@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Community Evidence Packet Workbench</title>
+  <meta name="description" content="Browser-local workbench for assembling a community evidence packet. No accounts. No network after load.">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to packet</a>
+  <header>
+    <div class="mark">
+      <div class="stamp" aria-hidden="true">CE</div>
+      <div>
+        <h1>Community Evidence Packet Workbench</h1>
+        <p class="lede">Assemble a local packet. Hash the bytes you loaded. Export HTML, Markdown, JSON, ZIP, RO-Crate, or BagIt. Print or copy. Every control stays available, including for empty packets.</p>
+      </div>
+    </div>
+    <div class="banner" role="note">
+      <strong>Open door.</strong> No accounts, no sign-in, no permission gate. After this page has loaded, work stays in this browser. SHA-256 here is local byte identity, not authenticity or legal proof. WACZ files are stored as opaque attachments and are not opened.
+    </div>
+  </header>
+  <main id="main">
+    <div id="notices" class="notices" aria-live="polite"></div>
+    <section aria-labelledby="packet-h">
+      <h2 id="packet-h">Packet</h2>
+      <div class="grid split">
+        <div>
+          <label for="title">Title</label>
+          <input id="title" type="text" autocomplete="off">
+          <label for="community">Community</label>
+          <input id="community" type="text" autocomplete="off">
+          <label for="collector">Collector</label>
+          <input id="collector" type="text" autocomplete="off">
+          <label for="location">Location</label>
+          <input id="location" type="text" autocomplete="off">
+        </div>
+        <div>
+          <div class="row">
+            <div>
+              <label for="start">Period start</label>
+              <input id="start" type="date">
+            </div>
+            <div>
+              <label for="end">Period end</label>
+              <input id="end" type="date">
+            </div>
+          </div>
+          <label for="tags">Tags (comma separated)</label>
+          <input id="tags" type="text" autocomplete="off">
+          <label for="statement">Statement</label>
+          <textarea id="statement"></textarea>
+        </div>
+      </div>
+    </section>
+    <section aria-labelledby="items-h">
+      <h2 id="items-h">Evidence items</h2>
+      <p class="fine">Files are read locally. Hashes are computed from the bytes in memory. Size notices are advisory and never hide export.</p>
+      <div class="actions">
+        <label class="file-btn">Add local files
+          <input id="files" type="file" multiple>
+        </label>
+        <button type="button" class="secondary" id="add-text">Add pasted testimony</button>
+        <label class="file-btn">Import packet JSON
+          <input id="import-json" type="file" accept="application/json,.json">
+        </label>
+        <button type="button" class="secondary" id="clear">Forget packet in this browser</button>
+      </div>
+      <div id="text-box" hidden>
+        <label for="paste-name">Testimony file name</label>
+        <input id="paste-name" type="text" value="testimony.txt">
+        <label for="paste-text">Testimony text</label>
+        <textarea id="paste-text"></textarea>
+        <button type="button" id="save-text">Store testimony locally</button>
+      </div>
+      <div id="items"></div>
+    </section>
+    <section aria-labelledby="export-h">
+      <h2 id="export-h">Export</h2>
+      <p class="fine">Empty and incomplete packets still export. Missing fields are labeled in the snapshot.</p>
+      <div class="exports">
+        <button type="button" id="ex-html">HTML</button>
+        <button type="button" id="ex-md">Markdown</button>
+        <button type="button" id="ex-json">JSON</button>
+        <button type="button" id="ex-zip">ZIP</button>
+        <button type="button" id="ex-crate">RO-Crate ZIP</button>
+        <button type="button" id="ex-bag">BagIt ZIP</button>
+        <button type="button" class="secondary" id="ex-copy">Copy JSON</button>
+        <button type="button" class="secondary" id="ex-print">Print</button>
+      </div>
+      <p id="export-status" class="fine" role="status"></p>
+    </section>
+  </main>
+  <footer>
+    <p>MIT. Public Commons Sprint 2026. Engineering target: WCAG 2.2 AA. This page does not claim accessibility certification or legal readiness. See LIMITATIONS.md in the source tree.</p>
+  </footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Community Evidence Packet Workbench</title>
+  <meta name="description" content="Browser-local workbench for assembling a community evidence packet. No accounts. No network after load.">
+  <style>
+:root {
+  --ink: #141414;
+  --paper: #f4f0e6;
+  --card: #fffdf8;
+  --line: #141414;
+  --accent: #0b3d38;
+  --muted: #3a3a3a;
+  --warn-bg: #f3e2c4;
+  --focus: #0b3d38;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.45;
+}
+.skip {
+  position: absolute;
+  left: -999px;
+  top: 0;
+}
+.skip:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+  background: var(--card);
+  color: var(--ink);
+  border: 2px solid var(--line);
+  padding: 0.4rem 0.6rem;
+  z-index: 10;
+}
+header, main, footer { max-width: 64rem; margin: 0 auto; padding: 1rem 1.1rem; }
+header {
+  border-bottom: 3px solid var(--line);
+}
+.mark {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+.stamp {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  flex: none;
+}
+h1 { font-size: 1.55rem; margin: 0 0 0.3rem; }
+.lede, .fine { color: var(--muted); }
+.lede { margin: 0.25rem 0 0.6rem; }
+.banner {
+  border: 2px solid var(--line);
+  background: var(--card);
+  padding: 0.65rem 0.8rem;
+  margin-top: 0.8rem;
+}
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 840px) {
+  .split { grid-template-columns: 1fr 1fr; }
+}
+section {
+  background: var(--card);
+  border: 2px solid var(--line);
+  padding: 0.9rem;
+  margin: 1rem 0;
+}
+section h2 { margin: 0 0 0.6rem; font-size: 1.1rem; }
+label { display: block; font-weight: 650; margin: 0.45rem 0 0.2rem; }
+input[type="text"], input[type="date"], textarea, select {
+  width: 100%;
+  border: 2px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 0.45rem 0.5rem;
+  font: inherit;
+}
+textarea { min-height: 6rem; resize: vertical; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+@media (max-width: 620px) { .row { grid-template-columns: 1fr; } }
+.actions, .exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+button, .file-btn {
+  font: inherit;
+  font-weight: 650;
+  border: 2px solid var(--line);
+  background: var(--accent);
+  color: #fff;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+}
+button.secondary, .file-btn {
+  background: var(--card);
+  color: var(--ink);
+}
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, .file-btn:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.file-btn input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.item {
+  border: 2px solid var(--line);
+  padding: 0.65rem;
+  margin: 0.55rem 0;
+}
+.item h3 { margin: 0 0 0.3rem; font-size: 1rem; }
+.hash { word-break: break-all; font-family: ui-monospace, monospace; font-size: 0.88rem; }
+.notices { margin: 0.8rem 0; }
+.notice {
+  border: 2px solid var(--line);
+  background: var(--warn-bg);
+  padding: 0.55rem 0.7rem;
+  margin: 0.4rem 0;
+}
+.empty-hint { border: 2px dashed var(--line); padding: 0.8rem; }
+footer {
+  border-top: 3px solid var(--line);
+  margin-top: 1rem;
+}
+.vis-hide, .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+@media (forced-colors: active) {
+  button, section, .item, .banner { border-width: 3px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; scroll-behavior: auto !important; }
+}
+@media print {
+  header, .actions, .exports, .file-btn, button { display: none !important; }
+  section { break-inside: avoid; }
+}
+
+</style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to packet</a>
+  <header>
+    <div class="mark">
+      <div class="stamp" aria-hidden="true">CE</div>
+      <div>
+        <h1>Community Evidence Packet Workbench</h1>
+        <p class="lede">Assemble a local packet. Hash the bytes you loaded. Export HTML, Markdown, JSON, ZIP, RO-Crate, or BagIt. Print or copy. Every control stays available, including for empty packets.</p>
+      </div>
+    </div>
+    <div class="banner" role="note">
+      <strong>Open door.</strong> No accounts, no sign-in, no permission gate. After this page has loaded, work stays in this browser. SHA-256 here is local byte identity, not authenticity or legal proof. WACZ files are stored as opaque attachments and are not opened.
+    </div>
+  </header>
+  <main id="main">
+    <div id="notices" class="notices" aria-live="polite"></div>
+    <section aria-labelledby="packet-h">
+      <h2 id="packet-h">Packet</h2>
+      <div class="grid split">
+        <div>
+          <label for="title">Title</label>
+          <input id="title" type="text" autocomplete="off">
+          <label for="community">Community</label>
+          <input id="community" type="text" autocomplete="off">
+          <label for="collector">Collector</label>
+          <input id="collector" type="text" autocomplete="off">
+          <label for="location">Location</label>
+          <input id="location" type="text" autocomplete="off">
+        </div>
+        <div>
+          <div class="row">
+            <div>
+              <label for="start">Period start</label>
+              <input id="start" type="date">
+            </div>
+            <div>
+              <label for="end">Period end</label>
+              <input id="end" type="date">
+            </div>
+          </div>
+          <label for="tags">Tags (comma separated)</label>
+          <input id="tags" type="text" autocomplete="off">
+          <label for="statement">Statement</label>
+          <textarea id="statement"></textarea>
+        </div>
+      </div>
+    </section>
+    <section aria-labelledby="items-h">
+      <h2 id="items-h">Evidence items</h2>
+      <p class="fine">Files are read locally. Hashes are computed from the bytes in memory. Size notices are advisory and never hide export.</p>
+      <div class="actions">
+        <label class="file-btn">Add local files
+          <input id="files" type="file" multiple>
+        </label>
+        <button type="button" class="secondary" id="add-text">Add pasted testimony</button>
+        <label class="file-btn">Import packet JSON
+          <input id="import-json" type="file" accept="application/json,.json">
+        </label>
+        <button type="button" class="secondary" id="clear">Forget packet in this browser</button>
+      </div>
+      <div id="text-box" hidden>
+        <label for="paste-name">Testimony file name</label>
+        <input id="paste-name" type="text" value="testimony.txt">
+        <label for="paste-text">Testimony text</label>
+        <textarea id="paste-text"></textarea>
+        <button type="button" id="save-text">Store testimony locally</button>
+      </div>
+      <div id="items"></div>
+    </section>
+    <section aria-labelledby="export-h">
+      <h2 id="export-h">Export</h2>
+      <p class="fine">Empty and incomplete packets still export. Missing fields are labeled in the snapshot.</p>
+      <div class="exports">
+        <button type="button" id="ex-html">HTML</button>
+        <button type="button" id="ex-md">Markdown</button>
+        <button type="button" id="ex-json">JSON</button>
+        <button type="button" id="ex-zip">ZIP</button>
+        <button type="button" id="ex-crate">RO-Crate ZIP</button>
+        <button type="button" id="ex-bag">BagIt ZIP</button>
+        <button type="button" class="secondary" id="ex-copy">Copy JSON</button>
+        <button type="button" class="secondary" id="ex-print">Print</button>
+      </div>
+      <p id="export-status" class="fine" role="status"></p>
+    </section>
+  </main>
+  <footer>
+    <p>MIT. Public Commons Sprint 2026. Engineering target: WCAG 2.2 AA. This page does not claim accessibility certification or legal readiness. See LIMITATIONS.md in the source tree.</p>
+  </footer>
+  <script>
+"use strict";
+
+/* ---- src/core/hash.js ---- */
+/**
+ * Local SHA-256 of exact bytes in memory.
+ * This is byte identity for this session, not authenticity.
+ */
+
+const BYTE_IDENTITY_NOTICE =
+  "SHA-256 of the exact bytes loaded in this session. Local byte identity only. Not authenticity, not chain of custody, not a timestamp authority, not legal proof.";
+
+function toUint8(bytes) {
+  if (bytes instanceof Uint8Array) return bytes;
+  if (bytes instanceof ArrayBuffer) return new Uint8Array(bytes);
+  if (ArrayBuffer.isView(bytes)) {
+    return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  }
+  throw new TypeError("hash input must be bytes");
+}
+
+async function sha256Hex(bytes) {
+  const buf = toUint8(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return hexFromBytes(new Uint8Array(digest));
+}
+
+function hexFromBytes(bytes) {
+  const b = toUint8(bytes);
+  let out = "";
+  for (let i = 0; i < b.length; i++) out += b[i].toString(16).padStart(2, "0");
+  return out;
+}
+
+function utf8Bytes(text) {
+  return new TextEncoder().encode(String(text ?? ""));
+}
+
+
+/* ---- src/core/escape.js ---- */
+/**
+ * Escaping for generated snapshots. Not a general-purpose sanitizer.
+ */
+
+const AMP = "\u0026";
+const HTML_MAP = {
+  "&": AMP + "amp;",
+  "<": AMP + "lt;",
+  ">": AMP + "gt;",
+  '"': AMP + "quot;",
+  "'": AMP + "#39;",
+};
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => HTML_MAP[ch]);
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value);
+}
+
+function escapeMarkdown(value) {
+  return String(value ?? "").replace(/[\\`*_{}\[\]()#+\-.!|]/g, "\\<script type="module" src="app.js"></script>");
+}
+
+function escapeMarkdownFence(value) {
+  return String(value ?? "").replace(/```/g, "`\u200b``");
+}
+
+/**
+ * Neutralize CSV formula injection. Prefix risky leading characters.
+ */
+function csvCell(value) {
+  let s = String(value ?? "");
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  if (/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function csvRow(cells) {
+  return cells.map(csvCell).join(",");
+}
+
+
+/* ---- src/core/paths.js ---- */
+/**
+ * Path normalization and ZIP-slip / collision defense.
+ * These checks are local archive hygiene, not access control.
+ */
+
+const WIN_ABS = /^[a-zA-Z]:[\\/]/;
+
+function normalizePath(input) {
+  let s = String(input ?? "").replace(/\\/g, "/");
+  s = s.replace(/^\.\/+/, "");
+  s = s.replace(/\/{2,}/g, "/");
+  if (s.endsWith("/") && s.length > 1) s = s.slice(0, -1);
+  return s;
+}
+
+function zipSlipReason(input) {
+  const raw = String(input ?? "");
+  if (!raw || !raw.trim()) return "empty-path";
+  if (raw.includes("\0")) return "nul-byte";
+  const s = normalizePath(raw);
+  if (!s) return "empty-path";
+  if (s.startsWith("/") || s.startsWith("\\")) return "absolute-path";
+  if (WIN_ABS.test(raw) || WIN_ABS.test(s)) return "absolute-path";
+  const parts = s.split("/");
+  for (const part of parts) {
+    if (part === ".." || part === ".") return part === ".." ? "parent-segment" : "dot-segment";
+  }
+  if (s.includes("\\")) return "backslash";
+  return null;
+}
+
+function isSafeArchivePath(input) {
+  return zipSlipReason(input) === null;
+}
+
+function assertSafeArchivePath(input) {
+  const reason = zipSlipReason(input);
+  if (reason) {
+    const err = new Error("unsafe-archive-path:" + reason);
+    err.code = "UNSAFE_ARCHIVE_PATH";
+    err.reason = reason;
+    err.path = String(input ?? "");
+    throw err;
+  }
+  return normalizePath(input);
+}
+
+function collisionKey(input) {
+  return normalizePath(input).toLowerCase();
+}
+
+function findCollisions(paths) {
+  const seen = new Map();
+  const collisions = [];
+  for (const p of paths) {
+    const key = collisionKey(p);
+    if (seen.has(key)) {
+      collisions.push({ path: normalizePath(p), other: seen.get(key), key });
+    } else {
+      seen.set(key, normalizePath(p));
+    }
+  }
+  return collisions;
+}
+
+function uniqueArchivePath(desired, used) {
+  const base = assertSafeArchivePath(desired);
+  if (!used.has(collisionKey(base))) return base;
+  const dot = base.lastIndexOf(".");
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  const ext = dot > 0 ? base.slice(dot) : "";
+  let n = 2;
+  while (n < 10000) {
+    const candidate = `${stem}-${n}${ext}`;
+    if (!used.has(collisionKey(candidate))) return candidate;
+    n += 1;
+  }
+  throw new Error("could-not-dedupe-path");
+}
+
+
+/* ---- src/core/zip.js ---- */
+/**
+ * STORE-method ZIP writer. Container only. Not a PKWARE-certified product.
+ */
+
+const CRC_TABLE = new Uint32Array(256);
+for (let i = 0; i < 256; i++) {
+  let c = i;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  CRC_TABLE[i] = c >>> 0;
+}
+
+function crc32(bytes) {
+  let c = 0xffffffff;
+  const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  for (let i = 0; i < b.length; i++) c = CRC_TABLE[(c ^ b[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function u16(n) {
+  const b = new Uint8Array(2);
+  b[0] = n & 0xff;
+  b[1] = (n >>> 8) & 0xff;
+  return b;
+}
+
+function u32(n) {
+  const b = new Uint8Array(4);
+  b[0] = n & 0xff;
+  b[1] = (n >>> 8) & 0xff;
+  b[2] = (n >>> 16) & 0xff;
+  b[3] = (n >>> 24) & 0xff;
+  return b;
+}
+
+function concat(parts) {
+  let n = 0;
+  for (const p of parts) n += p.length;
+  const out = new Uint8Array(n);
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+
+function encodeName(name) {
+  return new TextEncoder().encode(name);
+}
+
+/**
+ * @param {{path:string, bytes:Uint8Array}[]} entries
+ */
+function buildStoreZip(entries) {
+  const prepared = [];
+  for (const entry of entries) {
+    const path = assertSafeArchivePath(entry.path);
+    const bytes =
+      entry.bytes instanceof Uint8Array ? entry.bytes : new Uint8Array(entry.bytes || []);
+    prepared.push({ path, bytes });
+  }
+  const collisions = findCollisions(prepared.map((e) => e.path));
+  if (collisions.length) {
+    const err = new Error("zip-collision:" + collisions[0].path);
+    err.code = "ZIP_COLLISION";
+    err.collisions = collisions;
+    throw err;
+  }
+  const used = new Set(prepared.map((e) => collisionKey(e.path)));
+  if (used.size !== prepared.length) {
+    throw new Error("zip-collision");
+  }
+
+  const locals = [];
+  const centrals = [];
+  let offset = 0;
+
+  for (const { path, bytes } of prepared) {
+    const name = encodeName(path);
+    const crc = crc32(bytes);
+    const size = bytes.length;
+    const local = concat([
+      u32(0x04034b50),
+      u16(20),
+      u16(1 << 11),
+      u16(0),
+      u16(0),
+      u16(0),
+      u32(crc),
+      u32(size),
+      u32(size),
+      u16(name.length),
+      u16(0),
+      name,
+      bytes,
+    ]);
+    const central = concat([
+      u32(0x02014b50),
+      u16(20),
+      u16(20),
+      u16(1 << 11),
+      u16(0),
+      u16(0),
+      u16(0),
+      u32(crc),
+      u32(size),
+      u32(size),
+      u16(name.length),
+      u16(0),
+      u16(0),
+      u16(0),
+      u16(0),
+      u32(0),
+      u32(offset),
+      name,
+    ]);
+    locals.push(local);
+    centrals.push(central);
+    offset += local.length;
+  }
+
+  const centralDir = concat(centrals);
+  const eocd = concat([
+    u32(0x06054b50),
+    u16(0),
+    u16(0),
+    u16(prepared.length),
+    u16(prepared.length),
+    u32(centralDir.length),
+    u32(offset),
+    u16(0),
+  ]);
+  return concat([...locals, centralDir, eocd]);
+}
+
+function zipHasMagic(bytes) {
+  return bytes && bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b;
+}
+
+
+/* ---- src/core/wacz.js ---- */
+/**
+ * WACZ is recognized only as an opaque attachment.
+ * This module does not unpack, replay, or validate WARC/WACZ internals.
+ */
+
+const WACZ_EXT = /\.wacz$/i;
+const WACZ_TYPE = "application/x-wacz";
+
+function isWaczFilename(name) {
+  return WACZ_EXT.test(String(name || ""));
+}
+
+function isWaczMediaType(type) {
+  const t = String(type || "").toLowerCase();
+  return t === WACZ_TYPE || t === "application/wacz" || t === "application/x-wacz+zip";
+}
+
+function recognizeAttachment(filename, mediaType) {
+  const wacz = isWaczFilename(filename) || isWaczMediaType(mediaType);
+  if (!wacz) {
+    return {
+      kind: "file",
+      recognizedAs: "file",
+      note: "",
+    };
+  }
+  return {
+    kind: "wacz-attachment",
+    recognizedAs: "wacz-opaque",
+    note: "Recognized as a WACZ filename or media type. Stored as an opaque attachment. This workbench does not open, validate, replay, or certify the archive.",
+  };
+}
+
+const WACZ_POLICY =
+  "WACZ files are accepted only as opaque attachments. Presence of a .wacz suffix is not validation of Web Archive Collection Zipped contents.";
+
+
+/* ---- src/core/packet.js ---- */
+/**
+ * Community evidence packet model.
+ * Unknown fields are preserved on import and re-emitted on JSON export.
+ */
+
+
+
+const SCHEMA = "community-evidence-packet/v1";
+
+const ADVISORY_MAX_BYTES = 50 * 1024 * 1024;
+const ADVISORY_MAX_FILES = 200;
+
+const ITEM_ROLES = [
+  "photo",
+  "testimony",
+  "minutes",
+  "map",
+  "recording",
+  "wacz",
+  "document",
+  "other",
+];
+
+const PACKET_KEYS = new Set([
+  "schema",
+  "id",
+  "created",
+  "updated",
+  "title",
+  "community",
+  "collector",
+  "statement",
+  "location",
+  "period",
+  "tags",
+  "people",
+  "places",
+  "events",
+  "items",
+  "unknown",
+  "limits",
+]);
+
+const ITEM_KEYS = new Set([
+  "id",
+  "name",
+  "path",
+  "role",
+  "mediaType",
+  "bytes",
+  "sha256",
+  "caption",
+  "collectedAt",
+  "provenance",
+  "waczOpaque",
+  "recognizedAs",
+  "note",
+  "unknown",
+  "textContent",
+]);
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function mintId(prefix) {
+  const rand =
+    globalThis.crypto?.randomUUID?.() ||
+    "x" + Math.random().toString(16).slice(2) + Date.now().toString(16);
+  return `${prefix}-${rand}`;
+}
+
+function emptyPacket() {
+  return {
+    schema: SCHEMA,
+    id: mintId("cep"),
+    created: nowIso(),
+    updated: nowIso(),
+    title: "",
+    community: "",
+    collector: "",
+    statement: "",
+    location: "",
+    period: { start: "", end: "" },
+    tags: [],
+    people: [],
+    places: [],
+    events: [],
+    items: [],
+    unknown: {},
+    limits: {
+      advisoryMaxBytes: ADVISORY_MAX_BYTES,
+      advisoryMaxFiles: ADVISORY_MAX_FILES,
+    },
+  };
+}
+
+function asArray(value) {
+  if (Array.isArray(value)) return value.slice();
+  if (value == null || value === "") return [];
+  return [value];
+}
+
+function importItem(src) {
+  if (!src || typeof src !== "object" || Array.isArray(src)) {
+    return {
+      id: mintId("item"),
+      name: "",
+      path: "",
+      role: "other",
+      mediaType: "application/octet-stream",
+      bytes: 0,
+      sha256: "",
+      caption: "",
+      collectedAt: "",
+      provenance: "",
+      waczOpaque: false,
+      recognizedAs: "file",
+      note: "",
+      unknown: { _invalidItem: src },
+      textContent: "",
+    };
+  }
+  const rec = recognizeAttachment(src.name || src.path || "", src.mediaType || "");
+  const item = {
+    id: String(src.id || mintId("item")),
+    name: String(src.name ?? ""),
+    path: String(src.path ?? src.name ?? ""),
+    role: ITEM_ROLES.includes(src.role) ? src.role : rec.kind === "wacz-attachment" ? "wacz" : "other",
+    mediaType: String(src.mediaType ?? "application/octet-stream"),
+    bytes: Number(src.bytes) || 0,
+    sha256: String(src.sha256 ?? ""),
+    caption: String(src.caption ?? ""),
+    collectedAt: String(src.collectedAt ?? ""),
+    provenance: String(src.provenance ?? ""),
+    waczOpaque: rec.kind === "wacz-attachment" || src.waczOpaque === true,
+    recognizedAs: rec.recognizedAs,
+    note: rec.note || String(src.note ?? ""),
+    unknown: {},
+    textContent: String(src.textContent ?? ""),
+  };
+  for (const key of Object.keys(src)) {
+    if (!ITEM_KEYS.has(key) && key !== "_bytes") item.unknown[key] = src[key];
+  }
+  if (src.unknown && typeof src.unknown === "object" && !Array.isArray(src.unknown)) {
+    item.unknown = { ...src.unknown, ...item.unknown };
+  }
+  return item;
+}
+
+function importPacket(input) {
+  const src = typeof input === "string" ? JSON.parse(input) : input;
+  if (!src || typeof src !== "object" || Array.isArray(src)) {
+    throw new Error("packet-must-be-object");
+  }
+  const packet = emptyPacket();
+  if (typeof src.id === "string" && src.id) packet.id = src.id;
+  if (typeof src.created === "string" && src.created) packet.created = src.created;
+  packet.updated = nowIso();
+  packet.title = String(src.title ?? "");
+  packet.community = String(src.community ?? "");
+  packet.collector = String(src.collector ?? "");
+  packet.statement = String(src.statement ?? "");
+  packet.location = String(src.location ?? "");
+  if (src.period && typeof src.period === "object") {
+    packet.period = {
+      start: String(src.period.start ?? ""),
+      end: String(src.period.end ?? ""),
+    };
+  }
+  packet.tags = asArray(src.tags).map((t) => String(t));
+  packet.people = asArray(src.people);
+  packet.places = asArray(src.places);
+  packet.events = asArray(src.events);
+  packet.items = asArray(src.items).map(importItem);
+  packet.unknown = {};
+  for (const key of Object.keys(src)) {
+    if (!PACKET_KEYS.has(key)) packet.unknown[key] = src[key];
+  }
+  if (src.unknown && typeof src.unknown === "object" && !Array.isArray(src.unknown)) {
+    packet.unknown = { ...src.unknown, ...packet.unknown };
+  }
+  if (src.schema) packet.schema = String(src.schema);
+  return packet;
+}
+
+function itemToJson(item) {
+  const { unknown, _bytes, ...rest } = item;
+  const out = { ...(unknown || {}), ...rest };
+  if (!out.textContent) delete out.textContent;
+  return out;
+}
+
+function packetToJsonObject(packet) {
+  const { unknown, items, ...rest } = packet;
+  return {
+    ...(unknown || {}),
+    ...rest,
+    items: (items || []).map(itemToJson),
+  };
+}
+
+function packetToJson(packet) {
+  return JSON.stringify(packetToJsonObject(packet), null, 2);
+}
+
+function missingFields(packet) {
+  const missing = [];
+  if (!packet.title) missing.push("title");
+  if (!packet.community) missing.push("community");
+  if (!packet.collector) missing.push("collector");
+  if (!packet.statement) missing.push("statement");
+  if (!packet.items.length) missing.push("items");
+  for (const item of packet.items) {
+    if (!item.sha256) missing.push("item.sha256:" + (item.name || item.id));
+  }
+  return missing;
+}
+
+function isEmptyPacket(packet) {
+  return (
+    !packet.title &&
+    !packet.community &&
+    !packet.collector &&
+    !packet.statement &&
+    !packet.location &&
+    packet.items.length === 0
+  );
+}
+
+function totalBytes(packet) {
+  return packet.items.reduce((n, it) => n + (Number(it.bytes) || 0), 0);
+}
+
+function advisoryNotices(packet) {
+  const notices = [];
+  const bytes = totalBytes(packet);
+  if (bytes > packet.limits.advisoryMaxBytes) {
+    notices.push({
+      level: "advisory",
+      code: "SIZE",
+      text: `Packet payload is ${bytes} bytes, above the advisory ${packet.limits.advisoryMaxBytes}-byte notice. Export is still available.`,
+    });
+  }
+  if (packet.items.length > packet.limits.advisoryMaxFiles) {
+    notices.push({
+      level: "advisory",
+      code: "COUNT",
+      text: `Packet has ${packet.items.length} items, above the advisory ${packet.limits.advisoryMaxFiles}-file notice. Export is still available.`,
+    });
+  }
+  const missing = missingFields(packet);
+  if (missing.length) {
+    notices.push({
+      level: "incomplete",
+      code: "INCOMPLETE",
+      text: "Incomplete packet. Missing: " + missing.join(", ") + ". Export is still available.",
+    });
+  }
+  if (isEmptyPacket(packet)) {
+    notices.push({
+      level: "empty",
+      code: "EMPTY",
+      text: "Empty packet. Every export still runs and labels the empty state.",
+    });
+  }
+  return notices;
+}
+
+function archivePathForItem(item, used) {
+  const raw = item.path || item.name || item.id || "item.bin";
+  const fallback = isSafeArchivePath(raw) ? normalizePath(raw) : "evidence/" + String(item.id || "item") + ".bin";
+  const path = uniqueArchivePath("data/" + fallback.replace(/^data\//, ""), used);
+  used.add(collisionKey(path));
+  return path;
+}
+
+async function makeTextItem(name, text, role) {
+  const bytes = utf8Bytes(text);
+  const rec = recognizeAttachment(name, "text/plain");
+  return {
+    id: mintId("item"),
+    name,
+    path: name,
+    role: role || "testimony",
+    mediaType: "text/plain;charset=utf-8",
+    bytes: bytes.length,
+    sha256: await sha256Hex(bytes),
+    caption: "",
+    collectedAt: nowIso(),
+    provenance: "pasted-as-text-in-workbench",
+    waczOpaque: rec.kind === "wacz-attachment",
+    recognizedAs: rec.recognizedAs,
+    note: rec.note,
+    unknown: {},
+    textContent: String(text),
+    _bytes: bytes,
+  };
+}
+
+async function makeFileItem(file, arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  const rec = recognizeAttachment(file.name, file.type);
+  return {
+    id: mintId("item"),
+    name: file.name,
+    path: file.name,
+    role: rec.kind === "wacz-attachment" ? "wacz" : "other",
+    mediaType: file.type || "application/octet-stream",
+    bytes: bytes.length,
+    sha256: await sha256Hex(bytes),
+    caption: "",
+    collectedAt: nowIso(),
+    provenance: "loaded-from-local-file-in-workbench",
+    waczOpaque: rec.kind === "wacz-attachment",
+    recognizedAs: rec.recognizedAs,
+    note: rec.note,
+    unknown: {},
+    textContent: "",
+    _bytes: bytes,
+  };
+}
+
+
+
+
+/* ---- src/core/export.js ---- */
+/**
+ * Snapshot exporters. Empty and incomplete packets still export.
+ */
+
+
+
+
+
+const RO_CRATE_CONTEXT = "https://w3id.org/ro/crate/1.2/context";
+
+function itemBytes(item) {
+  if (item._bytes instanceof Uint8Array) return item._bytes;
+  if (item.textContent) return utf8Bytes(item.textContent);
+  return utf8Bytes("");
+}
+
+function payloadEntries(packet) {
+  const used = new Set();
+  const entries = [];
+  for (const item of packet.items) {
+    const path = archivePathForItem(item, used);
+    entries.push({
+      path,
+      bytes: itemBytes(item),
+      item,
+    });
+  }
+  return entries;
+}
+
+function exportJson(packet) {
+  return packetToJson(packet);
+}
+
+function exportMarkdown(packet) {
+  const missing = missingFields(packet);
+  const empty = isEmptyPacket(packet);
+  const notices = advisoryNotices(packet);
+  const lines = [];
+  lines.push("# " + (packet.title || "(untitled packet)"));
+  lines.push("");
+  lines.push("Community evidence packet snapshot. This file is a local export, not a certificate.");
+  lines.push("");
+  if (empty) lines.push("**State:** empty. Fields below are labeled as missing on purpose.");
+  else if (missing.length) lines.push("**State:** incomplete. Missing: " + missing.join(", ") + ".");
+  else lines.push("**State:** fields present in this session. Completeness is not verification.");
+  lines.push("");
+  lines.push("- Packet id: " + (packet.id || "(missing)"));
+  lines.push("- Community: " + (packet.community || "(missing)"));
+  lines.push("- Collector: " + (packet.collector || "(missing)"));
+  lines.push("- Location: " + (packet.location || "(missing)"));
+  lines.push("- Period: " + (packet.period?.start || "(missing)") + " → " + (packet.period?.end || "(missing)"));
+  lines.push("- Created: " + (packet.created || "(missing)"));
+  lines.push("");
+  lines.push("## Statement");
+  lines.push("");
+  lines.push(packet.statement ? escapeMarkdownFence(packet.statement) : "(missing)");
+  lines.push("");
+  lines.push("## Byte identity");
+  lines.push("");
+  lines.push(BYTE_IDENTITY_NOTICE);
+  lines.push("");
+  lines.push(WACZ_POLICY);
+  lines.push("");
+  lines.push("## Items");
+  lines.push("");
+  if (!packet.items.length) {
+    lines.push("No items. Empty export is intentional.");
+  } else {
+    for (const item of packet.items) {
+      lines.push("### " + escapeMarkdown(item.name || item.id));
+      lines.push("");
+      lines.push("- Role: " + item.role);
+      lines.push("- Path: `" + (item.path || item.name || "") + "`");
+      lines.push("- Bytes: " + item.bytes);
+      lines.push("- SHA-256: `" + (item.sha256 || "(missing)") + "`");
+      lines.push("- Recognized as: " + item.recognizedAs);
+      if (item.waczOpaque) lines.push("- WACZ: opaque attachment (not opened)");
+      if (item.caption) lines.push("- Caption: " + escapeMarkdownFence(item.caption));
+      if (item.provenance) lines.push("- Provenance: " + escapeMarkdownFence(item.provenance));
+      lines.push("");
+    }
+  }
+  if (notices.length) {
+    lines.push("## Notices");
+    lines.push("");
+    for (const n of notices) lines.push("- `" + n.code + "` " + n.text);
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+function exportHtml(packet) {
+  const missing = missingFields(packet);
+  const empty = isEmptyPacket(packet);
+  const notices = advisoryNotices(packet);
+  const state = empty ? "empty" : missing.length ? "incomplete" : "present";
+  const rows = packet.items
+    .map((item) => {
+      return `<tr>
+        <td>${escapeHtml(item.name || item.id)}</td>
+        <td>${escapeHtml(item.role)}</td>
+        <td>${escapeHtml(String(item.bytes))}</td>
+        <td><code>${escapeHtml(item.sha256 || "(missing)")}</code></td>
+        <td>${escapeHtml(item.recognizedAs)}${item.waczOpaque ? " (opaque WACZ)" : ""}</td>
+        <td>${escapeHtml(item.caption)}</td>
+      </tr>`;
+    })
+    .join("\n");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(packet.title || "Community evidence packet")}</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; color: #141414; background: #f7f4ee; margin: 0; }
+    main { max-width: 52rem; margin: 0 auto; padding: 1.25rem; }
+    h1 { font-size: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 2px solid #141414; padding: 0.4rem; text-align: left; vertical-align: top; }
+    code { word-break: break-all; }
+    .notice { border: 2px solid #141414; padding: 0.75rem; margin: 0.75rem 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>${escapeHtml(packet.title || "(untitled packet)")}</h1>
+  <p>Local HTML snapshot. Not a certificate. State: <strong>${escapeHtml(state)}</strong>.</p>
+  <ul>
+    <li>Community: ${escapeHtml(packet.community || "(missing)")}</li>
+    <li>Collector: ${escapeHtml(packet.collector || "(missing)")}</li>
+    <li>Location: ${escapeHtml(packet.location || "(missing)")}</li>
+    <li>Packet id: ${escapeHtml(packet.id)}</li>
+  </ul>
+  <h2>Statement</h2>
+  <p>${escapeHtml(packet.statement || "(missing)")}</p>
+  <h2>Byte identity</h2>
+  <p>${escapeHtml(BYTE_IDENTITY_NOTICE)}</p>
+  <p>${escapeHtml(WACZ_POLICY)}</p>
+  <h2>Items</h2>
+  ${
+    packet.items.length
+      ? `<table><thead><tr><th>Name</th><th>Role</th><th>Bytes</th><th>SHA-256</th><th>Recognition</th><th>Caption</th></tr></thead><tbody>${rows}</tbody></table>`
+      : "<p>No items. Empty export is intentional.</p>"
+  }
+  ${
+    notices.length
+      ? `<div class="notice"><h2>Notices</h2><ul>${notices
+          .map((n) => `<li><code>${escapeHtml(n.code)}</code> ${escapeHtml(n.text)}</li>`)
+          .join("")}</ul></div>`
+      : ""
+  }
+</main>
+</body>
+</html>
+`;
+}
+
+function exportCsv(packet) {
+  const header = csvRow(["name", "role", "path", "bytes", "sha256", "recognizedAs", "waczOpaque", "caption"]);
+  const rows = packet.items.map((item) =>
+    csvRow([
+      item.name,
+      item.role,
+      item.path,
+      item.bytes,
+      item.sha256,
+      item.recognizedAs,
+      item.waczOpaque ? "yes" : "no",
+      item.caption,
+    ]),
+  );
+  if (!rows.length) {
+    return header + "\n" + csvRow(["(no items)", "", "", "0", "", "", "", "empty export"]);
+  }
+  return [header, ...rows].join("\n") + "\n";
+}
+
+function roCrateMetadata(packet, entries) {
+  const graph = [
+    {
+      "@id": "ro-crate-metadata.json",
+      "@type": "CreativeWork",
+      conformsTo: { "@id": "https://w3id.org/ro/crate/1.2" },
+      about: { "@id": "./" },
+    },
+    {
+      "@id": "./",
+      "@type": ["Dataset"],
+      name: packet.title || "(untitled packet)",
+      description: packet.statement || "Community evidence packet (fields may be missing).",
+      identifier: packet.id,
+      hasPart: entries.map((e) => ({ "@id": e.path })),
+    },
+  ];
+  for (const e of entries) {
+    graph.push({
+      "@id": e.path,
+      "@type": e.item.waczOpaque ? "File" : "File",
+      name: e.item.name,
+      encodingFormat: e.item.mediaType,
+      contentSize: String(e.item.bytes),
+      sha256: e.item.sha256,
+      note: e.item.waczOpaque
+        ? "Opaque WACZ attachment. Not unpacked by this workbench."
+        : e.item.note || undefined,
+    });
+  }
+  return {
+    "@context": RO_CRATE_CONTEXT,
+    "@graph": graph,
+  };
+}
+
+function bagitText() {
+  return "BagIt-Version: 1.0\nTag-File-Character-Encoding: UTF-8\n";
+}
+
+function bagInfo(packet) {
+  return [
+    "Source-Organization: local-workbench",
+    "Bagging-Date: " + (packet.updated || packet.created || "").slice(0, 10),
+    "External-Identifier: " + packet.id,
+    "Bag-Software-Agent: community-evidence-packet-workbench",
+    "Internal-Sender-Description: Local byte-identity bag. Not a certificate.",
+    "",
+  ].join("\n");
+}
+
+async function bagManifest(entries) {
+  const lines = [];
+  for (const e of entries) {
+    const hex = e.item.sha256 || (await sha256Hex(e.bytes));
+    const payload = e.path.replace(/^data\//, "");
+    lines.push(`${hex}  ${payload}`);
+  }
+  if (!lines.length) {
+    const empty = utf8Bytes("");
+    const hex = await sha256Hex(empty);
+    lines.push(`${hex}  EMPTY.txt`);
+  }
+  return lines.join("\n") + "\n";
+}
+
+async function exportRoCrateZip(packet) {
+  let entries = payloadEntries(packet);
+  const used = new Set(entries.map((e) => collisionKey(e.path)));
+  const crate = utf8Bytes(JSON.stringify(roCrateMetadata(packet, entries), null, 2));
+  const cratePath = uniqueArchivePath("ro-crate-metadata.json", used);
+  used.add(collisionKey(cratePath));
+  const files = [
+    { path: cratePath, bytes: crate },
+    ...entries.map((e) => ({ path: e.path, bytes: e.bytes })),
+  ];
+  if (!entries.length) {
+    files.push({
+      path: uniqueArchivePath("EMPTY.txt", used),
+      bytes: utf8Bytes("Empty packet. Placeholder payload so the crate still has a file.\n"),
+    });
+  }
+  return buildStoreZip(files);
+}
+
+async function exportBagItZip(packet) {
+  let entries = payloadEntries(packet);
+  if (!entries.length) {
+    entries = [
+      {
+        path: "data/EMPTY.txt",
+        bytes: utf8Bytes("Empty packet. Placeholder payload so the bag still has a data file.\n"),
+        item: { sha256: "", name: "EMPTY.txt", waczOpaque: false, mediaType: "text/plain", bytes: 0 },
+      },
+    ];
+    entries[0].item.sha256 = await sha256Hex(entries[0].bytes);
+    entries[0].item.bytes = entries[0].bytes.length;
+  }
+  const dataEntries = entries.map((e) => {
+    const payload = e.path.replace(/^data\//, "");
+    return { path: "data/" + payload, bytes: e.bytes, item: e.item };
+  });
+  const manifest = utf8Bytes(await bagManifest(dataEntries));
+  const files = [
+    { path: "bagit.txt", bytes: utf8Bytes(bagitText()) },
+    { path: "bag-info.txt", bytes: utf8Bytes(bagInfo(packet)) },
+    { path: "manifest-sha256.txt", bytes: manifest },
+    ...dataEntries.map((e) => ({ path: e.path, bytes: e.bytes })),
+  ];
+  return buildStoreZip(files);
+}
+
+async function exportFilesZip(packet) {
+  const entries = payloadEntries(packet);
+  const json = utf8Bytes(exportJson(packet));
+  const md = utf8Bytes(exportMarkdown(packet));
+  const html = utf8Bytes(exportHtml(packet));
+  const used = new Set(["packet.json", "packet.md", "packet.html"].map(collisionKey));
+  const files = [
+    { path: "packet.json", bytes: json },
+    { path: "packet.md", bytes: md },
+    { path: "packet.html", bytes: html },
+    ...entries.map((e) => ({ path: e.path, bytes: e.bytes })),
+  ];
+  for (const f of files.slice(3)) used.add(collisionKey(f.path));
+  if (!entries.length) {
+    files.push({
+      path: uniqueArchivePath("EMPTY.txt", used),
+      bytes: utf8Bytes("Empty packet. Placeholder so the zip still contains a payload file.\n"),
+    });
+  }
+  return buildStoreZip(files);
+}
+
+
+
+
+/* ---- src/ui/app.js ---- */
+
+
+
+
+let packet = emptyPacket();
+
+const $ = (id) => document.getElementById(id);
+
+function bindPacketFields() {
+  $("title").value = packet.title;
+  $("community").value = packet.community;
+  $("collector").value = packet.collector;
+  $("location").value = packet.location;
+  $("start").value = packet.period.start;
+  $("end").value = packet.period.end;
+  $("tags").value = packet.tags.join(", ");
+  $("statement").value = packet.statement;
+}
+
+function readPacketFields() {
+  packet.title = $("title").value;
+  packet.community = $("community").value;
+  packet.collector = $("collector").value;
+  packet.location = $("location").value;
+  packet.period.start = $("start").value;
+  packet.period.end = $("end").value;
+  packet.tags = $("tags").value.split(",").map((s) => s.trim()).filter(Boolean);
+  packet.statement = $("statement").value;
+  packet.updated = new Date().toISOString();
+}
+
+function renderNotices() {
+  const box = $("notices");
+  const notices = advisoryNotices(packet);
+  box.innerHTML = notices
+    .map(
+      (n) =>
+        `<div class="notice"><strong>${escapeHtml(n.code)}</strong> ${escapeHtml(n.text)}</div>`,
+    )
+    .join("");
+}
+
+function renderItems() {
+  const root = $("items");
+  if (!packet.items.length) {
+    root.innerHTML =
+      '<div class="empty-hint">No items yet. Add files or paste testimony. Empty packets still export.</div>';
+    return;
+  }
+  root.innerHTML = packet.items
+    .map((item, i) => {
+      return `<article class="item" data-index="${i}">
+        <h3>${escapeHtml(item.name || item.id)}</h3>
+        <p class="fine">${escapeHtml(item.note || item.recognizedAs)}${item.waczOpaque ? " — opaque WACZ, not opened." : ""}</p>
+        <p class="hash">${escapeHtml(BYTE_IDENTITY_NOTICE)}<br><code>${escapeHtml(item.sha256 || "(hash missing)")}</code> · ${escapeHtml(String(item.bytes))} bytes</p>
+        <label>Role
+          <select data-role="${i}">
+            ${["photo","testimony","minutes","map","recording","wacz","document","other"].map((r) =>
+              `<option value="${r}"${item.role===r?" selected":""}>${r}</option>`).join("")}
+          </select>
+        </label>
+        <label>Caption
+          <input type="text" data-caption="${i}" value="${escapeHtml(item.caption)}">
+        </label>
+        <button type="button" class="secondary" data-remove="${i}">Remove item</button>
+      </article>`;
+    })
+    .join("");
+}
+
+function render() {
+  readPacketFields();
+  renderNotices();
+  renderItems();
+}
+
+function download(name, bytes, type) {
+  const blob = new Blob([bytes], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  $("export-status").textContent = "Saved locally as " + name + ". Object URL revoked. No remote send.";
+}
+
+function textBytes(s) {
+  return new TextEncoder().encode(s);
+}
+
+async function doExport(kind) {
+  readPacketFields();
+  renderNotices();
+  const base = (packet.title || "packet").replace(/[^\w.-]+/g, "-").slice(0, 40);
+  if (kind === "html") download(base + ".html", textBytes(exportHtml(packet)), "text/html");
+  else if (kind === "md") download(base + ".md", textBytes(exportMarkdown(packet)), "text/markdown");
+  else if (kind === "json") download(base + ".json", textBytes(exportJson(packet)), "application/json");
+  else if (kind === "zip") download(base + ".zip", await exportFilesZip(packet), "application/zip");
+  else if (kind === "crate") download(base + "-rocrate.zip", await exportRoCrateZip(packet), "application/zip");
+  else if (kind === "bag") download(base + "-bagit.zip", await exportBagItZip(packet), "application/zip");
+}
+
+function wire() {
+  ["title","community","collector","location","start","end","tags","statement"].forEach((id) => {
+    $(id).addEventListener("input", () => {
+      readPacketFields();
+      renderNotices();
+    });
+  });
+  $("files").addEventListener("change", async (ev) => {
+    const files = [...ev.target.files];
+    for (const file of files) {
+      const buf = await file.arrayBuffer();
+      packet.items.push(await makeFileItem(file, buf));
+    }
+    ev.target.value = "";
+    render();
+  });
+  $("add-text").addEventListener("click", () => {
+    $("text-box").hidden = !$("text-box").hidden;
+  });
+  $("save-text").addEventListener("click", async () => {
+    const name = $("paste-name").value || "testimony.txt";
+    const text = $("paste-text").value;
+    packet.items.push(await makeTextItem(name, text, "testimony"));
+    $("paste-text").value = "";
+    $("text-box").hidden = true;
+    render();
+  });
+  $("import-json").addEventListener("change", async (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    packet = importPacket(text);
+    bindPacketFields();
+    render();
+    ev.target.value = "";
+  });
+  $("clear").addEventListener("click", () => {
+    packet = emptyPacket();
+    bindPacketFields();
+    render();
+  });
+  $("items").addEventListener("change", (ev) => {
+    const role = ev.target.getAttribute("data-role");
+    const cap = ev.target.getAttribute("data-caption");
+    if (role != null) packet.items[Number(role)].role = ev.target.value;
+    if (cap != null) packet.items[Number(cap)].caption = ev.target.value;
+  });
+  $("items").addEventListener("click", (ev) => {
+    const rm = ev.target.getAttribute("data-remove");
+    if (rm != null) {
+      packet.items.splice(Number(rm), 1);
+      render();
+    }
+  });
+  $("ex-html").addEventListener("click", () => doExport("html"));
+  $("ex-md").addEventListener("click", () => doExport("md"));
+  $("ex-json").addEventListener("click", () => doExport("json"));
+  $("ex-zip").addEventListener("click", () => doExport("zip"));
+  $("ex-crate").addEventListener("click", () => doExport("crate"));
+  $("ex-bag").addEventListener("click", () => doExport("bag"));
+  $("ex-copy").addEventListener("click", async () => {
+    readPacketFields();
+    const text = packetToJson(packet);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      $("export-status").textContent = "JSON copied with the clipboard API. Local only.";
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      $("export-status").textContent = "JSON copied via a local textarea.";
+    }
+  });
+  $("ex-print").addEventListener("click", () => window.print());
+  bindPacketFields();
+  render();
+}
+
+wire();
+void WACZ_POLICY;
+
+
+</script>
+</body>
+</html>

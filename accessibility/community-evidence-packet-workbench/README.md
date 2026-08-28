@@ -24,7 +24,7 @@ See `LIMITATIONS.md`.
 
 ## Use
 
-Open `dist/index.html` in a browser (file:// or any static host). Or serve `src/ui/` as ES modules during editing.
+Open `dist/index.html` in a browser (`file://` or any static host). During editing, serve the workbench root so `src/ui/app.js` can import `src/core/*`.
 
 ```bash
 node --test tests/*.test.js
