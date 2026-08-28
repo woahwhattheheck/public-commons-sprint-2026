@@ -312,7 +312,7 @@ function escapeAttr(value) {
 }
 
 function escapeMarkdown(value) {
-  return String(value ?? "").replace(/[\\`*_{}\[\]()#+\-.!|]/g, "\\<script type="module" src="app.js"></script>");
+  return String(value ?? "").replace(/[\\`*_{}\[\]()#+\-.!|]/g, "\\$&");
 }
 
 function escapeMarkdownFence(value) {

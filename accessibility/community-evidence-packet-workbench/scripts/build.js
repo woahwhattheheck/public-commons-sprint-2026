@@ -35,15 +35,15 @@ let js = '"use strict";\n';
 for (const file of order) {
   js += stripModule(readFileSync(join(root, file), "utf8"), file);
 }
+js = js.replace(/<\/script/gi, "<\\/script");
 
 html = html.replace(
   /<link rel="stylesheet" href="app.css">/,
   "<style>\n" + css + "\n</style>",
 );
-html = html.replace(
-  /<script type="module" src="app.js"><\/script>/,
-  "<script>\n" + js + "\n</script>",
-);
+html = html.replace(/<script type="module" src="app.js"><\/script>/, () => {
+  return "<script>\n" + js + "\n</script>";
+});
 
 mkdirSync(join(root, "dist"), { recursive: true });
 writeFileSync(join(root, "dist/index.html"), html);

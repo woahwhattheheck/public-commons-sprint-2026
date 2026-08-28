@@ -43,3 +43,16 @@ test("built dist/index.html has no runtime network patterns when present", () =>
   assertNoRuntimeNetwork(html);
   assert.equal(html.includes("<script src=\"http"), false);
 });
+
+test("built dist does not leak inlined script as page text", () => {
+  let html;
+  try {
+    html = readFileSync(join(root, "dist/index.html"), "utf8");
+  } catch {
+    return;
+  }
+  const closes = html.match(/<\/script>/gi) || [];
+  assert.equal(closes.length, 1);
+  assert.equal(html.includes('src="app.js"></script>'), false);
+  assert.match(html, /\\\$&/);
+});

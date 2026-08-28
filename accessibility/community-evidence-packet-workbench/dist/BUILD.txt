@@ -2,4 +2,4 @@ Reproducible static build of Community Evidence Packet Workbench.
 Command: node scripts/build.js
 Output: dist/index.html (self-contained, no runtime network).
 This file is a build note, not a certification.
-Bytes: 42920
+Bytes: 42878
