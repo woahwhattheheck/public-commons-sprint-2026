@@ -23,17 +23,35 @@ The prompt does not fetch sources, validate professional advice, or make an
 unsourced claim true. See `examples/source-bound-public-brief.example.md` for a
 small offline-friendly invocation.
 
+## Render a prompt offline
+
+`render.py` replaces every template placeholder from a UTF-8 JSON object and
+writes the rendered prompt to standard output. It uses only the Python standard
+library and does not make a network request.
+
+```bash
+python prompts/render.py \
+  prompts/source-bound-public-brief.prompt.md \
+  prompts/examples/source-bound-public-brief.values.json \
+  > rendered-brief-prompt.txt
+```
+
+The command exits with status 2 and emits no rendered output when a required
+value is missing, an unknown value is supplied, or the JSON shape is invalid.
+
 ## Verification
 
 Run with Python 3 and no third-party packages:
 
 ```bash
 python -m unittest prompts/tests/test_source_bound_public_brief.py
+python -m unittest prompts/tests/test_render.py
 ```
 
 The test checks that the template is complete, deterministically substitutable,
 free of unresolved placeholders after the example render, and retains its
-source/uncertainty/expert-review contract.
+source/uncertainty/expert-review contract. The renderer tests cover successful
+offline output and malformed or incomplete value sets.
 
 ## Extending the library
 

@@ -1,0 +1,9 @@
+{
+  "AUDIENCE": "Residents who use the neighborhood cooling room",
+  "GOAL": "Explain the measured opening hours and identify missing accessibility information",
+  "FORMAT": "Plain-text bulletin",
+  "WORD_LIMIT": "180 words",
+  "CONSTRAINTS": "Use short sentences; do not imply services not listed",
+  "EXPERT_REVIEW_TOPICS": "Accessibility and heat-safety advice",
+  "SOURCE_PACKET": "[S1] Flyer, revision 2: Cooling room open Tuesday and Thursday, 14:00–18:00, through 31 August.\n[S2] Facilities note: Step-free entrance status has not been measured.\n[S3] Transit note: Bus route information was not supplied."
+}
