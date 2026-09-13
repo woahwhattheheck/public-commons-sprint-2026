@@ -19,10 +19,10 @@ The validator checks:
 - required package files are present;
 - three thumbnail PNGs are 1280×720;
 - seven SVG visuals declare a 1920×1080 canvas;
-- five per-section narration MP3 files exist and have nonzero duration;
+- clip-level narration MP3 files cover all five script sections and each has nonzero duration;
 - `script.md`, `SOURCES.md`, `assembly.md`, and `metadata.md` are non-empty;
 - the source map includes the pinned RustChain commit.
 
-The repository narration profile is 16 kHz mono MP3 at 16 kbps. The reference build used for editorial timing produced five narration files totaling 312.34 seconds (approximately 5:12). Exact duration can vary slightly across codec builds, so the generated audio remains the timing authority for final assembly.
+The repository narration profile is 8 kHz mono MP3 at 8 kbps, emitted as sentence-level clips grouped by section. The reference build produced 45 clips totaling 318.17 seconds (approximately 5:18). The generated audio remains the timing authority for final assembly.
 
 The package uses no production mutation, no token transfer, and no third-party stock footage. The voiceover is synthetic narration generated locally from the script.
