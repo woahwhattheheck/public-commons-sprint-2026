@@ -76,6 +76,37 @@ class OfflinePromptRendererTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "one object"):
                 RENDER.read_values(path)
 
+    def test_duplicate_values_key_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "values.json"
+            path.write_text('{"GOAL":"safe","GOAL":"different"}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "duplicate values key: GOAL"):
+                RENDER.read_values(path)
+
+    def test_cli_duplicate_values_key_emits_no_partial_prompt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            template = Path(directory) / "template.md"
+            values = Path(directory) / "values.json"
+            template.write_text("{{GOAL}}", encoding="utf-8")
+            values.write_text('{"GOAL":"safe","GOAL":"different"}', encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(RENDER_PATH), str(template), str(values)],
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "error: duplicate values key: GOAL\n")
+
+    def test_utf8_values_still_render(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "values.json"
+            path.write_text(json.dumps({"GOAL": "café — 東京"}, ensure_ascii=False), encoding="utf-8")
+            values = RENDER.read_values(path)
+        self.assertEqual(RENDER.render("{{GOAL}}", values), "café — 東京")
+
 
 if __name__ == "__main__":
     unittest.main()
