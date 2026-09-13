@@ -201,8 +201,14 @@ function safeDigest(value) {
   try { return digestObject(value); } catch { return null; }
 }
 
-function buildReceipt({ decision, reasons, offer, policy, evidence, metrics, budgetAfterAtomic, evidenceValid }) {
-  const live = evidenceValid && evidence?.sourceMode === 'live_graph';
+function normalizeEvidenceTransport(value) {
+  if (value === undefined) return 'untrusted';
+  contractAssert(['live_graph', 'fixture', 'untrusted'].includes(value), 'EVIDENCE_TRANSPORT_INVALID');
+  return value;
+}
+
+function buildReceipt({ decision, reasons, offer, policy, evidence, metrics, budgetAfterAtomic, evidenceValid, evidenceTransport }) {
+  const live = evidenceValid && evidenceTransport === 'live_graph' && evidence?.sourceMode === 'live_graph';
   const receipt = {
     schema: 'graph-purchase-decision/v1',
     decision,
@@ -220,8 +226,10 @@ function buildReceipt({ decision, reasons, offer, policy, evidence, metrics, bud
     evidenceDigest: evidenceValid ? digestObject(evidence) : safeDigest(evidence),
     metrics,
     qualification: {
+      evidenceTransport,
+      declaredSourceMode: evidenceValid ? evidence?.sourceMode ?? null : null,
       liveGraphEvidence: live,
-      fixtureOnly: !live,
+      fixtureOnly: evidenceTransport === 'fixture',
       prizeEligibilityClaimed: false,
     },
     authority: {
@@ -234,9 +242,10 @@ function buildReceipt({ decision, reasons, offer, policy, evidence, metrics, bud
   return { ...receipt, receiptDigest: digestObject(receipt) };
 }
 
-export function evaluatePurchase({ offer: offerInput, policy: policyInput, evidence: evidenceInput, now = new Date().toISOString() }) {
+export function evaluatePurchase({ offer: offerInput, policy: policyInput, evidence: evidenceInput, evidenceTransport: evidenceTransportInput, now = new Date().toISOString() }) {
   const offer = normalizeOffer(offerInput);
   const policy = normalizePolicy(policyInput);
+  const evidenceTransport = normalizeEvidenceTransport(evidenceTransportInput);
   const nowInstant = parseIsoInstant(now, 'NOW_INVALID');
   const nowSeconds = BigInt(Math.floor(nowInstant.millis / 1000));
   const futureSkew = BigInt(policy.maxFutureSkewSeconds);
@@ -248,7 +257,7 @@ export function evaluatePurchase({ offer: offerInput, policy: policyInput, evide
     const code = error instanceof ContractError ? error.code : 'EVIDENCE_INVALID';
     return buildReceipt({
       decision: 'HOLD', reasons: [`EVIDENCE_INVALID:${code}`], offer, policy, evidence: evidenceInput,
-      metrics: null, budgetAfterAtomic: policy.budgetRemainingAtomic, evidenceValid: false,
+      metrics: null, budgetAfterAtomic: policy.budgetRemainingAtomic, evidenceValid: false, evidenceTransport,
     });
   }
 
@@ -265,7 +274,9 @@ export function evaluatePurchase({ offer: offerInput, policy: policyInput, evide
     .map(([kind]) => kind)
     .sort();
   if (matchedEndpointKinds.length === 0) hold.push('SERVICE_ORIGIN_UNBOUND');
-  if (policy.requireLiveData && evidence.sourceMode !== 'live_graph') hold.push('LIVE_EVIDENCE_REQUIRED');
+  const trustedLiveGraph = evidenceTransport === 'live_graph' && evidence.sourceMode === 'live_graph';
+  if (evidenceTransport === 'live_graph' && evidence.sourceMode !== 'live_graph') hold.push('LIVE_SOURCE_MODE_MISMATCH');
+  if (policy.requireLiveData && !trustedLiveGraph) hold.push('LIVE_EVIDENCE_REQUIRED');
   if (evidence.graph.hasIndexingErrors) hold.push('GRAPH_INDEXING_ERRORS');
 
   const capturedSeconds = BigInt(Math.floor(Date.parse(evidence.capturedAt) / 1000));
@@ -304,7 +315,7 @@ export function evaluatePurchase({ offer: offerInput, policy: policyInput, evide
   };
 
   if (hold.length) {
-    return buildReceipt({ decision: 'HOLD', reasons: hold, offer, policy, evidence, metrics, budgetAfterAtomic: policy.budgetRemainingAtomic, evidenceValid: true });
+    return buildReceipt({ decision: 'HOLD', reasons: hold, offer, policy, evidence, metrics, budgetAfterAtomic: policy.budgetRemainingAtomic, evidenceValid: true, evidenceTransport });
   }
 
   const skip = [];
@@ -326,11 +337,11 @@ export function evaluatePurchase({ offer: offerInput, policy: policyInput, evide
   if (completedValidations.length === 0 && policy.minAverageValidationScore > 0) skip.push('AVERAGE_VALIDATION_SCORE_BELOW_MINIMUM');
 
   if (skip.length) {
-    return buildReceipt({ decision: 'SKIP', reasons: skip, offer, policy, evidence, metrics, budgetAfterAtomic: policy.budgetRemainingAtomic, evidenceValid: true });
+    return buildReceipt({ decision: 'SKIP', reasons: skip, offer, policy, evidence, metrics, budgetAfterAtomic: policy.budgetRemainingAtomic, evidenceValid: true, evidenceTransport });
   }
 
   return buildReceipt({
     decision: 'BUY', reasons: ['POLICY_SATISFIED'], offer, policy, evidence, metrics,
-    budgetAfterAtomic: (budget - price).toString(), evidenceValid: true,
+    budgetAfterAtomic: (budget - price).toString(), evidenceValid: true, evidenceTransport,
   });
 }
