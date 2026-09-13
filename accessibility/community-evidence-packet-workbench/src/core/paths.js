@@ -46,7 +46,9 @@ export function assertSafeArchivePath(input) {
 }
 
 export function collisionKey(input) {
-  return normalizePath(input).toLowerCase();
+  // Preserve the archive path spelling itself, but compare names in a stable
+  // canonical Unicode form so NFC/NFD aliases cannot coexist in one archive.
+  return normalizePath(input).normalize("NFC").toLowerCase();
 }
 
 export function findCollisions(paths) {
