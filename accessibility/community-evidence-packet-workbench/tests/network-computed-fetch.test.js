@@ -25,6 +25,22 @@ test("rejects direct optional and computed global fetch calls", () => {
   }
 });
 
+test("rejects computed access through aliases rooted at browser globals", () => {
+  const samples = [
+    'const root = globalThis; root["fe" + "tch"]("https://example.invalid/a");',
+    'const root = window; const alias = root; alias["fetch"]("https://example.invalid/a");',
+    'let root; root = self; const key = "fetch"; root[key]("https://example.invalid/a");',
+  ];
+
+  for (const source of samples) {
+    assert.throws(
+      () => assertNoRuntimeNetwork(source),
+      /runtime-network-pattern/,
+      source,
+    );
+  }
+});
+
 test("rejects fetch primitive references that can be invoked indirectly", () => {
   const samples = [
     'const fn = fetch; fn("https://example.invalid/a");',
@@ -49,8 +65,9 @@ test("rejects fetch primitive references that can be invoked indirectly", () => 
   }
 });
 
-test("allows inert fetch text inside quoted strings, comments, and page copy", () => {
+test("allows local computed properties and inert fetch text", () => {
   const samples = [
+    'const local = {}; const key = "fetch"; local[key];',
     'const name = "fetch";',
     'const note = "fetch(https://example.invalid/a)";',
     'const note = \'globalThis["fetch"]\';',
