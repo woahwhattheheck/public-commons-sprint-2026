@@ -110,6 +110,139 @@ function byteCount(value) {
   return Number.isSafeInteger(count) && count >= 0 ? count : 0;
 }
 
+function assertNoDuplicateJsonKeys(text) {
+  const source = String(text);
+  let index = 0;
+
+  function syntaxError() {
+    throw new SyntaxError("invalid-json");
+  }
+
+  function skipWhitespace() {
+    while (index < source.length && /[\t\n\r ]/.test(source[index])) index += 1;
+  }
+
+  function scanString() {
+    if (source[index] !== '"') syntaxError();
+    const start = index;
+    index += 1;
+    while (index < source.length) {
+      const char = source[index];
+      index += 1;
+      if (char === '"') return JSON.parse(source.slice(start, index));
+      if (char === "\\") {
+        if (index >= source.length) syntaxError();
+        const escape = source[index];
+        index += 1;
+        if (escape === "u") {
+          const hex = source.slice(index, index + 4);
+          if (hex.length !== 4 || !/^[0-9a-fA-F]{4}$/.test(hex)) syntaxError();
+          index += 4;
+        } else if (!'"\\/bfnrt'.includes(escape)) {
+          syntaxError();
+        }
+      } else if (char.charCodeAt(0) <= 0x1f) {
+        syntaxError();
+      }
+    }
+    syntaxError();
+  }
+
+  function scanNumber() {
+    const match = source.slice(index).match(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/);
+    if (!match) syntaxError();
+    index += match[0].length;
+  }
+
+  function scanLiteral(literal) {
+    if (!source.startsWith(literal, index)) syntaxError();
+    index += literal.length;
+  }
+
+  function scanArray() {
+    index += 1;
+    skipWhitespace();
+    if (source[index] === "]") {
+      index += 1;
+      return;
+    }
+    while (true) {
+      scanValue();
+      skipWhitespace();
+      if (source[index] === "]") {
+        index += 1;
+        return;
+      }
+      if (source[index] !== ",") syntaxError();
+      index += 1;
+      skipWhitespace();
+    }
+  }
+
+  function scanObject() {
+    index += 1;
+    skipWhitespace();
+    const keys = new Set();
+    if (source[index] === "}") {
+      index += 1;
+      return;
+    }
+    while (true) {
+      const key = scanString();
+      if (keys.has(key)) {
+        throw new SyntaxError(`duplicate-json-key:${JSON.stringify(key)}`);
+      }
+      keys.add(key);
+      skipWhitespace();
+      if (source[index] !== ":") syntaxError();
+      index += 1;
+      scanValue();
+      skipWhitespace();
+      if (source[index] === "}") {
+        index += 1;
+        return;
+      }
+      if (source[index] !== ",") syntaxError();
+      index += 1;
+      skipWhitespace();
+    }
+  }
+
+  function scanValue() {
+    skipWhitespace();
+    const char = source[index];
+    if (char === "{") {
+      scanObject();
+      return;
+    }
+    if (char === "[") {
+      scanArray();
+      return;
+    }
+    if (char === '"') {
+      scanString();
+      return;
+    }
+    if (char === "t") {
+      scanLiteral("true");
+      return;
+    }
+    if (char === "f") {
+      scanLiteral("false");
+      return;
+    }
+    if (char === "n") {
+      scanLiteral("null");
+      return;
+    }
+    scanNumber();
+  }
+
+  scanValue();
+  skipWhitespace();
+  if (index !== source.length) syntaxError();
+}
+
 function importItem(src) {
   if (!src || typeof src !== "object" || Array.isArray(src)) {
     return {
@@ -159,7 +292,11 @@ function importItem(src) {
 }
 
 export function importPacket(input) {
-  const src = typeof input === "string" ? JSON.parse(input) : input;
+  let src = input;
+  if (typeof input === "string") {
+    assertNoDuplicateJsonKeys(input);
+    src = JSON.parse(input);
+  }
   if (!src || typeof src !== "object" || Array.isArray(src)) {
     throw new Error("packet-must-be-object");
   }
