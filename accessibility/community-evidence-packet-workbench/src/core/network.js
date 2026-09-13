@@ -27,13 +27,21 @@ function isSecurityUrlCodePoint(codePoint) {
 
 function decodeSecurityHtmlEntities(text) {
   return text.replace(
-    /&(?:#x([0-9a-f]{1,6})|#([0-9]{1,7})|([a-z][a-z0-9]+));?/gi,
+    /&(?:#x([0-9a-f]+)|#([0-9]+)|([a-z][a-z0-9]+));?/gi,
     (match, hex, decimal, named) => {
       if (hex || decimal) {
         const codePoint = Number.parseInt(hex || decimal, hex ? 16 : 10);
-        if (!Number.isInteger(codePoint) || !isSecurityUrlCodePoint(codePoint)) {
+        if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
           return match;
         }
+        // The URL parser trims leading/trailing C0 controls and space. Preserve
+        // TAB/LF/CR for the dedicated URL-whitespace pass; represent the other
+        // leading C0 controls as space so a remote prefix cannot hide behind a
+        // numeric character reference such as &#11;.
+        if (codePoint > 0 && codePoint <= 0x20 && ![0x09, 0x0a, 0x0d].includes(codePoint)) {
+          return " ";
+        }
+        if (!isSecurityUrlCodePoint(codePoint)) return match;
         return String.fromCodePoint(codePoint);
       }
       return SECURITY_HTML_ENTITIES.get(named.toLowerCase()) ?? match;
@@ -42,7 +50,8 @@ function decodeSecurityHtmlEntities(text) {
 }
 
 function decodeCssUrlEscapes(text) {
-  return text.replace(
+  const withoutLineContinuations = text.replace(/\\(?:\r\n|[\n\r\f])/g, "");
+  return withoutLineContinuations.replace(
     /\\([0-9a-f]{1,6})(?:\r\n|[\t\n\f\r ])?|\\([^0-9a-f\r\n\f])/gi,
     (match, hex, escaped) => {
       const codePoint = hex ? Number.parseInt(hex, 16) : escaped.codePointAt(0);
@@ -55,9 +64,14 @@ function decodeCssUrlEscapes(text) {
 }
 
 function normalizeUrlSchemeControls(text) {
-  return text.replace(
+  const withoutSchemeControls = text.replace(
     /h[\t\n\r]*t[\t\n\r]*t[\t\n\r]*p(?:[\t\n\r]*s)?[\t\n\r]*:/gi,
     (match) => match.replace(/[\t\n\r]/g, ""),
+  );
+  // The basic URL parser removes ASCII TAB/LF/CR before parsing, including in
+  // a protocol-relative prefix. Mirror just that prefix-relevant transform.
+  return withoutSchemeControls.replace(/\/[\t\n\r]*\//g, (match) =>
+    match.replace(/[\t\n\r]/g, ""),
   );
 }
 
