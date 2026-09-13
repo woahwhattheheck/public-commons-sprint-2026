@@ -1,0 +1,46 @@
+name: Build RustChain Type A assets
+
+on:
+  push:
+    branches:
+      - revenue/rustchain-rip302-type-a-zc913438
+    paths:
+      - 'distribution/rustchain-rip302-type-a/**'
+      - '.github/workflows/rustchain-type-a-assets.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-assets:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: revenue/rustchain-rip302-type-a-zc913438
+      - name: Install asset toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y espeak ffmpeg python3-pil
+      - name: Generate package assets
+        working-directory: distribution/rustchain-rip302-type-a
+        run: |
+          python3 scripts/build_assets.py
+          python3 scripts/generate_voiceover.py
+          python3 scripts/validate_package.py
+      - name: Commit generated assets
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add distribution/rustchain-rip302-type-a/voiceover \
+                  distribution/rustchain-rip302-type-a/visuals \
+                  distribution/rustchain-rip302-type-a/thumbnail.png \
+                  distribution/rustchain-rip302-type-a/thumbnail-alt-a.png \
+                  distribution/rustchain-rip302-type-a/thumbnail-alt-b.png
+          if git diff --cached --quiet; then
+            echo "Generated assets are already current."
+            exit 0
+          fi
+          git commit -m "build: generate RIP-302 production assets [skip ci]"
+          git push origin HEAD:revenue/rustchain-rip302-type-a-zc913438
