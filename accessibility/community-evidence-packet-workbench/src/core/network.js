@@ -87,6 +87,127 @@ function securityScanText(source) {
   );
 }
 
+function parseHtmlAttributes(source) {
+  const attributes = new Map();
+  // HTML reports characters such as '=' in an unquoted value as parse errors,
+  // but still appends them to the value. Retain '=' so meta-refresh recovery is
+  // scanned the same way browsers recover it.
+  const pattern = /([^\s"'<>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'<>`]+)))?/g;
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    const name = match[1].toLowerCase();
+    if (!attributes.has(name)) {
+      attributes.set(name, match[2] ?? match[3] ?? match[4] ?? "");
+    }
+  }
+  return attributes;
+}
+
+function scanHtmlStartTags(source) {
+  const tags = [];
+  let cursor = 0;
+  while (cursor < source.length) {
+    const open = source.indexOf("<", cursor);
+    if (open === -1) break;
+    let index = open + 1;
+    if (!/[A-Za-z]/.test(source[index] ?? "")) {
+      cursor = index;
+      continue;
+    }
+    const nameStart = index;
+    while (/[A-Za-z0-9:-]/.test(source[index] ?? "")) index += 1;
+    const name = source.slice(nameStart, index).toLowerCase();
+    const attributesStart = index;
+    let quote = null;
+    while (index < source.length) {
+      const char = source[index];
+      if (quote !== null) {
+        if (char === quote) quote = null;
+      } else if (char === '"' || char === "'") {
+        quote = char;
+      } else if (char === ">") {
+        tags.push({
+          name,
+          attributes: parseHtmlAttributes(source.slice(attributesStart, index)),
+        });
+        index += 1;
+        break;
+      }
+      index += 1;
+    }
+    cursor = Math.max(index, open + 1);
+  }
+  return tags;
+}
+
+function isRemoteSingleUrl(value) {
+  return /^\s*(?:https?:|\/\/)/i.test(value);
+}
+
+function listContainsRemoteUrl(value, separator) {
+  return value
+    .split(separator)
+    .some((part) => isRemoteSingleUrl(part.trim().split(/\s+/)[0] ?? ""));
+}
+
+function passiveHtmlRisks(source) {
+  const risks = [];
+  const singleUrlAttributes = new Map([
+    ["script", ["src"]],
+    ["link", ["href"]],
+    ["img", ["src"]],
+    ["iframe", ["src"]],
+    ["audio", ["src"]],
+    ["video", ["src", "poster"]],
+    ["source", ["src"]],
+    ["track", ["src"]],
+    ["embed", ["src"]],
+    ["input", ["src", "formaction"]],
+    ["button", ["formaction"]],
+    ["object", ["data"]],
+    ["form", ["action"]],
+    ["base", ["href"]],
+    ["image", ["href", "xlink:href"]],
+    ["use", ["href", "xlink:href"]],
+    ["body", ["background"]],
+    ["table", ["background"]],
+    ["td", ["background"]],
+    ["th", ["background"]],
+  ]);
+
+  for (const { name, attributes } of scanHtmlStartTags(source)) {
+    for (const attribute of singleUrlAttributes.get(name) ?? []) {
+      if (attributes.has(attribute) && isRemoteSingleUrl(attributes.get(attribute))) {
+        risks.push(`passive:${name}:${attribute}`);
+      }
+    }
+    if (
+      (name === "img" || name === "source") &&
+      attributes.has("srcset") &&
+      listContainsRemoteUrl(attributes.get("srcset"), ",")
+    ) {
+      risks.push(`passive:${name}:srcset`);
+    }
+    if (
+      name === "a" &&
+      attributes.has("ping") &&
+      listContainsRemoteUrl(attributes.get("ping"), /\s+/)
+    ) {
+      risks.push("passive:a:ping");
+    }
+    if (
+      name === "meta" &&
+      (attributes.get("http-equiv") ?? "").trim().toLowerCase() === "refresh"
+    ) {
+      const content = attributes.get("content") ?? "";
+      if (/(?:^|[;\s])url\s*=\s*["']?\s*(?:https?:|\/\/)/i.test(content)) {
+        risks.push("passive:meta:refresh");
+      }
+    }
+  }
+  return risks;
+}
+
 const FORBIDDEN = [
   /\bfetch\s*\(/,
   /\bXMLHttpRequest\b/,
@@ -116,11 +237,12 @@ const FORBIDDEN = [
 
 export function networkRisks(source) {
   const text = securityScanText(source);
-  const hits = [];
+  const hits = new Set();
   for (const re of FORBIDDEN) {
-    if (re.test(text)) hits.push(re.toString());
+    if (re.test(text)) hits.add(re.toString());
   }
-  return hits;
+  for (const risk of passiveHtmlRisks(text)) hits.add(risk);
+  return [...hits];
 }
 
 export function assertNoRuntimeNetwork(source) {
