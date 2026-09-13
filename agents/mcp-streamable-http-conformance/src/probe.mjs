@@ -4,7 +4,8 @@ import { scrubSecrets, sha256Canonical } from './canonical.mjs';
 export const DEFAULT_MIN_PROTOCOL_VERSION = '2025-11-25';
 export const LAST_HANDSHAKE_PROTOCOL_VERSION = '2025-11-25';
 export const SUPPORTED_PROTOCOL_VERSIONS = Object.freeze(['2025-11-25']);
-const IMPOSSIBLE_OLD_VERSION = '1900-01-01';
+const REQUESTED_PROTOCOL_VERSION = '2025-11-25';
+const UNSUPPORTED_PROTOCOL_VERSION = '1900-01-01';
 const POST_ACCEPT = 'application/json, text/event-stream';
 
 function versionAtLeast(actual, minimum) {
@@ -71,7 +72,7 @@ export async function probeMcpEndpoint(options) {
   const init = await safeJson(checks, 'initialize-transport', request({
     headers: baseHeaders(authorizationHeader),
     body: rpc(1, 'initialize', {
-      protocolVersion: IMPOSSIBLE_OLD_VERSION,
+      protocolVersion: REQUESTED_PROTOCOL_VERSION,
       capabilities: {},
       clientInfo: { name: 'mcp-streamable-http-conformance', version: '0.1.0' },
     }),
@@ -101,9 +102,9 @@ export async function probeMcpEndpoint(options) {
   checks.push(SUPPORTED_PROTOCOL_VERSIONS.includes(negotiated)
     ? pass('supported-protocol-version', { supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS, negotiatedProtocolVersion: negotiated })
     : fail('supported-protocol-version', { supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS, negotiatedProtocolVersion: negotiated, reason: 'this probe only certifies explicitly listed handshake-era revisions' }));
-  checks.push(negotiated !== IMPOSSIBLE_OLD_VERSION
-    ? pass('version-negotiation', { requestedProtocolVersion: IMPOSSIBLE_OLD_VERSION, negotiatedProtocolVersion: negotiated })
-    : fail('version-negotiation', { requestedProtocolVersion: IMPOSSIBLE_OLD_VERSION, negotiatedProtocolVersion: negotiated }));
+  checks.push(negotiated === REQUESTED_PROTOCOL_VERSION
+    ? pass('version-negotiation', { requestedProtocolVersion: REQUESTED_PROTOCOL_VERSION, negotiatedProtocolVersion: negotiated })
+    : fail('version-negotiation', { requestedProtocolVersion: REQUESTED_PROTOCOL_VERSION, negotiatedProtocolVersion: negotiated, reason: 'server must echo a protocol version it supports; this probe supports only 2025-11-25' }));
   checks.push(sessionId
     ? pass('session-issued', { required: requireSession })
     : (requireSession ? fail('session-issued', { required: true }) : skip('session-issued', { required: false, reason: 'sessions are optional for stateless MCP servers' })));
@@ -184,7 +185,7 @@ export async function probeMcpEndpoint(options) {
       ? pass('missing-session-status', { httpStatus: 400, normativeStrength: 'SHOULD' })
       : warn('missing-session-status', { httpStatus: noSession.response.status, normativeStrength: 'SHOULD', expected: 400 }));
 
-    const wrongVersion = await safeJson(checks, 'wrong-protocol-transport', request({ headers: { ...headers, 'mcp-protocol-version': IMPOSSIBLE_OLD_VERSION }, body: rpc(8, 'ping') }));
+    const wrongVersion = await safeJson(checks, 'wrong-protocol-transport', request({ headers: { ...headers, 'mcp-protocol-version': UNSUPPORTED_PROTOCOL_VERSION }, body: rpc(8, 'ping') }));
     recordTiming('wrong-protocol', wrongVersion);
     if (wrongVersion) checks.push(wrongVersion.response.status >= 400
       ? pass('wrong-protocol-rejected', { httpStatus: wrongVersion.response.status })
