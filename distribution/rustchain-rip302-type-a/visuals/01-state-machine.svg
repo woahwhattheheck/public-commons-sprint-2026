@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<rect width="1920" height="1080" fill="#0b0d12"/>
+<rect x="96" y="90" width="10" height="90" fill="#e7edf7"/>
+<text x="140" y="125" fill="#aeb8c7" font-family="monospace" font-size="34">RIP-302 / JOB LIFECYCLE</text>
+<text x="140" y="205" fill="#ffffff" font-family="sans-serif" font-size="68" font-weight="700">A paid job is an explicit state machine</text>
+<rect x="140" y="320" width="1640" height="150" rx="24" fill="#151a23" stroke="#3a4558" stroke-width="2"/>
+<text x="185" y="376" fill="#ffffff" font-family="monospace" font-size="34" font-weight="700">OPEN → CLAIMED</text>
+<text x="185" y="426" fill="#c4cfdd" font-family="sans-serif" font-size="30">One worker wins the guarded claim transition.</text>
+<rect x="140" y="495" width="1640" height="150" rx="24" fill="#151a23" stroke="#3a4558" stroke-width="2"/>
+<text x="185" y="551" fill="#ffffff" font-family="monospace" font-size="34" font-weight="700">CLAIMED → DELIVERED</text>
+<text x="185" y="601" fill="#c4cfdd" font-family="sans-serif" font-size="30">Only the assigned worker can submit the result.</text>
+<rect x="140" y="670" width="1640" height="150" rx="24" fill="#151a23" stroke="#3a4558" stroke-width="2"/>
+<text x="185" y="726" fill="#ffffff" font-family="monospace" font-size="34" font-weight="700">DELIVERED → COMPLETED</text>
+<text x="185" y="776" fill="#c4cfdd" font-family="sans-serif" font-size="30">Poster acceptance is the payout boundary.</text>
+<text x="140" y="1010" fill="#8995a8" font-family="monospace" font-size="26">Side states: disputed · expired · cancelled</text>
+</svg>

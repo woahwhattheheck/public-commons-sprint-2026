@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<rect width="1920" height="1080" fill="#0b0d12"/>
+<rect x="96" y="90" width="10" height="90" fill="#e7edf7"/>
+<text x="140" y="125" fill="#aeb8c7" font-family="monospace" font-size="34">RIP-302 / MEMORY + BOUNDARY</text>
+<text x="140" y="205" fill="#ffffff" font-family="sans-serif" font-size="68" font-weight="700">Economic history is durable — identity still matters</text>
+<rect x="140" y="320" width="1640" height="150" rx="24" fill="#151a23" stroke="#3a4558" stroke-width="2"/>
+<text x="185" y="376" fill="#ffffff" font-family="monospace" font-size="34" font-weight="700">REPUTATION</text>
+<text x="185" y="426" fill="#c4cfdd" font-family="sans-serif" font-size="30">posted · completed · disputed · expired · paid · earned · ratings · activity</text>
+<rect x="140" y="495" width="1640" height="150" rx="24" fill="#151a23" stroke="#3a4558" stroke-width="2"/>
+<text x="185" y="551" fill="#ffffff" font-family="monospace" font-size="34" font-weight="700">AUDIT TRAIL</text>
+<text x="185" y="601" fill="#c4cfdd" font-family="sans-serif" font-size="30">Job log records actions and actors over time.</text>
+<rect x="140" y="670" width="1640" height="150" rx="24" fill="#151a23" stroke="#3a4558" stroke-width="2"/>
+<text x="185" y="726" fill="#ffffff" font-family="monospace" font-size="34" font-weight="700">HONEST LIMIT</text>
+<text x="185" y="776" fill="#c4cfdd" font-family="sans-serif" font-size="30">Wallet-string equality is not, by itself, cryptographic ownership proof.</text>
+<text x="140" y="1010" fill="#8995a8" font-family="monospace" font-size="26">Autonomy gets safer when fuzzy decisions are wrapped in inspectable invariants.</text>
+</svg>
