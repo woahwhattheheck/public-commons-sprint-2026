@@ -33,6 +33,42 @@ test("RO-Crate context IRI is a string constant, not a fetch", () => {
   assert.equal(networkRisks('const x = "' + RO_CRATE_CONTEXT + '"').length, 0);
 });
 
+test("passive browser fetch surfaces are rejected", () => {
+  const samples = [
+    '<img src="https://example.invalid/pixel.png">',
+    '<iframe src=//example.invalid/frame></iframe>',
+    '<audio src="https://example.invalid/audio.mp3"></audio>',
+    '<video poster="//example.invalid/poster.jpg"></video>',
+    '<source srcset="local.png 1x, https://example.invalid/remote.png 2x">',
+    '<object data="https://example.invalid/object.bin"></object>',
+    '<form action="//example.invalid/submit"></form>',
+    '<base href="https://example.invalid/assets/">',
+    '<meta content="0; url=https://example.invalid/next" http-equiv="refresh">',
+    '<style>@import "https://example.invalid/theme.css";</style>',
+    '<div style="background:url(//example.invalid/bg.png)"></div>',
+    '<script src="//example.invalid/app.js"></script>',
+    '<link rel="stylesheet" href="//example.invalid/app.css">',
+  ];
+  for (const source of samples) {
+    assert.throws(
+      () => assertNoRuntimeNetwork(source),
+      /runtime-network-pattern/,
+      source,
+    );
+  }
+});
+
+test("inert URL text remains allowed", () => {
+  const samples = [
+    'const evidenceUrl = "https://example.invalid/source";',
+    '{"@context":"https://schema.org"}',
+    'Source citation: https://example.invalid/report',
+  ];
+  for (const source of samples) {
+    assert.deepEqual(networkRisks(source), [], source);
+  }
+});
+
 test("built dist/index.html has no runtime network patterns when present", () => {
   let html;
   try {
