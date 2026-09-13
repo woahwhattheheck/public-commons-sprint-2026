@@ -11,6 +11,7 @@ import {
   exportBagItZip,
   roCrateMetadata,
   bagitText,
+  bagInfo,
   bagManifest,
   RO_CRATE_CONTEXT,
 } from "../src/core/export.js";
@@ -76,6 +77,32 @@ test("RO-Crate 1.2 context is a recorded IRI string", () => {
 test("BagIt text uses RFC 8493 version line", () => {
   assert.match(bagitText(), /BagIt-Version: 1\.0/);
   assert.match(bagitText(), /Tag-File-Character-Encoding: UTF-8/);
+});
+
+test("BagIt bag-info rejects CR/LF tag injection from imported metadata", () => {
+  for (const id of ["packet\nPayload-Oxum: 1.1", "packet\rPayload-Oxum: 1.1"]) {
+    const p = importPacket({ id });
+    assert.throws(
+      () => bagInfo(p),
+      (error) => error?.code === "BAGIT_TAG_VALUE" && error?.field === "External-Identifier",
+    );
+  }
+
+  const p = importPacket({ id: "packet-safe" });
+  p.updated = "2026\n09-12";
+  assert.throws(
+    () => bagInfo(p),
+    (error) => error?.code === "BAGIT_TAG_VALUE" && error?.field === "Bagging-Date",
+  );
+});
+
+test("BagIt bag-info preserves ordinary packet identifier and date", () => {
+  const p = importPacket({ id: "packet-safe" });
+  p.updated = "2026-09-12T20:00:00Z";
+  const info = bagInfo(p);
+  assert.match(info, /^Bagging-Date: 2026-09-12$/m);
+  assert.match(info, /^External-Identifier: packet-safe$/m);
+  assert.equal(info.includes("Payload-Oxum:"), false);
 });
 
 test("BagIt manifest paths remain relative to bag root under data", async () => {
