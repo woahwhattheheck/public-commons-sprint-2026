@@ -32,7 +32,7 @@ export function escapeMarkdownFence(value) {
  */
 export function csvCell(value) {
   let s = String(value ?? "");
-  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  if (/^[=+\-@\t\r\n]/.test(s)) s = "'" + s;
   if (/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
