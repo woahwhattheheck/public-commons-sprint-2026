@@ -4,6 +4,8 @@
  */
 
 const WIN_ABS = /^[a-zA-Z]:[\\/]/;
+const WIN_RESERVED_CHARS = /[<>:"|?*\u0001-\u001F]/;
+const WIN_DEVICE = /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\..*)?$/i;
 
 export function normalizePath(input) {
   let s = String(input ?? "").replace(/\\/g, "/");
@@ -24,6 +26,9 @@ export function zipSlipReason(input) {
   const parts = s.split("/");
   for (const part of parts) {
     if (part === ".." || part === ".") return part === ".." ? "parent-segment" : "dot-segment";
+    if (/[ .]$/.test(part)) return "windows-trailing-dot-space";
+    if (WIN_RESERVED_CHARS.test(part)) return "windows-reserved-character";
+    if (WIN_DEVICE.test(part)) return "windows-device-name";
   }
   if (s.includes("\\")) return "backslash";
   return null;

@@ -53,3 +53,24 @@ test("dedupes canonically equivalent Unicode paths without rewriting names", () 
   const used = new Set([collisionKey("data/é.txt")]);
   assert.equal(uniqueArchivePath("data/e\u0301.txt", used), "data/e\u0301-2.txt");
 });
+
+test("rejects Windows trailing dot and space aliases", () => {
+  assert.equal(zipSlipReason("evidence/report.txt."), "windows-trailing-dot-space");
+  assert.equal(zipSlipReason("evidence/report.txt "), "windows-trailing-dot-space");
+  assert.equal(zipSlipReason("evidence /report.txt"), "windows-trailing-dot-space");
+});
+
+test("rejects Windows reserved device names and characters", () => {
+  for (const path of ["NUL", "evidence/nul.txt", "COM1.json", "dir/LPT³.log"]) {
+    assert.equal(zipSlipReason(path), "windows-device-name", path);
+  }
+  for (const path of ["evidence/a?.txt", "evidence/a:b.txt", "evidence/a*.txt", "evidence/a\u0001b.txt"]) {
+    assert.equal(zipSlipReason(path), "windows-reserved-character", path);
+  }
+});
+
+test("preserves ordinary dotfiles and similar non-device names", () => {
+  assert.equal(zipSlipReason("evidence/.env"), null);
+  assert.equal(zipSlipReason("evidence/COM10.txt"), null);
+  assert.equal(zipSlipReason("evidence/com1x.txt"), null);
+});
