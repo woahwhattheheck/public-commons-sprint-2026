@@ -5,6 +5,7 @@
 import { assertSafeArchivePath, collisionKey, findCollisions } from "./paths.js";
 
 const ZIP_U16_MAX = 0xffff;
+const ZIP_U32_MAX = 0xffffffff;
 
 const CRC_TABLE = new Uint32Array(256);
 for (let i = 0; i < 256; i++) {
@@ -52,24 +53,28 @@ function encodeName(name) {
   return new TextEncoder().encode(name);
 }
 
+function classicLimit(limit, maximum, actual) {
+  const err = new Error("zip-classic-limit:" + limit);
+  err.code = "ZIP_CLASSIC_LIMIT";
+  err.limit = limit;
+  err.maximum = maximum;
+  err.actual = actual;
+  throw err;
+}
+
 function assertClassicEntryCount(entries) {
   if (entries.length <= ZIP_U16_MAX) return;
-  const err = new Error("zip-classic-limit:entry-count");
-  err.code = "ZIP_CLASSIC_LIMIT";
-  err.limit = "entry-count";
-  err.maximum = ZIP_U16_MAX;
-  err.actual = entries.length;
-  throw err;
+  classicLimit("entry-count", ZIP_U16_MAX, entries.length);
 }
 
 function assertClassicNameLength(name) {
   if (name.length <= ZIP_U16_MAX) return;
-  const err = new Error("zip-classic-limit:filename-bytes");
-  err.code = "ZIP_CLASSIC_LIMIT";
-  err.limit = "filename-bytes";
-  err.maximum = ZIP_U16_MAX;
-  err.actual = name.length;
-  throw err;
+  classicLimit("filename-bytes", ZIP_U16_MAX, name.length);
+}
+
+function assertClassicU32(limit, actual) {
+  if (actual <= ZIP_U32_MAX) return;
+  classicLimit(limit, ZIP_U32_MAX, actual);
 }
 
 /**
@@ -96,15 +101,32 @@ export function buildStoreZip(entries) {
     throw new Error("zip-collision");
   }
 
+  // Classic ZIP stores file sizes, local-header offsets, the central-directory
+  // offset, and the central-directory size in unsigned 32-bit fields. Check
+  // every one before constructing record buffers so u32() never truncates an
+  // out-of-range value. This writer deliberately does not emit ZIP64 records.
+  const framed = [];
+  let localBytes = 0;
+  let centralBytes = 0;
+  for (const { path, bytes } of prepared) {
+    const name = encodeName(path);
+    assertClassicNameLength(name);
+    const size = bytes.length;
+    assertClassicU32("entry-size", size);
+    assertClassicU32("local-header-offset", localBytes);
+    const crc = crc32(bytes);
+    framed.push({ path, bytes, name, crc, size });
+    localBytes += 30 + name.length + size;
+    centralBytes += 46 + name.length;
+  }
+  assertClassicU32("central-directory-offset", localBytes);
+  assertClassicU32("central-directory-size", centralBytes);
+
   const locals = [];
   const centrals = [];
   let offset = 0;
 
-  for (const { path, bytes } of prepared) {
-    const name = encodeName(path);
-    assertClassicNameLength(name);
-    const crc = crc32(bytes);
-    const size = bytes.length;
+  for (const { bytes, name, crc, size } of framed) {
     const local = concat([
       u32(0x04034b50),
       u16(20),
