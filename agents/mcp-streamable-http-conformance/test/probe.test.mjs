@@ -10,12 +10,13 @@ async function withFixture(options, fn) {
 }
 
 test('green fixture passes protocol/security matrix without invoking tools', async () => {
-  await withFixture({}, async ({ endpoint, methods, rpcMethods }) => {
+  await withFixture({}, async ({ endpoint, methods, rpcMethods, initializeVersions }) => {
     const report = await probeMcpEndpoint({ endpoint, requireSession: true, timeoutMs: 1000 });
     assert.equal(report.summary.ok, true, JSON.stringify(report.checks.filter((x) => x.status === 'FAIL')));
     assert.equal(report.summary.fail, 0);
     assert.match(report.evidenceSha256, /^[0-9a-f]{64}$/);
     assert.equal(report.checks.find((x) => x.id === 'version-negotiation').status, 'PASS');
+    assert.equal(initializeVersions[0], '2025-11-25', 'probe must initialize with a protocol version it actually supports');
     assert.equal(report.checks.find((x) => x.id === 'jsonrpc-method-not-found').status, 'PASS');
     assert.ok(methods.includes('DELETE'));
     assert.equal(rpcMethods.includes('notifications/initialized'), true);
