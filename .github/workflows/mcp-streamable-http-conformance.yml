@@ -1,0 +1,36 @@
+name: MCP Streamable HTTP conformance kit
+
+on:
+  pull_request:
+    paths:
+      - 'agents/mcp-streamable-http-conformance/**'
+      - '.github/workflows/mcp-streamable-http-conformance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'agents/mcp-streamable-http-conformance/**'
+      - '.github/workflows/mcp-streamable-http-conformance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  node-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        node: ['20', '22', '24']
+    defaults:
+      run:
+        working-directory: agents/mcp-streamable-http-conformance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: agents/mcp-streamable-http-conformance/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm test
