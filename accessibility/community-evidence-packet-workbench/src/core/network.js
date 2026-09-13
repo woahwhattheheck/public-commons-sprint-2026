@@ -228,11 +228,11 @@ function passiveHtmlRisks(source, depth) {
       risks.push(`passive:${name}:srcset`);
     }
     if (
-      name === "a" &&
+      (name === "a" || name === "area") &&
       attributes.has("ping") &&
       listContainsRemoteUrl(attributes.get("ping"), /\s+/)
     ) {
-      risks.push("passive:a:ping");
+      risks.push(`passive:${name}:ping`);
     }
     if (
       name === "meta" &&
