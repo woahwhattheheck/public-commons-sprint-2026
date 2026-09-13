@@ -38,6 +38,27 @@ test("known CRC32 of 123456789", () => {
   assert.equal(crc32(utf8Bytes("123456789")), 0xcbf43926);
 });
 
+test("malformed ZIP entry byte payloads fail closed instead of coercing", () => {
+  for (const bytes of ["abc", { 0: 65, length: 1 }, [65, 66], null, undefined]) {
+    assert.throws(
+      () => buildStoreZip([{ path: "bad.bin", bytes }]),
+      (err) => {
+        assert.equal(err.code, "ZIP_ENTRY_BYTES");
+        assert.equal(err.path, "bad.bin");
+        return true;
+      },
+    );
+  }
+});
+
+test("ArrayBuffer entry bytes retain their exact payload", () => {
+  const bytes = new Uint8Array([0, 127, 255]).buffer;
+  const zip = buildStoreZip([{ path: "bytes.bin", bytes }]);
+  const nameLength = zip[26] | (zip[27] << 8);
+  const payloadStart = 30 + nameLength;
+  assert.deepEqual(Array.from(zip.slice(payloadStart, payloadStart + 3)), [0, 127, 255]);
+});
+
 test("classic ZIP filename byte length is bounded before framing", () => {
   const boundary = "a".repeat(65531) + ".txt";
   const boundaryZip = buildStoreZip([{ path: boundary, bytes: new Uint8Array() }]);

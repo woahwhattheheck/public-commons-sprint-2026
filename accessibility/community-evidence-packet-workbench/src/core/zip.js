@@ -77,16 +77,24 @@ function assertClassicU32(limit, actual) {
   classicLimit(limit, ZIP_U32_MAX, actual);
 }
 
+function entryBytes(value, path) {
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  const err = new TypeError("zip-entry-bytes-must-be-byte-buffer");
+  err.code = "ZIP_ENTRY_BYTES";
+  err.path = path;
+  throw err;
+}
+
 /**
- * @param {{path:string, bytes:Uint8Array}[]} entries
+ * @param {{path:string, bytes:Uint8Array|ArrayBuffer}[]} entries
  */
 export function buildStoreZip(entries) {
   assertClassicEntryCount(entries);
   const prepared = [];
   for (const entry of entries) {
     const path = assertSafeArchivePath(entry.path);
-    const bytes =
-      entry.bytes instanceof Uint8Array ? entry.bytes : new Uint8Array(entry.bytes || []);
+    const bytes = entryBytes(entry.bytes, path);
     prepared.push({ path, bytes });
   }
   const collisions = findCollisions(prepared.map((e) => e.path));
