@@ -63,3 +63,25 @@ test("classic ZIP filename byte length is bounded before framing", () => {
     (err) => err.code === "ZIP_CLASSIC_LIMIT" && err.actual === 65536,
   );
 });
+
+test("classic ZIP entry count is bounded before per-entry processing", () => {
+  const tooMany = new Array(65536);
+  assert.throws(
+    () => buildStoreZip(tooMany),
+    (err) => {
+      assert.equal(err.code, "ZIP_CLASSIC_LIMIT");
+      assert.equal(err.limit, "entry-count");
+      assert.equal(err.maximum, 65535);
+      assert.equal(err.actual, 65536);
+      return true;
+    },
+  );
+
+  const zip = buildStoreZip([
+    { path: "one.txt", bytes: new Uint8Array() },
+    { path: "two.txt", bytes: new Uint8Array() },
+  ]);
+  const eocd = zip.length - 22;
+  assert.equal(zip[eocd + 8] | (zip[eocd + 9] << 8), 2);
+  assert.equal(zip[eocd + 10] | (zip[eocd + 11] << 8), 2);
+});
