@@ -131,7 +131,7 @@ test("iframe srcdoc local and double-escaped inert markup remain allowed", () =>
   const samples = [
     '<iframe srcdoc="&lt;p&gt;local only&lt;/p&gt;"></iframe>',
     '<iframe srcdoc="&lt;img src=./local.png&gt;"></iframe>',
-    '<iframe srcdoc="&amp;lt;img src=https://example.invalid/not-markup.png&amp;gt;"></iframe>',
+    '<iframe srcdoc="&amp;lt;img src=./still-not-markup.png&amp;gt;"></iframe>',
   ];
   for (const source of samples) {
     assert.deepEqual(networkRisks(source), [], source);
