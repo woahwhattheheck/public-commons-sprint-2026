@@ -5,7 +5,9 @@ import {
   zipSlipReason,
   isSafeArchivePath,
   assertSafeArchivePath,
+  collisionKey,
   findCollisions,
+  uniqueArchivePath,
 } from "../src/core/paths.js";
 
 test("normalizes backslashes and dots", () => {
@@ -39,4 +41,15 @@ test("detects case-insensitive collisions", () => {
   const hits = findCollisions(["Data/A.txt", "data/a.txt"]);
   assert.equal(hits.length, 1);
   assert.equal(hits[0].key, "data/a.txt");
+});
+
+test("detects canonically equivalent Unicode collisions", () => {
+  const hits = findCollisions(["data/é.txt", "data/e\u0301.txt"]);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].key, "data/é.txt");
+});
+
+test("dedupes canonically equivalent Unicode paths without rewriting names", () => {
+  const used = new Set([collisionKey("data/é.txt")]);
+  assert.equal(uniqueArchivePath("data/e\u0301.txt", used), "data/e\u0301-2.txt");
 });
