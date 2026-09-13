@@ -425,12 +425,16 @@ const FORBIDDEN = [
 ];
 
 function networkRisksAtDepth(source, depth) {
-  const text = securityScanText(source);
+  const sourceText = String(source ?? "");
+  const text = securityScanText(sourceText);
   const hits = new Set();
   for (const re of FORBIDDEN) {
     if (re.test(text)) hits.add(re.toString());
   }
-  if (hasFetchPrimitiveReference(text)) {
+  // Keep JavaScript syntax in its original escape domain. CSS/URL normalization
+  // intentionally interprets backslash escapes differently and can consume a
+  // JavaScript identifier escape such as `f\u0065tch` before this detector sees it.
+  if (hasFetchPrimitiveReference(sourceText)) {
     hits.add("javascript:fetch-reference");
   }
   for (const risk of passiveHtmlRisks(text, depth)) hits.add(risk);
