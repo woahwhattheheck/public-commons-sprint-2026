@@ -15,7 +15,7 @@ The live adapter queries the official Agent0 / ERC-8004 standardized Subgraph sc
 - validation lifecycle and scores;
 - `_meta` deployment, indexing-error flag, block number/hash/timestamp.
 
-The policy engine will not silently fall back to mocks. With `requireLiveData=true` (the integration default), fixture evidence produces `HOLD / LIVE_EVIDENCE_REQUIRED`. Tests can deliberately set `requireLiveData=false`, but every receipt still records `fixtureOnly=true` and `prizeEligibilityClaimed=false`.
+The policy engine will not silently fall back to mocks. Live authority is **out-of-band from evidence JSON**: callers pass a trusted `evidenceTransport` (`live_graph`, `fixture`, or the fail-closed default `untrusted`) separately from the evidence payload. A fixture file cannot promote itself by writing `sourceMode: "live_graph"`; the CLI pins fixture transport to `fixture` and live fetch transport to `live_graph`. With `requireLiveData=true` (the integration default), anything except trusted live transport plus matching live declaration produces `HOLD / LIVE_EVIDENCE_REQUIRED`. Receipts bind both trusted transport and declared source mode and never infer live qualification from file-controlled metadata alone.
 
 ## Decision contract
 
@@ -33,7 +33,7 @@ Input policy (`graph-purchase-policy/v1`) binds:
 - minimum feedback count / mean score / paid-feedback count;
 - minimum completed validation count / mean score.
 
-Evidence problems are **HOLD**, not negative seller judgments: seller mismatch, paid-service origin not bound to an advertised Agent0 `web`/`mcp`/`a2a` endpoint, fixture when live is required, stale/future capture, stale/future Graph block, indexing errors, future feedback/validation rows, malformed schema, and conflicting duplicate evidence IDs.
+Evidence problems are **HOLD**, not negative seller judgments: seller mismatch, paid-service origin not bound to an advertised Agent0 `web`/`mcp`/`a2a` endpoint, fixture/untrusted transport when live is required, trusted-transport/declaration mismatch, stale/future capture, stale/future Graph block, indexing errors, future feedback/validation rows, malformed schema, and conflicting duplicate evidence IDs. Authority-driving ISO instants must include an explicit RFC3339 timezone (`Z` or numeric offset); timezone-less timestamps are rejected before `Date.parse`, so the same bytes cannot change meaning with the host `TZ`.
 
 Valid-but-unattractive offers are **SKIP**: wrong currency, over max/budget, inactive seller, no x402 capability, trust mismatch, or reputation/validation thresholds not met.
 
@@ -95,7 +95,7 @@ npm test
 node --test
 ```
 
-The hostile suite covers exact integers beyond `Number.MAX_SAFE_INTEGER`, stale/future evidence, Graph indexing errors, cross-seller evidence, fixture-vs-live qualification, paid-service origin binding, malformed registered endpoints, conflicting duplicate observations, order-independent receipts, budget/price enforcement, x402/trust/reputation/validation thresholds, API-key redaction, endpoint SSRF-style refusal, and GraphQL failure handling.
+The hostile suite covers exact integers beyond `Number.MAX_SAFE_INTEGER`, stale/future evidence, Graph indexing errors, cross-seller evidence, out-of-band fixture-vs-live transport authority (including a forged `sourceMode` through the real CLI), explicit-timezone enforcement and cross-host-`TZ` digest determinism, paid-service origin binding, malformed registered endpoints, conflicting duplicate observations, order-independent receipts, budget/price enforcement, x402/trust/reputation/validation thresholds, API-key redaction, endpoint SSRF-style refusal, malformed provider fields, and GraphQL failure handling.
 
 ## Remaining qualification work
 
