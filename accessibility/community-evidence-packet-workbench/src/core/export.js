@@ -50,6 +50,14 @@ async function payloadEntries(packet) {
   return entries;
 }
 
+function snapshotByteIdentityNotice(packet) {
+  const hasImportedMetadata = packet.items.some(
+    (item) => !(item._bytes instanceof Uint8Array),
+  );
+  if (!hasImportedMetadata) return BYTE_IDENTITY_NOTICE;
+  return "SHA-256 values shown for imported items are recorded metadata unless local payload bytes were loaded in this session. Package exports re-hash available payload bytes and refuse unavailable nonzero payloads.";
+}
+
 export function exportJson(packet) {
   return packetToJson(packet);
 }
@@ -80,7 +88,7 @@ export function exportMarkdown(packet) {
   lines.push("");
   lines.push("## Byte identity");
   lines.push("");
-  lines.push(BYTE_IDENTITY_NOTICE);
+  lines.push(snapshotByteIdentityNotice(packet));
   lines.push("");
   lines.push(WACZ_POLICY);
   lines.push("");
@@ -158,7 +166,7 @@ export function exportHtml(packet) {
   <h2>Statement</h2>
   <p>${escapeHtml(packet.statement || "(missing)")}</p>
   <h2>Byte identity</h2>
-  <p>${escapeHtml(BYTE_IDENTITY_NOTICE)}</p>
+  <p>${escapeHtml(snapshotByteIdentityNotice(packet))}</p>
   <p>${escapeHtml(WACZ_POLICY)}</p>
   <h2>Items</h2>
   ${
