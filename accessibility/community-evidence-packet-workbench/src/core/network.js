@@ -97,6 +97,75 @@ function securityScanText(source) {
   );
 }
 
+function javascriptCodeText(source) {
+  const text = String(source ?? "");
+  let output = "";
+  let quote = null;
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1] ?? "";
+
+    if (lineComment) {
+      if (char === "\n" || char === "\r") {
+        lineComment = false;
+        output += char;
+      } else {
+        output += " ";
+      }
+      continue;
+    }
+
+    if (blockComment) {
+      if (char === "*" && next === "/") {
+        output += "  ";
+        index += 1;
+        blockComment = false;
+      } else {
+        output += char === "\n" || char === "\r" ? char : " ";
+      }
+      continue;
+    }
+
+    if (quote !== null) {
+      output += char === "\n" || char === "\r" ? char : " ";
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (char === "/" && next === "/") {
+      output += "  ";
+      index += 1;
+      lineComment = true;
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      output += "  ";
+      index += 1;
+      blockComment = true;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      output += " ";
+      continue;
+    }
+
+    output += char;
+  }
+
+  return output;
+}
+
 function decodeSrcdocHtml(value) {
   // srcdoc is different from ordinary attribute text: the browser decodes the
   // outer attribute once, then parses the resulting value as a new HTML
@@ -166,6 +235,44 @@ function scanHtmlStartTags(source) {
     cursor = Math.max(index, open + 1);
   }
   return tags;
+}
+
+function executableJavaScriptFragments(source) {
+  const text = String(source ?? "");
+
+  // Source snippets and standalone JavaScript do not need HTML extraction.
+  if (!/^\s*</.test(text)) return [text];
+
+  const fragments = [];
+  const scriptPattern = /<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi;
+  let match;
+  while ((match = scriptPattern.exec(text)) !== null) {
+    fragments.push(match[1]);
+  }
+
+  for (const { attributes } of scanHtmlStartTags(text)) {
+    for (const [name, value] of attributes) {
+      if (/^on[a-z]/.test(name)) {
+        fragments.push(value);
+      } else if (/^\s*javascript:/i.test(value)) {
+        fragments.push(value.replace(/^\s*javascript:/i, ""));
+      }
+    }
+  }
+
+  return fragments;
+}
+
+function hasFetchPrimitiveReference(source) {
+  for (const fragment of executableJavaScriptFragments(source)) {
+    if (/\b(?:globalThis|window|self)\s*\[\s*["']fetch["']\s*\]/.test(fragment)) {
+      return true;
+    }
+    if (/\bfetch\b/.test(javascriptCodeText(fragment))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isRemoteSingleUrl(value) {
@@ -248,7 +355,6 @@ function passiveHtmlRisks(source, depth) {
 }
 
 const FORBIDDEN = [
-  /\bfetch\s*\(/,
   /\bXMLHttpRequest\b/,
   /\bnavigator\.sendBeacon\s*\(/,
   /\bWebSocket\s*\(/,
@@ -279,6 +385,9 @@ function networkRisksAtDepth(source, depth) {
   const hits = new Set();
   for (const re of FORBIDDEN) {
     if (re.test(text)) hits.add(re.toString());
+  }
+  if (hasFetchPrimitiveReference(text)) {
+    hits.add("javascript:fetch-reference");
   }
   for (const risk of passiveHtmlRisks(text, depth)) hits.add(risk);
   return [...hits];
