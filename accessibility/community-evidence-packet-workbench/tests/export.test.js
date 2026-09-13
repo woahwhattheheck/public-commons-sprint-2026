@@ -16,6 +16,9 @@ import {
 } from "../src/core/export.js";
 import { zipHasMagic } from "../src/core/zip.js";
 
+const EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+const HELLO_SHA256 = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+
 function decoder(bytes) {
   return new TextDecoder().decode(bytes);
 }
@@ -70,7 +73,19 @@ test("BagIt manifest paths remain relative to bag root under data", async () => 
       item: { sha256: "a".repeat(64) },
     },
   ]);
-  assert.equal(manifest, `${"a".repeat(64)}  data/notes.txt\n`);
+  assert.equal(manifest, `${HELLO_SHA256}  data/notes.txt\n`);
+});
+
+test("BagIt manifest hashes actual bytes instead of imported checksum metadata", async () => {
+  const manifest = await bagManifest([
+    {
+      path: "data/notes.txt",
+      bytes: new TextEncoder().encode("hello"),
+      item: { sha256: "0".repeat(64) },
+    },
+  ]);
+  assert.equal(manifest, `${HELLO_SHA256}  data/notes.txt\n`);
+  assert.equal(manifest.includes("0".repeat(64)), false);
 });
 
 test("BagIt manifest percent-encodes RFC 8493 special path characters", async () => {
@@ -83,7 +98,7 @@ test("BagIt manifest percent-encodes RFC 8493 special path characters", async ()
   ]);
   assert.equal(
     manifest,
-    `${"b".repeat(64)}  data/percent%25/line%0D%0Abreak.txt\n`,
+    `${EMPTY_SHA256}  data/percent%25/line%0D%0Abreak.txt\n`,
   );
 });
 
@@ -99,6 +114,55 @@ test("BagIt manifest rejects payload entries outside data", async () => {
       ]),
     (error) => error?.code === "BAGIT_PAYLOAD_PATH",
   );
+});
+
+test("package exports reject imported binary metadata without local payload bytes", async () => {
+  const p = importPacket({
+    title: "Imported packet",
+    items: [
+      {
+        id: "photo-1",
+        name: "photo.jpg",
+        path: "photo.jpg",
+        mediaType: "image/jpeg",
+        bytes: 3,
+        sha256: "a".repeat(64),
+      },
+    ],
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(p.items[0], "textContent"), false);
+  for (const exporter of [exportFilesZip, exportRoCrateZip, exportBagItZip]) {
+    await assert.rejects(
+      () => exporter(p),
+      (error) => error?.code === "PAYLOAD_BYTES_UNAVAILABLE" && error?.itemId === "photo-1",
+    );
+  }
+});
+
+test("package exports re-hash reconstructible imported text and repair its metadata", async () => {
+  const p = importPacket({
+    title: "Imported text",
+    items: [
+      {
+        id: "text-1",
+        name: "notes.txt",
+        path: "notes.txt",
+        mediaType: "text/plain",
+        bytes: 999,
+        sha256: "0".repeat(64),
+        textContent: "hello",
+      },
+    ],
+  });
+
+  const bag = decoder(await exportBagItZip(p));
+  assert.match(bag, new RegExp(`${HELLO_SHA256}  data/notes\\.txt`));
+  assert.equal(bag.includes(`${"0".repeat(64)}  data/notes.txt`), false);
+
+  const filesZip = decoder(await exportFilesZip(p));
+  assert.match(filesZip, new RegExp(HELLO_SHA256));
+  assert.match(filesZip, /"bytes": 5/);
+  assert.equal(filesZip.includes(`"sha256": "${"0".repeat(64)}"`), false);
 });
 
 test("empty zip / crate / bagit still build PK containers", async () => {
