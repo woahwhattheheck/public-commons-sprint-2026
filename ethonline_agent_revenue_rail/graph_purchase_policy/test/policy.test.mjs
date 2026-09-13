@@ -13,6 +13,7 @@ function offer(overrides = {}) {
     offerId: 'report-001',
     sellerAgentId: '84532:77',
     serviceKey: 'work-intelligence/v1',
+    serviceUrl: 'https://seller.example/x402/report',
     requestDigest: H,
     currency: 'HBAR_TINYBAR',
     priceAtomic: '900719925474099312345',
@@ -62,7 +63,7 @@ function evidence(overrides = {}) {
       owner: '0xowner',
       updatedAt: String(NOW_S - 40),
       lastActivity: String(NOW_S - 20),
-      registration: { active: true, x402Support: true, supportedTrusts: ['reputation', 'tee-attestation'] },
+      registration: { active: true, x402Support: true, supportedTrusts: ['reputation', 'tee-attestation'], webEndpoint: 'https://seller.example/', mcpEndpoint: null, a2aEndpoint: null },
       feedback: [
         { id: 'f2', score: 90, clientAddress: '0xc2', createdAt: String(NOW_S - 200), proofOfPaymentTxHash: null },
         { id: 'f1', score: 80, clientAddress: '0xc1', createdAt: String(NOW_S - 100), proofOfPaymentTxHash: '0xpaid' },
@@ -110,6 +111,32 @@ test('seller identity mismatch is HOLD, not SKIP', () => {
   const result = decide(offer({ sellerAgentId: '84532:78' }));
   assert.equal(result.decision, 'HOLD');
   assert(result.reasons.includes('SELLER_EVIDENCE_MISMATCH'));
+});
+
+test('trusted agent evidence cannot authorize an unrelated paid service origin', () => {
+  const result = decide(offer({ serviceUrl: 'https://attacker.example/x402/report' }));
+  assert.equal(result.decision, 'HOLD');
+  assert(result.reasons.includes('SERVICE_ORIGIN_UNBOUND'));
+  assert.deepEqual(result.metrics.matchedEndpointKinds, []);
+});
+
+test('registered service origin binds a different HTTPS route on that origin', () => {
+  const result = decide(offer({ serviceUrl: 'https://seller.example/v2/paid-report' }));
+  assert.equal(result.decision, 'BUY');
+  assert.equal(result.metrics.serviceOrigin, 'https://seller.example');
+  assert.deepEqual(result.metrics.matchedEndpointKinds, ['web']);
+});
+
+test('offer service URL must be canonical HTTPS without credentials or fragment', () => {
+  assert.throws(() => decide(offer({ serviceUrl: 'http://seller.example/report' })), (error) => error.code === 'OFFER_SERVICE_URL');
+  assert.throws(() => decide(offer({ serviceUrl: 'https://user:pass@seller.example/report' })), (error) => error.code === 'OFFER_SERVICE_URL');
+  assert.throws(() => decide(offer({ serviceUrl: 'https://seller.example/report#frag' })), (error) => error.code === 'OFFER_SERVICE_URL');
+});
+
+test('malformed registered endpoint metadata makes evidence HOLD', () => {
+  const result = decide(offer(), policy(), evidence({ agent: { registration: { webEndpoint: 'http://seller.example/' } } }));
+  assert.equal(result.decision, 'HOLD');
+  assert(result.reasons.includes('EVIDENCE_INVALID:REGISTRATION_WEB_ENDPOINT'));
 });
 
 test('stale capture and stale Graph block both fail closed', () => {
@@ -214,7 +241,7 @@ test('live adapter strips API-key path from sourceRef and maps Agent0 data', asy
           _meta: { deployment: 'QmDep', hasIndexingErrors: false, block: { number: '9', hash: '0x9', timestamp: String(NOW_S - 1) } },
           agent: {
             id: '84532:77', chainId: '84532', agentId: '77', owner: '0xo', updatedAt: String(NOW_S - 4), lastActivity: String(NOW_S - 2),
-            registrationFile: { active: true, x402Support: true, supportedTrusts: ['reputation'] },
+            registrationFile: { active: true, x402Support: true, supportedTrusts: ['reputation'], webEndpoint: 'https://seller.example/', mcpEndpoint: null, a2aEndpoint: null },
             feedback: [{ id: 'f', score: 99, clientAddress: '0xc', createdAt: String(NOW_S - 3), feedbackFile: { proofOfPaymentTxHash: '0xp' } }],
             validations: [{ id: 'v', validatorAddress: '0xv', response: 90, status: 'COMPLETED', createdAt: String(NOW_S - 3) }],
           },
@@ -233,6 +260,7 @@ test('live adapter strips API-key path from sourceRef and maps Agent0 data', asy
   assert(!JSON.stringify(e).includes('SECRET_KEY_VALUE'));
   assert.equal(e.sourceMode, 'live_graph');
   assert.equal(e.agent.feedback[0].score, 99);
+  assert.equal(e.agent.registration.webEndpoint, 'https://seller.example/');
 });
 
 test('live adapter refuses non-The-Graph or non-HTTPS endpoints before I/O', async () => {
@@ -249,6 +277,7 @@ test('live adapter refuses non-The-Graph or non-HTTPS endpoints before I/O', asy
   assert.equal(calls, 0);
 });
 
+
 test('live adapter rejects structurally missing authority fields instead of coercing them', async () => {
   const fakeFetch = async () => ({
     ok: true,
@@ -257,7 +286,7 @@ test('live adapter rejects structurally missing authority fields instead of coer
         _meta: { deployment: 'QmDep', hasIndexingErrors: false, block: { number: '9', hash: '0x9', timestamp: String(NOW_S - 1) } },
         agent: {
           id: '84532:77', chainId: '84532', agentId: '77', owner: '0xo', updatedAt: String(NOW_S - 4), lastActivity: String(NOW_S - 2),
-          registrationFile: { x402Support: true, supportedTrusts: ['reputation'] },
+          registrationFile: { x402Support: true, supportedTrusts: ['reputation'], webEndpoint: 'https://seller.example/', mcpEndpoint: null, a2aEndpoint: null },
           feedback: [], validations: [],
         },
       } };
