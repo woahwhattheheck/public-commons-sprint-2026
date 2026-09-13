@@ -23,6 +23,6 @@ The validator checks:
 - `script.md`, `SOURCES.md`, `assembly.md`, and `metadata.md` are non-empty;
 - the source map includes the pinned RustChain commit.
 
-The reference build used for editorial timing produced five narration files totaling about 312 seconds (approximately 5:12). Exact duration can vary slightly across codec builds, so the generated audio remains the timing authority for final assembly.
+The repository narration profile is 16 kHz mono MP3 at 16 kbps. The reference build used for editorial timing produced five narration files totaling 312.34 seconds (approximately 5:12). Exact duration can vary slightly across codec builds, so the generated audio remains the timing authority for final assembly.
 
 The package uses no production mutation, no token transfer, and no third-party stock footage. The voiceover is synthetic narration generated locally from the script.
