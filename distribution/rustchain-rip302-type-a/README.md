@@ -7,7 +7,8 @@ Submission target: `Scottcjn/rustchain-bounties#16601` — Type A, full YouTube 
 ## Contents
 
 - `script.md` — five-section narration script.
-- `voiceover/` — sentence-level MP3 clips grouped by the script's five numbered sections, generated with eSpeak 1.48.15 for editor-friendly assembly.
+- `voiceover/section-*.mp3` — five final per-section narration tracks, generated with eSpeak 1.48.15 and FFmpeg.
+- `voiceover/clips/` — sentence-level MP3 edit clips for fine-grained assembly.
 - `visuals/` — seven original 1920×1080 SVG production frames.
 - `assembly.md` — shot-by-shot edit map.
 - `thumbnail.png`, `thumbnail-alt-a.png`, `thumbnail-alt-b.png` — three 1280×720 original thumbnails.
@@ -15,7 +16,7 @@ Submission target: `Scottcjn/rustchain-bounties#16601` — Type A, full YouTube 
 - `SOURCES.md` — claim-by-claim source map pinned to a public RustChain commit.
 - `VERIFY.md` — reproducibility / QA record.
 - `scripts/build_assets.py` — deterministic thumbnail + vector-frame generator.
-- `scripts/generate_voiceover.py` — deterministic clip-level narration generator.
+- `scripts/generate_voiceover.py` — deterministic narration generator; emits five section tracks plus sentence-level edit clips.
 - `scripts/validate_package.py` — package checks.
 
 ## Rights / publication grant
