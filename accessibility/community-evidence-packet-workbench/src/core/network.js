@@ -276,12 +276,40 @@ function decodeJavaScriptUnicodeEscapes(source) {
   );
 }
 
+function hasRootedBrowserGlobalComputedAccess(code) {
+  const aliases = new Set(["globalThis", "window", "self"]);
+  const assignment = /\b([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\b/g;
+  let changed = true;
+
+  // Follow conservative simple-identifier alias chains. Reassignment can make
+  // this over-approximate, which is intentional for release-gate authority.
+  while (changed) {
+    changed = false;
+    assignment.lastIndex = 0;
+    let match;
+    while ((match = assignment.exec(code)) !== null) {
+      if (aliases.has(match[2]) && !aliases.has(match[1])) {
+        aliases.add(match[1]);
+        changed = true;
+      }
+    }
+  }
+
+  const computedAccess = /\b([A-Za-z_$][\w$]*)\s*\[/g;
+  let match;
+  while ((match = computedAccess.exec(code)) !== null) {
+    if (aliases.has(match[1])) return true;
+  }
+  return false;
+}
+
 function hasFetchPrimitiveReference(source) {
   for (const fragment of executableJavaScriptFragments(source)) {
     const code = javascriptCodeText(fragment);
     // Dynamic property expressions can construct "fetch" without ever spelling
-    // one quoted token. Fail closed on computed access to browser global roots.
-    if (/\b(?:globalThis|window|self)\s*\[/.test(code)) {
+    // one quoted token. Follow simple aliases rooted at browser globals and fail
+    // closed when any rooted alias is used for computed access.
+    if (hasRootedBrowserGlobalComputedAccess(code)) {
       return true;
     }
     if (/\bfetch\b/.test(decodeJavaScriptUnicodeEscapes(code))) {
