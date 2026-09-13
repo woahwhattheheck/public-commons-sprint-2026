@@ -76,6 +76,28 @@ class OfflinePromptRendererTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "one object"):
                 RENDER.read_values(path)
 
+    def test_duplicate_value_keys_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "values.json"
+            path.write_text('{"GOAL":"safe","GOAL":"different"}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "duplicate values key: GOAL"):
+                RENDER.read_values(path)
+
+    def test_duplicate_value_keys_fail_cli_without_partial_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "values.json"
+            path.write_text('{"GOAL":"safe","GOAL":"different"}', encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(RENDER_PATH), str(TEMPLATE), str(path)],
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("duplicate values key: GOAL", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
