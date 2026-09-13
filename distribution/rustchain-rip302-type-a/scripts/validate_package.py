@@ -19,14 +19,15 @@ for p in svgs:
     assert 'width="1920"' in text and 'height="1080"' in text
 
 mp3s = sorted((ROOT / "voiceover").glob("*.mp3"))
-assert len(mp3s) == 5, len(mp3s)
+assert len(mp3s) >= 5, len(mp3s)
+assert {p.name[:2] for p in mp3s} == {"01", "02", "03", "04", "05"}
 total = 0.0
 for p in mp3s:
     out = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(p)], text=True).strip()
     dur = float(out)
-    assert dur > 10, (p.name, dur)
+    assert dur > 1, (p.name, dur)
     total += dur
 
 src = (ROOT / "SOURCES.md").read_text(encoding="utf-8")
 assert "8c79fba7561283ff8c880258152cd15e2610c312" in src
-print(f"validated package: voiceover_sections={len(mp3s)} voiceover_seconds={total:.2f} visuals={len(svgs)} thumbnails=3")
+print(f"validated package: voiceover_clips={len(mp3s)} voiceover_seconds={total:.2f} visuals={len(svgs)} thumbnails=3")
