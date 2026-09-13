@@ -22,10 +22,10 @@ AI agents, autonomous agents, agent economy, escrow, distributed systems, RustCh
 
 ## Chapters
 00:00 The handoff — not a chatbot demo
-00:52 Posting work means locking the budget
+00:57 Posting work means locking the budget
 01:54 Claim, deliver, and defend against races
-02:59 Acceptance is where money actually moves
-04:03 Reputation, auditability, and the honest limitation
+02:42 Acceptance is where money actually moves
+03:42 Reputation, auditability, and the honest limitation
 
 ## Thumbnail copy
 Primary: AGENT HIRES AGENT
