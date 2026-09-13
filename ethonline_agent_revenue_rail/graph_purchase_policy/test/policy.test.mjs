@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { evaluatePurchase } from '../src/policy.mjs';
 import { fetchLiveAgentEvidence } from '../src/live_graph.mjs';
 
@@ -87,8 +92,8 @@ function evidence(overrides = {}) {
   };
 }
 
-function decide(o = offer(), p = policy(), e = evidence()) {
-  return evaluatePurchase({ offer: o, policy: p, evidence: e, now: NOW });
+function decide(o = offer(), p = policy(), e = evidence(), evidenceTransport = 'live_graph') {
+  return evaluatePurchase({ offer: o, policy: p, evidence: e, evidenceTransport, now: NOW });
 }
 
 test('BUY uses exact integer arithmetic beyond Number.MAX_SAFE_INTEGER', () => {
@@ -105,6 +110,88 @@ test('fixture cannot satisfy a live-data-required policy', () => {
   assert.equal(result.decision, 'HOLD');
   assert(result.reasons.includes('LIVE_EVIDENCE_REQUIRED'));
   assert.equal(result.qualification.prizeEligibilityClaimed, false);
+});
+
+test('fixture transport cannot spoof live authority by declaring sourceMode live_graph', () => {
+  const result = decide(offer(), policy(), evidence({ sourceMode: 'live_graph' }), 'fixture');
+  assert.equal(result.decision, 'HOLD');
+  assert(result.reasons.includes('LIVE_EVIDENCE_REQUIRED'));
+  assert.equal(result.qualification.evidenceTransport, 'fixture');
+  assert.equal(result.qualification.declaredSourceMode, 'live_graph');
+  assert.equal(result.qualification.liveGraphEvidence, false);
+  assert.equal(result.qualification.fixtureOnly, true);
+});
+
+test('omitted transport provenance is untrusted and cannot qualify as live', () => {
+  const result = evaluatePurchase({ offer: offer(), policy: policy(), evidence: evidence(), now: NOW });
+  assert.equal(result.decision, 'HOLD');
+  assert(result.reasons.includes('LIVE_EVIDENCE_REQUIRED'));
+  assert.equal(result.qualification.evidenceTransport, 'untrusted');
+  assert.equal(result.qualification.liveGraphEvidence, false);
+});
+
+test('live transport rejects evidence that declares fixture source mode', () => {
+  const result = decide(offer(), policy(), evidence({ sourceMode: 'fixture' }), 'live_graph');
+  assert.equal(result.decision, 'HOLD');
+  assert(result.reasons.includes('LIVE_SOURCE_MODE_MISMATCH'));
+  assert(result.reasons.includes('LIVE_EVIDENCE_REQUIRED'));
+  assert.equal(result.qualification.liveGraphEvidence, false);
+});
+
+test('fixture CLI overrides a forged live source declaration out of band', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'graph-policy-fixture-'));
+  try {
+    const offerPath = join(dir, 'offer.json');
+    const policyPath = join(dir, 'policy.json');
+    const evidencePath = join(dir, 'evidence.json');
+    writeFileSync(offerPath, JSON.stringify(offer()));
+    writeFileSync(policyPath, JSON.stringify(policy()));
+    writeFileSync(evidencePath, JSON.stringify(evidence({ sourceMode: 'live_graph' })));
+    const cliPath = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
+    const run = spawnSync(process.execPath, [
+      cliPath, 'fixture', '--offer', offerPath, '--policy', policyPath, '--evidence', evidencePath, '--now', NOW,
+    ], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr);
+    const receipt = JSON.parse(run.stdout);
+    assert.equal(receipt.decision, 'HOLD');
+    assert(receipt.reasons.includes('LIVE_EVIDENCE_REQUIRED'));
+    assert.equal(receipt.qualification.evidenceTransport, 'fixture');
+    assert.equal(receipt.qualification.declaredSourceMode, 'live_graph');
+    assert.equal(receipt.qualification.liveGraphEvidence, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('authority timestamps require an explicit RFC3339 timezone', () => {
+  assert.throws(
+    () => evaluatePurchase({ offer: offer(), policy: policy(), evidence: evidence(), evidenceTransport: 'live_graph', now: '2026-09-13T09:40:00' }),
+    (error) => error.code === 'NOW_INVALID',
+  );
+  const badEvidence = decide(offer(), policy(), evidence({ capturedAt: '2026-09-13T09:39:55' }));
+  assert.equal(badEvidence.decision, 'HOLD');
+  assert(badEvidence.reasons.includes('EVIDENCE_INVALID:EVIDENCE_CAPTURED_AT'));
+});
+
+test('explicit-offset decision digest is identical across host timezones', () => {
+  const moduleUrl = new URL('../src/policy.mjs', import.meta.url).href;
+  const input = {
+    offer: offer(),
+    policy: policy(),
+    evidence: evidence({ capturedAt: '2026-09-13T05:39:55-04:00' }),
+    evidenceTransport: 'live_graph',
+    now: '2026-09-13T05:40:00-04:00',
+  };
+  const program = `import { evaluatePurchase } from ${JSON.stringify(moduleUrl)}; const input = ${JSON.stringify(input)}; process.stdout.write(evaluatePurchase(input).receiptDigest);`;
+  const run = (TZ) => spawnSync(process.execPath, ['--input-type=module', '-e', program], {
+    encoding: 'utf8', env: { ...process.env, TZ },
+  });
+  const utc = run('UTC');
+  const ny = run('America/New_York');
+  assert.equal(utc.status, 0, utc.stderr);
+  assert.equal(ny.status, 0, ny.stderr);
+  assert.equal(utc.stdout, ny.stdout);
+  assert.match(utc.stdout, /^[0-9a-f]{64}$/);
 });
 
 test('seller identity mismatch is HOLD, not SKIP', () => {
