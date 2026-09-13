@@ -65,6 +65,32 @@ test("passive browser fetch surfaces are rejected", () => {
   }
 });
 
+test("browser-normalized passive network surfaces are rejected", () => {
+  const samples = [
+    '<img src="h&#116;tps://example.invalid/pixel.png">',
+    '<img src="h&#x74;tps://example.invalid/pixel.png">',
+    '<img src="https&colon;&sol;&sol;example.invalid/pixel.png">',
+    '<img src="h&bsol;74tps://example.invalid/pixel.png">',
+    '<img src="h&#9;ttps://example.invalid/pixel.png">',
+    '<img src="https:example.invalid/pixel.png">',
+    '![image](&#104;ttps://example.invalid/pixel.png)',
+    '![image](//example.invalid/pixel.png)',
+    '<a href=/local ping=https://example.invalid/audit>local</a>',
+    '<meta http-equiv=refresh content=0;url=https://example.invalid/next>',
+    '<style>@import "h\\74tps://example.invalid/theme.css";</style>',
+    '<div style="background:url(h\\74tps://example.invalid/bg.png)"></div>',
+    '<div style="background:url(\\68ttps://example.invalid/bg.png)"></div>',
+    '<div style="background:url(https\\3a\\2f\\2f example.invalid/bg.png)"></div>',
+  ];
+  for (const source of samples) {
+    assert.throws(
+      () => assertNoRuntimeNetwork(source),
+      /runtime-network-pattern/,
+      source,
+    );
+  }
+});
+
 test("inert and local URL text remains allowed", () => {
   const samples = [
     'const evidenceUrl = "https://example.invalid/source";',
@@ -73,6 +99,13 @@ test("inert and local URL text remains allowed", () => {
     '<img src="./local.png">',
     '<form action="/local-submit"></form>',
     '<a href="https://example.invalid/citation">citation</a>',
+    'Source citation: h&#116;tps://example.invalid/report',
+    '&lt;img src=&quot;https://example.invalid/not-markup.png&quot;&gt;',
+    '&#60;img src=&#34;https://example.invalid/not-markup.png&#34;&#62;',
+    'Source citation: &amp;#104;ttps://example.invalid/report',
+    '[citation](https://example.invalid/report)',
+    '<a href=/local ping=/local-audit>local</a>',
+    '<meta http-equiv=refresh content=0;url=/local-next>',
   ];
   for (const source of samples) {
     assert.deepEqual(networkRisks(source), [], source);
