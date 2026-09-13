@@ -247,11 +247,22 @@ export function bagitText() {
   return "BagIt-Version: 1.0\nTag-File-Character-Encoding: UTF-8\n";
 }
 
+function bagInfoValue(value, field) {
+  const text = String(value ?? "");
+  if (/[\r\n]/.test(text)) {
+    const err = new Error("bagit-tag-value-newline");
+    err.code = "BAGIT_TAG_VALUE";
+    err.field = field;
+    throw err;
+  }
+  return text;
+}
+
 export function bagInfo(packet) {
   return [
     "Source-Organization: local-workbench",
-    "Bagging-Date: " + (packet.updated || packet.created || "").slice(0, 10),
-    "External-Identifier: " + packet.id,
+    "Bagging-Date: " + bagInfoValue((packet.updated || packet.created || "").slice(0, 10), "Bagging-Date"),
+    "External-Identifier: " + bagInfoValue(packet.id, "External-Identifier"),
     "Bag-Software-Agent: community-evidence-packet-workbench",
     "Internal-Sender-Description: Local byte-identity bag. Not a certificate.",
     "",
