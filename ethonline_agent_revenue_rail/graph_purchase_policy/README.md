@@ -22,7 +22,7 @@ The policy engine will not silently fall back to mocks. With `requireLiveData=tr
 Input offer (`agent-revenue-offer/v1`) binds:
 
 - exact seller ERC-8004 agent id;
-- service key + request SHA-256 commitment;
+- service key + exact HTTPS service URL + request SHA-256 commitment;
 - currency and exact integer atomic price.
 
 Input policy (`graph-purchase-policy/v1`) binds:
@@ -33,7 +33,7 @@ Input policy (`graph-purchase-policy/v1`) binds:
 - minimum feedback count / mean score / paid-feedback count;
 - minimum completed validation count / mean score.
 
-Evidence problems are **HOLD**, not negative seller judgments: seller mismatch, fixture when live is required, stale/future capture, stale/future Graph block, indexing errors, future feedback/validation rows, malformed schema, and conflicting duplicate evidence IDs.
+Evidence problems are **HOLD**, not negative seller judgments: seller mismatch, paid-service origin not bound to an advertised Agent0 `web`/`mcp`/`a2a` endpoint, fixture when live is required, stale/future capture, stale/future Graph block, indexing errors, future feedback/validation rows, malformed schema, and conflicting duplicate evidence IDs.
 
 Valid-but-unattractive offers are **SKIP**: wrong currency, over max/budget, inactive seller, no x402 capability, trust mismatch, or reputation/validation thresholds not met.
 
@@ -55,6 +55,20 @@ node src/cli.mjs live \
 ```
 
 The adapter deliberately permits only public HTTPS `gateway.thegraph.com/.../subgraphs/id/...` endpoints. It performs no wallet or payment action.
+
+### ETHOnline chain split (verified 2026-09-13)
+
+For the runnable hackathon integration, use Agent0 on **Base Sepolia (chain 84532)** for trust evidence and Hedera Testnet for the independent x402 payment lane. Agent0's current public subgraph README lists Base Sepolia as deployed at Subgraph ID `4yYAvQLFjBhBtdRCY7eUWo181VNoTSLLFd5M7FXQAi6u`, while the same current README marks Hedera Testnet (296) as contracts-not-deployed; Agent0's deployment guide calls Hedera only `Ready`, not `Deployed`. Do not treat the generic deployment manifest's `status: prod` as proof of a live Hedera endpoint.
+
+Use a submission-owned Graph API key rather than copying the shared key embedded in Agent0 SDK defaults:
+
+```bash
+export GRAPH_ENDPOINT='https://gateway.thegraph.com/api/<API_KEY>/subgraphs/id/4yYAvQLFjBhBtdRCY7eUWo181VNoTSLLFd5M7FXQAi6u'
+```
+
+Pinned upstream observations: `agent0lab/subgraph@909a9d4518432c641e06fdb731b480fb0e9340dd` (`README.md`, `schema.graphql`, `deployments/deployment_guide.md`). Re-verify before final demo because deployment state can change.
+
+The offer's `serviceUrl` is part of the signed/digested decision input and must be HTTPS with no credentials or fragment. The policy only reaches `BUY` when that URL's origin equals the origin of at least one Agent0-advertised `webEndpoint`, `mcpEndpoint`, or `a2aEndpoint`. This prevents borrowing a reputable agent ID to authorize payment to an unrelated domain. Lane A must consume the exact `serviceUrl` from the receipt-bound offer; it must not swap the paid endpoint after the decision.
 
 ## Lane A integration
 
@@ -81,7 +95,7 @@ npm test
 node --test
 ```
 
-The hostile suite covers exact integers beyond `Number.MAX_SAFE_INTEGER`, stale/future evidence, Graph indexing errors, cross-seller evidence, fixture-vs-live qualification, conflicting duplicate observations, order-independent receipts, budget/price enforcement, x402/trust/reputation/validation thresholds, API-key redaction, endpoint SSRF-style refusal, and GraphQL failure handling.
+The hostile suite covers exact integers beyond `Number.MAX_SAFE_INTEGER`, stale/future evidence, Graph indexing errors, cross-seller evidence, fixture-vs-live qualification, paid-service origin binding, malformed registered endpoints, conflicting duplicate observations, order-independent receipts, budget/price enforcement, x402/trust/reputation/validation thresholds, API-key redaction, endpoint SSRF-style refusal, and GraphQL failure handling.
 
 ## Remaining qualification work
 
