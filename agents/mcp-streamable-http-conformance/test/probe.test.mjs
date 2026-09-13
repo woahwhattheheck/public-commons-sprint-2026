@@ -35,11 +35,20 @@ test('SSE-framed POST responses are accepted without invoking tools', async () =
   });
 });
 
-test('generic servers may omit tools capability unless the caller requires tools', async () => {
-  await withFixture({ noToolsCapability: true }, async ({ endpoint }) => {
+test('generic servers may omit tools capability while tool-server profile requires advertised nonempty tools', async () => {
+  await withFixture({ noToolsCapability: true }, async ({ endpoint, rpcMethods }) => {
     const generic = await probeMcpEndpoint({ endpoint, requireSession: true });
     assert.equal(generic.summary.ok, true);
     assert.equal(generic.checks.find((x) => x.id === 'tools-discovery').status, 'SKIP');
+    const alexaProfile = await probeMcpEndpoint({ endpoint, requireSession: true, requireTools: true });
+    assert.equal(alexaProfile.summary.ok, false);
+    assert.equal(alexaProfile.checks.find((x) => x.id === 'tools-discovery').status, 'FAIL');
+    assert.equal(rpcMethods.includes('tools/list'), false, 'probe must respect an unadvertised tools capability');
+  });
+  await withFixture({ emptyTools: true }, async ({ endpoint }) => {
+    const generic = await probeMcpEndpoint({ endpoint, requireSession: true });
+    assert.equal(generic.summary.ok, true);
+    assert.equal(generic.checks.find((x) => x.id === 'tools-discovery').status, 'PASS');
     const alexaProfile = await probeMcpEndpoint({ endpoint, requireSession: true, requireTools: true });
     assert.equal(alexaProfile.summary.ok, false);
     assert.equal(alexaProfile.checks.find((x) => x.id === 'tools-discovery').status, 'FAIL');
