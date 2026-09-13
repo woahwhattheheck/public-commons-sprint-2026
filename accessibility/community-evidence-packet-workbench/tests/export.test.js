@@ -14,6 +14,7 @@ import {
   bagManifest,
   RO_CRATE_CONTEXT,
 } from "../src/core/export.js";
+import { networkRisks } from "../src/core/network.js";
 import { zipHasMagic } from "../src/core/zip.js";
 
 const EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -43,6 +44,36 @@ test("HTML export escapes hostile captions", () => {
   const html = exportHtml(p);
   assert.equal(html.includes("<img src=x"), false);
   assert.match(html, /\u0026lt;img src=x/);
+});
+
+test("Markdown export neutralizes packet-controlled active markup", () => {
+  const remote = `<img src=https://example.invalid/pixel>`;
+  const p = importPacket({
+    id: remote,
+    title: remote,
+    community: remote,
+    collector: remote,
+    statement: remote,
+    location: remote,
+    period: { start: remote, end: remote },
+    items: [
+      {
+        id: "item-1",
+        name: remote,
+        path: "` ![probe](https://example.invalid/path)",
+        role: "other",
+        bytes: 1,
+        sha256: "` ![probe](https://example.invalid/hash)",
+        caption: remote,
+        provenance: remote,
+      },
+    ],
+  });
+  const md = exportMarkdown(p);
+  assert.equal(md.includes("<img"), false);
+  assert.equal(md.includes("![probe]("), false);
+  assert.match(md, /&lt;img/);
+  assert.deepEqual(networkRisks(md), []);
 });
 
 test("metadata snapshots do not label imported hashes as session-verified bytes", () => {
