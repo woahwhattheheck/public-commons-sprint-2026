@@ -8,6 +8,7 @@ export async function startFixture(options = {}) {
   const methods = [];
   const rpcMethods = [];
   const authValues = [];
+  const initializeVersions = [];
   const server = http.createServer((req, res) => {
     void handle(req, res).catch((error) => {
       if (error?.code === 'ECONNRESET' || error?.code === 'ABORT_ERR' || error?.message === 'aborted') return;
@@ -40,6 +41,7 @@ export async function startFixture(options = {}) {
     const msg = JSON.parse(body);
     if (typeof msg?.method === 'string') rpcMethods.push(msg.method);
     if (msg.method === 'initialize') {
+      initializeVersions.push(msg.params?.protocolVersion);
       const id = randomUUID(); sessions.add(id);
       const capabilities = {
         ...(options.noToolsCapability ? {} : { tools: {} }),
@@ -68,7 +70,7 @@ export async function startFixture(options = {}) {
   }
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const endpoint = `http://127.0.0.1:${server.address().port}/mcp`;
-  return { endpoint, methods, rpcMethods, authValues, close: () => new Promise((resolve) => server.close(resolve)) };
+  return { endpoint, methods, rpcMethods, authValues, initializeVersions, close: () => new Promise((resolve) => server.close(resolve)) };
 }
 
 function send(res, status, body, extra = {}) {
