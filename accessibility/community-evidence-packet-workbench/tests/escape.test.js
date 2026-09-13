@@ -18,6 +18,7 @@ test("CSV formula cells are neutralized", () => {
   assert.equal(csvCell("+1+1").startsWith("'"), true);
   assert.equal(csvCell("-1+1").startsWith("'"), true);
   assert.equal(csvCell("@SUM(A1)").startsWith("'"), true);
+  assert.equal(csvCell("\n=SUM(A1:A2)"), '"\'\n=SUM(A1:A2)"');
 });
 
 test("CSV quotes commas", () => {
