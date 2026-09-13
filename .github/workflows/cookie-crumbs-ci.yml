@@ -1,0 +1,38 @@
+name: Cookie Crumbs CI
+
+on:
+  pull_request:
+    paths:
+      - 'cookie-crumbs/**'
+      - '.github/workflows/cookie-crumbs-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cookie-crumbs/**'
+      - '.github/workflows/cookie-crumbs-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax + regression contract
+        working-directory: cookie-crumbs
+        run: npm run ci
+      - name: Static app inventory
+        run: |
+          test -s cookie-crumbs/index.html
+          test -s cookie-crumbs/styles.css
+          test -s cookie-crumbs/app.js
+          test -s cookie-crumbs/receipt.mjs
+          grep -F 'https://rpc.cookiescan.io' cookie-crumbs/app.js
+          grep -F 'window.nightly?.solana' cookie-crumbs/app.js
