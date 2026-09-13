@@ -20,22 +20,42 @@ export const RO_CRATE_CONTEXT = "https://w3id.org/ro/crate/1.2/context";
 
 function itemBytes(item) {
   if (item._bytes instanceof Uint8Array) return item._bytes;
-  if (item.textContent) return utf8Bytes(item.textContent);
-  return utf8Bytes("");
+  if (Object.prototype.hasOwnProperty.call(item, "textContent")) {
+    return utf8Bytes(item.textContent);
+  }
+  if (Number(item.bytes) === 0) return utf8Bytes("");
+  const err = new Error("payload-bytes-unavailable");
+  err.code = "PAYLOAD_BYTES_UNAVAILABLE";
+  err.itemId = String(item.id || "");
+  throw err;
 }
 
-function payloadEntries(packet) {
+async function payloadEntries(packet) {
   const used = new Set();
   const entries = [];
   for (const item of packet.items) {
     const path = archivePathForItem(item, used);
+    const bytes = itemBytes(item);
+    const sha256 = await sha256Hex(bytes);
     entries.push({
       path,
-      bytes: itemBytes(item),
-      item,
+      bytes,
+      item: {
+        ...item,
+        bytes: bytes.length,
+        sha256,
+      },
     });
   }
   return entries;
+}
+
+function snapshotByteIdentityNotice(packet) {
+  const hasImportedMetadata = packet.items.some(
+    (item) => !(item._bytes instanceof Uint8Array),
+  );
+  if (!hasImportedMetadata) return BYTE_IDENTITY_NOTICE;
+  return "SHA-256 values shown for imported items are recorded metadata unless local payload bytes were loaded in this session. Package exports re-hash available payload bytes and refuse unavailable nonzero payloads.";
 }
 
 export function exportJson(packet) {
@@ -68,7 +88,7 @@ export function exportMarkdown(packet) {
   lines.push("");
   lines.push("## Byte identity");
   lines.push("");
-  lines.push(BYTE_IDENTITY_NOTICE);
+  lines.push(snapshotByteIdentityNotice(packet));
   lines.push("");
   lines.push(WACZ_POLICY);
   lines.push("");
@@ -146,7 +166,7 @@ export function exportHtml(packet) {
   <h2>Statement</h2>
   <p>${escapeHtml(packet.statement || "(missing)")}</p>
   <h2>Byte identity</h2>
-  <p>${escapeHtml(BYTE_IDENTITY_NOTICE)}</p>
+  <p>${escapeHtml(snapshotByteIdentityNotice(packet))}</p>
   <p>${escapeHtml(WACZ_POLICY)}</p>
   <h2>Items</h2>
   ${
@@ -252,8 +272,9 @@ function bagManifestPath(path) {
 export async function bagManifest(entries) {
   const lines = [];
   for (const e of entries) {
-    const hex = e.item.sha256 || (await sha256Hex(e.bytes));
-    lines.push(`${hex}  ${bagManifestPath(e.path)}`);
+    const path = bagManifestPath(e.path);
+    const hex = await sha256Hex(e.bytes);
+    lines.push(`${hex}  ${path}`);
   }
   if (!lines.length) {
     const empty = utf8Bytes("");
@@ -264,7 +285,7 @@ export async function bagManifest(entries) {
 }
 
 export async function exportRoCrateZip(packet) {
-  let entries = payloadEntries(packet);
+  const entries = await payloadEntries(packet);
   const used = new Set(entries.map((e) => collisionKey(e.path)));
   const crate = utf8Bytes(JSON.stringify(roCrateMetadata(packet, entries), null, 2));
   const cratePath = uniqueArchivePath("ro-crate-metadata.json", used);
@@ -283,7 +304,7 @@ export async function exportRoCrateZip(packet) {
 }
 
 export async function exportBagItZip(packet) {
-  let entries = payloadEntries(packet);
+  let entries = await payloadEntries(packet);
   if (!entries.length) {
     entries = [
       {
@@ -310,10 +331,14 @@ export async function exportBagItZip(packet) {
 }
 
 export async function exportFilesZip(packet) {
-  const entries = payloadEntries(packet);
-  const json = utf8Bytes(exportJson(packet));
-  const md = utf8Bytes(exportMarkdown(packet));
-  const html = utf8Bytes(exportHtml(packet));
+  const entries = await payloadEntries(packet);
+  const packagedPacket = {
+    ...packet,
+    items: entries.map((e) => e.item),
+  };
+  const json = utf8Bytes(exportJson(packagedPacket));
+  const md = utf8Bytes(exportMarkdown(packagedPacket));
+  const html = utf8Bytes(exportHtml(packagedPacket));
   const used = new Set(["packet.json", "packet.md", "packet.html"].map(collisionKey));
   const files = [
     { path: "packet.json", bytes: json },

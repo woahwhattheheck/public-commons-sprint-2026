@@ -56,6 +56,17 @@ function renderNotices() {
     .join("");
 }
 
+function byteIdentityNotice(item) {
+  if (item._bytes instanceof Uint8Array) return BYTE_IDENTITY_NOTICE;
+  if (Object.prototype.hasOwnProperty.call(item, "textContent")) {
+    return "Imported text payload is available locally, but the displayed SHA-256 came from imported metadata and has not been verified in this session. Package export re-hashes the local text bytes.";
+  }
+  if (Number(item.bytes) === 0) {
+    return "Imported metadata describes a zero-byte payload. Package export reconstructs and re-hashes the empty payload; the displayed imported SHA-256 is not treated as verified.";
+  }
+  return "Imported metadata only: payload bytes are not loaded in this session. Package export is blocked until this item is removed and the original file is added again; the displayed SHA-256 is not session-verified.";
+}
+
 function renderItems() {
   const root = $("items");
   if (!packet.items.length) {
@@ -68,7 +79,7 @@ function renderItems() {
       return `<article class="item" data-index="${i}">
         <h3>${escapeHtml(item.name || item.id)}</h3>
         <p class="fine">${escapeHtml(item.note || item.recognizedAs)}${item.waczOpaque ? " — opaque WACZ, not opened." : ""}</p>
-        <p class="hash">${escapeHtml(BYTE_IDENTITY_NOTICE)}<br><code>${escapeHtml(item.sha256 || "(hash missing)")}</code> · ${escapeHtml(String(item.bytes))} bytes</p>
+        <p class="hash">${escapeHtml(byteIdentityNotice(item))}<br><code>${escapeHtml(item.sha256 || "(hash missing)")}</code> · ${escapeHtml(String(item.bytes))} bytes</p>
         <label>Role
           <select data-role="${i}">
             ${["photo","testimony","minutes","map","recording","wacz","document","other"].map((r) =>
@@ -108,15 +119,25 @@ function textBytes(s) {
 }
 
 async function doExport(kind) {
-  readPacketFields();
-  renderNotices();
-  const base = (packet.title || "packet").replace(/[^\w.-]+/g, "-").slice(0, 40);
-  if (kind === "html") download(base + ".html", textBytes(exportHtml(packet)), "text/html");
-  else if (kind === "md") download(base + ".md", textBytes(exportMarkdown(packet)), "text/markdown");
-  else if (kind === "json") download(base + ".json", textBytes(exportJson(packet)), "application/json");
-  else if (kind === "zip") download(base + ".zip", await exportFilesZip(packet), "application/zip");
-  else if (kind === "crate") download(base + "-rocrate.zip", await exportRoCrateZip(packet), "application/zip");
-  else if (kind === "bag") download(base + "-bagit.zip", await exportBagItZip(packet), "application/zip");
+  try {
+    readPacketFields();
+    renderNotices();
+    const base = (packet.title || "packet").replace(/[^\w.-]+/g, "-").slice(0, 40);
+    if (kind === "html") download(base + ".html", textBytes(exportHtml(packet)), "text/html");
+    else if (kind === "md") download(base + ".md", textBytes(exportMarkdown(packet)), "text/markdown");
+    else if (kind === "json") download(base + ".json", textBytes(exportJson(packet)), "application/json");
+    else if (kind === "zip") download(base + ".zip", await exportFilesZip(packet), "application/zip");
+    else if (kind === "crate") download(base + "-rocrate.zip", await exportRoCrateZip(packet), "application/zip");
+    else if (kind === "bag") download(base + "-bagit.zip", await exportBagItZip(packet), "application/zip");
+  } catch (error) {
+    if (error?.code === "PAYLOAD_BYTES_UNAVAILABLE") {
+      $("export-status").textContent =
+        "Package export stopped: an imported item has metadata but no local payload bytes. Remove that metadata-only item and add the original file again before ZIP, RO-Crate, or BagIt export.";
+      return;
+    }
+    $("export-status").textContent =
+      "Export failed locally: " + String(error?.code || "EXPORT_FAILED") + ".";
+  }
 }
 
 function wire() {
