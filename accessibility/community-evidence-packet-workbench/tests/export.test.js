@@ -11,6 +11,7 @@ import {
   exportBagItZip,
   roCrateMetadata,
   bagitText,
+  bagManifest,
   RO_CRATE_CONTEXT,
 } from "../src/core/export.js";
 import { zipHasMagic } from "../src/core/zip.js";
@@ -61,6 +62,45 @@ test("BagIt text uses RFC 8493 version line", () => {
   assert.match(bagitText(), /Tag-File-Character-Encoding: UTF-8/);
 });
 
+test("BagIt manifest paths remain relative to bag root under data", async () => {
+  const manifest = await bagManifest([
+    {
+      path: "data/notes.txt",
+      bytes: new TextEncoder().encode("hello"),
+      item: { sha256: "a".repeat(64) },
+    },
+  ]);
+  assert.equal(manifest, `${"a".repeat(64)}  data/notes.txt\n`);
+});
+
+test("BagIt manifest percent-encodes RFC 8493 special path characters", async () => {
+  const manifest = await bagManifest([
+    {
+      path: "data/percent%/line\r\nbreak.txt",
+      bytes: new Uint8Array(),
+      item: { sha256: "b".repeat(64) },
+    },
+  ]);
+  assert.equal(
+    manifest,
+    `${"b".repeat(64)}  data/percent%25/line%0D%0Abreak.txt\n`,
+  );
+});
+
+test("BagIt manifest rejects payload entries outside data", async () => {
+  await assert.rejects(
+    () =>
+      bagManifest([
+        {
+          path: "notes.txt",
+          bytes: new Uint8Array(),
+          item: { sha256: "c".repeat(64) },
+        },
+      ]),
+    (error) => error?.code === "BAGIT_PAYLOAD_PATH",
+  );
+});
+
 test("empty zip / crate / bagit still build PK containers", async () => {
   const p = emptyPacket();
   const zip = await exportFilesZip(p);
@@ -79,7 +119,7 @@ test("bagit zip contains bagit.txt and manifest-sha256.txt names", async () => {
   const asText = decoder(bag);
   assert.match(asText, /bagit\.txt/);
   assert.match(asText, /manifest-sha256\.txt/);
-  assert.match(asText, /notes\.txt/);
+  assert.match(asText, /data\/notes\.txt/);
 });
 
 test("ro-crate zip contains metadata filename", async () => {

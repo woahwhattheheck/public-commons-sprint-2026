@@ -238,17 +238,27 @@ export function bagInfo(packet) {
   ].join("\n");
 }
 
+function bagManifestPath(path) {
+  const value = String(path ?? "");
+  if (!value.startsWith("data/") || value.length <= "data/".length) {
+    const err = new Error("bagit-payload-path-outside-data");
+    err.code = "BAGIT_PAYLOAD_PATH";
+    err.path = value;
+    throw err;
+  }
+  return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+}
+
 export async function bagManifest(entries) {
   const lines = [];
   for (const e of entries) {
     const hex = e.item.sha256 || (await sha256Hex(e.bytes));
-    const payload = e.path.replace(/^data\//, "");
-    lines.push(`${hex}  ${payload}`);
+    lines.push(`${hex}  ${bagManifestPath(e.path)}`);
   }
   if (!lines.length) {
     const empty = utf8Bytes("");
     const hex = await sha256Hex(empty);
-    lines.push(`${hex}  EMPTY.txt`);
+    lines.push(`${hex}  data/EMPTY.txt`);
   }
   return lines.join("\n") + "\n";
 }
