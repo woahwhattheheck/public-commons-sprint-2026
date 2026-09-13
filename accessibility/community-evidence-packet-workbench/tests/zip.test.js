@@ -85,3 +85,33 @@ test("classic ZIP entry count is bounded before per-entry processing", () => {
   assert.equal(zip[eocd + 8] | (zip[eocd + 9] << 8), 2);
   assert.equal(zip[eocd + 10] | (zip[eocd + 11] << 8), 2);
 });
+
+test("classic ZIP rejects entry sizes that cannot fit unsigned 32-bit fields", () => {
+  const bytes = new Uint8Array();
+  let exposedOversize = false;
+  Object.defineProperty(bytes, "length", {
+    configurable: true,
+    get() {
+      // On the vulnerable implementation crc32() is the first reader. Keep
+      // that zero-cost, then expose a 2^32 logical size to the framing path.
+      // The repaired implementation rejects that logical size before CRC.
+      if ((new Error().stack || "").includes("crc32")) return 0;
+      if (!exposedOversize) {
+        exposedOversize = true;
+        return 0x100000000;
+      }
+      return 0;
+    },
+  });
+
+  assert.throws(
+    () => buildStoreZip([{ path: "oversize.bin", bytes }]),
+    (err) => {
+      assert.equal(err.code, "ZIP_CLASSIC_LIMIT");
+      assert.equal(err.limit, "entry-size");
+      assert.equal(err.maximum, 0xffffffff);
+      assert.equal(err.actual, 0x100000000);
+      return true;
+    },
+  );
+});
