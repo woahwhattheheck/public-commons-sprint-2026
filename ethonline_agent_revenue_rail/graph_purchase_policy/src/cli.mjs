@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import { evaluatePurchase } from './policy.mjs';
-import { fetchLiveAgentEvidence } from './live_graph.mjs';
+import { fetchCompleteLiveAgentEvidence } from './live_complete.mjs';
 
 function argsToMap(argv) {
   const [mode, ...rest] = argv;
@@ -37,7 +37,7 @@ async function main() {
     const endpoint = process.env[envName];
     if (!endpoint) throw Object.assign(new Error(`missing endpoint environment variable ${envName}`), { code: 'CLI_ENDPOINT_ENV' });
     if (!args.agent) throw Object.assign(new Error('--agent required'), { code: 'CLI_AGENT' });
-    evidence = await fetchLiveAgentEvidence({ endpoint, agentId: args.agent, capturedAt: now });
+    evidence = await fetchCompleteLiveAgentEvidence({ endpoint, agentId: args.agent, capturedAt: now });
     evidenceTransport = 'live_graph';
   }
   const receipt = evaluatePurchase({ offer, policy, evidence, evidenceTransport, now });
