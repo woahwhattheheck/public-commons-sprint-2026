@@ -45,6 +45,19 @@ test("HTML export escapes hostile captions", () => {
   assert.match(html, /\u0026lt;img src=x/);
 });
 
+test("metadata snapshots do not label imported hashes as session-verified bytes", () => {
+  const p = importPacket({
+    title: "Imported metadata",
+    items: [{ name: "photo.jpg", bytes: 3, sha256: "a".repeat(64) }],
+  });
+  const html = exportHtml(p);
+  const md = exportMarkdown(p);
+  assert.match(html, /recorded metadata/i);
+  assert.match(md, /recorded metadata/i);
+  assert.equal(html.includes("exact bytes loaded in this session"), false);
+  assert.equal(md.includes("exact bytes loaded in this session"), false);
+});
+
 test("incomplete markdown still exports", () => {
   const p = emptyPacket();
   p.title = "Half";
