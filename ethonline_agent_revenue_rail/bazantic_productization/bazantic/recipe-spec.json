@@ -1,0 +1,20 @@
+{
+  "schema":"agent-revenue-rail/portable-bazantic-recipe-spec/v1",
+  "title":"Buy a Work-Intelligence Report Only When Live Agent Reputation Justifies It",
+  "status":"portable-spec-not-a-bazantic-import-format",
+  "whenToUse":"Use when an autonomous agent is considering a paid work-intelligence report and must gate the purchase on live ERC-8004/Agent0 reputation evidence before calling the x402 report service.",
+  "services":[
+    {"id":"graph_policy","provider":"The Graph / Agent0 ERC-8004","role":"Return live BUY, REFUSE, or DEFER purchase-policy evidence with a bounded freshness window."},
+    {"id":"report_service","provider":"Agent Revenue Rail via Bazantic x402/MPP Gateway","role":"Return a priced work-intelligence report; Lane A owns Hedera x402 settlement verification."}
+  ],
+  "steps":[
+    "Call graph_policy first and preserve its evidence digest, observation time, expiry, and decision.",
+    "If decision is REFUSE, do not call the paid report service.",
+    "If decision is DEFER or the policy is stale, refresh later; do not silently upgrade to BUY.",
+    "If decision is BUY, call report_service. Preserve exact HTTP/x402 result rather than treating HTTP 402 as success.",
+    "On PAYMENT_REQUIRED, satisfy the requirement only through Lane A's x402 flow; never fabricate a payment receipt.",
+    "Use a report only when Lane A reports SETTLED with upstreamVerified=true and a transaction hash, and the report payload passes the Lane C contract.",
+    "Return the paid report recommendation plus the Graph policy digest and settlement/report evidence digests so the agent can explain why the purchase occurred."
+  ],
+  "failureRules":{"graphUnavailable":"DEFER; do not purchase","graphRefuse":"STOP; do not purchase","staleGraphPolicy":"REFRESH_GRAPH_POLICY","paymentRequired":"SATISFY_X402_REQUIREMENT","paymentFailed":"STOP_OR_RETRY_PER_UPSTREAM","settlementUnverified":"never normalize as success","reportInvalid":"fail closed"}
+}

@@ -1,0 +1,41 @@
+name: ETHOnline Bazantic Productization
+
+on:
+  pull_request:
+    paths:
+      - 'ethonline_agent_revenue_rail/bazantic_productization/**'
+      - '.github/workflows/ethonline-bazantic-productization.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ethonline_agent_revenue_rail/bazantic_productization/**'
+      - '.github/workflows/ethonline-bazantic-productization.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  hostile-contract-suite:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ethonline_agent_revenue_rail/bazantic_productization
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Hostile contract tests
+        run: npm test
+      - name: Synthetic demo harness
+        run: npm run demo
+      - name: Synthetic A/B verifier
+        run: npm run verify:ab
+      - name: Placeholder release packet must remain HOLD
+        shell: bash
+        run: |
+          set +e
+          npm run release:gate
+          rc=$?
+          set -e
+          test "$rc" -eq 3

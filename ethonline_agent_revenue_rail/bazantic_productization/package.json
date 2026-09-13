@@ -1,0 +1,15 @@
+{
+  "name": "agent-revenue-rail-bazantic-lane-c",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "demo": "node bin/demo.mjs",
+    "verify:ab": "node bin/verify-ab.mjs fixtures/ab-baseline.json fixtures/ab-recipe.json",
+    "release:gate": "node bin/release-gate.mjs fixtures/release-hold.json 2026-09-13T09:40:00.000Z"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

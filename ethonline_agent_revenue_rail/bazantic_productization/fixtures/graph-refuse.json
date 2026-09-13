@@ -1,0 +1,1 @@
+{"now":"2026-09-13T09:40:00.000Z","graphPolicy":{"decision":"REFUSE","source":"thegraph-agent0","observedAt":"2026-09-13T09:39:00.000Z","expiresAt":"2026-09-13T09:44:00.000Z","evidenceDigest":"3333333333333333333333333333333333333333333333333333333333333333","reason":"Agent reputation is below the configured purchase threshold."}}
