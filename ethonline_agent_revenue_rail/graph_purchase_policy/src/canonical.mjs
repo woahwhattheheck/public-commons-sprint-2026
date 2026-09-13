@@ -70,6 +70,10 @@ export function requireSafeInteger(value, code, { min = 0, max = Number.MAX_SAFE
 
 export function parseIsoInstant(value, code) {
   requireString(value, code, { maxLength: 64 });
+  contractAssert(
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(value),
+    code,
+  );
   const millis = Date.parse(value);
   contractAssert(Number.isFinite(millis), code);
   return { millis, iso: new Date(millis).toISOString() };
