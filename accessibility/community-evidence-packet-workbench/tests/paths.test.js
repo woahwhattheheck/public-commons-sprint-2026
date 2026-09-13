@@ -54,6 +54,25 @@ test("dedupes canonically equivalent Unicode paths without rewriting names", () 
   assert.equal(uniqueArchivePath("data/e\u0301.txt", used), "data/e\u0301-2.txt");
 });
 
+test("keeps dedupe suffix on the leaf when parent directories contain dots", () => {
+  const extensionless = "data/evidence.v1/report";
+  assert.equal(
+    uniqueArchivePath(extensionless, new Set([collisionKey(extensionless)])),
+    "data/evidence.v1/report-2",
+  );
+
+  const withExtension = "data/evidence.v1/report.txt";
+  assert.equal(
+    uniqueArchivePath(withExtension, new Set([collisionKey(withExtension)])),
+    "data/evidence.v1/report-2.txt",
+  );
+});
+
+test("dedupes dotfiles without treating their leading dot as an extension", () => {
+  const path = "data/.env";
+  assert.equal(uniqueArchivePath(path, new Set([collisionKey(path)])), "data/.env-2");
+});
+
 test("rejects Windows trailing dot and space aliases", () => {
   assert.equal(zipSlipReason("evidence/report.txt."), "windows-trailing-dot-space");
   assert.equal(zipSlipReason("evidence/report.txt "), "windows-trailing-dot-space");
