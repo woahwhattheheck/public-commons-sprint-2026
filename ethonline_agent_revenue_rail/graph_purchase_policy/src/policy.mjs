@@ -16,14 +16,29 @@ const AGENT_ID_RE = /^[1-9][0-9]*:[0-9]+$/;
 const CURRENCY_RE = /^[A-Z][A-Z0-9._-]{1,31}$/;
 const TRUST_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 
+function normalizeHttpsUrl(value, code) {
+  requireString(value, code, { maxLength: 2048 });
+  let url;
+  try { url = new URL(value); } catch { throw new ContractError(code); }
+  contractAssert(url.protocol === 'https:', code);
+  contractAssert(!url.username && !url.password && !url.hash && url.hostname.length > 0, code);
+  return url.toString();
+}
+
+function normalizeNullableRegistrationUrl(value, code) {
+  if (value === null) return null;
+  return normalizeHttpsUrl(value, code);
+}
+
 function normalizeOffer(input) {
-  rejectUnknownKeys(input, ['schema', 'offerId', 'sellerAgentId', 'serviceKey', 'requestDigest', 'currency', 'priceAtomic'], 'OFFER_UNKNOWN_FIELD');
+  rejectUnknownKeys(input, ['schema', 'offerId', 'sellerAgentId', 'serviceKey', 'serviceUrl', 'requestDigest', 'currency', 'priceAtomic'], 'OFFER_UNKNOWN_FIELD');
   contractAssert(input.schema === 'agent-revenue-offer/v1', 'OFFER_SCHEMA');
   const offer = {
     schema: input.schema,
     offerId: requireString(input.offerId, 'OFFER_ID', { maxLength: 128 }),
     sellerAgentId: requireString(input.sellerAgentId, 'OFFER_SELLER_AGENT_ID', { pattern: AGENT_ID_RE, maxLength: 96 }),
     serviceKey: requireString(input.serviceKey, 'OFFER_SERVICE_KEY', { maxLength: 160 }),
+    serviceUrl: normalizeHttpsUrl(input.serviceUrl, 'OFFER_SERVICE_URL'),
     requestDigest: requireString(input.requestDigest, 'OFFER_REQUEST_DIGEST', { pattern: SHA256_RE, maxLength: 64 }),
     currency: requireString(input.currency, 'OFFER_CURRENCY', { pattern: CURRENCY_RE, maxLength: 32 }),
     priceAtomic: requireString(input.priceAtomic, 'OFFER_PRICE_ATOMIC', { maxLength: 78 }),
@@ -132,7 +147,7 @@ function normalizeEvidence(input) {
   };
 
   rejectUnknownKeys(input.agent, ['id', 'chainId', 'agentId', 'owner', 'updatedAt', 'lastActivity', 'registration', 'feedback', 'validations'], 'AGENT_UNKNOWN_FIELD');
-  rejectUnknownKeys(input.agent.registration, ['active', 'x402Support', 'supportedTrusts'], 'REGISTRATION_UNKNOWN_FIELD');
+  rejectUnknownKeys(input.agent.registration, ['active', 'x402Support', 'supportedTrusts', 'webEndpoint', 'mcpEndpoint', 'a2aEndpoint'], 'REGISTRATION_UNKNOWN_FIELD');
   const id = requireString(input.agent.id, 'AGENT_ID', { pattern: AGENT_ID_RE, maxLength: 96 });
   const chainId = requireString(input.agent.chainId, 'AGENT_CHAIN_ID', { maxLength: 40 });
   const agentId = requireString(input.agent.agentId, 'AGENT_NUMERIC_ID', { maxLength: 40 });
@@ -156,6 +171,9 @@ function normalizeEvidence(input) {
       active: requireBoolean(input.agent.registration.active, 'REGISTRATION_ACTIVE'),
       x402Support: requireBoolean(input.agent.registration.x402Support, 'REGISTRATION_X402'),
       supportedTrusts,
+      webEndpoint: normalizeNullableRegistrationUrl(input.agent.registration.webEndpoint, 'REGISTRATION_WEB_ENDPOINT'),
+      mcpEndpoint: normalizeNullableRegistrationUrl(input.agent.registration.mcpEndpoint, 'REGISTRATION_MCP_ENDPOINT'),
+      a2aEndpoint: normalizeNullableRegistrationUrl(input.agent.registration.a2aEndpoint, 'REGISTRATION_A2A_ENDPOINT'),
     },
     feedback: dedupeRows(input.agent.feedback, normalizeFeedback, 'CONFLICTING_FEEDBACK_DUPLICATE'),
     validations: dedupeRows(input.agent.validations, normalizeValidation, 'CONFLICTING_VALIDATION_DUPLICATE'),
@@ -192,6 +210,7 @@ function buildReceipt({ decision, reasons, offer, policy, evidence, metrics, bud
     offerId: offer.offerId,
     sellerAgentId: offer.sellerAgentId,
     serviceKey: offer.serviceKey,
+    serviceUrl: offer.serviceUrl,
     currency: offer.currency,
     priceAtomic: offer.priceAtomic,
     budgetBeforeAtomic: policy.budgetRemainingAtomic,
@@ -235,6 +254,17 @@ export function evaluatePurchase({ offer: offerInput, policy: policyInput, evide
 
   const hold = [];
   if (evidence.agent.id !== offer.sellerAgentId) hold.push('SELLER_EVIDENCE_MISMATCH');
+  const serviceOrigin = new URL(offer.serviceUrl).origin;
+  const registeredEndpoints = [
+    ['web', evidence.agent.registration.webEndpoint],
+    ['mcp', evidence.agent.registration.mcpEndpoint],
+    ['a2a', evidence.agent.registration.a2aEndpoint],
+  ];
+  const matchedEndpointKinds = registeredEndpoints
+    .filter(([, endpoint]) => endpoint !== null && new URL(endpoint).origin === serviceOrigin)
+    .map(([kind]) => kind)
+    .sort();
+  if (matchedEndpointKinds.length === 0) hold.push('SERVICE_ORIGIN_UNBOUND');
   if (policy.requireLiveData && evidence.sourceMode !== 'live_graph') hold.push('LIVE_EVIDENCE_REQUIRED');
   if (evidence.graph.hasIndexingErrors) hold.push('GRAPH_INDEXING_ERRORS');
 
@@ -267,6 +297,8 @@ export function evaluatePurchase({ offer: offerInput, policy: policyInput, evide
     completedValidationCount: completedValidations.length,
     averageCompletedValidationScore: decimalAverage(validationSum, completedValidations.length),
     supportedTrustModels: evidence.agent.registration.supportedTrusts,
+    serviceOrigin,
+    matchedEndpointKinds,
     graphBlockNumber: evidence.graph.blockNumber,
     graphBlockTimestamp: evidence.graph.blockTimestamp,
   };
