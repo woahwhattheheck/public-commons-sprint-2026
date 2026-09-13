@@ -7,7 +7,9 @@ import {
   isEmptyPacket,
   missingFields,
   advisoryNotices,
+  totalBytes,
   makeTextItem,
+  ADVISORY_MAX_BYTES,
   ADVISORY_MAX_FILES,
 } from "../src/core/packet.js";
 
@@ -40,6 +42,30 @@ test("unknown item fields are preserved", () => {
   assert.equal(p.items[0].unknown.recorderBadge, "door-4");
   const out = packetToJsonObject(p);
   assert.equal(out.items[0].recorderBadge, "door-4");
+});
+
+test("import normalizes malformed byte counts without corrupting valid counts", () => {
+  const invalid = [-1, 1.5, NaN, Infinity, -Infinity, true, false, "", " ", "NaN", "1.5", {}, []];
+  for (const bytes of invalid) {
+    const p = importPacket({ items: [{ name: "bad.bin", bytes }] });
+    assert.equal(p.items[0].bytes, 0, String(bytes));
+  }
+
+  for (const [bytes, expected] of [[0, 0], [42, 42], [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER], ["42", 42]]) {
+    const p = importPacket({ items: [{ name: "good.bin", bytes }] });
+    assert.equal(p.items[0].bytes, expected, String(bytes));
+  }
+});
+
+test("malformed runtime byte counts cannot subtract from advisory totals", () => {
+  const p = emptyPacket();
+  p.items = [
+    { id: "large", name: "large.bin", bytes: ADVISORY_MAX_BYTES + 1, sha256: "x" },
+    { id: "negative", name: "negative.bin", bytes: -ADVISORY_MAX_BYTES, sha256: "x" },
+    { id: "infinite", name: "infinite.bin", bytes: Infinity, sha256: "x" },
+  ];
+  assert.equal(totalBytes(p), ADVISORY_MAX_BYTES + 1);
+  assert.ok(advisoryNotices(p).some((n) => n.code === "SIZE"));
 });
 
 test("incomplete packets get INCOMPLETE notice and do not block", () => {
