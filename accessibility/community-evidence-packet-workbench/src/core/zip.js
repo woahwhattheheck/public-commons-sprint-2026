@@ -4,6 +4,8 @@
 
 import { assertSafeArchivePath, collisionKey, findCollisions } from "./paths.js";
 
+const ZIP_U16_MAX = 0xffff;
+
 const CRC_TABLE = new Uint32Array(256);
 for (let i = 0; i < 256; i++) {
   let c = i;
@@ -50,6 +52,16 @@ function encodeName(name) {
   return new TextEncoder().encode(name);
 }
 
+function assertClassicNameLength(name) {
+  if (name.length <= ZIP_U16_MAX) return;
+  const err = new Error("zip-classic-limit:filename-bytes");
+  err.code = "ZIP_CLASSIC_LIMIT";
+  err.limit = "filename-bytes";
+  err.maximum = ZIP_U16_MAX;
+  err.actual = name.length;
+  throw err;
+}
+
 /**
  * @param {{path:string, bytes:Uint8Array}[]} entries
  */
@@ -79,6 +91,7 @@ export function buildStoreZip(entries) {
 
   for (const { path, bytes } of prepared) {
     const name = encodeName(path);
+    assertClassicNameLength(name);
     const crc = crc32(bytes);
     const size = bytes.length;
     const local = concat([
