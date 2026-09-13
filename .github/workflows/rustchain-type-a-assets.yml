@@ -3,6 +3,7 @@ name: Build RustChain Type A assets
 on:
   push:
     branches:
+      - main
       - revenue/rustchain-rip302-type-a-zc913438
     paths:
       - 'distribution/rustchain-rip302-type-a/**'
@@ -18,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: revenue/rustchain-rip302-type-a-zc913438
+          ref: ${{ github.ref_name }}
       - name: Install asset toolchain
         run: |
           sudo apt-get update
@@ -43,4 +44,4 @@ jobs:
             exit 0
           fi
           git commit -m "build: generate RIP-302 production assets [skip ci]"
-          git push origin HEAD:revenue/rustchain-rip302-type-a-zc913438
+          git push origin HEAD:${GITHUB_REF_NAME}
