@@ -1,6 +1,6 @@
 # MCP Streamable HTTP Conformance Kit
 
-A side-effect-free conformance and security probe for **MCP handshake-era Streamable HTTP, through protocol revision 2025-11-25**. It is intended for self-hosted MCP builders, including Alexa+ projects, who need reproducible evidence that the transport handshake is correct without invoking application tools.
+A side-effect-free conformance and security probe for **MCP Streamable HTTP at the explicitly supported protocol revision 2025-11-25**. It is intended for self-hosted MCP builders, including Alexa+ projects, who need reproducible evidence that the transport handshake is correct without invoking application tools.
 
 This is deliberately *not* a 2026-07-28 modern-era checker. MCP 2026-07-28 removed the `initialize` handshake and session model; a server that reports a modern-era revision to this probe fails closed with a lifecycle-era diagnostic instead of being judged by obsolete handshake semantics.
 
@@ -8,7 +8,7 @@ The Amazon Build, Ship, Shape Open Source mini-challenge explicitly rewards mean
 
 ## What it checks
 
-- `initialize` version negotiation, a configurable minimum revision, and the handshake-era upper bound (`2025-11-25`);
+- `initialize` version negotiation, required `InitializeResult` fields (`capabilities`, `serverInfo`), a configurable policy minimum, and an explicit supported-version table currently containing only `2025-11-25`;
 - both legal request-response modes: `application/json` and SSE-framed `text/event-stream`;
 - `notifications/initialized` lifecycle semantics;
 - `ping`, advertised `tools/list`, and advertised `resources/list` discovery;
@@ -79,7 +79,7 @@ const report = await probeMcpEndpoint({
 
 ## Safety and limitations
 
-Read [SECURITY.md](./SECURITY.md). The probe validates the **handshake-era transport** only. It does not prove application correctness, OAuth-provider configuration, public internet reachability, Alexa account registration, cloud deployment, end-to-end Alexa device behavior, or modern-era MCP 2026-07-28 conformance. RTT measurements are from the machine running the probe and should not be presented as Alexa production latency.
+Read [SECURITY.md](./SECURITY.md). The probe validates the **explicitly supported 2025-11-25 handshake-era transport** only. It does not prove application correctness, OAuth-provider configuration, public internet reachability, Alexa account registration, cloud deployment, end-to-end Alexa device behavior, or modern-era MCP 2026-07-28 conformance. RTT measurements are from the machine running the probe and should not be presented as Alexa production latency.
 
 ## Standards / sources
 

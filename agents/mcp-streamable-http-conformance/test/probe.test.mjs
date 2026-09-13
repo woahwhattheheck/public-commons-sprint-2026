@@ -23,6 +23,8 @@ test('green fixture passes protocol/security matrix without invoking tools', asy
   });
 });
 
+
+
 test('SSE-framed POST responses are accepted without invoking tools', async () => {
   await withFixture({ sseResponses: true }, async ({ endpoint, rpcMethods }) => {
     const report = await probeMcpEndpoint({ endpoint, requireSession: true, requireTools: true, timeoutMs: 1000 });
@@ -48,7 +50,33 @@ test('modern-era protocol revisions are rejected by this handshake-era probe', a
   await withFixture({ protocolVersion: '2026-07-28' }, async ({ endpoint }) => {
     const report = await probeMcpEndpoint({ endpoint, requireSession: true });
     assert.equal(report.summary.ok, false);
-    assert.equal(report.checks.find((x) => x.id === 'handshake-era-version').status, 'FAIL');
+    assert.equal(report.checks.find((x) => x.id === 'supported-protocol-version').status, 'FAIL');
+  });
+});
+
+test('older handshake revisions do not become supported by lowering the policy minimum', async () => {
+  await withFixture({ protocolVersion: '2025-06-18' }, async ({ endpoint }) => {
+    const report = await probeMcpEndpoint({ endpoint, minimumProtocolVersion: '2025-06-18', requireSession: true });
+    assert.equal(report.summary.ok, false);
+    assert.equal(report.checks.find((x) => x.id === 'protocol-minimum').status, 'PASS');
+    assert.equal(report.checks.find((x) => x.id === 'supported-protocol-version').status, 'FAIL');
+  });
+});
+
+test('initialize result requires capabilities and server implementation identity', async () => {
+  await withFixture({ omitCapabilities: true }, async ({ endpoint }) => {
+    const report = await probeMcpEndpoint({ endpoint });
+    assert.equal(report.summary.ok, false);
+    const initialize = report.checks.find((x) => x.id === 'initialize-envelope');
+    assert.equal(initialize.status, 'FAIL');
+    assert.equal(initialize.detail.requiredFields.capabilities, false);
+  });
+  await withFixture({ omitServerInfo: true }, async ({ endpoint }) => {
+    const report = await probeMcpEndpoint({ endpoint });
+    assert.equal(report.summary.ok, false);
+    const initialize = report.checks.find((x) => x.id === 'initialize-envelope');
+    assert.equal(initialize.status, 'FAIL');
+    assert.equal(initialize.detail.requiredFields.serverInfo, false);
   });
 });
 

@@ -45,7 +45,12 @@ export async function startFixture(options = {}) {
         ...(options.noToolsCapability ? {} : { tools: {} }),
         ...(options.noResourcesCapability ? {} : { resources: {} }),
       };
-      return sendRpc(res, 200, { jsonrpc: '2.0', id: msg.id, result: { protocolVersion: options.protocolVersion ?? PROTOCOL, capabilities, serverInfo: { name: 'fixture', version: '1' } } }, { 'mcp-session-id': id });
+      const result = {
+        protocolVersion: options.protocolVersion ?? PROTOCOL,
+        ...(options.omitCapabilities ? {} : { capabilities }),
+        ...(options.omitServerInfo ? {} : { serverInfo: { name: 'fixture', version: '1' } }),
+      };
+      return sendRpc(res, 200, { jsonrpc: '2.0', id: msg.id, result }, { 'mcp-session-id': id });
     }
     if (!sessionId || !sessions.has(sessionId)) return send(res, 404, { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32001, message: 'Unknown session' } });
     if (req.headers['mcp-protocol-version'] !== PROTOCOL) return send(res, 400, { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32002, message: 'wrong protocol' } });

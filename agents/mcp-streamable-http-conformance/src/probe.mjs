@@ -3,11 +3,16 @@ import { scrubSecrets, sha256Canonical } from './canonical.mjs';
 
 export const DEFAULT_MIN_PROTOCOL_VERSION = '2025-11-25';
 export const LAST_HANDSHAKE_PROTOCOL_VERSION = '2025-11-25';
+export const SUPPORTED_PROTOCOL_VERSIONS = Object.freeze(['2025-11-25']);
 const IMPOSSIBLE_OLD_VERSION = '1900-01-01';
 const POST_ACCEPT = 'application/json, text/event-stream';
 
 function versionAtLeast(actual, minimum) {
   return /^\d{4}-\d{2}-\d{2}$/.test(actual) && /^\d{4}-\d{2}-\d{2}$/.test(minimum) && actual >= minimum;
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function rpc(id, method, params = {}) { return { jsonrpc: '2.0', id, method, params }; }
@@ -74,17 +79,28 @@ export async function probeMcpEndpoint(options) {
   recordTiming('initialize', init);
   if (!init) return finalize();
 
-  const negotiated = init.body?.result?.protocolVersion;
+  const initResult = init.body?.result;
+  const negotiated = initResult?.protocolVersion;
   const sessionId = init.response.headers.get('mcp-session-id');
-  const initOk = init.response.status === 200 && init.body?.jsonrpc === '2.0' && init.body?.id === 1 && typeof negotiated === 'string';
-  checks.push(initOk ? pass('initialize-envelope', { httpStatus: init.response.status, negotiatedProtocolVersion: negotiated, sessionIssued: Boolean(sessionId) }) : fail('initialize-envelope', { httpStatus: init.response.status, errorCode: init.body?.error?.code ?? null }));
+  const serverInfo = initResult?.serverInfo;
+  const initOk = init.response.status === 200 &&
+    init.body?.jsonrpc === '2.0' &&
+    init.body?.id === 1 &&
+    typeof negotiated === 'string' &&
+    isPlainObject(initResult?.capabilities) &&
+    isPlainObject(serverInfo) &&
+    typeof serverInfo.name === 'string' && serverInfo.name.length > 0 &&
+    typeof serverInfo.version === 'string' && serverInfo.version.length > 0;
+  checks.push(initOk
+    ? pass('initialize-envelope', { httpStatus: init.response.status, negotiatedProtocolVersion: negotiated, sessionIssued: Boolean(sessionId), serverName: serverInfo.name, serverVersion: serverInfo.version })
+    : fail('initialize-envelope', { httpStatus: init.response.status, errorCode: init.body?.error?.code ?? null, requiredFields: { protocolVersion: typeof negotiated === 'string', capabilities: isPlainObject(initResult?.capabilities), serverInfo: isPlainObject(serverInfo), serverName: typeof serverInfo?.name === 'string' && serverInfo.name.length > 0, serverVersion: typeof serverInfo?.version === 'string' && serverInfo.version.length > 0 } }));
   if (!initOk) return finalize();
   checks.push(versionAtLeast(negotiated, minimumProtocolVersion)
     ? pass('protocol-minimum', { minimumProtocolVersion, negotiatedProtocolVersion: negotiated })
     : fail('protocol-minimum', { minimumProtocolVersion, negotiatedProtocolVersion: negotiated }));
-  checks.push(versionAtLeast(LAST_HANDSHAKE_PROTOCOL_VERSION, negotiated)
-    ? pass('handshake-era-version', { lastHandshakeProtocolVersion: LAST_HANDSHAKE_PROTOCOL_VERSION, negotiatedProtocolVersion: negotiated })
-    : fail('handshake-era-version', { lastHandshakeProtocolVersion: LAST_HANDSHAKE_PROTOCOL_VERSION, negotiatedProtocolVersion: negotiated, reason: 'modern MCP revisions use a different lifecycle and require a modern-era probe' }));
+  checks.push(SUPPORTED_PROTOCOL_VERSIONS.includes(negotiated)
+    ? pass('supported-protocol-version', { supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS, negotiatedProtocolVersion: negotiated })
+    : fail('supported-protocol-version', { supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS, negotiatedProtocolVersion: negotiated, reason: 'this probe only certifies explicitly listed handshake-era revisions' }));
   checks.push(negotiated !== IMPOSSIBLE_OLD_VERSION
     ? pass('version-negotiation', { requestedProtocolVersion: IMPOSSIBLE_OLD_VERSION, negotiatedProtocolVersion: negotiated })
     : fail('version-negotiation', { requestedProtocolVersion: IMPOSSIBLE_OLD_VERSION, negotiatedProtocolVersion: negotiated }));
