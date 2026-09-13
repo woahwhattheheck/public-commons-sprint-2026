@@ -97,6 +97,75 @@ function securityScanText(source) {
   );
 }
 
+function javascriptCodeText(source) {
+  const text = String(source ?? "");
+  let output = "";
+  let quote = null;
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1] ?? "";
+
+    if (lineComment) {
+      if (char === "\n" || char === "\r") {
+        lineComment = false;
+        output += char;
+      } else {
+        output += " ";
+      }
+      continue;
+    }
+
+    if (blockComment) {
+      if (char === "*" && next === "/") {
+        output += "  ";
+        index += 1;
+        blockComment = false;
+      } else {
+        output += char === "\n" || char === "\r" ? char : " ";
+      }
+      continue;
+    }
+
+    if (quote !== null) {
+      output += char === "\n" || char === "\r" ? char : " ";
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (char === "/" && next === "/") {
+      output += "  ";
+      index += 1;
+      lineComment = true;
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      output += "  ";
+      index += 1;
+      blockComment = true;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      output += " ";
+      continue;
+    }
+
+    output += char;
+  }
+
+  return output;
+}
+
 function decodeSrcdocHtml(value) {
   // srcdoc is different from ordinary attribute text: the browser decodes the
   // outer attribute once, then parses the resulting value as a new HTML
@@ -166,6 +235,88 @@ function scanHtmlStartTags(source) {
     cursor = Math.max(index, open + 1);
   }
   return tags;
+}
+
+function executableJavaScriptFragments(source) {
+  const text = String(source ?? "");
+
+  // Source snippets and standalone JavaScript do not need HTML extraction.
+  if (!/^\s*</.test(text)) return [text];
+
+  const fragments = [];
+  const scriptPattern = /<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi;
+  let match;
+  while ((match = scriptPattern.exec(text)) !== null) {
+    fragments.push(match[1]);
+  }
+
+  for (const { attributes } of scanHtmlStartTags(text)) {
+    for (const [name, value] of attributes) {
+      if (/^on[a-z]/.test(name)) {
+        fragments.push(value);
+      } else if (/^\s*javascript:/i.test(value)) {
+        fragments.push(value.replace(/^\s*javascript:/i, ""));
+      }
+    }
+  }
+
+  return fragments;
+}
+
+function decodeJavaScriptUnicodeEscapes(source) {
+  return source.replace(
+    /\\u(?:\{([0-9a-f]{1,6})\}|([0-9a-f]{4}))/gi,
+    (match, braced, fixed) => {
+      const codePoint = Number.parseInt(braced ?? fixed, 16);
+      if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
+        return match;
+      }
+      return String.fromCodePoint(codePoint);
+    },
+  );
+}
+
+function hasRootedBrowserGlobalComputedAccess(code) {
+  const aliases = new Set(["globalThis", "window", "self"]);
+  const assignment = /\b([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\b/g;
+  let changed = true;
+
+  // Follow conservative simple-identifier alias chains. Reassignment can make
+  // this over-approximate, which is intentional for release-gate authority.
+  while (changed) {
+    changed = false;
+    assignment.lastIndex = 0;
+    let match;
+    while ((match = assignment.exec(code)) !== null) {
+      if (aliases.has(match[2]) && !aliases.has(match[1])) {
+        aliases.add(match[1]);
+        changed = true;
+      }
+    }
+  }
+
+  const computedAccess = /\b([A-Za-z_$][\w$]*)\s*\[/g;
+  let match;
+  while ((match = computedAccess.exec(code)) !== null) {
+    if (aliases.has(match[1])) return true;
+  }
+  return false;
+}
+
+function hasFetchPrimitiveReference(source) {
+  for (const fragment of executableJavaScriptFragments(source)) {
+    const code = javascriptCodeText(fragment);
+    // Dynamic property expressions can construct "fetch" without ever spelling
+    // one quoted token. Follow simple aliases rooted at browser globals and fail
+    // closed when any rooted alias is used for computed access.
+    if (hasRootedBrowserGlobalComputedAccess(code)) {
+      return true;
+    }
+    if (/\bfetch\b/.test(decodeJavaScriptUnicodeEscapes(code))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isRemoteSingleUrl(value) {
@@ -248,7 +399,6 @@ function passiveHtmlRisks(source, depth) {
 }
 
 const FORBIDDEN = [
-  /\bfetch\s*\(/,
   /\bXMLHttpRequest\b/,
   /\bnavigator\.sendBeacon\s*\(/,
   /\bWebSocket\s*\(/,
@@ -275,10 +425,17 @@ const FORBIDDEN = [
 ];
 
 function networkRisksAtDepth(source, depth) {
-  const text = securityScanText(source);
+  const sourceText = String(source ?? "");
+  const text = securityScanText(sourceText);
   const hits = new Set();
   for (const re of FORBIDDEN) {
     if (re.test(text)) hits.add(re.toString());
+  }
+  // Keep JavaScript syntax in its original escape domain. CSS/URL normalization
+  // intentionally interprets backslash escapes differently and can consume a
+  // JavaScript identifier escape such as `f\u0065tch` before this detector sees it.
+  if (hasFetchPrimitiveReference(sourceText)) {
+    hits.add("javascript:fetch-reference");
   }
   for (const risk of passiveHtmlRisks(text, depth)) hits.add(risk);
   return [...hits];
