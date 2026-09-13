@@ -103,6 +103,13 @@ function asArray(value) {
   return [value];
 }
 
+function byteCount(value) {
+  if (typeof value !== "number" && typeof value !== "string") return 0;
+  if (typeof value === "string" && !value.trim()) return 0;
+  const count = Number(value);
+  return Number.isSafeInteger(count) && count >= 0 ? count : 0;
+}
+
 function importItem(src) {
   if (!src || typeof src !== "object" || Array.isArray(src)) {
     return {
@@ -131,7 +138,7 @@ function importItem(src) {
     path: String(src.path ?? src.name ?? ""),
     role: ITEM_ROLES.includes(src.role) ? src.role : rec.kind === "wacz-attachment" ? "wacz" : "other",
     mediaType: String(src.mediaType ?? "application/octet-stream"),
-    bytes: Number(src.bytes) || 0,
+    bytes: byteCount(src.bytes),
     sha256: String(src.sha256 ?? ""),
     caption: String(src.caption ?? ""),
     collectedAt: String(src.collectedAt ?? ""),
@@ -232,7 +239,7 @@ export function isEmptyPacket(packet) {
 }
 
 export function totalBytes(packet) {
-  return packet.items.reduce((n, it) => n + (Number(it.bytes) || 0), 0);
+  return packet.items.reduce((n, it) => n + byteCount(it.bytes), 0);
 }
 
 export function advisoryNotices(packet) {
