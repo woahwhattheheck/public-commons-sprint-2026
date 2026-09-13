@@ -168,8 +168,8 @@ export async function probeMcpEndpoint(options) {
     const observed = timings.filter(({ name }) => ['initialize', 'ping', 'tools/list'].includes(name)).map(({ elapsedMs }) => elapsedMs);
     const maxObserved = observed.length ? Math.max(...observed) : Infinity;
     checks.push(maxObserved <= maxRttMs
-      ? pass('rtt-budget', { maxRttMs, maxObservedMs: maxObserved })
-      : fail('rtt-budget', { maxRttMs, maxObservedMs: maxObserved }));
+      ? pass('rtt-budget', { maxRttMs })
+      : fail('rtt-budget', { maxRttMs }));
   } else checks.push(skip('rtt-budget', { reason: 'no maxRttMs configured' }));
 
   if (sessionId && terminateSession) {
