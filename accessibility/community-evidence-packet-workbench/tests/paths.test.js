@@ -61,7 +61,15 @@ test("rejects Windows trailing dot and space aliases", () => {
 });
 
 test("rejects Windows reserved device names and characters", () => {
-  for (const path of ["NUL", "evidence/nul.txt", "COM1.json", "dir/LPT³.log"]) {
+  for (const path of [
+    "NUL",
+    "evidence/nul.txt",
+    "COM1.json",
+    "dir/LPT³.log",
+    "CONIN$",
+    "evidence/conout$.txt",
+    "dir/ConOut$.json",
+  ]) {
     assert.equal(zipSlipReason(path), "windows-device-name", path);
   }
   for (const path of ["evidence/a?.txt", "evidence/a:b.txt", "evidence/a*.txt", "evidence/a\u0001b.txt"]) {
@@ -73,4 +81,6 @@ test("preserves ordinary dotfiles and similar non-device names", () => {
   assert.equal(zipSlipReason("evidence/.env"), null);
   assert.equal(zipSlipReason("evidence/COM10.txt"), null);
   assert.equal(zipSlipReason("evidence/com1x.txt"), null);
+  assert.equal(zipSlipReason("evidence/CONOUT$-log.txt"), null);
+  assert.equal(zipSlipReason("evidence/CONIN$foo"), null);
 });
