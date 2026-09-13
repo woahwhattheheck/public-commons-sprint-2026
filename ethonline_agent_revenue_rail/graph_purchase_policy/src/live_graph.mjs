@@ -18,6 +18,9 @@ query PurchasePolicyAgent($id: ID!, $feedbackFirst: Int!, $validationFirst: Int!
       active
       x402Support
       supportedTrusts
+      webEndpoint
+      mcpEndpoint
+      a2aEndpoint
     }
     feedback(where: { isRevoked: false }, first: $feedbackFirst, orderBy: createdAt, orderDirection: desc) {
       id
@@ -69,6 +72,11 @@ function asBoolean(value, code) {
 function asArray(value, code) {
   contractAssert(Array.isArray(value), code);
   return value;
+}
+
+function asNullableString(value, code) {
+  if (value === null) return null;
+  return asString(value, code);
 }
 
 export async function fetchLiveAgentEvidence({
@@ -152,6 +160,9 @@ export async function fetchLiveAgentEvidence({
         active: asBoolean(agent.registrationFile.active, 'GRAPH_REGISTRATION_ACTIVE'),
         x402Support: asBoolean(agent.registrationFile.x402Support, 'GRAPH_REGISTRATION_X402'),
         supportedTrusts: asArray(agent.registrationFile.supportedTrusts, 'GRAPH_REGISTRATION_TRUSTS').map(String),
+        webEndpoint: asNullableString(agent.registrationFile.webEndpoint, 'GRAPH_REGISTRATION_WEB_ENDPOINT'),
+        mcpEndpoint: asNullableString(agent.registrationFile.mcpEndpoint, 'GRAPH_REGISTRATION_MCP_ENDPOINT'),
+        a2aEndpoint: asNullableString(agent.registrationFile.a2aEndpoint, 'GRAPH_REGISTRATION_A2A_ENDPOINT'),
       },
       feedback,
       validations,
