@@ -185,6 +185,7 @@ function passiveHtmlRisks(source, depth) {
     ["link", ["href"]],
     ["img", ["src"]],
     ["iframe", ["src"]],
+    ["frame", ["src"]],
     ["audio", ["src"]],
     ["video", ["src", "poster"]],
     ["source", ["src"]],
