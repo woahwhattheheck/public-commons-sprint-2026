@@ -73,9 +73,13 @@ export function findCollisions(paths) {
 export function uniqueArchivePath(desired, used) {
   const base = assertSafeArchivePath(desired);
   if (!used.has(collisionKey(base))) return base;
+  const slash = base.lastIndexOf("/");
   const dot = base.lastIndexOf(".");
-  const stem = dot > 0 ? base.slice(0, dot) : base;
-  const ext = dot > 0 ? base.slice(dot) : "";
+  // Only a dot inside the leaf name is an extension separator. Parent-directory
+  // dots and a leading dotfile marker must not move the dedupe suffix upstream.
+  const hasExtension = dot > slash + 1;
+  const stem = hasExtension ? base.slice(0, dot) : base;
+  const ext = hasExtension ? base.slice(dot) : "";
   let n = 2;
   while (n < 10000) {
     const candidate = `${stem}-${n}${ext}`;
