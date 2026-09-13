@@ -2,6 +2,7 @@
  * STORE-method ZIP writer. Container only. Not a PKWARE-certified product.
  */
 
+import { toUint8 } from "./hash.js";
 import { assertSafeArchivePath, collisionKey, findCollisions } from "./paths.js";
 
 const ZIP_U16_MAX = 0xffff;
@@ -77,16 +78,27 @@ function assertClassicU32(limit, actual) {
   classicLimit(limit, ZIP_U32_MAX, actual);
 }
 
+function entryBytes(value, path) {
+  try {
+    return toUint8(value);
+  } catch (cause) {
+    const err = new TypeError("zip-entry-bytes-must-be-byte-buffer");
+    err.code = "ZIP_ENTRY_BYTES";
+    err.path = path;
+    err.cause = cause;
+    throw err;
+  }
+}
+
 /**
- * @param {{path:string, bytes:Uint8Array}[]} entries
+ * @param {{path:string, bytes:Uint8Array|ArrayBuffer|ArrayBufferView}[]} entries
  */
 export function buildStoreZip(entries) {
   assertClassicEntryCount(entries);
   const prepared = [];
   for (const entry of entries) {
     const path = assertSafeArchivePath(entry.path);
-    const bytes =
-      entry.bytes instanceof Uint8Array ? entry.bytes : new Uint8Array(entry.bytes || []);
+    const bytes = entryBytes(entry.bytes, path);
     prepared.push({ path, bytes });
   }
   const collisions = findCollisions(prepared.map((e) => e.path));
