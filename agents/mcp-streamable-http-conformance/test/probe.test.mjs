@@ -18,6 +18,7 @@ test('green fixture passes protocol/security matrix without invoking tools', asy
     assert.equal(report.checks.find((x) => x.id === 'version-negotiation').status, 'PASS');
     assert.equal(report.checks.find((x) => x.id === 'jsonrpc-method-not-found').status, 'PASS');
     assert.ok(methods.includes('DELETE'));
+    assert.equal(rpcMethods.includes('notifications/initialized'), true);
     assert.equal(rpcMethods.includes('tools/call'), false);
   });
 });
