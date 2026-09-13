@@ -23,6 +23,35 @@ test('green fixture passes protocol/security matrix without invoking tools', asy
   });
 });
 
+test('SSE-framed POST responses are accepted without invoking tools', async () => {
+  await withFixture({ sseResponses: true }, async ({ endpoint, rpcMethods }) => {
+    const report = await probeMcpEndpoint({ endpoint, requireSession: true, requireTools: true, timeoutMs: 1000 });
+    assert.equal(report.summary.ok, true, JSON.stringify(report.checks.filter((x) => x.status === 'FAIL')));
+    assert.equal(report.checks.find((x) => x.id === 'initialize-envelope').status, 'PASS');
+    assert.equal(report.checks.find((x) => x.id === 'tools-discovery').status, 'PASS');
+    assert.equal(rpcMethods.includes('tools/call'), false);
+  });
+});
+
+test('generic servers may omit tools capability unless the caller requires tools', async () => {
+  await withFixture({ noToolsCapability: true }, async ({ endpoint }) => {
+    const generic = await probeMcpEndpoint({ endpoint, requireSession: true });
+    assert.equal(generic.summary.ok, true);
+    assert.equal(generic.checks.find((x) => x.id === 'tools-discovery').status, 'SKIP');
+    const alexaProfile = await probeMcpEndpoint({ endpoint, requireSession: true, requireTools: true });
+    assert.equal(alexaProfile.summary.ok, false);
+    assert.equal(alexaProfile.checks.find((x) => x.id === 'tools-discovery').status, 'FAIL');
+  });
+});
+
+test('modern-era protocol revisions are rejected by this handshake-era probe', async () => {
+  await withFixture({ protocolVersion: '2026-07-28' }, async ({ endpoint }) => {
+    const report = await probeMcpEndpoint({ endpoint, requireSession: true });
+    assert.equal(report.summary.ok, false);
+    assert.equal(report.checks.find((x) => x.id === 'handshake-era-version').status, 'FAIL');
+  });
+});
+
 test('semantic evidence hash is stable across capture time and transport timing with RTT gate enabled', async () => {
   await withFixture({}, async ({ endpoint }) => {
     const first = await probeMcpEndpoint({ endpoint, requireSession: true, maxRttMs: 10_000 });

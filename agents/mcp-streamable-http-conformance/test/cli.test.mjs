@@ -23,7 +23,7 @@ test('CLI exits zero on a conforming server and never prints bearer secret', asy
   const fixture = await startFixture({ echoAuthInError: true });
   try {
     const secret = 'cli-secret-f31c9d';
-    const result = await run([fixture.endpoint, '--require-session', '--bearer-env', 'PROBE_TOKEN'], { PROBE_TOKEN: secret });
+    const result = await run([fixture.endpoint, '--require-session', '--require-tools', '--bearer-env', 'PROBE_TOKEN'], { PROBE_TOKEN: secret });
     assert.equal(result.code, 0, result.stderr || result.stdout);
     assert.equal(result.stdout.includes(secret), false);
     const report = JSON.parse(result.stdout);

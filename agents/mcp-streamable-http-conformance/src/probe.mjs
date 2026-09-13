@@ -2,6 +2,7 @@ import { requestHeadersOnly, requestJson, validateEndpoint } from './http-client
 import { scrubSecrets, sha256Canonical } from './canonical.mjs';
 
 export const DEFAULT_MIN_PROTOCOL_VERSION = '2025-11-25';
+export const LAST_HANDSHAKE_PROTOCOL_VERSION = '2025-11-25';
 const IMPOSSIBLE_OLD_VERSION = '1900-01-01';
 const POST_ACCEPT = 'application/json, text/event-stream';
 
@@ -49,6 +50,7 @@ export async function probeMcpEndpoint(options) {
   const maxResponseBytes = options?.maxResponseBytes ?? 256 * 1024;
   const maxRttMs = options?.maxRttMs ?? null;
   const requireSession = options?.requireSession ?? false;
+  const requireTools = options?.requireTools ?? false;
   const terminateSession = options?.terminateSession ?? true;
   const authorizationHeader = options?.authorizationHeader ?? null;
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new TypeError('timeoutMs must be finite and > 0');
@@ -80,6 +82,9 @@ export async function probeMcpEndpoint(options) {
   checks.push(versionAtLeast(negotiated, minimumProtocolVersion)
     ? pass('protocol-minimum', { minimumProtocolVersion, negotiatedProtocolVersion: negotiated })
     : fail('protocol-minimum', { minimumProtocolVersion, negotiatedProtocolVersion: negotiated }));
+  checks.push(versionAtLeast(LAST_HANDSHAKE_PROTOCOL_VERSION, negotiated)
+    ? pass('handshake-era-version', { lastHandshakeProtocolVersion: LAST_HANDSHAKE_PROTOCOL_VERSION, negotiatedProtocolVersion: negotiated })
+    : fail('handshake-era-version', { lastHandshakeProtocolVersion: LAST_HANDSHAKE_PROTOCOL_VERSION, negotiatedProtocolVersion: negotiated, reason: 'modern MCP revisions use a different lifecycle and require a modern-era probe' }));
   checks.push(negotiated !== IMPOSSIBLE_OLD_VERSION
     ? pass('version-negotiation', { requestedProtocolVersion: IMPOSSIBLE_OLD_VERSION, negotiatedProtocolVersion: negotiated })
     : fail('version-negotiation', { requestedProtocolVersion: IMPOSSIBLE_OLD_VERSION, negotiatedProtocolVersion: negotiated }));
@@ -100,12 +105,21 @@ export async function probeMcpEndpoint(options) {
     ? pass('ping', { httpStatus: 200 })
     : fail('ping', { httpStatus: ping.response.status, errorCode: ping.body?.error?.code ?? null }));
 
-  const tools = await safeJson(checks, 'tools-list-transport', request({ headers, body: rpc(3, 'tools/list') }));
-  recordTiming('tools/list', tools);
-  const toolNames = Array.isArray(tools?.body?.result?.tools) ? tools.body.result.tools.map((tool) => tool?.name).filter((name) => typeof name === 'string').sort() : [];
-  if (tools) checks.push(tools.response.status === 200 && Array.isArray(tools.body?.result?.tools) && toolNames.length > 0
-    ? pass('tools-discovery', { httpStatus: 200, toolCount: toolNames.length, toolNames })
-    : fail('tools-discovery', { httpStatus: tools.response.status, toolCount: toolNames.length, errorCode: tools.body?.error?.code ?? null }));
+  const toolsCap = init.body?.result?.capabilities?.tools;
+  if (toolsCap) {
+    const tools = await safeJson(checks, 'tools-list-transport', request({ headers, body: rpc(3, 'tools/list') }));
+    recordTiming('tools/list', tools);
+    const toolNames = Array.isArray(tools?.body?.result?.tools) ? tools.body.result.tools.map((tool) => tool?.name).filter((name) => typeof name === 'string').sort() : [];
+    if (tools) {
+      const validList = tools.response.status === 200 && Array.isArray(tools.body?.result?.tools);
+      const requirementMet = !requireTools || toolNames.length > 0;
+      checks.push(validList && requirementMet
+        ? pass('tools-discovery', { httpStatus: 200, toolCount: toolNames.length, toolNames, required: requireTools })
+        : fail('tools-discovery', { httpStatus: tools.response.status, toolCount: toolNames.length, required: requireTools, errorCode: tools.body?.error?.code ?? null }));
+    }
+  } else checks.push(requireTools
+    ? fail('tools-discovery', { required: true, reason: 'server did not advertise tools capability' })
+    : skip('tools-discovery', { required: false, reason: 'server did not advertise tools capability' }));
 
   const resourcesCap = init.body?.result?.capabilities?.resources;
   if (resourcesCap) {
@@ -213,6 +227,7 @@ export async function probeMcpEndpoint(options) {
       minimumProtocolVersion,
       authenticated: Boolean(authorizationHeader),
       requireSession,
+      requireTools,
       checks: semanticChecks,
       summary,
     };
