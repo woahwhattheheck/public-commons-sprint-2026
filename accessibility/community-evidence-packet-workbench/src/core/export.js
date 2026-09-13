@@ -2,7 +2,7 @@
  * Snapshot exporters. Empty and incomplete packets still export.
  */
 
-import { escapeHtml, escapeMarkdown, escapeMarkdownFence, csvRow } from "./escape.js";
+import { escapeHtml, escapeMarkdown, csvRow } from "./escape.js";
 import { sha256Hex, utf8Bytes, BYTE_IDENTITY_NOTICE } from "./hash.js";
 import { collisionKey, uniqueArchivePath } from "./paths.js";
 import { buildStoreZip } from "./zip.js";
@@ -58,6 +58,14 @@ function snapshotByteIdentityNotice(packet) {
   return "SHA-256 values shown for imported items are recorded metadata unless local payload bytes were loaded in this session. Package exports re-hash available payload bytes and refuse unavailable nonzero payloads.";
 }
 
+function markdownText(value) {
+  const text = String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return escapeMarkdown(text);
+}
+
 export function exportJson(packet) {
   return packetToJson(packet);
 }
@@ -67,24 +75,30 @@ export function exportMarkdown(packet) {
   const empty = isEmptyPacket(packet);
   const notices = advisoryNotices(packet);
   const lines = [];
-  lines.push("# " + (packet.title || "(untitled packet)"));
+  lines.push("# " + markdownText(packet.title || "(untitled packet)"));
   lines.push("");
   lines.push("Community evidence packet snapshot. This file is a local export, not a certificate.");
   lines.push("");
   if (empty) lines.push("**State:** empty. Fields below are labeled as missing on purpose.");
-  else if (missing.length) lines.push("**State:** incomplete. Missing: " + missing.join(", ") + ".");
-  else lines.push("**State:** fields present in this session. Completeness is not verification.");
+  else if (missing.length) {
+    lines.push("**State:** incomplete. Missing: " + markdownText(missing.join(", ")) + ".");
+  } else lines.push("**State:** fields present in this session. Completeness is not verification.");
   lines.push("");
-  lines.push("- Packet id: " + (packet.id || "(missing)"));
-  lines.push("- Community: " + (packet.community || "(missing)"));
-  lines.push("- Collector: " + (packet.collector || "(missing)"));
-  lines.push("- Location: " + (packet.location || "(missing)"));
-  lines.push("- Period: " + (packet.period?.start || "(missing)") + " → " + (packet.period?.end || "(missing)"));
-  lines.push("- Created: " + (packet.created || "(missing)"));
+  lines.push("- Packet id: " + markdownText(packet.id || "(missing)"));
+  lines.push("- Community: " + markdownText(packet.community || "(missing)"));
+  lines.push("- Collector: " + markdownText(packet.collector || "(missing)"));
+  lines.push("- Location: " + markdownText(packet.location || "(missing)"));
+  lines.push(
+    "- Period: " +
+      markdownText(packet.period?.start || "(missing)") +
+      " → " +
+      markdownText(packet.period?.end || "(missing)"),
+  );
+  lines.push("- Created: " + markdownText(packet.created || "(missing)"));
   lines.push("");
   lines.push("## Statement");
   lines.push("");
-  lines.push(packet.statement ? escapeMarkdownFence(packet.statement) : "(missing)");
+  lines.push(packet.statement ? markdownText(packet.statement) : "(missing)");
   lines.push("");
   lines.push("## Byte identity");
   lines.push("");
@@ -98,23 +112,25 @@ export function exportMarkdown(packet) {
     lines.push("No items. Empty export is intentional.");
   } else {
     for (const item of packet.items) {
-      lines.push("### " + escapeMarkdown(item.name || item.id));
+      lines.push("### " + markdownText(item.name || item.id));
       lines.push("");
-      lines.push("- Role: " + item.role);
-      lines.push("- Path: `" + (item.path || item.name || "") + "`");
-      lines.push("- Bytes: " + item.bytes);
-      lines.push("- SHA-256: `" + (item.sha256 || "(missing)") + "`");
-      lines.push("- Recognized as: " + item.recognizedAs);
+      lines.push("- Role: " + markdownText(item.role));
+      lines.push("- Path: " + markdownText(item.path || item.name || ""));
+      lines.push("- Bytes: " + markdownText(item.bytes));
+      lines.push("- SHA-256: " + markdownText(item.sha256 || "(missing)"));
+      lines.push("- Recognized as: " + markdownText(item.recognizedAs));
       if (item.waczOpaque) lines.push("- WACZ: opaque attachment (not opened)");
-      if (item.caption) lines.push("- Caption: " + escapeMarkdownFence(item.caption));
-      if (item.provenance) lines.push("- Provenance: " + escapeMarkdownFence(item.provenance));
+      if (item.caption) lines.push("- Caption: " + markdownText(item.caption));
+      if (item.provenance) lines.push("- Provenance: " + markdownText(item.provenance));
       lines.push("");
     }
   }
   if (notices.length) {
     lines.push("## Notices");
     lines.push("");
-    for (const n of notices) lines.push("- `" + n.code + "` " + n.text);
+    for (const n of notices) {
+      lines.push("- " + markdownText(n.code) + " " + markdownText(n.text));
+    }
     lines.push("");
   }
   return lines.join("\n");
