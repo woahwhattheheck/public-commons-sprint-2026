@@ -263,12 +263,28 @@ function executableJavaScriptFragments(source) {
   return fragments;
 }
 
+function decodeJavaScriptUnicodeEscapes(source) {
+  return source.replace(
+    /\\u(?:\{([0-9a-f]{1,6})\}|([0-9a-f]{4}))/gi,
+    (match, braced, fixed) => {
+      const codePoint = Number.parseInt(braced ?? fixed, 16);
+      if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
+        return match;
+      }
+      return String.fromCodePoint(codePoint);
+    },
+  );
+}
+
 function hasFetchPrimitiveReference(source) {
   for (const fragment of executableJavaScriptFragments(source)) {
-    if (/\b(?:globalThis|window|self)\s*\[\s*["']fetch["']\s*\]/.test(fragment)) {
+    const code = javascriptCodeText(fragment);
+    // Dynamic property expressions can construct "fetch" without ever spelling
+    // one quoted token. Fail closed on computed access to browser global roots.
+    if (/\b(?:globalThis|window|self)\s*\[/.test(code)) {
       return true;
     }
-    if (/\bfetch\b/.test(javascriptCodeText(fragment))) {
+    if (/\bfetch\b/.test(decodeJavaScriptUnicodeEscapes(code))) {
       return true;
     }
   }
