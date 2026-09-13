@@ -237,6 +237,44 @@ function scanHtmlStartTags(source) {
   return tags;
 }
 
+function executableJavaScriptFragments(source) {
+  const text = String(source ?? "");
+
+  // Source snippets and standalone JavaScript do not need HTML extraction.
+  if (!/^\s*</.test(text)) return [text];
+
+  const fragments = [];
+  const scriptPattern = /<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi;
+  let match;
+  while ((match = scriptPattern.exec(text)) !== null) {
+    fragments.push(match[1]);
+  }
+
+  for (const { attributes } of scanHtmlStartTags(text)) {
+    for (const [name, value] of attributes) {
+      if (/^on[a-z]/.test(name)) {
+        fragments.push(value);
+      } else if (/^\s*javascript:/i.test(value)) {
+        fragments.push(value.replace(/^\s*javascript:/i, ""));
+      }
+    }
+  }
+
+  return fragments;
+}
+
+function hasFetchPrimitiveReference(source) {
+  for (const fragment of executableJavaScriptFragments(source)) {
+    if (/\b(?:globalThis|window|self)\s*\[\s*["']fetch["']\s*\]/.test(fragment)) {
+      return true;
+    }
+    if (/\bfetch\b/.test(javascriptCodeText(fragment))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function isRemoteSingleUrl(value) {
   return /^\s*(?:https?:|\/\/)/i.test(value);
 }
@@ -317,8 +355,6 @@ function passiveHtmlRisks(source, depth) {
 }
 
 const FORBIDDEN = [
-  /\bfetch\s*(?:\?\.)?\s*\(/,
-  /\b(?:globalThis|window|self)\s*\[\s*["']fetch["']\s*\]/,
   /\bXMLHttpRequest\b/,
   /\bnavigator\.sendBeacon\s*\(/,
   /\bWebSocket\s*\(/,
@@ -350,7 +386,7 @@ function networkRisksAtDepth(source, depth) {
   for (const re of FORBIDDEN) {
     if (re.test(text)) hits.add(re.toString());
   }
-  if (/\bfetch\b/.test(javascriptCodeText(text))) {
+  if (hasFetchPrimitiveReference(text)) {
     hits.add("javascript:fetch-reference");
   }
   for (const risk of passiveHtmlRisks(text, depth)) hits.add(risk);
