@@ -40,10 +40,17 @@ test("passive browser fetch surfaces are rejected", () => {
     '<audio src="https://example.invalid/audio.mp3"></audio>',
     '<video poster="//example.invalid/poster.jpg"></video>',
     '<source srcset="local.png 1x, https://example.invalid/remote.png 2x">',
+    '<img srcset=https://example.invalid/remote.png>',
     '<object data="https://example.invalid/object.bin"></object>',
     '<form action="//example.invalid/submit"></form>',
+    '<button formaction="https://example.invalid/submit">send</button>',
     '<base href="https://example.invalid/assets/">',
     '<meta content="0; url=https://example.invalid/next" http-equiv="refresh">',
+    '<meta http-equiv="refresh" content="0; url=\'https://example.invalid/next\'">',
+    '<svg><image href="https://example.invalid/image.svg"></image></svg>',
+    '<svg><use xlink:href="//example.invalid/sprite.svg#icon"></use></svg>',
+    '<body background="//example.invalid/bg.png">',
+    '<a href="/local" ping="https://example.invalid/audit">local</a>',
     '<style>@import "https://example.invalid/theme.css";</style>',
     '<div style="background:url(//example.invalid/bg.png)"></div>',
     '<script src="//example.invalid/app.js"></script>',
@@ -58,11 +65,14 @@ test("passive browser fetch surfaces are rejected", () => {
   }
 });
 
-test("inert URL text remains allowed", () => {
+test("inert and local URL text remains allowed", () => {
   const samples = [
     'const evidenceUrl = "https://example.invalid/source";',
     '{"@context":"https://schema.org"}',
     'Source citation: https://example.invalid/report',
+    '<img src="./local.png">',
+    '<form action="/local-submit"></form>',
+    '<a href="https://example.invalid/citation">citation</a>',
   ];
   for (const source of samples) {
     assert.deepEqual(networkRisks(source), [], source);
