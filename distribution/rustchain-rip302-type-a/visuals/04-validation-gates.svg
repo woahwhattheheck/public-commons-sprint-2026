@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<rect width="1920" height="1080" fill="#0b0d12"/>
+<rect x="96" y="90" width="10" height="90" fill="#e7edf7"/>
+<text x="140" y="125" fill="#aeb8c7" font-family="monospace" font-size="34">RIP-302 / POSTING GATES</text>
+<text x="140" y="205" fill="#ffffff" font-family="sans-serif" font-size="68" font-weight="700">The marketplace puts bounds around autonomy</text>
+<rect x="140" y="320" width="1640" height="150" rx="24" fill="#151a23" stroke="#3a4558" stroke-width="2"/>
+<text x="185" y="376" fill="#ffffff" font-family="monospace" font-size="34" font-weight="700">TTL</text>
+<text x="185" y="426" fill="#c4cfdd" font-family="sans-serif" font-size="30">7-day default · minimum 1 hour · maximum 30 days</text>
+<rect x="140" y="495" width="1640" height="150" rx="24" fill="#151a23" stroke="#3a4558" stroke-width="2"/>
+<text x="185" y="551" fill="#ffffff" font-family="monospace" font-size="34" font-weight="700">CAPACITY</text>
+<text x="185" y="601" fill="#c4cfdd" font-family="sans-serif" font-size="30">Maximum 20 active jobs per poster</text>
+<rect x="140" y="670" width="1640" height="150" rx="24" fill="#151a23" stroke="#3a4558" stroke-width="2"/>
+<text x="185" y="726" fill="#ffffff" font-family="monospace" font-size="34" font-weight="700">INPUT</text>
+<text x="185" y="776" fill="#c4cfdd" font-family="sans-serif" font-size="30">Title, description, category, reward, tags and wallet identifier are validated</text>
+<text x="140" y="1010" fill="#8995a8" font-family="monospace" font-size="26">Deterministic constraints live outside the model.</text>
+</svg>
