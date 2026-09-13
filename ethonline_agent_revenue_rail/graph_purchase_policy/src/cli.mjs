@@ -28,16 +28,19 @@ async function main() {
   const policy = await readJson(args.policy, 'CLI_POLICY');
   const now = args.now ?? new Date().toISOString();
   let evidence;
+  let evidenceTransport;
   if (args.mode === 'fixture') {
     evidence = await readJson(args.evidence, 'CLI_EVIDENCE');
+    evidenceTransport = 'fixture';
   } else {
     const envName = args['endpoint-env'] ?? 'GRAPH_ENDPOINT';
     const endpoint = process.env[envName];
     if (!endpoint) throw Object.assign(new Error(`missing endpoint environment variable ${envName}`), { code: 'CLI_ENDPOINT_ENV' });
     if (!args.agent) throw Object.assign(new Error('--agent required'), { code: 'CLI_AGENT' });
     evidence = await fetchLiveAgentEvidence({ endpoint, agentId: args.agent, capturedAt: now });
+    evidenceTransport = 'live_graph';
   }
-  const receipt = evaluatePurchase({ offer, policy, evidence, now });
+  const receipt = evaluatePurchase({ offer, policy, evidence, evidenceTransport, now });
   process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
 }
 
