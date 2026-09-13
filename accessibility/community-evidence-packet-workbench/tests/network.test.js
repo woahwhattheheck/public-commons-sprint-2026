@@ -97,6 +97,47 @@ test("browser-normalized passive network surfaces are rejected", () => {
   }
 });
 
+test("iframe srcdoc nested passive documents are rejected", () => {
+  const samples = [
+    '<iframe srcdoc="&lt;img src=https://example.invalid/pixel.png&gt;"></iframe>',
+    '<iframe srcdoc="&#60;link rel=stylesheet href=https://example.invalid/theme.css&#62;"></iframe>',
+    '<iframe srcdoc="&#60;img src=&#104;ttps://example.invalid/pixel.png&#62;"></iframe>',
+    '<iframe srcdoc="&lt;iframe srcdoc=&quot;&amp;lt;img src=https://example.invalid/nested.png&amp;gt;&quot;&gt;&lt;/iframe&gt;"></iframe>',
+  ];
+  for (const source of samples) {
+    assert.throws(
+      () => assertNoRuntimeNetwork(source),
+      /runtime-network-pattern/,
+      source,
+    );
+  }
+});
+
+test("iframe srcdoc recursion fails closed at excessive nesting", () => {
+  const escapeSrcdoc = (source) =>
+    source
+      .replaceAll("&", "&amp;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  let source = "<p>local only</p>";
+  for (let depth = 0; depth < 10; depth += 1) {
+    source = `<iframe srcdoc="${escapeSrcdoc(source)}"></iframe>`;
+  }
+  assert.throws(() => assertNoRuntimeNetwork(source), /runtime-network-pattern/);
+});
+
+test("iframe srcdoc local and double-escaped inert markup remain allowed", () => {
+  const samples = [
+    '<iframe srcdoc="&lt;p&gt;local only&lt;/p&gt;"></iframe>',
+    '<iframe srcdoc="&lt;img src=./local.png&gt;"></iframe>',
+    '<iframe srcdoc="&amp;lt;img src=./still-not-markup.png&amp;gt;"></iframe>',
+  ];
+  for (const source of samples) {
+    assert.deepEqual(networkRisks(source), [], source);
+  }
+});
+
 test("inert and local URL text remains allowed", () => {
   const samples = [
     'const evidenceUrl = "https://example.invalid/source";',

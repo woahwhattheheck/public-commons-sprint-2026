@@ -11,6 +11,16 @@ const SECURITY_HTML_ENTITIES = new Map([
   ["tab", "\t"],
 ]);
 
+const SRCDOC_HTML_ENTITIES = new Map([
+  ["amp", "&"],
+  ["apos", "'"],
+  ["gt", ">"],
+  ["lt", "<"],
+  ["quot", '"'],
+]);
+
+const MAX_NESTED_DOCUMENT_DEPTH = 8;
+
 function isSecurityUrlCodePoint(codePoint) {
   return (
     (codePoint >= 0x30 && codePoint <= 0x39) ||
@@ -87,6 +97,24 @@ function securityScanText(source) {
   );
 }
 
+function decodeSrcdocHtml(value) {
+  // srcdoc is different from ordinary attribute text: the browser decodes the
+  // outer attribute once, then parses the resulting value as a new HTML
+  // document. Mirror exactly one character-reference pass so `&amp;lt;` remains
+  // literal `&lt;` text in the nested document rather than becoming a tag.
+  return String(value ?? "")
+    .replace(/&#(?:x([0-9a-f]+)|([0-9]+));?/gi, (match, hex, decimal) => {
+      const codePoint = Number.parseInt(hex ?? decimal, hex ? 16 : 10);
+      if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
+        return match;
+      }
+      return String.fromCodePoint(codePoint);
+    })
+    .replace(/&(amp|apos|gt|lt|quot);/gi, (match, named) =>
+      SRCDOC_HTML_ENTITIES.get(named.toLowerCase()) ?? match,
+    );
+}
+
 function parseHtmlAttributes(source) {
   const attributes = new Map();
   // HTML reports characters such as '=' in an unquoted value as parse errors,
@@ -150,7 +178,7 @@ function listContainsRemoteUrl(value, separator) {
     .some((part) => isRemoteSingleUrl(part.trim().split(/\s+/)[0] ?? ""));
 }
 
-function passiveHtmlRisks(source) {
+function passiveHtmlRisks(source, depth) {
   const risks = [];
   const singleUrlAttributes = new Map([
     ["script", ["src"]],
@@ -179,6 +207,16 @@ function passiveHtmlRisks(source) {
     for (const attribute of singleUrlAttributes.get(name) ?? []) {
       if (attributes.has(attribute) && isRemoteSingleUrl(attributes.get(attribute))) {
         risks.push(`passive:${name}:${attribute}`);
+      }
+    }
+    if (name === "iframe" && attributes.has("srcdoc")) {
+      if (depth >= MAX_NESTED_DOCUMENT_DEPTH) {
+        risks.push("passive:iframe:srcdoc-depth");
+      } else {
+        const nestedDocument = decodeSrcdocHtml(attributes.get("srcdoc"));
+        if (networkRisksAtDepth(nestedDocument, depth + 1).length) {
+          risks.push("passive:iframe:srcdoc");
+        }
       }
     }
     if (
@@ -235,14 +273,18 @@ const FORBIDDEN = [
   /unpkg\.com/i,
 ];
 
-export function networkRisks(source) {
+function networkRisksAtDepth(source, depth) {
   const text = securityScanText(source);
   const hits = new Set();
   for (const re of FORBIDDEN) {
     if (re.test(text)) hits.add(re.toString());
   }
-  for (const risk of passiveHtmlRisks(text)) hits.add(risk);
+  for (const risk of passiveHtmlRisks(text, depth)) hits.add(risk);
   return [...hits];
+}
+
+export function networkRisks(source) {
+  return networkRisksAtDepth(source, 0);
 }
 
 export function assertNoRuntimeNetwork(source) {
