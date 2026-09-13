@@ -2,7 +2,6 @@ import { BYTE_IDENTITY_NOTICE } from "../core/hash.js";
 import { escapeHtml } from "../core/escape.js";
 import {
   emptyPacket,
-  importPacket,
   packetToJson,
   advisoryNotices,
   makeTextItem,
@@ -17,6 +16,7 @@ import {
   exportRoCrateZip,
   exportBagItZip,
 } from "../core/export.js";
+import { importPacketFile } from "./import-file.js";
 
 let packet = emptyPacket();
 
@@ -170,11 +170,13 @@ function wire() {
   $("import-json").addEventListener("change", async (ev) => {
     const file = ev.target.files[0];
     if (!file) return;
-    const text = await file.text();
-    packet = importPacket(text);
+    const result = await importPacketFile(file, packet);
+    ev.target.value = "";
+    $("export-status").textContent = result.message;
+    if (!result.ok) return;
+    packet = result.packet;
     bindPacketFields();
     render();
-    ev.target.value = "";
   });
   $("clear").addEventListener("click", () => {
     packet = emptyPacket();
