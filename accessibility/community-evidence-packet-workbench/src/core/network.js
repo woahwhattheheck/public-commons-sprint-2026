@@ -248,7 +248,8 @@ function passiveHtmlRisks(source, depth) {
 }
 
 const FORBIDDEN = [
-  /\bfetch\s*\(/,
+  /\bfetch\s*(?:\?\.)?\s*\(/,
+  /\b(?:globalThis|window|self)\s*\[\s*["']fetch["']\s*\]\s*(?:\?\.)?\s*\(/,
   /\bXMLHttpRequest\b/,
   /\bnavigator\.sendBeacon\s*\(/,
   /\bWebSocket\s*\(/,
