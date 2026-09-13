@@ -23,12 +23,14 @@ test('green fixture passes protocol/security matrix without invoking tools', asy
   });
 });
 
-test('semantic evidence hash is stable across capture time and transport timing', async () => {
+test('semantic evidence hash is stable across capture time and transport timing with RTT gate enabled', async () => {
   await withFixture({}, async ({ endpoint }) => {
-    const first = await probeMcpEndpoint({ endpoint, requireSession: true });
-    const second = await probeMcpEndpoint({ endpoint, requireSession: true });
+    const first = await probeMcpEndpoint({ endpoint, requireSession: true, maxRttMs: 10_000 });
+    const second = await probeMcpEndpoint({ endpoint, requireSession: true, maxRttMs: 10_000 });
     assert.equal(first.summary.ok, true);
     assert.equal(second.summary.ok, true);
+    assert.equal(first.checks.find((x) => x.id === 'rtt-budget').status, 'PASS');
+    assert.equal(second.checks.find((x) => x.id === 'rtt-budget').status, 'PASS');
     assert.equal(first.evidenceSha256, second.evidenceSha256);
   });
 });
