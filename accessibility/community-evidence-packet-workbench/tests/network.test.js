@@ -81,6 +81,12 @@ test("browser-normalized passive network surfaces are rejected", () => {
     '<div style="background:url(h\\74tps://example.invalid/bg.png)"></div>',
     '<div style="background:url(\\68ttps://example.invalid/bg.png)"></div>',
     '<div style="background:url(https\\3a\\2f\\2f example.invalid/bg.png)"></div>',
+    '<img src="&#00000104;ttps://example.invalid/pixel.png">',
+    '<img src="&#x00000068;ttps://example.invalid/pixel.png">',
+    '<img src="&#11;https://example.invalid/pixel.png">',
+    '<iframe src="/&#9;/example.invalid/frame"></iframe>',
+    '<style>@import "ht' + String.fromCharCode(92, 10) + 'tps://example.invalid/theme.css";</style>',
+    '<div style="background:url(/' + String.fromCharCode(92, 10) + '/example.invalid/bg.png)"></div>',
   ];
   for (const source of samples) {
     assert.throws(
@@ -106,6 +112,8 @@ test("inert and local URL text remains allowed", () => {
     '[citation](https://example.invalid/report)',
     '<a href=/local ping=/local-audit>local</a>',
     '<meta http-equiv=refresh content=0;url=/local-next>',
+    'Source citation: &#00000104;ttps://example.invalid/report',
+    '<img src="&#11;./local.png">',
   ];
   for (const source of samples) {
     assert.deepEqual(networkRisks(source), [], source);
