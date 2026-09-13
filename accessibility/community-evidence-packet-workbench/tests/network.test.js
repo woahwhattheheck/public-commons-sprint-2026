@@ -65,11 +65,34 @@ test("passive browser fetch surfaces are rejected", () => {
   }
 });
 
+test("browser-decoded passive network spellings are rejected", () => {
+  const samples = [
+    '<img src="&#104;ttps://example.invalid/pixel.png">',
+    '<img src="h&#116;tps://example.invalid/pixel.png">',
+    '<img src="&#x68;ttps&colon;&sol;&sol;example.invalid/pixel.png">',
+    '<iframe src=&sol;&sol;example.invalid/frame></iframe>',
+    '<a href="/local" ping=https://example.invalid/audit>local</a>',
+    '<meta http-equiv=refresh content=0;url=https://example.invalid/next>',
+    '<style>.x{background:url(h\\74tps://example.invalid/bg.png)}</style>',
+    '<style>@import "h\\74tps://example.invalid/theme.css";</style>',
+    '<style>@import url(\\68 ttps://example.invalid/theme.css);</style>',
+  ];
+  for (const source of samples) {
+    assert.throws(
+      () => assertNoRuntimeNetwork(source),
+      /runtime-network-pattern/,
+      source,
+    );
+  }
+});
+
 test("inert and local URL text remains allowed", () => {
   const samples = [
     'const evidenceUrl = "https://example.invalid/source";',
     '{"@context":"https://schema.org"}',
     'Source citation: https://example.invalid/report',
+    'Source citation: &#104;ttps://example.invalid/report',
+    '<pre>&lt;img src=&quot;https://example.invalid/pixel.png&quot;&gt;</pre>',
     '<img src="./local.png">',
     '<form action="/local-submit"></form>',
     '<a href="https://example.invalid/citation">citation</a>',
