@@ -52,6 +52,16 @@ function encodeName(name) {
   return new TextEncoder().encode(name);
 }
 
+function assertClassicEntryCount(entries) {
+  if (entries.length <= ZIP_U16_MAX) return;
+  const err = new Error("zip-classic-limit:entry-count");
+  err.code = "ZIP_CLASSIC_LIMIT";
+  err.limit = "entry-count";
+  err.maximum = ZIP_U16_MAX;
+  err.actual = entries.length;
+  throw err;
+}
+
 function assertClassicNameLength(name) {
   if (name.length <= ZIP_U16_MAX) return;
   const err = new Error("zip-classic-limit:filename-bytes");
@@ -66,6 +76,7 @@ function assertClassicNameLength(name) {
  * @param {{path:string, bytes:Uint8Array}[]} entries
  */
 export function buildStoreZip(entries) {
+  assertClassicEntryCount(entries);
   const prepared = [];
   for (const entry of entries) {
     const path = assertSafeArchivePath(entry.path);
