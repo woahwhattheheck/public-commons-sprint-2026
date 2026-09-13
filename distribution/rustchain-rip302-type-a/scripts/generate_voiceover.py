@@ -17,5 +17,5 @@ for (num, title), body in zip(heads, parts):
     wav = VOICE / f"{num.zfill(2)}-{slug}.wav"
     mp3 = VOICE / f"{num.zfill(2)}-{slug}.mp3"
     subprocess.run(["espeak", "-s", "145", "-p", "42", "-w", str(wav), clean], check=True)
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(wav), "-codec:a", "libmp3lame", "-b:a", "64k", str(mp3)], check=True)
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(wav), "-ar", "16000", "-ac", "1", "-codec:a", "libmp3lame", "-b:a", "16k", str(mp3)], check=True)
     wav.unlink()
