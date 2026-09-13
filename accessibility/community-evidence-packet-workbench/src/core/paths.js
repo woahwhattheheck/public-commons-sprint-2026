@@ -5,7 +5,7 @@
 
 const WIN_ABS = /^[a-zA-Z]:[\\/]/;
 const WIN_RESERVED_CHARS = /[<>:"|?*\u0001-\u001F]/;
-const WIN_DEVICE = /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\..*)?$/i;
+const WIN_DEVICE = /^(?:con|prn|aux|nul|conin\$|conout\$|com[1-9¹²³]|lpt[1-9¹²³])(?:\..*)?$/i;
 
 export function normalizePath(input) {
   let s = String(input ?? "").replace(/\\/g, "/");
