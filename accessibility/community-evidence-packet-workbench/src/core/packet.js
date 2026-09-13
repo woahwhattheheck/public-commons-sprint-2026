@@ -124,6 +124,7 @@ function importItem(src) {
     };
   }
   const rec = recognizeAttachment(src.name || src.path || "", src.mediaType || "");
+  const hasTextContent = Object.prototype.hasOwnProperty.call(src, "textContent");
   const item = {
     id: String(src.id || mintId("item")),
     name: String(src.name ?? ""),
@@ -139,8 +140,8 @@ function importItem(src) {
     recognizedAs: rec.recognizedAs,
     note: rec.note || String(src.note ?? ""),
     unknown: {},
-    textContent: String(src.textContent ?? ""),
   };
+  if (hasTextContent) item.textContent = String(src.textContent ?? "");
   for (const key of Object.keys(src)) {
     if (!ITEM_KEYS.has(key) && key !== "_bytes") item.unknown[key] = src[key];
   }
