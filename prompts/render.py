@@ -13,9 +13,22 @@ from pathlib import Path
 PLACEHOLDER = re.compile(r"\{\{([A-Z_]+)\}\}")
 
 
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Build one JSON object while refusing ambiguous duplicate names."""
+    value: dict[str, object] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate values key: {key}")
+        value[key] = item
+    return value
+
+
 def read_values(path: Path) -> dict[str, str]:
     """Read a JSON object whose values are strings."""
-    value = json.loads(path.read_text(encoding="utf-8"))
+    value = json.loads(
+        path.read_text(encoding="utf-8"),
+        object_pairs_hook=_reject_duplicate_keys,
+    )
     if not isinstance(value, dict):
         raise ValueError("values JSON must contain one object")
 
