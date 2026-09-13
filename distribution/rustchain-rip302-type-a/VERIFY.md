@@ -6,11 +6,12 @@ Generation environment used for the submitted artifacts:
 - FFmpeg 7.1.5
 - Python 3 / Pillow 12.3.0
 
-Run:
+Run from `distribution/rustchain-rip302-type-a/`:
 
 ```bash
-python scripts/build_assets.py
-python scripts/validate_package.py
+python3 scripts/build_assets.py
+python3 scripts/generate_voiceover.py
+python3 scripts/validate_package.py
 ```
 
 The validator checks:
@@ -21,5 +22,7 @@ The validator checks:
 - five per-section narration MP3 files exist and have nonzero duration;
 - `script.md`, `SOURCES.md`, `assembly.md`, and `metadata.md` are non-empty;
 - the source map includes the pinned RustChain commit.
+
+The reference build used for editorial timing produced five narration files totaling about 312 seconds (approximately 5:12). Exact duration can vary slightly across codec builds, so the generated audio remains the timing authority for final assembly.
 
 The package uses no production mutation, no token transfer, and no third-party stock footage. The voiceover is synthetic narration generated locally from the script.
