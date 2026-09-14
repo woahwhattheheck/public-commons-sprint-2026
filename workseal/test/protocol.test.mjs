@@ -205,6 +205,27 @@ test('settlement intent binds task, result, acceptance and event head', () => {
   assert.equal(intent.eventHead, state.previousEventDigest);
 });
 
+test('signed acceptance digest binds the pinned verifier authority and signature', () => {
+  const t = task();
+  const r = result(t);
+  const rcpt = receipt(t, r);
+  const k1 = keys();
+  const k2 = keys();
+
+  function acceptWith(k) {
+    let state = createState(t, publicKeyFingerprint(k.publicKeyPem));
+    state = fundState(state, { chain: 'solana-devnet', reference: 'same-funding', currency: t.currency, amountAtomic: t.amountAtomic });
+    state = commitResult(state, r);
+    const sig = signAcceptanceReceipt(rcpt, k.privateKeyPem);
+    return acceptState(state, { receipt: rcpt, signatureBase64: sig, publicKeyPem: k.publicKeyPem });
+  }
+
+  const a = acceptWith(k1);
+  const b = acceptWith(k2);
+  assert.notEqual(a.acceptanceDigest, b.acceptanceDigest);
+  assert.notEqual(createSettlementIntent(a).receiptAuthorityFingerprint, createSettlementIntent(b).receiptAuthorityFingerprint);
+});
+
 test('settlement cannot be created before ACCEPTED', () => {
   const t = task(); const k = keys(); const state = createState(t, publicKeyFingerprint(k.publicKeyPem));
   assert.throws(() => createSettlementIntent(state), (e) => e.code === 'BAD_PHASE');

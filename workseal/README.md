@@ -53,6 +53,7 @@ verifier checks exact policy            |
 - An ACCEPT receipt covers every requirement exactly once; any false requirement prevents receipt creation.
 - Receipt verifier id/version are pinned by the task.
 - The receipt authority public key fingerprint is pinned before funding.
+- Settlement binds the signed acceptance envelope (receipt digest + authority fingerprint + Ed25519 signature), not merely the unsigned receipt.
 - Old acceptance receipts cannot authorize a newer result generation.
 - Settlement intent binds task, result, acceptance receipt, funding reference, amount, parties, and the current event-chain head.
 - The Solana adapter is a **transaction plan only**: it hard-codes `writePerformed: false`; no wallet or RPC mutation is hidden behind the demo.

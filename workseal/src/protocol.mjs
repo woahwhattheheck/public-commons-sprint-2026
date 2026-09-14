@@ -238,17 +238,25 @@ export function acceptState(state, { receipt, signatureBase64, publicKeyPem }) {
   }
   assertRfc3339(receipt.acceptedAt, 'receipt.acceptedAt');
   assertSha256(receipt.checksDigest, 'receipt.checksDigest');
-  const digest = sha256Hex(receipt);
+  const receiptOnlyDigest = sha256Hex(receipt);
+  const digest = sha256Hex({
+    schema: 'workseal-signed-acceptance/v1',
+    receiptDigest: receiptOnlyDigest,
+    receiptAuthorityFingerprint: state.receiptAuthorityFingerprint,
+    signatureBase64,
+  });
   const event = {
     type: 'ACCEPTED', taskDigest: state.taskDigest, resultDigest: state.resultDigest,
-    acceptanceDigest: digest, generation: state.generation, sequence: state.sequence + 1,
+    acceptanceDigest: digest, receiptDigest: receiptOnlyDigest,
+    receiptAuthorityFingerprint: state.receiptAuthorityFingerprint,
+    generation: state.generation, sequence: state.sequence + 1,
     previousEventDigest: state.previousEventDigest,
   };
   return {
     ...state,
     phase: 'ACCEPTED',
     sequence: event.sequence,
-    acceptance: { receipt, signatureBase64 },
+    acceptance: { receipt, signatureBase64, receiptDigest: receiptOnlyDigest },
     acceptanceDigest: digest,
     previousEventDigest: eventDigest(event),
   };
@@ -261,6 +269,7 @@ export function createSettlementIntent(state) {
     taskDigest: state.taskDigest,
     resultDigest: state.resultDigest,
     acceptanceDigest: state.acceptanceDigest,
+    receiptAuthorityFingerprint: state.receiptAuthorityFingerprint,
     generation: state.generation,
     currency: state.task.currency,
     amountAtomic: state.task.amountAtomic,
