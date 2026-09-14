@@ -32,6 +32,18 @@ jobs:
       - name: Syntax + regression contract
         working-directory: cookie-crumbs
         run: npm run ci
+      - name: Verify pinned Solana web3 integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.4/lib/index.iife.min.js'
+          expected_sri='sha384-I45YF+S0YGWIolUyTksLk9TNtTqaDgZg8e6T1OoBoJvvFmphqYNIPZw3Kl0TkZNN'
+          expected_sha256='09cdbea951b2ed0e11bcbe3aeb1ee9f035f9fb51ed212aca645475ae82688cc3'
+          curl --fail --silent --show-error --location "$url" --output /tmp/solana-web3.js
+          observed_sri="sha384-$(openssl dgst -sha384 -binary /tmp/solana-web3.js | openssl base64 -A)"
+          observed_sha256="$(sha256sum /tmp/solana-web3.js | cut -d' ' -f1)"
+          test "$observed_sri" = "$expected_sri"
+          test "$observed_sha256" = "$expected_sha256"
       - name: Static app inventory
         run: |
           test -s cookie-crumbs/index.html
