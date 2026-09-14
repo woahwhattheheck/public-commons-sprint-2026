@@ -181,7 +181,7 @@ export async function probeMcpEndpoint(options) {
 
   const ping = await safeJson(checks, 'ping-transport', request({ headers, body: rpc(2, 'ping') }));
   recordTiming('ping', ping);
-  if (ping) checks.push(ping.response.status === 200 && ping.body?.result && typeof ping.body.result === 'object'
+  if (ping) checks.push(ping.response.status === 200 && isPlainObject(ping.body?.result)
     ? pass('ping', { httpStatus: 200 })
     : fail('ping', { httpStatus: ping.response.status, errorCode: ping.body?.error?.code ?? null }));
 

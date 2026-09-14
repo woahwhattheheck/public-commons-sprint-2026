@@ -158,7 +158,7 @@ export async function requestJson({ url, method = 'POST', headers = {}, body, ti
     const sseResponse = /^text\/event-stream(?:;|$)/i.test(contentType);
     const jsonResponse = /^application\/json(?:;|$)/i.test(contentType);
     const rpcRequest = body?.id !== undefined;
-    if (rpcRequest && !sseResponse && !jsonResponse) {
+    if (response.status === 200 && rpcRequest && !sseResponse && !jsonResponse) {
       await response.body?.cancel().catch(() => {});
       throw new ProbeTransportError(
         'RESPONSE_MEDIA_TYPE',
@@ -168,7 +168,20 @@ export async function requestJson({ url, method = 'POST', headers = {}, body, ti
     }
     let parsed = null;
     let responseMode = 'empty';
-    if (sseResponse) {
+    if (response.status !== 200) {
+      const text = await readBounded(response, maxResponseBytes);
+      if (text.length > 0) {
+        responseMode = 'opaque';
+        if (jsonResponse) {
+          try {
+            parsed = JSON.parse(text);
+            responseMode = 'json';
+          } catch {
+            parsed = null;
+          }
+        }
+      }
+    } else if (sseResponse) {
       parsed = await readSseRpcResponse(response, maxResponseBytes, body?.id);
       responseMode = 'sse';
     } else {
@@ -178,7 +191,7 @@ export async function requestJson({ url, method = 'POST', headers = {}, body, ti
         catch { throw new ProbeTransportError('INVALID_JSON', 'response body is not valid JSON', { status: response.status }); }
         responseMode = 'json';
       }
-      if (response.status === 200 && body?.id !== undefined && !responseMatchesRequest(parsed, body.id)) {
+      if (body?.id !== undefined && !responseMatchesRequest(parsed, body.id)) {
         throw new ProbeTransportError('RPC_RESPONSE_MISMATCH', 'JSON response does not exactly correlate to the JSON-RPC request', {
           status: response.status,
           requestId: body.id,
