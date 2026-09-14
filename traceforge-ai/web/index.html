@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TraceForge AI — Evidence-grounded incident copilot</title>
+  <meta name="description" content="Investigate production incidents without letting model confidence outrun evidence.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="TraceForge home">
+      <span class="brand-mark" aria-hidden="true">TF</span>
+      <span><strong>TraceForge AI</strong><small>Evidence-grounded incident copilot</small></span>
+    </a>
+    <div class="status-line"><span id="liveDot" class="dot"></span><span id="configText">Checking runtime…</span></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">INCIDENT INTELLIGENCE · EVIDENCE FIRST</p>
+        <h1>Make the model show its work.</h1>
+        <p class="lede">TraceForge turns messy incident logs into cited hypotheses, then makes a second skeptic challenge every finding. Unsupported or stale claims are held instead of dressed up as certainty.</p>
+      </div>
+      <div class="hero-proof" aria-label="TraceForge workflow">
+        <div><b>01</b><span>Bind evidence</span></div><i>→</i><div><b>02</b><span>Investigate</span></div><i>→</i><div><b>03</b><span>Skeptic review</span></div><i>→</i><div><b>04</b><span>Verify</span></div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <article class="panel evidence-panel">
+        <div class="panel-head">
+          <div><p class="kicker">SOURCE EVIDENCE</p><h2>Incident packet</h2></div>
+          <button id="loadDemo" class="button ghost" type="button">Load demo</button>
+        </div>
+        <textarea id="incident" spellcheck="false" aria-label="Incident evidence" placeholder="Paste logs, notes, metrics, and timeline evidence here…"></textarea>
+        <div class="evidence-meta">
+          <span id="lineCount">0 lines</span>
+          <span id="byteCount">0 bytes</span>
+          <span class="trust-chip">Untrusted input</span>
+        </div>
+        <div class="actions">
+          <label class="mode-select">Mode
+            <select id="mode">
+              <option value="demo">Deterministic demo</option>
+              <option value="live">Live AI endpoint</option>
+            </select>
+          </label>
+          <button id="analyze" class="button primary" type="button">Analyze incident</button>
+        </div>
+        <p class="microcopy">Live mode uses an operator-configured OpenAI-compatible endpoint. TraceForge never executes remediation, sends messages, or mutates providers.</p>
+      </article>
+
+      <article class="panel result-panel" aria-live="polite">
+        <div class="panel-head">
+          <div><p class="kicker">VERIFIED ANALYSIS</p><h2>Findings</h2></div>
+          <span id="receiptState" class="receipt-chip">No receipt</span>
+        </div>
+        <div id="emptyState" class="empty-state">
+          <div class="shield">✓</div>
+          <h3>Confidence needs provenance.</h3>
+          <p>Run an analysis to see citations, deterministic support scores, skeptic verdicts, and an offline-verifiable receipt.</p>
+        </div>
+        <div id="results" class="results hidden">
+          <div class="summary-card"><span>Incident summary</span><p id="summary"></p></div>
+          <div class="metrics" id="metrics"></div>
+          <div id="findings" class="findings"></div>
+          <details class="receipt"><summary>Integrity receipt</summary><pre id="receipt"></pre></details>
+        </div>
+        <div id="errorBox" class="error-box hidden"></div>
+      </article>
+    </section>
+
+    <section class="principles">
+      <article><span>01</span><h3>Evidence is data, never authority</h3><p>Prompt injection inside logs remains quoted source material. It cannot change TraceForge policy.</p></article>
+      <article><span>02</span><h3>Two independent gates</h3><p>A skeptic verdict is necessary but not sufficient. Citation existence and lexical support are recomputed deterministically.</p></article>
+      <article><span>03</span><h3>HOLD beats hallucination</h3><p>Bad citations, stale evidence, malformed model output, and weak grounding fail closed instead of becoming polished guesses.</p></article>
+    </section>
+  </main>
+
+  <footer><span>TraceForge AI · Apache-2.0</span><span>Human-operated analysis only · no autonomous remediation</span></footer>
+  <script src="/app.js" defer></script>
+</body>
+</html>
