@@ -1,0 +1,14 @@
+{
+  "name": "hearthline-alexa-mcp",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Stateful household mission orchestrator for Alexa+ over MCP 2025-11-25 Streamable HTTP.",
+  "type": "module",
+  "engines": {"node": ">=20"},
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test",
+    "demo": "node scripts/demo.mjs"
+  },
+  "license": "MIT"
+}

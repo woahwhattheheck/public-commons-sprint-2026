@@ -1,0 +1,46 @@
+name: Hearthline public carrier
+
+on:
+  pull_request:
+    paths:
+      - 'hearthline-alexa-mcp/**'
+      - '.github/workflows/hearthline-public-carrier.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'hearthline-alexa-mcp/**'
+      - '.github/workflows/hearthline-public-carrier.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify executable release CLI mode
+        working-directory: hearthline-alexa-mcp
+        run: test "$(git ls-files -s release/public-release.mjs | awk '{print $1}')" = "100755"
+      - name: Run full regression suite
+        working-directory: hearthline-alexa-mcp
+        run: npm test
+      - name: Run MCP runtime conformance probe
+        working-directory: hearthline-alexa-mcp
+        run: node runtime/conformance-probe.mjs
+      - name: Run deterministic local demo
+        working-directory: hearthline-alexa-mcp
+        run: node scripts/demo.mjs
+      - name: Exercise fail-closed public release gate
+        working-directory: hearthline-alexa-mcp
+        run: |
+          mkdir -p /tmp/hearthline-release-parent
+          node release/public-release.mjs \
+            --source-commit "$(git rev-parse HEAD)" \
+            --dest /tmp/hearthline-release-parent/hearthline-public
+          test -s /tmp/hearthline-release-parent/hearthline-public/PUBLIC_RELEASE_RECEIPT.json
+          test ! -e /tmp/hearthline-release-parent/hearthline-public/PUBLIC_RELEASE_ABORTED.json
