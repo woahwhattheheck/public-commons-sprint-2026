@@ -7,8 +7,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from .core import MAX_RECEIPT_BYTES, TraceForgeError, analyze, strict_json_loads, verify_receipt
+from .core import TraceForgeError, analyze, strict_json_loads, verify_receipt
 from .model import DemoModel, OpenAICompatibleModel
+from .receipt_io import MAX_RECEIPT_BYTES, render_analysis_packet
 
 MAX_REQUEST_BYTES = 320_000
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,6 +46,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send_json(self, status: int, value: Any) -> None:
         payload = _json_bytes(value)
+        self._headers(status, "application/json; charset=utf-8", len(payload))
+        self.wfile.write(payload)
+
+    def _send_analysis(self, status: int, value: Any) -> None:
+        payload = render_analysis_packet(value).encode("utf-8")
         self._headers(status, "application/json; charset=utf-8", len(payload))
         self.wfile.write(payload)
 
@@ -104,7 +110,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 raise TraceForgeError("mode must be demo or live")
             result = analyze(text, model)
-            self._send_json(HTTPStatus.OK, result)
+            self._send_analysis(HTTPStatus.OK, result)
         except (UnicodeDecodeError, TraceForgeError) as exc:
             self._send_json(HTTPStatus.UNPROCESSABLE_ENTITY, {"error": "analysis_rejected", "detail": str(exc)[:400]})
 

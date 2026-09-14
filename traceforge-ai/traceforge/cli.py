@@ -5,8 +5,9 @@ import json
 import sys
 from pathlib import Path
 
-from .core import MAX_RECEIPT_BYTES, TraceForgeError, analyze, strict_json_loads, verify_receipt
+from .core import TraceForgeError, analyze, strict_json_loads, verify_receipt
 from .model import DemoModel, OpenAICompatibleModel
+from .receipt_io import MAX_RECEIPT_BYTES, render_analysis_packet
 from .server import serve
 
 
@@ -35,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
             text = args.file.read_text(encoding="utf-8")
             model = DemoModel() if args.mode == "demo" else OpenAICompatibleModel.from_env()
             result = analyze(text, model)
-            rendered = json.dumps(result, indent=2, ensure_ascii=False) + "\n"
+            rendered = render_analysis_packet(result, pretty=True)
             if args.json_out:
                 args.json_out.write_text(rendered, encoding="utf-8")
                 print(f"wrote {args.json_out} ({result['receipt']['run_id']})")
