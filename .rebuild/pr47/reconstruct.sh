@@ -5,17 +5,22 @@ root="$(git rev-parse --show-toplevel)"
 cd "$root"
 product="agents/mcp-streamable-http-conformance"
 
-decode_parts() {
-  local source_dir="$1"
-  local target="$2"
-  mkdir -p "$(dirname "$target")"
-  cat "$source_dir"/*.b64 | tr -d '\n\r ' | base64 --decode > "$target"
-}
+python3 - <<'PY'
+from pathlib import Path
+import base64
 
-decode_parts .rebuild/pr47/probe "$product/src/probe.mjs"
-decode_parts .rebuild/pr47/test-cli "$product/test/cli.test.mjs"
-decode_parts .rebuild/pr47/test-probe "$product/test/probe.test.mjs"
-decode_parts .rebuild/pr47/closure "$product/test/transport-security-closure.test.mjs"
+mappings = [
+    (Path('.rebuild/pr47/probe'), Path('agents/mcp-streamable-http-conformance/src/probe.mjs')),
+    (Path('.rebuild/pr47/test-cli'), Path('agents/mcp-streamable-http-conformance/test/cli.test.mjs')),
+    (Path('.rebuild/pr47/test-probe'), Path('agents/mcp-streamable-http-conformance/test/probe.test.mjs')),
+    (Path('.rebuild/pr47/closure'), Path('agents/mcp-streamable-http-conformance/test/transport-security-closure.test.mjs')),
+]
+for source_dir, target in mappings:
+    encoded = ''.join(part.read_text(encoding='ascii') for part in sorted(source_dir.glob('*.b64')))
+    encoded = ''.join(encoded.split())
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(base64.b64decode(encoded, validate=True))
+PY
 
 check_blob() {
   local expected="$1"
