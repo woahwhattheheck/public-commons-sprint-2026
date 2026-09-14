@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from .core import TraceForgeError, analyze, strict_json_loads, verify_receipt
+from .core import MAX_RECEIPT_BYTES, TraceForgeError, analyze, strict_json_loads, verify_receipt
 from .model import DemoModel, OpenAICompatibleModel
 
 MAX_REQUEST_BYTES = 320_000
@@ -117,12 +117,12 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "-1"))
         except ValueError:
             length = -1
-        if length < 0 or length > MAX_REQUEST_BYTES:
-            self._send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "invalid_request_size"})
+        if length < 0 or length > MAX_RECEIPT_BYTES:
+            self._send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "invalid_receipt_size"})
             return
         raw = self.rfile.read(length)
         try:
-            payload = strict_json_loads(raw.decode("utf-8"), max_bytes=MAX_REQUEST_BYTES, label="receipt")
+            payload = strict_json_loads(raw.decode("utf-8"), max_bytes=MAX_RECEIPT_BYTES, label="receipt")
         except (UnicodeDecodeError, TraceForgeError) as exc:
             self._send_json(HTTPStatus.UNPROCESSABLE_ENTITY, {"error": "invalid_receipt", "detail": str(exc)[:300]})
             return
