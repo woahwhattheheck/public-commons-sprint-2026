@@ -12,6 +12,7 @@ export function validateEndpoint(input) {
   try { url = new URL(input); } catch { throw new ProbeTransportError('ENDPOINT_URL', 'endpoint must be an absolute http(s) URL'); }
   if (!['http:', 'https:'].includes(url.protocol)) throw new ProbeTransportError('ENDPOINT_SCHEME', 'endpoint must use http or https');
   if (url.username || url.password) throw new ProbeTransportError('ENDPOINT_USERINFO', 'endpoint URL must not contain credentials');
+  if (url.search) throw new ProbeTransportError('ENDPOINT_QUERY', 'endpoint URL must not contain a query string');
   if (url.hash) throw new ProbeTransportError('ENDPOINT_FRAGMENT', 'endpoint URL must not contain a fragment');
   return url;
 }
@@ -21,6 +22,13 @@ function timeoutSignal(timeoutMs) {
   const timer = setTimeout(() => controller.abort(new Error('probe request timed out')), timeoutMs);
   timer.unref?.();
   return { controller, timer };
+}
+
+function decodeUtf8(decoder, value, options, response) {
+  try { return decoder.decode(value, options); }
+  catch {
+    throw new ProbeTransportError('INVALID_UTF8', 'response body is not valid UTF-8', { status: response.status });
+  }
 }
 
 async function readBounded(response, maxBytes) {
@@ -45,18 +53,19 @@ async function readBounded(response, maxBytes) {
   const merged = new Uint8Array(total);
   let offset = 0;
   for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
-  return new TextDecoder().decode(merged);
+  return decodeUtf8(new TextDecoder('utf-8', { fatal: true }), merged, undefined, response);
 }
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function responseMatchesRequest(message, requestId) {
+function responseMatchesRequest(message, requestId, requestMethod) {
   if (!message || message.jsonrpc !== '2.0' || message.id !== requestId) return false;
   const hasResult = Object.prototype.hasOwnProperty.call(message, 'result');
   const hasError = Object.prototype.hasOwnProperty.call(message, 'error');
   if (hasResult === hasError) return false;
+  if (hasResult && requestMethod === 'ping' && !isPlainObject(message.result)) return false;
   if (hasError) {
     const error = message.error;
     if (!isPlainObject(error) || !Number.isInteger(error.code) || typeof error.message !== 'string') return false;
@@ -64,11 +73,11 @@ function responseMatchesRequest(message, requestId) {
   return true;
 }
 
-async function readSseRpcResponse(response, maxBytes, requestId) {
+async function readSseRpcResponse(response, maxBytes, requestId, requestMethod) {
   if (!response.body) throw new ProbeTransportError('SSE_RESPONSE_MISSING', 'SSE response has no body', { status: response.status });
   if (requestId === undefined) throw new ProbeTransportError('SSE_REQUEST_ID', 'cannot correlate SSE response without a JSON-RPC request id');
   const reader = response.body.getReader();
-  const decoder = new TextDecoder();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
   let total = 0;
   let buffer = '';
   let dataLines = [];
@@ -80,11 +89,10 @@ async function readSseRpcResponse(response, maxBytes, requestId) {
     let message;
     try { message = JSON.parse(data); }
     catch { throw new ProbeTransportError('INVALID_SSE_JSON', 'SSE data event is not valid JSON', { status: response.status }); }
-    return responseMatchesRequest(message, requestId) ? message : null;
+    return responseMatchesRequest(message, requestId, requestMethod) ? message : null;
   };
 
-  const processLine = (rawLine) => {
-    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
+  const processLine = (line) => {
     if (line === '') return consumeEvent();
     if (line.startsWith(':')) return null;
     const colon = line.indexOf(':');
@@ -95,17 +103,41 @@ async function readSseRpcResponse(response, maxBytes, requestId) {
     return null;
   };
 
+  const drainCompleteLines = (final = false) => {
+    for (;;) {
+      let lineEnd = -1;
+      let terminatorLength = 0;
+      for (let index = 0; index < buffer.length; index += 1) {
+        if (buffer[index] === '\n') {
+          lineEnd = index;
+          terminatorLength = 1;
+          break;
+        }
+        if (buffer[index] === '\r') {
+          if (index + 1 === buffer.length && !final) return null;
+          lineEnd = index;
+          terminatorLength = buffer[index + 1] === '\n' ? 2 : 1;
+          break;
+        }
+      }
+      if (lineEnd === -1) return null;
+      const line = buffer.slice(0, lineEnd);
+      buffer = buffer.slice(lineEnd + terminatorLength);
+      const message = processLine(line);
+      if (message) return message;
+    }
+  };
+
   try {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) {
-        buffer += decoder.decode();
-        if (buffer.length > 0) {
-          const message = processLine(buffer);
-          if (message) return message;
-        }
-        const final = consumeEvent();
-        if (final) return final;
+        buffer += decodeUtf8(decoder, undefined, undefined, response);
+        const message = drainCompleteLines(true);
+        if (message) return message;
+        // The SSE algorithm discards an incomplete event at EOF. In particular,
+        // neither an unterminated final line nor pending data without a blank
+        // line is dispatched here.
         break;
       }
       total += value.byteLength;
@@ -113,17 +145,11 @@ async function readSseRpcResponse(response, maxBytes, requestId) {
         await reader.cancel('body limit exceeded').catch(() => {});
         throw new ProbeTransportError('BODY_LIMIT', `response body exceeded ${maxBytes} bytes`, { status: response.status, maxBytes });
       }
-      buffer += decoder.decode(value, { stream: true });
-      for (;;) {
-        const newline = buffer.indexOf('\n');
-        if (newline === -1) break;
-        const line = buffer.slice(0, newline);
-        buffer = buffer.slice(newline + 1);
-        const message = processLine(line);
-        if (message) {
-          await reader.cancel('matched JSON-RPC response').catch(() => {});
-          return message;
-        }
+      buffer += decodeUtf8(decoder, value, { stream: true }, response);
+      const message = drainCompleteLines();
+      if (message) {
+        await reader.cancel('matched JSON-RPC response').catch(() => {});
+        return message;
       }
     }
   } finally {
@@ -154,6 +180,13 @@ export async function requestJson({ url, method = 'POST', headers = {}, body, ti
       throw new ProbeTransportError('REDIRECT', 'redirects are not followed by the probe', { status: response.status, location: response.headers.get('location') });
     }
 
+    const requestHeaders = new Headers(headers);
+    if (requestHeaders.has('origin') && response.status === 403) {
+      await response.body?.cancel().catch(() => {});
+      const elapsedMs = performance.now() - started;
+      return { response, body: null, elapsedMs, responseMode: 'empty' };
+    }
+
     const contentType = response.headers.get('content-type') ?? '';
     const sseResponse = /^text\/event-stream(?:;|$)/i.test(contentType);
     const jsonResponse = /^application\/json(?:;|$)/i.test(contentType);
@@ -169,7 +202,7 @@ export async function requestJson({ url, method = 'POST', headers = {}, body, ti
     let parsed = null;
     let responseMode = 'empty';
     if (sseResponse) {
-      parsed = await readSseRpcResponse(response, maxResponseBytes, body?.id);
+      parsed = await readSseRpcResponse(response, maxResponseBytes, body?.id, body?.method);
       responseMode = 'sse';
     } else {
       const text = await readBounded(response, maxResponseBytes);
@@ -178,7 +211,7 @@ export async function requestJson({ url, method = 'POST', headers = {}, body, ti
         catch { throw new ProbeTransportError('INVALID_JSON', 'response body is not valid JSON', { status: response.status }); }
         responseMode = 'json';
       }
-      if (response.status === 200 && body?.id !== undefined && !responseMatchesRequest(parsed, body.id)) {
+      if (response.status === 200 && body?.id !== undefined && !responseMatchesRequest(parsed, body.id, body.method)) {
         throw new ProbeTransportError('RPC_RESPONSE_MISMATCH', 'JSON response does not exactly correlate to the JSON-RPC request', {
           status: response.status,
           requestId: body.id,
