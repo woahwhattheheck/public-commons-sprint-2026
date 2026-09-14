@@ -1,9 +1,15 @@
 import { composeReceipt, parseReceipt, shortAddress, utf8Bytes, MAX_MEMO_BYTES } from './receipt.mjs';
+import {
+  CookieChainRpc,
+  LAMPORTS_PER_SOL,
+  MEMO_PROGRAM_ID,
+  assertPublicKey,
+  buildUnsignedMemoTransaction,
+} from './chain.mjs';
+import { transactionHasSigner } from './history.mjs';
 
 const RPC_URL = 'https://rpc.cookiescan.io';
-const WS_URL = 'https://wss.cookiescan.io';
 const EXPLORER = 'https://cookiescan.io';
-const MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 const HISTORY_LIMIT = 12;
 
 const state = {
@@ -41,11 +47,6 @@ const elements = {
   historyStatus: $('history-status'),
 };
 
-function web3() {
-  if (!window.solanaWeb3) throw new Error('Solana web3 bundle did not load. Check your network and reload.');
-  return window.solanaWeb3;
-}
-
 function setStatus(node, text, tone = 'neutral') {
   node.textContent = text;
   node.dataset.tone = tone;
@@ -70,12 +71,7 @@ function getFeature(wallet, names) {
 }
 
 async function ensureConnection() {
-  if (!state.connection) {
-    state.connection = new (web3().Connection)(RPC_URL, {
-      commitment: 'confirmed',
-      wsEndpoint: WS_URL,
-    });
-  }
+  if (!state.connection) state.connection = new CookieChainRpc(RPC_URL);
   return state.connection;
 }
 
@@ -100,15 +96,15 @@ async function connectWallet() {
   const account = result?.accounts?.[0];
   if (!account) throw new Error('Nightly returned no authorized account.');
 
-  const publicKey = new (web3().PublicKey)(account.address || account.publicKey);
+  const publicKey = assertPublicKey(account.address || account.publicKey, 'Nightly account');
   state.wallet = wallet;
   state.account = account;
   state.publicKey = publicKey;
 
-  elements.walletAddress.textContent = publicKey.toBase58();
+  elements.walletAddress.textContent = publicKey;
   elements.connect.hidden = true;
   elements.disconnect.hidden = false;
-  setStatus(elements.walletStatus, `Nightly connected · ${shortAddress(publicKey.toBase58())}`, 'good');
+  setStatus(elements.walletStatus, `Nightly connected · ${shortAddress(publicKey)}`, 'good');
   await refreshDashboard();
 }
 
@@ -151,11 +147,13 @@ async function refreshWalletFacts() {
   if (!state.publicKey) return;
   const connection = await ensureConnection();
   const lamports = await connection.getBalance(state.publicKey, 'confirmed');
-  elements.balance.textContent = `${(lamports / web3().LAMPORTS_PER_SOL).toLocaleString(undefined, { maximumFractionDigits: 6 })} COOK`;
+  elements.balance.textContent = `${(lamports / LAMPORTS_PER_SOL).toLocaleString(undefined, { maximumFractionDigits: 6 })} COOK`;
 }
 
 function instructionMemo(instruction) {
-  const programId = instruction?.programId?.toBase58?.() ?? instruction?.programId?.toString?.() ?? '';
+  const programId = typeof instruction?.programId === 'string'
+    ? instruction.programId
+    : instruction?.programId?.toString?.() ?? '';
   if (programId !== MEMO_PROGRAM_ID && instruction?.program !== 'spl-memo') return null;
   if (typeof instruction.parsed === 'string') return instruction.parsed;
   if (typeof instruction.parsed?.info === 'string') return instruction.parsed.info;
@@ -165,11 +163,9 @@ function instructionMemo(instruction) {
 
 async function fetchReceipt(signatureInfo) {
   const connection = await ensureConnection();
-  const tx = await connection.getParsedTransaction(signatureInfo.signature, {
-    commitment: 'confirmed',
-    maxSupportedTransactionVersion: 0,
-  });
-  if (!tx) return null;
+  const tx = await connection.getParsedTransaction(signatureInfo.signature, 'confirmed');
+  if (!tx || !transactionHasSigner(tx, state.publicKey)) return null;
+
   for (const instruction of tx.transaction.message.instructions) {
     const memo = instructionMemo(instruction);
     if (!memo) continue;
@@ -186,10 +182,10 @@ async function fetchReceipt(signatureInfo) {
 function renderHistory(receipts) {
   elements.history.innerHTML = '';
   if (!receipts.length) {
-    setStatus(elements.historyStatus, 'No Cookie Crumbs receipts found in the latest wallet activity.');
+    setStatus(elements.historyStatus, 'No signer-authenticated Cookie Crumbs receipts found in the latest wallet activity.');
     return;
   }
-  setStatus(elements.historyStatus, `${receipts.length} receipt${receipts.length === 1 ? '' : 's'} found in recent activity.`, 'good');
+  setStatus(elements.historyStatus, `${receipts.length} signer-authenticated receipt${receipts.length === 1 ? '' : 's'} found in recent activity.`, 'good');
   for (const receipt of receipts) {
     const item = document.createElement('li');
     const title = document.createElement('strong');
@@ -210,7 +206,7 @@ function renderHistory(receipts) {
 
 async function refreshHistory() {
   if (!state.publicKey) return;
-  setStatus(elements.historyStatus, 'Indexing recent wallet activity…');
+  setStatus(elements.historyStatus, 'Indexing recent wallet activity and verifying signer attribution…');
   const connection = await ensureConnection();
   const signatures = await connection.getSignaturesForAddress(state.publicKey, { limit: HISTORY_LIMIT }, 'confirmed');
   const receipts = [];
@@ -266,13 +262,12 @@ function updatePreview() {
   }
 }
 
-async function signWithNightly(transaction) {
+async function signWithNightly(serializedTransaction) {
   const feature = getFeature(state.wallet, ['solana:signTransaction', 'standard:signTransaction']);
   if (!feature?.signTransaction) throw new Error('Nightly does not expose a Solana transaction signing feature.');
-  const serialized = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
   const outputs = await feature.signTransaction({
     account: state.account,
-    transaction: serialized,
+    transaction: serializedTransaction,
   });
   const signed = outputs?.[0]?.signedTransaction;
   if (!signed) throw new Error('Nightly returned no signed transaction.');
@@ -294,16 +289,12 @@ async function writeReceipt(event) {
     setStatus(elements.writeStatus, 'Building transaction…');
 
     const connection = await ensureConnection();
-    const { Transaction, TransactionInstruction, PublicKey } = web3();
     const latest = await connection.getLatestBlockhash('confirmed');
-    const transaction = new Transaction({
+    const transaction = buildUnsignedMemoTransaction({
       feePayer: state.publicKey,
       recentBlockhash: latest.blockhash,
-    }).add(new TransactionInstruction({
-      keys: [],
-      programId: new PublicKey(MEMO_PROGRAM_ID),
-      data: new TextEncoder().encode(memo),
-    }));
+      memo,
+    });
 
     setStatus(elements.writeStatus, 'Awaiting Nightly signature…');
     const signedTransaction = await signWithNightly(transaction);
@@ -319,12 +310,11 @@ async function writeReceipt(event) {
     elements.latestTx.hidden = false;
     setStatus(elements.writeStatus, `Submitted ${shortAddress(signature, 9, 9)} · confirming…`);
 
-    const confirmation = await connection.confirmTransaction({
+    await connection.confirmTransaction({
       signature,
-      blockhash: latest.blockhash,
       lastValidBlockHeight: latest.lastValidBlockHeight,
-    }, 'confirmed');
-    if (confirmation.value.err) throw new Error(`Transaction confirmed with error: ${JSON.stringify(confirmation.value.err)}`);
+      commitment: 'confirmed',
+    });
 
     setStatus(elements.writeStatus, 'Receipt confirmed on Cookie Chain.', 'good');
     state.lastReceipt = null;
@@ -340,7 +330,7 @@ async function writeReceipt(event) {
 function friendlyError(error) {
   const message = String(error?.message ?? error ?? 'Unknown error');
   if (/rejected|declined|denied|cancel/i.test(message)) return 'Signature request was rejected. No receipt was written.';
-  if (/blockhash/i.test(message)) return 'The transaction expired before confirmation. Refresh and try again.';
+  if (/expired|blockhash/i.test(message)) return 'The transaction expired before confirmation. Refresh and try again.';
   if (/insufficient|balance|funds/i.test(message)) return 'Insufficient COOK to pay the transaction fee.';
   if (/failed to fetch|network|rpc/i.test(message)) return `Cookie Chain RPC/network error: ${message}`;
   return message;
