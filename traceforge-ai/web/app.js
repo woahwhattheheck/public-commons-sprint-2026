@@ -34,7 +34,7 @@ function renderFinding(finding, lineMap) {
   const titleWrap = document.createElement('div');
   const badge = document.createElement('span');
   badge.className = `verdict ${finding.status.toLowerCase()}`;
-  badge.textContent = finding.status;
+  badge.textContent = `CLAIM ${finding.status}`;
   const title = document.createElement('h3');
   title.textContent = finding.claim;
   titleWrap.append(badge, title);
@@ -58,12 +58,24 @@ function renderFinding(finding, lineMap) {
   const foot = document.createElement('div');
   foot.className = 'finding-foot';
   const score = document.createElement('span');
-  score.textContent = `Support ${(finding.support_score * 100).toFixed(0)}%`;
+  score.textContent = `Claim support ${(finding.support_score * 100).toFixed(0)}%`;
   const skeptic = document.createElement('span');
-  skeptic.textContent = `Skeptic ${finding.skeptic.status}`;
+  skeptic.textContent = `Claim skeptic ${finding.skeptic.status}`;
+
+  const actionReview = finding.action_review || {
+    status: 'REVIEW_ONLY',
+    reason: 'Model-suggested action is not evidence-verified or authorized; a human operator must assess it independently.',
+  };
+  const actionBox = document.createElement('div');
+  actionBox.className = 'model-action';
+  const actionState = document.createElement('strong');
+  actionState.textContent = `${actionReview.status} · MODEL SUGGESTION`;
   const action = document.createElement('p');
-  action.textContent = `Next: ${finding.action}`;
-  foot.append(score, skeptic, action);
+  action.textContent = finding.action;
+  const actionReason = document.createElement('small');
+  actionReason.textContent = actionReview.reason;
+  actionBox.append(actionState, action, actionReason);
+  foot.append(score, skeptic, actionBox);
 
   if (finding.status === 'HOLD' && finding.verification_reason) {
     const reasons = document.createElement('ul');
@@ -108,8 +120,8 @@ async function analyze() {
     $('metrics').replaceChildren(
       metric('Evidence SHA', payload.evidence.sha256.slice(0, 12) + '…'),
       metric('Model', payload.model),
-      metric('PASS', String(payload.findings.filter((x) => x.status === 'PASS').length)),
-      metric('HOLD', String(payload.findings.filter((x) => x.status === 'HOLD').length)),
+      metric('CLAIM PASS', String(payload.findings.filter((x) => x.status === 'PASS').length)),
+      metric('CLAIM HOLD', String(payload.findings.filter((x) => x.status === 'HOLD').length)),
     );
     const findings = $('findings');
     const lineMap = new Map(payload.evidence.lines.map((x) => [x.id, x.text]));
