@@ -1,0 +1,9 @@
+[project]
+name = "traceforge-ai"
+version = "0.1.0"
+description = "Evidence-grounded AI incident copilot"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+
+[project.scripts]
+traceforge = "traceforge.cli:main"
