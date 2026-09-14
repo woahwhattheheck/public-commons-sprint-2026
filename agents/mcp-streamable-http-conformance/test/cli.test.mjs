@@ -19,16 +19,28 @@ function run(args, env = {}) {
   });
 }
 
-test('CLI exits zero on a conforming server and never prints bearer secret', async () => {
-  const fixture = await startFixture({ echoAuthInError: true });
+test('CLI exits zero on a conforming unauthenticated server', async () => {
+  const fixture = await startFixture();
   try {
-    const secret = 'cli-secret-f31c9d';
-    const result = await run([fixture.endpoint, '--require-session', '--require-tools', '--bearer-env', 'PROBE_TOKEN'], { PROBE_TOKEN: secret });
+    const result = await run([fixture.endpoint, '--require-session', '--require-tools']);
     assert.equal(result.code, 0, result.stderr || result.stdout);
-    assert.equal(result.stdout.includes(secret), false);
     const report = JSON.parse(result.stdout);
     assert.equal(report.summary.ok, true);
-    assert.equal(report.authenticated, true);
+    assert.equal(report.authenticated, false);
+  } finally { await fixture.close(); }
+});
+
+test('CLI rejects bearer credentials on cleartext HTTP before sending the secret', async () => {
+  const fixture = await startFixture();
+  try {
+    const secret = 'cli-secret-f31c9d';
+    const result = await run([fixture.endpoint, '--bearer-env', 'PROBE_TOKEN'], { PROBE_TOKEN: secret });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /authorizationHeader requires an https endpoint/);
+    assert.equal(result.stdout.includes(secret), false);
+    assert.equal(result.stderr.includes(secret), false);
+    assert.equal(fixture.methods.length, 0);
+    assert.equal(fixture.authValues.length, 0);
   } finally { await fixture.close(); }
 });
 
