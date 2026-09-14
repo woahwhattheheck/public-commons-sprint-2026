@@ -4,23 +4,26 @@ import { pathToFileURL } from 'node:url';
 
 export const SOURCE = Object.freeze({
   repository: 'woahwhattheheck/public-commons-sprint-2026',
-  commit: '446b66260e35535b35b3d68becf4c7f3462e60b0',
+  commit: '4cce26e0d86d5351dd0ddcede162ad3248d73b67',
   directory: 'cookie-crumbs',
 });
 
 export const FILE_CONTRACT = Object.freeze({
   'index.html': Object.freeze({
-    gitBlobSha1: 'af4d1a0ce8ae835092d480c319f2ba2234bf97a4',
+    gitBlobSha1: '5e9883ce7acc03bfcbe3b1c5f3f0be37f5d9b478',
     mediaTypes: Object.freeze(['text/html']),
     markers: Object.freeze([
       '<title>Cookie Crumbs',
       'id="connect-wallet"',
       'href="./styles.css"',
       'src="./app.js"',
+      'src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.4/lib/index.iife.min.js"',
+      'integrity="sha384-I45YF+S0YGWIolUyTksLk9TNtTqaDgZg8e6T1OoBoJvvFmphqYNIPZw3Kl0TkZNN"',
+      'crossorigin="anonymous"',
     ]),
   }),
   'app.js': Object.freeze({
-    gitBlobSha1: '31e2ca50c8d02a4f0bd390687337835c45d65d27',
+    gitBlobSha1: '91128f03a20db45028e6c35236d561c86c7bdc7f',
     mediaTypes: Object.freeze(['application/javascript', 'text/javascript', 'application/x-javascript']),
     markers: Object.freeze([
       "from './receipt.mjs'",
@@ -30,7 +33,7 @@ export const FILE_CONTRACT = Object.freeze({
     ]),
   }),
   'receipt.mjs': Object.freeze({
-    gitBlobSha1: 'befbf85080201ed458b1555bf77442f85fcfe442',
+    gitBlobSha1: 'fcd00e45b16c03718f0db7f5eee090a08b6e0548',
     mediaTypes: Object.freeze(['application/javascript', 'text/javascript', 'application/x-javascript']),
     markers: Object.freeze([
       "cookie-crumbs:v1",

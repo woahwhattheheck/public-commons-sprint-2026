@@ -13,7 +13,7 @@ import {
 const canonical = Object.freeze({
   '/site/index.html': {
     type: 'text/html; charset=utf-8',
-    body: '<!doctype html><title>Cookie Crumbs · test</title><button id="connect-wallet"></button><link href="./styles.css"><script type="module" src="./app.js"></script>',
+    body: '<!doctype html><title>Cookie Crumbs · test</title><button id="connect-wallet"></button><link href="./styles.css"><script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.4/lib/index.iife.min.js" integrity="sha384-I45YF+S0YGWIolUyTksLk9TNtTqaDgZg8e6T1OoBoJvvFmphqYNIPZw3Kl0TkZNN" crossorigin="anonymous"></script><script type="module" src="./app.js"></script>',
   },
   '/site/app.js': {
     type: 'application/javascript; charset=utf-8',
@@ -83,9 +83,9 @@ test('pins every published runtime file to the integrated source blobs', () => {
   assert.deepEqual(
     Object.fromEntries(Object.entries(FILE_CONTRACT).map(([path, contract]) => [path, contract.gitBlobSha1])),
     {
-      'index.html': 'af4d1a0ce8ae835092d480c319f2ba2234bf97a4',
-      'app.js': '31e2ca50c8d02a4f0bd390687337835c45d65d27',
-      'receipt.mjs': 'befbf85080201ed458b1555bf77442f85fcfe442',
+      'index.html': '5e9883ce7acc03bfcbe3b1c5f3f0be37f5d9b478',
+      'app.js': '91128f03a20db45028e6c35236d561c86c7bdc7f',
+      'receipt.mjs': 'fcd00e45b16c03718f0db7f5eee090a08b6e0548',
       'styles.css': '63e8dbc8c6c7cb4efea6dfc2a7135cff435c3d74',
     },
   );
