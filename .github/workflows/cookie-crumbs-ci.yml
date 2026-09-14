@@ -38,7 +38,15 @@ jobs:
           test -s cookie-crumbs/styles.css
           test -s cookie-crumbs/app.js
           test -s cookie-crumbs/receipt.mjs
+          test -s cookie-crumbs/provenance.mjs
+          test -s cookie-crumbs/build.mjs
+          test -s cookie-crumbs/package.json
           test -s cookie-crumbs/verify-deploy.mjs
           grep -F 'https://rpc.cookiescan.io' cookie-crumbs/app.js
           grep -F 'window.nightly?.solana' cookie-crumbs/app.js
-          grep -F 'cookie-crumbs/deployment-receipt/v1' cookie-crumbs/verify-deploy.mjs
+          grep -F "from './provenance.mjs'" cookie-crumbs/app.js
+          grep -F "generation: 'cookie-crumbs/source-hardening-v2'" cookie-crumbs/verify-deploy.mjs
+          grep -F "schema: 'cookie-crumbs/deployment-receipt/v2'" cookie-crumbs/verify-deploy.mjs
+          grep -F "lock.schema !== 'cookie-crumbs/vendor-lock/v1'" cookie-crumbs/verify-deploy.mjs
+          grep -F "export const WEB3_PACKAGE = '@solana/web3.js@1.98.4'" cookie-crumbs/build.mjs
+          grep -F "npm, ['pack', '--ignore-scripts', '--json'" cookie-crumbs/build.mjs
