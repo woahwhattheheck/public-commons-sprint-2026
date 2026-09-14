@@ -86,6 +86,27 @@ export function parseReceipt(memo) {
   };
 }
 
+export function parsedTransactionSignedBy(parsedTransaction, walletAddress) {
+  const expected = String(walletAddress ?? '').trim();
+  if (!expected) return false;
+  const accountKeys = parsedTransaction?.transaction?.message?.accountKeys;
+  if (!Array.isArray(accountKeys)) return false;
+
+  return accountKeys.some((entry) => {
+    if (!entry || entry.signer !== true) return false;
+    const key = entry.pubkey ?? entry;
+    let address = '';
+    try {
+      if (typeof key === 'string') address = key;
+      else if (typeof key?.toBase58 === 'function') address = key.toBase58();
+      else if (typeof key?.toString === 'function') address = key.toString();
+    } catch {
+      return false;
+    }
+    return address === expected;
+  });
+}
+
 export function shortAddress(value, left = 5, right = 5) {
   const text = String(value ?? '');
   if (text.length <= left + right + 3) return text;

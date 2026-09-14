@@ -31,3 +31,17 @@ test('UI makes the signing boundary explicit and avoids key custody', () => {
   assert.match(html, /seed phrase, private key/i);
   assert.doesNotMatch(app, /localStorage\.setItem\([^)]*(seed|private|secret)/i);
 });
+
+
+test('remote executable is exact-version and subresource-integrity bound', () => {
+  const remoteScripts = [...html.matchAll(/<script\b[^>]*\bsrc=["']https:\/\/[^"']+["'][^>]*>/gi)].map((match) => match[0]);
+  assert.equal(remoteScripts.length, 1);
+  assert.match(remoteScripts[0], /@solana\/web3\.js@1\.98\.4\/lib\/index\.iife\.min\.js/);
+  assert.ok(remoteScripts[0].includes('integrity="sha384-I45YF+S0YGWIolUyTksLk9TNtTqaDgZg8e6T1OoBoJvvFmphqYNIPZw3Kl0TkZNN"'));
+  assert.ok(remoteScripts[0].includes('crossorigin="anonymous"'));
+});
+
+test('recent receipt attribution requires exact connected signer proof', () => {
+  assert.match(app, /parsedTransactionSignedBy\(tx, walletAddress\)/);
+  assert.match(app, /if \(!parsedTransactionSignedBy\(tx, walletAddress\)\) return null/);
+});

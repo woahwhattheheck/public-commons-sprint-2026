@@ -1,4 +1,4 @@
-import { composeReceipt, parseReceipt, shortAddress, utf8Bytes, MAX_MEMO_BYTES } from './receipt.mjs';
+import { composeReceipt, parseReceipt, parsedTransactionSignedBy, shortAddress, utf8Bytes, MAX_MEMO_BYTES } from './receipt.mjs';
 
 const RPC_URL = 'https://rpc.cookiescan.io';
 const WS_URL = 'https://wss.cookiescan.io';
@@ -170,6 +170,8 @@ async function fetchReceipt(signatureInfo) {
     maxSupportedTransactionVersion: 0,
   });
   if (!tx) return null;
+  const walletAddress = state.publicKey?.toBase58?.();
+  if (!parsedTransactionSignedBy(tx, walletAddress)) return null;
   for (const instruction of tx.transaction.message.instructions) {
     const memo = instructionMemo(instruction);
     if (!memo) continue;

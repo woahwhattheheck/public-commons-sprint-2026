@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { composeReceipt, parseReceipt, utf8Bytes, MAX_MEMO_BYTES, RECEIPT_PREFIX, shortAddress } from '../receipt.mjs';
+import { composeReceipt, parseReceipt, parsedTransactionSignedBy, utf8Bytes, MAX_MEMO_BYTES, RECEIPT_PREFIX, shortAddress } from '../receipt.mjs';
 
 test('round-trips reserved characters without ambiguity', () => {
   const memo = composeReceipt({
@@ -51,4 +51,22 @@ test('memo size is bounded in UTF-8 bytes', () => {
 test('shortAddress is stable for long and short values', () => {
   assert.equal(shortAddress('1234567890', 3, 3), '123…890');
   assert.equal(shortAddress('short', 3, 3), 'short');
+});
+
+
+test('parsedTransactionSignedBy requires exact connected signer metadata', () => {
+  const wallet = 'Wallet1111111111111111111111111111111111111';
+  const other = 'Other11111111111111111111111111111111111111';
+  const tx = (accountKeys) => ({ transaction: { message: { accountKeys } } });
+
+  assert.equal(parsedTransactionSignedBy(tx([{ pubkey: wallet, signer: true }]), wallet), true);
+  assert.equal(parsedTransactionSignedBy(tx([{ pubkey: { toBase58: () => wallet }, signer: true }]), wallet), true);
+  assert.equal(parsedTransactionSignedBy(tx([{ pubkey: wallet, signer: false }]), wallet), false);
+  assert.equal(parsedTransactionSignedBy(tx([
+    { pubkey: other, signer: true },
+    { pubkey: wallet, signer: false },
+  ]), wallet), false);
+  assert.equal(parsedTransactionSignedBy(tx([{ toBase58: () => wallet }]), wallet), false);
+  assert.equal(parsedTransactionSignedBy(tx([{ pubkey: wallet, signer: true }]), ''), false);
+  assert.equal(parsedTransactionSignedBy({ transaction: { message: {} } }, wallet), false);
 });
