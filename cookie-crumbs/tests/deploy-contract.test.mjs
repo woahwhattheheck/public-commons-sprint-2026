@@ -13,11 +13,11 @@ import {
 const canonical = Object.freeze({
   '/site/index.html': {
     type: 'text/html; charset=utf-8',
-    body: '<!doctype html><title>Cookie Crumbs · test</title><button id="connect-wallet"></button><link href="./styles.css"><script type="module" src="./app.js"></script>',
+    body: '<!doctype html><title>Cookie Crumbs · test</title><button id="connect-wallet"></button><link href="./styles.css"><p>no remote JavaScript CDN</p><script type="module" src="./app.js"></script>',
   },
   '/site/app.js': {
     type: 'application/javascript; charset=utf-8',
-    body: "import { composeReceipt } from './receipt.mjs'; const RPC='https://rpc.cookiescan.io'; const wallet=window.nightly?.solana; const memo='MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'; void composeReceipt; void RPC; void wallet; void memo;",
+    body: "import { composeReceipt } from './receipt.mjs'; import { CookieChainRpc } from './chain.mjs'; import { transactionHasSigner } from './history.mjs'; const RPC='https://rpc.cookiescan.io'; const wallet=window.nightly?.solana; transactionHasSigner(tx, state.publicKey); void composeReceipt; void CookieChainRpc; void RPC; void wallet;",
   },
   '/site/receipt.mjs': {
     type: 'text/javascript; charset=utf-8',
@@ -26,6 +26,14 @@ const canonical = Object.freeze({
   '/site/styles.css': {
     type: 'text/css; charset=utf-8',
     body: '.wallet-card, .panel { display:block } @media (max-width: 760px) { .panel { display:grid } }',
+  },
+  '/site/chain.mjs': {
+    type: 'text/javascript; charset=utf-8',
+    body: "export class CookieChainRpc {}; export function buildUnsignedMemoTransaction(){}; const memo='MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'; void memo;",
+  },
+  '/site/history.mjs': {
+    type: 'text/javascript; charset=utf-8',
+    body: "export function transactionHasSigner(){ return entry?.signer === true; }",
   },
 });
 
@@ -74,19 +82,21 @@ async function expectCode(promise, expectedCode) {
   });
 }
 
-
 test('computes Git blob identity using the canonical blob header', () => {
   assert.equal(gitBlobSha1(Buffer.from('hello\n', 'utf8')), 'ce013625030ba8dba906f756967f9e9ca394464a');
 });
 
-test('pins every published runtime file to the integrated source blobs', () => {
+test('pins every published runtime file to the hardened source generation', () => {
+  assert.equal(SOURCE.commit, '6ea7fc3976676577f81f8a5adebd239487eb7c0a');
   assert.deepEqual(
     Object.fromEntries(Object.entries(FILE_CONTRACT).map(([path, contract]) => [path, contract.gitBlobSha1])),
     {
-      'index.html': 'af4d1a0ce8ae835092d480c319f2ba2234bf97a4',
-      'app.js': '31e2ca50c8d02a4f0bd390687337835c45d65d27',
+      'index.html': '467a802fc8af6d37e86be152dfbd6bb7b9e1cf0c',
+      'app.js': 'c948315035051b1649e7ffdeb01a647bf267e2cd',
       'receipt.mjs': 'befbf85080201ed458b1555bf77442f85fcfe442',
       'styles.css': '63e8dbc8c6c7cb4efea6dfc2a7135cff435c3d74',
+      'chain.mjs': 'c5f685537c9bf241b6103bf3e39c4ab255016e60',
+      'history.mjs': 'bf199898f716131b70a57b5bcbec7f155d277b6f',
     },
   );
 });
@@ -103,7 +113,7 @@ test('rejects embedded URL credentials before any request', () => {
   );
 });
 
-test('accepts a complete deployment and emits byte- and source-bound receipts', async () => {
+test('accepts a complete six-file deployment and emits source-bound receipts', async () => {
   await withServer({}, async (baseUrl, routes) => {
     const receipt = await verifyDeployment(baseUrl, {
       fileContract: contractFor(routes),
@@ -112,8 +122,10 @@ test('accepts a complete deployment and emits byte- and source-bound receipts', 
     assert.equal(receipt.ok, true);
     assert.equal(receipt.checkedAt, '2026-09-14T12:00:00.000Z');
     assert.equal(receipt.source.commit, SOURCE.commit);
-    assert.equal(receipt.files.length, 4);
-    assert.deepEqual(receipt.files.map((file) => file.path), ['index.html', 'app.js', 'receipt.mjs', 'styles.css']);
+    assert.equal(receipt.files.length, 6);
+    assert.deepEqual(receipt.files.map((file) => file.path), [
+      'index.html', 'app.js', 'receipt.mjs', 'styles.css', 'chain.mjs', 'history.mjs',
+    ]);
     for (const file of receipt.files) {
       assert.match(file.sha256, /^[0-9a-f]{64}$/);
       assert.match(file.observedGitBlobSha1, /^[0-9a-f]{40}$/);
@@ -124,39 +136,42 @@ test('accepts a complete deployment and emits byte- and source-bound receipts', 
   });
 });
 
-test('fails closed on any byte drift from the pinned source blob', async () => {
-  const overrides = {
-    '/site/styles.css': {
-      type: 'text/css; charset=utf-8',
-      body: `${canonical['/site/styles.css'].body}\n/* injected */`,
-    },
-  };
-  await withServer(overrides, async (baseUrl) => {
-    await expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(canonical) }), 'SOURCE_BLOB_MISMATCH');
-  });
-});
-
-test('fails closed when a required marker is missing even if its blob is expected', async () => {
-  const overrides = {
-    '/site/app.js': { type: 'application/javascript', body: "import './receipt.mjs';" },
-  };
-  await withServer(overrides, async (baseUrl, routes) => {
-    await expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'MARKER_MISSING');
-  });
+test('fails closed on drift in either hardened security module', async () => {
+  for (const path of ['chain.mjs', 'history.mjs']) {
+    const routePath = `/site/${path}`;
+    const overrides = {
+      [routePath]: {
+        ...canonical[routePath],
+        body: `${canonical[routePath].body}\n// injected drift`,
+      },
+    };
+    await withServer(overrides, async (baseUrl) => {
+      await expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(canonical) }), 'SOURCE_BLOB_MISMATCH');
+    });
+  }
 });
 
 test('fails closed on an incorrect Content-Type', async () => {
   const overrides = {
-    '/site/styles.css': { type: 'text/plain', body: canonical['/site/styles.css'].body },
+    '/site/history.mjs': { type: 'text/plain', body: canonical['/site/history.mjs'].body },
   };
   await withServer(overrides, async (baseUrl, routes) => {
     await expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'CONTENT_TYPE_MISMATCH');
   });
 });
 
+test('fails closed when a required marker is missing even if its blob is expected', async () => {
+  const overrides = {
+    '/site/history.mjs': { type: 'text/javascript', body: 'export function nope(){}' },
+  };
+  await withServer(overrides, async (baseUrl, routes) => {
+    await expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'MARKER_MISSING');
+  });
+});
+
 test('fails closed when an asset is missing', async () => {
   const overrides = {
-    '/site/receipt.mjs': { status: 404, type: 'text/plain', body: 'gone' },
+    '/site/chain.mjs': { status: 404, type: 'text/plain', body: 'gone' },
   };
   await withServer(overrides, async (baseUrl, routes) => {
     await expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'HTTP_STATUS');
