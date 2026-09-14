@@ -43,7 +43,8 @@ export async function startFixture(options = {}) {
     if (typeof msg?.method === 'string') rpcMethods.push(msg.method);
     if (msg.method === 'initialize') {
       initializeVersions.push(msg.params?.protocolVersion);
-      const id = randomUUID(); sessions.add(id);
+      const id = options.noSession ? null : randomUUID();
+      if (id) sessions.add(id);
       const defaultCapabilities = {
         ...(options.noToolsCapability ? {} : { tools: {} }),
         ...(options.noResourcesCapability ? {} : { resources: {} }),
@@ -54,9 +55,9 @@ export async function startFixture(options = {}) {
         ...(options.omitCapabilities ? {} : { capabilities }),
         ...(options.omitServerInfo ? {} : { serverInfo: { name: 'fixture', version: '1' } }),
       };
-      return sendRpc(res, 200, { jsonrpc: '2.0', id: msg.id, result }, { 'mcp-session-id': id });
+      return sendRpc(res, 200, { jsonrpc: '2.0', id: msg.id, result }, id ? { 'mcp-session-id': id } : {});
     }
-    if (!sessionId || !sessions.has(sessionId)) return send(res, 404, { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32001, message: 'Unknown session' } });
+    if (!options.noSession && (!sessionId || !sessions.has(sessionId))) return send(res, 404, { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32001, message: 'Unknown session' } });
     if (req.headers['mcp-protocol-version'] !== PROTOCOL) {
       const status = options.wrongProtocolStatus ?? 400;
       if (status === 200) return sendRpc(res, 200, { jsonrpc: '2.0', id: msg.id ?? null, result: {} });

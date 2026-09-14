@@ -16,16 +16,44 @@ function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function onlyKeys(value, allowed) {
+  const set = new Set(allowed);
+  return Object.keys(value).every((key) => set.has(key));
+}
+
 function optionalBooleans(value, keys) {
   return keys.every((key) => value[key] === undefined || typeof value[key] === 'boolean');
 }
 
+function validBooleanCapability(value, keys) {
+  return isPlainObject(value) && onlyKeys(value, keys) && optionalBooleans(value, keys);
+}
+
+function validTasksCapability(tasks) {
+  if (!isPlainObject(tasks) || !onlyKeys(tasks, ['list', 'cancel', 'requests'])) return false;
+  for (const key of ['list', 'cancel']) {
+    if (tasks[key] !== undefined && !isPlainObject(tasks[key])) return false;
+  }
+  const requests = tasks.requests;
+  if (requests === undefined) return true;
+  if (!isPlainObject(requests) || !onlyKeys(requests, ['tools'])) return false;
+  const tools = requests.tools;
+  if (tools === undefined) return true;
+  if (!isPlainObject(tools) || !onlyKeys(tools, ['call'])) return false;
+  return tools.call === undefined || isPlainObject(tools.call);
+}
+
 function validServerCapabilities(capabilities) {
   if (!isPlainObject(capabilities)) return false;
-  const tools = capabilities.tools;
-  if (tools !== undefined && (!isPlainObject(tools) || !optionalBooleans(tools, ['listChanged']))) return false;
-  const resources = capabilities.resources;
-  if (resources !== undefined && (!isPlainObject(resources) || !optionalBooleans(resources, ['subscribe', 'listChanged']))) return false;
+  const experimental = capabilities.experimental;
+  if (experimental !== undefined && (!isPlainObject(experimental) || Object.values(experimental).some((value) => !isPlainObject(value)))) return false;
+  for (const key of ['logging', 'completions']) {
+    if (capabilities[key] !== undefined && !isPlainObject(capabilities[key])) return false;
+  }
+  if (capabilities.prompts !== undefined && !validBooleanCapability(capabilities.prompts, ['listChanged'])) return false;
+  if (capabilities.resources !== undefined && !validBooleanCapability(capabilities.resources, ['subscribe', 'listChanged'])) return false;
+  if (capabilities.tools !== undefined && !validBooleanCapability(capabilities.tools, ['listChanged'])) return false;
+  if (capabilities.tasks !== undefined && !validTasksCapability(capabilities.tasks)) return false;
   return true;
 }
 
@@ -198,16 +226,13 @@ export async function probeMcpEndpoint(options) {
     if (noSession) checks.push(noSession.response.status === 400
       ? pass('missing-session-status', { httpStatus: 400, normativeStrength: 'SHOULD' })
       : warn('missing-session-status', { httpStatus: noSession.response.status, normativeStrength: 'SHOULD', expected: 400 }));
+  } else checks.push(skip('missing-session-status', { reason: 'server did not issue a session' }));
 
-    const wrongVersion = await safeJson(checks, 'wrong-protocol-transport', request({ headers: { ...headers, 'mcp-protocol-version': UNSUPPORTED_PROTOCOL_VERSION }, body: rpc(8, 'ping') }));
-    recordTiming('wrong-protocol', wrongVersion);
-    if (wrongVersion) checks.push(wrongVersion.response.status === 400
-      ? pass('wrong-protocol-rejected', { httpStatus: 400 })
-      : fail('wrong-protocol-rejected', { httpStatus: wrongVersion.response.status, expected: 400, reason: 'unsupported MCP-Protocol-Version must be rejected with HTTP 400' }));
-  } else {
-    checks.push(skip('missing-session-status', { reason: 'server did not issue a session' }));
-    checks.push(skip('wrong-protocol-rejected', { reason: 'no session-bound request to test' }));
-  }
+  const wrongVersion = await safeJson(checks, 'wrong-protocol-transport', request({ headers: { ...headers, 'mcp-protocol-version': UNSUPPORTED_PROTOCOL_VERSION }, body: rpc(8, 'ping') }));
+  recordTiming('wrong-protocol', wrongVersion);
+  if (wrongVersion) checks.push(wrongVersion.response.status === 400
+    ? pass('wrong-protocol-rejected', { httpStatus: 400, sessionBound: Boolean(sessionId) })
+    : fail('wrong-protocol-rejected', { httpStatus: wrongVersion.response.status, expected: 400, sessionBound: Boolean(sessionId), reason: 'unsupported MCP-Protocol-Version must be rejected with HTTP 400 on every post-initialize request' }));
 
   if (maxRttMs !== null) {
     const observed = timings.filter(({ name }) => ['initialize', 'ping', 'tools/list'].includes(name)).map(({ elapsedMs }) => elapsedMs);
