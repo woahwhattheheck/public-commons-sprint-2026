@@ -38,8 +38,10 @@ jobs:
           cp cookie-crumbs/styles.css _site/cookie-crumbs/
           cp cookie-crumbs/app.js _site/cookie-crumbs/
           cp cookie-crumbs/receipt.mjs _site/cookie-crumbs/
+          cp cookie-crumbs/chain.mjs _site/cookie-crumbs/
+          cp cookie-crumbs/history.mjs _site/cookie-crumbs/
           touch _site/.nojekyll
-          printf '%s\n' .nojekyll cookie-crumbs/app.js cookie-crumbs/index.html cookie-crumbs/receipt.mjs cookie-crumbs/styles.css > expected-files.txt
+          printf '%s\n' .nojekyll cookie-crumbs/app.js cookie-crumbs/chain.mjs cookie-crumbs/history.mjs cookie-crumbs/index.html cookie-crumbs/receipt.mjs cookie-crumbs/styles.css > expected-files.txt
           find _site -type f -printf '%P\n' | sort > actual-files.txt
           diff -u expected-files.txt actual-files.txt
       - name: Configure Pages
