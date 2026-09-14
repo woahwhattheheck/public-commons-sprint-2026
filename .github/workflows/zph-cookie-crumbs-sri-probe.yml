@@ -1,0 +1,28 @@
+name: ZPH Cookie Crumbs SRI probe
+
+on:
+  push:
+    branches:
+      - zph-n4v8/cookie-crumbs-source-hardening-20260914
+
+permissions:
+  contents: read
+
+jobs:
+  hash-pinned-solana-web3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hash exact pinned CDN bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.4/lib/index.iife.min.js'
+          curl --fail --silent --show-error --location "$url" --output /tmp/solana-web3.js
+          echo "URL=$url"
+          echo "BYTES=$(wc -c < /tmp/solana-web3.js)"
+          printf 'SRI=sha384-'
+          openssl dgst -sha384 -binary /tmp/solana-web3.js | openssl base64 -A
+          echo
+          printf 'SHA256='
+          sha256sum /tmp/solana-web3.js | cut -d' ' -f1
