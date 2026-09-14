@@ -33,7 +33,8 @@ export async function startFixture(options = {}) {
     const sessionId = req.headers['mcp-session-id'];
     if (req.method === 'DELETE') {
       if (!sessionId || !sessions.has(sessionId)) return send(res, 404, { error: 'missing' });
-      sessions.delete(sessionId); res.writeHead(204); return res.end();
+      if (!options.retainSessionAfterDelete) sessions.delete(sessionId);
+      res.writeHead(204); return res.end();
     }
     if (req.method !== 'POST') return send(res, 405, { error: 'method' });
     let body = '';
@@ -43,10 +44,11 @@ export async function startFixture(options = {}) {
     if (msg.method === 'initialize') {
       initializeVersions.push(msg.params?.protocolVersion);
       const id = randomUUID(); sessions.add(id);
-      const capabilities = {
+      const defaultCapabilities = {
         ...(options.noToolsCapability ? {} : { tools: {} }),
         ...(options.noResourcesCapability ? {} : { resources: {} }),
       };
+      const capabilities = options.capabilitiesOverride ?? defaultCapabilities;
       const result = {
         protocolVersion: options.protocolVersion ?? PROTOCOL,
         ...(options.omitCapabilities ? {} : { capabilities }),
@@ -55,7 +57,11 @@ export async function startFixture(options = {}) {
       return sendRpc(res, 200, { jsonrpc: '2.0', id: msg.id, result }, { 'mcp-session-id': id });
     }
     if (!sessionId || !sessions.has(sessionId)) return send(res, 404, { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32001, message: 'Unknown session' } });
-    if (req.headers['mcp-protocol-version'] !== PROTOCOL) return send(res, 400, { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32002, message: 'wrong protocol' } });
+    if (req.headers['mcp-protocol-version'] !== PROTOCOL) {
+      const status = options.wrongProtocolStatus ?? 400;
+      if (status === 200) return sendRpc(res, 200, { jsonrpc: '2.0', id: msg.id ?? null, result: {} });
+      return send(res, status, { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32002, message: 'wrong protocol' } });
+    }
     if (msg.id === undefined) { res.writeHead(202); return res.end(); }
     if (msg.method === 'ping') return sendRpc(res, 200, { jsonrpc: '2.0', id: msg.id, result: {} });
     if (msg.method === 'tools/list') {

@@ -16,6 +16,19 @@ function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function optionalBooleans(value, keys) {
+  return keys.every((key) => value[key] === undefined || typeof value[key] === 'boolean');
+}
+
+function validServerCapabilities(capabilities) {
+  if (!isPlainObject(capabilities)) return false;
+  const tools = capabilities.tools;
+  if (tools !== undefined && (!isPlainObject(tools) || !optionalBooleans(tools, ['listChanged']))) return false;
+  const resources = capabilities.resources;
+  if (resources !== undefined && (!isPlainObject(resources) || !optionalBooleans(resources, ['subscribe', 'listChanged']))) return false;
+  return true;
+}
+
 function rpc(id, method, params = {}) { return { jsonrpc: '2.0', id, method, params }; }
 function note(method, params = {}) { return { jsonrpc: '2.0', method, params }; }
 function check(id, status, detail = {}) { return { id, status, detail }; }
@@ -84,17 +97,18 @@ export async function probeMcpEndpoint(options) {
   const negotiated = initResult?.protocolVersion;
   const sessionId = init.response.headers.get('mcp-session-id');
   const serverInfo = initResult?.serverInfo;
+  const capabilitiesValid = validServerCapabilities(initResult?.capabilities);
   const initOk = init.response.status === 200 &&
     init.body?.jsonrpc === '2.0' &&
     init.body?.id === 1 &&
     typeof negotiated === 'string' &&
-    isPlainObject(initResult?.capabilities) &&
+    capabilitiesValid &&
     isPlainObject(serverInfo) &&
     typeof serverInfo.name === 'string' && serverInfo.name.length > 0 &&
     typeof serverInfo.version === 'string' && serverInfo.version.length > 0;
   checks.push(initOk
     ? pass('initialize-envelope', { httpStatus: init.response.status, negotiatedProtocolVersion: negotiated, sessionIssued: Boolean(sessionId), serverName: serverInfo.name, serverVersion: serverInfo.version })
-    : fail('initialize-envelope', { httpStatus: init.response.status, errorCode: init.body?.error?.code ?? null, requiredFields: { protocolVersion: typeof negotiated === 'string', capabilities: isPlainObject(initResult?.capabilities), serverInfo: isPlainObject(serverInfo), serverName: typeof serverInfo?.name === 'string' && serverInfo.name.length > 0, serverVersion: typeof serverInfo?.version === 'string' && serverInfo.version.length > 0 } }));
+    : fail('initialize-envelope', { httpStatus: init.response.status, errorCode: init.body?.error?.code ?? null, requiredFields: { protocolVersion: typeof negotiated === 'string', capabilities: capabilitiesValid, serverInfo: isPlainObject(serverInfo), serverName: typeof serverInfo?.name === 'string' && serverInfo.name.length > 0, serverVersion: typeof serverInfo?.version === 'string' && serverInfo.version.length > 0 } }));
   if (!initOk) return finalize();
   checks.push(versionAtLeast(negotiated, minimumProtocolVersion)
     ? pass('protocol-minimum', { minimumProtocolVersion, negotiatedProtocolVersion: negotiated })
@@ -187,9 +201,9 @@ export async function probeMcpEndpoint(options) {
 
     const wrongVersion = await safeJson(checks, 'wrong-protocol-transport', request({ headers: { ...headers, 'mcp-protocol-version': UNSUPPORTED_PROTOCOL_VERSION }, body: rpc(8, 'ping') }));
     recordTiming('wrong-protocol', wrongVersion);
-    if (wrongVersion) checks.push(wrongVersion.response.status >= 400
-      ? pass('wrong-protocol-rejected', { httpStatus: wrongVersion.response.status })
-      : warn('wrong-protocol-rejected', { httpStatus: wrongVersion.response.status, reason: 'server accepted a non-negotiated protocol header' }));
+    if (wrongVersion) checks.push(wrongVersion.response.status === 400
+      ? pass('wrong-protocol-rejected', { httpStatus: 400 })
+      : fail('wrong-protocol-rejected', { httpStatus: wrongVersion.response.status, expected: 400, reason: 'unsupported MCP-Protocol-Version must be rejected with HTTP 400' }));
   } else {
     checks.push(skip('missing-session-status', { reason: 'server did not issue a session' }));
     checks.push(skip('wrong-protocol-rejected', { reason: 'no session-bound request to test' }));
@@ -217,7 +231,7 @@ export async function probeMcpEndpoint(options) {
         recordTiming('post-delete', afterDelete);
         if (afterDelete) checks.push(afterDelete.response.status === 404
           ? pass('deleted-session-not-found', { httpStatus: 404 })
-          : warn('deleted-session-not-found', { httpStatus: afterDelete.response.status, expected: 404 }));
+          : fail('deleted-session-not-found', { httpStatus: afterDelete.response.status, expected: 404, reason: 'server accepted client session termination but kept the session live' }));
       } else checks.push(skip('deleted-session-not-found', { reason: 'server does not support client session termination' }));
     }
   } else {

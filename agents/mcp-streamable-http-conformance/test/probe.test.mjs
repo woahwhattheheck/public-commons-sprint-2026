@@ -25,7 +25,6 @@ test('green fixture passes protocol/security matrix without invoking tools', asy
 });
 
 
-
 test('SSE-framed POST responses are accepted without invoking tools', async () => {
   await withFixture({ sseResponses: true }, async ({ endpoint, rpcMethods }) => {
     const report = await probeMcpEndpoint({ endpoint, requireSession: true, requireTools: true, timeoutMs: 1000 });
@@ -87,6 +86,54 @@ test('initialize result requires capabilities and server implementation identity
     const initialize = report.checks.find((x) => x.id === 'initialize-envelope');
     assert.equal(initialize.status, 'FAIL');
     assert.equal(initialize.detail.requiredFields.serverInfo, false);
+  });
+});
+
+test('known server capability shapes are schema-validated before discovery', async () => {
+  const malformed = [
+    { tools: true, resources: {} },
+    { tools: {}, resources: 'yes' },
+    { tools: { listChanged: 'yes' }, resources: {} },
+    { tools: {}, resources: { subscribe: 'yes' } },
+    { tools: {}, resources: { listChanged: 1 } },
+  ];
+  for (const capabilitiesOverride of malformed) {
+    await withFixture({ capabilitiesOverride }, async ({ endpoint }) => {
+      const report = await probeMcpEndpoint({ endpoint, requireSession: true });
+      assert.equal(report.summary.ok, false);
+      const initialize = report.checks.find((x) => x.id === 'initialize-envelope');
+      assert.equal(initialize.status, 'FAIL');
+      assert.equal(initialize.detail.requiredFields.capabilities, false);
+    });
+  }
+  await withFixture({ capabilitiesOverride: { tools: { listChanged: true }, resources: { subscribe: false, listChanged: true }, extensionCapability: { mode: 'safe' } } }, async ({ endpoint }) => {
+    const report = await probeMcpEndpoint({ endpoint, requireSession: true });
+    assert.equal(report.summary.ok, true, JSON.stringify(report.checks.filter((x) => x.status === 'FAIL')));
+  });
+});
+
+test('unsupported protocol header requires exact HTTP 400', async () => {
+  for (const wrongProtocolStatus of [200, 403]) {
+    await withFixture({ wrongProtocolStatus }, async ({ endpoint }) => {
+      const report = await probeMcpEndpoint({ endpoint, requireSession: true });
+      assert.equal(report.summary.ok, false);
+      const check = report.checks.find((x) => x.id === 'wrong-protocol-rejected');
+      assert.equal(check.status, 'FAIL');
+      assert.equal(check.detail.httpStatus, wrongProtocolStatus);
+      assert.equal(check.detail.expected, 400);
+    });
+  }
+});
+
+test('accepted session termination must make that session unusable', async () => {
+  await withFixture({ retainSessionAfterDelete: true }, async ({ endpoint }) => {
+    const report = await probeMcpEndpoint({ endpoint, requireSession: true });
+    assert.equal(report.summary.ok, false);
+    assert.equal(report.checks.find((x) => x.id === 'session-delete').status, 'PASS');
+    const afterDelete = report.checks.find((x) => x.id === 'deleted-session-not-found');
+    assert.equal(afterDelete.status, 'FAIL');
+    assert.equal(afterDelete.detail.httpStatus, 200);
+    assert.equal(afterDelete.detail.expected, 404);
   });
 });
 
