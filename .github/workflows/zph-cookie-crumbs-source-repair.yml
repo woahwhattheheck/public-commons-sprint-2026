@@ -22,4 +22,4 @@ jobs:
         with:
           node-version: 24
       - name: Apply, test, commit, and push source repair
-        run: python .github/zph_cookie_crumbs_repair.py
+        run: python .github/zph_cookie_crumbs_run_no_workflow.py
