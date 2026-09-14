@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check app.js && node --check receipt.mjs && node --check verify-deploy.mjs",
+    "build": "node build.mjs",
+    "check": "node --check app.js && node --check receipt.mjs && node --check provenance.mjs && node --check build.mjs && node --check verify-deploy.mjs",
     "test": "node --test tests/*.test.mjs",
     "ci": "npm run check && npm test",
     "verify:deploy": "node verify-deploy.mjs"
