@@ -5,8 +5,9 @@ import json
 import sys
 from pathlib import Path
 
-from .core import TraceForgeError, analyze, verify_receipt
+from .core import TraceForgeError, analyze, strict_json_loads, verify_receipt
 from .model import DemoModel, OpenAICompatibleModel
+from .receipt_io import MAX_RECEIPT_BYTES, render_analysis_packet
 from .server import serve
 
 
@@ -35,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
             text = args.file.read_text(encoding="utf-8")
             model = DemoModel() if args.mode == "demo" else OpenAICompatibleModel.from_env()
             result = analyze(text, model)
-            rendered = json.dumps(result, indent=2, ensure_ascii=False) + "\n"
+            rendered = render_analysis_packet(result, pretty=True)
             if args.json_out:
                 args.json_out.write_text(rendered, encoding="utf-8")
                 print(f"wrote {args.json_out} ({result['receipt']['run_id']})")
@@ -43,8 +44,12 @@ def main(argv: list[str] | None = None) -> int:
                 sys.stdout.write(rendered)
             return 0
         if args.command == "verify":
-            result = json.loads(args.file.read_text(encoding="utf-8"))
-            valid = verify_receipt(result)
+            payload = strict_json_loads(
+                args.file.read_text(encoding="utf-8"),
+                max_bytes=MAX_RECEIPT_BYTES,
+                label="receipt",
+            )
+            valid = verify_receipt(payload)
             print(json.dumps({"valid": valid}))
             return 0 if valid else 2
         if args.command == "serve":

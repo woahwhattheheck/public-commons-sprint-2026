@@ -9,6 +9,7 @@ from typing import Any
 
 from .core import TraceForgeError, analyze, strict_json_loads, verify_receipt
 from .model import DemoModel, OpenAICompatibleModel
+from .receipt_io import MAX_RECEIPT_BYTES, render_analysis_packet
 
 MAX_REQUEST_BYTES = 320_000
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,6 +46,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send_json(self, status: int, value: Any) -> None:
         payload = _json_bytes(value)
+        self._headers(status, "application/json; charset=utf-8", len(payload))
+        self.wfile.write(payload)
+
+    def _send_analysis(self, status: int, value: Any) -> None:
+        payload = render_analysis_packet(value).encode("utf-8")
         self._headers(status, "application/json; charset=utf-8", len(payload))
         self.wfile.write(payload)
 
@@ -92,7 +98,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         raw = self.rfile.read(length)
         try:
-            payload = strict_json_loads(raw.decode("utf-8"))
+            payload = strict_json_loads(raw.decode("utf-8"), max_bytes=MAX_REQUEST_BYTES, label="request")
             if not isinstance(payload, dict) or set(payload) != {"text", "mode"}:
                 raise TraceForgeError("request must contain exactly text and mode")
             text = payload["text"]
@@ -104,7 +110,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 raise TraceForgeError("mode must be demo or live")
             result = analyze(text, model)
-            self._send_json(HTTPStatus.OK, result)
+            self._send_analysis(HTTPStatus.OK, result)
         except (UnicodeDecodeError, TraceForgeError) as exc:
             self._send_json(HTTPStatus.UNPROCESSABLE_ENTITY, {"error": "analysis_rejected", "detail": str(exc)[:400]})
 
@@ -117,12 +123,12 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "-1"))
         except ValueError:
             length = -1
-        if length < 0 or length > MAX_REQUEST_BYTES:
-            self._send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "invalid_request_size"})
+        if length < 0 or length > MAX_RECEIPT_BYTES:
+            self._send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "invalid_receipt_size"})
             return
         raw = self.rfile.read(length)
         try:
-            payload = strict_json_loads(raw.decode("utf-8"))
+            payload = strict_json_loads(raw.decode("utf-8"), max_bytes=MAX_RECEIPT_BYTES, label="receipt")
         except (UnicodeDecodeError, TraceForgeError) as exc:
             self._send_json(HTTPStatus.UNPROCESSABLE_ENTITY, {"error": "invalid_receipt", "detail": str(exc)[:300]})
             return
