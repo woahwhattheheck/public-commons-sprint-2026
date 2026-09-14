@@ -21,7 +21,7 @@
       <div>
         <p class="eyebrow">INCIDENT INTELLIGENCE · EVIDENCE FIRST</p>
         <h1>Make the model show its work.</h1>
-        <p class="lede">TraceForge turns messy incident logs into cited hypotheses, then makes a second skeptic challenge every claim. Unsupported or stale claims are held instead of dressed up as certainty; model-suggested actions always remain human-review-only.</p>
+        <p class="lede">TraceForge turns messy incident logs into cited hypotheses, then makes a second skeptic challenge every claim. Unsupported or stale claims are held instead of dressed up as certainty; model summaries and suggested actions always remain human-review-only.</p>
       </div>
       <div class="hero-proof" aria-label="TraceForge workflow">
         <div><b>01</b><span>Bind evidence</span></div><i>→</i><div><b>02</b><span>Investigate</span></div><i>→</i><div><b>03</b><span>Skeptic review</span></div><i>→</i><div><b>04</b><span>Verify claims</span></div>
@@ -54,16 +54,16 @@
 
       <article class="panel result-panel" aria-live="polite">
         <div class="panel-head">
-          <div><p class="kicker">VERIFIED CLAIMS · REVIEW-ONLY ACTIONS</p><h2>Findings</h2></div>
+          <div><p class="kicker">VERIFIED CLAIMS · REVIEW-ONLY MODEL TEXT</p><h2>Findings</h2></div>
           <span id="receiptState" class="receipt-chip">No receipt</span>
         </div>
         <div id="emptyState" class="empty-state">
           <div class="shield">✓</div>
           <h3>Confidence needs provenance.</h3>
-          <p>Run an analysis to see claim citations, deterministic support scores, skeptic verdicts, review-only model suggestions, and an offline-verifiable integrity receipt.</p>
+          <p>Run an analysis to see claim citations, deterministic support scores, skeptic verdicts, review-only model summary/actions, and an offline-verifiable integrity receipt.</p>
         </div>
         <div id="results" class="results hidden">
-          <div class="summary-card"><span>Incident summary</span><p id="summary"></p></div>
+          <div class="summary-card"><span id="summaryState">REVIEW_ONLY · MODEL SUMMARY</span><p id="summary"></p><small id="summaryReason">Model-generated summary is not evidence-verified.</small></div>
           <div class="metrics" id="metrics"></div>
           <div id="findings" class="findings"></div>
           <details class="receipt"><summary>Integrity receipt</summary><pre id="receipt"></pre></details>
@@ -74,7 +74,7 @@
 
     <section class="principles">
       <article><span>01</span><h3>Evidence is data, never authority</h3><p>Prompt injection inside logs remains quoted source material. It cannot change TraceForge policy.</p></article>
-      <article><span>02</span><h3>Claim gates, explicit action boundary</h3><p>Citation and skeptic gates apply to evidence claims. Suggested actions never inherit a claim PASS and always require independent human review.</p></article>
+      <article><span>02</span><h3>Claim gates, explicit model-text boundary</h3><p>Citation and skeptic gates apply only to evidence claims. Model summaries and suggested actions stay review-only.</p></article>
       <article><span>03</span><h3>HOLD beats hallucination</h3><p>Bad citations, stale evidence, malformed model output, and weak grounding fail closed instead of becoming polished guesses.</p></article>
     </section>
   </main>

@@ -116,7 +116,13 @@ async function analyze() {
 
     $('emptyState').classList.add('hidden');
     $('results').classList.remove('hidden');
+    const summaryReview = payload.summary_review || {
+      status: 'REVIEW_ONLY',
+      reason: 'Model-generated summary is not evidence-verified; only individual CLAIM PASS findings have passed citation, support, and skeptic gates.',
+    };
+    $('summaryState').textContent = `${summaryReview.status} · MODEL SUMMARY`;
     $('summary').textContent = escapeText(payload.summary);
+    $('summaryReason').textContent = summaryReview.reason;
     $('metrics').replaceChildren(
       metric('Evidence SHA', payload.evidence.sha256.slice(0, 12) + '…'),
       metric('Model', payload.model),
@@ -134,7 +140,9 @@ async function analyze() {
       body: JSON.stringify(payload),
     });
     const verified = await verifyResponse.json();
-    $('receiptState').textContent = verified.valid ? 'Receipt verified' : 'Receipt invalid';
+    $('receiptState').textContent = verified.valid
+      ? 'Packet integrity verified · model summary/actions remain review-only'
+      : 'Packet integrity invalid';
     $('receiptState').className = `receipt-chip ${verified.valid ? 'ok' : 'hold'}`;
   } catch (error) {
     showError(error.message || String(error));
