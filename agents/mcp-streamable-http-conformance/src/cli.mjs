@@ -2,7 +2,7 @@
 import { probeMcpEndpoint } from './probe.mjs';
 
 function usage() {
-  return `Usage: mcp-http-conformance <endpoint> [options]\n\nOptions:\n  --bearer-env NAME       Read bearer token from environment variable NAME\n  --min-version DATE      Minimum acceptable MCP version (default 2025-11-25)\n  --timeout-ms N          Per-request timeout (default 3000)\n  --max-bytes N           Max JSON response bytes (default 262144)\n  --max-rtt-ms N          Optional latency budget for initialize/ping/tools-list\n  --require-session       Fail if the server does not issue MCP-Session-Id\n  --require-tools         Fail unless tools capability has at least one listed tool\n  --no-delete             Do not terminate the probe-created session\n  --help                  Show this help\n\nThe probe never invokes tools/call and never prints bearer credentials.\n`;
+  return `Usage: mcp-http-conformance <endpoint> [options]\n\nOptions:\n  --bearer-env NAME       Read bearer token from NAME (HTTPS endpoints only)\n  --min-version DATE      Minimum acceptable MCP version (default 2025-11-25)\n  --timeout-ms N          Per-request timeout (default 3000)\n  --max-bytes N           Max JSON response bytes (default 262144)\n  --max-rtt-ms N          Optional latency budget for initialize/ping/tools-list\n  --require-session       Fail if the server does not issue MCP-Session-Id\n  --require-tools         Fail unless tools capability has at least one listed tool\n  --no-delete             Do not terminate the probe-created session\n  --help                  Show this help\n\nThe probe never invokes tools/call and never prints bearer credentials.\n`;
 }
 
 function parse(argv) {

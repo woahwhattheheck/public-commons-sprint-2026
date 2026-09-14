@@ -155,9 +155,25 @@ export async function requestJson({ url, method = 'POST', headers = {}, body, ti
     }
 
     const contentType = response.headers.get('content-type') ?? '';
+    const isRpcRequest = body?.id !== undefined;
+    const isSse = /^text\/event-stream(?:;|$)/i.test(contentType);
+    const isJson = /^application\/json(?:;|$)/i.test(contentType);
+    if (response.status === 200 && isRpcRequest && !isSse && !isJson) {
+      await response.body?.cancel().catch(() => {});
+      throw new ProbeTransportError(
+        'INVALID_RESPONSE_MEDIA_TYPE',
+        'JSON-RPC request responses must use application/json or text/event-stream',
+        {
+          status: response.status,
+          contentType: contentType || null,
+          allowed: ['application/json', 'text/event-stream'],
+        },
+      );
+    }
+
     let parsed = null;
     let responseMode = 'empty';
-    if (/^text\/event-stream(?:;|$)/i.test(contentType)) {
+    if (isSse) {
       parsed = await readSseRpcResponse(response, maxResponseBytes, body?.id);
       responseMode = 'sse';
     } else {
