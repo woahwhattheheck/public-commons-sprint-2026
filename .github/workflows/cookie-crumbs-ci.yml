@@ -32,6 +32,15 @@ jobs:
       - name: Syntax + regression contract
         working-directory: cookie-crumbs
         run: npm run ci
+      - name: Build + prove exact pinned vendor artifact
+        working-directory: cookie-crumbs
+        run: |
+          set -euo pipefail
+          npm run build
+          test "$(wc -c < dist/vendor/solana-web3.iife.min.js)" -eq 463860
+          printf '%s  %s\n' '09cdbea951b2ed0e11bcbe3aeb1ee9f035f9fb51ed212aca645475ae82688cc3' 'dist/vendor/solana-web3.iife.min.js' | sha256sum -c -
+          grep -F '"bundleBytes": 463860' dist/vendor-lock.json
+          grep -F '"bundleSri": "sha384-I45YF+S0YGWIolUyTksLk9TNtTqaDgZg8e6T1OoBoJvvFmphqYNIPZw3Kl0TkZNN"' dist/vendor-lock.json
       - name: Static app inventory
         run: |
           test -s cookie-crumbs/index.html
@@ -49,4 +58,7 @@ jobs:
           grep -F "schema: 'cookie-crumbs/deployment-receipt/v2'" cookie-crumbs/verify-deploy.mjs
           grep -F "lock.schema !== 'cookie-crumbs/vendor-lock/v1'" cookie-crumbs/verify-deploy.mjs
           grep -F "export const WEB3_PACKAGE = '@solana/web3.js@1.98.4'" cookie-crumbs/build.mjs
+          grep -F "export const WEB3_BUNDLE_BYTES = 463_860" cookie-crumbs/build.mjs
+          grep -F "export const WEB3_BUNDLE_SHA256 = '09cdbea951b2ed0e11bcbe3aeb1ee9f035f9fb51ed212aca645475ae82688cc3'" cookie-crumbs/build.mjs
+          grep -F "bundleSha256: '09cdbea951b2ed0e11bcbe3aeb1ee9f035f9fb51ed212aca645475ae82688cc3'" cookie-crumbs/verify-deploy.mjs
           grep -F "npm, ['pack', '--ignore-scripts', '--json'" cookie-crumbs/build.mjs
