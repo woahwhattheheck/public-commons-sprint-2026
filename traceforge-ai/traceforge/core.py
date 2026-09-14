@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -361,6 +362,127 @@ def analyze(text: str, model: ModelClient) -> dict[str, Any]:
     return {**result_core, "receipt": receipt}
 
 
+def _normalized_bounded_text(value: Any, *, max_chars: int) -> bool:
+    try:
+        return _bounded_text(value, "receipt field", max_chars=max_chars) == value
+    except TraceForgeError:
+        return False
+
+
+def _receipt_evidence_line_map(evidence: Any) -> dict[str, str] | None:
+    if not isinstance(evidence, dict) or set(evidence) != {"sha256", "line_count", "byte_count", "lines"}:
+        return None
+    if not isinstance(evidence.get("sha256"), str) or not _SHA256.fullmatch(evidence["sha256"]):
+        return None
+    line_count = evidence.get("line_count")
+    byte_count = evidence.get("byte_count")
+    if not isinstance(line_count, int) or isinstance(line_count, bool) or not 1 <= line_count <= MAX_EVIDENCE_LINES:
+        return None
+    if not isinstance(byte_count, int) or isinstance(byte_count, bool) or not 1 <= byte_count <= MAX_EVIDENCE_BYTES:
+        return None
+    lines = evidence.get("lines")
+    if not isinstance(lines, list) or len(lines) != line_count:
+        return None
+
+    texts: list[str] = []
+    line_map: dict[str, str] = {}
+    for index, line in enumerate(lines, 1):
+        expected_id = f"E{index:04d}"
+        if not isinstance(line, dict) or set(line) != {"id", "text"}:
+            return None
+        if line.get("id") != expected_id:
+            return None
+        text = line.get("text")
+        if not isinstance(text, str) or "\n" in text or "\r" in text or "\x00" in text:
+            return None
+        texts.append(text)
+        line_map[expected_id] = text
+
+    canonical = "\n".join(texts) + "\n"
+    try:
+        canonical_bytes = canonical.encode("utf-8")
+    except UnicodeEncodeError:
+        return None
+    if len(canonical_bytes) != byte_count or len(canonical_bytes) > MAX_EVIDENCE_BYTES:
+        return None
+    if hashlib.sha256(canonical_bytes).hexdigest() != evidence["sha256"]:
+        return None
+    return line_map
+
+
+def _receipt_finding_valid(finding: Any, line_map: dict[str, str]) -> bool:
+    expected = {
+        "id", "claim", "severity", "citations", "action", "status", "support_score",
+        "skeptic", "verification_reason", "action_review",
+    }
+    if not isinstance(finding, dict) or set(finding) != expected:
+        return False
+    finding_id = finding.get("id")
+    if not isinstance(finding_id, str) or not _FINDING_ID.fullmatch(finding_id):
+        return False
+    if not _normalized_bounded_text(finding.get("claim"), max_chars=1_000):
+        return False
+    if finding.get("severity") not in {"info", "low", "medium", "high", "critical"}:
+        return False
+    if not _normalized_bounded_text(finding.get("action"), max_chars=1_200):
+        return False
+
+    citations = finding.get("citations")
+    if not isinstance(citations, list) or not 1 <= len(citations) <= 8:
+        return False
+    if len(set(citations)) != len(citations):
+        return False
+    if not all(isinstance(cid, str) and _LINE_ID.fullmatch(cid) for cid in citations):
+        return False
+
+    skeptic = finding.get("skeptic")
+    if not isinstance(skeptic, dict) or set(skeptic) != {"status", "reason"}:
+        return False
+    if skeptic.get("status") not in {"ACCEPT", "REJECT"}:
+        return False
+    if not _normalized_bounded_text(skeptic.get("reason"), max_chars=1_000):
+        return False
+
+    action_review = finding.get("action_review")
+    if not isinstance(action_review, dict) or set(action_review) != {"status", "reason"}:
+        return False
+    if action_review.get("status") != "REVIEW_ONLY" or action_review.get("reason") != _ACTION_REVIEW_REASON:
+        return False
+
+    score_value = finding.get("support_score")
+    if type(score_value) is not float or not math.isfinite(score_value) or not 0.0 <= score_value <= 1.0:
+        return False
+    if score_value == 0.0 and math.copysign(1.0, score_value) < 0.0:
+        return False
+
+    missing = [cid for cid in citations if cid not in line_map]
+    cited_lines = [line_map[cid] for cid in citations if cid in line_map]
+    instruction_shaped = [text for text in cited_lines if _INSTRUCTION_SHAPED.search(text)]
+    meta_claim = bool(_META_CLAIM.search(finding["claim"]))
+    support_lines = cited_lines if meta_claim else [text for text in cited_lines if not _INSTRUCTION_SHAPED.search(text)]
+    cited_text = "\n".join(support_lines)
+    score = citation_support_score(finding["claim"], cited_text) if not missing else 0.0
+    expected_score = round(score, 3)
+
+    reasons: list[str] = []
+    if missing:
+        reasons.append(f"missing citations: {', '.join(missing)}")
+    if instruction_shaped and not support_lines and not meta_claim:
+        reasons.append("citations rely only on instruction-shaped evidence")
+    if score < MIN_SUPPORT_SCORE:
+        reasons.append(f"lexical evidence support {score:.2f} below {MIN_SUPPORT_SCORE:.2f}")
+    if skeptic["status"] != "ACCEPT":
+        reasons.append(f"skeptic rejected: {skeptic['reason']}")
+    expected_status = "PASS" if not reasons else "HOLD"
+    expected_reason = "verified evidence claim + skeptic" if expected_status == "PASS" else "; ".join(reasons)
+
+    return (
+        score_value == expected_score
+        and finding.get("status") == expected_status
+        and finding.get("verification_reason") == expected_reason
+    )
+
+
 def _receipt_shape_valid(result: dict[str, Any]) -> bool:
     if set(result) != {"schema", "model", "evidence", "summary", "findings", "counts", "receipt"}:
         return False
@@ -368,28 +490,23 @@ def _receipt_shape_valid(result: dict[str, Any]) -> bool:
         return False
     if not isinstance(result.get("model"), str) or not result["model"]:
         return False
-    if not isinstance(result.get("summary"), str):
+    if not _normalized_bounded_text(result.get("summary"), max_chars=2_000):
         return False
 
-    evidence = result.get("evidence")
-    if not isinstance(evidence, dict) or set(evidence) != {"sha256", "line_count", "byte_count", "lines"}:
+    line_map = _receipt_evidence_line_map(result.get("evidence"))
+    if line_map is None:
         return False
-    if not isinstance(evidence.get("sha256"), str) or not _SHA256.fullmatch(evidence["sha256"]):
+
+    findings = result.get("findings")
+    if not isinstance(findings, list) or len(findings) > MAX_FINDINGS:
         return False
-    if not isinstance(evidence.get("line_count"), int) or isinstance(evidence["line_count"], bool) or evidence["line_count"] < 1:
-        return False
-    if not isinstance(evidence.get("byte_count"), int) or isinstance(evidence["byte_count"], bool) or evidence["byte_count"] < 1:
-        return False
-    lines = evidence.get("lines")
-    if not isinstance(lines, list) or len(lines) != evidence["line_count"]:
-        return False
-    for line in lines:
-        if not isinstance(line, dict) or set(line) != {"id", "text"}:
+    seen_ids: set[str] = set()
+    for finding in findings:
+        if not _receipt_finding_valid(finding, line_map):
             return False
-        if not isinstance(line.get("id"), str) or not _LINE_ID.fullmatch(line["id"]):
+        if finding["id"] in seen_ids:
             return False
-        if not isinstance(line.get("text"), str):
-            return False
+        seen_ids.add(finding["id"])
 
     counts = result.get("counts")
     if not isinstance(counts, dict) or set(counts) != {"pass", "hold"}:
@@ -397,38 +514,10 @@ def _receipt_shape_valid(result: dict[str, Any]) -> bool:
     for key in ("pass", "hold"):
         if not isinstance(counts.get(key), int) or isinstance(counts[key], bool) or counts[key] < 0:
             return False
-
-    findings = result.get("findings")
-    if not isinstance(findings, list) or counts["pass"] + counts["hold"] != len(findings):
+    if counts["pass"] != sum(1 for item in findings if item["status"] == "PASS"):
         return False
-    expected_finding = {
-        "id", "claim", "severity", "citations", "action", "status", "support_score",
-        "skeptic", "verification_reason", "action_review",
-    }
-    for finding in findings:
-        if not isinstance(finding, dict) or set(finding) != expected_finding:
-            return False
-        if not isinstance(finding.get("id"), str) or not _FINDING_ID.fullmatch(finding["id"]):
-            return False
-        if not all(isinstance(finding.get(key), str) for key in ("claim", "severity", "action", "verification_reason")):
-            return False
-        if finding.get("status") not in {"PASS", "HOLD"}:
-            return False
-        if not isinstance(finding.get("support_score"), (int, float)) or isinstance(finding["support_score"], bool):
-            return False
-        citations = finding.get("citations")
-        if not isinstance(citations, list) or not citations or not all(isinstance(cid, str) and _LINE_ID.fullmatch(cid) for cid in citations):
-            return False
-        skeptic = finding.get("skeptic")
-        if not isinstance(skeptic, dict) or set(skeptic) != {"status", "reason"}:
-            return False
-        if skeptic.get("status") not in {"ACCEPT", "REJECT"} or not isinstance(skeptic.get("reason"), str):
-            return False
-        action_review = finding.get("action_review")
-        if not isinstance(action_review, dict) or set(action_review) != {"status", "reason"}:
-            return False
-        if action_review.get("status") != "REVIEW_ONLY" or action_review.get("reason") != _ACTION_REVIEW_REASON:
-            return False
+    if counts["hold"] != sum(1 for item in findings if item["status"] == "HOLD"):
+        return False
 
     receipt = result.get("receipt")
     if not isinstance(receipt, dict) or set(receipt) != {"schema", "evidence_sha256", "analysis_sha256", "model", "run_id"}:
