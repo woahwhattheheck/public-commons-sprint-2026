@@ -15,3 +15,10 @@ test('settlement result digest cannot diverge from signed receipt', async () => 
 test('settlement generation cannot diverge from accepted generation', async () => { const b=await buildDemoBundle(); b.settlementIntent.generation=2; await assert.rejects(()=>verifyBrowserBundle(b),/settlement generation mismatch/); });
 test('result cannot swap GitHub evidence after acceptance', async () => { const b=await buildDemoBundle(); b.result.evidence[0].digest='f'.repeat(64); await assert.rejects(()=>verifyBrowserBundle(b),/receipt task\/result digest mismatch/); });
 test('checks digest cannot be swapped', async () => { const b=await buildDemoBundle(); b.receipt.checksDigest='f'.repeat(64); await assert.rejects(()=>verifyBrowserBundle(b),/acceptance signature invalid/); });
+
+test('settlement amount cannot diverge from task', async () => { const b=await buildDemoBundle(); b.settlementIntent.amountAtomic='1'; await assert.rejects(()=>verifyBrowserBundle(b),/settlement amount\/currency mismatch/); });
+test('settlement currency cannot diverge from task', async () => { const b=await buildDemoBundle(); b.settlementIntent.currency='OTHER'; await assert.rejects(()=>verifyBrowserBundle(b),/settlement amount\/currency mismatch/); });
+test('settlement payer cannot diverge from task buyer', async () => { const b=await buildDemoBundle(); b.settlementIntent.payer='ATTACKER'; await assert.rejects(()=>verifyBrowserBundle(b),/settlement party mismatch/); });
+test('settlement payee cannot diverge from task worker', async () => { const b=await buildDemoBundle(); b.settlementIntent.payee='ATTACKER'; await assert.rejects(()=>verifyBrowserBundle(b),/settlement party mismatch/); });
+test('settlement funding amount cannot diverge from task', async () => { const b=await buildDemoBundle(); b.settlementIntent.funding.amountAtomic='1'; await assert.rejects(()=>verifyBrowserBundle(b),/settlement funding mismatch/); });
+test('unknown settlement fields fail closed', async () => { const b=await buildDemoBundle(); b.settlementIntent.extra='semantic-extension'; await assert.rejects(()=>verifyBrowserBundle(b),/settlement intent field set mismatch/); });

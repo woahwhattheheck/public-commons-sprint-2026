@@ -19,6 +19,10 @@ function normalize(value, path = '$') {
   }
   throw new Error(`${path} contains unsupported value`);
 }
+function assertExactKeys(value, keys, name) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name} must be an object`);
+  if (Object.keys(value).sort().join('\0') !== [...keys].sort().join('\0')) throw new Error(`${name} field set mismatch`);
+}
 export function canonicalJson(value) { return JSON.stringify(normalize(value)); }
 export async function sha256Hex(value) {
   const bytes = typeof value === 'string' ? encoder.encode(value) : encoder.encode(canonicalJson(value));
@@ -57,10 +61,18 @@ export async function verifyBrowserBundle(bundle) {
   const keys = ['schema','task','result','receipt','signatureBase64','publicKeySpkiBase64','receiptAuthorityFingerprint','githubEvidence','githubExpected','settlementIntent'];
   if (!bundle || typeof bundle !== 'object' || Array.isArray(bundle) || Object.keys(bundle).sort().join('\0') !== keys.sort().join('\0')) throw new Error('bundle field set mismatch');
   if (bundle.schema !== 'workseal-browser-bundle/v1') throw new Error('bad bundle schema');
-  if (bundle.task?.schema !== 'workseal-task/v1') throw new Error('bad task schema');
-  if (bundle.result?.schema !== 'workseal-result/v1') throw new Error('bad result schema');
-  if (bundle.receipt?.schema !== 'workseal-acceptance/v1' || bundle.receipt.verdict !== 'ACCEPT') throw new Error('bad acceptance receipt');
-  if (bundle.settlementIntent?.schema !== 'workseal-settlement-intent/v1') throw new Error('bad settlement intent schema');
+  assertExactKeys(bundle.task, ['schema','taskId','buyer','worker','currency','amountAtomic','deadline','acceptancePolicy'], 'task');
+  assertExactKeys(bundle.task.buyer, ['id','settlementAddress'], 'task buyer');
+  assertExactKeys(bundle.task.worker, ['id','settlementAddress'], 'task worker');
+  assertExactKeys(bundle.task.acceptancePolicy, ['verifierId','verifierVersion','requirements'], 'acceptance policy');
+  assertExactKeys(bundle.result, ['schema','taskDigest','workerId','generation','artifactDigest','evidence'], 'result');
+  assertExactKeys(bundle.receipt, ['schema','taskDigest','resultDigest','generation','verifierId','verifierVersion','acceptedAt','verdict','checksDigest'], 'receipt');
+  assertExactKeys(bundle.settlementIntent, ['schema','taskDigest','resultDigest','acceptanceDigest','receiptAuthorityFingerprint','generation','currency','amountAtomic','payer','payee','funding','eventHead'], 'settlement intent');
+  assertExactKeys(bundle.settlementIntent.funding, ['chain','reference','currency','amountAtomic'], 'settlement funding');
+  if (bundle.task.schema !== 'workseal-task/v1') throw new Error('bad task schema');
+  if (bundle.result.schema !== 'workseal-result/v1') throw new Error('bad result schema');
+  if (bundle.receipt.schema !== 'workseal-acceptance/v1' || bundle.receipt.verdict !== 'ACCEPT') throw new Error('bad acceptance receipt');
+  if (bundle.settlementIntent.schema !== 'workseal-settlement-intent/v1') throw new Error('bad settlement intent schema');
 
   const taskDigest = await sha256Hex(bundle.task);
   if (bundle.result.taskDigest !== taskDigest) throw new Error('result task digest mismatch');
@@ -82,6 +94,9 @@ export async function verifyBrowserBundle(bundle) {
 
   if (bundle.settlementIntent.taskDigest !== taskDigest || bundle.settlementIntent.resultDigest !== resultDigest) throw new Error('settlement task/result digest mismatch');
   if (bundle.settlementIntent.generation !== bundle.result.generation) throw new Error('settlement generation mismatch');
+  if (bundle.settlementIntent.currency !== bundle.task.currency || bundle.settlementIntent.amountAtomic !== bundle.task.amountAtomic) throw new Error('settlement amount/currency mismatch');
+  if (bundle.settlementIntent.payer !== bundle.task.buyer.settlementAddress || bundle.settlementIntent.payee !== bundle.task.worker.settlementAddress) throw new Error('settlement party mismatch');
+  if (bundle.settlementIntent.funding.currency !== bundle.task.currency || bundle.settlementIntent.funding.amountAtomic !== bundle.task.amountAtomic) throw new Error('settlement funding mismatch');
   if (bundle.settlementIntent.acceptanceDigest !== acceptanceDigest) throw new Error('settlement acceptance digest mismatch');
   if (bundle.settlementIntent.receiptAuthorityFingerprint !== fp) throw new Error('settlement authority mismatch');
   if (bundle.receipt.checksDigest !== await sha256Hex([{ id: 'github-actions', ok: true, evidenceDigest }])) throw new Error('checks digest mismatch');
