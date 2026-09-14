@@ -13,6 +13,9 @@ export const VENDOR_CONTRACT = Object.freeze({
   bundlePath: 'vendor/solana-web3.iife.min.js',
   package: '@solana/web3.js@1.98.4',
   tarballSha512: 'beff657e7be352c462abfffe8f9a417578a0d0841db730340516776d710fe0a688c85d4271ac9d5aa832cd081f64c348b16356986f80507c0fcb8007383ea0a7',
+  bundleBytes: 463_860,
+  bundleSri: 'sha384-I45YF+S0YGWIolUyTksLk9TNtTqaDgZg8e6T1OoBoJvvFmphqYNIPZw3Kl0TkZNN',
+  bundleSha256: '09cdbea951b2ed0e11bcbe3aeb1ee9f035f9fb51ed212aca645475ae82688cc3',
 });
 
 export const FILE_CONTRACT = Object.freeze({
@@ -207,28 +210,41 @@ async function verifyVendor(baseUrl, options) {
   } catch (error) {
     fail('VENDOR_LOCK_INVALID', 'vendor-lock.json is not valid JSON.', { cause: error.message });
   }
+
   const keys = ['schema', 'package', 'tarballSha512', 'bundlePath', 'bundleBytes', 'bundleSri'];
   if (!exactKeys(lock, keys) || lock.schema !== 'cookie-crumbs/vendor-lock/v1') fail('VENDOR_LOCK_SHAPE', 'Vendor lock does not match the expected closed schema.');
-  if (lock.package !== VENDOR_CONTRACT.package || lock.tarballSha512 !== VENDOR_CONTRACT.tarballSha512 || lock.bundlePath !== VENDOR_CONTRACT.bundlePath) {
-    fail('VENDOR_SOURCE_MISMATCH', 'Vendor lock is not bound to the approved package generation.', { observed: lock });
+  if (
+    lock.package !== VENDOR_CONTRACT.package
+    || lock.tarballSha512 !== VENDOR_CONTRACT.tarballSha512
+    || lock.bundlePath !== VENDOR_CONTRACT.bundlePath
+    || lock.bundleBytes !== VENDOR_CONTRACT.bundleBytes
+    || lock.bundleSri !== VENDOR_CONTRACT.bundleSri
+  ) {
+    fail('VENDOR_SOURCE_MISMATCH', 'Vendor lock is not bound to the approved package and browser-bundle generation.', { observed: lock });
   }
-  if (!Number.isSafeInteger(lock.bundleBytes) || lock.bundleBytes < 100_000 || lock.bundleBytes > options.maxBytes) fail('VENDOR_SIZE_INVALID', 'Vendor bundle size is outside the expected range.', { bundleBytes: lock.bundleBytes });
-  if (typeof lock.bundleSri !== 'string' || !/^sha384-[A-Za-z0-9+/]+={0,2}$/.test(lock.bundleSri)) fail('VENDOR_SRI_INVALID', 'Vendor lock has an invalid SHA-384 SRI value.');
 
   const bundle = await fetchBytes(baseUrl, VENDOR_CONTRACT.bundlePath, ['application/javascript', 'text/javascript', 'application/x-javascript'], options);
-  if (bundle.bytes.byteLength !== lock.bundleBytes) fail('VENDOR_SIZE_MISMATCH', 'Served vendor bundle size does not match the build lock.', { expected: lock.bundleBytes, observed: bundle.bytes.byteLength });
+  if (bundle.bytes.byteLength !== VENDOR_CONTRACT.bundleBytes) {
+    fail('VENDOR_SIZE_MISMATCH', 'Served vendor bundle size does not match the approved browser bundle.', { expected: VENDOR_CONTRACT.bundleBytes, observed: bundle.bytes.byteLength });
+  }
   const observedSri = `sha384-${createHash('sha384').update(bundle.bytes).digest('base64')}`;
-  if (observedSri !== lock.bundleSri) fail('VENDOR_SRI_MISMATCH', 'Served vendor bundle does not match the build lock.', { expected: lock.bundleSri, observed: observedSri });
+  if (observedSri !== VENDOR_CONTRACT.bundleSri) {
+    fail('VENDOR_SRI_MISMATCH', 'Served vendor bundle SRI does not match the approved browser bundle.', { expected: VENDOR_CONTRACT.bundleSri, observed: observedSri });
+  }
+  const observedSha256 = createHash('sha256').update(bundle.bytes).digest('hex');
+  if (observedSha256 !== VENDOR_CONTRACT.bundleSha256) {
+    fail('VENDOR_SHA256_MISMATCH', 'Served vendor bundle SHA-256 does not match the approved browser bundle.', { expected: VENDOR_CONTRACT.bundleSha256, observed: observedSha256 });
+  }
   const prefix = decodeUtf8(bundle.bytes.slice(0, Math.min(bundle.bytes.byteLength, 96)), VENDOR_CONTRACT.bundlePath);
   if (!prefix.includes('solanaWeb3')) fail('VENDOR_MARKER_MISSING', 'Served vendor bundle is not the expected Solana browser bundle.');
 
   return Object.freeze({
-    package: lock.package,
-    tarballSha512: lock.tarballSha512,
+    package: VENDOR_CONTRACT.package,
+    tarballSha512: VENDOR_CONTRACT.tarballSha512,
     path: VENDOR_CONTRACT.bundlePath,
     bytes: bundle.bytes.byteLength,
     sri: observedSri,
-    sha256: createHash('sha256').update(bundle.bytes).digest('hex'),
+    sha256: observedSha256,
   });
 }
 
@@ -243,6 +259,7 @@ export async function verifyDeployment(input, options = {}) {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000) fail('INVALID_TIMEOUT', 'timeoutMs must be an integer between 1 and 120000.', { timeoutMs });
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 20_000_000) fail('INVALID_MAX_BYTES', 'maxBytes must be an integer between 1 and 20000000.', { maxBytes });
   if (!fileContract || typeof fileContract !== 'object' || Array.isArray(fileContract)) fail('INVALID_FILE_CONTRACT', 'fileContract must be an object keyed by deployment path.');
+  if (maxBytes < VENDOR_CONTRACT.bundleBytes) fail('INVALID_MAX_BYTES', 'maxBytes must be large enough to read the approved vendor bundle.', { maxBytes, required: VENDOR_CONTRACT.bundleBytes });
 
   const fetchOptions = { timeoutMs, maxBytes, fetchImpl };
   const files = [];
