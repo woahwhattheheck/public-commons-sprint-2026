@@ -38,7 +38,13 @@ jobs:
           test -s cookie-crumbs/styles.css
           test -s cookie-crumbs/app.js
           test -s cookie-crumbs/receipt.mjs
+          test -s cookie-crumbs/chain.mjs
+          test -s cookie-crumbs/history.mjs
           test -s cookie-crumbs/verify-deploy.mjs
           grep -F 'https://rpc.cookiescan.io' cookie-crumbs/app.js
           grep -F 'window.nightly?.solana' cookie-crumbs/app.js
+          grep -F 'transactionHasSigner(tx, state.publicKey)' cookie-crumbs/app.js
+          grep -F 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr' cookie-crumbs/chain.mjs
+          ! grep -E 'https?://[^"'"'"' ]+\.js' cookie-crumbs/index.html
+          ! grep -E 'jsdelivr|unpkg|@solana/web3' cookie-crumbs/index.html
           grep -F 'cookie-crumbs/deployment-receipt/v1' cookie-crumbs/verify-deploy.mjs
