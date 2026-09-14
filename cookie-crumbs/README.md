@@ -1,26 +1,28 @@
 # Cookie Crumbs
 
-Cookie Crumbs is a small developer-facing cApp for **Cookie Chain**. It connects to **Nightly Wallet**, switches Nightly to the Cookie Chain community RPC with the chain's live genesis hash, writes compact human-readable receipts through Solana's Memo program, confirms the transaction, and indexes the connected wallet's recent Cookie Crumbs receipts.
+Cookie Crumbs is a small developer-facing cApp for **Cookie Chain**. It connects to **Nightly Wallet**, switches Nightly to the Cookie Chain community RPC with the chain's live genesis hash, writes compact human-readable receipts through Solana's Memo program, confirms the transaction, and indexes only recent Cookie Crumbs receipts for which the connected wallet is cryptographically represented as a transaction signer.
 
 The target use cases are release evidence, audit checkpoints, handoffs, and incident breadcrumbs that benefit from a cheap public timestamp without deploying a custom program.
 
 ## What is real
 
 - Cookie Chain HTTP RPC: `https://rpc.cookiescan.io`
-- Cookie Chain WebSocket RPC: `https://wss.cookiescan.io`
 - CookieScan explorer links for submitted signatures
 - Nightly injected Solana wallet (`window.nightly.solana`)
 - Nightly standard connect + transaction-signing features
 - Nightly custom SVM network change using `getGenesisHash()` + `changeNetwork({ genesisHash, url })`
 - Canonical Solana Memo program `MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr`
-- RPC confirmation with blockhash + last-valid-block-height fencing
-- Recent connected-wallet transaction indexing
+- Dependency-free checked-in JSON-RPC client and legacy Memo transaction encoder
+- RPC confirmation fenced by last-valid-block-height
+- Recent connected-wallet transaction indexing with exact signer attribution
 
-There is no mocked success path and no backend holding keys.
+There is no mocked success path, backend key custody, or remote executable JavaScript dependency.
 
 ## Safety / signing contract
 
 Cookie Crumbs never requests seed phrases or private keys. The exact memo is rendered before signing. The user must click **Write receipt on-chain**, approve the Nightly signature, and have enough COOK for the fee. Rejected signatures are treated as terminal user decisions. The app does not bridge, swap, transfer tokens, or deploy a program.
+
+The history view does not equate “an address appeared in this transaction” with authorship. A parsed transaction is eligible for **Your recent crumbs** only when its `accountKeys` metadata marks the exact connected public key with `signer: true`. Unknown or legacy-untyped account-key shapes fail closed.
 
 Receipts use a compact versioned format:
 
@@ -50,7 +52,7 @@ cd cookie-crumbs
 npm run ci
 ```
 
-The browser client loads `@solana/web3.js@1.98.4` from jsDelivr. CI checks JavaScript syntax, receipt round-trips/adversarial parsing/byte bounds, and static integration contracts for the Cookie RPC, Nightly, transaction signing, confirmation, and Memo program.
+All executable app code is checked in under `cookie-crumbs/**`; `index.html` intentionally contains no remote executable `<script>` tags. CI checks JavaScript syntax, the local transaction encoder/RPC request contract, signer-attribution hostiles, receipt round-trips/adversarial parsing/byte bounds, and static integration contracts for Cookie RPC, Nightly, signing, confirmation, and the Memo program.
 
 ## Source references
 
