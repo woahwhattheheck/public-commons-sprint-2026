@@ -1,0 +1,14 @@
+{
+  "name": "workseal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Evidence-gated settlement receipts for agent and contract work",
+  "scripts": {
+    "test": "node --test",
+    "demo": "node src/cli.mjs demo"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
