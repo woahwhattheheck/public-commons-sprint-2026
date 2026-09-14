@@ -45,6 +45,6 @@ jobs:
           grep -F 'window.nightly?.solana' cookie-crumbs/app.js
           grep -F 'transactionHasSigner(tx, state.publicKey)' cookie-crumbs/app.js
           grep -F 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr' cookie-crumbs/chain.mjs
-          ! grep -E 'https?://[^"'"'"' ]+\.js' cookie-crumbs/index.html
+          ! grep -E 'https?://.*\.js' cookie-crumbs/index.html
           ! grep -E 'jsdelivr|unpkg|@solana/web3' cookie-crumbs/index.html
           grep -F 'cookie-crumbs/deployment-receipt/v1' cookie-crumbs/verify-deploy.mjs
