@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-TraceForge is intentionally smaller than an autonomous incident agent. It analyzes evidence and produces evidence-linked recommendations. It does **not** execute remediation. That keeps the difficult trust boundary visible: the AI may reason, but deterministic code decides whether a claim is sufficiently grounded to display as verified.
+TraceForge is intentionally smaller than an autonomous incident agent. It analyzes evidence and produces evidence-linked claims plus model-suggested human review steps. It does **not** execute remediation. That keeps the difficult trust boundary visible: the AI may reason, but deterministic code decides whether a claim is sufficiently grounded to display as verified. Suggested actions never inherit a claim verdict and always remain `REVIEW_ONLY`.
 
 ## 1. Evidence binding
 
@@ -22,33 +22,39 @@ Returns strict JSON with a summary and up to 12 findings. Every finding requires
 - one to eight evidence line IDs;
 - suggested human next action.
 
+The action is retained for operator review but is never represented as evidence-verified or authorized.
+
 ### Skeptic
 
-Receives the investigator result plus the same immutable evidence packet. It must return exactly one `ACCEPT` or `REJECT` verdict per finding. Missing, duplicate, extra, or stale verdicts fail the whole analysis rather than degrading silently.
+Receives the investigator result plus the same immutable evidence packet. It must return exactly one `ACCEPT` or `REJECT` verdict per finding claim. Missing, duplicate, extra, or stale verdicts fail the whole analysis rather than degrading silently. A skeptic verdict covers the evidence claim, not the safety or authority of the suggested action.
 
 The local demo implementation is explicitly a deterministic rules surrogate, not a learned model. Live mode uses the OpenAI-compatible adapter.
 
-## 3. Deterministic verification
+## 3. Deterministic claim verification
 
-A finding is `PASS` only when all of these are true:
+A finding claim is `PASS` only when all of these are true:
 
 1. every cited line ID exists in the current evidence document;
 2. instruction-shaped log text cannot support ordinary operational conclusions (but can support a finding about prompt/instruction injection);
 3. lexical overlap between the claim and eligible cited text reaches the minimum support score;
 4. the skeptic returns `ACCEPT`.
 
-The lexical check is deliberately conservative and explainable; it is not claimed to prove causality. Its purpose is to stop obviously untethered claims even when two model passes agree. `HOLD` is a first-class product state, not an error to hide.
+The lexical check is deliberately conservative and explainable; it is not claimed to prove causality. Its purpose is to stop obviously untethered claims even when two model passes agree. `HOLD` is a first-class claim state, not an error to hide.
+
+No deterministic evidence-overlap test can prove a proposed operational action safe. Every finding therefore carries a separate receipt-bound action object with `status: REVIEW_ONLY` and a fixed reason requiring independent human assessment. The browser labels the verdict `CLAIM PASS` / `CLAIM HOLD` and renders the model action in a distinct review-only block.
 
 ## 4. Receipt model
 
-The complete analysis core is canonical-JSON serialized and SHA-256 hashed. The receipt records:
+The complete analysis core—including the action review boundary—is canonical-JSON serialized and SHA-256 hashed. The receipt records:
 
 - exact evidence digest;
 - exact analysis digest;
 - redacted model identity (host/model, never bearer secret);
 - run ID derived from analysis digest.
 
-`verify_receipt()` recomputes the digest offline. Any ordinary mutation to summary, evidence, findings, verdicts, or model identity invalidates the receipt.
+`verify_receipt()` exact/type validates the v1 envelope before nested access, then recomputes the digest offline. Ordinary mutation to summary, evidence, findings, action boundaries, verdicts, or model identity invalidates the receipt. Malformed envelopes return `False`; they do not raise through the API boundary.
+
+The receipt is an integrity checksum, not a digital signature or external attestation. Anyone who can replace both an analysis and its checksum can create a different internally consistent packet. The verifier proves packet integrity and v1 shape, not authorship.
 
 ## 5. Live inference adapter
 
@@ -67,8 +73,10 @@ TraceForge never stores the API key in receipts or browser APIs. `/api/config` o
 
 ## 6. Browser/API surface
 
-The server exposes a fixed static allowlist rather than a filesystem path router. JSON requests are content-type and byte bounded. The UI uses `textContent`, not HTML interpolation, for incident/model-derived strings. Responses carry a restrictive same-origin CSP, `nosniff`, `no-referrer`, and `no-store`.
+The server exposes a fixed static allowlist rather than a filesystem path router. JSON requests are content-type and byte bounded. Request and receipt parsers use the API request ceiling rather than the smaller model-output ceiling, while model responses retain their independent 128,000-byte bound. The UI uses `textContent`, not HTML interpolation, for incident/model-derived strings. Responses carry a restrictive same-origin CSP, `nosniff`, `no-referrer`, and `no-store`.
+
+Offline CLI verification uses the same duplicate-key and non-finite rejecting parser as the API before receipt shape validation.
 
 ## Failure philosophy
 
-TraceForge prefers an explicit rejected analysis over a plausible one with missing provenance. Provider outage, malformed JSON, stale hashes, invalid citations, oversized bodies, unsupported fields, and skeptic inconsistency all fail closed.
+TraceForge prefers an explicit rejected analysis over a plausible one with missing provenance. Provider outage, malformed JSON, stale hashes, invalid citations, oversized bodies, unsupported fields, receipt shape confusion, and skeptic inconsistency all fail closed. A verified claim still does not authorize its model-suggested action.
