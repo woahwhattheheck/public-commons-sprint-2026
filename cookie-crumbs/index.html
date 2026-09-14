@@ -91,9 +91,10 @@
       <ul>
         <li>Uses the Cookie Chain community RPC and the standard Solana Memo program.</li>
         <li>Requests a Nightly signature only after showing the exact memo bytes.</li>
+        <li>Attributes “Your recent crumbs” only when the connected wallet is a transaction signer.</li>
+        <li>Loads executable application code only from this checked-in source tree—no remote JavaScript CDN.</li>
         <li>Never asks for a seed phrase, private key, bridge deposit, token swap, or custody.</li>
         <li>Writes only when you click the on-chain action; rejected signatures are terminal.</li>
-        <li>Indexes only the connected wallet’s recent public transactions.</li>
       </ul>
     </section>
   </main>
@@ -104,7 +105,6 @@
     <a href="https://docs.nightly.app/docs/solana/solana/" target="_blank" rel="noopener noreferrer">Nightly docs</a>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.4/lib/index.iife.min.js" defer></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

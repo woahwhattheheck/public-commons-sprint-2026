@@ -4,29 +4,32 @@ import { pathToFileURL } from 'node:url';
 
 export const SOURCE = Object.freeze({
   repository: 'woahwhattheheck/public-commons-sprint-2026',
-  commit: '446b66260e35535b35b3d68becf4c7f3462e60b0',
+  commit: '6ea7fc3976676577f81f8a5adebd239487eb7c0a',
   directory: 'cookie-crumbs',
 });
 
 export const FILE_CONTRACT = Object.freeze({
   'index.html': Object.freeze({
-    gitBlobSha1: 'af4d1a0ce8ae835092d480c319f2ba2234bf97a4',
+    gitBlobSha1: '467a802fc8af6d37e86be152dfbd6bb7b9e1cf0c',
     mediaTypes: Object.freeze(['text/html']),
     markers: Object.freeze([
       '<title>Cookie Crumbs',
       'id="connect-wallet"',
       'href="./styles.css"',
       'src="./app.js"',
+      'no remote JavaScript CDN',
     ]),
   }),
   'app.js': Object.freeze({
-    gitBlobSha1: '31e2ca50c8d02a4f0bd390687337835c45d65d27',
+    gitBlobSha1: 'c948315035051b1649e7ffdeb01a647bf267e2cd',
     mediaTypes: Object.freeze(['application/javascript', 'text/javascript', 'application/x-javascript']),
     markers: Object.freeze([
       "from './receipt.mjs'",
+      "from './chain.mjs'",
+      "from './history.mjs'",
       'https://rpc.cookiescan.io',
       'window.nightly?.solana',
-      'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+      'transactionHasSigner(tx, state.publicKey)',
     ]),
   }),
   'receipt.mjs': Object.freeze({
@@ -44,6 +47,23 @@ export const FILE_CONTRACT = Object.freeze({
     markers: Object.freeze([
       '.wallet-card, .panel',
       '@media (max-width: 760px)',
+    ]),
+  }),
+  'chain.mjs': Object.freeze({
+    gitBlobSha1: 'c5f685537c9bf241b6103bf3e39c4ab255016e60',
+    mediaTypes: Object.freeze(['application/javascript', 'text/javascript', 'application/x-javascript']),
+    markers: Object.freeze([
+      'export class CookieChainRpc',
+      'buildUnsignedMemoTransaction',
+      'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+    ]),
+  }),
+  'history.mjs': Object.freeze({
+    gitBlobSha1: 'bf199898f716131b70a57b5bcbec7f155d277b6f',
+    mediaTypes: Object.freeze(['application/javascript', 'text/javascript', 'application/x-javascript']),
+    markers: Object.freeze([
+      'export function transactionHasSigner',
+      'entry?.signer === true',
     ]),
   }),
 });
