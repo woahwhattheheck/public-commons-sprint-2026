@@ -1,0 +1,13 @@
+[toolchain]
+anchor_version = "1.1.1"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+workseal_escrow = "BvfrbqcMAERN2VTA9LT84Y4j228UULhsz2iwtKo3aqeA"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"

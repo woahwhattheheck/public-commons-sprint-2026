@@ -2,106 +2,127 @@
 
 **Evidence-gated settlement for agent and contract work.**
 
-WorkSeal makes a payment instruction depend on the exact work that was requested, the exact result generation that was delivered, and an independently signed acceptance receipt. It is designed for agent-to-business work where “the model says it succeeded” is not enough authority to release money.
+WorkSeal makes settlement depend on the exact work that was requested, the exact result generation delivered, and an independently authorized acceptance. The first carrier proved deterministic signed receipts and a plan-only Solana transfer. The onchain successor adds a PDA-owned SPL escrow so an accepted result can release funds without asking the buyer to make a second discretionary payment decision.
 
-This directory is an event-time source carrier for Colosseum Crypto World’s Fair 2026. It is **not** a claim that the project has been registered, submitted, judged, funded, deployed on mainnet, or paid. External Colosseum account actions and any wallet writes remain separate explicit-authority steps.
+This directory is an event-time source carrier for Colosseum Crypto World’s Fair 2026. It is **not** a claim that the project has been registered, submitted, judged, funded, deployed, or paid. External Colosseum account actions and any wallet/RPC writes remain separate explicit-authority steps.
 
-## Problem
-
-Autonomous agents can discover work, produce artifacts, and even prepare payments, but a commercial settlement rail needs stronger answers to four questions:
-
-1. What exact task and acceptance policy did the buyer authorize?
-2. What exact result generation is being paid for?
-3. Which verifier is allowed to say the work passed?
-4. Can an old “PASS” receipt be replayed after the worker uploads a newer result?
-
-WorkSeal binds all four into deterministic content-addressed receipts.
-
-## Protocol
+## Settlement architecture
 
 ```text
-buyer + worker + amount + deadline + acceptance policy
-                         |
-                         v
-                  taskDigest (sha256)
-                         |
-                funding reference
-                         |
-                         v
-worker result gen N -> resultDigest ----+
-                                        |
-verifier checks exact policy            |
-      + exact result generation          |
-      + Ed25519 signature                |
-                                        v
-                               acceptanceDigest
-                                        |
-                                        v
-                             settlement intent
-                         task/result/receipt/head
-                                        |
-                                        v
-                    chain-specific transaction plan
+Task + policy --------------------------------------------------------+
+  |                                                                  |
+  +--> taskDigest + policyDigest                                     |
+                                                                      v
+Buyer SPL token account -- transfer_checked --> PDA vault        FUNDED
+                                                   |                  |
+Worker result gen N --> resultDigest -------------+--> COMMITTED     |
+                                                   |                  |
+Pinned verifier + signed acceptance commitment ---+--> ACCEPTED      |
+                                                                      |
+Any caller may invoke release; escrow PDA signs exact SPL transfer ---+
+                                                                      v
+                                                                  RELEASED
 ```
 
-### Fail-closed invariants
+Alternative terminal paths are buyer refund **after deadline and before acceptance**, or buyer/worker dispute freeze. The pinned SPL mint participates in the escrow PDA identity and every vault transfer.
 
-- Currency amounts are positive decimal integer strings, never floating point.
-- Authority timestamps require explicit RFC3339 timezones.
-- Unknown protocol fields are rejected instead of ignored.
-- Every result binds the exact `taskDigest`, worker id, and monotonic generation.
-- An ACCEPT receipt covers every requirement exactly once; any false requirement prevents receipt creation.
-- Receipt verifier id/version are pinned by the task.
-- The receipt authority public key fingerprint is pinned before funding.
-- Settlement binds the signed acceptance envelope (receipt digest + authority fingerprint + Ed25519 signature), not merely the unsigned receipt.
-- Old acceptance receipts cannot authorize a newer result generation.
-- Settlement intent binds task, result, acceptance receipt, funding reference, amount, parties, and the current event-chain head.
-- The Solana adapter is a **transaction plan only**: it hard-codes `writePerformed: false`; no wallet or RPC mutation is hidden behind the demo.
+## Layers
 
-## Why it is different from the existing Agent Revenue Rail
+### 1. Offchain evidence protocol
 
-`ethonline_agent_revenue_rail/graph_purchase_policy` is a **pre-purchase buyer policy**: should an agent BUY/SKIP/HOLD a metered report based on live reputation and budget evidence?
+`src/protocol.mjs` binds:
 
-WorkSeal is a **post-delivery settlement protocol**: after a task has been funded and a result delivered, is there an exact signed acceptance receipt for *this* result generation that can authorize a settlement instruction? The two can compose: a revenue rail can decide whether to buy; WorkSeal can bind what actually gets paid after delivery.
+- exact buyer, worker, amount, deadline, and acceptance policy;
+- exact task digest and monotonic result generation;
+- result artifact/evidence digests;
+- verifier id/version;
+- Ed25519 receipt-authority fingerprint and signature;
+- signed acceptance envelope digest;
+- settlement intent and event-chain head.
 
-## Run
+The existing `src/solana.mjs` plan-only adapter remains useful for compatibility and comparison, but its direct System Program transfer is **client-authority** and is not the hardened escrow path.
 
-Requires Node 20+ and no third-party packages.
+### 2. Executable escrow reference model
+
+`src/escrow.mjs` is dependency-free and models the onchain authority/state rules. It produces deterministic PDA seed commitments and non-writing instruction plans (`writePerformed: false`). Tests exercise wrong buyer/source/mint, amount mismatch/overflow, stale generation, wrong verifier and receipt authority, cross-task/cross-vault transplant, replay, over-release, premature refund, and dispute bypass.
+
+The model is an executable invariant oracle, not a substitute for Solana's actual PDA derivation or program execution.
+
+### 3. Anchor / SPL program source
+
+`onchain/programs/workseal_escrow/src/lib.rs` implements the source-level enforcement layer:
+
+- escrow PDA seeds: `['workseal', buyer, worker, taskDigest, mint]`;
+- token-vault PDA seeds: `['vault', escrowPda]`;
+- exact mint + token-program pinning;
+- exact buyer funding + worker destination token-account pinning;
+- `transfer_checked` for buyer funding, PDA release, and expiry refund;
+- worker-only monotonic result commits;
+- verifier-only acceptance of exact task/result/generation plus pinned receipt-authority fingerprint;
+- permissionless release after ACCEPTED, signed by the escrow PDA;
+- buyer-only expiry refund before acceptance;
+- buyer/worker dispute freeze;
+- terminal replay resistance through phase state.
+
+See `onchain/README.md` for the precise trust and toolchain boundary.
+
+### 4. Browser + retained-evidence proof
+
+The current mainline browser/evidence carrier (`web/index.html`, `web/demo.mjs`, `web/core.mjs`, and the GitHub retained-evidence adapter) remains the judge-facing proof surface. This successor does not overwrite it. It adds the escrow model/program underneath that surface, preserving the browser carrier's explicit no-wallet/no-RPC boundary while giving the next integration step a chain-enforced settlement target.
+
+## Fail-closed invariants
+
+- Amounts are positive integer base units and the model rejects values above Solana `u64`.
+- Unknown offchain protocol fields are rejected instead of ignored.
+- Every result binds the exact task, worker, and next generation.
+- ACCEPT binds the exact current result/generation and the pinned receipt-authority fingerprint.
+- The onchain verifier is a pinned Solana signer distinct from buyer and worker; a different signer cannot authorize release.
+- Escrow identity binds buyer + worker + task digest + SPL mint.
+- Vault identity binds the escrow PDA and the vault's token authority is the escrow PDA.
+- Exact buyer funding and worker destination token accounts are pinned at initialization; funding/release/refund cannot swap in another same-owner token account.
+- SPL transfers use the pinned mint and token program; no generic System Program value transfer is used by the escrow program.
+- Release/refund move exactly the pinned amount once. Extra vault tokens cannot increase the settlement amount.
+- ACCEPTED cannot be refunded; DISPUTED cannot release or refund in v1.
+- The Node instruction planner hard-codes `writePerformed: false`.
+
+## Run the verified local surfaces
+
+Requires Node 20+ and no third-party npm packages.
 
 ```bash
+cd workseal
 npm test
 npm run demo
 ```
 
-The demo generates an ephemeral Ed25519 verifier key, creates and funds a task state, commits a result, signs an ACCEPT receipt, derives the settlement intent, and prints a deterministic Solana devnet transaction plan. It does **not** submit the transaction.
+To view the offline browser surface, serve `workseal/` with any static HTTP server and open `web/`. Serving the files does not connect the demo to Solana.
 
-## Solana MVP adapter
+The original CLI demo still exercises the Ed25519 receipt and plan-only SOL adapter. Mainline also carries the browser/GitHub retained-evidence proof from #74. This successor adds the SPL escrow reference model and Anchor source-contract assertions without replacing those surfaces.
 
-`src/solana.mjs` currently supports `SOL_LAMPORTS` and emits a deterministic two-instruction plan:
+## Anchor build boundary
 
-1. a Memo instruction containing `WORKSEAL:v1:<settlementIntentSha256>`;
-2. a System Program transfer from the task buyer settlement address to the worker address.
+The program source is pinned to Anchor `1.1.1`. The authoring environment for this successor had Node v22.16.0 but no Rust/Anchor/Solana CLI, so **no Anchor compilation, validator execution, deployment, or onchain transaction is claimed**. With the matching toolchain installed, the intended source build entrypoint is:
 
-This is deliberately a **client-authority MVP**, not an escrow smart contract. The client MUST validate the pinned signed WorkSeal acceptance before signing the transfer. A production Colosseum submission should add an onchain escrow/PDA program or payment-channel integration so settlement authority is enforced by chain state rather than only by the signing client.
+```bash
+cd workseal/onchain
+anchor build
+anchor test
+```
 
-## Product path
+The undeployed source program ID is `BvfrbqcMAERN2VTA9LT84Y4j228UULhsz2iwtKo3aqeA`.
 
-WorkSeal targets bug bounties, AI-agent freelancing, procurement micro-contracts, research tasks, and API/data jobs where the buyer wants machine-verifiable acceptance before settlement. The commercial wedge is not “payments for agents” in the abstract; it is **dispute-reducing proof of exactly what a payment was for**.
+## Product / competition path
 
-Near-term build order:
+The product wedge is dispute-reducing proof of exactly what an agent or contractor was paid for, now with a path from signed acceptance to chain-enforced SPL escrow. Suitable work classes include bug bounties, AI-agent freelancing, procurement micro-contracts, research deliverables, and API/data jobs.
 
-- deploy a Solana devnet escrow program that pins `taskDigest`, worker, verifier authority, generation, amount, and deadline;
-- add USDC/SPL-token settlement;
-- add verifier adapters for GitHub Actions, signed artifact manifests, and reproducible CLI checks;
-- build a browser demo showing task → delivery → acceptance → settlement with Explorer links;
+Remaining substantive seams after this source carrier:
+
+- compile/program-test the Anchor program under the pinned toolchain and repair any toolchain-specific issues;
+- add Ed25519 instruction-sysvar verification if the verifier transaction signer should not be trusted to attest the offchain receipt signature;
+- add cluster-aware USDC mint profiles and associated-token-account creation UX;
+- connect a wallet/RPC only under explicit owner authority, then deploy to devnet and replace model PDA commitments with actual addresses/explorer receipts;
 - register/submit to Colosseum only after owner/account authority and current competition requirements are rechecked.
 
-## Competition facts used for this carrier
+## Competition facts used for the parent carrier
 
-As checked on 2026-09-14, Colosseum lists Crypto World’s Fair as an online hackathon running Sep 14–Oct 12 and describes its hackathons as four-week startup/product competitions. Colosseum says winners receive non-dilutive prizes and selected winners may be considered for its accelerator; the accelerator page currently says accepted startups receive a $250,000 investment and require some Solana integration. Those external facts should be revalidated at submission time.
-
-Current external references used for the competition boundary:
-
-- https://colosseum.com/hackathon
-- https://blog.colosseum.com/expanding-the-arena/
-- https://colosseum.com/accelerator
+The parent carrier checked Colosseum's event/accelerator facts on 2026-09-14. Those external facts are intentionally not treated as durable protocol input and must be revalidated before any external submission action.
