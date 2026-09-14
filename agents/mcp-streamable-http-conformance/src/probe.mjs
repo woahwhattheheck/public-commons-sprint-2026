@@ -1,4 +1,4 @@
-import { requestHeadersOnly, requestJson, validateEndpoint } from './http-client.mjs';
+import { ProbeTransportError, requestHeadersOnly, requestJson, validateEndpoint } from './http-client.mjs';
 import { scrubSecrets, sha256Canonical } from './canonical.mjs';
 
 export const DEFAULT_MIN_PROTOCOL_VERSION = '2025-11-25';
@@ -96,7 +96,7 @@ async function safeJson(checks, id, request) {
 }
 
 export async function probeMcpEndpoint(options) {
-  const endpoint = validateEndpoint(options?.endpoint).toString();
+  const endpointUrl = validateEndpoint(options?.endpoint);
   const minimumProtocolVersion = options?.minimumProtocolVersion ?? DEFAULT_MIN_PROTOCOL_VERSION;
   const timeoutMs = options?.timeoutMs ?? 3_000;
   const maxResponseBytes = options?.maxResponseBytes ?? 256 * 1024;
@@ -105,6 +105,11 @@ export async function probeMcpEndpoint(options) {
   const requireTools = options?.requireTools ?? false;
   const terminateSession = options?.terminateSession ?? true;
   const authorizationHeader = options?.authorizationHeader ?? null;
+  if (authorizationHeader !== null && typeof authorizationHeader !== 'string') throw new TypeError('authorizationHeader must be null or a string');
+  if (authorizationHeader && endpointUrl.protocol !== 'https:') {
+    throw new ProbeTransportError('AUTH_REQUIRES_HTTPS', 'authenticated probes require an https endpoint');
+  }
+  const endpoint = endpointUrl.toString();
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new TypeError('timeoutMs must be finite and > 0');
   if (!Number.isInteger(maxResponseBytes) || maxResponseBytes < 1024) throw new TypeError('maxResponseBytes must be an integer >= 1024');
   if (maxRttMs !== null && (!Number.isFinite(maxRttMs) || maxRttMs <= 0)) throw new TypeError('maxRttMs must be null or finite and > 0');
@@ -248,20 +253,18 @@ export async function probeMcpEndpoint(options) {
       : fail('get-stream-contract', { httpStatus: get.response.status, contentType: get.contentType }));
   } catch (error) { checks.push(transportFailure('get-stream-contract', error)); }
 
-  if (getMode === 'sse') {
-    try {
-      const originGet = await requestHeadersOnly({
-        url: endpoint,
-        method: 'GET',
-        timeoutMs,
-        headers: { ...getHeaders, origin: INVALID_ORIGIN },
-      });
-      recordTiming('invalid-origin-established-get', originGet);
-      checks.push(originGet.response.status === 403
-        ? pass('invalid-origin-established-get-rejected', { httpStatus: 403 })
-        : fail('invalid-origin-established-get-rejected', { httpStatus: originGet.response.status, expected: 403 }));
-    } catch (error) { checks.push(transportFailure('invalid-origin-established-get-rejected', error)); }
-  } else checks.push(skip('invalid-origin-established-get-rejected', { reason: getMode === 'not-supported' ? 'server does not support GET SSE' : 'GET transport did not establish an SSE path' }));
+  try {
+    const originGet = await requestHeadersOnly({
+      url: endpoint,
+      method: 'GET',
+      timeoutMs,
+      headers: { ...getHeaders, origin: INVALID_ORIGIN },
+    });
+    recordTiming('invalid-origin-established-get', originGet);
+    checks.push(originGet.response.status === 403
+      ? pass('invalid-origin-established-get-rejected', { httpStatus: 403, ordinaryGetMode: getMode })
+      : fail('invalid-origin-established-get-rejected', { httpStatus: originGet.response.status, expected: 403, ordinaryGetMode: getMode }));
+  } catch (error) { checks.push(transportFailure('invalid-origin-established-get-rejected', error)); }
 
   if (sessionId) {
     const noSession = await safeJson(checks, 'missing-session-transport', request({ headers: { ...baseHeaders(authorizationHeader), 'mcp-protocol-version': negotiated }, body: rpc(7, 'ping') }));
@@ -285,7 +288,21 @@ export async function probeMcpEndpoint(options) {
       : fail('rtt-budget', { maxRttMs }));
   } else checks.push(skip('rtt-budget', { reason: 'no maxRttMs configured' }));
 
+  let hostileDeleteRejected = true;
   if (sessionId && terminateSession) {
+    const hostileDelete = await safeJson(checks, 'invalid-origin-established-delete-transport', request({
+      method: 'DELETE',
+      headers: { ...headers, origin: INVALID_ORIGIN },
+      body: undefined,
+    }));
+    recordTiming('invalid-origin-established-delete', hostileDelete);
+    hostileDeleteRejected = hostileDelete?.response.status === 403;
+    if (hostileDelete) checks.push(hostileDeleteRejected
+      ? pass('invalid-origin-established-delete-rejected', { httpStatus: 403 })
+      : fail('invalid-origin-established-delete-rejected', { httpStatus: hostileDelete.response.status, expected: 403 }));
+  } else checks.push(skip('invalid-origin-established-delete-rejected', { reason: sessionId ? 'terminateSession=false' : 'server did not issue a session' }));
+
+  if (sessionId && terminateSession && hostileDeleteRejected) {
     const deleted = await safeJson(checks, 'session-delete-transport', request({ method: 'DELETE', headers, body: undefined }));
     recordTiming('DELETE', deleted);
     if (deleted) {
@@ -303,8 +320,11 @@ export async function probeMcpEndpoint(options) {
       } else checks.push(skip('deleted-session-not-found', { reason: 'server does not support client session termination' }));
     }
   } else {
-    checks.push(skip('session-delete', { reason: sessionId ? 'terminateSession=false' : 'server did not issue a session' }));
-    checks.push(skip('deleted-session-not-found', { reason: 'no deleted session to verify' }));
+    const reason = sessionId && terminateSession
+      ? 'hostile-Origin DELETE was not safely rejected; legitimate DELETE suppressed to avoid compounding ambiguous session state'
+      : sessionId ? 'terminateSession=false' : 'server did not issue a session';
+    checks.push(skip('session-delete', { reason }));
+    checks.push(skip('deleted-session-not-found', { reason: 'no safely deleted session to verify' }));
   }
 
   return finalize();

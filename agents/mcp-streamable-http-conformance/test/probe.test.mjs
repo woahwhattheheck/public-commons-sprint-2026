@@ -188,15 +188,15 @@ test('timeouts fail closed', async () => {
   });
 });
 
-test('bearer secrets are scrubbed even if a malicious server echoes them', async () => {
-  await withFixture({ unknownMethodCode: -32010, echoAuthInError: true }, async ({ endpoint, authValues }) => {
+test('authenticated probes reject plain HTTP before provider traffic', async () => {
+  await withFixture({}, async ({ endpoint, authValues, methods }) => {
     const secret = 'test-secret-9e84a3';
-    const report = await probeMcpEndpoint({ endpoint, authorizationHeader: `Bearer ${secret}` });
-    const json = JSON.stringify(report);
-    assert.equal(json.includes(secret), false);
-    assert.equal(json.includes(`Bearer ${secret}`), false);
-    assert.ok(authValues.some((value) => value === `Bearer ${secret}`));
-    assert.equal(report.authenticated, true);
+    await assert.rejects(
+      probeMcpEndpoint({ endpoint, authorizationHeader: `Bearer ${secret}` }),
+      (error) => error?.code === 'AUTH_REQUIRES_HTTPS',
+    );
+    assert.deepEqual(authValues, []);
+    assert.deepEqual(methods, []);
   });
 });
 
