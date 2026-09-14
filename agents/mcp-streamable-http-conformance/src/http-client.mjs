@@ -158,7 +158,7 @@ export async function requestJson({ url, method = 'POST', headers = {}, body, ti
     const sseResponse = /^text\/event-stream(?:;|$)/i.test(contentType);
     const jsonResponse = /^application\/json(?:;|$)/i.test(contentType);
     const rpcRequest = body?.id !== undefined;
-    if (rpcRequest && !sseResponse && !jsonResponse) {
+    if (response.status === 200 && rpcRequest && !sseResponse && !jsonResponse) {
       await response.body?.cancel().catch(() => {});
       throw new ProbeTransportError(
         'RESPONSE_MEDIA_TYPE',

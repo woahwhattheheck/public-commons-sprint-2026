@@ -1,31 +1,3 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-root="$(git rev-parse --show-toplevel)"
-cd "$root"
-product="agents/mcp-streamable-http-conformance"
-
-python3 - <<'PY'
-from pathlib import Path
-
-http_path = Path('agents/mcp-streamable-http-conformance/src/http-client.mjs')
-http_text = http_path.read_text(encoding='utf-8')
-http_old = "    if (rpcRequest && !sseResponse && !jsonResponse) {"
-http_new = "    if (response.status === 200 && rpcRequest && !sseResponse && !jsonResponse) {"
-if http_text.count(http_old) != 1:
-    raise SystemExit(f'http-client exact-source fence failed: count={http_text.count(http_old)}')
-http_path.write_text(http_text.replace(http_old, http_new), encoding='utf-8')
-
-probe_path = Path('agents/mcp-streamable-http-conformance/src/probe.mjs')
-probe_text = probe_path.read_text(encoding='utf-8')
-probe_old = "  if (ping) checks.push(ping.response.status === 200 && ping.body?.result && typeof ping.body.result === 'object'"
-probe_new = "  if (ping) checks.push(ping.response.status === 200 && isPlainObject(ping.body?.result)"
-if probe_text.count(probe_old) != 1:
-    raise SystemExit(f'probe exact-source fence failed: count={probe_text.count(probe_old)}')
-probe_path.write_text(probe_text.replace(probe_old, probe_new), encoding='utf-8')
-PY
-
-cat > "$product/test/final-source-closure.test.mjs" <<'EOF'
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { probeMcpEndpoint } from '../src/probe.mjs';
@@ -165,13 +137,3 @@ test('HTTP 200 JSON-RPC under text/plain remains a hard media-type failure', { c
   assert.equal(failure.detail.status, 200);
   assert.equal(failure.detail.contentType, 'text/plain');
 });
-EOF
-
-cd "$product"
-npm ci --ignore-scripts
-npm run check
-npm test
-cd "$root"
-
-rm -rf .rebuild/pr47-final
-rm -f .github/workflows/pr47-final-source-closure.yml
