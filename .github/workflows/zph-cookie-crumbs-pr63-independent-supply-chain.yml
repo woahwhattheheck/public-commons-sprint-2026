@@ -1,0 +1,40 @@
+name: ZPH Cookie Crumbs PR63 independent supply-chain proof
+
+on:
+  push:
+    branches:
+      - zph-n4v8/cookie-crumbs-source-hardening-20260914
+
+permissions:
+  contents: read
+
+jobs:
+  prove-package-generation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Measure exact npm tarball and extracted browser bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          raw="$(npm pack --ignore-scripts --json --pack-destination "$tmp" '@solana/web3.js@1.98.4')"
+          filename="$(node -e 'const j=JSON.parse(process.argv[1]); process.stdout.write(j[0].filename)' "$raw")"
+          tarball="$tmp/$filename"
+          echo "TARBALL_FILE=$filename"
+          echo "TARBALL_BYTES=$(wc -c < "$tarball")"
+          echo "TARBALL_SHA512=$(sha512sum "$tarball" | cut -d' ' -f1)"
+          tar -xzf "$tarball" -C "$tmp" package/lib/index.iife.min.js
+          bundle="$tmp/package/lib/index.iife.min.js"
+          echo "BUNDLE_BYTES=$(wc -c < "$bundle")"
+          printf 'BUNDLE_SRI=sha384-'
+          openssl dgst -sha384 -binary "$bundle" | openssl base64 -A
+          echo
+          echo "BUNDLE_SHA256=$(sha256sum "$bundle" | cut -d' ' -f1)"
+          curl --fail --silent --show-error --location 'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.4/lib/index.iife.min.js' --output "$tmp/cdn.js"
+          cmp "$bundle" "$tmp/cdn.js"
+          echo 'NPM_BUNDLE_EQUALS_JSDELIVR=YES'
