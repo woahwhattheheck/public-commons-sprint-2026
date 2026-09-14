@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
   <meta name="description" content="Cookie Crumbs writes compact, human-readable developer receipts to Cookie Chain using Nightly Wallet.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://rpc.cookiescan.io wss://wss.cookiescan.io; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>Cookie Crumbs · Cookie Chain receipt console</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -93,7 +94,8 @@
         <li>Requests a Nightly signature only after showing the exact memo bytes.</li>
         <li>Never asks for a seed phrase, private key, bridge deposit, token swap, or custody.</li>
         <li>Writes only when you click the on-chain action; rejected signatures are terminal.</li>
-        <li>Indexes only the connected wallet’s recent public transactions.</li>
+        <li>Attributes indexed receipts only when the connected wallet is an explicit transaction signer.</li>
+        <li>Runs only repository-served JavaScript; the pinned Solana browser bundle is verified during the static build.</li>
       </ul>
     </section>
   </main>
@@ -104,7 +106,7 @@
     <a href="https://docs.nightly.app/docs/solana/solana/" target="_blank" rel="noopener noreferrer">Nightly docs</a>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.4/lib/index.iife.min.js" defer></script>
+  <script src="./vendor/solana-web3.iife.min.js" defer></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
