@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 export const SOURCE = Object.freeze({
   repository: 'woahwhattheheck/public-commons-sprint-2026',
-  commit: '6ea7fc3976676577f81f8a5adebd239487eb7c0a',
+  commit: '66309f360b53408248222f3a55499f9942e945ad',
   directory: 'cookie-crumbs',
 });
 
@@ -21,7 +21,7 @@ export const FILE_CONTRACT = Object.freeze({
     ]),
   }),
   'app.js': Object.freeze({
-    gitBlobSha1: 'c948315035051b1649e7ffdeb01a647bf267e2cd',
+    gitBlobSha1: '94cf6ef4aa213c8858b5251230620b06d71e3b2a',
     mediaTypes: Object.freeze(['application/javascript', 'text/javascript', 'application/x-javascript']),
     markers: Object.freeze([
       "from './receipt.mjs'",
@@ -30,6 +30,7 @@ export const FILE_CONTRACT = Object.freeze({
       'https://rpc.cookiescan.io',
       'window.nightly?.solana',
       'transactionHasSigner(tx, state.publicKey)',
+      'state.lastReceipt?.memo',
     ]),
   }),
   'receipt.mjs': Object.freeze({
