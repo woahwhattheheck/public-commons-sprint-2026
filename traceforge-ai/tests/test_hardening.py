@@ -123,7 +123,7 @@ class ApiHardeningTests(unittest.TestCase):
             method="POST",
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(request, timeout=10) as response:
+        with urllib.request.urlopen(request, timeout=15) as response:
             return response.status, json.loads(response.read())
 
     def test_verify_api_returns_false_for_malformed_checksum_correct_receipt(self):
@@ -131,16 +131,24 @@ class ApiHardeningTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(body, {"valid": False})
 
-    def test_analyze_accepts_valid_request_above_model_output_limit(self):
-        line = "database timeout while acquiring checkout connection pool=" + ("x" * 16)
-        text = "\n".join(f"{line}{i:04d}" for i in range(2_200)) + "\n"
+    def test_max_evidence_analysis_and_expanded_receipt_use_separate_byte_ceilings(self):
+        line = "database timeout pool=" + ("x" * 22)
+        text = "\n".join(f"{line}{i:04d}" for i in range(5_000)) + "\n"
         request_size = len(json.dumps({"text": text, "mode": "demo"}, separators=(",", ":")).encode("utf-8"))
         self.assertGreater(request_size, 128_000)
         self.assertLess(request_size, 320_000)
+
         status, body = self.post("/api/analyze", {"text": text, "mode": "demo"})
         self.assertEqual(status, 200)
-        self.assertEqual(body["evidence"]["line_count"], 2_200)
+        self.assertEqual(body["evidence"]["line_count"], 5_000)
         self.assertTrue(verify_receipt(body))
+
+        receipt_size = len(json.dumps(body, separators=(",", ":")).encode("utf-8"))
+        self.assertGreater(receipt_size, 320_000)
+        self.assertLess(receipt_size, 1_000_000)
+        verify_status, verified = self.post("/api/verify", body)
+        self.assertEqual(verify_status, 200)
+        self.assertEqual(verified, {"valid": True})
 
 
 if __name__ == "__main__":
