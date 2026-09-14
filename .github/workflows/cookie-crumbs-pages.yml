@@ -1,0 +1,91 @@
+name: Cookie Crumbs Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'cookie-crumbs/**'
+      - '.github/workflows/cookie-crumbs-pages.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: cookie-crumbs-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Run source contract
+        working-directory: cookie-crumbs
+        run: npm run ci
+      - name: Assemble least-authority static artifact
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site/cookie-crumbs
+          cp cookie-crumbs/index.html _site/cookie-crumbs/
+          cp cookie-crumbs/styles.css _site/cookie-crumbs/
+          cp cookie-crumbs/app.js _site/cookie-crumbs/
+          cp cookie-crumbs/receipt.mjs _site/cookie-crumbs/
+          touch _site/.nojekyll
+          printf '%s\n' .nojekyll cookie-crumbs/app.js cookie-crumbs/index.html cookie-crumbs/receipt.mjs cookie-crumbs/styles.css > expected-files.txt
+          find _site -type f -printf '%P\n' | sort > actual-files.txt
+          diff -u expected-files.txt actual-files.txt
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Verify published bytes and MIME contract
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          rm -f deployment-receipt.json
+          DEPLOYMENT_URL="${PAGE_URL%/}/cookie-crumbs/"
+          for attempt in 1 2 3 4 5 6; do
+            if node cookie-crumbs/verify-deploy.mjs "$DEPLOYMENT_URL" --out deployment-receipt.json; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 6 ]; then
+              echo "Deployment did not satisfy the Cookie Crumbs contract after $attempt attempts." >&2
+              exit 1
+            fi
+            sleep 10
+          done
+      - name: Retain deployment receipt
+        uses: actions/upload-artifact@v7
+        with:
+          name: cookie-crumbs-deployment-receipt-${{ github.sha }}
+          path: deployment-receipt.json
+          if-no-files-found: error
+          retention-days: 30
