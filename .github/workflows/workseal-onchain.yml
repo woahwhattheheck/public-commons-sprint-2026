@@ -1,0 +1,41 @@
+name: WorkSeal on-chain semantics
+
+on:
+  pull_request:
+    paths:
+      - 'workseal/**'
+      - '.github/workflows/workseal-onchain.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'workseal/**'
+      - '.github/workflows/workseal-onchain.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-model:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - working-directory: workseal
+        run: node --test
+      - working-directory: workseal
+        run: node src/cli.mjs demo
+  rust-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - working-directory: workseal/onchain/program
+        run: cargo fmt --check
+      - run: node --test workseal/test/rust_source_contract.test.mjs
