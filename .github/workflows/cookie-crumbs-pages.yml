@@ -29,17 +29,25 @@ jobs:
       - name: Run source contract
         working-directory: cookie-crumbs
         run: npm run ci
+      - name: Build hash-pinned static artifact
+        working-directory: cookie-crumbs
+        run: npm run build
       - name: Assemble least-authority static artifact
         run: |
           set -euo pipefail
           rm -rf _site
           mkdir -p _site/cookie-crumbs
-          cp cookie-crumbs/index.html _site/cookie-crumbs/
-          cp cookie-crumbs/styles.css _site/cookie-crumbs/
-          cp cookie-crumbs/app.js _site/cookie-crumbs/
-          cp cookie-crumbs/receipt.mjs _site/cookie-crumbs/
+          cp -R cookie-crumbs/dist/. _site/cookie-crumbs/
           touch _site/.nojekyll
-          printf '%s\n' .nojekyll cookie-crumbs/app.js cookie-crumbs/index.html cookie-crumbs/receipt.mjs cookie-crumbs/styles.css > expected-files.txt
+          printf '%s\n' \
+            .nojekyll \
+            cookie-crumbs/app.js \
+            cookie-crumbs/index.html \
+            cookie-crumbs/provenance.mjs \
+            cookie-crumbs/receipt.mjs \
+            cookie-crumbs/styles.css \
+            cookie-crumbs/vendor-lock.json \
+            cookie-crumbs/vendor/solana-web3.iife.min.js > expected-files.txt
           find _site -type f -printf '%P\n' | sort > actual-files.txt
           diff -u expected-files.txt actual-files.txt
       - name: Configure Pages
