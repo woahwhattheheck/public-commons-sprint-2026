@@ -1,4 +1,5 @@
 import { composeReceipt, parseReceipt, shortAddress, utf8Bytes, MAX_MEMO_BYTES } from './receipt.mjs';
+import { transactionSignedBy } from './provenance.mjs';
 
 const RPC_URL = 'https://rpc.cookiescan.io';
 const WS_URL = 'https://wss.cookiescan.io';
@@ -163,13 +164,13 @@ function instructionMemo(instruction) {
   return null;
 }
 
-async function fetchReceipt(signatureInfo) {
+async function fetchReceipt(signatureInfo, expectedSigner) {
   const connection = await ensureConnection();
   const tx = await connection.getParsedTransaction(signatureInfo.signature, {
     commitment: 'confirmed',
     maxSupportedTransactionVersion: 0,
   });
-  if (!tx) return null;
+  if (!tx || !transactionSignedBy(tx, expectedSigner)) return null;
   for (const instruction of tx.transaction.message.instructions) {
     const memo = instructionMemo(instruction);
     if (!memo) continue;
@@ -186,10 +187,10 @@ async function fetchReceipt(signatureInfo) {
 function renderHistory(receipts) {
   elements.history.innerHTML = '';
   if (!receipts.length) {
-    setStatus(elements.historyStatus, 'No Cookie Crumbs receipts found in the latest wallet activity.');
+    setStatus(elements.historyStatus, 'No wallet-signed Cookie Crumbs receipts found in the latest activity.');
     return;
   }
-  setStatus(elements.historyStatus, `${receipts.length} receipt${receipts.length === 1 ? '' : 's'} found in recent activity.`, 'good');
+  setStatus(elements.historyStatus, `${receipts.length} wallet-signed receipt${receipts.length === 1 ? '' : 's'} found in recent activity.`, 'good');
   for (const receipt of receipts) {
     const item = document.createElement('li');
     const title = document.createElement('strong');
@@ -215,7 +216,7 @@ async function refreshHistory() {
   const signatures = await connection.getSignaturesForAddress(state.publicKey, { limit: HISTORY_LIMIT }, 'confirmed');
   const receipts = [];
   for (const signatureInfo of signatures) {
-    const receipt = await fetchReceipt(signatureInfo);
+    const receipt = await fetchReceipt(signatureInfo, state.publicKey);
     if (receipt) receipts.push(receipt);
   }
   renderHistory(receipts);
