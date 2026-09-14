@@ -3,6 +3,12 @@ import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import test from 'node:test';
 import {
+  WEB3_BUNDLE_BYTES,
+  WEB3_BUNDLE_SHA256,
+  WEB3_BUNDLE_SRI,
+  WEB3_TARBALL_SHA512,
+} from '../build.mjs';
+import {
   DeploymentVerificationError,
   FILE_CONTRACT,
   SOURCE,
@@ -12,16 +18,28 @@ import {
   verifyDeployment,
 } from '../verify-deploy.mjs';
 
-const vendorBody = `var solanaWeb3={};\n${'x'.repeat(100_000)}`;
-const vendorSri = `sha384-${createHash('sha384').update(vendorBody).digest('base64')}`;
-const vendorLock = JSON.stringify({
+const forgedVendorBody = Buffer.from(`var solanaWeb3={};\n${'x'.repeat(100_000)}`, 'utf8');
+const forgedVendorSri = `sha384-${createHash('sha384').update(forgedVendorBody).digest('base64')}`;
+const forgedVendorLock = JSON.stringify({
   schema: 'cookie-crumbs/vendor-lock/v1',
   package: VENDOR_CONTRACT.package,
   tarballSha512: VENDOR_CONTRACT.tarballSha512,
   bundlePath: VENDOR_CONTRACT.bundlePath,
-  bundleBytes: Buffer.byteLength(vendorBody),
-  bundleSri: vendorSri,
+  bundleBytes: forgedVendorBody.byteLength,
+  bundleSri: forgedVendorSri,
 });
+
+const pinnedVendorLock = JSON.stringify({
+  schema: 'cookie-crumbs/vendor-lock/v1',
+  package: VENDOR_CONTRACT.package,
+  tarballSha512: VENDOR_CONTRACT.tarballSha512,
+  bundlePath: VENDOR_CONTRACT.bundlePath,
+  bundleBytes: VENDOR_CONTRACT.bundleBytes,
+  bundleSri: VENDOR_CONTRACT.bundleSri,
+});
+
+const sameSizeAttackerBundle = Buffer.alloc(VENDOR_CONTRACT.bundleBytes, 0x78);
+Buffer.from('var solanaWeb3={};\n', 'utf8').copy(sameSizeAttackerBundle);
 
 const canonical = Object.freeze({
   '/site/index.html': {
@@ -44,8 +62,8 @@ const canonical = Object.freeze({
     type: 'text/css; charset=utf-8',
     body: '.wallet-card, .panel { display:block } @media (max-width: 760px) { .panel { display:grid } }',
   },
-  '/site/vendor-lock.json': { type: 'application/json; charset=utf-8', body: vendorLock },
-  '/site/vendor/solana-web3.iife.min.js': { type: 'application/javascript; charset=utf-8', body: vendorBody },
+  '/site/vendor-lock.json': { type: 'application/json; charset=utf-8', body: pinnedVendorLock },
+  '/site/vendor/solana-web3.iife.min.js': { type: 'application/javascript; charset=utf-8', body: sameSizeAttackerBundle },
 });
 
 function contractFor(routes) {
@@ -106,6 +124,16 @@ test('pins every first-party published runtime file to hardened source blobs', (
   assert.equal(SOURCE.generation, 'cookie-crumbs/source-hardening-v2');
 });
 
+test('build and deployment verifier share the independently proved vendor identity', () => {
+  assert.equal(VENDOR_CONTRACT.tarballSha512, WEB3_TARBALL_SHA512);
+  assert.equal(VENDOR_CONTRACT.bundleBytes, WEB3_BUNDLE_BYTES);
+  assert.equal(VENDOR_CONTRACT.bundleSri, WEB3_BUNDLE_SRI);
+  assert.equal(VENDOR_CONTRACT.bundleSha256, WEB3_BUNDLE_SHA256);
+  assert.equal(VENDOR_CONTRACT.bundleBytes, 463_860);
+  assert.equal(VENDOR_CONTRACT.bundleSri, 'sha384-I45YF+S0YGWIolUyTksLk9TNtTqaDgZg8e6T1OoBoJvvFmphqYNIPZw3Kl0TkZNN');
+  assert.equal(VENDOR_CONTRACT.bundleSha256, '09cdbea951b2ed0e11bcbe3aeb1ee9f035f9fb51ed212aca645475ae82688cc3');
+});
+
 test('normalizes directory and index URLs without retaining query or fragment', () => {
   assert.equal(normalizeBaseUrl('https://example.test/a/b').href, 'https://example.test/a/b/');
   assert.equal(normalizeBaseUrl('https://example.test/a/b/index.html?x=1#y').href, 'https://example.test/a/b/');
@@ -115,37 +143,31 @@ test('rejects embedded URL credentials before any request', () => {
   assert.throws(() => normalizeBaseUrl('https://user:secret@example.test/site/'), (error) => error instanceof DeploymentVerificationError && error.code === 'CREDENTIALS_FORBIDDEN');
 });
 
-test('accepts complete source-bound deployment and hash-bound local vendor', async () => {
-  await withServer({}, async (baseUrl, routes) => {
-    const receipt = await verifyDeployment(baseUrl, { fileContract: contractFor(routes), now: () => new Date('2026-09-14T12:00:00.000Z') });
-    assert.equal(receipt.ok, true);
-    assert.equal(receipt.schema, 'cookie-crumbs/deployment-receipt/v2');
-    assert.equal(receipt.checkedAt, '2026-09-14T12:00:00.000Z');
-    assert.equal(receipt.files.length, 5);
-    assert.equal(receipt.vendor.package, VENDOR_CONTRACT.package);
-    assert.equal(receipt.vendor.tarballSha512, VENDOR_CONTRACT.tarballSha512);
-    assert.equal(receipt.vendor.sri, vendorSri);
-  });
+test('rejects a forged self-consistent vendor lock instead of trusting served metadata', async () => {
+  const overrides = {
+    '/site/vendor-lock.json': { type: 'application/json; charset=utf-8', body: forgedVendorLock },
+    '/site/vendor/solana-web3.iife.min.js': { type: 'application/javascript; charset=utf-8', body: forgedVendorBody },
+  };
+  await withServer(overrides, async (baseUrl, routes) => expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'VENDOR_SOURCE_MISMATCH'));
 });
 
-test('fails closed on any first-party byte drift', async () => {
+test('rejects attacker vendor bytes even when their size and marker match the approved bundle', async () => {
+  await withServer({}, async (baseUrl, routes) => expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'VENDOR_SRI_MISMATCH'));
+});
+
+test('fails closed on any first-party byte drift before vendor verification', async () => {
   const overrides = { '/site/styles.css': { type: 'text/css; charset=utf-8', body: `${canonical['/site/styles.css'].body}\n/* injected */` } };
   await withServer(overrides, async (baseUrl) => expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(canonical) }), 'SOURCE_BLOB_MISMATCH'));
 });
 
-test('fails closed when the served vendor bytes drift from their build lock', async () => {
-  const overrides = { '/site/vendor/solana-web3.iife.min.js': { type: 'application/javascript; charset=utf-8', body: `${vendorBody}tamper` } };
-  await withServer(overrides, async (baseUrl, routes) => expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'VENDOR_SIZE_MISMATCH'));
-});
-
 test('fails closed when vendor lock claims a different package generation', async () => {
-  const bad = JSON.parse(vendorLock);
+  const bad = JSON.parse(pinnedVendorLock);
   bad.tarballSha512 = '0'.repeat(128);
   const overrides = { '/site/vendor-lock.json': { type: 'application/json', body: JSON.stringify(bad) } };
   await withServer(overrides, async (baseUrl, routes) => expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'VENDOR_SOURCE_MISMATCH'));
 });
 
-test('fails closed on incorrect Content-Type or missing asset', async () => {
+test('fails closed on incorrect Content-Type or missing first-party asset', async () => {
   await withServer({ '/site/styles.css': { type: 'text/plain', body: canonical['/site/styles.css'].body } }, async (baseUrl, routes) => expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'CONTENT_TYPE_MISMATCH'));
   await withServer({ '/site/receipt.mjs': { status: 404, type: 'text/plain', body: 'gone' } }, async (baseUrl, routes) => expectCode(verifyDeployment(baseUrl, { fileContract: contractFor(routes) }), 'HTTP_STATUS'));
 });
@@ -153,4 +175,5 @@ test('fails closed on incorrect Content-Type or missing asset', async () => {
 test('validates timeout and byte-limit options before network activity', async () => {
   await expectCode(verifyDeployment('https://example.test/', { timeoutMs: 0 }), 'INVALID_TIMEOUT');
   await expectCode(verifyDeployment('https://example.test/', { maxBytes: 0 }), 'INVALID_MAX_BYTES');
+  await expectCode(verifyDeployment('https://example.test/', { maxBytes: 400_000 }), 'INVALID_MAX_BYTES');
 });
