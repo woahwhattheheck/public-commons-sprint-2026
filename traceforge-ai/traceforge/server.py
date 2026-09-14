@@ -92,7 +92,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         raw = self.rfile.read(length)
         try:
-            payload = strict_json_loads(raw.decode("utf-8"))
+            payload = strict_json_loads(raw.decode("utf-8"), max_bytes=MAX_REQUEST_BYTES, label="request")
             if not isinstance(payload, dict) or set(payload) != {"text", "mode"}:
                 raise TraceForgeError("request must contain exactly text and mode")
             text = payload["text"]
@@ -122,7 +122,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         raw = self.rfile.read(length)
         try:
-            payload = strict_json_loads(raw.decode("utf-8"))
+            payload = strict_json_loads(raw.decode("utf-8"), max_bytes=MAX_REQUEST_BYTES, label="receipt")
         except (UnicodeDecodeError, TraceForgeError) as exc:
             self._send_json(HTTPStatus.UNPROCESSABLE_ENTITY, {"error": "invalid_receipt", "detail": str(exc)[:300]})
             return
