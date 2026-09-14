@@ -105,6 +105,7 @@ async function connectWallet() {
   elements.connect.hidden = true;
   elements.disconnect.hidden = false;
   setStatus(elements.walletStatus, `Nightly connected · ${shortAddress(publicKey)}`, 'good');
+  updatePreview();
   await refreshDashboard();
 }
 
@@ -117,6 +118,7 @@ async function disconnectWallet() {
   elements.walletAddress.textContent = 'Not connected';
   elements.connect.hidden = false;
   elements.disconnect.hidden = true;
+  elements.write.disabled = true;
   setStatus(elements.walletStatus, 'Wallet disconnected');
   elements.balance.textContent = '—';
   elements.history.innerHTML = '';
@@ -320,8 +322,7 @@ async function writeReceipt(event) {
   } catch (error) {
     setStatus(elements.writeStatus, friendlyError(error), 'bad');
   } finally {
-    elements.write.disabled = !state.publicKey && !state.lastReceipt?.memo;
-    if (state.publicKey && state.lastReceipt?.memo) elements.write.disabled = false;
+    elements.write.disabled = !(state.publicKey && state.lastReceipt?.memo);
   }
 }
 
