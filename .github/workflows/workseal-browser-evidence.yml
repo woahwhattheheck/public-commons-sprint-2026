@@ -1,0 +1,29 @@
+name: WorkSeal browser evidence
+on:
+  push:
+    paths:
+      - 'workseal/**'
+      - '.github/workflows/workseal-browser-evidence.yml'
+  pull_request:
+    paths:
+      - 'workseal/**'
+      - '.github/workflows/workseal-browser-evidence.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      matrix:
+        node: [20, 22]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Full WorkSeal test suite
+        working-directory: workseal
+        run: npm test
+      - name: Syntax-check browser entrypoint
+        working-directory: workseal
+        run: node --check web/demo.mjs

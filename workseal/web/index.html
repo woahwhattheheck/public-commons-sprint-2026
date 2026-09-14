@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WorkSeal — evidence-gated settlement demo</title><link rel="stylesheet" href="./style.css"></head>
+<body><main>
+<p class="eyebrow">WorkSeal / local evidence demo</p><h1>Pay the accepted work generation, not an agent’s assertion.</h1>
+<p>This demo creates a local Ed25519 verifier key, normalizes a retained GitHub Actions success record, signs an ACCEPT receipt, binds that signed authority into a settlement intent, and verifies the whole bundle in-browser. It performs no network request, wallet action, RPC call, or transfer.</p>
+<section class="grid"><article><h2>1. Evidence</h2><p>Exact repository, workflow bytes, commit, run attempt, raw-response digest, successful jobs and steps.</p></article><article><h2>2. Acceptance</h2><p>Ed25519 signature covers the exact acceptance receipt; verifier fingerprint is pinned into the signed acceptance digest.</p></article><article><h2>3. Settlement</h2><p>The intent binds task, result, signed acceptance authority and funding reference. Chain execution remains separately authorized.</p></article></section>
+<div class="actions"><button id="run-demo" type="button">Run local demo</button><button id="verify-bundle" type="button">Verify pasted bundle</button></div>
+<p id="status" role="status" aria-live="polite">Ready. Nothing has been sent.</p>
+<label for="bundle">Bundle JSON</label><textarea id="bundle" spellcheck="false" placeholder="Run the demo or paste a WorkSeal browser bundle"></textarea>
+<pre id="output" tabindex="0"></pre>
+<footer>Competition carrier only. No Colosseum submission, prize, payment, wallet, deployment, or revenue claim is implied.</footer>
+</main><script type="module" src="./demo.mjs"></script></body></html>
