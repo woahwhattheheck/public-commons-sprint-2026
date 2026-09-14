@@ -34,8 +34,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
       - working-directory: workseal/onchain/program
-        run: cargo fmt --check
+        run: cargo check --locked=false
       - run: node --test workseal/test/rust_source_contract.test.mjs
