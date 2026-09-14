@@ -1,0 +1,14 @@
+{
+  "name": "@public-commons/mcp-streamable-http-conformance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Side-effect-free MCP 2025-11-25 Streamable HTTP conformance and security probe",
+  "engines": { "node": ">=20" },
+  "bin": { "mcp-http-conformance": "./src/cli.mjs" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check src/*.mjs && node --check test/*.mjs"
+  },
+  "license": "MIT"
+}
