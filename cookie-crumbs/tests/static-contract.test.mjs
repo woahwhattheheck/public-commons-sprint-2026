@@ -46,3 +46,20 @@ test('UI makes the signing boundary explicit and avoids key custody', () => {
   assert.match(html, /seed phrase, private key/i);
   assert.doesNotMatch(app, /localStorage\.setItem\([^)]*(seed|private|secret)/i);
 });
+
+test('signing consumes the exact memo stored by preview instead of recomposing it', () => {
+  const currentReceiptBody = app.match(/function currentReceipt\(\) \{([\s\S]*?)\n\}/)?.[1];
+  assert.ok(currentReceiptBody, 'currentReceipt() must remain present');
+  assert.match(currentReceiptBody, /state\.lastReceipt\?\.memo/);
+  assert.doesNotMatch(currentReceiptBody, /composeReceipt|new Date/);
+
+  const updatePreviewBody = app.match(/function updatePreview\(\) \{([\s\S]*?)\n\}/)?.[1];
+  assert.ok(updatePreviewBody, 'updatePreview() must remain present');
+  assert.match(updatePreviewBody, /state\.lastReceipt = \{ draftId, memo \}/);
+  assert.match(app, /const memo = currentReceipt\(\);[\s\S]*buildUnsignedMemoTransaction\(\{[\s\S]*memo,/);
+});
+
+test('write control fails closed unless both wallet identity and a preview-bound memo exist', () => {
+  assert.match(app, /elements\.write\.disabled = !\(state\.publicKey && state\.lastReceipt\?\.memo\)/);
+  assert.match(app, /state\.lastReceipt = null;[\s\S]*elements\.write\.disabled = true/);
+});

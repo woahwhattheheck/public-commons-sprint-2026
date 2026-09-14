@@ -105,6 +105,7 @@ async function connectWallet() {
   elements.connect.hidden = true;
   elements.disconnect.hidden = false;
   setStatus(elements.walletStatus, `Nightly connected · ${shortAddress(publicKey)}`, 'good');
+  updatePreview();
   await refreshDashboard();
 }
 
@@ -117,6 +118,7 @@ async function disconnectWallet() {
   elements.walletAddress.textContent = 'Not connected';
   elements.connect.hidden = false;
   elements.disconnect.hidden = true;
+  elements.write.disabled = true;
   setStatus(elements.walletStatus, 'Wallet disconnected');
   elements.balance.textContent = '—';
   elements.history.innerHTML = '';
@@ -230,19 +232,14 @@ async function refreshDashboard() {
 }
 
 function currentReceipt() {
-  return composeReceipt({
-    kind: elements.kind.value,
-    subject: elements.subject.value,
-    note: elements.note.value,
-    createdAt: new Date(),
-    id: state.lastReceipt?.draftId ?? randomId(),
-  });
+  const memo = state.lastReceipt?.memo;
+  if (!memo) throw new Error('Receipt preview is unavailable. Edit a field to regenerate the exact memo before signing.');
+  return memo;
 }
 
 function updatePreview() {
   try {
     const draftId = state.lastReceipt?.draftId ?? randomId();
-    state.lastReceipt = { draftId };
     const memo = composeReceipt({
       kind: elements.kind.value,
       subject: elements.subject.value,
@@ -250,11 +247,13 @@ function updatePreview() {
       createdAt: new Date(),
       id: draftId,
     });
+    state.lastReceipt = { draftId, memo };
     elements.preview.textContent = memo;
     elements.byteCount.textContent = `${utf8Bytes(memo)} / ${MAX_MEMO_BYTES} bytes`;
     elements.write.disabled = !state.publicKey;
-    setStatus(elements.writeStatus, state.publicKey ? 'Ready to sign. Nothing is sent until you click “Write receipt on-chain”.' : 'Connect Nightly to enable signing.');
+    setStatus(elements.writeStatus, state.publicKey ? 'Ready to sign the exact memo shown above. Nothing is sent until you click “Write receipt on-chain”.' : 'Connect Nightly to enable signing.');
   } catch (error) {
+    state.lastReceipt = null;
     elements.preview.textContent = friendlyError(error);
     elements.byteCount.textContent = `limit ${MAX_MEMO_BYTES} bytes`;
     elements.write.disabled = true;
@@ -286,7 +285,7 @@ async function writeReceipt(event) {
     const memo = currentReceipt();
     elements.preview.textContent = memo;
     elements.byteCount.textContent = `${utf8Bytes(memo)} / ${MAX_MEMO_BYTES} bytes`;
-    setStatus(elements.writeStatus, 'Building transaction…');
+    setStatus(elements.writeStatus, 'Building the exact previewed transaction…');
 
     const connection = await ensureConnection();
     const latest = await connection.getLatestBlockhash('confirmed');
@@ -296,7 +295,7 @@ async function writeReceipt(event) {
       memo,
     });
 
-    setStatus(elements.writeStatus, 'Awaiting Nightly signature…');
+    setStatus(elements.writeStatus, 'Awaiting Nightly signature for the exact memo shown above…');
     const signedTransaction = await signWithNightly(transaction);
     setStatus(elements.writeStatus, 'Submitting to Cookie Chain…');
     const signature = await connection.sendRawTransaction(signedTransaction, {
@@ -323,7 +322,7 @@ async function writeReceipt(event) {
   } catch (error) {
     setStatus(elements.writeStatus, friendlyError(error), 'bad');
   } finally {
-    elements.write.disabled = !state.publicKey;
+    elements.write.disabled = !(state.publicKey && state.lastReceipt?.memo);
   }
 }
 

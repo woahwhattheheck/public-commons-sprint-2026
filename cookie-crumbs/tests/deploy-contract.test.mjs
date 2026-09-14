@@ -17,7 +17,7 @@ const canonical = Object.freeze({
   },
   '/site/app.js': {
     type: 'application/javascript; charset=utf-8',
-    body: "import { composeReceipt } from './receipt.mjs'; import { CookieChainRpc } from './chain.mjs'; import { transactionHasSigner } from './history.mjs'; const RPC='https://rpc.cookiescan.io'; const wallet=window.nightly?.solana; transactionHasSigner(tx, state.publicKey); void composeReceipt; void CookieChainRpc; void RPC; void wallet;",
+    body: "import { composeReceipt } from './receipt.mjs'; import { CookieChainRpc } from './chain.mjs'; import { transactionHasSigner } from './history.mjs'; const RPC='https://rpc.cookiescan.io'; const wallet=window.nightly?.solana; transactionHasSigner(tx, state.publicKey); const memo=state.lastReceipt?.memo; void composeReceipt; void CookieChainRpc; void RPC; void wallet; void memo;",
   },
   '/site/receipt.mjs': {
     type: 'text/javascript; charset=utf-8',
@@ -86,13 +86,13 @@ test('computes Git blob identity using the canonical blob header', () => {
   assert.equal(gitBlobSha1(Buffer.from('hello\n', 'utf8')), 'ce013625030ba8dba906f756967f9e9ca394464a');
 });
 
-test('pins every published runtime file to the hardened source generation', () => {
-  assert.equal(SOURCE.commit, '6ea7fc3976676577f81f8a5adebd239487eb7c0a');
+test('pins every published runtime file to the preview-bound source generation', () => {
+  assert.equal(SOURCE.commit, '66309f360b53408248222f3a55499f9942e945ad');
   assert.deepEqual(
     Object.fromEntries(Object.entries(FILE_CONTRACT).map(([path, contract]) => [path, contract.gitBlobSha1])),
     {
       'index.html': '467a802fc8af6d37e86be152dfbd6bb7b9e1cf0c',
-      'app.js': 'c948315035051b1649e7ffdeb01a647bf267e2cd',
+      'app.js': '94cf6ef4aa213c8858b5251230620b06d71e3b2a',
       'receipt.mjs': 'befbf85080201ed458b1555bf77442f85fcfe442',
       'styles.css': '63e8dbc8c6c7cb4efea6dfc2a7135cff435c3d74',
       'chain.mjs': 'c5f685537c9bf241b6103bf3e39c4ab255016e60',
