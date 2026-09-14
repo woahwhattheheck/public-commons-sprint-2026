@@ -48,9 +48,20 @@ async function readBounded(response, maxBytes) {
   return new TextDecoder().decode(merged);
 }
 
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 function responseMatchesRequest(message, requestId) {
-  return message && message.jsonrpc === '2.0' && message.id === requestId &&
-    (Object.prototype.hasOwnProperty.call(message, 'result') || Object.prototype.hasOwnProperty.call(message, 'error'));
+  if (!message || message.jsonrpc !== '2.0' || message.id !== requestId) return false;
+  const hasResult = Object.prototype.hasOwnProperty.call(message, 'result');
+  const hasError = Object.prototype.hasOwnProperty.call(message, 'error');
+  if (hasResult === hasError) return false;
+  if (hasError) {
+    const error = message.error;
+    if (!isPlainObject(error) || !Number.isInteger(error.code) || typeof error.message !== 'string') return false;
+  }
+  return true;
 }
 
 async function readSseRpcResponse(response, maxBytes, requestId) {
@@ -155,6 +166,14 @@ export async function requestJson({ url, method = 'POST', headers = {}, body, ti
         try { parsed = JSON.parse(text); }
         catch { throw new ProbeTransportError('INVALID_JSON', 'response body is not valid JSON', { status: response.status }); }
         responseMode = 'json';
+      }
+      if (response.status === 200 && body?.id !== undefined && !responseMatchesRequest(parsed, body.id)) {
+        throw new ProbeTransportError('RPC_RESPONSE_MISMATCH', 'JSON response does not exactly correlate to the JSON-RPC request', {
+          status: response.status,
+          requestId: body.id,
+          responseId: parsed?.id ?? null,
+          responseJsonrpc: parsed?.jsonrpc ?? null,
+        });
       }
     }
     const elapsedMs = performance.now() - started;

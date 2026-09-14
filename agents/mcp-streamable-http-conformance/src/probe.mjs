@@ -6,6 +6,7 @@ export const LAST_HANDSHAKE_PROTOCOL_VERSION = '2025-11-25';
 export const SUPPORTED_PROTOCOL_VERSIONS = Object.freeze(['2025-11-25']);
 const REQUESTED_PROTOCOL_VERSION = '2025-11-25';
 const UNSUPPORTED_PROTOCOL_VERSION = '1900-01-01';
+const INVALID_ORIGIN = 'https://mcp-conformance.invalid';
 const POST_ACCEPT = 'application/json, text/event-stream';
 
 function versionAtLeast(actual, minimum) {
@@ -55,6 +56,10 @@ function validServerCapabilities(capabilities) {
   if (capabilities.tools !== undefined && !validBooleanCapability(capabilities.tools, ['listChanged'])) return false;
   if (capabilities.tasks !== undefined && !validTasksCapability(capabilities.tasks)) return false;
   return true;
+}
+
+function validSessionId(value) {
+  return typeof value === 'string' && /^[\x21-\x7E]+$/.test(value);
 }
 
 function rpc(id, method, params = {}) { return { jsonrpc: '2.0', id, method, params }; }
@@ -123,7 +128,7 @@ export async function probeMcpEndpoint(options) {
 
   const initResult = init.body?.result;
   const negotiated = initResult?.protocolVersion;
-  const sessionId = init.response.headers.get('mcp-session-id');
+  const rawSessionId = init.response.headers.get('mcp-session-id');
   const serverInfo = initResult?.serverInfo;
   const capabilitiesValid = validServerCapabilities(initResult?.capabilities);
   const initOk = init.response.status === 200 &&
@@ -135,7 +140,7 @@ export async function probeMcpEndpoint(options) {
     typeof serverInfo.name === 'string' && serverInfo.name.length > 0 &&
     typeof serverInfo.version === 'string' && serverInfo.version.length > 0;
   checks.push(initOk
-    ? pass('initialize-envelope', { httpStatus: init.response.status, negotiatedProtocolVersion: negotiated, sessionIssued: Boolean(sessionId), serverName: serverInfo.name, serverVersion: serverInfo.version })
+    ? pass('initialize-envelope', { httpStatus: init.response.status, negotiatedProtocolVersion: negotiated, sessionIssued: rawSessionId !== null, serverName: serverInfo.name, serverVersion: serverInfo.version })
     : fail('initialize-envelope', { httpStatus: init.response.status, errorCode: init.body?.error?.code ?? null, requiredFields: { protocolVersion: typeof negotiated === 'string', capabilities: capabilitiesValid, serverInfo: isPlainObject(serverInfo), serverName: typeof serverInfo?.name === 'string' && serverInfo.name.length > 0, serverVersion: typeof serverInfo?.version === 'string' && serverInfo.version.length > 0 } }));
   if (!initOk) return finalize();
   checks.push(versionAtLeast(negotiated, minimumProtocolVersion)
@@ -147,9 +152,20 @@ export async function probeMcpEndpoint(options) {
   checks.push(negotiated === REQUESTED_PROTOCOL_VERSION
     ? pass('version-negotiation', { requestedProtocolVersion: REQUESTED_PROTOCOL_VERSION, negotiatedProtocolVersion: negotiated })
     : fail('version-negotiation', { requestedProtocolVersion: REQUESTED_PROTOCOL_VERSION, negotiatedProtocolVersion: negotiated, reason: 'server must echo a protocol version it supports; this probe supports only 2025-11-25' }));
-  checks.push(sessionId
-    ? pass('session-issued', { required: requireSession })
-    : (requireSession ? fail('session-issued', { required: true }) : skip('session-issued', { required: false, reason: 'sessions are optional for stateless MCP servers' })));
+
+  const sessionIdOk = rawSessionId === null || validSessionId(rawSessionId);
+  checks.push(rawSessionId === null
+    ? skip('session-id-syntax', { reason: 'server did not issue a session' })
+    : sessionIdOk
+      ? pass('session-id-syntax', { visibleAsciiOnly: true })
+      : fail('session-id-syntax', { visibleAsciiOnly: false, reason: 'MCP-Session-Id must contain only visible ASCII characters 0x21 through 0x7E' }));
+  const sessionId = sessionIdOk ? rawSessionId : null;
+  checks.push(rawSessionId !== null && !sessionIdOk
+    ? fail('session-issued', { required: requireSession, reason: 'server issued a malformed MCP-Session-Id that will not be reflected by the probe' })
+    : sessionId
+      ? pass('session-issued', { required: requireSession })
+      : (requireSession ? fail('session-issued', { required: true }) : skip('session-issued', { required: false, reason: 'sessions are optional for stateless MCP servers' })));
+  if (rawSessionId !== null && !sessionIdOk) return finalize();
 
   const headers = sessionHeaders(authorizationHeader, sessionId, negotiated);
   const initialized = await safeJson(checks, 'initialized-notification-transport', request({ headers, body: note('notifications/initialized') }));
@@ -160,7 +176,7 @@ export async function probeMcpEndpoint(options) {
 
   const ping = await safeJson(checks, 'ping-transport', request({ headers, body: rpc(2, 'ping') }));
   recordTiming('ping', ping);
-  if (ping) checks.push(ping.response.status === 200 && ping.body?.jsonrpc === '2.0' && ping.body?.id === 2 && ping.body?.result && typeof ping.body.result === 'object'
+  if (ping) checks.push(ping.response.status === 200 && ping.body?.result && typeof ping.body.result === 'object'
     ? pass('ping', { httpStatus: 200 })
     : fail('ping', { httpStatus: ping.response.status, errorCode: ping.body?.error?.code ?? null }));
 
@@ -197,28 +213,55 @@ export async function probeMcpEndpoint(options) {
     : fail('jsonrpc-method-not-found', { httpStatus: unknown.response.status, errorCode: unknown.body?.error?.code ?? null }));
 
   const invalidOrigin = await safeJson(checks, 'invalid-origin-transport', request({
-    headers: { ...baseHeaders(authorizationHeader), origin: 'https://mcp-conformance.invalid' },
+    headers: { ...baseHeaders(authorizationHeader), origin: INVALID_ORIGIN },
     body: rpc(6, 'initialize', { protocolVersion: minimumProtocolVersion, capabilities: {}, clientInfo: { name: 'origin-probe', version: '0.1.0' } }),
   }));
   recordTiming('invalid-origin', invalidOrigin);
   if (invalidOrigin) checks.push(invalidOrigin.response.status === 403
-    ? pass('invalid-origin-rejected', { httpStatus: 403 })
-    : fail('invalid-origin-rejected', { httpStatus: invalidOrigin.response.status }));
+    ? pass('invalid-origin-rejected', { httpStatus: 403, phase: 'initialize' })
+    : fail('invalid-origin-rejected', { httpStatus: invalidOrigin.response.status, expected: 403, phase: 'initialize' }));
 
+  const establishedOrigin = await safeJson(checks, 'invalid-origin-established-post-transport', request({
+    headers: { ...headers, origin: INVALID_ORIGIN },
+    body: rpc(60, 'ping'),
+  }));
+  recordTiming('invalid-origin-established-post', establishedOrigin);
+  if (establishedOrigin) checks.push(establishedOrigin.response.status === 403
+    ? pass('invalid-origin-established-post-rejected', { httpStatus: 403, sessionBound: Boolean(sessionId) })
+    : fail('invalid-origin-established-post-rejected', { httpStatus: establishedOrigin.response.status, expected: 403, sessionBound: Boolean(sessionId) }));
+
+  const getHeaders = {
+    accept: 'text/event-stream',
+    ...(authorizationHeader ? { authorization: authorizationHeader } : {}),
+    ...(sessionId ? { 'mcp-session-id': sessionId } : {}),
+    'mcp-protocol-version': negotiated,
+  };
+  let getMode = 'failed';
   try {
-    const get = await requestHeadersOnly({ url: endpoint, method: 'GET', timeoutMs, headers: {
-      accept: 'text/event-stream',
-      ...(authorizationHeader ? { authorization: authorizationHeader } : {}),
-      ...(sessionId ? { 'mcp-session-id': sessionId } : {}),
-      'mcp-protocol-version': negotiated,
-    } });
+    const get = await requestHeadersOnly({ url: endpoint, method: 'GET', timeoutMs, headers: getHeaders });
     recordTiming('GET', get);
     const sseOk = get.response.status === 200 && /^text\/event-stream(?:;|$)/i.test(get.contentType ?? '');
     const noSseOk = get.response.status === 405;
+    getMode = sseOk ? 'sse' : noSseOk ? 'not-supported' : 'invalid';
     checks.push(sseOk || noSseOk
-      ? pass('get-stream-contract', { httpStatus: get.response.status, mode: sseOk ? 'sse' : 'not-supported' })
+      ? pass('get-stream-contract', { httpStatus: get.response.status, mode: getMode })
       : fail('get-stream-contract', { httpStatus: get.response.status, contentType: get.contentType }));
   } catch (error) { checks.push(transportFailure('get-stream-contract', error)); }
+
+  if (getMode === 'sse') {
+    try {
+      const originGet = await requestHeadersOnly({
+        url: endpoint,
+        method: 'GET',
+        timeoutMs,
+        headers: { ...getHeaders, origin: INVALID_ORIGIN },
+      });
+      recordTiming('invalid-origin-established-get', originGet);
+      checks.push(originGet.response.status === 403
+        ? pass('invalid-origin-established-get-rejected', { httpStatus: 403 })
+        : fail('invalid-origin-established-get-rejected', { httpStatus: originGet.response.status, expected: 403 }));
+    } catch (error) { checks.push(transportFailure('invalid-origin-established-get-rejected', error)); }
+  } else checks.push(skip('invalid-origin-established-get-rejected', { reason: getMode === 'not-supported' ? 'server does not support GET SSE' : 'GET transport did not establish an SSE path' }));
 
   if (sessionId) {
     const noSession = await safeJson(checks, 'missing-session-transport', request({ headers: { ...baseHeaders(authorizationHeader), 'mcp-protocol-version': negotiated }, body: rpc(7, 'ping') }));
