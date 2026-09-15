@@ -11,8 +11,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from traceforge.cli import main as cli_main
-from traceforge.core import EvidenceDocument, analyze, sha256_json, verify_receipt
-from traceforge.server import Handler
+from traceforge.core import MAX_EVIDENCE_BYTES, EvidenceDocument, analyze, sha256_json, verify_receipt
+from traceforge.server import MAX_REQUEST_BYTES, Handler
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO_TEXT = (ROOT / "examples" / "incident.txt").read_text(encoding="utf-8")
@@ -57,6 +57,16 @@ class GroundedClaimHostileActionModel:
         )
 
 
+class ChangingIdentityModel(GroundedClaimHostileActionModel):
+    def __init__(self):
+        self.identity_reads = 0
+
+    @property
+    def identity(self) -> str:
+        self.identity_reads += 1
+        return f"changing-identity-test/v{self.identity_reads}"
+
+
 def malformed_checksum_correct_receipt():
     core = {"schema": "x", "evidence": [], "model": "m"}
     digest = sha256_json(core)
@@ -79,6 +89,13 @@ class VerificationBoundaryTests(unittest.TestCase):
         self.assertEqual(finding["status"], "PASS")
         self.assertEqual(finding["action_review"]["status"], "REVIEW_ONLY")
         self.assertIn("not evidence-verified or authorized", finding["action_review"]["reason"])
+        self.assertTrue(verify_receipt(result))
+
+    def test_model_identity_is_captured_once_and_receipt_verifies(self):
+        model = ChangingIdentityModel()
+        result = analyze(DEMO_TEXT, model)
+        self.assertEqual(model.identity_reads, 1)
+        self.assertEqual(result["model"], result["receipt"]["model"])
         self.assertTrue(verify_receipt(result))
 
     def test_checksum_correct_malformed_receipt_returns_false_without_raising(self):
@@ -136,7 +153,7 @@ class ApiHardeningTests(unittest.TestCase):
         text = "\n".join(f"{line}{i:04d}" for i in range(5_000)) + "\n"
         request_size = len(json.dumps({"text": text, "mode": "demo"}, separators=(",", ":")).encode("utf-8"))
         self.assertGreater(request_size, 128_000)
-        self.assertLess(request_size, 320_000)
+        self.assertLess(request_size, MAX_REQUEST_BYTES)
 
         status, body = self.post("/api/analyze", {"text": text, "mode": "demo"})
         self.assertEqual(status, 200)
@@ -145,7 +162,21 @@ class ApiHardeningTests(unittest.TestCase):
 
         receipt_size = len(json.dumps(body, separators=(",", ":")).encode("utf-8"))
         self.assertGreater(receipt_size, 320_000)
-        self.assertLess(receipt_size, 1_000_000)
+        verify_status, verified = self.post("/api/verify", body)
+        self.assertEqual(verify_status, 200)
+        self.assertEqual(verified, {"valid": True})
+
+    def test_control_character_evidence_fits_json_transport_ceiling(self):
+        text = "\x01" * (MAX_EVIDENCE_BYTES - 1) + "\n"
+        request_size = len(json.dumps({"text": text, "mode": "demo"}, separators=(",", ":")).encode("utf-8"))
+        self.assertGreater(request_size, 1_000_000)
+        self.assertLess(request_size, MAX_REQUEST_BYTES)
+
+        status, body = self.post("/api/analyze", {"text": text, "mode": "demo"})
+        self.assertEqual(status, 200)
+        self.assertEqual(body["evidence"]["byte_count"], MAX_EVIDENCE_BYTES)
+        self.assertTrue(verify_receipt(body))
+
         verify_status, verified = self.post("/api/verify", body)
         self.assertEqual(verify_status, 200)
         self.assertEqual(verified, {"valid": True})
