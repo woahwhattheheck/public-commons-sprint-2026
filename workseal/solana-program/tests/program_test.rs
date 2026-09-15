@@ -27,8 +27,7 @@ async fn process(
     extra_signers: &[&Keypair],
 ) -> Result<(), String> {
     let blockhash = context
-        .banks_client
-        .get_latest_blockhash()
+        .get_new_latest_blockhash()
         .await
         .map_err(|err| format!("blockhash: {err:?}"))?;
     let mut signers: Vec<&dyn Signer> = vec![&context.payer];
@@ -77,11 +76,14 @@ async fn test_context() -> ProgramTestContext {
         spl_associated_token_account::id(),
         processor!(spl_associated_token_account::processor::process_instruction),
     );
-    let context = program.start_with_context().await;
-    context.set_sysvar(&Clock {
-        unix_timestamp: CLOCK_START,
-        ..Clock::default()
-    });
+    let mut context = program.start_with_context().await;
+    let mut clock = context
+        .banks_client
+        .get_sysvar::<Clock>()
+        .await
+        .expect("clock");
+    clock.unix_timestamp = CLOCK_START;
+    context.set_sysvar(&clock);
     context
 }
 
@@ -408,10 +410,13 @@ async fn real_program_refund_is_time_gated_and_terminal() {
     assert!(process(&mut context, vec![refund.clone()], &[]).await.is_err());
     assert_eq!(token_amount(&mut context, vault).await, ESCROW_AMOUNT);
 
-    context.set_sysvar(&Clock {
-        unix_timestamp: CLOCK_START + 11,
-        ..Clock::default()
-    });
+    let mut clock = context
+        .banks_client
+        .get_sysvar::<Clock>()
+        .await
+        .expect("clock");
+    clock.unix_timestamp = CLOCK_START + 11;
+    context.set_sysvar(&clock);
     process(&mut context, vec![refund.clone()], &[])
         .await
         .expect("mature refund");
