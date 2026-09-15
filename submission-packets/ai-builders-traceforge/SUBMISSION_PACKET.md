@@ -39,7 +39,7 @@ The product normalizes incident notes and logs, binds them to a SHA-256 digest, 
 
 The trust boundary is explicit: model-generated summaries and suggested actions never inherit a verified claim state. They remain receipt-bound `REVIEW_ONLY` text for an operator to assess independently. Every analysis includes an offline-verifiable integrity receipt bound to the exact evidence, analysis result, review boundaries, and model identity.
 
-Judges can use the full deterministic demo without an API key or paid service. For live AI, an operator may configure an authorized OpenAI-compatible HTTPS endpoint. TraceForge keeps credentials environment-only, rejects unsafe endpoint shapes and malformed model JSON, and never autonomously executes remediation or mutates infrastructure.
+Judges can use the full deterministic demo without an API key or paid service. For live AI, an operator may configure an authorized OpenAI-compatible HTTPS endpoint. TraceForge keeps credentials environment-only, rejects unsafe endpoint shapes and malformed model JSON, and never autonomously executes remediation or mutates infrastructure. Public HTTP live inference additionally requires the operator's exact `TRACEFORGE_ALLOW_PUBLIC_LIVE=1` opt-in; provider configuration alone does not authorize anonymous paid inference.
 
 ### Live demo
 
@@ -77,15 +77,17 @@ https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/tracefor
 
 ## Source-to-demo binding
 
-The hosted deployment was created from repository commit:
+Railway production reports a successful source-triggered deployment from repository commit:
 
-`9c51622893e93af5e7247bea42790f7ed1c2abf2`
+`fb1f699fbba4684046d4c1015d80fc06f2034ab3`
 
-At packet creation, both that deployment commit and then-current repository main resolve the `traceforge-ai` subtree to the exact Git tree:
+That deployment commit and the repository main generation used for this packet rebind resolve the `traceforge-ai` subtree to the exact Git tree:
 
-`8b23ad6a894c7afd29e65407ae3ae8440744fd33`
+`c041168a5609c3b3156c87bd61ea707ecd2809d5`
 
-This packet intentionally lives **outside** `traceforge-ai/**`, so adding submission metadata does not mutate the code/docs subtree served by the deployment.
+The successful Railway deployment receipt for this generation is `41692dfe-2f40-4477-bd64-2a17d34f2ed1`. The merge commit is the security-hardening generation from PR #87; public HTTP live inference now remains off unless an operator supplies the separate exact opt-in in addition to provider configuration.
+
+This packet intentionally lives **outside** `traceforge-ai/**`, so rebinding submission metadata does not mutate the code/docs subtree served by the deployment.
 
 Run the fail-closed proof before final submission:
 
