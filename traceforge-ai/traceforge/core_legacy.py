@@ -8,9 +8,11 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 MAX_EVIDENCE_BYTES = 256_000
+MAX_CANONICAL_EVIDENCE_BYTES = MAX_EVIDENCE_BYTES + 1
 MAX_EVIDENCE_LINES = 5_000
 MAX_MODEL_OUTPUT_BYTES = 128_000
 MAX_RECEIPT_BYTES = 1_000_000
+MAX_MODEL_IDENTITY_CHARS = 500
 MAX_FINDINGS = 12
 MIN_SUPPORT_SCORE = 0.16
 
@@ -335,9 +337,10 @@ def analyze(text: str, model: ModelClient) -> dict[str, Any]:
             }
         )
 
+    model_identity = _bounded_text(model.identity, "model identity", max_chars=MAX_MODEL_IDENTITY_CHARS)
     result_core: dict[str, Any] = {
         "schema": "traceforge-analysis/v1",
-        "model": model.identity,
+        "model": model_identity,
         "evidence": {
             "sha256": evidence.sha256,
             "line_count": len(evidence.lines),
@@ -356,7 +359,7 @@ def analyze(text: str, model: ModelClient) -> dict[str, Any]:
         "schema": "traceforge-receipt/v1",
         "evidence_sha256": evidence.sha256,
         "analysis_sha256": analysis_sha,
-        "model": model.identity,
+        "model": model_identity,
         "run_id": analysis_sha[:16],
     }
     return {**result_core, "receipt": receipt}
@@ -378,7 +381,7 @@ def _receipt_evidence_line_map(evidence: Any) -> dict[str, str] | None:
     byte_count = evidence.get("byte_count")
     if not isinstance(line_count, int) or isinstance(line_count, bool) or not 1 <= line_count <= MAX_EVIDENCE_LINES:
         return None
-    if not isinstance(byte_count, int) or isinstance(byte_count, bool) or not 1 <= byte_count <= MAX_EVIDENCE_BYTES:
+    if not isinstance(byte_count, int) or isinstance(byte_count, bool) or not 1 <= byte_count <= MAX_CANONICAL_EVIDENCE_BYTES:
         return None
     lines = evidence.get("lines")
     if not isinstance(lines, list) or len(lines) != line_count:
@@ -403,7 +406,7 @@ def _receipt_evidence_line_map(evidence: Any) -> dict[str, str] | None:
         canonical_bytes = canonical.encode("utf-8")
     except UnicodeEncodeError:
         return None
-    if len(canonical_bytes) != byte_count or len(canonical_bytes) > MAX_EVIDENCE_BYTES:
+    if len(canonical_bytes) != byte_count or len(canonical_bytes) > MAX_CANONICAL_EVIDENCE_BYTES:
         return None
     if hashlib.sha256(canonical_bytes).hexdigest() != evidence["sha256"]:
         return None
@@ -488,7 +491,7 @@ def _receipt_shape_valid(result: dict[str, Any]) -> bool:
         return False
     if result.get("schema") != "traceforge-analysis/v1":
         return False
-    if not isinstance(result.get("model"), str) or not result["model"]:
+    if not _normalized_bounded_text(result.get("model"), max_chars=MAX_MODEL_IDENTITY_CHARS):
         return False
     if not _normalized_bounded_text(result.get("summary"), max_chars=2_000):
         return False
@@ -530,7 +533,7 @@ def _receipt_shape_valid(result: dict[str, Any]) -> bool:
         return False
     if not isinstance(receipt.get("run_id"), str) or not _RUN_ID.fullmatch(receipt["run_id"]):
         return False
-    if not isinstance(receipt.get("model"), str):
+    if not _normalized_bounded_text(receipt.get("model"), max_chars=MAX_MODEL_IDENTITY_CHARS):
         return False
     return True
 
