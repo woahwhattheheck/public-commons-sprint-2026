@@ -6,7 +6,7 @@ import json
 import math
 import unittest
 
-from traceforge.core import EvidenceDocument, analyze, sha256_json, verify_receipt
+from traceforge.core import MAX_EVIDENCE_BYTES, EvidenceDocument, analyze, sha256_json, verify_receipt
 
 
 EVIDENCE = "2026-09-14 database timeout while acquiring checkout connection\n"
@@ -104,6 +104,11 @@ class ReceiptSemanticConsistencyTests(unittest.TestCase):
 
     def test_valid_analyzer_packet_still_verifies(self):
         self.assertTrue(verify_receipt(valid_packet()))
+
+    def test_max_raw_evidence_without_terminal_newline_round_trips(self):
+        packet = analyze("x" * MAX_EVIDENCE_BYTES, StaticModel())
+        self.assertEqual(packet["evidence"]["byte_count"], MAX_EVIDENCE_BYTES + 1)
+        self.assertTrue(verify_receipt(packet))
 
     def test_legitimate_missing_citation_hold_still_verifies(self):
         packet = analyze(EVIDENCE, MissingCitationModel())
