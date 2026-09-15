@@ -1,6 +1,6 @@
 {
   "schema": "traceforge-ai-builders-submission/v1",
-  "checked_at": "2026-09-14",
+  "checked_at": "2026-09-15",
   "operation": "AI-BUILDERS-TRACEFORGE-SUBMISSION-PACKET-ZNKR7W4-20260914",
   "competition": {
     "name": "AI Builders Hackathon",
@@ -14,17 +14,20 @@
     },
     "required_materials": [
       "project title and description",
+      "working product / functional prototype",
       "publicly accessible source repository",
-      "demo video (3-5 minutes recommended)",
+      "demo video (up to 5 minutes on current overview; 3-5 minutes recommended in rules)",
       "documentation explaining problem, solution, and technology",
+      "presentation deck (up to 10 slides on current overview)",
       "team member details"
     ],
     "judging_criteria": [
       "innovation and originality",
       "technical implementation",
-      "real-world impact",
+      "real-world impact / problem solving",
       "user experience and design",
-      "scalability and feasibility"
+      "presentation and demo (current overview)",
+      "scalability and feasibility (rules)"
     ]
   },
   "project": {
@@ -47,8 +50,8 @@
   },
   "source_binding": {
     "subtree_path": "traceforge-ai",
-    "deployment_source_commit": "fb1f699fbba4684046d4c1015d80fc06f2034ab3",
-    "expected_subtree_sha": "c041168a5609c3b3156c87bd61ea707ecd2809d5",
+    "deployment_source_commit": "f1c4b8f0dbde9ae364765c415181e9731c83af54",
+    "expected_subtree_sha": "0a331961cbe42aae42c9d9edc96b31e43edc6fbc",
     "meaning": "The deployed source commit and the repository HEAD used for submission must resolve traceforge-ai to this exact Git tree. A mismatch means the live demo is no longer proven source-identical to the submitted subtree."
   },
   "human_gates": [
@@ -65,7 +68,7 @@
     {
       "id": "demo_video",
       "status": "PENDING_HUMAN",
-      "reason": "Record and upload an accessible 3-5 minute demo using the existing script and live deployment."
+      "reason": "Record and upload an accessible demo of up to 5 minutes using the existing script and live deployment; the rules recommend 3-5 minutes."
     },
     {
       "id": "terms_and_submit",
