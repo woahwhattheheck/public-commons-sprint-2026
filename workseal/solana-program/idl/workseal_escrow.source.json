@@ -1,0 +1,74 @@
+{
+  "schema": "workseal-anchor-source-contract/v1",
+  "generated": false,
+  "deploymentObserved": false,
+  "programId": "3WxhciNh6XDy9iCYZtoHx2Y8LzbpTRELJURPkLGX81MM",
+  "pda": {
+    "seeds": [
+      "utf8:workseal-v1",
+      "bytes32:task_digest"
+    ],
+    "bumpStored": true
+  },
+  "instructions": {
+    "initialize": {
+      "signers": [
+        "buyer",
+        "worker"
+      ],
+      "binds": [
+        "task_digest",
+        "receipt_authority_fingerprint",
+        "buyer",
+        "worker",
+        "mint",
+        "amount",
+        "refund_after_unix"
+      ],
+      "requires": "refund_after_unix > clock.unix_timestamp"
+    },
+    "fund": {
+      "signers": [
+        "buyer"
+      ],
+      "fromPhase": "UNFUNDED",
+      "toPhase": "FUNDED",
+      "transfer": "buyer_ata -> escrow_vault_ata"
+    },
+    "settle": {
+      "signers": [
+        "verifier"
+      ],
+      "authority": "sha256(ed25519_spki_prefix || verifier_pubkey) == receipt_authority_fingerprint",
+      "binds": [
+        "result_digest",
+        "acceptance_digest",
+        "event_head",
+        "generation"
+      ],
+      "fromPhase": "FUNDED",
+      "toPhase": "SETTLED",
+      "transfer": "escrow_vault_ata -> worker_ata"
+    },
+    "refund": {
+      "signers": [
+        "buyer"
+      ],
+      "binds": [
+        "reason_digest"
+      ],
+      "fromPhase": "FUNDED",
+      "toPhase": "REFUNDED",
+      "transfer": "escrow_vault_ata -> buyer_ata",
+      "requires": "clock.unix_timestamp >= refund_after_unix"
+    }
+  },
+  "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  "associatedTokenProgram": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+  "authorityCeiling": {
+    "walletWritePerformedByRepository": false,
+    "rpcWritePerformedByRepository": false,
+    "deploymentObserved": false
+  },
+  "programIdStatus": "SOURCE_LOCAL_SYNTHETIC_NO_DEPLOYMENT_KEYPAIR"
+}
