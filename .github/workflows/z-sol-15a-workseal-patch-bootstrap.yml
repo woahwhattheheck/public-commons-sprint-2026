@@ -1,0 +1,95 @@
+name: Z Sol 15A WorkSeal patch bootstrap
+
+on:
+  push:
+    branches:
+      - z-sol-15a/workseal-programtest-unique-clock-fix-20260915
+    paths:
+      - '.github/workflows/z-sol-15a-workseal-patch-bootstrap.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: z-sol-15a/workseal-programtest-unique-clock-fix-20260915
+          fetch-depth: 0
+      - name: Repair transaction uniqueness and Clock mutation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('workseal/solana-program/tests/program_test.rs')
+          text = path.read_text()
+
+          old = '''    let blockhash = context
+                  .banks_client
+                  .get_latest_blockhash()
+                  .await
+                  .map_err(|err| format!("blockhash: {err:?}"))?;
+          '''
+          new = '''    let blockhash = context
+                  .get_new_latest_blockhash()
+                  .await
+                  .map_err(|err| format!("blockhash: {err:?}"))?;
+          '''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one process blockhash block, found {text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old = '''    let context = program.start_with_context().await;
+              context.set_sysvar(&Clock {
+                  unix_timestamp: CLOCK_START,
+                  ..Clock::default()
+              });
+              context
+          '''
+          new = '''    let mut context = program.start_with_context().await;
+              let mut clock = context
+                  .banks_client
+                  .get_sysvar::<Clock>()
+                  .await
+                  .expect("clock");
+              clock.unix_timestamp = CLOCK_START;
+              context.set_sysvar(&clock);
+              context
+          '''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one initial Clock block, found {text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old = '''    context.set_sysvar(&Clock {
+                  unix_timestamp: CLOCK_START + 11,
+                  ..Clock::default()
+              });
+          '''
+          new = '''    let mut clock = context
+                  .banks_client
+                  .get_sysvar::<Clock>()
+                  .await
+                  .expect("clock");
+              clock.unix_timestamp = CLOCK_START + 11;
+              context.set_sysvar(&clock);
+          '''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one mature Clock block, found {text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+      - name: Commit repair and remove bootstrap
+        shell: bash
+        run: |
+          git config user.name "Z-Sol-15A"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/z-sol-15a-workseal-patch-bootstrap.yml
+          git add workseal/solana-program/tests/program_test.rs
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "test(workseal): make repeated program-test transactions real"
+          git push origin HEAD:z-sol-15a/workseal-programtest-unique-clock-fix-20260915
