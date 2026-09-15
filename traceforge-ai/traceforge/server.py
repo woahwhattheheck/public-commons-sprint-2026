@@ -23,6 +23,17 @@ _ASSETS = {
 }
 
 
+def _provider_live_configured() -> bool:
+    return bool(os.environ.get("TRACEFORGE_BASE_URL") and os.environ.get("TRACEFORGE_MODEL"))
+
+
+def _public_live_enabled() -> bool:
+    # Deliberately exact: provider credentials alone must never make a public
+    # deployment an anonymous paid-inference endpoint. Operators must make a
+    # separate, explicit cost/risk decision for the HTTP surface.
+    return _provider_live_configured() and os.environ.get("TRACEFORGE_ALLOW_PUBLIC_LIVE") == "1"
+
+
 def _json_bytes(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
@@ -68,11 +79,15 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.OK, {"text": EXAMPLE.read_text(encoding="utf-8")})
             return
         if self.path == "/api/config":
+            provider_configured = _provider_live_configured()
+            public_live_enabled = _public_live_enabled()
             self._send_json(
                 HTTPStatus.OK,
                 {
-                    "liveConfigured": bool(os.environ.get("TRACEFORGE_BASE_URL") and os.environ.get("TRACEFORGE_MODEL")),
-                    "liveModel": os.environ.get("TRACEFORGE_MODEL", "")[:100],
+                    "liveConfigured": public_live_enabled,
+                    "liveModel": os.environ.get("TRACEFORGE_MODEL", "")[:100] if public_live_enabled else "",
+                    "providerConfigured": provider_configured,
+                    "publicLiveOptInRequired": True,
                 },
             )
             return
@@ -106,6 +121,11 @@ class Handler(BaseHTTPRequestHandler):
             if mode == "demo":
                 model = DemoModel()
             elif mode == "live":
+                if not _public_live_enabled():
+                    raise TraceForgeError(
+                        "public HTTP live mode is disabled; an operator must set "
+                        "TRACEFORGE_ALLOW_PUBLIC_LIVE=1 in addition to provider configuration"
+                    )
                 model = OpenAICompatibleModel.from_env()
             else:
                 raise TraceForgeError("mode must be demo or live")

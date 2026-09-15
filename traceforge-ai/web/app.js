@@ -170,8 +170,17 @@ analyzeButton.addEventListener('click', analyze);
   try {
     const [config, demo] = await Promise.all([fetch('/api/config'), fetch('/api/demo')]);
     const c = await config.json();
+    const liveOption = $('mode').querySelector('option[value="live"]');
+    if (liveOption) liveOption.disabled = !c.liveConfigured;
+    if (!c.liveConfigured && $('mode').value === 'live') $('mode').value = 'demo';
     $('liveDot').classList.toggle('online', c.liveConfigured);
-    $('configText').textContent = c.liveConfigured ? `Live AI ready · ${c.liveModel}` : 'Demo mode ready · live AI not configured';
+    if (c.liveConfigured) {
+      $('configText').textContent = `Public live AI enabled · ${c.liveModel}`;
+    } else if (c.providerConfigured) {
+      $('configText').textContent = 'Demo mode ready · provider configured, public live opt-in off';
+    } else {
+      $('configText').textContent = 'Demo mode ready · live AI not configured';
+    }
     const d = await demo.json();
     incident.value = d.text;
     updateCounts();
