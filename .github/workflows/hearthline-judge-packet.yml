@@ -1,0 +1,45 @@
+name: Hearthline judge packet
+
+on:
+  pull_request:
+    paths:
+      - 'hearthline-alexa-mcp/JUDGE_PACKET.md'
+      - 'hearthline-alexa-mcp/judge/**'
+      - 'hearthline-alexa-mcp/test/judge-packet.test.mjs'
+      - '.github/workflows/hearthline-judge-packet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'hearthline-alexa-mcp/JUDGE_PACKET.md'
+      - 'hearthline-alexa-mcp/judge/**'
+      - 'hearthline-alexa-mcp/test/judge-packet.test.mjs'
+      - '.github/workflows/hearthline-judge-packet.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify public-carrier byte identity and truth boundary
+        working-directory: hearthline-alexa-mcp
+        run: node judge/verify.mjs
+      - name: Compile deterministic judge packet twice
+        working-directory: hearthline-alexa-mcp
+        run: |
+          node judge/packet.mjs > /tmp/hearthline-judge-a.json
+          node judge/packet.mjs > /tmp/hearthline-judge-b.json
+          cmp /tmp/hearthline-judge-a.json /tmp/hearthline-judge-b.json
+      - name: Assert packet cannot manufacture external claims
+        working-directory: hearthline-alexa-mcp
+        run: |
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('/tmp/hearthline-judge-a.json','utf8'));if(!Object.values(p.truthBoundary).every(v=>v===false))process.exit(1);if(p.reproducibility.networkRequired||p.reproducibility.credentialsRequired)process.exit(1);console.log('truth-boundary-ok')"
+      - name: Run complete project regression suite including judge tamper tests
+        working-directory: hearthline-alexa-mcp
+        run: npm test

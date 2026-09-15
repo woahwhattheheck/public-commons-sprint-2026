@@ -1,0 +1,43 @@
+{
+  "schema": "hearthline-judge-submission-fields/v1",
+  "project": "Hearthline",
+  "title": "Hearthline — stateful household mission control over MCP",
+  "tagline": "A durable Alexa+ household mission orchestrator that keeps irreversible actions behind explicit human approval and idempotent execution.",
+  "problem": "Household goals span multiple conversations and mix harmless reads with actions that could create real-world effects. A useful assistant needs durable mission state without silently turning conversational intent into a purchase, booking, notification, or other commitment.",
+  "solution": "Hearthline is a self-hosted MCP 2025-11-25 Streamable HTTP server that combines live read-only context with durable household state, builds dependency-aware missions, rotates plan hashes after approval-state changes, and executes only explicitly approved demo actions with idempotency receipts.",
+  "judgePath": [
+    "README.md",
+    "JUDGE_PACKET.md",
+    "docs/DEMO.md",
+    "docs/ARCHITECTURE.md",
+    "simulator/index.html",
+    "runtime/conformance-probe.mjs",
+    "PUBLIC_CARRIER_PROVENANCE.json"
+  ],
+  "demoCommands": [
+    "node judge/verify.mjs",
+    "npm test",
+    "node runtime/conformance-probe.mjs",
+    "node scripts/demo.mjs",
+    "python -m http.server 8080"
+  ],
+  "truthBoundary": {
+    "alexaRegistered": false,
+    "alexaSubmitted": false,
+    "awsDeployed": false,
+    "awsSpendIncurred": false,
+    "competitionEligibilityConfirmed": false,
+    "devpostSubmitted": false,
+    "judgingConfirmed": false,
+    "organizerAcceptanceReceived": false,
+    "paymentReceived": false,
+    "prizeAwarded": false
+  },
+  "ownerActionsRequired": [
+    "Confirm the current Amazon Build, Ship, Shape / Alexa+ rules, deadline, eligibility, and required submission fields in the official portal.",
+    "Complete any account registration, identity verification, rule acceptance, or terms acceptance that requires the owner.",
+    "Decide whether to create live Alexa/AWS evidence; if so, authorize and execute it separately and preserve the resulting external receipts.",
+    "Paste or adapt this packet into the official submission surface, review every external claim against fresh receipts, and explicitly submit.",
+    "Preserve the final submission URL / confirmation / timestamp separately; source publication is not a submission receipt."
+  ]
+}
