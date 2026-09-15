@@ -16,7 +16,6 @@ use spl_token::state::{Account as SplAccount, Mint};
 const TOKEN_DECIMALS: u8 = 6;
 const INITIAL_BALANCE: u64 = 900_000_000;
 const ESCROW_AMOUNT: u64 = 125_000_000;
-const CLOCK_START: i64 = 1_800_000_000;
 const SPKI_PREFIX: &[u8] = &[
     0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
 ];
@@ -77,12 +76,15 @@ async fn test_context() -> ProgramTestContext {
         spl_associated_token_account::id(),
         processor!(spl_associated_token_account::processor::process_instruction),
     );
-    let context = program.start_with_context().await;
-    context.set_sysvar(&Clock {
-        unix_timestamp: CLOCK_START,
-        ..Clock::default()
-    });
+    program.start_with_context().await
+}
+
+async fn bank_clock(context: &mut ProgramTestContext) -> Clock {
     context
+        .banks_client
+        .get_sysvar::<Clock>()
+        .await
+        .expect("clock sysvar")
 }
 
 async fn create_mint_and_wallets(
@@ -318,6 +320,7 @@ async fn real_program_settlement_moves_exact_tokens_and_rejects_hostiles() {
     let wrong_verifier = Keypair::new();
     let (mint, buyer_token, worker_token) = create_mint_and_wallets(&mut context, &worker).await;
     let task_digest = [0x11; 32];
+    let refund_after_unix = bank_clock(&mut context).await.unix_timestamp + 600;
     let (initialize, escrow, vault) = initialize_instruction(
         &context,
         &worker,
@@ -326,7 +329,7 @@ async fn real_program_settlement_moves_exact_tokens_and_rejects_hostiles() {
         buyer_token,
         worker_token,
         task_digest,
-        CLOCK_START + 600,
+        refund_after_unix,
     );
     process(&mut context, vec![initialize], &[&worker])
         .await
@@ -386,6 +389,7 @@ async fn real_program_refund_is_time_gated_and_terminal() {
     let verifier = Keypair::new();
     let (mint, buyer_token, worker_token) = create_mint_and_wallets(&mut context, &worker).await;
     let task_digest = [0x22; 32];
+    let refund_after_unix = bank_clock(&mut context).await.unix_timestamp + 10;
     let (initialize, escrow, vault) = initialize_instruction(
         &context,
         &worker,
@@ -394,7 +398,7 @@ async fn real_program_refund_is_time_gated_and_terminal() {
         buyer_token,
         worker_token,
         task_digest,
-        CLOCK_START + 10,
+        refund_after_unix,
     );
     process(&mut context, vec![initialize], &[&worker])
         .await
@@ -408,10 +412,14 @@ async fn real_program_refund_is_time_gated_and_terminal() {
     assert!(process(&mut context, vec![refund.clone()], &[]).await.is_err());
     assert_eq!(token_amount(&mut context, vault).await, ESCROW_AMOUNT);
 
-    context.set_sysvar(&Clock {
-        unix_timestamp: CLOCK_START + 11,
-        ..Clock::default()
-    });
+    let mut clock = bank_clock(&mut context).await;
+    clock.unix_timestamp = refund_after_unix + 1;
+    context.set_sysvar(&clock);
+    assert_eq!(
+        bank_clock(&mut context).await.unix_timestamp,
+        refund_after_unix + 1
+    );
+
     process(&mut context, vec![refund.clone()], &[])
         .await
         .expect("mature refund");
