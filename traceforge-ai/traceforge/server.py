@@ -7,11 +7,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from .core import TraceForgeError, analyze, strict_json_loads, verify_receipt
+from .core import MAX_EVIDENCE_BYTES, TraceForgeError, analyze, strict_json_loads, verify_receipt
 from .model import DemoModel, OpenAICompatibleModel
 from .receipt_io import MAX_RECEIPT_BYTES, render_analysis_packet
 
-MAX_REQUEST_BYTES = 320_000
+# JSON may encode each accepted non-NUL C0 control byte as a six-byte
+# ``\u00XX`` escape. Keep the HTTP request boundary above the core's exact
+# decoded evidence ceiling plus bounded schema/mode overhead.
+_JSON_ESCAPE_EXPANSION = 6
+MAX_REQUEST_BYTES = MAX_EVIDENCE_BYTES * _JSON_ESCAPE_EXPANSION + 64_000
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 EXAMPLE = ROOT / "examples" / "incident.txt"
