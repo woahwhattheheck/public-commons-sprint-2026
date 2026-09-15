@@ -5,11 +5,30 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_COUNT = 47;
+
+// Deliberate verifier-generation pins. The mutable carrier files below are data,
+// not authorities for their own identity. Updating either file requires an
+// explicit verifier generation change that reviews and replaces these constants.
+const TRUSTED_SOURCE_MATRIX_BLOB = 'f3ee0e9edca5bae569767f4b7737c3d849d8dda0';
+const TRUSTED_PROVENANCE_BLOB = '081c4f11638c7afcb1bad66140bbb0e91c8eb2b0';
+
 const REQUIRED_FALSE_CLAIMS = [
   'alexaSubmitted',
   'awsDeployed',
   'devpostSubmitted',
   'prizeOrRevenueClaimed',
+];
+const REQUIRED_SUBMISSION_TRUTH = [
+  'alexaRegistered',
+  'alexaSubmitted',
+  'awsDeployed',
+  'awsSpendIncurred',
+  'competitionEligibilityConfirmed',
+  'devpostSubmitted',
+  'judgingConfirmed',
+  'organizerAcceptanceReceived',
+  'paymentReceived',
+  'prizeAwarded',
 ];
 
 export class JudgePacketError extends Error {
@@ -50,6 +69,18 @@ async function readJson(rootDir, relative, readFileImpl) {
   catch { fail('INVALID_JSON', relative); }
 }
 
+async function readPinnedJson(rootDir, relative, expectedBlob, mismatchCode, readFileImpl) {
+  const file = path.join(rootDir, ...safeRelative(relative, relative).split('/'));
+  let raw;
+  try { raw = await readFileImpl(file); }
+  catch (error) { fail('MISSING_ARTIFACT', `${relative}: ${error?.code ?? error?.message ?? error}`); }
+  const bytes = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+  const actualBlob = gitBlobSha(bytes);
+  if (actualBlob !== expectedBlob) fail(mismatchCode, `${relative}: ${actualBlob} != ${expectedBlob}`);
+  try { return JSON.parse(bytes.toString('utf8')); }
+  catch { fail('INVALID_JSON', relative); }
+}
+
 function assertHex(value, length, label) {
   if (typeof value !== 'string' || !new RegExp(`^[0-9a-f]{${length}}$`).test(value)) fail('INVALID_DIGEST', label);
 }
@@ -61,9 +92,33 @@ function sameSet(a, b) {
   return left.every((value, index) => value === right[index]);
 }
 
+function requireExactFalseClaims(value, expectedKeys, missingCode, keyCode, trueCode, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail(missingCode, `missing ${label}`);
+  const actualKeys = Object.keys(value);
+  if (!sameSet(actualKeys, expectedKeys)) {
+    fail(keyCode, `${label}: expected [${[...expectedKeys].sort().join(',')}], got [${actualKeys.sort().join(',')}]`);
+  }
+  for (const claim of expectedKeys) {
+    if (value[claim] !== false) fail(trueCode, `${label}.${claim}`);
+  }
+}
+
 export async function verifyJudgePacket({ rootDir = PROJECT_ROOT, readFileImpl = readFile, statImpl = stat } = {}) {
-  const provenance = await readJson(rootDir, 'PUBLIC_CARRIER_PROVENANCE.json', readFileImpl);
-  const matrix = await readJson(rootDir, 'judge/source-blobs.json', readFileImpl);
+  // Authenticate the raw bytes before parsing or trusting any field within them.
+  const provenance = await readPinnedJson(
+    rootDir,
+    'PUBLIC_CARRIER_PROVENANCE.json',
+    TRUSTED_PROVENANCE_BLOB,
+    'PROVENANCE_BLOB_MISMATCH',
+    readFileImpl,
+  );
+  const matrix = await readPinnedJson(
+    rootDir,
+    'judge/source-blobs.json',
+    TRUSTED_SOURCE_MATRIX_BLOB,
+    'SOURCE_MATRIX_BLOB_MISMATCH',
+    readFileImpl,
+  );
   const manifest = await readJson(rootDir, 'release/public-release.manifest.json', readFileImpl);
   const submission = await readJson(rootDir, 'judge/submission-fields.json', readFileImpl);
 
@@ -121,15 +176,23 @@ export async function verifyJudgePacket({ rootDir = PROJECT_ROOT, readFileImpl =
   const manifestEntry = matrix.files.find((entry) => entry.path === 'release/public-release.manifest.json');
   if (!manifestEntry || manifestEntry.blob !== provenance.manifestBlob) fail('MANIFEST_BLOB_BINDING', 'manifest matrix entry does not bind provenance');
 
-  if (!provenance.externalClaims || typeof provenance.externalClaims !== 'object') fail('EXTERNAL_CLAIMS', 'missing public-carrier truth boundary');
-  for (const claim of REQUIRED_FALSE_CLAIMS) {
-    if (provenance.externalClaims[claim] !== false) fail('EXTERNAL_CLAIM_TRUE', `provenance.${claim}`);
-  }
+  requireExactFalseClaims(
+    provenance.externalClaims,
+    REQUIRED_FALSE_CLAIMS,
+    'EXTERNAL_CLAIMS',
+    'EXTERNAL_CLAIM_KEYS',
+    'EXTERNAL_CLAIM_TRUE',
+    'provenance.externalClaims',
+  );
   if (submission.schema !== 'hearthline-judge-submission-fields/v1') fail('SUBMISSION_SCHEMA', String(submission.schema));
-  if (!submission.truthBoundary || typeof submission.truthBoundary !== 'object') fail('SUBMISSION_TRUTH_BOUNDARY', 'missing');
-  for (const [claim, value] of Object.entries(submission.truthBoundary)) {
-    if (value !== false) fail('SUBMISSION_CLAIM_TRUE', claim);
-  }
+  requireExactFalseClaims(
+    submission.truthBoundary,
+    REQUIRED_SUBMISSION_TRUTH,
+    'SUBMISSION_TRUTH_BOUNDARY',
+    'SUBMISSION_TRUTH_KEYS',
+    'SUBMISSION_CLAIM_TRUE',
+    'submission.truthBoundary',
+  );
   if (!Array.isArray(submission.ownerActionsRequired) || submission.ownerActionsRequired.length < 3) fail('OWNER_ACTIONS', 'submission handoff must expose unresolved owner actions');
 
   for (const required of ['JUDGE_PACKET.md', 'judge/packet.mjs', 'judge/source-blobs.json', 'judge/submission-fields.json', 'judge/verify.mjs']) {

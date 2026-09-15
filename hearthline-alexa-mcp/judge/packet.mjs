@@ -8,7 +8,10 @@ const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
   if (value && typeof value === 'object') {
-    const out = {};
+    // A null-prototype accumulator preserves dangerous JSON keys such as
+    // "__proto__" as ordinary data instead of invoking Object.prototype's
+    // legacy accessor while canonicalizing an untrusted parsed object.
+    const out = Object.create(null);
     for (const key of Object.keys(value).sort()) out[key] = stable(value[key]);
     return out;
   }
