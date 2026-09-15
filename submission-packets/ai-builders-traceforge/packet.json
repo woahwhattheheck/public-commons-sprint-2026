@@ -1,0 +1,82 @@
+{
+  "schema": "traceforge-ai-builders-submission/v1",
+  "checked_at": "2026-09-14",
+  "operation": "AI-BUILDERS-TRACEFORGE-SUBMISSION-PACKET-ZNKR7W4-20260914",
+  "competition": {
+    "name": "AI Builders Hackathon",
+    "official_url": "https://ai-builders-hackathon-2026.devpost.com/",
+    "rules_url": "https://ai-builders-hackathon-2026.devpost.com/rules",
+    "deadline": "2026-09-15T23:00:00-04:00",
+    "target_prize": {
+      "name": "Best SaaS Product",
+      "cash_usd": 4000,
+      "winners": 1
+    },
+    "required_materials": [
+      "project title and description",
+      "publicly accessible source repository",
+      "demo video (3-5 minutes recommended)",
+      "documentation explaining problem, solution, and technology",
+      "team member details"
+    ],
+    "judging_criteria": [
+      "innovation and originality",
+      "technical implementation",
+      "real-world impact",
+      "user experience and design",
+      "scalability and feasibility"
+    ]
+  },
+  "project": {
+    "title": "TraceForge AI",
+    "tagline": "Evidence-grounded incident copilot with deterministic claim verification.",
+    "live_demo": "https://traceforge-ai-production.up.railway.app",
+    "source_repository": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/traceforge-ai",
+    "documentation": "traceforge-ai/README.md",
+    "demo_script": "traceforge-ai/docs/DEMO_SCRIPT.md",
+    "submission_deck": "traceforge-ai/docs/SUBMISSION_DECK.md",
+    "description": "TraceForge AI is a human-operated incident copilot for engineers and operators. It turns incident notes and logs into stable evidence line IDs, asks an Investigator model for cited hypotheses, asks a Skeptic model to challenge those claims, and then applies deterministic citation and support checks before any individual finding can become CLAIM PASS. Unsupported findings remain CLAIM HOLD. Model-written summaries and suggested actions are always REVIEW_ONLY and never inherit a verified claim state. Every analysis includes an offline-verifiable integrity receipt bound to the evidence, result, review boundaries, and model identity. Judges can run the complete workflow without an API key using the deterministic local demo, while an operator can optionally configure an authorized OpenAI-compatible inference endpoint for live AI mode.",
+    "technology": [
+      "Python 3.11+ standard library runtime",
+      "browser UI served by TraceForge",
+      "OpenAI-compatible inference adapter for optional live mode",
+      "deterministic evidence/citation/support verifier",
+      "SHA-256-bound analysis receipts",
+      "unittest adversarial regression suite"
+    ]
+  },
+  "source_binding": {
+    "subtree_path": "traceforge-ai",
+    "deployment_source_commit": "9c51622893e93af5e7247bea42790f7ed1c2abf2",
+    "expected_subtree_sha": "8b23ad6a894c7afd29e65407ae3ae8440744fd33",
+    "meaning": "The deployed source commit and the repository HEAD used for submission must resolve traceforge-ai to this exact Git tree. A mismatch means the live demo is no longer proven source-identical to the submitted subtree."
+  },
+  "human_gates": [
+    {
+      "id": "eligibility",
+      "status": "PENDING_HUMAN",
+      "reason": "Devpost surfaces inconsistent eligibility wording across the overview/UI and rules/discussion. A participant must confirm eligibility and registration state in the authenticated account."
+    },
+    {
+      "id": "team_details",
+      "status": "PENDING_HUMAN",
+      "reason": "Team identities and emails are account facts and are intentionally not invented in this packet."
+    },
+    {
+      "id": "demo_video",
+      "status": "PENDING_HUMAN",
+      "reason": "Record and upload an accessible 3-5 minute demo using the existing script and live deployment."
+    },
+    {
+      "id": "terms_and_submit",
+      "status": "PENDING_HUMAN",
+      "reason": "A participant must review Devpost terms/attestations and perform the final submission action."
+    }
+  ],
+  "claims": {
+    "devpost_submission_completed": false,
+    "eligibility_attested": false,
+    "prize_won": false,
+    "payment_received": false
+  }
+}

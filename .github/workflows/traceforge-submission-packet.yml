@@ -1,0 +1,32 @@
+name: TraceForge submission source proof
+
+on:
+  pull_request:
+    paths:
+      - 'submission-packets/ai-builders-traceforge/**'
+      - '.github/workflows/traceforge-submission-packet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'submission-packets/ai-builders-traceforge/**'
+      - '.github/workflows/traceforge-submission-packet.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-source-binding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate machine-readable packet
+        run: python -m json.tool submission-packets/ai-builders-traceforge/packet.json >/dev/null
+      - name: Compile verifier
+        run: python -m py_compile submission-packets/ai-builders-traceforge/verify.py
+      - name: Prove deployed and submitted TraceForge source are identical
+        run: python submission-packets/ai-builders-traceforge/verify.py --repo-root .
