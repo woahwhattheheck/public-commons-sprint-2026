@@ -84,7 +84,7 @@ pub mod workseal_escrow {
             authority: ctx.accounts.buyer.to_account_info(),
         };
         token_interface::transfer_checked(
-            CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
+            CpiContext::new(ctx.accounts.token_program.key(), cpi_accounts),
             amount,
             ctx.accounts.mint.decimals,
         )?;
@@ -168,7 +168,7 @@ pub mod workseal_escrow {
             authority: ctx.accounts.escrow.to_account_info(),
         };
         token_interface::transfer_checked(
-            CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info(), cpi_accounts, signer),
+            CpiContext::new_with_signer(ctx.accounts.token_program.key(), cpi_accounts, signer),
             amount,
             ctx.accounts.mint.decimals,
         )?;
@@ -216,7 +216,7 @@ pub mod workseal_escrow {
             authority: ctx.accounts.escrow.to_account_info(),
         };
         token_interface::transfer_checked(
-            CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info(), cpi_accounts, signer),
+            CpiContext::new_with_signer(ctx.accounts.token_program.key(), cpi_accounts, signer),
             amount,
             ctx.accounts.mint.decimals,
         )?;

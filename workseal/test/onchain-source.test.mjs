@@ -36,7 +36,9 @@ test('Anchor release and refund move only pinned SPL mint under escrow PDA signa
   const rust = await source();
   const transfers = rust.match(/token_interface::transfer_checked/g) ?? [];
   assert.equal(transfers.length, 3, 'fund, release, and refund each use transfer_checked');
-  assert.match(rust, /CpiContext::new_with_signer/);
+  assert.match(rust, /CpiContext::new\(ctx\.accounts\.token_program\.key\(\), cpi_accounts\)/);
+  const signed = rust.match(/CpiContext::new_with_signer\(ctx\.accounts\.token_program\.key\(\), cpi_accounts, signer\)/g) ?? [];
+  assert.equal(signed.length, 2, 'release and refund CPI use escrow-PDA signer seeds');
   assert.match(rust, /token::authority = worker/);
   assert.match(rust, /token::authority = buyer/);
   assert.match(rust, /require_eq!\(ctx\.accounts\.escrow\.phase, PHASE_ACCEPTED/);
@@ -51,10 +53,10 @@ test('dispute freezes pre-acceptance escrow and requires buyer or worker', async
   assert.match(rust, /ctx\.accounts\.escrow\.phase = PHASE_DISPUTED/);
 });
 
-test('program source pins current Anchor crates and IDL build features', async () => {
+test('program source pins Anchor crates exactly and exposes IDL build features', async () => {
   const cargo = await readFile(cargoUrl, 'utf8');
-  assert.match(cargo, /anchor-lang = "1\.1\.1"/);
-  assert.match(cargo, /anchor-spl = "1\.1\.1"/);
+  assert.match(cargo, /anchor-lang = "=1\.2\.0"/);
+  assert.match(cargo, /anchor-spl = "=1\.2\.0"/);
   assert.match(cargo, /anchor-lang\/idl-build/);
   assert.match(cargo, /anchor-spl\/idl-build/);
 });

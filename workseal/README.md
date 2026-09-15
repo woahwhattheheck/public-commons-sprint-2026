@@ -101,7 +101,9 @@ The original CLI demo still exercises the Ed25519 receipt and plan-only SOL adap
 
 ## Anchor build boundary
 
-The program source is pinned to Anchor `1.1.1`. The authoring environment for this successor had Node v22.16.0 but no Rust/Anchor/Solana CLI, so **no Anchor compilation, validator execution, deployment, or onchain transaction is claimed**. With the matching toolchain installed, the intended source build entrypoint is:
+The program source and workspace metadata are pinned exactly to Anchor `1.2.0`. The authoring environment for this successor had Node v22.16.0 but no local Rust/Anchor/Solana CLI, so source edits are not treated as compiler evidence. The repository carries a hosted Rust `cargo check --workspace --all-targets` gate on the exact PR head. Even a green compile-check is **not** a validator/program-test, deployment, or onchain-transaction claim.
+
+With the matching local toolchain installed, deeper execution entrypoints are:
 
 ```bash
 cd workseal/onchain
@@ -117,7 +119,7 @@ The product wedge is dispute-reducing proof of exactly what an agent or contract
 
 Remaining substantive seams after this source carrier:
 
-- compile/program-test the Anchor program under the pinned toolchain and repair any toolchain-specific issues;
+- run Anchor validator/program-tests under the pinned toolchain and repair any runtime-specific issues;
 - add Ed25519 instruction-sysvar verification if the verifier transaction signer should not be trusted to attest the offchain receipt signature;
 - add cluster-aware USDC mint profiles and associated-token-account creation UX;
 - connect a wallet/RPC only under explicit owner authority, then deploy to devnet and replace model PDA commitments with actual addresses/explorer receipts;

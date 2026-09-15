@@ -42,7 +42,7 @@ CREATED --buyer SPL funding--> FUNDED --worker commit--> COMMITTED
 
 `RELEASED`, `REFUNDED`, and `DISPUTED` are terminal in this v1 source. A dispute intentionally freezes the vault rather than guessing an arbitration outcome.
 
-Release is permissionless once the pinned verifier has accepted the exact current generation: no buyer signature is required. The program signs the SPL transfer with the escrow PDA seeds and transfers exactly the pinned amount to a token account owned by the pinned worker. This removes the parent MVP's "buyer validates then signs a direct transfer" trust gap.
+Release is permissionless once the pinned verifier has accepted the exact current generation: no buyer signature is required. The program signs the SPL transfer with the escrow PDA seeds and transfers exactly the pinned amount to the pinned worker token account. This removes the parent MVP's "buyer validates then signs a direct transfer" trust gap.
 
 ## Acceptance boundary
 
@@ -54,13 +54,13 @@ That means chain state enforces who can attest acceptance and what exact commitm
 
 The program uses Anchor's token-interface accounts and pins the mint in both the escrow PDA seed and account state. The USDC profile uses the canonical USDC mint for the chosen cluster and amount in the mint's base units. `transfer_checked` uses the mint account's actual decimals; the program does not trust a client-supplied decimal count.
 
-The browser/reference demo uses the public mainnet USDC mint address only as a deterministic identity example. It does not connect to mainnet, query balances, create accounts, or transfer tokens.
+The reference model uses the public mainnet USDC mint address only as a deterministic identity example. It does not connect to mainnet, query balances, create accounts, or transfer tokens.
 
 ## Toolchain and verification truth
 
-Source is pinned to Anchor `1.1.1` (`anchor-lang` and `anchor-spl`). The authoring seat had Node v22.16.0 but did **not** have Rust, Anchor, or Solana CLIs installed, so no Anchor build, deployment, program-test, validator, or transaction claim is made here.
+Source is pinned exactly to Anchor `1.2.0` (`anchor-lang = "=1.2.0"` and `anchor-spl = "=1.2.0"`). The authoring seat had Node v22.16.0 but did **not** have Rust, Anchor, or Solana CLIs installed locally. The repository therefore carries a hosted `cargo check --workspace --all-targets` workflow so compiler truth is read from the exact GitHub head rather than inferred from source inspection.
 
-When the matching toolchain is available, the intended build commands are:
+With the matching local toolchain available, the intended deeper commands are:
 
 ```bash
 cd workseal/onchain
@@ -68,7 +68,7 @@ anchor build
 anchor test
 ```
 
-The repository's ordinary `npm test` suite executes a dependency-free reference state machine plus source-contract tests that assert the critical PDA seeds, token constraints, signer separation, acceptance bindings, `transfer_checked` use, and terminal rules. Those tests are useful invariant evidence; they are not a substitute for compiling and testing the Rust program with Anchor.
+The repository's ordinary `npm test` suite executes a dependency-free reference state machine plus source-contract tests that assert the critical PDA seeds, token constraints, signer separation, acceptance bindings, `transfer_checked` use, CPI program IDs, and terminal rules. Those tests are useful invariant evidence; they are not a substitute for validator/program-test or deployment.
 
 Program source ID: `BvfrbqcMAERN2VTA9LT84Y4j228UULhsz2iwtKo3aqeA`. It is an undeployed source identity in this carrier, not evidence of a deployed program.
 
