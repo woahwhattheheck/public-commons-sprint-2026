@@ -8,6 +8,7 @@ on:
       - 'workseal/test/escrow*.test.mjs'
       - 'workseal/solana-program/**'
       - 'workseal/SOLANA_ESCROW.md'
+      - 'workseal/PROGRAM_TEST.md'
       - '.github/workflows/workseal-escrow.yml'
   push:
     paths:
@@ -16,6 +17,7 @@ on:
       - 'workseal/test/escrow*.test.mjs'
       - 'workseal/solana-program/**'
       - 'workseal/SOLANA_ESCROW.md'
+      - 'workseal/PROGRAM_TEST.md'
       - '.github/workflows/workseal-escrow.yml'
 
 jobs:
@@ -40,9 +42,12 @@ jobs:
         working-directory: workseal
         run: node --no-addons --test test/escrow.test.mjs
 
-  rust-anchor-source-check:
+  rust-anchor-program-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Anchor program host compile
         run: cargo check --manifest-path workseal/solana-program/Cargo.toml
+      - name: Execute real program against in-process Solana bank
+        run: cargo test --manifest-path workseal/solana-program/Cargo.toml --test program_test -- --nocapture
