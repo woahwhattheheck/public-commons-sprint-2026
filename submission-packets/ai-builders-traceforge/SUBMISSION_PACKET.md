@@ -2,24 +2,25 @@
 
 > Status: **READY FOR HUMAN ACCOUNT/VIDEO CLOSEOUT; NOT SUBMITTED.** This packet does not attest eligibility, accept Devpost terms, identify teammates, upload media, claim a prize, or claim payment.
 
-Operation: `AI-BUILDERS-TRACEFORGE-SUBMISSION-PACKET-ZNKR7W4-20260914`
+Operation: `AI-BUILDERS-TRACEFORGE-SUBMISSION-PACKET-ZNKR7W4-20260914`  
+Latest source/deployment rebind: `TRACEFORGE-DEVPOST-CLOSEOUT-ZSOL37-20260915`
 
 ## Deadline and external requirements
 
-Checked against the official Devpost overview/rules on 2026-09-14:
+Checked against the official Devpost overview/rules on 2026-09-15:
 
 - Competition: **AI Builders Hackathon**
 - Deadline: **2026-09-15 23:00 EDT**
 - Target award: **Best SaaS Product — $4,000 cash, 1 winner**
-- Required submission materials: project title/description; publicly accessible source repository; demo video (**3–5 minutes recommended**); documentation explaining problem, solution, and technology; team-member details.
-- Judging criteria: innovation/originality; technical implementation; real-world impact; user experience/design; scalability/feasibility.
+- Required materials across the current overview/rules: project title/description; a working product/functional prototype; publicly accessible source repository; demo video (**up to 5 minutes** on the overview, with **3–5 minutes recommended** in the rules); documentation explaining problem, solution, and technology; a presentation deck (**up to 10 slides** on the overview); team-member details.
+- Judging surfaces are not worded identically. The current overview weights innovation/creativity, technical implementation, problem solving/impact, UX/design, and presentation/demo; the rules list innovation/originality, technical implementation, real-world impact, UX/design, and scalability/feasibility. The packet maps TraceForge to both without treating either surface as permission to invent claims.
 
 Official sources:
 
 - https://ai-builders-hackathon-2026.devpost.com/
 - https://ai-builders-hackathon-2026.devpost.com/rules
 
-**Eligibility is a human gate.** The public Devpost surfaces have shown inconsistent wording: the rules list developers, engineers, founders, open-source contributors, and other builders, while another registration-facing surface has displayed “Students only”; an organizer discussion described that display as an issue. Do not convert that inconsistency into an eligibility claim. The participant must confirm the authenticated registration state and any attestations before submitting.
+**Eligibility is a human gate.** The public Devpost surfaces remain inconsistent: the overview/registration-facing surface displays “Students only,” while the rules list students/recent graduates, developers/engineers, AI/ML practitioners, designers/product builders, startup founders/entrepreneurs, open-source contributors, and technology enthusiasts. Do not convert that inconsistency into an eligibility claim. The participant must confirm the authenticated registration state and any attestations before submitting.
 
 ## Copy/paste project fields
 
@@ -69,23 +70,33 @@ https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/tracefor
 
 | Criterion | Demonstration | Proof surface |
 | --- | --- | --- |
-| Innovation / originality | Model claims are separated from deterministic evidence verification; summaries/actions are explicitly review-only. | README trust-boundary description; live verdict UI; receipt. |
+| Innovation / creativity / originality | Model claims are separated from deterministic evidence verification; summaries/actions are explicitly review-only. | README trust-boundary description; live verdict UI; receipt. |
 | Technical implementation | Stable evidence IDs, two-pass Investigator/Skeptic flow, strict model/receipt parsing, deterministic claim gates. | `traceforge-ai/traceforge/**`, tests, architecture doc. |
-| Real-world impact | Reduces the chance that fluent but unsupported incident hypotheses are presented as trusted operational conclusions. | Built-in incident demo; PASS/HOLD behavior. |
+| Problem solving / real-world impact | Reduces the chance that fluent but unsupported incident hypotheses are presented as trusted operational conclusions. | Built-in incident demo; PASS/HOLD behavior. |
 | UX / design | Browser flow makes evidence, verdicts, review-only surfaces, and receipt verification visible to operators. | Hosted demo. |
+| Presentation / demo | The current cut sheet demonstrates problem, evidence, analysis, trust boundary, receipt, and architecture in one bounded flow. | Hosted demo; demo script; submission deck. |
 | Scalability / feasibility | Dependency-light runtime; deterministic local mode; optional authorized OpenAI-compatible endpoint; CLI + browser surfaces. | README runbook and live configuration boundary. |
 
 ## Source-to-demo binding
 
-Railway production reports a successful source-triggered deployment from repository commit:
+Railway production reports a successful deployment from repository commit:
 
-`fb1f699fbba4684046d4c1015d80fc06f2034ab3`
+`f1c4b8f0dbde9ae364765c415181e9731c83af54`
 
 That deployment commit and the repository main generation used for this packet rebind resolve the `traceforge-ai` subtree to the exact Git tree:
 
-`c041168a5609c3b3156c87bd61ea707ecd2809d5`
+`0a331961cbe42aae42c9d9edc96b31e43edc6fbc`
 
-The successful Railway deployment receipt for this generation is `41692dfe-2f40-4477-bd64-2a17d34f2ed1`. The merge commit is the security-hardening generation from PR #87; public HTTP live inference now remains off unless an operator supplies the separate exact opt-in in addition to provider configuration.
+The successful Railway deployment receipt for this generation is `28478c0d-6fa4-47a8-ab69-52287d2c63a8`. It was deployed from current `main` after PR #94 repaired the request-size/model-identity/receipt-boundary residuals without changing the existing public-live authorization rule from PR #87.
+
+A read-only public zero-key smoke against this deployment returned:
+
+- `GET /api/config` → HTTP 200 with `providerConfigured=false`, `liveConfigured=false`, and `publicLiveOptInRequired=true`;
+- `GET /api/demo` → HTTP 200;
+- `POST /api/analyze` in deterministic `demo` mode → HTTP 200, 4 `PASS` / 0 `HOLD`, receipt schema `traceforge-receipt/v1`;
+- `POST /api/verify` with the exact returned analysis packet → HTTP 200, `{"valid":true}`.
+
+No live-model key or paid inference was enabled for this smoke.
 
 This packet intentionally lives **outside** `traceforge-ai/**`, so rebinding submission metadata does not mutate the code/docs subtree served by the deployment.
 
@@ -107,7 +118,7 @@ If the verifier fails, do **not** describe the live demo as source-identical to 
 
 ## 3–5 minute recording cut sheet
 
-The existing `traceforge-ai/docs/DEMO_SCRIPT.md` is the canonical product script. For the Devpost recommendation, target roughly **3:15–3:45** by preserving the product flow and adding brief architecture/verification context rather than inventing features.
+The existing `traceforge-ai/docs/DEMO_SCRIPT.md` is the canonical product script. The current overview allows a video up to 5 minutes and the rules recommend 3–5 minutes. Target roughly **3:15–3:45** by preserving the product flow and adding brief architecture/verification context rather than inventing features.
 
 1. **0:00–0:25 — Problem.** Incident response produces persuasive stories faster than proof. State TraceForge's claim/action trust boundary.
 2. **0:25–0:55 — Evidence.** Open the hosted demo, load the synthetic incident, show stable evidence IDs and digest-bound input.
@@ -124,7 +135,8 @@ Recording rule: show only behavior actually present in the hosted build/source. 
 - [ ] Sign in to the intended Devpost participant account and confirm the account is registered for the hackathon.
 - [ ] Personally review eligibility, current rules, and any participant/team attestations; resolve the inconsistent public eligibility display rather than guessing.
 - [ ] Fill team-member details from real account/user data. Do not invent teammates or emails.
-- [ ] Record/upload an accessible demo video. 3–5 minutes is the organizer's current recommendation.
+- [ ] Record/upload an accessible demo video. The current overview allows up to 5 minutes; the rules recommend 3–5 minutes.
+- [ ] Confirm the prepared submission deck is within the current overview's 10-slide limit.
 - [ ] Run `python submission-packets/ai-builders-traceforge/verify.py --repo-root .` against the exact source generation you will link.
 - [ ] Confirm the live URL loads and the demo endpoints behave as expected immediately before submission.
 - [ ] Paste the project fields above, attach/link the public repository, video, and documentation/deck.
