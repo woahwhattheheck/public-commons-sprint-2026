@@ -47,8 +47,8 @@
   },
   "source_binding": {
     "subtree_path": "traceforge-ai",
-    "deployment_source_commit": "9c51622893e93af5e7247bea42790f7ed1c2abf2",
-    "expected_subtree_sha": "8b23ad6a894c7afd29e65407ae3ae8440744fd33",
+    "deployment_source_commit": "fb1f699fbba4684046d4c1015d80fc06f2034ab3",
+    "expected_subtree_sha": "c041168a5609c3b3156c87bd61ea707ecd2809d5",
     "meaning": "The deployed source commit and the repository HEAD used for submission must resolve traceforge-ai to this exact Git tree. A mismatch means the live demo is no longer proven source-identical to the submitted subtree."
   },
   "human_gates": [
