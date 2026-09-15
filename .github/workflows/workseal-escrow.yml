@@ -1,0 +1,48 @@
+name: WorkSeal Escrow
+
+on:
+  pull_request:
+    paths:
+      - 'workseal/src/escrow.mjs'
+      - 'workseal/src/escrow_demo.mjs'
+      - 'workseal/test/escrow*.test.mjs'
+      - 'workseal/solana-program/**'
+      - 'workseal/SOLANA_ESCROW.md'
+      - '.github/workflows/workseal-escrow.yml'
+  push:
+    paths:
+      - 'workseal/src/escrow.mjs'
+      - 'workseal/src/escrow_demo.mjs'
+      - 'workseal/test/escrow*.test.mjs'
+      - 'workseal/solana-program/**'
+      - 'workseal/SOLANA_ESCROW.md'
+      - '.github/workflows/workseal-escrow.yml'
+
+jobs:
+  node-authority-contract:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax
+        run: |
+          node --check workseal/src/escrow.mjs
+          node --check workseal/src/escrow_demo.mjs
+      - name: WorkSeal protocol + escrow hostiles
+        working-directory: workseal
+        run: node --test test/protocol.test.mjs test/escrow.test.mjs
+      - name: Hardened runtime escrow hostiles
+        working-directory: workseal
+        run: node --no-addons --test test/escrow.test.mjs
+
+  rust-anchor-source-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Anchor program host compile
+        run: cargo check --manifest-path workseal/solana-program/Cargo.toml

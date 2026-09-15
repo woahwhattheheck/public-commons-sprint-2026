@@ -1,0 +1,22 @@
+[package]
+name = "workseal-escrow"
+version = "0.1.0"
+edition = "2021"
+description = "WorkSeal evidence-gated SPL-token escrow authority program"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "workseal_escrow"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.31.1"
+anchor-spl = { version = "0.31.1", features = ["associated_token", "token"] }
+solana-program = "2"
