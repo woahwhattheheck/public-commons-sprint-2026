@@ -26,8 +26,7 @@ async fn process(
     extra_signers: &[&Keypair],
 ) -> Result<(), String> {
     let blockhash = context
-        .banks_client
-        .get_latest_blockhash()
+        .get_new_latest_blockhash()
         .await
         .map_err(|err| format!("blockhash: {err:?}"))?;
     let mut signers: Vec<&dyn Signer> = vec![&context.payer];
