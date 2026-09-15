@@ -38,7 +38,7 @@ python -m traceforge verify analysis.json
 
 ### Live AI mode
 
-Configure an authorized OpenAI-compatible endpoint, then select **Live AI endpoint** in the UI or pass `--mode live`:
+Configure an authorized OpenAI-compatible endpoint for operator-controlled CLI use:
 
 ```bash
 export TRACEFORGE_BASE_URL='https://your-inference-host.example'
@@ -47,11 +47,21 @@ export TRACEFORGE_API_KEY='...optional bearer token...'
 python -m traceforge analyze examples/incident.txt --mode live
 ```
 
+Provider configuration **does not authorize anonymous public HTTP inference**. A server that accepts browser/API traffic keeps `mode:"live"` fail-closed unless an operator makes a separate, exact cost/risk acknowledgement:
+
+```bash
+export TRACEFORGE_ALLOW_PUBLIC_LIVE=1
+python -m traceforge serve --host 0.0.0.0 --port 8080
+```
+
+Use that flag only when public callers are intentionally allowed to spend against the configured endpoint. Any other value—including `true`, `yes`, or whitespace-padded `1`—is treated as off. With provider variables present but the public flag absent, CLI live mode remains available while HTTP live requests are rejected before a provider request is created. The zero-key deterministic demo remains available either way.
+
 Security boundaries for live mode:
 
 - non-loopback endpoints must be HTTPS;
 - URL-embedded credentials, query strings, fragments, and redirects are refused;
 - bearer secrets are accepted only from the environment and are never included in durable receipts/model identity;
+- public HTTP live inference requires both provider configuration and the separate exact `TRACEFORGE_ALLOW_PUBLIC_LIVE=1` acknowledgement;
 - requests/responses have hard byte and timeout ceilings;
 - model JSON is duplicate-key/NaN/Infinity rejected and exact-schema validated;
 - incident evidence is explicitly delimited as **untrusted data**, not instructions;
@@ -103,6 +113,7 @@ The test suite exercises more than happy paths. It includes:
 - receipt tampering and checksum-correct malformed receipt envelopes;
 - CRLF normalization and evidence/request bounds;
 - unsafe live-model URLs and credential handling;
+- provider credentials that must not enable public HTTP live inference without the separate exact opt-in;
 - a fake local OpenAI-compatible provider for actual HTTP adapter execution;
 - API request/schema errors and browser-facing demo endpoint behavior.
 
