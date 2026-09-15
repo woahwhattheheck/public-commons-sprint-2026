@@ -1,0 +1,32 @@
+name: WorkSeal Anchor source
+
+on:
+  pull_request:
+    paths:
+      - 'workseal/onchain/**'
+      - '.github/workflows/workseal-anchor-source.yml'
+  push:
+    paths:
+      - 'workseal/onchain/**'
+      - '.github/workflows/workseal-anchor-source.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cargo-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: workseal/onchain
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stable Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+          cargo --version
+      - name: Compile-check WorkSeal Anchor workspace
+        run: cargo check --workspace --all-targets --locked=false
