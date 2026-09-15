@@ -1,5 +1,7 @@
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
-use solana_program::{hash::hashv, program_pack::Pack};
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, hash::hashv, program_pack::Pack,
+};
 use solana_program_test::{processor, ProgramTest, ProgramTestContext};
 use solana_sdk::{
     clock::Clock,
@@ -44,11 +46,26 @@ async fn process(
         .map_err(|err| format!("transaction: {err:?}"))
 }
 
+// `solana-program-test` keeps the slice borrow and each AccountInfo's inner borrow
+// independent, while Anchor's generated `entry` ties both to one `'info` lifetime.
+// ProgramTest invokes processors synchronously and guarantees the AccountInfos outlive
+// that call, so this wrapper narrows those compatible borrows only for `entry`.
+fn process_workseal_instruction(
+    program_id: &solana_sdk::pubkey::Pubkey,
+    accounts: &[AccountInfo],
+    data: &[u8],
+) -> ProgramResult {
+    // SAFETY: this changes lifetimes only, not representation or ownership. The
+    // transmuted slice cannot escape this synchronous call to Anchor's entrypoint.
+    let tied: &[AccountInfo] = unsafe { core::mem::transmute(accounts) };
+    workseal_escrow::entry(program_id, tied, data)
+}
+
 async fn test_context() -> ProgramTestContext {
     let mut program = ProgramTest::new(
         "workseal_escrow",
         workseal_escrow::ID,
-        processor!(workseal_escrow::entry),
+        processor!(process_workseal_instruction),
     );
     program.add_program(
         "spl_token",
@@ -314,13 +331,10 @@ async fn real_program_settlement_moves_exact_tokens_and_rejects_hostiles() {
     process(&mut context, vec![initialize], &[&worker])
         .await
         .expect("initialize escrow");
-    process(
-        &mut context,
-        vec![fund_instruction(&context, mint.pubkey(), escrow, buyer_token, vault)],
-        &[],
-    )
-    .await
-    .expect("fund escrow");
+    let fund = fund_instruction(&context, mint.pubkey(), escrow, buyer_token, vault);
+    process(&mut context, vec![fund], &[])
+        .await
+        .expect("fund escrow");
 
     assert_eq!(token_amount(&mut context, buyer_token).await, INITIAL_BALANCE - ESCROW_AMOUNT);
     assert_eq!(token_amount(&mut context, vault).await, ESCROW_AMOUNT);
@@ -385,13 +399,10 @@ async fn real_program_refund_is_time_gated_and_terminal() {
     process(&mut context, vec![initialize], &[&worker])
         .await
         .expect("initialize refund escrow");
-    process(
-        &mut context,
-        vec![fund_instruction(&context, mint.pubkey(), escrow, buyer_token, vault)],
-        &[],
-    )
-    .await
-    .expect("fund refund escrow");
+    let fund = fund_instruction(&context, mint.pubkey(), escrow, buyer_token, vault);
+    process(&mut context, vec![fund], &[])
+        .await
+        .expect("fund refund escrow");
 
     let refund = refund_instruction(&context, mint.pubkey(), escrow, vault, buyer_token);
     assert!(process(&mut context, vec![refund.clone()], &[]).await.is_err());
