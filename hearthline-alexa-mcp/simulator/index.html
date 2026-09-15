@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Hearthline · Evidence-first decision simulator</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <a class="skip" href="#decision-card">Skip to decision</a>
+  <header>
+    <div>
+      <p class="eyebrow">TitanMCP · Hearthline · Alexa+ interaction demo</p>
+      <h1>Evidence-first action plane</h1>
+      <p class="lede">Routine work can proceed. Irreversible work stops on a decision card with evidence, explicit authority, retry fencing, and an auditable receipt.</p>
+    </div>
+    <div class="simulation" role="note"><strong>Simulation only</strong><span>No calls, bookings, purchases, contracts, payments, or provider writes occur here.</span></div>
+  </header>
+
+  <main>
+    <aside aria-label="Demo operations">
+      <div class="aside-head"><h2>Operations</h2><button data-action="reset" class="text-button">Reset</button></div>
+      <div id="operation-list" class="operation-list"></div>
+      <section class="principles" aria-labelledby="principles-title">
+        <h2 id="principles-title">Authority law</h2>
+        <ol>
+          <li>Routine actions may run without a decision.</li>
+          <li>Irreversible actions require explicit approval.</li>
+          <li>Unknown outcomes fence retries until reconciliation.</li>
+          <li>Repeated command IDs are idempotent; conflicting reuse fails closed.</li>
+        </ol>
+      </section>
+    </aside>
+
+    <section class="workspace">
+      <article id="decision-card" class="decision-card" tabindex="-1" aria-label="Selected operation decision card"></article>
+      <div id="announcer" class="announcer" role="status" aria-live="polite"></div>
+
+      <div class="grid">
+        <section class="panel" aria-labelledby="evidence-title"><h2 id="evidence-title">Evidence</h2><ul id="evidence" class="evidence"></ul></section>
+        <section class="panel" aria-labelledby="timeline-title"><h2 id="timeline-title">Operation timeline</h2><ol id="timeline" class="timeline"></ol></section>
+      </div>
+
+      <section class="panel receipt" aria-labelledby="receipt-title">
+        <div class="receipt-head"><div><h2 id="receipt-title">Deterministic receipt</h2><p>Canonical, sorted-key JSON for replay and review.</p></div><button data-action="copy" class="secondary">Copy receipt</button></div>
+        <pre id="export" tabindex="0"></pre>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>

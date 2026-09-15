@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "project": "Hearthline Alexa+ MCP public judge carrier",
+  "maxFiles": 128,
+  "maxFileBytes": 2000000,
+  "maxTotalBytes": 20000000,
+  "files": [
+    {"source":".gitignore"},{"source":"Dockerfile"},{"source":"LICENSE"},{"source":"README.md"},{"source":"package.json"},
+    {"source":"aws/README.md"},{"source":"aws/dynamodb-json-store.mjs"},{"source":"aws/evidence-gate.mjs"},{"source":"aws/reproducibility.json"},{"source":"aws/server.mjs"},{"source":"aws/sigv4.mjs"},{"source":"aws/smoke.mjs"},
+    {"source":"docs/ARCHITECTURE.md"},{"source":"docs/DEMO.md"},{"source":"docs/FRICTION_LOG.md"},{"source":"docs/runtime-conformance.md"},
+    {"source":"release/README.md"},{"source":"release/gate-lib.mjs"},{"source":"release/public-release.manifest.json"},{"source":"release/public-release.mjs"},
+    {"source":"runtime/conformance-probe.mjs"},{"source":"scripts/demo.mjs"},
+    {"source":"simulator/README.md"},{"source":"simulator/app.mjs"},{"source":"simulator/index.html"},{"source":"simulator/state.mjs"},{"source":"simulator/style.css"},
+    {"source":"src/app-resource.mjs"},{"source":"src/mcp-server.mjs"},{"source":"src/nws.mjs"},{"source":"src/orchestrator.mjs"},{"source":"src/server.mjs"},{"source":"src/store.mjs"},{"source":"src/tools.mjs"},
+    {"source":"test/aws-dynamodb-store.test.mjs"},{"source":"test/aws-evidence-gate.test.mjs"},{"source":"test/aws-sigv4.test.mjs"},{"source":"test/http.test.mjs"},{"source":"test/initialize.test.mjs"},{"source":"test/nws.test.mjs"},{"source":"test/orchestrator.test.mjs"},{"source":"test/public-release-nested-custody.test.mjs"},{"source":"test/public-release.test.mjs"},{"source":"test/restart.test.mjs"},{"source":"test/runtime-conformance.test.mjs"},{"source":"test/simulator-state.test.mjs"},{"source":"test/simulator-static.test.mjs"}
+  ]
+}

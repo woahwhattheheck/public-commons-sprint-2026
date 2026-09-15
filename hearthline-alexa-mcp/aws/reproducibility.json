@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "operation": "AMAZON-BSS-AWS-REPRO-ZHCN7Q4-20260913",
+  "runtime": {
+    "node": ">=20",
+    "thirdPartyDependencies": 0,
+    "awsService": "DynamoDB",
+    "awsJsonProtocolTargetPrefix": "DynamoDB_20120810",
+    "defaultEndpointTemplate": "https://dynamodb.{region}.amazonaws.com/"
+  },
+  "offlineValidation": [
+    "node --test test/aws-*.test.mjs"
+  ],
+  "liveValidation": [
+    "HEARTHLINE_AWS_EVIDENCE=/secure/out/hearthline-aws-evidence.json node aws/smoke.mjs",
+    "node aws/evidence-gate.mjs /secure/out/hearthline-aws-evidence.json <region> <table>"
+  ],
+  "claims": {
+    "offlineTestsProveAwsDeployment": false,
+    "mockRequestIdProvesAwsDeployment": false,
+    "liveProbeRequiredForAwsRuntimeClaim": true,
+    "hackathonSubmissionPerformed": false,
+    "prizeOrPaymentClaimed": false
+  }
+}

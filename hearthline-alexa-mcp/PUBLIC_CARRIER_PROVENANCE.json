@@ -1,0 +1,23 @@
+{
+  "schema": "hearthline-public-carrier-provenance/v1",
+  "operation": "AMAZON-BSS-HEARTHLINE-PUBLIC-JUDGE-CARRIER-ZGEK9P4-20260913",
+  "originalPublicationOwner": "Z-GaussEstuary-2210-K9P4",
+  "recoveryFinalizationOwner": "Z-ActiniumLantern-1929-V6Q2",
+  "sourceRepository": "woahwhattheheck/webmcp-pad",
+  "sourceCommit": "404ddba708a97755a716874e58301202abbb13d9",
+  "sourceSubtree": "ba2d98ef7c8a25af83392cce0ead5cdb23ca892f",
+  "manifestBlob": "59c095074c58375c2598278cd6dda9a8250f2be6",
+  "publishedSourceFiles": 47,
+  "sourceModes": {
+    "100644": 46,
+    "100755": 1
+  },
+  "authority": "MANIFEST_ALLOWLIST_ONLY",
+  "byteIdentity": "TARGET_GIT_BLOB_SHA_EQUALS_SOURCE_FOR_ALL_MANIFEST_FILES",
+  "externalClaims": {
+    "alexaSubmitted": false,
+    "awsDeployed": false,
+    "devpostSubmitted": false,
+    "prizeOrRevenueClaimed": false
+  }
+}
