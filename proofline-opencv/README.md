@@ -2,7 +2,7 @@
 
 ProofLine is a source-first OpenCV 5 visual-inspection system for manufacturing and field QA. It aligns a new inspection frame against a known reference, measures localized visual changes, binds them to deterministic evidence receipts, and produces **human review proposals** that cannot approve/reject product or mutate production.
 
-The AWS path is part of the product contract: versioned S3 object events drive a Lambda/OpenCV worker; DynamoDB stores evidence/proposal packets using a conditional idempotency key.
+The AWS path is part of the product contract: versioned S3 object events drive a Lambda/OpenCV worker; the configured reference is pinned to an explicit S3 version; and DynamoDB stores evidence/proposal packets under an idempotency identity that binds both inspection and reference generations.
 
 ## Quick development demo
 
@@ -39,15 +39,15 @@ This is not an LLM wrapper around a screenshot. `proofline.vision` uses OpenCV f
 - connected-component extraction and geometric region measurement;
 - deterministic PNG encoding for evidence-crop and segmentation-mask digests.
 
-The resulting packet binds both input hashes, registration, segmentation mask, every region, OpenCV version, and pipeline generation.
+The resulting packet binds both input hashes, registration, segmentation mask, every region, OpenCV version, and pipeline generation. AWS-produced evidence additionally receipt-binds the exact S3 bucket/key/version identity of both the reference and inspection object.
 
 ## Agent boundary
 
-`build_review_proposal` can rank visual changes for human review. Its receipt-bound authority map hard-falses product approval/rejection, production mutation, vendor contact, payment/purchase, and external sends. An evidence or authority mutation invalidates verification.
+`build_review_proposal` can rank visual changes for human review. Its receipt-bound authority map hard-falses product approval/rejection, production mutation, vendor contact, payment/purchase, and external sends. `verify_review_proposal` deterministically recomputes the complete proposal from verified evidence and compares canonical JSON bytes; omitted regions, rewritten priorities/measurements, type aliases, extra fields, or authority edits therefore fail even if a caller recomputes the public integrity digest.
 
 ## AWS
 
-`infra/template.yaml` defines a versioned inspection S3 bucket, Lambda worker, encrypted/PITR DynamoDB evidence table, and least-privilege read/write policies. Duplicate S3 delivery is rejected at ledger insertion using a pipeline-bound event key.
+`infra/template.yaml` defines a versioned inspection S3 bucket, Lambda worker, encrypted/PITR DynamoDB evidence table, a required `ReferenceVersionId`, S3 read policies, and DynamoDB permissions limited to `GetItem`/`PutItem`. Duplicate delivery first reads the exact bound ledger key; an already-recorded event returns the stored evidence/proposal receipts without refetching or recomputing. A reference-version rotation produces a different event identity and evidence source binding rather than silently reusing the old key.
 
 See `docs/ARCHITECTURE.md`, `docs/DEMO_SCRIPT.md`, and `docs/COMPETITION.md`.
 
