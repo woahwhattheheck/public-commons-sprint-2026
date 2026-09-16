@@ -14,6 +14,18 @@ class AwsContractError(ValueError):
     pass
 
 
+def _bounded_text(value: Any, name: str, max_bytes: int) -> str:
+    if not isinstance(value, str) or not value or "\x00" in value:
+        raise AwsContractError(f"{name} must be non-empty text")
+    try:
+        raw = value.encode("utf-8", "strict")
+    except UnicodeEncodeError as exc:
+        raise AwsContractError(f"{name} must be valid UTF-8") from exc
+    if len(raw) > max_bytes:
+        raise AwsContractError(f"{name} exceeds byte limit")
+    return value
+
+
 @dataclass(frozen=True)
 class S3ObjectEvent:
     bucket: str
@@ -27,6 +39,29 @@ class S3ObjectEvent:
         material = "\0".join(
             [self.bucket, self.key, self.version_id, self.event_name, self.sequencer, PIPELINE_GENERATION]
         ).encode("utf-8")
+        return hashlib.sha256(material).hexdigest()
+
+    def bound_idempotency_key(
+        self,
+        *,
+        reference_bucket: str,
+        reference_key: str,
+        reference_version_id: str,
+    ) -> str:
+        ref_bucket = _bounded_text(reference_bucket, "reference_bucket", 255)
+        ref_key = _bounded_text(reference_key, "reference_key", 1024)
+        ref_version = _bounded_text(reference_version_id, "reference_version_id", 1024)
+        material = "\0".join([
+            self.bucket,
+            self.key,
+            self.version_id,
+            self.event_name,
+            self.sequencer,
+            ref_bucket,
+            ref_key,
+            ref_version,
+            PIPELINE_GENERATION,
+        ]).encode("utf-8")
         return hashlib.sha256(material).hexdigest()
 
 
