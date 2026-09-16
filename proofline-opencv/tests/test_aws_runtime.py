@@ -20,8 +20,7 @@ class FakeS3:
 
 
 class Conditional(Exception):
-    def __init__(self):
-        self.response = {"Error": {"Code": "ConditionalCheckFailedException"}}
+    def __init__(self): self.response = {"Error": {"Code": "ConditionalCheckFailedException"}}
 
 
 class FakeTable:
@@ -31,8 +30,7 @@ class FakeTable:
         return {} if item is None else {"Item": copy.deepcopy(item)}
     def put_item(self, **kwargs):
         item = kwargs["Item"]
-        if item["pk"] in self.items:
-            raise Conditional()
+        if item["pk"] in self.items: raise Conditional()
         self.items[item["pk"]] = copy.deepcopy(item)
 
 
@@ -49,8 +47,7 @@ def evidence(source_binding=None):
         "regions":[],"summary":{"region_count":0,"total_region_area_px":0,"max_region_area_px":0},
         "authority":{"quality_disposition":False,"production_mutation":False,"vendor_contact":False,"purchase_or_payment":False,"external_send":False},
     }
-    if source_binding is not None:
-        packet["source_binding"] = copy.deepcopy(source_binding)
+    if source_binding is not None: packet["source_binding"] = copy.deepcopy(source_binding)
     packet["receipt_sha256"] = digest_json(packet)
     return packet
 
@@ -63,10 +60,7 @@ class AwsRuntimeTests(unittest.TestCase):
     @mock.patch("proofline.aws_runtime.inspect_pair", side_effect=inspect_fake)
     def test_records_pinned_reference_generation(self, _inspect):
         s3, table = FakeS3(), FakeTable()
-        result = aws_runtime.process_event(
-            event(), s3=s3, table=table,
-            reference_bucket="ref", reference_key="gold.png", reference_version_id="R1",
-        )
+        result = aws_runtime.process_event(event(), s3=s3, table=table, reference_bucket="ref", reference_key="gold.png", reference_version_id="R1")
         self.assertEqual(result["results"][0]["status"], "RECORDED")
         self.assertEqual(len(table.items), 1)
         stored = next(iter(table.items.values()))
@@ -77,16 +71,10 @@ class AwsRuntimeTests(unittest.TestCase):
 
     @mock.patch("proofline.aws_runtime.inspect_pair", side_effect=inspect_fake)
     def test_duplicate_returns_stored_receipts_without_refetch_or_recompute(self, inspect):
-        table = FakeTable()
-        first = aws_runtime.process_event(
-            event(), s3=FakeS3(), table=table,
-            reference_bucket="ref", reference_key="gold.png", reference_version_id="R1",
-        )
+        table = FakeTable(); first_s3 = FakeS3()
+        first = aws_runtime.process_event(event(), s3=first_s3, table=table, reference_bucket="ref", reference_key="gold.png", reference_version_id="R1")
         second_s3 = FakeS3()
-        second = aws_runtime.process_event(
-            event(), s3=second_s3, table=table,
-            reference_bucket="ref", reference_key="gold.png", reference_version_id="R1",
-        )
+        second = aws_runtime.process_event(event(), s3=second_s3, table=table, reference_bucket="ref", reference_key="gold.png", reference_version_id="R1")
         self.assertEqual(second["results"][0]["status"], "DUPLICATE_REPLAY")
         self.assertEqual(second["results"][0]["evidence_receipt_sha256"], first["results"][0]["evidence_receipt_sha256"])
         self.assertEqual(second["results"][0]["proposal_receipt_sha256"], first["results"][0]["proposal_receipt_sha256"])
@@ -96,32 +84,19 @@ class AwsRuntimeTests(unittest.TestCase):
     @mock.patch("proofline.aws_runtime.inspect_pair", side_effect=inspect_fake)
     def test_reference_rotation_creates_distinct_bound_ledger_identity(self, _inspect):
         table = FakeTable()
-        first = aws_runtime.process_event(
-            event(), s3=FakeS3(), table=table,
-            reference_bucket="ref", reference_key="gold.png", reference_version_id="R1",
-        )
-        second = aws_runtime.process_event(
-            event(), s3=FakeS3(), table=table,
-            reference_bucket="ref", reference_key="gold.png", reference_version_id="R2",
-        )
+        first = aws_runtime.process_event(event(), s3=FakeS3(), table=table, reference_bucket="ref", reference_key="gold.png", reference_version_id="R1")
+        second = aws_runtime.process_event(event(), s3=FakeS3(), table=table, reference_bucket="ref", reference_key="gold.png", reference_version_id="R2")
         self.assertNotEqual(first["results"][0]["event_key"], second["results"][0]["event_key"])
         self.assertEqual(len(table.items), 2)
 
     def test_reference_version_is_required(self):
         with self.assertRaises(aws_runtime.RuntimeErrorProofLine):
-            aws_runtime.process_event(
-                event(), s3=FakeS3(), table=FakeTable(),
-                reference_bucket="ref", reference_key="gold.png", reference_version_id="",
-            )
+            aws_runtime.process_event(event(), s3=FakeS3(), table=FakeTable(), reference_bucket="ref", reference_key="gold.png", reference_version_id="")
 
     @mock.patch("proofline.aws_runtime.inspect_pair", return_value=evidence())
     def test_missing_source_binding_from_inspector_fails_closed(self, _inspect):
         with self.assertRaises(aws_runtime.RuntimeErrorProofLine):
-            aws_runtime.process_event(
-                event(), s3=FakeS3(), table=FakeTable(),
-                reference_bucket="ref", reference_key="gold.png", reference_version_id="R1",
-            )
+            aws_runtime.process_event(event(), s3=FakeS3(), table=FakeTable(), reference_bucket="ref", reference_key="gold.png", reference_version_id="R1")
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()
