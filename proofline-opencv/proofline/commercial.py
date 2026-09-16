@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import argparse
@@ -77,16 +78,13 @@ ACCEPTANCE_CRITERIA = [
     },
 ]
 
-
 class CommercialError(ValueError):
     pass
-
 
 def _int(value: Any, name: str, lo: int, hi: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or not lo <= value <= hi:
         raise CommercialError(f"{name} must be an integer in [{lo}, {hi}]")
     return value
-
 
 def _text(value: Any, name: str, max_len: int = 160) -> str:
     if not isinstance(value, str) or not value.strip() or len(value) > max_len:
@@ -94,11 +92,9 @@ def _text(value: Any, name: str, max_len: int = 160) -> str:
     value.encode("utf-8", "strict")
     return value.strip()
 
-
 def _minor_cost(units: int, seconds_per_unit: int, hourly_minor: int) -> int:
     # Deliberately conservative deterministic floor: scenario arithmetic, not observed savings.
     return (units * seconds_per_unit * hourly_minor) // 3600
-
 
 def _normalize_intake(intake: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(intake, dict):
@@ -149,7 +145,7 @@ def _normalize_intake(intake: dict[str, Any]) -> dict[str, Any]:
     if assumptions.get("source") != ASSUMPTION_SOURCE:
         raise CommercialError("ROI inputs must be buyer/owner supplied scenario assumptions")
 
-    return {
+    normalized = {
         "pilot_id": _text(intake.get("pilot_id"), "pilot_id", 80),
         "buyer_label": _text(intake.get("buyer_label"), "buyer_label", 120),
         "buyer_is_synthetic": buyer_is_synthetic,
@@ -182,7 +178,7 @@ def _normalize_intake(intake: dict[str, Any]) -> dict[str, Any]:
             ),
         },
     }
-
+    return normalized
 
 def _roi_scenario(assumptions: dict[str, Any]) -> dict[str, Any]:
     units = assumptions["units_per_period"]
@@ -210,7 +206,6 @@ def _roi_scenario(assumptions: dict[str, Any]) -> dict[str, Any]:
         ],
     }
 
-
 def build_pilot_packet(intake: dict[str, Any]) -> dict[str, Any]:
     pilot = _normalize_intake(intake)
     packet: dict[str, Any] = {
@@ -236,7 +231,6 @@ def build_pilot_packet(intake: dict[str, Any]) -> dict[str, Any]:
         raise CommercialError("internal packet verification failed")
     return packet
 
-
 def verify_pilot_packet(packet: dict[str, Any]) -> bool:
     try:
         if not isinstance(packet, dict) or packet.get("schema") != SCHEMA:
@@ -251,7 +245,8 @@ def verify_pilot_packet(packet: dict[str, Any]) -> bool:
         if digest_json(body) != receipt:
             return False
 
-        if body.get("source_truth") != {
+        source_truth = body.get("source_truth")
+        if source_truth != {
             "source_test_demo_ready": True,
             "live_aws_deployed": False,
             "competition_submitted": False,
@@ -288,13 +283,11 @@ def verify_pilot_packet(packet: dict[str, Any]) -> bool:
     except (CommercialError, TypeError, ValueError, UnicodeError):
         return False
 
-
 def _packet_for_validation(packet: dict[str, Any]) -> dict[str, Any]:
-    # Revalidate normalized input without weakening the public schema.
+    # Internal adapter used to revalidate normalized pilot input without weakening the public schema.
     pilot = json.loads(json.dumps(packet["pilot"]))
     pilot["price"].pop("payment_link", None)
     return pilot
-
 
 def write_packet(intake_path: Path, output_path: Path) -> dict[str, Any]:
     raw = intake_path.read_bytes()
@@ -305,12 +298,10 @@ def write_packet(intake_path: Path, output_path: Path) -> dict[str, Any]:
     output_path.write_bytes(canonical_json(packet) + b"\n")
     return packet
 
-
 def verify_file(packet_path: Path) -> bool:
     raw = packet_path.read_bytes()
     packet = loads_strict(raw, max_bytes=500_000)
     return isinstance(packet, dict) and verify_pilot_packet(packet)
-
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Compile or verify a fail-closed ProofLine commercial pilot packet")
@@ -329,7 +320,6 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if verify_file(args.packet) else 2
     except (OSError, CommercialError, ValueError, UnicodeError):
         return 2
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
