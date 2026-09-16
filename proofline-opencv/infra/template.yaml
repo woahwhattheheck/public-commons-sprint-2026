@@ -6,6 +6,9 @@ Parameters:
     Type: String
   ReferenceKey:
     Type: String
+  ReferenceVersionId:
+    Type: String
+    MinLength: 1
 Resources:
   InspectionBucket:
     Type: AWS::S3::Bucket
@@ -44,13 +47,18 @@ Resources:
           EVIDENCE_TABLE: !Ref EvidenceTable
           REFERENCE_BUCKET: !Ref ReferenceBucketName
           REFERENCE_KEY: !Ref ReferenceKey
+          REFERENCE_VERSION_ID: !Ref ReferenceVersionId
       Policies:
         - S3ReadPolicy:
             BucketName: !Ref InspectionBucket
         - S3ReadPolicy:
             BucketName: !Ref ReferenceBucketName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref EvidenceTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: !GetAtt EvidenceTable.Arn
       Events:
         InspectionCreated:
           Type: S3
