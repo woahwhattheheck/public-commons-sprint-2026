@@ -1,0 +1,30 @@
+{
+  "format": "permitpulse-source-manifest-v1",
+  "generatedFor": "PERMITPULSE-ALL-GAS-RECOVERY-ZCAN7Q4-20260916",
+  "files": {
+    ".env.example": "1e14db42c6638d24e46776d2b9c414aa862d2fd97a6a4762b9d417e267ae1ed2",
+    ".gitignore": "d3a12d009b7169b93fbb6ecd717ce81ffad2f4ae665d1ec9f9894f086959b882",
+    "README.md": "31f1fba3d7bfae6fbc16469bcf969227fce634995fc461cf343e937bd5a063f3",
+    "TRANSPORT.md": "44b9cc106963521fde8602e04469a97e3409d6cb39eab540c8b93ec68868f78b",
+    "checklist.mjs": "cecd5192e4dca489c04eb2b01d67101c79720332fe7141ab78bcdd0d68c5fbba",
+    "convex/actions.ts": "fe058c658cbdfcbeab9a3aac6fa04b306a30547edd40e682eaf0ab595ba55699",
+    "convex/convex.config.ts": "dfb4bee234d41ca32b2b1a231d5ed3f98b2cd39cd9fe89d60e6836f9146e97e2",
+    "convex/http.ts": "3f4e5b031bacee83f880d0744bc0779047e2e203d7d55f858e4804ae20a2a074",
+    "convex/inbox.ts": "2517118f1c8f397044eeb412866d1f2f1815f45fc89f0aee1cd1a306ce367313",
+    "convex/schema.ts": "29aa859347e4d898187bfb255a173deec95cfe617e50e299752d373ef18a54c2",
+    "convex/sources.ts": "ac95451ffe1e6b9731d3bb70b60ed62cbab2ed6b8e718802e87447f9401d2127",
+    "core.mjs": "1fdd4641afce6247a53b13a2305091d42686a156aaeaabf10733792ce8d786a8",
+    "fixtures/demo.json": "e38bf1ae05b4547a1b60e37f3b1338e505abf0eda1d89687ed7c9a4c355bfeee",
+    "hackathon.md": "e11ab8942c745a716e8eef2cbf28a2407580295ffa0ba133ac1ec8b24e7c3b7a",
+    "inbox.mjs": "69ea6cedef6202ebd74f3722cb813b97c022bccf0f0b3dd750d639a1bb8a519a",
+    "package.json": "aa21ee9f43846427735aea88a9d6b0f3fb019dd65a014dc68b3f583743dc3f56",
+    "provider-contracts.mjs": "8401e0b8474040da9d952af075e6e49d3ae049cea2bbdc249944976fd0546ed3",
+    "public/app.js": "17476abf748b768ac30ad72d49112d1050d656d5a1b5853bec32b90d8bf0ca1b",
+    "public/index.html": "d8966f68eff8d5775c76edbdf6245f40c2fda53bed1e362d15ff300f3943f0fe",
+    "public/styles.css": "bce58959c19fd2cccf78ee569820bf34a315c278e9d94abbc57b22f6bff054ce",
+    "scripts/verify-demo.mjs": "71aa917ab5ed5f61be88fbd4e0f6547bffde250969190a8eb73404e483dab06b",
+    "scripts/verify-manifest.mjs": "02395fe940a5c3ee753e13019be1bb629f091bed7cf599ce9262a5b6419e614a",
+    "tests/core.test.mjs": "5d8d8702cbd2ba197ae1948bfb6a7faae4de44ffaee3bc60388f2df51b8046eb"
+  },
+  "note": "Hashes cover the staging package bytes excluding this manifest and the carrier-level GitHub Actions workflow."
+}
