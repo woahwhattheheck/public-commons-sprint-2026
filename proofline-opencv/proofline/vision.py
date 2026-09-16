@@ -150,12 +150,43 @@ def _segment_regions(reference: np.ndarray, aligned: np.ndarray, config: Inspect
     return candidates, mask, threshold_value
 
 
+def _source_object(value: Any, name: str) -> dict[str, str]:
+    if not isinstance(value, dict) or set(value) != {"provider", "bucket", "key", "version_id"}:
+        raise VisionError(f"{name} must contain exact S3 source identity")
+    if value.get("provider") != "AWS_S3":
+        raise VisionError(f"{name}.provider must be AWS_S3")
+    limits = {"bucket": 255, "key": 1024, "version_id": 1024}
+    normalized = {"provider": "AWS_S3"}
+    for field, limit in limits.items():
+        item = value.get(field)
+        if not isinstance(item, str) or not item or "\x00" in item:
+            raise VisionError(f"{name}.{field} must be non-empty text")
+        try:
+            raw = item.encode("utf-8", "strict")
+        except UnicodeEncodeError as exc:
+            raise VisionError(f"{name}.{field} must be valid UTF-8") from exc
+        if len(raw) > limit:
+            raise VisionError(f"{name}.{field} exceeds byte limit")
+        normalized[field] = item
+    return normalized
+
+
+def _source_binding(value: Any) -> dict[str, dict[str, str]]:
+    if not isinstance(value, dict) or set(value) != {"reference", "inspection"}:
+        raise VisionError("source_binding must contain exact reference and inspection identities")
+    return {
+        "reference": _source_object(value.get("reference"), "source_binding.reference"),
+        "inspection": _source_object(value.get("inspection"), "source_binding.inspection"),
+    }
+
+
 def inspect_pair(
     reference_bytes: bytes,
     inspection_bytes: bytes,
     *,
     config: InspectionConfig | None = None,
     allow_opencv4_dev: bool = False,
+    source_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     config = config or InspectionConfig()
     config.validate()
@@ -198,6 +229,8 @@ def inspect_pair(
             "external_send": False,
         },
     }
+    if source_binding is not None:
+        packet["source_binding"] = _source_binding(source_binding)
     packet["receipt_sha256"] = digest_json(packet)
     return packet
 
@@ -217,6 +250,12 @@ def verify_evidence_packet(packet: dict[str, Any]) -> bool:
     authority = body.get("authority")
     if not isinstance(authority, dict) or not authority or any(value is not False for value in authority.values()):
         return False
+    if "source_binding" in body:
+        try:
+            if _source_binding(body["source_binding"]) != body["source_binding"]:
+                return False
+        except VisionError:
+            return False
     regions = body.get("regions")
     if not isinstance(regions, list) or len(regions) > MAX_REGIONS:
         return False
