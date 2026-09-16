@@ -1,0 +1,24 @@
+{
+  "assumptions": {
+    "loaded_labor_cost_per_hour_minor": 4200,
+    "manual_review_seconds_per_unit": 45,
+    "modeled_review_share_bps": 2000,
+    "periods_per_year": 12,
+    "source": "BUYER_SUPPLIED_OR_OWNER_SCENARIO_INPUT",
+    "units_per_period": 5000
+  },
+  "buyer_is_synthetic": true,
+  "buyer_label": "SYNTHETIC DEMO MANUFACTURER",
+  "input_data_classification": "NON_SENSITIVE_SYNTHETIC",
+  "pilot_id": "SYNTH-DEMO-001",
+  "price": {
+    "currency": "USD",
+    "fixed_minor": 1250000,
+    "state": "PROPOSED_NOT_ACCEPTED"
+  },
+  "reference_policy": "buyer-approved reference image per product generation; changes require a new explicit generation",
+  "retention_days": 14,
+  "sample_count": 30,
+  "site_label": "Demo Cell 1",
+  "use_case": "screen surface visual-change review against a buyer-approved golden reference"
+}
