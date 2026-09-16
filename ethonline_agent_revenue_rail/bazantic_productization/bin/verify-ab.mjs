@@ -1,0 +1,2 @@
+import fs from 'node:fs'; import { compareABEvidence } from '../src/ab-evidence.mjs';
+const [baselinePath,recipePath]=process.argv.slice(2); if(!baselinePath||!recipePath){console.error('usage: node bin/verify-ab.mjs <baseline.json> <recipe.json>');process.exit(2);} const baseline=JSON.parse(fs.readFileSync(baselinePath,'utf8')), recipe=JSON.parse(fs.readFileSync(recipePath,'utf8')); const result=compareABEvidence(baseline,recipe); console.log(JSON.stringify(result,null,2)); if(!result.meaningfulImprovement) process.exitCode=1;

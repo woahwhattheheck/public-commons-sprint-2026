@@ -1,0 +1,7 @@
+import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url'; import { compareABEvidence } from '../src/ab-evidence.mjs';
+const here=path.dirname(fileURLToPath(import.meta.url)); const fixture=(name)=>JSON.parse(fs.readFileSync(path.resolve(here,`../fixtures/${name}`),'utf8'));
+test('comparable A/B reports meaningful Recipe improvement',()=>{const out=compareABEvidence(fixture('ab-baseline.json'),fixture('ab-recipe.json'));assert.equal(out.improvement,4);assert.equal(out.meaningfulImprovement,true);assert.match(out.evidenceDigest,/^[0-9a-f]{64}$/);});
+test('model drift invalidates A/B',()=>{const b=fixture('ab-baseline.json'),r=fixture('ab-recipe.json');r.model='different-model';assert.throws(()=>compareABEvidence(b,r),/not comparable/);});
+test('settings drift invalidates A/B',()=>{const b=fixture('ab-baseline.json'),r=fixture('ab-recipe.json');r.settings.temperature=0.2;assert.throws(()=>compareABEvidence(b,r),/not comparable/);});
+test('API access drift invalidates A/B',()=>{const b=fixture('ab-baseline.json'),r=fixture('ab-recipe.json');r.apiAccess.push('extra-service');assert.throws(()=>compareABEvidence(b,r),/not comparable/);});
+test('unsupported facts defeat improvement',()=>{const b=fixture('ab-baseline.json'),r=fixture('ab-recipe.json');r.output.unsupportedFactsInvented=true;const out=compareABEvidence(b,r);assert.equal(out.recipe.score,0);assert.equal(out.meaningfulImprovement,false);});

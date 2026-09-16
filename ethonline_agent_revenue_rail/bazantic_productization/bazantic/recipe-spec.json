@@ -1,0 +1,31 @@
+{
+  "schema": "bazantic-recipe-spec/v2",
+  "name": "agent-revenue-rail-evidence-bound-purchase",
+  "description": "Use a retained Graph purchase decision before a Hedera/x402 report acquisition, then consume only a report cross-bound to the independently retained settlement response.",
+  "authorityModel": {
+    "untrustedInput": ["laneBReceipt", "laneAReceipt", "report"],
+    "hostOnlyCapability": "createRecipeAuthority",
+    "serializedAuthorityAccepted": false,
+    "callerRelativeClockAccepted": false,
+    "paymentAuthority": false,
+    "submissionAuthority": false
+  },
+  "states": [
+    "POLICY_EXPIRED",
+    "SKIP_PURCHASE",
+    "DEFER_PURCHASE",
+    "PURCHASE_NEEDED",
+    "PAYMENT_REQUIRED",
+    "PURCHASE_FAILED",
+    "REPORT_MISSING",
+    "USE_REPORT",
+    "GATE_VIOLATION"
+  ],
+  "providerRequirements": [
+    "retained Lane B receipt and execution/source evidence",
+    "trusted host clock",
+    "independent Lane A settlement readback",
+    "retained exact report response bytes"
+  ],
+  "releaseStatus": "HOLD_UNTIL_PROVIDER_INTEGRATED_HOST"
+}

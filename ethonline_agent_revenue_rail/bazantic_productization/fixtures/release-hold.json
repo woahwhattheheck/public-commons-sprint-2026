@@ -1,0 +1,37 @@
+{
+  "version": "agent-revenue-rail/release-evidence/v2",
+  "sourceHead": "1111111111111111111111111111111111111111",
+  "repoUrl": "https://github.com/example/replace-me",
+  "repoEvidenceDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+  "deployUrl": "https://example.invalid",
+  "deployEvidenceDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+  "offerDigest": "3333333333333333333333333333333333333333333333333333333333333333",
+  "bazantic": {
+    "accountHandle": "replace-me",
+    "recipeId": "replace-me",
+    "recipeEvidenceDigest": "4444444444444444444444444444444444444444444444444444444444444444",
+    "capturedAt": "2026-09-15T20:50:00.000Z"
+  },
+  "graph": {
+    "providerAgentId": "8453:replace-me",
+    "network": "base",
+    "liveQueryEvidenceDigest": "5555555555555555555555555555555555555555555555555555555555555555",
+    "capturedAt": "2026-09-15T20:51:00.000Z"
+  },
+  "hedera": {
+    "network": "hedera:testnet",
+    "asset": "0.0.0",
+    "txHash": "replace-with-live-testnet-tx-hash",
+    "settlementEvidenceDigest": "6666666666666666666666666666666666666666666666666666666666666666",
+    "capturedAt": "2026-09-15T20:52:00.000Z"
+  },
+  "ab": {
+    "baselineCaptureDigest": "7777777777777777777777777777777777777777777777777777777777777777",
+    "recipeCaptureDigest": "8888888888888888888888888888888888888888888888888888888888888888",
+    "verificationDigest": "9999999999999999999999999999999999999999999999999999999999999999",
+    "meaningfulImprovement": false,
+    "capturedAt": "2026-09-15T20:53:00.000Z"
+  },
+  "videoUrl": "https://example.invalid/demo",
+  "videoEvidenceDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+}
