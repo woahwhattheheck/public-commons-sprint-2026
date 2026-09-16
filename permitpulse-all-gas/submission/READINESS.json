@@ -1,0 +1,43 @@
+{
+  "format": "permitpulse-submission-readiness-v1",
+  "operation": "PERMITPULSE-LAST-MILE-SUBMISSION-CARRIER-ZSOL-20260916",
+  "source": {
+    "stagingRepo": "woahwhattheheck/public-commons-sprint-2026",
+    "stagingDirectory": "permitpulse-all-gas",
+    "sourceMergeCommit": "5da9e9d7a46e389d29afc15112e477db829ec62f",
+    "sourceManifest": "permitpulse-all-gas/SOURCE_MANIFEST.json"
+  },
+  "officialRules": {
+    "url": "https://www.convex.dev/hackathons/all-gas",
+    "verifiedOn": "2026-09-16",
+    "deadline": "2026-09-22T12:00:00-07:00",
+    "cashPrizesUsd": [10000, 5000, 1500],
+    "requirements": [
+      "public_repo",
+      "root_hackathon_md",
+      "convex_backend",
+      "live_convex_or_chatgpt_url",
+      "real_openai_work",
+      "real_firecrawl_work",
+      "real_agentmail_work",
+      "social_build_post",
+      "video_under_180_seconds",
+      "vibeapps_submission"
+    ]
+  },
+  "externalReceipts": [
+    {"id":"public_repo","required":true,"status":"OPEN","evidence":[]},
+    {"id":"root_hackathon_md","required":true,"status":"OPEN","evidence":[]},
+    {"id":"luma_registration","required":false,"status":"OPEN","evidence":[]},
+    {"id":"convex_backend_live","required":true,"status":"OPEN","evidence":[]},
+    {"id":"live_public_url","required":true,"status":"OPEN","evidence":[]},
+    {"id":"firecrawl_live_work","required":true,"status":"OPEN","evidence":[]},
+    {"id":"agentmail_live_work","required":true,"status":"OPEN","evidence":[]},
+    {"id":"openai_live_work","required":true,"status":"OPEN","evidence":[]},
+    {"id":"social_build_post","required":true,"status":"OPEN","evidence":[]},
+    {"id":"demo_video","required":true,"status":"OPEN","evidence":[]},
+    {"id":"vibeapps_submission","required":true,"status":"OPEN","evidence":[]}
+  ],
+  "readyForSubmission": false,
+  "truthBoundary": "SOURCE_TEST_DEMO_STAGING_ONLY"
+}

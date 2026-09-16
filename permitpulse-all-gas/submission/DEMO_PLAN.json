@@ -1,0 +1,13 @@
+{
+  "format": "permitpulse-demo-plan-v1",
+  "targetSeconds": 165,
+  "scenes": [
+    {"start":0,"end":15,"title":"Problem + product","proof":"Show PermitPulse home and explain that operator guidance changes are tracked with source provenance."},
+    {"start":15,"end":45,"title":"Convex state","proof":"Show jurisdictions, source snapshots, live update state, and owner-review checklist records backed by Convex."},
+    {"start":45,"end":75,"title":"Firecrawl change capture","proof":"Trigger or replay a real admitted Firecrawl scrape and show requested URL, returned source identity, digest, and detected change."},
+    {"start":75,"end":100,"title":"AgentMail inbound notice","proof":"Show one real inbound event routed into the same jurisdiction, including dedupe identity; do not send outbound mail."},
+    {"start":100,"end":130,"title":"OpenAI review checklist","proof":"Show OpenAI generating bounded operational review steps from the documented change, with owner-review-required state visible."},
+    {"start":130,"end":150,"title":"Fail-closed evidence boundary","proof":"Show source mismatch or duplicate event rejected and explain that fixtures never count as live provider proof."},
+    {"start":150,"end":165,"title":"Close","proof":"Show public URL, repo, hackathon.md, and the exact workflow a real operator would use this week."}
+  ]
+}
