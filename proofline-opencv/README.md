@@ -51,6 +51,19 @@ The resulting packet binds both input hashes, registration, segmentation mask, e
 
 See `docs/ARCHITECTURE.md`, `docs/DEMO_SCRIPT.md`, and `docs/COMPETITION.md`.
 
+## Commercial pilot pack
+
+`commercial/` converts this source/test/demo carrier into a buyer-evaluable fixed-scope pilot without widening authority. It includes a fail-closed packet compiler, scenario-only ROI worksheet, evidence-linked acceptance criteria, delivery and security runbooks, a clearly synthetic case study, and a first-party-evidence-backed target-account research set.
+
+```bash
+PYTHONPATH=proofline-opencv python -m proofline.commercial compile \
+  proofline-opencv/commercial/sample_intake.json /tmp/proofline-pilot.json
+PYTHONPATH=proofline-opencv python -m proofline.commercial verify \
+  /tmp/proofline-pilot.json
+```
+
+The sample price is `PROPOSED_NOT_ACCEPTED`; the compiler contains no payment link and rejects positive customer-result, accepted-price, observed-savings, live-deployment, revenue, or outbound claims. Any prospect contact remains a separate owner + Muse single-writer action.
+
 ## Truth state
 
-This carrier can establish **source/test/demo readiness**. It does not by itself establish a live AWS deployment, competition submission, judging result, prize, payment, or revenue.
+This carrier can establish **source/test/demo readiness**. It does not by itself establish a live AWS deployment, competition submission, judging result, prize, payment, customer acceptance, observed savings, or revenue.
