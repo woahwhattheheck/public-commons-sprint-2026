@@ -1,0 +1,21 @@
+{
+  "name": "permitpulse-all-gas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:optimized": "node --no-warnings --test tests/*.test.mjs",
+    "verify:demo": "node scripts/verify-demo.mjs",
+    "verify": "npm test && npm run test:optimized && npm run verify:demo && npm run verify:manifest",
+    "verify:manifest": "node scripts/verify-manifest.mjs"
+  },
+  "dependencies": {
+    "@agentmail/convex": "0.1.0",
+    "@firecrawl/firecrawl-convex": "0.1.1",
+    "convex": "1.43.0"
+  }
+}
