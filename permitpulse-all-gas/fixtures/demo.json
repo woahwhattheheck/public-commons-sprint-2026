@@ -1,0 +1,39 @@
+{
+  "before": {
+    "sourceUrl": "https://permits.example.gov/food-service/renewals",
+    "jurisdiction": "Demo City",
+    "title": "Food service permit renewals — synthetic fixture",
+    "fetchedAt": "2026-09-15T12:00:00Z",
+    "content": "Demo fixture only — not a real ordinance or permit rule.\nRenewal packets may be uploaded as PDF.\nInspection scheduling requests should be submitted at least 72 hours in advance.\nQuestions: permits@example.gov"
+  },
+  "after": {
+    "sourceUrl": "https://permits.example.gov/food-service/renewals",
+    "jurisdiction": "Demo City",
+    "title": "Food service permit renewals — synthetic fixture",
+    "fetchedAt": "2026-09-16T12:00:00Z",
+    "content": "Demo fixture only — not a real ordinance or permit rule.\nRenewal packets may be uploaded as PDF or PDF/A.\nInspection scheduling requests should be submitted at least 5 business days in advance.\nQuestions: permits@example.gov"
+  },
+  "inbox": {
+    "eventId": "evt_demo_001",
+    "messageId": "msg_demo_001",
+    "threadId": "thread_demo_001",
+    "from": "Demo City Permits <notices@example.gov>",
+    "subject": "Food service renewal page updated",
+    "text": "The renewal guidance changed. Review https://permits.example.gov/food-service/renewals before your next scheduling request.",
+    "receivedAt": "2026-09-16T12:05:00Z"
+  },
+  "checklist": [
+    {
+      "kind": "verify",
+      "title": "Review the new inspection scheduling lead time",
+      "why": "The current public-source snapshot changed the scheduling guidance; confirm how it affects the next planned inspection request.",
+      "evidenceDigests": ["__AFTER_DIGEST__"]
+    },
+    {
+      "kind": "update_record",
+      "title": "Update the internal renewal-packet note",
+      "why": "The current snapshot now mentions PDF/A in addition to PDF; record the source change for staff review.",
+      "evidenceDigests": ["__AFTER_DIGEST__"]
+    }
+  ]
+}
