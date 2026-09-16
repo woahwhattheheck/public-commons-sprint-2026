@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ProofLine OpenCV evidence-bound visual inspection
+Parameters:
+  ReferenceBucketName:
+    Type: String
+  ReferenceKey:
+    Type: String
+Resources:
+  InspectionBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+  EvidenceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+  VisionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.12
+      Handler: proofline.aws_runtime.lambda_handler
+      CodeUri: ../
+      Timeout: 60
+      MemorySize: 2048
+      Environment:
+        Variables:
+          EVIDENCE_TABLE: !Ref EvidenceTable
+          REFERENCE_BUCKET: !Ref ReferenceBucketName
+          REFERENCE_KEY: !Ref ReferenceKey
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref InspectionBucket
+        - S3ReadPolicy:
+            BucketName: !Ref ReferenceBucketName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EvidenceTable
+      Events:
+        InspectionCreated:
+          Type: S3
+          Properties:
+            Bucket: !Ref InspectionBucket
+            Events: s3:ObjectCreated:*
+Outputs:
+  InspectionBucket:
+    Value: !Ref InspectionBucket
+  EvidenceTable:
+    Value: !Ref EvidenceTable

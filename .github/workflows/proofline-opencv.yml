@@ -1,0 +1,26 @@
+name: ProofLine OpenCV
+on:
+  pull_request:
+    paths:
+      - 'proofline-opencv/**'
+      - '.github/workflows/proofline-opencv.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'proofline-opencv/**'
+      - '.github/workflows/proofline-opencv.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r proofline-opencv/requirements.txt
+      - run: python -m compileall -q proofline-opencv/proofline proofline-opencv/tests
+      - run: PYTHONPATH=proofline-opencv python -m unittest discover -s proofline-opencv/tests -v

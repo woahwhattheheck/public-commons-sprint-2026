@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proofline-opencv"
+version = "0.1.0"
+description = "Evidence-bound OpenCV visual inspection with AWS review routing"
+requires-python = ">=3.11"
+dependencies = [
+  "opencv-python-headless>=5.0.0,<6",
+  "numpy>=2.0,<3",
+  "boto3>=1.35,<2",
+]
+
+[project.scripts]
+proofline = "proofline.cli:main"
+
+[tool.setuptools]
+packages = ["proofline"]
