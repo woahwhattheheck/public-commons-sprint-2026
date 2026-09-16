@@ -1,82 +1,82 @@
 [
   {
-    "organization": "Jabil",
     "fit_signal": "Jabil publicly describes AXI/AOI inspection for proactive defect capture; current quality roles also perform visual inspection and nonconformance documentation.",
     "fit_source": "https://www.jabil.com/capability/metals.html",
-    "public_route": "https://www.jabil.com/contact.html",
+    "organization": "Jabil",
     "pilot_wedge": "Evidence-bound reference-vs-inspection review for surfaces or change-detection steps that sit beside existing AOI/AXI, with human disposition retained.",
+    "public_route": "https://www.jabil.com/contact.html",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   },
   {
-    "organization": "Flex",
     "fit_signal": "Flex publicly discusses high-speed cameras, AI-assisted visual inspection, anomaly detection, and automated/visual inspection in advanced manufacturing.",
     "fit_source": "https://flex.com/resources/how-can-advanced-manufacturing-improve-quality",
-    "public_route": "https://flex.com/contact-us",
+    "organization": "Flex",
     "pilot_wedge": "A bounded evidence-receipt layer for change review, engineering trials, or low-volume/high-mix surfaces where a deterministic audit trail matters.",
+    "public_route": "https://flex.com/contact-us",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   },
   {
-    "organization": "Sanmina",
     "fit_signal": "Sanmina publishes machine-vision verification, optical inspection, and real-time test/inspection traceability as manufacturing capabilities.",
     "fit_source": "https://www.sanmina.com/solutions-contract-manufacturing-design/sanmina4/",
-    "public_route": "https://www.sanmina.com/contact/",
+    "organization": "Sanmina",
     "pilot_wedge": "Receipt-bound supplemental inspection evidence for a selected high-mix process, without replacing 42Q or existing pass/fail authority.",
+    "public_route": "https://www.sanmina.com/contact/",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   },
   {
-    "organization": "Plexus",
     "fit_signal": "Plexus explicitly offers visual and structural inspection plus automated vision systems to verify placement and polarity, with traceability.",
     "fit_source": "https://www.plexus.com/solutions/manufacturing/integrated-test-and-inspection/",
-    "public_route": "https://www.plexus.com/contact/",
+    "organization": "Plexus",
     "pilot_wedge": "Human-review change evidence for a narrowly selected inspection gap or NPI flow, complementing existing automated inspection and traceability.",
+    "public_route": "https://www.plexus.com/contact/",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   },
   {
-    "organization": "Celestica",
     "fit_signal": "Celestica publicly describes product reliability testing, inspection, qualification, and failure/yield analysis across complex assemblies.",
     "fit_source": "https://www.celestica.com/our-expertise/services/testing-and-quality",
-    "public_route": "https://www.celestica.com/contact-us",
+    "organization": "Celestica",
     "pilot_wedge": "Deterministic before/after visual evidence for NPI, failure analysis, or controlled inspection trials where reviewer provenance matters.",
+    "public_route": "https://www.celestica.com/contact-us",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   },
   {
-    "organization": "Benchmark Electronics",
     "fit_signal": "Benchmark says most manufacturing inspection is automated optical inspection and separately describes machine vision for discrepancy detection and continuous quality improvement.",
     "fit_source": "https://www.bench.com/setting-the-benchmark/the-next-generation-of-visual-inspection-tools",
-    "public_route": "https://www.bench.com/",
+    "organization": "Benchmark Electronics",
     "pilot_wedge": "A source-first evidence and review layer for experimental or low-volume inspection scenarios that should not directly mutate product disposition.",
+    "public_route": "https://www.bench.com/",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   },
   {
-    "organization": "Fabrinet",
     "fit_signal": "Fabrinet lists visual inspection, AOI, X-ray, incoming inspection, and in-house inspection labs for complex optical/electronic manufacturing.",
     "fit_source": "https://fabrinet.com/services/circuit-board-assembly",
-    "public_route": "https://fabrinet.com/contact",
+    "organization": "Fabrinet",
     "pilot_wedge": "Evidence-bound visual change review around precision optical/electromechanical assemblies, explicitly supplemental to existing AOI/X-ray.",
+    "public_route": "https://fabrinet.com/contact",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   },
   {
-    "organization": "Polaris",
     "fit_signal": "Polaris Government & Defense describes recorded quality inspections, visual work instructions, 3D scanning, and AI detection systems on its manufacturing line.",
     "fit_source": "https://military.polaris.com/en-us/manufacturing/",
-    "public_route": "https://www.polaris.com/en-us/commercial/contact-us/",
+    "organization": "Polaris",
     "pilot_wedge": "A bounded review-only pilot for visual-change evidence on one station or component family, preserving Polaris's existing quality authority.",
+    "public_route": "https://www.polaris.com/en-us/commercial/contact-us/",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   },
   {
-    "organization": "TTM Technologies",
     "fit_signal": "TTM publicly lists automated optical inspection and X-ray inspection across PCB/backplane/system-integration manufacturing.",
     "fit_source": "https://www.ttm.com/index.php/en/solutions/system-integration",
-    "public_route": "https://www.ttm.com/contact-us-and-support",
+    "organization": "TTM Technologies",
     "pilot_wedge": "Supplemental deterministic evidence for high-mix visual comparisons or engineering-change verification, not a replacement for AOI acceptance.",
+    "public_route": "https://www.ttm.com/contact-us-and-support",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   },
   {
-    "organization": "Creation Technologies",
     "fit_signal": "Creation Technologies publishes AOI, inspection, validation, verification, and production test-development capabilities for complex systems.",
     "fit_source": "https://www.creationtech.com/solutions/product-development-and-engineering/turnkey-product-development/test-design-and-development/",
-    "public_route": "https://www.creationtech.com/contact/",
+    "organization": "Creation Technologies",
     "pilot_wedge": "Review-only evidence receipts for a controlled NPI/validation visual comparison where deterministic replay and source custody reduce buyer uncertainty.",
+    "public_route": "https://www.creationtech.com/contact/",
     "state": "RESEARCH_ONLY_NO_OUTBOUND"
   }
 ]
