@@ -60,8 +60,8 @@ def verify_review_proposal(proposal: dict[str, Any], evidence: dict[str, Any]) -
         return False
     try:
         expected = build_review_proposal(evidence)
-        # Canonical bytes preserve exact JSON types (true must not alias integer 1)
-        # and reject every omitted, extra, reprioritized, or rewritten field.
+        # Canonical bytes, rather than Python equality, preserve exact JSON types
+        # (e.g. true must never alias integer 1) and reject all extra/missing fields.
         return canonical_json(proposal) == canonical_json(expected)
     except (ProposalError, TypeError, ValueError, UnicodeError):
         return False
