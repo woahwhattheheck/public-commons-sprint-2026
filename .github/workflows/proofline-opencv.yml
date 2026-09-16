@@ -20,6 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - run: sha256sum -c proofline-opencv/SOURCE_MANIFEST.sha256
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r proofline-opencv/requirements.txt
       - run: python -m compileall -q proofline-opencv/proofline proofline-opencv/tests
