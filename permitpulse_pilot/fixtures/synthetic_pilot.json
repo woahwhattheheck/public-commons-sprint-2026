@@ -1,0 +1,59 @@
+{
+  "schema": "permitpulse-paid-pilot/v1",
+  "pilotId": "PERMITPULSE-PAID-PILOT-SYN-001",
+  "asOfUtc": "2026-09-16T12:00:00Z",
+  "intake": {
+    "jurisdictions": [
+      {"id": "J-SYN-1", "label": "synthetic-county-a"}
+    ],
+    "sources": [
+      {
+        "id": "S-SYN-1",
+        "jurisdictionId": "J-SYN-1",
+        "httpsUrl": "https://permits.example.invalid/guidance",
+        "refreshCadenceHours": 24
+      }
+    ],
+    "reviewOwners": [
+      {"id": "RO-SYN-1", "role": "owner-reviewer"}
+    ],
+    "retentionDays": 90
+  },
+  "snapshots": [
+    {
+      "id": "SNAP-1",
+      "sourceId": "S-SYN-1",
+      "capturedAt": "2026-09-15T00:00:00Z",
+      "digest": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "id": "SNAP-2",
+      "sourceId": "S-SYN-1",
+      "capturedAt": "2026-09-16T00:00:00Z",
+      "digest": "2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  ],
+  "changes": [
+    {
+      "id": "CHG-1",
+      "sourceId": "S-SYN-1",
+      "beforeDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+      "afterDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+      "laborMinutes": 45
+    }
+  ],
+  "commercial": {
+    "status": "PROPOSED_NOT_ACCEPTED",
+    "hypothesisMinor": 450000,
+    "currency": "USD",
+    "paymentLink": false
+  },
+  "researchAccounts": [
+    {
+      "id": "RA-1",
+      "label": "synthetic-operator-a",
+      "firstPartyUrl": "https://operator.example.invalid/about",
+      "posture": "RESEARCH_ONLY_NO_OUTBOUND"
+    }
+  ]
+}
