@@ -39,6 +39,11 @@ No dependency install is required for the stdlib contract tests. A live standalo
 - `OPENAI_API_KEY`
 - optional `OPENAI_MODEL` (defaults to `gpt-5.6-luna`)
 
+## Paid pilot carrier
+
+A commercialization-only, synthetic, no-provider pilot packet lives in `permitpulse_pilot/`.
+It does not deploy, submit, contact buyers, create payment links, or change `#105` readiness truth.
+
 ## Safety / product boundary
 
 PermitPulse reports **what documented source text changed** and proposes review steps. It does not decide whether a business is compliant, whether a permit is approved/denied, whether a filing/payment is legally required, or whether an operator should contact an authority. No customer data is included in the staging carrier.

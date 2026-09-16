@@ -32,3 +32,7 @@ All outputs include source notes, test cases where applicable, and known limitat
 See CONTRIBUTING.md. Prefer issues and PRs. This sprint ends ~26 Aug 2026; ongoing maintenance is community-driven.
 
 Generated as part of the Public Commons Sprint, August 2026.
+
+## PermitPulse paid pilot
+
+See `permitpulse_pilot/` for the commercialization-only synthetic pilot carrier. Predecessor `permitpulse-all-gas` submission receipts remain OPEN and `readyForSubmission` remains false.
