@@ -2,12 +2,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from .codec import digest_json
+from .codec import canonical_json, digest_json
 from .vision import verify_evidence_packet
 
 
 class ProposalError(ValueError):
     pass
+
+
+def _priority(area: int, mean_delta: float) -> str:
+    if area >= 1000 or mean_delta >= 90:
+        return "HIGH"
+    if area >= 200 or mean_delta >= 45:
+        return "MEDIUM"
+    return "LOW"
 
 
 def build_review_proposal(evidence: dict[str, Any]) -> dict[str, Any]:
@@ -18,15 +26,9 @@ def build_review_proposal(evidence: dict[str, Any]) -> dict[str, Any]:
     for region in regions:
         area = int(region["area_px"])
         mean_delta = float(region["mean_delta"])
-        if area >= 1000 or mean_delta >= 90:
-            priority = "HIGH"
-        elif area >= 200 or mean_delta >= 45:
-            priority = "MEDIUM"
-        else:
-            priority = "LOW"
         proposals.append({
             "region_id": region["region_id"],
-            "priority": priority,
+            "priority": _priority(area, mean_delta),
             "proposal": "REVIEW_VISUAL_CHANGE",
             "evidence_crop_sha256": region["evidence_crop_sha256"],
             "measurements": {
@@ -54,38 +56,12 @@ def build_review_proposal(evidence: dict[str, Any]) -> dict[str, Any]:
 
 
 def verify_review_proposal(proposal: dict[str, Any], evidence: dict[str, Any]) -> bool:
-    if not verify_evidence_packet(evidence):
+    if not verify_evidence_packet(evidence) or not isinstance(proposal, dict):
         return False
-    if not isinstance(proposal, dict) or proposal.get("schema") != "proofline.review-proposal.v1":
+    try:
+        expected = build_review_proposal(evidence)
+        # Canonical bytes preserve exact JSON types (true must not alias integer 1)
+        # and reject every omitted, extra, reprioritized, or rewritten field.
+        return canonical_json(proposal) == canonical_json(expected)
+    except (ProposalError, TypeError, ValueError, UnicodeError):
         return False
-    receipt = proposal.get("receipt_sha256")
-    if not isinstance(receipt, str):
-        return False
-    body = dict(proposal)
-    body.pop("receipt_sha256", None)
-    if digest_json(body) != receipt:
-        return False
-    if body.get("evidence_receipt_sha256") != evidence.get("receipt_sha256"):
-        return False
-    authority = body.get("authority")
-    if not isinstance(authority, dict) or any(value is not False for value in authority.values()):
-        return False
-    valid_regions = {region["region_id"]: region for region in evidence["regions"]}
-    proposals = body.get("proposals")
-    if not isinstance(proposals, list):
-        return False
-    seen: set[str] = set()
-    for item in proposals:
-        if not isinstance(item, dict):
-            return False
-        region_id = item.get("region_id")
-        if region_id in seen or region_id not in valid_regions:
-            return False
-        seen.add(region_id)
-        source = valid_regions[region_id]
-        if item.get("evidence_crop_sha256") != source.get("evidence_crop_sha256"):
-            return False
-        if item.get("proposal") != "REVIEW_VISUAL_CHANGE":
-            return False
-    expected_state = "REVIEW_REQUIRED" if proposals else "NO_VISUAL_CHANGE_DETECTED"
-    return body.get("state") == expected_state
