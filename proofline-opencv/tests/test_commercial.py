@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 import copy, json, subprocess, sys, tempfile, unittest
 from pathlib import Path
@@ -26,7 +27,6 @@ SAMPLE = {
         "modeled_review_share_bps": 2000,
     },
 }
-
 
 class CommercialPilotTests(unittest.TestCase):
     def test_packet_is_deterministic_and_verifies(self):
@@ -103,6 +103,7 @@ class CommercialPilotTests(unittest.TestCase):
         self.assertTrue(verify_pilot_packet(packet))
         self.assertIsNone(packet["pilot"]["price"]["fixed_minor"])
 
+
     def test_target_account_research_is_ten_deduped_and_no_outbound(self):
         targets = json.loads((ROOT / "commercial" / "target_accounts.json").read_text(encoding="utf-8"))
         self.assertEqual(len(targets), 10)
@@ -132,7 +133,6 @@ class CommercialPilotTests(unittest.TestCase):
                 cwd=ROOT, env=env, capture_output=True, text=True, timeout=10
             )
             self.assertEqual(v.returncode, 0, v.stderr)
-
 
 if __name__ == "__main__":
     unittest.main()
