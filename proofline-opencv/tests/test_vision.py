@@ -38,6 +38,30 @@ class VisionTests(unittest.TestCase):
         forged["inspection_sha256"] = "0" * 64
         self.assertFalse(verify_evidence_packet(forged))
 
+    def test_aws_source_binding_is_receipt_bound_and_strict(self):
+        reference = make_reference()
+        inspection = make_inspection(reference, defects=[(160, 260, 30, 24)])
+        binding = {
+            "reference": {"provider":"AWS_S3","bucket":"ref","key":"gold.png","version_id":"R1"},
+            "inspection": {"provider":"AWS_S3","bucket":"inspection","key":"one.png","version_id":"I1"},
+        }
+        packet = inspect_pair(
+            encode_png(reference), encode_png(inspection),
+            allow_opencv4_dev=True, source_binding=binding,
+        )
+        self.assertEqual(packet["source_binding"], binding)
+        self.assertTrue(verify_evidence_packet(packet))
+        forged = copy.deepcopy(packet)
+        forged["source_binding"]["reference"]["version_id"] = "R2"
+        self.assertFalse(verify_evidence_packet(forged))
+        bad = copy.deepcopy(binding)
+        bad["reference"]["version_id"] = ""
+        with self.assertRaises(VisionError):
+            inspect_pair(
+                encode_png(reference), encode_png(inspection),
+                allow_opencv4_dev=True, source_binding=bad,
+            )
+
     def test_dimension_mismatch_fails_closed(self):
         reference = make_reference(640, 420)
         inspection = make_reference(600, 420)
