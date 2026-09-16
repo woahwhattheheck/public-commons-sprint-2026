@@ -4,14 +4,7 @@ from proofline.aws_contract import AwsContractError, parse_s3_events
 
 
 def record(key="inspection%2Fone.png", version="v1", sequencer="001"):
-    return {
-        "eventSource": "aws:s3",
-        "eventName": "ObjectCreated:Put",
-        "s3": {
-            "bucket": {"name": "proofline-inspection"},
-            "object": {"key": key, "versionId": version, "sequencer": sequencer},
-        },
-    }
+    return {"eventSource":"aws:s3","eventName":"ObjectCreated:Put","s3":{"bucket":{"name":"proofline-inspection"},"object":{"key":key,"versionId":version,"sequencer":sequencer}}}
 
 
 class AwsContractTests(unittest.TestCase):
@@ -26,16 +19,23 @@ class AwsContractTests(unittest.TestCase):
         self.assertEqual(len(parsed), 2)
         self.assertNotEqual(parsed[0].idempotency_key, parsed[1].idempotency_key)
 
+    def test_reference_version_is_bound_into_runtime_key(self):
+        item = parse_s3_events({"Records": [record()]})[0]
+        a = item.bound_idempotency_key(reference_bucket="ref", reference_key="gold.png", reference_version_id="r1")
+        b = item.bound_idempotency_key(reference_bucket="ref", reference_key="gold.png", reference_version_id="r2")
+        self.assertNotEqual(a, b)
+        self.assertEqual(len(a), 64)
+
+    def test_empty_reference_version_rejected(self):
+        item = parse_s3_events({"Records": [record()]})[0]
+        with self.assertRaises(AwsContractError):
+            item.bound_idempotency_key(reference_bucket="ref", reference_key="gold.png", reference_version_id="")
+
     def test_non_s3_and_delete_rejected(self):
-        bad = record()
-        bad["eventSource"] = "aws:sqs"
-        with self.assertRaises(AwsContractError):
-            parse_s3_events({"Records": [bad]})
-        bad2 = record()
-        bad2["eventName"] = "ObjectRemoved:Delete"
-        with self.assertRaises(AwsContractError):
-            parse_s3_events({"Records": [bad2]})
+        bad = record(); bad["eventSource"] = "aws:sqs"
+        with self.assertRaises(AwsContractError): parse_s3_events({"Records": [bad]})
+        bad2 = record(); bad2["eventName"] = "ObjectRemoved:Delete"
+        with self.assertRaises(AwsContractError): parse_s3_events({"Records": [bad2]})
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()

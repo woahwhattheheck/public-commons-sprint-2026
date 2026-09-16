@@ -25,19 +25,22 @@ def evidence_packet():
     return packet
 
 
+def reseal(packet):
+    packet = copy.deepcopy(packet)
+    packet.pop("receipt_sha256", None)
+    packet["receipt_sha256"] = digest_json(packet)
+    return packet
+
+
 class CodecAgentTests(unittest.TestCase):
     def test_canonical_rejects_nonfinite_and_surrogate(self):
-        with self.assertRaises(CodecError):
-            canonical_json({"x": math.nan})
-        with self.assertRaises(CodecError):
-            canonical_json({"x": "\ud800"})
+        with self.assertRaises(CodecError): canonical_json({"x": math.nan})
+        with self.assertRaises(CodecError): canonical_json({"x": "\ud800"})
 
     def test_loads_bounds_and_utf8(self):
         self.assertEqual(loads_strict('{"b":2,"a":1}'), {"a": 1, "b": 2})
-        with self.assertRaises(CodecError):
-            loads_strict(b"\xff")
-        with self.assertRaises(CodecError):
-            loads_strict("x" * 100, max_bytes=10)
+        with self.assertRaises(CodecError): loads_strict(b"\xff")
+        with self.assertRaises(CodecError): loads_strict("x" * 100, max_bytes=10)
 
     def test_packet_and_proposal_tamper_fail(self):
         packet = evidence_packet()
@@ -50,8 +53,27 @@ class CodecAgentTests(unittest.TestCase):
         tampered2 = copy.deepcopy(packet)
         tampered2["regions"][0]["area_px"] += 1
         self.assertFalse(verify_evidence_packet(tampered2))
-        with self.assertRaises(ProposalError):
-            build_review_proposal(tampered2)
+        with self.assertRaises(ProposalError): build_review_proposal(tampered2)
+
+    def test_resealed_missing_region_proposal_fails(self):
+        packet = evidence_packet()
+        proposal = build_review_proposal(packet)
+        proposal["proposals"] = []
+        proposal["state"] = "NO_VISUAL_CHANGE_DETECTED"
+        self.assertFalse(verify_review_proposal(reseal(proposal), packet))
+
+    def test_resealed_priority_and_measurements_fail(self):
+        packet = evidence_packet()
+        proposal = build_review_proposal(packet)
+        proposal["proposals"][0]["priority"] = "LOW"
+        proposal["proposals"][0]["measurements"]["area_px"] = 1
+        self.assertFalse(verify_review_proposal(reseal(proposal), packet))
+
+    def test_resealed_json_type_alias_fails(self):
+        packet = evidence_packet()
+        proposal = build_review_proposal(packet)
+        proposal["authority"]["external_send"] = 0
+        self.assertFalse(verify_review_proposal(reseal(proposal), packet))
 
     def test_duplicate_region_rejected(self):
         packet = evidence_packet()
@@ -62,5 +84,4 @@ class CodecAgentTests(unittest.TestCase):
         self.assertFalse(verify_evidence_packet(packet))
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()
