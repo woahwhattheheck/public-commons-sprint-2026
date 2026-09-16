@@ -26,6 +26,18 @@ class AwsContractTests(unittest.TestCase):
         self.assertEqual(len(parsed), 2)
         self.assertNotEqual(parsed[0].idempotency_key, parsed[1].idempotency_key)
 
+    def test_reference_version_is_bound_into_runtime_key(self):
+        item = parse_s3_events({"Records": [record()]})[0]
+        first = item.bound_idempotency_key(reference_bucket="ref", reference_key="gold.png", reference_version_id="r1")
+        second = item.bound_idempotency_key(reference_bucket="ref", reference_key="gold.png", reference_version_id="r2")
+        self.assertNotEqual(first, second)
+        self.assertEqual(len(first), 64)
+
+    def test_empty_reference_version_rejected(self):
+        item = parse_s3_events({"Records": [record()]})[0]
+        with self.assertRaises(AwsContractError):
+            item.bound_idempotency_key(reference_bucket="ref", reference_key="gold.png", reference_version_id="")
+
     def test_non_s3_and_delete_rejected(self):
         bad = record()
         bad["eventSource"] = "aws:sqs"
