@@ -1,0 +1,8 @@
+{
+  "reportServiceBaseUrl": "https://example.invalid/agent-revenue-rail",
+  "graphNetwork": "base",
+  "providerAgentId": "8453:replace-with-live-agent-id",
+  "serviceId": "agent-revenue-report",
+  "amountTinybar": "1000000",
+  "graphEndpointLabel": "live-agent0-subgraph"
+}

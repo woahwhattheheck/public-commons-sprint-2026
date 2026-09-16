@@ -1,0 +1,48 @@
+name: ETHOnline Bazantic productization
+
+on:
+  pull_request:
+    paths:
+      - 'ethonline_agent_revenue_rail/bazantic_productization/**'
+      - 'ethonline_agent_revenue_rail/graph_purchase_policy/**'
+      - '.github/workflows/ethonline-bazantic-productization.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ethonline_agent_revenue_rail/bazantic_productization/**'
+      - 'ethonline_agent_revenue_rail/graph_purchase_policy/**'
+      - '.github/workflows/ethonline-bazantic-productization.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  authority-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ethonline_agent_revenue_rail/bazantic_productization
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax
+        run: |
+          node --check src/canonical.mjs
+          node --check src/lane-b-adapter.mjs
+          node --check src/recipe-contract.mjs
+          node --check src/release-gate.mjs
+      - name: Contract and hostile suite
+        run: npm test
+      - name: Comparable A/B evidence
+        run: npm run verify:ab
+      - name: Fail-closed demo
+        run: npm run demo
+      - name: Release reducer must HOLD without provider host
+        run: |
+          set +e
+          npm run release:gate
+          rc=$?
+          set -e
+          test "$rc" -eq 3
