@@ -34,17 +34,13 @@ def reseal(packet):
 
 class CodecAgentTests(unittest.TestCase):
     def test_canonical_rejects_nonfinite_and_surrogate(self):
-        with self.assertRaises(CodecError):
-            canonical_json({"x": math.nan})
-        with self.assertRaises(CodecError):
-            canonical_json({"x": "\ud800"})
+        with self.assertRaises(CodecError): canonical_json({"x": math.nan})
+        with self.assertRaises(CodecError): canonical_json({"x": "\ud800"})
 
     def test_loads_bounds_and_utf8(self):
         self.assertEqual(loads_strict('{"b":2,"a":1}'), {"a": 1, "b": 2})
-        with self.assertRaises(CodecError):
-            loads_strict(b"\xff")
-        with self.assertRaises(CodecError):
-            loads_strict("x" * 100, max_bytes=10)
+        with self.assertRaises(CodecError): loads_strict(b"\xff")
+        with self.assertRaises(CodecError): loads_strict("x" * 100, max_bytes=10)
 
     def test_packet_and_proposal_tamper_fail(self):
         packet = evidence_packet()
@@ -57,8 +53,7 @@ class CodecAgentTests(unittest.TestCase):
         tampered2 = copy.deepcopy(packet)
         tampered2["regions"][0]["area_px"] += 1
         self.assertFalse(verify_evidence_packet(tampered2))
-        with self.assertRaises(ProposalError):
-            build_review_proposal(tampered2)
+        with self.assertRaises(ProposalError): build_review_proposal(tampered2)
 
     def test_resealed_missing_region_proposal_fails(self):
         packet = evidence_packet()
@@ -89,5 +84,4 @@ class CodecAgentTests(unittest.TestCase):
         self.assertFalse(verify_evidence_packet(packet))
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()
