@@ -21,7 +21,7 @@ Input is a source-controlled evidence manifest: repository + baseline digest, ad
 
 ## Authority ceiling
 
-RepoAtlas **never** merges, deploys, contacts anyone, accepts terms, registers an account, submits a competition entry, spends money, or claims an award/payment. Even if all provider evidence flags become true, `authority.auto_merge`, `deploy`, `external_send`, `account_or_terms`, `competition_submit`, and `award_or_payment` remain false. Output is `READY_FOR_HUMAN_REVIEW` or `HOLD_EVIDENCE_GAPS`, not an operational authorization.
+RepoAtlas **never** merges, deploys, contacts anyone, accepts terms, registers an account, submits a competition entry, spends money, or claims an award/payment. This source-only generation also rejects caller-supplied `true` provider flags: Bob execution, registration, submission, or published-track evidence must arrive through a separately source-bound successor rather than being self-attested in the input JSON. Output is `READY_FOR_HUMAN_REVIEW` or `HOLD_EVIDENCE_GAPS`, not an operational authorization.
 
 `BOB_EXECUTION_REQUIRED` stays present until a real IBM Bob execution receipt is admitted by a later authorized provider lane. This source build does not claim that Bob was used, that the team is registered, or that a submission exists.
 
@@ -44,7 +44,7 @@ The synthetic fixture intentionally has an unowned/untested worker change, so th
 ## Test
 
 ```bash
-python -m py_compile repoatlas/*.py tests/test_repoatlas.py
-python -m unittest -v tests.test_repoatlas
-python -O -m unittest -v tests.test_repoatlas
+python -m py_compile repoatlas/*.py tests/*.py
+python -m unittest discover -s tests -v
+python -O -m unittest discover -s tests -v
 ```
