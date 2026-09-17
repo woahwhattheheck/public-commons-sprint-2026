@@ -48,6 +48,7 @@ def _require_text(value: Any, field_name: str, limit: int) -> str:
         raise IncidentError(f"{field_name} must be a string")
     if not value or len(value) > limit:
         raise IncidentError(f"{field_name} length must be 1..{limit}")
+    # Disallow lone surrogates / values that cannot be encoded as UTF-8.
     try:
         value.encode("utf-8")
     except UnicodeEncodeError as exc:
@@ -215,6 +216,7 @@ def compile_packet(turns: Iterable[dict[str, Any]]) -> dict[str, Any]:
         projected = project_final_turn(raw)
         if projected is None:
             continue
+        # Idempotent duplicates do not duplicate the admitted turn ledger.
         was_present = projected["turn_order"] in state.turns
         state.ingest(projected)
         if not was_present:
@@ -253,6 +255,9 @@ def verify_packet(packet: Any) -> bool:
     if not isinstance(turns, list):
         return False
 
+    # Reconstruct raw final-Turn messages from the stable projection, then
+    # recompute the complete packet. This prevents caller-authored state or
+    # authority labels from becoming self-authenticating.
     raw: list[dict[str, Any]] = []
     for turn in turns:
         if not isinstance(turn, dict):
