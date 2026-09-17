@@ -28,6 +28,7 @@ def main() -> int:
             if not isinstance(turns, list):
                 raise IncidentError("turn fixture must be a JSON array")
             packet = compile_packet(turns)
+            # Create-exclusive output: never overwrite evidence by accident.
             with args.output.open("x", encoding="utf-8", newline="\n") as fh:
                 json.dump(packet, fh, indent=2, ensure_ascii=False, allow_nan=False)
                 fh.write("\n")
