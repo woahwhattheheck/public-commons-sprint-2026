@@ -89,9 +89,26 @@ class ProviderAuthorityTests(unittest.TestCase):
         with self.assertRaisesRegex(RepoAtlasError, "invalid_unicode_scalar"):
             compile_packet(raw)
 
-    def test_deep_json_fails_closed_without_recursion_escape(self):
+    def test_deep_json_uses_explicit_interpreter_independent_fence(self):
         data = b"[" * 1500 + b"0" + b"]" * 1500
-        with self.assertRaisesRegex(RepoAtlasError, "json_too_deep|invalid_json"):
+        with self.assertRaisesRegex(RepoAtlasError, "^json_too_deep$"):
+            parse_json_bytes(data)
+
+    def test_json_ingress_requires_exact_bytes(self):
+        class BytesSubclass(bytes):
+            pass
+
+        for value in (bytearray(b"{}"), memoryview(b"{}"), BytesSubclass(b"{}")):
+            with self.subTest(kind=type(value).__name__):
+                with self.assertRaisesRegex(RepoAtlasError, "^json_bytes_required$"):
+                    parse_json_bytes(value)
+
+    def test_json_size_cap_precedes_depth_scan(self):
+        # This payload violates both constraints. The retained byte-work ceiling
+        # must win before the O(n) depth walk, proving work did not move ahead
+        # of the declared MAX_TEXT ingress bound.
+        data = b"[" * 200_001
+        with self.assertRaisesRegex(RepoAtlasError, "^input_too_large$"):
             parse_json_bytes(data)
 
     def test_huge_integer_parser_limit_fails_as_repoatlas_error(self):
@@ -130,7 +147,7 @@ class ProviderAuthorityTests(unittest.TestCase):
     def test_surrogate_field_name_cli_fails_closed_without_rendering_escape(self):
         raw = fixture()
         # Keep root field count at the schema maximum so this reaches the
-        # UTF-8 field-name fence rather than the cardinality fence.  JSON emits
+        # UTF-8 field-name fence rather than the cardinality fence. JSON emits
         # the lone surrogate as an ASCII escape; json.loads recreates the
         # invalid Python scalar before object-mode preflight.
         raw.pop("runbooks")
