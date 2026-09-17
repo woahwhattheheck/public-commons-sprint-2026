@@ -2,7 +2,7 @@ import {
   AUTHORITY,
   ContractError,
   acceptedEvent,
-  collisionKey,
+  sha256Hex,
   effectiveExpiredHumanLease,
   impactFromEvents,
   makeReceipt,
@@ -25,7 +25,9 @@ function common(input, principal) {
   const eventId = validateIdentifier(input.event_id, "event id");
   const actor = validateActor(principal.subject);
   const identity = normalizeIdentity(input);
-  const key = collisionKey(input);
+  // Hash the exact normalized generation that is retained in receipts/lanes.
+  // Never reread caller-owned identity fields after normalization.
+  const key = sha256Hex(identity);
   const route = normalizeRoute(input.route);
   const reason = validateReason(input.reason);
   return { eventId, actor, identity, key, route, reason };
