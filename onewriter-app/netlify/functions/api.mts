@@ -8,7 +8,8 @@ let cachedRegistry: string | null = null;
 let cachedAuthenticator: ReturnType<typeof createAuthenticator> | null = null;
 
 function getAuthenticator() {
-  const raw = process.env.ONEWRITER_SESSIONS_JSON ?? "";
+  const runtimeProcess = (globalThis as any).process;
+  const raw = runtimeProcess?.env?.ONEWRITER_SESSIONS_JSON ?? "";
   if (raw !== cachedRegistry || cachedAuthenticator === null) {
     cachedAuthenticator = createAuthenticator(raw);
     cachedRegistry = raw;
