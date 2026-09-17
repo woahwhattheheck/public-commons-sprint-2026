@@ -1,0 +1,49 @@
+[
+  {
+    "type": "Begin",
+    "id": "synthetic-session"
+  },
+  {
+    "type": "Turn",
+    "turn_order": 0,
+    "transcript": "OBS: checkout error rate reached 18 percent after the latest release",
+    "end_of_turn": true,
+    "end_of_turn_confidence": 0.98,
+    "speaker_label": "SRE"
+  },
+  {
+    "type": "Turn",
+    "turn_order": 1,
+    "transcript": "HYP: payment provider latency regressed after the release",
+    "end_of_turn": true,
+    "end_of_turn_confidence": 0.91,
+    "speaker_label": "IC"
+  },
+  {
+    "type": "Turn",
+    "turn_order": 2,
+    "transcript": "CHECK: compare provider latency before and after the release and inspect timeout distribution",
+    "end_of_turn": true,
+    "end_of_turn_confidence": 0.95,
+    "speaker_label": "SRE"
+  },
+  {
+    "type": "Turn",
+    "turn_order": 3,
+    "transcript": "ACTION: roll back release 2026.09.17 if error rate remains above ten percent",
+    "end_of_turn": true,
+    "end_of_turn_confidence": 0.93,
+    "speaker_label": "IC"
+  },
+  {
+    "type": "Turn",
+    "turn_order": 4,
+    "transcript": "DECISION: hold rollback until the latency comparison is reviewed by the incident commander",
+    "end_of_turn": true,
+    "end_of_turn_confidence": 0.97,
+    "speaker_label": "IC"
+  },
+  {
+    "type": "Termination"
+  }
+]
