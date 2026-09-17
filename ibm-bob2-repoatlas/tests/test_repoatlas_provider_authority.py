@@ -127,6 +127,46 @@ class ProviderAuthorityTests(unittest.TestCase):
             self.assertFalse(packet.exists())
             self.assertFalse(receipt.exists())
 
+    def test_surrogate_field_name_cli_fails_closed_without_rendering_escape(self):
+        raw = fixture()
+        # Keep root field count at the schema maximum so this reaches the
+        # UTF-8 field-name fence rather than the cardinality fence.  JSON emits
+        # the lone surrogate as an ASCII escape; json.loads recreates the
+        # invalid Python scalar before object-mode preflight.
+        raw.pop("runbooks")
+        raw["\ud800"] = []
+        data = json.dumps(
+            raw,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("ascii")
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "input.json"
+            packet = root / "packet.json"
+            receipt = root / "receipt.json"
+            source.write_bytes(data)
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                rc = cli_main(
+                    [
+                        "compile",
+                        "--input",
+                        str(source),
+                        "--packet",
+                        str(packet),
+                        "--receipt",
+                        str(receipt),
+                    ]
+                )
+            rendered = stdout.getvalue()
+            self.assertEqual(rc, 2)
+            self.assertIn("ERROR:root:field_name", rendered)
+            self.assertNotIn("Traceback", rendered)
+            self.assertFalse(packet.exists())
+            self.assertFalse(receipt.exists())
+
     def test_all_false_source_generation_remains_deterministic(self):
         raw = fixture()
         packet, receipt = compile_packet(raw)
