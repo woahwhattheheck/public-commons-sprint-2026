@@ -1,0 +1,2 @@
+# Optional: the deterministic core and offline demo use only Python stdlib.
+websocket-client>=1.8,<2
