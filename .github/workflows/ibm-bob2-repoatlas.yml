@@ -28,13 +28,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Compile
         working-directory: ibm-bob2-repoatlas
-        run: python -m py_compile repoatlas/*.py tests/test_repoatlas.py
+        run: python -m py_compile repoatlas/*.py tests/*.py
       - name: Tests
         working-directory: ibm-bob2-repoatlas
-        run: python -m unittest -v tests.test_repoatlas
+        run: python -m unittest discover -s tests -v
       - name: Optimized tests
         working-directory: ibm-bob2-repoatlas
-        run: python -O -m unittest -v tests.test_repoatlas
+        run: python -O -m unittest discover -s tests -v
       - name: Demo compile and verify
         working-directory: ibm-bob2-repoatlas
         run: |
