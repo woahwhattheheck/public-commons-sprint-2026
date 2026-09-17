@@ -19,6 +19,21 @@ def fixture():
     return json.loads((ROOT / "fixtures" / "synthetic-repo.json").read_text())
 
 
+def generated_files(count: int, tests_per_file: int = 0):
+    return [
+        {
+            "path": f"src/generated_{i}.py",
+            "kind": "source",
+            "owner": "platform",
+            "sha256": "1" * 64,
+            "public_api": False,
+            "tests": [f"tests/generated_{j}.py" for j in range(tests_per_file)],
+            "module": f"generated_{i}",
+        }
+        for i in range(count)
+    ]
+
+
 class ProviderAuthorityTests(unittest.TestCase):
     def test_caller_cannot_self_attest_external_provider_state(self):
         for field in (
@@ -126,6 +141,103 @@ class ProviderAuthorityTests(unittest.TestCase):
             self.assertNotIn("Traceback", rendered)
             self.assertFalse(packet.exists())
             self.assertFalse(receipt.exists())
+
+    def test_direct_object_changes_rows_are_bounded(self):
+        raw = fixture()
+        raw["changes"] = [
+            {
+                "path": f"src/change_{i}.py",
+                "change": "modified",
+                "before_sha256": "a" * 64,
+                "after_sha256": "b" * 64,
+            }
+            for i in range(5001)
+        ]
+        with self.assertRaisesRegex(RepoAtlasError, "changes:cardinality"):
+            compile_packet(raw)
+
+    def test_direct_object_document_rows_are_bounded(self):
+        for name in ("adrs", "runbooks"):
+            with self.subTest(name=name):
+                raw = fixture()
+                raw[name] = [
+                    {"id": f"{name}-{i}", "covers": ["src/api.py"], "sha256": "a" * 64}
+                    for i in range(5001)
+                ]
+                with self.assertRaisesRegex(RepoAtlasError, f"{name}:cardinality"):
+                    compile_packet(raw)
+
+    def test_direct_object_file_test_references_are_bounded_per_row(self):
+        raw = fixture()
+        raw["files"][0]["tests"] = [f"tests/t{i}.py" for i in range(501)]
+        with self.assertRaisesRegex(RepoAtlasError, r"files\[0\]\.tests:cardinality"):
+            compile_packet(raw)
+
+    def test_direct_object_file_test_references_are_bounded_in_aggregate(self):
+        raw = fixture()
+        raw["files"] = generated_files(41, tests_per_file=500)
+        raw["dependencies"] = []
+        raw["changes"] = []
+        raw["adrs"] = []
+        raw["runbooks"] = []
+        with self.assertRaisesRegex(RepoAtlasError, "files.tests:total_cardinality"):
+            compile_packet(raw)
+
+    def test_direct_object_document_covers_are_bounded_per_row(self):
+        for name in ("adrs", "runbooks"):
+            with self.subTest(name=name):
+                raw = fixture()
+                raw["files"] = generated_files(501)
+                raw["dependencies"] = []
+                raw["changes"] = []
+                raw["adrs"] = []
+                raw["runbooks"] = []
+                raw[name] = [
+                    {
+                        "id": "wide",
+                        "covers": [f"src/generated_{i}.py" for i in range(501)],
+                        "sha256": "a" * 64,
+                    }
+                ]
+                with self.assertRaisesRegex(
+                    RepoAtlasError, rf"{name}\[0\]\.covers:cardinality"
+                ):
+                    compile_packet(raw)
+
+    def test_direct_object_document_covers_are_bounded_in_aggregate(self):
+        covers = [f"src/generated_{i}.py" for i in range(500)]
+        for name in ("adrs", "runbooks"):
+            with self.subTest(name=name):
+                raw = fixture()
+                raw["files"] = generated_files(500)
+                raw["dependencies"] = []
+                raw["changes"] = []
+                raw["adrs"] = []
+                raw["runbooks"] = []
+                raw[name] = [
+                    {"id": f"{name}-{i}", "covers": covers, "sha256": "a" * 64}
+                    for i in range(41)
+                ]
+                with self.assertRaisesRegex(
+                    RepoAtlasError, f"{name}\.covers:total_cardinality"
+                ):
+                    compile_packet(raw)
+
+    def test_verifier_rejects_direct_object_over_limit_before_recompile(self):
+        valid = fixture()
+        packet, receipt = compile_packet(valid)
+        oversized = copy.deepcopy(valid)
+        oversized["changes"] = [
+            {
+                "path": f"src/change_{i}.py",
+                "change": "modified",
+                "before_sha256": "a" * 64,
+                "after_sha256": "b" * 64,
+            }
+            for i in range(5001)
+        ]
+        with self.assertRaisesRegex(RepoAtlasError, "changes:cardinality"):
+            verify_bundle(oversized, packet, receipt)
 
     def test_all_false_source_generation_remains_deterministic(self):
         raw = fixture()
