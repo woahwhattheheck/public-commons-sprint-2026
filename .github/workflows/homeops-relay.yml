@@ -1,0 +1,44 @@
+name: HomeOps Relay MCP
+
+on:
+  pull_request:
+    paths:
+      - 'amazon-alexa-homeops-relay/**'
+      - '.github/workflows/homeops-relay.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'amazon-alexa-homeops-relay/**'
+      - '.github/workflows/homeops-relay.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homeops-relay-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile
+        working-directory: amazon-alexa-homeops-relay
+        run: python -m py_compile core.py mcp_server.py demo.py tests/test_homeops.py
+      - name: Contract and hostile tests
+        working-directory: amazon-alexa-homeops-relay
+        run: python -m unittest -v tests/test_homeops.py
+      - name: Optimized-mode contract tests
+        working-directory: amazon-alexa-homeops-relay
+        run: python -O -m unittest -v tests/test_homeops.py
+      - name: Deterministic demo
+        working-directory: amazon-alexa-homeops-relay
+        run: python demo.py
