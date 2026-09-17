@@ -220,13 +220,12 @@ export function createService(db) {
         const refenced = restored.refenced;
         const priorState = lane.state;
 
+        // A late provider outcome after a one-shot human lease expires is invalid.
+        // Throwing here rolls back the refence too, so no persisted state transition
+        // exists without a receipt. Snapshot still reports the effective fence; the
+        // next admissible event will persist refence + receipt atomically.
         if (refenced && (kind === "SENT" || kind === "BOUNCE")) {
-          const error = new ContractError(`${kind} lease expired; prior fence restored`, 409);
-          error.commitState = true;
-          error.effectiveState = lane.state;
-          // The caller sees a conflict, but the restored fence must remain committed.
-          const accepted = null;
-          return { conflict: true, status: 409, error: error.message, effective_state: lane.state, authority: AUTHORITY };
+          throw new ContractError(`${kind} lease expired; prior fence is effective`, 409);
         }
 
         if (kind === "SENT" || kind === "BOUNCE") {
