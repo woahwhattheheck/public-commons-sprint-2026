@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import contextlib
 import copy
 import importlib
+import io
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
+from repoatlas.cli import main as cli_main
 from repoatlas.core import RepoAtlasError, compile_packet, parse_json_bytes, verify_bundle
 
 ROOT = Path(__file__).parents[1]
@@ -89,6 +93,39 @@ class ProviderAuthorityTests(unittest.TestCase):
         data = b"[" * 1500 + b"0" + b"]" * 1500
         with self.assertRaisesRegex(RepoAtlasError, "json_too_deep|invalid_json"):
             parse_json_bytes(data)
+
+    def test_huge_integer_parser_limit_fails_as_repoatlas_error(self):
+        data = b'{"n":' + (b"9" * 5000) + b"}"
+        with self.assertRaisesRegex(RepoAtlasError, "invalid_json"):
+            parse_json_bytes(data)
+
+    def test_huge_integer_cli_fails_closed_without_traceback(self):
+        data = b'{"n":' + (b"9" * 5000) + b"}"
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "input.json"
+            packet = root / "packet.json"
+            receipt = root / "receipt.json"
+            source.write_bytes(data)
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                rc = cli_main(
+                    [
+                        "compile",
+                        "--input",
+                        str(source),
+                        "--packet",
+                        str(packet),
+                        "--receipt",
+                        str(receipt),
+                    ]
+                )
+            rendered = stdout.getvalue()
+            self.assertEqual(rc, 2)
+            self.assertIn("ERROR:invalid_json", rendered)
+            self.assertNotIn("Traceback", rendered)
+            self.assertFalse(packet.exists())
+            self.assertFalse(receipt.exists())
 
     def test_all_false_source_generation_remains_deterministic(self):
         raw = fixture()
