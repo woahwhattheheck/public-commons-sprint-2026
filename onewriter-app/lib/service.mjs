@@ -15,13 +15,15 @@ import {
   validateLeaseSeconds,
   validateReason,
 } from "./core.mjs";
+import { requireRole } from "./auth.mjs";
 
-const CLAIM_KEYS = ["event_id", "actor", "org", "domain", "route", "purpose", "opportunity", "lease_seconds", "reason"];
-const EVENT_KEYS = ["event_id", "kind", "actor", "org", "domain", "route", "purpose", "opportunity", "provider_receipt", "human_evidence_id", "reason"];
+const CLAIM_KEYS = ["event_id", "org", "domain", "route", "purpose", "opportunity", "lease_seconds", "reason"];
+const EVENT_KEYS = ["event_id", "kind", "org", "domain", "route", "purpose", "opportunity", "provider_receipt", "human_evidence_id", "reason"];
+const RETRYABLE_TRANSACTION_CODES = new Set(["40001", "40P01"]);
 
-function common(input) {
+function common(input, principal) {
   const eventId = validateIdentifier(input.event_id, "event id");
-  const actor = validateActor(input.actor);
+  const actor = validateActor(principal.subject);
   const identity = normalizeIdentity(input);
   const key = collisionKey(input);
   const route = normalizeRoute(input.route);
@@ -29,19 +31,40 @@ function common(input) {
   return { eventId, actor, identity, key, route, reason };
 }
 
-async function transaction(db, fn) {
-  const client = await db.pool.connect();
-  try {
-    await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
-    const value = await fn(client);
-    await client.query("COMMIT");
-    return value;
-  } catch (error) {
-    try { await client.query("ROLLBACK"); } catch { /* keep original error */ }
-    throw error;
-  } finally {
-    client.release();
+function isRetryableTransactionError(error) {
+  return Boolean(error && typeof error === "object" && RETRYABLE_TRANSACTION_CODES.has(error.code));
+}
+
+async function transaction(db, fn, options = {}) {
+  const maxAttempts = options.maxAttempts ?? 3;
+  requireCondition(Number.isInteger(maxAttempts) && maxAttempts >= 1 && maxAttempts <= 5, "transaction retry configuration invalid", 500);
+  let lastRetryable = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const client = await db.pool.connect();
+    try {
+      await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+      const value = await fn(client, { attempt });
+      await client.query("COMMIT");
+      return value;
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch { /* preserve original error */ }
+      if (!isRetryableTransactionError(error)) throw error;
+      lastRetryable = error;
+    } finally {
+      client.release();
+    }
+
+    if (attempt < maxAttempts) {
+      // Bounded deterministic backoff gives a winner time to commit while keeping
+      // retries small and testable. The next loop opens a completely new tx/snapshot.
+      await new Promise((resolve) => setTimeout(resolve, 5 * attempt));
+    }
   }
+
+  const error = new ContractError("database contention retry exhausted; no writer authority granted", 409);
+  error.databaseCode = lastRetryable?.code ?? null;
+  throw error;
 }
 
 async function lockLane(client, key) {
@@ -106,15 +129,20 @@ async function persistEvent(client, accepted, receipt) {
   return Number(result.rows[0].seq);
 }
 
-export function createService(db) {
+export function createService(db, options = {}) {
+  const txOptions = { maxAttempts: options.transactionMaxAttempts ?? 3 };
+  const afterServerNow = typeof options.afterServerNow === "function" ? options.afterServerNow : null;
+
   return {
-    async claim(input) {
+    async claim(input, principal) {
+      requireRole(principal, "claim");
       requireExactKeys(input, CLAIM_KEYS, "claim");
-      const c = common(input);
+      const c = common(input, principal);
       const leaseSeconds = validateLeaseSeconds(input.lease_seconds);
-      return transaction(db, async (client) => {
+      return transaction(db, async (client, attemptContext) => {
         await lockLane(client, c.key);
         const now = await serverNow(client);
+        if (afterServerNow) await afterServerNow({ operation: "claim", attempt: attemptContext.attempt, now });
         await reserveIdentifier(client, c.eventId, "event");
         let lane = await loadLane(client, c.key);
         let refenced = false;
@@ -192,14 +220,18 @@ export function createService(db) {
         });
         const seq = await persistEvent(client, accepted, receipt);
         return { seq, receipt, authority: AUTHORITY };
-      });
+      }, txOptions);
     },
 
-    async record(input) {
+    async record(input, principal) {
       requireExactKeys(input, EVENT_KEYS, "event");
-      const c = common(input);
       const kind = input.kind;
       requireCondition(["SENT", "BOUNCE", "HUMAN_EVENT", "HOLD"].includes(kind), "event kind must be SENT, BOUNCE, HUMAN_EVENT, or HOLD");
+      if (kind === "SENT" || kind === "BOUNCE") requireRole(principal, "provider_evidence");
+      else if (kind === "HUMAN_EVENT") requireRole(principal, "human_evidence");
+      else requireRole(principal, "hold");
+
+      const c = common(input, principal);
       const providerReceipt = input.provider_receipt === null ? null : validateIdentifier(input.provider_receipt, "provider_receipt");
       const humanEvidenceId = input.human_evidence_id === null ? null : validateIdentifier(input.human_evidence_id, "human_evidence_id");
       if (kind === "SENT" || kind === "BOUNCE") {
@@ -210,9 +242,10 @@ export function createService(db) {
         requireCondition(providerReceipt === null && humanEvidenceId === null, "HOLD forbids evidence identifiers");
       }
 
-      return transaction(db, async (client) => {
+      return transaction(db, async (client, attemptContext) => {
         await lockLane(client, c.key);
         const now = await serverNow(client);
+        if (afterServerNow) await afterServerNow({ operation: "event", kind, attempt: attemptContext.attempt, now });
         let lane = await loadLane(client, c.key);
         requireCondition(Boolean(lane), "writer lane does not exist", 409);
         const restored = await refenceExpiredHumanLease(client, lane, now);
@@ -231,7 +264,7 @@ export function createService(db) {
         if (kind === "SENT" || kind === "BOUNCE") {
           requireCondition(lane.state === "LEASED", `${kind} requires an active lease`, 409);
           requireCondition(now < new Date(lane.lease_until), `${kind} lease expired`, 409);
-          requireCondition(lane.holder === c.actor, `${kind} actor is not current lease holder`, 409);
+          requireCondition(lane.holder === c.actor, `${kind} recorder is not current lease holder`, 409);
           requireCondition(lane.leased_route === c.route, `${kind} route does not match current leased route`, 409);
         } else if (kind === "HUMAN_EVENT") {
           requireCondition(["HARD_DNR", "DEAD_ROUTE", "HOLD"].includes(lane.state), "HUMAN_EVENT requires a fenced prior lane", 409);
@@ -291,10 +324,11 @@ export function createService(db) {
         });
         const seq = await persistEvent(client, accepted, receipt);
         return { seq, receipt, authority: AUTHORITY };
-      });
+      }, txOptions);
     },
 
-    async snapshot() {
+    async snapshot(principal) {
+      requireRole(principal, "state");
       const [laneRows, eventRows, nowRows] = await Promise.all([
         db.sql`SELECT * FROM lanes ORDER BY updated_at DESC, collision_key ASC`,
         db.sql`SELECT seq, event_id, collision_key, occurred_at, kind, actor, event_route, decision, new_state, lane_route_after, receipt_sha256, external_send_authorized FROM events ORDER BY seq DESC LIMIT 200`,
@@ -308,6 +342,7 @@ export function createService(db) {
       return {
         status: "OK",
         server_time_utc: now.toISOString(),
+        principal: { subject: principal.subject, roles: [...principal.roles] },
         lanes,
         events: eventRows,
         impact: impactFromEvents(eventRows),
