@@ -219,9 +219,13 @@ def _build_source_only_api():
     def verify_bundle(raw: Any, packet: Any, receipt: Any) -> bool:
         _validate_source_input(raw)
         expected_packet, expected_receipt = compile_packet(raw)
-        if packet != expected_packet:
+        # Artifact identity is canonical serialized identity, not Python's
+        # loose object equality. In particular, bool is a subclass of int, so
+        # dict equality treats False == 0 and True == 1 even though those are
+        # distinct JSON artifacts with different content-addressed bytes.
+        if _source._canonical(packet) != _source._canonical(expected_packet):
             raise RepoAtlasError("verify:packet_mismatch")
-        if receipt != expected_receipt:
+        if _source._canonical(receipt) != _source._canonical(expected_receipt):
             raise RepoAtlasError("verify:receipt_mismatch")
         return True
 
