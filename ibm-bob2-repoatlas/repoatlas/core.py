@@ -47,10 +47,26 @@ def parse_json_bytes(data: bytes) -> Any:
         raise RepoAtlasError("invalid_json") from exc
 
 
+def _preflight_mapping(value: Any, name: str, maximum_fields: int) -> None:
+    """Bound direct-object mapping work before `_source._only()` allocates."""
+    if type(value) is not dict:
+        return
+    if len(value) > maximum_fields:
+        raise RepoAtlasError(f"{name}:field_cardinality")
+    for key in value:
+        # json.loads can only produce string object keys. Public object-mode
+        # callers bypass that parser, so keep non-JSON or pathological keys out
+        # of the retained analyzer's unknown-field set/sort path.
+        if type(key) is not str or len(key) > 256:
+            raise RepoAtlasError(f"{name}:field_name")
+
+
 def _preflight_cardinality(raw: Any) -> None:
     """Bound every repeated object-mode structure before expensive traversal."""
     if type(raw) is not dict:
         return
+
+    _preflight_mapping(raw, "root", 9)
 
     for name, limit in (
         ("changes", MAX_CHANGES),
@@ -68,22 +84,39 @@ def _preflight_cardinality(raw: Any) -> None:
     files = raw.get("files", [])
     if type(files) is list and len(files) <= _source.MAX_FILES:
         for i, row in enumerate(files):
+            _preflight_mapping(row, f"files[{i}]", 7)
             if type(row) is not dict:
                 continue
             tests = row.get("tests", [])
             if type(tests) is list and len(tests) > MAX_ROW_REFS:
                 raise RepoAtlasError(f"files[{i}].tests:cardinality")
 
+    # Dependency count is already source-bounded before row traversal.  Mirror
+    # that outer condition only so direct-object row maps are bounded before
+    # `_source._only()` constructs an attacker-sized unknown-key set.
+    dependencies = raw.get("dependencies", [])
+    if type(dependencies) is list and len(dependencies) <= _source.MAX_EDGES:
+        for i, row in enumerate(dependencies):
+            _preflight_mapping(row, f"dependencies[{i}]", 3)
+
+    changes = raw.get("changes", [])
+    if type(changes) is list and len(changes) <= MAX_CHANGES:
+        for i, row in enumerate(changes):
+            _preflight_mapping(row, f"changes[{i}]", 4)
+
     for name in ("adrs", "runbooks"):
         rows = raw.get(name, [])
         if type(rows) is not list or len(rows) > MAX_DOC_ROWS:
             continue
         for i, row in enumerate(rows):
+            _preflight_mapping(row, f"{name}[{i}]", 3)
             if type(row) is not dict:
                 continue
             covers = row.get("covers", [])
             if type(covers) is list and len(covers) > MAX_ROW_REFS:
                 raise RepoAtlasError(f"{name}[{i}].covers:cardinality")
+
+    _preflight_mapping(raw.get("provider"), "provider", 4)
 
 
 def _validate_source_input(raw: Any) -> dict[str, Any]:
