@@ -31,6 +31,10 @@ MAX_ROW_REFS = _source.MAX_FILES
 
 # JSON nesting is a product contract, not an interpreter-recursion accident.
 MAX_JSON_DEPTH = 256
+# Verification accepts caller-supplied object-mode packet/receipt artifacts.
+# Bound total JSON node work independently of CPython's recursion limit while
+# leaving generous room above any artifact produced from the admitted input.
+MAX_ARTIFACT_NODES = _source.MAX_TEXT
 
 
 def _preflight_json_depth(data: bytes) -> None:
@@ -197,6 +201,61 @@ def _validate_source_input(raw: Any) -> dict[str, Any]:
     return normalized
 
 
+def _canonical_verified_artifact(value: Any, name: str) -> bytes:
+    """Bound and canonicalize a supplied packet/receipt without recursion trust.
+
+    The expected artifacts are JSON values. Object-mode verification therefore
+    admits only the exact built-in JSON shapes that byte-mode JSON parsing can
+    produce, walks them iteratively under the same nesting contract as ingress,
+    and bounds total node work before handing the frozen shape to the retained
+    canonical serializer. This keeps malformed direct objects inside the stable
+    RepoAtlas error surface instead of depending on CPython recursion behavior.
+    """
+    stack: list[tuple[Any, int]] = [(value, 0)]
+    remaining_nodes = MAX_ARTIFACT_NODES - 1
+
+    while stack:
+        current, container_depth = stack.pop()
+        current_type = type(current)
+
+        if current_type is dict:
+            next_depth = container_depth + 1
+            if next_depth > MAX_JSON_DEPTH:
+                raise RepoAtlasError(f"verify:{name}_too_deep")
+            if len(current) > remaining_nodes:
+                raise RepoAtlasError(f"verify:{name}_too_complex")
+            remaining_nodes -= len(current)
+            for key, item in current.items():
+                if type(key) is not str:
+                    raise RepoAtlasError(f"verify:{name}_not_canonical_json")
+                stack.append((item, next_depth))
+            continue
+
+        if current_type is list:
+            next_depth = container_depth + 1
+            if next_depth > MAX_JSON_DEPTH:
+                raise RepoAtlasError(f"verify:{name}_too_deep")
+            if len(current) > remaining_nodes:
+                raise RepoAtlasError(f"verify:{name}_too_complex")
+            remaining_nodes -= len(current)
+            stack.extend((item, next_depth) for item in current)
+            continue
+
+        if current is None or current_type in (str, int, float, bool):
+            continue
+        raise RepoAtlasError(f"verify:{name}_not_canonical_json")
+
+    try:
+        return _source._canonical(value)
+    except RepoAtlasError:
+        raise
+    except RecursionError as exc:
+        # The iterative bound above should keep normal CPython serializers well
+        # below recursion limits, but preserve a stable error if an interpreter
+        # imposes a stricter implementation limit.
+        raise RepoAtlasError(f"verify:{name}_too_deep") from exc
+
+
 def _build_source_only_api():
     # Capture the reviewed analyzer once, then retire its ordinary module-level
     # compiler/verifier names. Because importing a submodule initializes the
@@ -223,9 +282,9 @@ def _build_source_only_api():
         # loose object equality. In particular, bool is a subclass of int, so
         # dict equality treats False == 0 and True == 1 even though those are
         # distinct JSON artifacts with different content-addressed bytes.
-        if _source._canonical(packet) != _source._canonical(expected_packet):
+        if _canonical_verified_artifact(packet, "packet") != _source._canonical(expected_packet):
             raise RepoAtlasError("verify:packet_mismatch")
-        if _source._canonical(receipt) != _source._canonical(expected_receipt):
+        if _canonical_verified_artifact(receipt, "receipt") != _source._canonical(expected_receipt):
             raise RepoAtlasError("verify:receipt_mismatch")
         return True
 
