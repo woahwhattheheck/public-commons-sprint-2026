@@ -19,6 +19,16 @@ from . import _core_source_v1 as _source
 
 RepoAtlasError = _source.RepoAtlasError
 
+# Object-mode compilation is a supported public ingress and therefore needs
+# explicit code-owned cardinality ceilings independent of the byte parser.
+# Keep these aligned with the analyzer's existing maximum admitted file set:
+# one change per path, at most one document row per admitted path in the
+# conservative envelope, and no per-row reference list larger than the entire
+# admitted file universe.
+MAX_CHANGES = _source.MAX_FILES
+MAX_DOC_ROWS = _source.MAX_FILES
+MAX_ROW_REFS = _source.MAX_FILES
+
 
 def parse_json_bytes(data: bytes) -> Any:
     try:
@@ -37,7 +47,47 @@ def parse_json_bytes(data: bytes) -> Any:
         raise RepoAtlasError("invalid_json") from exc
 
 
+def _preflight_cardinality(raw: Any) -> None:
+    """Bound every repeated object-mode structure before expensive traversal."""
+    if type(raw) is not dict:
+        return
+
+    for name, limit in (
+        ("changes", MAX_CHANGES),
+        ("adrs", MAX_DOC_ROWS),
+        ("runbooks", MAX_DOC_ROWS),
+    ):
+        rows = raw.get(name, [])
+        if type(rows) is list and len(rows) > limit:
+            raise RepoAtlasError(f"{name}:cardinality")
+
+    # `_source._validate` already bounds the top-level files list before
+    # iterating it.  Only inspect nested refs when that outer list is itself
+    # within the retained bound, so this preflight cannot be turned into a new
+    # unbounded traversal.
+    files = raw.get("files", [])
+    if type(files) is list and len(files) <= _source.MAX_FILES:
+        for i, row in enumerate(files):
+            if type(row) is not dict:
+                continue
+            tests = row.get("tests", [])
+            if type(tests) is list and len(tests) > MAX_ROW_REFS:
+                raise RepoAtlasError(f"files[{i}].tests:cardinality")
+
+    for name in ("adrs", "runbooks"):
+        rows = raw.get(name, [])
+        if type(rows) is not list or len(rows) > MAX_DOC_ROWS:
+            continue
+        for i, row in enumerate(rows):
+            if type(row) is not dict:
+                continue
+            covers = row.get("covers", [])
+            if type(covers) is list and len(covers) > MAX_ROW_REFS:
+                raise RepoAtlasError(f"{name}[{i}].covers:cardinality")
+
+
 def _validate_source_input(raw: Any) -> dict[str, Any]:
+    _preflight_cardinality(raw)
     try:
         normalized = _source._validate(raw)
     except UnicodeEncodeError as exc:
