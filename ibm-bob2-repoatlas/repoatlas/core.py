@@ -1,14 +1,14 @@
 """Source-only authority facade for RepoAtlas.
 
 The mature source analyzer is retained in `_core_source_v1.py`; this module owns
-the supported package API and the source-only authority boundary.  Caller JSON
+the supported package API and the source-only authority boundary. Caller JSON
 cannot self-attest IBM/lablab registration, Bob execution, track publication,
-or submission evidence.  Ordinary package initialization also retires the
+or submission evidence. Ordinary package initialization also retires the
 legacy module's direct compile/verify entrypoints so a normal private-submodule
 import cannot bypass this facade.
 
 This is cooperative Python-runtime API hardening, not hostile-interpreter or
-source-file tamper resistance.  A later provider transition still requires a
+source-file tamper resistance. A later provider transition still requires a
 separately source-bound and reviewed successor.
 """
 from __future__ import annotations
@@ -30,15 +30,10 @@ MAX_DOC_ROWS = _source.MAX_FILES
 MAX_ROW_REFS = _source.MAX_FILES
 
 # JSON nesting is a product contract, not an interpreter-recursion accident.
-# Scan the bounded byte ingress before json.loads so supported Python versions
-# reject the same excessive nesting depth even when their C decoder stack
-# tolerances differ.
 MAX_JSON_DEPTH = 256
 
 
-def _preflight_json_depth(data: Any) -> None:
-    if type(data) is not bytes:
-        return
+def _preflight_json_depth(data: bytes) -> None:
     depth = 0
     in_string = False
     escaped = False
@@ -58,12 +53,22 @@ def _preflight_json_depth(data: Any) -> None:
             if depth > MAX_JSON_DEPTH:
                 raise RepoAtlasError("json_too_deep")
         elif byte in (0x5D, 0x7D) and depth:
-            # Syntax/matching remains the JSON decoder's job.  This preflight
+            # Syntax/matching remains the JSON decoder's job. This preflight
             # owns only the deterministic upper bound on open nesting.
             depth -= 1
 
 
 def parse_json_bytes(data: bytes) -> Any:
+    # The retained decoder historically accepted bytearray/bytes subclasses
+    # accidentally through len()+decode(). Make the public ingress exact and
+    # stable so every accepted shape passes the same fences.
+    if type(data) is not bytes:
+        raise RepoAtlasError("json_bytes_required")
+    # Preserve the retained byte-work ceiling *before* the O(n) depth scan.
+    # This prevents an oversized adversarial payload from moving work ahead of
+    # the already-declared MAX_TEXT bound.
+    if len(data) > _source.MAX_TEXT:
+        raise RepoAtlasError("input_too_large")
     _preflight_json_depth(data)
     try:
         return _source.parse_json_bytes(data)
@@ -75,7 +80,7 @@ def parse_json_bytes(data: bytes) -> Any:
         raise RepoAtlasError("invalid_unicode_scalar") from exc
     except ValueError as exc:
         # CPython can reject extremely long integer literals before json.loads
-        # can produce a JSONDecodeError (sys.set_int_max_str_digits).  Keep that
+        # can produce a JSONDecodeError (sys.set_int_max_str_digits). Keep that
         # runtime-specific parser guard inside RepoAtlas's stable fail-closed
         # error surface rather than letting a raw traceback escape the CLI.
         raise RepoAtlasError("invalid_json") from exc
@@ -90,7 +95,7 @@ def _preflight_mapping(value: Any, name: str, maximum_fields: int) -> None:
     for key in value:
         # json.loads can only produce string object keys, but escaped lone
         # surrogates are still Python ``str`` values and object-mode callers
-        # bypass the parser entirely.  Reject non-JSON/pathological/UTF-8-invalid
+        # bypass the parser entirely. Reject non-JSON/pathological/UTF-8-invalid
         # field names before `_source._only()` can embed them in an error string
         # that the UTF-8 CLI would then fail to print.
         if type(key) is not str or len(key) > 256:
@@ -118,7 +123,7 @@ def _preflight_cardinality(raw: Any) -> None:
             raise RepoAtlasError(f"{name}:cardinality")
 
     # `_source._validate` already bounds the top-level files list before
-    # iterating it.  Only inspect nested refs when that outer list is itself
+    # iterating it. Only inspect nested refs when that outer list is itself
     # within the retained bound, so this preflight cannot be turned into a new
     # unbounded traversal.
     files = raw.get("files", [])
@@ -131,7 +136,7 @@ def _preflight_cardinality(raw: Any) -> None:
             if type(tests) is list and len(tests) > MAX_ROW_REFS:
                 raise RepoAtlasError(f"files[{i}].tests:cardinality")
 
-    # Dependency count is already source-bounded before row traversal.  Mirror
+    # Dependency count is already source-bounded before row traversal. Mirror
     # that outer condition only so direct-object row maps are bounded before
     # `_source._only()` constructs an attacker-sized unknown-key set.
     dependencies = raw.get("dependencies", [])
@@ -172,8 +177,8 @@ def _validate_source_input(raw: Any) -> dict[str, Any]:
         raise RepoAtlasError("provider:external_evidence_requires_bound_successor")
 
     # Bind the admitted file manifest to the change image it claims to
-    # describe.  Added/modified paths carry the post-image; deleted paths carry
-    # the pre-image.  Missing manifest rows remain analyzer findings, but a row
+    # describe. Added/modified paths carry the post-image; deleted paths carry
+    # the pre-image. Missing manifest rows remain analyzer findings, but a row
     # that exists may not contradict the corresponding change digest.
     files_by_path = {row["path"]: row for row in normalized["files"]}
     for change in normalized["changes"]:
@@ -194,7 +199,7 @@ def _validate_source_input(raw: Any) -> dict[str, Any]:
 
 def _build_source_only_api():
     # Capture the reviewed analyzer once, then retire its ordinary module-level
-    # compiler/verifier names.  Because importing a submodule initializes the
+    # compiler/verifier names. Because importing a submodule initializes the
     # parent package first, `import repoatlas._core_source_v1` cannot recover a
     # second normal compiler surface after this package has initialized.
     source_compile = _source.compile_packet
