@@ -22,6 +22,24 @@ test("route-independent lane identity normalizes text with Unicode casefold", ()
   assert.equal(normalizeText("  STRAẞE   LABS ", "org"), "strasse labs");
 });
 
+test("collision identity canonicalizes NFC equivalence and refuses invisible alias seams", () => {
+  const composed = collisionKey({ ...base, org: "Café Labs" });
+  const decomposed = collisionKey({ ...base, org: "Cafe\u0301 Labs" });
+  assert.equal(composed, decomposed);
+  assert.equal(normalizeText("Cafe\u0301 Labs", "org"), "café labs");
+
+  for (const field of ["org", "purpose", "opportunity"]) {
+    assert.throws(
+      () => collisionKey({ ...base, [field]: `${base[field]}\u200b` }),
+      /non-visible Unicode/,
+    );
+  }
+  assert.throws(
+    () => collisionKey({ ...base, purpose: "initial\u034f outreach" }),
+    /Default_Ignorable/,
+  );
+});
+
 test("domain normalization strips URL surface and uses IDNA2003-compatible transitional mapping", () => {
   assert.equal(normalizeDomain("HTTPS://WWW.NORTHSTAR.EXAMPLE./ignored?q=1"), "northstar.example");
   assert.equal(normalizeDomain("faß.example"), normalizeDomain("fass.example"));
