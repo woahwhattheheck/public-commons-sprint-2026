@@ -226,3 +226,43 @@ test("state projection itself requires state capability", async () => {
   assert.equal(snapshot.principal.subject, "worker-a");
   await assert.rejects(service.snapshot({ subject: "blind", roles: ["claim"] }), /role state required/);
 });
+
+test("canonically equivalent composed and decomposed identities share one writer lane", async () => {
+  const [a, b] = await Promise.all([
+    service.claim(
+      claim("evt-unicode-composed", "email:composed@northstar.example", { org: "Café Labs" }),
+      workerA,
+    ),
+    service.claim(
+      claim("evt-unicode-decomposed", "email:decomposed@northstar.example", { org: "Cafe\u0301 Labs" }),
+      workerB,
+    ),
+  ]);
+  const decisions = [a.receipt.decision, b.receipt.decision].sort();
+  assert.deepEqual(decisions, ["DENIED_ACTIVE_LEASE", "GRANTED"]);
+  assert.equal(a.receipt.collision_key, b.receipt.collision_key);
+  assert.equal((await db.sql`SELECT * FROM lanes`).length, 1);
+  assert.equal((await db.sql`SELECT * FROM lane_locks`).length, 1);
+  assert.equal((await db.sql`SELECT * FROM events`).length, 2);
+});
+
+test("zero-width collision alias fails closed and cannot mint a second lane", async () => {
+  const [valid, invisible] = await Promise.allSettled([
+    service.claim(
+      claim("evt-visible", "email:visible@northstar.example", { org: "Northstar Labs" }),
+      workerA,
+    ),
+    service.claim(
+      claim("evt-zero-width", "email:invisible@northstar.example", { org: "North\u200bstar Labs" }),
+      workerB,
+    ),
+  ]);
+  assert.equal(valid.status, "fulfilled");
+  assert.equal(valid.value.receipt.decision, "GRANTED");
+  assert.equal(invisible.status, "rejected");
+  assert.match(String(invisible.reason?.message), /category-C/);
+  assert.equal((await db.sql`SELECT * FROM lanes`).length, 1);
+  assert.equal((await db.sql`SELECT * FROM lane_locks`).length, 1);
+  const events = await db.sql`SELECT event_id FROM events ORDER BY event_id`;
+  assert.deepEqual(events.map((row) => row.event_id), ["evt-visible"]);
+});
