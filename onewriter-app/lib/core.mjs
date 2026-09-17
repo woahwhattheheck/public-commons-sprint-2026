@@ -73,12 +73,38 @@ export function strictText(value, name, { max = 240, casefold = false } = {}) {
   return normalized;
 }
 
+function requireCollisionIdentityText(value, name) {
+  const chars = Array.from(value);
+  requireCondition(
+    !chars.some((ch) => CATEGORY_C.test(ch)),
+    `${name} contains non-visible Unicode control/format/private/unassigned codepoints`,
+  );
+  requireCondition(
+    !chars.some(isNonCategoryCDefaultIgnorable),
+    `${name} contains Unicode Default_Ignorable codepoints`,
+  );
+  requireCondition(
+    chars.some((ch) => !NON_BASE.test(ch)),
+    `${name} must contain at least one visible base codepoint`,
+  );
+}
+
 export function normalizeText(value, name) {
-  return strictText(value, name, { casefold: true });
+  requireCondition(typeof value === "string", `${name} must be a string`);
+  const canonical = value.normalize("NFC");
+  requireCollisionIdentityText(canonical, name);
+  const collapsed = canonical.trim().replace(/\s+/gu, " ");
+  const normalized = caseFold(collapsed).normalize("NFC");
+  requireCondition(
+    normalized.length > 0 && Array.from(normalized).length <= 240,
+    `${name} invalid`,
+  );
+  requireCollisionIdentityText(normalized, name);
+  return normalized;
 }
 
 export function normalizeRoute(value) {
-  return normalizeText(value, "route");
+  return strictText(value, "route", { casefold: true });
 }
 
 export function normalizeDomain(value) {
