@@ -1,12 +1,28 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { AUTHORITY, ContractError, requireCondition } from "../../lib/core.mjs";
+import { createAuthenticator } from "../../lib/auth.mjs";
 import { createService } from "../../lib/service.mjs";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
+let cachedRegistry: string | null = null;
+let cachedAuthenticator: ReturnType<typeof createAuthenticator> | null = null;
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+function json(body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
+  return new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...extraHeaders } });
+}
+
+function authenticator() {
+  const raw = process.env.ONEWRITER_SESSIONS_JSON ?? "";
+  if (raw !== cachedRegistry || cachedAuthenticator === null) {
+    cachedAuthenticator = createAuthenticator(raw);
+    cachedRegistry = raw;
+  }
+  return cachedAuthenticator;
+}
+
+function authenticate(req: Request) {
+  return authenticator().authenticate(req.headers.get("authorization"));
 }
 
 function rejectDuplicateTopLevelKeys(text: string) {
@@ -49,18 +65,25 @@ async function parseBody(req: Request) {
 
 export default async (req: Request) => {
   try {
-    const service = createService(getDatabase());
     const path = new URL(req.url).pathname;
-    if (req.method === "GET" && path === "/api/state") return json(await service.snapshot());
-    if (req.method === "POST" && path === "/api/claim") return json(await service.claim(await parseBody(req)), 201);
-    if (req.method === "POST" && path === "/api/event") {
-      const result: any = await service.record(await parseBody(req));
-      if (result.conflict) return json(result, result.status);
-      return json(result, 201);
-    }
-    return json({ error: "not found", authority: AUTHORITY }, 404);
+    const supported =
+      (req.method === "GET" && path === "/api/state") ||
+      (req.method === "POST" && (path === "/api/claim" || path === "/api/event"));
+    if (!supported) return json({ error: "not found", authority: AUTHORITY }, 404);
+
+    // All operational state and every mutation require an explicit Bearer
+    // capability. No cookie/session header is consumed, so browsers do not
+    // acquire an ambient-cookie request-forgery channel.
+    const principal = authenticate(req);
+    const service = createService(getDatabase());
+    if (req.method === "GET") return json(await service.snapshot(principal));
+    if (path === "/api/claim") return json(await service.claim(await parseBody(req), principal), 201);
+    return json(await service.record(await parseBody(req), principal), 201);
   } catch (error: any) {
-    if (error instanceof ContractError) return json({ error: error.message, authority: AUTHORITY }, error.status ?? 400);
+    if (error instanceof ContractError) {
+      const headers = error.status === 401 ? { "www-authenticate": "Bearer realm=OneWriter" } : {};
+      return json({ error: error.message, authority: AUTHORITY }, error.status ?? 400, headers);
+    }
     console.error(error);
     return json({ error: "internal error", authority: AUTHORITY }, 500);
   }
