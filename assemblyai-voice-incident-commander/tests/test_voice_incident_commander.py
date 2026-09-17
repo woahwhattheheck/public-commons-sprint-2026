@@ -14,7 +14,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from assemblyai_stream import DEFAULT_SPEECH_MODEL, STREAMING_ENDPOINT, build_ws_url, handle_server_message
-from incident_core import IncidentError, SCHEMA, compile_packet, strict_json_loads, verify_packet
+from incident_core import IncidentError, SCHEMA, compile_packet, project_final_turn, strict_json_loads, verify_packet
 
 
 def turn(order: int, text: str, **extra):
