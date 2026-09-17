@@ -29,8 +29,42 @@ MAX_CHANGES = _source.MAX_FILES
 MAX_DOC_ROWS = _source.MAX_FILES
 MAX_ROW_REFS = _source.MAX_FILES
 
+# JSON nesting is a product contract, not an interpreter-recursion accident.
+# Scan the bounded byte ingress before json.loads so supported Python versions
+# reject the same excessive nesting depth even when their C decoder stack
+# tolerances differ.
+MAX_JSON_DEPTH = 256
+
+
+def _preflight_json_depth(data: Any) -> None:
+    if type(data) is not bytes:
+        return
+    depth = 0
+    in_string = False
+    escaped = False
+    for byte in data:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif byte == 0x5C:  # backslash
+                escaped = True
+            elif byte == 0x22:  # quote
+                in_string = False
+            continue
+        if byte == 0x22:
+            in_string = True
+        elif byte in (0x5B, 0x7B):  # [ {
+            depth += 1
+            if depth > MAX_JSON_DEPTH:
+                raise RepoAtlasError("json_too_deep")
+        elif byte in (0x5D, 0x7D) and depth:
+            # Syntax/matching remains the JSON decoder's job.  This preflight
+            # owns only the deterministic upper bound on open nesting.
+            depth -= 1
+
 
 def parse_json_bytes(data: bytes) -> Any:
+    _preflight_json_depth(data)
     try:
         return _source.parse_json_bytes(data)
     except RepoAtlasError:
