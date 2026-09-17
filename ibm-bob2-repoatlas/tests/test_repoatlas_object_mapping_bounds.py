@@ -69,6 +69,15 @@ class ObjectModeMappingBoundTests(unittest.TestCase):
         with self.assertRaisesRegex(RepoAtlasError, "root:field_name"):
             compile_packet(raw)
 
+    def test_utf8_invalid_unknown_key_fails_before_error_rendering(self):
+        raw = fixture()
+        # Keep root field count at the valid maximum so the field-name fence,
+        # not the cardinality fence, owns this predecessor.
+        raw.pop("runbooks")
+        raw["\ud800"] = []
+        with self.assertRaisesRegex(RepoAtlasError, "root:field_name"):
+            compile_packet(raw)
+
 
 if __name__ == "__main__":
     unittest.main()
