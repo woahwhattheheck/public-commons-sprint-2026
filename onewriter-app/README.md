@@ -19,11 +19,11 @@ This app **never sends email, DMs, forms, or provider mutations**. The collision
 - server/database clock for lease expiry;
 - one-shot `HUMAN_EVENT` reopen that retains the exact prior fence and restores it if the authorized lease expires unused;
 - strict retained identifier admission: trimmed nonempty 1–240 text, no ASCII controls, no Unicode category-C codepoints, no non-category-C Default_Ignorable codepoints, and at least one visible base outside C/M/Z;
-- Unicode case-folding for organization/purpose/opportunity/route and transitional IDNA normalization for organization domains;
+- collision identity for organization/purpose/opportunity is NFC-canonicalized, Unicode case-folded, and rejects category-C plus non-category-C Default_Ignorable codepoints before hashing; the exact canonical identity is retained and hashed once, while route remains separately normalized lease metadata; transitional IDNA normalization applies to organization domains;
 - immutable accepted-event and transition receipt digests with `external_send_authorized=false`;
 - CI race proof against a real PostgreSQL 16 service plus deterministic injected serialization/deadlock failures;
 - local fallback proof via Netlify's official `@netlify/database-dev` emulator;
-- hostiles for unauthenticated state/mutation, caller actor injection, insufficient role, wrong-route/provider-holder outcomes, cross-type identifier reuse, hard DNR, and one-shot human-reopen refencing.
+- hostiles for unauthenticated state/mutation, caller actor injection, insufficient role, Unicode collision aliases (NFC-equivalent spellings and invisible controls), wrong-route/provider-holder outcomes, cross-type identifier reuse, hard DNR, and one-shot human-reopen refencing.
 
 ## Authentication contract
 
