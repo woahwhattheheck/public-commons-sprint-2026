@@ -93,6 +93,38 @@ test("two authenticated concurrent workers on different routes get one grant and
   assert.deepEqual(events.map((row) => row.actor).sort(), ["worker-a", "worker-b"]);
 });
 
+test("canonically equivalent Unicode identities contend on exactly one lane", async () => {
+  const [a, b] = await Promise.all([
+    service.claim(claim("evt-nfc-a", "email:sales@northstar.example", { org: "Café Labs" }), workerA),
+    service.claim(claim("evt-nfc-b", "email:founder@northstar.example", { org: "Cafe\u0301 Labs" }), workerB),
+  ]);
+  const decisions = [a.receipt.decision, b.receipt.decision].sort();
+  assert.deepEqual(decisions, ["DENIED_ACTIVE_LEASE", "GRANTED"]);
+  assert.equal(a.receipt.collision_key, b.receipt.collision_key);
+
+  const lanes = await db.sql`SELECT collision_key, org, state FROM lanes`;
+  assert.equal(lanes.length, 1);
+  assert.equal(lanes[0].org, "café labs");
+  assert.equal(lanes[0].state, "LEASED");
+  const events = await db.sql`SELECT event_id FROM events ORDER BY event_id`;
+  assert.deepEqual(events.map((row) => row.event_id), ["evt-nfc-a", "evt-nfc-b"]);
+});
+
+test("invisible collision aliases fail closed before any lane or receipt exists", async () => {
+  await assert.rejects(
+    service.claim(claim("evt-zwsp", "email:sales@northstar.example", { org: "North\u200bstar Labs" }), workerA),
+    /non-visible Unicode/,
+  );
+  await assert.rejects(
+    service.claim(claim("evt-cgj", "email:founder@northstar.example", { purpose: "initial\u034f outreach" }), workerB),
+    /Default_Ignorable/,
+  );
+  assert.equal((await db.sql`SELECT * FROM lane_locks`).length, 0);
+  assert.equal((await db.sql`SELECT * FROM lanes`).length, 0);
+  assert.equal((await db.sql`SELECT * FROM workspace_identifiers`).length, 0);
+  assert.equal((await db.sql`SELECT * FROM events`).length, 0);
+});
+
 test("whole transaction retries 40001 with a fresh DB clock and no aborted-generation leakage", async () => {
   const samples = [];
   let injected = false;
