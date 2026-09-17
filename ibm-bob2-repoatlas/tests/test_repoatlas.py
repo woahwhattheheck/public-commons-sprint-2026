@@ -37,13 +37,11 @@ class RepoAtlasTests(unittest.TestCase):
         packet, _ = compile_packet(fixture())
         self.assertNotIn(("src/api.py", "PUBLIC_API_WITHOUT_ADR_COVERAGE"), {(x["path"], x["code"]) for x in packet["findings"]})
 
-    def test_provider_flags_do_not_enable_external_authority(self):
+    def test_provider_flags_require_bound_successor(self):
         raw = fixture()
         raw["provider"] = {"bob_execution_verified": True, "registration_verified": True, "submission_verified": True, "tracks_published": True}
-        packet, _ = compile_packet(raw)
-        self.assertEqual(packet["competition_state"], "PROVIDER_EVIDENCE_PRESENT")
-        self.assertFalse(packet["authority"]["competition_submit"])
-        self.assertFalse(packet["authority"]["award_or_payment"])
+        with self.assertRaisesRegex(RepoAtlasError, "external_evidence_requires_bound_successor"):
+            compile_packet(raw)
 
     def test_unknown_fields_fail_closed(self):
         raw = fixture()
