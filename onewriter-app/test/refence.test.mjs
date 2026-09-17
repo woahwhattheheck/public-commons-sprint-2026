@@ -10,6 +10,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 let local;
 let db;
 let service;
+const workerA = Object.freeze({ subject: "worker-a", roles: ["claim", "provider_evidence"] });
+const workerB = Object.freeze({ subject: "worker-b", roles: ["claim", "provider_evidence"] });
+const workerC = Object.freeze({ subject: "worker-c", roles: ["claim"] });
+const humanRecorder = Object.freeze({ subject: "human-recorder", roles: ["human_evidence"] });
 
 before(async () => {
   local = new NetlifyDB({ logger: () => {} });
@@ -24,27 +28,27 @@ after(async () => {
   await local?.stop?.();
 });
 
-const claim = (eventId, actor, route, leaseSeconds = 300) => ({
-  event_id: eventId, actor, org: "Northstar Labs", domain: "northstar.example", route,
+const claim = (eventId, route, leaseSeconds = 300) => ({
+  event_id: eventId, org: "Northstar Labs", domain: "northstar.example", route,
   purpose: "initial outreach", opportunity: "builder fest", lease_seconds: leaseSeconds,
   reason: "receipt-bound refence proof",
 });
 
-const event = (eventId, kind, actor, route, providerReceipt = null, humanEvidenceId = null) => ({
-  event_id: eventId, kind, actor, org: "Northstar Labs", domain: "northstar.example", route,
+const event = (eventId, kind, route, providerReceipt = null, humanEvidenceId = null) => ({
+  event_id: eventId, kind, org: "Northstar Labs", domain: "northstar.example", route,
   purpose: "initial outreach", opportunity: "builder fest", provider_receipt: providerReceipt,
   human_evidence_id: humanEvidenceId, reason: "receipt-bound refence proof",
 });
 
 test("late provider result rolls back refence; next admissible claim persists refence with receipt", async () => {
-  await service.claim(claim("evt-claim", "worker-a", "email:sales@northstar.example"));
-  await service.record(event("evt-sent", "SENT", "worker-a", "email:sales@northstar.example", "provider-sent"));
-  await service.record(event("evt-human", "HUMAN_EVENT", "reviewer", "email:sales@northstar.example", null, "human-reply"));
-  await service.claim(claim("evt-reopen", "worker-b", "email:founder@northstar.example", 30));
+  await service.claim(claim("evt-claim", "email:sales@northstar.example"), workerA);
+  await service.record(event("evt-sent", "SENT", "email:sales@northstar.example", "provider-sent"), workerA);
+  await service.record(event("evt-human", "HUMAN_EVENT", "email:sales@northstar.example", null, "human-reply"), humanRecorder);
+  await service.claim(claim("evt-reopen", "email:founder@northstar.example", 30), workerB);
   await db.sql`UPDATE lanes SET lease_until = clock_timestamp() - interval '1 second'`;
 
   await assert.rejects(
-    service.record(event("evt-late-provider", "SENT", "worker-b", "email:founder@northstar.example", "provider-late")),
+    service.record(event("evt-late-provider", "SENT", "email:founder@northstar.example", "provider-late"), workerB),
     /lease expired; prior fence is effective/,
   );
 
@@ -55,7 +59,7 @@ test("late provider result rolls back refence; next admissible claim persists re
   const lateIds = await db.sql`SELECT identifier FROM workspace_identifiers WHERE identifier IN ('evt-late-provider','provider-late')`;
   assert.equal(lateIds.length, 0);
 
-  const next = await service.claim(claim("evt-next", "worker-c", "email:partner@northstar.example"));
+  const next = await service.claim(claim("evt-next", "email:partner@northstar.example"), workerC);
   assert.equal(next.receipt.reopen_expiry_refenced, true);
   assert.equal(next.receipt.prior_state, "HARD_DNR");
   assert.equal(next.receipt.decision, "DENIED_HARD_DNR");
