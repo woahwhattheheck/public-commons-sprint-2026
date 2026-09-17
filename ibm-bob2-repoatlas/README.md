@@ -13,12 +13,15 @@ Sources:
 Input is a source-controlled evidence manifest: repository + baseline digest, admitted files, dependency edges, bounded changes, ADR/runbook coverage and explicit provider state. RepoAtlas then:
 
 - validates strict JSON, duplicate keys, UTF-8/Unicode scalar safety, bounded nesting, hashes, paths and field sets;
+- bounds both byte-parsed input and direct Python-object input: direct object mode caps repeated `changes`/ADR/runbook rows at 5,000, nested test/coverage references at 500 per row and 20,000 in aggregate, in addition to the retained 5,000-file and 20,000-dependency ceilings;
 - binds every present changed-file manifest digest to the claimed image (`after_sha256` for added/modified, `before_sha256` for deleted), rejecting contradictory custody rather than analyzing two incompatible versions;
 - computes module/owner/test/dependency topology;
 - flags changed public APIs without ADR coverage, unowned changes, missing/indirect test evidence, operational changes lacking runbook coverage, deletions with live dependents and high-fanout changes;
 - emits deterministic recommendations and content-addressed packet/receipt;
 - recompiles the entire result during verification rather than trusting a self-authored receipt;
 - mechanically keeps competition/provider truth separate from product-source readiness.
+
+The direct-object caps are structural resource bounds, not a claim that an in-memory Python object has the same serialized-size ceiling as the CLI's byte input. Both compiler and verifier apply the structural gate before walking the retained analyzer graph.
 
 ## Authority ceiling
 
