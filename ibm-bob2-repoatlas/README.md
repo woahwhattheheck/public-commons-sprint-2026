@@ -12,7 +12,8 @@ Sources:
 
 Input is a source-controlled evidence manifest: repository + baseline digest, admitted files, dependency edges, bounded changes, ADR/runbook coverage and explicit provider state. RepoAtlas then:
 
-- validates strict JSON, duplicate keys, UTF-8, hashes, paths and field sets;
+- validates strict JSON, duplicate keys, UTF-8/Unicode scalar safety, bounded nesting, hashes, paths and field sets;
+- binds every present changed-file manifest digest to the claimed image (`after_sha256` for added/modified, `before_sha256` for deleted), rejecting contradictory custody rather than analyzing two incompatible versions;
 - computes module/owner/test/dependency topology;
 - flags changed public APIs without ADR coverage, unowned changes, missing/indirect test evidence, operational changes lacking runbook coverage, deletions with live dependents and high-fanout changes;
 - emits deterministic recommendations and content-addressed packet/receipt;
@@ -22,6 +23,8 @@ Input is a source-controlled evidence manifest: repository + baseline digest, ad
 ## Authority ceiling
 
 RepoAtlas **never** merges, deploys, contacts anyone, accepts terms, registers an account, submits a competition entry, spends money, or claims an award/payment. This source-only generation also rejects caller-supplied `true` provider flags: Bob execution, registration, submission, or published-track evidence must arrive through a separately source-bound successor rather than being self-attested in the input JSON. Output is `READY_FOR_HUMAN_REVIEW` or `HOLD_EVIDENCE_GAPS`, not an operational authorization.
+
+The supported package API seals the retained legacy implementation's ordinary module-level compiler/verifier names during parent-package initialization, so `import repoatlas._core_source_v1` does not expose a second normal compiler that can bypass the source-only provider gate. This is a **cooperative Python-runtime boundary**, not a claim of resistance to code that can rewrite/reload package source, replace import machinery, or mutate live interpreter internals. Hostile same-interpreter integrity requires a separate isolated/source-verified runner that this carrier does not provide.
 
 `BOB_EXECUTION_REQUIRED` stays present until a real IBM Bob execution receipt is admitted by a later authorized provider lane. This source build does not claim that Bob was used, that the team is registered, or that a submission exists.
 
