@@ -1,0 +1,55 @@
+{
+  "model_plan": {
+    "operations": [
+      {
+        "kind": "read",
+        "path": "src/parser.py"
+      },
+      {
+        "content": "def admit(row):\n    return bool(row.get('id'))\n",
+        "kind": "write",
+        "path": "src/parser.py"
+      },
+      {
+        "kind": "test",
+        "name": "parser-unit"
+      },
+      {
+        "kind": "test",
+        "name": "parser-hostile"
+      }
+    ],
+    "summary": "Read parser, apply bounded validation change, run both required tests."
+  },
+  "provider_evidence": {
+    "note": "No Nebius inference claimed by this fixture.",
+    "provider": "offline-replay"
+  },
+  "request": {
+    "allowed_paths": [
+      "src/parser.py"
+    ],
+    "goal": "Make the CSV parser reject rows with missing IDs.",
+    "max_writes": 1,
+    "request_id": "demo-parser-001",
+    "required_tests": [
+      "parser-unit",
+      "parser-hostile"
+    ]
+  },
+  "sandbox": {
+    "files": {
+      "src/parser.py": "def admit(row):\n    return True\n"
+    },
+    "tests": {
+      "parser-hostile": {
+        "exit_code": 0,
+        "output": "7 adversarial cases passed\n"
+      },
+      "parser-unit": {
+        "exit_code": 0,
+        "output": "4 passed\n"
+      }
+    }
+  }
+}
