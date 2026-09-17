@@ -14,6 +14,18 @@ def fixture():
     return json.loads((ROOT / "fixtures" / "synthetic-repo.json").read_text())
 
 
+def canonical_size(value):
+    return len(
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8", "strict")
+    )
+
+
 def deeply_nested_array():
     value = False
     for _ in range(MAX_JSON_DEPTH + 1):
@@ -53,6 +65,26 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         packet, _ = compile_packet(raw)
         with self.assertRaisesRegex(RepoAtlasError, "verify:receipt_too_deep"):
             verify_bundle(raw, packet, deeply_nested_array())
+
+    def test_over_budget_scalar_fails_before_candidate_serialization(self):
+        raw = fixture()
+        packet, receipt = compile_packet(raw)
+        expected_bytes = canonical_size(packet)
+        oversized_packet = {"x": "A" * (expected_bytes + 1)}
+        with self.assertRaisesRegex(RepoAtlasError, "verify:packet_too_complex"):
+            verify_bundle(raw, oversized_packet, receipt)
+
+    def test_shared_scalar_alias_amplification_is_charged_per_occurrence(self):
+        raw = fixture()
+        packet, receipt = compile_packet(raw)
+        expected_bytes = canonical_size(packet)
+        shared = "A" * 1024
+        repeats = max(2, expected_bytes // len(shared) + 2)
+        amplified_packet = {"x": [shared] * repeats}
+        self.assertIs(amplified_packet["x"][0], amplified_packet["x"][1])
+        self.assertGreater(canonical_size(amplified_packet), expected_bytes)
+        with self.assertRaisesRegex(RepoAtlasError, "verify:packet_too_complex"):
+            verify_bundle(raw, amplified_packet, receipt)
 
 
 if __name__ == "__main__":
