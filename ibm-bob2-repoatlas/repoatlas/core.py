@@ -13,6 +13,7 @@ separately source-bound and reviewed successor.
 """
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from . import _core_source_v1 as _source
@@ -201,18 +202,64 @@ def _validate_source_input(raw: Any) -> dict[str, Any]:
     return normalized
 
 
-def _canonical_verified_artifact(value: Any, name: str) -> bytes:
-    """Bound and canonicalize a supplied packet/receipt without recursion trust.
+def _json_string_canonical_size(value: str, name: str, remaining: int) -> int:
+    """Return exact UTF-8 JSON string bytes without allocating encoded output."""
+    # Every Unicode scalar needs at least one output byte plus the two quotes.
+    # This O(1) lower bound rejects arbitrarily large strings before scanning.
+    if len(value) + 2 > remaining:
+        raise RepoAtlasError(f"verify:{name}_too_complex")
 
-    The expected artifacts are JSON values. Object-mode verification therefore
-    admits only the exact built-in JSON shapes that byte-mode JSON parsing can
-    produce, walks them iteratively under the same nesting contract as ingress,
-    and bounds total node work before handing the frozen shape to the retained
-    canonical serializer. This keeps malformed direct objects inside the stable
-    RepoAtlas error surface instead of depending on CPython recursion behavior.
+    size = 2
+    short_escapes = {0x08, 0x09, 0x0A, 0x0C, 0x0D, 0x22, 0x5C}
+    for char in value:
+        codepoint = ord(char)
+        if 0xD800 <= codepoint <= 0xDFFF:
+            raise RepoAtlasError(f"verify:{name}_not_canonical_json")
+        if codepoint in short_escapes:
+            size += 2
+        elif codepoint < 0x20:
+            size += 6
+        elif codepoint < 0x80:
+            size += 1
+        elif codepoint < 0x800:
+            size += 2
+        elif codepoint < 0x10000:
+            size += 3
+        else:
+            size += 4
+        if size > remaining:
+            raise RepoAtlasError(f"verify:{name}_too_complex")
+    return size
+
+
+def _canonical_verified_artifact(
+    value: Any,
+    name: str,
+    max_canonical_bytes: int,
+) -> bytes:
+    """Bound and canonicalize supplied packet/receipt before serialization.
+
+    Verification already owns a trusted recomputed artifact. Its exact canonical
+    byte length is therefore the tightest legitimate ceiling for the supplied
+    artifact: anything larger cannot possibly be identical. The iterative walk
+    below computes the candidate's exact canonical JSON byte cost without first
+    serializing the untrusted container. It charges structure, keys, scalar
+    UTF-8/escaping and each repeated alias occurrence, while separately bounding
+    total nodes and nesting. Only after the entire candidate is proven within
+    the trusted byte budget do we call the retained canonical serializer.
     """
+    if type(max_canonical_bytes) is not int or max_canonical_bytes < 0:
+        raise RepoAtlasError(f"verify:{name}_too_complex")
+
     stack: list[tuple[Any, int]] = [(value, 0)]
     remaining_nodes = MAX_ARTIFACT_NODES - 1
+    remaining_bytes = max_canonical_bytes
+
+    def charge(amount: int) -> None:
+        nonlocal remaining_bytes
+        if amount < 0 or amount > remaining_bytes:
+            raise RepoAtlasError(f"verify:{name}_too_complex")
+        remaining_bytes -= amount
 
     while stack:
         current, container_depth = stack.pop()
@@ -225,9 +272,12 @@ def _canonical_verified_artifact(value: Any, name: str) -> bytes:
             if len(current) > remaining_nodes:
                 raise RepoAtlasError(f"verify:{name}_too_complex")
             remaining_nodes -= len(current)
+            # Braces, one colon per entry and commas between entries.
+            charge(2 + len(current) + max(len(current) - 1, 0))
             for key, item in current.items():
                 if type(key) is not str:
                     raise RepoAtlasError(f"verify:{name}_not_canonical_json")
+                charge(_json_string_canonical_size(key, name, remaining_bytes))
                 stack.append((item, next_depth))
             continue
 
@@ -238,15 +288,43 @@ def _canonical_verified_artifact(value: Any, name: str) -> bytes:
             if len(current) > remaining_nodes:
                 raise RepoAtlasError(f"verify:{name}_too_complex")
             remaining_nodes -= len(current)
+            # Brackets and commas between elements.
+            charge(2 + max(len(current) - 1, 0))
             stack.extend((item, next_depth) for item in current)
             continue
 
-        if current is None or current_type in (str, int, float, bool):
+        if current is None:
+            charge(4)
+            continue
+        if current_type is bool:
+            charge(4 if current else 5)
+            continue
+        if current_type is str:
+            charge(_json_string_canonical_size(current, name, remaining_bytes))
+            continue
+        if current_type is int:
+            # Bound decimal rendering work before str(); one decimal digit
+            # carries fewer than four value bits, so this is a safe lower bound.
+            bits = abs(current).bit_length()
+            minimum_digits = 1 if bits == 0 else ((bits - 1) // 4) + 1
+            if minimum_digits + (1 if current < 0 else 0) > remaining_bytes:
+                raise RepoAtlasError(f"verify:{name}_too_complex")
+            try:
+                rendered = str(current)
+            except ValueError as exc:
+                raise RepoAtlasError(f"verify:{name}_too_complex") from exc
+            charge(len(rendered))
+            continue
+        if current_type is float:
+            if not math.isfinite(current):
+                raise RepoAtlasError(f"verify:{name}_not_canonical_json")
+            # CPython's JSON encoder uses the finite float repr spelling.
+            charge(len(repr(current)))
             continue
         raise RepoAtlasError(f"verify:{name}_not_canonical_json")
 
     try:
-        return _source._canonical(value)
+        canonical = _source._canonical(value)
     except RepoAtlasError:
         raise
     except RecursionError as exc:
@@ -254,6 +332,11 @@ def _canonical_verified_artifact(value: Any, name: str) -> bytes:
         # below recursion limits, but preserve a stable error if an interpreter
         # imposes a stricter implementation limit.
         raise RepoAtlasError(f"verify:{name}_too_deep") from exc
+    if len(canonical) > max_canonical_bytes:
+        # Defensive invariant: the preflight is intended to account for every
+        # canonical byte before this serializer is reached.
+        raise RepoAtlasError(f"verify:{name}_too_complex")
+    return canonical
 
 
 def _build_source_only_api():
@@ -282,9 +365,15 @@ def _build_source_only_api():
         # loose object equality. In particular, bool is a subclass of int, so
         # dict equality treats False == 0 and True == 1 even though those are
         # distinct JSON artifacts with different content-addressed bytes.
-        if _canonical_verified_artifact(packet, "packet") != _source._canonical(expected_packet):
+        expected_packet_bytes = _source._canonical(expected_packet)
+        expected_receipt_bytes = _source._canonical(expected_receipt)
+        if _canonical_verified_artifact(
+            packet, "packet", len(expected_packet_bytes)
+        ) != expected_packet_bytes:
             raise RepoAtlasError("verify:packet_mismatch")
-        if _canonical_verified_artifact(receipt, "receipt") != _source._canonical(expected_receipt):
+        if _canonical_verified_artifact(
+            receipt, "receipt", len(expected_receipt_bytes)
+        ) != expected_receipt_bytes:
             raise RepoAtlasError("verify:receipt_mismatch")
         return True
 
