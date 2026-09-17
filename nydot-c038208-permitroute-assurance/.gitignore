@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+.env
+customer_data/
+authorized_extracts/
