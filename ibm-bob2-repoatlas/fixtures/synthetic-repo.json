@@ -1,0 +1,25 @@
+{
+  "schema": "repoatlas-input/v1",
+  "repository": "example/repoatlas-demo",
+  "baseline": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "files": [
+    {"path":"src/api.py","kind":"source","owner":"platform","sha256":"1111111111111111111111111111111111111111111111111111111111111111","public_api":true,"tests":["tests/test_api.py"],"module":"api"},
+    {"path":"src/store.py","kind":"source","owner":"data","sha256":"2222222222222222222222222222222222222222222222222222222222222222","public_api":false,"tests":[],"module":"store"},
+    {"path":"src/worker.py","kind":"source","owner":"UNOWNED","sha256":"3333333333333333333333333333333333333333333333333333333333333333","public_api":false,"tests":[],"module":"worker"},
+    {"path":"tests/test_api.py","kind":"test","owner":"quality","sha256":"4444444444444444444444444444444444444444444444444444444444444444","public_api":false,"tests":[],"module":"api"},
+    {"path":"docs/api-adr.md","kind":"doc","owner":"platform","sha256":"5555555555555555555555555555555555555555555555555555555555555555","public_api":false,"tests":[],"module":"docs"},
+    {"path":"docs/runbook.md","kind":"doc","owner":"ops","sha256":"6666666666666666666666666666666666666666666666666666666666666666","public_api":false,"tests":[],"module":"docs"}
+  ],
+  "dependencies": [
+    {"from":"src/api.py","to":"src/store.py","kind":"import"},
+    {"from":"src/worker.py","to":"src/store.py","kind":"import"},
+    {"from":"tests/test_api.py","to":"src/api.py","kind":"test"}
+  ],
+  "changes": [
+    {"path":"src/api.py","change":"modified","before_sha256":"7777777777777777777777777777777777777777777777777777777777777777","after_sha256":"1111111111111111111111111111111111111111111111111111111111111111"},
+    {"path":"src/worker.py","change":"modified","before_sha256":"8888888888888888888888888888888888888888888888888888888888888888","after_sha256":"3333333333333333333333333333333333333333333333333333333333333333"}
+  ],
+  "adrs": [{"id":"ADR-001","covers":["src/api.py"],"sha256":"9999999999999999999999999999999999999999999999999999999999999999"}],
+  "runbooks": [{"id":"RUN-001","covers":["src/api.py"],"sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],
+  "provider": {"bob_execution_verified":false,"registration_verified":false,"submission_verified":false,"tracks_published":false}
+}
