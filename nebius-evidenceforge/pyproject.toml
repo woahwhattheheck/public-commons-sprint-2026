@@ -1,0 +1,11 @@
+[project]
+name = "evidenceforge"
+version = "0.1.0"
+description = "Evidence-gated coding agent foundation for Nebius x NVIDIA Global AI Hackathon"
+requires-python = ">=3.11"
+
+[project.scripts]
+evidenceforge = "evidenceforge.cli:main"
+
+[tool.unittest]
+start-directory = "tests"
