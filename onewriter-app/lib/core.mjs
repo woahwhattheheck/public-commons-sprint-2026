@@ -67,10 +67,10 @@ export function sha256Hex(value) {
 
 export function strictText(value, name, { max = 240, casefold = false } = {}) {
   requireCondition(typeof value === "string", `${name} must be a string`);
-  const trimmed = value.trim();
-  requireCondition(trimmed.length > 0 && Array.from(trimmed).length <= max, `${name} invalid`);
-  const collapsed = trimmed.replace(/\s+/gu, " ");
-  return casefold ? caseFold(collapsed) : collapsed;
+  const collapsed = value.trim().replace(/\s+/gu, " ");
+  const normalized = casefold ? caseFold(collapsed) : collapsed;
+  requireCondition(normalized.length > 0 && Array.from(normalized).length <= max, `${name} invalid`);
+  return normalized;
 }
 
 export function normalizeText(value, name) {
