@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+*.log
+.env
+ring_credentials*
+provider_capture*
