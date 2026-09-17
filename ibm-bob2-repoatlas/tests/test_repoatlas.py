@@ -45,7 +45,10 @@ class RepoAtlasTests(unittest.TestCase):
 
     def test_unknown_fields_fail_closed(self):
         raw = fixture()
-        raw["surprise"] = 1
+        # Preserve the strict root mapping cardinality while replacing one
+        # admitted field, so this predecessor reaches unknown-field semantics
+        # instead of intentionally tripping the earlier cardinality fence.
+        raw["surprise"] = raw.pop("runbooks")
         with self.assertRaisesRegex(RepoAtlasError, "unknown_fields"):
             compile_packet(raw)
 
