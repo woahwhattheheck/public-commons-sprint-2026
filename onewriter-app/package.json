@@ -1,0 +1,23 @@
+{
+  "name": "onewriter-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:core": "node --test test/core.test.mjs",
+    "test:integration": "node --test test/integration.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@netlify/database": "2.0.0",
+    "tr46": "6.0.0",
+    "unicode-case-folding": "1.1.1"
+  },
+  "devDependencies": {
+    "@netlify/database-dev": "1.0.1",
+    "@netlify/functions": "6.0.0",
+    "typescript": "7.0.2"
+  }
+}

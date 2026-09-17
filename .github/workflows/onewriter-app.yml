@@ -1,0 +1,33 @@
+name: onewriter-app
+
+on:
+  pull_request:
+    paths:
+      - "onewriter-app/**"
+      - ".github/workflows/onewriter-app.yml"
+  push:
+    branches: [main]
+    paths:
+      - "onewriter-app/**"
+      - ".github/workflows/onewriter-app.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: onewriter-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: onewriter-app/package.json
+      - run: npm install --ignore-scripts
+      - run: npm test
+      - run: npm run typecheck

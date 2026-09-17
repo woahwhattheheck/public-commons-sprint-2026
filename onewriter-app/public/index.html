@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>OneWriter — collision control</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">TJLabs coordination control</p>
+      <h1>OneWriter</h1>
+      <p class="lede">One live writer per organization lane. Different aliases do not bypass the lease.</p>
+    </div>
+    <div class="authority"><strong>No send authority</strong><span>This app records ownership and evidence. It never sends outreach.</span></div>
+  </header>
+
+  <nav class="tabs" aria-label="OneWriter sections">
+    <button data-tab="claim" class="active">Claim desk</button>
+    <button data-tab="lanes">Live lanes</button>
+    <button data-tab="outcomes">Outcomes</button>
+    <button data-tab="receipts">Receipts</button>
+    <button data-tab="impact">Impact</button>
+  </nav>
+
+  <main>
+    <section id="claim" class="panel active">
+      <div class="section-head"><div><p class="eyebrow">Atomic acquisition</p><h2>Claim a writer lane</h2></div><span id="server-time" class="mono subtle">server time unavailable</span></div>
+      <form id="claim-form" class="grid form-grid">
+        <label>Organization<input name="org" required value="Northstar Labs"></label>
+        <label>Domain<input name="domain" required value="northstar.example"></label>
+        <label>Proposed route<input name="route" required value="email:sales@northstar.example"></label>
+        <label>Purpose<input name="purpose" required value="initial outreach"></label>
+        <label>Opportunity<input name="opportunity" required value="builder fest"></label>
+        <label>Worker / actor<input name="actor" required value="worker-alpha"></label>
+        <label>Lease seconds<input name="lease_seconds" required type="number" min="30" max="1800" value="300"></label>
+        <label>Event id<input name="event_id" required placeholder="evt-20260917-001"></label>
+        <label class="span-2">Reason<input name="reason" required value="single-writer ownership before external action"></label>
+        <div class="span-2 callout">The collision key is organization × domain × purpose × opportunity. <strong>Route is metadata, not a key field.</strong></div>
+        <button class="primary span-2" type="submit">Request writer lease</button>
+      </form>
+      <pre id="claim-result" class="result" aria-live="polite"></pre>
+    </section>
+
+    <section id="lanes" class="panel">
+      <div class="section-head"><div><p class="eyebrow">Current state</p><h2>Live lanes</h2></div><button id="refresh-lanes">Refresh</button></div>
+      <div id="lane-list" class="cards"></div>
+    </section>
+
+    <section id="outcomes" class="panel">
+      <div class="section-head"><div><p class="eyebrow">Evidence-bound transitions</p><h2>Record an outcome</h2></div></div>
+      <form id="event-form" class="grid form-grid">
+        <label>Kind<select name="kind" required><option>SENT</option><option>BOUNCE</option><option>HUMAN_EVENT</option><option>HOLD</option></select></label>
+        <label>Event id<input name="event_id" required placeholder="evt-outcome-001"></label>
+        <label>Organization<input name="org" required value="Northstar Labs"></label>
+        <label>Domain<input name="domain" required value="northstar.example"></label>
+        <label>Route<input name="route" required value="email:sales@northstar.example"></label>
+        <label>Purpose<input name="purpose" required value="initial outreach"></label>
+        <label>Opportunity<input name="opportunity" required value="builder fest"></label>
+        <label>Actor<input name="actor" required value="worker-alpha"></label>
+        <label>Provider receipt<input name="provider_receipt" placeholder="required for SENT/BOUNCE"></label>
+        <label>Human evidence id<input name="human_evidence_id" placeholder="required for HUMAN_EVENT"></label>
+        <label class="span-2">Reason<input name="reason" required value="retained evidence transition"></label>
+        <div class="span-2 callout warning">SENT means provider acceptance of the outgoing action, not human interest. BOUNCE means route failure, not buyer rejection. HUMAN_EVENT requires retained human evidence.</div>
+        <button class="primary span-2" type="submit">Record transition</button>
+      </form>
+      <pre id="event-result" class="result" aria-live="polite"></pre>
+    </section>
+
+    <section id="receipts" class="panel">
+      <div class="section-head"><div><p class="eyebrow">Append-only audit</p><h2>Receipts</h2></div><button id="refresh-receipts">Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Seq</th><th>Event</th><th>Kind</th><th>Actor</th><th>Decision</th><th>State</th><th>Route</th><th>Digest</th></tr></thead><tbody id="receipt-table"></tbody></table></div>
+    </section>
+
+    <section id="impact" class="panel">
+      <div class="section-head"><div><p class="eyebrow">Receipt-derived only</p><h2>Impact</h2></div><button id="refresh-impact">Refresh</button></div>
+      <div id="impact-grid" class="metrics"></div>
+      <p class="subtle">Counts are computed from retained receipts. No manual totals. Demo or rehearsal data must not be represented as production impact.</p>
+    </section>
+  </main>
+
+  <footer><span>OneWriter · coordination evidence desk</span><span class="mono">external_send_authorized = false</span></footer>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
