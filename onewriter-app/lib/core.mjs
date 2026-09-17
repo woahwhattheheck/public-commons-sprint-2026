@@ -85,16 +85,13 @@ export function normalizeDomain(value) {
   requireCondition(typeof value === "string", "domain must be a string");
   const raw = value.trim();
   requireCondition(raw.length > 0, "domain shape invalid");
-  let parsed;
-  try {
-    parsed = new URL(SCHEME.test(raw) ? raw : `https://${raw}`);
-  } catch {
-    throw new ContractError("domain shape invalid");
-  }
-  requireCondition(!parsed.username && !parsed.password, "domain credentials forbidden");
-  requireCondition(!parsed.port, "domain port forbidden");
-  let unicodeHost = parsed.hostname.replace(/\.$/u, "");
-  if (unicodeHost.startsWith("www.")) unicodeHost = unicodeHost.slice(4);
+  const withoutScheme = raw.replace(SCHEME, "");
+  const authority = withoutScheme.split(/[/?#]/u, 1)[0];
+  requireCondition(authority.length > 0, "domain shape invalid");
+  requireCondition(!authority.includes("@"), "domain credentials forbidden");
+  requireCondition(!authority.includes(":"), "domain port forbidden");
+  let unicodeHost = authority.replace(/\.$/u, "");
+  if (unicodeHost.toLowerCase().startsWith("www.")) unicodeHost = unicodeHost.slice(4);
   const host = tr46.toASCII(unicodeHost, {
     checkBidi: true,
     checkHyphens: true,
