@@ -1,11 +1,20 @@
 # EvidenceForge — Nebius × NVIDIA Global AI Hackathon
 
 **Track target:** Coding and Agentic Engineering  
-**State:** public build foundation; **real Nebius provider execution is still required before any competition submission claim**.
+**Submission state:** source/demo foundation ready; **a real Nebius Token Factory inference is still required before any competition submission claim**.
 
 EvidenceForge is a coding-agent control plane for teams that want the speed of a reasoning model without giving model text direct production authority. A human declares the files the agent may touch, the exact tests it must run, and a write budget. A Nemotron/NVIDIA model on Nebius Token Factory proposes a JSON plan. EvidenceForge validates that plan, executes it only through an isolated sandbox adapter, and emits a content-addressed receipt that separates **what ran** from **what is approved**.
 
 The product is intentionally useful even when the model is wrong: unknown paths, undeclared tests, arbitrary tool kinds, duplicate JSON keys, path traversal, non-finite JSON, skipped tests, and attempts to smuggle approval fields all fail closed.
+
+## Judge/evaluator path
+
+1. Run the zero-credential CLI demo and verify its receipt.
+2. Open the local browser demo and inspect the same authority boundary visually.
+3. Review `ARCHITECTURE.md` for the trust model.
+4. Review `SUBMISSION.md` for the current competition gate ledger.
+5. Use `DEMO_STORYBOARD.md` for the <=3-minute public demo-video capture plan.
+6. Before submission, replace the remaining `PROVIDER_EXECUTION_REQUIRED` gate with evidence from an authorized live Token Factory call using an NVIDIA/Nemotron model.
 
 ## Why this fits the hackathon
 
@@ -13,7 +22,7 @@ The current official rules require a working software application that either ca
 
 The adapter deliberately **does not hard-code a model ID**. It queries `/v1/models` at runtime, requires the configured `NEBIUS_MODEL` to be present, and requires an NVIDIA/Nemotron model identity. This avoids silently claiming a model that Token Factory has since removed or renamed.
 
-Official competition sources (re-check before submission):
+Official competition sources (re-check immediately before submission):
 - https://nebiusglobalaihackathon.devpost.com/
 - https://nebiusglobalaihackathon.devpost.com/rules
 - https://docs.tokenfactory.nebius.com/api-reference/introduction
@@ -24,7 +33,7 @@ Official competition sources (re-check before submission):
 1. **Human policy:** request JSON defines `allowed_paths`, `required_tests`, and `max_writes`.
 2. **Nebius inference:** `provider.generate_plan()` checks live Token Factory model inventory and asks the selected NVIDIA/Nemotron model for a strict JSON plan.
 3. **Fail-closed validation:** model output is parsed with duplicate-key and non-finite-number rejection. Only `read`, `write`, and predeclared `test` operations exist.
-4. **Sandbox execution:** the included `MemorySandbox` gives a deterministic zero-credential replay. A production competition adapter can bind the same interface to Token Factory Sandboxes / an isolated Nebius runner without changing the authority contract.
+4. **Sandbox execution:** the included `MemorySandbox` gives a deterministic zero-credential replay. A competition runtime adapter can bind the same interface to Token Factory Sandboxes or another isolated Nebius runner without changing the authority contract.
 5. **Receipt:** every read/write/test is reduced to content hashes and an immutable `evidenceforge-receipt/v1`.
 6. **Human approval ceiling:** receipts always state `real_repository_mutation=false` and `human_approval_required=true`. Provider output is evidence, never self-granted authority.
 
@@ -70,8 +79,10 @@ The model cannot:
 - deploy, contact third parties, spend money, or mutate a real repository;
 - convert its own output or provider metadata into approval.
 
-See `ARCHITECTURE.md` for the trust model and `SUBMISSION.md` for the remaining competition gates.
+## Submission materials
+
+`SUBMISSION.md` is the canonical readiness ledger. It deliberately keeps provider execution, hosted demo URL, public video, registration/rules acceptance, and final Devpost submission as explicit gates until those events actually occur. `DEMO_STORYBOARD.md` provides a shot-by-shot video plan without claiming those external actions have happened.
 
 ## License
 
-This project is part of `public-commons-sprint-2026`, whose repository root carries an MIT license. Competition submission should link the repository license visibly and preserve the notice.
+MIT. See the repository-root `LICENSE` file. Preserve the license notice in any public submission or derived distribution.
