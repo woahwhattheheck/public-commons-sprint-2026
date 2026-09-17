@@ -23,10 +23,18 @@ RepoAtlasError = _source.RepoAtlasError
 def parse_json_bytes(data: bytes) -> Any:
     try:
         return _source.parse_json_bytes(data)
+    except RepoAtlasError:
+        raise
     except RecursionError as exc:
         raise RepoAtlasError("json_too_deep") from exc
     except UnicodeEncodeError as exc:
         raise RepoAtlasError("invalid_unicode_scalar") from exc
+    except ValueError as exc:
+        # CPython can reject extremely long integer literals before json.loads
+        # can produce a JSONDecodeError (sys.set_int_max_str_digits).  Keep that
+        # runtime-specific parser guard inside RepoAtlas's stable fail-closed
+        # error surface rather than letting a raw traceback escape the CLI.
+        raise RepoAtlasError("invalid_json") from exc
 
 
 def _validate_source_input(raw: Any) -> dict[str, Any]:
