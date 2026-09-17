@@ -54,11 +54,17 @@ def _preflight_mapping(value: Any, name: str, maximum_fields: int) -> None:
     if len(value) > maximum_fields:
         raise RepoAtlasError(f"{name}:field_cardinality")
     for key in value:
-        # json.loads can only produce string object keys. Public object-mode
-        # callers bypass that parser, so keep non-JSON or pathological keys out
-        # of the retained analyzer's unknown-field set/sort path.
+        # json.loads can only produce string object keys, but escaped lone
+        # surrogates are still Python ``str`` values and object-mode callers
+        # bypass the parser entirely.  Reject non-JSON/pathological/UTF-8-invalid
+        # field names before `_source._only()` can embed them in an error string
+        # that the UTF-8 CLI would then fail to print.
         if type(key) is not str or len(key) > 256:
             raise RepoAtlasError(f"{name}:field_name")
+        try:
+            key.encode("utf-8", "strict")
+        except UnicodeEncodeError as exc:
+            raise RepoAtlasError(f"{name}:field_name") from exc
 
 
 def _preflight_cardinality(raw: Any) -> None:
