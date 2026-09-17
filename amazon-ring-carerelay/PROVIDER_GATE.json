@@ -1,0 +1,12 @@
+{
+  "schema": "carerelay-provider-gate/v1",
+  "captured_at": "2026-09-17",
+  "ring_provider_execution_verified": false,
+  "ring_simulator_exercised": false,
+  "ring_account_registered": false,
+  "devpost_joined": false,
+  "devpost_submitted": false,
+  "award_verified": false,
+  "payment_verified": false,
+  "next_gate": "OWNER_AUTHENTICATED_RING_SIMULATOR_RUN"
+}
