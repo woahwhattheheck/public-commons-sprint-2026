@@ -85,7 +85,8 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         raw = fixture()
         packet, receipt = compile_packet(raw)
         expected_bytes = canonical_size(packet)
-        oversized_packet = {"x": "A" * (expected_bytes + 1)}
+        work_ceiling = core._verification_work_ceiling(expected_bytes)
+        oversized_packet = {"x": "A" * (work_ceiling + 1)}
         with self.assertRaisesRegex(RepoAtlasError, "verify:packet_too_complex"):
             verify_bundle(raw, oversized_packet, receipt)
 
@@ -93,43 +94,43 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         raw = fixture()
         packet, receipt = compile_packet(raw)
         expected_bytes = canonical_size(packet)
+        work_ceiling = core._verification_work_ceiling(expected_bytes)
         shared = "A" * 1024
-        repeats = max(2, expected_bytes // len(shared) + 2)
+        repeats = max(2, work_ceiling // len(shared) + 2)
         amplified_packet = {"x": [shared] * repeats}
         self.assertIs(amplified_packet["x"][0], amplified_packet["x"][1])
-        self.assertGreater(canonical_size(amplified_packet), expected_bytes)
+        self.assertGreater(canonical_size(amplified_packet), work_ceiling)
         with self.assertRaisesRegex(RepoAtlasError, "verify:packet_too_complex"):
             verify_bundle(raw, amplified_packet, receipt)
 
     def test_source_snapshot_precedes_cardinality_and_policy_reads(self):
         raw = fixture()
+        original_raw = copy.deepcopy(raw)
         original_packet, _ = compile_packet(copy.deepcopy(raw))
         switched = False
 
-        def mutate_after_snapshot(frame, event, _arg):
+        def mutate_during_preflight(frame, event, _arg):
             nonlocal switched
             if (
                 event == "line"
-                and frame.f_code is core._validate_source_input.__code__
-                and frame.f_locals.get("raw") is raw
-                and "source_snapshot" in frame.f_locals
+                and frame.f_code is core._preflight_cardinality.__code__
                 and not switched
             ):
-                # This would bypass the predecessor's preflight->validate
-                # ceiling if later validation reread caller raw.
                 raw["changes"] = [None] * (core.MAX_CHANGES + 1)
                 switched = True
-            return mutate_after_snapshot
+            return mutate_during_preflight
 
         prior_trace = sys.gettrace()
-        sys.settrace(mutate_after_snapshot)
+        sys.settrace(mutate_during_preflight)
         try:
             packet, _ = compile_packet(raw)
         finally:
             sys.settrace(prior_trace)
 
-        self.assertTrue(switched)
-        self.assertEqual(len(raw["changes"]), core.MAX_CHANGES + 1)
+        # The source-generation fence suspends the callback before preflight,
+        # so the caller graph cannot move between cardinality and validation.
+        self.assertFalse(switched)
+        self.assertEqual(raw, original_raw)
         self.assertEqual(packet, original_packet)
 
     def test_source_snapshot_blocks_cross_sibling_trace_splice(self):
@@ -138,21 +139,20 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         self.assertFalse(any(provider.values()))
         switched = False
 
-        def splice_inside_snapshot(frame, event, _arg):
+        def splice_inside_validation(frame, event, _arg):
             nonlocal switched
             if (
                 event == "line"
-                and frame.f_code is core._canonical_verified_artifact.__code__
-                and frame.f_locals.get("name") == "source"
-                and frame.f_locals.get("current") is provider
+                and frame.f_code is core._source._validate.__code__
+                and frame.f_locals.get("raw") is raw
                 and not switched
             ):
                 provider.update({key: True for key in provider})
                 switched = True
-            return splice_inside_snapshot
+            return splice_inside_validation
 
         prior_trace = sys.gettrace()
-        sys.settrace(splice_inside_snapshot)
+        sys.settrace(splice_inside_validation)
         try:
             packet, _ = compile_packet(raw)
         finally:
