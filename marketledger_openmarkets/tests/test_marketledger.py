@@ -51,6 +51,9 @@ class NormalizeTests(unittest.TestCase):
         with self.assertRaises(MarketLedgerError):
             normalize_liquidity_envelope({"data": {}})
 
+    def test_liquidity_hash_is_preserved_in_report(self):
+        self.assertEqual(report()["positions"][0]["quotes"][0]["liquidity_hash"], "a1")
+
     def test_negative_fee_fails(self):
         with self.assertRaises(MarketLedgerError):
             normalize_liquidity_envelope(DOC_PAYLOAD, fee_bps_by_partner={"a": -1})
@@ -80,6 +83,18 @@ class EngineTests(unittest.TestCase):
     def test_invalid_price_fails(self):
         payload = deepcopy(DOC_PAYLOAD)
         payload["data"][0]["partner_liquidities"][0]["price"] = 1.5
+        with self.assertRaises(MarketLedgerError):
+            report(payload)
+
+    def test_missing_market_identity_fails(self):
+        payload = deepcopy(DOC_PAYLOAD)
+        payload["data"][0]["market_key"] = ""
+        with self.assertRaises(MarketLedgerError):
+            report(payload)
+
+    def test_missing_liquidity_hash_fails(self):
+        payload = deepcopy(DOC_PAYLOAD)
+        payload["data"][0]["partner_liquidities"][0]["liquidity_hash"] = None
         with self.assertRaises(MarketLedgerError):
             report(payload)
 
@@ -150,7 +165,7 @@ class EngineTests(unittest.TestCase):
         row = rep["positions"][0]
         staged = stage_action(rep, position_hash=row["position_hash"], partner_id="a", confirmation_token="confirmed-123")
         self.assertFalse(staged["provider_mutation_allowed"])
-        self.assertEqual(staged["authority"], "data_only_human_confirmed_stage")
+        self.assertEqual(staged["authority"], "data_only_confirmation_token_stage")
         self.assertNotIn("url", staged)
         self.assertNotIn("execute", staged)
 
