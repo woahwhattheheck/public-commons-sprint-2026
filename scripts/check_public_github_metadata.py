@@ -468,9 +468,9 @@ def run_self_test() -> dict[str, Any]:
     cases = 0
     for candidate in (
         repo_marker,
-        "woahwhattheheck/%63ommons",
-        "woahwhattheheck/&#99;ommons",
-        "woahwhattheheck/\\u0063ommons",
+        "woahwhattheheck/%63" + "ommons",
+        "woahwhattheheck/&#99;" + "ommons",
+        "woahwhattheheck/\\u0063" + "ommons",
     ):
         cases += 1
         if repository_reason not in reasons(candidate):
