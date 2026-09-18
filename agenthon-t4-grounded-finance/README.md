@@ -36,8 +36,9 @@ surface before packaging. Competition rules can change.
 4. Document text follows the organizer resolver: use flat `text` when present, otherwise join
    `spans[].text` with one space, and compute citation offsets against that exact resolved string.
 5. Retrieval ranks exact sentences from the frozen corpus and preserves source character offsets.
-6. If `MODEL_ENDPOINT`, `MODEL_TOKEN`, and `MODEL_NAME` are all present, one bounded House request
-   plans labels/numeric predictions for the complete roster. The model never controls citations.
+6. If `MODEL_ENDPOINT`, `MODEL_TOKEN`, and `MODEL_NAME` are all present, one bounded HTTPS House request
+   plans labels/numeric predictions for the complete roster. Redirects are refused, response bytes are capped,
+   and both the provider envelope and model content use strict duplicate/non-finite JSON parsing. The model never controls citations.
 7. If House access is missing, errors, or emits contract-invalid output, the agent falls back
    deterministically and still produces a reproducible candidate answer.
 8. Every output claim is copied from the exact cited source span.
@@ -75,9 +76,9 @@ external retrieval. This source does not contain registration credentials or a T
 From this directory:
 
 ```bash
-python -m unittest -v tests.test_agenthon_t4
-python -O -m unittest -v tests.test_agenthon_t4
-python -m py_compile agenthon_t4/*.py tests/test_agenthon_t4.py
+python -m unittest -v tests.test_agenthon_t4 tests.test_agenthon_boundaries
+python -O -m unittest -v tests.test_agenthon_t4 tests.test_agenthon_boundaries
+python -m py_compile agenthon_t4/*.py tests/test_agenthon_t4.py tests/test_agenthon_boundaries.py
 ```
 
 Tests are synthetic and contain no hidden Agenthon material.
