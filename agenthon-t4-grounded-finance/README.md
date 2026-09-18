@@ -30,15 +30,22 @@ surface before packaging. Competition rules can change.
 
 1. Strict JSON ingestion rejects duplicate keys, malformed dates, non-finite numerics, duplicate
    roster IDs, duplicate corpus IDs, symlinked corpus files, and unbounded inputs.
-2. Corpus documents newer than the task cutoff are excluded **before retrieval**.
-3. Retrieval ranks exact sentences from the frozen corpus and preserves source character offsets.
-4. If `MODEL_ENDPOINT`, `MODEL_TOKEN`, and `MODEL_NAME` are all present, one bounded House request
+2. `corpus/manifest.json` is treated as an index, never as a citable document; citation IDs come
+   from the authoritative corpus filename stem.
+3. Corpus documents newer than the task cutoff are excluded **before retrieval**.
+4. Document text follows the organizer resolver: use flat `text` when present, otherwise join
+   `spans[].text` with one space, and compute citation offsets against that exact resolved string.
+5. Retrieval ranks exact sentences from the frozen corpus and preserves source character offsets.
+6. If `MODEL_ENDPOINT`, `MODEL_TOKEN`, and `MODEL_NAME` are all present, one bounded House request
    plans labels/numeric predictions for the complete roster. The model never controls citations.
-5. If House access is missing, errors, or emits contract-invalid output, the agent falls back
+7. If House access is missing, errors, or emits contract-invalid output, the agent falls back
    deterministically and still produces a reproducible candidate answer.
-6. Every output claim is copied from the exact cited source span.
-7. The output uses the task's exact interval level and deterministic roster order.
-8. Writes are atomic and refuse an existing output symlink.
+8. Every output claim is copied from the exact cited source span.
+9. The output uses the task's exact interval level and deterministic roster order.
+10. If a synthetic unit contains only post-cutoff evidence, the agent writes a schema-shaped
+    unresolved marker rather than citing future evidence or crashing; that unit is not claimed
+    admissible.
+11. Writes are atomic and refuse an existing output symlink.
 
 The deterministic fallback is an **availability floor, not a quality claim**. A real leaderboard
 candidate still needs public-unit evaluation, faithfulness checks, scoring experiments, and
