@@ -64,6 +64,39 @@ class ExternalSurfaceIsolationTests(unittest.TestCase):
             self.assertEqual(len(findings), 1)
             self.assertEqual(findings[0][2], "commons-repository")
 
+    def test_internal_slack_and_svg_xml_surfaces_are_blocking(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            slack = "https://tokenjunkielabs.slack.com" + "/archives/C0EXAMPLE/p123"
+            (root / "diagram.svg").write_text(
+                '<svg><a href="' + slack + '">internal</a></svg>\n',
+                encoding="utf-8",
+            )
+            (root / "feed.xml").write_text(
+                '<link href="' + slack.replace("/archives/", "%2Farchives%2F") + '"/>\n',
+                encoding="utf-8",
+            )
+            checked, findings = guard.scan_root(root)
+            self.assertEqual(checked, 2)
+            self.assertEqual(
+                [finding[2] for finding in findings],
+                ["internal-slack-archive", "internal-slack-archive"],
+            )
+
+    def test_symlinked_public_directory_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target = root / "target"
+            target.mkdir()
+            (target / "README.md").write_text("clean\n", encoding="utf-8")
+            link = root / "linked-public"
+            try:
+                link.symlink_to(target, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("directory symlink unavailable")
+            with self.assertRaisesRegex(guard.ScanError, "symlinked public directory"):
+                guard.scan_root(root)
+
     def test_unscannable_public_text_is_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
