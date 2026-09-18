@@ -8,12 +8,12 @@ from typing import Any
 
 from .codec import canonical_json, digest_json, loads_strict
 
-SCHEMA = "proofline.commercial-pilot.v1"
-GENERATION = "commercial-pilot-2026-09-16"
+SCHEMA = "proofline.commercial-pilot.v2"
+GENERATION = "commercial-pilot-2026-09-17-readiness-truth"
 ASSUMPTION_SOURCE = "BUYER_SUPPLIED_OR_OWNER_SCENARIO_INPUT"
 PRICE_STATES = {"PROPOSED_NOT_ACCEPTED", "OWNER_PRICING_REQUIRED"}
 DATA_CLASSES = {"NON_SENSITIVE_SYNTHETIC", "BUYER_APPROVED_NON_SECRET"}
-SOURCE_BASE = "6b660f8907fb18323976bc1deaafa9ba849d33d7"
+SOURCE_READINESS_STATE = "NOT_ATTESTED_BY_COMMERCIAL_PACKET"
 
 FALSE_AUTHORITY = {
     "approve_product": False,
@@ -41,7 +41,7 @@ SOURCE_EVIDENCE = [
     {
         "capability": "deterministic_visual_change_evidence",
         "source": "proofline/vision.py",
-        "truth": "SOURCE_AND_TEST_READINESS_ONLY",
+        "truth": "SOURCE_REFERENCE_NOT_READINESS_ATTESTATION",
     },
     {
         "capability": "receipt_bound_human_review_proposals",
@@ -73,8 +73,8 @@ ACCEPTANCE_CRITERIA = [
     },
     {
         "id": "A4",
-        "criterion": "Pilot delivery includes reproducible source/test/demo evidence; cloud deployment is a separate owner-authorized step.",
-        "proof": "documented test/compile commands pass and deployment remains false unless separately evidenced.",
+        "criterion": "The commercial packet never self-attests source/test/demo readiness; owner-held source/test receipts are separate evidence.",
+        "proof": "source_test_demo_ready remains false and source_generation is explicitly not attested by this packet.",
     },
 ]
 
@@ -211,9 +211,14 @@ def build_pilot_packet(intake: dict[str, Any]) -> dict[str, Any]:
     packet: dict[str, Any] = {
         "schema": SCHEMA,
         "generation": GENERATION,
-        "source_base_commit": SOURCE_BASE,
+        "source_generation": {
+            "state": SOURCE_READINESS_STATE,
+            "commit": None,
+            "manifest_sha256": None,
+            "test_execution_receipt": None,
+        },
         "source_truth": {
-            "source_test_demo_ready": True,
+            "source_test_demo_ready": False,
             "live_aws_deployed": False,
             "competition_submitted": False,
             "customer_validated": False,
@@ -235,7 +240,7 @@ def verify_pilot_packet(packet: dict[str, Any]) -> bool:
     try:
         if not isinstance(packet, dict) or packet.get("schema") != SCHEMA:
             return False
-        if packet.get("generation") != GENERATION or packet.get("source_base_commit") != SOURCE_BASE:
+        if packet.get("generation") != GENERATION:
             return False
         receipt = packet.get("receipt_sha256")
         if not isinstance(receipt, str) or len(receipt) != 64:
@@ -246,8 +251,15 @@ def verify_pilot_packet(packet: dict[str, Any]) -> bool:
             return False
 
         source_truth = body.get("source_truth")
+        if body.get("source_generation") != {
+            "state": SOURCE_READINESS_STATE,
+            "commit": None,
+            "manifest_sha256": None,
+            "test_execution_receipt": None,
+        }:
+            return False
         if source_truth != {
-            "source_test_demo_ready": True,
+            "source_test_demo_ready": False,
             "live_aws_deployed": False,
             "competition_submitted": False,
             "customer_validated": False,

@@ -36,6 +36,47 @@ class CommercialPilotTests(unittest.TestCase):
         self.assertTrue(verify_pilot_packet(a))
         self.assertEqual(a["case_study_state"], "SYNTHETIC_ONLY")
         self.assertEqual(a["commercial_claims"]["revenue_received"], False)
+        self.assertFalse(a["source_truth"]["source_test_demo_ready"])
+        self.assertEqual(a["source_generation"]["state"], "NOT_ATTESTED_BY_COMMERCIAL_PACKET")
+        self.assertIsNone(a["source_generation"]["commit"])
+        self.assertIsNone(a["source_generation"]["manifest_sha256"])
+        self.assertIsNone(a["source_generation"]["test_execution_receipt"])
+
+
+    def test_resealed_positive_source_readiness_fails(self):
+        from proofline.codec import digest_json
+        packet = build_pilot_packet(copy.deepcopy(SAMPLE))
+        packet["source_truth"]["source_test_demo_ready"] = True
+        packet["source_generation"] = {
+            "state": "ATTESTED",
+            "commit": "6b660f8907fb18323976bc1deaafa9ba849d33d7",
+            "manifest_sha256": "0" * 64,
+            "test_execution_receipt": "caller-authored",
+        }
+        packet.pop("receipt_sha256")
+        packet["receipt_sha256"] = digest_json(packet)
+        self.assertFalse(verify_pilot_packet(packet))
+
+    def test_old_v1_generation_cannot_verify_even_when_resealed(self):
+        from proofline.codec import digest_json
+        packet = build_pilot_packet(copy.deepcopy(SAMPLE))
+        packet["schema"] = "proofline.commercial-pilot.v1"
+        packet["generation"] = "commercial-pilot-2026-09-16"
+        packet["source_base_commit"] = "6b660f8907fb18323976bc1deaafa9ba849d33d7"
+        packet.pop("source_generation")
+        packet["source_truth"]["source_test_demo_ready"] = True
+        packet.pop("receipt_sha256")
+        packet["receipt_sha256"] = digest_json(packet)
+        self.assertFalse(verify_pilot_packet(packet))
+
+    def test_source_reference_cannot_promote_readiness(self):
+        from proofline.codec import digest_json
+        packet = build_pilot_packet(copy.deepcopy(SAMPLE))
+        packet["source_evidence"][0]["truth"] = "SOURCE_AND_TEST_READINESS_ONLY"
+        packet["source_truth"]["source_test_demo_ready"] = True
+        packet.pop("receipt_sha256")
+        packet["receipt_sha256"] = digest_json(packet)
+        self.assertFalse(verify_pilot_packet(packet))
 
     def test_roi_is_scenario_only(self):
         packet = build_pilot_packet(copy.deepcopy(SAMPLE))
