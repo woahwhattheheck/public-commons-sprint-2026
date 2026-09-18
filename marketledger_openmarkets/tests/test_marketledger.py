@@ -133,6 +133,13 @@ class EngineTests(unittest.TestCase):
     def test_no_move_below_threshold(self):
         self.assertEqual(compare_reports(report(), report(), move_threshold_bps=1), [])
 
+    def test_compare_rejects_tampered_report(self):
+        old = report()
+        tampered = deepcopy(old)
+        tampered["positions"][0]["best_fee_adjusted_price"] = "0.01000000"
+        with self.assertRaises(MarketLedgerError):
+            compare_reports(old, tampered)
+
     def test_stage_requires_token(self):
         row = report()["positions"][0]
         with self.assertRaises(MarketLedgerError):
@@ -151,6 +158,17 @@ class EngineTests(unittest.TestCase):
         rep = report()
         with self.assertRaises(MarketLedgerError):
             stage_action(rep, position_hash="pos-1", partner_id="missing", confirmation_token="confirmed-123")
+
+    def test_stage_rejects_tampered_report_with_old_receipt(self):
+        rep = report()
+        rep["positions"][0]["quotes"][0]["price"] = "0.01000000"
+        with self.assertRaises(MarketLedgerError):
+            stage_action(rep, position_hash="pos-1", partner_id="a", confirmation_token="confirmed-123")
+
+    def test_stage_rejects_below_liquidity_policy(self):
+        rep = report(min_available_usd=5000)
+        with self.assertRaises(MarketLedgerError):
+            stage_action(rep, position_hash="pos-1", partner_id="b", confirmation_token="confirmed-123")
 
 
 class AdapterTests(unittest.TestCase):
