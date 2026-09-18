@@ -37,6 +37,21 @@ class ExternalSurfaceIsolationTests(unittest.TestCase):
             normalized = guard.normalized_for_scan(case)
             self.assertIn(repo, normalized)
 
+    def test_marker_boundaries_avoid_owner_and_repo_prefix_false_positives(self) -> None:
+        clean = (
+            "https://github.com/notwoahwhattheheck/commons",
+            "https://github.com/woahwhattheheck/commons-demo",
+        )
+        for case in clean:
+            candidate = guard.normalized_for_scan(case)
+            self.assertFalse(
+                any(guard.marker_present(candidate, marker) for _, marker in guard.FORBIDDEN_MARKERS)
+            )
+
+        target = "woahwhattheheck" + "/commons.git"
+        candidate = guard.normalized_for_scan("git@github.com:" + target)
+        self.assertTrue(guard.marker_present(candidate, guard.FORBIDDEN_MARKERS[0][1]))
+
     def test_normalization_exhaustion_fails_closed(self) -> None:
         value = "woahwhattheheck" + "/commons"
         for _ in range(guard.MAX_NORMALIZATION_PASSES + 2):
@@ -120,7 +135,7 @@ class ExternalSurfaceIsolationTests(unittest.TestCase):
             (root / "README.md").write_bytes(b"\xff\xfe")
             _, findings = guard.scan_root(root)
             self.assertTrue(findings)
-            self.assertTrue(findings[0][2].startswith("unscannable-public-text:"))
+            self.assertEqual(findings[0][2], "unscannable-public-text")
 
     def test_extensionless_public_text_is_scanned(self) -> None:
         with tempfile.TemporaryDirectory() as td:
