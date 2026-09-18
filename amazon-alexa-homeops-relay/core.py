@@ -223,25 +223,35 @@ class HomeOpsStore:
         if not approval or approval["decision"] != "APPROVE" or approval["plan_digest"] != self.plans[plan_id]["plan_digest"]:
             raise HomeOpsError("approved exact plan required")
         action_id = _id(args["action_id"], "action_id")
-        if action_id in self.actions:
-            raise HomeOpsError("duplicate action_id")
         kind = _text(args["kind"], "kind", max_len=40).upper()
         if kind not in SIDE_EFFECT_KINDS:
             raise HomeOpsError("kind: unsupported side effect")
+        summary = _text(args["summary"], "summary")
+        existing = self.actions.get(action_id)
+        if existing is not None:
+            if (
+                existing["plan_id"] == plan_id
+                and existing["plan_digest"] == self.plans[plan_id]["plan_digest"]
+                and existing["approval_digest"] == approval["approval_digest"]
+                and existing["kind"] == kind
+                and existing["summary"] == summary
+            ):
+                return {**existing, "replayed": True}
+            raise HomeOpsError("action_id already used with different payload")
         request = {
             "action_id": action_id,
             "plan_id": plan_id,
             "plan_digest": self.plans[plan_id]["plan_digest"],
             "approval_digest": approval["approval_digest"],
             "kind": kind,
-            "summary": _text(args["summary"], "summary"),
+            "summary": summary,
             "execution_authorized": False,
             "requires_external_executor": True,
         }
         request["request_digest"] = digest(request)
         self.actions[action_id] = request
         self._event("SIDE_EFFECT_REQUESTED", self.plans[plan_id]["issue_id"], {"request_digest": request["request_digest"]})
-        return request
+        return {**request, "replayed": False}
 
     def get_issue(self, args: dict[str, Any]) -> dict[str, Any]:
         if set(args) != {"issue_id"}:
