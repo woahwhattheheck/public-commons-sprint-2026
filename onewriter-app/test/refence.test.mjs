@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { NetlifyDB } from "@netlify/database-dev";
 import { getDatabase } from "@netlify/database";
+import { parseLaneRegistry } from "../lib/lane-registry.mjs";
 import { createService } from "../lib/service.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -14,13 +15,16 @@ const workerA = Object.freeze({ subject: "worker-a", roles: ["claim", "provider_
 const workerB = Object.freeze({ subject: "worker-b", roles: ["claim", "provider_evidence"] });
 const workerC = Object.freeze({ subject: "worker-c", roles: ["claim"] });
 const humanRecorder = Object.freeze({ subject: "human-recorder", roles: ["human_evidence"] });
+const laneRegistry = parseLaneRegistry(JSON.stringify([
+  { lane_id: "lane:northstar-builderfest" },
+]));
 
 before(async () => {
   local = new NetlifyDB({ logger: () => {} });
   const connectionString = await local.start();
   await local.applyMigrations(join(HERE, "../netlify/database/migrations"));
   db = getDatabase({ connectionString });
-  service = createService(db);
+  service = createService(db, { laneRegistry });
 });
 
 after(async () => {
@@ -29,7 +33,7 @@ after(async () => {
 });
 
 const claim = (eventId, route, leaseSeconds = 300) => ({
-  event_id: eventId, org: "Northstar Labs", domain: "northstar.example", route,
+  event_id: eventId, lane_id: "lane:northstar-builderfest", org: "Northstar Labs", domain: "northstar.example", route,
   purpose: "initial outreach", opportunity: "builder fest", lease_seconds: leaseSeconds,
   reason: "receipt-bound refence proof",
 });
