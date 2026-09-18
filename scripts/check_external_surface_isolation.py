@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import hashlib
 import os
 import re
 from pathlib import Path
@@ -80,7 +81,7 @@ def _decode_source_ascii_escapes(value: str) -> str:
     """Decode bounded source escapes that can hide ASCII URL/path markers."""
 
     def replace(match: re.Match[str]) -> str:
-        digits = match.group(1) or match.group(2)
+        digits = match.group(1) or match.group(2) or match.group(3)
         codepoint = int(digits, 16)
         return chr(codepoint) if codepoint <= 0x7F else match.group(0)
 
@@ -194,6 +195,37 @@ def iter_text_files(root: Path):
                 yield path
 
 
+def marker_present(candidate: str, marker: str) -> bool:
+    """Match an internal target without suffix/prefix owner-name false positives."""
+    marker = marker.casefold()
+    start = 0
+    ident = frozenset("abcdefghijklmnopqrstuvwxyz0123456789._-")
+    while True:
+        at = candidate.find(marker, start)
+        if at < 0:
+            return False
+        left = candidate[at - 1] if at else ""
+        if left and left in ident:
+            start = at + 1
+            continue
+
+        end = at + len(marker)
+        if marker.endswith("/"):
+            return True
+        if end == len(candidate):
+            return True
+
+        tail = candidate[end:]
+        if tail.startswith(".git"):
+            after_git = end + 4
+            if after_git == len(candidate) or candidate[after_git] not in ident:
+                return True
+
+        if candidate[end] not in ident:
+            return True
+        start = at + 1
+
+
 def scan_root(root: Path):
     root = root.resolve()
     if not root.exists():
@@ -210,7 +242,7 @@ def scan_root(root: Path):
             text = _read_public_text(path)
         except ScanError as exc:
             rel = path.relative_to(root).as_posix()
-            violations.append((rel, 0, f"unscannable-public-text:{exc}"))
+            violations.append((rel, 0, "unscannable-public-text"))
             continue
 
         for lineno, line in enumerate(text.splitlines(), 1):
@@ -221,7 +253,7 @@ def scan_root(root: Path):
                 violations.append((rel, lineno, f"unscannable-public-line:{exc}"))
                 continue
             for label, marker in FORBIDDEN_MARKERS:
-                if marker.casefold() in candidate:
+                if marker_present(candidate, marker):
                     violations.append((rel, lineno, label))
 
     return checked, violations
@@ -238,12 +270,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         checked, violations = scan_root(root)
     except ScanError as exc:
-        print(f"external-surface-isolation: FAIL ({exc})", file=sys.stderr)
+        print("external-surface-isolation: FAIL (scan-incomplete)", file=sys.stderr)
         return 2
     if violations:
         print("external-surface-isolation: FAIL", file=sys.stderr)
         for path, lineno, label in violations:
-            location = f"{path}:{lineno}" if lineno else path
+            path_id = hashlib.sha256(path.encode("utf-8")).hexdigest()[:16]
+            location = f"path_sha256={path_id} line={lineno}" if lineno else f"path_sha256={path_id}"
             print(f"  {location}: {label}", file=sys.stderr)
         return 1
 
