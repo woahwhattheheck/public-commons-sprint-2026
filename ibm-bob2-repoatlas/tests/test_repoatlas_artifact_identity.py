@@ -428,5 +428,31 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         self.assertEqual(expected, actual)
 
 
+    def test_source_preflight_policy_roots_resist_post_import_rebinding(self):
+        raw = fixture()
+        original_max_changes = core.MAX_CHANGES
+        original_max_doc_rows = core.MAX_DOC_ROWS
+        original_max_row_refs = core.MAX_ROW_REFS
+        original_source_max_files = core._source.MAX_FILES
+        original_source_max_edges = core._source.MAX_EDGES
+
+        # Keep the hostile otherwise intentionally malformed: the reviewed
+        # facade-owned work ceiling must reject cardinality before any later
+        # source-shape validation can matter.
+        raw["changes"] = [None] * (original_max_changes + 1)
+
+        with (
+            mock.patch.object(core, "_preflight_cardinality", lambda _raw: None),
+            mock.patch.object(core, "_preflight_mapping", lambda *_a, **_k: None),
+            mock.patch.object(core, "MAX_CHANGES", original_max_changes + 1_000_000),
+            mock.patch.object(core, "MAX_DOC_ROWS", original_max_doc_rows + 1_000_000),
+            mock.patch.object(core, "MAX_ROW_REFS", original_max_row_refs + 1_000_000),
+            mock.patch.object(core._source, "MAX_FILES", original_source_max_files + 1_000_000),
+            mock.patch.object(core._source, "MAX_EDGES", original_source_max_edges + 1_000_000),
+        ):
+            with self.assertRaisesRegex(RepoAtlasError, "changes:cardinality"):
+                compile_packet(raw)
+
+
 if __name__ == "__main__":
     unittest.main()
