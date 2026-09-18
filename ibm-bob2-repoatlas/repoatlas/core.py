@@ -14,6 +14,7 @@ separately source-bound and reviewed successor.
 from __future__ import annotations
 
 import math
+import sys
 from typing import Any
 
 from . import _core_source_v1 as _source
@@ -36,6 +37,14 @@ MAX_JSON_DEPTH = 256
 # Bound total JSON node work independently of CPython's recursion limit while
 # leaving generous room above any artifact produced from the admitted input.
 MAX_ARTIFACT_NODES = _source.MAX_TEXT
+
+# Keep direct-object verification work bounded while allowing ordinary small
+# tamper to reach the semantic mismatch surface instead of being mislabeled
+# as a complexity attack. The cap never exceeds the retained input ceiling
+# unless the trusted expected artifact itself is already larger.
+ARTIFACT_BYTE_SLACK = 4096
+ARTIFACT_BYTE_FACTOR = 2
+_ATOMIC_FREEZE_SWITCH_SECONDS = 3600.0
 
 
 def _preflight_json_depth(data: bytes) -> None:
@@ -236,137 +245,229 @@ def _canonical_verified_artifact(
     value: Any,
     name: str,
     max_canonical_bytes: int,
+    _get_switch_interval=sys.getswitchinterval,
+    _set_switch_interval=sys.setswitchinterval,
 ) -> bytes:
-    """Freeze, bound, then canonicalize one supplied packet/receipt generation.
+    """Freeze one coherent supplied packet/receipt generation under bounded work.
 
-    Verification already owns a trusted recomputed artifact. Its exact canonical
-    byte length is the tightest legitimate ceiling for the supplied artifact:
-    anything larger cannot possibly be identical. The iterative walk therefore
-    does two jobs in the same bounded pass: it charges the candidate's exact
-    canonical JSON work and deep-copies every admitted exact built-in container
-    into verifier-owned plain JSON. The later serializer sees only that frozen
-    generation, never the caller-owned object that was preflighted.
+    The verifier must not assemble an impossible artifact by reading sibling
+    containers from different caller generations.  CPython can otherwise
+    switch Python threads between exact-dict/list reads even though each
+    individual read is callback-free.  This boundary temporarily extends the
+    interpreter thread-switch interval only across the bounded, non-blocking
+    preflight+freeze.  The prior interval is restored before serialization.
+
+    A shape-first pass gives nesting errors precedence over byte-budget errors.
+    The byte-work ceiling remains O(trusted expected artifact): small ordinary
+    tamper can serialize and become a semantic mismatch, while large scalar or
+    alias amplification still fails before unbounded serialization.
     """
     if type(max_canonical_bytes) is not int or max_canonical_bytes < 0:
         raise RepoAtlasError(f"verify:{name}_too_complex")
 
-    root: list[Any] = [None]
-    stack: list[tuple[Any, int, Any, Any]] = [(value, 0, root, 0)]
-    remaining_nodes = MAX_ARTIFACT_NODES - 1
-    remaining_bytes = max_canonical_bytes
+    work_byte_limit = max(
+        max_canonical_bytes,
+        min(
+            _source.MAX_TEXT,
+            max(
+                max_canonical_bytes * ARTIFACT_BYTE_FACTOR,
+                max_canonical_bytes + ARTIFACT_BYTE_SLACK,
+            ),
+        ),
+    )
 
-    def charge(amount: int) -> None:
-        nonlocal remaining_bytes
-        if amount < 0 or amount > remaining_bytes:
-            raise RepoAtlasError(f"verify:{name}_too_complex")
-        remaining_bytes -= amount
+    def preflight_shape() -> None:
+        stack: list[tuple[Any, int]] = [(value, 0)]
+        remaining_nodes = MAX_ARTIFACT_NODES - 1
 
-    while stack:
-        current, container_depth, parent, slot = stack.pop()
-        current_type = type(current)
+        while stack:
+            current, container_depth = stack.pop()
+            current_type = type(current)
 
-        if current_type is dict:
-            next_depth = container_depth + 1
-            if next_depth > MAX_JSON_DEPTH:
-                raise RepoAtlasError(f"verify:{name}_too_deep")
-            member_count = len(current)
-            if member_count > remaining_nodes:
+            if current_type is dict:
+                next_depth = container_depth + 1
+                if next_depth > MAX_JSON_DEPTH:
+                    raise RepoAtlasError(f"verify:{name}_too_deep")
+                member_count = len(current)
+                if member_count > remaining_nodes:
+                    raise RepoAtlasError(f"verify:{name}_too_complex")
+                remaining_nodes -= member_count
+                try:
+                    items = list(current.items())
+                except RuntimeError as exc:
+                    raise RepoAtlasError(
+                        f"verify:{name}_generation_changed"
+                    ) from exc
+                if len(items) != member_count:
+                    raise RepoAtlasError(f"verify:{name}_generation_changed")
+                for key, item in reversed(items):
+                    if type(key) is not str:
+                        raise RepoAtlasError(
+                            f"verify:{name}_not_canonical_json"
+                        )
+                    stack.append((item, next_depth))
+                continue
+
+            if current_type is list:
+                next_depth = container_depth + 1
+                if next_depth > MAX_JSON_DEPTH:
+                    raise RepoAtlasError(f"verify:{name}_too_deep")
+                member_count = len(current)
+                if member_count > remaining_nodes:
+                    raise RepoAtlasError(f"verify:{name}_too_complex")
+                remaining_nodes -= member_count
+                items = list(current)
+                if len(items) != member_count:
+                    raise RepoAtlasError(f"verify:{name}_generation_changed")
+                for index in range(member_count - 1, -1, -1):
+                    stack.append((items[index], next_depth))
+                continue
+
+            if (
+                current is None
+                or current_type is bool
+                or current_type is str
+                or current_type is int
+                or current_type is float
+            ):
+                continue
+            raise RepoAtlasError(f"verify:{name}_not_canonical_json")
+
+    def freeze_generation() -> Any:
+        root: list[Any] = [None]
+        stack: list[tuple[Any, int, Any, Any]] = [(value, 0, root, 0)]
+        remaining_nodes = MAX_ARTIFACT_NODES - 1
+        remaining_bytes = work_byte_limit
+
+        def charge(amount: int) -> None:
+            nonlocal remaining_bytes
+            if amount < 0 or amount > remaining_bytes:
                 raise RepoAtlasError(f"verify:{name}_too_complex")
-            remaining_nodes -= member_count
-            # Exact built-in dict snapshotting executes without user callbacks.
-            # Copy references once, then never read this caller-owned container
-            # again. Later nested containers are likewise frozen when visited.
-            try:
-                items = list(current.items())
-            except RuntimeError as exc:
-                raise RepoAtlasError(f"verify:{name}_generation_changed") from exc
-            if len(items) != member_count:
-                raise RepoAtlasError(f"verify:{name}_generation_changed")
-            frozen_dict: dict[str, Any] = {}
-            parent[slot] = frozen_dict
-            # Braces, one colon per entry and commas between entries.
-            charge(2 + member_count + max(member_count - 1, 0))
-            for key, _ in items:
-                if type(key) is not str:
-                    raise RepoAtlasError(f"verify:{name}_not_canonical_json")
-                charge(_json_string_canonical_size(key, name, remaining_bytes))
-                frozen_dict[key] = None
-            for key, item in reversed(items):
-                stack.append((item, next_depth, frozen_dict, key))
-            continue
+            remaining_bytes -= amount
 
-        if current_type is list:
-            next_depth = container_depth + 1
-            if next_depth > MAX_JSON_DEPTH:
-                raise RepoAtlasError(f"verify:{name}_too_deep")
-            member_count = len(current)
-            if member_count > remaining_nodes:
-                raise RepoAtlasError(f"verify:{name}_too_complex")
-            remaining_nodes -= member_count
-            # Snapshot exact-list references once; subsequent caller mutation
-            # cannot change which generation the verifier later serializes.
-            items = list(current)
-            if len(items) != member_count:
-                raise RepoAtlasError(f"verify:{name}_generation_changed")
-            frozen_list: list[Any] = [None] * member_count
-            parent[slot] = frozen_list
-            # Brackets and commas between elements.
-            charge(2 + max(member_count - 1, 0))
-            for index in range(member_count - 1, -1, -1):
-                stack.append((items[index], next_depth, frozen_list, index))
-            continue
+        while stack:
+            current, container_depth, parent, slot = stack.pop()
+            current_type = type(current)
 
-        if current is None:
-            charge(4)
-            parent[slot] = None
-            continue
-        if current_type is bool:
-            charge(4 if current else 5)
-            parent[slot] = current
-            continue
-        if current_type is str:
-            charge(_json_string_canonical_size(current, name, remaining_bytes))
-            parent[slot] = current
-            continue
-        if current_type is int:
-            # Bound decimal rendering work before str(); one decimal digit
-            # carries fewer than four value bits, so this is a safe lower bound.
-            bits = abs(current).bit_length()
-            minimum_digits = 1 if bits == 0 else ((bits - 1) // 4) + 1
-            if minimum_digits + (1 if current < 0 else 0) > remaining_bytes:
-                raise RepoAtlasError(f"verify:{name}_too_complex")
-            try:
-                rendered = str(current)
-            except ValueError as exc:
-                raise RepoAtlasError(f"verify:{name}_too_complex") from exc
-            charge(len(rendered))
-            parent[slot] = current
-            continue
-        if current_type is float:
-            if not math.isfinite(current):
-                raise RepoAtlasError(f"verify:{name}_not_canonical_json")
-            # CPython's JSON encoder uses the finite float repr spelling.
-            charge(len(repr(current)))
-            parent[slot] = current
-            continue
-        raise RepoAtlasError(f"verify:{name}_not_canonical_json")
+            if current_type is dict:
+                next_depth = container_depth + 1
+                if next_depth > MAX_JSON_DEPTH:
+                    raise RepoAtlasError(f"verify:{name}_too_deep")
+                member_count = len(current)
+                if member_count > remaining_nodes:
+                    raise RepoAtlasError(f"verify:{name}_too_complex")
+                remaining_nodes -= member_count
+                try:
+                    items = list(current.items())
+                except RuntimeError as exc:
+                    raise RepoAtlasError(
+                        f"verify:{name}_generation_changed"
+                    ) from exc
+                if len(items) != member_count:
+                    raise RepoAtlasError(f"verify:{name}_generation_changed")
+                frozen_dict: dict[str, Any] = {}
+                parent[slot] = frozen_dict
+                charge(2 + member_count + max(member_count - 1, 0))
+                for key, _ in items:
+                    if type(key) is not str:
+                        raise RepoAtlasError(
+                            f"verify:{name}_not_canonical_json"
+                        )
+                    charge(
+                        _json_string_canonical_size(
+                            key, name, remaining_bytes
+                        )
+                    )
+                    frozen_dict[key] = None
+                for key, item in reversed(items):
+                    stack.append((item, next_depth, frozen_dict, key))
+                continue
 
-    frozen = root[0]
+            if current_type is list:
+                next_depth = container_depth + 1
+                if next_depth > MAX_JSON_DEPTH:
+                    raise RepoAtlasError(f"verify:{name}_too_deep")
+                member_count = len(current)
+                if member_count > remaining_nodes:
+                    raise RepoAtlasError(f"verify:{name}_too_complex")
+                remaining_nodes -= member_count
+                items = list(current)
+                if len(items) != member_count:
+                    raise RepoAtlasError(f"verify:{name}_generation_changed")
+                frozen_list: list[Any] = [None] * member_count
+                parent[slot] = frozen_list
+                charge(2 + max(member_count - 1, 0))
+                for index in range(member_count - 1, -1, -1):
+                    stack.append(
+                        (items[index], next_depth, frozen_list, index)
+                    )
+                continue
+
+            if current is None:
+                charge(4)
+                parent[slot] = None
+                continue
+            if current_type is bool:
+                charge(4 if current else 5)
+                parent[slot] = current
+                continue
+            if current_type is str:
+                charge(
+                    _json_string_canonical_size(
+                        current, name, remaining_bytes
+                    )
+                )
+                parent[slot] = current
+                continue
+            if current_type is int:
+                bits = abs(current).bit_length()
+                minimum_digits = 1 if bits == 0 else ((bits - 1) // 4) + 1
+                if (
+                    minimum_digits + (1 if current < 0 else 0)
+                    > remaining_bytes
+                ):
+                    raise RepoAtlasError(f"verify:{name}_too_complex")
+                try:
+                    rendered = str(current)
+                except ValueError as exc:
+                    raise RepoAtlasError(
+                        f"verify:{name}_too_complex"
+                    ) from exc
+                charge(len(rendered))
+                parent[slot] = current
+                continue
+            if current_type is float:
+                if not math.isfinite(current):
+                    raise RepoAtlasError(
+                        f"verify:{name}_not_canonical_json"
+                    )
+                charge(len(repr(current)))
+                parent[slot] = current
+                continue
+            raise RepoAtlasError(f"verify:{name}_not_canonical_json")
+
+        return root[0]
+
+    previous_interval = _get_switch_interval()
+    changed_interval = previous_interval < _ATOMIC_FREEZE_SWITCH_SECONDS
+    if changed_interval:
+        _set_switch_interval(_ATOMIC_FREEZE_SWITCH_SECONDS)
+    try:
+        preflight_shape()
+        frozen = freeze_generation()
+    finally:
+        if changed_interval:
+            _set_switch_interval(previous_interval)
+
     try:
         canonical = _source._canonical(frozen)
     except RepoAtlasError:
         raise
     except RecursionError as exc:
-        # The iterative bound above should keep normal CPython serializers well
-        # below recursion limits, but preserve a stable error if an interpreter
-        # imposes a stricter implementation limit.
         raise RepoAtlasError(f"verify:{name}_too_deep") from exc
-    if len(canonical) > max_canonical_bytes:
-        # Defensive invariant: the freeze/preflight is intended to account for
-        # every canonical byte before the serializer is reached.
+    if len(canonical) > work_byte_limit:
         raise RepoAtlasError(f"verify:{name}_too_complex")
     return canonical
-
 
 def _build_source_only_api():
     # Capture the reviewed analyzer once, then retire its ordinary module-level
