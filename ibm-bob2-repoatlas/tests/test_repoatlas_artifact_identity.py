@@ -101,6 +101,76 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         with self.assertRaisesRegex(RepoAtlasError, "verify:packet_too_complex"):
             verify_bundle(raw, amplified_packet, receipt)
 
+    def test_source_snapshot_precedes_cardinality_and_policy_reads(self):
+        raw = fixture()
+        original_packet, _ = compile_packet(copy.deepcopy(raw))
+        switched = False
+
+        def mutate_after_snapshot(frame, event, _arg):
+            nonlocal switched
+            if (
+                event == "line"
+                and frame.f_code is core._validate_source_input.__code__
+                and frame.f_locals.get("raw") is raw
+                and "source_snapshot" in frame.f_locals
+                and not switched
+            ):
+                # This would bypass the predecessor's preflight->validate
+                # ceiling if later validation reread caller raw.
+                raw["changes"] = [None] * (core.MAX_CHANGES + 1)
+                switched = True
+            return mutate_after_snapshot
+
+        prior_trace = sys.gettrace()
+        sys.settrace(mutate_after_snapshot)
+        try:
+            packet, _ = compile_packet(raw)
+        finally:
+            sys.settrace(prior_trace)
+
+        self.assertTrue(switched)
+        self.assertEqual(len(raw["changes"]), core.MAX_CHANGES + 1)
+        self.assertEqual(packet, original_packet)
+
+    def test_source_snapshot_blocks_cross_sibling_trace_splice(self):
+        raw = fixture()
+        provider = raw["provider"]
+        self.assertFalse(any(provider.values()))
+        switched = False
+
+        def splice_inside_snapshot(frame, event, _arg):
+            nonlocal switched
+            if (
+                event == "line"
+                and frame.f_code is core._canonical_verified_artifact.__code__
+                and frame.f_locals.get("name") == "source"
+                and frame.f_locals.get("current") is provider
+                and not switched
+            ):
+                provider.update({key: True for key in provider})
+                switched = True
+            return splice_inside_snapshot
+
+        prior_trace = sys.gettrace()
+        sys.settrace(splice_inside_snapshot)
+        try:
+            packet, _ = compile_packet(raw)
+        finally:
+            sys.settrace(prior_trace)
+
+        self.assertFalse(switched)
+        self.assertFalse(any(provider.values()))
+        self.assertEqual(packet["competition_state"], "PROVIDER_GATE_HOLD")
+
+    def test_bounded_larger_packet_is_mismatch_not_complexity(self):
+        raw = fixture()
+        packet, receipt = compile_packet(raw)
+        candidate = copy.deepcopy(packet)
+        candidate["bounded_extra"] = "x"
+        self.assertGreater(canonical_size(candidate), canonical_size(packet))
+        with self.assertRaisesRegex(RepoAtlasError, "verify:packet_mismatch"):
+            verify_bundle(raw, candidate, receipt)
+
     def test_source_validation_generation_is_detached_before_compile(self):
         raw = fixture()
         provider = raw["provider"]
