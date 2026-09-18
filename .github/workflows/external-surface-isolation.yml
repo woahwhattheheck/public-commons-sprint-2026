@@ -1,0 +1,28 @@
+name: external-surface-isolation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: external-surface-isolation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Unit hostiles
+        run: python -m unittest -v test_external_surface_isolation.py
+      - name: Unit hostiles under optimized Python
+        run: python -O -m unittest -v test_external_surface_isolation.py
+      - name: Scan public text surfaces
+        run: python scripts/check_external_surface_isolation.py --root .
