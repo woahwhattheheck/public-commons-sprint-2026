@@ -63,6 +63,7 @@ async function refresh() {
   state = await api("/api/state", { method: "GET" });
   setSessionStatus(state.principal);
   $("#server-time").textContent = `server ${new Date(state.server_time_utc).toLocaleString()}`;
+  renderLaneRegistry();
   renderLanes();
   renderReceipts();
   renderImpact();
@@ -70,6 +71,13 @@ async function refresh() {
 function stateClass(value) {
   return `state-${String(value || "unknown").toLowerCase().replaceAll("_", "-")}`;
 }
+function renderLaneRegistry() {
+  const ids = Array.isArray(state?.lane_registry) ? state.lane_registry : [];
+  $("#lane-registry-list").innerHTML = ids
+    .map((laneId) => `<option value="${esc(laneId)}"></option>`)
+    .join("");
+}
+
 function renderLanes() {
   const host = $("#lane-list");
   if (!state?.lanes?.length) {
@@ -80,7 +88,7 @@ function renderLanes() {
     const lease = lane.lease_until ? new Date(lane.lease_until).toLocaleString() : "—";
     return `<article class="lane-card">
       <div class="card-row"><span class="badge ${stateClass(lane.state)}">${esc(lane.state)}</span><span class="mono subtle">${esc(short(lane.collision_key, 16))}</span></div>
-      <h3>${esc(lane.org)}</h3><p>${esc(lane.domain)} · ${esc(lane.purpose)} · ${esc(lane.opportunity)}</p>
+      <h3>${esc(lane.org)}</h3><p class="mono subtle">${esc(lane.lane_id)}</p><p>${esc(lane.domain)} · ${esc(lane.purpose)} · ${esc(lane.opportunity)}</p>
       <dl><dt>Holder</dt><dd>${esc(lane.holder)}</dd><dt>Selected route</dt><dd>${esc(lane.leased_route)}</dd><dt>Lease until</dt><dd>${esc(lease)}</dd><dt>Version</dt><dd>${esc(lane.version)}</dd></dl>
       ${lane.effective_refence_pending ? '<p class="callout warning">One-shot human lease expired; effective prior fence shown. Next admissible mutation will persist the refence and receipt atomically.</p>' : ""}
     </article>`;
@@ -146,6 +154,7 @@ $("#disconnect").addEventListener("click", () => {
   $("#lane-list").innerHTML = '<div class="empty">Authenticate to view operational state.</div>';
   $("#receipt-table").innerHTML = '<tr><td colspan="8" class="empty">Authenticate to view receipts.</td></tr>';
   $("#impact-grid").innerHTML = "";
+  $("#lane-registry-list").innerHTML = "";
 });
 
 $("#claim-form").addEventListener("submit", async (event) => {
