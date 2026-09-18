@@ -110,6 +110,80 @@ test("canonically equivalent Unicode identities contend on exactly one lane", as
   assert.deepEqual(events.map((row) => row.event_id), ["evt-nfc-a", "evt-nfc-b"]);
 });
 
+test("root and subdomain aliases contend on one organization writer lane", async () => {
+  const [a, b] = await Promise.all([
+    service.claim(
+      claim("evt-domain-root", "email:sales@northstar.example", { domain: "northstar.example" }),
+      workerA,
+    ),
+    service.claim(
+      claim("evt-domain-sub", "email:founder@app.northstar.example", { domain: "app.northstar.example" }),
+      workerB,
+    ),
+  ]);
+  const decisions = [a.receipt.decision, b.receipt.decision].sort();
+  assert.deepEqual(decisions, ["DENIED_ACTIVE_LEASE", "GRANTED"]);
+  assert.equal(a.receipt.collision_key, b.receipt.collision_key);
+
+  const lanes = await db.sql`SELECT collision_key, domain, state FROM lanes`;
+  assert.equal(lanes.length, 1);
+  assert.equal(lanes[0].state, "LEASED");
+  const granted = a.receipt.decision === "GRANTED" ? a.receipt : b.receipt;
+  assert.equal(lanes[0].domain, granted.accepted_event.identity.domain);
+
+  const events = await db.sql`SELECT event_id, decision FROM events ORDER BY event_id`;
+  assert.deepEqual(events.map((row) => row.event_id), ["evt-domain-root", "evt-domain-sub"]);
+});
+
+test("provider outcome is bound to the domain selected by the live lease", async () => {
+  await service.claim(
+    claim("evt-domain-claim", "email:sales@northstar.example", { domain: "northstar.example" }),
+    workerA,
+  );
+  await assert.rejects(
+    service.record(
+      event(
+        "evt-domain-wrong",
+        "SENT",
+        "email:sales@northstar.example",
+        { domain: "app.northstar.example", provider_receipt: "provider-domain-wrong" },
+      ),
+      workerA,
+    ),
+    /domain does not match current leased domain/,
+  );
+  const lanes = await db.sql`SELECT domain, state, holder FROM lanes`;
+  assert.equal(lanes.length, 1);
+  assert.equal(lanes[0].domain, "northstar.example");
+  assert.equal(lanes[0].state, "LEASED");
+  assert.equal(lanes[0].holder, "worker-a");
+  const ids = await db.sql`SELECT identifier FROM workspace_identifiers ORDER BY identifier`;
+  assert.deepEqual(ids.map((row) => row.identifier), ["evt-domain-claim"]);
+});
+
+test("stale recovery may select a new domain without opening a second lane", async () => {
+  await service.claim(
+    claim("evt-domain-stale-a", "email:sales@northstar.example", {
+      domain: "northstar.example",
+      lease_seconds: 30,
+    }),
+    workerA,
+  );
+  await db.sql`UPDATE lanes SET lease_until = clock_timestamp() - interval '1 second'`;
+  const recovered = await service.claim(
+    claim("evt-domain-stale-b", "email:founder@app.northstar.example", {
+      domain: "app.northstar.example",
+    }),
+    workerB,
+  );
+  assert.equal(recovered.receipt.decision, "GRANTED_STALE_RECOVERY");
+  const lanes = await db.sql`SELECT domain, holder, leased_route FROM lanes`;
+  assert.equal(lanes.length, 1);
+  assert.equal(lanes[0].domain, "app.northstar.example");
+  assert.equal(lanes[0].holder, "worker-b");
+  assert.equal(lanes[0].leased_route, "email:founder@app.northstar.example");
+});
+
 test("invisible collision aliases fail closed before any lane or receipt exists", async () => {
   await assert.rejects(
     service.claim(claim("evt-zwsp", "email:sales@northstar.example", { org: "North\u200bstar Labs" }), workerA),
