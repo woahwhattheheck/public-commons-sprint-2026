@@ -51,6 +51,7 @@ Resources:
       Architectures: [arm64]
       MemorySize: 2048
       Timeout: 30
+      ReservedConcurrentExecutions: 1
       Environment:
         Variables:
           VISUALLEDGER_TABLE: !Ref EvidenceTable
