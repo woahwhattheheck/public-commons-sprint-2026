@@ -7,6 +7,7 @@ import math
 import sys
 import tempfile
 import unittest
+import urllib.request
 from pathlib import Path
 from unittest.mock import patch
 
@@ -159,6 +160,76 @@ class AgenthonBoundaryTests(unittest.TestCase):
             json.dumps(answer, allow_nan=False)
             for claim in row["claims"]:
                 self.assertEqual(claim["claim"], DOC["text"][claim["span_start"]:claim["span_end"]])
+
+    def test_house_transport_bounds_read_and_strictly_parses_outer_json(self) -> None:
+        class Response:
+            status = 200
+            def __init__(self, payload: bytes):
+                self.payload = payload
+                self.sizes: list[int] = []
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def read(self, size: int = -1) -> bytes:
+                self.sizes.append(size)
+                return self.payload[:size]
+
+        validated = agent.validate_task(task())
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            _, corpus = fixture(root)
+            docs = agent.load_corpus(corpus, validated["cutoff_date"])
+            content = json.dumps({
+                "entity_predictions": [{
+                    "entity_id": "SYNTH", "label": None,
+                    "point_forecast": 1.5, "lo": 1.0, "hi": 2.0,
+                }]
+            })
+            good = Response(json.dumps({
+                "choices": [{"message": {"content": content}}]
+            }).encode())
+            env = {
+                "MODEL_ENDPOINT": "https://organizer.example",
+                "MODEL_TOKEN": "synthetic-token",
+                "MODEL_NAME": "synthetic-model",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                result = house.plan(validated, docs, transport=lambda req, timeout: good)
+            self.assertEqual(result["SYNTH"]["point_forecast"], 1.5)
+            self.assertEqual(good.sizes, [house.MAX_HOUSE_RESPONSE_BYTES + 1])
+
+            duplicate = Response(
+                b'{"choices":[],"choices":[{"message":{"content":"{}"}}]}'
+            )
+            with patch.dict(os.environ, env, clear=True):
+                self.assertIsNone(
+                    house.plan(validated, docs, transport=lambda req, timeout: duplicate)
+                )
+            self.assertEqual(duplicate.sizes, [house.MAX_HOUSE_RESPONSE_BYTES + 1])
+
+            oversized = Response(b"x" * (house.MAX_HOUSE_RESPONSE_BYTES + 1))
+            with patch.dict(os.environ, env, clear=True):
+                self.assertIsNone(
+                    house.plan(validated, docs, transport=lambda req, timeout: oversized)
+                )
+            self.assertEqual(oversized.sizes, [house.MAX_HOUSE_RESPONSE_BYTES + 1])
+
+    def test_house_endpoint_requires_https_and_redirect_handler_refuses_forwarding(self) -> None:
+        with patch.dict(os.environ, {
+            "MODEL_ENDPOINT": "http://organizer.example",
+            "MODEL_TOKEN": "synthetic-token",
+            "MODEL_NAME": "synthetic-model",
+        }, clear=True):
+            self.assertIsNone(house._endpoint())
+        handler = house.NoRedirect()
+        request = urllib.request.Request(
+            "https://organizer.example/start",
+            headers={"Authorization": "Bearer synthetic-token"},
+        )
+        self.assertIsNone(handler.redirect_request(
+            request, None, 302, "Found", {}, "https://other.example/next"
+        ))
 
 
 if __name__ == "__main__":
