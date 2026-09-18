@@ -33,6 +33,7 @@ const NON_C_DEFAULT_IGNORABLE = [
 const CATEGORY_C = /\p{C}/u;
 const NON_BASE = /[\p{C}\p{M}\p{Z}]/u;
 const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i;
+const CANONICAL_ID_RE = /^[a-z0-9][a-z0-9._:-]{0,127}$/u;
 
 export function requireCondition(ok, message, status = 400) {
   if (!ok) throw new ContractError(message, status);
@@ -147,6 +148,11 @@ export function validateIdentifier(value, name = "identifier") {
   return value;
 }
 
+export function validateCanonicalId(value, name = "canonical id") {
+  requireCondition(typeof value === "string" && CANONICAL_ID_RE.test(value), `${name} must be stable lowercase ASCII id text`);
+  return value;
+}
+
 export function normalizeIdentity(input) {
   return {
     org: normalizeText(input.org, "org"),
@@ -156,25 +162,17 @@ export function normalizeIdentity(input) {
   };
 }
 
-export function collisionIdentityFromNormalized(identity) {
+export function collisionKeyFromCanonical(canonical) {
   requireExactKeys(
-    identity,
-    ["org", "domain", "purpose", "opportunity"],
-    "normalized identity",
+    canonical,
+    ["org_id", "purpose_id", "opportunity_id"],
+    "canonical lane identity",
   );
-  // Domain is retained target evidence, not a writer-lease partition. Without a
-  // trusted organization-id registry, including a caller-selected host here
-  // lets root/subdomain or legitimate multi-domain aliases mint parallel writers.
-  return {
-    org: identity.org,
-    purpose: identity.purpose,
-    opportunity: identity.opportunity,
-  };
-}
-
-export function collisionKey(input) {
-  const identity = normalizeIdentity(input);
-  return sha256Hex(collisionIdentityFromNormalized(identity));
+  return sha256Hex({
+    org_id: validateCanonicalId(canonical.org_id, "org_id"),
+    purpose_id: validateCanonicalId(canonical.purpose_id, "purpose_id"),
+    opportunity_id: validateCanonicalId(canonical.opportunity_id, "opportunity_id"),
+  });
 }
 
 export function validateLeaseSeconds(value) {
@@ -190,13 +188,15 @@ export function validateReason(value) {
   return strictText(value, "reason", { max: 1000, casefold: false });
 }
 
-export function acceptedEvent({ eventId, atUtc, kind, actor, identity, collisionKey: key, route, leaseSeconds = null, providerReceipt = null, humanEvidenceId = null, reason }) {
+export function acceptedEvent({ eventId, atUtc, kind, actor, identity, canonicalIdentity, requestedLaneId, collisionKey: key, route, leaseSeconds = null, providerReceipt = null, humanEvidenceId = null, reason }) {
   return {
     event_id: eventId,
     at_utc: atUtc,
     kind,
     actor,
     identity,
+    canonical_identity: canonicalIdentity,
+    requested_lane_id: requestedLaneId,
     collision_key: key,
     event_route: route,
     lease_seconds: leaseSeconds,
