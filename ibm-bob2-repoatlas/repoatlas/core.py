@@ -40,6 +40,25 @@ MAX_JSON_DEPTH = 256
 # leaving generous room above any artifact produced from the admitted input.
 MAX_ARTIFACT_NODES = _source.MAX_TEXT
 
+# Object-mode source ingress is frozen to canonical bytes before any policy or
+# cardinality traversal, then reparsed into a verifier-owned exact-built-in
+# graph. Keep that snapshot at the same byte ceiling as the public byte parser.
+MAX_SOURCE_SNAPSHOT_BYTES = _source.MAX_TEXT
+
+
+def _verification_work_ceiling(expected_canonical_bytes: int) -> int:
+    """Bound hostile candidate work without conflating mismatch with size."""
+    if type(expected_canonical_bytes) is not int or expected_canonical_bytes < 0:
+        raise RepoAtlasError("verify:invalid_expected_size")
+    # The trusted recomputed artifact supplies the scale. A 4x envelope plus a
+    # fixed 64 KiB floor lets ordinary bounded mismatches and declared depth
+    # errors reach exact comparison while keeping hostile canonical work finite.
+    return max(
+        expected_canonical_bytes * 4,
+        expected_canonical_bytes + 65_536,
+        (MAX_JSON_DEPTH + 1) * 8,
+    )
+
 
 def _preflight_json_depth(data: bytes) -> None:
     depth = 0
@@ -173,9 +192,28 @@ def _preflight_cardinality(raw: Any) -> None:
 
 
 def _validate_source_input(raw: Any) -> dict[str, Any]:
-    _preflight_cardinality(raw)
+    # Establish source-generation custody before *any* policy/cardinality read.
+    # The same cooperative runtime fence used for supplied packet/receipt
+    # artifacts snapshots exact built-in JSON into canonical bytes; reparsing
+    # yields a detached graph. All later reads are from that one real caller
+    # generation, so preflight and semantic validation cannot be spliced.
     try:
-        normalized = _source._validate(raw)
+        source_snapshot_bytes = _canonical_verified_artifact(
+            raw, "source", MAX_SOURCE_SNAPSHOT_BYTES
+        )
+        source_snapshot = _source.parse_json_bytes(source_snapshot_bytes)
+    except RepoAtlasError as exc:
+        if str(exc) == "verify:source_too_complex":
+            raise RepoAtlasError("input_too_large") from exc
+        if str(exc) == "verify:source_too_deep":
+            raise RepoAtlasError("input_too_deep") from exc
+        if str(exc) == "verify:source_not_canonical_json":
+            raise RepoAtlasError("not_canonical_json") from exc
+        raise
+
+    _preflight_cardinality(source_snapshot)
+    try:
+        normalized = _source._validate(source_snapshot)
     except UnicodeEncodeError as exc:
         raise RepoAtlasError("invalid_unicode_scalar") from exc
     except RecursionError as exc:
@@ -264,10 +302,12 @@ def _canonical_verified_artifact(
 ) -> bytes:
     """Freeze, bound, then canonicalize one supplied packet/receipt generation.
 
-    Verification already owns a trusted recomputed artifact. Its exact canonical
-    byte length is the tightest legitimate ceiling for the supplied artifact:
-    anything larger cannot possibly be identical. The iterative walk therefore
-    does two jobs in the same bounded pass: it charges the candidate's exact
+    The caller supplies an explicit hard canonical-work ceiling. For public
+    verification that ceiling is derived from the trusted recomputed artifact
+    but is deliberately wider than exact expected length, so an ordinary
+    bounded mismatch reaches exact comparison rather than being misclassified
+    as complexity. The iterative walk therefore does two jobs in the same
+    bounded pass: it charges the candidate's exact
     canonical JSON work and deep-copies every admitted exact built-in container
     into verifier-owned plain JSON. The deep-copy pass runs inside a bounded
     cooperative-runtime snapshot fence: automatic cyclic GC is disabled,
@@ -466,12 +506,18 @@ def _build_source_only_api():
         # distinct JSON artifacts with different content-addressed bytes.
         expected_packet_bytes = _source._canonical(expected_packet)
         expected_receipt_bytes = _source._canonical(expected_receipt)
+        packet_work_ceiling = _verification_work_ceiling(
+            len(expected_packet_bytes)
+        )
+        receipt_work_ceiling = _verification_work_ceiling(
+            len(expected_receipt_bytes)
+        )
         if _canonical_verified_artifact(
-            packet, "packet", len(expected_packet_bytes)
+            packet, "packet", packet_work_ceiling
         ) != expected_packet_bytes:
             raise RepoAtlasError("verify:packet_mismatch")
         if _canonical_verified_artifact(
-            receipt, "receipt", len(expected_receipt_bytes)
+            receipt, "receipt", receipt_work_ceiling
         ) != expected_receipt_bytes:
             raise RepoAtlasError("verify:receipt_mismatch")
         return True
