@@ -69,6 +69,15 @@ test("collision identity ignores route but includes opportunity lane", () => {
   assert.notEqual(a, c);
 });
 
+test("domain aliases are retained evidence but do not partition one organization writer lane", () => {
+  const root = collisionKey({ ...base, domain: "northstar.example" });
+  const subdomain = collisionKey({ ...base, domain: "app.northstar.example" });
+  const alternate = collisionKey({ ...base, domain: "northstar-labs.example" });
+  assert.equal(root, subdomain);
+  assert.equal(root, alternate);
+  assert.notEqual(normalizeDomain("northstar.example"), normalizeDomain("app.northstar.example"));
+});
+
 test("invalid identifier types fail closed", () => {
   assert.throws(() => validateIdentifier(true, "event id"), ContractError);
   assert.throws(() => validateIdentifier("", "event id"), ContractError);
