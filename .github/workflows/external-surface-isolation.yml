@@ -2,15 +2,30 @@ name: external-surface-isolation
 
 on:
   pull_request:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+  release:
+    types: [published, released, edited]
   push:
     branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
 
 concurrency:
-  group: external-surface-isolation-${{ github.workflow }}-${{ github.ref }}
+  group: external-surface-isolation-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.issue.number || github.event.pull_request.number || github.event.release.id || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
 
 jobs:
   guard:
@@ -26,3 +41,15 @@ jobs:
         run: python -O -m unittest -v test_external_surface_isolation.py
       - name: Scan public text surfaces
         run: python scripts/check_external_surface_isolation.py --root .
+      - name: Metadata hostiles
+        run: python scripts/check_public_github_metadata.py --self-test
+      - name: Metadata hostiles under optimized Python
+        run: python -O scripts/check_public_github_metadata.py --self-test
+      - name: Audit current metadata event
+        if: ${{ github.event_name == 'issues' || github.event_name == 'issue_comment' || github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment' || github.event_name == 'release' }}
+        run: python scripts/check_public_github_metadata.py --event "$GITHUB_EVENT_PATH" --event-name "$GITHUB_EVENT_NAME" --repository "$GITHUB_REPOSITORY"
+      - name: Audit full public repository metadata
+        if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/check_public_github_metadata.py --full-repository --repository "$GITHUB_REPOSITORY"
