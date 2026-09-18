@@ -6,9 +6,11 @@ import {
   normalizeDomain,
   normalizeText,
   validateIdentifier,
+  validateLaneId,
 } from "../lib/core.mjs";
 
 const base = {
+  lane_id: "lane:northstar-builderfest",
   org: "Northstar Labs",
   domain: "northstar.example",
   purpose: "Initial Outreach",
@@ -61,10 +63,17 @@ test("strict retained identifiers reject category-C and Default_Ignorable seams"
   assert.equal(validateIdentifier("provider-cafe\u0301-001", "identifier"), "provider-cafe\u0301-001");
 });
 
-test("collision identity ignores route but includes opportunity lane", () => {
+test("only canonical lane id partitions writer ownership; display aliases do not", () => {
   const a = collisionKey({ ...base, route: "email:sales@northstar.example" });
-  const b = collisionKey({ ...base, route: "email:founder@northstar.example" });
-  const c = collisionKey({ ...base, opportunity: "Different Opportunity" });
+  const b = collisionKey({
+    ...base,
+    org: "Northstar Holdings",
+    domain: "app.northstar-labs.example",
+    route: "email:founder@app.northstar-labs.example",
+    purpose: "intro",
+    opportunity: "Builder Festival 2026",
+  });
+  const c = collisionKey({ ...base, lane_id: "lane:other-opportunity" });
   assert.equal(a, b);
   assert.notEqual(a, c);
 });
@@ -76,6 +85,19 @@ test("domain aliases are retained evidence but do not partition one organization
   assert.equal(root, subdomain);
   assert.equal(root, alternate);
   assert.notEqual(normalizeDomain("northstar.example"), normalizeDomain("app.northstar.example"));
+});
+
+test("canonical lane ids are exact lowercase ASCII identifiers", () => {
+  assert.equal(validateLaneId("lane:northstar-builderfest"), "lane:northstar-builderfest");
+  for (const value of [
+    "Lane:northstar-builderfest",
+    "lane northstar",
+    "lane/northstar",
+    "",
+    "é",
+  ]) {
+    assert.throws(() => validateLaneId(value), /pre-provisioned canonical id/);
+  }
 });
 
 test("invalid identifier types fail closed", () => {
