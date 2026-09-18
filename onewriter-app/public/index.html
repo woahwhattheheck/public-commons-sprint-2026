@@ -42,7 +42,7 @@
         <label>Lease seconds<input name="lease_seconds" required type="number" min="30" max="1800" value="300"></label>
         <label>Event id<input name="event_id" required placeholder="evt-20260917-001"></label>
         <label class="span-2">Reason<input name="reason" required value="single-writer ownership before external action"></label>
-        <div class="span-2 callout">The collision key is organization × domain × purpose × opportunity. <strong>Route is metadata, not a key field.</strong> The authenticated session subject is the worker identity written into the receipt.</div>
+        <div class="span-2 callout">The collision key is organization × purpose × opportunity. <strong>Domain and route are retained target metadata, not ownership partitions.</strong> The authenticated session subject is the worker identity written into the receipt.</div>
         <button class="primary span-2" type="submit">Request writer lease</button>
       </form>
       <pre id="claim-result" class="result" aria-live="polite"></pre>
