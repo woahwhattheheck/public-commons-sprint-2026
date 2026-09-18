@@ -44,8 +44,8 @@ class AgenthonT4Tests(unittest.TestCase):
         corpus_dir = root / "corpus"
         corpus_dir.mkdir()
         write_json(task_path, task or base_task())
-        for idx, doc in enumerate(corpus or docs()):
-            write_json(corpus_dir / f"{idx:02d}.json", doc)
+        for doc in corpus or docs():
+            write_json(corpus_dir / f"{doc['doc_id']}.json", doc)
         return task_path, corpus_dir
 
     def test_offline_answer_is_deterministic_and_exact_span_bound(self) -> None:
@@ -73,12 +73,46 @@ class AgenthonT4Tests(unittest.TestCase):
             out = agent.run(task_path, corpus_dir, root / "answer.json")
             self.assertNotIn("FUTURE", {c["doc_id"] for c in out["entity_predictions"][0]["claims"]})
 
-    def test_no_eligible_document_fails_closed(self) -> None:
+    def test_no_eligible_document_never_cites_future_and_still_writes(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             task_path, corpus_dir = self.make_unit(root, corpus=[{"doc_id": "FUTURE", "doc_date": "2024-04-01", "ticker": "AAPL", "title": "Future result", "text": "Post-cutoff only."}])
-            with self.assertRaisesRegex(agent.ContractError, "no embargo-eligible"):
-                agent.run(task_path, corpus_dir, root / "answer.json")
+            out = agent.run(task_path, corpus_dir, root / "answer.json")
+            claim = out["entity_predictions"][0]["claims"][0]
+            self.assertEqual(claim["doc_id"], "NO_ELIGIBLE_EVIDENCE")
+            self.assertNotEqual(claim["doc_id"], "FUTURE")
+            self.assertTrue((root / "answer.json").is_file())
+
+
+    def test_manifest_index_is_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            task_path, corpus_dir = self.make_unit(root)
+            # This is intentionally not document-shaped; loading it as a corpus document would fail.
+            write_json(corpus_dir / "manifest.json", {"manifest_version": "2.0", "files": []})
+            out = agent.run(task_path, corpus_dir, root / "answer.json")
+            cited = {c["doc_id"] for c in out["entity_predictions"][0]["claims"]}
+            self.assertNotIn("manifest", cited)
+
+    def test_spans_fallback_joins_with_single_spaces_and_preserves_offsets(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            corpus = [{
+                "doc_id": "SPAN_DOC",
+                "doc_date": "2024-02-01",
+                "ticker": "AAPL",
+                "title": "Span representation",
+                "spans": [
+                    {"text": "Apple reported diluted earnings per share of $2.18."},
+                    {"text": "Management guided gross margin between 46 and 47 percent."},
+                ],
+            }]
+            task_path, corpus_dir = self.make_unit(root, corpus=corpus)
+            out = agent.run(task_path, corpus_dir, root / "answer.json")
+            resolved = "Apple reported diluted earnings per share of $2.18. Management guided gross margin between 46 and 47 percent."
+            for claim in out["entity_predictions"][0]["claims"]:
+                self.assertEqual(claim["doc_id"], "SPAN_DOC")
+                self.assertEqual(claim["claim"], resolved[claim["span_start"]:claim["span_end"]])
 
     def test_duplicate_entity_and_document_ids_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -90,10 +124,15 @@ class AgenthonT4Tests(unittest.TestCase):
                 agent.run(task_path, corpus_dir, root / "answer.json")
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            duplicate = docs() + [dict(docs()[0])]
-            task_path, corpus_dir = self.make_unit(root, corpus=duplicate)
-            with self.assertRaisesRegex(agent.ContractError, "duplicate doc_id"):
-                agent.run(task_path, corpus_dir, root / "answer.json")
+            task_path, corpus_dir = self.make_unit(root)
+            original = corpus_dir / "D1.json"
+            aliased = corpus_dir / "AUTHORITATIVE_STEM.json"
+            aliased.write_bytes(original.read_bytes())
+            original.unlink()
+            out = agent.run(task_path, corpus_dir, root / "answer.json")
+            cited = {c["doc_id"] for c in out["entity_predictions"][0]["claims"]}
+            self.assertIn("AUTHORITATIVE_STEM", cited)
+            self.assertNotIn("D1", cited)
 
     def test_duplicate_json_key_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -153,7 +192,7 @@ class AgenthonT4Tests(unittest.TestCase):
             root = Path(td)
             task_path, corpus_dir = self.make_unit(root)
             try:
-                (corpus_dir / "99.json").symlink_to(corpus_dir / "00.json")
+                (corpus_dir / "99.json").symlink_to(corpus_dir / "D1.json")
             except (OSError, NotImplementedError):
                 self.skipTest("symlink unavailable")
             with self.assertRaisesRegex(agent.ContractError, "symlink corpus file refused"):
