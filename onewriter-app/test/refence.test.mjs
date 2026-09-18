@@ -39,7 +39,7 @@ const claim = (eventId, route, leaseSeconds = 300) => ({
 });
 
 const event = (eventId, kind, route, providerReceipt = null, humanEvidenceId = null) => ({
-  event_id: eventId, kind, org: "Northstar Labs", domain: "northstar.example", route,
+  event_id: eventId, kind, lane_id: "lane:northstar-builderfest", org: "Northstar Labs", domain: "northstar.example", route,
   purpose: "initial outreach", opportunity: "builder fest", provider_receipt: providerReceipt,
   human_evidence_id: humanEvidenceId, reason: "receipt-bound refence proof",
 });
