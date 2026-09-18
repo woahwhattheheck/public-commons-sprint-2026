@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "visualledger-opencv"
+version = "0.1.0"
+description = "Evidence-bound finance-document vision routing for OpenCV AI Competition 2026"
+requires-python = ">=3.11"
+dependencies = [
+  "opencv-python-headless>=5.0.0,<6",
+  "numpy>=2.0,<3",
+  "boto3>=1.35,<2",
+]
+
+[project.scripts]
+visualledger = "visualledger.cli:main"
+
+[tool.setuptools]
+packages = ["visualledger"]
