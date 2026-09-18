@@ -3,7 +3,7 @@
 **Competition carrier:** OpenMarkets Hackathon, Sep 15–23 2026  
 **Operation:** `OPENMARKETS-HACKATHON-MARKETLEDGER-20260918`
 
-MarketLedger is a small B2B/AI evidence plane for OpenMarkets' normalized cross-venue liquidity. It reads the documented **read-only** Flow liquidity endpoint, converts each position into a deterministic reconciliation receipt, highlights fee-adjusted dispersion and price moves, and can create a **data-only staged action** only after a human confirmation token is supplied.
+MarketLedger is a small B2B/AI evidence plane for OpenMarkets' normalized cross-venue liquidity. It reads the documented **read-only** Flow liquidity endpoint, converts each position into a deterministic reconciliation receipt, highlights fee-adjusted dispersion and price moves, and can create a **data-only staged action** only after an operator-supplied confirmation token is supplied.
 
 It intentionally contains **no order-placement or execution function**.
 
@@ -14,7 +14,7 @@ OpenMarkets' hackathon explicitly calls for B2B reconciliation reporting, AI/aut
 1. **Usefulness:** an operator can see which venue is cheapest after a supplied analytical fee adjustment, whether enough quoted USD liquidity exists, and how far venues diverge.
 2. **Network leverage:** the product only becomes interesting because OpenMarkets normalizes many partners into one `position_hash` and one liquidity response.
 3. **Evidence:** every report is canonicalized and SHA-256 receipted for replay/audit.
-4. **Safety:** the core is pure computation. Live access is GET-only and host-locked to `api.openmarkets.ai`. Staged actions are records, not provider mutations.
+4. **Safety:** the core is pure computation. Live access is GET-only and host-locked to `api.openmarkets.ai`. Staged actions are confirmation-token-gated records, not provider mutations.
 5. **Business path:** a partner book, trading desk, creator tool, or internal risk function can use the same evidence plane for routing review, fee impact, and reconciliation.
 
 ## OpenMarkets contract used
@@ -60,7 +60,7 @@ python -m marketledger_openmarkets.cli live YOUR_CONTEST_ID \
   --out report.json
 ```
 
-Create a staged, non-executing action record:
+Create a confirmation-token-gated, non-executing action record:
 
 ```bash
 export MARKETLEDGER_CONFIRM_TOKEN='human-confirmation-value'
@@ -81,7 +81,7 @@ There is no command that sends an order.
 - live response bytes are bounded;
 - input files must be regular non-symlink files under a size cap;
 - outputs use exclusive create and refuse overwrite;
-- human confirmation tokens are hashed, not persisted in plaintext;
+- confirmation tokens are hashed, not persisted in plaintext;
 - core evaluation has no network/provider mutation path.
 
 ## Tests
@@ -92,7 +92,7 @@ python -m unittest discover -s marketledger_openmarkets/tests -v
 python -O -m unittest discover -s marketledger_openmarkets/tests -v
 ```
 
-The suite covers the published OpenMarkets liquidity shape, deterministic receipts, freshness, duplicate identity, price/liquidity/fee validation, fee-adjusted selection, liquidity gates, move detection, human-confirm staging, host locking, GET-only live reads, and file/symlink boundaries.
+The suite covers the published OpenMarkets liquidity shape, deterministic receipts, freshness, duplicate identity, price/liquidity/fee validation, fee-adjusted selection, liquidity gates, move detection, confirmation-token staging, host locking, GET-only live reads, and file/symlink boundaries.
 
 ## Submission status
 
