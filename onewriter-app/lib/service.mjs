@@ -2,6 +2,7 @@ import {
   AUTHORITY,
   ContractError,
   acceptedEvent,
+  collisionIdentityFromNormalized,
   sha256Hex,
   effectiveExpiredHumanLease,
   impactFromEvents,
@@ -25,9 +26,10 @@ function common(input, principal) {
   const eventId = validateIdentifier(input.event_id, "event id");
   const actor = validateActor(principal.subject);
   const identity = normalizeIdentity(input);
-  // Hash the exact normalized generation that is retained in receipts/lanes.
-  // Never reread caller-owned identity fields after normalization.
-  const key = sha256Hex(identity);
+  // Normalize once, retain the full target identity, but lock on the
+  // organization-level projection. Domain remains selected target evidence and
+  // cannot mint a parallel writer lane through root/subdomain/multi-domain aliases.
+  const key = sha256Hex(collisionIdentityFromNormalized(identity));
   const route = normalizeRoute(input.route);
   const reason = validateReason(input.reason);
   return { eventId, actor, identity, key, route, reason };
@@ -176,11 +178,18 @@ export function createService(db, options = {}) {
             } else {
               const updated = await client.query(
                 `UPDATE lanes
-                   SET holder=$2, leased_route=$3, lease_until=$4,
+                   SET holder=$2, leased_route=$3, domain=$4, lease_until=$5,
                        reopen_from_state=NULL, reopen_from_route=NULL,
-                       version=version+1, updated_at=$5
+                       version=version+1, updated_at=$6
                  WHERE collision_key=$1 RETURNING *`,
-                [c.key, c.actor, c.route, new Date(now.getTime() + leaseSeconds * 1000), now],
+                [
+                  c.key,
+                  c.actor,
+                  c.route,
+                  c.identity.domain,
+                  new Date(now.getTime() + leaseSeconds * 1000),
+                  now,
+                ],
               );
               lane = updated.rows[0];
               decision = "GRANTED_STALE_RECOVERY";
@@ -188,21 +197,35 @@ export function createService(db, options = {}) {
           } else if (lane.state === "HUMAN_EVENT_REOPEN") {
             const updated = await client.query(
               `UPDATE lanes
-                 SET state='LEASED', holder=$2, leased_route=$3, lease_until=$4,
-                     version=version+1, updated_at=$5
+                 SET state='LEASED', holder=$2, leased_route=$3, domain=$4, lease_until=$5,
+                     version=version+1, updated_at=$6
                WHERE collision_key=$1 RETURNING *`,
-              [c.key, c.actor, c.route, new Date(now.getTime() + leaseSeconds * 1000), now],
+              [
+                c.key,
+                c.actor,
+                c.route,
+                c.identity.domain,
+                new Date(now.getTime() + leaseSeconds * 1000),
+                now,
+              ],
             );
             lane = updated.rows[0];
             decision = "GRANTED_AFTER_HUMAN_EVENT";
           } else if (lane.state === "CLEAR") {
             const updated = await client.query(
               `UPDATE lanes
-                 SET state='LEASED', holder=$2, leased_route=$3, lease_until=$4,
+                 SET state='LEASED', holder=$2, leased_route=$3, domain=$4, lease_until=$5,
                      reopen_from_state=NULL, reopen_from_route=NULL,
-                     version=version+1, updated_at=$5
+                     version=version+1, updated_at=$6
                WHERE collision_key=$1 RETURNING *`,
-              [c.key, c.actor, c.route, new Date(now.getTime() + leaseSeconds * 1000), now],
+              [
+                c.key,
+                c.actor,
+                c.route,
+                c.identity.domain,
+                new Date(now.getTime() + leaseSeconds * 1000),
+                now,
+              ],
             );
             lane = updated.rows[0];
             decision = "GRANTED";
@@ -267,6 +290,7 @@ export function createService(db, options = {}) {
           requireCondition(lane.state === "LEASED", `${kind} requires an active lease`, 409);
           requireCondition(now < new Date(lane.lease_until), `${kind} lease expired`, 409);
           requireCondition(lane.holder === c.actor, `${kind} recorder is not current lease holder`, 409);
+          requireCondition(lane.domain === c.identity.domain, `${kind} domain does not match current leased domain`, 409);
           requireCondition(lane.leased_route === c.route, `${kind} route does not match current leased route`, 409);
         } else if (kind === "HUMAN_EVENT") {
           requireCondition(["HARD_DNR", "DEAD_ROUTE", "HOLD"].includes(lane.state), "HUMAN_EVENT requires a fenced prior lane", 409);
