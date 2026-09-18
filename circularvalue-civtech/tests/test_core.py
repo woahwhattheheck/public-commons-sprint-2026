@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import copy
+import tempfile
 import unittest
+from pathlib import Path
 
-from circularvalue.core import CircularValueError, compile_case, loads_strict, verify_packet
+from circularvalue.cli import MAX_JSON_BYTES, main as cli_main
+from circularvalue.core import CircularValueError, canonical_json, compile_case, loads_strict, verify_packet
 from circularvalue.demo import synthetic_case
 
 
@@ -223,6 +226,103 @@ class CircularValueTests(unittest.TestCase):
     def test_modelled_lever_reported(self):
         packet = compile_case(self.case)
         self.assertEqual(packet["quality"]["modeledLeverIds"], ["expedite-resilience"])
+
+
+class CircularValueCliFilesystemTests(unittest.TestCase):
+    def setUp(self):
+        self.case = synthetic_case()
+
+    def _write_case(self, root: Path) -> Path:
+        case_path = root / "case.json"
+        case_path.write_text(canonical_json(self.case) + "\n", encoding="utf-8")
+        return case_path
+
+    def _symlink_or_skip(self, link: Path, target: Path, *, is_dir: bool = False) -> None:
+        try:
+            link.symlink_to(target, target_is_directory=is_dir)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"symlink unavailable: {exc}")
+
+    def test_cli_rejects_input_symlink(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            case_path = self._write_case(root)
+            link = root / "case-link.json"
+            self._symlink_or_skip(link, case_path)
+            out = root / "packet.json"
+            self.assertEqual(cli_main(["compile", str(link), "--out", str(out)]), 2)
+            self.assertFalse(out.exists())
+
+    def test_cli_rejects_oversized_input(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            case_path = root / "case.json"
+            case_path.write_bytes(b"{" + (b" " * MAX_JSON_BYTES) + b"}")
+            out = root / "packet.json"
+            self.assertEqual(cli_main(["compile", str(case_path), "--out", str(out)]), 2)
+            self.assertFalse(out.exists())
+
+    def test_compile_refuses_existing_output_without_truncation(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            case_path = self._write_case(root)
+            out = root / "packet.json"
+            out.write_text("sentinel", encoding="utf-8")
+            self.assertEqual(cli_main(["compile", str(case_path), "--out", str(out)]), 2)
+            self.assertEqual(out.read_text(encoding="utf-8"), "sentinel")
+
+    def test_compile_refuses_output_symlink_without_write_through(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            case_path = self._write_case(root)
+            target = root / "target.txt"
+            target.write_text("sentinel", encoding="utf-8")
+            out = root / "packet.json"
+            self._symlink_or_skip(out, target)
+            self.assertEqual(cli_main(["compile", str(case_path), "--out", str(out)]), 2)
+            self.assertEqual(target.read_text(encoding="utf-8"), "sentinel")
+
+    def test_demo_refuses_existing_case_child_without_partial_publish(self):
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "demo"
+            out.mkdir()
+            case_path = out / "case.json"
+            case_path.write_text("sentinel", encoding="utf-8")
+            self.assertEqual(cli_main(["demo", "--out-dir", str(out)]), 2)
+            self.assertEqual(case_path.read_text(encoding="utf-8"), "sentinel")
+            self.assertFalse((out / "packet.json").exists())
+
+    def test_demo_refuses_existing_packet_child_and_cleans_first_reservation(self):
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "demo"
+            out.mkdir()
+            packet_path = out / "packet.json"
+            packet_path.write_text("sentinel", encoding="utf-8")
+            self.assertEqual(cli_main(["demo", "--out-dir", str(out)]), 2)
+            self.assertEqual(packet_path.read_text(encoding="utf-8"), "sentinel")
+            self.assertFalse((out / "case.json").exists())
+
+    def test_demo_refuses_child_symlink_without_write_through(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            out = root / "demo"
+            out.mkdir()
+            target = root / "target.txt"
+            target.write_text("sentinel", encoding="utf-8")
+            self._symlink_or_skip(out / "case.json", target)
+            self.assertEqual(cli_main(["demo", "--out-dir", str(out)]), 2)
+            self.assertEqual(target.read_text(encoding="utf-8"), "sentinel")
+            self.assertFalse((out / "packet.json").exists())
+
+    def test_demo_refuses_symlink_output_directory(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            real = root / "real"
+            real.mkdir()
+            link = root / "demo-link"
+            self._symlink_or_skip(link, real, is_dir=True)
+            self.assertEqual(cli_main(["demo", "--out-dir", str(link)]), 2)
+            self.assertEqual(list(real.iterdir()), [])
 
 
 if __name__ == "__main__":
