@@ -128,9 +128,11 @@ def validate_task(task: Any) -> dict[str, Any]:
 def load_corpus(corpus_dir: Path, cutoff: str) -> list[CorpusDoc]:
     if corpus_dir.is_symlink() or not corpus_dir.is_dir():
         raise ContractError("corpus must be a regular directory")
-    paths = sorted(corpus_dir.glob("*.json"))
+    # The organizer ships corpus/manifest.json as an index in most public units. It is not
+    # a citable document and must never enter retrieval or citation resolution.
+    paths = sorted(path for path in corpus_dir.glob("*.json") if path.name != "manifest.json")
     if not paths:
-        raise ContractError("corpus contains no JSON documents")
+        return []
     if len(paths) > MAX_CORPUS_FILES:
         raise ContractError("corpus file count exceeds limit")
     total = 0
@@ -145,21 +147,30 @@ def load_corpus(corpus_dir: Path, cutoff: str) -> list[CorpusDoc]:
         raw = load_json(path)
         if not isinstance(raw, dict):
             raise ContractError(f"corpus document must be an object: {path.name}")
-        doc_id = raw.get("doc_id")
-        if not isinstance(doc_id, str) or not doc_id:
-            raise ContractError(f"doc_id is required: {path.name}")
+        # QFBench citation resolution keys documents by the manifest-declared filename stem.
+        # The public files currently repeat that value inside the JSON, but the filename is
+        # authoritative and avoids trusting redundant participant-visible metadata.
+        doc_id = path.stem
         if doc_id in seen:
             raise ContractError(f"duplicate doc_id: {doc_id}")
         seen.add(doc_id)
         doc_date = _iso_day(raw.get("doc_date"), f"{doc_id}.doc_date")
         text = raw.get("text")
         if not isinstance(text, str) or not text.strip():
-            raise ContractError(f"{doc_id}.text must be non-empty")
+            spans = raw.get("spans")
+            if not isinstance(spans, list) or not spans:
+                raise ContractError(f"{doc_id} requires text or non-empty spans")
+            parts: list[str] = []
+            for idx, span in enumerate(spans):
+                if not isinstance(span, dict) or not isinstance(span.get("text"), str):
+                    raise ContractError(f"{doc_id}.spans[{idx}].text must be a string")
+                parts.append(span["text"])
+            text = " ".join(parts)
+            if not text.strip():
+                raise ContractError(f"{doc_id}.spans resolve to empty text")
         if doc_date > cutoff:
             continue
         docs.append(CorpusDoc(doc_id, doc_date, text, str(raw.get("title", "")), str(raw.get("ticker", "")), path.name))
-    if not docs:
-        raise ContractError("no embargo-eligible corpus document")
     return docs
 
 def _sentences(doc: CorpusDoc) -> Iterable[tuple[int, int, str]]:
@@ -221,7 +232,11 @@ def retrieve(task: dict[str, Any], entity: dict[str, Any], docs: list[CorpusDoc]
         if len(chosen) >= MAX_EVIDENCE_PER_ENTITY:
             break
     if not chosen:
-        raise ContractError(f"no evidence span available for {entity['entity_id']}")
+        # No embargo-eligible premise exists. A post-cutoff citation would be worse: it is an
+        # explicit embargo violation. Emit a schema-shaped unresolved marker so the container
+        # still writes answer.json and exits cleanly; this unit is expected to fail citation
+        # admission, but never by leaking or citing future evidence.
+        return [Evidence("NO_ELIGIBLE_EVIDENCE", 0, 0, "No embargo-eligible evidence available.", -1e9, task["cutoff_date"])]
     return chosen
 
 def _numeric_anchor(entity: dict[str, Any], task: dict[str, Any]) -> float:
