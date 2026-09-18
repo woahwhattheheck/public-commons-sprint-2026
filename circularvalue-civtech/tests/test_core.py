@@ -253,6 +253,15 @@ class CircularValueCliFilesystemTests(unittest.TestCase):
             self.assertEqual(cli_main(["compile", str(link), "--out", str(out)]), 2)
             self.assertFalse(out.exists())
 
+    def test_cli_rejects_non_regular_input(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            not_a_file = root / "case-dir"
+            not_a_file.mkdir()
+            out = root / "packet.json"
+            self.assertEqual(cli_main(["compile", str(not_a_file), "--out", str(out)]), 2)
+            self.assertFalse(out.exists())
+
     def test_cli_rejects_oversized_input(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
