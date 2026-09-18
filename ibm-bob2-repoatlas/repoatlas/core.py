@@ -444,16 +444,21 @@ def _build_source_only_api():
             delattr(_source, name)
 
     def compile_packet(raw: Any) -> tuple[dict[str, Any], dict[str, Any]]:
-        _validate_source_input(raw)
+        # _validate_source_input returns a freshly normalized exact-built-in
+        # graph. It is the source-generation custody boundary: once caller
+        # input has been admitted, the retained compiler must never reread the
+        # mutable caller object.
+        normalized = _validate_source_input(raw)
         try:
-            return source_compile(raw)
+            return source_compile(normalized)
         except UnicodeEncodeError as exc:
             raise RepoAtlasError("invalid_unicode_scalar") from exc
         except RecursionError as exc:
             raise RepoAtlasError("input_too_deep") from exc
 
     def verify_bundle(raw: Any, packet: Any, receipt: Any) -> bool:
-        _validate_source_input(raw)
+        # Recompute through the exact same single-generation compile boundary;
+        # do not preflight one caller generation and compile a later one.
         expected_packet, expected_receipt = compile_packet(raw)
         # Artifact identity is canonical serialized identity, not Python's
         # loose object equality. In particular, bool is a subclass of int, so
