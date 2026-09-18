@@ -24,6 +24,7 @@ export const AUTHORITY = Object.freeze({
   contest_submission_authorized: false,
 });
 export const IDENTIFIER_MAX = 240;
+export const LANE_ID_MAX = 120;
 
 const NON_C_DEFAULT_IGNORABLE = [
   [0x034f, 0x034f], [0x115f, 0x1160], [0x17b4, 0x17b5], [0x180b, 0x180d],
@@ -33,6 +34,7 @@ const NON_C_DEFAULT_IGNORABLE = [
 const CATEGORY_C = /\p{C}/u;
 const NON_BASE = /[\p{C}\p{M}\p{Z}]/u;
 const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i;
+const LANE_ID_RE = /^[a-z0-9][a-z0-9._:-]{0,119}$/u;
 
 export function requireCondition(ok, message, status = 400) {
   if (!ok) throw new ContractError(message, status);
@@ -136,6 +138,16 @@ function isNonCategoryCDefaultIgnorable(ch) {
   return NON_C_DEFAULT_IGNORABLE.some(([lo, hi]) => cp >= lo && cp <= hi);
 }
 
+export function validateLaneId(value) {
+  requireCondition(
+    typeof value === "string" &&
+      Array.from(value).length <= LANE_ID_MAX &&
+      LANE_ID_RE.test(value),
+    "lane_id must be a pre-provisioned canonical id using lowercase ASCII [a-z0-9._:-]",
+  );
+  return value;
+}
+
 export function validateIdentifier(value, name = "identifier") {
   requireCondition(typeof value === "string", `${name} must be a string`);
   const chars = Array.from(value);
@@ -149,6 +161,7 @@ export function validateIdentifier(value, name = "identifier") {
 
 export function normalizeIdentity(input) {
   return {
+    lane_id: validateLaneId(input.lane_id),
     org: normalizeText(input.org, "org"),
     domain: normalizeDomain(input.domain),
     purpose: normalizeText(input.purpose, "purpose"),
@@ -159,17 +172,13 @@ export function normalizeIdentity(input) {
 export function collisionIdentityFromNormalized(identity) {
   requireExactKeys(
     identity,
-    ["org", "domain", "purpose", "opportunity"],
+    ["lane_id", "org", "domain", "purpose", "opportunity"],
     "normalized identity",
   );
-  // Domain is retained target evidence, not a writer-lease partition. Without a
-  // trusted organization-id registry, including a caller-selected host here
-  // lets root/subdomain or legitimate multi-domain aliases mint parallel writers.
-  return {
-    org: identity.org,
-    purpose: identity.purpose,
-    opportunity: identity.opportunity,
-  };
+  // Only a pre-provisioned canonical lane id partitions writer ownership.
+  // Human-readable organization/domain/purpose/opportunity are retained audit
+  // metadata and cannot mint another lock through semantic aliases.
+  return { lane_id: validateLaneId(identity.lane_id) };
 }
 
 export function collisionKey(input) {
