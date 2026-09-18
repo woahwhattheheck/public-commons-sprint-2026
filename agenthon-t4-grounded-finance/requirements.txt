@@ -1,0 +1,2 @@
+# Runtime is Python 3.13 standard library only.
+# The organizer House route is OpenAI-compatible HTTP and is called with urllib.
