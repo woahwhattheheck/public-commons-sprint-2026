@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from marketledger_openmarkets.cli import _read_json, _write_json
 from marketledger_openmarkets.engine import MarketLedgerError, compare_reports, evaluate_snapshot, stage_action
-from marketledger_openmarkets.openmarkets import _validate_base_url, fetch_contest_liquidity, normalize_liquidity_envelope
+from marketledger_openmarkets.openmarkets import _NoRedirectHandler, _validate_base_url, fetch_contest_liquidity, normalize_liquidity_envelope
 
 
 DOC_PAYLOAD = {
@@ -174,9 +174,20 @@ class EngineTests(unittest.TestCase):
 class AdapterTests(unittest.TestCase):
     def test_base_url_is_host_locked(self):
         self.assertEqual(_validate_base_url("https://api.openmarkets.ai/flow/v1"), "https://api.openmarkets.ai/flow/v1")
-        for bad in ["http://api.openmarkets.ai/flow/v1", "https://evil.example/flow/v1", "https://api.openmarkets.ai.evil.example/flow/v1"]:
+        for bad in [
+            "http://api.openmarkets.ai/flow/v1",
+            "https://evil.example/flow/v1",
+            "https://api.openmarkets.ai.evil.example/flow/v1",
+            "https://api.openmarkets.ai:4443/flow/v1",
+            "https://user@api.openmarkets.ai/flow/v1",
+            "https://api.openmarkets.ai/auth",
+        ]:
             with self.assertRaises(MarketLedgerError):
                 _validate_base_url(bad)
+
+    def test_redirects_fail_closed_before_key_forwarding(self):
+        with self.assertRaises(MarketLedgerError):
+            _NoRedirectHandler().redirect_request(None, None, 302, "Found", {}, "https://evil.example/steal")
 
     def test_fetch_requires_key(self):
         with self.assertRaises(MarketLedgerError):
@@ -194,7 +205,7 @@ class AdapterTests(unittest.TestCase):
             seen["key"] = req.headers.get("X-api-key")
             seen["timeout"] = timeout
             return FakeResponse()
-        with patch("marketledger_openmarkets.openmarkets.urlopen", fake_urlopen):
+        with patch("marketledger_openmarkets.openmarkets._open_request", fake_urlopen):
             out = fetch_contest_liquidity("contest / weird", "abcdefgh", timeout_seconds=3)
         self.assertEqual(seen["method"], "GET")
         self.assertEqual(seen["key"], "abcdefgh")
