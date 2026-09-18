@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { NetlifyDB } from "@netlify/database-dev";
 import { getDatabase } from "@netlify/database";
+import { parseLaneRegistry } from "../lib/lane-registry.mjs";
 import { createService } from "../lib/service.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -18,6 +19,10 @@ const workerB = Object.freeze({ subject: "worker-b", roles: ["state", "claim", "
 const workerC = Object.freeze({ subject: "worker-c", roles: ["state", "claim"] });
 const humanRecorder = Object.freeze({ subject: "human-recorder", roles: ["state", "human_evidence"] });
 const stateOnly = Object.freeze({ subject: "observer", roles: ["state"] });
+const laneRegistry = parseLaneRegistry(JSON.stringify([
+  { lane_id: "lane:northstar-builderfest" },
+  { lane_id: "lane:other-opportunity" },
+]));
 
 before(async () => {
   const external = process.env.ONEWRITER_TEST_DATABASE_URL;
@@ -30,7 +35,7 @@ before(async () => {
     await local.applyMigrations(join(HERE, "../netlify/database/migrations"));
     db = getDatabase({ connectionString });
   }
-  service = createService(db);
+  service = createService(db, { laneRegistry });
 });
 
 after(async () => {
@@ -45,6 +50,7 @@ beforeEach(async () => {
 function claim(eventId, route, overrides = {}) {
   return {
     event_id: eventId,
+    lane_id: "lane:northstar-builderfest",
     org: "Northstar Labs",
     domain: "northstar.example",
     route,
@@ -60,6 +66,7 @@ function event(eventId, kind, route, overrides = {}) {
   return {
     event_id: eventId,
     kind,
+    lane_id: "lane:northstar-builderfest",
     org: "Northstar Labs",
     domain: "northstar.example",
     route,
@@ -91,6 +98,55 @@ test("two authenticated concurrent workers on different routes get one grant and
   const events = await db.sql`SELECT event_id, actor, decision FROM events ORDER BY event_id`;
   assert.equal(events.length, 2);
   assert.deepEqual(events.map((row) => row.actor).sort(), ["worker-a", "worker-b"]);
+});
+
+test("same canonical lane id serializes semantically different display labels into one writer", async () => {
+  const [a, b] = await Promise.all([
+    service.claim(
+      claim("evt-semantic-a", "email:sales@northstar.example", {
+        org: "Northstar Labs",
+        domain: "northstar.example",
+        purpose: "initial outreach",
+        opportunity: "builder fest",
+      }),
+      workerA,
+    ),
+    service.claim(
+      claim("evt-semantic-b", "email:founder@northstar-labs.example", {
+        org: "Northstar Holdings",
+        domain: "northstar-labs.example",
+        purpose: "partner introduction",
+        opportunity: "Builder Festival 2026",
+      }),
+      workerB,
+    ),
+  ]);
+  const decisions = [a.receipt.decision, b.receipt.decision].sort();
+  assert.deepEqual(decisions, ["DENIED_ACTIVE_LEASE", "GRANTED"]);
+  assert.equal(a.receipt.collision_key, b.receipt.collision_key);
+  assert.equal(a.receipt.accepted_event.identity.lane_id, "lane:northstar-builderfest");
+  assert.equal(b.receipt.accepted_event.identity.lane_id, "lane:northstar-builderfest");
+
+  const lanes = await db.sql`SELECT collision_key, lane_id, state FROM lanes`;
+  assert.equal(lanes.length, 1);
+  assert.equal(lanes[0].lane_id, "lane:northstar-builderfest");
+  assert.equal(lanes[0].state, "LEASED");
+});
+
+test("unknown canonical lane id fails before any database mutation", async () => {
+  await assert.rejects(
+    service.claim(
+      claim("evt-unknown-lane", "email:sales@northstar.example", {
+        lane_id: "lane:unknown",
+      }),
+      workerA,
+    ),
+    /unknown lane_id; server registry binding required/,
+  );
+  assert.equal((await db.sql`SELECT * FROM lane_locks`).length, 0);
+  assert.equal((await db.sql`SELECT * FROM lanes`).length, 0);
+  assert.equal((await db.sql`SELECT * FROM workspace_identifiers`).length, 0);
+  assert.equal((await db.sql`SELECT * FROM events`).length, 0);
 });
 
 test("canonically equivalent Unicode identities contend on exactly one lane", async () => {
@@ -203,6 +259,7 @@ test("whole transaction retries 40001 with a fresh DB clock and no aborted-gener
   const samples = [];
   let injected = false;
   const retrying = createService(db, {
+    laneRegistry,
     transactionMaxAttempts: 3,
     afterServerNow: async ({ operation, attempt, now }) => {
       if (operation !== "claim") return;
@@ -229,6 +286,7 @@ test("whole transaction retries 40001 with a fresh DB clock and no aborted-gener
 test("40P01 deadlock is deliberately retried as a whole transaction", async () => {
   let injected = false;
   const retrying = createService(db, {
+    laneRegistry,
     afterServerNow: async ({ operation }) => {
       if (operation === "claim" && !injected) {
         injected = true;
@@ -242,6 +300,7 @@ test("40P01 deadlock is deliberately retried as a whole transaction", async () =
 
 test("retry exhaustion fails closed and leaves no writer, identifier, or receipt", async () => {
   const exhausted = createService(db, {
+    laneRegistry,
     transactionMaxAttempts: 2,
     afterServerNow: async ({ operation }) => {
       if (operation === "claim") throw serializationFailure("40001");
