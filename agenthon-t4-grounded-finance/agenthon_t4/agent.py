@@ -30,6 +30,35 @@ def _strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         out[key] = value
     return out
 
+
+def _reject_constant(value: str) -> None:
+    raise ContractError(f"non-finite JSON number rejected: {value}")
+
+
+def _strict_float(value: str) -> float:
+    try:
+        parsed = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise ContractError("invalid JSON float") from exc
+    if not math.isfinite(parsed):
+        raise ContractError("non-finite JSON number rejected")
+    return parsed
+
+
+def parse_json_text(text: str) -> Any:
+    try:
+        return json.loads(
+            text,
+            object_pairs_hook=_strict_object,
+            parse_constant=_reject_constant,
+            parse_float=_strict_float,
+        )
+    except ContractError:
+        raise
+    except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as exc:
+        raise ContractError(f"invalid JSON: {exc}") from exc
+
+
 def load_json(path: Path, *, max_bytes: int = MAX_DOC_BYTES) -> Any:
     if path.is_symlink():
         raise ContractError(f"symlink input refused: {path}")
@@ -39,10 +68,10 @@ def load_json(path: Path, *, max_bytes: int = MAX_DOC_BYTES) -> Any:
     if stat.st_size > max_bytes:
         raise ContractError(f"input exceeds byte limit: {path}")
     try:
-        return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_strict_object)
+        return parse_json_text(path.read_text(encoding="utf-8"))
     except UnicodeDecodeError as exc:
         raise ContractError(f"UTF-8 required: {path}") from exc
-    except json.JSONDecodeError as exc:
+    except ContractError as exc:
         raise ContractError(f"invalid JSON: {path}: {exc}") from exc
 
 def _iso_day(value: Any, field: str) -> str:
@@ -56,7 +85,10 @@ def _iso_day(value: Any, field: str) -> str:
 def _finite_number(value: Any, field: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ContractError(f"{field} must be numeric")
-    result = float(value)
+    try:
+        result = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise ContractError(f"{field} must fit a finite float") from exc
     if not math.isfinite(result):
         raise ContractError(f"{field} must be finite")
     return result
@@ -243,13 +275,20 @@ def _numeric_anchor(entity: dict[str, Any], task: dict[str, Any]) -> float:
     target_name = str((task.get("target") or {}).get("name", ""))
     for key in [target_name, f"consensus_{target_name}", "consensus_eps", "consensus", "estimate", "point_estimate", "value", "score"]:
         value = entity.get(key)
-        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)):
-            return float(value)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            try:
+                return _finite_number(value, f"entity.{key}")
+            except ContractError:
+                continue
     for key in sorted(entity):
         value = entity[key]
-        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)):
-            return float(value)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            try:
+                return _finite_number(value, f"entity.{key}")
+            except ContractError:
+                continue
     return 0.0
+
 
 def _fallback_candidate(task: dict[str, Any], entity: dict[str, Any]) -> dict[str, Any]:
     point = _numeric_anchor(entity, task)
@@ -257,7 +296,10 @@ def _fallback_candidate(task: dict[str, Any], entity: dict[str, Any]) -> dict[st
     if task["_target_type"] == "classification":
         label = "inline" if "inline" in task["_labels"] else task["_labels"][0]
     width = max(abs(point) * 0.12, 0.10)
-    return {"entity_id": entity["entity_id"], "label": label, "point_forecast": point, "lo": point - width, "hi": point + width}
+    lo, hi = point - width, point + width
+    if not all(math.isfinite(value) for value in (point, width, lo, hi)):
+        raise ContractError("fallback interval exceeds finite numeric range")
+    return {"entity_id": entity["entity_id"], "label": label, "point_forecast": point, "lo": lo, "hi": hi}
 
 def _candidate_from_model(task: dict[str, Any], entity: dict[str, Any], raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict) or raw.get("entity_id") != entity["entity_id"]:
@@ -311,7 +353,16 @@ def atomic_write_json(path: Path, value: Any) -> None:
     if path.exists() and path.is_symlink():
         raise ContractError("output symlink refused")
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
+    try:
+        payload = json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ) + "\n"
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ContractError("output must be finite strict JSON") from exc
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent), text=True)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
@@ -325,9 +376,20 @@ def atomic_write_json(path: Path, value: Any) -> None:
         except FileNotFoundError:
             pass
 
-def run(task_path: Path, corpus_dir: Path, out_path: Path, *, model_candidates: dict[str, Any] | None = None) -> dict[str, Any]:
-    task = validate_task(load_json(task_path))
-    docs = load_corpus(corpus_dir, task["cutoff_date"])
+def run_frozen(
+    task: dict[str, Any],
+    docs: list[CorpusDoc],
+    out_path: Path,
+    *,
+    model_candidates: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build and publish from one already-validated task/corpus generation."""
     answer = build_answer(task, docs, model_candidates=model_candidates)
     atomic_write_json(out_path, answer)
     return answer
+
+
+def run(task_path: Path, corpus_dir: Path, out_path: Path, *, model_candidates: dict[str, Any] | None = None) -> dict[str, Any]:
+    task = validate_task(load_json(task_path))
+    docs = load_corpus(corpus_dir, task["cutoff_date"])
+    return run_frozen(task, docs, out_path, model_candidates=model_candidates)
