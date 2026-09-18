@@ -29,6 +29,7 @@ class ExternalSurfaceIsolationTests(unittest.TestCase):
         cases = (
             "woahwhattheheck" + r"\u002fcommons",
             "woahwhattheheck" + r"\x2fcommons",
+            "woahwhattheheck" + r"\u{63}ommons",
             "woahwhattheheck" + r"\/commons",
             "woahwhattheheck" + "%E2%80%8B/commons",
             "woahwhattheheck" + "&#8203;/commons",
