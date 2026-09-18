@@ -278,6 +278,7 @@ def _canonical_verified_artifact(
     name: str,
     max_canonical_bytes: int,
     _string_size=_json_string_canonical_size,
+    _canonical=_source._canonical,
     _gc_isenabled=gc.isenabled,
     _gc_disable=gc.disable,
     _gc_enable=gc.enable,
@@ -458,7 +459,7 @@ def _canonical_verified_artifact(
 
     frozen = root[0]
     try:
-        canonical = _source._canonical(frozen)
+        canonical = _canonical(frozen)
     except RepoAtlasError:
         raise
     except RecursionError as exc:
@@ -473,7 +474,7 @@ def _canonical_verified_artifact(
     return canonical
 
 
-def _build_source_only_api():
+def _build_source_only_api(_canonical=_source._canonical):
     # Capture the reviewed analyzer once, then retire its ordinary module-level
     # compiler/verifier names. Because importing a submodule initializes the
     # parent package first, `import repoatlas._core_source_v1` cannot recover a
@@ -504,8 +505,8 @@ def _build_source_only_api():
         # loose object equality. In particular, bool is a subclass of int, so
         # dict equality treats False == 0 and True == 1 even though those are
         # distinct JSON artifacts with different content-addressed bytes.
-        expected_packet_bytes = _source._canonical(expected_packet)
-        expected_receipt_bytes = _source._canonical(expected_receipt)
+        expected_packet_bytes = _canonical(expected_packet)
+        expected_receipt_bytes = _canonical(expected_receipt)
         packet_work_ceiling = _verification_work_ceiling(
             len(expected_packet_bytes)
         )
