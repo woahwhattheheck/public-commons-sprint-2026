@@ -14,10 +14,11 @@ class ExternalSurfaceIsolationTests(unittest.TestCase):
             root = Path(td)
             with self.assertRaises(guard.ScanError):
                 guard.scan_root(root / "missing")
-            (root / "index.html").write_text(
-                "https://github.com/woahwhattheheck%26%23x2f%3Bcomm%26%23x200b%3Bons\n",
-                encoding="utf-8",
+            obfuscated = (
+                "https://github.com/woahwhattheheck"
+                + "%26%23x2f%3Bcomm%26%23x200b%3Bons"
             )
+            (root / "index.html").write_text(obfuscated + "\n", encoding="utf-8")
             _, findings = guard.scan_root(root)
             self.assertEqual(len(findings), 1)
             self.assertEqual(findings[0][2], "commons-repository")
