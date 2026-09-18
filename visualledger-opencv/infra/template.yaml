@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: VisualLedger versioned S3 -> OpenCV 5 Lambda container -> DynamoDB evidence ledger
+
+Parameters:
+  ContainerImageUri:
+    Type: String
+    Description: Immutable ECR image URI containing this exact source generation and OpenCV 5.x
+  RecordHmacKey:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    MaxLength: 128
+    Description: Deployment-held HMAC secret authenticating retained Dynamo evidence records
+
+Resources:
+  EvidenceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  EvidenceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: scope
+          AttributeType: S
+        - AttributeName: event_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: scope
+          KeyType: HASH
+        - AttributeName: event_id
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  VisionWorker:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      ImageUri: !Ref ContainerImageUri
+      Architectures: [arm64]
+      MemorySize: 2048
+      Timeout: 30
+      Environment:
+        Variables:
+          VISUALLEDGER_TABLE: !Ref EvidenceTable
+          VISUALLEDGER_RECORD_HMAC_KEY: !Ref RecordHmacKey
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref EvidenceBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EvidenceTable
+      Events:
+        ImageCreated:
+          Type: S3
+          Properties:
+            Bucket: !Ref EvidenceBucket
+            Events: s3:ObjectCreated:*
+
+Outputs:
+  BucketName:
+    Value: !Ref EvidenceBucket
+  TableName:
+    Value: !Ref EvidenceTable
