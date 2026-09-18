@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .agent import load_corpus, load_json, run, validate_task
+from .agent import load_corpus, load_json, run_frozen, validate_task
 from .house import plan
 
 VERB = "analyze"
@@ -17,12 +17,10 @@ def main() -> int:
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--offline", action="store_true", help="Disable House-route planning and use deterministic fallback only")
     args = parser.parse_args()
-    model_candidates = None
-    if not args.offline:
-        task = validate_task(load_json(args.task))
-        docs = load_corpus(args.corpus, task["cutoff_date"])
-        model_candidates = plan(task, docs)
-    run(args.task, args.corpus, args.out, model_candidates=model_candidates)
+    task = validate_task(load_json(args.task))
+    docs = load_corpus(args.corpus, task["cutoff_date"])
+    model_candidates = None if args.offline else plan(task, docs)
+    run_frozen(task, docs, args.out, model_candidates=model_candidates)
     return 0
 
 
