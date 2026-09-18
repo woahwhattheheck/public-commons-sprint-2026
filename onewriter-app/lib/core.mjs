@@ -156,8 +156,25 @@ export function normalizeIdentity(input) {
   };
 }
 
+export function collisionIdentityFromNormalized(identity) {
+  requireExactKeys(
+    identity,
+    ["org", "domain", "purpose", "opportunity"],
+    "normalized identity",
+  );
+  // Domain is retained target evidence, not a writer-lease partition. Without a
+  // trusted organization-id registry, including a caller-selected host here
+  // lets root/subdomain or legitimate multi-domain aliases mint parallel writers.
+  return {
+    org: identity.org,
+    purpose: identity.purpose,
+    opportunity: identity.opportunity,
+  };
+}
+
 export function collisionKey(input) {
-  return sha256Hex(normalizeIdentity(input));
+  const identity = normalizeIdentity(input);
+  return sha256Hex(collisionIdentityFromNormalized(identity));
 }
 
 export function validateLeaseSeconds(value) {
