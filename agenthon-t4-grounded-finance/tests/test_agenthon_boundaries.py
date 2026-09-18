@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import os
 import sys
 import tempfile
 import unittest
@@ -159,6 +160,76 @@ class AgenthonBoundaryTests(unittest.TestCase):
             json.dumps(answer, allow_nan=False)
             for claim in row["claims"]:
                 self.assertEqual(claim["claim"], DOC["text"][claim["span_start"]:claim["span_end"]])
+
+    def test_house_transport_uses_no_redirect_handler_and_bounded_read(self) -> None:
+        observed_sizes: list[int] = []
+
+        class Response:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self, size=-1):
+                observed_sizes.append(size)
+                return b'{"choices":[{"message":{"content":"{\\\"entity_predictions\\\":[]}"}}]}'
+
+        class Opener:
+            def open(self, _request, timeout=None):
+                self.timeout = timeout
+                return Response()
+
+        validated = agent.validate_task(task())
+        docs = [agent.CorpusDoc("D1", DOC["doc_date"], DOC["text"], "", DOC["ticker"], "D1.json")]
+        with patch.dict(
+            os.environ,
+            {"MODEL_ENDPOINT": "https://organizer.invalid", "MODEL_TOKEN": "token", "MODEL_NAME": "house"},
+            clear=True,
+        ), patch.object(house.urllib.request, "build_opener", return_value=Opener()) as built:
+            result = house.plan(validated, docs)
+        self.assertEqual(result, {})
+        self.assertEqual(observed_sizes, [house.MAX_HOUSE_RESPONSE_BYTES + 1])
+        self.assertIsInstance(built.call_args.args[0], house._NoRedirect)
+
+    def test_house_transport_rejects_oversized_response_and_redirects(self) -> None:
+        class OversizedResponse:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self, size=-1):
+                self.size = size
+                return b"x" * (house.MAX_HOUSE_RESPONSE_BYTES + 1)
+
+        class Opener:
+            def open(self, _request, timeout=None):
+                return OversizedResponse()
+
+        validated = agent.validate_task(task())
+        docs = [agent.CorpusDoc("D1", DOC["doc_date"], DOC["text"], "", DOC["ticker"], "D1.json")]
+        with patch.dict(
+            os.environ,
+            {"MODEL_ENDPOINT": "https://organizer.invalid", "MODEL_TOKEN": "token", "MODEL_NAME": "house"},
+            clear=True,
+        ), patch.object(house.urllib.request, "build_opener", return_value=Opener()):
+            self.assertIsNone(house.plan(validated, docs))
+        self.assertIsNone(house._NoRedirect().redirect_request(None, None, 302, "Found", {}, "https://other.invalid"))
+
+    def test_house_endpoint_rejects_non_https_and_embedded_credentials(self) -> None:
+        for endpoint in ("http://organizer.invalid", "https://user:pass@organizer.invalid", "https://organizer.invalid?x=1"):
+            with self.subTest(endpoint=endpoint), patch.dict(
+                os.environ,
+                {"MODEL_ENDPOINT": endpoint, "MODEL_TOKEN": "token", "MODEL_NAME": "house"},
+                clear=True,
+            ):
+                self.assertIsNone(house._endpoint())
 
 
 if __name__ == "__main__":
