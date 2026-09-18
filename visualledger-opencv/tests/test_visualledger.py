@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from visualledger.agent import canonical, compile_trace, verify_trace
-from visualledger.aws_adapter import event_identity, handle_s3_event, normalize_s3_event
+from visualledger.aws_adapter import event_identity, handle_s3_event, normalize_s3_event, prior_fingerprints_from_records
 from visualledger.synth import benchmark_cases, make_case
 from visualledger.vision import VisionError, VisionPolicy, analyze_image, hamming
 
@@ -207,8 +207,8 @@ class AwsAdapterTests(unittest.TestCase):
     def test_handler_records_once_and_replays_without_reload(self):
         store = {}; calls = {"load": 0, "write": 0, "prior": 0}
         def load(bucket, key, version): calls["load"] += 1; return self.raw
-        def read(k): return store.get(k)
-        def write(k, v): calls["write"] += 1; store[k] = v
+        def read(scope, k): return store.get((scope, k))
+        def write(scope, k, v): calls["write"] += 1; store[(scope, k)] = v
         def priors(scope): calls["prior"] += 1; return []
         first = handle_s3_event(event(), load_object=load, read_record=read, write_record=write, load_prior_fingerprints=priors, allow_opencv4_dev=True)
         second = handle_s3_event(event(), load_object=load, read_record=read, write_record=write, load_prior_fingerprints=priors, allow_opencv4_dev=True)
@@ -222,8 +222,8 @@ class AwsAdapterTests(unittest.TestCase):
         prior = [{"evidence_id": "BASE", "fingerprint": base["perception"]["fingerprint_dhash64"]}]
         store = {}
         out = handle_s3_event(
-            event(), load_object=lambda b,k,v: self.raw, read_record=lambda k: None,
-            write_record=lambda k,v: store.setdefault(k,v), load_prior_fingerprints=lambda scope: prior,
+            event(), load_object=lambda b,k,v: self.raw, read_record=lambda scope,k: None,
+            write_record=lambda scope,k,v: store.setdefault((scope,k),v), load_prior_fingerprints=lambda scope: prior,
             allow_opencv4_dev=True,
         )
         self.assertEqual(out["record"]["scope"], "entity-a")
@@ -233,16 +233,46 @@ class AwsAdapterTests(unittest.TestCase):
         with self.assertRaises(VisionError):
             handle_s3_event(
                 event(), load_object=lambda *a: self.raw,
-                read_record=lambda k: {"event_id": "wrong"}, write_record=lambda *a: None,
+                read_record=lambda scope,k: {"event_id": "wrong"}, write_record=lambda *a: None,
                 load_prior_fingerprints=lambda s: [], allow_opencv4_dev=True,
             )
+
+    def test_prior_fingerprint_records_are_bounded_and_validated(self):
+        trace = compile_trace(self.raw, evidence_id="PRIOR", allow_opencv4_dev=True)
+        record = {
+            "schema": "visualledger-aws-record/v1",
+            "event_id": "a" * 64,
+            "trace": trace,
+        }
+        self.assertEqual(
+            prior_fingerprints_from_records([record]),
+            [{"evidence_id": "PRIOR", "fingerprint": trace["perception"]["fingerprint_dhash64"]}],
+        )
+        bad = copy.deepcopy(record); bad["trace"]["perception"]["fingerprint_dhash64"] = "NOPE"
+        with self.assertRaises(VisionError): prior_fingerprints_from_records([bad])
+        with self.assertRaises(VisionError): prior_fingerprints_from_records([record, copy.deepcopy(record)])
+        with self.assertRaises(VisionError): prior_fingerprints_from_records([record, record], maximum=1)
+
+    def test_handler_passes_scope_to_primary_record_boundaries(self):
+        calls = []
+        store = {}
+        def read(scope, event_id): calls.append(("read", scope, event_id)); return store.get((scope,event_id))
+        def write(scope, event_id, record): calls.append(("write", scope, event_id)); store[(scope,event_id)] = record
+        out = handle_s3_event(
+            event(key="ledger-42/invoice.png"), load_object=lambda *a: self.raw,
+            read_record=read, write_record=write, load_prior_fingerprints=lambda scope: [],
+            allow_opencv4_dev=True,
+        )
+        self.assertEqual(out["record"]["scope"], "ledger-42")
+        self.assertEqual(calls[0][0:2], ("read", "ledger-42"))
+        self.assertEqual(calls[1][0:2], ("write", "ledger-42"))
 
     def test_aws_record_receipt_is_deterministic(self):
         def run():
             store = {}
             return handle_s3_event(
-                event(), load_object=lambda *a: self.raw, read_record=lambda k: None,
-                write_record=lambda k,v: store.setdefault(k,v), load_prior_fingerprints=lambda s: [],
+                event(), load_object=lambda *a: self.raw, read_record=lambda scope,k: None,
+                write_record=lambda scope,k,v: store.setdefault((scope,k),v), load_prior_fingerprints=lambda s: [],
                 allow_opencv4_dev=True,
             )["record"]
         self.assertEqual(canonical(run()), canonical(run()))
