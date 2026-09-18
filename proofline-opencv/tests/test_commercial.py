@@ -86,6 +86,8 @@ class CommercialPilotTests(unittest.TestCase):
         from proofline.codec import digest_json
         packet = build_pilot_packet(copy.deepcopy(SAMPLE))
         packet["source_truth"]["live_aws_deployed"] = True
+        packet["source_truth"]["source_test_demo_ready"] = True
+        packet["source_truth"]["provider_execution_verified"] = True
         packet.pop("receipt_sha256")
         packet["receipt_sha256"] = digest_json(packet)
         self.assertFalse(verify_pilot_packet(packet))
