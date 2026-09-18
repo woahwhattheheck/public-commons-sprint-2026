@@ -7,22 +7,37 @@ wrapper; tests exercise the same normalized contract without credentials/spend.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
 import re
 from typing import Any, Callable
 
-from .agent import canonical, compile_trace
+from .agent import TRACE_SCHEMA, canonical, compile_trace
 from .vision import VisionError
 
 PIPELINE_GENERATION = "visualledger-opencv/v1"
+RECORD_SCHEMA = "visualledger-aws-record/v1"
 MAX_SCOPE_RECORDS = 512
+_HEX64 = re.compile(r"[0-9a-f]{64}\\Z")
 
 
 def _text(value: Any, label: str, maximum: int = 512) -> str:
-    if type(value) is not str or not value or len(value) > maximum or "\x00" in value:
+    if type(value) is not str or not value or len(value) > maximum or "\\x00" in value:
         raise VisionError(f"invalid {label}")
     return value
+
+
+def _normalize_source(source: Any) -> dict[str, str]:
+    if type(source) is not dict or set(source) != {"bucket", "key", "version_id", "etag"}:
+        raise VisionError("malformed normalized source")
+    bucket = _text(source["bucket"], "bucket", 128)
+    key = _text(source["key"], "key", 1024)
+    version_id = _text(source["version_id"], "versionId", 512)
+    etag = _text(source["etag"], "eTag", 128)
+    if re.fullmatch(r"[A-Za-z0-9._/-]+", key) is None or key.startswith("/") or ".." in key.split("/"):
+        raise VisionError("unsafe S3 object key")
+    return {"bucket": bucket, "key": key, "version_id": version_id, "etag": etag}
 
 
 def normalize_s3_event(event: Any) -> dict[str, str]:
@@ -31,27 +46,84 @@ def normalize_s3_event(event: Any) -> dict[str, str]:
     record = event["Records"][0]
     try:
         s3 = record["s3"]
-        bucket = _text(s3["bucket"]["name"], "bucket", 128)
-        obj = s3["object"]
-        key = _text(obj["key"], "key", 1024)
-        version_id = _text(obj["versionId"], "versionId", 512)
-        etag = _text(obj["eTag"], "eTag", 128)
+        source = {
+            "bucket": s3["bucket"]["name"],
+            "key": s3["object"]["key"],
+            "version_id": s3["object"]["versionId"],
+            "etag": s3["object"]["eTag"],
+        }
     except (KeyError, TypeError) as exc:
         raise VisionError("malformed S3 event") from exc
-    if re.fullmatch(r"[A-Za-z0-9._/-]+", key) is None or key.startswith("/") or ".." in key.split("/"):
-        raise VisionError("unsafe S3 object key")
-    return {"bucket": bucket, "key": key, "version_id": version_id, "etag": etag}
+    return _normalize_source(source)
 
 
 def event_identity(event: dict[str, str], pipeline_generation: str = PIPELINE_GENERATION) -> str:
+    source = _normalize_source(event)
     payload = {
-        "bucket": event["bucket"],
-        "key": event["key"],
-        "version_id": event["version_id"],
-        "etag": event["etag"],
+        "bucket": source["bucket"],
+        "key": source["key"],
+        "version_id": source["version_id"],
+        "etag": source["etag"],
         "pipeline_generation": pipeline_generation,
     }
     return hashlib.sha256(canonical(payload)).hexdigest()
+
+
+def _validate_trace_receipt(trace: Any, *, event_id: str) -> dict[str, Any]:
+    if type(trace) is not dict or trace.get("schema") != TRACE_SCHEMA:
+        raise VisionError("stored trace schema is invalid")
+    if trace.get("evidence_id") != event_id[:32]:
+        raise VisionError("stored trace evidence id does not match event generation")
+    receipt = trace.get("receipt_sha256")
+    if type(receipt) is not str or _HEX64.fullmatch(receipt) is None:
+        raise VisionError("stored trace receipt is invalid")
+    body = dict(trace)
+    body.pop("receipt_sha256", None)
+    expected = hashlib.sha256(canonical(body)).hexdigest()
+    if not hmac.compare_digest(receipt, expected):
+        raise VisionError("stored trace receipt mismatch")
+    return trace
+
+
+def validate_record_generation(
+    record: Any,
+    *,
+    expected_scope: str | None = None,
+    expected_event_id: str | None = None,
+) -> dict[str, Any]:
+    """Validate one retained record as a current canonical evidence generation."""
+    required = {"schema", "event_id", "pipeline_generation", "source", "scope", "trace", "record_sha256"}
+    if type(record) is not dict or set(record) != required or record.get("schema") != RECORD_SCHEMA:
+        raise VisionError("malformed retained evidence record")
+    if record.get("pipeline_generation") != PIPELINE_GENERATION:
+        raise VisionError("retained evidence belongs to another pipeline generation")
+
+    source = _normalize_source(record.get("source"))
+    scope = source["key"].split("/", 1)[0]
+    if not scope or record.get("scope") != scope:
+        raise VisionError("retained evidence scope/source mismatch")
+    if expected_scope is not None and scope != expected_scope:
+        raise VisionError("retained evidence is outside queried scope")
+
+    event_id = record.get("event_id")
+    if type(event_id) is not str or _HEX64.fullmatch(event_id) is None:
+        raise VisionError("malformed retained event id")
+    if not hmac.compare_digest(event_id, event_identity(source)):
+        raise VisionError("retained event id/source mismatch")
+    if expected_event_id is not None and not hmac.compare_digest(event_id, expected_event_id):
+        raise VisionError("retained replay event id mismatch")
+
+    _validate_trace_receipt(record.get("trace"), event_id=event_id)
+
+    receipt = record.get("record_sha256")
+    if type(receipt) is not str or _HEX64.fullmatch(receipt) is None:
+        raise VisionError("retained record receipt is invalid")
+    body = dict(record)
+    body.pop("record_sha256", None)
+    expected = hashlib.sha256(canonical(body)).hexdigest()
+    if not hmac.compare_digest(receipt, expected):
+        raise VisionError("retained record receipt mismatch")
+    return record
 
 
 def handle_s3_event(
@@ -70,8 +142,7 @@ def handle_s3_event(
         raise VisionError("S3 key must include an entity scope prefix")
     existing = read_record(scope, identity)
     if existing is not None:
-        if type(existing) is not dict or existing.get("event_id") != identity:
-            raise VisionError("stored idempotency record is malformed")
+        validate_record_generation(existing, expected_scope=scope, expected_event_id=identity)
         return {"status": "IDEMPOTENT_REPLAY", "event_id": identity, "record": existing}
     priors = load_prior_fingerprints(scope)
     raw = load_object(normalized["bucket"], normalized["key"], normalized["version_id"])
@@ -82,7 +153,7 @@ def handle_s3_event(
         allow_opencv4_dev=allow_opencv4_dev,
     )
     record = {
-        "schema": "visualledger-aws-record/v1",
+        "schema": RECORD_SCHEMA,
         "event_id": identity,
         "pipeline_generation": PIPELINE_GENERATION,
         "source": normalized,
@@ -94,8 +165,16 @@ def handle_s3_event(
     return {"status": "RECORDED", "event_id": identity, "record": record}
 
 
-def prior_fingerprints_from_records(records: Any, *, maximum: int = MAX_SCOPE_RECORDS) -> list[dict[str, str]]:
-    """Validate retained same-scope records and extract bounded duplicate evidence."""
+def prior_fingerprints_from_records(
+    records: Any,
+    *,
+    scope: str,
+    maximum: int = MAX_SCOPE_RECORDS,
+) -> list[dict[str, str]]:
+    """Validate retained same-scope record generations and extract duplicate evidence."""
+    scope = _text(scope, "scope", 1024)
+    if "/" in scope:
+        raise VisionError("invalid scope")
     if type(maximum) is not int or isinstance(maximum, bool) or not 1 <= maximum <= MAX_SCOPE_RECORDS:
         raise VisionError("invalid prior-record bound")
     if type(records) is not list or len(records) > maximum:
@@ -103,15 +182,12 @@ def prior_fingerprints_from_records(records: Any, *, maximum: int = MAX_SCOPE_RE
     out: list[dict[str, str]] = []
     seen: set[str] = set()
     for record in records:
-        if type(record) is not dict or record.get("schema") != "visualledger-aws-record/v1":
-            raise VisionError("malformed same-scope evidence record")
-        event_id = record.get("event_id")
-        trace = record.get("trace")
-        if type(event_id) is not str or len(event_id) != 64 or any(ch not in "0123456789abcdef" for ch in event_id):
-            raise VisionError("malformed prior event id")
+        validate_record_generation(record, expected_scope=scope)
+        event_id = record["event_id"]
         if event_id in seen:
             raise VisionError("duplicate prior event id")
         seen.add(event_id)
+        trace = record["trace"]
         try:
             evidence_id = trace["evidence_id"]
             fingerprint = trace["perception"]["fingerprint_dhash64"]
@@ -127,12 +203,7 @@ def prior_fingerprints_from_records(records: Any, *, maximum: int = MAX_SCOPE_RE
 
 
 def lambda_handler(event: Any, context: Any) -> dict[str, Any]:  # pragma: no cover - requires live AWS SDK/runtime
-    """Minimal production wrapper for S3 + DynamoDB.
-
-    Required env: VISUALLEDGER_TABLE. Evidence is stored as canonical JSON.
-    Near-duplicate history is intentionally not guessed here: a deployment must
-    add the documented scope-index query before claiming duplicate detection on AWS.
-    """
+    """Minimal production wrapper for S3 + DynamoDB with validated retained history."""
     try:
         import boto3
     except Exception as exc:
@@ -161,9 +232,6 @@ def lambda_handler(event: Any, context: Any) -> dict[str, Any]:  # pragma: no co
         )
 
     def load_prior_fingerprints(scope: str) -> list[dict[str, str]]:
-        # Base-table Query is strongly consistent. A scope larger than the retained
-        # duplicate-evidence bound fails closed rather than silently sampling and
-        # creating a false-negative duplicate path.
         response = table.query(
             KeyConditionExpression=" #scope = :scope",
             ExpressionAttributeNames={"#scope": "scope"},
@@ -182,7 +250,7 @@ def lambda_handler(event: Any, context: Any) -> dict[str, Any]:  # pragma: no co
             except (KeyError, TypeError, json.JSONDecodeError) as exc:
                 raise VisionError("malformed retained same-scope record") from exc
             records.append(record)
-        return prior_fingerprints_from_records(records)
+        return prior_fingerprints_from_records(records, scope=scope)
 
     return handle_s3_event(
         event,
