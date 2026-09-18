@@ -6,7 +6,7 @@ Devin-Local reported that the actual OpenCV 5.0.0.93 runtime returns Hough line
 segments as `(N, 4)`, while the original loop assumes `(N, 1, 4)` and attempts
 `map(int, row[0])`. A detected line therefore raises `TypeError` before the
 finance-document route or trace can be produced. Original report and correction:
-https://tokenjunkielabs.slack.com/archives/C0BS7AZ4BSL/p1789713796036359
+internal review channel `C0BS7AZ4BSL`, message `p1789713796036359`.
 
 This repair consumes that finding; it does not claim original discovery.
 The source baseline is PR #125 head
