@@ -2,6 +2,7 @@ name: external-surface-isolation
 
 on:
   pull_request:
+    types: [opened, edited, reopened, synchronize]
   issues:
     types: [opened, edited, reopened]
   issue_comment:
