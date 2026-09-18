@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import html
 import os
+import re
 from pathlib import Path
 import sys
 import stat
@@ -69,19 +70,34 @@ FORBIDDEN_MARKERS = (
 )
 
 
+ASCII_ESCAPE_RE = re.compile(r"\\\\(?:u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2}))")
+
+
+def _decode_source_ascii_escapes(value: str) -> str:
+    """Decode bounded source escapes that can hide ASCII URL/path markers."""
+
+    def replace(match: re.Match[str]) -> str:
+        digits = match.group(1) or match.group(2)
+        codepoint = int(digits, 16)
+        return chr(codepoint) if codepoint <= 0x7F else match.group(0)
+
+    return ASCII_ESCAPE_RE.sub(replace, value)
+
+
 def normalized_for_scan(text: str) -> str:
-    """Normalize bounded layers of ordinary URL/text obfuscation."""
+    """Normalize bounded layers of ordinary URL/text/source obfuscation."""
     value = text
     for _ in range(MAX_NORMALIZATION_PASSES):
         previous = value
         value = html.unescape(value)
         value = unquote(value)
+        value = _decode_source_ascii_escapes(value)
         value = unicodedata.normalize("NFKC", value)
         value = "".join(ch for ch in value if unicodedata.category(ch) != "Cf")
         value = value.replace("\\", "/")
         if value == previous:
-            break
-    return value.casefold()
+            return value.casefold()
+    raise ScanError("normalization pass limit exceeded")
 
 
 def _fingerprint(info: os.stat_result) -> tuple[int, int, int, int]:
