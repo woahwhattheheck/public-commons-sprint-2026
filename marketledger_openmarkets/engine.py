@@ -106,6 +106,12 @@ def evaluate_snapshot(
             raise MarketLedgerError(f"positions[{index}].contest_id must be non-empty")
         contest_ids.add(contest_id)
 
+        market_key = position.get("market_key")
+        side_key = position.get("side_key")
+        if not isinstance(market_key, str) or not market_key:
+            raise MarketLedgerError(f"positions[{index}].market_key must be non-empty")
+        if not isinstance(side_key, str) or not side_key:
+            raise MarketLedgerError(f"positions[{index}].side_key must be non-empty")
         consensus = _decimal(position.get("consensus_price"), f"positions[{index}].consensus_price", minimum=Decimal("0"), maximum=Decimal("1"))
         quotes = position.get("quotes")
         if not isinstance(quotes, list) or not quotes:
@@ -126,6 +132,9 @@ def evaluate_snapshot(
             price = _decimal(quote.get("price"), f"quote[{partner_id}].price", minimum=Decimal("0"), maximum=Decimal("1"))
             available = _decimal(quote.get("available_usd"), f"quote[{partner_id}].available_usd", minimum=Decimal("0"))
             fee_bps = _decimal(quote.get("fee_bps", 0), f"quote[{partner_id}].fee_bps", minimum=Decimal("0"), maximum=Decimal("10000"))
+            liquidity_hash = quote.get("liquidity_hash")
+            if not isinstance(liquidity_hash, str) or not liquidity_hash:
+                raise MarketLedgerError(f"quote[{partner_id}].liquidity_hash must be non-empty")
             adjusted = price * (Decimal("1") + fee_bps / Decimal("10000"))
             rendered_quote = {
                 "partner_id": partner_id,
@@ -134,6 +143,7 @@ def evaluate_snapshot(
                 "fee_bps": _q(fee_bps, "0.01"),
                 "fee_adjusted_price": _q(adjusted),
                 "available_usd": _q(available, "0.01"),
+                "liquidity_hash": liquidity_hash,
                 "eligible": available >= min_liq,
             }
             qout.append(rendered_quote)
@@ -146,8 +156,8 @@ def evaluate_snapshot(
             "position_hash": position_hash,
             "contest_id": contest_id,
             "title": str(position.get("title") or ""),
-            "market_key": str(position.get("market_key") or ""),
-            "side_key": str(position.get("side_key") or ""),
+            "market_key": market_key,
+            "side_key": side_key,
             "participant_id": position.get("participant_id"),
             "consensus_price": _q(consensus),
             "quotes": qout,
@@ -229,7 +239,7 @@ def compare_reports(previous: Mapping[str, Any], current: Mapping[str, Any], *, 
 
 
 def stage_action(report: Mapping[str, Any], *, position_hash: str, partner_id: str, confirmation_token: str) -> dict[str, Any]:
-    """Create a data-only staged action. There is intentionally no execute function."""
+    """Create a data-only confirmation-gated stage. There is intentionally no execute function."""
     _verify_report(report)
     if not isinstance(confirmation_token, str) or len(confirmation_token.strip()) < 8:
         raise MarketLedgerError("confirmation_token must contain at least 8 characters")
@@ -246,7 +256,7 @@ def stage_action(report: Mapping[str, Any], *, position_hash: str, partner_id: s
     token_hash = hashlib.sha256(confirmation_token.encode("utf-8")).hexdigest()
     staged = {
         "schema": STAGE_SCHEMA,
-        "authority": "data_only_human_confirmed_stage",
+        "authority": "data_only_confirmation_token_stage",
         "provider_mutation_allowed": False,
         "report_sha256": report.get("report_sha256"),
         "position_hash": position_hash,
