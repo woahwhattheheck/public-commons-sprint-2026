@@ -8,7 +8,7 @@ Before any Agenthon Development upload:
 - [ ] Confirm the registered Agenthon team and captain; keep Team Key private.
 - [ ] Confirm the current CodaBench Track 4 Development page is accepting submissions.
 - [ ] Run organizer-published schema validation and Track 4 smoke tooling on the exact image.
-- [ ] Run public-unit raithfulness checks without using resolved/private outcomes.
+- [ ] Run public-unit faithfulness checks without using resolved/private outcomes.
 - [ ] Pin the exact container image digest; no floating tag.
 - [ ] Use the current valid submission category (current Track 4 docs: `api`).
 - [ ] Declare the organizer-required House model/version/cutoff exactly as published.
