@@ -36,6 +36,144 @@ class CommercialPilotTests(unittest.TestCase):
         self.assertTrue(verify_pilot_packet(a))
         self.assertEqual(a["case_study_state"], "SYNTHETIC_ONLY")
         self.assertEqual(a["commercial_claims"]["revenue_received"], False)
+        self.assertFalse(a["source_truth"]["source_test_demo_ready"])
+        self.assertEqual(a["source_generation"]["state"], "NOT_ATTESTED_BY_COMMERCIAL_PACKET")
+        self.assertIsNone(a["source_generation"]["commit"])
+        self.assertIsNone(a["source_generation"]["manifest_sha256"])
+        self.assertIsNone(a["source_generation"]["test_execution_receipt"])
+
+
+    def test_resealed_positive_source_readiness_fails(self):
+        from proofline.codec import digest_json
+        packet = build_pilot_packet(copy.deepcopy(SAMPLE))
+        packet["source_truth"]["source_test_demo_ready"] = True
+        packet["source_generation"] = {
+            "state": "ATTESTED",
+            "commit": "6b660f8907fb18323976bc1deaafa9ba849d33d7",
+            "manifest_sha256": "0" * 64,
+            "test_execution_receipt": "caller-authored",
+        }
+        packet.pop("receipt_sha256")
+        packet["receipt_sha256"] = digest_json(packet)
+        self.assertFalse(verify_pilot_packet(packet))
+
+    def test_old_v1_generation_cannot_verify_even_when_resealed(self):
+        from proofline.codec import digest_json
+        packet = build_pilot_packet(copy.deepcopy(SAMPLE))
+        packet["schema"] = "proofline.commercial-pilot.v1"
+        packet["generation"] = "commercial-pilot-2026-09-16"
+        packet["source_base_commit"] = "6b660f8907fb18323976bc1deaafa9ba849d33d7"
+        packet.pop("source_generation")
+        packet["source_truth"]["source_test_demo_ready"] = True
+        packet.pop("receipt_sha256")
+        packet["receipt_sha256"] = digest_json(packet)
+        self.assertFalse(verify_pilot_packet(packet))
+
+    def test_source_reference_cannot_promote_readiness(self):
+        from proofline.codec import digest_json
+        packet = build_pilot_packet(copy.deepcopy(SAMPLE))
+        packet["source_evidence"][0]["truth"] = "SOURCE_AND_TEST_READINESS_ONLY"
+        packet["source_truth"]["source_test_demo_ready"] = True
+        packet.pop("receipt_sha256")
+        packet["receipt_sha256"] = digest_json(packet)
+        self.assertFalse(verify_pilot_packet(packet))
+
+
+    def test_resealed_packet_mutation_cannot_redefine_verifier_policy(self):
+        from proofline.codec import digest_json
+        packet = build_pilot_packet(copy.deepcopy(SAMPLE))
+        packet["authority"]["claim_revenue"] = True
+        packet["commercial_claims"]["revenue_received"] = True
+        packet["source_evidence"][0]["truth"] = "CALLER_PROMOTED"
+        packet["acceptance_criteria"][0]["proof"] = "caller says pass"
+        packet.pop("receipt_sha256")
+        packet["receipt_sha256"] = digest_json(packet)
+        self.assertFalse(verify_pilot_packet(packet))
+
+        clean = build_pilot_packet(copy.deepcopy(SAMPLE))
+        self.assertTrue(verify_pilot_packet(clean))
+        self.assertFalse(clean["authority"]["claim_revenue"])
+        self.assertFalse(clean["commercial_claims"]["revenue_received"])
+        self.assertEqual(
+            clean["source_evidence"][0]["truth"],
+            "SOURCE_REFERENCE_NOT_READINESS_ATTESTATION",
+        )
+
+    def test_post_import_policy_root_rebinding_cannot_promote_packet(self):
+        import proofline.commercial as commercial
+        from proofline.codec import digest_json
+
+        clean = commercial.build_pilot_packet(copy.deepcopy(SAMPLE))
+
+        def reseal(packet):
+            candidate = copy.deepcopy(packet)
+            candidate.pop("receipt_sha256", None)
+            candidate["receipt_sha256"] = digest_json(candidate)
+            return candidate
+
+        variants = []
+        candidate = copy.deepcopy(clean)
+        candidate["source_generation"]["state"] = "ATTESTED"
+        variants.append(reseal(candidate))
+        candidate = copy.deepcopy(clean)
+        candidate["authority"]["claim_revenue"] = True
+        variants.append(reseal(candidate))
+        candidate = copy.deepcopy(clean)
+        candidate["commercial_claims"]["revenue_received"] = True
+        variants.append(reseal(candidate))
+        candidate = copy.deepcopy(clean)
+        candidate["source_evidence"][0]["truth"] = "CALLER_PROMOTED"
+        variants.append(reseal(candidate))
+        candidate = copy.deepcopy(clean)
+        candidate["acceptance_criteria"][0]["proof"] = "caller says pass"
+        variants.append(reseal(candidate))
+        candidate = copy.deepcopy(clean)
+        candidate["pilot"]["buyer_label"] = ""
+        variants.append(reseal(candidate))
+        candidate = copy.deepcopy(clean)
+        candidate["roi_scenario"]["modeled_cost_delta_minor_per_year"] += 1
+        variants.append(reseal(candidate))
+        candidate = copy.deepcopy(clean)
+        candidate["receipt_sha256"] = "0" * 64
+        variants.append(candidate)
+
+        names = [
+            "_false_authority", "_false_outcomes", "_source_evidence", "_acceptance_criteria",
+            "_normalize_intake", "_roi_scenario", "_int", "_text", "_minor_cost",
+            "_packet_for_validation", "SOURCE_READINESS_STATE", "ASSUMPTION_SOURCE",
+            "PRICE_STATES", "DATA_CLASSES", "SCHEMA", "GENERATION", "digest_json",
+        ]
+        saved = {name: getattr(commercial, name) for name in names}
+        try:
+            commercial._false_authority = lambda: copy.deepcopy(variants[1]["authority"])
+            commercial._false_outcomes = lambda: copy.deepcopy(variants[2]["commercial_claims"])
+            commercial._source_evidence = lambda: copy.deepcopy(variants[3]["source_evidence"])
+            commercial._acceptance_criteria = lambda: copy.deepcopy(variants[4]["acceptance_criteria"])
+            commercial._normalize_intake = lambda _: copy.deepcopy(variants[5]["pilot"])
+            commercial._roi_scenario = lambda _: copy.deepcopy(variants[6]["roi_scenario"])
+            commercial._int = lambda value, *args, **kwargs: value
+            commercial._text = lambda value, *args, **kwargs: value
+            commercial._minor_cost = lambda *args, **kwargs: 0
+            commercial._packet_for_validation = lambda body: copy.deepcopy(body["pilot"])
+            commercial.SOURCE_READINESS_STATE = "ATTESTED"
+            commercial.ASSUMPTION_SOURCE = "ATTACKER"
+            commercial.PRICE_STATES = {"ACCEPTED"}
+            commercial.DATA_CLASSES = {"SECRET"}
+            commercial.SCHEMA = "attacker.schema"
+            commercial.GENERATION = "attacker-generation"
+            commercial.digest_json = lambda _: "0" * 64
+
+            self.assertTrue(commercial.verify_pilot_packet(clean))
+            for index, variant in enumerate(variants):
+                with self.subTest(index=index):
+                    self.assertFalse(commercial.verify_pilot_packet(variant))
+            with self.assertRaises(commercial.CommercialError):
+                commercial.build_pilot_packet(copy.deepcopy(SAMPLE))
+        finally:
+            for name, value in saved.items():
+                setattr(commercial, name, value)
+
+        self.assertTrue(commercial.verify_pilot_packet(clean))
 
     def test_roi_is_scenario_only(self):
         packet = build_pilot_packet(copy.deepcopy(SAMPLE))
