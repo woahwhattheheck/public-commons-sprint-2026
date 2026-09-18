@@ -13,6 +13,7 @@ separately source-bound and reviewed successor.
 """
 from __future__ import annotations
 
+import gc
 import math
 import signal
 import sys
@@ -239,6 +240,9 @@ def _canonical_verified_artifact(
     name: str,
     max_canonical_bytes: int,
     _string_size=_json_string_canonical_size,
+    _gc_isenabled=gc.isenabled,
+    _gc_disable=gc.disable,
+    _gc_enable=gc.enable,
     _get_switch_interval=sys.getswitchinterval,
     _set_switch_interval=sys.setswitchinterval,
     _get_trace=sys.gettrace,
@@ -266,9 +270,10 @@ def _canonical_verified_artifact(
     does two jobs in the same bounded pass: it charges the candidate's exact
     canonical JSON work and deep-copies every admitted exact built-in container
     into verifier-owned plain JSON. The deep-copy pass runs inside a bounded
-    cooperative-runtime snapshot fence: ordinary Python thread switching is
-    deferred, current-thread trace/profile callbacks are suspended, and
-    blockable signals are masked where the runtime exposes pthread_sigmask.
+    cooperative-runtime snapshot fence: automatic cyclic GC is disabled,
+    ordinary Python thread switching is deferred, current-thread trace/profile
+    callbacks are suspended, and blockable signals are masked where the runtime
+    exposes pthread_sigmask.
     The pass performs no I/O and invokes only exact-built-in operations plus
     callables captured when this function was defined. Runtime state is always
     restored in a finally block. The later serializer therefore sees only one
@@ -278,6 +283,7 @@ def _canonical_verified_artifact(
     if type(max_canonical_bytes) is not int or max_canonical_bytes < 0:
         raise RepoAtlasError(f"verify:{name}_too_complex")
 
+    gc_was_enabled = _gc_isenabled()
     previous_interval = _get_switch_interval()
     previous_trace = _get_trace()
     previous_profile = _get_profile()
@@ -288,6 +294,8 @@ def _canonical_verified_artifact(
         # performs no blocking I/O. Keep ordinary Python mutation sources out
         # of that short window so nested siblings are copied from one coherent
         # caller generation rather than from independently timed snapshots.
+        if gc_was_enabled:
+            _gc_disable()
         _set_switch_interval(max(previous_interval, 3600.0))
         _set_trace(None)
         _set_profile(None)
@@ -405,6 +413,8 @@ def _canonical_verified_artifact(
         _set_profile(previous_profile)
         _set_trace(previous_trace)
         _set_switch_interval(previous_interval)
+        if gc_was_enabled:
+            _gc_enable()
 
     frozen = root[0]
     try:
