@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from types import FunctionType
 from typing import Any
 
 from .codec import canonical_json, digest_json, loads_strict
@@ -244,70 +245,115 @@ def build_pilot_packet(intake: dict[str, Any]) -> dict[str, Any]:
         raise CommercialError("internal packet verification failed")
     return packet
 
-def verify_pilot_packet(packet: dict[str, Any]) -> bool:
-    try:
-        if not isinstance(packet, dict) or packet.get("schema") != SCHEMA:
-            return False
-        if packet.get("generation") != GENERATION:
-            return False
-        receipt = packet.get("receipt_sha256")
-        if not isinstance(receipt, str) or len(receipt) != 64:
-            return False
-        body = dict(packet)
-        body.pop("receipt_sha256", None)
-        if digest_json(body) != receipt:
-            return False
-
-        source_truth = body.get("source_truth")
-        if body.get("source_generation") != {
-            "state": SOURCE_READINESS_STATE,
-            "commit": None,
-            "manifest_sha256": None,
-            "test_execution_receipt": None,
-        }:
-            return False
-        if source_truth != {
-            "source_test_demo_ready": False,
-            "live_aws_deployed": False,
-            "competition_submitted": False,
-            "customer_validated": False,
-        }:
-            return False
-        if body.get("authority") != _false_authority():
-            return False
-        if body.get("commercial_claims") != _false_outcomes():
-            return False
-        if body.get("source_evidence") != _source_evidence():
-            return False
-        if body.get("acceptance_criteria") != _acceptance_criteria():
-            return False
-
-        if not isinstance(body.get("pilot"), dict):
-            return False
-        if body["pilot"].get("price", {}).get("payment_link") is not None:
-            return False
-        pilot = _normalize_intake(_packet_for_validation(body))
-        if body["pilot"] != pilot:
-            return False
-
-        expected_roi = _roi_scenario(pilot["assumptions"])
-        if body.get("roi_scenario") != expected_roi:
-            return False
-        if expected_roi["observed_savings_minor"] is not None:
-            return False
-
-        expected_case = "SYNTHETIC_ONLY" if pilot["buyer_is_synthetic"] else "BUYER_INPUT_PACKET_NOT_CUSTOMER_RESULT"
-        if body.get("case_study_state") != expected_case:
-            return False
-        return True
-    except (CommercialError, TypeError, ValueError, UnicodeError):
-        return False
-
 def _packet_for_validation(packet: dict[str, Any]) -> dict[str, Any]:
     # Internal adapter used to revalidate normalized pilot input without weakening the public schema.
     pilot = json.loads(json.dumps(packet["pilot"]))
     pilot["price"].pop("payment_link", None)
     return pilot
+
+def _make_verifier_generation():
+    frozen_globals: dict[str, Any] = {
+        "__builtins__": __builtins__,
+        "json": json,
+        "CommercialError": CommercialError,
+        "ASSUMPTION_SOURCE": ASSUMPTION_SOURCE,
+        "PRICE_STATES": frozenset(PRICE_STATES),
+        "DATA_CLASSES": frozenset(DATA_CLASSES),
+    }
+
+    def clone(fn):
+        cloned = FunctionType(
+            fn.__code__,
+            frozen_globals,
+            name=fn.__name__,
+            argdefs=fn.__defaults__,
+            closure=fn.__closure__,
+        )
+        if fn.__kwdefaults__:
+            cloned.__kwdefaults__ = dict(fn.__kwdefaults__)
+        frozen_globals[fn.__name__] = cloned
+        return cloned
+
+    for fn in (_int, _text, _minor_cost, _normalize_intake, _roi_scenario, _packet_for_validation):
+        clone(fn)
+
+    normalize = frozen_globals["_normalize_intake"]
+    roi = frozen_globals["_roi_scenario"]
+    packet_for_validation = frozen_globals["_packet_for_validation"]
+    digest = digest_json
+    expected_authority = _false_authority()
+    expected_outcomes = _false_outcomes()
+    expected_source_evidence = _source_evidence()
+    expected_acceptance = _acceptance_criteria()
+    schema = SCHEMA
+    generation = GENERATION
+    source_readiness_state = SOURCE_READINESS_STATE
+    source_truth_expected = {
+        "source_test_demo_ready": False,
+        "live_aws_deployed": False,
+        "competition_submitted": False,
+        "customer_validated": False,
+    }
+
+    def frozen_verify(packet: dict[str, Any]) -> bool:
+        try:
+            if not isinstance(packet, dict) or packet.get("schema") != schema:
+                return False
+            if packet.get("generation") != generation:
+                return False
+            receipt = packet.get("receipt_sha256")
+            if not isinstance(receipt, str) or len(receipt) != 64:
+                return False
+            body = dict(packet)
+            body.pop("receipt_sha256", None)
+            if digest(body) != receipt:
+                return False
+            if body.get("source_generation") != {
+                "state": source_readiness_state,
+                "commit": None,
+                "manifest_sha256": None,
+                "test_execution_receipt": None,
+            }:
+                return False
+            if body.get("source_truth") != source_truth_expected:
+                return False
+            if body.get("authority") != expected_authority:
+                return False
+            if body.get("commercial_claims") != expected_outcomes:
+                return False
+            if body.get("source_evidence") != expected_source_evidence:
+                return False
+            if body.get("acceptance_criteria") != expected_acceptance:
+                return False
+            if not isinstance(body.get("pilot"), dict):
+                return False
+            if body["pilot"].get("price", {}).get("payment_link") is not None:
+                return False
+            pilot = normalize(packet_for_validation(body))
+            if body["pilot"] != pilot:
+                return False
+            expected_roi = roi(pilot["assumptions"])
+            if body.get("roi_scenario") != expected_roi:
+                return False
+            if expected_roi["observed_savings_minor"] is not None:
+                return False
+            expected_case = (
+                "SYNTHETIC_ONLY"
+                if pilot["buyer_is_synthetic"]
+                else "BUYER_INPUT_PACKET_NOT_CUSTOMER_RESULT"
+            )
+            if body.get("case_study_state") != expected_case:
+                return False
+            return True
+        except (CommercialError, TypeError, ValueError, UnicodeError):
+            return False
+
+    return frozen_verify
+
+
+verify_pilot_packet = _make_verifier_generation()
+del _make_verifier_generation
+
 
 def write_packet(intake_path: Path, output_path: Path) -> dict[str, Any]:
     raw = intake_path.read_bytes()
