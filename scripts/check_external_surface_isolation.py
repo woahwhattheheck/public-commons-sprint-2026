@@ -30,10 +30,12 @@ TEXT_SUFFIXES = frozenset(
         ".py",
         ".sh",
         ".sql",
+        ".svg",
         ".toml",
         ".ts",
         ".tsx",
         ".txt",
+        ".xml",
         ".yaml",
         ".yml",
     }
@@ -67,6 +69,7 @@ FORBIDDEN_MARKERS = (
     ("commons-repository", "woahwhattheheck" + "/commons"),
     ("commons-pages", "woahwhattheheck.github.io" + "/commons"),
     ("legacy-commons-mcp", "commons-spark-mcp" + ".vercel.app"),
+    ("internal-slack-archive", "tokenjunkielabs.slack.com" + "/archives/"),
 )
 
 
@@ -162,8 +165,20 @@ def _read_public_text(path: Path) -> str:
 
 def iter_text_files(root: Path):
     for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
-        dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
         base = Path(dirpath)
+        retained_dirs: list[str] = []
+        for dirname in sorted(dirnames):
+            if dirname in SKIP_DIRS:
+                continue
+            directory = base / dirname
+            try:
+                info = directory.lstat()
+            except OSError as exc:
+                raise ScanError(f"cannot stat public directory: {directory}") from exc
+            if stat.S_ISLNK(info.st_mode):
+                raise ScanError(f"symlinked public directory: {directory}")
+            retained_dirs.append(dirname)
+        dirnames[:] = retained_dirs
         for filename in sorted(filenames):
             path = base / filename
             if (
