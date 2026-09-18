@@ -364,6 +364,28 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         self.assertEqual(summary[summary_key], original_summary_value)
         self.assertEqual(authority["auto_merge"], 0)
 
+    def test_serializer_rebinding_does_not_change_verifier_identity(self):
+        raw = fixture()
+        packet, receipt = compile_packet(raw)
+        changed_packet = copy.deepcopy(packet)
+        changed_packet["authority"]["auto_merge"] = 0
+        changed_receipt = copy.deepcopy(receipt)
+        changed_receipt["authority_external_action"] = 0
+        canonical = core._source._canonical
+
+        def alternate(value):
+            if type(value) is dict and (
+                "packet_sha256" in value or "receipt_sha256" in value
+            ):
+                return b"alternate"
+            return canonical(value)
+
+        with mock.patch.object(core._source, "_canonical", side_effect=alternate):
+            with self.assertRaisesRegex(RepoAtlasError, "verify:packet_mismatch"):
+                verify_bundle(raw, changed_packet, receipt)
+            with self.assertRaisesRegex(RepoAtlasError, "verify:receipt_mismatch"):
+                verify_bundle(raw, packet, changed_receipt)
+
     def test_mutation_after_bounded_freeze_cannot_change_serialized_generation(self):
         raw = fixture()
         packet, _ = compile_packet(raw)
@@ -391,16 +413,12 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         worker = threading.Thread(target=mutate_caller_generation)
         worker.start()
         try:
-            with mock.patch.object(
-                core._source,
-                "_canonical",
-                side_effect=serialize_after_mutation,
-            ):
-                actual = core._canonical_verified_artifact(
-                    candidate,
-                    "packet",
-                    len(expected),
-                )
+            actual = core._canonical_verified_artifact(
+            candidate,
+            "packet",
+            len(expected),
+            _canonical=serialize_after_mutation,
+        )
         finally:
             worker.join(5)
 
