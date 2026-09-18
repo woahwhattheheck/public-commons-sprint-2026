@@ -13,3 +13,5 @@ PYTHONPATH=. python -m circularvalue.cli verify /tmp/circularvalue-demo/case.jso
 ```
 
 The demo uses synthetic data. Each scenario input is bound to retained evidence hashes, explicit confidence labels, deterministic replay and bounded uncertainty.
+
+Filesystem boundary: CLI inputs must be bounded regular non-symlink files. Generated outputs are **create-only**: `compile --out` and the demo's `case.json`/`packet.json` refuse pre-existing paths (including symlinks) rather than overwrite them. Use a fresh output file/directory for each run.
