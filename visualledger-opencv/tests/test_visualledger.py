@@ -30,6 +30,24 @@ def event(version: str = "v1", key: str = "entity-a/invoice.png") -> dict:
     }
 
 
+AUTH_KEY = b"visualledger-test-record-auth-key-v2!!"
+
+
+def _handle_s3_event_test(*args, **kwargs):
+    kwargs["record_auth_key"] = AUTH_KEY
+    return handle_s3_event(*args, **kwargs)
+
+
+def _validate_record_test(*args, **kwargs):
+    kwargs["record_auth_key"] = AUTH_KEY
+    return validate_record_generation(*args, **kwargs)
+
+
+def _prior_records_test(*args, **kwargs):
+    kwargs["record_auth_key"] = AUTH_KEY
+    return prior_fingerprints_from_records(*args, **kwargs)
+
+
 class VisionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -190,7 +208,7 @@ class AwsAdapterTests(unittest.TestCase):
 
     def fresh_record(self, ev=None):
         store = {}
-        out = handle_s3_event(
+        out = _handle_s3_event_test(
             ev or event(), load_object=lambda *a: self.raw, read_record=lambda scope,k: None,
             write_record=lambda scope,k,v: store.setdefault((scope,k),v), load_prior_fingerprints=lambda scope: [],
             allow_opencv4_dev=True,
@@ -199,7 +217,9 @@ class AwsAdapterTests(unittest.TestCase):
 
     @staticmethod
     def rehash_record(record):
-        body = dict(record); body.pop("record_sha256", None)
+        body = dict(record)
+        body.pop("record_hmac_sha256", None)
+        body.pop("record_sha256", None)
         record["record_sha256"] = hashlib.sha256(canonical(body)).hexdigest()
 
     @classmethod
@@ -231,8 +251,8 @@ class AwsAdapterTests(unittest.TestCase):
         def read(scope, k): return store.get((scope, k))
         def write(scope, k, v): calls["write"] += 1; store[(scope, k)] = v
         def priors(scope): calls["prior"] += 1; return []
-        first = handle_s3_event(event(), load_object=load, read_record=read, write_record=write, load_prior_fingerprints=priors, allow_opencv4_dev=True)
-        second = handle_s3_event(event(), load_object=load, read_record=read, write_record=write, load_prior_fingerprints=priors, allow_opencv4_dev=True)
+        first = _handle_s3_event_test(event(), load_object=load, read_record=read, write_record=write, load_prior_fingerprints=priors, allow_opencv4_dev=True)
+        second = _handle_s3_event_test(event(), load_object=load, read_record=read, write_record=write, load_prior_fingerprints=priors, allow_opencv4_dev=True)
         self.assertEqual(first["status"], "RECORDED")
         self.assertEqual(second["status"], "IDEMPOTENT_REPLAY")
         self.assertEqual(calls, {"load": 1, "write": 1, "prior": 1})
@@ -242,7 +262,7 @@ class AwsAdapterTests(unittest.TestCase):
         base = compile_trace(self.raw, evidence_id="BASE", allow_opencv4_dev=True)
         prior = [{"evidence_id": "BASE", "fingerprint": base["perception"]["fingerprint_dhash64"]}]
         store = {}
-        out = handle_s3_event(
+        out = _handle_s3_event_test(
             event(), load_object=lambda b,k,v: self.raw, read_record=lambda scope,k: None,
             write_record=lambda scope,k,v: store.setdefault((scope,k),v), load_prior_fingerprints=lambda scope: prior,
             allow_opencv4_dev=True,
@@ -252,7 +272,7 @@ class AwsAdapterTests(unittest.TestCase):
 
     def test_handler_rejects_malformed_existing_record(self):
         with self.assertRaises(VisionError):
-            handle_s3_event(
+            _handle_s3_event_test(
                 event(), load_object=lambda *a: self.raw,
                 read_record=lambda scope,k: {"event_id": "wrong"}, write_record=lambda *a: None,
                 load_prior_fingerprints=lambda s: [], allow_opencv4_dev=True,
@@ -264,55 +284,55 @@ class AwsAdapterTests(unittest.TestCase):
             "evidence_id": record["event_id"][:32],
             "fingerprint": record["trace"]["perception"]["fingerprint_dhash64"],
         }]
-        self.assertEqual(prior_fingerprints_from_records([record], scope="entity-a"), expected)
+        self.assertEqual(_prior_records_test([record], scope="entity-a"), expected)
         bad = copy.deepcopy(record); bad["trace"]["perception"]["fingerprint_dhash64"] = "NOPE"
         self.rehash_record(bad)
-        with self.assertRaises(VisionError): prior_fingerprints_from_records([bad], scope="entity-a")
-        with self.assertRaises(VisionError): prior_fingerprints_from_records([record, copy.deepcopy(record)], scope="entity-a")
-        with self.assertRaises(VisionError): prior_fingerprints_from_records([record, record], scope="entity-a", maximum=1)
+        with self.assertRaises(VisionError): _prior_records_test([bad], scope="entity-a")
+        with self.assertRaises(VisionError): _prior_records_test([record, copy.deepcopy(record)], scope="entity-a")
+        with self.assertRaises(VisionError): _prior_records_test([record, record], scope="entity-a", maximum=1)
 
     def test_retained_generation_wrong_pipeline_fails_closed_even_if_rehashed(self):
         record = copy.deepcopy(self.fresh_record())
         record["pipeline_generation"] = PIPELINE_GENERATION + "-stale"
         self.rehash_record(record)
         with self.assertRaises(VisionError):
-            validate_record_generation(record, expected_scope="entity-a")
+            _validate_record_test(record, expected_scope="entity-a")
         with self.assertRaises(VisionError):
-            prior_fingerprints_from_records([record], scope="entity-a")
+            _prior_records_test([record], scope="entity-a")
 
     def test_retained_generation_wrong_scope_fails_closed_even_if_rehashed(self):
         record = copy.deepcopy(self.fresh_record())
         record["scope"] = "entity-b"
         self.rehash_record(record)
         with self.assertRaises(VisionError):
-            validate_record_generation(record, expected_scope="entity-a")
+            _validate_record_test(record, expected_scope="entity-a")
 
     def test_retained_generation_wrong_source_fails_closed_even_if_rehashed(self):
         record = copy.deepcopy(self.fresh_record())
         record["source"]["version_id"] = "v2"
         self.rehash_record(record)
         with self.assertRaises(VisionError):
-            validate_record_generation(record, expected_scope="entity-a")
+            _validate_record_test(record, expected_scope="entity-a")
 
     def test_retained_generation_wrong_record_hash_fails_closed(self):
         record = copy.deepcopy(self.fresh_record())
         record["record_sha256"] = "0" * 64
         with self.assertRaises(VisionError):
-            validate_record_generation(record, expected_scope="entity-a")
+            _validate_record_test(record, expected_scope="entity-a")
 
     def test_retained_trace_receipt_tamper_fails_closed(self):
         record = copy.deepcopy(self.fresh_record())
         record["trace"]["decision"]["action"] = "AUTO_APPROVE"
         self.rehash_record(record)
         with self.assertRaises(VisionError):
-            validate_record_generation(record, expected_scope="entity-a")
+            _validate_record_test(record, expected_scope="entity-a")
 
     def test_retained_trace_evidence_rebind_fails_closed_even_if_rehashed(self):
         record = copy.deepcopy(self.fresh_record())
         record["trace"]["evidence_id"] = "a" * 32
         self.rehash_trace(record)
         with self.assertRaises(VisionError):
-            validate_record_generation(record, expected_scope="entity-a")
+            _validate_record_test(record, expected_scope="entity-a")
 
     def test_mixed_generation_prior_records_fail_closed(self):
         current = self.fresh_record()
@@ -320,22 +340,38 @@ class AwsAdapterTests(unittest.TestCase):
         stale["pipeline_generation"] = "visualledger-opencv/old"
         self.rehash_record(stale)
         with self.assertRaises(VisionError):
-            prior_fingerprints_from_records([current, stale], scope="entity-a")
+            _prior_records_test([current, stale], scope="entity-a")
 
     def test_tampered_idempotent_replay_same_event_id_fails_before_reload(self):
         record = copy.deepcopy(self.fresh_record())
-        record["trace"]["perception"]["fingerprint_dhash64"] = "0" * 16
-        self.rehash_record(record)
+        original = record["trace"]["perception"]["fingerprint_dhash64"]
+        record["trace"]["perception"]["fingerprint_dhash64"] = f"{int(original, 16) ^ 1:016x}"
+        self.rehash_trace(record)
         calls = {"load": 0, "write": 0, "prior": 0}
         def load(*args): calls["load"] += 1; return self.raw
         def write(*args): calls["write"] += 1
         def priors(*args): calls["prior"] += 1; return []
         with self.assertRaises(VisionError):
-            handle_s3_event(
+            _handle_s3_event_test(
                 event(), load_object=load, read_record=lambda scope,k: record, write_record=write,
                 load_prior_fingerprints=priors, allow_opencv4_dev=True,
             )
         self.assertEqual(calls, {"load": 0, "write": 0, "prior": 0})
+
+    def test_reminted_prior_fingerprint_with_both_self_hashes_fails_authentication(self):
+        record = copy.deepcopy(self.fresh_record())
+        original = record["trace"]["perception"]["fingerprint_dhash64"]
+        record["trace"]["perception"]["fingerprint_dhash64"] = f"{int(original, 16) ^ 1:016x}"
+        self.rehash_trace(record)
+        self.assertNotEqual(record["record_hmac_sha256"], "0" * 64)
+        with self.assertRaises(VisionError):
+            _prior_records_test([record], scope="entity-a")
+
+    def test_record_authentication_key_is_required_and_bounded(self):
+        record = self.fresh_record()
+        for key in [b"", b"x" * 31, b"x" * 129]:
+            with self.subTest(length=len(key)), self.assertRaises(VisionError):
+                validate_record_generation(record, record_auth_key=key, expected_scope="entity-a")
 
     def test_source_remint_with_same_event_id_fails_even_if_inner_receipts_rehashed(self):
         record = copy.deepcopy(self.fresh_record())
@@ -345,14 +381,14 @@ class AwsAdapterTests(unittest.TestCase):
         self.assertEqual(record["event_id"], original_event_id)
         self.assertNotEqual(event_identity(record["source"]), original_event_id)
         with self.assertRaises(VisionError):
-            validate_record_generation(record, expected_scope="entity-a")
+            _validate_record_test(record, expected_scope="entity-a")
 
     def test_handler_passes_scope_to_primary_record_boundaries(self):
         calls = []
         store = {}
         def read(scope, event_id): calls.append(("read", scope, event_id)); return store.get((scope,event_id))
         def write(scope, event_id, record): calls.append(("write", scope, event_id)); store[(scope,event_id)] = record
-        out = handle_s3_event(
+        out = _handle_s3_event_test(
             event(key="ledger-42/invoice.png"), load_object=lambda *a: self.raw,
             read_record=read, write_record=write, load_prior_fingerprints=lambda scope: [],
             allow_opencv4_dev=True,
@@ -364,7 +400,7 @@ class AwsAdapterTests(unittest.TestCase):
     def test_aws_record_receipt_is_deterministic(self):
         def run():
             store = {}
-            return handle_s3_event(
+            return _handle_s3_event_test(
                 event(), load_object=lambda *a: self.raw, read_record=lambda scope,k: None,
                 write_record=lambda scope,k,v: store.setdefault((scope,k),v), load_prior_fingerprints=lambda s: [],
                 allow_opencv4_dev=True,
