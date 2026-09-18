@@ -8,91 +8,123 @@ from pathlib import Path
 from .core import CircularValueError, canonical_json, compile_case, loads_strict, verify_packet
 from .demo import synthetic_case
 
-MAX_INPUT_BYTES = 1_048_576
-_READ_CHUNK_BYTES = 65_536
+MAX_JSON_BYTES = 4 * 1024 * 1024
+_READ_CHUNK = 64 * 1024
+
+
+def _same_identity(before: os.stat_result, after: os.stat_result) -> bool:
+    before_id = (getattr(before, "st_dev", None), getattr(before, "st_ino", None))
+    after_id = (getattr(after, "st_dev", None), getattr(after, "st_ino", None))
+    if None in before_id or None in after_id:
+        return True
+    return before_id == after_id
 
 
 def _read(path: str) -> dict:
     p = Path(path)
-    before = p.lstat()
-    if not stat.S_ISREG(before.st_mode):
+    try:
+        before = p.lstat()
+    except OSError as exc:
+        raise CircularValueError(f"cannot inspect input: {exc}") from exc
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
         raise CircularValueError("input must be a regular non-symlink file")
-    if before.st_size > MAX_INPUT_BYTES:
-        raise CircularValueError(f"input exceeds {MAX_INPUT_BYTES} bytes")
+    if before.st_size > MAX_JSON_BYTES:
+        raise CircularValueError(f"input exceeds {MAX_JSON_BYTES} byte limit")
 
     flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
-    fd = os.open(p, flags)
+    try:
+        fd = os.open(p, flags)
+    except OSError as exc:
+        raise CircularValueError(f"cannot open input safely: {exc}") from exc
     try:
         opened = os.fstat(fd)
         if not stat.S_ISREG(opened.st_mode):
             raise CircularValueError("input must remain a regular file")
-        if before.st_dev != opened.st_dev or before.st_ino != opened.st_ino:
-            raise CircularValueError("input changed during admission")
-        if opened.st_size > MAX_INPUT_BYTES:
-            raise CircularValueError(f"input exceeds {MAX_INPUT_BYTES} bytes")
-
+        if not _same_identity(before, opened):
+            raise CircularValueError("input changed while being opened")
+        if opened.st_size > MAX_JSON_BYTES:
+            raise CircularValueError(f"input exceeds {MAX_JSON_BYTES} byte limit")
         chunks: list[bytes] = []
-        remaining = MAX_INPUT_BYTES + 1
-        while remaining:
-            chunk = os.read(fd, min(_READ_CHUNK_BYTES, remaining))
+        total = 0
+        while True:
+            chunk = os.read(fd, min(_READ_CHUNK, MAX_JSON_BYTES + 1 - total))
             if not chunk:
                 break
             chunks.append(chunk)
-            remaining -= len(chunk)
-        raw = b"".join(chunks)
-        if len(raw) > MAX_INPUT_BYTES:
-            raise CircularValueError(f"input exceeds {MAX_INPUT_BYTES} bytes")
+            total += len(chunk)
+            if total > MAX_JSON_BYTES:
+                raise CircularValueError(f"input exceeds {MAX_JSON_BYTES} byte limit")
     finally:
         os.close(fd)
 
     try:
-        data = raw.decode("utf-8")
+        data = b"".join(chunks).decode("utf-8")
     except UnicodeDecodeError as exc:
-        raise CircularValueError("input must be valid UTF-8") from exc
+        raise CircularValueError("input must be UTF-8") from exc
     value = loads_strict(data)
     if type(value) is not dict:
         raise CircularValueError("top-level JSON must be object")
     return value
 
 
-def _require_absent_output(path: Path) -> None:
-    try:
-        path.lstat()
-    except FileNotFoundError:
-        return
-    raise CircularValueError(f"refusing existing output path: {path}")
+def _open_new(path: Path) -> int:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+    return os.open(path, flags, 0o600)
+
+
+def _write_fd(fd: int, text: str) -> None:
+    data = text.encode("utf-8")
+    view = memoryview(data)
+    while view:
+        written = os.write(fd, view)
+        if written <= 0:
+            raise OSError("short write")
+        view = view[written:]
 
 
 def _write_new(path: Path, text: str) -> None:
-    data = text.encode("utf-8")
-    flags = (
-        os.O_WRONLY
-        | os.O_CREAT
-        | os.O_EXCL
-        | getattr(os, "O_BINARY", 0)
-        | getattr(os, "O_NOFOLLOW", 0)
-    )
-    fd = os.open(path, flags, 0o600)
+    fd = _open_new(path)
     try:
-        offset = 0
-        while offset < len(data):
-            written = os.write(fd, data[offset:])
-            if written <= 0:
-                raise OSError("short output write")
-            offset += written
+        _write_fd(fd, text)
     finally:
         os.close(fd)
 
 
-def _prepare_output_dir(path: Path) -> Path:
+def _prepare_demo_dir(path: Path) -> None:
     try:
-        current = path.lstat()
+        existing = path.lstat()
     except FileNotFoundError:
         path.mkdir(parents=True, exist_ok=False)
-        current = path.lstat()
-    if not stat.S_ISDIR(current.st_mode):
-        raise CircularValueError("demo output directory must be a real directory, not a symlink or special file")
-    return path
+        existing = path.lstat()
+    if stat.S_ISLNK(existing.st_mode) or not stat.S_ISDIR(existing.st_mode):
+        raise CircularValueError("demo output directory must be a real directory, not a symlink")
+
+
+def _write_demo_pair(out: Path, case_text: str, packet_text: str) -> tuple[Path, Path]:
+    case_path = out / "case.json"
+    packet_path = out / "packet.json"
+    case_fd: int | None = None
+    packet_fd: int | None = None
+    try:
+        case_fd = _open_new(case_path)
+        try:
+            packet_fd = _open_new(packet_path)
+        except Exception:
+            os.close(case_fd)
+            case_fd = None
+            try:
+                case_path.unlink()
+            except OSError:
+                pass
+            raise
+        _write_fd(case_fd, case_text)
+        _write_fd(packet_fd, packet_text)
+    finally:
+        if case_fd is not None:
+            os.close(case_fd)
+        if packet_fd is not None:
+            os.close(packet_fd)
+    return case_path, packet_path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -111,9 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         if ns.cmd == "compile":
             case = _read(ns.case)
             packet = compile_case(case)
-            out = Path(ns.out)
-            _require_absent_output(out)
-            _write_new(out, canonical_json(packet) + "\n")
+            _write_new(Path(ns.out), canonical_json(packet) + "\n")
             print(packet["decisionSupportState"], packet["packetSha256"])
             return 0
         if ns.cmd == "verify":
@@ -122,15 +152,15 @@ def main(argv: list[str] | None = None) -> int:
             ok = verify_packet(case, packet)
             print("VALID" if ok else "INVALID")
             return 0 if ok else 2
-        out = _prepare_output_dir(Path(ns.out_dir))
+        out = Path(ns.out_dir)
+        _prepare_demo_dir(out)
         case = synthetic_case()
         packet = compile_case(case)
-        case_path = out / "case.json"
-        packet_path = out / "packet.json"
-        _require_absent_output(case_path)
-        _require_absent_output(packet_path)
-        _write_new(case_path, canonical_json(case) + "\n")
-        _write_new(packet_path, canonical_json(packet) + "\n")
+        case_path, packet_path = _write_demo_pair(
+            out,
+            canonical_json(case) + "\n",
+            canonical_json(packet) + "\n",
+        )
         print(case_path)
         print(packet_path)
         print(packet["decisionSupportState"], packet["packetSha256"])
