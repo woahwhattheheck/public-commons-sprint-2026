@@ -193,10 +193,14 @@ def scan_root(root: Path):
             continue
 
         for lineno, line in enumerate(text.splitlines(), 1):
-            candidate = normalized_for_scan(line)
+            rel = path.relative_to(root).as_posix()
+            try:
+                candidate = normalized_for_scan(line)
+            except ScanError as exc:
+                violations.append((rel, lineno, f"unscannable-public-line:{exc}"))
+                continue
             for label, marker in FORBIDDEN_MARKERS:
                 if marker.casefold() in candidate:
-                    rel = path.relative_to(root).as_posix()
                     violations.append((rel, lineno, label))
 
     return checked, violations
