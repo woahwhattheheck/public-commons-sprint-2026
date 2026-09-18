@@ -191,57 +191,70 @@ def _preflight_cardinality(raw: Any) -> None:
     _preflight_mapping(raw.get("provider"), "provider", 4)
 
 
-def _validate_source_input(raw: Any) -> dict[str, Any]:
-    # Establish source-generation custody before *any* policy/cardinality read.
-    # The same cooperative runtime fence used for supplied packet/receipt
-    # artifacts snapshots exact built-in JSON into canonical bytes; reparsing
-    # yields a detached graph. All later reads are from that one real caller
-    # generation, so preflight and semantic validation cannot be spliced.
+def _validate_source_input(
+    raw: Any,
+    _source_validate=_source._validate,
+    _gc_isenabled=gc.isenabled,
+    _gc_disable=gc.disable,
+    _gc_enable=gc.enable,
+    _get_switch_interval=sys.getswitchinterval,
+    _set_switch_interval=sys.setswitchinterval,
+    _get_trace=sys.gettrace,
+    _set_trace=sys.settrace,
+    _get_profile=sys.getprofile,
+    _set_profile=sys.setprofile,
+    _pthread_sigmask=getattr(signal, "pthread_sigmask", None),
+    _sig_block=getattr(signal, "SIG_BLOCK", None),
+    _sig_setmask=getattr(signal, "SIG_SETMASK", None),
+    _maskable_signals=frozenset(
+        sig for sig in signal.valid_signals()
+        if sig not in {getattr(signal, "SIGKILL", None), getattr(signal, "SIGSTOP", None)}
+    ),
+) -> dict[str, Any]:
+    """Validate exactly one caller-owned source generation under one runtime fence."""
+    gc_was_enabled = _gc_isenabled()
+    previous_interval = _get_switch_interval()
+    previous_trace = _get_trace()
+    previous_profile = _get_profile()
+    previous_mask = None
+    signal_masked = False
     try:
-        source_snapshot_bytes = _canonical_verified_artifact(
-            raw, "source", MAX_SOURCE_SNAPSHOT_BYTES
-        )
-        source_snapshot = _source.parse_json_bytes(source_snapshot_bytes)
-    except RepoAtlasError as exc:
-        if str(exc) == "verify:source_too_complex":
-            raise RepoAtlasError("input_too_large") from exc
-        if str(exc) == "verify:source_too_deep":
+        if gc_was_enabled:
+            _gc_disable()
+        _set_switch_interval(max(previous_interval, 3600.0))
+        _set_trace(None)
+        _set_profile(None)
+        if _pthread_sigmask is not None and _sig_block is not None and _sig_setmask is not None:
+            previous_mask = _pthread_sigmask(_sig_block, _maskable_signals)
+            signal_masked = True
+        _preflight_cardinality(raw)
+        try:
+            normalized = _source_validate(raw)
+        except UnicodeEncodeError as exc:
+            raise RepoAtlasError("invalid_unicode_scalar") from exc
+        except RecursionError as exc:
             raise RepoAtlasError("input_too_deep") from exc
-        if str(exc) == "verify:source_not_canonical_json":
-            raise RepoAtlasError("not_canonical_json") from exc
-        raise
-
-    _preflight_cardinality(source_snapshot)
-    try:
-        normalized = _source._validate(source_snapshot)
-    except UnicodeEncodeError as exc:
-        raise RepoAtlasError("invalid_unicode_scalar") from exc
-    except RecursionError as exc:
-        raise RepoAtlasError("input_too_deep") from exc
+    finally:
+        if signal_masked:
+            _pthread_sigmask(_sig_setmask, previous_mask)
+        _set_profile(previous_profile)
+        _set_trace(previous_trace)
+        _set_switch_interval(previous_interval)
+        if gc_was_enabled:
+            _gc_enable()
 
     if any(normalized["provider"].values()):
         raise RepoAtlasError("provider:external_evidence_requires_bound_successor")
 
-    # Bind the admitted file manifest to the change image it claims to
-    # describe. Added/modified paths carry the post-image; deleted paths carry
-    # the pre-image. Missing manifest rows remain analyzer findings, but a row
-    # that exists may not contradict the corresponding change digest.
     files_by_path = {row["path"]: row for row in normalized["files"]}
     for change in normalized["changes"]:
         manifest_row = files_by_path.get(change["path"])
         if manifest_row is None:
             continue
-        expected_sha = (
-            change["before_sha256"]
-            if change["change"] == "deleted"
-            else change["after_sha256"]
-        )
+        expected_sha = change["before_sha256"] if change["change"] == "deleted" else change["after_sha256"]
         if manifest_row["sha256"] != expected_sha:
-            raise RepoAtlasError(
-                f"changes:file_manifest_sha_mismatch:{change['path']}"
-            )
+            raise RepoAtlasError(f"changes:file_manifest_sha_mismatch:{change['path']}")
     return normalized
-
 
 def _json_string_canonical_size(value: str, name: str, remaining: int) -> int:
     """Return exact UTF-8 JSON string bytes without allocating encoded output."""
