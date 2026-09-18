@@ -4,79 +4,88 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from types import FunctionType
 from typing import Any
 
 from .codec import canonical_json, digest_json, loads_strict
 
-SCHEMA = "proofline.commercial-pilot.v1"
-GENERATION = "commercial-pilot-2026-09-16"
+SCHEMA = "proofline.commercial-pilot.v2"
+GENERATION = "commercial-pilot-2026-09-17-readiness-truth"
 ASSUMPTION_SOURCE = "BUYER_SUPPLIED_OR_OWNER_SCENARIO_INPUT"
 PRICE_STATES = {"PROPOSED_NOT_ACCEPTED", "OWNER_PRICING_REQUIRED"}
 DATA_CLASSES = {"NON_SENSITIVE_SYNTHETIC", "BUYER_APPROVED_NON_SECRET"}
-SOURCE_BASE = "6b660f8907fb18323976bc1deaafa9ba849d33d7"
+SOURCE_READINESS_STATE = "NOT_ATTESTED_BY_COMMERCIAL_PACKET"
 
-FALSE_AUTHORITY = {
-    "approve_product": False,
-    "reject_product": False,
-    "production_mutation": False,
-    "vendor_contact": False,
-    "purchase_or_payment": False,
-    "external_send": False,
-    "deploy_cloud": False,
-    "accept_contract": False,
-    "claim_revenue": False,
-    "claim_savings": False,
-}
+def _false_authority() -> dict[str, bool]:
+    return {
+        "approve_product": False,
+        "reject_product": False,
+        "production_mutation": False,
+        "vendor_contact": False,
+        "purchase_or_payment": False,
+        "external_send": False,
+        "deploy_cloud": False,
+        "accept_contract": False,
+        "claim_revenue": False,
+        "claim_savings": False,
+    }
 
-FALSE_OUTCOMES = {
-    "buyer_engaged": False,
-    "pilot_accepted": False,
-    "live_deployed": False,
-    "observed_savings": False,
-    "customer_result": False,
-    "revenue_received": False,
-}
 
-SOURCE_EVIDENCE = [
-    {
-        "capability": "deterministic_visual_change_evidence",
-        "source": "proofline/vision.py",
-        "truth": "SOURCE_AND_TEST_READINESS_ONLY",
-    },
-    {
-        "capability": "receipt_bound_human_review_proposals",
-        "source": "proofline/agent.py",
-        "truth": "REVIEW_PROPOSAL_ONLY",
-    },
-    {
-        "capability": "conditional_idempotent_aws_contract",
-        "source": "proofline/aws_contract.py",
-        "truth": "SOURCE_CONTRACT_NOT_LIVE_DEPLOYMENT",
-    },
-]
+def _false_outcomes() -> dict[str, bool]:
+    return {
+        "buyer_engaged": False,
+        "pilot_accepted": False,
+        "live_deployed": False,
+        "observed_savings": False,
+        "customer_result": False,
+        "revenue_received": False,
+    }
 
-ACCEPTANCE_CRITERIA = [
-    {
-        "id": "A1",
-        "criterion": "For an agreed reference/inspection pair, ProofLine emits a receipt-bound evidence packet or fails closed.",
-        "proof": "verify_evidence_packet returns true for the exact packet used in review.",
-    },
-    {
-        "id": "A2",
-        "criterion": "Each review proposal is bound to an evidence receipt and cannot approve/reject product or mutate production.",
-        "proof": "verify_review_proposal returns true and every authority bit is false.",
-    },
-    {
-        "id": "A3",
-        "criterion": "Replaying an identical source event does not create a second ledger row in the documented AWS contract.",
-        "proof": "conditional idempotency-key behavior is reproduced with the source-level fake runtime.",
-    },
-    {
-        "id": "A4",
-        "criterion": "Pilot delivery includes reproducible source/test/demo evidence; cloud deployment is a separate owner-authorized step.",
-        "proof": "documented test/compile commands pass and deployment remains false unless separately evidenced.",
-    },
-]
+
+def _source_evidence() -> list[dict[str, str]]:
+    return [
+        {
+            "capability": "deterministic_visual_change_evidence",
+            "source": "proofline/vision.py",
+            "truth": "SOURCE_REFERENCE_NOT_READINESS_ATTESTATION",
+        },
+        {
+            "capability": "receipt_bound_human_review_proposals",
+            "source": "proofline/agent.py",
+            "truth": "REVIEW_PROPOSAL_ONLY",
+        },
+        {
+            "capability": "conditional_idempotent_aws_contract",
+            "source": "proofline/aws_contract.py",
+            "truth": "SOURCE_CONTRACT_NOT_LIVE_DEPLOYMENT",
+        },
+    ]
+
+
+def _acceptance_criteria() -> list[dict[str, str]]:
+    return [
+        {
+            "id": "A1",
+            "criterion": "For an agreed reference/inspection pair, ProofLine emits a receipt-bound evidence packet or fails closed.",
+            "proof": "verify_evidence_packet returns true for the exact packet used in review.",
+        },
+        {
+            "id": "A2",
+            "criterion": "Each review proposal is bound to an evidence receipt and cannot approve/reject product or mutate production.",
+            "proof": "verify_review_proposal returns true and every authority bit is false.",
+        },
+        {
+            "id": "A3",
+            "criterion": "Replaying an identical source event does not create a second ledger row in the documented AWS contract.",
+            "proof": "conditional idempotency-key behavior is reproduced with the source-level fake runtime.",
+        },
+        {
+            "id": "A4",
+            "criterion": "The commercial packet never self-attests source/test/demo readiness; owner-held source/test receipts are separate evidence.",
+            "proof": "source_test_demo_ready remains false and source_generation is explicitly not attested by this packet.",
+        },
+    ]
+
 
 class CommercialError(ValueError):
     pass
@@ -211,19 +220,24 @@ def build_pilot_packet(intake: dict[str, Any]) -> dict[str, Any]:
     packet: dict[str, Any] = {
         "schema": SCHEMA,
         "generation": GENERATION,
-        "source_base_commit": SOURCE_BASE,
+        "source_generation": {
+            "state": SOURCE_READINESS_STATE,
+            "commit": None,
+            "manifest_sha256": None,
+            "test_execution_receipt": None,
+        },
         "source_truth": {
-            "source_test_demo_ready": True,
+            "source_test_demo_ready": False,
             "live_aws_deployed": False,
             "competition_submitted": False,
             "customer_validated": False,
         },
         "pilot": pilot,
-        "source_evidence": SOURCE_EVIDENCE,
-        "acceptance_criteria": ACCEPTANCE_CRITERIA,
+        "source_evidence": _source_evidence(),
+        "acceptance_criteria": _acceptance_criteria(),
         "roi_scenario": _roi_scenario(pilot["assumptions"]),
-        "commercial_claims": dict(FALSE_OUTCOMES),
-        "authority": dict(FALSE_AUTHORITY),
+        "commercial_claims": _false_outcomes(),
+        "authority": _false_authority(),
         "case_study_state": "SYNTHETIC_ONLY" if pilot["buyer_is_synthetic"] else "BUYER_INPUT_PACKET_NOT_CUSTOMER_RESULT",
     }
     packet["receipt_sha256"] = digest_json(packet)
@@ -231,63 +245,115 @@ def build_pilot_packet(intake: dict[str, Any]) -> dict[str, Any]:
         raise CommercialError("internal packet verification failed")
     return packet
 
-def verify_pilot_packet(packet: dict[str, Any]) -> bool:
-    try:
-        if not isinstance(packet, dict) or packet.get("schema") != SCHEMA:
-            return False
-        if packet.get("generation") != GENERATION or packet.get("source_base_commit") != SOURCE_BASE:
-            return False
-        receipt = packet.get("receipt_sha256")
-        if not isinstance(receipt, str) or len(receipt) != 64:
-            return False
-        body = dict(packet)
-        body.pop("receipt_sha256", None)
-        if digest_json(body) != receipt:
-            return False
-
-        source_truth = body.get("source_truth")
-        if source_truth != {
-            "source_test_demo_ready": True,
-            "live_aws_deployed": False,
-            "competition_submitted": False,
-            "customer_validated": False,
-        }:
-            return False
-        if body.get("authority") != FALSE_AUTHORITY:
-            return False
-        if body.get("commercial_claims") != FALSE_OUTCOMES:
-            return False
-        if body.get("source_evidence") != SOURCE_EVIDENCE:
-            return False
-        if body.get("acceptance_criteria") != ACCEPTANCE_CRITERIA:
-            return False
-
-        if not isinstance(body.get("pilot"), dict):
-            return False
-        if body["pilot"].get("price", {}).get("payment_link") is not None:
-            return False
-        pilot = _normalize_intake(_packet_for_validation(body))
-        if body["pilot"] != pilot:
-            return False
-
-        expected_roi = _roi_scenario(pilot["assumptions"])
-        if body.get("roi_scenario") != expected_roi:
-            return False
-        if expected_roi["observed_savings_minor"] is not None:
-            return False
-
-        expected_case = "SYNTHETIC_ONLY" if pilot["buyer_is_synthetic"] else "BUYER_INPUT_PACKET_NOT_CUSTOMER_RESULT"
-        if body.get("case_study_state") != expected_case:
-            return False
-        return True
-    except (CommercialError, TypeError, ValueError, UnicodeError):
-        return False
-
 def _packet_for_validation(packet: dict[str, Any]) -> dict[str, Any]:
     # Internal adapter used to revalidate normalized pilot input without weakening the public schema.
     pilot = json.loads(json.dumps(packet["pilot"]))
     pilot["price"].pop("payment_link", None)
     return pilot
+
+def _make_verifier_generation():
+    frozen_globals: dict[str, Any] = {
+        "__builtins__": __builtins__,
+        "json": json,
+        "CommercialError": CommercialError,
+        "ASSUMPTION_SOURCE": ASSUMPTION_SOURCE,
+        "PRICE_STATES": frozenset(PRICE_STATES),
+        "DATA_CLASSES": frozenset(DATA_CLASSES),
+    }
+
+    def clone(fn):
+        cloned = FunctionType(
+            fn.__code__,
+            frozen_globals,
+            name=fn.__name__,
+            argdefs=fn.__defaults__,
+            closure=fn.__closure__,
+        )
+        if fn.__kwdefaults__:
+            cloned.__kwdefaults__ = dict(fn.__kwdefaults__)
+        frozen_globals[fn.__name__] = cloned
+        return cloned
+
+    for fn in (_int, _text, _minor_cost, _normalize_intake, _roi_scenario, _packet_for_validation):
+        clone(fn)
+
+    normalize = frozen_globals["_normalize_intake"]
+    roi = frozen_globals["_roi_scenario"]
+    packet_for_validation = frozen_globals["_packet_for_validation"]
+    digest = digest_json
+    expected_authority = _false_authority()
+    expected_outcomes = _false_outcomes()
+    expected_source_evidence = _source_evidence()
+    expected_acceptance = _acceptance_criteria()
+    schema = SCHEMA
+    generation = GENERATION
+    source_readiness_state = SOURCE_READINESS_STATE
+    source_truth_expected = {
+        "source_test_demo_ready": False,
+        "live_aws_deployed": False,
+        "competition_submitted": False,
+        "customer_validated": False,
+    }
+
+    def frozen_verify(packet: dict[str, Any]) -> bool:
+        try:
+            if not isinstance(packet, dict) or packet.get("schema") != schema:
+                return False
+            if packet.get("generation") != generation:
+                return False
+            receipt = packet.get("receipt_sha256")
+            if not isinstance(receipt, str) or len(receipt) != 64:
+                return False
+            body = dict(packet)
+            body.pop("receipt_sha256", None)
+            if digest(body) != receipt:
+                return False
+            if body.get("source_generation") != {
+                "state": source_readiness_state,
+                "commit": None,
+                "manifest_sha256": None,
+                "test_execution_receipt": None,
+            }:
+                return False
+            if body.get("source_truth") != source_truth_expected:
+                return False
+            if body.get("authority") != expected_authority:
+                return False
+            if body.get("commercial_claims") != expected_outcomes:
+                return False
+            if body.get("source_evidence") != expected_source_evidence:
+                return False
+            if body.get("acceptance_criteria") != expected_acceptance:
+                return False
+            if not isinstance(body.get("pilot"), dict):
+                return False
+            if body["pilot"].get("price", {}).get("payment_link") is not None:
+                return False
+            pilot = normalize(packet_for_validation(body))
+            if body["pilot"] != pilot:
+                return False
+            expected_roi = roi(pilot["assumptions"])
+            if body.get("roi_scenario") != expected_roi:
+                return False
+            if expected_roi["observed_savings_minor"] is not None:
+                return False
+            expected_case = (
+                "SYNTHETIC_ONLY"
+                if pilot["buyer_is_synthetic"]
+                else "BUYER_INPUT_PACKET_NOT_CUSTOMER_RESULT"
+            )
+            if body.get("case_study_state") != expected_case:
+                return False
+            return True
+        except (CommercialError, TypeError, ValueError, UnicodeError):
+            return False
+
+    return frozen_verify
+
+
+verify_pilot_packet = _make_verifier_generation()
+del _make_verifier_generation
+
 
 def write_packet(intake_path: Path, output_path: Path) -> dict[str, Any]:
     raw = intake_path.read_bytes()
