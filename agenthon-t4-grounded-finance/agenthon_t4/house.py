@@ -4,12 +4,19 @@ import json
 import os
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
-from .agent import CorpusDoc, Evidence, retrieve
+from .agent import ContractError, CorpusDoc, Evidence, parse_json_text, retrieve
 
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL | re.IGNORECASE)
+MAX_HOUSE_RESPONSE_BYTES = 2 * 1024 * 1024
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def _endpoint() -> tuple[str, str, str] | None:
@@ -18,7 +25,18 @@ def _endpoint() -> tuple[str, str, str] | None:
     model = os.environ.get("MODEL_NAME", "").strip()
     if not (base and token and model):
         return None
-    return base + "/v1/chat/completions", token, model
+    parsed = urllib.parse.urlsplit(base)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        return None
+    clean_base = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", ""))
+    return clean_base + "/v1/chat/completions", token, model
 
 
 def _parse_content(content: str) -> dict[str, Any] | None:
@@ -26,9 +44,11 @@ def _parse_content(content: str) -> dict[str, Any] | None:
     match = _JSON_FENCE.fullmatch(text)
     if match:
         text = match.group(1)
+    if len(text.encode("utf-8", errors="ignore")) > MAX_HOUSE_RESPONSE_BYTES:
+        return None
     try:
-        value = json.loads(text)
-    except (json.JSONDecodeError, TypeError):
+        value = parse_json_text(text)
+    except (ContractError, TypeError, RecursionError):
         return None
     if not isinstance(value, dict) or not isinstance(value.get("entity_predictions"), list):
         return None
@@ -78,20 +98,43 @@ def plan(task: dict[str, Any], docs: list[CorpusDoc], *, timeout: float = 35.0) 
         "max_tokens": min(4000, max(800, 160 * len(task["entities"]))),
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": json.dumps(user_payload, sort_keys=True, separators=(",", ":"))},
+            {
+                "role": "user",
+                "content": json.dumps(
+                    user_payload,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    allow_nan=False,
+                ),
+            },
         ],
-    }, separators=(",", ":")).encode("utf-8")
+    }, separators=(",", ":"), allow_nan=False).encode("utf-8")
     request = urllib.request.Request(url, data=body, method="POST", headers={
         "Authorization": f"Bearer {token}", "Content-Type": "application/json", "Accept": "application/json"
     })
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        opener = urllib.request.build_opener(_NoRedirect())
+        with opener.open(request, timeout=timeout) as response:
             if response.status != 200:
                 return None
-            raw = json.loads(response.read().decode("utf-8"))
+            payload = response.read(MAX_HOUSE_RESPONSE_BYTES + 1)
+            if len(payload) > MAX_HOUSE_RESPONSE_BYTES:
+                return None
+            try:
+                raw = parse_json_text(payload.decode("utf-8"))
+            except (ContractError, UnicodeDecodeError):
+                return None
         content = raw["choices"][0]["message"]["content"]
         if not isinstance(content, str):
             return None
         return _parse_content(content)
-    except (OSError, KeyError, IndexError, TypeError, ValueError, urllib.error.URLError):
+    except (
+        OSError,
+        KeyError,
+        IndexError,
+        TypeError,
+        ValueError,
+        RecursionError,
+        urllib.error.URLError,
+    ):
         return None
