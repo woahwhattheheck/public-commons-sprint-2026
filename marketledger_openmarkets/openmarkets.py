@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Mapping
 from urllib.parse import quote, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .engine import MarketLedgerError, SNAPSHOT_SCHEMA
 
@@ -20,9 +20,28 @@ def _utc_now() -> str:
 
 def _validate_base_url(base_url: str) -> str:
     parsed = urlparse(base_url)
-    if parsed.scheme != "https" or parsed.hostname != DEFAULT_HOST or parsed.params or parsed.query or parsed.fragment:
-        raise MarketLedgerError("base_url must be the exact HTTPS OpenMarkets API host")
-    return base_url.rstrip("/")
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != DEFAULT_HOST
+        or parsed.port not in (None, 443)
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path.rstrip("/") != "/flow/v1"
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise MarketLedgerError("base_url must be the exact HTTPS OpenMarkets Flow v1 root")
+    return DEFAULT_BASE_URL
+
+
+class _NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        raise MarketLedgerError("OpenMarkets redirects are refused to protect API-key custody")
+
+
+def _open_request(req: Request, timeout_seconds: float):
+    return build_opener(_NoRedirectHandler()).open(req, timeout=timeout_seconds)
 
 
 def fetch_contest_liquidity(contest_id: str, api_key: str, *, timeout_seconds: float = 10.0, base_url: str = DEFAULT_BASE_URL) -> dict[str, Any]:
@@ -36,7 +55,7 @@ def fetch_contest_liquidity(contest_id: str, api_key: str, *, timeout_seconds: f
     safe_base = _validate_base_url(base_url)
     url = f"{safe_base}/contests/{quote(contest_id, safe='')}/liquidity"
     req = Request(url, headers={"X-API-Key": api_key, "Accept": "application/json"}, method="GET")
-    with urlopen(req, timeout=float(timeout_seconds)) as response:  # nosec B310: host is fail-closed above
+    with _open_request(req, float(timeout_seconds)) as response:
         raw = response.read(MAX_RESPONSE_BYTES + 1)
     if len(raw) > MAX_RESPONSE_BYTES:
         raise MarketLedgerError("OpenMarkets response exceeds size limit")
