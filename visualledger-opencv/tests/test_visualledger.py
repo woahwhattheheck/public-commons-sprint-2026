@@ -408,6 +408,11 @@ class AwsAdapterTests(unittest.TestCase):
         self.assertEqual(canonical(run()), canonical(run()))
 
 
+    def test_sam_worker_is_single_concurrency(self):
+        template = (ROOT / "infra" / "template.yaml").read_text(encoding="utf-8")
+        self.assertIn("ReservedConcurrentExecutions: 1", template)
+
+
 class CliTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
