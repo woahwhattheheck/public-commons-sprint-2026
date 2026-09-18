@@ -70,7 +70,7 @@ FORBIDDEN_MARKERS = (
 )
 
 
-ASCII_ESCAPE_RE = re.compile(r"\\\\(?:u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2}))")
+ASCII_ESCAPE_RE = re.compile(r"\\(?:u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2}))")
 
 
 def _decode_source_ascii_escapes(value: str) -> str:
