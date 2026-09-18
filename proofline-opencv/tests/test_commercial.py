@@ -36,6 +36,10 @@ class CommercialPilotTests(unittest.TestCase):
         self.assertTrue(verify_pilot_packet(a))
         self.assertEqual(a["case_study_state"], "SYNTHETIC_ONLY")
         self.assertEqual(a["commercial_claims"]["revenue_received"], False)
+        self.assertEqual(a["source_truth"]["source_test_demo_status"], "UNVERIFIED_BY_COMMERCIAL_PACKET")
+        self.assertFalse(a["source_truth"]["source_test_demo_ready"])
+        self.assertFalse(a["source_truth"]["provider_execution_verified"])
+        self.assertNotIn("source_base_commit", a)
 
     def test_roi_is_scenario_only(self):
         packet = build_pilot_packet(copy.deepcopy(SAMPLE))
