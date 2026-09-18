@@ -146,9 +146,19 @@ def _text_lines(gray: Any, cv2: Any) -> int:
     )
     if lines is None:
         return 0
+    # Python bindings expose Hough segments as (N, 1, 4) in OpenCV 4
+    # and (N, 4) in newer bindings. Normalize only those supported layouts;
+    # a blind reshape could reinterpret an unrelated/malformed array.
+    shape = getattr(lines, "shape", ())
+    if len(shape) == 3 and shape[1:] == (1, 4):
+        rows = lines[:, 0, :]
+    elif len(shape) == 2 and shape[1] == 4:
+        rows = lines
+    else:
+        raise VisionError("unexpected HoughLinesP segment array shape")
     ys: list[int] = []
-    for row in lines:
-        x1, y1, x2, y2 = map(int, row[0])
+    for row in rows:
+        x1, y1, x2, y2 = map(int, row)
         dx = abs(x2 - x1)
         dy = abs(y2 - y1)
         if dx < minimum or dy > max(4, dx // 20):
