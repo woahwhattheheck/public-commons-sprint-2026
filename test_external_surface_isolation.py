@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from urllib.parse import quote
 
@@ -96,6 +97,22 @@ class ExternalSurfaceIsolationTests(unittest.TestCase):
                 self.skipTest("directory symlink unavailable")
             with self.assertRaisesRegex(guard.ScanError, "symlinked public directory"):
                 guard.scan_root(root)
+
+    def test_walk_traversal_error_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+
+            def broken_walk(_root, *, topdown, onerror, followlinks):
+                self.assertTrue(topdown)
+                self.assertFalse(followlinks)
+                error = OSError("simulated traversal failure")
+                error.filename = str(root / "raced-subtree")
+                onerror(error)
+                return iter(())
+
+            with patch.object(guard.os, "walk", broken_walk):
+                with self.assertRaisesRegex(guard.ScanError, "cannot traverse public directory"):
+                    guard.scan_root(root)
 
     def test_unscannable_public_text_is_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as td:
