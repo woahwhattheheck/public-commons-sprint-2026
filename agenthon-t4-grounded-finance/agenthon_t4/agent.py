@@ -15,6 +15,8 @@ MAX_CORPUS_BYTES = 256 * 1024 * 1024
 MAX_DOC_BYTES = 8 * 1024 * 1024
 MAX_EVIDENCE_PER_ENTITY = 3
 MAX_SPAN_CHARS = 900
+MAX_JSON_DEPTH = 64
+MAX_JSON_NODES = 50_000
 _TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._%+-]*")
 _SENTENCE_RE = re.compile(r"\S(?:.*?)(?:[.!?](?=\s|$)|$)", re.DOTALL)
 _STOP = frozenset("a an and are as at be by for from given in into is it of on or predict support that the their this to with will whether each table below above".split())
@@ -30,6 +32,54 @@ def _strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         out[key] = value
     return out
 
+def _reject_constant(value: str) -> Any:
+    raise ContractError(f"non-finite JSON number rejected: {value}")
+
+def _strict_float_token(value: str) -> float:
+    try:
+        result = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise ContractError("invalid JSON number") from exc
+    if not math.isfinite(result):
+        raise ContractError("non-finite JSON number rejected")
+    return result
+
+def _check_json_shape(value: Any) -> None:
+    remaining = MAX_JSON_NODES
+    stack: list[tuple[Any, int]] = [(value, 0)]
+    while stack:
+        item, depth = stack.pop()
+        remaining -= 1
+        if remaining < 0 or depth > MAX_JSON_DEPTH:
+            raise ContractError("JSON structure exceeds limits")
+        if isinstance(item, dict):
+            stack.extend((child, depth + 1) for child in item.values())
+        elif isinstance(item, list):
+            stack.extend((child, depth + 1) for child in item)
+
+def strict_json_text(text: str, *, max_bytes: int = MAX_DOC_BYTES) -> Any:
+    if not isinstance(text, str):
+        raise ContractError("JSON text must be a string")
+    try:
+        encoded = text.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ContractError("JSON must be valid UTF-8 text") from exc
+    if len(encoded) > max_bytes:
+        raise ContractError("JSON text exceeds byte limit")
+    try:
+        value = json.loads(
+            text,
+            object_pairs_hook=_strict_object,
+            parse_constant=_reject_constant,
+            parse_float=_strict_float_token,
+        )
+    except ContractError:
+        raise
+    except (json.JSONDecodeError, RecursionError, ValueError) as exc:
+        raise ContractError(f"invalid JSON: {exc}") from exc
+    _check_json_shape(value)
+    return value
+
 def load_json(path: Path, *, max_bytes: int = MAX_DOC_BYTES) -> Any:
     if path.is_symlink():
         raise ContractError(f"symlink input refused: {path}")
@@ -39,11 +89,10 @@ def load_json(path: Path, *, max_bytes: int = MAX_DOC_BYTES) -> Any:
     if stat.st_size > max_bytes:
         raise ContractError(f"input exceeds byte limit: {path}")
     try:
-        return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_strict_object)
+        text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError as exc:
         raise ContractError(f"UTF-8 required: {path}") from exc
-    except json.JSONDecodeError as exc:
-        raise ContractError(f"invalid JSON: {path}: {exc}") from exc
+    return strict_json_text(text, max_bytes=max_bytes)
 
 def _iso_day(value: Any, field: str) -> str:
     if not isinstance(value, str):
@@ -56,7 +105,10 @@ def _iso_day(value: Any, field: str) -> str:
 def _finite_number(value: Any, field: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ContractError(f"{field} must be numeric")
-    result = float(value)
+    try:
+        result = float(value)
+    except (OverflowError, ValueError, TypeError) as exc:
+        raise ContractError(f"{field} must be finite") from exc
     if not math.isfinite(result):
         raise ContractError(f"{field} must be finite")
     return result
@@ -243,12 +295,12 @@ def _numeric_anchor(entity: dict[str, Any], task: dict[str, Any]) -> float:
     target_name = str((task.get("target") or {}).get("name", ""))
     for key in [target_name, f"consensus_{target_name}", "consensus_eps", "consensus", "estimate", "point_estimate", "value", "score"]:
         value = entity.get(key)
-        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)):
-            return float(value)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return _finite_number(value, f"entity.{key}")
     for key in sorted(entity):
         value = entity[key]
-        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)):
-            return float(value)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return _finite_number(value, f"entity.{key}")
     return 0.0
 
 def _fallback_candidate(task: dict[str, Any], entity: dict[str, Any]) -> dict[str, Any]:
@@ -257,7 +309,10 @@ def _fallback_candidate(task: dict[str, Any], entity: dict[str, Any]) -> dict[st
     if task["_target_type"] == "classification":
         label = "inline" if "inline" in task["_labels"] else task["_labels"][0]
     width = max(abs(point) * 0.12, 0.10)
-    return {"entity_id": entity["entity_id"], "label": label, "point_forecast": point, "lo": point - width, "hi": point + width}
+    lo, hi = point - width, point + width
+    if not all(math.isfinite(number) for number in (width, lo, hi)):
+        raise ContractError("fallback interval must remain finite")
+    return {"entity_id": entity["entity_id"], "label": label, "point_forecast": point, "lo": lo, "hi": hi}
 
 def _candidate_from_model(task: dict[str, Any], entity: dict[str, Any], raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict) or raw.get("entity_id") != entity["entity_id"]:
@@ -310,8 +365,13 @@ def build_answer(task: dict[str, Any], docs: list[CorpusDoc], model_candidates: 
 def atomic_write_json(path: Path, value: Any) -> None:
     if path.exists() and path.is_symlink():
         raise ContractError("output symlink refused")
+    try:
+        payload = json.dumps(
+            value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+        ) + "\n"
+    except (ValueError, TypeError, OverflowError) as exc:
+        raise ContractError("output must be strict finite JSON") from exc
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent), text=True)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
@@ -325,9 +385,14 @@ def atomic_write_json(path: Path, value: Any) -> None:
         except FileNotFoundError:
             pass
 
-def run(task_path: Path, corpus_dir: Path, out_path: Path, *, model_candidates: dict[str, Any] | None = None) -> dict[str, Any]:
-    task = validate_task(load_json(task_path))
-    docs = load_corpus(corpus_dir, task["cutoff_date"])
+def run_loaded(task: dict[str, Any], docs: list[CorpusDoc], out_path: Path, *,
+               model_candidates: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Build and publish from one already-validated task/corpus generation."""
     answer = build_answer(task, docs, model_candidates=model_candidates)
     atomic_write_json(out_path, answer)
     return answer
+
+def run(task_path: Path, corpus_dir: Path, out_path: Path, *, model_candidates: dict[str, Any] | None = None) -> dict[str, Any]:
+    task = validate_task(load_json(task_path))
+    docs = load_corpus(corpus_dir, task["cutoff_date"])
+    return run_loaded(task, docs, out_path, model_candidates=model_candidates)
