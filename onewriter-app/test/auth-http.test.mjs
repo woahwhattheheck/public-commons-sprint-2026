@@ -85,7 +85,7 @@ test("authenticated claim body is forwarded without any server-synthesized calle
     }),
   });
   const body = {
-    event_id: "evt-1", org: "Northstar", domain: "northstar.example",
+    event_id: "evt-1", lane_id: "lane:northstar-builderfest", org: "Northstar", domain: "northstar.example",
     route: "email:sales@northstar.example", purpose: "initial outreach",
     opportunity: "builder fest", lease_seconds: 300, reason: "proof",
   };
