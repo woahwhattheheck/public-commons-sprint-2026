@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import gc
 import json
 import sys
 import threading
@@ -159,6 +160,69 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         # The verifier's cooperative snapshot fence suspends current-thread
         # trace callbacks during the caller-owned graph copy, so the armed
         # cross-sibling splice cannot run inside that critical section.
+        self.assertFalse(switched)
+        self.assertEqual(summary[summary_key], original_summary_value)
+        self.assertEqual(authority["auto_merge"], 0)
+
+    def test_automatic_gc_callback_cannot_cross_sibling_freeze_generation(self):
+        raw = fixture()
+        packet, receipt = compile_packet(raw)
+        candidate = copy.deepcopy(packet)
+        summary = candidate["summary"]
+        authority = candidate["authority"]
+        self.assertIs(authority["auto_merge"], False)
+
+        # State A is invalid only in authority. An automatic cyclic-GC callback
+        # is armed to detect the old verifier while it is actively freezing the
+        # later authority subtree, then flip to state B where summary is wrong
+        # and authority is correct. Neither caller generation is valid; the
+        # predecessor could nevertheless retain old-correct summary plus
+        # later-correct authority if a GC callback ran between the sibling
+        # copies.
+        authority["auto_merge"] = 0
+        summary_key = next(
+            key
+            for key, value in summary.items()
+            if type(value) in (bool, int, float, str)
+        )
+        original_summary_value = summary[summary_key]
+        if type(original_summary_value) is bool:
+            wrong_summary_value = not original_summary_value
+        elif type(original_summary_value) is int:
+            wrong_summary_value = original_summary_value + 1
+        elif type(original_summary_value) is float:
+            wrong_summary_value = original_summary_value + 1.0
+        else:
+            wrong_summary_value = original_summary_value + "#gc-mutated"
+
+        switched = False
+
+        def splice_on_gc(phase, _info):
+            nonlocal switched
+            if phase != "start" or switched:
+                return
+            frame = sys._getframe()
+            while frame is not None:
+                if (
+                    frame.f_code is core._canonical_verified_artifact.__code__
+                    and frame.f_locals.get("current") is authority
+                ):
+                    summary[summary_key] = wrong_summary_value
+                    authority["auto_merge"] = False
+                    switched = True
+                    return
+                frame = frame.f_back
+
+        old_threshold = gc.get_threshold()
+        gc.callbacks.append(splice_on_gc)
+        gc.set_threshold(1, 1, 1)
+        try:
+            with self.assertRaisesRegex(RepoAtlasError, "verify:packet_mismatch"):
+                verify_bundle(raw, candidate, receipt)
+        finally:
+            gc.set_threshold(*old_threshold)
+            gc.callbacks.remove(splice_on_gc)
+
         self.assertFalse(switched)
         self.assertEqual(summary[summary_key], original_summary_value)
         self.assertEqual(authority["auto_merge"], 0)
