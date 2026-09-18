@@ -38,12 +38,9 @@ MAX_JSON_DEPTH = 256
 # leaving generous room above any artifact produced from the admitted input.
 MAX_ARTIFACT_NODES = _source.MAX_TEXT
 
-# Keep direct-object verification work bounded while allowing ordinary small
-# tamper to reach the semantic mismatch surface instead of being mislabeled
-# as a complexity attack. The cap never exceeds the retained input ceiling
-# unless the trusted expected artifact itself is already larger.
-ARTIFACT_BYTE_SLACK = 4096
-ARTIFACT_BYTE_FACTOR = 2
+# Extend only the interpreter thread-switch interval while one bounded
+# verifier-owned snapshot is being taken; restore the caller's prior value
+# before canonical serialization.
 _ATOMIC_FREEZE_SWITCH_SECONDS = 3600.0
 
 
@@ -265,16 +262,7 @@ def _canonical_verified_artifact(
     if type(max_canonical_bytes) is not int or max_canonical_bytes < 0:
         raise RepoAtlasError(f"verify:{name}_too_complex")
 
-    work_byte_limit = max(
-        max_canonical_bytes,
-        min(
-            _source.MAX_TEXT,
-            max(
-                max_canonical_bytes * ARTIFACT_BYTE_FACTOR,
-                max_canonical_bytes + ARTIFACT_BYTE_SLACK,
-            ),
-        ),
-    )
+    work_byte_limit = max_canonical_bytes
 
     def preflight_shape() -> None:
         stack: list[tuple[Any, int]] = [(value, 0)]
@@ -497,13 +485,40 @@ def _build_source_only_api():
         # distinct JSON artifacts with different content-addressed bytes.
         expected_packet_bytes = _source._canonical(expected_packet)
         expected_receipt_bytes = _source._canonical(expected_receipt)
-        if _canonical_verified_artifact(
-            packet, "packet", len(expected_packet_bytes)
-        ) != expected_packet_bytes:
+        def same_top_level_shape(candidate: Any, expected: dict[str, Any]) -> bool:
+            if type(candidate) is not dict or len(candidate) != len(expected):
+                return False
+            return all(key in candidate for key in expected)
+
+        try:
+            actual_packet = _canonical_verified_artifact(
+                packet, "packet", len(expected_packet_bytes)
+            )
+        except RepoAtlasError as exc:
+            # A same-schema ordinary tamper can be a few bytes longer than the
+            # trusted packet. Preserve the historical semantic mismatch label
+            # without widening the exact work ceiling or serializing past it.
+            if (
+                str(exc) == "verify:packet_too_complex"
+                and same_top_level_shape(packet, expected_packet)
+            ):
+                raise RepoAtlasError("verify:packet_mismatch") from exc
+            raise
+        if actual_packet != expected_packet_bytes:
             raise RepoAtlasError("verify:packet_mismatch")
-        if _canonical_verified_artifact(
-            receipt, "receipt", len(expected_receipt_bytes)
-        ) != expected_receipt_bytes:
+
+        try:
+            actual_receipt = _canonical_verified_artifact(
+                receipt, "receipt", len(expected_receipt_bytes)
+            )
+        except RepoAtlasError as exc:
+            if (
+                str(exc) == "verify:receipt_too_complex"
+                and same_top_level_shape(receipt, expected_receipt)
+            ):
+                raise RepoAtlasError("verify:receipt_mismatch") from exc
+            raise
+        if actual_receipt != expected_receipt_bytes:
             raise RepoAtlasError("verify:receipt_mismatch")
         return True
 
