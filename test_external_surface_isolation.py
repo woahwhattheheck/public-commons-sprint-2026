@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -137,6 +138,30 @@ class ExternalSurfaceIsolationTests(unittest.TestCase):
             _, findings = guard.scan_root(root)
             self.assertTrue(findings)
             self.assertEqual(findings[0][2], "unscannable-public-text")
+
+    def test_notebook_json_is_scanned(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            target = "woahwhattheheck" + "/commons"
+            notebook = {
+                "cells": [
+                    {
+                        "cell_type": "markdown",
+                        "metadata": {},
+                        "source": ["Internal docs: https://github.com/" + target],
+                    }
+                ],
+                "metadata": {},
+                "nbformat": 4,
+                "nbformat_minor": 5,
+            }
+            (root / "public.ipynb").write_text(
+                json.dumps(notebook, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            checked, findings = guard.scan_root(root)
+            self.assertEqual(checked, 1)
+            self.assertEqual([finding[2] for finding in findings], ["commons-repository"])
 
     def test_extensionless_public_text_is_scanned(self) -> None:
         with tempfile.TemporaryDirectory() as td:
