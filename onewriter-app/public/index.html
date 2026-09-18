@@ -12,7 +12,7 @@
     <div>
       <p class="eyebrow">TJLabs coordination control</p>
       <h1>OneWriter</h1>
-      <p class="lede">One live writer per organization lane. Different aliases do not bypass the lease.</p>
+      <p class="lede">One live writer per server-provisioned canonical lane. Human labels, domains, and routes cannot mint another writer.</p>
     </div>
     <div class="authority"><strong>No send authority</strong><span>This app records ownership and evidence. It never sends outreach.</span></div>
   </header>
@@ -30,10 +30,13 @@
     <button data-tab="impact">Impact</button>
   </nav>
 
+  <datalist id="lane-registry-list"></datalist>
+
   <main>
     <section id="claim" class="panel active">
       <div class="section-head"><div><p class="eyebrow">Atomic acquisition</p><h2>Claim a writer lane</h2></div><span id="server-time" class="mono subtle">authenticated state required</span></div>
       <form id="claim-form" class="grid form-grid">
+        <label>Canonical lane ID<input name="lane_id" list="lane-registry-list" required placeholder="lane:northstar-builderfest"></label>
         <label>Organization<input name="org" required value="Northstar Labs"></label>
         <label>Domain<input name="domain" required value="northstar.example"></label>
         <label>Proposed route<input name="route" required value="email:sales@northstar.example"></label>
@@ -42,7 +45,7 @@
         <label>Lease seconds<input name="lease_seconds" required type="number" min="30" max="1800" value="300"></label>
         <label>Event id<input name="event_id" required placeholder="evt-20260917-001"></label>
         <label class="span-2">Reason<input name="reason" required value="single-writer ownership before external action"></label>
-        <div class="span-2 callout">The collision key is organization × purpose × opportunity. <strong>Domain and route are retained target metadata, not ownership partitions.</strong> The authenticated session subject is the worker identity written into the receipt.</div>
+        <div class="span-2 callout">Writer ownership is keyed only by a <strong>server-provisioned canonical lane ID</strong>. Organization, domain, purpose, opportunity, and route are retained target/audit metadata and cannot mint a second lane. Unknown IDs are rejected before any database mutation. The authenticated session subject is the worker identity written into the receipt.</div>
         <button class="primary span-2" type="submit">Request writer lease</button>
       </form>
       <pre id="claim-result" class="result" aria-live="polite"></pre>
@@ -58,6 +61,7 @@
       <form id="event-form" class="grid form-grid">
         <label>Kind<select name="kind" required><option>SENT</option><option>BOUNCE</option><option>HUMAN_EVENT</option><option>HOLD</option></select></label>
         <label>Event id<input name="event_id" required placeholder="evt-outcome-001"></label>
+        <label>Canonical lane ID<input name="lane_id" list="lane-registry-list" required placeholder="lane:northstar-builderfest"></label>
         <label>Organization<input name="org" required value="Northstar Labs"></label>
         <label>Domain<input name="domain" required value="northstar.example"></label>
         <label>Route<input name="route" required value="email:sales@northstar.example"></label>
