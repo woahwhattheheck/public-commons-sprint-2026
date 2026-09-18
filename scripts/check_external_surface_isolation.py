@@ -97,7 +97,7 @@ def normalized_for_scan(text: str) -> str:
         value = _decode_source_ascii_escapes(value)
         value = unicodedata.normalize("NFKC", value)
         value = "".join(ch for ch in value if unicodedata.category(ch) != "Cf")
-        value = value.replace("\\", "/")
+        value = value.replace("\\/", "/").replace("\\", "/")
         if value == previous:
             return value.casefold()
     raise ScanError("normalization pass limit exceeded")
@@ -164,7 +164,13 @@ def _read_public_text(path: Path) -> str:
         raise ScanError(f"non-UTF-8 public text: {path}") from exc
 
 def iter_text_files(root: Path):
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+    def walk_error(error: OSError) -> None:
+        location = getattr(error, "filename", None) or root
+        raise ScanError(f"cannot traverse public directory: {location}") from error
+
+    for dirpath, dirnames, filenames in os.walk(
+        root, topdown=True, onerror=walk_error, followlinks=False
+    ):
         base = Path(dirpath)
         retained_dirs: list[str] = []
         for dirname in sorted(dirnames):
