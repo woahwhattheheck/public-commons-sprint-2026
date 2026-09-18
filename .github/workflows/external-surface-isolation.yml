@@ -49,8 +49,8 @@ jobs:
       - name: Audit current metadata event
         if: ${{ github.event_name == 'issues' || github.event_name == 'issue_comment' || github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment' || github.event_name == 'release' }}
         run: python scripts/check_public_github_metadata.py --event "$GITHUB_EVENT_PATH" --event-name "$GITHUB_EVENT_NAME" --repository "$GITHUB_REPOSITORY"
-      - name: Audit full public repository metadata
-        if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+      - name: Inventory full public repository metadata
+        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/check_public_github_metadata.py --full-repository --repository "$GITHUB_REPOSITORY"
