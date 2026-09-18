@@ -53,7 +53,7 @@ Omit the dev switch on the final OpenCV 5 runtime.
 
 `visualledger.aws_adapter` normalizes a single versioned S3 object event, binds bucket/key/version/eTag + pipeline generation into an idempotency key, performs vision, and writes a deterministic evidence record through an injected Dynamo-style boundary. `infra/template.yaml` is an AWS SAM blueprint for a versioned S3 ingest bucket, container-image Lambda worker, and on-demand DynamoDB evidence table.
 
-The local build does **not** deploy AWS or spend money. The production `lambda_handler` requires a deployed container that contains OpenCV 5 and boto3. The first deployment milestone must add a scope-index query before claiming cross-object duplicate detection in AWS; the adapter deliberately does not fabricate that evidence.
+The local build does **not** deploy AWS or spend money. The production `lambda_handler` requires a deployed container that contains OpenCV 5 and boto3. The DynamoDB primary key is `(scope, event_id)`, allowing a strongly consistent bounded query of all retained same-scope records (maximum 512) before vision routing. If a scope exceeds that bound or pagination appears, the handler fails closed instead of silently sampling and creating a duplicate false-negative. This source path is tested locally, but AWS behavior remains unproven until a real deployment receipt exists.
 
 ## Evaluation
 
