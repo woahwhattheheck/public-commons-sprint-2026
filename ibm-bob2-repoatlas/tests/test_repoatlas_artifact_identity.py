@@ -101,6 +101,73 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         with self.assertRaisesRegex(RepoAtlasError, "verify:packet_too_complex"):
             verify_bundle(raw, amplified_packet, receipt)
 
+    def test_source_validation_generation_is_detached_before_compile(self):
+        raw = fixture()
+        provider = raw["provider"]
+        self.assertFalse(any(provider.values()))
+        switched = False
+
+        def flip_after_source_admission(frame, event, _arg):
+            nonlocal switched
+            if (
+                event == "line"
+                and frame.f_code is core.compile_packet.__code__
+                and frame.f_locals.get("raw") is raw
+                and "normalized" in frame.f_locals
+                and not switched
+            ):
+                provider.update({key: True for key in provider})
+                switched = True
+            return flip_after_source_admission
+
+        prior_trace = sys.gettrace()
+        sys.settrace(flip_after_source_admission)
+        try:
+            packet, _receipt = compile_packet(raw)
+        finally:
+            sys.settrace(prior_trace)
+
+        self.assertTrue(switched)
+        self.assertTrue(all(provider.values()))  # proves caller generation moved
+        self.assertEqual(packet["competition_state"], "PROVIDER_GATE_HOLD")
+        codes = {finding["code"] for finding in packet["findings"]}
+        self.assertTrue(
+            {
+                "BOB_EXECUTION_REQUIRED",
+                "TRACKS_UNPUBLISHED",
+                "REGISTRATION_NOT_VERIFIED",
+                "SUBMISSION_NOT_VERIFIED",
+            }.issubset(codes)
+        )
+
+    def test_verify_bundle_reuses_detached_source_generation(self):
+        raw = fixture()
+        packet, receipt = compile_packet(raw)
+        provider = raw["provider"]
+        switched = False
+
+        def flip_after_source_admission(frame, event, _arg):
+            nonlocal switched
+            if (
+                event == "line"
+                and frame.f_code is core.compile_packet.__code__
+                and frame.f_locals.get("raw") is raw
+                and "normalized" in frame.f_locals
+                and not switched
+            ):
+                provider.update({key: True for key in provider})
+                switched = True
+            return flip_after_source_admission
+
+        prior_trace = sys.gettrace()
+        sys.settrace(flip_after_source_admission)
+        try:
+            self.assertTrue(verify_bundle(raw, packet, receipt))
+        finally:
+            sys.settrace(prior_trace)
+
+        self.assertTrue(switched)
+        self.assertTrue(all(provider.values()))
     def test_cross_sibling_callback_cannot_splice_valid_packet_generation(self):
         raw = fixture()
         packet, receipt = compile_packet(raw)
