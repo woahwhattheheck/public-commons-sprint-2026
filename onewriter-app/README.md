@@ -4,7 +4,7 @@ Status: **SOURCE + POSTGRES PROOF / NOT DEPLOYED / NOT SUBMITTED**
 
 OneWriter prevents a multi-agent business failure: two workers independently notice the same valuable organization and contact it seconds apart, often through different aliases. It turns the ownership decision into a database-serialized writer lease and retains evidence-bound transition receipts.
 
-This app **never sends email, DMs, forms, or provider mutations**. The collision key is `organization × domain × purpose × opportunity`; route is normalized lease metadata and cannot be used to bypass a live writer lease.
+This app **never sends email, DMs, forms, or provider mutations**. The writer collision key is `organization × purpose × opportunity`. Domain and route remain normalized target/lease evidence, but neither partitions writer ownership. This is deliberately conservative: without a trusted server-held organization-ID/domain-alias registry, caller-selected root/subdomain or multi-domain aliases cannot mint parallel writers for the same organization lane.
 
 ## What is implemented
 
@@ -19,7 +19,7 @@ This app **never sends email, DMs, forms, or provider mutations**. The collision
 - server/database clock for lease expiry;
 - one-shot `HUMAN_EVENT` reopen that retains the exact prior fence and restores it if the authorized lease expires unused;
 - strict retained identifier admission: trimmed nonempty 1–240 text, no ASCII controls, no Unicode category-C codepoints, no non-category-C Default_Ignorable codepoints, and at least one visible base outside C/M/Z;
-- collision identity for organization/purpose/opportunity is NFC-canonicalized, Unicode case-folded, and rejects category-C plus non-category-C Default_Ignorable codepoints before hashing; the exact canonical identity is retained and hashed once, while route remains separately normalized lease metadata; transitional IDNA normalization applies to organization domains;
+- collision identity for organization/purpose/opportunity is NFC-canonicalized, Unicode case-folded, and rejects category-C plus non-category-C Default_Ignorable codepoints before hashing; full normalized identity still retains the selected domain, but the collision projection intentionally omits domain and route so root/subdomain or legitimate multi-domain aliases cannot split writer ownership; transitional IDNA normalization still applies to retained target domains;
 - immutable accepted-event and transition receipt digests with `external_send_authorized=false`;
 - CI race proof against a real PostgreSQL 16 service plus deterministic injected serialization/deadlock failures;
 - local fallback proof via Netlify's official `@netlify/database-dev` emulator;
@@ -92,7 +92,7 @@ Exact keys (there is deliberately no caller-controlled `actor`):
 }
 ```
 
-The retained receipt actor is the authenticated session subject. Typed outcomes include `GRANTED`, `DENIED_ACTIVE_LEASE`, `GRANTED_STALE_RECOVERY`, `DENIED_HARD_DNR`, `DENIED_DEAD_ROUTE`, `DENIED_HOLD`, and `GRANTED_AFTER_HUMAN_EVENT`.
+The retained receipt actor is the authenticated session subject. The normalized domain is retained as the selected target domain; a competing domain alias cannot bypass the organization-level lease, and provider outcomes must match the domain and route selected by the live lease. Typed outcomes include `GRANTED`, `DENIED_ACTIVE_LEASE`, `GRANTED_STALE_RECOVERY`, `DENIED_HARD_DNR`, `DENIED_DEAD_ROUTE`, `DENIED_HOLD`, and `GRANTED_AFTER_HUMAN_EVENT`.
 
 ### `POST /api/event`
 
