@@ -459,6 +459,7 @@ def fetch_repository_objects(repository: str, token: str) -> list[MetadataObject
 def run_self_test() -> dict[str, Any]:
     """Run deterministic policy hostiles without network access."""
     repo_marker = "woahwhattheheck" + "/commons"
+    repository_reason = "commons" + "-repository"
 
     def reasons(text: str) -> set[str]:
         row = MetadataObject("issue", "issue:114", "body", text, 114)
@@ -472,7 +473,7 @@ def run_self_test() -> dict[str, Any]:
         "woahwhattheheck/\\u0063ommons",
     ):
         cases += 1
-        if "commons-repository" not in reasons(candidate):
+        if repository_reason not in reasons(candidate):
             raise MetadataAuditError("self-test normalized marker escape")
 
     cases += 1
@@ -485,9 +486,9 @@ def run_self_test() -> dict[str, Any]:
         raise MetadataAuditError("self-test product SHA false positive")
 
     cases += 1
-    if "commons-repository" in reasons("not" + repo_marker):
+    if repository_reason in reasons("not" + repo_marker):
         raise MetadataAuditError("self-test owner-prefix false positive")
-    if "commons-repository" in reasons(repo_marker + "-demo"):
+    if repository_reason in reasons(repo_marker + "-demo"):
         raise MetadataAuditError("self-test repo-suffix false positive")
 
     cases += 1
