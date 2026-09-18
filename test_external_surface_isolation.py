@@ -42,6 +42,18 @@ class ExternalSurfaceIsolationTests(unittest.TestCase):
         with self.assertRaisesRegex(guard.ScanError, "normalization pass limit"):
             guard.normalized_for_scan(value)
 
+    def test_scan_reports_normalization_exhaustion_as_blocking_line(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            value = "woahwhattheheck" + "/commons"
+            for _ in range(guard.MAX_NORMALIZATION_PASSES + 2):
+                value = quote(value, safe="")
+            (root / "surface.txt").write_text(value + "\n", encoding="utf-8")
+            _, findings = guard.scan_root(root)
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0][0:2], ("surface.txt", 1))
+            self.assertTrue(findings[0][2].startswith("unscannable-public-line:normalization pass limit"))
+
     def test_scan_flags_json_unicode_escaped_commons_path(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
