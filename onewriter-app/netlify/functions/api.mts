@@ -32,7 +32,11 @@ function getLaneRegistry() {
 
 export default createHttpHandler({
   getAuthenticator,
-  getService: () => createService(getDatabase(), { laneRegistry: getLaneRegistry() }),
+  getService: () => {
+    // Validate trusted registry configuration before constructing a DB handle.
+    const laneRegistry = getLaneRegistry();
+    return createService(getDatabase(), { laneRegistry });
+  },
 });
 
 export const config: Config = { path: "/api/*" };
