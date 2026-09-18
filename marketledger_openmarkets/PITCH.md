@@ -12,7 +12,7 @@ OpenMarkets already normalizes every venue into a shared contest/market/position
 3. Apply fee assumptions and minimum-liquidity policy.
 4. MarketLedger highlights the best eligible venue and an anomaly when dispersion crosses policy.
 5. Compare two receipts to show a price-move event.
-6. Stage a human-confirmed action record. Point out: there is no execution method in the product.
+6. Stage a confirmation-token-gated action record. Point out: there is no execution method in the product.
 
 ## 2:05–2:40 — Business
 The same evidence plane can serve a trading desk, partner book, creator product, or internal risk/reconciliation team. The value is not another odds screen; it is a replayable decision record across every partner OpenMarkets supports. Marketplace distribution can start with analytics, then add paid policy packs, team audit, and enterprise retention/export.
