@@ -273,20 +273,17 @@ def retrieve(task: dict[str, Any], entity: dict[str, Any], docs: list[CorpusDoc]
 
 def _numeric_anchor(entity: dict[str, Any], task: dict[str, Any]) -> float:
     target_name = str((task.get("target") or {}).get("name", ""))
-    for key in [target_name, f"consensus_{target_name}", "consensus_eps", "consensus", "estimate", "point_estimate", "value", "score"]:
-        value = entity.get(key)
+    preferred = [target_name, f"consensus_{target_name}", "consensus_eps", "consensus", "estimate", "point_estimate", "value", "score"]
+    for key in preferred:
+        if key not in entity:
+            continue
+        value = entity[key]
         if isinstance(value, (int, float)) and not isinstance(value, bool):
-            try:
-                return _finite_number(value, f"entity.{key}")
-            except ContractError:
-                continue
+            return _finite_number(value, f"entity.{key}")
     for key in sorted(entity):
         value = entity[key]
         if isinstance(value, (int, float)) and not isinstance(value, bool):
-            try:
-                return _finite_number(value, f"entity.{key}")
-            except ContractError:
-                continue
+            return _finite_number(value, f"entity.{key}")
     return 0.0
 
 
