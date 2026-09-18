@@ -21,6 +21,7 @@ TEXT_SUFFIXES = frozenset(
         ".htm",
         ".html",
         ".ini",
+        ".ipynb",
         ".js",
         ".json",
         ".jsonl",
