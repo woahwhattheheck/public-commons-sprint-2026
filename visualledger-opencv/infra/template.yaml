@@ -6,6 +6,12 @@ Parameters:
   ContainerImageUri:
     Type: String
     Description: Immutable ECR image URI containing this exact source generation and OpenCV 5.x
+  RecordHmacKey:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    MaxLength: 128
+    Description: Deployment-held HMAC secret authenticating retained Dynamo evidence records
 
 Resources:
   EvidenceBucket:
@@ -48,6 +54,7 @@ Resources:
       Environment:
         Variables:
           VISUALLEDGER_TABLE: !Ref EvidenceTable
+          VISUALLEDGER_RECORD_HMAC_KEY: !Ref RecordHmacKey
       Policies:
         - S3ReadPolicy:
             BucketName: !Ref EvidenceBucket
