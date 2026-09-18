@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.parse import quote
 
 from scripts import check_external_surface_isolation as guard
 
@@ -17,6 +18,35 @@ class ExternalSurfaceIsolationTests(unittest.TestCase):
                 "https://github.com/woahwhattheheck%26%23x2f%3Bcomm%26%23x200b%3Bons\n",
                 encoding="utf-8",
             )
+            _, findings = guard.scan_root(root)
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0][2], "commons-repository")
+
+    def test_source_escapes_and_encoded_invisibles_cannot_hide_marker(self) -> None:
+        repo = "woahwhattheheck" + "/commons"
+        cases = (
+            "woahwhattheheck" + r"\u002fcommons",
+            "woahwhattheheck" + r"\x2fcommons",
+            "woahwhattheheck" + r"\/commons",
+            "woahwhattheheck" + "%E2%80%8B/commons",
+            "woahwhattheheck" + "&#8203;/commons",
+        )
+        for case in cases:
+            normalized = guard.normalized_for_scan(case)
+            self.assertIn(repo, normalized)
+
+    def test_normalization_exhaustion_fails_closed(self) -> None:
+        value = "woahwhattheheck" + "/commons"
+        for _ in range(guard.MAX_NORMALIZATION_PASSES + 2):
+            value = quote(value, safe="")
+        with self.assertRaisesRegex(guard.ScanError, "normalization pass limit"):
+            guard.normalized_for_scan(value)
+
+    def test_scan_flags_json_unicode_escaped_commons_path(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            escaped = "woahwhattheheck" + r"\u002fcommons"
+            (root / "surface.json").write_text('{"url":"' + escaped + '"}\n', encoding="utf-8")
             _, findings = guard.scan_root(root)
             self.assertEqual(len(findings), 1)
             self.assertEqual(findings[0][2], "commons-repository")
