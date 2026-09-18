@@ -4,12 +4,21 @@ import json
 import os
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, Callable
 
-from .agent import CorpusDoc, Evidence, retrieve
+from .agent import ContractError, CorpusDoc, Evidence, retrieve, strict_json_text
 
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL | re.IGNORECASE)
+MAX_HOUSE_RESPONSE_BYTES = 1_000_000
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects so the organizer bearer token cannot be forwarded."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def _endpoint() -> tuple[str, str, str] | None:
@@ -17,6 +26,10 @@ def _endpoint() -> tuple[str, str, str] | None:
     token = os.environ.get("MODEL_TOKEN", "").strip()
     model = os.environ.get("MODEL_NAME", "").strip()
     if not (base and token and model):
+        return None
+    parsed = urllib.parse.urlsplit(base)
+    if (parsed.scheme != "https" or not parsed.hostname or parsed.username is not None
+            or parsed.password is not None or parsed.query or parsed.fragment):
         return None
     return base + "/v1/chat/completions", token, model
 
@@ -27,8 +40,8 @@ def _parse_content(content: str) -> dict[str, Any] | None:
     if match:
         text = match.group(1)
     try:
-        value = json.loads(text)
-    except (json.JSONDecodeError, TypeError):
+        value = strict_json_text(text, max_bytes=MAX_HOUSE_RESPONSE_BYTES)
+    except (ContractError, TypeError):
         return None
     if not isinstance(value, dict) or not isinstance(value.get("entity_predictions"), list):
         return None
@@ -43,7 +56,8 @@ def _parse_content(content: str) -> dict[str, Any] | None:
     return out
 
 
-def plan(task: dict[str, Any], docs: list[CorpusDoc], *, timeout: float = 35.0) -> dict[str, Any] | None:
+def plan(task: dict[str, Any], docs: list[CorpusDoc], *, timeout: float = 35.0,
+         transport: Callable[..., Any] | None = None) -> dict[str, Any] | None:
     """Ask only the organizer House route for prediction numbers/labels.
 
     Evidence identity and citation spans are never accepted from model output. They are
@@ -72,26 +86,36 @@ def plan(task: dict[str, Any], docs: list[CorpusDoc], *, timeout: float = 35.0) 
         "entities": task["entities"],
         "evidence": evidence_by_entity,
     }
-    body = json.dumps({
-        "model": model,
-        "temperature": 0,
-        "max_tokens": min(4000, max(800, 160 * len(task["entities"]))),
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": json.dumps(user_payload, sort_keys=True, separators=(",", ":"))},
-        ],
-    }, separators=(",", ":")).encode("utf-8")
+    try:
+        body = json.dumps({
+            "model": model,
+            "temperature": 0,
+            "max_tokens": min(4000, max(800, 160 * len(task["entities"]))),
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": json.dumps(
+                    user_payload, sort_keys=True, separators=(",", ":"), allow_nan=False
+                )},
+            ],
+        }, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    except (ValueError, TypeError, OverflowError):
+        return None
     request = urllib.request.Request(url, data=body, method="POST", headers={
         "Authorization": f"Bearer {token}", "Content-Type": "application/json", "Accept": "application/json"
     })
+    open_request = transport or urllib.request.build_opener(NoRedirect()).open
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with open_request(request, timeout=timeout) as response:
             if response.status != 200:
                 return None
-            raw = json.loads(response.read().decode("utf-8"))
+            raw_bytes = response.read(MAX_HOUSE_RESPONSE_BYTES + 1)
+            if len(raw_bytes) > MAX_HOUSE_RESPONSE_BYTES:
+                return None
+        raw = strict_json_text(raw_bytes.decode("utf-8"), max_bytes=MAX_HOUSE_RESPONSE_BYTES)
         content = raw["choices"][0]["message"]["content"]
         if not isinstance(content, str):
             return None
         return _parse_content(content)
-    except (OSError, KeyError, IndexError, TypeError, ValueError, urllib.error.URLError):
+    except (ContractError, UnicodeDecodeError, OSError, KeyError, IndexError, TypeError,
+            ValueError, urllib.error.URLError):
         return None
