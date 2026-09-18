@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 import threading
 import unittest
 from pathlib import Path
@@ -98,6 +99,69 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         self.assertGreater(canonical_size(amplified_packet), expected_bytes)
         with self.assertRaisesRegex(RepoAtlasError, "verify:packet_too_complex"):
             verify_bundle(raw, amplified_packet, receipt)
+
+    def test_cross_sibling_callback_cannot_splice_valid_packet_generation(self):
+        raw = fixture()
+        packet, receipt = compile_packet(raw)
+        candidate = copy.deepcopy(packet)
+        summary = candidate["summary"]
+        authority = candidate["authority"]
+        self.assertIs(authority["auto_merge"], False)
+
+        # State A: summary is correct, authority is canonically wrong. The
+        # hostile callback is armed to switch to state B only after the summary
+        # subtree has been copied but before the authority subtree is copied.
+        # State B makes summary wrong and authority correct. Neither state is
+        # the expected packet, but the predecessor could splice the correct
+        # half from each state into one verifier-owned artifact.
+        authority["auto_merge"] = 0
+        summary_key = next(
+            key
+            for key, value in summary.items()
+            if type(value) in (bool, int, float, str)
+        )
+        original_summary_value = summary[summary_key]
+        if type(original_summary_value) is bool:
+            wrong_summary_value = not original_summary_value
+        elif type(original_summary_value) is int:
+            wrong_summary_value = original_summary_value + 1
+        elif type(original_summary_value) is float:
+            wrong_summary_value = original_summary_value + 1.0
+        else:
+            wrong_summary_value = original_summary_value + "#mutated"
+
+        switched = False
+
+        def splice_on_authority(frame, event, _arg):
+            nonlocal switched
+            if (
+                event == "line"
+                and frame.f_code is core._canonical_verified_artifact.__code__
+                and frame.f_locals.get("current") is authority
+                and not switched
+            ):
+                # Transition A -> both wrong -> B. There is deliberately never
+                # an instant where the live caller packet equals the expected
+                # packet.
+                summary[summary_key] = wrong_summary_value
+                authority["auto_merge"] = False
+                switched = True
+            return splice_on_authority
+
+        prior_trace = sys.gettrace()
+        sys.settrace(splice_on_authority)
+        try:
+            with self.assertRaisesRegex(RepoAtlasError, "verify:packet_mismatch"):
+                verify_bundle(raw, candidate, receipt)
+        finally:
+            sys.settrace(prior_trace)
+
+        # The verifier's cooperative snapshot fence suspends current-thread
+        # trace callbacks during the caller-owned graph copy, so the armed
+        # cross-sibling splice cannot run inside that critical section.
+        self.assertFalse(switched)
+        self.assertEqual(summary[summary_key], original_summary_value)
+        self.assertEqual(authority["auto_merge"], 0)
 
     def test_mutation_after_bounded_freeze_cannot_change_serialized_generation(self):
         raw = fixture()
