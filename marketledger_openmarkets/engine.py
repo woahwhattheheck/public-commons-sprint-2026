@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -184,9 +185,22 @@ def evaluate_snapshot(
     return core
 
 
+def _verify_report(report: Mapping[str, Any]) -> None:
+    if not isinstance(report, Mapping) or report.get("schema") != REPORT_SCHEMA:
+        raise MarketLedgerError("report must use marketledger.report.v1")
+    supplied = report.get("report_sha256")
+    if not isinstance(supplied, str) or len(supplied) != 64:
+        raise MarketLedgerError("report_sha256 is missing or malformed")
+    core = dict(report)
+    core.pop("report_sha256", None)
+    expected = _receipt(core)
+    if not hmac.compare_digest(supplied, expected):
+        raise MarketLedgerError("report_sha256 does not match report contents")
+
+
 def compare_reports(previous: Mapping[str, Any], current: Mapping[str, Any], *, move_threshold_bps: int | float | str = 50) -> list[dict[str, Any]]:
-    if previous.get("schema") != REPORT_SCHEMA or current.get("schema") != REPORT_SCHEMA:
-        raise MarketLedgerError("both reports must use marketledger.report.v1")
+    _verify_report(previous)
+    _verify_report(current)
     threshold = _decimal(move_threshold_bps, "move_threshold_bps", minimum=Decimal("0"))
     prev = {row["position_hash"]: row for row in previous.get("positions", []) if isinstance(row, Mapping)}
     events: list[dict[str, Any]] = []
@@ -216,16 +230,19 @@ def compare_reports(previous: Mapping[str, Any], current: Mapping[str, Any], *, 
 
 def stage_action(report: Mapping[str, Any], *, position_hash: str, partner_id: str, confirmation_token: str) -> dict[str, Any]:
     """Create a data-only staged action. There is intentionally no execute function."""
-    if report.get("schema") != REPORT_SCHEMA:
-        raise MarketLedgerError("report must use marketledger.report.v1")
+    _verify_report(report)
     if not isinstance(confirmation_token, str) or len(confirmation_token.strip()) < 8:
         raise MarketLedgerError("confirmation_token must contain at least 8 characters")
     target = next((row for row in report.get("positions", []) if row.get("position_hash") == position_hash), None)
     if target is None:
         raise MarketLedgerError("position_hash not present in report")
+    if target.get("status") != "ok":
+        raise MarketLedgerError("position is not eligible for staging")
     quote = next((row for row in target.get("quotes", []) if row.get("partner_id") == partner_id), None)
     if quote is None:
         raise MarketLedgerError("partner_id not present for position")
+    if quote.get("eligible") is not True:
+        raise MarketLedgerError("partner quote is below the report liquidity policy")
     token_hash = hashlib.sha256(confirmation_token.encode("utf-8")).hexdigest()
     staged = {
         "schema": STAGE_SCHEMA,
