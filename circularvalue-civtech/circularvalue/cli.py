@@ -100,6 +100,19 @@ def _prepare_demo_dir(path: Path) -> None:
         raise CircularValueError("demo output directory must be a real directory, not a symlink")
 
 
+def _unlink_if_same(path: Path, fd: int) -> None:
+    try:
+        current = path.lstat()
+        opened = os.fstat(fd)
+    except OSError:
+        return
+    if stat.S_ISREG(current.st_mode) and _same_identity(current, opened):
+        try:
+            path.unlink()
+        except OSError:
+            pass
+
+
 def _write_demo_pair(out: Path, case_text: str, packet_text: str) -> tuple[Path, Path]:
     case_path = out / "case.json"
     packet_path = out / "packet.json"
@@ -110,12 +123,9 @@ def _write_demo_pair(out: Path, case_text: str, packet_text: str) -> tuple[Path,
         try:
             packet_fd = _open_new(packet_path)
         except Exception:
+            _unlink_if_same(case_path, case_fd)
             os.close(case_fd)
             case_fd = None
-            try:
-                case_path.unlink()
-            except OSError:
-                pass
             raise
         _write_fd(case_fd, case_text)
         _write_fd(packet_fd, packet_text)
