@@ -18,17 +18,17 @@ import {
 } from "./core.mjs";
 import { requireRole } from "./auth.mjs";
 
-const CLAIM_KEYS = ["event_id", "org", "domain", "route", "purpose", "opportunity", "lease_seconds", "reason"];
-const EVENT_KEYS = ["event_id", "kind", "org", "domain", "route", "purpose", "opportunity", "provider_receipt", "human_evidence_id", "reason"];
+const CLAIM_KEYS = ["event_id", "lane_id", "org", "domain", "route", "purpose", "opportunity", "lease_seconds", "reason"];
+const EVENT_KEYS = ["event_id", "kind", "lane_id", "org", "domain", "route", "purpose", "opportunity", "provider_receipt", "human_evidence_id", "reason"];
 const RETRYABLE_TRANSACTION_CODES = new Set(["40001", "40P01"]);
 
-function common(input, principal) {
+function common(input, principal, laneRegistry) {
   const eventId = validateIdentifier(input.event_id, "event id");
   const actor = validateActor(principal.subject);
   const identity = normalizeIdentity(input);
-  // Normalize once, retain the full target identity, but lock on the
-  // organization-level projection. Domain remains selected target evidence and
-  // cannot mint a parallel writer lane through root/subdomain/multi-domain aliases.
+  // Membership is a server-held authority decision and happens before any
+  // transaction, lock-row insert, identifier reservation, or event persistence.
+  laneRegistry.requireKnown(identity.lane_id);
   const key = sha256Hex(collisionIdentityFromNormalized(identity));
   const route = normalizeRoute(input.route);
   const reason = validateReason(input.reason);
@@ -134,6 +134,14 @@ async function persistEvent(client, accepted, receipt) {
 }
 
 export function createService(db, options = {}) {
+  const laneRegistry = options.laneRegistry;
+  requireCondition(
+    laneRegistry &&
+      typeof laneRegistry.requireKnown === "function" &&
+      typeof laneRegistry.list === "function",
+    "server lane registry dependency required",
+    503,
+  );
   const txOptions = { maxAttempts: options.transactionMaxAttempts ?? 3 };
   const afterServerNow = typeof options.afterServerNow === "function" ? options.afterServerNow : null;
 
@@ -141,7 +149,7 @@ export function createService(db, options = {}) {
     async claim(input, principal) {
       requireRole(principal, "claim");
       requireExactKeys(input, CLAIM_KEYS, "claim");
-      const c = common(input, principal);
+      const c = common(input, principal, laneRegistry);
       const leaseSeconds = validateLeaseSeconds(input.lease_seconds);
       return transaction(db, async (client, attemptContext) => {
         await lockLane(client, c.key);
@@ -156,17 +164,22 @@ export function createService(db, options = {}) {
         if (!lane) {
           const inserted = await client.query(
             `INSERT INTO lanes (
-               collision_key, org, domain, purpose, opportunity, state, holder,
+               collision_key, lane_id, org, domain, purpose, opportunity, state, holder,
                leased_route, lease_until, reopen_from_state, reopen_from_route, version, updated_at
-             ) VALUES ($1,$2,$3,$4,$5,'LEASED',$6,$7,$8,NULL,NULL,1,$9)
+             ) VALUES ($1,$2,$3,$4,$5,$6,'LEASED',$7,$8,$9,NULL,NULL,1,$10)
              RETURNING *`,
-            [c.key, c.identity.org, c.identity.domain, c.identity.purpose,
-             c.identity.opportunity, c.actor, c.route,
+            [c.key, c.identity.lane_id, c.identity.org, c.identity.domain,
+             c.identity.purpose, c.identity.opportunity, c.actor, c.route,
              new Date(now.getTime() + leaseSeconds * 1000), now],
           );
           lane = inserted.rows[0];
           decision = "GRANTED";
         } else {
+          requireCondition(
+            lane.lane_id === c.identity.lane_id,
+            "canonical lane identity mismatch",
+            500,
+          );
           const restored = await refenceExpiredHumanLease(client, lane, now);
           lane = restored.lane;
           refenced = restored.refenced;
@@ -256,7 +269,7 @@ export function createService(db, options = {}) {
       else if (kind === "HUMAN_EVENT") requireRole(principal, "human_evidence");
       else requireRole(principal, "hold");
 
-      const c = common(input, principal);
+      const c = common(input, principal, laneRegistry);
       const providerReceipt = input.provider_receipt === null ? null : validateIdentifier(input.provider_receipt, "provider_receipt");
       const humanEvidenceId = input.human_evidence_id === null ? null : validateIdentifier(input.human_evidence_id, "human_evidence_id");
       if (kind === "SENT" || kind === "BOUNCE") {
@@ -273,6 +286,11 @@ export function createService(db, options = {}) {
         if (afterServerNow) await afterServerNow({ operation: "event", kind, attempt: attemptContext.attempt, now });
         let lane = await loadLane(client, c.key);
         requireCondition(Boolean(lane), "writer lane does not exist", 409);
+        requireCondition(
+          lane.lane_id === c.identity.lane_id,
+          "canonical lane identity mismatch",
+          500,
+        );
         const restored = await refenceExpiredHumanLease(client, lane, now);
         lane = restored.lane;
         const refenced = restored.refenced;
@@ -369,6 +387,7 @@ export function createService(db, options = {}) {
         status: "OK",
         server_time_utc: now.toISOString(),
         principal: { subject: principal.subject, roles: [...principal.roles] },
+        lane_registry: laneRegistry.list(),
         lanes,
         events: eventRows,
         impact: impactFromEvents(eventRows),
