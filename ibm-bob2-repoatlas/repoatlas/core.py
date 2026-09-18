@@ -113,12 +113,17 @@ def parse_json_bytes(data: bytes) -> Any:
         raise RepoAtlasError("invalid_json") from exc
 
 
-def _preflight_mapping(value: Any, name: str, maximum_fields: int) -> None:
+def _preflight_mapping(
+    value: Any,
+    name: str,
+    maximum_fields: int,
+    _error=RepoAtlasError,
+) -> None:
     """Bound direct-object mapping work before `_source._only()` allocates."""
     if type(value) is not dict:
         return
     if len(value) > maximum_fields:
-        raise RepoAtlasError(f"{name}:field_cardinality")
+        raise _error(f"{name}:field_cardinality")
     for key in value:
         # json.loads can only produce string object keys, but escaped lone
         # surrogates are still Python ``str`` values and object-mode callers
@@ -126,74 +131,83 @@ def _preflight_mapping(value: Any, name: str, maximum_fields: int) -> None:
         # field names before `_source._only()` can embed them in an error string
         # that the UTF-8 CLI would then fail to print.
         if type(key) is not str or len(key) > 256:
-            raise RepoAtlasError(f"{name}:field_name")
+            raise _error(f"{name}:field_name")
         try:
             key.encode("utf-8", "strict")
         except UnicodeEncodeError as exc:
-            raise RepoAtlasError(f"{name}:field_name") from exc
+            raise _error(f"{name}:field_name") from exc
 
 
-def _preflight_cardinality(raw: Any) -> None:
-    """Bound every repeated object-mode structure before expensive traversal."""
+def _preflight_cardinality(
+    raw: Any,
+    _mapping=_preflight_mapping,
+    _error=RepoAtlasError,
+    _max_changes=MAX_CHANGES,
+    _max_doc_rows=MAX_DOC_ROWS,
+    _max_row_refs=MAX_ROW_REFS,
+    _max_files=_source.MAX_FILES,
+    _max_edges=_source.MAX_EDGES,
+) -> None:
+    """Bound object-mode work using one import-generation policy snapshot."""
     if type(raw) is not dict:
         return
 
-    _preflight_mapping(raw, "root", 9)
+    _mapping(raw, "root", 9)
 
     for name, limit in (
-        ("changes", MAX_CHANGES),
-        ("adrs", MAX_DOC_ROWS),
-        ("runbooks", MAX_DOC_ROWS),
+        ("changes", _max_changes),
+        ("adrs", _max_doc_rows),
+        ("runbooks", _max_doc_rows),
     ):
         rows = raw.get(name, [])
         if type(rows) is list and len(rows) > limit:
-            raise RepoAtlasError(f"{name}:cardinality")
+            raise _error(f"{name}:cardinality")
 
-    # `_source._validate` already bounds the top-level files list before
-    # iterating it. Only inspect nested refs when that outer list is itself
-    # within the retained bound, so this preflight cannot be turned into a new
-    # unbounded traversal.
+    # Retain the original source file/edge ceilings here as well as in the
+    # retained validator. That prevents later mutation of the retained module's
+    # public limit names from widening work admitted by this facade generation.
     files = raw.get("files", [])
-    if type(files) is list and len(files) <= _source.MAX_FILES:
+    if type(files) is list:
+        if len(files) > _max_files:
+            raise _error("files:cardinality")
         for i, row in enumerate(files):
-            _preflight_mapping(row, f"files[{i}]", 7)
+            _mapping(row, f"files[{i}]", 7)
             if type(row) is not dict:
                 continue
             tests = row.get("tests", [])
-            if type(tests) is list and len(tests) > MAX_ROW_REFS:
-                raise RepoAtlasError(f"files[{i}].tests:cardinality")
+            if type(tests) is list and len(tests) > _max_row_refs:
+                raise _error(f"files[{i}].tests:cardinality")
 
-    # Dependency count is already source-bounded before row traversal. Mirror
-    # that outer condition only so direct-object row maps are bounded before
-    # `_source._only()` constructs an attacker-sized unknown-key set.
     dependencies = raw.get("dependencies", [])
-    if type(dependencies) is list and len(dependencies) <= _source.MAX_EDGES:
+    if type(dependencies) is list:
+        if len(dependencies) > _max_edges:
+            raise _error("dependencies:cardinality")
         for i, row in enumerate(dependencies):
-            _preflight_mapping(row, f"dependencies[{i}]", 3)
+            _mapping(row, f"dependencies[{i}]", 3)
 
     changes = raw.get("changes", [])
-    if type(changes) is list and len(changes) <= MAX_CHANGES:
+    if type(changes) is list and len(changes) <= _max_changes:
         for i, row in enumerate(changes):
-            _preflight_mapping(row, f"changes[{i}]", 4)
+            _mapping(row, f"changes[{i}]", 4)
 
     for name in ("adrs", "runbooks"):
         rows = raw.get(name, [])
-        if type(rows) is not list or len(rows) > MAX_DOC_ROWS:
+        if type(rows) is not list or len(rows) > _max_doc_rows:
             continue
         for i, row in enumerate(rows):
-            _preflight_mapping(row, f"{name}[{i}]", 3)
+            _mapping(row, f"{name}[{i}]", 3)
             if type(row) is not dict:
                 continue
             covers = row.get("covers", [])
-            if type(covers) is list and len(covers) > MAX_ROW_REFS:
-                raise RepoAtlasError(f"{name}[{i}].covers:cardinality")
+            if type(covers) is list and len(covers) > _max_row_refs:
+                raise _error(f"{name}[{i}].covers:cardinality")
 
-    _preflight_mapping(raw.get("provider"), "provider", 4)
-
+    _mapping(raw.get("provider"), "provider", 4)
 
 def _validate_source_input(
     raw: Any,
     _source_validate=_source._validate,
+    _preflight_cardinality_fn=_preflight_cardinality,
     _gc_isenabled=gc.isenabled,
     _gc_disable=gc.disable,
     _gc_enable=gc.enable,
@@ -227,7 +241,7 @@ def _validate_source_input(
         if _pthread_sigmask is not None and _sig_block is not None and _sig_setmask is not None:
             previous_mask = _pthread_sigmask(_sig_block, _maskable_signals)
             signal_masked = True
-        _preflight_cardinality(raw)
+        _preflight_cardinality_fn(raw)
         try:
             normalized = _source_validate(raw)
         except UnicodeEncodeError as exc:
