@@ -16,15 +16,28 @@ MAX_INPUT_BYTES = 2_000_000
 
 def _read_json(path_text: str) -> Any:
     path = Path(path_text)
-    if path.is_symlink():
-        raise MarketLedgerError("input path must not be a symlink")
-    st = path.stat()
-    if not stat.S_ISREG(st.st_mode):
-        raise MarketLedgerError("input path must be a regular file")
-    if st.st_size > MAX_INPUT_BYTES:
-        raise MarketLedgerError("input file exceeds size limit")
-    with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        fd = os.open(path, flags)
+    except OSError as exc:
+        if path.is_symlink():
+            raise MarketLedgerError("input path must not be a symlink") from exc
+        raise
+    owned_fd: int | None = fd
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            raise MarketLedgerError("input path must be a regular file")
+        if st.st_size > MAX_INPUT_BYTES:
+            raise MarketLedgerError("input file exceeds size limit")
+        with os.fdopen(fd, "r", encoding="utf-8") as handle:
+            owned_fd = None
+            return json.load(handle)
+    finally:
+        if owned_fd is not None:
+            os.close(owned_fd)
 
 
 def _write_json(path_text: str, value: Any) -> None:
