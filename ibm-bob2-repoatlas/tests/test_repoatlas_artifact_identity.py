@@ -414,11 +414,11 @@ class RepoAtlasArtifactIdentityTests(unittest.TestCase):
         worker.start()
         try:
             actual = core._canonical_verified_artifact(
-            candidate,
-            "packet",
-            len(expected),
-            _canonical=serialize_after_mutation,
-        )
+                candidate,
+                "packet",
+                len(expected),
+                _canonical=serialize_after_mutation,
+            )
         finally:
             worker.join(5)
 
