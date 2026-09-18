@@ -19,11 +19,11 @@ from .vision import VisionError
 PIPELINE_GENERATION = "visualledger-opencv/v1"
 RECORD_SCHEMA = "visualledger-aws-record/v1"
 MAX_SCOPE_RECORDS = 512
-_HEX64 = re.compile(r"[0-9a-f]{64}\\Z")
+_HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 
 
 def _text(value: Any, label: str, maximum: int = 512) -> str:
-    if type(value) is not str or not value or len(value) > maximum or "\\x00" in value:
+    if type(value) is not str or not value or len(value) > maximum or "\x00" in value:
         raise VisionError(f"invalid {label}")
     return value
 
