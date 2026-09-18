@@ -78,6 +78,27 @@ class CommercialPilotTests(unittest.TestCase):
         packet["receipt_sha256"] = digest_json(packet)
         self.assertFalse(verify_pilot_packet(packet))
 
+
+    def test_resealed_packet_mutation_cannot_redefine_verifier_policy(self):
+        from proofline.codec import digest_json
+        packet = build_pilot_packet(copy.deepcopy(SAMPLE))
+        packet["authority"]["claim_revenue"] = True
+        packet["commercial_claims"]["revenue_received"] = True
+        packet["source_evidence"][0]["truth"] = "CALLER_PROMOTED"
+        packet["acceptance_criteria"][0]["proof"] = "caller says pass"
+        packet.pop("receipt_sha256")
+        packet["receipt_sha256"] = digest_json(packet)
+        self.assertFalse(verify_pilot_packet(packet))
+
+        clean = build_pilot_packet(copy.deepcopy(SAMPLE))
+        self.assertTrue(verify_pilot_packet(clean))
+        self.assertFalse(clean["authority"]["claim_revenue"])
+        self.assertFalse(clean["commercial_claims"]["revenue_received"])
+        self.assertEqual(
+            clean["source_evidence"][0]["truth"],
+            "SOURCE_REFERENCE_NOT_READINESS_ATTESTATION",
+        )
+
     def test_roi_is_scenario_only(self):
         packet = build_pilot_packet(copy.deepcopy(SAMPLE))
         roi = packet["roi_scenario"]
