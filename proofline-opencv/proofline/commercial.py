@@ -251,6 +251,36 @@ def _packet_for_validation(packet: dict[str, Any]) -> dict[str, Any]:
     pilot["price"].pop("payment_link", None)
     return pilot
 
+def _freeze_verifier_json(value: Any, depth: int = 0) -> Any:
+    """Copy verifier input into owned exact built-in JSON types.
+
+    The programmatic verifier is a trust boundary, so container/scalar subclasses
+    are rejected before hashing or semantic comparisons can invoke attacker-
+    controlled equality, iteration, or mapping behavior.
+    """
+    if depth > 32:
+        raise CommercialError("verifier packet exceeds maximum JSON depth")
+    if value is None:
+        return None
+    value_type = type(value)
+    if value_type is str:
+        value.encode("utf-8", "strict")
+        return value
+    if value_type in (bool, int, float):
+        return value
+    if value_type is list:
+        return [_freeze_verifier_json(item, depth + 1) for item in value]
+    if value_type is dict:
+        owned: dict[str, Any] = {}
+        for key, item in value.items():
+            if type(key) is not str:
+                raise CommercialError("verifier JSON object keys must be exact strings")
+            key.encode("utf-8", "strict")
+            owned[key] = _freeze_verifier_json(item, depth + 1)
+        return owned
+    raise CommercialError("verifier packet must contain only exact built-in JSON types")
+
+
 def _make_verifier_generation():
     frozen_globals: dict[str, Any] = {
         "__builtins__": __builtins__,
@@ -274,12 +304,13 @@ def _make_verifier_generation():
         frozen_globals[fn.__name__] = cloned
         return cloned
 
-    for fn in (_int, _text, _minor_cost, _normalize_intake, _roi_scenario, _packet_for_validation):
+    for fn in (_int, _text, _minor_cost, _normalize_intake, _roi_scenario, _packet_for_validation, _freeze_verifier_json):
         clone(fn)
 
     normalize = frozen_globals["_normalize_intake"]
     roi = frozen_globals["_roi_scenario"]
     packet_for_validation = frozen_globals["_packet_for_validation"]
+    freeze = frozen_globals["_freeze_verifier_json"]
     digest = digest_json
     expected_authority = _false_authority()
     expected_outcomes = _false_outcomes()
@@ -297,14 +328,15 @@ def _make_verifier_generation():
 
     def frozen_verify(packet: dict[str, Any]) -> bool:
         try:
-            if not isinstance(packet, dict) or packet.get("schema") != schema:
+            owned = freeze(packet)
+            if type(owned) is not dict or owned.get("schema") != schema:
                 return False
-            if packet.get("generation") != generation:
+            if owned.get("generation") != generation:
                 return False
-            receipt = packet.get("receipt_sha256")
+            receipt = owned.get("receipt_sha256")
             if not isinstance(receipt, str) or len(receipt) != 64:
                 return False
-            body = dict(packet)
+            body = dict(owned)
             body.pop("receipt_sha256", None)
             if digest(body) != receipt:
                 return False
