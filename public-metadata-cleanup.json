@@ -1,0 +1,29 @@
+{
+  "schema": "public-github-metadata-cleanup/v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "policy_generation": "public-metadata-isolation/v1",
+  "items": [
+    {
+      "kind": "issue",
+      "number": 114,
+      "field": "body",
+      "state": "REDACTION_REQUIRED",
+      "reasons": [
+        "commons-work-item-lineage",
+        "internal-commit-locator",
+        "internal-swarm-lineage"
+      ],
+      "preserve": [
+        "OneWriter product scope",
+        "transactional lease architecture",
+        "retained identifier semantics",
+        "deployment and external-authority hard gates"
+      ],
+      "redact": [
+        "internal work-item locator",
+        "internal commit locator",
+        "internal orchestration identity"
+      ]
+    }
+  ]
+}
