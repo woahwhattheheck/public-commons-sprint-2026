@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>OneWriter — collision control</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">TJLabs coordination control</p>
+      <h1>OneWriter</h1>
+      <p class="lede">One live writer per server-provisioned canonical lane. Human labels, domains, and routes cannot mint another writer.</p>
+    </div>
+    <div class="authority"><strong>No send authority</strong><span>This app records ownership and evidence. It never sends outreach.</span></div>
+  </header>
+
+  <section class="session-bar" aria-label="Authenticated session">
+    <div><p class="eyebrow">Explicit bearer capability</p><strong id="session-status">Not authenticated</strong><p class="subtle">Token stays in this browser tab's sessionStorage and is sent only in the Authorization header. Actor identity comes from the server session registry, never from form input.</p></div>
+    <form id="session-form" class="session-form"><label>Session token<input id="session-token" type="password" autocomplete="off" required placeholder="paste authorized session token"></label><button class="primary" type="submit">Connect</button><button id="disconnect" type="button">Disconnect</button></form>
+  </section>
+
+  <nav class="tabs" aria-label="OneWriter sections">
+    <button data-tab="claim" class="active">Claim desk</button>
+    <button data-tab="lanes">Live lanes</button>
+    <button data-tab="outcomes">Outcomes</button>
+    <button data-tab="receipts">Receipts</button>
+    <button data-tab="impact">Impact</button>
+  </nav>
+
+  <datalist id="lane-registry-list"></datalist>
+
+  <main>
+    <section id="claim" class="panel active">
+      <div class="section-head"><div><p class="eyebrow">Atomic acquisition</p><h2>Claim a writer lane</h2></div><span id="server-time" class="mono subtle">authenticated state required</span></div>
+      <form id="claim-form" class="grid form-grid">
+        <label>Canonical lane ID<input name="lane_id" list="lane-registry-list" required placeholder="lane:northstar-builderfest"></label>
+        <label>Organization<input name="org" required value="Northstar Labs"></label>
+        <label>Domain<input name="domain" required value="northstar.example"></label>
+        <label>Proposed route<input name="route" required value="email:sales@northstar.example"></label>
+        <label>Purpose<input name="purpose" required value="initial outreach"></label>
+        <label>Opportunity<input name="opportunity" required value="builder fest"></label>
+        <label>Lease seconds<input name="lease_seconds" required type="number" min="30" max="1800" value="300"></label>
+        <label>Event id<input name="event_id" required placeholder="evt-20260917-001"></label>
+        <label class="span-2">Reason<input name="reason" required value="single-writer ownership before external action"></label>
+        <div class="span-2 callout">Writer ownership is keyed only by a <strong>server-provisioned canonical lane ID</strong>. Organization, domain, purpose, opportunity, and route are retained target/audit metadata and cannot mint a second lane. Unknown IDs are rejected before any database mutation. The authenticated session subject is the worker identity written into the receipt.</div>
+        <button class="primary span-2" type="submit">Request writer lease</button>
+      </form>
+      <pre id="claim-result" class="result" aria-live="polite"></pre>
+    </section>
+
+    <section id="lanes" class="panel">
+      <div class="section-head"><div><p class="eyebrow">Authenticated current state</p><h2>Live lanes</h2></div><button id="refresh-lanes">Refresh</button></div>
+      <div id="lane-list" class="cards"></div>
+    </section>
+
+    <section id="outcomes" class="panel">
+      <div class="section-head"><div><p class="eyebrow">Role-gated evidence transitions</p><h2>Record an outcome</h2></div></div>
+      <form id="event-form" class="grid form-grid">
+        <label>Kind<select name="kind" required><option>SENT</option><option>BOUNCE</option><option>HUMAN_EVENT</option><option>HOLD</option></select></label>
+        <label>Event id<input name="event_id" required placeholder="evt-outcome-001"></label>
+        <label>Canonical lane ID<input name="lane_id" list="lane-registry-list" required placeholder="lane:northstar-builderfest"></label>
+        <label>Organization<input name="org" required value="Northstar Labs"></label>
+        <label>Domain<input name="domain" required value="northstar.example"></label>
+        <label>Route<input name="route" required value="email:sales@northstar.example"></label>
+        <label>Purpose<input name="purpose" required value="initial outreach"></label>
+        <label>Opportunity<input name="opportunity" required value="builder fest"></label>
+        <label>Provider receipt<input name="provider_receipt" placeholder="provider_evidence role; SENT/BOUNCE"></label>
+        <label>Human evidence id<input name="human_evidence_id" placeholder="human_evidence role; HUMAN_EVENT"></label>
+        <label class="span-2">Reason<input name="reason" required value="retained evidence transition"></label>
+        <div class="span-2 callout warning">SENT/BOUNCE require the authenticated current lease-holder session to also hold provider_evidence capability. HUMAN_EVENT requires human_evidence capability. HOLD requires hold capability. SENT means recorder-attested provider acceptance, not human interest; BOUNCE means route failure, not buyer rejection.</div>
+        <button class="primary span-2" type="submit">Record transition</button>
+      </form>
+      <pre id="event-result" class="result" aria-live="polite"></pre>
+    </section>
+
+    <section id="receipts" class="panel">
+      <div class="section-head"><div><p class="eyebrow">Append-only audit</p><h2>Receipts</h2></div><button id="refresh-receipts">Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Seq</th><th>Event</th><th>Kind</th><th>Authenticated actor</th><th>Decision</th><th>State</th><th>Route</th><th>Digest</th></tr></thead><tbody id="receipt-table"></tbody></table></div>
+    </section>
+
+    <section id="impact" class="panel">
+      <div class="section-head"><div><p class="eyebrow">Receipt-derived only</p><h2>Impact</h2></div><button id="refresh-impact">Refresh</button></div>
+      <div id="impact-grid" class="metrics"></div>
+      <p class="subtle">Counts are computed from authenticated retained receipts. No manual totals. Demo or rehearsal data must not be represented as production impact.</p>
+    </section>
+  </main>
+
+  <footer><span>OneWriter · authenticated coordination evidence desk</span><span class="mono">external_send_authorized = false</span></footer>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

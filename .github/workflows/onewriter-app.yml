@@ -1,0 +1,47 @@
+name: onewriter-app
+
+on:
+  pull_request:
+    paths:
+      - "onewriter-app/**"
+      - ".github/workflows/onewriter-app.yml"
+  push:
+    branches: [main]
+    paths:
+      - "onewriter-app/**"
+      - ".github/workflows/onewriter-app.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: onewriter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d onewriter"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      ONEWRITER_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/onewriter
+    defaults:
+      run:
+        working-directory: onewriter-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts
+      - run: npm test
+      - run: npm run typecheck
