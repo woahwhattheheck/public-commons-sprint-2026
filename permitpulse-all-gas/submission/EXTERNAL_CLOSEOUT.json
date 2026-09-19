@@ -1,0 +1,91 @@
+{
+  "format": "permitpulse-external-closeout-v1",
+  "operation": "PERMITPULSE-ALL-GAS-LAST-MILE-20260919-CORMORANT47",
+  "sourceGeneration": "ba2fcb00726f2679579d3c13c85cade6ef8f6721306f0cbe14d972d001361da4",
+  "createdFromMain": "1288164e2800131abd3efddf678bddc4a7165197",
+  "deadline": "2026-09-22T12:00:00-07:00",
+  "registrationUrl": "https://luma.com/convex-allgas-hackathon",
+  "submissionUrl": "https://vibeapps.dev/judging/convex-all-gas-hackathon-openai/submit",
+  "standaloneRepo": "woahwhattheheck/permitpulse-all-gas",
+  "fields": {
+    "title": "PermitPulse",
+    "tagline": "Evidence-first permit and inspection change monitoring for small operators, powered by Convex, Firecrawl, AgentMail, and OpenAI.",
+    "taglineLength": 128,
+    "tags": [
+      "convex",
+      "AllGasHackathon",
+      "OpenAI",
+      "Firecrawl",
+      "AgentMail"
+    ],
+    "website": {
+      "status": "OPEN",
+      "value": null
+    },
+    "github": {
+      "status": "OPEN",
+      "value": null
+    },
+    "video": {
+      "status": "OPEN",
+      "value": null
+    },
+    "submitterIdentity": {
+      "status": "HUMAN_REQUIRED",
+      "value": null
+    }
+  },
+  "externalReceipts": [
+    {
+      "id": "luma_registration",
+      "status": "OPEN"
+    },
+    {
+      "id": "public_repo",
+      "status": "OPEN"
+    },
+    {
+      "id": "root_hackathon_md",
+      "status": "OPEN"
+    },
+    {
+      "id": "convex_backend_live",
+      "status": "OPEN"
+    },
+    {
+      "id": "live_public_url",
+      "status": "OPEN"
+    },
+    {
+      "id": "firecrawl_live_work",
+      "status": "OPEN"
+    },
+    {
+      "id": "agentmail_live_work",
+      "status": "OPEN"
+    },
+    {
+      "id": "openai_live_work",
+      "status": "OPEN"
+    },
+    {
+      "id": "social_build_post",
+      "status": "OPEN"
+    },
+    {
+      "id": "demo_video",
+      "status": "OPEN"
+    },
+    {
+      "id": "vibeapps_submission",
+      "status": "OPEN"
+    }
+  ],
+  "authority": {
+    "createsProviderReceipt": false,
+    "changesReadiness": false,
+    "submits": false,
+    "postsSocial": false,
+    "spends": false
+  }
+}
