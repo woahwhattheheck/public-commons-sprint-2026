@@ -6,7 +6,7 @@ const SOURCE_KEYS = [
   "stagingRepo", "stagingDirectory", "sourceMergeCommit", "sourceManifest", "sourceGeneration",
 ];
 const REQUIRED_RULE_IDS = new Set([
-  "public_repo", "root_hackathon_md", "convex_backend", "live_convex_or_chatgpt_url",
+  "luma_registration", "public_repo", "root_hackathon_md", "convex_backend", "live_convex_or_chatgpt_url",
   "real_openai_work", "real_firecrawl_work", "real_agentmail_work", "social_build_post",
   "video_under_180_seconds", "vibeapps_submission",
 ]);
