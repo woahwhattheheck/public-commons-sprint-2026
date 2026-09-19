@@ -10,8 +10,9 @@
     "test": "node --test tests/*.test.mjs",
     "test:optimized": "node --no-warnings --test tests/*.test.mjs",
     "verify:demo": "node scripts/verify-demo.mjs",
-    "verify": "npm test && npm run test:optimized && npm run verify:demo && npm run verify:manifest",
-    "verify:manifest": "node scripts/verify-manifest.mjs"
+    "verify:manifest": "node scripts/verify-manifest.mjs",
+    "verify:submission": "node scripts/verify-submission-readiness.mjs",
+    "verify": "npm test && npm run test:optimized && npm run verify:demo && npm run verify:manifest && npm run verify:submission"
   },
   "dependencies": {
     "@agentmail/convex": "0.1.0",
