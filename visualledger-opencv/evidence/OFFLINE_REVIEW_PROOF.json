@@ -1,0 +1,116 @@
+{
+  "schema": "visualledger-offline-review-proof/v1",
+  "owner": "Z-Cairn-Q6E9 / GPT-6 Astra Pro",
+  "date": "2026-09-18",
+  "evidence_class": "local exact-blob OpenCV-4 compatibility execution; not hosted proof",
+  "published_source_commit": "11cd24d38e5a382fcf8a72e7ba08020aaf701e63",
+  "source_files": {
+    "visualledger/review.py": {
+      "bytes": 16685,
+      "git_blob": "5384c1e492dbf30d5ea561af10bec4965d665f9a",
+      "sha256": "773b42c4da76cf5688e18cec816f843ee7f603182bb48888fda387df84435e6e"
+    },
+    "tests/test_review.py": {
+      "bytes": 13937,
+      "git_blob": "6a2789a5751cc2f6c21be402f26e99c430fa3650",
+      "sha256": "e22ff8ca343f4bf010dc778c08b29548ae133983e21199251c007f8d30bc7a2a"
+    },
+    "docs/OFFLINE_REVIEW.md": {
+      "bytes": 5866,
+      "git_blob": "56c937fa48c270073f291d0fe8d0511bf7d644bf",
+      "sha256": "31fa5ff13a7def456db505a9d6ccfc10c23d13fe761a45c67f43e67ff6fd7046"
+    }
+  },
+  "canonical_dependency_commit": "749f0b4207bcae3c364fe7d51c300c37eb87a245",
+  "canonical_git_blobs": {
+    "visualledger/__init__.py": "312e728c9140c4f8a23e3e9b076794427e6356cd",
+    "visualledger/agent.py": "e0b56940cc7a24767bdc92eaa9bddf79ab9536d7",
+    "visualledger/vision.py": "f9bd5b223a0e167a4b4e0eadf5b51f6dc839bc13",
+    "visualledger/synth.py": "fd3c2be66c831e060f2ccedfc84e58a4369d7abb"
+  },
+  "runtime": {
+    "python": "3.13.5",
+    "opencv": "4.13.0",
+    "numpy": "2.3.5",
+    "chromium": "144.0.7559.96",
+    "execution_location": "isolated cloud container"
+  },
+  "commands": [
+    {
+      "command": "python -m py_compile visualledger/review.py",
+      "exit_code": 0
+    },
+    {
+      "command": "OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m unittest discover -s tests -p test_review.py -v",
+      "exit_code": 0,
+      "passed": 27,
+      "failed": 0,
+      "seconds": 8.479
+    },
+    {
+      "command": "OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -O -m unittest discover -s tests -p test_review.py -v",
+      "exit_code": 0,
+      "passed": 27,
+      "failed": 0,
+      "seconds": 6.802
+    }
+  ],
+  "optimized_cli": "two actual subprocesses, normal and -O, produced byte-identical HTML and stdout",
+  "browser": {
+    "method": "Playwright Chromium set_content from generated HTML, no remote navigation; default packaged browser absent; system Chromium used. file:// navigation is blocked by browser policy and not claimed tested.",
+    "results": [
+      {
+        "viewport": "desktop",
+        "images": [
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024}
+        ],
+        "width": {"scroll": 1440, "viewport": 1440},
+        "external_requests": [],
+        "page_errors": []
+      },
+      {
+        "viewport": "mobile",
+        "images": [
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024},
+          {"ok": true, "width": 1024}
+        ],
+        "width": {"scroll": 390, "viewport": 390},
+        "external_requests": [],
+        "page_errors": []
+      }
+    ]
+  },
+  "synthetic_demo": {
+    "documents": 6,
+    "html_bytes": 185832,
+    "html_sha256": "ecfc26f6feebe5b57431a3477f3662ad98157701273b67b31b9934f5f7181cce"
+  },
+  "raw_logs": {
+    "review-normal.txt": {
+      "sha256": "617eb77b887f4fab93a876632ae5ad67af8d8159e1e86b3969c825257d68a1fc",
+      "bytes": 3521
+    },
+    "review-optimized.txt": {
+      "sha256": "09a7fcc2a04230c8bf11fb78de3ee06e08637394ba53fb58421e5b51d9f8216c",
+      "bytes": 3521
+    }
+  },
+  "limitations": [
+    "No OpenCV-5 execution",
+    "No AWS or DynamoDB source-authentication proof",
+    "No live deployment or customer inputs",
+    "No competition registration or submission",
+    "No payment or revenue",
+    "Tests cover the additive UI only, not the entire active parent carrier",
+    "HTML replay consistency is not source authentication or a signed receipt"
+  ]
+}
