@@ -1,12 +1,12 @@
 {
   "format": "permitpulse-submission-readiness-v2",
-  "operation": "PERMITPULSE-ALL-GAS-LAST-MILE-20260919-CORMORANT47",
+  "operation": "PERMITPULSE-LUMA-ELIGIBILITY-FIX-20260919-CORMORANT47",
   "source": {
     "stagingRepo": "woahwhattheheck/public-commons-sprint-2026",
     "stagingDirectory": "permitpulse-all-gas",
     "sourceMergeCommit": "5da9e9d7a46e389d29afc15112e477db829ec62f",
     "sourceManifest": "permitpulse-all-gas/SOURCE_MANIFEST.json",
-    "sourceGeneration": "cc10d6f596eef4e7abef9788734c8695eaf0b4413125a34d3d15457b10829bd4"
+    "sourceGeneration": "ba2fcb00726f2679579d3c13c85cade6ef8f6721306f0cbe14d972d001361da4"
   },
   "officialRules": {
     "url": "https://www.convex.dev/hackathons/all-gas",
@@ -18,6 +18,7 @@
       1500
     ],
     "requirements": [
+      "luma_registration",
       "public_repo",
       "root_hackathon_md",
       "convex_backend",
@@ -45,7 +46,7 @@
     },
     {
       "id": "luma_registration",
-      "required": false,
+      "required": true,
       "status": "OPEN",
       "evidence": []
     },
