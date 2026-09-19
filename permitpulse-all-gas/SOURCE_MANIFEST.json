@@ -1,7 +1,7 @@
 {
   "format": "permitpulse-source-manifest-v2",
-  "generatedFor": "PERMITPULSE-ALL-GAS-LAST-MILE-20260919-CORMORANT47",
-  "sourceGeneration": "cc10d6f596eef4e7abef9788734c8695eaf0b4413125a34d3d15457b10829bd4",
+  "generatedFor": "PERMITPULSE-LUMA-ELIGIBILITY-FIX-20260919-CORMORANT47",
+  "sourceGeneration": "ba2fcb00726f2679579d3c13c85cade6ef8f6721306f0cbe14d972d001361da4",
   "files": {
     ".env.example": "1e14db42c6638d24e46776d2b9c414aa862d2fd97a6a4762b9d417e267ae1ed2",
     ".gitignore": "d3a12d009b7169b93fbb6ecd717ce81ffad2f4ae665d1ec9f9894f086959b882",
@@ -26,9 +26,9 @@
     "scripts/verify-demo.mjs": "71aa917ab5ed5f61be88fbd4e0f6547bffde250969190a8eb73404e483dab06b",
     "scripts/verify-manifest.mjs": "22c6f3a4d88938e7ae5a9035c2645ef8f47473df4d0209483cedbb07f6174735",
     "scripts/verify-submission-readiness.mjs": "ad3b9399d4e1e7d91afe45f7dd590afc9712a23b0578367c65d3be0438b4a8b3",
-    "submission/readiness-contract.mjs": "9a48d8e4386559a04527707353038b621f9dbe643bd5535c52c0bcf4b95670a6",
+    "submission/readiness-contract.mjs": "7691f94339ae9db5c4e8796ef3d1dcf4d6ee296d7f8b40716288be0c4c927d38",
     "tests/core.test.mjs": "5d8d8702cbd2ba197ae1948bfb6a7faae4de44ffaee3bc60388f2df51b8046eb",
-    "tests/submission-readiness.test.mjs": "73e36d044d9ceb32b31c7f7028c451576417ba06df3c873a002388ad3ec58df0"
+    "tests/submission-readiness.test.mjs": "4d7ad952adf7b3270fc524e41fae0195975d408fe82939e893da065672c5ea96"
   },
   "note": "Hashes cover the standalone product and readiness-code bytes, excluding this manifest, external receipt ledger data, submission copy/demo data, and carrier-level GitHub Actions workflows."
 }
