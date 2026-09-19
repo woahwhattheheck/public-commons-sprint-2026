@@ -1,17 +1,22 @@
 {
-  "format": "permitpulse-submission-readiness-v1",
-  "operation": "PERMITPULSE-LAST-MILE-SUBMISSION-CARRIER-ZSOL-20260916",
+  "format": "permitpulse-submission-readiness-v2",
+  "operation": "PERMITPULSE-ALL-GAS-LAST-MILE-20260919-CORMORANT47",
   "source": {
     "stagingRepo": "woahwhattheheck/public-commons-sprint-2026",
     "stagingDirectory": "permitpulse-all-gas",
     "sourceMergeCommit": "5da9e9d7a46e389d29afc15112e477db829ec62f",
-    "sourceManifest": "permitpulse-all-gas/SOURCE_MANIFEST.json"
+    "sourceManifest": "permitpulse-all-gas/SOURCE_MANIFEST.json",
+    "sourceGeneration": "cc10d6f596eef4e7abef9788734c8695eaf0b4413125a34d3d15457b10829bd4"
   },
   "officialRules": {
     "url": "https://www.convex.dev/hackathons/all-gas",
-    "verifiedOn": "2026-09-16",
+    "verifiedOn": "2026-09-19",
     "deadline": "2026-09-22T12:00:00-07:00",
-    "cashPrizesUsd": [10000, 5000, 1500],
+    "cashPrizesUsd": [
+      10000,
+      5000,
+      1500
+    ],
     "requirements": [
       "public_repo",
       "root_hackathon_md",
@@ -26,18 +31,73 @@
     ]
   },
   "externalReceipts": [
-    {"id":"public_repo","required":true,"status":"OPEN","evidence":[]},
-    {"id":"root_hackathon_md","required":true,"status":"OPEN","evidence":[]},
-    {"id":"luma_registration","required":false,"status":"OPEN","evidence":[]},
-    {"id":"convex_backend_live","required":true,"status":"OPEN","evidence":[]},
-    {"id":"live_public_url","required":true,"status":"OPEN","evidence":[]},
-    {"id":"firecrawl_live_work","required":true,"status":"OPEN","evidence":[]},
-    {"id":"agentmail_live_work","required":true,"status":"OPEN","evidence":[]},
-    {"id":"openai_live_work","required":true,"status":"OPEN","evidence":[]},
-    {"id":"social_build_post","required":true,"status":"OPEN","evidence":[]},
-    {"id":"demo_video","required":true,"status":"OPEN","evidence":[]},
-    {"id":"vibeapps_submission","required":true,"status":"OPEN","evidence":[]}
+    {
+      "id": "public_repo",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "root_hackathon_md",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "luma_registration",
+      "required": false,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "convex_backend_live",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "live_public_url",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "firecrawl_live_work",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "agentmail_live_work",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "openai_live_work",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "social_build_post",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "demo_video",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    },
+    {
+      "id": "vibeapps_submission",
+      "required": true,
+      "status": "OPEN",
+      "evidence": []
+    }
   ],
   "readyForSubmission": false,
-  "truthBoundary": "SOURCE_TEST_DEMO_STAGING_ONLY"
+  "truthBoundary": "SOURCE_TEST_DEMO_EXTERNAL_RECEIPTS_GATED"
 }
