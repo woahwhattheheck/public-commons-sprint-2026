@@ -175,6 +175,105 @@ class CommercialPilotTests(unittest.TestCase):
 
         self.assertTrue(commercial.verify_pilot_packet(clean))
 
+    def test_nested_json_subclasses_cannot_override_verifier_policy_equality(self):
+        from proofline.codec import digest_json
+
+        class AlwaysEqualDict(dict):
+            def __eq__(self, other):
+                return True
+
+            def __ne__(self, other):
+                return False
+
+        class AlwaysEqualList(list):
+            def __eq__(self, other):
+                return True
+
+            def __ne__(self, other):
+                return False
+
+        clean = build_pilot_packet(copy.deepcopy(SAMPLE))
+        variants = []
+
+        candidate = copy.deepcopy(clean)
+        promoted_authority = AlwaysEqualDict(candidate["authority"])
+        promoted_authority["claim_revenue"] = True
+        candidate["authority"] = promoted_authority
+        candidate.pop("receipt_sha256")
+        candidate["receipt_sha256"] = digest_json(candidate)
+        variants.append(candidate)
+
+        candidate = copy.deepcopy(clean)
+        promoted_evidence = AlwaysEqualList(candidate["source_evidence"])
+        promoted_evidence[0] = dict(promoted_evidence[0])
+        promoted_evidence[0]["truth"] = "CALLER_PROMOTED"
+        candidate["source_evidence"] = promoted_evidence
+        candidate.pop("receipt_sha256")
+        candidate["receipt_sha256"] = digest_json(candidate)
+        variants.append(candidate)
+
+        self.assertTrue(verify_pilot_packet(clean))
+        for index, candidate in enumerate(variants):
+            with self.subTest(index=index):
+                self.assertFalse(verify_pilot_packet(candidate))
+
+    def test_nested_json_subclass_boundary_holds_under_real_python_O(self):
+        clean = build_pilot_packet(copy.deepcopy(SAMPLE))
+        env = dict(__import__("os").environ)
+        env["PYTHONPATH"] = str(ROOT)
+        env["PROOFLINE_PACKET_JSON"] = json.dumps(clean, ensure_ascii=False)
+        script = r"""
+import json
+import os
+from proofline.codec import digest_json
+from proofline.commercial import verify_pilot_packet
+
+class AlwaysEqualDict(dict):
+    def __eq__(self, other):
+        return True
+    def __ne__(self, other):
+        return False
+
+class AlwaysEqualList(list):
+    def __eq__(self, other):
+        return True
+    def __ne__(self, other):
+        return False
+
+def reseal(packet):
+    packet.pop("receipt_sha256", None)
+    packet["receipt_sha256"] = digest_json(packet)
+    return packet
+
+clean = json.loads(os.environ["PROOFLINE_PACKET_JSON"])
+if not verify_pilot_packet(clean):
+    raise SystemExit(40)
+
+candidate = json.loads(os.environ["PROOFLINE_PACKET_JSON"])
+authority = AlwaysEqualDict(candidate["authority"])
+authority["claim_revenue"] = True
+candidate["authority"] = authority
+if verify_pilot_packet(reseal(candidate)):
+    raise SystemExit(41)
+
+candidate = json.loads(os.environ["PROOFLINE_PACKET_JSON"])
+evidence = AlwaysEqualList(candidate["source_evidence"])
+evidence[0] = dict(evidence[0])
+evidence[0]["truth"] = "CALLER_PROMOTED"
+candidate["source_evidence"] = evidence
+if verify_pilot_packet(reseal(candidate)):
+    raise SystemExit(42)
+"""
+        proc = subprocess.run(
+            [sys.executable, "-O", "-c", script],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
+
     def test_roi_is_scenario_only(self):
         packet = build_pilot_packet(copy.deepcopy(SAMPLE))
         roi = packet["roi_scenario"]
