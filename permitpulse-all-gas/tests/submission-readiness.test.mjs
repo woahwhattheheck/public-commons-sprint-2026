@@ -14,8 +14,8 @@ function base() {
   return {
     format:"permitpulse-submission-readiness-v2",operation:"test",
     source:{stagingRepo:"woahwhattheheck/public-commons-sprint-2026",stagingDirectory:"permitpulse-all-gas",sourceMergeCommit:"5da9e9d7a46e389d29afc15112e477db829ec62f",sourceManifest:"permitpulse-all-gas/SOURCE_MANIFEST.json",sourceGeneration:GEN},
-    officialRules:{url:"https://www.convex.dev/hackathons/all-gas",verifiedOn:"2026-09-19",deadline:"2026-09-22T12:00:00-07:00",cashPrizesUsd:[10000,5000,1500],requirements:["public_repo","root_hackathon_md","convex_backend","live_convex_or_chatgpt_url","real_openai_work","real_firecrawl_work","real_agentmail_work","social_build_post","video_under_180_seconds","vibeapps_submission"]},
-    externalReceipts:receiptIds.map((id)=>({id,required:id!=="luma_registration",status:"OPEN",evidence:[]})),
+    officialRules:{url:"https://www.convex.dev/hackathons/all-gas",verifiedOn:"2026-09-19",deadline:"2026-09-22T12:00:00-07:00",cashPrizesUsd:[10000,5000,1500],requirements:["luma_registration","public_repo","root_hackathon_md","convex_backend","live_convex_or_chatgpt_url","real_openai_work","real_firecrawl_work","real_agentmail_work","social_build_post","video_under_180_seconds","vibeapps_submission"]},
+    externalReceipts:receiptIds.map((id)=>({id,required:true,status:"OPEN",evidence:[]})),
     readyForSubmission:false,truthBoundary:"SOURCE_TEST_DEMO_EXTERNAL_RECEIPTS_GATED",
   };
 }
@@ -36,6 +36,16 @@ test("all required live receipts can promote readiness to true",()=>{
   const result=validateReadiness(value,demo());
   assert.equal(result.readyForSubmission,true);
   assert.equal(result.verifiedRequired,result.requiredCount);
+});
+
+
+test("Luma registration is a required eligibility receipt",()=>{
+  const value=base();
+  for(const row of value.externalReceipts){
+    if(row.id!=="luma_registration"){ row.status="VERIFIED"; row.evidence=[evidence(row.id)]; }
+  }
+  value.readyForSubmission=true;
+  assert.throws(()=>validateReadiness(value,demo()),/readyForSubmission/);
 });
 
 test("ready true fails while any required receipt is open",()=>{
