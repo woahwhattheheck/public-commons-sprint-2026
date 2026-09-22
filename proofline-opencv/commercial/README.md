@@ -20,6 +20,8 @@ PYTHONPATH=proofline-opencv python -m proofline.commercial verify \
 
 The compiler rejects accepted-price states, undeclared fields, positive customer/revenue/savings claims, live-deployment claims, and payment links. ROI output is scenario arithmetic from explicit buyer/owner inputs only.
 
+The commercial packet also refuses to self-attest source/test/demo readiness. It emits `source_test_demo_ready=false` and `source_generation.state=NOT_ATTESTED_BY_COMMERCIAL_PACKET`; exact source-generation, manifest, and execution receipts remain separate owner-held evidence from the pilot runbook. Recomputing the public packet receipt cannot promote those facts.
+
 ## Acceptance boundary
 
 A successful pilot means the agreed evidence/review workflow is reproducible against the agreed sample and the acceptance criteria in the compiled packet are met. It does **not** mean ProofLine independently approves/rejects product, replaces an existing QMS/AOI system, proves production savings, deploys AWS, or receives customer acceptance/payment.
