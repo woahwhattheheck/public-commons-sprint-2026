@@ -7,7 +7,6 @@ WACZ files are accepted only as opaque recognized attachments. This workbench do
 ## What this is
 
 - Editable source under `src/`
-- Deterministic tests under `tests/`
 - Reproducible static build at `dist/index.html`
 
 After the page has loaded, work stays in the browser. There is no backend, account, authorization, permission gate, telemetry, runtime network, remote fetch, or code execution in this app.
@@ -27,11 +26,10 @@ See `LIMITATIONS.md`.
 Open `dist/index.html` in a browser (`file://` or any static host). During editing, serve the workbench root so `src/ui/app.js` can import `src/core/*`.
 
 ```bash
-node --test tests/*.test.js
 node scripts/build.js
 ```
 
-No package install is required. Node 18+ is enough for tests and the static build.
+No package install is required. Node 18+ is enough for the static build.
 
 ## Layout
 
@@ -39,7 +37,6 @@ No package install is required. Node 18+ is enough for tests and the static buil
 src/core/     packet model, hash, escape, paths, zip, exporters
 src/ui/       editable page, CSS, app wiring
 scripts/      reproducible static build
-tests/        deterministic Node tests
 dist/         self-contained page after build
 ```
 
