@@ -1546,8 +1546,27 @@ async function importPacketFile(file, currentPacket) {
 
 
 let packet = emptyPacket();
+let generation = 0;
 
 const $ = (id) => document.getElementById(id);
+
+function stillCurrent(gen, target) {
+  return generation === gen && packet === target;
+}
+
+function editStamp() {
+  return JSON.stringify({
+    title: $("title").value,
+    community: $("community").value,
+    collector: $("collector").value,
+    location: $("location").value,
+    start: $("start").value,
+    end: $("end").value,
+    tags: $("tags").value,
+    statement: $("statement").value,
+    items: packet.items.map((item) => [item.id, item.role, item.caption, item.sha256]),
+  });
+}
 
 function bindPacketFields() {
   $("title").value = packet.title;
@@ -1676,12 +1695,42 @@ function wire() {
   });
   $("files").addEventListener("change", async (ev) => {
     const files = [...ev.target.files];
-    for (const file of files) {
-      const buf = await file.arrayBuffer();
-      packet.items.push(await makeFileItem(file, buf));
-    }
     ev.target.value = "";
+    if (!files.length) return;
+    generation += 1;
+    const gen = generation;
+    const target = packet;
+    const staged = [];
+    try {
+      for (const file of files) {
+        const buf = await file.arrayBuffer();
+        if (!stillCurrent(gen, target)) {
+          $("export-status").textContent = "File import cancelled because the packet changed.";
+          return;
+        }
+        staged.push(await makeFileItem(file, buf));
+        if (!stillCurrent(gen, target)) {
+          $("export-status").textContent = "File import cancelled because the packet changed.";
+          return;
+        }
+      }
+    } catch (error) {
+      if (stillCurrent(gen, target)) {
+        $("export-status").textContent =
+          "File import stopped before any item was added: " +
+          String(error?.code || "READ_FAILED") +
+          ".";
+      }
+      return;
+    }
+    if (!stillCurrent(gen, target)) {
+      $("export-status").textContent = "File import cancelled because the packet changed.";
+      return;
+    }
+    target.items.push(...staged);
     render();
+    $("export-status").textContent =
+      staged.length === 1 ? "Added 1 file to this packet." : "Added " + staged.length + " files to this packet.";
   });
   $("add-text").addEventListener("click", () => {
     $("text-box").hidden = !$("text-box").hidden;
@@ -1689,16 +1738,58 @@ function wire() {
   $("save-text").addEventListener("click", async () => {
     const name = $("paste-name").value || "testimony.txt";
     const text = $("paste-text").value;
-    packet.items.push(await makeTextItem(name, text, "testimony"));
+    generation += 1;
+    const gen = generation;
+    const target = packet;
+    let item;
+    try {
+      item = await makeTextItem(name, text, "testimony");
+    } catch (error) {
+      if (stillCurrent(gen, target)) {
+        $("export-status").textContent =
+          "Text import stopped before the item was added: " +
+          String(error?.code || "READ_FAILED") +
+          ".";
+      }
+      return;
+    }
+    if (!stillCurrent(gen, target)) {
+      $("export-status").textContent = "Text import cancelled because the packet changed.";
+      return;
+    }
+    target.items.push(item);
     $("paste-text").value = "";
     $("text-box").hidden = true;
     render();
   });
   $("import-json").addEventListener("change", async (ev) => {
     const file = ev.target.files[0];
-    if (!file) return;
-    const result = await importPacketFile(file, packet);
     ev.target.value = "";
+    if (!file) return;
+    generation += 1;
+    const gen = generation;
+    const target = packet;
+    const stamp = editStamp();
+    let result;
+    try {
+      result = await importPacketFile(file, target);
+    } catch (error) {
+      if (stillCurrent(gen, target)) {
+        $("export-status").textContent =
+          "JSON import failed locally: " + String(error?.code || "IMPORT_FAILED") + ".";
+      }
+      return;
+    }
+    if (!stillCurrent(gen, target)) {
+      $("export-status").textContent =
+        "JSON import cancelled because a newer packet change superseded it.";
+      return;
+    }
+    if (editStamp() !== stamp) {
+      $("export-status").textContent =
+        "JSON import cancelled so edits made while it was reading stay in this packet.";
+      return;
+    }
     $("export-status").textContent = result.message;
     if (!result.ok) return;
     packet = result.packet;
@@ -1706,9 +1797,12 @@ function wire() {
     render();
   });
   $("clear").addEventListener("click", () => {
+    generation += 1;
     packet = emptyPacket();
     bindPacketFields();
     render();
+    $("export-status").textContent =
+      "Packet cleared. Pending file, text, and JSON imports were cancelled.";
   });
   $("items").addEventListener("change", (ev) => {
     const role = ev.target.getAttribute("data-role");
