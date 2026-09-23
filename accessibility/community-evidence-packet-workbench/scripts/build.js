@@ -17,6 +17,7 @@ const order = [
   "src/core/wacz.js",
   "src/core/packet.js",
   "src/core/export.js",
+  "src/ui/import-file.js",
   "src/ui/app.js",
 ];
 
