@@ -31,6 +31,14 @@ node scripts/build.js
 
 No package install is required. Node 18+ is enough for the static build.
 
+## Pending imports
+
+File, pasted-text, and JSON imports stay bound to the packet generation that started them.
+
+- Clear, or a newer file, text, or JSON import, cancels older pending reads. A cancelled read does not add items and does not replace the packet.
+- Files chosen together are staged as one batch. If a read fails, none of that batch is added and items already in the packet stay.
+- Edits made while a JSON import is still reading are kept. That import is cancelled instead of overwriting the packet. A newer JSON import can replace the packet only if it is still the current generation and nothing was edited during its read.
+
 ## Layout
 
 ```
