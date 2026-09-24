@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "qubits": 2,
+  "gates": [
+    {"op": "H", "wire": 0},
+    {"op": "CNOT", "control": 0, "target": 1}
+  ],
+  "observables": ["ZZ", "XX"]
+}
