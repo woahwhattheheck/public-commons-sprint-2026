@@ -44,6 +44,34 @@ python -m repoatlas.cli verify \
 
 The synthetic fixture intentionally has an unowned/untested worker change, so the demo lands in `HOLD_EVIDENCE_GAPS` while still producing a deterministic onboarding/drift report.
 
+## Read the human review report
+
+After compiling the bundle, create a standalone HTML report:
+
+```bash
+python -m repoatlas.cli report \
+  --input fixtures/synthetic-repo.json \
+  --packet /tmp/repoatlas.packet.json \
+  --receipt /tmp/repoatlas.receipt.json \
+  --out /tmp/repoatlas.review.html
+```
+
+The native verifier recompiles and checks the supplied bundle before writing.
+Open the HTML locally to read severity-ordered findings and their existing next
+steps, module ownership, changed-path hashes, file/test-reference mappings,
+dependency relationships, architecture/runbook coverage, and bundle identities.
+Provider flags and authority remain visible as recorded snapshot metadata.
+The report contains no scripts, external fonts or network resources and supports
+browser printing. An existing output is never replaced; verification or I/O
+failures exit `2`. A valid report exits `0` even when the native review state is
+`HOLD_EVIDENCE_GAPS`.
+
+This is a presentation of admitted manifest evidence. It does not scan the actual
+repository, run referenced tests, establish current provider facts, or change
+analyzer decisions. Keep the source JSON, packet and receipt alongside the HTML
+for independent verification. The native input hash identifies the normalized
+manifest rather than the original file's whitespace or JSON key order.
+
 ## Test
 
 ```bash
