@@ -33,14 +33,52 @@ Exit codes are automation-friendly:
 
 Accepted colors are three- or six-digit sRGB hex values, with or without `#`.
 
-## Run the tests
+## Audit a palette
 
-```bash
-python -m unittest -v test_contrast.py
-python -O -m unittest -v test_contrast.py
+Use `--csv` to evaluate multiple named pairs without invoking the tool once per
+pair. CSV files use UTF-8 (an optional byte-order mark is accepted).
+
+```csv
+name,foreground,background,level,large_text
+Body text,#111111,#FFFFFF,AA,false
+Large heading,#777,#fff,AA,true
+Secondary text,#767676,#FFFFFF,,
 ```
 
-The regression suite covers color parsing, the 1:1 and 21:1 extrema, order independence, a pair on either side of the AA 4.5:1 boundary, AA/AAA large-text thresholds, JSON output, and CLI exit codes.
+```bash
+python contrast.py --csv palette.csv
+python contrast.py --csv palette.csv --json
+cat palette.csv | python contrast.py --csv - --level AAA
+```
+
+`foreground` and `background` are required columns. `name`, `level`, and
+`large_text` are optional; column order is flexible. Headers must be unique and
+use those exact names. Empty `level` and `large_text` cells inherit the command's
+`--level` and `--large-text` settings (AA and normal text by default).
+`large_text` accepts only `true` or `false`, ignoring case. A row can explicitly
+use `false` to select normal text even when the command uses `--large-text`.
+
+Every record gets PASS, FAIL, or ERROR, its record number and ending source line.
+JSON includes the original cells, normalized colors, threshold, and summary
+counts. Invalid colors, levels, booleans, or cell counts produce row errors while
+the rest of the palette is still evaluated. Empty files, invalid headers,
+unreadable files, and malformed CSV quoting abort the audit. A palette must
+contain at least one pair. Quotes and embedded commas follow normal CSV rules.
+
+The process exits `2` if any row has an error, otherwise `1` if any pair fails,
+otherwise `0`. Pass/fail uses the full calculated ratio before display rounding.
+`--csv` cannot be combined with positional colors. All processing stays local;
+the tool reads the CSV and writes the report to standard output.
+
+## Single-pair verification
+
+```bash
+python contrast.py '#000' '#fff' --json
+python contrast.py '#777' '#fff' --json
+```
+
+Black on white returns 21:1 and exit 0. `#777` on white is below the normal-text
+AA threshold and returns exit 1, even if a shortened display appears near 4.5:1.
 
 ## Verification notes and limitations
 
