@@ -39,6 +39,7 @@ First-party references:
 cd assemblyai-voice-incident-commander
 python replay.py compile fixtures/synthetic_incident.json /tmp/incident.packet.json
 python replay.py verify /tmp/incident.packet.json
+python replay.py report /tmp/incident.packet.json /tmp/incident.review.html
 ```
 
 Expected verifier output:
@@ -46,6 +47,21 @@ Expected verifier output:
 ```text
 VERIFIED
 ```
+
+Open `incident.review.html` locally for a chronological transcript review. Filter
+by speaker, event type, or words in the original transcript; reset the filters
+to restore the complete call. Every turn retains its original transcript,
+classification, provider end-of-turn confidence, and transcript/event hashes.
+Action and diagnostic proposals remain visibly labeled as proposals, and spoken
+decisions do not become executable instructions.
+
+The `report` command first replays the existing verifier and refuses an invalid
+packet before creating output. It creates a new self-contained HTML file with
+no remote resources or provider calls. Filters work in the page only; all turns
+remain in its source and the JSON packet is unchanged. Browser printing follows
+the current visible filter; reset filters before printing the whole call. The
+displayed receipt identifies the JSON packet, not the HTML copy. Keep the JSON
+for later verification. With JavaScript disabled, all turns remain readable.
 
 Run the full proof in normal and optimized mode:
 
@@ -102,7 +118,7 @@ Before a provider submission, the remaining owner/account gates are:
 2. Muse single-writer SELECT for the one-person LabLab registration/submission action;
 3. register/join the intended LabLab identity once;
 4. run a live AssemblyAI demo using a legitimately held key and preserve a non-secret execution receipt;
-5. add a short demo UI/video and judge-facing architecture diagram;
+5. record the local transcript review UI in a short demo video and add a judge-facing architecture diagram;
 6. verify the live prize split, judging criteria, rules, and required submission fields immediately before submit;
 7. submit exactly once and record provider receipt; never call a placement or prize “revenue” before settlement.
 
