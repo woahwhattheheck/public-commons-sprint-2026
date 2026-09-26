@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .core import CircularValueError, canonical_json, compile_case, loads_strict, verify_packet
 from .demo import synthetic_case
+from .report import render_case_html
 
 MAX_JSON_BYTES = 4 * 1024 * 1024
 _READ_CHUNK = 64 * 1024
@@ -143,6 +144,9 @@ def main(argv: list[str] | None = None) -> int:
     c = sub.add_parser("compile")
     c.add_argument("case")
     c.add_argument("--out", required=True)
+    r = sub.add_parser("report", help="compile a case into a self-contained HTML review")
+    r.add_argument("case")
+    r.add_argument("--out", required=True)
     v = sub.add_parser("verify")
     v.add_argument("case")
     v.add_argument("packet")
@@ -150,6 +154,10 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--out-dir", required=True)
     ns = parser.parse_args(argv)
     try:
+        if ns.cmd == "report":
+            _write_new(Path(ns.out), render_case_html(_read(ns.case)))
+            print(ns.out)
+            return 0
         if ns.cmd == "compile":
             case = _read(ns.case)
             packet = compile_case(case)
