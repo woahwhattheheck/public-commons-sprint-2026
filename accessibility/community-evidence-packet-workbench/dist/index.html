@@ -1129,6 +1129,22 @@ async function makeFileItem(file, arrayBuffer) {
   };
 }
 
+async function matchingFileBytes(item, arrayBuffer) {
+  const expectedSize = Number(item.bytes);
+  const expectedHash = String(item.sha256 || "");
+  const bytes = new Uint8Array(arrayBuffer).slice();
+  if (
+    !Number.isSafeInteger(expectedSize) || expectedSize < 0 ||
+    bytes.length !== expectedSize || !/^[a-f0-9]{64}$/i.test(expectedHash) ||
+    await sha256Hex(bytes) !== expectedHash.toLowerCase()
+  ) {
+    const error = new Error("selected-file-does-not-match-recorded-bytes");
+    error.code = "FILE_BYTES_MISMATCH";
+    throw error;
+  }
+  return bytes;
+}
+
 
 
 
@@ -1610,7 +1626,7 @@ function byteIdentityNotice(item) {
   if (Number(item.bytes) === 0) {
     return "Imported metadata describes a zero-byte payload. Package export reconstructs and re-hashes the empty payload; the displayed imported SHA-256 is not treated as verified.";
   }
-  return "Imported metadata only: payload bytes are not loaded in this session. Package export is blocked until this item is removed and the original file is added again; the displayed SHA-256 is not session-verified.";
+  return "Imported metadata only: payload bytes are not loaded in this session. Attach the original file below to restore package export while keeping this item's details; the displayed SHA-256 is not session-verified yet.";
 }
 
 function renderItems() {
@@ -1635,6 +1651,9 @@ function renderItems() {
         <label>Caption
           <input type="text" data-caption="${i}" value="${escapeHtml(item.caption)}">
         </label>
+        ${!(item._bytes instanceof Uint8Array) && !Object.prototype.hasOwnProperty.call(item, "textContent") && Number(item.bytes) > 0
+          ? `<label class="file-btn">Attach original file<input type="file" data-reattach="${i}"></label>`
+          : ""}
         <button type="button" class="secondary" data-remove="${i}">Remove item</button>
       </article>`;
     })
@@ -1678,7 +1697,7 @@ async function doExport(kind) {
   } catch (error) {
     if (error?.code === "PAYLOAD_BYTES_UNAVAILABLE") {
       $("export-status").textContent =
-        "Package export stopped: an imported item has metadata but no local payload bytes. Remove that metadata-only item and add the original file again before ZIP, RO-Crate, or BagIt export.";
+        "Package export stopped: an imported item has metadata but no local payload bytes. Use Attach original file on that item before ZIP, RO-Crate, or BagIt export.";
       return;
     }
     $("export-status").textContent =
@@ -1806,9 +1825,41 @@ function wire() {
   });
   $("items").addEventListener("change", (ev) => {
     const role = ev.target.getAttribute("data-role");
-    const cap = ev.target.getAttribute("data-caption");
     if (role != null) packet.items[Number(role)].role = ev.target.value;
+  });
+  $("items").addEventListener("input", (ev) => {
+    const cap = ev.target.getAttribute("data-caption");
     if (cap != null) packet.items[Number(cap)].caption = ev.target.value;
+  });
+  $("items").addEventListener("change", async (ev) => {
+    const index = ev.target.getAttribute("data-reattach");
+    if (index == null) return;
+    const file = ev.target.files[0];
+    ev.target.value = "";
+    if (!file) return;
+    const target = packet;
+    const item = target.items[Number(index)];
+    if (!item) return;
+    generation += 1;
+    const gen = generation;
+    const expectedSize = item.bytes;
+    const expectedHash = item.sha256;
+    try {
+      const buffer = await file.arrayBuffer();
+      if (!stillCurrent(gen, target) || !target.items.includes(item)) return;
+      const bytes = await matchingFileBytes(item, buffer);
+      if (!stillCurrent(gen, target) || !target.items.includes(item)) return;
+      if (item.bytes !== expectedSize || item.sha256 !== expectedHash) return;
+      item._bytes = bytes;
+      render();
+      $("export-status").textContent =
+        "Original bytes attached. Recorded size and SHA-256 match; item details were kept. This is byte identity, not authenticity.";
+    } catch (error) {
+      if (!stillCurrent(gen, target) || !target.items.includes(item)) return;
+      $("export-status").textContent = error?.code === "FILE_BYTES_MISMATCH"
+        ? "Selected file does not match the recorded size and SHA-256. The item is unchanged; choose its original file."
+        : "Original file could not be read locally. The item is unchanged.";
+    }
   });
   $("items").addEventListener("click", (ev) => {
     const rm = ev.target.getAttribute("data-remove");
