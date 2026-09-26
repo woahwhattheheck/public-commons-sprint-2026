@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from .core import RepoAtlasError, compile_packet, parse_json_bytes, verify_bundle
+from .report import render_report
 
 
 def _read(path: str):
@@ -29,6 +30,11 @@ def main(argv=None) -> int:
     v.add_argument("--input", required=True)
     v.add_argument("--packet", required=True)
     v.add_argument("--receipt", required=True)
+    r = sub.add_parser("report", help="Write a standalone human review report from a verified bundle")
+    r.add_argument("--input", required=True)
+    r.add_argument("--packet", required=True)
+    r.add_argument("--receipt", required=True)
+    r.add_argument("--out", required=True)
     args = p.parse_args(argv)
     try:
         raw = _read(args.input)
@@ -36,6 +42,11 @@ def main(argv=None) -> int:
             packet, receipt = compile_packet(raw)
             _write(args.packet, packet)
             _write(args.receipt, receipt)
+        elif args.command == "report":
+            report = render_report(raw, _read(args.packet), _read(args.receipt))
+            with Path(args.out).open("x", encoding="utf-8", newline="") as handle:
+                handle.write(report)
+            print(f"REPORT_WRITTEN:{args.out}")
         else:
             verify_bundle(raw, _read(args.packet), _read(args.receipt))
             print("VERIFIED")
