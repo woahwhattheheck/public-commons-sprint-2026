@@ -13,6 +13,7 @@ import {
   exportHtml,
   exportMarkdown,
   exportJson,
+  exportCsv,
   exportFilesZip,
   exportRoCrateZip,
   exportBagItZip,
@@ -149,6 +150,7 @@ async function doExport(kind) {
     if (kind === "html") download(base + ".html", textBytes(exportHtml(packet)), "text/html");
     else if (kind === "md") download(base + ".md", textBytes(exportMarkdown(packet)), "text/markdown");
     else if (kind === "json") download(base + ".json", textBytes(exportJson(packet)), "application/json");
+    else if (kind === "csv") download(base + ".csv", textBytes(exportCsv(packet)), "text/csv;charset=utf-8");
     else if (kind === "zip") download(base + ".zip", await exportFilesZip(packet), "application/zip");
     else if (kind === "crate") download(base + "-rocrate.zip", await exportRoCrateZip(packet), "application/zip");
     else if (kind === "bag") download(base + "-bagit.zip", await exportBagItZip(packet), "application/zip");
@@ -329,6 +331,7 @@ function wire() {
   $("ex-html").addEventListener("click", () => doExport("html"));
   $("ex-md").addEventListener("click", () => doExport("md"));
   $("ex-json").addEventListener("click", () => doExport("json"));
+  $("ex-csv").addEventListener("click", () => doExport("csv"));
   $("ex-zip").addEventListener("click", () => doExport("zip"));
   $("ex-crate").addEventListener("click", () => doExport("crate"));
   $("ex-bag").addEventListener("click", () => doExport("bag"));
