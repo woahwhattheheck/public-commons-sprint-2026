@@ -12,7 +12,10 @@ import json
 import sys
 from pathlib import Path
 
-from engine import OracleError, load_manifest, simulate, verify
+if __package__:
+    from .engine import OracleError, load_manifest, simulate, verify
+else:
+    from engine import OracleError, load_manifest, simulate, verify
 
 
 def _read(path: Path) -> str:
@@ -39,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
             report = simulate(manifest)
         else:
             report = verify(manifest, _read(Path(args.candidate)))
-    except OracleError as exc:
+    except (OracleError, OSError, UnicodeError) as exc:
         print(f"HOLD {exc}", file=sys.stderr)
         return 2
     json.dump(report, sys.stdout, sort_keys=True, separators=(",", ":"), allow_nan=False)
