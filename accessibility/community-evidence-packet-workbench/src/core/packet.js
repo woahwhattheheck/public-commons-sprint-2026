@@ -468,4 +468,20 @@ export async function makeFileItem(file, arrayBuffer) {
   };
 }
 
+export async function matchingFileBytes(item, arrayBuffer) {
+  const expectedSize = Number(item.bytes);
+  const expectedHash = String(item.sha256 || "");
+  const bytes = new Uint8Array(arrayBuffer).slice();
+  if (
+    !Number.isSafeInteger(expectedSize) || expectedSize < 0 ||
+    bytes.length !== expectedSize || !/^[a-f0-9]{64}$/i.test(expectedHash) ||
+    await sha256Hex(bytes) !== expectedHash.toLowerCase()
+  ) {
+    const error = new Error("selected-file-does-not-match-recorded-bytes");
+    error.code = "FILE_BYTES_MISMATCH";
+    throw error;
+  }
+  return bytes;
+}
+
 export { BYTE_IDENTITY_NOTICE, WACZ_POLICY };
