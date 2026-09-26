@@ -169,7 +169,7 @@ footer {
       <div class="stamp" aria-hidden="true">CE</div>
       <div>
         <h1>Community Evidence Packet Workbench</h1>
-        <p class="lede">Assemble a local packet. Hash the bytes you loaded. Export HTML, Markdown, JSON, ZIP, RO-Crate, or BagIt. Print or copy. Every control stays available, including for empty packets.</p>
+        <p class="lede">Assemble a local packet. Hash the bytes you loaded. Export HTML, Markdown, JSON, CSV, ZIP, RO-Crate, or BagIt. Print or copy. Every control stays available, including for empty packets.</p>
       </div>
     </div>
     <div class="banner" role="note">
@@ -238,6 +238,7 @@ footer {
         <button type="button" id="ex-html">HTML</button>
         <button type="button" id="ex-md">Markdown</button>
         <button type="button" id="ex-json">JSON</button>
+        <button type="button" id="ex-csv">CSV inventory</button>
         <button type="button" id="ex-zip">ZIP</button>
         <button type="button" id="ex-crate">RO-Crate ZIP</button>
         <button type="button" id="ex-bag">BagIt ZIP</button>
@@ -1691,6 +1692,7 @@ async function doExport(kind) {
     if (kind === "html") download(base + ".html", textBytes(exportHtml(packet)), "text/html");
     else if (kind === "md") download(base + ".md", textBytes(exportMarkdown(packet)), "text/markdown");
     else if (kind === "json") download(base + ".json", textBytes(exportJson(packet)), "application/json");
+    else if (kind === "csv") download(base + ".csv", textBytes(exportCsv(packet)), "text/csv;charset=utf-8");
     else if (kind === "zip") download(base + ".zip", await exportFilesZip(packet), "application/zip");
     else if (kind === "crate") download(base + "-rocrate.zip", await exportRoCrateZip(packet), "application/zip");
     else if (kind === "bag") download(base + "-bagit.zip", await exportBagItZip(packet), "application/zip");
@@ -1871,6 +1873,7 @@ function wire() {
   $("ex-html").addEventListener("click", () => doExport("html"));
   $("ex-md").addEventListener("click", () => doExport("md"));
   $("ex-json").addEventListener("click", () => doExport("json"));
+  $("ex-csv").addEventListener("click", () => doExport("csv"));
   $("ex-zip").addEventListener("click", () => doExport("zip"));
   $("ex-crate").addEventListener("click", () => doExport("crate"));
   $("ex-bag").addEventListener("click", () => doExport("bag"));
