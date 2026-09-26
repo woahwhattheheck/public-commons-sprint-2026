@@ -57,6 +57,12 @@
           <div><p class="kicker">VERIFIED CLAIMS · REVIEW-ONLY MODEL TEXT</p><h2>Findings</h2></div>
           <span id="receiptState" class="receipt-chip">No receipt</span>
         </div>
+        <div class="actions">
+          <button id="savePacket" class="button ghost" type="button" disabled>Download analysis JSON</button>
+          <button id="openPacket" class="button ghost" type="button">Open analysis JSON…</button>
+          <input id="packetFile" type="file" accept=".json,application/json" hidden>
+        </div>
+        <p id="packetStatus" class="microcopy">Save a verified analysis to reopen its evidence and findings later. Files are checked by this workspace's server; reopening does not run inference.</p>
         <div id="emptyState" class="empty-state">
           <div class="shield">✓</div>
           <h3>Confidence needs provenance.</h3>
@@ -83,3 +89,4 @@
   <script src="/app.js" defer></script>
 </body>
 </html>
+
