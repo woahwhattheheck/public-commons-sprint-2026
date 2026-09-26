@@ -1,6 +1,6 @@
 # Community Evidence Packet Workbench
 
-Portable, browser-local workbench for assembling a community evidence packet and exporting it as HTML, Markdown, JSON, ZIP, copy, print, RO-Crate 1.2 metadata layout, or RFC 8493 BagIt layout.
+Portable, browser-local workbench for assembling a community evidence packet and exporting it as HTML, Markdown, JSON, CSV inventory, ZIP, copy, print, RO-Crate 1.2 metadata layout, or RFC 8493 BagIt layout.
 
 WACZ files are accepted only as opaque recognized attachments. This workbench does not unpack, replay, or validate WARC/WACZ contents.
 
@@ -58,6 +58,19 @@ Once every missing file is attached, ZIP, RO-Crate, and BagIt export can use the
 local bytes again. The match establishes byte identity with the imported
 metadata, not authenticity. JSON exports still omit file bytes, so retain the
 original files or a package export when saving your work.
+
+## Spreadsheet inventory
+
+**CSV inventory** downloads the existing item list with name, role, archive path,
+byte count, recorded SHA-256, recognition, WACZ flag, and caption. It preserves
+packet item order and works for imported metadata even when file payloads are
+not loaded. An empty packet exports the header and a labeled empty row.
+
+The inventory is a metadata review copy, not a payload archive or packet backup.
+Imported hashes remain recorded metadata until matching file bytes are loaded.
+Formula-shaped text receives an apostrophe prefix for spreadsheet display; the
+JSON packet keeps the original values. Import identifier and hash columns as
+text to preserve their spelling.
 
 ## Layout
 
