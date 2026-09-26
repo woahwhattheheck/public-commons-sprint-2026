@@ -14,12 +14,27 @@ def _read_json(path: Path):
     return strict_json_loads(path.read_text(encoding="utf-8"))
 
 
+def _read_jsonl(path: Path):
+    with path.open(encoding="utf-8-sig") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            if not line.strip():
+                continue
+            try:
+                message = strict_json_loads(line)
+                if not isinstance(message, dict):
+                    raise IncidentError("each JSONL record must be one message object")
+            except IncidentError as exc:
+                raise IncidentError(f"{path}:{line_number}: {exc}") from exc
+            yield message
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("compile")
     c.add_argument("turns", type=Path)
     c.add_argument("output", type=Path)
+    c.add_argument("--input-format", choices=("json", "jsonl"), default="json")
     v = sub.add_parser("verify")
     v.add_argument("packet", type=Path)
     r = sub.add_parser("report", help="render a verified packet as an offline transcript review")
@@ -28,9 +43,12 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.cmd == "compile":
-            turns = _read_json(args.turns)
-            if not isinstance(turns, list):
-                raise IncidentError("turn fixture must be a JSON array")
+            if args.input_format == "jsonl":
+                turns = _read_jsonl(args.turns)
+            else:
+                turns = _read_json(args.turns)
+                if not isinstance(turns, list):
+                    raise IncidentError("turn input must be a JSON array")
             packet = compile_packet(turns)
             # Create-exclusive output: never overwrite evidence by accident.
             with args.output.open("x", encoding="utf-8", newline="\n") as fh:
