@@ -36,6 +36,29 @@ python -m traceforge analyze examples/incident.txt --mode demo --json-out analys
 python -m traceforge verify analysis.json
 ```
 
+### Save and reopen browser analyses
+
+After a successful analysis, **Download analysis JSON** saves the complete verified
+packet: normalized evidence lines, findings and citations, model identity,
+review-only summary/actions, and integrity receipt. The file also works with
+`python -m traceforge verify analysis.json`.
+
+Choose **Open analysis JSON…** while the local server is running to reopen a
+saved browser or CLI packet. Its original JSON text goes to the existing native
+verifier before display; malformed JSON, duplicate keys, inconsistent receipts,
+and files above the 2,496,000-byte receipt limit are refused. Reopening performs
+no model call. Confirm replacement after verification; cancelling or a failed
+load keeps the current editor and last successful analysis.
+
+The reopened editor contains the packet's normalized evidence, not original file
+line endings. Editing evidence does not rewrite the displayed analysis: a status
+message says when the editor differs, and download continues to save the exact
+last verified packet. Analyze again to produce a result for edited evidence.
+Controls pause while analysis, demo loading or packet verification is in progress.
+Closing without downloading loses the in-memory analysis; there is no autosave.
+Keep downloaded incident data in approved private storage. The existing integrity
+and human-review boundaries below still apply.
+
 ### Live AI mode
 
 Configure an authorized OpenAI-compatible endpoint for operator-controlled CLI use:
@@ -148,3 +171,4 @@ See [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for a sub-three-minute demo and
 ## License
 
 Apache-2.0. See [`LICENSE`](LICENSE).
+

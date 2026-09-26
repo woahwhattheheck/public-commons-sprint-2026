@@ -3,12 +3,56 @@
 const $ = (id) => document.getElementById(id);
 const incident = $('incident');
 const analyzeButton = $('analyze');
+// Matches the native receipt_io.MAX_RECEIPT_BYTES ceiling.
+const MAX_PACKET_BYTES = 2_496_000;
+let savedPacket = null;
+let busy = false;
+let editorGeneration = 0;
+
+function setBusy(value) {
+  busy = value;
+  for (const id of ['analyze', 'loadDemo', 'openPacket', 'packetFile', 'mode', 'incident']) {
+    $(id).disabled = value;
+  }
+  $('savePacket').disabled = value || !savedPacket;
+}
+
+function canonicalEvidence(value) {
+  const lines = value.replace(/\r\n?/g, '\n').split('\n');
+  if (lines[lines.length - 1] === '') lines.pop();
+  return lines.join('\n') + '\n';
+}
+
+function updatePacketStatus() {
+  if (!savedPacket) return;
+  const same = canonicalEvidence(incident.value) === savedPacket.evidenceText;
+  $('packetStatus').textContent = `Saved analysis ${savedPacket.payload.receipt.run_id}. ` +
+    (same ? 'The editor matches its evidence.' : 'The editor has different evidence; download still saves the displayed analysis.');
+}
+
+async function verifyPacket(raw) {
+  if (new TextEncoder().encode(raw).length > MAX_PACKET_BYTES) {
+    throw new Error('Analysis packet exceeds the supported file size.');
+  }
+  // Send original text before JSON.parse so duplicate keys reach the strict native parser.
+  const response = await fetch('/api/verify', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: raw,
+    signal: AbortSignal.timeout(15000),
+  });
+  const result = await response.json();
+  if (!response.ok || result.valid !== true) {
+    throw new Error(result.detail || result.error || 'Packet integrity invalid; current work was kept.');
+  }
+  const payload = JSON.parse(raw);
+  return {raw, payload, evidenceText: payload.evidence.lines.map((line) => line.text).join('\n') + '\n'};
+}
 
 function updateCounts() {
   const text = incident.value;
   const lines = text ? text.replace(/\r\n?/g, '\n').split('\n').filter((_, i, a) => i < a.length - 1 || a[i] !== '').length : 0;
   $('lineCount').textContent = `${lines} ${lines === 1 ? 'line' : 'lines'}`;
   $('byteCount').textContent = `${new TextEncoder().encode(text).length.toLocaleString()} bytes`;
+  updatePacketStatus();
 }
 
 function escapeText(value) {
@@ -95,74 +139,114 @@ function renderFinding(finding, lineMap) {
 function showError(message) {
   $('errorBox').textContent = message;
   $('errorBox').classList.remove('hidden');
+  if (!savedPacket) {
+    $('receiptState').textContent = 'No verified packet';
+    $('receiptState').className = 'receipt-chip hold';
+  }
+}
+
+function renderPacket(packet) {
+  const payload = packet.payload;
   $('emptyState').classList.add('hidden');
-  $('results').classList.add('hidden');
-  $('receiptState').textContent = 'Analysis rejected';
-  $('receiptState').className = 'receipt-chip hold';
+  $('results').classList.remove('hidden');
+  $('summaryState').textContent = `${payload.summary_review.status} · MODEL SUMMARY`;
+  $('summary').textContent = escapeText(payload.summary);
+  $('summaryReason').textContent = payload.summary_review.reason;
+  $('metrics').replaceChildren(
+    metric('Evidence SHA', payload.evidence.sha256.slice(0, 12) + '…'),
+    metric('Model', payload.model),
+    metric('CLAIM PASS', String(payload.findings.filter((x) => x.status === 'PASS').length)),
+    metric('CLAIM HOLD', String(payload.findings.filter((x) => x.status === 'HOLD').length)),
+  );
+  const lineMap = new Map(payload.evidence.lines.map((x) => [x.id, x.text]));
+  $('findings').replaceChildren(...payload.findings.map((x) => renderFinding(x, lineMap)));
+  $('receipt').textContent = JSON.stringify(payload.receipt, null, 2);
+  $('receiptState').textContent = 'Packet integrity verified · model summary/actions remain review-only';
+  $('receiptState').className = 'receipt-chip ok';
+  savedPacket = packet;
+  updatePacketStatus();
 }
 
 async function analyze() {
+  if (busy) return;
+  const request = {text: incident.value, mode: $('mode').value};
+  editorGeneration += 1;
   $('errorBox').classList.add('hidden');
-  analyzeButton.disabled = true;
+  setBusy(true);
   analyzeButton.textContent = 'Verifying evidence…';
   try {
     const response = await fetch('/api/analyze', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text: incident.value, mode: $('mode').value}),
+      body: JSON.stringify(request),
     });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.detail || payload.error || `HTTP ${response.status}`);
-
-    $('emptyState').classList.add('hidden');
-    $('results').classList.remove('hidden');
-    const summaryReview = payload.summary_review || {
-      status: 'REVIEW_ONLY',
-      reason: 'Model-generated summary is not evidence-verified; only individual CLAIM PASS findings have passed citation, support, and skeptic gates.',
-    };
-    $('summaryState').textContent = `${summaryReview.status} · MODEL SUMMARY`;
-    $('summary').textContent = escapeText(payload.summary);
-    $('summaryReason').textContent = summaryReview.reason;
-    $('metrics').replaceChildren(
-      metric('Evidence SHA', payload.evidence.sha256.slice(0, 12) + '…'),
-      metric('Model', payload.model),
-      metric('CLAIM PASS', String(payload.findings.filter((x) => x.status === 'PASS').length)),
-      metric('CLAIM HOLD', String(payload.findings.filter((x) => x.status === 'HOLD').length)),
-    );
-    const findings = $('findings');
-    const lineMap = new Map(payload.evidence.lines.map((x) => [x.id, x.text]));
-    findings.replaceChildren(...payload.findings.map((x) => renderFinding(x, lineMap)));
-    $('receipt').textContent = JSON.stringify(payload.receipt, null, 2);
-
-    const verifyResponse = await fetch('/api/verify', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
-    });
-    const verified = await verifyResponse.json();
-    $('receiptState').textContent = verified.valid
-      ? 'Packet integrity verified · model summary/actions remain review-only'
-      : 'Packet integrity invalid';
-    $('receiptState').className = `receipt-chip ${verified.valid ? 'ok' : 'hold'}`;
+    const raw = await response.text();
+    if (!response.ok) {
+      const error = JSON.parse(raw);
+      throw new Error(error.detail || error.error || `HTTP ${response.status}`);
+    }
+    renderPacket(await verifyPacket(raw));
   } catch (error) {
     showError(error.message || String(error));
   } finally {
-    analyzeButton.disabled = false;
+    setBusy(false);
     analyzeButton.textContent = 'Analyze incident';
   }
 }
 
+$('openPacket').addEventListener('click', () => {
+  if (!busy) $('packetFile').click();
+});
+$('packetFile').addEventListener('change', async () => {
+  const file = $('packetFile').files[0];
+  $('packetFile').value = '';
+  if (!file || busy) return;
+  editorGeneration += 1;
+  $('errorBox').classList.add('hidden');
+  setBusy(true);
+  try {
+    if (file.size > MAX_PACKET_BYTES) throw new Error('Analysis packet exceeds the supported file size.');
+    const raw = new TextDecoder('utf-8', {fatal: true}).decode(await file.arrayBuffer());
+    const candidate = await verifyPacket(raw);
+    if ((savedPacket || incident.value.trim()) && !window.confirm('Replace the displayed analysis and incident editor with this verified packet? Download current analysis first if you need to keep it.')) return;
+    incident.value = candidate.evidenceText;
+    renderPacket(candidate);
+    updateCounts();
+  } catch (error) {
+    showError(`Unable to open packet: ${error.message || String(error)}`);
+  } finally {
+    setBusy(false);
+  }
+});
+$('savePacket').addEventListener('click', () => {
+  if (busy || !savedPacket) return;
+  const url = URL.createObjectURL(new Blob([savedPacket.raw], {type: 'application/json;charset=utf-8'}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `traceforge-${savedPacket.payload.receipt.run_id}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
 $('loadDemo').addEventListener('click', async () => {
+  if (busy) return;
+  editorGeneration += 1;
+  setBusy(true);
   try {
     const response = await fetch('/api/demo');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     incident.value = payload.text;
     updateCounts();
   } catch (error) {
     showError(`Unable to load demo: ${error.message}`);
+  } finally {
+    setBusy(false);
   }
 });
-incident.addEventListener('input', updateCounts);
+incident.addEventListener('input', () => { editorGeneration += 1; updateCounts(); });
 analyzeButton.addEventListener('click', analyze);
 
 (async function init() {
@@ -182,9 +266,12 @@ analyzeButton.addEventListener('click', analyze);
       $('configText').textContent = 'Demo mode ready · live AI not configured';
     }
     const d = await demo.json();
-    incident.value = d.text;
-    updateCounts();
+    if (editorGeneration === 0 && !incident.value) {
+      incident.value = d.text;
+      updateCounts();
+    }
   } catch (_) {
     $('configText').textContent = 'Local UI ready';
   }
 })();
+
