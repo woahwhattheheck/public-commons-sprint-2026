@@ -302,7 +302,9 @@ def _expectation(state: list[complex], qubits: int, label: str) -> float:
         if amp == 0:
             continue
         image, phase = _pauli_image(index, qubits, label)
-        acc += amp.conjugate() * phase * state[image]
+        # P|index> = phase|image>, so contract with the bra at image.
+        # Conjugating the source amplitude instead flips odd-Y observables.
+        acc += state[image].conjugate() * phase * amp
     if abs(acc.imag) > 1e-8:
         raise OracleError(f"observable {label} produced a non-real expectation")
     return float(acc.real)
