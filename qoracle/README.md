@@ -29,6 +29,30 @@ files and invalid UTF-8 return a readable diagnostic with exit code 2.
 nonzero status on mismatch. Tolerances must be between 0 and `1e-2`.
 Duplicate keys and nonfinite numbers are rejected.
 
+## Probabilities for selected wires
+
+The optional manifest field `probability_wires` selects a non-empty ordered
+list of distinct register wires. The simulator sums probabilities over all
+other wires and emits `2**len(probability_wires)` outcomes. It does not measure
+or collapse the state; Pauli expectations still refer to the full register.
+
+```json
+{"schema":1,"qubits":2,"gates":[{"op":"H","wire":0},{"op":"CNOT","control":0,"target":1}],"observables":["ZZ"],"probability_wires":[1]}
+```
+
+This Bell circuit returns `[0.5, 0.5]` for wire 1 and `ZZ = 1`, up to
+floating-point precision. The candidate's `probabilities` array must follow
+the selected wires and have the same reduced length; the normal `verify`
+command compares it directly.
+
+Output index bit `j` corresponds to `probability_wires[j]`, preserving the
+little-endian convention. Order matters: applying `X` to wire 0 of a two-qubit
+register gives `[0, 0, 1, 0]` for selection `[1, 0]`, while `[0, 1]` gives
+`[0, 1, 0, 0]`. Adapt another framework's basis ordering explicitly before
+comparing. The selector is included in the normalized manifest hash and both
+simulation and verification outputs. If omitted, full-register probabilities,
+output fields, and manifest hashes retain the existing behavior.
+
 ## Complex phases and Pauli Y
 
 Expectations use the Hermitian inner product `<psi|P|psi>`. If applying `P`

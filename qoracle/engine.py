@@ -77,9 +77,9 @@ def load_manifest(text: str) -> dict[str, Any]:
     raw = strict_loads(text)
     if not isinstance(raw, dict):
         raise OracleError("manifest must be an object")
-    allowed = {"schema", "qubits", "gates", "observables"}
+    allowed = {"schema", "qubits", "gates", "observables", "probability_wires"}
     extra = sorted(set(raw) - allowed)
-    missing = sorted(allowed - {"observables"} - set(raw))
+    missing = sorted({"schema", "qubits", "gates"} - set(raw))
     if extra or missing:
         raise OracleError(f"manifest keys missing={missing} extra={extra}")
     if raw["schema"] != SCHEMA:
@@ -99,7 +99,16 @@ def load_manifest(text: str) -> dict[str, Any]:
         if not isinstance(item, str) or len(item) != qubits or any(ch not in "IXYZ" for ch in item):
             raise OracleError(f"observable {index} must be an IXYZ string of length {qubits}")
         parsed_obs.append(item)
-    return {"schema": SCHEMA, "qubits": qubits, "gates": parsed, "observables": parsed_obs}
+    manifest = {"schema": SCHEMA, "qubits": qubits, "gates": parsed, "observables": parsed_obs}
+    if "probability_wires" in raw:
+        wires = raw["probability_wires"]
+        if not isinstance(wires, list) or not 1 <= len(wires) <= qubits:
+            raise OracleError("probability_wires must be a non-empty list no longer than the register")
+        selected = [_int_wire(wire, qubits, "probability_wires entry") for wire in wires]
+        if len(set(selected)) != len(selected):
+            raise OracleError("probability_wires must not repeat a wire")
+        manifest["probability_wires"] = selected
+    return manifest
 
 
 def _gate(item: Any, qubits: int, index: int) -> dict[str, Any]:
@@ -146,8 +155,15 @@ def simulate(manifest: dict[str, Any]) -> dict[str, Any]:
     if abs(norm - 1.0) > 1e-8:
         raise OracleError("statevector left the unit sphere")
     probabilities = [abs(amp) ** 2 for amp in state]
+    if "probability_wires" in manifest:
+        selected = manifest["probability_wires"]
+        buckets = [[] for _ in range(1 << len(selected))]
+        for basis, probability in enumerate(probabilities):
+            outcome = sum(((basis >> wire) & 1) << bit for bit, wire in enumerate(selected))
+            buckets[outcome].append(probability)
+        probabilities = [math.fsum(bucket) for bucket in buckets]
     expectations = {label: _expectation(state, qubits, label) for label in manifest["observables"]}
-    return {
+    report = {
         "schema": SCHEMA,
         "qubits": qubits,
         "endian": "little",
@@ -164,6 +180,9 @@ def simulate(manifest: dict[str, Any]) -> dict[str, Any]:
             "revenue",
         ],
     }
+    if "probability_wires" in manifest:
+        report["probability_wires"] = list(manifest["probability_wires"])
+    return report
 
 
 def verify(manifest: dict[str, Any], candidate_text: str) -> dict[str, Any]:
@@ -202,7 +221,7 @@ def verify(manifest: dict[str, Any], candidate_text: str) -> dict[str, Any]:
             got = _finite(expectations[label], f"expectation {label}")
             if abs(got - expected) > tolerance:
                 findings.append(f"expectation {label} disagrees with the oracle")
-    return {
+    report = {
         "schema": SCHEMA,
         "state": "MATCH" if not findings else "MISMATCH",
         "findings": findings,
@@ -211,6 +230,9 @@ def verify(manifest: dict[str, Any], candidate_text: str) -> dict[str, Any]:
         "authority": oracle["authority"],
         "not": oracle["not"],
     }
+    if "probability_wires" in oracle:
+        report["probability_wires"] = oracle["probability_wires"]
+    return report
 
 
 def _apply(state: list[complex], qubits: int, gate: dict[str, Any]) -> None:
