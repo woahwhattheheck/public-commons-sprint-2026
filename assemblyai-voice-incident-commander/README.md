@@ -63,6 +63,29 @@ the current visible filter; reset filters before printing the whole call. The
 displayed receipt identifies the JSON packet, not the HTML copy. Keep the JSON
 for later verification. With JavaScript disabled, all turns remain readable.
 
+### Replay a message log
+
+For a saved log containing one provider message object per line, select JSONL
+explicitly instead of rewriting the log as a JSON array:
+
+```bash
+python replay.py compile incident-messages.jsonl /tmp/incident.packet.json --input-format jsonl
+python replay.py verify /tmp/incident.packet.json
+```
+
+The reader streams UTF-8 lines (an optional initial byte-order mark is accepted),
+ignores blank lines, and rejects duplicate keys and non-finite JSON just like
+array input. Each nonblank line must contain one complete message object;
+pretty-printed objects spanning lines are not JSONL. JSON syntax and record-type
+errors include the source filename and physical line number.
+
+The existing reducer still ignores non-Turn and partial messages, preserves
+final-turn order, collapses identical retries, and rejects conflicting retries
+or order gaps. Equivalent message sequences produce the same packet and receipt
+in either input format. All messages are consumed before a new output is
+created, so an invalid later record does not leave a partial packet. The default
+input format remains a JSON array.
+
 Run the full proof in normal and optimized mode:
 
 ```bash
