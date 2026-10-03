@@ -13,12 +13,17 @@ def _text(value: Any) -> str:
 
 
 def _table(headers: Iterable[str], rows: Iterable[Iterable[Any]]) -> str:
+    headers = list(headers)
+    label = "Table: " + ", ".join(str(value) for value in headers)
     headings = "".join(f'<th scope="col">{_text(value)}</th>' for value in headers)
     body = "".join(
-        "<tr>" + "".join(f"<td>{_text(value)}</td>" for value in row) + "</tr>"
+        "<tr>" + "".join(
+            f'<td class="number">{_text(value)}</td>' if isinstance(value, int)
+            else f"<td>{_text(value)}</td>" for value in row
+        ) + "</tr>"
         for row in rows
     )
-    return f'<div class="table-scroll"><table><thead><tr>{headings}</tr></thead><tbody>{body}</tbody></table></div>'
+    return f'<div class="table-scroll" role="region" aria-label="{_text(label)}" tabindex="0"><table><thead><tr>{headings}</tr></thead><tbody>{body}</tbody></table></div>'
 
 
 def render_case_html(raw_case: dict[str, Any]) -> str:
@@ -38,13 +43,17 @@ def render_case_html(raw_case: dict[str, Any]) -> str:
         h2 { margin-top: 2rem; font-size: 1.25rem; }
         .eyebrow { color: #365a67; font-weight: 700; letter-spacing: .06em; }
         .state { border-left: 5px solid #9b5d00; background: #fff6e6; padding: 1rem; overflow-wrap: anywhere; }
+        .table-hint { display: none; }
         .table-scroll { overflow-x: auto; }
+        .table-scroll:focus-visible { outline: 2px solid #365a67; outline-offset: 2px; }
+        .number { white-space: nowrap; font-variant-numeric: tabular-nums; }
         table { border-collapse: collapse; width: 100%; margin: .75rem 0; font-size: .9rem; }
         th, td { border-bottom: 1px solid #cdd7dd; padding: .65rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-        th { background: #edf3f5; }
+        th { background: #edf3f5; overflow-wrap: normal; }
         code { overflow-wrap: anywhere; }
         dt { font-weight: 700; } dd { margin: .25rem 0 1rem; overflow-wrap: anywhere; }
-        @media print { body { background: white; padding: 0; max-width: none; } main { padding: 0; } .table-scroll { overflow: visible; } tr { break-inside: avoid; } h2 { break-after: avoid; } }
+        @media screen and (max-width: 700px) { table { min-width: 42rem; } .table-hint { display: block; } }
+        @media print { :root { background: white; } .table-scroll:focus-visible { outline: none; } table { font-size: .8rem; } th, td { padding: .45rem; } body { background: white; padding: 0; max-width: none; } main { padding: 0; } .table-scroll { overflow: visible; } tr { break-inside: avoid; } h2 { break-after: avoid; } }
         </style></head><body><main>""",
         '<p class="eyebrow">CIRCULARVALUE · CASE REVIEW</p>',
         f'<h1>{_text(packet["caseId"])}</h1>',
@@ -52,6 +61,7 @@ def render_case_html(raw_case: dict[str, Any]) -> str:
         f'<p class="state"><strong>{_text(packet["decisionSupportState"])}</strong><br>',
         'Decision support from entered evidence and assumptions. Values are not realized savings or an investment recommendation.</p>',
         '<h2>Value range</h2><p>All monetary amounts below are integer minor units as supplied in the case. No currency scale or conversion is inferred.</p>',
+        '<p class="table-hint">Scroll tables sideways to read all columns, or focus a table and use the arrow keys.</p>',
         _table(["Measure", "Low", "Central", "High"], [
             [label, values["lowMinor"], values["centralMinor"], values["highMinor"]]
             for label, values in [("Annual lever value before recurring costs", packet["annualValue"]), ("Net present value", packet["npv"])]
