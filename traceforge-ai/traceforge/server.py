@@ -16,7 +16,10 @@ from .receipt_io import MAX_RECEIPT_BYTES, render_analysis_packet
 # decoded evidence ceiling plus bounded schema/mode overhead.
 _JSON_ESCAPE_EXPANSION = 6
 MAX_REQUEST_BYTES = MAX_EVIDENCE_BYTES * _JSON_ESCAPE_EXPANSION + 64_000
-ROOT = Path(__file__).resolve().parent.parent
+# Wheels keep the browser and demo inside the installed package. The source
+# checkout keeps its existing sibling directories for direct module execution.
+PACKAGE_ROOT = Path(__file__).resolve().parent
+ROOT = PACKAGE_ROOT if (PACKAGE_ROOT / "web").is_dir() else PACKAGE_ROOT.parent
 WEB = ROOT / "web"
 EXAMPLE = ROOT / "examples" / "incident.txt"
 

@@ -23,13 +23,24 @@ The local demo uses a deterministic rules surrogate so judges can run the full w
 
 Requires Python **3.11+**. Runtime has no third-party Python dependencies.
 
+From the `traceforge-ai` directory, install into your active Python environment:
+
+```bash
+python -m pip install .
+traceforge serve --host 127.0.0.1 --port 8080
+```
+
+The installed command works from any working directory. Its wheel includes the browser HTML, JavaScript, stylesheet, and built-in synthetic incident; no checkout is needed to serve the app or load the demo. To build a wheel for another environment, run `python -m pip wheel --no-deps --wheel-dir dist .`, then install that wheel there. Hatchling is needed only to build the package, not to run it.
+
+Direct source execution from the `traceforge-ai` directory remains available:
+
 ```bash
 python -m traceforge serve --host 127.0.0.1 --port 8080
 ```
 
 Open `http://127.0.0.1:8080`, load the built-in synthetic incident, and click **Analyze incident**.
 
-CLI demo:
+CLI demo from the checkout (or supply the path to your own evidence file from any directory):
 
 ```bash
 python -m traceforge analyze examples/incident.txt --mode demo --json-out analysis.json
@@ -171,4 +182,3 @@ See [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for a sub-three-minute demo and
 ## License
 
 Apache-2.0. See [`LICENSE`](LICENSE).
-
