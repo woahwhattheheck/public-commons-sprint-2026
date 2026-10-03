@@ -130,6 +130,12 @@ def _write_demo_pair(out: Path, case_text: str, packet_text: str) -> tuple[Path,
             raise
         _write_fd(case_fd, case_text)
         _write_fd(packet_fd, packet_text)
+    except Exception:
+        if case_fd is not None:
+            _unlink_if_same(case_path, case_fd)
+        if packet_fd is not None:
+            _unlink_if_same(packet_path, packet_fd)
+        raise
     finally:
         if case_fd is not None:
             os.close(case_fd)
