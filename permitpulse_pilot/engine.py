@@ -412,7 +412,12 @@ def write_exclusive(output_dir: str | os.PathLike[str], artifacts: dict[str, byt
             fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             created.append(path)
             try:
-                os.write(fd, data)
+                remaining = memoryview(data)
+                while remaining:
+                    written = os.write(fd, remaining)
+                    if written <= 0:
+                        raise OSError("output write made no progress")
+                    remaining = remaining[written:]
                 os.fsync(fd)
             finally:
                 os.close(fd)
