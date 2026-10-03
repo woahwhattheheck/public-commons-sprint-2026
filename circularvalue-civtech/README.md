@@ -33,3 +33,8 @@ locators are displayed as supplied references; they are not fetched or
 independently authenticated.
 
 Filesystem boundary: CLI inputs must be bounded regular non-symlink files. Generated outputs are **create-only**: `compile --out`, `report --out`, and the demo's `case.json`/`packet.json` refuse pre-existing paths (including symlinks) rather than overwrite them. Use a fresh output file/directory for each run.
+
+If writing the demo fails, the CLI removes only the case and packet files created
+by that attempt that have not since been replaced. Existing files and unrelated
+directory contents remain untouched. After the storage problem is fixed, retry
+the same directory when the demo output names are free.
