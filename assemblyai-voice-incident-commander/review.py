@@ -30,7 +30,7 @@ button{align-self:end;cursor:pointer}input{min-width:200px}.events{list-style:no
 .event[hidden]{display:none}.event h2{margin:0;display:flex;gap:.75rem;flex-wrap:wrap}.event p{white-space:pre-wrap;overflow-wrap:anywhere}
 .meta{color:#36586e;font-size:.9rem}.kind{font-size:.85rem;background:#edf2f5;padding:.15rem .5rem;border-radius:5px}
 details{border-top:1px solid #d6dfe5;padding-top:.75rem}summary{cursor:pointer}code{overflow-wrap:anywhere}dt{font-weight:650}dd{margin:.25rem 0 1rem;overflow-wrap:anywhere}
-@media print{body{background:white}main{max-width:none;padding:0}.controls{display:none}.event{break-inside:avoid}}
+@media print{:root{font-size:14px;background:white}body{background:white}main{max-width:none;padding:0}.controls{display:none}.event{break-inside:avoid}}
 """
 
 SCRIPT = """
