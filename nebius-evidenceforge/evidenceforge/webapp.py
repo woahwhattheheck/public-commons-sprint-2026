@@ -60,10 +60,11 @@ class Handler(BaseHTTPRequestHandler):
         status = "GREEN" if receipt["required_tests_green"] else "RED"
         authority = receipt["authority"]
         page = f"""<!doctype html>
-<html><head><meta charset="utf-8"><title>EvidenceForge</title>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>EvidenceForge</title>
 <style>
 body{{font-family:system-ui;margin:3rem;max-width:850px}} code{{background:#eee;padding:.1rem .25rem}}
 .card{{border:1px solid #aaa;border-radius:12px;padding:1rem;margin:1rem 0}}
+.card code{{overflow-wrap:anywhere}}
 </style></head><body>
 <h1>EvidenceForge</h1>
 <p>Evidence-gated coding agent foundation for Nebius × NVIDIA.</p>
