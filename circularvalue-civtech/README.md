@@ -17,7 +17,10 @@ The demo uses synthetic data. Each scenario input is bound to retained evidence 
 Open `review.html` locally to read the same compiler's value ranges, assumptions,
 confidence labels, category totals, sensitivity ranking, and retained evidence
 references. It is self-contained: no network, scripts, remote fonts, or service
-account is needed. The browser's print command can produce a paper or PDF copy.
+account is needed. The browser's print command can produce a paper or PDF copy. Numeric amounts
+stay on one line. On narrow screens, tables scroll horizontally; focus a table
+with Tab and use the arrow keys to inspect its remaining columns. Printing fits
+the tables to the page without changing the underlying values.
 
 `report` reads and compiles the source case directly; it does not accept a
 caller-authored result packet. The report shows the source case and compiled
