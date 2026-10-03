@@ -1,9 +1,24 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
 [project]
 name = "traceforge-ai"
 version = "0.1.0"
 description = "Evidence-grounded AI incident copilot"
+readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 
 [project.scripts]
 traceforge = "traceforge.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["traceforge"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"web" = "traceforge/web"
+"examples/incident.txt" = "traceforge/examples/incident.txt"
+
+[tool.hatch.build.targets.sdist]
+include = ["/traceforge", "/web", "/examples/incident.txt", "/README.md", "/LICENSE", "/pyproject.toml"]
