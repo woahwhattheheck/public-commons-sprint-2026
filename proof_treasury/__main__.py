@@ -93,7 +93,7 @@ def read_events(db: sqlite3.Connection) -> list[dict]:
         if number != expected or type(document) is not str:
             core.fail("EVENT_SEQUENCE_INVALID")
         item = core.load_json(document)
-        if item.get("number") != number:
+        if type(item) is not dict or item.get("number") != number:
             core.fail("EVENT_SEQUENCE_INVALID")
         events.append(item)
     return events
