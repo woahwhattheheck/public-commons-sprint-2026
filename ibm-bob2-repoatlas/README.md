@@ -44,6 +44,14 @@ python -m repoatlas.cli verify \
 
 The synthetic fixture intentionally has an unowned/untested worker change, so the demo lands in `HOLD_EVIDENCE_GAPS` while still producing a deterministic onboarding/drift report.
 
+Compile requires two distinct, unused output paths. Existing files, directories
+and symlinks are refused before either output is created. The command reserves
+both destinations exclusively, then writes the packet and receipt. If an open,
+write or close fails, it removes only files created by that attempt, leaving
+existing outputs intact and allowing a corrected retry. A cleanup failure is
+reported as `output_cleanup_failed` for the operator to inspect. This coordinates
+ordinary command failures; separate files are not a crash-atomic transaction.
+
 ## Read the human review report
 
 After compiling the bundle, create a standalone HTML report:
