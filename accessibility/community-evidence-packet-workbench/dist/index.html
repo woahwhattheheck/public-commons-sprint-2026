@@ -1503,7 +1503,7 @@ async function exportFilesZip(packet) {
   const entries = await payloadEntries(packet);
   const packagedPacket = {
     ...packet,
-    items: entries.map((e) => e.item),
+    items: entries.map((e) => ({ ...e.item, path: e.path })),
   };
   const json = utf8Bytes(exportJson(packagedPacket));
   const md = utf8Bytes(exportMarkdown(packagedPacket));
