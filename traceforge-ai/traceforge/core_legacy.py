@@ -69,7 +69,10 @@ class EvidenceDocument:
         text = text.replace("\r\n", "\n").replace("\r", "\n")
         if "\x00" in text:
             raise TraceForgeError("evidence contains NUL bytes")
-        raw = text.encode("utf-8")
+        try:
+            raw = text.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise TraceForgeError("evidence text must be valid UTF-8") from exc
         if len(raw) > MAX_EVIDENCE_BYTES:
             raise TraceForgeError(f"evidence exceeds {MAX_EVIDENCE_BYTES} bytes")
         physical = text.split("\n")
