@@ -167,13 +167,17 @@ def evaluate_snapshot(
         else:
             low = eligible[0][0]
             high = eligible[-1][0]
-            dispersion = Decimal("0") if low == 0 else (high - low) / low * Decimal("10000")
+            if low == 0:
+                # A positive quote relative to zero has no finite dispersion.
+                dispersion = None if high > 0 else Decimal("0")
+            else:
+                dispersion = (high - low) / low * Decimal("10000")
             result.update({
                 "status": "ok",
                 "best_partner_id": eligible[0][1],
                 "best_fee_adjusted_price": _q(low),
-                "dispersion_bps": _q(dispersion, "0.01"),
-                "alert": dispersion >= threshold,
+                "dispersion_bps": None if dispersion is None else _q(dispersion, "0.01"),
+                "alert": dispersion is None or dispersion >= threshold,
             })
         rendered.append(result)
 

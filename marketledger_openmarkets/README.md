@@ -69,6 +69,22 @@ python -m marketledger_openmarkets.cli stage report.json POSITION_HASH PARTNER_I
 
 There is no command that sends an order.
 
+## Dispersion calculation
+
+Among quotes that meet the minimum-liquidity policy, `low` and `high` are the
+lowest and highest fee-adjusted prices. When `low > 0`, relative dispersion is
+`(high - low) / low * 10,000`. The report displays `dispersion_bps` rounded to two
+decimal places, but compares the unrounded value with the supplied threshold
+using `>=`.
+
+When `low == 0` and `high > 0`, relative dispersion has no finite value. The
+report uses `dispersion_bps: null` and `alert: true` for every finite threshold.
+The position remains eligible, and its quoted prices and selected partner are
+retained. When all eligible prices are zero, dispersion remains `"0.00"` and the
+usual threshold comparison applies: no alert at a positive threshold, an alert
+at a zero threshold. With no eligible quotes, the existing
+`insufficient_liquidity` status, null dispersion and false alert remain in place.
+
 ## Deterministic fail-closed boundaries
 
 - snapshot age is bounded and future timestamps fail;
