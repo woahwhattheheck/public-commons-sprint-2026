@@ -43,3 +43,11 @@ python -O -m unittest -v permitpulse_pilot.test_engine
 ```
 
 Hypothesis `$4,500 fixed / PROPOSED_NOT_ACCEPTED` is a labeled synthetic commercial hypothesis only.
+
+## Output files
+
+Compilation reports success after both artifact files have been fully written
+and synchronized. Existing output files are never overwritten. An I/O failure
+returns an error and removes only files created by that compilation, so a
+partial write cannot produce a success receipt. The output directory can then
+be retried after the storage problem is resolved.
