@@ -10,6 +10,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 SCHEMA = "permitpulse-paid-pilot/v1"
 SCHEMA_PACKET = "permitpulse-paid-pilot-packet/v1"
@@ -150,6 +151,16 @@ def _scan_forbidden(value: Any, where: str) -> None:
             raise ValidationError(f"forbidden promotion in {where}: {token}")
 
 
+def _has_synthetic_host(url: str) -> bool:
+    try:
+        hostname = urlsplit(url).hostname
+    except ValueError as exc:
+        raise ValidationError("invalid source or research URL") from exc
+    return hostname == "example.invalid" or (
+        hostname is not None and hostname.endswith(".example.invalid")
+    )
+
+
 def normalize(raw: Any) -> dict[str, Any]:
     obj = _exact(
         raw,
@@ -181,7 +192,7 @@ def normalize(raw: Any) -> dict[str, Any]:
         if jid not in jids:
             raise ValidationError("source unknown jurisdiction")
         url = _str(rec["httpsUrl"], f"sources[{i}].httpsUrl", HTTPS_RE, max_len=240)
-        if "example.invalid" not in url:
+        if not _has_synthetic_host(url):
             raise ValidationError("pilot fixture sources must stay on example.invalid")
         sources.append(
             {
@@ -253,7 +264,7 @@ def normalize(raw: Any) -> dict[str, Any]:
         if rec["posture"] != "RESEARCH_ONLY_NO_OUTBOUND":
             raise ValidationError("research posture must be RESEARCH_ONLY_NO_OUTBOUND")
         url = _str(rec["firstPartyUrl"], f"researchAccounts[{i}].firstPartyUrl", HTTPS_RE, max_len=240)
-        if "example.invalid" not in url:
+        if not _has_synthetic_host(url):
             raise ValidationError("research URLs must stay synthetic")
         research.append(
             {

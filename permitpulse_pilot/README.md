@@ -16,6 +16,14 @@ Issue: https://github.com/woahwhattheheck/public-commons-sprint-2026/issues/106
 - target-account research rows marked `RESEARCH_ONLY_NO_OUTBOUND`
 - machine verifier rejecting accepted-price, customer-result, live-provider, submission/prize, compliance, legal-advice, outbound, payment, and revenue promotion
 
+## Synthetic URL boundary
+
+Source `httpsUrl` and research `firstPartyUrl` must have the hostname
+`example.invalid` or a subdomain such as `permits.example.invalid`. Hostname
+comparison is case-insensitive. The words `example.invalid` in a path, query,
+fragment or unrelated hostname do not qualify. Existing HTTPS and field-format
+rules still apply, and accepted URL text is retained unchanged.
+
 ## What this carrier is not
 
 No buyer contact, Muse request, live Firecrawl/OpenAI/AgentMail/Convex invocation, hackathon submission, prize claim, payment-link creation, accepted contract, customer result, observed savings, or revenue mutation.
