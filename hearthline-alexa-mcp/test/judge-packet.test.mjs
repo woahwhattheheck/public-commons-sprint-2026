@@ -8,14 +8,14 @@ import { gitBlobSha, verifyJudgePacket } from '../judge/verify.mjs';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-test('judge verifier binds all 47 public source blobs and the executable mode', async () => {
+test('judge verifier binds all 52 public source blobs and the executable mode', async () => {
   const report = await verifyJudgePacket({ rootDir });
   assert.equal(report.schema, 'hearthline-judge-verification/v1');
   assert.equal(report.ok, true);
-  assert.equal(report.sourceFiles, 47);
+  assert.equal(report.sourceFiles, 52);
   assert.equal(report.executableFiles, 1);
-  assert.equal(report.sourceCommit, '404ddba708a97755a716874e58301202abbb13d9');
-  assert.equal(report.manifestBlob, '59c095074c58375c2598278cd6dda9a8250f2be6');
+  assert.equal(report.sourceCommit, '2abe1282b11249df73aad88fbaf3300e78a5f68b');
+  assert.equal(report.manifestBlob, '9d51a39ac88772ff9313370e4ff8adb73f136fb9');
 });
 
 test('Git blob hashing matches the canonical Git object identity algorithm', () => {

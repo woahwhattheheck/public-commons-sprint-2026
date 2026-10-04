@@ -1,4 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
+import {
+  actionIntentDigest,
+  assertOperationId,
+  createApprovalRecord,
+  createExecutionReceipt,
+  ensureAuthorityState,
+  verifyApprovalRecord,
+  verifyExecutionReceipt,
+} from './authority.mjs';
 
 const SUPPLY_BASELINE = [['flashlight', 1], ['water', 3], ['battery_pack', 1], ['first_aid_kit', 1]];
 function nowIso(clock) { return new Date(clock()).toISOString(); }
@@ -24,27 +33,102 @@ export class HearthlineOrchestrator {
     actions.push({ id: `action_${randomUUID()}`, kind: 'household_reminder', risk: 'external_commit', status: 'awaiting_approval', summary: alerts.length ? `Draft household reminder for ${highestSeverity.toLowerCase()} weather conditions` : 'Draft routine preparedness check-in', payload: { audience: 'household', message: alerts.length ? `Preparedness check: ${alerts[0].headline}. Review supplies and your local official guidance.` : 'Preparedness check: no active NWS alerts were found; verify supplies and household contacts.' } });
     const mission = { id: missionId, type: 'storm_readiness', title: String(title).slice(0, 120), status: actions.some((a) => a.status === 'awaiting_approval') ? 'awaiting_approval' : 'ready', createdAt, updatedAt: createdAt, location: { latitude, longitude }, household: sanitizeHousehold(household), alertsSummary: { count: alerts.length, highestSeverity }, actions };
     refreshPlanHash(mission);
-    return this.store.mutate((draft) => { draft.missions[missionId] = mission; return mission; });
+    return this.store.mutate((draft) => { draft.missions[missionId] = mission; ensureAuthorityState(draft); return mission; });
   }
-  async getMission(id) { await this.store.load(); const mission = this.store.snapshot().missions[id]; if (!mission) throw new Error('mission not found'); return mission; }
-  async listMissions() { await this.store.load(); return Object.values(this.store.snapshot().missions).sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
-  async approveAction({ missionId, actionId, planHash }) {
-    return this.store.mutate((state) => { const mission = state.missions[missionId]; if (!mission) throw new Error('mission not found'); if (planHash !== mission.planHash) throw new Error('plan hash mismatch; re-read mission before approving'); const action = mission.actions.find((x) => x.id === actionId); if (!action) throw new Error('action not found'); if (action.risk !== 'external_commit') throw new Error('action does not require approval'); if (action.status === 'complete') return { mission, action, alreadyComplete: true }; if (action.status !== 'awaiting_approval' && action.status !== 'approved') throw new Error(`action cannot be approved from status ${action.status}`); action.status = 'approved'; action.approvedAt = nowIso(this.clock); mission.updatedAt = action.approvedAt; refreshPlanHash(mission); return { mission, action, alreadyComplete: false }; });
+  async getMission(id) {
+    await this.store.load();
+    const state = this.store.snapshot(); const mission = state.missions[id]; if (!mission) throw new Error('mission not found');
+    validateMissionAuthority(state, mission);
+    return mission;
   }
-  async executeApproved({ missionId, actionId, idempotencyKey }) {
-    if (!/^[A-Za-z0-9._:-]{8,128}$/.test(String(idempotencyKey ?? ''))) throw new Error('idempotencyKey must be 8-128 safe characters');
+  async listMissions() {
+    await this.store.load(); const state = this.store.snapshot(); ensureAuthorityState(state);
+    for (const mission of Object.values(state.missions)) validateMissionAuthority(state, mission);
+    return Object.values(state.missions).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  async getOperation(operationId) {
+    assertOperationId(operationId);
+    await this.store.load(); const state = this.store.snapshot(); const authority = ensureAuthorityState(state); const operation = authority.operations[operationId];
+    if (!operation) throw new Error('operation not found');
+    const mission = state.missions[operation.approval.missionId]; const action = mission?.actions.find((candidate) => candidate.id === operation.approval.actionId);
+    if (!mission || !action) throw new Error('authority operation target missing');
+    verifyApprovalRecord(operation.approval, { missionId: mission.id, action, operationId });
+    if (operation.status === 'complete') {
+      const receipt = authority.receipts.find((candidate) => candidate.receiptDigest === operation.receiptDigest); if (!receipt) throw new Error('authority execution receipt missing');
+      verifyExecutionReceipt(receipt, { approval: operation.approval, output: action.output });
+    }
+    return operation;
+  }
+  async approveAction({ missionId, actionId, planHash, operationId }) {
+    const requestedOperationId = operationId ?? `legacy:${stableHash({ missionId, actionId, planHash }).slice(0, 48)}`;
+    assertOperationId(requestedOperationId);
     return this.store.mutate((state) => {
-      const prior = state.receipts.find((r) => r.idempotencyKey === idempotencyKey);
-      if (prior) { if (prior.missionId !== missionId || prior.actionId !== actionId) throw new Error('idempotency key already used for another action'); return { receipt: prior, replayed: true, mission: state.missions[missionId] }; }
-      const mission = state.missions[missionId]; if (!mission) throw new Error('mission not found'); const action = mission.actions.find((x) => x.id === actionId); if (!action) throw new Error('action not found'); if (action.status !== 'approved') throw new Error('action must be explicitly approved before execution');
+      const operationId = requestedOperationId; const authority = ensureAuthorityState(state); const mission = state.missions[missionId]; if (!mission) throw new Error('mission not found'); const action = mission.actions.find((x) => x.id === actionId); if (!action) throw new Error('action not found');
+      if (action.risk !== 'external_commit') throw new Error('action does not require approval');
+      const prior = authority.operations[operationId];
+      if (prior) {
+        verifyApprovalRecord(prior.approval, { missionId, action, operationId });
+        if (prior.approval.approvedPlanHash !== planHash || prior.approval.actionId !== actionId) throw new Error('operationId already bound to different approval material');
+        if (action.operationId !== operationId || action.approvalDigest !== prior.approval.approvalDigest) throw new Error('mission approval binding mismatch');
+        return { mission, action, approval: prior.approval, replayed: true, alreadyComplete: prior.status === 'complete' };
+      }
+      if (planHash !== mission.planHash) throw new Error('plan hash mismatch; re-read mission before approving');
+      if (action.status !== 'awaiting_approval') throw new Error(`action cannot be approved from status ${action.status}`);
+      const approvedAt = nowIso(this.clock); const approval = createApprovalRecord({ missionId, action, operationId, approvedPlanHash: planHash, approvedAt });
+      authority.operations[operationId] = { status: 'approved', approval, receiptDigest: null };
+      action.status = 'approved'; action.approvedAt = approvedAt; action.operationId = operationId; action.approvalDigest = approval.approvalDigest; mission.updatedAt = approvedAt; refreshPlanHash(mission);
+      return { mission, action, approval, replayed: false, alreadyComplete: false };
+    });
+  }
+  async executeApproved({ missionId, actionId, operationId, idempotencyKey }) {
+    if (operationId !== undefined) assertOperationId(operationId);
+    if (idempotencyKey !== undefined && !/^[A-Za-z0-9._:-]{8,128}$/.test(String(idempotencyKey))) throw new Error('idempotencyKey must be 8-128 safe characters');
+    if (operationId === undefined && idempotencyKey === undefined) throw new Error('operationId required');
+    return this.store.mutate((state) => {
+      const authority = ensureAuthorityState(state); const mission = state.missions[missionId]; if (!mission) throw new Error('mission not found'); const action = mission.actions.find((x) => x.id === actionId); if (!action) throw new Error('action not found');
+      const effectiveOperationId = operationId ?? action.operationId; if (!effectiveOperationId) throw new Error('operation must be explicitly approved before execution'); assertOperationId(effectiveOperationId);
+      const operation = authority.operations[effectiveOperationId]; if (!operation) throw new Error('operation must be explicitly approved before execution');
+      verifyApprovalRecord(operation.approval, { missionId, action, operationId: effectiveOperationId });
+      if (operation.approval.actionId !== actionId || action.operationId !== effectiveOperationId || action.approvalDigest !== operation.approval.approvalDigest) throw new Error('execution does not match approved operation');
+      if (idempotencyKey !== undefined) {
+        const collision = Object.entries(authority.operations).find(([candidateId, candidate]) => candidateId !== effectiveOperationId && candidate.legacyIdempotencyKey === idempotencyKey);
+        if (collision) throw new Error('idempotency key already used for another action');
+        if (operation.legacyIdempotencyKey !== undefined && operation.legacyIdempotencyKey !== idempotencyKey) throw new Error('idempotency key does not match approved operation');
+        if (operation.legacyIdempotencyKey === undefined) operation.legacyIdempotencyKey = idempotencyKey;
+      }
+      if (operation.status === 'complete') {
+        const receipt = authority.receipts.find((item) => item.receiptDigest === operation.receiptDigest); if (!receipt) throw new Error('authority execution receipt missing');
+        verifyExecutionReceipt(receipt, { approval: operation.approval, output: action.output });
+        return { receipt, approval: operation.approval, replayed: true, mission };
+      }
+      if (action.status !== 'approved') throw new Error('action must be explicitly approved before execution');
+      if (operation.status !== 'approved') throw new Error(`operation cannot execute from status ${operation.status}`);
+      const currentDigest = actionIntentDigest({ missionId, action }); if (currentDigest !== operation.approval.actionDigest) throw new Error('approved action payload changed');
       const executedAt = nowIso(this.clock); let output;
       if (action.kind === 'shopping_proposal') output = { type: 'shopping_handoff', status: 'prepared_not_purchased', items: action.payload.items, note: 'No purchase was placed; this is a handoff artifact for an authorized shopping provider.' };
       else if (action.kind === 'household_reminder') { const outboxItem = { id: `outbox_${randomUUID()}`, createdAt: executedAt, ...action.payload, delivery: 'local_demo_outbox' }; state.outbox.push(outboxItem); output = outboxItem; }
       else throw new Error(`unsupported executable action kind: ${action.kind}`);
       action.status = 'complete'; action.executedAt = executedAt; action.output = output; mission.updatedAt = executedAt; mission.status = mission.actions.some((x) => x.status === 'awaiting_approval' || x.status === 'approved') ? 'awaiting_approval' : 'complete'; refreshPlanHash(mission);
-      const receipt = { id: `receipt_${randomUUID()}`, missionId, actionId, idempotencyKey, executedAt, outputHash: stableHash(output), semantics: action.kind === 'shopping_proposal' ? 'prepared_not_purchased' : 'local_demo_delivery' };
-      state.receipts.push(receipt); return { receipt, replayed: false, mission };
+      const receipt = createExecutionReceipt({ approval: operation.approval, executedAt, output, semantics: action.kind === 'shopping_proposal' ? 'prepared_not_purchased' : 'local_demo_delivery', previousReceiptDigest: authority.receiptHead, receiptId: `receipt_${randomUUID()}` });
+      authority.receipts.push(receipt); authority.receiptHead = receipt.receiptDigest; operation.status = 'complete'; operation.receiptDigest = receipt.receiptDigest;
+      state.receipts.push(receipt);
+      return { receipt, approval: operation.approval, replayed: false, mission };
     });
+  }
+}
+
+function validateMissionAuthority(state, mission) {
+  const authority = ensureAuthorityState(state);
+  for (const action of mission.actions) {
+    if (!action.operationId && !action.approvalDigest) continue;
+    if (!action.operationId || !action.approvalDigest) throw new Error('partial mission approval binding');
+    const operation = authority.operations[action.operationId]; if (!operation) throw new Error('mission approval operation missing');
+    verifyApprovalRecord(operation.approval, { missionId: mission.id, action, operationId: action.operationId });
+    if (operation.approval.approvalDigest !== action.approvalDigest) throw new Error('mission approval digest mismatch');
+    if (operation.status === 'complete') {
+      const receipt = authority.receipts.find((candidate) => candidate.receiptDigest === operation.receiptDigest); if (!receipt) throw new Error('mission execution receipt missing');
+      verifyExecutionReceipt(receipt, { approval: operation.approval, output: action.output });
+    }
   }
 }
 

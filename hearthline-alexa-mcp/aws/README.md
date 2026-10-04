@@ -30,6 +30,12 @@ node aws/server.mjs
 
 The existing MCP transport and authority semantics stay unchanged; only persistence moves from a local JSON file to DynamoDB.
 
+## Bounded AWS deployment plane
+
+`aws/deploy/` contains the fresh-main deployment successor that packages this DynamoDB runtime behind Route 53, HTTPS ALB and one ECS Fargate task. It creates a retained encrypted DynamoDB table, gives the application task role exactly `GetItem`/`PutItem`, supplies the current bearer-auth environment contract, and keeps plan mode offline. Live mutation is separately gated by account identity, digest-pinned ECR evidence, existing-stack ownership and an explicit charge acknowledgement. See [`deploy/README.md`](deploy/README.md).
+
+Merging the deployment source does not claim that AWS resources exist. Live provider evidence still comes from the read-only probe and gate below.
+
 ## Reproducible offline contract gate
 
 ```bash
