@@ -1,7 +1,8 @@
-import { DynamoDbJsonStore, awsCredentialsFromEnv } from './dynamodb-json-store.mjs';
+import { DynamoDbJsonStore, awsCredentialsFromRuntime } from './dynamodb-json-store.mjs';
 import { fetchActiveAlerts } from '../src/nws.mjs';
 import { HearthlineOrchestrator } from '../src/orchestrator.mjs';
 import { createMcpHttpServer } from '../src/mcp-server.mjs';
+import { loadAuthConfigFromEnv } from '../src/auth-env.mjs';
 
 const port = Number(process.env.PORT ?? 8787);
 const host = process.env.HOST ?? '127.0.0.1';
@@ -12,8 +13,14 @@ const allowedOrigins = String(process.env.ALLOWED_ORIGINS ?? '').split(',').map(
 
 if (!region) throw new Error('AWS_REGION (or AWS_DEFAULT_REGION) is required');
 if (!tableName) throw new Error('HEARTHLINE_DDB_TABLE is required');
-const store = new DynamoDbJsonStore({ tableName, region, key, credentials: awsCredentialsFromEnv() });
+const auth = await loadAuthConfigFromEnv({ required: true });
+const store = new DynamoDbJsonStore({
+  tableName,
+  region,
+  key,
+  credentials: () => awsCredentialsFromRuntime(),
+});
 await store.load();
 const orchestrator = new HearthlineOrchestrator({ store, alertProvider: (location) => fetchActiveAlerts(location) });
-const server = createMcpHttpServer({ orchestrator, allowedOrigins });
-server.listen(port, host, () => console.log(`Hearthline MCP (AWS DynamoDB store) listening on http://${host}:${port}/mcp (protocol 2025-11-25)`));
+const server = createMcpHttpServer({ orchestrator, allowedOrigins, auth });
+server.listen(port, host, () => console.log(`Hearthline MCP (AWS DynamoDB store) listening on http://${host}:${port}/mcp (protocol 2025-11-25, bearerAuth=true)`));

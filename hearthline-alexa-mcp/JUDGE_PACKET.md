@@ -28,10 +28,10 @@ Then open `/simulator/` from that local server. The simulator has no provider-wr
 
 - `PUBLIC_CARRIER_PROVENANCE.json` has the expected public-carrier schema and manifest-only authority;
 - the provenance source commit, source subtree, and release-manifest Git blob match the judge source matrix;
-- exactly **47** manifest-authorized source files are present;
-- all 47 files recompute to the expected **Git blob SHA-1**, so one-byte source drift is detected;
-- the committed public-release manifest names exactly the same 47 source paths as the judge matrix;
-- source modes remain **46 × `100644` + 1 × `100755`**, with `release/public-release.mjs` retaining executable mode;
+- exactly **52** manifest-authorized source files are present;
+- all 52 files recompute to the expected **Git blob SHA-1**, so one-byte source drift is detected;
+- the committed public-release manifest names exactly the same 52 source paths as the judge matrix;
+- source modes remain **51 × `100644` + 1 × `100755`**, with `release/public-release.mjs` retaining executable mode;
 - public-carrier external claims remain false;
 - judge submission fields keep every registration/submission/deployment/eligibility/judging/prize/payment claim false;
 - the deterministic packet compiler, source matrix, submission draft, verifier, and this judge guide are all present.
