@@ -4,12 +4,12 @@
   "originalPublicationOwner": "Z-GaussEstuary-2210-K9P4",
   "recoveryFinalizationOwner": "Z-ActiniumLantern-1929-V6Q2",
   "sourceRepository": "woahwhattheheck/webmcp-pad",
-  "sourceCommit": "404ddba708a97755a716874e58301202abbb13d9",
-  "sourceSubtree": "ba2d98ef7c8a25af83392cce0ead5cdb23ca892f",
-  "manifestBlob": "59c095074c58375c2598278cd6dda9a8250f2be6",
-  "publishedSourceFiles": 47,
+  "sourceCommit": "2abe1282b11249df73aad88fbaf3300e78a5f68b",
+  "sourceSubtree": "5d196e91b1d6dc193321ddc7577379bef884a7dc",
+  "manifestBlob": "9d51a39ac88772ff9313370e4ff8adb73f136fb9",
+  "publishedSourceFiles": 52,
   "sourceModes": {
-    "100644": 46,
+    "100644": 51,
     "100755": 1
   },
   "authority": "MANIFEST_ALLOWLIST_ONLY",

@@ -4,13 +4,13 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SOURCE_COUNT = 47;
+const SOURCE_COUNT = 52;
 
 // Deliberate verifier-generation pins. The mutable carrier files below are data,
 // not authorities for their own identity. Updating either file requires an
 // explicit verifier generation change that reviews and replaces these constants.
-const TRUSTED_SOURCE_MATRIX_BLOB = 'f3ee0e9edca5bae569767f4b7737c3d849d8dda0';
-const TRUSTED_PROVENANCE_BLOB = '081c4f11638c7afcb1bad66140bbb0e91c8eb2b0';
+const TRUSTED_SOURCE_MATRIX_BLOB = 'cb217797d77e21fabae1f11a5a87f2eaef463eb9';
+const TRUSTED_PROVENANCE_BLOB = '1b56880ea85055206551dfcdec8bff4acbd877e4';
 
 const REQUIRED_FALSE_CLAIMS = [
   'alexaSubmitted',
@@ -138,7 +138,7 @@ export async function verifyJudgePacket({ rootDir = PROJECT_ROOT, readFileImpl =
   if (provenance.publishedSourceFiles !== SOURCE_COUNT || !Array.isArray(matrix.files) || matrix.files.length !== SOURCE_COUNT) {
     fail('SOURCE_COUNT', `expected ${SOURCE_COUNT}`);
   }
-  if (provenance.sourceModes?.['100644'] !== 46 || provenance.sourceModes?.['100755'] !== 1) fail('SOURCE_MODE_SUMMARY', 'expected 46 regular + 1 executable');
+  if (provenance.sourceModes?.['100644'] !== 51 || provenance.sourceModes?.['100755'] !== 1) fail('SOURCE_MODE_SUMMARY', 'expected 51 regular + 1 executable');
 
   const seenPaths = new Set();
   let totalBytes = 0;

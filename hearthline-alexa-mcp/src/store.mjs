@@ -1,8 +1,9 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { emptyAuthorityState } from './authority.mjs';
 
-const EMPTY = Object.freeze({ version: 1, missions: {}, inventory: {}, outbox: [], receipts: [] });
+const EMPTY = Object.freeze({ version: 1, missions: {}, inventory: {}, outbox: [], receipts: [], authority: emptyAuthorityState() });
 const clone = (value) => structuredClone(value);
 
 export class JsonStore {
@@ -13,7 +14,7 @@ export class JsonStore {
     try {
       const parsed = JSON.parse(await readFile(this.path, 'utf8'));
       if (parsed?.version !== 1 || typeof parsed.missions !== 'object') throw new Error('unsupported Hearthline store format');
-      this.state = { ...clone(EMPTY), ...parsed, missions: parsed.missions ?? {}, inventory: parsed.inventory ?? {}, outbox: parsed.outbox ?? [], receipts: parsed.receipts ?? [] };
+      this.state = { ...clone(EMPTY), ...parsed, missions: parsed.missions ?? {}, inventory: parsed.inventory ?? {}, outbox: parsed.outbox ?? [], receipts: parsed.receipts ?? [], authority: parsed.authority ?? emptyAuthorityState() };
     } catch (error) {
       if (error?.code !== 'ENOENT') throw error;
       await this.#persist();

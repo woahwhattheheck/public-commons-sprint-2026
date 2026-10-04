@@ -23,6 +23,8 @@ node release/public-release.mjs \
   --dest /tmp/hearthline-export-parent/hearthline-public
 ```
 
+The allowlist includes the repository modules used by `npm start`, `npm run start:stdio`, and `npm run demo`, plus the linked `docs/AUTHORITY.md` contract. Keep package entrypoints and their local imports in the manifest when updating a release. The module selected by `HEARTHLINE_BEARER_VERIFIER_MODULE` is deployment-supplied configuration; provide that verifier separately when enabling bearer authentication.
+
 Review `PUBLIC_RELEASE_RECEIPT.json` and the exported tree before any public-repository mutation. `submission/**` remains intentionally excluded by the committed allowlist: internal evidence/provenance material is not judge-facing product source.
 
 ## Authority boundary
