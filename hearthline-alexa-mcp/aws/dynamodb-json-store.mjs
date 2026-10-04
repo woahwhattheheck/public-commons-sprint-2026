@@ -3,6 +3,8 @@ import { signAwsRequest } from './sigv4.mjs';
 const EMPTY = Object.freeze({ version: 1, missions: {}, inventory: {}, outbox: [], receipts: [] });
 const clone = (value) => structuredClone(value);
 const MAX_STATE_BYTES = 300 * 1024;
+const ECS_CREDENTIALS_ORIGIN = 'http://169.254.170.2';
+const ECS_CREDENTIALS_PATH = /^\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]{1,1024}$/;
 
 function required(value, label) {
   if (!value || !String(value).trim()) throw new Error(`${label} is required`);
@@ -38,6 +40,7 @@ export class DynamoDbJsonStore {
     this.tableName = required(tableName, 'DynamoDB table name');
     this.region = required(region, 'AWS region');
     this.key = required(key, 'DynamoDB partition key value');
+    if (!credentials || (typeof credentials !== 'object' && typeof credentials !== 'function')) throw new Error('AWS credentials or credential provider is required');
     this.credentials = credentials;
     this.endpoint = endpoint ?? `https://dynamodb.${this.region}.amazonaws.com/`;
     const parsedEndpoint = new URL(this.endpoint);
@@ -140,6 +143,8 @@ export class DynamoDbJsonStore {
 
   async #request(target, payload) {
     const body = JSON.stringify(payload);
+    const credentials = typeof this.credentials === 'function' ? await this.credentials() : this.credentials;
+    if (!credentials || typeof credentials !== 'object') throw new Error('AWS credential provider returned invalid credentials');
     const signed = signAwsRequest({
       method: 'POST',
       url: this.endpoint,
@@ -150,7 +155,7 @@ export class DynamoDbJsonStore {
         'content-type': 'application/x-amz-json-1.0',
         'x-amz-target': target,
       },
-      credentials: this.credentials,
+      credentials,
       now: this.clock(),
     });
     const response = await this.fetchImpl(signed.url, { method: signed.method, headers: signed.headers, body: signed.body, redirect: 'error' });
@@ -184,4 +189,46 @@ export function awsCredentialsFromEnv(env = process.env) {
   const secretAccessKey = required(env.AWS_SECRET_ACCESS_KEY, 'AWS_SECRET_ACCESS_KEY');
   const sessionToken = env.AWS_SESSION_TOKEN ? String(env.AWS_SESSION_TOKEN) : undefined;
   return { accessKeyId, secretAccessKey, sessionToken };
+}
+
+function normalizeRuntimeCredentials(raw, label = 'AWS runtime credentials') {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error(`${label} response must be an object`);
+  const accessKeyId = required(raw.AccessKeyId ?? raw.accessKeyId, `${label} access key`);
+  const secretAccessKey = required(raw.SecretAccessKey ?? raw.secretAccessKey, `${label} secret key`);
+  const sessionToken = required(raw.Token ?? raw.sessionToken, `${label} session token`);
+  const expiration = required(raw.Expiration ?? raw.expiration, `${label} expiration`);
+  const expiresAt = Date.parse(expiration);
+  if (!Number.isFinite(expiresAt)) throw new Error(`${label} expiration must be ISO-8601`);
+  if (expiresAt <= Date.now() + 60_000) throw new Error(`${label} are expired or expire within one minute`);
+  return { accessKeyId, secretAccessKey, sessionToken };
+}
+
+export async function awsCredentialsFromRuntime({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
+  const access = String(env.AWS_ACCESS_KEY_ID ?? '').trim();
+  const secret = String(env.AWS_SECRET_ACCESS_KEY ?? '').trim();
+  const token = String(env.AWS_SESSION_TOKEN ?? '').trim();
+  if (access || secret || token) {
+    if (!access || !secret) throw new Error('static AWS credentials are incomplete');
+    return awsCredentialsFromEnv(env);
+  }
+
+  const relative = String(env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI ?? '').trim();
+  const full = String(env.AWS_CONTAINER_CREDENTIALS_FULL_URI ?? '').trim();
+  if (full) throw new Error('AWS_CONTAINER_CREDENTIALS_FULL_URI is not accepted; ECS relative credential URI is required');
+  if (!relative) throw new Error('AWS credentials are unavailable: set static environment credentials or ECS task-role AWS_CONTAINER_CREDENTIALS_RELATIVE_URI');
+  if (!ECS_CREDENTIALS_PATH.test(relative) || relative.includes('..') || relative.includes('//')) throw new Error('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI is invalid');
+  if (typeof fetchImpl !== 'function') throw new Error('credential fetch implementation is required');
+
+  const url = `${ECS_CREDENTIALS_ORIGIN}${relative}`;
+  let response;
+  try {
+    response = await fetchImpl(url, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(3000) });
+  } catch (error) {
+    throw new Error(`ECS task-role credential endpoint unavailable: ${error.message}`);
+  }
+  if (!response?.ok) throw new Error(`ECS task-role credential endpoint returned HTTP ${response?.status ?? 'unknown'}`);
+  let payload;
+  try { payload = await response.json(); }
+  catch { throw new Error('ECS task-role credential endpoint returned invalid JSON'); }
+  return normalizeRuntimeCredentials(payload, 'ECS task-role credentials');
 }

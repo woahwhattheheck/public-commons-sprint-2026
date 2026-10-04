@@ -133,6 +133,10 @@ function handleAction(action) {
     operations.clear(); serial = 0; seed(); render(); announce('Demo reset.');
   }
   if (action === 'copy') {
+    if (typeof navigator.clipboard?.writeText !== 'function') {
+      announce('Clipboard unavailable; receipt remains visible below.', true);
+      return;
+    }
     navigator.clipboard?.writeText(exportOperation(op)).then(
       () => announce('Deterministic receipt copied.'),
       () => announce('Clipboard unavailable; receipt remains visible below.', true),
