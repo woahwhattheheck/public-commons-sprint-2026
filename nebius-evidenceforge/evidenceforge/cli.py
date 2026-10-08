@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from .core import EvidenceError, MemorySandbox, compile_change, verify_receipt
+from .core import EvidenceError, MemorySandbox, compile_change, verify_receipt, strict_json_loads
 
 
 def _read(path: str) -> str:
@@ -28,11 +28,15 @@ def main(argv: list[str] | None = None) -> int:
     plan.add_argument("--model", help="current NVIDIA/Nemotron model; defaults to NEBIUS_MODEL")
     plan.add_argument("--out", default="-")
 
+    replay = sub.add_parser("replay", help="replay a saved plan in MemorySandbox with synthetic test outputs")
+    replay.add_argument("--plan", required=True, help="saved plan command output")
+    replay.add_argument("--fixture", required=True, help="human-selected sandbox scenario")
+    replay.add_argument("--out", default="-")
+
     args = parser.parse_args(argv)
     try:
         if args.command == "plan":
             from .provider import generate_plan
-            from .core import strict_json_loads
 
             if args.out != "-" and Path(args.request).resolve() == Path(args.out).resolve():
                 raise EvidenceError("plan output must differ from the input request")
@@ -48,18 +52,37 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 Path(args.out).write_text(encoded, encoding="utf-8")
             return 0
-        if args.command == "demo":
-            fixture = json.loads(_read(args.fixture))
+        if args.command in {"demo", "replay"}:
+            if args.command == "replay" and args.out != "-":
+                output = Path(args.out).resolve()
+                if output in {Path(args.plan).resolve(), Path(args.fixture).resolve()}:
+                    raise EvidenceError("replay output must differ from both inputs")
+            fixture = strict_json_loads(_read(args.fixture))
+            if args.command == "replay":
+                bundle = strict_json_loads(_read(args.plan))
+                if not isinstance(bundle, dict) or set(bundle) != {"request", "plan", "provider_evidence"}:
+                    raise EvidenceError("saved plan must contain request, plan, and provider_evidence")
+                if not isinstance(bundle["provider_evidence"], dict):
+                    raise EvidenceError("saved provider_evidence must be an object")
+                if bundle["request"] != fixture["request"]:
+                    raise EvidenceError("saved request must match the human-selected fixture request")
+                plan = bundle["plan"]
+                evidence = bundle["provider_evidence"]
+            else:
+                plan = fixture["model_plan"]
+                evidence = fixture["provider_evidence"]
             sandbox = MemorySandbox(
                 files=fixture["sandbox"]["files"],
                 tests={k: (v["exit_code"], v["output"]) for k, v in fixture["sandbox"]["tests"].items()},
             )
             receipt = compile_change(
                 json.dumps(fixture["request"]),
-                json.dumps(fixture["model_plan"]),
+                json.dumps(plan),
                 sandbox,
-                provider_evidence=fixture["provider_evidence"],
+                provider_evidence=evidence,
             )
+            if args.command == "replay":
+                print("MemorySandbox replay: synthetic test outputs; no inference or real tests executed.", file=sys.stderr)
             encoded = json.dumps(receipt, indent=2, sort_keys=True) + "\n"
             if args.out == "-":
                 sys.stdout.write(encoded)
