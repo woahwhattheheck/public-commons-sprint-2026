@@ -49,6 +49,39 @@ def run(req=None, pl=None, tests=None):
 
 
 class EvidenceForgeTests(unittest.TestCase):
+    def test_provider_evidence_round_trip_and_legacy_compatibility(self):
+        evidence_cases = [None, {}, {"provider": "offline-replay"}, {
+            "provider": "nebius-token-factory",
+            "model": "nvidia/offline-test-fixture",
+            "response_id": "synthetic-response-not-a-provider-run",
+            "model_inventory_checked": True,
+        }]
+        for evidence in evidence_cases:
+            with self.subTest(evidence=evidence):
+                receipt = compile_change(
+                    json.dumps(request()), json.dumps(plan()),
+                    MemorySandbox(files={"src/parser.py": "original"},
+                                  tests={"unit": (0, "synthetic")}),
+                    provider_evidence=evidence,
+                )
+                restored = json.loads(json.dumps(receipt))
+                self.assertEqual(restored["provider_evidence"], evidence or {})
+                self.assertTrue(verify_receipt(restored))
+                self.assertFalse(restored["authority"]["real_repository_mutation"])
+
+                # Check the inner binding independently of the outer checksum.
+                inconsistent = copy.deepcopy(restored)
+                inconsistent["provider_evidence_sha256"] = "0" * 64
+                inconsistent.pop("receipt_sha256")
+                inconsistent["receipt_sha256"] = core.sha256_hex(core.canonical_bytes(inconsistent))
+                self.assertFalse(verify_receipt(inconsistent))
+
+                legacy = dict(restored)
+                legacy.pop("provider_evidence")
+                legacy.pop("receipt_sha256")
+                legacy["receipt_sha256"] = core.sha256_hex(core.canonical_bytes(legacy))
+                self.assertTrue(verify_receipt(legacy))
+
     def test_full_flow_green_and_verifies(self):
         receipt = run()
         self.assertTrue(receipt["required_tests_green"])
