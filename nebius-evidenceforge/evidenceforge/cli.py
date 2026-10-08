@@ -23,8 +23,31 @@ def main(argv: list[str] | None = None) -> int:
     verify = sub.add_parser("verify", help="verify a receipt without executing tools")
     verify.add_argument("receipt")
 
+    plan = sub.add_parser("plan", help="request a validated plan from Nebius Token Factory")
+    plan.add_argument("--request", required=True)
+    plan.add_argument("--model", help="current NVIDIA/Nemotron model; defaults to NEBIUS_MODEL")
+    plan.add_argument("--out", default="-")
+
     args = parser.parse_args(argv)
     try:
+        if args.command == "plan":
+            from .provider import generate_plan
+            from .core import strict_json_loads
+
+            if args.out != "-" and Path(args.request).resolve() == Path(args.out).resolve():
+                raise EvidenceError("plan output must differ from the input request")
+            request_raw = _read(args.request)
+            result = generate_plan(request_raw, model=args.model)
+            encoded = json.dumps({
+                "request": strict_json_loads(request_raw),
+                "plan": strict_json_loads(result.content),
+                "provider_evidence": result.evidence(),
+            }, indent=2, sort_keys=True) + "\n"
+            if args.out == "-":
+                sys.stdout.write(encoded)
+            else:
+                Path(args.out).write_text(encoded, encoding="utf-8")
+            return 0
         if args.command == "demo":
             fixture = json.loads(_read(args.fixture))
             sandbox = MemorySandbox(
