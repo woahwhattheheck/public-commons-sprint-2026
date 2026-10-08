@@ -300,7 +300,7 @@ def compile_change(
 
     provider = dict(provider_evidence or {})
     # No provider field is trusted as approval, and arbitrary nested objects are
-    # fine because they are only hashed as evidence.
+    # retained as evidence, not interpreted as instructions or approval.
     provider_digest = sha256_hex(canonical_bytes(provider))
 
     body = {
@@ -313,6 +313,7 @@ def compile_change(
         "workspace_after_sha256": after_digest,
         "events": events,
         "required_tests_green": tests_green,
+        "provider_evidence": provider,
         "provider_evidence_sha256": provider_digest,
         "authority": {
             "sandbox_execution": True,
@@ -341,6 +342,14 @@ def verify_receipt(receipt: Mapping[str, Any]) -> bool:
         return False
     if expected != digest:
         return False
+    # Legacy v1 receipts contain only the digest; new receipts also retain
+    # the inspectable evidence needed to identify their provider execution.
+    if "provider_evidence" in receipt:
+        provider = receipt["provider_evidence"]
+        if not isinstance(provider, dict):
+            return False
+        if receipt.get("provider_evidence_sha256") != sha256_hex(canonical_bytes(provider)):
+            return False
     authority = receipt.get("authority")
     if authority != {
         "sandbox_execution": True,
