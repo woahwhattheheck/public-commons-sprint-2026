@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import html
 import json
+import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from .core import MemorySandbox, compile_change
+from .panta_view import PantaViewError, load_snapshot, render_page, selected_context
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -39,10 +41,57 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _panta_response(self, path: str, query: str) -> None:
+        json_mode = path == "/api/panta"
+        configured = os.environ.get("PANTA_SNAPSHOT_FILE", "").strip()
+        if not configured:
+            explanation = (
+                "No market snapshot is configured. Capture from Panta using "
+                "python -m evidenceforge.panta, then set PANTA_SNAPSHOT_FILE to "
+                "the saved JSON. The included demo/panta-snapshot.json is synthetic."
+            )
+            if json_mode:
+                self._send(HTTPStatus.SERVICE_UNAVAILABLE, "application/json; charset=utf-8",
+                           (json.dumps({"error": explanation}) + "\n").encode())
+            else:
+                self._send(HTTPStatus.SERVICE_UNAVAILABLE, "text/html; charset=utf-8",
+                           (f"<h1>Panta capture not configured</h1><p>{html.escape(explanation)}</p>").encode())
+            return
+        try:
+            values = parse_qs(query, keep_blank_values=True)
+            if any(key != "market" for key in values) or len(values.get("market", [])) > 1:
+                raise PantaViewError("only one optional market query is supported")
+            market_id = values.get("market", [None])[0]
+            if market_id is not None and not market_id:
+                raise PantaViewError("empty market ID")
+            snapshot = load_snapshot(Path(configured))
+            if json_mode:
+                data = (selected_context(snapshot, market_id) if market_id is not None
+                        else {"snapshot": snapshot, "provenance": {
+                            "capture": "local-file", "liveAPIAuthenticated": False,
+                            "freshnessVerified": False}})
+                self._send(HTTPStatus.OK, "application/json; charset=utf-8",
+                           (json.dumps(data, indent=2, sort_keys=True) + "\n").encode())
+            else:
+                self._send(HTTPStatus.OK, "text/html; charset=utf-8",
+                           render_page(snapshot, market_id).encode("utf-8"))
+        except PantaViewError as exc:
+            msg = str(exc)
+            if json_mode:
+                self._send(HTTPStatus.UNPROCESSABLE_ENTITY, "application/json; charset=utf-8",
+                           (json.dumps({"error": msg}) + "\n").encode())
+            else:
+                self._send(HTTPStatus.UNPROCESSABLE_ENTITY, "text/plain; charset=utf-8",
+                           (msg + "\n").encode())
+
     def do_GET(self) -> None:
-        path = urlparse(self.path).path
+        url = urlparse(self.path)
+        path = url.path
         if path == "/healthz":
             self._send(HTTPStatus.OK, "application/json", b'{"ok":true}\n')
+            return
+        if path in {"/panta", "/api/panta"}:
+            self._panta_response(path, url.query)
             return
         if path == "/api/demo":
             body = (json.dumps(_compile_demo(), indent=2, sort_keys=True) + "\n").encode()
@@ -76,6 +125,7 @@ body{{font-family:system-ui;margin:3rem;max-width:850px}} code{{background:#eee;
 {authority['real_repository_mutation']}. Human approval required:
 {authority['human_approval_required']}.</p>
 <p><a href="/api/demo">View machine-readable receipt</a></p>
+<p><a href="/panta">Inspect a Panta prediction-market snapshot</a> (requires explicit local capture file).</p>
 </body></html>"""
         self._send(HTTPStatus.OK, "text/html; charset=utf-8", page.encode("utf-8"))
 

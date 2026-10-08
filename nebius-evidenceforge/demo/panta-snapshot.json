@@ -1,0 +1,42 @@
+{
+  "authority": {
+    "read_only": true,
+    "submission_or_award": false,
+    "trade_or_claim": false,
+    "transaction_built": false,
+    "wallet_used": false
+  },
+  "filters": {
+    "category": "technology",
+    "limit": 20,
+    "phase": "primary"
+  },
+  "items": [
+    {
+      "category": "technology",
+      "createdByPartner": false,
+      "marketId": "EXAMPLE-NOT-LIVE-1",
+      "noPrice": "0.375",
+      "phase": "primary",
+      "title": "EXAMPLE ONLY — will code review approve a bounded fix?",
+      "totalVolumeUsdc": "20",
+      "volumeUsdc": "12.5",
+      "yesPrice": "0.625"
+    },
+    {
+      "category": "technology",
+      "createdByPartner": false,
+      "marketId": "EXAMPLE-NOT-LIVE-2",
+      "noPrice": "0.5",
+      "phase": "primary",
+      "title": "EXAMPLE ONLY — will the fixture produce a valid receipt?",
+      "totalVolumeUsdc": "0",
+      "volumeUsdc": "0",
+      "yesPrice": "0.5"
+    }
+  ],
+  "nextCursor": null,
+  "schema": "evidenceforge-panta-market-snapshot/v1",
+  "snapshotSha256": "bfb3bfd95da2aa8dc1524b2f019fcf27eefb5064460beb0a5c55682969ea67f3",
+  "source": "https://live-api.panta.market/api/v1/markets/"
+}
