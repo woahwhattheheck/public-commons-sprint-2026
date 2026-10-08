@@ -14,6 +14,7 @@ Current implementation:
 
 - `workseal/src/meteora_dbc.mjs` — deterministic DBC launch-plan builder.
 - `workseal/src/meteora_cli.mjs` — file-to-plan CLI.
+- `workseal/src/meteora_demo.mjs` — self-contained local browser-verification-to-DBC demo.
 - `workseal/test/meteora_dbc.test.mjs` — focused fail-closed and configuration tests.
 - `workseal/METEORA_DBC.md` — usage and authority boundary.
 - Meteora source landed on repository main in commit `a1182112e3ee002a3fc1ed2499dc3ddc2c3a003a`.
@@ -86,13 +87,15 @@ Explain the product path: reusable launch presets, proof-bound project pages, an
 
 A demo should be reproducible from the public repository and should never imply a network write that did not happen.
 
-1. Show a valid WorkSeal verified bundle.
+1. Show the local WorkSeal demo bundle and explain that it is generated and verified through the real browser-verification path.
 2. Run:
 
    ```bash
    cd workseal
-   node src/meteora_cli.mjs verified-workseal.json launch-input.json > meteora-plan.json
+   npm run demo:meteora > meteora-plan.json
    ```
+
+   The command is self-contained: it builds an ephemeral demo bundle, verifies it to `PASS`, and generates the unsigned plan without relying on untracked fixture files or external state.
 
 3. Inspect `meteora-plan.json`:
    - WorkSeal digests are present.
