@@ -64,7 +64,25 @@ export NEBIUS_API_KEY='...'
 export NEBIUS_MODEL='CURRENT_NVIDIA_OR_NEMOTRON_MODEL_ID_FROM_/v1/models'
 ```
 
-Then call `evidenceforge.provider.generate_plan(request_json)` and feed the returned `content` plus `result.evidence()` into `compile_change(...)`.
+Run the provider planner on a human request JSON containing `request_id`, `goal`,
+`allowed_paths`, `required_tests`, and `max_writes`:
+
+```bash
+python -m evidenceforge.cli plan --request request.json --out provider-plan.json
+```
+
+The command validates the request before any network call, checks the live model
+inventory, and validates the returned plan with the compiler's existing contract.
+Its output contains `request`, `plan`, and `provider_evidence`; it does not execute
+operations or claim a sandbox receipt. Provider evidence separates `requested_model`
+from the actual response `model` and retains the actual response ID and Unix
+`created` timestamp. Truncated, refused, or otherwise incomplete completions are
+rejected without a plan output. There is no automatic retry of inference.
+
+Feed the saved `plan` and `provider_evidence` into `compile_change(...)` with your
+existing sandbox adapter. The Python `generate_plan(request_json)` API remains
+available. Its `content` is the provider's original validated plan text.
+API response fields: https://docs.tokenfactory.nebius.com/api-reference/introduction
 
 **Provider evidence needed before submission readiness:** capture the real Token Factory response ID, configured live NVIDIA model ID, timestamp/run log, and a demo receipt produced from that call. Until then the project state is `PROVIDER_EXECUTION_REQUIRED`, not “Nebius-integrated and tested.”
 
