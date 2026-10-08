@@ -2,6 +2,10 @@
 
 _Last source/evidence check: 2026-10-08. This file prepares public submission material; it does not represent a Colosseum or Superteam account action, submission receipt, award, deployment, or payment._
 
+## Current Colosseum rules boundary
+
+The current official rules set the entry cutoff at **October 12, 2026, 11:59 PM Pacific Time (October 13, 2:59 AM EDT)**. Every team member must complete individual registration and required profile information before that cutoff; the team leader must upload the project submission. An entrant may join only one team, and a team may have only one project submission active at a time. Submission content must be in English. These are eligibility and routing constraints, not evidence that an account, team, project, or submission already exists.
+
 ## One-line pitch
 
 **WorkSeal turns a verified work-acceptance receipt into a deterministic Meteora Dynamic Bonding Curve launch plan, so a launch can commit its public metadata to the exact accepted work result instead of an unverifiable claim.**
@@ -176,8 +180,10 @@ If any WorkSeal work exists outside this repository or predates that first visib
 ### Human-owner / provider actions still required
 
 - [ ] Confirm the current Colosseum account/team and that WorkSeal is the single product submission for that individual/team.
+- [ ] Confirm every team member has completed individual registration/profile information and that the team leader owns the final upload.
 - [ ] Re-check current Colosseum and Superteam terms immediately before submitting.
 - [ ] Fill the submission form and attach the correct repository.
+- [ ] Preserve the final provider project/submission URL or ID and submitted timestamp after the team leader uploads.
 - [ ] Record the 2–3 minute presentation video.
 - [ ] Record the product demo video within the current portal limit.
 - [ ] Supply team/background/location details and any required graphics.
@@ -192,6 +198,7 @@ If any WorkSeal work exists outside this repository or predates that first visib
 - Meteora sidetrack: https://superteam.fun/earn/listing/meteora-dbc/
 - Colosseum Crypto World's Fair: https://colosseum.com/worldsfair
 - Colosseum hackathon FAQ: https://colosseum.com/hackathon
+- Crypto World’s Fair official rules: https://colosseum.com/legal/Crypto%20World%27s%20Fair%20Hackathon%20Rules.pdf
 - Meteora DBC guide: https://docs.meteora.ag/developer-guides/dbc
 - Meteora Invent: https://github.com/MeteoraAg/meteora-invent
 - Meteora DBC SDK: https://github.com/MeteoraAg/dynamic-bonding-curve-sdk
