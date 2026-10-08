@@ -7,7 +7,8 @@
   "scripts": {
     "test": "node --test",
     "demo": "node src/cli.mjs demo",
-    "demo:meteora": "node src/meteora_cli.mjs",
+    "demo:meteora": "node src/meteora_demo.mjs",
+    "plan:meteora": "node src/meteora_cli.mjs",
     "test:meteora": "node --test test/meteora_dbc.test.mjs"
   },
   "engines": {
