@@ -79,8 +79,24 @@ from the actual response `model` and retains the actual response ID and Unix
 `created` timestamp. Truncated, refused, or otherwise incomplete completions are
 rejected without a plan output. There is no automatic retry of inference.
 
-Feed the saved `plan` and `provider_evidence` into `compile_change(...)` with your
-existing sandbox adapter. The Python `generate_plan(request_json)` API remains
+To replay that saved plan with the existing deterministic sandbox:
+
+```bash
+python -m evidenceforge.cli replay --plan provider-plan.json --fixture demo/scenario.json --out provider-receipt.json
+python -m evidenceforge.cli verify provider-receipt.json
+```
+
+The saved request must exactly match the human-selected scenario's `request`.
+Use that request for the preceding `plan` command; a different task requires its
+own explicitly selected scenario. Replay revalidates the plan against that policy,
+uses the scenario's files and synthetic test outputs, and retains the saved
+provider evidence in the receipt. It makes no network call and does not run real
+tests. Neither replay nor receipt verification authenticates a caller-supplied
+provider claim: retain the actual provider run log separately. Output cannot
+overwrite either replay input.
+
+For an isolated runner that executes real tests, feed the saved `plan` and
+`provider_evidence` into `compile_change(...)` with that sandbox adapter. The Python `generate_plan(request_json)` API remains
 available. Its `content` is the provider's original validated plan text.
 API response fields: https://docs.tokenfactory.nebius.com/api-reference/introduction
 
