@@ -1,0 +1,9 @@
+{
+  "http_flow": "PASS",
+  "token_rejection": "PASS",
+  "stable_replay": "PASS",
+  "retained_load": "PASS",
+  "operation_id": "http-20261008-ch-02",
+  "run_sha256": "3b799b3afd077ccd45de7b9243e235a092c99996eb6feddde77ac5c6ad3f33ea",
+  "provider_calls": 0
+}
