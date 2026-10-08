@@ -6,7 +6,7 @@ const DEMO_INPUT = Object.freeze({
   name: 'WorkSeal Proof Launch',
   symbol: 'SEAL',
   description: 'A proof-bound launch whose metadata commits to an accepted WorkSeal result.',
-  website: 'https://example.com/workseal',
+  website: 'https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/workseal',
   creator: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
   feeClaimer: '11111111111111111111111111111111',
   leftoverReceiver: 'So11111111111111111111111111111111111111112',

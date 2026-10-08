@@ -96,4 +96,9 @@ test('runs the local browser-verification-to-Meteora demo without external write
   assert.equal(plan.execution.readyForExecution, false);
   assert.equal(plan.externalState.colosseumSubmission, 'NOT_ASSERTED');
   assert.equal(plan.externalState.superteamSubmission, 'NOT_ASSERTED');
+  assert.equal(
+    plan.studioConfig.dbcPool.metadata.website,
+    'https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/workseal',
+  );
+  assert.doesNotMatch(plan.studioConfig.dbcPool.metadata.website, /example\.com/);
 });
