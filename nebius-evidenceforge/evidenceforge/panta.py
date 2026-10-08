@@ -1,0 +1,186 @@
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from collections.abc import Callable, Mapping
+from typing import Any
+
+
+BASE_URL = "https://live-api.panta.market/api/v1"
+MAX_RESPONSE_BYTES = 1_000_000
+Transport = Callable[[str, Mapping[str, str]], bytes]
+
+
+class PantaError(ValueError):
+    """Raised when Panta market evidence is unavailable or malformed."""
+
+
+def _canonical_bytes(value: Any) -> bytes:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def _default_transport(url: str, headers: Mapping[str, str]) -> bytes:
+    request = urllib.request.Request(url, headers=dict(headers), method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            declared = response.headers.get("Content-Length")
+            if declared and int(declared) > MAX_RESPONSE_BYTES:
+                raise PantaError("Panta response exceeds the 1 MB evidence limit")
+            payload = response.read(MAX_RESPONSE_BYTES + 1)
+    except PantaError:
+        raise
+    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+        raise PantaError(f"Panta market request failed: {exc}") from exc
+    if len(payload) > MAX_RESPONSE_BYTES:
+        raise PantaError("Panta response exceeds the 1 MB evidence limit")
+    return payload
+
+
+def _text(value: Any, field: str, *, required: bool = True) -> str | None:
+    if value is None and not required:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise PantaError(f"market {field} must be non-empty text")
+    return value.strip()
+
+
+def _decimal(value: Any, field: str) -> str | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        raise PantaError(f"market {field} must be numeric")
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise PantaError(f"market {field} must be numeric") from exc
+    if not math.isfinite(number) or number < 0:
+        raise PantaError(f"market {field} must be finite and non-negative")
+    if field.endswith("Price") and number > 1:
+        raise PantaError(f"market {field} must be in [0, 1]")
+    return format(number, ".12g")
+
+
+def _normalize_market(row: Any) -> dict[str, Any]:
+    if not isinstance(row, dict):
+        raise PantaError("Panta markets items must be objects")
+    yes = row.get("yesPrice")
+    no = row.get("noPrice")
+    if yes is None or yes == "":
+        yes = row.get("primaryYesPrice")
+    if no is None or no == "":
+        no = row.get("primaryNoPrice")
+    return {
+        "marketId": _text(row.get("marketId"), "marketId"),
+        "title": _text(row.get("title"), "title"),
+        "category": _text(row.get("category"), "category", required=False),
+        "phase": _text(row.get("phase"), "phase"),
+        "yesPrice": _decimal(yes, "yesPrice"),
+        "noPrice": _decimal(no, "noPrice"),
+        "volumeUsdc": _decimal(row.get("volumeUsdc"), "volumeUsdc"),
+        "totalVolumeUsdc": _decimal(row.get("totalVolumeUsdc"), "totalVolumeUsdc"),
+        "createdByPartner": row.get("createdByPartner") is True,
+    }
+
+
+def fetch_market_snapshot(
+    api_key: str,
+    *,
+    category: str | None = None,
+    phase: str | None = None,
+    limit: int = 20,
+    base_url: str = BASE_URL,
+    transport: Transport = _default_transport,
+) -> dict[str, Any]:
+    """Fetch and bind a read-only Panta market catalog page.
+
+    The result is context for EvidenceForge; it is not trading advice, a quote,
+    a transaction, or proof of submission eligibility.
+    """
+
+    if not isinstance(api_key, str) or not api_key.strip():
+        raise PantaError("PANTA_API_KEY is required")
+    if not isinstance(limit, int) or isinstance(limit, bool) or not (1 <= limit <= 50):
+        raise PantaError("limit must be an integer in [1, 50]")
+    parsed_base = urllib.parse.urlparse(base_url)
+    if parsed_base.scheme != "https" or not parsed_base.netloc:
+        raise PantaError("Panta base URL must be HTTPS")
+    query: dict[str, str] = {"limit": str(limit)}
+    if category:
+        query["category"] = category
+    if phase:
+        query["status"] = phase
+    url = f"{base_url.rstrip('/')}/markets/?{urllib.parse.urlencode(query)}"
+    payload = transport(
+        url,
+        {"Accept": "application/json", "X-Api-Key": api_key.strip()},
+    )
+    if not isinstance(payload, bytes) or len(payload) > MAX_RESPONSE_BYTES:
+        raise PantaError("transport returned invalid or oversized evidence")
+    try:
+        decoded = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PantaError("Panta markets response is not valid UTF-8 JSON") from exc
+    if not isinstance(decoded, dict) or not isinstance(decoded.get("items"), list):
+        raise PantaError("Panta markets response must contain items[]")
+    if len(decoded["items"]) > limit:
+        raise PantaError("Panta markets response exceeded requested limit")
+    items = [_normalize_market(row) for row in decoded["items"]]
+    ids = [row["marketId"] for row in items]
+    if len(ids) != len(set(ids)):
+        raise PantaError("Panta markets response contains duplicate marketId values")
+    evidence = {
+        "schema": "evidenceforge-panta-market-snapshot/v1",
+        "source": f"{parsed_base.scheme}://{parsed_base.netloc}{parsed_base.path.rstrip('/')}/markets/",
+        "filters": {"category": category, "phase": phase, "limit": limit},
+        "items": items,
+        "nextCursor": decoded.get("nextCursor") if isinstance(decoded.get("nextCursor"), str) else None,
+        "authority": {
+            "read_only": True,
+            "transaction_built": False,
+            "wallet_used": False,
+            "trade_or_claim": False,
+            "submission_or_award": False,
+        },
+    }
+    return {
+        **evidence,
+        "snapshotSha256": hashlib.sha256(_canonical_bytes(evidence)).hexdigest(),
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python -m evidenceforge.panta")
+    parser.add_argument("--category")
+    parser.add_argument("--phase", choices=["primary", "secondary", "resolved", "cancelled"])
+    parser.add_argument("--limit", type=int, default=20)
+    args = parser.parse_args(argv)
+    try:
+        snapshot = fetch_market_snapshot(
+            os.environ.get("PANTA_API_KEY", ""),
+            category=args.category,
+            phase=args.phase,
+            limit=args.limit,
+        )
+        json.dump(snapshot, sys.stdout, indent=2, sort_keys=True)
+        sys.stdout.write("\n")
+        return 0
+    except PantaError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
