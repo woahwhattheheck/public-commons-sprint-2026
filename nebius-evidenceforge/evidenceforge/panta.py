@@ -14,6 +14,7 @@ from typing import Any
 
 
 BASE_URL = "https://live-api.panta.market/api/v1"
+ALLOWED_API_HOSTS = {"live-api.panta.market", "staging-api.panta.market"}
 MAX_RESPONSE_BYTES = 1_000_000
 Transport = Callable[[str, Mapping[str, str]], bytes]
 
@@ -115,8 +116,8 @@ def fetch_market_snapshot(
     if not isinstance(limit, int) or isinstance(limit, bool) or not (1 <= limit <= 50):
         raise PantaError("limit must be an integer in [1, 50]")
     parsed_base = urllib.parse.urlparse(base_url)
-    if parsed_base.scheme != "https" or not parsed_base.netloc:
-        raise PantaError("Panta base URL must be HTTPS")
+    if parsed_base.scheme != "https" or parsed_base.hostname not in ALLOWED_API_HOSTS:
+        raise PantaError("Panta base URL must use an allowed HTTPS Panta API host")
     query: dict[str, str] = {"limit": str(limit)}
     if category:
         query["category"] = category
