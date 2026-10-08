@@ -18,7 +18,17 @@ Source publication does **not** establish Colosseum registration/submission, Sup
 
 ## Usage
 
-1. Verify a real browser bundle with `verifyBrowserBundle()` from `web/core.mjs` and save its returned result as `verified-workseal.json`.
+Run the self-contained local demo:
+
+```bash
+npm run demo:meteora > meteora-plan.json
+```
+
+This path builds an ephemeral WorkSeal browser demo bundle, verifies it through the real `verifyBrowserBundle()` path, and passes the resulting `PASS` object to the Meteora planner. It needs no untracked input files and performs no account, wallet, RPC, provider, or network write.
+
+To generate a plan from a real accepted WorkSeal result instead:
+
+1. Verify the browser bundle with `verifyBrowserBundle()` from `web/core.mjs` and save its returned result as `verified-workseal.json`.
 2. Prepare `launch-input.json` with public launch metadata and public Solana addresses:
 
 ```json
@@ -38,7 +48,7 @@ Source publication does **not** establish Colosseum registration/submission, Sup
 3. Generate the unsigned plan:
 
 ```bash
-node src/meteora_cli.mjs verified-workseal.json launch-input.json > meteora-plan.json
+npm run plan:meteora -- verified-workseal.json launch-input.json > meteora-plan.json
 ```
 
 4. A human owner must recheck current competition eligibility, disclose all pre-existing work, set a local keypair path outside source control, and inspect the official Meteora Invent dry run before separately approving any devnet transaction. Mainnet is outside this plan.
