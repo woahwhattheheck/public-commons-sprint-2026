@@ -84,6 +84,12 @@ The demo generates an ephemeral Ed25519 verifier key, creates and funds a task s
 
 This is deliberately a **client-authority MVP**, not an escrow smart contract. The client MUST validate the pinned signed WorkSeal acceptance before signing the transfer. A production Colosseum submission should add an onchain escrow/PDA program or payment-channel integration so settlement authority is enforced by chain state rather than only by the signing client.
 
+## Meteora DBC proof-to-launch adapter
+
+`src/meteora_dbc.mjs` converts a successful `verifyBrowserBundle()` result into a deterministic, unsigned, devnet-only configuration packet for the official Meteora Invent DBC workflow. The launch metadata commits to the accepted WorkSeal result and receipt. The packet defaults to a market-cap curve, DAMM v2 graduation, and 10% permanently locked liquidity; it hard-codes `dryRun: true`, performs no RPC or wallet write, and requires separate human review before any transaction.
+
+See `METEORA_DBC.md` for the exact authority boundary, current provider references, inputs, and focused validation. Publication is not Colosseum/Superteam registration or submission and does not assert eligibility, award, payment, pool creation, or mainnet deployment.
+
 ## Product path
 
 WorkSeal targets bug bounties, AI-agent freelancing, procurement micro-contracts, research tasks, and API/data jobs where the buyer wants machine-verifiable acceptance before settlement. The commercial wedge is not “payments for agents” in the abstract; it is **dispute-reducing proof of exactly what a payment was for**.
