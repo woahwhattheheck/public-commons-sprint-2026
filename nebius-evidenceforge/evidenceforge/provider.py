@@ -7,7 +7,7 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
-from .core import EvidenceError, strict_json_loads
+from .core import EvidenceError, strict_json_loads, _validate_request, _validate_plan
 
 
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
@@ -19,11 +19,15 @@ class TokenFactoryResult:
     response_id: str
     content: str
     model_inventory_checked: bool
+    response_model: str | None = None
+    created: int | None = None
 
     def evidence(self) -> dict[str, Any]:
         return {
             "provider": "nebius-token-factory",
-            "model": self.model,
+            "model": self.response_model or self.model,
+            "requested_model": self.model,
+            "created": self.created,
             "response_id": self.response_id,
             "model_inventory_checked": self.model_inventory_checked,
         }
@@ -77,6 +81,11 @@ def generate_plan(request_json: str, *, api_key: str | None = None, model: str |
     hard-coding a model identifier that can become stale.
     """
 
+    request = strict_json_loads(request_json)
+    if not isinstance(request, dict):
+        raise EvidenceError("request must be a JSON object")
+    request = _validate_request(request)
+
     token = api_key or os.environ.get("NEBIUS_API_KEY")
     chosen_model = model or os.environ.get("NEBIUS_MODEL")
     if not token:
@@ -90,7 +99,10 @@ def generate_plan(request_json: str, *, api_key: str | None = None, model: str |
     system = (
         "You are EvidenceForge's untrusted planning model. Return JSON only. "
         "The object must have exactly keys summary and operations. "
-        "Operations may be read(path), write(path,content), or test(name). "
+        'Each operation must be one of {"kind":"read","path":"..."}, '
+        '{"kind":"write","path":"...","content":"..."}, or '
+        '{"kind":"test","name":"..."}, with exactly those keys. '
+        "summary must be nonempty text; operations must be a JSON array. "
         "Never invent paths/tests outside the human request. Never claim approval, "
         "deployment, payment, or external authority. Run every required test exactly "
         "once and in the request order."
@@ -100,23 +112,37 @@ def generate_plan(request_json: str, *, api_key: str | None = None, model: str |
         "temperature": 0,
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": request_json},
+            {"role": "user", "content": json.dumps(request, ensure_ascii=False)},
         ],
     }
     response = _request_json(f"{BASE_URL}/chat/completions", token, body=body)
     response_id = response.get("id")
+    response_model = response.get("model")
+    created = response.get("created")
+    if not isinstance(response_model, str) or not response_model.strip():
+        raise EvidenceError("Token Factory chat response missing model")
+    if type(created) is not int or created < 0:
+        raise EvidenceError("Token Factory chat response missing Unix created timestamp")
     choices = response.get("choices")
-    if not isinstance(response_id, str) or not isinstance(choices, list) or not choices:
+    if not isinstance(response_id, str) or not response_id.strip() or not isinstance(choices, list) or not choices:
         raise EvidenceError("Token Factory chat response missing id/choices")
     first = choices[0]
     if not isinstance(first, dict):
         raise EvidenceError("Token Factory choice must be an object")
+    if first.get("finish_reason") != "stop":
+        raise EvidenceError("Token Factory plan did not complete normally")
     message = first.get("message")
     if not isinstance(message, dict) or not isinstance(message.get("content"), str):
         raise EvidenceError("Token Factory choice missing text content")
+    plan = strict_json_loads(message["content"])
+    if not isinstance(plan, dict):
+        raise EvidenceError("Token Factory plan must be a JSON object")
+    _validate_plan(plan, request)
     return TokenFactoryResult(
         model=chosen_model,
         response_id=response_id,
         content=message["content"],
         model_inventory_checked=True,
+        response_model=response_model,
+        created=created,
     )
