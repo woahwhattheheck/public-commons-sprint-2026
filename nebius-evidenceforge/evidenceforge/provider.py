@@ -136,6 +136,9 @@ def generate_plan(request_json: str, *, api_key: str | None = None, model: str |
         '{"kind":"test","name":"..."}, with exactly those keys. '
         "summary must be nonempty text; operations must be a JSON array. "
         "Never invent paths/tests outside the human request. Never claim approval, "
+        "When allowed Python source is supplied, preserve its pure-function style: "
+        "only its existing imported libraries, no annotations, classes, decorators, "
+        "f-strings, reflection, dunder identifiers, file/network/process operations. "
         "deployment, payment, or external authority. Run every required test exactly "
         "once and in the request order."
     )
