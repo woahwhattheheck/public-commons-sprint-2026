@@ -53,11 +53,6 @@ test('creates a deterministic dry-run-first Meteora Invent packet', () => {
   assert.equal(first.execution.readyForExecution, false);
   assert.equal(first.execution.network, 'devnet');
   assert.match(first.studioConfig.dbcPool.metadata.description, /WorkSeal accepted result 222222222222/);
-  assert.equal(
-    first.studioConfig.dbcPool.metadata.website,
-    'https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/workseal',
-  );
-  assert.doesNotMatch(first.studioConfig.dbcPool.metadata.website, /example\.com/);
 });
 
 test('uses a valid DAMM v2 graduation split with ten percent permanently locked', () => {
@@ -101,4 +96,9 @@ test('runs the local browser-verification-to-Meteora demo without external write
   assert.equal(plan.execution.readyForExecution, false);
   assert.equal(plan.externalState.colosseumSubmission, 'NOT_ASSERTED');
   assert.equal(plan.externalState.superteamSubmission, 'NOT_ASSERTED');
+  assert.equal(
+    plan.studioConfig.dbcPool.metadata.website,
+    'https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/workseal',
+  );
+  assert.doesNotMatch(plan.studioConfig.dbcPool.metadata.website, /example\.com/);
 });
