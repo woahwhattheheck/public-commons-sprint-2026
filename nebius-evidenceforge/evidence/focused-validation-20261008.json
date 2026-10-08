@@ -1,0 +1,100 @@
+{
+  "scope": "named curated extension checks",
+  "network_calls": 0,
+  "live_nebius": false,
+  "results": [
+    {
+      "task": "invoice-import",
+      "baseline_green": false,
+      "fixed_green": true,
+      "cases": [
+        {
+          "name": "BOM_normalization_and_exact_cents",
+          "passed": true,
+          "observed": "[{'id': 'A', 'cents': 10}, {'id': 'B', 'cents': 1230}]",
+          "expected": "[{'id': 'A', 'cents': 10}, {'id': 'B', 'cents': 1230}]"
+        },
+        {
+          "name": "duplicate_normalized_ID",
+          "passed": true,
+          "observed": "ValueError"
+        },
+        {
+          "name": "fractional_cent",
+          "passed": true,
+          "observed": "ValueError"
+        },
+        {
+          "name": "nonfinite_amount",
+          "passed": true,
+          "observed": "ValueError"
+        }
+      ],
+      "wall_seconds": 16.078999999999724,
+      "run_sha256": "758858f6dcdbe093bb333a2a166a260830c70ae18796411e6c69e7f4935ddbd8",
+      "source_after": "1d58027b788a4a84fab9b590ba7c299da72f0ae9a44fe46c1e2333576a5945a5"
+    },
+    {
+      "task": "dependency-order",
+      "baseline_green": false,
+      "fixed_green": true,
+      "cases": [
+        {
+          "name": "unsorted_dependency",
+          "passed": true,
+          "observed": "['build', 'test', 'deploy']",
+          "expected": "['build', 'test', 'deploy']"
+        },
+        {
+          "name": "stable_ready_order",
+          "passed": true,
+          "observed": "['B', 'A', 'C']",
+          "expected": "['B', 'A', 'C']"
+        },
+        {
+          "name": "unknown_reference",
+          "passed": true,
+          "observed": "ValueError"
+        },
+        {
+          "name": "cycle",
+          "passed": true,
+          "observed": "ValueError"
+        }
+      ],
+      "wall_seconds": 17.03099999999995,
+      "run_sha256": "d28d96d63bf52b12f13e0245973dc38d451ac524396c6233015aa173b0f09f95",
+      "source_after": "abe4d1d9fc3e83c2b0afa2f24b39cb08dffb2086878180aa8ea16f6244c42e25"
+    },
+    {
+      "task": "operation-ledger",
+      "baseline_green": false,
+      "fixed_green": true,
+      "cases": [
+        {
+          "name": "canonical_replay_once",
+          "passed": true,
+          "observed_records": 1
+        },
+        {
+          "name": "changed_payload",
+          "passed": true,
+          "observed": "ValueError"
+        },
+        {
+          "name": "boolean_integer_conflict",
+          "passed": true,
+          "observed": "ValueError"
+        },
+        {
+          "name": "empty_operation_ID",
+          "passed": true,
+          "observed": "ValueError"
+        }
+      ],
+      "wall_seconds": 14.561999999999898,
+      "run_sha256": "e835b443ae70b71d5d0598be5e4327e22d395f4bdcfa259eb985bcffecbbf64f",
+      "source_after": "ff23c7881f8d1f608f7d314a688023c4422c3d4ea8bfc510c7671581025c5e0d"
+    }
+  ]
+}

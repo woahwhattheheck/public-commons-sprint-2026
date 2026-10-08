@@ -36,15 +36,49 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Determine whether guard implementation or fixtures changed
+        id: guard_delta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python - <<'PY'
+          import os, re, subprocess
+          paths = {"test_external_surface_isolation.py",
+                   "scripts/check_external_surface_isolation.py",
+                   "scripts/check_public_github_metadata.py"}
+          event = os.environ.get("EVENT_NAME", "")
+          base, head = os.environ.get("BASE_SHA", ""), os.environ.get("HEAD_SHA", "")
+          changed = True
+          if event in {"issues", "issue_comment", "pull_request_review",
+                       "pull_request_review_comment", "release"}:
+              changed = False
+          elif all(re.fullmatch(r"[0-9a-f]{40}", value) and value != "0" * 40 for value in (base, head)):
+              try:
+                  subprocess.run(["git", "fetch", "--no-tags", "--depth=1", "origin", base, head],
+                                 check=True, capture_output=True, text=True)
+                  result = subprocess.run(["git", "diff", "--name-only", base, head],
+                                          check=True, capture_output=True, text=True)
+                  changed = bool(paths.intersection(result.stdout.splitlines()))
+              except subprocess.CalledProcessError:
+                  changed = True  # Unknown delta: retain fixture checks and actual audits.
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("run_hostiles=" + str(changed).lower() + "\n")
+          PY
       - name: Unit hostiles
+        if: steps.guard_delta.outputs.run_hostiles == 'true'
         run: python -m unittest -v test_external_surface_isolation.py
       - name: Unit hostiles under optimized Python
+        if: steps.guard_delta.outputs.run_hostiles == 'true'
         run: python -O -m unittest -v test_external_surface_isolation.py
       - name: Scan public text surfaces
         run: python scripts/check_external_surface_isolation.py --root .
       - name: Metadata hostiles
+        if: steps.guard_delta.outputs.run_hostiles == 'true'
         run: python scripts/check_public_github_metadata.py --self-test
       - name: Metadata hostiles under optimized Python
+        if: steps.guard_delta.outputs.run_hostiles == 'true'
         run: python -O scripts/check_public_github_metadata.py --self-test
       - name: Audit current metadata event
         if: ${{ github.event_name == 'issues' || github.event_name == 'issue_comment' || github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment' || github.event_name == 'release' }}
@@ -54,3 +88,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/check_public_github_metadata.py --full-repository --repository "$GITHUB_REPOSITORY"
+
