@@ -63,6 +63,10 @@ class PantaSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(PantaError, "HTTPS"):
             fetch_market_snapshot("k", base_url="http://example.test/api")
 
+    def test_key_cannot_be_sent_to_an_arbitrary_https_host(self):
+        with self.assertRaisesRegex(PantaError, "allowed HTTPS Panta"):
+            fetch_market_snapshot("k", base_url="https://example.test/api")
+
     def test_bad_price_is_rejected(self):
         with self.assertRaisesRegex(PantaError, r"\[0, 1\]"):
             fetch_market_snapshot(
