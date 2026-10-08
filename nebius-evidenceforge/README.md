@@ -9,6 +9,8 @@ The product is intentionally useful even when the model is wrong: unknown paths,
 
 ## Judge/evaluator path
 
+For actual source computation and measured checks, start with [Focused execution](FOCUSED_EXECUTION.md): three released repository bugs, a restricted pure-Python adapter, source diffs and verifiable run envelopes. The local interface is `python -B -m evidenceforge.web_runtime`; a real Nebius inference remains pending.
+
 1. Run the zero-credential CLI demo and verify its receipt.
 2. Open the local browser demo and inspect the same authority boundary visually.
 3. Review `ARCHITECTURE.md` for the trust model.
