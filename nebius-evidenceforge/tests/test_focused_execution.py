@@ -33,6 +33,8 @@ class FocusedExtension(unittest.TestCase):
     def test_reject_capability_and_late_write(self):
         for source in ['import os\ndef parse_invoices(text):\n    return os.environ\n',
                        'def parse_invoices(text):\n    return text.__class__\n',
+                       'def __builtins__():\n    return None\ndef parse_invoices(text):\n    return []\n',
+                       'def parse_invoices(text, __ef_call=None):\n    return []\n',
                        'def parse_invoices(text):\n    return "x" % 1\n']:
             if " % " in source:
                 # String format is admitted syntactically but guarded before evaluation.

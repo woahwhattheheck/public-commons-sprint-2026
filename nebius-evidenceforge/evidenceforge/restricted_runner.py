@@ -101,12 +101,16 @@ def admit_source(source):
                             ast.JoinedStr,ast.FormattedValue)):
             raise EvidenceError("unsupported pure-module capability")
         if isinstance(node,ast.FunctionDef):
+            if "__" in node.name:
+                raise EvidenceError("private hook definitions are not admitted")
             if node.decorator_list or node.returns or any(arg.annotation for arg in node.args.args):
                 raise EvidenceError("decorators/annotations unsupported")
             if any(not isinstance(default,ast.Constant) for default in node.args.defaults):
                 raise EvidenceError("function defaults must be constants")
         if isinstance(node,ast.Name) and (node.id in FORBIDDEN_NAMES or "__" in node.id):
             raise EvidenceError("forbidden execution/reflection name")
+        if isinstance(node,ast.arg) and "__" in node.arg:
+            raise EvidenceError("private hook parameters are not admitted")
         if isinstance(node,ast.Attribute) and node.attr not in METHODS:
             raise EvidenceError("unapproved attribute")
         if isinstance(node,ast.Import):
