@@ -6,6 +6,7 @@ import {
   buildMeteoraDbcLaunchPlan,
   sha256Hex,
 } from '../src/meteora_dbc.mjs';
+import { buildMeteoraDemoPlan } from '../src/meteora_demo.mjs';
 
 const verified = Object.freeze({
   verdict: 'PASS',
@@ -85,4 +86,14 @@ test('contains no signing material, transaction, or award assertion', () => {
   assert.match(serialized, /OWNER_MUST_SET_LOCAL_KEYPAIR_PATH/);
   assert.match(serialized, /"award":"NOT_ASSERTED"/);
   assert.match(serialized, /"payment":"NOT_ASSERTED"/);
+});
+
+test('runs the local browser-verification-to-Meteora demo without external writes', async () => {
+  const plan = await buildMeteoraDemoPlan();
+  assert.equal(plan.schema, 'workseal-meteora-dbc-launch-plan/v1');
+  assert.equal(plan.execution.writePerformed, false);
+  assert.equal(plan.execution.unsigned, true);
+  assert.equal(plan.execution.readyForExecution, false);
+  assert.equal(plan.externalState.colosseumSubmission, 'NOT_ASSERTED');
+  assert.equal(plan.externalState.superteamSubmission, 'NOT_ASSERTED');
 });
