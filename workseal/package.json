@@ -6,7 +6,9 @@
   "description": "Evidence-gated settlement receipts for agent and contract work",
   "scripts": {
     "test": "node --test",
-    "demo": "node src/cli.mjs demo"
+    "demo": "node src/cli.mjs demo",
+    "demo:meteora": "node src/meteora_cli.mjs",
+    "test:meteora": "node --test test/meteora_dbc.test.mjs"
   },
   "engines": {
     "node": ">=20"
