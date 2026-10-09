@@ -94,7 +94,7 @@ $("planform").addEventListener("submit", event => {
 });
 $("orderform").addEventListener("submit", event => {
   event.preventDefault();
-  if ($("consent").checked) run("/api/order", {approved: true});
+  if ($("consent").checked && snapshot && snapshot.plan) run("/api/order", {approved: true, generation: snapshot.generation, revision: snapshot.revision, sku: snapshot.plan.sku, usd: snapshot.plan.usd});
 });
 $("captureform").addEventListener("submit", event => {
   event.preventDefault();
