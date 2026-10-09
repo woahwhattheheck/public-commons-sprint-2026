@@ -241,7 +241,8 @@ def session_for(handler):
         if sid not in SESSIONS:
             sid = secrets.token_urlsafe(30)
             SESSIONS[sid] = {"csrf": secrets.token_urlsafe(30), "phase": "idle",
-                             "audit": []}
+                             "audit": [], "generation": secrets.token_urlsafe(16),
+                             "revision": 0}
     handler.session_id = sid
     return SESSIONS[sid]
 
@@ -249,6 +250,7 @@ def session_for(handler):
 def summarize(state):
     plan = state.get("plan")
     return {"csrf": state["csrf"], "phase": state["phase"],
+            "generation": state["generation"], "revision": state["revision"],
             "plan": plan, "order_id": state.get("order_id"),
             "approval_url": state.get("approval_url"), "audit": state["audit"][-7:],
             "mode": "fixture" if FIXTURE else "sandbox",
@@ -258,6 +260,7 @@ def summarize(state):
 
 
 def record(state, event, note):
+    state["revision"] += 1
     state["audit"].append({"step": len(state["audit"]) + 1, "event": event, "detail": note})
 
 
@@ -358,8 +361,11 @@ class Handler(BaseHTTPRequestHandler):
     def action(self, route, body, state):
         if route == "/api/reset":
             csrf = state["csrf"]
+            generation = state["generation"]
+            revision = state["revision"] + 1
             state.clear()
-            state.update({"csrf": csrf, "phase": "idle", "audit": []})
+            state.update({"csrf": csrf, "phase": "idle", "audit": [],
+                          "generation": generation, "revision": revision})
             return summarize(state)
         if route == "/api/plan":
             if state["phase"] not in ("idle", "planned", "cancelled", "fixture_completed", "completed"):
