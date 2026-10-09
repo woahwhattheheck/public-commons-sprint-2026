@@ -18,12 +18,16 @@ await check('live transport pins original host and refuses redirects', async () 
   let calls = 0;
   const parsed = await fetchLiveQlooResponse({ ...params, fetcher: async (url, options) => {
     calls++;
-    assert.equal(url, `${base}/v2/insights`);
+    const parsedUrl = new URL(url);
+    assert.equal(parsedUrl.origin, base);
+    assert.equal(parsedUrl.pathname, '/v2/insights');
+    assert.deepEqual(Object.fromEntries(parsedUrl.searchParams), body);
     assert.equal(options.redirect, 'error');
-    assert.equal(options.method, 'POST');
+    assert.equal(options.method, 'GET');
+    assert.equal(options.body, undefined);
     assert.equal(options.headers['x-api-key'], params.apiKey);
     assert.equal(options.headers.accept, 'application/json');
-    assert.deepEqual(JSON.parse(options.body), body);
+    assert.equal(options.headers['content-type'], undefined);
     assert.ok(options.signal instanceof AbortSignal);
     return ok;
   }});
@@ -47,6 +51,31 @@ await check('bounded streaming reader failure returns gateway 502', async () => 
 await check('unknown origin fails before fetch or credential transport', async () => {
   let called = false;
   await failsAs(() => fetchLiveQlooResponse({ ...params, apiBase: 'https://redirect.invalid', fetcher: async () => { called = true; return ok; } }), 502);
+  assert.equal(called, false);
+});
+await check('search lookup is GET on the original hackathon host', async () => {
+  const search = { query: 'Main Street Coffee', types: 'urn:entity:place,urn:entity:brand', take: 10 };
+  await fetchLiveQlooResponse({ ...params, path: '/search', requestBody: search,
+    fetcher: async (url, options) => {
+      const u = new URL(url);
+      assert.equal(u.pathname, '/search');
+      assert.deepEqual(Object.fromEntries(u.searchParams), {
+        query: 'Main Street Coffee', types: 'urn:entity:place,urn:entity:brand', take: '10'
+      });
+      assert.equal(options.method, 'GET');
+      assert.equal(options.body, undefined);
+      return ok;
+    },
+  });
+});
+await check('POST-only named seed array or wrong hackathon origin fails before upstream', async () => {
+  let called = false;
+  const fetcher = async () => { called = true; return ok; };
+  await failsAs(() => fetchLiveQlooResponse({ ...params, fetcher, requestBody: {
+    'filter.type': 'urn:entity:place', 'signal.interests.entities.query': [{ name: 'unsupported' }]
+  } }), 400);
+  await failsAs(() => fetchLiveQlooResponse({ ...params, fetcher,
+    apiBase: 'https://api.qloo.com' }), 502);
   assert.equal(called, false);
 });
 console.log(`OK ${runs} focused live-provider checks`);
