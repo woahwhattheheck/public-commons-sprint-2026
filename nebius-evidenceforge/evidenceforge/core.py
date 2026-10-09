@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import posixpath
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Protocol
@@ -13,6 +14,13 @@ class EvidenceError(ValueError):
 
 def _reject_constant(value: str) -> None:
     raise EvidenceError(f"non-finite JSON number rejected: {value}")
+
+
+def _parse_finite_float(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise EvidenceError(f"non-finite JSON number rejected: {value}")
+    return parsed
 
 
 def _pairs_no_duplicates(pairs: Iterable[tuple[str, Any]]) -> dict[str, Any]:
@@ -30,6 +38,7 @@ def strict_json_loads(raw: str) -> Any:
             raw,
             object_pairs_hook=_pairs_no_duplicates,
             parse_constant=_reject_constant,
+            parse_float=_parse_finite_float,
         )
     except EvidenceError:
         raise
