@@ -71,28 +71,50 @@ function searchCandidates(doc) {
   // Qloo search results may be returned as flat arrays or a named `entities` collection.
   return normalizeInsights(doc).filter(x=>x.id);
 }
-export async function resolveEntity(seed,key,fetcher=fetch){
+export async function resolveEntity(seed,key,fetcher=fetch,selectedId=null){
+  // A browser choice is a hint, never authority: only an ID returned for the
+  // current exact seed by this live Qloo search may enter an Insights request.
+  if(selectedId!==null && (typeof selectedId!=='string'||!/^[A-Za-z0-9:._/-]{1,256}$/.test(selectedId)))
+    throw new QlooError('INVALID_SELECTION','Choose an entity from the current Qloo results.');
   const {url,data}=await qlooGet('/search',{query:seed,types:'urn:entity:artist,urn:entity:movie,urn:entity:book,urn:entity:videogame',take:10},key,fetcher);
   const candidates=searchCandidates(data);
   // Related search hits cannot substitute for the user's requested entity.
-  const canonical = value => value.normalize('NFKC').trim().toLocaleLowerCase('en').replace(/\s+/g,' ');
+  const canonical = value => value.normalize('NFKC').trim().toLocaleLowerCase('en').replace(/\\s+/g,' ');
   const exact=candidates.filter(x=>canonical(x.name)===canonical(seed));
   if(!exact.length)throw new QlooError('NO_MATCH',`Qloo did not resolve a taste seed named "${seed}"`);
-  // Names can be shared by different cultural entities across Qloo domains.
-  const uniqueIds=new Set(exact.map(x=>x.id.trim().toLocaleLowerCase('en')));
-  if(uniqueIds.size>1)
-    throw new QlooError('AMBIGUOUS_SEED',`Qloo found multiple entities named "${seed}"; choose a more specific seed.`);
-  const best=exact[0];
+  const byId=new Map();
+  for(const hit of exact){
+    const normalized=hit.id.trim().toLocaleLowerCase('en');
+    if(!byId.has(normalized))byId.set(normalized,hit);
+  }
+  if(selectedId!==null){
+    const chosen=byId.get(selectedId.toLocaleLowerCase('en'));
+    if(!chosen)throw new QlooError('INVALID_SELECTION','That choice is not an exact match in the current Qloo search. Choose again.');
+    return {id:chosen.id,name:chosen.name,url};
+  }
+  if(byId.size>1){
+    const err=new QlooError('AMBIGUOUS_SEED',`Qloo found multiple entities named "${seed}"; choose the intended Qloo entity.`);
+    // Only normalized public search evidence, not raw provider payloads or keys.
+    err.options=[...byId.values()].slice(0,10).map(x=>({id:x.id,name:x.name,description:x.description||''}));
+    throw err;
+  }
+  const best=byId.values().next().value;
   return {id:best.id,name:best.name,url};
 }
 export async function insightForSeed(seedId,kind,key,fetcher=fetch){
   return qlooGet('/v2/insights',{'filter.type':KINDS[kind],'signal.interests.entities':seedId,take:40,'feature.explainability':true},key,fetcher);
 }
-export async function buildLiveComparison({seedA,seedB,kind,fetcher=fetch,key=process.env.QLOO_API_KEY}){
+export async function buildLiveComparison({seedA,seedB,kind,selectedA=null,selectedB=null,fetcher=fetch,key=process.env.QLOO_API_KEY}){
   if(!key)throw new QlooError('NOT_CONFIGURED','Live Qloo mode requires a server-side QLOO_API_KEY. Demo mode is available separately.');
   const trace=[];
   const add=(step,detail)=>trace.push({step,status:'done',detail});
-  const [a,b]=await Promise.all([resolveEntity(seedA,key,fetcher),resolveEntity(seedB,key,fetcher)]);
+  const [left,right]=await Promise.allSettled([
+    resolveEntity(seedA,key,fetcher,selectedA),resolveEntity(seedB,key,fetcher,selectedB)
+  ]);
+  // Preserve parallel searches but return a deterministic seed-side choice.
+  if(left.status==='rejected'){if(left.reason instanceof QlooError)left.reason.side='a';throw left.reason;}
+  if(right.status==='rejected'){if(right.reason instanceof QlooError)right.reason.side='b';throw right.reason;}
+  const a=left.value,b=right.value;
   add('resolve',`${seedA} → ${a.name}; ${seedB} → ${b.name}. Two Qloo entity searches.`);
   const [ia,ib]=await Promise.all([insightForSeed(a.id,kind,key,fetcher),insightForSeed(b.id,kind,key,fetcher)]);
   add('retrieve',`Qloo returned separate ${kind} insight collections. Each collection is evaluated independently.`);
