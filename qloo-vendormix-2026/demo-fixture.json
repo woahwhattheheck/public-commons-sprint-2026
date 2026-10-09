@@ -1,0 +1,14 @@
+[
+  {"id":"fixture-01","name":"Maple & Ember Coffee","category":"Coffee","signal":0.96},
+  {"id":"fixture-02","name":"Canal Street Dumplings","category":"Street food","signal":0.92},
+  {"id":"fixture-03","name":"Bluebird Espresso Cart","category":"Coffee","signal":0.90},
+  {"id":"fixture-04","name":"Golden Hour Vinyl","category":"Music","signal":0.88},
+  {"id":"fixture-05","name":"Little Orchard Gelato","category":"Dessert","signal":0.86},
+  {"id":"fixture-06","name":"Northbank Noodle Stand","category":"Street food","signal":0.84},
+  {"id":"fixture-07","name":"Paper Lantern Printmakers","category":"Arts","signal":0.82},
+  {"id":"fixture-08","name":"Aster Tea Studio","category":"Tea","signal":0.79},
+  {"id":"fixture-09","name":"Hearthline Breads","category":"Bakery","signal":0.77},
+  {"id":"fixture-10","name":"City Echo Records","category":"Music","signal":0.73},
+  {"id":"fixture-11","name":"Riverbend Makers Lab","category":"Arts","signal":0.69},
+  {"id":"fixture-12","name":"Green Moon Flowers","category":"Florist","signal":0.64}
+]
