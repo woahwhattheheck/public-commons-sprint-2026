@@ -1,3 +1,5 @@
+import {validateDraftGrounding} from './draft_evidence_guard.mjs';
+
 // Optional, explicit-use Microsoft Foundry inference. Never runs during replay.
 // Resource credentials remain server-side; no request occurs unless configured
 // and the visitor presses the optional button. Output is unverified commentary.
@@ -44,7 +46,9 @@ export async function suggestedNarrative(overlay, env = process.env) {
   const result = JSON.parse(Buffer.concat(chunks).toString('utf8'));
   const text = result?.choices?.[0]?.message?.content;
   if (typeof text !== 'string' || text.length === 0) throw new Error('No model commentary');
-  return {used: true, text: text.replace(/[<>\r\n]/g, ' ').slice(0, 135),
+  const draft = text.trim();
+  if (!validateDraftGrounding(draft, overlay).ok) throw new Error('Foundry draft not supported by evidence');
+  return {used: true, text: draft,
     label: 'OPTIONAL FOUNDRY DRAFT · HUMAN VERIFICATION REQUIRED',
     canonicalEvidence: overlay.evidenceIds};
 }
