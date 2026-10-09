@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="SignalGuard: evidence-first popularity sensitivity audits powered by Qloo." />
+  <title>SignalGuard — Audits for taste intelligence</title>
+  <link href="/style.css" rel="stylesheet" />
+  <script src="/app.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" aria-label="SignalGuard home"><span class="logo" aria-hidden="true">◎</span> SignalGuard <span class="brand-sub">/ LAB</span></div>
+    <div class="top-right"><span id="mode-pill" class="mode-pill">CHECKING MODE</span><span class="top-hint">QLOO HACKATHON 2026</span></div>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="overline">INTELLIGENCE / EVIDENCE / DECISIONS</div>
+      <h1 id="hero-title">Find the <em>blind spot</em><br />in your taste signals.</h1>
+      <p class="lede">A Qloo-powered audit agent that probes your creative seed across baseline, emerging and popular segments. It tells you what the data actually returned—and where the evidence ends.</p>
+      <div class="small-info"><span class="small-signal"></span> Audits segmentation sensitivity, not conversion forecasts or demographic traits.</div>
+    </section>
+    <div class="divider-line" aria-hidden="true"></div>
+    <section class="workbench" aria-labelledby="setup-title">
+      <div class="section-heading"><div><span class="eyebrow">01 / CONFIGURE</span><h2 id="setup-title">Define your signal</h2></div><p>Start with something your audience loves. The agent resolves it to a real Qloo entity ID when live.</p></div>
+      <form id="audit-form" class="audit-form">
+        <div class="field field-seed"><label for="seed">Cultural anchor <span>NAME OR TITLE</span></label><input id="seed" name="seed" type="text" required minlength="2" maxlength="100" value="Everything Everywhere All at Once" autocomplete="off" placeholder="Movie, book or artist" /></div>
+        <div class="field"><label for="seedType">Anchor type</label><select id="seedType" name="seedType"><option value="urn:entity:movie">Movie</option><option value="urn:entity:artist">Artist</option><option value="urn:entity:book">Book</option></select></div>
+        <div class="field"><label for="target">Audit results</label><select id="target" name="target"><option value="urn:entity:movie">Movies</option><option value="urn:entity:artist">Artists</option><option value="urn:entity:book">Books</option></select></div>
+        <div class="field"><label for="mode">Data source</label><select id="mode" name="mode"><option value="demo">Synthetic demo</option><option value="live">Live Qloo</option></select></div>
+        <button class="run" type="submit"><span>RUN SIGNAL AUDIT</span><span aria-hidden="true">↗</span></button>
+      </form>
+      <p id="mode-caption" class="data-note">Synthetic demo uses invented titles and values, never Qloo data. Live requires a server-side QLOO_API_KEY.</p>
+    </section>
+    <section id="response" class="response" aria-live="polite" aria-atomic="false" hidden>
+      <div class="section-heading"><div><span class="eyebrow">02 / EVIDENCE REPORT</span><h2>What changed when we filtered?</h2></div><span id="report-mode" class="report-mode"></span></div>
+      <div id="status-line" class="status-line" role="status"></div>
+      <div id="metrics" class="metric-grid"></div>
+      <div class="report-layout">
+        <article class="insight-panel"><span class="eyebrow">INTERPRETATION / LIMITED</span><h3>Agent brief</h3><p id="summary"></p><div id="notes"></div><div class="reference"><strong>Evidence contract:</strong> <span id="evidence"></span></div></article>
+        <article class="trace-panel"><span class="eyebrow">AGENT TRACE / FOUR STEPS</span><h3>Audit trail</h3><ol id="trace"></ol></article>
+      </div>
+      <div class="segment-head"><span class="eyebrow">03 / RETRIEVED ENTITIES</span><p>Columns are three separate Qloo retrievals. Rankings are not demand, fairness, or conversion scores.</p></div>
+      <div id="segments" class="segments"></div>
+      <div class="actions-panel"><span class="eyebrow">NEXT ACTIONS</span><ul id="actions"></ul></div>
+    </section>
+    <footer class="footer"><span>SignalGuard // source-driven product lab</span><span>NO CLAIM OF PRIZE, DEPLOYMENT, OR LIVE API VALIDATION</span></footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WorkSeal · Evidence-gated settlement walkthrough</title>
+  <style>
+    :root { color-scheme: dark; --page:#101520; --panel:#1b2535; --border:#344154; --text:#eef2fb; --muted:#a9b7ca; --green:#74e2b2; --red:#ff999d; --blue:#9bd4ff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--page); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,sans-serif; line-height:1.55; }
+    main { margin:0 auto; max-width:1160px; padding:32px 20px 64px; }
+    h1 { margin:5px 0 8px; font-size:clamp(1.9rem,4vw,3.1rem); line-height:1.15; }
+    h2 { font-size:1.15rem; margin:0 0 8px; }
+    .kicker { color:var(--blue); text-transform:uppercase; letter-spacing:.12em; font-weight:700; font-size:.78rem; }
+    .sub { color:var(--muted); max-width:800px; }
+    .notice { margin:22px 0; padding:14px 18px; border:1px solid #b49a68; border-radius:12px; background:#30291e; color:#ffdeb2; }
+    .steps { display:grid; gap:14px; grid-template-columns:repeat(4,minmax(0,1fr)); padding:18px 0; }
+    .step { padding:18px; border-radius:13px; background:var(--panel); border:1px solid var(--border); }
+    .num { color:var(--blue); font-variant-numeric:tabular-nums; letter-spacing:.02em; font-weight:800; }
+    .step p { font-size:.9rem; color:var(--muted); margin:.4rem 0 0; }
+    .controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:18px 0 24px; }
+    button { border:none; border-radius:11px; padding:12px 18px; background:var(--blue); color:#112032; font-weight:800; cursor:pointer; font:inherit; font-weight:750; }
+    button.secondary { background:#2a374a; color:var(--text); border:1px solid #526078; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    button:focus-visible { outline:3px solid #f6d7a0; outline-offset:3px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .panel { border-radius:13px; padding:20px; background:var(--panel); border:1px solid var(--border); min-width:0; }
+    .status { padding:11px 14px; border:1px solid #58677d; border-radius:9px; background:#263246; font-weight:800; min-height:48px; }
+    .pass { color:var(--green); border-color:#497e6e; }
+    .hold { color:var(--red); border-color:#905e62; }
+    dl { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:7px 14px; margin:15px 0; font-size:.92rem; }
+    dt { color:var(--muted); } dd { margin:0; overflow-wrap:anywhere; font-family:ui-monospace,SFMono-Regular,monospace; font-size:.88rem; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; border-radius:9px; padding:13px; background:#101722; border:1px solid #2c3b50; max-height:275px; overflow-y:auto; font-size:.79rem; }
+    .small { color:var(--muted); font-size:.86rem; }
+    footer { border-top:1px solid var(--border); padding-top:20px; margin-top:22px; color:var(--muted); font-size:.88rem; }
+    @media(max-width:800px) { .steps { grid-template-columns:repeat(2,minmax(0,1fr)); } .grid { grid-template-columns:1fr; } }
+    @media(max-width:470px) { .steps { grid-template-columns:1fr; } dl { grid-template-columns:1fr; gap:3px; } dt { margin-top:8px; } }
+  </style>
+</head>
+<body>
+<main>
+  <div class="kicker">WorkSeal / judge walkthrough / local proof</div>
+  <h1>Pay for verified work, not a promise.</h1>
+  <p class="sub">Follow a signed acceptance from buyer task through worker result to a settlement <em>intent</em>. Then change one byte and see the same verifier refuse it.</p>
+  <div class="notice" role="note"><strong>Synthetic demonstration only.</strong> Generated keys, GitHub Actions evidence, addresses and funding references are fixtures. A local PASS is not externally authenticated GitHub evidence, a deployed escrow, a payout, or an official Colosseum submission. No wallet, RPC or external service is contacted by this page.</div>
+  <section class="steps" aria-label="Protocol stages">
+    <div class="step"><div class="num">01 · Buyer terms</div><h2>Exact obligation</h2><p>Price, parties, due date and a pinned acceptance policy are bound into one digest.</p></div>
+    <div class="step"><div class="num">02 · Worker result</div><h2>Exact generation</h2><p>A result points to the buyer task and one specific artifact generation and evidence set.</p></div>
+    <div class="step"><div class="num">03 · Verifier receipt</div><h2>Signed ACCEPT</h2><p>The verifier’s pinned authority signs the acceptance receipt for that result generation.</p></div>
+    <div class="step"><div class="num">04 · Settlement intent</div><h2>Bound, not spent</h2><p>The unsigned payment instruction binds task, result, signature, funding and event head.</p></div>
+  </section>
+  <section class="controls" aria-label="Demo controls">
+    <button id="start" type="button">Generate and verify receipt</button>
+    <button id="tamper" type="button" class="secondary" disabled>Tamper with receipt</button>
+    <button id="reset" type="button" class="secondary" disabled>Restore valid proof</button>
+    <span class="small">Runs locally in the browser · fresh ephemeral Ed25519 key · no transaction</span>
+  </section>
+  <section class="grid" aria-label="Live verified and tampered results">
+    <div class="panel">
+      <h2>Signed original proof</h2>
+      <div id="valid-status" class="status" role="status" aria-live="polite">Not generated</div>
+      <dl>
+        <dt>Task SHA-256</dt><dd id="task-digest">—</dd>
+        <dt>Result SHA-256</dt><dd id="result-digest">—</dd>
+        <dt>Verifier fingerprint</dt><dd id="verifier-fp">—</dd>
+        <dt>Acceptance SHA-256</dt><dd id="acceptance-digest">—</dd>
+        <dt>Settlement intent</dt><dd id="settlement-digest">—</dd>
+        <dt>Amount (atomic units)</dt><dd id="amount">—</dd>
+      </dl>
+      <p class="small">All displayed hashes and verification results come from the actual WorkSeal browser verifier.</p>
+    </div>
+    <div class="panel">
+      <h2>Changed proof</h2>
+      <div id="tamper-status" class="status" role="status" aria-live="polite">Generate the original, then tamper</div>
+      <p id="tamper-description" class="small">One alteration breaks the binding. The verifier must hold instead of approving a payment intent.</p>
+      <pre id="tamper-details" aria-label="Tamper verification detail">No altered proof yet.</pre>
+      <p class="small">The altered result is never published, paid, signed again or treated as a successful receipt.</p>
+    </div>
+  </section>
+  <footer>What remains before money moves: independent evidence acquisition, explicit buyer authority, actual on-chain escrow, sponsor-required project entry, and live transaction observation. This page proves the local verification logic only.</footer>
+</main>
+<script type="module" src="./presenter.mjs"></script>
+</body>
+</html>

@@ -91,3 +91,12 @@ assume a future hidden task uses these names.
 Compare probabilities and Pauli expectations. Do not compare raw amplitudes:
 a global phase is not an observable disagreement. This package does not submit
 anything to QHack.
+
+## Gradients and subsystem states
+
+`gradient MANIFEST --gates 0 3` differentiates Pauli expectations with respect
+to selected RX/RY/RZ gate occurrences. `reduced-state MANIFEST --wires 0 2`
+emits the subsystem density matrix, probabilities, trace and purity. Both are
+available through `python3 -m qoracle.cli`; see [DIAGNOSTICS.md](DIAGNOSTICS.md)
+for complete examples, ordering, per-occurrence parameter semantics and limits.
+Existing simulation, verification and manifest hashes are unchanged.

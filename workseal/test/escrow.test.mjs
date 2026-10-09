@@ -438,3 +438,45 @@ test('demo reaches SETTLED while preserving every external-action non-claim', ()
     prizeOrRevenueClaimed: false,
   });
 });
+
+
+test('terminal readback refuses forged SETTLED evidence and inconsistent transfer details', () => {
+  const { escrow, intent, authority: signer } = acceptedWithEscrow();
+  const settled = settleEscrow(escrow, signedSettlement({ escrow, intent, authority: signer }));
+  assert.equal(verifyEscrowState(settled).valid, true);
+  for (const [description, mutate] of [
+    ['fabricated terminal digest', (s) => { s.terminalDigest = '0'.repeat(64); }],
+    ['forged verifier signature', (s) => { s.terminalInstruction.authorizationSignatureBase64 = 'AAAA'; }],
+    ['stolen destination ATA', (s) => { s.terminalInstruction.destinationTokenAccount = pubkeyFromSeed('attacker-wallet'); }],
+    ['different verifier identity', (s) => { s.terminalInstruction.verifierSigner = pubkeyFromSeed('wrong-verifier'); }],
+    ['altered paid generation', (s) => { s.generation += 1; }],
+    ['altered event head', (s) => { s.previousEventDigest = '1'.repeat(64); }],
+    ['phase-only transition', (s) => { s.phase = 'FUNDED'; }],
+  ]) {
+    const bad = structuredClone(settled);
+    mutate(bad);
+    assert.throws(() => verifyEscrowState(bad), (error) => Boolean(error.code), description);
+  }
+  const forged = structuredClone(escrow);
+  forged.phase = 'SETTLED';
+  forged.sequence = 2;
+  forged.terminalDigest = 'f'.repeat(64);
+  assert.throws(() => verifyEscrowState(forged), (error) => Boolean(error.code), 'fabricated phase/terminal digest');
+});
+
+test('terminal readback verifies buyer-signed REFUND and rejects before-deadline tampering', () => {
+  const { escrow } = funded();
+  const refunded = refundEscrow(escrow, signedRefund(escrow, sha256Hex('refund-cause')));
+  assert.equal(verifyEscrowState(refunded).valid, true);
+  for (const [description, mutate] of [
+    ['refunded amount changed', (s) => { s.terminalInstruction.amountAtomic = '999999'; }],
+    ['buyer signature forged', (s) => { s.terminalInstruction.authorizationSignatureBase64 = 'AAAA'; }],
+    ['refund moved before deadline', (s) => { s.terminalInstruction.observedUnix = s.plan.binding.refundAfterUnix - 1; }],
+    ['buyer destination changed', (s) => { s.terminalInstruction.destinationTokenAccount = pubkeyFromSeed('malicious-ata'); }],
+    ['refund event head changed', (s) => { s.previousEventDigest = 'f'.repeat(64); }],
+  ]) {
+    const bad = structuredClone(refunded);
+    mutate(bad);
+    assert.throws(() => verifyEscrowState(bad), (error) => Boolean(error.code), description);
+  }
+});

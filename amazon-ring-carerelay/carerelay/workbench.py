@@ -43,12 +43,16 @@ def main(argv: list[str] | None = None) -> int:
                 publish_new(args.out, render_review(result))
         state = result["state"]
         reviewed = {r["proposal_id"] for r in state["approvals"]}
+        proposed_events = {p["event_id"] for p in state["proposals"]}
         summary = {"state_sha256": result["receipt"]["state_sha256"],
                    "source": result["receipt"]["source"], "events": len(state["events"]),
                    "proposals": len(state["proposals"]), "reviews": len(state["approvals"]),
                    "pending": [{"proposal_id": p["proposal_id"], "action": p["action"],
                                 "event_id": p["event_id"]} for p in state["proposals"]
                                if p["proposal_id"] not in reviewed],
+                   "events_without_proposal": [
+                       {key: e[key] for key in ("event_id", "device_id", "occurred_at", "event_type", "classification")}
+                       for e in state["events"] if e["event_id"] not in proposed_events],
                    "authority": state["authority"]}
         print(json.dumps(summary, sort_keys=True))
         return 0

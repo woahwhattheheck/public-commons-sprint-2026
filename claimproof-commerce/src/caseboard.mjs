@@ -28,7 +28,6 @@ const policy = [
   "object-src 'none'"
 ].join('; ');
 const server = http.createServer((req, res) => {
-  const pathname = new URL(req.url, 'http://127.0.0.1:' + port).pathname;
   const common = {
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
@@ -36,6 +35,14 @@ const server = http.createServer((req, res) => {
     'X-Frame-Options': 'DENY',
     'Content-Security-Policy': policy
   };
+  let pathname;
+  try {
+    pathname = new URL(req.url, 'http://127.0.0.1:' + port).pathname;
+  } catch {
+    res.writeHead(400, {...common, 'Content-Type': 'application/json; charset=utf-8'});
+    res.end(JSON.stringify({error:'invalid request URL'}));
+    return;
+  }
   if (req.method === 'GET' && pathname === '/') {
     res.writeHead(200, {...common, 'Content-Type': 'text/html; charset=utf-8'});
     res.end(html);

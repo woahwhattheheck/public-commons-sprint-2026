@@ -1,9 +1,4 @@
-"""Simulate or verify a QOracle manifest.
-
-Usage:
-  python3 cli.py simulate MANIFEST.json
-  python3 cli.py verify MANIFEST.json CANDIDATE.json
-"""
+"""Simulate, verify or diagnose a QOracle manifest."""
 
 from __future__ import annotations
 
@@ -14,8 +9,10 @@ from pathlib import Path
 
 if __package__:
     from .engine import OracleError, load_manifest, simulate, verify
+    from .diagnostics import expectation_gradients, reduced_state
 else:
     from engine import OracleError, load_manifest, simulate, verify
+    from diagnostics import expectation_gradients, reduced_state
 
 
 def _read(path: Path) -> str:
@@ -35,11 +32,21 @@ def main(argv: list[str] | None = None) -> int:
     check = sub.add_parser("verify")
     check.add_argument("manifest")
     check.add_argument("candidate")
+    gradient = sub.add_parser("gradient", help="Pauli expectation derivatives per rotation gate")
+    gradient.add_argument("manifest")
+    gradient.add_argument("--gates", type=int, nargs="+", help="zero-based RX/RY/RZ gate indices; default: all")
+    density = sub.add_parser("reduced-state", help="partial trace and purity on ordered wires")
+    density.add_argument("manifest")
+    density.add_argument("--wires", type=int, nargs="+", required=True, help="ordered register wires, at most six")
     args = parser.parse_args(argv)
     try:
         manifest = load_manifest(_read(Path(args.manifest)))
         if args.command == "simulate":
             report = simulate(manifest)
+        elif args.command == "gradient":
+            report = expectation_gradients(manifest, args.gates)
+        elif args.command == "reduced-state":
+            report = reduced_state(manifest, args.wires)
         else:
             report = verify(manifest, _read(Path(args.candidate)))
     except (OracleError, OSError, UnicodeError) as exc:

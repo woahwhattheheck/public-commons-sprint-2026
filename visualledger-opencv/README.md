@@ -64,3 +64,20 @@ See `docs/ARCHITECTURE.md`, `docs/COMPETITION.md`, and `docs/DEMO_SCRIPT.md`.
 ## Truth state
 
 This carrier can establish source/test/demo readiness. It does not establish OpenCV-5 runtime execution, AWS deployment, competition registration/submission, judging result, prize, customer use, savings, payment, or revenue.
+
+## Human crop workspace
+
+Complete a requested human crop without replacing the source or relaxing the
+vision policy:
+
+```sh
+python -m visualledger.workspace --allow-opencv4-dev
+python -m visualledger.crop visualledger-crop-evidence.zip --allow-opencv4-dev
+```
+
+The loopback-only workspace supports drag selection and keyboard pixel edges,
+re-evaluates the original-pixel crop, and exports both canonical traces plus
+source/crop provenance for independent replay and existing offline review.
+Development compatibility remains explicitly labeled. It does not perform OCR,
+approve an invoice, deploy AWS, or submit a competition entry.
+See [human crop workspace instructions](docs/HUMAN_CROP_WORKSPACE.md).

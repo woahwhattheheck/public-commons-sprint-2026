@@ -125,6 +125,9 @@ class CorpusDoc:
     title: str
     ticker: str
     path: str
+    entity_ids: frozenset[str] | None = None
+    shared: bool = False
+    scope_enforced: bool = False
 
 @dataclass(frozen=True)
 class Evidence:
@@ -178,20 +181,70 @@ def validate_task(task: Any) -> dict[str, Any]:
     normalized["_labels"] = list(labels)
     return normalized
 
+def _manifest_scope(corpus_dir: Path) -> dict[str, tuple[frozenset[str] | None, bool]] | None:
+    """Load trusted unit-root corpus role and entity scope, not corpus/manifest.json.
+
+    The official scorer cites only manifest-declared corpus members. Every declared
+    document is either labelled for one or more entities, marked shared, or barred.
+    Units without a root manifest retain the standalone/legacy retrieval API.
+    """
+    manifest_path = corpus_dir.parent / "manifest.json"
+    if not manifest_path.exists() and not manifest_path.is_symlink():
+        return None
+    manifest = load_json(manifest_path)
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("files"), list):
+        raise ContractError("unit-root manifest requires files[]")
+    scopes: dict[str, tuple[frozenset[str] | None, bool]] = {}
+    for row in manifest["files"]:
+        if not isinstance(row, dict):
+            raise ContractError("manifest file entry must be an object")
+        if row.get("role") != "corpus":
+            continue
+        relative = row.get("path")
+        if (not isinstance(relative, str)
+                or len(Path(relative).parts) != 2
+                or Path(relative).parts[0] != "corpus"
+                or not relative.endswith(".json")
+                or Path(relative).name == "manifest.json"):
+            raise ContractError("manifest corpus path must be corpus/<document>.json")
+        filename = Path(relative).name
+        if filename in scopes:
+            raise ContractError(f"duplicate manifest corpus path: {filename}")
+        entity_ids = row.get("entity_ids")
+        if entity_ids is not None and (
+            not isinstance(entity_ids, list)
+            or any(not isinstance(eid, str) or not eid for eid in entity_ids)
+        ):
+            raise ContractError(f"{filename}.entity_ids must be a list of strings")
+        shared = row.get("shared")
+        if shared is not None and shared is not True:
+            raise ContractError(f"{filename}.shared must be true when present")
+        scopes[filename] = (
+            frozenset(entity_ids) if entity_ids is not None else None,
+            shared is True,
+        )
+    return scopes
+
 def load_corpus(corpus_dir: Path, cutoff: str) -> list[CorpusDoc]:
     if corpus_dir.is_symlink() or not corpus_dir.is_dir():
         raise ContractError("corpus must be a regular directory")
-    # The organizer ships corpus/manifest.json as an index in most public units. It is not
-    # a citable document and must never enter retrieval or citation resolution.
+    # Unit-root manifest.json is the scorer's authority for citation membership and
+    # entity_ids/shared labels; corpus/manifest.json is merely an uncitable index.
+    scopes = _manifest_scope(corpus_dir)
     paths = sorted(path for path in corpus_dir.glob("*.json") if path.name != "manifest.json")
     if not paths:
+        if scopes:
+            raise ContractError("manifest-declared corpus documents are missing")
         return []
     if len(paths) > MAX_CORPUS_FILES:
         raise ContractError("corpus file count exceeds limit")
     total = 0
     docs: list[CorpusDoc] = []
     seen: set[str] = set()
+    manifest_seen: set[str] = set()
     for path in paths:
+        if scopes is not None and path.name not in scopes:
+            continue  # Unmanifested files can never resolve as official citations.
         if path.is_symlink():
             raise ContractError(f"symlink corpus file refused: {path.name}")
         total += path.stat().st_size
@@ -207,6 +260,7 @@ def load_corpus(corpus_dir: Path, cutoff: str) -> list[CorpusDoc]:
         if doc_id in seen:
             raise ContractError(f"duplicate doc_id: {doc_id}")
         seen.add(doc_id)
+        manifest_seen.add(path.name)
         doc_date = _iso_day(raw.get("doc_date"), f"{doc_id}.doc_date")
         text = raw.get("text")
         if not isinstance(text, str) or not text.strip():
@@ -223,7 +277,11 @@ def load_corpus(corpus_dir: Path, cutoff: str) -> list[CorpusDoc]:
                 raise ContractError(f"{doc_id}.spans resolve to empty text")
         if doc_date > cutoff:
             continue
-        docs.append(CorpusDoc(doc_id, doc_date, text, str(raw.get("title", "")), str(raw.get("ticker", "")), path.name))
+        ids, shared = scopes[path.name] if scopes is not None else (None, False)
+        docs.append(CorpusDoc(doc_id, doc_date, text, str(raw.get("title", "")), str(raw.get("ticker", "")), path.name,
+                              ids, shared, scopes is not None))
+    if scopes is not None and scopes.keys() - manifest_seen:
+        raise ContractError("manifest-declared corpus documents are missing")
     return docs
 
 def _sentences(doc: CorpusDoc) -> Iterable[tuple[int, int, str]]:
@@ -299,9 +357,14 @@ class RetrievalIndex:
 
     def retrieve(self, task: dict[str, Any], entity: dict[str, Any]) -> list[Evidence]:
         identity_terms, context_terms = _query_terms(task, entity)
-        ticker = str(entity.get("entity_id", "")).lower()
+        entity_id = str(entity.get("entity_id", ""))
+        ticker = entity_id.lower()
         ranked: list[tuple[float, str, int, int, int]] = []
         for index, span in enumerate(self.spans):
+            if span.doc.scope_enforced and not (
+                span.doc.shared or (span.doc.entity_ids is not None and entity_id in span.doc.entity_ids)
+            ):
+                continue
             # Reapply the cutoff when querying too, so a prepared index cannot widen it.
             if span.doc.doc_date > task["cutoff_date"]:
                 continue
@@ -391,7 +454,9 @@ def _candidate_from_model(task: dict[str, Any], entity: dict[str, Any], raw: Any
     return {"entity_id": entity["entity_id"], "label": label, "point_forecast": point, "lo": lo, "hi": hi}
 
 def _claims(evidence: list[Evidence]) -> list[dict[str, Any]]:
-    return [{"doc_id": ev.doc_id, "span_start": ev.span_start, "span_end": ev.span_end, "claim": ev.text} for ev in evidence]
+    # The diagnostic no-evidence sentinel is not a real manifest document or valid citation.
+    return [{"doc_id": ev.doc_id, "span_start": ev.span_start, "span_end": ev.span_end, "claim": ev.text}
+            for ev in evidence if ev.doc_id != "NO_ELIGIBLE_EVIDENCE"]
 
 def build_answer(task: dict[str, Any], docs: list[CorpusDoc], model_candidates: dict[str, Any] | None = None) -> dict[str, Any]:
     predictions: list[dict[str, Any]] = []
@@ -399,7 +464,7 @@ def build_answer(task: dict[str, Any], docs: list[CorpusDoc], model_candidates: 
     retrieval = RetrievalIndex(docs)
     for entity in task["entities"]:
         evidence = retrieval.retrieve(task, entity)
-        evidence_total += len(evidence)
+        evidence_total += sum(ev.doc_id != "NO_ELIGIBLE_EVIDENCE" for ev in evidence)
         candidate = _candidate_from_model(task, entity, model_candidates.get(entity["entity_id"])) if model_candidates is not None else None
         if candidate is None:
             candidate = _fallback_candidate(task, entity)
