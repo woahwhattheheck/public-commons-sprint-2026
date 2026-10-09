@@ -44,7 +44,7 @@ python synthetic_demo.py --out synthetic-output
 python thermoloom.py synthetic-output/spot.png --rows 4 --cols 6 --out receipt.json --overlay evidence.png
 ```
 
-Expected synthetic states: `clean=MONITOR`, `spot=HUMAN_REVIEW` with row 1/col 3, and `flat=RETAKE`. No claimed accuracy on real captures. A real grayscale camera image must pass source rights/privacy and operator validation. For perspective capture, pass `--corners-json corners.json` containing exactly four *image-pixel* coordinates ordered top-left, top-right, bottom-right, bottom-left. Receipts then use rectified-image coordinates, not original-camera coordinates. Annotated overlay is only supported without a homography for now; requesting both fails explicitly.
+Expected synthetic states: `clean=MONITOR`, `spot=HUMAN_REVIEW` with row 1/col 3, and `flat=RETAKE`. No claimed accuracy on real captures. A real grayscale camera image must pass source rights/privacy and operator validation. For perspective capture, pass `--corners-json corners.json` containing exactly four *image-pixel* coordinates ordered top-left, top-right, bottom-right, bottom-left. Receipts then use rectified-image coordinates, not original-camera coordinates. Combine `--corners-json corners.json --overlay evidence.png` to draw evidence on the same rectified pixels used for scoring. The overlay checks capture identity and refuses mismatched source frames or corner geometry; output overlay coordinates are rectified, not original-camera.
 
 ## Opt-in illumination-gradient ablation (synthetic candidate)
 
