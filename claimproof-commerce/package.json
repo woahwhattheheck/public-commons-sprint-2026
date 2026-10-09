@@ -1,0 +1,12 @@
+{
+  "name": "claimproof-commerce",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Human-approved AI-assisted commerce review with PayPal sandbox Orders v2",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "check:focused": "node --test tests/focused.test.mjs"
+  }
+}
