@@ -6,6 +6,18 @@ import json
 from pathlib import Path
 from engine import save_review
 
+# Keep this intake limit aligned with engine.decode_image. Reading one extra
+# byte distinguishes an oversized input without loading the whole file.
+MAX_IMAGE_BYTES = 8_000_000
+
+
+def read_image_bounded(path: Path) -> bytes:
+    with path.open('rb') as source:
+        raw = source.read(MAX_IMAGE_BYTES + 1)
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise ValueError('image exceeds 8,000,000-byte limit')
+    return raw
+
 
 def render_page(report: dict) -> str:
     decision = report['decision']
@@ -33,7 +45,11 @@ def main():
     ap.add_argument('--output', type=Path, default=Path('review-output'))
     ap.add_argument('--marker-mm', type=float, default=50.0)
     args = ap.parse_args()
-    report = save_review(args.image.read_bytes(), args.output, marker_side_mm=args.marker_mm)
+    try:
+        raw = read_image_bounded(args.image)
+    except ValueError as exc:
+        ap.error(str(exc))
+    report = save_review(raw, args.output, marker_side_mm=args.marker_mm)
     (args.output / 'index.html').write_text(render_page(report), encoding='utf-8')
     print(json.dumps({'action':report['decision']['action'],'red_candidates':report['candidate_count'],
                       'review':str(args.output / 'index.html'), 'reasons':report['decision']['reason_codes']}))
