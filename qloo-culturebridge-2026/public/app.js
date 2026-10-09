@@ -20,6 +20,5 @@ $('bridge-form').addEventListener('submit',async e=>{
 });
 $('export').addEventListener('click',async()=>{if(!last)return;const s=`CultureBridge ${last.mode.toUpperCase()} ${last.seedA} x ${last.seedB}
 ${last.method}
-${last.bridges.map(v=>`${v.name}: ${v.score}/100, ranks ${v.rankA}/${v.rankB}`).join('
-')}
+${last.bridges.map(v=>`${v.name}: ${v.score}/100, ranks ${v.rankA}/${v.rankB}`).join('\n')}
 ${last.warnings.join(' ')}`;try{await navigator.clipboard.writeText(s);$('export').textContent='Copied evidence brief ✓'}catch{$('export').textContent='Copy unavailable in this browser'}});
