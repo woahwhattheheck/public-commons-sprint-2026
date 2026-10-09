@@ -65,4 +65,8 @@ The receipt verifier recomputes the state digest and counters and refuses any re
 5. Produce the <3 minute demo through the official simulator or device.
 6. Only then update provider-execution evidence. Devpost join/terms/submission remains a separate owner action.
 
-No prize, payment, or revenue is claimed by this source carrier.
+Competition entry, award and payment have not yet been verified. The original entrant retains all applicable prize eligibility and seeks the awards available under the published rules.
+
+## Session lifecycle
+
+The runtime now disables redirects, validates same-device session URLs, closes HTTP responses, and exposes explicit DELETE termination plus context-managed cleanup. See [RUNTIME.md](RUNTIME.md) for usage, uncertain-outcome handling, and the focused transport checks.
