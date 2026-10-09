@@ -6,7 +6,7 @@ export function makeSandboxReceipt(review, verified, reviewId, observedAt=new Da
   const cart=review?.cart,order=review?.order;
   if(review?.state!=='CAPTURED' || cart?.currency!=='USD' ||
      !/^[a-f0-9]{64}$/.test(cart?.fingerprint||'') ||
-     !/^\\d+\\.\\d{2}$/.test(cart?.total||'') ||
+     !/^[0-9]+[.][0-9]{2}$/.test(cart?.total||'') ||
      !/^[a-f0-9-]{36}$/.test(reviewId||'') ||
      !/^[A-Za-z0-9]{10,30}$/.test(order?.order_id||'') ||
      verified?.status!=='COMPLETED' || verified?.order_status!=='COMPLETED' ||
