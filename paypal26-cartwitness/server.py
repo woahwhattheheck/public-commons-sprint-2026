@@ -178,18 +178,25 @@ def same_amount(purchase_units, chosen):
     if not isinstance(purchase_units, list) or len(purchase_units) != 1:
         return False
     unit = purchase_units[0]
-    amount = unit.get("amount", {})
+    if not isinstance(unit, dict):
+        return False
+    amount = unit.get("amount")
+    if not isinstance(amount, dict):
+        return False
     return (unit.get("reference_id") == chosen["sku"]
             and amount.get("currency_code") == "USD"
             and amount.get("value") == money(chosen["cents"]))
 
 
 def valid_approved_order(detail, chosen, expected_id):
-    return (detail.get("id") == expected_id and detail.get("status") == "APPROVED"
+    return (isinstance(detail, dict)
+            and detail.get("id") == expected_id and detail.get("status") == "APPROVED"
             and same_amount(detail.get("purchase_units"), chosen))
 
 
 def valid_capture(detail, chosen, expected_id):
+    if not isinstance(detail, dict):
+        return False
     if detail.get("id") != expected_id or detail.get("status") != "COMPLETED":
         return False
     if not same_amount(detail.get("purchase_units"), chosen):
