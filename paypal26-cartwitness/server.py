@@ -80,6 +80,16 @@ def demo_selection(prompt, affordable):
     return max(affordable, key=score)
 
 
+class _NoAuthRedirect(urllib.request.HTTPRedirectHandler):
+    """Do not forward authenticated provider requests across HTTP redirects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_AUTH_SAFE_OPENER = urllib.request.build_opener(_NoAuthRedirect)
+
+
 def api_json(url, *, method="GET", payload=None, headers=None, auth=None, form=None):
     data = None
     headers = dict(headers or {})
@@ -93,7 +103,7 @@ def api_json(url, *, method="GET", payload=None, headers=None, auth=None, form=N
         headers["Authorization"] = auth
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=12) as resp:
+        with _AUTH_SAFE_OPENER.open(req, timeout=12) as resp:
             raw = resp.read(65536)
         return json.loads(raw)
     except urllib.error.HTTPError as exc:
@@ -168,28 +178,43 @@ def same_amount(purchase_units, chosen):
     if not isinstance(purchase_units, list) or len(purchase_units) != 1:
         return False
     unit = purchase_units[0]
-    amount = unit.get("amount", {})
+    if not isinstance(unit, dict):
+        return False
+    amount = unit.get("amount")
+    if not isinstance(amount, dict):
+        return False
     return (unit.get("reference_id") == chosen["sku"]
             and amount.get("currency_code") == "USD"
             and amount.get("value") == money(chosen["cents"]))
 
 
 def valid_approved_order(detail, chosen, expected_id):
-    return (detail.get("id") == expected_id and detail.get("status") == "APPROVED"
+    return (isinstance(detail, dict)
+            and detail.get("id") == expected_id and detail.get("status") == "APPROVED"
             and same_amount(detail.get("purchase_units"), chosen))
 
 
 def valid_capture(detail, chosen, expected_id):
+    if not isinstance(detail, dict):
+        return False
     if detail.get("id") != expected_id or detail.get("status") != "COMPLETED":
         return False
     if not same_amount(detail.get("purchase_units"), chosen):
         return False
-    captures = detail.get("purchase_units", [{}])[0].get("payments", {}).get("captures", [])
-    return bool(captures) and all(
-        c.get("status") == "COMPLETED"
-        and c.get("amount", {}).get("currency_code") == "USD"
-        and c.get("amount", {}).get("value") == money(chosen["cents"])
-        for c in captures)
+    payments = detail["purchase_units"][0].get("payments")
+    if not isinstance(payments, dict):
+        return False
+    captures = payments.get("captures")
+    if not isinstance(captures, list) or len(captures) != 1:
+        return False
+    capture = captures[0]
+    if not isinstance(capture, dict):
+        return False
+    amount = capture.get("amount")
+    return (capture.get("status") == "COMPLETED"
+            and isinstance(amount, dict)
+            and amount.get("currency_code") == "USD"
+            and amount.get("value") == money(chosen["cents"]))
 
 
 def approval_url(order):
@@ -216,7 +241,8 @@ def session_for(handler):
         if sid not in SESSIONS:
             sid = secrets.token_urlsafe(30)
             SESSIONS[sid] = {"csrf": secrets.token_urlsafe(30), "phase": "idle",
-                             "audit": []}
+                             "audit": [], "generation": secrets.token_urlsafe(16),
+                             "revision": 0}
     handler.session_id = sid
     return SESSIONS[sid]
 
@@ -224,6 +250,7 @@ def session_for(handler):
 def summarize(state):
     plan = state.get("plan")
     return {"csrf": state["csrf"], "phase": state["phase"],
+            "generation": state["generation"], "revision": state["revision"],
             "plan": plan, "order_id": state.get("order_id"),
             "approval_url": state.get("approval_url"), "audit": state["audit"][-7:],
             "mode": "fixture" if FIXTURE else "sandbox",
@@ -233,6 +260,7 @@ def summarize(state):
 
 
 def record(state, event, note):
+    state["revision"] += 1
     state["audit"].append({"step": len(state["audit"]) + 1, "event": event, "detail": note})
 
 
@@ -333,8 +361,11 @@ class Handler(BaseHTTPRequestHandler):
     def action(self, route, body, state):
         if route == "/api/reset":
             csrf = state["csrf"]
+            generation = state["generation"]
+            revision = state["revision"] + 1
             state.clear()
-            state.update({"csrf": csrf, "phase": "idle", "audit": []})
+            state.update({"csrf": csrf, "phase": "idle", "audit": [],
+                          "generation": generation, "revision": revision})
             return summarize(state)
         if route == "/api/plan":
             if state["phase"] not in ("idle", "planned", "cancelled", "fixture_completed", "completed"):

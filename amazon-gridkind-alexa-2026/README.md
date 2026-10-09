@@ -2,7 +2,7 @@
 
 A standalone, original **simulated Alexa+ experience** prototype for Amazon Build, Ship, Shape 2026 (Alexa+ track). This is **not** an Alexa/Amazon integration, smart-home device controller, live meter, tariff feed, or Devpost entry. The [official rules](https://amazonappdev2026.devpost.com/rules) permit an alternate simulated Alexa+ experience using an agentic tool, no mandatory MCP runtime hook; require an actual demo video under 3 min, public code with license or judges' private repo access, feedback and entrant submission by **Oct 23, 2026, noon PDT**.
 
-GridKind simulates an agent that autonomously calls a constraint-aware optimizer on 24-hour **hypothetical** hourly prices; checks shared 3 kW circuit and quiet hours; explains baseline vs cheaper plan; requests separate human approval; then dispatches **only in-memory, labeled simulated device commands**, with replay-safe receipts and reset. It is a verifiable planner, not a generic chat wrapper or a text-only storyboard. One front-end browser session is isolated from others by a unique HttpOnly cookie. No external network/API calls, keys, utility data, or device pairing.
+GridKind simulates an agent that autonomously calls a constraint-aware optimizer on 24-hour **hypothetical** hourly prices; checks shared 3 kW circuit and quiet hours; explains baseline vs cheaper plan; requests separate human approval; then dispatches **only in-memory, labeled simulated device commands**, with replay-safe receipts and reset. It is a verifiable planner, not a generic chat wrapper or a text-only storyboard. One front-end browser session is isolated from others by a unique HttpOnly cookie. No external network/API calls, keys, utility data, or device pairing. The browser UI stylesheet is served as same-origin `/style.css` under the existing strict `style-src 'self'` policy; no inline CSS permission is needed.
 
 ## Run
 
@@ -18,7 +18,7 @@ Say “Find a cheaper schedule for tonight”, inspect item times and relative p
 
 ## Agentic tools and method
 
-- `plan` enumerates feasible whole-hour placements for 1–5 tasks. It respects deadlines, quiet hours, and a shared circuit power ceiling, comparing a compliant earliest-arrival baseline with the joint minimum-cost schedule.
+- `plan` enumerates feasible whole-hour placements for 1–5 tasks. It respects deadlines, quiet hours, and a shared circuit power ceiling, comparing the **earliest jointly feasible** baseline with the joint minimum-cost schedule. It will move a flexible load later if a greedy prefix would block a fixed load; task hours outside the 0–24 hour horizon are rejected.
 - `makeAgent` routes a speech-like command to the scheduling/explanation tools, maintains proposal revision and approved exact ID, and exposes a guarded, idempotent simulated-execution tool.
 - No task is scheduled after plan mutation until a human approves the new plan ID. A retry cannot send duplicate simulated commands.
 - Price vector is a fictional 24-hour $/kWh curve ($0.12 off-peak, $0.25 general, $0.43 peak); task powers and times are illustrated assumptions, not a consumer energy claim. Savings are differences **within this one hypothetical scenario**, not forecast actual household savings.

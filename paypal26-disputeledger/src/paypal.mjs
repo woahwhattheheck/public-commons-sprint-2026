@@ -62,9 +62,43 @@ export class PayPalDisputes {
     return boundedJson(response);
   }
   async list(){
-    const data=await this.get('/v1/customer/disputes?page_size=10');
-    if(!data || !Array.isArray(data.items))throw Error('Disputes list schema not recognized');
-    return data.items.slice(0,10);
+    // The merchant review store retains up to 80 cases. Follow the official
+    // Disputes next-page cursor up to 8 x 10 records, never a provider URL.
+    let path='/v1/customer/disputes?page_size=10';
+    const items=[], seenIds=new Set(), seenCursors=new Set();
+    const allowed=new Set(['page_size','next_page_token','start_time',
+      'dispute_state','update_time_before','update_time_after']);
+    for(let page=1;page<=8;page++){
+      const data=await this.get(path);
+      if(!data || !Array.isArray(data.items) || data.items.length>10)
+        throw Error('Disputes list page schema not recognized');
+      for(const item of data.items){
+        if(!validId(item?.dispute_id))throw Error('PayPal dispute list has invalid identity');
+        if(seenIds.has(item.dispute_id))throw Error('PayPal dispute list repeated an ID; refresh the review');
+        seenIds.add(item.dispute_id);items.push(item);
+      }
+      if(data.links!==undefined && !Array.isArray(data.links))
+        throw Error('Disputes list links schema not recognized');
+      const nextLinks=(data.links || []).filter(link=>link?.rel==='next');
+      if(nextLinks.length>1)throw Error('Multiple PayPal next links in a dispute page');
+      if(!nextLinks.length)return {items,pages_read:page,incomplete:false};
+      let next;
+      try {next=new URL(nextLinks[0].href)}
+      catch {throw Error('Invalid PayPal dispute cursor URL')}
+      const q=next.searchParams, cursor=q.get('next_page_token');
+      if(next.origin!==HOST || next.pathname!=='/v1/customer/disputes' ||
+        next.username || next.password || next.hash ||
+        (nextLinks[0].method && nextLinks[0].method!=='GET') ||
+        (q.has('page_size') && q.get('page_size')!=='10') ||
+        [...q.keys()].some(key=>!allowed.has(key) || q.getAll(key).length!==1) ||
+        typeof cursor!=='string' || !cursor.length || cursor.length>2048)
+        throw Error('Unexpected PayPal dispute next-page cursor');
+      if(seenCursors.has(cursor))throw Error('PayPal dispute next-page cursor repeated');
+      seenCursors.add(cursor);
+      if(page===8)return {items,pages_read:page,incomplete:true};
+      path=next.pathname+next.search;
+    }
+    throw Error('PayPal dispute pagination did not terminate');
   }
   async detail(id){
     if(!validId(id)||id.startsWith('DEMO-'))throw Error('A real PayPal sandbox dispute ID is required');

@@ -16,6 +16,8 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from origin_guard import trusted_request
+
 HERE = Path(__file__).resolve().parent
 DB = Path(os.environ.get("SWISS_VOICES_DB", str(HERE / "workspace.json")))
 MODEL = os.environ.get("APERTUS_MODEL", "swiss-ai/apertus-v1.5-8b")
@@ -25,6 +27,8 @@ LANGUAGES = {"de-CH", "fr-CH", "it-CH", "rm-CH"}
 SOURCE_KINDS = {"synthetic", "public_domain", "consented_person"}
 RUBRIC = ("linguistic_fidelity", "swiss_context_accuracy", "respectful_localization")
 LOCK = threading.RLock()
+# In-process only: workspace is a single-user local prototype, not cross-process SaaS.
+INFLIGHT = set()
 MAX_BODY = 48_000
 MAX_CASES = 1000
 MAX_TEXT = 1600
@@ -175,24 +179,41 @@ def generate(raw):
     case_id = clip(raw.get("id"), 40)
     with LOCK:
         case = dict(by_id(load(), case_id))
-        if not case.get("approved"):
+        source_sha = case.get("approval_sha256")
+        if not case.get("approved") or not isinstance(source_sha, str):
             raise ValueError("Case must be human-approved with a reference first")
-    answer = call_apertus(case)
-    # The saved source fingerprint makes later source edits detectably incompatible.
-    run = {
-        "id": fingerprint({"case": case_id, "answer": answer, "model": MODEL})[:18],
-        "model": MODEL, "answer": answer, "answer_sha256": fingerprint(answer),
-        "source_sha256": case["approval_sha256"], "reviews": []
-    }
-    with LOCK:
-        data = load()
-        live = by_id(data, case_id)
-        if live.get("approval_sha256") != case["approval_sha256"]:
-            raise ValueError("Case changed during provider request; result discarded")
-        if not any(r["id"] == run["id"] for r in live["runs"]):
+        # A repeat click must not pay for inference again after a durable result.
+        prior = next((r for r in case["runs"] if r.get("model") == MODEL
+                      and r.get("source_sha256") == source_sha), None)
+        if prior is not None:
+            return prior
+        flight_key = (case_id, source_sha, MODEL)
+        if flight_key in INFLIGHT:
+            raise ValueError("Model request already in progress for this approved case")
+        INFLIGHT.add(flight_key)
+    try:
+        answer = call_apertus(case)
+        run = {
+            "id": fingerprint({"case": case_id, "answer": answer, "model": MODEL})[:18],
+            "model": MODEL, "answer": answer, "answer_sha256": fingerprint(answer),
+            "source_sha256": source_sha, "reviews": []
+        }
+        with LOCK:
+            data = load()
+            live = by_id(data, case_id)
+            if live.get("approval_sha256") != source_sha:
+                raise ValueError("Case changed during provider request; result discarded")
+            prior = next((r for r in live["runs"] if r.get("model") == MODEL
+                          and r.get("source_sha256") == source_sha), None)
+            if prior is not None:
+                return prior
             live["runs"].append(run)
             store(data)
-    return run
+        return run
+    finally:
+        # Provider failures and source-race rejections must permit a later retry.
+        with LOCK:
+            INFLIGHT.discard(flight_key)
 
 
 def reviewer_key(value):
@@ -249,6 +270,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if not trusted_request(self.headers, self.server.server_port):
+            return self.send_json(403, {"error": "Local same-origin requests only"})
         if self.path in ("/api/cases", "/api/export"):
             with LOCK:
                 data = load()
@@ -266,6 +289,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": "Not found"})
 
     def do_POST(self):
+        # Refuse browser cross-origin simple POSTs before reading JSON or making API calls.
+        if not trusted_request(self.headers, self.server.server_port, write=True):
+            return self.send_json(403, {"error": "Local same-origin JSON requests only"})
         paths = {
             "/api/cases": submit_case,
             "/api/approve": approve_case,
