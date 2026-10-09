@@ -159,6 +159,17 @@ def orchestrate(reference: np.ndarray, first: np.ndarray, aisle: list[list[int]]
         return {"decision": "OBSERVED_NO_CHANGE", "first": initial, "second": None, "next_action": "continue_periodic_inspection"}
     if second is None:
         return {"decision": "SECOND_VIEW_REQUIRED", "first": initial, "second": None, "next_action": "capture_independent_frame"}
+    # A frozen feed or replayed frame is not an independent observation.
+    # Equality checks pixels after decoding; distinct capture provenance must
+    # still be established at the trusted ingestion boundary.
+    if np.array_equal(first, second):
+        return {
+            "decision": "RETAKE_REQUIRED",
+            "reason": "confirmation_frame_identical",
+            "first": initial,
+            "second": None,
+            "next_action": "capture_new_confirmation_frame",
+        }
     follow = inspect(reference, second, aisle)
     if follow["status"] == "ABSTAIN":
         return {"decision": "RETAKE_REQUIRED", "reason": "confirmation_unreliable", "first": initial, "second": follow, "next_action": "operator_reframe_camera"}
