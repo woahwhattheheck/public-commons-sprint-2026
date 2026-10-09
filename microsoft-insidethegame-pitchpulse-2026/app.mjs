@@ -1,3 +1,4 @@
+import {localizedStory} from './locale.mjs';
 const $=id=>document.getElementById(id);
 let latest=null, busy=false, reviewSecond=null;
 const time=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
@@ -17,11 +18,13 @@ function node(tag,className,text){const element=document.createElement(tag);if(c
 function replace(target,children){target.replaceChildren(...children);}
 function render(data){
  latest=data;
+ // Presentation-only localization; the server's event ledger and proof stay canonical.
+ const story=localizedStory(data,$('language').value);
  $('clock').textContent=time(data.clockSecond);
  $('score').textContent=data.scoreboard.map(x=>x.goals).join(' : ');
  $('eventCount').textContent=`${data.acceptedEvents} synthetic events · ${data.replayMode==='custom'?'custom replay':`${data.demoRemaining??'?'} remaining`}`;
  // An expired moment belongs in history, not on the live scoreboard.
- const last=data.activeOverlays.at(-1);
+ const last=story.activeOverlays.at(-1);
  $('headline').textContent=last?.title||(data.acceptedEvents?'No active highlight at this clock':'Waiting for synthetic football events');
  $('why').textContent=last?.text||'Past moments remain in the evidence ledger below.';
  $('seek').max=String(Math.max(1,data.lastLedgerSecond));
@@ -36,7 +39,7 @@ function render(data){
  }
  replace($('stats'),stats);
  const con=Object.entries(data.control).map(([team,value])=>node('p',null,`${team}: ${value.score.toFixed(1)} control points / 300s`));replace($('control'),con);
- const rows=data.overlays.slice().reverse().map(o=>{
+ const rows=story.overlays.slice().reverse().map(o=>{
   const row=node('article','overlay'),head=node('div','overlay-head');head.append(node('strong',null,o.title),node('span',null,time(o.second)));row.append(head,node('p',null,o.text),
    node('small',null,`RULE ${o.proof.rule} · EVENT ${o.eventId} · SOURCE ${o.proof.source}`),
    node('p','small',data.clockSecond>=o.expiresAtSecond
@@ -50,7 +53,7 @@ function render(data){
  $('explain').title=data.foundryConfigured?'Generate an optional cloud draft':'Configure Foundry credentials and FOUNDRY_DEMO_MAX_CALLS_PER_HOUR (1–24) on the server';
 }
 function syncControls(){
- for(const id of ['reset','audience','favorite','exportReplay','importReplay'])$(id).disabled=busy;
+ for(const id of ['reset','audience','favorite','language','exportReplay','importReplay'])$(id).disabled=busy;
  $('seek').disabled=busy||!latest||latest.lastLedgerSecond===0;
  $('live').disabled=busy||reviewSecond===null;
  $('step').disabled=busy||!latest||latest.demoRemaining===0;
@@ -83,6 +86,12 @@ $('reset').addEventListener('click',()=>run(async()=>{
  $('replayStatus').textContent='Only your match was restarted.';
 }));
 for(const key of ['audience','favorite'])$(key).addEventListener('change',()=>act('/api/state','GET'));
+$('language').addEventListener('change',()=>{
+ const language=$('language').value;
+ document.documentElement.lang=language==='pt'?'pt-BR':language;
+ // Re-render the same accepted facts: no event mutation, HTTP request or Foundry call.
+ if(latest)render(latest);
+});
 $('explain').addEventListener('click',()=>run(async()=>{
  $('foundryOutput').textContent='Requesting a model draft…';
  try{const out=await request('/api/explain','POST');$('foundryOutput').textContent=out.text+(out.warning?`\n\n${out.warning}`:'');}
