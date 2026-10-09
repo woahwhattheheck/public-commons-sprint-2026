@@ -1,12 +1,12 @@
 const $=id=>document.getElementById(id);
-let state=null;let busy=false;
+let state=null;let busy=false;let stateRevision=0;
 const money=n=>'$'+Number(n||0).toFixed(2);
 async function call(action,params={}){
   if(busy)return;
   busy=true;$('error').textContent='';
   try{
     const r=await fetch('/api/action',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action,...params})});
-    const data=await r.json();if(!r.ok)throw Error(data.error||`HTTP ${r.status}`);state=data;render();
+    const data=await r.json();if(!r.ok)throw Error(data.error||`HTTP ${r.status}`);state=data;stateRevision++;render();
   }catch(e){$('error').textContent=e.message||'Request failed';}
   finally{busy=false;}
 }
@@ -26,7 +26,7 @@ function render(){
   const max=Math.max(...p.prices);
   const bars=$('bars');bars.replaceChildren();
   for(const [h,price] of p.prices.entries()){
-    const bar=document.createElement('div');bar.className='bar';bar.style.height=`${Math.round(price/max*100)}%`;
+    const bar=document.createElement('div');bar.className='bar';bar.style.height=`${max===0?0:Math.round(price/max*100)}%`;
     bar.title=`Hour ${h}: ${money(price)} per kWh`;bars.append(bar);
   }
   $('approve').disabled=state.approved||state.status==='executed';
@@ -39,4 +39,8 @@ $('plan').onclick=()=>call('propose');
 $('approve').onclick=()=>call('approve',{id:state?.proposal?.id});
 $('execute').onclick=()=>call('execute',{id:state?.proposal?.id});
 $('cancel').onclick=()=>call('cancel');
-fetch('/api/state').then(x=>x.json()).then(x=>{state=x;render()}).catch(()=>{});
+const initialRevision=stateRevision;
+fetch('/api/state').then(x=>x.json()).then(x=>{
+  if(stateRevision!==initialRevision)return; // A newer user action already changed the visible plan.
+  state=x;render();
+}).catch(()=>{});
