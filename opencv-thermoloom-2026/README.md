@@ -46,6 +46,17 @@ python thermoloom.py synthetic-output/spot.png --rows 4 --cols 6 --out receipt.j
 
 Expected synthetic states: `clean=MONITOR`, `spot=HUMAN_REVIEW` with row 1/col 3, and `flat=RETAKE`. No claimed accuracy on real captures. A real grayscale camera image must pass source rights/privacy and operator validation. For perspective capture, pass `--corners-json corners.json` containing exactly four *image-pixel* coordinates ordered top-left, top-right, bottom-right, bottom-left. Receipts then use rectified-image coordinates, not original-camera coordinates. Annotated overlay is only supported without a homography for now; requesting both fails explicitly.
 
+## Opt-in illumination-gradient ablation (synthetic candidate)
+
+The production default remains `--threshold-mode peer` (same historical output, receipt fingerprint and decisions). The separate `--threshold-mode panel` uses each panel's median plus a conservative local median-absolute-deviation cutoff, avoiding a large across-panel gradient raising the global anomaly threshold enough to mask a small region. The opt-in report identifies the mode and records each local cutoff; its fingerprint differs from the original so evidence from two modes cannot overwrite one another.
+
+```bash
+python thermoloom.py synthetic-output/spot.png --threshold-mode panel --out local-candidate.json
+python test_panel_threshold_focused.py
+```
+
+One bounded **synthetic-only** cloud probe used 12 deterministic seeds, eight broad illumination gradients, and clean/spot pairs (96 clean + 96 injected spots): incumbent peer-global localized 51/96 spots, panel-local 96/96, and both modes raised 0/96 alerts on clean synthesized captures. The focused direct-source check used 3 seeds x 4 gradients (12 clean + 12 injected) on **OpenCV 4.13.0**, with peer 4/12 versus panel 12/12 localized and zero clean alerts for both. These are designed cases, not real PV imagery, calibrated thermal results, an official OpenCV 5 evaluation, or estimated deployment accuracy. A real captured-world and OpenCV 5 comparison is required before promoting panel mode to default or claiming competition performance.
+
 ## Deploy only with permission
 
 ```bash
