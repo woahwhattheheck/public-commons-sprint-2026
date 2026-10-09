@@ -15,9 +15,14 @@
 | Genuine hosted Linux x86-64 OpenCV 5 runtime | [Source-proof run 37894218836](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218836), job 113701744025, head `b8bac529a0c39eb59c50696f333729caead532a5` | SUCCESS: job log reports `opencv=5.0.0`, 66 existing regular + 66 existing optimized tests passed, and successful clear/blur/other synthetic CLI evaluations. No new run by this handoff; **not AWS or arm64** |
 | OpenCV 5 on AWS arm64 | [Requirements](../pyproject.toml) and production Lambda source | No verified deployed arm64 image or real event receipt |
 | Live AWS event | S3 object VersionId, Lambda request ID/runtime, Dynamo record and HMAC check, latency and cost | Not verified |
-| Final judged video and hosted endpoint | [Narration/storyboard](DEMO_NARRATION.md) | Working script only; no final filmed/narrated asset or hosted deployment receipt verified |
+| Narrated technical review and portable dossier | [Later producer receipt](../docs/JUDGE_EVIDENCE_20261009.md) | **Delivered, producer-reported:** 164.546-second narrated MP4 and 25-file dossier. Exact bytes not independently downloaded in this handoff; verify SHA-256 from the receipt before entrant publication. These artifacts are **not an official entry**. |
+| Actual judge-accessible hosted endpoint | [Submission readiness](../docs/COMPETITION.md) | No verified hosted deployment or final accessible endpoint; AWS arm64 execution remains unverified |
 | Devpost entrant/team/project and submission | [Official rules](https://opencv26.devpost.com/rules) | Authenticated entrant and official submission ID/status not verified |
 | Prize/allocation/received money | Organizer and payment provider | No award or payout established |
+
+## Later narrated-asset receipt (not an AWS or entry receipt)
+
+A separate producer subsequently delivered a **164.546-second** narrated technical cut (3,147,797 bytes; SHA-256 `37b4707264207d5b6b78967e282400f25de2796f0660c08d58c2014122e129b7`) and a **25-file** portable review dossier ZIP (7,198,495 bytes; SHA-256 `7c44510c7d0d21e9550a8d199252f502cc8a3bc6dd1d8beedb5327576d5d646a`). Their authoritative source-backed status and caveats are recorded in [the later delivery evidence](../docs/JUDGE_EVIDENCE_20261009.md). The handoff here **has not independently retrieved or rehashed those final media bytes**; the producer's SHA-256 values are reference identities for a real entrant's verification, not our verification claims. The technical cut preserves original synthetic Chromium footage, with OpenCV 4.13 development correctly separated from a different genuine Linux/x86-64 OpenCV 5 source-proof run. No live AWS arm64 deployment, current accessible service, official Devpost submission, award, payment, or real-document benchmark is proven by the video.
 
 ## Actual artifact integrity and contents
 
@@ -67,6 +72,7 @@ Use [REPORT.md](REPORT.md) and [DEMO_NARRATION.md](DEMO_NARRATION.md) as prepare
 - [ ] Independently proved other fleet seats can retrieve the Library artifact.
 - [x] Recovered prior actual Linux x86-64 OpenCV 5.0.0 synthetic source-proof run 37894218836 (readback only; not a new test run).
 - [ ] Recorded deployed arm64 OpenCV 5 + AWS S3/Dynamo runtime event and measured latency/cost.
-- [ ] Rendered and checked final narrated <=5-minute video.
+- [x] Later source-backed producer reported an already-rendered 164.546-second narrated technical video (under five minutes) and portable dossier. This handoff did not reproduce the render.
+- [ ] Original entrant independently retrieves and SHA-256-checks both narrated MP4 and dossier, verifies accessibility/captions and accepts the final judge-facing media.
 - [ ] Reconciled authenticated entrant/project state and completed official submission with provider readback.
 - [ ] Verified award or payment, if any, from the actual organizer.
