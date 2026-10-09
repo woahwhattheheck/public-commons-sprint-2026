@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .core import CareRelayError
 from .review_page import render_review
+from .paged_review import build_report_pages, page_names, PAGE_SIZES, REVIEW_STATES
 from .workspace import SOURCES, apply_reviews, import_events, load_workspace, publish_new, save_workspace
 
 
@@ -28,6 +29,12 @@ def main(argv: list[str] | None = None) -> int:
     report = commands.add_parser("report", help="export a script-free offline HTML review copy")
     report.add_argument("workspace", type=Path)
     report.add_argument("--out", required=True, type=Path)
+    report.add_argument("--pages", action="store_true", help="export linked, static HTML pages")
+    report.add_argument("--summary", action="store_true", help="export only source-derived totals")
+    report.add_argument("--size", type=int, choices=PAGE_SIZES, default=100)
+    report.add_argument("--status", choices=REVIEW_STATES, default="all")
+    report.add_argument("--classification", help="exact event classification")
+    report.add_argument("--kind", help="exact event type")
     args = parser.parse_args(argv)
     try:
         if args.command == "import":
@@ -40,7 +47,26 @@ def main(argv: list[str] | None = None) -> int:
         else:
             result = load_workspace(args.workspace)
             if args.command == "report":
-                publish_new(args.out, render_review(result))
+                if args.pages and args.summary:
+                    raise CareRelayError("--pages and --summary are alternatives")
+                filtered = (args.status != "all" or args.classification is not None
+                            or args.kind is not None)
+                if args.pages or args.summary:
+                    pages = build_report_pages(
+                        result, filename=args.out.name, size=args.size,
+                        status=args.status, classification=args.classification,
+                        kind=args.kind, summary=args.summary)
+                    paths = [args.out.with_name(name)
+                             for name in page_names(args.out.name, len(pages))]
+                    if any(path.exists() for path in paths):
+                        raise CareRelayError("a report bundle path already exists; choose a new version")
+                    # All HTML bytes are computed before any immutable file is published.
+                    for path, payload in zip(paths, pages):
+                        publish_new(path, payload)
+                else:
+                    if filtered or args.size != 100:
+                        raise CareRelayError("filters and custom size require --pages or --summary")
+                    publish_new(args.out, render_review(result))
         state = result["state"]
         reviewed = {r["proposal_id"] for r in state["approvals"]}
         proposed_events = {p["event_id"] for p in state["proposals"]}
