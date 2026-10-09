@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Counterpress Compass — Synthetic Match Intelligence</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header><div class="brand">COUNTERPRESS / COMPASS</div><div class="pill">SYNTHETIC MATCH DATA ONLY</div></header>
+<main>
+<section class="hero"><div class="kicker">Evidence-linked football intelligence</div><h1>See the <span>eight seconds</span> that change a match.</h1><p class="intro">A tactical story engine that watches possession loss, pressing actions, and recovery windows — then turns exact event evidence into timed overlays for fans and analysts.</p></section>
+<div class="grid">
+<section class="panel" aria-labelledby="live-title"><div class="kicker">01 / Interactive replay</div><h2 id="live-title">Match control</h2>
+<div class="scoreboard"><div class="teamname">Harbor FC</div><div class="vs">SYNTHETIC<br>VS</div><div class="teamname">Metro Rovers</div></div>
+<div class="controlrow"><div><label for="team">Focus club</label><select id="team"><option>Harbor FC</option><option>Metro Rovers</option></select></div><div><label for="audience">Experience</label><select id="audience"><option value="casual">Casual fan</option><option value="analyst">Analyst</option></select></div><div><label for="locale">Language</label><select id="locale"><option value="en">English</option><option value="es">Español</option></select></div></div>
+<div class="progress"><div id="progress" class="progressfill"></div></div><div id="frame" class="eventlabel" aria-live="polite">No events played</div>
+<div class="buttonrow"><button class="primary" id="next">Next event →</button><button id="play">Auto-play</button><button id="reset">Restart</button></div>
+<div class="kicker" class="kicker timeline-label">Incoming evidence</div><ol class="event-ticker" id="events" aria-label="Synthetic event timeline"></ol>
+</section>
+<aside class="panel"><div class="kicker">02 / Broadcast explanation</div><h2>Why did it matter?</h2>
+<div class="metricgrid"><div class="metric"><strong id="attempts">—</strong><span>Press attempts</span></div><div class="metric"><strong id="successes">—</strong><span>Regains</span></div><div class="metric"><strong id="seconds">—</strong><span>Mean regain</span></div></div>
+<div class="overlay"><div class="kicker">Synchronized on-screen cue</div><p id="overlay" class="no-overlay">Play the event stream to reveal evidence-backed moments.</p><div class="evidence" id="evidence">No cue issued yet.</div></div>
+<div class="optional"><div class="kicker">03 / Optional Microsoft Foundry draft</div><p>Server-side model commentary is opt-in, not used for event evidence. The deterministic explanation always remains the source of truth. Enabling a configured Azure model may incur usage charges.</p><button id="foundry" disabled>Foundry not configured</button><div id="foundryResult" aria-live="polite"></div></div>
+</aside>
+</div>
+</main>
+<footer>Created for Microsoft Inside the Game 2026 development. All teams, players, timings, and events here are invented. No real Premier League data, broadcasts, outcomes, performance inference, Microsoft deployment, or competition entry is represented. Local synthetic prototype; the optional Foundry REST adapter has not been authenticated in this source seat.</footer>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
