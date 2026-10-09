@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const state = { plan: null, excluded: new Set() };
+  const state = { plan: null, excluded: new Set(), requestSeq: 0, controller: null, modeTouched: false };
   const form = $('planner-form'), button = $('plan-button'), sourceBadge = $('source-badge');
   const create = (tag, cls, text) => {
     const el = document.createElement(tag);
@@ -68,31 +68,55 @@
     $('outcome').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   async function generate() {
+    const run = ++state.requestSeq;
+    state.controller?.abort();
+    const controller = new AbortController();
+    state.controller = controller;
     setError('');
+    state.plan = null;
+    $('outcome').hidden = true;
     const city = $('city').value;
     const tastes = $('tastes').value.split('\n').map(s => s.trim()).filter(Boolean);
     const mode = $('mode').value;
     button.disabled = true;
+    $('reroll').disabled = true;
     button.firstChild.textContent = mode === 'fixture' ? 'Building synthetic illustration… ' : 'Calling Qloo taste graph… ';
     try {
       const rsp = await fetch('/api/plan', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
+        method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
         body: JSON.stringify({ city, tastes, mode, excludedIds: [...state.excluded] }),
       });
       const result = await rsp.json();
+      if (run !== state.requestSeq) return;
       if (!rsp.ok) throw new Error(result?.error || `Request failed (HTTP ${rsp.status}).`);
       renderPlan(result);
     } catch (err) {
+      if (run !== state.requestSeq || err?.name === 'AbortError') return;
       setError(err?.message || 'Could not generate the plan.');
       $('error-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } finally {
-      button.disabled = false;
-      button.firstChild.textContent = 'Build four-week program ';
+      if (run === state.requestSeq) {
+        state.controller = null;
+        button.disabled = false;
+        $('reroll').disabled = false;
+        button.firstChild.textContent = 'Build four-week program ';
+      }
     }
   }
   form.addEventListener('submit', e => { e.preventDefault(); state.excluded.clear(); void generate(); });
   $('reroll').addEventListener('click', () => { void generate(); });
-  $('mode').addEventListener('change', modeText);
+  $('mode').addEventListener('change', () => {
+    state.modeTouched = true;
+    state.requestSeq++;
+    state.controller?.abort();
+    state.controller = null;
+    button.disabled = false;
+    $('reroll').disabled = false;
+    button.firstChild.textContent = 'Build four-week program ';
+    state.plan = null;
+    $('outcome').hidden = true;
+    modeText();
+  });
   function download(filename, mime, content) {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -119,7 +143,7 @@
     download('neighborhoodpulse-program.csv', 'text/csv;charset=utf-8', [head, ...rows].map(r => r.map(csvSafe).join(',')).join('\r\n') + '\r\n');
   });
   fetch('/api/health').then(r => r.json()).then(h => {
-    if (!h.liveReady) $('mode').value = 'fixture';
+    if (!h.liveReady && !state.modeTouched) $('mode').value = 'fixture';
     modeText();
   }).catch(() => { modeText(); });
 })();
