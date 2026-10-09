@@ -39,6 +39,8 @@ For public hosting, use `HOST=0.0.0.0 PORT=4173 node server.mjs` or the included
 
 `node --test test.mjs` runs **only seven directly relevant checks** covering validation, synthetic four-week generation, deduplicated replan, no fabricated source metrics, a mocked LIVE Qloo client, fail-closed live mode, and local HTTP server behavior. It does not execute broad repository suites or run actual external Qloo calls.
 
+`node --test test-qloo-response-bounds.mjs` is a separate **three-case focused regression** for the live response reader: multi-chunk Unicode decoding, byte-ceiling cancellation after 1,500,000 bytes, and early `Content-Length` rejection. The server bounds real streamed Qloo HTTP bodies **before** decoding instead of reading unlimited bytes into memory. Synthetic fetch mocks retain a compatibility-only text fallback; none of these checks substitutes for a real-key provider test.
+
 ## Competition status and what remains
 
 **Qloo Agentic Hackathon**, submission deadline **October 30, 2026 at 11:45 PM EDT**, prizes first **$15,000**, second **$6,000**, third **$4,000**. [Official Devpost rules](https://qloo.devpost.com/rules). The rules require a genuinely **hosted and externally available end-to-end live application**, public source repository with license visible in the repository About area, product description, an entrant/representative who meets eligibility, and integration with the actual Qloo API. Merely releasing this code or using its synthetic fixture mode does not qualify as a submission, a working Qloo integration test, a finalist, or an award.
