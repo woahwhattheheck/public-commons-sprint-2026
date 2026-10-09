@@ -39,16 +39,32 @@ function respond(res, status, body, contentType = 'application/json; charset=utf
 }
 function readPayload(req) {
   return new Promise((resolve, reject) => {
-    let data = ''; let rejected = false;
+    const chunks = [];
+    let bytes = 0;
+    let rejected = false;
     req.on('data', chunk => {
-      data += chunk;
-      if (data.length > 32768 && !rejected) { rejected = true; reject(new Error('Request body exceeds 32 KB.')); req.destroy(); }
+      if (rejected) return;
+      bytes += chunk.length;
+      if (bytes > 32768) {
+        rejected = true;
+        chunks.length = 0;
+        // Drain rather than destroy the socket so the client receives HTTP 413.
+        reject(new Error('Request body exceeds 32 KB.'));
+        return;
+      }
+      chunks.push(chunk);
     });
     req.on('end', () => {
       if (rejected) return;
-      try { resolve(JSON.parse(data)); } catch { reject(new Error('Invalid JSON payload.')); }
+      try {
+        // Decode only after joining bytes: UTF-8 characters may span TCP chunks.
+        const data = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks, bytes));
+        resolve(JSON.parse(data));
+      } catch {
+        reject(new Error('Invalid JSON payload.'));
+      }
     });
-    req.on('error', reject);
+    req.on('error', error => { if (!rejected) reject(error); });
   });
 }
 export function createHandler(deps = {}) {
@@ -80,7 +96,7 @@ export function createHandler(deps = {}) {
       const value = e instanceof Error ? e.message : 'Unknown error';
       const isBadInput = /required|must be|Expected|Supply|Excluded|Invalid JSON|exceeds|valid characters/i.test(value);
       const isServiceUnavailable = /QLOO_API_KEY|Qloo .* HTTP|Qloo response|Qloo returned|No Qloo entity|Unapproved Qloo/i.test(value);
-      return respond(res, isBadInput ? 400 : isServiceUnavailable ? 502 : 500, {
+      return respond(res, value === 'Request body exceeds 32 KB.' ? 413 : isBadInput ? 400 : isServiceUnavailable ? 502 : 500, {
         error: isBadInput || isServiceUnavailable ? value : 'The plan could not be generated. Try a more specific seed or retry.'
       });
     }
