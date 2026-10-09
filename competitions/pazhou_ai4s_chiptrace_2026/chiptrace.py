@@ -231,6 +231,33 @@ def _reference_window_coverage(baseline_rows: Sequence[Observation], run_rows: S
     return min(run_spans) / median(reference_spans)
 
 
+def _reference_window_overlap_coverage(baseline_rows: Sequence[Observation], run_rows: Sequence[Observation]) -> float | None:
+    """Minimum candidate-replicate overlap with the anchored reference window.
+
+    A full-duration candidate at different elapsed experiment times must not
+    silently pass. Traces must share a protocol-relative elapsed-time origin.
+    """
+    def intervals(rows: Sequence[Observation]) -> List[Tuple[float, float]]:
+        by_rep: Dict[Tuple[str, str], List[float]] = defaultdict(list)
+        for row in rows:
+            by_rep[row.run_id, row.replicate_id].append(row.time_s)
+        return [(min(times), max(times)) for times in by_rep.values()]
+
+    references = [(start, end) for start, end in intervals(baseline_rows) if end > start]
+    if not references:
+        return None
+    reference_start = median([start for start, _ in references])
+    reference_end = median([end for _, end in references])
+    span = reference_end - reference_start
+    if span <= 0:
+        return None
+    candidates = intervals(run_rows)
+    if not candidates:
+        return 0.0
+    return min(max(0.0, min(end, reference_end) - max(start, reference_start)) / span
+               for start, end in candidates)
+
+
 def correlation_deltas(baseline_obs: Sequence[Observation], run_obs: Sequence[Observation]) -> Tuple[Dict[str, dict], Dict[str, float]]:
     base = aligned_correlations(baseline_obs)
     run = aligned_correlations(run_obs)
@@ -374,6 +401,15 @@ def analyze(baseline_path: Path, run_path: Path, *, min_points: int=6, min_basel
             result['reasons'].append('observed replicate time span is under 75% of baseline median duration; full-window quality cannot be assessed')
             result['metrics']['reference_window_coverage'] = round(coverage, 8)
             truncated_windows.append(ch)
+        overlap_coverage = _reference_window_overlap_coverage(baseline_groups[ch], run_groups[ch])
+        if overlap_coverage is not None and overlap_coverage < 0.75 and (coverage is None or coverage >= 0.75):
+            # A full-duration but shifted experiment phase is not a clean run.
+            result['state'] = 'INSUFFICIENT_EVIDENCE'
+            result['quality_risk_score'] = None
+            result['uncertainty'] = 1.0
+            result['reasons'].append('candidate elapsed-time window overlaps under 75% of baseline reference interval; experimental phase is not sufficiently covered')
+            result['metrics']['reference_window_overlap_coverage'] = round(overlap_coverage, 8)
+            truncated_windows.append(ch)
         assessments.append(result)
     # The absence of an entire baseline channel is not a clean observation.
     # Include it in the ordered channel evidence and abstain overall.
@@ -388,7 +424,7 @@ def analyze(baseline_path: Path, run_path: Path, *, min_points: int=6, min_basel
     if absent_channels or truncated_windows or any('replicate_evidence' in a for a in assessments):
         payload['scope']['state_semantics']['INSUFFICIENT_EVIDENCE'] = (
             'Observation counts are too small, a baseline channel is absent, a candidate observation window '
-            'covers less than 75% of its baseline replicate reference duration, or independent candidate '
+            'covers less than 75% of its baseline replicate reference duration or anchored elapsed-time window, or independent candidate '
             'replicate coverage is insufficient.'
         )
     payload['receipt_sha256'] = _sha256_bytes(canonical_bytes(payload))
