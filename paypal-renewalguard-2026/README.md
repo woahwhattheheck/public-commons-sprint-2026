@@ -22,6 +22,8 @@ Requirements: Node 22+ (no npm install required). From this directory:
   explicitly returns a rule-based placeholder, not an AI-generated result.
 - Focused isolated logic contract: \`npm run test:focused\`.
 
+The local HTTP handler rejects non-loopback Host headers, cross-origin browser Origin headers, and cross-site Fetch Metadata before any provider read or draft. This protects this local demo from common DNS-rebinding/browser-trigger scenarios; it is not user authentication.
+
 The server binds to 127.0.0.1 by default; don't deploy it publicly without
 real user authentication and tenant isolation. The app cannot create/cancel
 subscriptions, charge/refund, send customer emails, or alter account state.
