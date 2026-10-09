@@ -8,6 +8,13 @@ Serve `workseal/` over any static HTTP server and open `web/index.html`. The pag
 
 No network, wallet, RPC, transfer, Colosseum account, or provider mutation is performed by the demo. `writePerformed=false` and `externalAuthorityGranted=false` are explicit verification outputs.
 
+### Portable proof for independent reviewers
+
+Choose **Run local demo**, which builds a synthetic signed bundle and verifies it, or paste an existing bundle and choose **Verify pasted bundle**. Once the displayed verdict is PASS, the **Download verified bundle JSON** button becomes available. The generated `workseal-verified-browser-bundle.json` contains the exact signed public-key proof envelope so a reviewer can paste its JSON back into the same demo and verify the signature, GitHub evidence bindings and settlement-intent digests. An edit or failed verification disables export until the current text is verified again.
+
+The downloaded example is **synthetic**, not an authenticated GitHub Actions capture, chain deployment, Colosseum entry or financial settlement. No verifier private key, provider credential or wallet action is exported or invoked. The browser requests the file locally through a Blob URL; downloading it never registers a contest submission.
+
+
 ## GitHub Actions evidence contract
 
 `src/github_evidence_contract.mjs` is browser-safe and strict. A PASS requires:
