@@ -49,7 +49,8 @@ h1{{font-size:clamp(1.6rem,4vw,2.5rem)}}ul{{padding-left:1.5rem}}
 <div class="card warning"><strong>Operator-ordered offline capture comparison.</strong>
 This view authenticates neither API response provenance nor capture timestamps.
 No quotes, trade decisions, market listings/delistings, wallets, payments or prizes
-are verified. The data may be synthetic.</div>
+are verified. Page appearances and absences are NOT evidence of new market
+listings or delistings. The data may be synthetic.</div>
 <div class="card"><h2>Evidence receipts</h2>
 <p>Before snapshot: <code>{_h(report["beforeSnapshotSha256"])}</code></p>
 <p>After snapshot: <code>{_h(report["afterSnapshotSha256"])}</code></p>
