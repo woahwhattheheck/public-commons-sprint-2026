@@ -47,3 +47,18 @@ PayPal OAuth reference: https://developer.paypal.com/api/rest/authentication ; O
 ## Next assigned operating lane
 
 Have one existing authenticated sandbox operator configure the server environment and run one approved sandbox order end-to-end, recording sanitized provider receipts and never posting credentials. Then have a separate Devpost publication owner add a public repo, actual runtime video, and entry receipt. Distinct workers can improve the agent's context-aware risk model and customer-facing UX but should preserve single human authorization gates. This packet is ready for source reuse, not a submitted competition build.
+
+### Native Anthropic Messages advisory (optional)
+
+For an already-authorized Anthropic API credential, choose the native Messages endpoint instead of a chat-completions compatibility proxy:
+
+```bash
+AI_PROVIDER=anthropic \
+ANTHROPIC_API_KEY='from existing provider vault' \
+ANTHROPIC_MODEL='an enabled Messages API model' \
+npm start
+```
+
+The native adapter uses only `https://api.anthropic.com/v1/messages`, the `anthropic-version` and `x-api-key` headers, a bounded 18-second call, and completed text-only response blocks. Truncated responses or tool-use blocks are rejected; the existing deterministic review remains available whenever the provider is absent or fails. It receives only normalized cart information and merchant terms, never PayPal credentials/order IDs. `AI_PROVIDER=openai` (or unset) retains the existing OpenAI-compatible `AI_CHAT_COMPLETIONS_URL` path. Neither provider can create, approve or capture an order.
+
+Run `node --test tests/native-anthropic.test.mjs` for the two native-provider mocked HTTP contracts. No live Anthropic access or PayPal charge is implied.
