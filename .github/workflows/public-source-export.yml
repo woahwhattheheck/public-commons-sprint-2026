@@ -1,0 +1,38 @@
+name: Public source export
+run-name: Source export · ${{ inputs.source_path }} · ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_path:
+        description: Existing tracked public source directory (no trailing slash)
+        required: true
+        type: string
+        default: hearthline-alexa-mcp
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-source-export-${{ inputs.source_path }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Export immutable regular Git blobs
+        env:
+          SOURCE_PATH: ${{ inputs.source_path }}
+        run: python3 tools/public_source_export.py "$SOURCE_PATH" "$RUNNER_TEMP/public-source-export"
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: public-source-${{ github.run_id }}
+          path: ${{ runner.temp }}/public-source-export/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
