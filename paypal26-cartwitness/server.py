@@ -389,6 +389,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def action(self, route, body, state):
         if route == "/api/reset":
+            # A stale tab with the same session cookie/CSRF cannot erase a newer
+            # checkout (including one awaiting payer approval or capture).
+            if (type(body.get("revision")) is not int
+                    or body["revision"] != state["revision"]
+                    or body.get("generation") != state["generation"]):
+                raise ServiceError(409, "Checkout changed. Refresh before resetting.")
             csrf = state["csrf"]
             generation = state["generation"]
             revision = state["revision"] + 1
