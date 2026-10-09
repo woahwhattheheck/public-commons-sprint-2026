@@ -1,0 +1,13 @@
+{
+  "name": "solami-slotsentinel-2026",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {"node": ">=22.10"},
+  "scripts": {
+    "start": "node server.mjs",
+    "test:focused": "node --test test/telemetry.test.mjs"
+  },
+  "license": "MIT",
+  "description": "Dependency-free Solami mainnet RPC and slot WebSocket integrity monitor"
+}
