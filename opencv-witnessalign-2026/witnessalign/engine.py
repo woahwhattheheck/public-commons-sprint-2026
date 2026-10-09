@@ -12,6 +12,8 @@ from typing import Any
 import cv2
 import numpy as np
 
+from .header_guard import ImageHeaderError, admit_image_header
+
 MAX_IMAGE_BYTES = 4_000_000
 MAX_PIXELS = 5_000_000
 MAX_SIDE = 2600
@@ -36,6 +38,11 @@ class Settings:
 def _decode(payload: bytes, name: str) -> np.ndarray:
     if not isinstance(payload, bytes) or not 0 < len(payload) <= MAX_IMAGE_BYTES:
         raise EvidenceError(f"{name}: image bytes missing or outside 4 MB limit")
+    try:
+        admit_image_header(payload, min_side=160, max_side=MAX_SIDE,
+                           max_pixels=MAX_PIXELS)
+    except ImageHeaderError as exc:
+        raise EvidenceError(f"{name}: {exc}") from exc
     raw = np.frombuffer(payload, dtype=np.uint8)
     image = cv2.imdecode(raw, cv2.IMREAD_COLOR)
     if image is None or image.ndim != 3 or image.shape[2] != 3:
