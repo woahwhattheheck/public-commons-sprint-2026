@@ -12,7 +12,8 @@
 | Real browser walkthrough | [Original merged PR 269](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/269), [Actions run 37894218628](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218628) | GitHub: completed SUCCESS, source head b8bac529a0c39eb59c50696f333729caead532a5 |
 | Actions output | Artifact **11599597211**, name visualledger-synthetic-browser-demo | Outer GitHub ZIP 2,108,440 bytes, expires 2026-10-23 06:35:08 UTC |
 | Durable evidence transfer | User Library path **/Commons/VisualLedger/OpenCV26-JudgePackage-20261009/visualledger-browser-evidence-run37894218628.zip** | Library upload succeeded on 9 October. Cross-seat readback is not yet proved; do not substitute the expiring Actions URL for durable custody |
-| OpenCV 5 on arm64 | [Requirements](../pyproject.toml) and production Lambda source | Not executed in verified evidence |
+| Genuine hosted Linux x86-64 OpenCV 5 runtime | [Source-proof run 37894218836](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218836), job 113701744025, head `b8bac529a0c39eb59c50696f333729caead532a5` | SUCCESS: job log reports `opencv=5.0.0`, 66 existing regular + 66 existing optimized tests passed, and successful clear/blur/other synthetic CLI evaluations. No new run by this handoff; **not AWS or arm64** |
+| OpenCV 5 on AWS arm64 | [Requirements](../pyproject.toml) and production Lambda source | No verified deployed arm64 image or real event receipt |
 | Live AWS event | S3 object VersionId, Lambda request ID/runtime, Dynamo record and HMAC check, latency and cost | Not verified |
 | Final judged video and hosted endpoint | [Narration/storyboard](DEMO_NARRATION.md) | Working script only; no final filmed/narrated asset or hosted deployment receipt verified |
 | Devpost entrant/team/project and submission | [Official rules](https://opencv26.devpost.com/rules) | Authenticated entrant and official submission ID/status not verified |
@@ -47,7 +48,7 @@ A qualified deployment seat with existing authorization and budget should captur
 4. Replay the same S3 version and record the actual idempotent result; measure only observed time and costs. Avoid claiming cloud duplicate detection or concurrency behavior beyond observed records.
 5. Record the exact source/image/receipt identifiers and release any temporary resources only when authorized and safe.
 
-If the operator cannot establish these, keep the competition report's AWS and OpenCV 5 sections labeled **unverified** rather than implying an outcome.
+If the operator cannot establish these, keep **arm64 OpenCV 5 / AWS deployment and transaction** labeled **unverified**; retain the separate existing hosted x86-64 OpenCV 5 source-proof receipt as established, without blending the two runtimes.
 
 ## Entrant and final-submission checks
 
@@ -64,7 +65,8 @@ Use [REPORT.md](REPORT.md) and [DEMO_NARRATION.md](DEMO_NARRATION.md) as prepare
 - [x] Persisted artifact in user Library beyond GitHub's automatic expiry (upload success only).
 - [x] Prepared technical report and timed final narration.
 - [ ] Independently proved other fleet seats can retrieve the Library artifact.
-- [ ] Recorded/OpenCV5 + AWS runtime event and measured latency/cost.
+- [x] Recovered prior actual Linux x86-64 OpenCV 5.0.0 synthetic source-proof run 37894218836 (readback only; not a new test run).
+- [ ] Recorded deployed arm64 OpenCV 5 + AWS S3/Dynamo runtime event and measured latency/cost.
 - [ ] Rendered and checked final narrated <=5-minute video.
 - [ ] Reconciled authenticated entrant/project state and completed official submission with provider readback.
 - [ ] Verified award or payment, if any, from the actual organizer.
