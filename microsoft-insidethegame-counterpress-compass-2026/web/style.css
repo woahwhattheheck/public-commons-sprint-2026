@@ -1,0 +1,48 @@
+:root {color-scheme:dark;--bg:#091520;--panel:#102230;--edge:#254151;--text:#e8f2f1;--muted:#9bb3ba;--lime:#c5ff74;--blue:#72cfed;--gold:#ffd484}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 80% -20%,#224958 0%,transparent 55%),var(--bg);font:16px/1.46 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text);min-height:100vh}
+header,main,footer{max-width:1160px;margin:auto;padding-left:24px;padding-right:24px}
+header{padding-top:36px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-size:.8rem;letter-spacing:.18em;font-weight:900;color:var(--lime)}
+.pill{border:1px solid #42605a;background:#1a3336;border-radius:99px;padding:8px 12px;font-size:.72rem;letter-spacing:.07em;color:#d9ece5}
+.hero{padding-top:44px;padding-bottom:32px}
+h1{margin:0;max-width:790px;font-size:clamp(3rem,6.8vw,6.4rem);letter-spacing:-.065em;line-height:.98;font-weight:850}
+h1 span{color:var(--lime)}
+.intro{max-width:680px;color:#b8d0d1;margin:22px 0 0;font-size:1.1rem}
+.grid{display:grid;grid-template-columns:minmax(320px,1.25fr) minmax(270px,.75fr);gap:18px;align-items:start}
+.panel{background:linear-gradient(145deg,#112633,#0d1b27);border:1px solid var(--edge);border-radius:19px;padding:25px;box-shadow:0 22px 45px #06101838}
+.kicker{font-size:.69rem;letter-spacing:.18em;font-weight:800;text-transform:uppercase;color:var(--blue)}
+label{display:block;color:var(--muted);font-size:.75rem;letter-spacing:.05em;margin-bottom:8px}
+.controlrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:19px}
+select{background:#182d38;color:var(--text);border:1px solid #486171;border-radius:8px;padding:10px 7px;width:100%;font:inherit;font-size:.83rem}
+.scoreboard{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:16px 0 23px}
+.teamname{font-size:1.55rem;letter-spacing:-.045em;font-weight:750}
+.vs{font-size:.75rem;letter-spacing:.1em;color:var(--muted)}
+.progress{height:7px;background:#334653;border-radius:99px;overflow:hidden;margin:19px 0 9px}
+.progressfill{width:0%;height:100%;background:linear-gradient(90deg,var(--blue),var(--lime));transition:width .18s}
+button{cursor:pointer;min-height:43px;background:#243b49;color:var(--text);border:1px solid #557080;border-radius:10px;padding:10px 15px;font:inherit;font-size:.9rem;font-weight:650}
+button.primary{background:var(--lime);border-color:var(--lime);color:#122018}
+button:disabled{cursor:not-allowed;opacity:.48}
+.buttonrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.eventlabel{margin-top:14px;color:#bfd3d9;font-size:.83rem}
+.event-ticker{list-style:none;padding:0;margin:12px 0 0;max-height:330px;overflow-y:auto}
+.event-ticker li{border-bottom:1px solid #28414c;padding:9px 0;display:flex;gap:12px;font-size:.82rem;align-items:flex-start}
+.event-ticker li b{font-variant-numeric:tabular-nums;min-width:54px;color:var(--lime)}
+.event-ticker li:nth-child(even){background:#14293544}
+.event-ticker li.current{background:#27463b76}
+.metricgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:20px 0}
+.metric{border:1px solid var(--edge);border-radius:12px;padding:15px 8px;background:#10242f}
+.metric strong{display:block;font-size:clamp(1.4rem,3vw,2.1rem);line-height:1.2;color:var(--lime);font-variant-numeric:tabular-nums}
+.metric span{font-size:.69rem;color:var(--muted);letter-spacing:.02em}
+.overlay{background:linear-gradient(140deg,#1c3c44,#142d36);border:1px solid #447884;border-radius:13px;padding:20px;min-height:160px;margin-top:13px}
+.overlay p{font-size:1.3rem;font-weight:700;letter-spacing:-.035em;line-height:1.28;margin:12px 0}
+.evidence{font-size:.74rem;color:#b2dfe5;overflow-wrap:anywhere}
+.no-overlay{font-weight:450!important;color:var(--muted)}
+footer{padding-top:45px;padding-bottom:60px;color:#91acb5;font-size:.83rem}
+.optional{border-top:1px solid var(--edge);margin-top:25px;padding-top:20px}
+.optional p{font-size:.81rem;color:var(--muted)}
+#foundryResult{font-size:.82rem;margin-top:12px;color:var(--gold);min-height:20px}
+@media(max-width:780px){.grid{grid-template-columns:1fr}header{padding-top:21px}.hero{padding-top:25px}.controlrow{grid-template-columns:repeat(2,minmax(0,1fr))}.scoreboard .teamname{font-size:1.16rem}}
+@media(max-width:420px){.panel{padding:18px}.controlrow{grid-template-columns:1fr}.metricgrid{grid-template-columns:repeat(3,1fr)}.metric{padding:10px 5px}}
+
+.timeline-label{margin-top:28px}
