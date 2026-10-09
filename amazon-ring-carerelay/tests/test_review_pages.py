@@ -71,6 +71,42 @@ class ReviewPagesFocused(unittest.TestCase):
             with self.assertRaises(CareRelayError):
                 render_paged(self.workspace, **kw)
 
+    def test_filtered_summary_matches_selected_pages_and_cli_rejects_zero(self):
+        import io
+        from contextlib import redirect_stderr
+        from carerelay.workbench import main as workbench_main
+
+        filtered = render_paged(self.workspace, summary=True, status="approved",
+                                classification="human", kind="doorbell").decode("utf-8")
+        self.assertIn("1 matching proposals", filtered)
+        self.assertIn("0 matching events without proposals", filtered)
+        self.assertIn("<tr><th scope='row'>approved</th><td>1</td></tr>", filtered)
+        self.assertNotIn(">pending</th>", filtered)
+        self.assertIn("9 events · 4 proposals · 3 pending", filtered)  # Whole workspace.
+
+        all_human = render_paged(self.workspace, summary=True, status="all",
+                                 classification="human", kind="doorbell").decode("utf-8")
+        self.assertIn("2 matching proposals", all_human)
+        self.assertIn("3 matching events without proposals", all_human)
+        self.assertNotIn(">animal</th>", all_human)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp) / "filtered"
+            export_page_bundle(self.workspace, directory, size=2, status="approved",
+                               classification="human", kind="doorbell")
+            summary = (directory / "summary.html").read_text()
+            self.assertIn("1 matching proposals", summary)
+            self.assertNotIn(">pending</th>", summary)
+        with patch("carerelay.workbench.load_workspace", return_value=self.workspace), \
+             patch("carerelay.workbench.publish_new") as published, \
+             redirect_stderr(io.StringIO()) as err:
+            status = workbench_main(["report", "dummy.json", "--out", "bad.html",
+                                      "--page", "0"])
+            self.assertEqual(status, 2)
+            published.assert_not_called()
+            self.assertIn("page must be positive", err.getvalue())
+        self.assertEqual(self.state, self.original)
+
     def test_static_page_links_are_real_files_and_restore_once(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "export"
