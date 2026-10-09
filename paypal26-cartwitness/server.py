@@ -323,6 +323,12 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/state":
                 return self.json_out(200, summarize(state))
             if path == "/api/cancel":
+                # PayPal's late cancel redirect must only revoke its own order.
+                # A previous tab cannot cancel a newer checkout in this session.
+                params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+                cancel_intent = params.get("intent", [""])[0]
+                if not hmac.compare_digest(cancel_intent, state.get("cancel_nonce", "_")):
+                    return self.json_out(409, {"error": "Cancel link no longer matches current checkout."})
                 if state["phase"] in ("approval_pending", "payer_returned"):
                     state["phase"] = "cancelled"
                     record(state, "cancelled", "No payment capture attempted.")
@@ -405,7 +411,8 @@ class Handler(BaseHTTPRequestHandler):
                 "sku": choice["sku"], "name": choice["name"], "usd": money(choice["cents"]),
                 "reason": reason, "method": method, "budget_usd": money(budget)},
                 "order_id": None, "approval_url": None, "fixture_order": False,
-                "order_request_id": str(uuid.uuid4())})
+                "order_request_id": str(uuid.uuid4()),
+                "cancel_nonce": secrets.token_urlsafe(20)})
             record(state, "plan", f"{method}: {choice['sku']}; server-priced {money(choice['cents'])} USD.")
             return summarize(state)
         if route == "/api/order":
@@ -415,6 +422,10 @@ class Handler(BaseHTTPRequestHandler):
                 raise ServiceError(409, "Explicit buyer consent to the selected item and price is required.")
             require_current_consent(body, state)
             chosen = state["chosen"]
+            # Preserve nonce alongside PayPal-Request-Id across ambiguous retries.
+            # Existing/in-memory states created before this field are compatible.
+            if "cancel_nonce" not in state:
+                state["cancel_nonce"] = secrets.token_urlsafe(20)
             if FIXTURE and not PAYPAL_READY:
                 oid = "FIXTURE-" + uuid.uuid4().hex[:14]
                 url = "/api/return?token=" + urllib.parse.quote(oid)
@@ -428,7 +439,8 @@ class Handler(BaseHTTPRequestHandler):
                          "amount": {"currency_code": "USD", "value": money(chosen["cents"])}}],
                         "payment_source": {"paypal": {"experience_context": {
                             "return_url": ORIGIN + "/api/return",
-                            "cancel_url": ORIGIN + "/api/cancel",
+                            "cancel_url": ORIGIN + "/api/cancel?intent=" +
+                            urllib.parse.quote(state["cancel_nonce"]),
                             "shipping_preference": "NO_SHIPPING", "user_action": "PAY_NOW"}}}})
                 oid = order.get("id")
                 if not isinstance(oid, str) or not re.fullmatch(r"[A-Z0-9]{8,32}", oid):
