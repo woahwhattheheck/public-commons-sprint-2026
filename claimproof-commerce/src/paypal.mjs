@@ -44,11 +44,28 @@ export class PayPalSandbox {
   async get(orderId) { return this.api(`/v2/checkout/orders/${assertOrderId(orderId)}`); }
   async captureApproved(orderId,cart,requestId) {
     // Never capture merely because a browser callback claimed success.
-    const current = await this.get(orderId);
-    const amount = current.purchase_units?.[0]?.amount;
-    if (current.status !== 'APPROVED' || current.intent !== 'CAPTURE' || !Array.isArray(current.purchase_units) || current.purchase_units.length !== 1 || amount?.currency_code !== 'USD' || amount?.value !== cart.total) {
-      throw new InputError('PayPal has not confirmed APPROVED state and unchanged cart total');
+    const verifiedId = assertOrderId(orderId);
+    const current = await this.get(verifiedId);
+    const unit = Array.isArray(current.purchase_units) && current.purchase_units.length === 1
+      ? current.purchase_units[0] : null;
+    const amount = unit?.amount;
+    if (current.id !== verifiedId || current.intent !== 'CAPTURE' || !unit || amount?.currency_code !== 'USD' || amount?.value !== cart.total) {
+      throw new InputError('PayPal order identity, intent, or unchanged cart total could not be verified');
     }
-    return this.api(`/v2/checkout/orders/${assertOrderId(orderId)}/capture`,{method:'POST',body:{},requestId});
+    // A prior capture POST may have succeeded even when the response timed out.
+    // Reconcile only from PayPal's authoritative order + capture records.
+    if (current.status === 'COMPLETED') {
+      const captures = unit.payments?.captures;
+      const settled = Array.isArray(captures) && captures.length === 1 ? captures[0] : null;
+      if (!settled || settled.status !== 'COMPLETED' ||
+          settled.amount?.currency_code !== 'USD' || settled.amount?.value !== cart.total) {
+        throw new InputError('Completed PayPal order lacks a verified matching capture; manual reconciliation required');
+      }
+      return {status:'COMPLETED',id:settled.id,already_captured:true};
+    }
+    if (current.status !== 'APPROVED') {
+      throw new InputError('PayPal has not confirmed APPROVED state; capture was not requested');
+    }
+    return this.api(`/v2/checkout/orders/${verifiedId}/capture`,{method:'POST',body:{},requestId});
   }
 }

@@ -74,7 +74,7 @@ const server=http.createServer(async(req,res)=>{
     review.state='CAPTURED';send(res,200,{state:review.state,order_id:review.order.order_id,capture_status:capture.status});
   }catch(e){
     const client=e instanceof InputError;
-    send(res,client?400:503,{error:client?e.message:'Service not available. Nothing was charged. Check local sandbox configuration and provider access.'});
+    send(res,client?400:503,{error:client?e.message:'Sandbox provider outcome could not be verified. If a capture was attempted, payment may have completed. Check the PayPal sandbox order before starting another checkout; retry the same review to reuse its idempotency key.'});
   }
 });
 server.listen(port,'127.0.0.1',()=>console.log(`ClaimProof Commerce: ${base} (loopback only; sandbox only)`));
