@@ -91,8 +91,20 @@ def handler(event, context):
         version_id=version_id, expected_etag=etag,
     )
     request = json.loads(manifest_raw)
-    if not isinstance(request, dict) or request.get("schema") != 1:
+    if not isinstance(request, dict) or type(request.get("schema")) is not int or request["schema"] not in (1, 2):
         raise ValueError("Unsupported manifest schema")
+    pinned = request["schema"] == 2
+    if pinned and version_id is None:
+        raise ValueError("Schema 2 requires a versioned request manifest event")
+
+    def input_version(container: dict, name: str) -> str | None:
+        if not pinned:
+            return None
+        value = container.get(name)
+        if not isinstance(value, str) or value in ("", "null"):
+            raise ValueError(f"Schema 2 requires {name} S3 version ID")
+        # _body independently checks length/control bytes before forwarding to S3.
+        return value
     site = request.get("site")
     if not isinstance(site, str) or not (1 <= len(site) <= 50) or not all(c.isalnum() or c in "-_" for c in site):
         raise ValueError("Invalid site identifier")
@@ -105,14 +117,26 @@ def handler(event, context):
         raise ValueError("Confirmation frame must be in same site")
     if not _key_allowed(camera_key, f"config/{site}/", (".json",)):
         raise ValueError("Configuration must be in site-scoped config/")
-    config_raw = _body(s3, bucket, camera_key, MAX_MANIFEST_BYTES)
+    camera_version = input_version(request, "camera_version_id")
+    first_version = input_version(request, "first_version_id")
+    if pinned and not second_key and request.get("second_version_id") is not None:
+        raise ValueError("Second frame version supplied without second frame key")
+    second_version = input_version(request, "second_version_id") if second_key else None
+    config_raw = _body(s3, bucket, camera_key, MAX_MANIFEST_BYTES,
+                       version_id=camera_version)
     config = json.loads(config_raw)
+    if not isinstance(config, dict):
+        raise ValueError("Invalid camera configuration object")
     reference_key = config.get("reference_key")
     if not _key_allowed(reference_key, f"frames/{site}/", (".png", ".jpg", ".jpeg")):
         raise ValueError("Trusted reference not configured")
-    first_raw = _body(s3, bucket, first_key, MAX_FRAME_BYTES)
-    reference_raw = _body(s3, bucket, reference_key, MAX_FRAME_BYTES)
-    second_raw = _body(s3, bucket, second_key, MAX_FRAME_BYTES) if second_key else None
+    reference_version = input_version(config, "reference_version_id")
+    first_raw = _body(s3, bucket, first_key, MAX_FRAME_BYTES,
+                      version_id=first_version)
+    reference_raw = _body(s3, bucket, reference_key, MAX_FRAME_BYTES,
+                          version_id=reference_version)
+    second_raw = (_body(s3, bucket, second_key, MAX_FRAME_BYTES,
+                        version_id=second_version) if second_key else None)
     evidence_sha256 = {
         "manifest": hashlib.sha256(manifest_raw).hexdigest(),
         "config": hashlib.sha256(config_raw).hexdigest(),
@@ -127,6 +151,17 @@ def handler(event, context):
     # Bind the receipt to bytes ACTUALLY inspected: a stable manifest key alone
     # does not distinguish overwrites of its config or frame objects.
     identity = {"bucket": bucket, "manifest_key": manifest_key, "evidence_sha256": evidence_sha256}
+    evidence_versions = None
+    if pinned:
+        evidence_versions = {
+            "manifest": version_id,
+            "config": camera_version,
+            "reference": reference_version,
+            "first": first_version,
+            "second": second_version,
+        }
+        # Versions distinguish exact capture instances even with identical bytes.
+        identity["evidence_versions"] = evidence_versions
     inspection_id = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     receipt = {
         "evidence_sha256": evidence_sha256,
@@ -137,6 +172,8 @@ def handler(event, context):
         "first_regions": len(decision["first"]["regions"]),
         "created_epoch": int(time.time()),
     }
+    if pinned:
+        receipt["evidence_versions"] = evidence_versions
     # At-least-once SQS delivery; consumers MUST dedupe on inspection_id.
     # Send first: failed queue delivery leaves no false processed receipt.
     if decision["decision"] in ("HUMAN_REVIEW_REQUIRED", "DISAGREEMENT_REVIEW", "RETAKE_REQUIRED"):

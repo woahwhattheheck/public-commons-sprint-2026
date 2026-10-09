@@ -72,3 +72,26 @@ Source: MIT, aligned with the host repository license. Original independent comp
 S3 ObjectCreated notification is pinned to its versionId when present and/or verified against its event eTag with a conditional GetObject. Missing snapshot identifiers or an overwritten unversioned manifest fail closed: the handler does not silently process the current content of a stale event. The receipt inspection_id and evidence_sha256 bind the **bytes actually read** for manifest, camera config, reference, first and optional confirmation frames. Changed camera evidence cannot silently reuse an earlier receipt solely because the request manifest is unchanged.
 
 Schema-1 frame and config references still load their then-current bytes; hashes provide audit identity, **not proof of immutable capture provenance or independent timestamps**. Real deployments require authenticated uploads, version pinning for all input objects, independent capture evidence, operator review and actual AWS/OpenCV5 qualification. This is source only; nothing was deployed or submitted. Offline AWS-mocked focused check: PYTHONPATH=. python -m unittest -q focus.test_s3_snapshot.
+
+### Fully version-pinned evidence (schema 2; source-only)
+
+The opt-in schema-2 request requires a **real S3 VersionId** for the manifest ObjectCreated event and for EVERY referenced input object. The versioned bucket is declared in the SAM template; a legacy unversioned event or missing version field fails closed. The following JSON contains illustrative placeholders: the trusted capture/upload service must replace them with actual S3 object-version IDs.
+
+~~~json
+{
+  "schema": 2,
+  "site": "demo-site",
+  "camera_key": "config/demo-site/camera.json",
+  "camera_version_id": "ACTUAL_CONFIG_S3_VERSION_ID",
+  "first_key": "frames/demo-site/capture-001.png",
+  "first_version_id": "ACTUAL_FIRST_S3_VERSION_ID",
+  "second_key": "frames/demo-site/capture-002.png",
+  "second_version_id": "ACTUAL_SECOND_S3_VERSION_ID"
+}
+~~~
+
+The selected version of the camera config must include its existing reference_key AND reference_version_id sourced from the trusted original reference upload. If second_key is absent omit second_version_id; if it is present the version is mandatory. Retrieval uses conditional versioned S3 GetObject, verifying returned VersionId for each object. The review receipt records both actual byte SHA-256 hashes and source evidence_versions; inspection_id binds both. Replay with the same version pins and bytes is stable when current S3 objects are overwritten. A new original version yields a new receipt identity even if its content bytes are unchanged.
+
+The SAM template enables S3 Versioning and s3:GetObjectVersion and expires noncurrent raw frame versions after seven noncurrent days; operators must evaluate cost and evidence retention before deploying. This source is NOT deployed here. Backward-compatible schema 1 continues to hash bytes actually read, but config and frames remain UNPINNED on schema 1. Object VersionId alone proves neither independent capture time, upload authorization, camera authenticity, actual physical clearance nor regulatory compliance. The system still requires a trusted publisher, human review, real OpenCV5/AWS deployment validation and explicit contest submission.
+
+Focused offline AWS-mocked check: PYTHONPATH=. python -m unittest -q focus.test_s3_snapshot focus.test_s3_all_inputs_pinned. No live AWS, official entry, award or broad test run is claimed.
