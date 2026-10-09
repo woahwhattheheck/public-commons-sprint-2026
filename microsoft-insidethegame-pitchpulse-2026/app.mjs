@@ -67,7 +67,7 @@ $('importReplay').addEventListener('change',()=>{
  const file=$('importReplay').files[0];if(!file)return;
  run(async()=>{
   try{
-   if(file.size>1024*1024)throw new Error('Replay file exceeds 1 MiB');
+   if(file.size>2*1024*1024)throw new Error('Replay file exceeds 2 MiB');
    const replay=JSON.parse(await file.text());
    render(await request('/api/replay','POST',replay));
    $('foundryOutput').textContent='Cloud inference not attempted for imported replay.';
