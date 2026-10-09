@@ -1,0 +1,13 @@
+{
+  "name": "counterpress-compass-2026",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Synthetic event-time football counterpress explainer for Microsoft Inside The Game",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "check:focused": "node --test test/engine.focused.test.mjs"
+  },
+  "engines": {"node": ">=22"},
+  "license": "MIT"
+}
