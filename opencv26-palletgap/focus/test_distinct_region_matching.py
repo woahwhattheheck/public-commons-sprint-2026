@@ -27,7 +27,7 @@ class DistinctConfirmationTests(unittest.TestCase):
         self.assertEqual(inspector.call_count, 2)
         return decision
 
-    def test_one_followup_region_is_only_one_distinct_corrobation(self) -> None:
+    def test_one_followup_region_is_only_one_distinct_corroboration(self) -> None:
         first = [[100, 100, 50, 50], [155, 100, 50, 50]]
         second = [[100, 100, 105, 50]]
         result = self.decide(first, second)
