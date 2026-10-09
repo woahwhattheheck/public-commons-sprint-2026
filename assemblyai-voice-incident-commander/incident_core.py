@@ -114,13 +114,17 @@ def project_final_turn(message: Any) -> dict[str, Any] | None:
     confidence = msg.get("end_of_turn_confidence", 1.0)
     if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
         raise IncidentError("end_of_turn_confidence must be numeric")
-    confidence = float(confidence)
+    try:
+        confidence = float(confidence)
+    except OverflowError as exc:
+        raise IncidentError("end_of_turn_confidence must be finite in [0,1]") from exc
     if not math.isfinite(confidence) or confidence < 0.0 or confidence > 1.0:
         raise IncidentError("end_of_turn_confidence must be finite in [0,1]")
 
     speaker = msg.get("speaker_label")
     if speaker is not None:
-        if not isinstance(speaker, str) or not _SAFE_SPEAKER.fullmatch(speaker):
+        speaker = _require_text(speaker, "speaker_label", MAX_SPEAKER_CHARS)
+        if not _SAFE_SPEAKER.fullmatch(speaker):
             raise IncidentError("speaker_label must be printable text up to 64 characters")
 
     projection = {
@@ -274,4 +278,10 @@ def verify_packet(packet: Any) -> bool:
         rebuilt = compile_packet(raw)
     except IncidentError:
         return False
-    return rebuilt == candidate
+    # Python container equality equates JSON-distinct values such as False/0
+    # and 1/1.0. Compare canonical bytes, including the recomputed receipt, so
+    # an unchanged digest cannot validate a type-altered packet.
+    try:
+        return _canonical(rebuilt) == _canonical(candidate)
+    except (TypeError, ValueError, RecursionError):
+        return False
