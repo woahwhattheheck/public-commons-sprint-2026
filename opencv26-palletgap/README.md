@@ -66,3 +66,9 @@ Only the SAM-owned S3 bucket, explicit prefixes and bounded file sizes are accep
 Real evaluation should use a fixed-camera dataset with day/night, shadows, vibration, partial occlusion, different load positions and accessible manual labels; measure detection rate, false escalation, abstentions, end-to-end latency and cost. ORB may fail on textureless floors; chroma thresholds can disagree under sunlight; overlap is not real-world distance or a 3D clearance measurement. Reviewers must not infer regulatory compliance from any output. Synthetic fixtures intentionally test program flow, **not predictive accuracy**.
 
 Source: MIT, aligned with the host repository license. Original independent competition candidate; no competition entrant/team registration, AWS execution, win or payout is implied by public source publication.
+
+### AWS event snapshots and evidence receipts (source-only)
+
+S3 ObjectCreated notification is pinned to its versionId when present and/or verified against its event eTag with a conditional GetObject. Missing snapshot identifiers or an overwritten unversioned manifest fail closed: the handler does not silently process the current content of a stale event. The receipt inspection_id and evidence_sha256 bind the **bytes actually read** for manifest, camera config, reference, first and optional confirmation frames. Changed camera evidence cannot silently reuse an earlier receipt solely because the request manifest is unchanged.
+
+Schema-1 frame and config references still load their then-current bytes; hashes provide audit identity, **not proof of immutable capture provenance or independent timestamps**. Real deployments require authenticated uploads, version pinning for all input objects, independent capture evidence, operator review and actual AWS/OpenCV5 qualification. This is source only; nothing was deployed or submitted. Offline AWS-mocked focused check: PYTHONPATH=. python -m unittest -q focus.test_s3_snapshot.
