@@ -269,6 +269,30 @@ def assess_channel(channel: str, rows: Sequence[Observation], baseline: ChannelB
         reasons.append('no configured quality-review threshold exceeded')
     return {'channel': channel, 'state': state, 'quality_risk_score': round(quality_risk, 3), 'uncertainty': round(uncertainty, 6), 'reasons': reasons, 'run_n': len(rows), 'baseline_n': baseline.n, 'unit': baseline.unit, 'modality': baseline.modality, 'baseline_center': round(baseline.center, 10), 'baseline_scale': round(baseline.scale, 10), 'baseline_scale_method': baseline.scale_method, 'metrics': {'run_center': round(run_center, 10), 'level_z': round(level_z, 6), 'max_change_z': round(change_z, 6), 'max_trend_z_per_baseline_step': round(trend_z, 6), 'outlier_fraction': round(outlier_fraction, 8), 'missing_fraction': round(missing_fraction, 8), 'replicate_divergence_z': round(replicate_divergence_z, 6), 'max_cross_sensor_correlation_delta': round(corr_delta, 8)}, 'score_components': {k: round(v, 8) for k, v in components.items()}}
 
+def _missing_channel_assessment(channel: str, baseline: ChannelBaseline) -> dict:
+    """Abstain if a baseline sensor has no candidate samples at all.
+
+    Absent evidence has no numeric quality-risk estimate. A zero score would
+    misleadingly label a non-observed sensor as low risk.
+    """
+    return {
+        'channel': channel,
+        'state': 'INSUFFICIENT_EVIDENCE',
+        'quality_risk_score': None,
+        'uncertainty': 1.0,
+        'reasons': ['baseline channel is entirely absent from candidate run; no QC assessment is possible'],
+        'run_n': 0,
+        'baseline_n': baseline.n,
+        'unit': baseline.unit,
+        'modality': baseline.modality,
+        'baseline_center': round(baseline.center, 10),
+        'baseline_scale': round(baseline.scale, 10),
+        'baseline_scale_method': baseline.scale_method,
+        'metrics': {},
+        'score_components': {},
+    }
+
+
 def analyze(baseline_path: Path, run_path: Path, *, min_points: int=6, min_baseline_points: int=12) -> dict:
     if min_points < 2 or min_baseline_points < 2:
         raise ContractError('minimum point counts must be >=2')
@@ -283,9 +307,20 @@ def analyze(baseline_path: Path, run_path: Path, *, min_points: int=6, min_basel
         raise ContractError(f'run contains channels absent from baseline: {missing_channels}')
     corr_details, per_channel_corr = correlation_deltas(baseline_obs, run_obs)
     assessments = [assess_channel(ch, run_groups[ch], baselines[ch], per_channel_corr.get(ch, 0.0), min_points, min_baseline_points) for ch in sorted(run_groups)]
+    # The absence of an entire baseline channel is not a clean observation.
+    # Include it in the ordered channel evidence and abstain overall.
+    absent_channels = sorted(set(baselines) - set(run_groups))
+    assessments.extend(_missing_channel_assessment(ch, baselines[ch]) for ch in absent_channels)
+    assessments.sort(key=lambda row: row['channel'])
     state_order = {'SUPPORTED': 0, 'REVIEW': 1, 'INSUFFICIENT_EVIDENCE': 2}
     overall = max((a['state'] for a in assessments), key=state_order.get)
-    payload = {'schema': 'chiptrace.report.v1', 'tool': {'name': 'ChipTrace', 'version': VERSION}, 'scope': {'intended_use': 'organ-on-chip research experiment quality control and drift review', 'not_for': ['clinical diagnosis', 'treatment recommendation', 'patient-specific decision making', 'drug efficacy or safety claim'], 'state_semantics': {'SUPPORTED': 'No configured QC review threshold was exceeded; this is not a biological-efficacy claim.', 'REVIEW': 'One or more QC signals warrant researcher review.', 'INSUFFICIENT_EVIDENCE': 'Observation counts are too small for a supported QC state.'}}, 'inputs': {'baseline_file': baseline_path.name, 'baseline_sha256': file_sha256(baseline_path), 'run_file': run_path.name, 'run_sha256': file_sha256(run_path), 'baseline_rows': len(baseline_obs), 'run_rows': len(run_obs)}, 'config': {'min_points': min_points, 'min_baseline_points': min_baseline_points}, 'overall_state': overall, 'max_quality_risk_score': round(max((a['quality_risk_score'] for a in assessments)), 3), 'channel_assessments': assessments, 'cross_sensor_correlations': corr_details, 'baseline_model': {k: asdict(v) for k, v in sorted(baselines.items())}}
+    payload = {'schema': 'chiptrace.report.v1', 'tool': {'name': 'ChipTrace', 'version': VERSION}, 'scope': {'intended_use': 'organ-on-chip research experiment quality control and drift review', 'not_for': ['clinical diagnosis', 'treatment recommendation', 'patient-specific decision making', 'drug efficacy or safety claim'], 'state_semantics': {'SUPPORTED': 'No configured QC review threshold was exceeded; this is not a biological-efficacy claim.', 'REVIEW': 'One or more QC signals warrant researcher review.', 'INSUFFICIENT_EVIDENCE': 'Observation counts are too small for a supported QC state.'}}, 'inputs': {'baseline_file': baseline_path.name, 'baseline_sha256': file_sha256(baseline_path), 'run_file': run_path.name, 'run_sha256': file_sha256(run_path), 'baseline_rows': len(baseline_obs), 'run_rows': len(run_obs)}, 'config': {'min_points': min_points, 'min_baseline_points': min_baseline_points}, 'overall_state': overall, 'max_quality_risk_score': round(max((a['quality_risk_score'] for a in assessments if a['quality_risk_score'] is not None), default=0.0), 3), 'channel_assessments': assessments, 'cross_sensor_correlations': corr_details, 'baseline_model': {k: asdict(v) for k, v in sorted(baselines.items())}}
+    # Keep previously published full-coverage demo receipts byte-stable.
+    # Explain the wider abstention condition only for reports that need it.
+    if absent_channels:
+        payload['scope']['state_semantics']['INSUFFICIENT_EVIDENCE'] = (
+            'Observation counts are too small or a baseline channel is absent from the candidate run.'
+        )
     payload['receipt_sha256'] = _sha256_bytes(canonical_bytes(payload))
     return payload
 
@@ -297,7 +332,7 @@ def verify_report(report: Mapping[str, object]) -> bool:
 def render_html(report: Mapping[str, object]) -> str:
     rows = []
     for a in report['channel_assessments']:
-        rows.append(f"<tr><td>{html.escape(str(a['channel']))}</td><td><strong>{html.escape(str(a['state']))}</strong></td><td>{a['quality_risk_score']}</td><td>{a['uncertainty']}</td><td>{html.escape('; '.join(a['reasons']))}</td></tr>")
+        rows.append(f"<tr><td>{html.escape(str(a['channel']))}</td><td><strong>{html.escape(str(a['state']))}</strong></td><td>{'n/a' if a['quality_risk_score'] is None else a['quality_risk_score']}</td><td>{a['uncertainty']}</td><td>{html.escape('; '.join(a['reasons']))}</td></tr>")
     receipt = html.escape(str(report['receipt_sha256']))
     raw = html.escape(json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False))
     return f"""<!doctype html>\n<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>ChipTrace judge report</title>\n<style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;line-height:1.45}}table{{border-collapse:collapse;width:100%}}th,td{{border:1px solid #bbb;padding:.55rem;text-align:left;vertical-align:top}}code,pre{{background:#f3f3f3;padding:.15rem .3rem}}pre{{overflow:auto;padding:1rem}}.note{{border-left:4px solid #666;padding:.7rem 1rem;background:#fafafa}}</style>\n<h1>ChipTrace experiment-quality report</h1>\n<p class="note"><strong>Research QC only.</strong> SUPPORTED means configured quality-review thresholds were not exceeded. It does not establish biological efficacy, clinical safety, diagnosis, or treatment suitability.</p>\n<p><strong>Overall state:</strong> {html.escape(str(report['overall_state']))}<br>\n<strong>Max quality-risk score:</strong> {report['max_quality_risk_score']} / 100<br>\n<strong>Replay receipt:</strong> <code>{receipt}</code></p>\n<h2>Channel evidence</h2><table><thead><tr><th>Channel</th><th>State</th><th>Risk</th><th>Uncertainty</th><th>Why</th></tr></thead><tbody>{''.join(rows)}</tbody></table>\n<h2>Machine-readable evidence</h2><pre>{raw}</pre></html>"""
