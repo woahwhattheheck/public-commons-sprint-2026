@@ -105,7 +105,10 @@ def api_json(url, *, method="GET", payload=None, headers=None, auth=None, form=N
     try:
         with _AUTH_SAFE_OPENER.open(req, timeout=12) as resp:
             raw = resp.read(65536)
-        return json.loads(raw)
+        decoded = json.loads(raw)
+        if not isinstance(decoded, dict):
+            raise ValueError("Provider JSON root must be an object.")
+        return decoded
     except urllib.error.HTTPError as exc:
         kind = "PayPal sandbox" if url.startswith(PAYPAL_HOST) else "AI service"
         raise ServiceError(502, f"{kind} returned HTTP {exc.code}. No payment status assumed.") from exc
@@ -218,10 +221,15 @@ def valid_capture(detail, chosen, expected_id):
 
 
 def approval_url(order):
-    for link in order.get("links", []):
-        if link.get("rel") not in ("approve", "payer-action"):
+    links = order.get("links")
+    if not isinstance(links, list):
+        raise ServiceError(502, "PayPal sandbox order lacks a verified approval link.")
+    for link in links:
+        if not isinstance(link, dict) or link.get("rel") not in ("approve", "payer-action"):
             continue
         url = link.get("href", "")
+        if not isinstance(url, str):
+            continue
         parsed = urllib.parse.urlparse(url)
         if (parsed.scheme == "https" and parsed.hostname
                 and (parsed.hostname == "sandbox.paypal.com"
@@ -381,7 +389,8 @@ class Handler(BaseHTTPRequestHandler):
             state.update({"phase": "planned", "chosen": choice, "plan": {
                 "sku": choice["sku"], "name": choice["name"], "usd": money(choice["cents"]),
                 "reason": reason, "method": method, "budget_usd": money(budget)},
-                "order_id": None, "approval_url": None, "fixture_order": False})
+                "order_id": None, "approval_url": None, "fixture_order": False,
+                "order_request_id": str(uuid.uuid4())})
             record(state, "plan", f"{method}: {choice['sku']}; server-priced {money(choice['cents'])} USD.")
             return summarize(state)
         if route == "/api/order":
@@ -395,7 +404,9 @@ class Handler(BaseHTTPRequestHandler):
                 url = "/api/return?token=" + urllib.parse.quote(oid)
                 state["fixture_order"] = True
             else:
-                order = paypal("/v2/checkout/orders", method="POST", request_id=str(uuid.uuid4()),
+                # A timeout can follow successful provider-side creation. Retry
+                # this *same* plan with its original PayPal-Request-Id.
+                order = paypal("/v2/checkout/orders", method="POST", request_id=state["order_request_id"],
                     payload={"intent": "CAPTURE", "purchase_units": [
                         {"reference_id": chosen["sku"], "description": chosen["name"],
                          "amount": {"currency_code": "USD", "value": money(chosen["cents"])}}],
