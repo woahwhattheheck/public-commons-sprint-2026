@@ -4,14 +4,18 @@
   "private": true,
   "type": "module",
   "description": "Unsigned, SDK-native Meteora DBC launch-curve preset studio",
-  "engines": {"node": ">=22"},
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node server.mjs",
     "inspect": "node cli.mjs inspect",
     "compare": "node cli.mjs compare",
-    "test:focused": "node --test test/validation.test.mjs"
+    "test:focused": "node --test test/validation.test.mjs",
+    "status": "node status_cli.mjs"
   },
   "dependencies": {
-    "@meteora-ag/dynamic-bonding-curve-sdk": "1.5.13"
+    "@meteora-ag/dynamic-bonding-curve-sdk": "1.5.13",
+    "@solana/web3.js": "^1.98.0"
   }
 }
