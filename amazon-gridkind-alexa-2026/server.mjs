@@ -25,9 +25,22 @@ async function readBody(req){
   for await (const chunk of req){bytes+=chunk.length;if(bytes>12000)throw Error('JSON body too large');chunks.push(chunk);}
   return JSON.parse(Buffer.concat(chunks,bytes).toString('utf8'));
 }
+// A loopback-only demo must not recognize a forged public Host. In particular,
+// a browser DNS-rebinding origin must not receive the ambient demo session.
+// Explicit non-loopback HOST deployments keep their configured host policy.
+function acceptsHost(req,boundHost){
+  if(!['127.0.0.1','::1','localhost'].includes(boundHost))return true;
+  const actualPort=req.socket.localPort;
+  const raw=req.headers.host;
+  if(typeof raw!=='string'||!Number.isInteger(actualPort))return false;
+  const hosts=['127.0.0.1','localhost','[::1]'];
+  const suffixes=actualPort===80?['',':80']:[`:${actualPort}`];
+  return hosts.some(local=>suffixes.some(port=>raw.toLowerCase()===local+port));
+}
 export function start({port=Number(process.env.PORT||'4181'),host=process.env.HOST||'127.0.0.1'}={}){
   const server=http.createServer(async(req,res)=>{
     try{
+      if(!acceptsHost(req,host))return respond(res,403,{error:'Loopback demo Host mismatch'});
       const path=new URL(req.url,'http://localhost').pathname;
       if(req.method==='GET'&&['/','/app.js','/style.css'].includes(path)){
         const file=path==='/'?'index.html':path==='/style.css'?'style.css':'app.js';
