@@ -6,9 +6,26 @@ const seedTypes = new Set(['urn:entity:movie', 'urn:entity:artist', 'urn:entity:
 const targets = new Set(['urn:entity:movie', 'urn:entity:artist', 'urn:entity:book']);
 
 function numberInRange(value, lo, hi) {
-  if (value === null || value === undefined || value === '') return null;
-  const n = typeof value === 'number' ? value : Number(value);
+  // An empty string, boolean or array coerces to 0/1: NOT a Qloo measurement.
+  if (value === null || value === undefined ||
+      (typeof value !== 'string' && typeof value !== 'number')) return null;
+  if (typeof value === 'string') {
+    const decimal = value.trim();
+    if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(decimal)) return null;
+    value = decimal;
+  }
+  const n = Number(value);
   return Number.isFinite(n) && n >= lo && n <= hi ? n : null;
+}
+
+const isRecord = item => item !== null && typeof item === 'object' && !Array.isArray(item);
+function uniqueIds(rows) {
+  const seen = new Set();
+  return rows.filter(row => {
+    if (seen.has(row.id)) return false;
+    seen.add(row.id);
+    return true;
+  });
 }
 
 export function normalizeCandidates(payload) {
@@ -16,23 +33,23 @@ export function normalizeCandidates(payload) {
   const raw = Array.isArray(results?.entities) ? results.entities
     : Array.isArray(results) ? results
     : Array.isArray(payload?.entities) ? payload.entities : [];
-  return raw.slice(0, 30).map(item => ({
+  return uniqueIds(raw.slice(0, 30).filter(isRecord).map(item => ({
     id: String(item.entity_id ?? item.id ?? item.entity?.entity_id ?? ''),
     name: String(item.name ?? item.entity?.name ?? ''),
     type: String(item.subtype ?? item.type ?? item.entity?.subtype ?? ''),
-  })).filter(row => row.id && row.name);
+  })).filter(row => row.id && row.name));
 }
 
 export function normalizeInsights(payload) {
   const entities = payload?.results?.entities;
   if (!Array.isArray(entities)) throw new Error('Unexpected Qloo Insights response; entities[] is missing');
-  return entities.slice(0, 40).map(item => ({
+  return uniqueIds(entities.slice(0, 40).filter(isRecord).map(item => ({
     id: String(item.entity_id ?? item.id ?? ''),
     name: String(item.name ?? ''),
     popularity: numberInRange(item.popularity, 0, 1),
     type: String(item.subtype ?? ''),
     description: String(item.properties?.description ?? '').slice(0, 210),
-  })).filter(row => row.id && row.name);
+  })).filter(row => row.id && row.name));
 }
 
 const median = xs => {
