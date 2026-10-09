@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {normalizeCart,staticReview,InputError} from './core.mjs';
 import {reviewWithModel} from './ai.mjs';
 import {PayPalSandbox} from './paypal.mjs';
+import {makeSandboxReceipt} from './receipt.mjs';
 
 const port=Number(process.env.PORT || 3159);
 if (!Number.isInteger(port)||port < 1024||port > 65535) throw new Error('PORT invalid');
@@ -68,7 +69,7 @@ const server=http.createServer(async(req,res)=>{
       res.end(html);return;
     }
     if(req.method==='GET' && url.pathname==='/api/health'){send(res,200,{ready:true,paypal_sandbox_configured:!!(process.env.PAYPAL_CLIENT_ID&&process.env.PAYPAL_CLIENT_SECRET),ai_provider_configured:process.env.AI_PROVIDER==='anthropic'?!!(process.env.ANTHROPIC_API_KEY&&process.env.ANTHROPIC_MODEL):!!(process.env.AI_CHAT_COMPLETIONS_URL&&process.env.AI_API_KEY&&process.env.AI_MODEL)});return;}
-    if(req.method!=='POST' || !['/api/review','/api/create','/api/capture','/api/status'].includes(url.pathname)){send(res,404,{error:'route not found'});return;}
+    if(req.method!=='POST' || !['/api/review','/api/create','/api/capture','/api/status','/api/receipt'].includes(url.pathname)){send(res,404,{error:'route not found'});return;}
     assertPost(req);const request=await body(req);prune();
     if(url.pathname==='/api/review'){
       const cart=normalizeCart(request);const findings=staticReview(cart);
@@ -81,8 +82,9 @@ const server=http.createServer(async(req,res)=>{
     const review=getReview(request.review_id);
     if(request.fingerprint!==review.cart.fingerprint)throw new InputError('approved cart fingerprint mismatch');
     // Status is an explicit, read-only action: it never authorizes a new capture.
-    if(url.pathname!=='/api/status' && request.confirm!==true)throw new InputError('explicit human confirmation required');
+    if(!['/api/status','/api/receipt'].includes(url.pathname) && request.confirm!==true)throw new InputError('explicit human confirmation required');
     const kind=url.pathname==='/api/create'?'create':
+      url.pathname==='/api/receipt'?'receipt':
       url.pathname==='/api/status'||['CAPTURE_PENDING','CAPTURE_UNKNOWN','CAPTURED','CAPTURE_FAILED','CAPTURE_REVERSED','ORDER_VOIDED'].includes(review.state)?'status':'capture';
     const result=await reviewOperation(review,kind,async()=>{
       if(kind==='create'){
@@ -93,7 +95,12 @@ const server=http.createServer(async(req,res)=>{
         return {state:review.state,order,payment_authority:false};
       }
       if(!review.order)throw new InputError('no order awaits approval');
-      if(kind==='status')return captureResult(review,await paypal.captureStatus(review.order.order_id,review.cart));
+      if(kind==='status'||kind==='receipt'){
+        const verified=await paypal.captureStatus(review.order.order_id,review.cart);
+        const state=captureResult(review,verified);
+        if(kind==='receipt')return {receipt:makeSandboxReceipt(review,verified,request.review_id),payment_authority:false};
+        return state;
+      }
       if(review.state!=='ORDER_CREATED')throw new InputError('no order awaits approval');
       return captureResult(review,await paypal.captureApproved(review.order.order_id,review.cart,review.captureRequestId));
     });
