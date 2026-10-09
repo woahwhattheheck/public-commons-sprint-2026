@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
+from decimal import Decimal, InvalidOperation
 import os
 import sys
 import urllib.error
@@ -21,6 +21,20 @@ Transport = Callable[[str, Mapping[str, str]], bytes]
 
 class PantaError(ValueError):
     """Raised when Panta market evidence is unavailable or malformed."""
+
+
+def _unique_json_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Reject duplicate source fields before producing a signed evidence snapshot."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise PantaError(f"Panta response contains duplicate JSON field: {key}")
+        result[key] = value
+    return result
+
+
+def _reject_nonfinite_constant(value: str) -> None:
+    raise PantaError(f"Panta response contains non-finite JSON number: {value}")
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -59,19 +73,36 @@ def _text(value: Any, field: str, *, required: bool = True) -> str | None:
 
 
 def _decimal(value: Any, field: str) -> str | None:
+    """Keep the source's exact decimal value, never convert quotes via float.
+
+    The explicit 40-character normalized output and bounded decimal exponent
+    also keep a hostile 1e100000 value from expanding during formatting.
+    """
     if value is None or value == "":
         return None
-    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+    if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
         raise PantaError(f"market {field} must be numeric")
+    lexical = str(value).strip()
+    if not lexical or len(lexical) > 40:
+        raise PantaError(f"market {field} exceeds supported numeric length")
     try:
-        number = float(value)
-    except (TypeError, ValueError) as exc:
+        number = Decimal(lexical)
+    except (InvalidOperation, ValueError) as exc:
         raise PantaError(f"market {field} must be numeric") from exc
-    if not math.isfinite(number) or number < 0:
+    if not number.is_finite() or number < 0:
         raise PantaError(f"market {field} must be finite and non-negative")
     if field.endswith("Price") and number > 1:
         raise PantaError(f"market {field} must be in [0, 1]")
-    return format(number, ".12g")
+    if number.is_zero():
+        return "0"
+    if number.adjusted() > 18 or number.as_tuple().exponent < -24:
+        raise PantaError(f"market {field} exceeds supported decimal scale")
+    normalized = format(number, "f")
+    if "." in normalized:
+        normalized = normalized.rstrip("0").rstrip(".")
+    if len(normalized) > 40:
+        raise PantaError(f"market {field} exceeds supported numeric length")
+    return normalized
 
 
 def _normalize_market(row: Any) -> dict[str, Any]:
@@ -131,8 +162,14 @@ def fetch_market_snapshot(
     if not isinstance(payload, bytes) or len(payload) > MAX_RESPONSE_BYTES:
         raise PantaError("transport returned invalid or oversized evidence")
     try:
-        decoded = json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        decoded = json.loads(
+            payload.decode("utf-8"),
+            object_pairs_hook=_unique_json_pairs,
+            parse_float=Decimal,
+            parse_int=Decimal,
+            parse_constant=_reject_nonfinite_constant,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, InvalidOperation) as exc:
         raise PantaError("Panta markets response is not valid UTF-8 JSON") from exc
     if not isinstance(decoded, dict) or not isinstance(decoded.get("items"), list):
         raise PantaError("Panta markets response must contain items[]")
