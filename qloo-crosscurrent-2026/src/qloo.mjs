@@ -19,6 +19,42 @@ function arrayOfEntities(payload) {
   throw new QlooError('QLOO_RESPONSE_SHAPE_UNRECOGNIZED', 502);
 }
 
+// The server shares a Qloo client across visitors. Bound decoded response bytes
+// before JSON.parse can allocate an arbitrarily large body from an HTTP 200.
+const MAX_QLOO_RESPONSE_BYTES = 1024 * 1024;
+async function readBoundedJson(response, controller) {
+  const rawLength = response.headers?.get?.('content-length');
+  if (rawLength != null && Number.isFinite(Number(rawLength)) &&
+      Number(rawLength) > MAX_QLOO_RESPONSE_BYTES) {
+    controller.abort();
+    throw new QlooError('QLOO_RESPONSE_TOO_LARGE', 502);
+  }
+  if (response.body && typeof response.body.getReader === 'function') {
+    const reader = response.body.getReader();
+    const chunks = [];
+    let bytes = 0;
+    try {
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        bytes += value.byteLength;
+        if (bytes > MAX_QLOO_RESPONSE_BYTES) {
+          controller.abort();
+          throw new QlooError('QLOO_RESPONSE_TOO_LARGE', 502);
+        }
+        chunks.push(Buffer.from(value));
+      }
+    } finally { reader.releaseLock(); }
+    return JSON.parse(Buffer.concat(chunks, bytes).toString('utf8'));
+  }
+  // Injected fake fetchers sometimes implement only json(). Real fetch exposes
+  // the streamed body, which is checked before JSON parsing and caching.
+  const payload = await response.json();
+  if (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_QLOO_RESPONSE_BYTES)
+    throw new QlooError('QLOO_RESPONSE_TOO_LARGE', 502);
+  return payload;
+}
+
 // Qloo normally reports a broad type (urn:entity) and the actual category
 // in subtype. A mismatched explicit subtype must never be treated as evidence
 // that the entity satisfies a requested category (especially venue/place).
@@ -106,7 +142,7 @@ export class QlooClient {
       if (!response?.ok) throw new QlooError(response?.status === 429 ? 'QLOO_RATE_LIMIT' :
         response?.status === 401 ? 'QLOO_KEY_REJECTED' : `QLOO_HTTP_${response?.status ?? 'UNKNOWN'}`,
         response?.status === 429 ? 429 : 502);
-      const result = await response.json();
+      const result = await readBoundedJson(response, controller);
       // Validate before the five-minute cache: do not persist schema failures
       // as successful provider responses or convert them to empty recommendations.
       arrayOfEntities(result);
