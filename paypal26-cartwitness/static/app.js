@@ -100,5 +100,7 @@ $("captureform").addEventListener("submit", event => {
   event.preventDefault();
   if ($("finalconsent").checked && snapshot && snapshot.order_id) run("/api/capture", {confirmed: true, generation: snapshot.generation, revision: snapshot.revision, order_id: snapshot.order_id});
 });
-$("reset").addEventListener("click", () => run("/api/reset", {}));
+$("reset").addEventListener("click", () => {
+  if (snapshot) run("/api/reset", {generation: snapshot.generation, revision: snapshot.revision});
+});
 run("/api/state");
