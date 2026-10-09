@@ -20,6 +20,8 @@ def render_review(workspace: dict[str, Any]) -> bytes:
         reviewer = "Not recorded" if review is None else review["approver"]
         fields = (("Proposal ID", proposal["proposal_id"]), ("Event ID", event["event_id"]),
                   ("Device", event["device_id"]), ("Occurred at", event["occurred_at"]),
+                  ("Event type", event["event_type"]), ("Classification", event["classification"]),
+                  ("Device health", event["device_health"] or "Not supplied"),
                   ("Zone", event["zone"] or "Not supplied"), ("Reviewer label", reviewer))
         definition = "".join(f"<dt>{label}</dt><dd>{escape(value)}</dd>" for label, value in fields)
         cards.append(f"<article><h2>{escape(proposal['action'].replace('_', ' ').capitalize())}</h2>"
@@ -33,6 +35,7 @@ def render_review(workspace: dict[str, Any]) -> bytes:
     for event in quiet_events:
         fields = (("Event ID", event["event_id"]), ("Device", event["device_id"]),
                   ("Occurred at", event["occurred_at"]), ("Classification", event["classification"]),
+                  ("Device health", event["device_health"] or "Not supplied"),
                   ("Zone", event["zone"] or "Not supplied"))
         definition = "".join(f"<dt>{label}</dt><dd>{escape(value)}</dd>" for label, value in fields)
         timeline.append(f"<article><h3>{escape(event['event_type'].replace('_', ' ').capitalize())}</h3>"
