@@ -82,6 +82,8 @@ The demo generates an ephemeral Ed25519 verifier key, creates and funds a task s
 1. a Memo instruction containing `WORKSEAL:v1:<settlementIntentSha256>`;
 2. a System Program transfer from the task buyer settlement address to the worker address.
 
+The adapter rejects lamport transfers outside Solana's unsigned 64-bit range and payer/payee account strings that fail base58 decoding to exactly 32 bytes. Passing this format check does **not** prove wallet ownership, a valid signature, account balance or chain acceptance. The console demo and focused fixtures derive **illustrative unsignable public-key-shaped addresses** from fixed labels, not real funded keypairs; do not submit their transaction plans as live payments.
+
 This is deliberately a **client-authority MVP**, not an escrow smart contract. The client MUST validate the pinned signed WorkSeal acceptance before signing the transfer. A production Colosseum submission should add an onchain escrow/PDA program or payment-channel integration so settlement authority is enforced by chain state rather than only by the signing client.
 
 ## Meteora DBC proof-to-launch adapter
