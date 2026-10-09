@@ -45,7 +45,7 @@ async function readJsonBounded(response) {
   }
 }
 
-async function getJson(path, params, apiKey, fetcher) {
+async function getJson(path, params, apiKey, fetcher, postBody = null) {
   const u = new URL(path, HOST);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') u.searchParams.append(key, String(value));
@@ -53,11 +53,17 @@ async function getJson(path, params, apiKey, fetcher) {
   const ctrl = new AbortController();
   const deadline = setTimeout(() => ctrl.abort(), 12000);
   try {
-    const response = await fetcher(u, {
+    const request = {
       headers: { 'X-Api-Key': apiKey, Accept: 'application/json' },
       signal: ctrl.signal,
       redirect: 'manual', // Never forward a server-only API key to a redirected origin.
-    });
+    };
+    if (postBody !== null) {
+      request.method = 'POST';
+      request.headers['Content-Type'] = 'application/json';
+      request.body = JSON.stringify(postBody);
+    }
+    const response = await fetcher(u, request);
     if (response.status >= 300 && response.status < 400)
       throw new QlooError('Qloo redirect refused; credentials were not forwarded', 502);
     if (!response.ok) {
@@ -87,9 +93,25 @@ export function createQlooProvider(apiKey, fetcher = fetch) {
       // Qloo documents /search with the `query` and array-of-strings `types` fields.
       return getJson('/search', { query, types, take: 10 }, apiKey, fetcher);
     },
-    async insights({ target, entityId, take = 15, maxPopularity, minPopularity }) {
+    async insights({ target, entityId, entityName, take = 15, maxPopularity, minPopularity }) {
       if (!ALLOWED.has(target)) throw new QlooError('Unsupported target type', 400);
-      if (!entityId || entityId.length > 160) throw new QlooError('Missing or invalid entity ID', 400);
+      if (entityName !== undefined) {
+        if (entityId !== undefined || typeof entityName !== 'string' ||
+            entityName.trim().length < 2 || entityName.trim().length > 100)
+          throw new QlooError('Invalid exact-name signal', 400);
+        // Qloo's documented name-resolver accepts entities.query on POST only.
+        // GET with signal.interests.entities=<name> is not equivalent to a name query.
+        const body = {
+          'filter.type': target,
+          'signal.interests.entities.query': [{ name: entityName.trim() }],
+          take,
+        };
+        if (maxPopularity !== undefined) body['filter.popularity.max'] = maxPopularity;
+        if (minPopularity !== undefined) body['filter.popularity.min'] = minPopularity;
+        return getJson('/v2/insights', {}, apiKey, fetcher, body);
+      }
+      if (!entityId || typeof entityId !== 'string' || entityId.length > 160)
+        throw new QlooError('Missing or invalid entity ID', 400);
       const params = { 'filter.type': target, 'signal.interests.entities': entityId, take };
       if (maxPopularity !== undefined) params['filter.popularity.max'] = maxPopularity;
       if (minPopularity !== undefined) params['filter.popularity.min'] = minPopularity;
