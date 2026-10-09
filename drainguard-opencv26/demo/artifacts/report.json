@@ -1,0 +1,81 @@
+{
+  "alignment": {
+    "coverage": 0.983,
+    "inlier_fraction": 0.83,
+    "inliers": 318,
+    "lighting_mad_lab_l": 4.0,
+    "lighting_offset_lab_l": 0.0,
+    "matches": 383,
+    "ok": true,
+    "rmse_px": 0.92
+  },
+  "assumptions": [
+    "same grate and camera subject",
+    "reference photo is known-good and rights-cleared",
+    "bright occlusion only; dark debris and water can be missed",
+    "no field deployment validation"
+  ],
+  "can_authorize_maintenance": false,
+  "fixture": "fully_synthetic_seed_20261009",
+  "human_review_required": true,
+  "method": "ORB/RANSAC + reference brightness contrast; not a safety clearance",
+  "not_live_aws_or_real_road_evidence": true,
+  "opencv_runtime": "4.13.0",
+  "reason": "human review required; do not interpret as drainage clearance",
+  "schema": "drainguard/report/v1",
+  "slots": [
+    {
+      "aligned_coverage": 1.0,
+      "bright_change_fraction": 0.0,
+      "classification": "REVIEW_NO_BRIGHT_BLOCKAGE",
+      "reason": "no bright obstruction found; other hazards not ruled out",
+      "reference_box_xywh": [
+        180,
+        153,
+        58,
+        132
+      ],
+      "slot_id": "S1"
+    },
+    {
+      "aligned_coverage": 1.0,
+      "bright_change_fraction": 0.7051,
+      "classification": "REVIEW_BRIGHT_BLOCKAGE",
+      "reason": "bright obstruction-like change observed",
+      "reference_box_xywh": [
+        269,
+        153,
+        58,
+        132
+      ],
+      "slot_id": "S2"
+    },
+    {
+      "aligned_coverage": 1.0,
+      "bright_change_fraction": 0.7099,
+      "classification": "REVIEW_BRIGHT_BLOCKAGE",
+      "reason": "bright obstruction-like change observed",
+      "reference_box_xywh": [
+        358,
+        153,
+        58,
+        132
+      ],
+      "slot_id": "S3"
+    },
+    {
+      "aligned_coverage": 1.0,
+      "bright_change_fraction": 0.0,
+      "classification": "REVIEW_NO_BRIGHT_BLOCKAGE",
+      "reason": "no bright obstruction found; other hazards not ruled out",
+      "reference_box_xywh": [
+        447,
+        153,
+        58,
+        132
+      ],
+      "slot_id": "S4"
+    }
+  ],
+  "status": "REVIEW_BRIGHT_BLOCKAGE"
+}

@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: DrainGuard S3-triggered roadside inlet image audit; every result requires human review
+Parameters:
+  StageName:
+    Type: String
+    Default: demo
+    AllowedPattern: '[a-z0-9-]+'
+  DrainGuardBucketName:
+    Type: String
+    Description: 'Unique DNS-safe S3 bucket name supplied by the deployer; use the same value in runtime and IAM, without a stack-resource dependency'
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
+Resources:
+  DrainGuardBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref DrainGuardBucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-demo-captures
+            Status: Enabled
+            Prefix: captures/
+            ExpirationInDays: 14
+          - Id: expire-old-versions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+  ReviewTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: assessmentId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: assessmentId
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+  DrainGuardProcessor:
+    Type: AWS::Serverless::Function
+    Metadata:
+      DockerContext: ..
+      Dockerfile: infra/Dockerfile
+      DockerTag: !Sub 'drainguard-${StageName}'
+    Properties:
+      PackageType: Image
+      Architectures: [x86_64]
+      MemorySize: 2048
+      Timeout: 60
+      Environment:
+        Variables:
+          DRAINGUARD_BUCKET: !Ref DrainGuardBucketName
+          DRAINGUARD_REVIEW_TABLE: !Ref ReviewTable
+          DRAINGUARD_REFERENCE_KEY: reference/reference.png
+          DRAINGUARD_SLOTS_KEY: reference/slots.json
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Sid: ReadReferenceAndCaptures
+              Effect: Allow
+              Action: [s3:GetObject]
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:s3:::${DrainGuardBucketName}/reference/*'
+                - !Sub 'arn:${AWS::Partition}:s3:::${DrainGuardBucketName}/captures/*'
+            - Sid: ReadVersionPinnedCapture
+              Effect: Allow
+              Action: [s3:GetObjectVersion]
+              Resource: !Sub 'arn:${AWS::Partition}:s3:::${DrainGuardBucketName}/captures/*'
+            - Sid: WriteAuditReport
+              Effect: Allow
+              Action: [s3:PutObject]
+              Resource: !Sub 'arn:${AWS::Partition}:s3:::${DrainGuardBucketName}/reports/*'
+            - Sid: EnqueueReview
+              Effect: Allow
+              Action: [dynamodb:PutItem]
+              Resource: !GetAtt ReviewTable.Arn
+      Events:
+        CaptureUploaded:
+          Type: S3
+          Properties:
+            Bucket: !Ref DrainGuardBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: captures/
+Outputs:
+  StorageBucket:
+    Description: Private reference, captured imagery and review artifacts
+    Value: !Ref DrainGuardBucket
+  ReviewTableName:
+    Description: Human review queue; no automatic maintenance actions
+    Value: !Ref ReviewTable
