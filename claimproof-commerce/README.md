@@ -6,6 +6,8 @@
 
 A buyer pastes a digital product cart and merchant's own terms. The server normalizes a fixed 2-decimal USD amount, detects missing return/fulfillment disclosures, and optionally sends the *cart and terms only* to an OpenAI-compatible chat model to receive structured risk questions. The model is advisory; it cannot select a merchant, payment amount, token, or operation. The user must deliberately consent to create a PayPal **sandbox** Orders-v2 intent=CAPTURE checkout, approve it on the actual PayPal sandbox site, and deliberately consent *again* to capture. Before capture, the server gets live PayPal order state and requires APPROVED, USD, and exact unchanged total. Browser callback or AI output alone never captures. The app cannot target PayPal live endpoints.
 
+The local risk-review heuristic distinguishes missing refund language (`RETURNS_UNCLEAR`) from explicitly restrictive language such as “no refunds”, “all sales final”, or “non-refundable” (`RETURNS_RESTRICTED`). This flags a policy for buyer attention rather than assuming that a keyword match means friendly returns. It cannot verify the merchant's actual policy, applicable consumer rights, or legal enforceability; it is not legal advice.
+
 ## Run offline now
 
 ```bash
