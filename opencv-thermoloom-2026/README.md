@@ -44,7 +44,7 @@ python synthetic_demo.py --out synthetic-output
 python thermoloom.py synthetic-output/spot.png --rows 4 --cols 6 --out receipt.json --overlay evidence.png
 ```
 
-Expected synthetic states: `clean=MONITOR`, `spot=HUMAN_REVIEW` with row 1/col 3, and `flat=RETAKE`. No claimed accuracy on real captures. A real grayscale camera image must pass source rights/privacy and operator validation. For perspective capture, pass `--corners-json corners.json` containing exactly four *image-pixel* coordinates ordered top-left, top-right, bottom-right, bottom-left. Receipts then use rectified-image coordinates, not original-camera coordinates. Annotated overlay is only supported without a homography for now; requesting both fails explicitly.
+Expected synthetic states: `clean=MONITOR`, `spot=HUMAN_REVIEW` with row 1/col 3, and `flat=RETAKE`. No claimed accuracy on real captures. A real grayscale camera image must pass source rights/privacy and operator validation. For perspective capture, pass `--corners-json corners.json` containing exactly four *image-pixel* coordinates ordered top-left, top-right, bottom-right, bottom-left. Receipts then use rectified-image coordinates, not original-camera coordinates. Combine `--corners-json corners.json --overlay evidence.png` to draw evidence on the same rectified pixels used for scoring. The overlay checks capture identity and refuses mismatched source frames or corner geometry; output overlay coordinates are rectified, not original-camera.
 
 ## Opt-in illumination-gradient ablation (synthetic candidate)
 
@@ -56,6 +56,10 @@ python test_panel_threshold_focused.py
 ```
 
 One bounded **synthetic-only** cloud probe used 12 deterministic seeds, eight broad illumination gradients, and clean/spot pairs (96 clean + 96 injected spots): incumbent peer-global localized 51/96 spots, panel-local 96/96, and both modes raised 0/96 alerts on clean synthesized captures. The focused direct-source check used 3 seeds x 4 gradients (12 clean + 12 injected) on **OpenCV 4.13.0**, with peer 4/12 versus panel 12/12 localized and zero clean alerts for both. These are designed cases, not real PV imagery, calibrated thermal results, an official OpenCV 5 evaluation, or estimated deployment accuracy. A real captured-world and OpenCV 5 comparison is required before promoting panel mode to default or claiming competition performance.
+
+## S3 ObjectCreated source identity
+
+The Lambda worker now rejects non-ObjectCreated events and requires an S3 version ID or ETag from the event. Versioned reads request the event's VersionId; if an ETag is present, the S3 IfMatch precondition and a response ETag check prevent a stale event from silently reviewing newer data at the same key. A version mismatch or absent source identity rejects the event before writing a review receipt. ETags are not cryptographic content hashes: bucket versioning is preferred for immutable source identity. AWS processing remains at least once, not exactly once. The four mocked-S3 regression cases use synthetic inputs and do not demonstrate deployed AWS behavior.
 
 ## Deploy only with permission
 

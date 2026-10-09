@@ -27,5 +27,58 @@ class ApprovalBoundary(unittest.TestCase):
                 "status": "PENDING", "amount": unit["amount"]}]}}]}, item, "ORDER1"))
 
 
+    def test_rejects_duplicate_full_amount_and_malformed_capture_records(self):
+        item = CATALOG_BY_SKU["trail-repair"]
+        amount = {"currency_code": "USD", "value": money(item["cents"])}
+        unit = {"reference_id": item["sku"], "amount": amount}
+        capture = {"status": "COMPLETED", "amount": amount}
+
+        def result(payments):
+            return {"id": "ORDER1", "status": "COMPLETED",
+                    "purchase_units": [{**unit, "payments": payments}]}
+
+        self.assertTrue(valid_capture(result({"captures": [capture]}), item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": [capture, dict(capture)]}),
+                                       item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": []}), item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": {"0": capture}}),
+                                       item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": None}), item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": [None]}), item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": [{"status": "COMPLETED",
+                                                             "amount": None}]}),
+                                       item, "ORDER1"))
+        self.assertFalse(valid_capture(result(None), item, "ORDER1"))
+
+
+    def test_malformed_order_envelopes_fail_closed(self):
+        item = CATALOG_BY_SKU["trail-repair"]
+        amount = {"currency_code": "USD", "value": money(item["cents"])}
+        valid_unit = {"reference_id": item["sku"], "amount": amount}
+        for envelope in (None, [], "not-a-provider-object", 17):
+            with self.subTest(envelope=envelope):
+                self.assertFalse(valid_approved_order(envelope, item, "ORDER1"))
+                self.assertFalse(valid_capture(envelope, item, "ORDER1"))
+
+        malformed_units = (
+            None, "unit", [], 42,
+            {"reference_id": item["sku"], "amount": None},
+            {"reference_id": item["sku"], "amount": []},
+            {"reference_id": item["sku"], "amount": "42.95"},
+        )
+        for unit in malformed_units:
+            with self.subTest(unit=unit):
+                self.assertFalse(valid_approved_order({
+                    "id": "ORDER1", "status": "APPROVED",
+                    "purchase_units": [unit]}, item, "ORDER1"))
+                self.assertFalse(valid_capture({
+                    "id": "ORDER1", "status": "COMPLETED",
+                    "purchase_units": [unit]}, item, "ORDER1"))
+
+        self.assertTrue(valid_approved_order({
+            "id": "ORDER1", "status": "APPROVED",
+            "purchase_units": [valid_unit]}, item, "ORDER1"))
+
+
 if __name__ == "__main__":
     unittest.main()

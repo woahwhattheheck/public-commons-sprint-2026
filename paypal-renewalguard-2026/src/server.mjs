@@ -3,6 +3,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { DEMO, summarize, validId } from './logic.mjs';
+import { isLocalBrowserRequest } from './local-boundary.mjs';
 
 const PAYPAL = 'https://api-m.sandbox.paypal.com';
 const OPENAI = 'https://api.openai.com/v1/chat/completions';
@@ -57,12 +58,49 @@ function validateMode(mode) {
   if (mode !== 'demo' && mode !== 'sandbox') throw new Error('Invalid mode');
   return mode;
 }
+// Follow actual PayPal page boundaries without following provider-supplied URLs.
+// A full final page triggers a confirming probe even when links are omitted.
+export async function collectSubscriptionPages(getPage, maxPages = 10) {
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 10)
+    throw new Error('Invalid list page limit');
+  const seen = new Set(), items = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const batch = await getPage(page);
+    if (!batch || !Array.isArray(batch.subscriptions) || batch.subscriptions.length > 20)
+      throw new Error('PayPal list page format changed');
+    for (const item of batch.subscriptions) {
+      if (!validId(item?.id)) throw new Error('Invalid PayPal subscription in list');
+      if (seen.has(item.id)) throw new Error('PayPal list changed during pagination (duplicate subscription); retry');
+      seen.add(item.id);
+      items.push({id:item.id,status:String(item.status || ''),plan_id:String(item.plan_id || '')});
+    }
+    if (batch.links !== undefined && !Array.isArray(batch.links))
+      throw new Error('PayPal list links format changed');
+    const nextLinks = (batch.links || []).filter(link => link?.rel === 'next');
+    if (nextLinks.length > 1) throw new Error('Ambiguous PayPal next page link');
+    if (nextLinks.length) {
+      let next;
+      try { next = new URL(nextLinks[0].href); }
+      catch { throw new Error('Malformed PayPal next page link'); }
+      if (next.origin !== PAYPAL || next.pathname !== '/v1/billing/subscriptions' ||
+          next.username || next.password || next.searchParams.get('page') !== String(page + 1) ||
+          (next.searchParams.has('page_size') && next.searchParams.get('page_size') !== '20') ||
+          (nextLinks[0].method && nextLinks[0].method !== 'GET'))
+        throw new Error('Unexpected PayPal next page link');
+    }
+    const more = nextLinks.length > 0 || batch.subscriptions.length === 20;
+    if (!more || page === maxPages)
+      return {items, pages_read:page, incomplete:more};
+  }
+  throw new Error('Subscription pagination did not terminate');
+}
 async function listing(mode) {
-  if (mode === 'demo') return DEMO.map(x => ({id:x.id,status:x.status,plan_id:x.plan_id}));
-  const value = await paypalGet('/v1/billing/subscriptions?page=1&page_size=20');
-  if (!Array.isArray(value.subscriptions)) throw new Error('PayPal list format changed');
-  return value.subscriptions.filter(x => validId(x?.id)).slice(0,20)
-    .map(x => ({id:x.id,status:String(x.status || ''),plan_id:String(x.plan_id || '')}));
+  if (mode === 'demo') return {
+    items:DEMO.map(x => ({id:x.id,status:x.status,plan_id:x.plan_id})),
+    pages_read:1, incomplete:false,
+  };
+  return collectSubscriptionPages(page =>
+    paypalGet('/v1/billing/subscriptions?page=' + page + '&page_size=20'));
 }
 async function detail(mode,id) {
   if (!validId(id)) throw new Error('Invalid subscription ID');
@@ -117,6 +155,8 @@ async function incoming(req) {
 export function makeServer() {
   return createServer(async (req,res) => {
     try {
+      if (!isLocalBrowserRequest(req.headers))
+        return response(res,403,{error:'Only same-origin local requests are supported'});
       const url = new URL(req.url || '/', 'http://localhost');
       if (req.method === 'GET' && url.pathname === '/') {
         const html = await readFile(new URL('../web/index.html',import.meta.url));
@@ -133,7 +173,7 @@ export function makeServer() {
       }
       if (req.method === 'GET' && url.pathname === '/api/list') {
         const mode = validateMode(url.searchParams.get('mode'));
-        return response(res,200,{mode,items:await listing(mode)});
+        return response(res,200,{mode,...await listing(mode)});
       }
       if (req.method === 'GET' && url.pathname === '/api/detail') {
         const mode = validateMode(url.searchParams.get('mode'));

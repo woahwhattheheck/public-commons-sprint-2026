@@ -60,13 +60,18 @@ def _scale_edge_px(xy: np.ndarray) -> float | None:
     return float(np.mean(lengths))
 
 
-def _marker(image: np.ndarray, marker_side_mm: float) -> tuple[dict | None, np.ndarray, bool]:
+def _marker(image: np.ndarray, marker_side_mm: float) -> tuple[dict | None, np.ndarray, bool | str]:
     dictionary = cv2.aruco.getPredefinedDictionary(MARKER_DICTIONARY)
     detector = cv2.aruco.ArucoDetector(dictionary, cv2.aruco.DetectorParameters())
     corners, ids, _ = detector.detectMarkers(image)
     mask = np.full(image.shape[:2], 255, np.uint8)
     if ids is None:
         return None, mask, False
+    # Two visible fiducials sharing one ID do not identify a unique scale plane.
+    # Abstain before falling back to a single geometry-valid marker.
+    matching = sum(int(marker_id) == MARKER_ID for marker_id in ids.flatten())
+    if matching > 1:
+        return None, mask, "duplicate"
     unreliable_geometry = False
     for points, marker_id in zip(corners, ids.flatten()):
         if int(marker_id) != MARKER_ID:
@@ -109,7 +114,8 @@ def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0)
     if brightness < 48:
         reasons.append("DARK_RETAKE")
     if marker is None:
-        reasons.append("SCALE_MARKER_GEOMETRY_UNRELIABLE" if marker_geometry_rejected
+        reasons.append("SCALE_MARKER_AMBIGUOUS" if marker_geometry_rejected == "duplicate"
+                       else "SCALE_MARKER_GEOMETRY_UNRELIABLE" if marker_geometry_rejected
                        else "SCALE_MARKER_MISSING")
 
     # Narrow, disclosed red fruit detector. Green/yellow varieties are not

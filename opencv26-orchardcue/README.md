@@ -2,7 +2,7 @@
 
 **Original OpenCV AI Competition 2026 / AWS concept; NOT a Devpost submission.** A camera still is analyzed by a conservative **red-fruit-like-region detector** with an ArUco scale marker. The operator receives a count of visual candidates, pixel locations, approximate marker-plane diameters, capture-quality issues, an annotated PNG and an audit JSON. The next action is always **operator review or retake**; the software never decides yield, fruit ripeness, pesticide application, treatment, or any irreversible operation.
 
-The entire offline demo works without cloud credentials, external datasets, images from third parties or an LLM. It is intentionally a falsifiable starting point, **not a model validated in an orchard**. Green/yellow fruit, shade, occlusion, and touching blobs cannot be assumed detected. Red blobs are not guaranteed to be fruit. Millimeter estimates only apply if the marker and candidate are coplanar; absent a marker, dimensional output is suppressed. These are explicit engineering limitations, not fixed with fictional confidence scores.
+The entire offline demo works without cloud credentials, external datasets, images from third parties or an LLM. It is intentionally a falsifiable starting point, **not a model validated in an orchard**. Green/yellow fruit, shade, occlusion, and touching blobs cannot be assumed detected. Red blobs are not guaranteed to be fruit. Millimeter estimates only apply if the marker and candidate are coplanar; absent a marker or duplicate ArUco id 23 markers, dimensional output is suppressed. Duplicate IDs produce `SCALE_MARKER_AMBIGUOUS` and require human review rather than selecting an arbitrary marker scale. These are explicit engineering limitations, not fixed with fictional confidence scores.
 
 ## Local demo (Python 3.11+, NumPy, OpenCV with aruco)
 
@@ -39,6 +39,7 @@ or official OpenCV 5 / AWS performance. Real orchard validation is still require
 
 - `RETAKE_REQUIRED`: blur, severe glare, or underexposure; request a new image and **do not decide orchard state**.
 - `HUMAN_REVIEW_REQUIRED`: marker missing, ambiguous/touching red objects, or zero candidates; review and verify scale.
+  When the same ID 23 is detected twice, review must request a single-marker recapture rather than choosing a physical scale. Pixel-only candidate positions remain available.
 - `READY_FOR_OPERATOR_REVIEW`: quality gates pass and six synthetic red objects were localized; human still confirms.
 
 Every action includes `human_confirmation_required=true`. The static HTML shows the same provenance and annotated capture and provides the JSON, with **no browser-upload service and no silent network calls**.

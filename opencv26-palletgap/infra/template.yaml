@@ -10,6 +10,8 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
@@ -19,6 +21,8 @@ Resources:
             Prefix: frames/
             Status: Enabled
             ExpirationInDays: 7
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 7
   Inspections:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -58,7 +62,9 @@ Resources:
           Statement:
             - Sid: ReadCameraInputs
               Effect: Allow
-              Action: s3:GetObject
+              Action:
+                - s3:GetObject
+                - s3:GetObjectVersion
               Resource: !Sub '${Inputs.Arn}/*'
             - Sid: StoreDecision
               Effect: Allow

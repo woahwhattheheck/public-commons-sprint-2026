@@ -1,0 +1,95 @@
+{
+  "files": {
+    ".gitignore": {
+      "bytes": 45,
+      "sha256": "072223f291d856ac498d11c7f9a0217d30c48405fa826514c4d415e13968012a"
+    },
+    "AWS_VERSIONED_EVENT_PROVENANCE.md": {
+      "bytes": 1661,
+      "sha256": "2f0a5c678a502074b2a6f20cb887ffd5e2b0c5dbd872e777313db0083cadc475"
+    },
+    "COMPETITION_DELIVERY.md": {
+      "bytes": 1419,
+      "sha256": "62d41ceef04e1a9c1c27ac0bb3a7cd1c13dd3de99925ce8b985f1d72f39b20ad"
+    },
+    "LICENSE": {
+      "bytes": 1093,
+      "sha256": "8b70f3039d0c5260dc2ef4659a61c8670b29645c3e466e2c6c7e1a0dd4e61c64"
+    },
+    "README.md": {
+      "bytes": 8828,
+      "sha256": "ae0a76b255a3d0b439e6a721c821dcc1ff36224cadbb25ee20cd9d4cdd3f7dce"
+    },
+    "SAM_DEPLOYABILITY.md": {
+      "bytes": 2631,
+      "sha256": "2e0e64dd03b5f5ec681caa1a4110903affcd8cc210ddbaa55869aad8f9fa6c95"
+    },
+    "demo/artifacts/annotated.png": {
+      "bytes": 431392,
+      "sha256": "439a50fd1c01f8bb95dd9fa5a12ae9f0222b041212a60f7359d386a5fae360f2"
+    },
+    "demo/artifacts/capture.png": {
+      "bytes": 464389,
+      "sha256": "d3877ae15598ba494e559e9796de0a1963f2ca44b44b50bf3a2c65b17b59942a"
+    },
+    "demo/artifacts/reference.png": {
+      "bytes": 487494,
+      "sha256": "d45d9973acc339e172e27537f9d41f4389e3781166187e1dc3aeca0553a23249"
+    },
+    "demo/artifacts/report.json": {
+      "bytes": 2131,
+      "sha256": "3b4bf28f511c732aa2d32080bd309c656126aa6ca038de5402a13ba2c58c03b7"
+    },
+    "demo/artifacts/slots.json": {
+      "bytes": 355,
+      "sha256": "a3fd14b22f8af44295125fdfa103aa4051f0bb011e6f730ebac47f5422f1463b"
+    },
+    "demo/index.html": {
+      "bytes": 3486,
+      "sha256": "3aba907824184f4ee743c30b5c1e3cc32098e0d34d0f3492a5c54db3c8fb8171"
+    },
+    "drainguard/__init__.py": {
+      "bytes": 94,
+      "sha256": "f1c2daccc03bd06bb1b035bbdba81a6c1db22da6de9bfcb4e7793e82a2075579"
+    },
+    "drainguard/aws_handler.py": {
+      "bytes": 8016,
+      "sha256": "42ba9ff1cd0ce9579e569c6cf965f43cb330465b5afc80a15a777ae7bb5108e8"
+    },
+    "drainguard/demo.py": {
+      "bytes": 1485,
+      "sha256": "98e055c2fb5d58bac0e7be03629dabaf0e6a401b09bac5734385aae5592c60c4"
+    },
+    "drainguard/synthetic.py": {
+      "bytes": 2200,
+      "sha256": "139d197005077a61dbedf152d315cb2164e5d6f0dc9d672fec2ab7843ec0d9c2"
+    },
+    "drainguard/vision.py": {
+      "bytes": 10683,
+      "sha256": "b33a3b59be3c9645a09a844070e97198708cb22481446e4ad4faeeb41d942c3e"
+    },
+    "infra/Dockerfile": {
+      "bytes": 348,
+      "sha256": "bcba6e82fdee26d4f0d7464e78771f2ce1458ccf866b54e378913370840d548f"
+    },
+    "infra/requirements.txt": {
+      "bytes": 153,
+      "sha256": "4c620745932e6a20c64cff5de31826dcb248a2d41eb919c0613efacb66ffc438"
+    },
+    "infra/template.yaml": {
+      "bytes": 3690,
+      "sha256": "831dd71d93a0b03b21e28eda263864050fc89dbf035d44dd5c1066b86ddee95f"
+    },
+    "test/test_focused.py": {
+      "bytes": 871,
+      "sha256": "0732f572cc8739e719ccd8b0c5f79620b7dd523bc54325d1d6cfd367f5a3aef3"
+    },
+    "test/test_s3_version_receipt.py": {
+      "bytes": 3708,
+      "sha256": "36f5459b446f144c97912df8addec396431aba83fb8fa08f5ad788498596f5f4"
+    }
+  },
+  "schema": "drainguard/source-manifest/v1",
+  "source_version": "0.1.1-sam-bucket-reference",
+  "synthetic_only": true
+}
