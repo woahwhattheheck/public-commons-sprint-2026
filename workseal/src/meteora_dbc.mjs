@@ -39,9 +39,12 @@ function canonicalize(value, path = '$') {
     if (!Number.isSafeInteger(value)) fail('BAD_NUMBER', `${path} must be a safe integer`);
     return value;
   }
-  if (Array.isArray(value)) return value.map((entry, index) => canonicalize(entry, `${path}[${index}]`));
+  if (Array.isArray(value)) return Array.from({ length: value.length }, (_, index) => {
+    if (!Object.hasOwn(value, index)) fail('SPARSE_ARRAY', `missing element at ${path}[${index}]`);
+    return canonicalize(value[index], `${path}[${index}]`);
+  });
   if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-    const out = {};
+    const out = Object.create(null);
     for (const key of Object.keys(value).sort()) {
       if (value[key] === undefined) fail('UNDEFINED_FIELD', `${path}.${key} is undefined`);
       out[key] = canonicalize(value[key], `${path}.${key}`);
