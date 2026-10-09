@@ -51,6 +51,23 @@ python -m evidenceforge.panta_compare /tmp/panta-before.json /tmp/panta-after.js
 python -m unittest tests.test_panta_compare -v
 ```
 
+The existing loopback judge UI can now exhibit the same two-capture comparison,
+without relying on a generated screenshot or hosting a Panta credential:
+
+```bash
+export PANTA_BEFORE_FILE=/tmp/panta-before.json
+export PANTA_AFTER_FILE=/tmp/panta-after.json
+python -m evidenceforge.webapp
+# Browse http://127.0.0.1:8080/panta-compare
+# Exact JSON: http://127.0.0.1:8080/api/panta-compare
+```
+
+Both file paths are explicit operator inputs. Missing files return HTTP 503; invalid,
+tampered, differently filtered or source-mismatched snapshots return HTTP 422.
+The browser HTML escapes untrusted market values. It makes no network request,
+does not accept a provider key, and does not assert live timestamps. One focused
+no-network view case is in tests/test_panta_compare_view.py.
+
 The comparison rechecks both source snapshot hashes, strict schemas, filters and
 read-only authority. It reports decimal-exact YES/NO and volume deltas, phase
 transitions and digest-bound evidence. Because catalog API pages may paginate,

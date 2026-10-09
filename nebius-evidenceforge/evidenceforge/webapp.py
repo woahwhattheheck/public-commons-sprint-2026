@@ -10,6 +10,8 @@ from urllib.parse import parse_qs, urlparse
 
 from .core import MemorySandbox, compile_change
 from .panta_view import PantaViewError, load_snapshot, render_page, selected_context
+from .panta_compare import PantaComparisonError, compare_snapshots
+from .panta_compare_view import render_comparison_page
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -84,6 +86,42 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(HTTPStatus.UNPROCESSABLE_ENTITY, "text/plain; charset=utf-8",
                            (msg + "\n").encode())
 
+    def _panta_compare_response(self, path: str, query: str) -> None:
+        """Serve only explicit local-file comparisons; never fetch a live key."""
+        json_mode = path == "/api/panta-compare"
+        before_file = os.environ.get("PANTA_BEFORE_FILE", "").strip()
+        after_file = os.environ.get("PANTA_AFTER_FILE", "").strip()
+        if not before_file or not after_file:
+            message = ("Set PANTA_BEFORE_FILE and PANTA_AFTER_FILE to two saved, "
+                       "validated Panta snapshot JSON files. The included fixture is synthetic.")
+            self._send(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                "application/json; charset=utf-8" if json_mode else "text/plain; charset=utf-8",
+                ((json.dumps({"error": message}) if json_mode else message) + "\n").encode("utf-8"),
+            )
+            return
+        try:
+            if query:
+                raise PantaComparisonError("comparison endpoint accepts no query parameters")
+            report = compare_snapshots(
+                load_snapshot(Path(before_file)), load_snapshot(Path(after_file))
+            )
+        except (PantaComparisonError, PantaViewError) as exc:
+            error = str(exc)
+            self._send(
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+                "application/json; charset=utf-8" if json_mode else "text/plain; charset=utf-8",
+                ((json.dumps({"error": error}) if json_mode else error) + "\n").encode("utf-8"),
+            )
+            return
+        if json_mode:
+            body = (json.dumps(report, sort_keys=True, ensure_ascii=False, indent=2)
+                    + "\n").encode("utf-8")
+            self._send(HTTPStatus.OK, "application/json; charset=utf-8", body)
+        else:
+            self._send(HTTPStatus.OK, "text/html; charset=utf-8",
+                       render_comparison_page(report).encode("utf-8"))
+
     def do_GET(self) -> None:
         url = urlparse(self.path)
         path = url.path
@@ -92,6 +130,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path in {"/panta", "/api/panta"}:
             self._panta_response(path, url.query)
+            return
+        if path in {"/panta-compare", "/api/panta-compare"}:
+            self._panta_compare_response(path, url.query)
             return
         if path == "/api/demo":
             body = (json.dumps(_compile_demo(), indent=2, sort_keys=True) + "\n").encode()
@@ -126,6 +167,7 @@ body{{font-family:system-ui;margin:3rem;max-width:850px}} code{{background:#eee;
 {authority['human_approval_required']}.</p>
 <p><a href="/api/demo">View machine-readable receipt</a></p>
 <p><a href="/panta">Inspect a Panta prediction-market snapshot</a> (requires explicit local capture file).</p>
+<p><a href="/panta-compare">Compare two captured Panta market pages</a> (requires two saved snapshots).</p>
 </body></html>"""
         self._send(HTTPStatus.OK, "text/html; charset=utf-8", page.encode("utf-8"))
 
