@@ -123,8 +123,26 @@ def inspect(reference: np.ndarray, live: np.ndarray, vertices: list[list[int]], 
     if illum > params.max_illumination_shift:
         return {"status": "ABSTAIN", "reason": "illumination_changed", "registration": diag, "regions": [], "illumination_shift": round(illum, 2)}
     difference = np.abs(live_lab - ref_lab - shifts)
-    # Lightness alone is not reliable: chroma+lightness residual count together.
-    changed = (np.sqrt(np.mean(difference ** 2, axis=2)) > params.pixel_change_threshold).astype(np.uint8) * 255
+    # Retain the original color-residual threshold. A texture-matched obstruction
+    # can nevertheless occlude the reference's edges with little Lab shift.
+    color_changed = (np.sqrt(np.mean(difference ** 2, axis=2)) > params.pixel_change_threshold)
+    # Local Laplacian energy loss is a *separate* evidence channel, not a lowered
+    # color threshold. Require a textured reference and both absolute/relative
+    # attenuation so uniform lighting and flat-floor noise are not obstacles.
+    def local_energy(frame: np.ndarray) -> np.ndarray:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        laplacian = cv2.Laplacian(gray, cv2.CV_32F, ksize=3)
+        return cv2.blur(np.abs(laplacian), (7, 7))
+
+    reference_energy = local_energy(reference)
+    observed_energy = local_energy(aligned)
+    lost_energy = reference_energy - observed_energy
+    texture_occluded = (
+        (reference_energy >= 30.0)
+        & (lost_energy >= 18.0)
+        & (lost_energy >= 0.42 * reference_energy)
+    )
+    changed = (color_changed | texture_occluded).astype(np.uint8) * 255
     changed[roi == 0] = 0
     changed = cv2.morphologyEx(changed, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     changed = cv2.morphologyEx(changed, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
