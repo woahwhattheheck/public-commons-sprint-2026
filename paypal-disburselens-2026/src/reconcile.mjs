@@ -34,10 +34,19 @@ function canonicalSnapshot(pages){
   let expected=Number(pages[0].total_pages??1);
   if(!Number.isSafeInteger(expected)||expected<1||expected>10)throw new Error('unsupported page count');
   if(pages.length!==expected)throw new Error('partial pagination: no complete reconciliation');
+  // Pages are successive observations, not an atomic provider snapshot.
+  // Reject changed report facts instead of combining them with page 1's totals.
+  const reportFacts=h=>JSON.stringify([h?.batch_status??null,h?.amount?.currency??null,h?.amount?.value??null]);
+  const firstFacts=reportFacts(header);
+  const firstCount=pages[0].total_items==null?null:Number(pages[0].total_items);
+  if(firstCount!==null&&(!Number.isSafeInteger(firstCount)||firstCount<0))throw new Error('invalid declared item count');
   const items=[];
   for(const page of pages){
     if(page.batch_header?.payout_batch_id!==id)throw new Error('batch ID changed across pages');
     if(Number(page.total_pages??1)!==expected)throw new Error('page count changed');
+    if(reportFacts(page.batch_header)!==firstFacts)throw new Error('batch amount or status changed across pages; retry sync');
+    const pageCount=page.total_items==null?null:Number(page.total_items);
+    if(pageCount!==firstCount)throw new Error('item count changed across pages; retry sync');
     if(!Array.isArray(page.items))throw new Error('missing page items');
     items.push(...page.items);
     if(items.length>1000)throw new Error('too many payout items');
