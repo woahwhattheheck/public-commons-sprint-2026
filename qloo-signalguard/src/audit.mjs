@@ -94,8 +94,20 @@ export async function audit({ seed, seedType, target }, provider) {
   const exact = candidates.find(c => c.name.toLowerCase() === normalizedSeed.toLowerCase());
   const selected = exact ?? candidates[0];
   trace.push({ step: 'baseline', detail: `Querying ${target} against a Qloo entity signal` });
-  const baseline = normalizeInsights(await provider.insights({ target, entityId: selected.id, take: 15 }), target);
-  if (!baseline.length) return { status: 'abstained', reason: 'Qloo returned no baseline entities; an evidence-based audit is not possible', seed: selected, trace };
+  // A valid but empty ID-based baseline is not proof the exact resolved name
+  // lacks Qloo evidence. Qloo documents its separate name-resolution signal
+  // through POST /v2/insights; only use it when the first lookup had zero
+  // compatible entities. Malformed payloads still throw before completion.
+  let baselineSignal = 'entity-id';
+  let signal = { entityId: selected.id };
+  let baseline = normalizeInsights(await provider.insights({ target, ...signal, take: 15 }), target);
+  if (!baseline.length) {
+    signal = { entityName: selected.name };
+    trace.push({ step: 'resolve-name', detail: 'Empty Qloo entity-ID baseline; resolving the exact selected name as an Insights signal' });
+    baseline = normalizeInsights(await provider.insights({ target, ...signal, take: 15 }), target);
+    baselineSignal = 'exact-name';
+  }
+  if (!baseline.length) return { status: 'abstained', reason: 'Qloo returned no baseline entities for ID or exact-name signal; an evidence-based audit is not possible', seed: selected, trace };
 
   const availablePops = baseline.map(row => row.popularity).filter(n => n !== null);
   const med = median(availablePops);
@@ -104,8 +116,8 @@ export async function audit({ seed, seedType, target }, provider) {
   if (med === null) notes.push('Qloo omitted popularity for these baseline entities; the 0.55 threshold is a neutral fallback, not a measured distribution.');
   trace.push({ step: 'probe', detail: `Auditing low/high popularity slices around ${pivot.toFixed(2)} (two independent Qloo Insights queries)` });
   const settled = await Promise.allSettled([
-    provider.insights({ target, entityId: selected.id, take: 15, maxPopularity: pivot }),
-    provider.insights({ target, entityId: selected.id, take: 15, minPopularity: pivot }),
+    provider.insights({ target, ...signal, take: 15, maxPopularity: pivot }),
+    provider.insights({ target, ...signal, take: 15, minPopularity: pivot }),
   ]);
   const status = { low: 'ok', high: 'ok' };
   const rows = [];
@@ -142,6 +154,7 @@ export async function audit({ seed, seedType, target }, provider) {
     status: 'complete',
     seed: selected,
     lookup: exact ? 'exact name' : 'best available name match',
+    baselineSignal,
     target,
     pivot,
     summary,
