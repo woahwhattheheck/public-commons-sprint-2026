@@ -33,9 +33,16 @@ export function makeAgent(){
   function say(sentence){
     if(typeof sentence!=='string'||sentence.length>240)throw Error('Command must be text <=240 chars');
     const words=sentence.trim().toLowerCase();
-    if(/\b(plan|save|cheaper|schedule|optimize)\b/.test(words))return offer();
-    if(/\b(explain|status|why|show)\b/.test(words))return view();
-    if(/\b(cancel|reset|discard)\b/.test(words))return cancel();
+    // Negative commands must NEVER turn into positive scheduling or reset actions.
+    if(/\b(?:don't|do not|never|not)\s+(?:[\w-]+\s+){0,3}(?:plan|save|schedule|optimize|cancel|reset|discard)\b/.test(words))
+      throw Error('Negated action not executed; use a direct explicit command');
+    const cancelIntent=/\b(cancel|reset|discard)\b/.test(words);
+    const readIntent=/\b(explain|status|why|show)\b/.test(words);
+    const planIntent=/\b(plan|save|cheaper|schedule|optimize)\b/.test(words);
+    if(cancelIntent&&readIntent)throw Error('Ambiguous command: ask for status or cancel separately');
+    if(cancelIntent)return cancel(); // "cancel the plan" must cancel, never regenerate.
+    if(readIntent)return view(); // "explain the plan" is read-only.
+    if(planIntent)return offer();
     throw Error('Try "find a cheaper schedule", "explain the plan", or use explicit approval controls.');
   }
   return {offer,view,approve,execute,cancel,say};
