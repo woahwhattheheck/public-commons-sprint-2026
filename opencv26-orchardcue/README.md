@@ -24,6 +24,7 @@ python check_focused.py       # one small synthetic acceptance check; not a full
 
 - `RETAKE_REQUIRED`: blur, severe glare, or underexposure; request a new image and **do not decide orchard state**.
 - `HUMAN_REVIEW_REQUIRED`: marker missing, ambiguous/touching red objects, or zero candidates; review and verify scale.
+  When the same ID 23 is detected twice, review must request a single-marker recapture rather than choosing a physical scale. Pixel-only candidate positions remain available.
 - `READY_FOR_OPERATOR_REVIEW`: quality gates pass and six synthetic red objects were localized; human still confirms.
 
 Every action includes `human_confirmation_required=true`. The static HTML shows the same provenance and annotated capture and provides the JSON, with **no browser-upload service and no silent network calls**.
