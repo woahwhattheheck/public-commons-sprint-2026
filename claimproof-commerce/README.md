@@ -39,6 +39,12 @@ A network timeout or HTTP 503 **does not prove that a capture failed**. Never st
 
 This is not a general chargeback, refund or production-payment reconciliation service. In-memory review state is lost on server restart; an unknown provider outcome must be resolved at PayPal before starting a new order. Offline focused cases are in `tests/focused.test.mjs`; they do not prove any live capture occurred.
 
+### Fresh sandbox settlement observation (no live funds)
+
+After deliberate PayPal sandbox approval and capture, the **Download verified sandbox observation** control becomes available only for a locally recognized `CAPTURED` review. Clicking it sends an authenticated-by-local-review `POST /api/receipt` containing the original review ID and cart fingerprint. The backend performs a **fresh, read-only PayPal Orders v2 GET**, validates the original order ID, capture intent, one exact USD purchase unit, cart fingerprint reference, successful matching single capture and both order/capture `COMPLETED` statuses, then returns a timestamped JSON observation. Pending, declined, voided, reversed, mismatched, unconfigured or unavailable provider status cannot produce a record. Concurrent checkout operations are fenced rather than sharing a stale status response.
+
+The downloaded JSON identifies the local sandbox order/capture and frozen reviewed amount. It is **not digitally signed by PayPal**, not an official merchant receipt, not proof of a live-money transaction, not an expense or award receipt, and grants no payment authority. The read-only export never initiates an order or capture. An offline focused contract for this rule is `node --test tests/sandbox-receipt.test.mjs`; it does not simulate or assert a real PayPal transfer.
+
 ### Security and delivery limits
 
 - This prototype uses an in-memory, 30-minute review store and loopback-only server; it is not a multitenant production service. Cart fingerprints cover items, price, terms, and currency. Explicit approvals are not delegated to a model.
