@@ -1,0 +1,81 @@
+name: BountyHub public rendered intake
+on:
+  push:
+    branches: [delivery/bountyhub-intake-20261009-astra-c7]
+    paths: [.github/workflows/bountyhub-public-intake.yml]
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: bountyhub-public-rendered-intake
+  cancel-in-progress: false
+jobs:
+  public-board:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Provision isolated browser library
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: |
+          mkdir -p evidence
+          npm install --prefix "$RUNNER_TEMP/bountyhub-browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+      - name: Read the public board without accounts or writes
+        env:
+          NODE_PATH: ${{ runner.temp }}/bountyhub-browser/node_modules
+        shell: bash
+        run: |
+          node <<'JS'
+          const fs = require('node:fs/promises');
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({channel: 'chrome', headless: true});
+            const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
+            const page = await context.newPage();
+            const url = 'https://www.bountyhub.dev/en/bounties';
+            const report = {url, started_at: new Date().toISOString(), authenticated: false,
+              account_or_claim_actions: false, scope: 'one public listing page', warnings: []};
+            try {
+              const response = await page.goto(url, {waitUntil: 'domcontentloaded', timeout: 45000});
+              report.http_status = response ? response.status() : null;
+              try {
+                await page.waitForFunction(() =>
+                  document.querySelectorAll('a[href*="/bounties/"]').length > 0 ||
+                  (document.querySelector('main')?.innerText.length || 0) > 4000,
+                  null, {timeout: 20000});
+              } catch (_) {
+                report.warnings.push('Expected listing readiness signal not observed; absence is not an empty-market result.');
+              }
+              report.title = await page.title();
+              report.body_text = (await page.locator('body').innerText()).slice(0, 120000);
+              report.links = await page.locator('a[href]').evaluateAll(anchors =>
+                anchors.map(a => {
+                  const u = new URL(a.href, document.location.href);
+                  return {text: (a.innerText || a.getAttribute('aria-label') || '').trim(),
+                    url: u.origin + u.pathname,
+                    context: (a.closest('article,li,[data-slot="card"]')?.innerText || '').slice(0, 5000)};
+                }).filter(a => /^https?:/.test(a.url)));
+              report.visible_buttons = await page.getByRole('button').allTextContents();
+              await page.screenshot({path: 'evidence/public-board.png', fullPage: true});
+              await fs.writeFile('evidence/public-board.txt', report.body_text + '\n');
+              console.log(JSON.stringify({http_status: report.http_status, title: report.title,
+                characters: report.body_text.length, links: report.links.length,
+                warnings: report.warnings}, null, 2));
+              console.log(report.body_text.slice(0, 14000));
+            } catch (error) {
+              report.error = String(error.message || error).slice(0, 1000);
+              process.exitCode = 1;
+            } finally {
+              report.finished_at = new Date().toISOString();
+              await fs.writeFile('evidence/public-board.json', JSON.stringify(report, null, 2) + '\n');
+              await browser.close();
+            }
+          })().catch(error => {console.error(error.message); process.exitCode = 1;});
+          JS
+      - name: Preserve actual rendered public evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bountyhub-rendered-public-board
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
