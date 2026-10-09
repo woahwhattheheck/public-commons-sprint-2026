@@ -21,8 +21,10 @@ def _records(event):
     if not (1 <= len(event["Records"]) <= MAX_RECORDS):
         raise ValueError("S3 event record count out of bounds")
     for record in event["Records"]:
-        if record.get("eventSource") != "aws:s3":
-            raise ValueError("only S3 object-created events accepted")
+        event_name = record.get("eventName") if isinstance(record, dict) else None
+        if (not isinstance(record, dict) or record.get("eventSource") != "aws:s3" or not isinstance(event_name, str)
+                or not event_name.startswith("ObjectCreated:") or event_name == "ObjectCreated:"):
+            raise ValueError("only S3 ObjectCreated events accepted")
         s3 = record.get("s3") or {}
         bucket = (s3.get("bucket") or {}).get("name")
         obj = s3.get("object") or {}
@@ -31,7 +33,15 @@ def _records(event):
             raise ValueError("expected S3 images/*.png object")
         if ".." in key.split("/") or len(key) > 1024:
             raise ValueError("invalid object key")
-        yield bucket, key, obj.get("versionId"), obj.get("eTag")
+        version, etag = obj.get("versionId"), obj.get("eTag")
+        if version is not None and (not isinstance(version, str) or not version.strip()):
+            raise ValueError("invalid S3 event versionId")
+        if etag is not None and (not isinstance(etag, str) or not etag.strip('"')
+                                 or any(ord(ch) < 32 for ch in etag)):
+            raise ValueError("invalid S3 event eTag")
+        if not version and not etag:
+            raise ValueError("S3 event requires versionId or eTag to bind image bytes")
+        yield bucket, key, version, etag
 
 
 def lambda_handler(event, context, s3_client=None):
@@ -52,7 +62,16 @@ def lambda_handler(event, context, s3_client=None):
         request = {"Bucket": bucket, "Key": key}
         if version:
             request["VersionId"] = version
+        if etag:
+            # Conditional read prevents an old unversioned event from reading
+            # a newer object at the same key. ETag is an S3 identity hint,
+            # not a cryptographic content digest.
+            request["IfMatch"] = etag
         source = s3_client.get_object(**request)
+        if version and source.get("VersionId") not in (None, version):
+            raise ValueError("S3 response version differs from ObjectCreated event")
+        if etag and str(source.get("ETag", "")).strip('"').lower() != etag.strip('"').lower():
+            raise ValueError("S3 response ETag differs from ObjectCreated event")
         payload = source["Body"].read(8 * 1024 * 1024 + 1)
         frame = decode_image(payload)
         receipt = inspect(frame, rows=rows, cols=cols)
