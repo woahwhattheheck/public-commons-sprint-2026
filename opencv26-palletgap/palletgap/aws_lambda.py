@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import time
 from urllib.parse import unquote_plus
 
@@ -16,10 +17,24 @@ MAX_MANIFEST_BYTES = 32_768
 MAX_FRAME_BYTES = 12_000_000
 
 
-def _body(s3, bucket: str, key: str, maximum: int) -> bytes:
+def _body(s3, bucket: str, key: str, maximum: int, *,
+          version_id: str | None = None, expected_etag: str | None = None) -> bytes:
     if not key.startswith(("frames/", "config/", "requests/")) or "/../" in key or key.startswith("/"):
         raise ValueError("Disallowed object key")
-    response = s3.get_object(Bucket=bucket, Key=key)
+    options = {"Bucket": bucket, "Key": key}
+    if version_id is not None:
+        if not isinstance(version_id, str) or not (1 <= len(version_id) <= 512) or any(ord(c) < 32 for c in version_id):
+            raise ValueError("Invalid S3 event version")
+        options["VersionId"] = version_id
+    if expected_etag is not None:
+        if not isinstance(expected_etag, str) or not re.fullmatch(r'"?[a-fA-F0-9]{32}(?:-[1-9][0-9]*)?"?', expected_etag):
+            raise ValueError("Invalid S3 event ETag")
+        options["IfMatch"] = '"' + expected_etag.strip('"') + '"'
+    response = s3.get_object(**options)
+    if version_id is not None and response.get("VersionId") != version_id:
+        raise ValueError("S3 event version does not match retrieved manifest")
+    if expected_etag is not None and response.get("ETag", "").strip('"').lower() != expected_etag.strip('"').lower():
+        raise ValueError("S3 event ETag does not match retrieved manifest")
     length = int(response.get("ContentLength", 0))
     if length > maximum:
         raise ValueError("S3 object too large")
@@ -64,7 +79,17 @@ def handler(event, context):
     s3 = boto3.client("s3")
     dynamodb = boto3.resource("dynamodb")
     sqs = boto3.client("sqs")
-    manifest_raw = _body(s3, bucket, manifest_key, MAX_MANIFEST_BYTES)
+    event_object = source["object"]
+    version_id = event_object.get("versionId")
+    if version_id == "null":
+        version_id = None  # Unversioned buckets may provide the literal sentinel.
+    etag = event_object.get("eTag")
+    if version_id is None and etag is None:
+        raise ValueError("S3 event has neither versionId nor eTag; cannot pin manifest")
+    manifest_raw = _body(
+        s3, bucket, manifest_key, MAX_MANIFEST_BYTES,
+        version_id=version_id, expected_etag=etag,
+    )
     request = json.loads(manifest_raw)
     if not isinstance(request, dict) or request.get("schema") != 1:
         raise ValueError("Unsupported manifest schema")
@@ -80,17 +105,31 @@ def handler(event, context):
         raise ValueError("Confirmation frame must be in same site")
     if not _key_allowed(camera_key, f"config/{site}/", (".json",)):
         raise ValueError("Configuration must be in site-scoped config/")
-    config = json.loads(_body(s3, bucket, camera_key, MAX_MANIFEST_BYTES))
+    config_raw = _body(s3, bucket, camera_key, MAX_MANIFEST_BYTES)
+    config = json.loads(config_raw)
     reference_key = config.get("reference_key")
     if not _key_allowed(reference_key, f"frames/{site}/", (".png", ".jpg", ".jpeg")):
         raise ValueError("Trusted reference not configured")
-    first = decode_image(_body(s3, bucket, first_key, MAX_FRAME_BYTES))
-    reference = decode_image(_body(s3, bucket, reference_key, MAX_FRAME_BYTES))
-    second = decode_image(_body(s3, bucket, second_key, MAX_FRAME_BYTES)) if second_key else None
+    first_raw = _body(s3, bucket, first_key, MAX_FRAME_BYTES)
+    reference_raw = _body(s3, bucket, reference_key, MAX_FRAME_BYTES)
+    second_raw = _body(s3, bucket, second_key, MAX_FRAME_BYTES) if second_key else None
+    evidence_sha256 = {
+        "manifest": hashlib.sha256(manifest_raw).hexdigest(),
+        "config": hashlib.sha256(config_raw).hexdigest(),
+        "reference": hashlib.sha256(reference_raw).hexdigest(),
+        "first": hashlib.sha256(first_raw).hexdigest(),
+        "second": hashlib.sha256(second_raw).hexdigest() if second_raw is not None else None,
+    }
+    first = decode_image(first_raw)
+    reference = decode_image(reference_raw)
+    second = decode_image(second_raw) if second_raw is not None else None
     decision = orchestrate(reference, first, config["aisle_polygon"], second)
-    # Source identity includes exact manifest bytes, not a client-controlled claim ID.
-    inspection_id = hashlib.sha256(bucket.encode() + b"\0" + manifest_key.encode() + b"\0" + manifest_raw).hexdigest()
+    # Bind the receipt to bytes ACTUALLY inspected: a stable manifest key alone
+    # does not distinguish overwrites of its config or frame objects.
+    identity = {"bucket": bucket, "manifest_key": manifest_key, "evidence_sha256": evidence_sha256}
+    inspection_id = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     receipt = {
+        "evidence_sha256": evidence_sha256,
         "inspection_id": inspection_id,
         "site": site,
         "decision": decision["decision"],
