@@ -41,7 +41,21 @@ def strict_loads(text: str) -> Any:
     if not isinstance(text, str):
         raise OracleError("input must be text")
     try:
-        return json.loads(text, object_pairs_hook=pairs, parse_constant=reject_constant)
+        parsed = json.loads(text, object_pairs_hook=pairs, parse_constant=reject_constant)
+        # Python decoder nesting behavior varies by interpreter version.
+        # Keep QOracle's finite-size manifest/candidate contract independent of it.
+        pending = [(parsed, 0)]
+        nodes = 0
+        while pending:
+            item, depth = pending.pop()
+            nodes += 1
+            if nodes > 50_000 or depth > 64:
+                raise OracleError("json structure exceeds limits")
+            if isinstance(item, dict):
+                pending.extend((value, depth + 1) for value in item.values())
+            elif isinstance(item, list):
+                pending.extend((value, depth + 1) for value in item)
+        return parsed
     except OracleError:
         raise
     except json.JSONDecodeError as exc:
