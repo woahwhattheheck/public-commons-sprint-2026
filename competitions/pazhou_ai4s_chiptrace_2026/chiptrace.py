@@ -163,6 +163,14 @@ def build_baselines(obs: Sequence[Observation]) -> Dict[str, ChannelBaseline]:
         result[channel] = ChannelBaseline(channel=channel, unit=next(iter(units)), modality=next(iter(modalities)), n=len(rows), center=median(vals), scale=scale, scale_method=method, cadence_s=_positive_cadence(rows), replicate_count=len({(r.run_id, r.replicate_id) for r in rows}))
     return result
 
+def _pair_channel_encode(channel: str) -> str:
+    """Escape percent/pipe in one unambiguous correlation key component."""
+    return channel.replace('%', '%25').replace('|', '%7C')
+
+def _pair_channel_decode(channel: str) -> str:
+    """Reverse channel pair key escapes without changing plain channel names."""
+    return channel.replace('%7C', '|').replace('%25', '%')
+
 def aligned_correlations(obs: Sequence[Observation]) -> Dict[str, float]:
     aligned: Dict[Tuple[str, str, float], Dict[str, float]] = defaultdict(dict)
     for o in obs:
@@ -179,7 +187,7 @@ def aligned_correlations(obs: Sequence[Observation]) -> Dict[str, float]:
                     ys.append(values[b])
             r = pearson(xs, ys)
             if r is not None:
-                out[f'{a}|{b}'] = r
+                out[f'{_pair_channel_encode(a)}|{_pair_channel_encode(b)}'] = r
     return out
 
 def _missing_fraction(rows: Sequence[Observation], cadence: float) -> float:
@@ -231,7 +239,7 @@ def correlation_deltas(baseline_obs: Sequence[Observation], run_obs: Sequence[Ob
     for pair in sorted(set(base) & set(run)):
         delta = abs(run[pair] - base[pair])
         details[pair] = {'baseline_r': round(base[pair], 8), 'run_r': round(run[pair], 8), 'absolute_delta': round(delta, 8)}
-        a, b = pair.split('|', 1)
+        a, b = (_pair_channel_decode(part) for part in pair.split('|', 1))
         channel_max[a] = max(channel_max[a], delta)
         channel_max[b] = max(channel_max[b], delta)
     return (details, dict(channel_max))
