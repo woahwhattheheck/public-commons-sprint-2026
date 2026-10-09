@@ -9,11 +9,16 @@ export class GitHubEvidenceError extends Error {
 }
 
 function fail(code, message) { throw new GitHubEvidenceError(code, message); }
+// Compare structured names directly: JSON names may themselves contain separators.
+function sameSortedStrings(actual, expected) {
+  return actual.length === expected.length && actual.every((value, index) => value === expected[index]);
+}
+function compareStrings(a, b) { return a < b ? -1 : a > b ? 1 : 0; }
 function exactKeys(value, keys, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail('BAD_OBJECT', `${name} must be an object`);
   const actual = Object.keys(value).sort();
   const expected = [...keys].sort();
-  if (actual.join('\0') !== expected.join('\0')) fail('FIELD_SET_MISMATCH', `${name} must have exactly: ${expected.join(', ')}`);
+  if (!sameSortedStrings(actual, expected)) fail('FIELD_SET_MISMATCH', `${name} must have exactly: ${expected.join(', ')}`);
 }
 function text(value, name, max = 512) {
   if (typeof value !== 'string' || value.length === 0 || value.length > max) fail('BAD_STRING', `${name} must be a non-empty string <= ${max} chars`);
@@ -76,8 +81,8 @@ export function normalizeGitHubActionsEvidence(input) {
     const startedAt = rfc3339(job.startedAt, `jobs[${ji}].startedAt`);
     const completedAt = rfc3339(job.completedAt, `jobs[${ji}].completedAt`);
     if (Date.parse(completedAt) < Date.parse(startedAt)) fail('TIME_REWIND', `job ${name} completes before it starts`);
-    if (Date.parse(startedAt) < Date.parse(createdAt) || Date.parse(completedAt) > Date.parse(observedAt)) fail('JOB_TIME_OUTSIDE_RUN', `job ${name} time falls outside retained run interval`);
-    if (!Array.isArray(job.steps) || job.steps.length === 0 || job.steps.length > 256) fail('BAD_STEPS', `job ${name} must have 1..256 steps`);
+    if (Date.parse(startedAt) < Date.parse(createdAt) || Date.parse(completedAt) > Date.parse(updatedAt)) fail('JOB_TIME_OUTSIDE_RUN', `job ${name} time falls outside completed run interval`);
+    if (!Array.isArray(job.steps) || job.steps.length === 0 || job.steps.length > 256) fail('BAD_STEPS', `job ${name} must contain 1..256 steps`);
     const stepNumbers = new Set();
     const steps = job.steps.map((step, si) => {
       exactKeys(step, ['number','name','conclusion'], `jobs[${ji}].steps[${si}]`);
@@ -87,7 +92,7 @@ export function normalizeGitHubActionsEvidence(input) {
       return { number: step.number, name: text(step.name, 'step.name', 200), conclusion: success(step.conclusion, 'step.conclusion') };
     }).sort((a,b) => a.number - b.number);
     return { name, conclusion: 'success', startedAt, completedAt, steps };
-  }).sort((a,b) => a.name.localeCompare(b.name));
+  }).sort((a,b) => compareStrings(a.name, b.name));
   return {
     schema: 'workseal-github-actions-evidence/v1', repository,
     workflowPath: workflowPath(input.workflowPath), workflowDigest: digest(input.workflowDigest, 'workflowDigest'),
@@ -103,13 +108,13 @@ export function assertGitHubActionsExpected(evidence, expected) {
   const exp = {
     repository: githubRepo(expected.repository), workflowPath: workflowPath(expected.workflowPath),
     workflowDigest: digest(expected.workflowDigest, 'expected.workflowDigest'), headSha: commit(expected.headSha, 'expected.headSha'),
-    event: text(expected.event, 'expected.event', 64),
+    event: text(expected.event, 'event', 64),
   };
   for (const key of Object.keys(exp)) if (normalized[key] !== exp[key]) fail('EXPECTED_MISMATCH', `${key} does not match the pinned expectation`);
   if (!Array.isArray(expected.requiredJobs) || expected.requiredJobs.length === 0 || expected.requiredJobs.length > 64) fail('BAD_REQUIRED_JOBS', 'requiredJobs must contain 1..64 names');
   const requiredJobs = expected.requiredJobs.map((name, i) => text(name, `expected.requiredJobs[${i}]`, 200));
   if (new Set(requiredJobs).size !== requiredJobs.length) fail('DUPLICATE_REQUIRED_JOB', 'requiredJobs contains duplicates');
   const actualJobs = normalized.jobs.map(job => job.name).sort();
-  if (actualJobs.join('\0') !== [...requiredJobs].sort().join('\0')) fail('EXPECTED_JOB_SET_MISMATCH', 'retained job set does not match pinned requiredJobs');
+  if (!sameSortedStrings(actualJobs, [...requiredJobs].sort())) fail('EXPECTED_JOB_SET_MISMATCH', 'retained job set does not match pinned requiredJobs');
   return normalized;
 }
