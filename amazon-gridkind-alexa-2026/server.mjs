@@ -29,9 +29,10 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
   const server=http.createServer(async(req,res)=>{
     try{
       const path=new URL(req.url,'http://localhost').pathname;
-      if(req.method==='GET'&&['/','/app.js'].includes(path)){
-        const file=path==='/'?'index.html':'app.js';
-        res.writeHead(200,{'content-type':path==='/'?'text/html; charset=utf-8':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});
+      if(req.method==='GET'&&['/','/app.js','/style.css'].includes(path)){
+        const file=path==='/'?'index.html':path==='/style.css'?'style.css':'app.js';
+        const mime=path==='/'?'text/html; charset=utf-8':path==='/style.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
+        res.writeHead(200,{'content-type':mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});
         return res.end(await readFile(join(ROOT,file)));
       }
       if(!path.startsWith('/api/'))return respond(res,404,{error:'Not found'});
