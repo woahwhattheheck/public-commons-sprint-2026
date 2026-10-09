@@ -14,6 +14,8 @@ node server.mjs
 node --test test.mjs    # two focused behavioral checks, no broad suite
 ```
 
+For loopback-only hosting, requests must use the matching local Host (`127.0.0.1`, `localhost`, or `[::1]`) and listening port; forged public Host headers are rejected before a session is created. An explicit non-loopback `HOST` remains an intentional deployment choice.
+
 Say “Find a cheaper schedule for tonight”, inspect item times and relative prices, click **Approve** and then **Execute simulation**. The receipt shows `simulated: true`, `liveDeviceCalls: 0`. Use **Reset session** to discard the current proposal. The UI shows no live-service or AWS/official account claim.
 
 ## Agentic tools and method
