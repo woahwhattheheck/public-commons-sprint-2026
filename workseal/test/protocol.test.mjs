@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
-import { canonicalJson, sha256Hex, WorkSealError } from '../src/canonical.mjs';
+import { assertRfc3339, canonicalJson, sha256Hex, WorkSealError } from '../src/canonical.mjs';
 import {
   acceptState,
   commitResult,
@@ -109,6 +109,22 @@ test('atomic amount rejects floats and leading zero', () => {
 
 test('timestamps require explicit timezone', () => {
   assert.throws(() => taskDigest({ ...task(), deadline: '2026-10-12T23:59:59' }), (e) => e.code === 'BAD_TIMESTAMP');
+});
+
+test('signed deadlines reject Gregorian rollovers but accept leap days', () => {
+  for (const invalid of [
+    '2026-02-30T12:00:00Z',
+    '2026-10-08T24:00:00Z',
+    '2100-02-29T23:59:59Z',
+    '2026-13-01T12:00:00Z',
+    '2026-10-08T12:60:00Z',
+    '2026-10-08T12:00:00+24:00',
+  ]) {
+    assert.throws(() => taskDigest({ ...task(), deadline: invalid }),
+      (e) => e instanceof WorkSealError && e.code === 'BAD_TIMESTAMP');
+  }
+  assert.equal(assertRfc3339('2028-02-29T23:59:59+00:00', 'deadline'),
+    '2028-02-29T23:59:59+00:00');
 });
 
 test('result must bind exact task', () => {
