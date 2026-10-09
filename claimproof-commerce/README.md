@@ -33,6 +33,12 @@ npm start
 
 Credentials are server-only. The AI endpoint must be HTTPS or loopback. PayPal transport is hardcoded to `https://api-m.sandbox.paypal.com`; the application does not implement production-mode payments. This is a local prototype bound to `127.0.0.1` intentionally, not a public hosted app.
 
+### Uncertain PayPal sandbox capture outcomes
+
+A network timeout or HTTP 503 **does not prove that a capture failed**. Never start another checkout solely because an API response was unavailable. Inspect the original order in the PayPal **sandbox** dashboard first. While the same local 30-minute review is retained, another explicitly confirmed Capture action reuses that review's idempotency key. Before any new capture POST, the backend fetches the order: if PayPal already reports `COMPLETED` with one verified successful USD capture of the exact reviewed amount, it reconciles locally and does **not** send a second capture. Mismatched order identity, amount, intent or incomplete capture records are rejected for manual investigation.
+
+This is not a general chargeback, refund or production-payment reconciliation service. In-memory review state is lost on server restart; an unknown provider outcome must be resolved at PayPal before starting a new order. Offline focused cases are in `tests/focused.test.mjs`; they do not prove any live capture occurred.
+
 ### Security and delivery limits
 
 - This prototype uses an in-memory, 30-minute review store and loopback-only server; it is not a multitenant production service. Cart fingerprints cover items, price, terms, and currency. Explicit approvals are not delegated to a model.
