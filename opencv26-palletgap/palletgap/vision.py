@@ -53,6 +53,52 @@ def check_image(frame: np.ndarray) -> None:
         raise ValueError("Image dimensions outside fixed-camera limits")
 
 
+def _orient(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
+    return float((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
+
+
+def _point_on_segment(a: np.ndarray, b: np.ndarray, p: np.ndarray) -> bool:
+    return (min(a[0], b[0]) <= p[0] <= max(a[0], b[0])
+            and min(a[1], b[1]) <= p[1] <= max(a[1], b[1]))
+
+
+def _segments_intersect(a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray) -> bool:
+    ab_c = _orient(a, b, c)
+    ab_d = _orient(a, b, d)
+    cd_a = _orient(c, d, a)
+    cd_b = _orient(c, d, b)
+    if ((ab_c > 0 and ab_d < 0) or (ab_c < 0 and ab_d > 0)) and (
+        (cd_a > 0 and cd_b < 0) or (cd_a < 0 and cd_b > 0)
+    ):
+        return True
+    return ((ab_c == 0 and _point_on_segment(a, b, c))
+            or (ab_d == 0 and _point_on_segment(a, b, d))
+            or (cd_a == 0 and _point_on_segment(c, d, a))
+            or (cd_b == 0 and _point_on_segment(c, d, b)))
+
+
+def _simple_polygon(pts: np.ndarray) -> bool:
+    n = len(pts)
+    if len({(float(x), float(y)) for x, y in pts}) != n:
+        return False
+    for i in range(n):
+        a, b = pts[i], pts[(i + 1) % n]
+        for j in range(i + 1, n):
+            c, d = pts[j], pts[(j + 1) % n]
+            if j == i + 1 or (i == 0 and j == n - 1):
+                # Adjacent edges may share an endpoint but may not double back.
+                if j == i + 1:
+                    shared, left, right = b, a, d
+                else:
+                    shared, left, right = a, b, c
+                if (_orient(shared, left, right) == 0
+                        and float(np.dot(left - shared, right - shared)) > 0):
+                    return False
+            elif _segments_intersect(a, b, c, d):
+                return False
+    return True
+
+
 def polygon_mask(shape: tuple[int, ...], vertices: list[list[int]]) -> np.ndarray:
     h, w = shape[:2]
     pts = np.array(vertices, dtype=np.float64)
@@ -60,6 +106,8 @@ def polygon_mask(shape: tuple[int, ...], vertices: list[list[int]]) -> np.ndarra
         raise ValueError("Aisle polygon requires 3–12 vertices")
     if not np.isfinite(pts).all() or (pts < 0).any() or (pts[:, 0] >= w).any() or (pts[:, 1] >= h).any():
         raise ValueError("Aisle polygon extends outside reference image")
+    if not _simple_polygon(pts):
+        raise ValueError("Aisle polygon must be simple with no intersecting or overlapping edges")
     area = abs(float(cv2.contourArea(pts.astype(np.float32))))
     if area < 1800 or area > 0.85 * h * w:
         raise ValueError("Aisle polygon area is unsafe or implausible")
@@ -200,7 +248,23 @@ def orchestrate(reference: np.ndarray, first: np.ndarray, aisle: list[list[int]]
         iy = max(0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
         union = a[2] * a[3] + b[2] * b[3] - ix * iy
         return ix * iy / max(1, union) >= 0.22
-    matched = sum(any(overlaps(a, b) for b in follow_boxes) for a in boxes)
+    # A single confirmation finding cannot independently corroborate two first-view
+    # regions. Maximize distinct pairs rather than counting the same match twice.
+    adjacent = [[j for j, b in enumerate(follow_boxes) if overlaps(a, b)] for a in boxes]
+    assigned: dict[int, int] = {}
+
+    def augment(first_idx: int, visited: set[int]) -> bool:
+        for second_idx in adjacent[first_idx]:
+            if second_idx in visited:
+                continue
+            visited.add(second_idx)
+            previous = assigned.get(second_idx)
+            if previous is None or augment(previous, visited):
+                assigned[second_idx] = first_idx
+                return True
+        return False
+
+    matched = sum(augment(i, set()) for i in range(len(adjacent)))
     return {
         "decision": "HUMAN_REVIEW_REQUIRED" if matched else "DISAGREEMENT_REVIEW",
         "first": initial, "second": follow, "persistent_regions": matched,

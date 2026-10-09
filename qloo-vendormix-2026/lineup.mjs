@@ -6,6 +6,13 @@ export function categoryKey(raw) {
   return (label || 'Unclassified').toLocaleLowerCase('en-US');
 }
 
+// Match excluded and duplicate vendor names across case, Unicode width, and spacing.
+export function nameKey(raw) {
+  return typeof raw === 'string'
+    ? raw.normalize('NFKC').trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en-US')
+    : '';
+}
+
 export function parseCategoryCap(raw, slots) {
   if (raw === undefined) return null; // Existing API requests preserve soft-variety mode.
   if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 1 || raw > slots) {
@@ -20,9 +27,10 @@ export function parseCategoryCap(raw, slots) {
  * Selection never fills with excluded/duplicate candidates to bypass a cap.
  */
 export function rankLineup(candidates, input) {
-  const excluded = new Set(input.exclusions);
-  const remaining = candidates.filter(c => !excluded.has(c.name.toLowerCase()));
+  const excluded = new Set(input.exclusions.map(nameKey).filter(Boolean));
+  const remaining = candidates.filter(c => !excluded.has(nameKey(c.name)));
   const chosen = [];
+  const chosenNames = new Set();
   const counts = new Map(); // Prior soft-variety logic ignores Unclassified.
   const capCounts = new Map(); // Hard constraint still treats unknown tags as one bucket.
   const weights = input.mode === 'taste' ? { taste: 0.92, new: 0.08, repeat: 0.04 }
@@ -32,7 +40,7 @@ export function rankLineup(candidates, input) {
   while (chosen.length < input.slots) {
     const options = remaining.filter(c =>
       !seen.has(c.id) &&
-      !chosen.some(v => v.name.toLowerCase() === c.name.toLowerCase()) &&
+      !chosenNames.has(nameKey(c.name)) &&
       (input.categoryCap === null || (capCounts.get(categoryKey(c.category)) || 0) < input.categoryCap)
     ).map(c => {
       const key = categoryKey(c.category);
@@ -47,15 +55,25 @@ export function rankLineup(candidates, input) {
     const pick = options[0];
     chosen.push({ ...pick, explanation: `${pick.evidence}. ${pick.diversity ? 'New observed category for this lineup.' : (pick.repeats ? 'Category repeats; scored with a variety penalty.' : 'No verified category tag; variety bonus withheld.')}` });
     seen.add(pick.id);
+    chosenNames.add(nameKey(pick.name));
     const key = categoryKey(pick.category);
     capCounts.set(key, (capCounts.get(key) || 0) + 1);
     if (key !== 'unclassified') counts.set(key, (counts.get(key) || 0) + 1);
   }
   const covered = [...counts.keys()].filter(key => key !== 'unclassified').length;
   const shortfall = chosen.length < input.slots;
+  const alternatives = [];
+  const alternativeNames = new Set(chosenNames);
+  for (const c of remaining) {
+    const key = nameKey(c.name);
+    if (seen.has(c.id) || alternativeNames.has(key)) continue;
+    alternativeNames.add(key);
+    alternatives.push(c);
+    if (alternatives.length === 8) break;
+  }
   return {
     selected: chosen,
-    alternatives: remaining.filter(c => !chosen.some(v => v.id === c.id)).slice(0, 8),
+    alternatives,
     summary: {
       requested: input.slots, filled: chosen.length, observedCategories: covered,
       analyzed: remaining.length, strategy: input.mode, categoryCap: input.categoryCap,

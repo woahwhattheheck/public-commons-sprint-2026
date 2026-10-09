@@ -41,11 +41,28 @@ def strict_loads(text: str) -> Any:
     if not isinstance(text, str):
         raise OracleError("input must be text")
     try:
-        return json.loads(text, object_pairs_hook=pairs, parse_constant=reject_constant)
+        parsed = json.loads(text, object_pairs_hook=pairs, parse_constant=reject_constant)
+        # Python decoder nesting behavior varies by interpreter version.
+        # Keep QOracle's finite-size manifest/candidate contract independent of it.
+        pending = [(parsed, 0)]
+        nodes = 0
+        while pending:
+            item, depth = pending.pop()
+            nodes += 1
+            if nodes > 50_000 or depth > 64:
+                raise OracleError("json structure exceeds limits")
+            if isinstance(item, dict):
+                pending.extend((value, depth + 1) for value in item.values())
+            elif isinstance(item, list):
+                pending.extend((value, depth + 1) for value in item)
+        return parsed
     except OracleError:
         raise
     except json.JSONDecodeError as exc:
         raise OracleError(f"malformed json: {exc.msg}") from exc
+    except (ValueError, RecursionError) as exc:
+        # Includes the interpreter's integer-digit cap and JSON nesting limit.
+        raise OracleError("json exceeds decoder limits") from exc
 
 
 def canonical(value: Any) -> str:
@@ -59,7 +76,10 @@ def sha256_text(text: str) -> str:
 def _finite(value: Any, label: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise OracleError(f"{label} must be a finite real")
-    number = float(value)
+    try:
+        number = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise OracleError(f"{label} must be a finite real") from exc
     if not math.isfinite(number):
         raise OracleError(f"{label} must be a finite real")
     return number
@@ -82,7 +102,7 @@ def load_manifest(text: str) -> dict[str, Any]:
     missing = sorted({"schema", "qubits", "gates"} - set(raw))
     if extra or missing:
         raise OracleError(f"manifest keys missing={missing} extra={extra}")
-    if raw["schema"] != SCHEMA:
+    if type(raw["schema"]) is not int or raw["schema"] != SCHEMA:
         raise OracleError("unsupported schema")
     qubits = raw["qubits"]
     if isinstance(qubits, bool) or not isinstance(qubits, int) or not 1 <= qubits <= MAX_QUBITS:
@@ -115,7 +135,7 @@ def _gate(item: Any, qubits: int, index: int) -> dict[str, Any]:
     if not isinstance(item, dict):
         raise OracleError(f"gate {index} must be an object")
     op = item.get("op")
-    if op not in OPS:
+    if not isinstance(op, str) or op not in OPS:
         raise OracleError(f"gate {index} has an unsupported op")
     if op in {"CNOT", "CZ", "SWAP"}:
         keys = {"op", "control", "target"} if op != "SWAP" else {"op", "wire_a", "wire_b"}
@@ -193,7 +213,8 @@ def verify(manifest: dict[str, Any], candidate_text: str) -> dict[str, Any]:
     allowed = {"schema", "probabilities", "expectations", "tolerance"}
     if set(candidate) - allowed or "probabilities" not in candidate:
         raise OracleError("candidate keys are not the verifier contract")
-    if candidate.get("schema", SCHEMA) != SCHEMA:
+    candidate_schema = candidate.get("schema", SCHEMA)
+    if type(candidate_schema) is not int or candidate_schema != SCHEMA:
         raise OracleError("unsupported candidate schema")
     tolerance = _finite(candidate.get("tolerance", 1e-8), "tolerance")
     if tolerance < 0 or tolerance > 1e-2:

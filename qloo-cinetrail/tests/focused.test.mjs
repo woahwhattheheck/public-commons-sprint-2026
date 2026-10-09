@@ -26,7 +26,7 @@ test("mock live Qloo path preserves exact IDs and honors locality", async () => 
     ] }}), {status:200});
   };
   const plan = await producePlan({ movie:"Amélie",locality:"New York",mood:"curious" },
-    { fetcher, key:"fake-key",base:"https://api.hackathon.qloo.com" });
+    { fetcher, key:"fake-key",base:"https://hackathon.api.qloo.com" });
   assert.equal(plan.mode, "live");
   assert.equal(plan.resolved_movie_qloo_id, "MOV-1");
   assert.deepEqual(plan.stops.map(p => p.qloo_entity_id), ["PLACE-1","PLACE-2"]);
@@ -61,3 +61,25 @@ test("live Qloo requests target canonical hackathon origin without credential-ca
   assert.equal(new URL("/v2/insights", calls[0].url.origin).pathname, "/v2/insights");
 });
 
+
+test("live provider requests reject untrusted origins before outbound transfer", async () => {
+  let calls = 0;
+  const fetcher = async () => {
+    calls++;
+    return new Response(JSON.stringify({ results: { entities: [] } }), { status: 200 });
+  };
+  for (const base of [
+    "https://example.net", "https://api.hackathon.qloo.com", "https://api.qloo.com.evil.example",
+    "http://hackathon.api.qloo.com", "https://api.qloo.com/random",
+    "https://api.qloo.com?destination=foo", "https://hello:there@api.qloo.com",
+  ]) {
+    await assert.rejects(qlooGet("/search", { query: "Amelie" },
+      { fetcher, key: "test-only", base }), /approved Qloo HTTPS origin/);
+  }
+  assert.equal(calls, 0);
+
+  for (const base of ["https://hackathon.api.qloo.com", "https://api.qloo.com", "https://staging.api.qloo.com"]) {
+    await qlooGet("/search", { query: "Amelie" }, { fetcher, key: "test-only", base });
+  }
+  assert.equal(calls, 3);
+});

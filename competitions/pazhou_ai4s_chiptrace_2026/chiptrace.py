@@ -91,16 +91,28 @@ def theil_sen_slope(points: Sequence[Tuple[float, float]]) -> float:
     return median(slopes) if slopes else 0.0
 
 def pearson(xs: Sequence[float], ys: Sequence[float]) -> float | None:
+    """Scale finite sensor series before correlation arithmetic to avoid overflow.
+
+    A raw sum of centered-square deviations overflows for legal finite
+    magnitudes (for example 1e200), emitting NaN into quality evidence.
+    Preserve the existing 1e-18 variance-squared floor in source units.
+    """
     if len(xs) != len(ys) or len(xs) < 3:
         return None
-    mx, my = (statistics.fmean(xs), statistics.fmean(ys))
-    dx = [x - mx for x in xs]
-    dy = [y - my for y in ys]
-    vx = sum((x * x for x in dx))
-    vy = sum((y * y for y in dy))
-    if vx <= 1e-18 or vy <= 1e-18:
+    sx, sy = max(abs(x) for x in xs), max(abs(y) for y in ys)
+    if sx == 0.0 or sy == 0.0:
         return None
-    return sum((a * b for a, b in zip(dx, dy))) / math.sqrt(vx * vy)
+    nx = [x / sx for x in xs]
+    ny = [y / sy for y in ys]
+    mx, my = (statistics.fmean(nx), statistics.fmean(ny))
+    dx = [x - mx for x in nx]
+    dy = [y - my for y in ny]
+    vx = math.fsum(x * x for x in dx)
+    vy = math.fsum(y * y for y in dy)
+    if sx * math.sqrt(vx) <= 1e-9 or sy * math.sqrt(vy) <= 1e-9:
+        return None
+    r = math.fsum(a * b for a, b in zip(dx, dy)) / (math.sqrt(vx) * math.sqrt(vy))
+    return max(-1.0, min(1.0, r))
 
 def _positive_cadence(obs: Sequence[Observation]) -> float:
     deltas: List[float] = []

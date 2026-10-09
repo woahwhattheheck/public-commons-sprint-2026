@@ -41,6 +41,11 @@ async function body(req){
   return result;
 }
 const server=http.createServer(async(req,res)=>{
+  // Keep the local app pinned to its advertised loopback origin even for GETs.
+  // A loopback bind alone does not validate the HTTP Host authority.
+  if(req.headers.host!==`127.0.0.1:${port}`){
+    json(res,403,{error:'Unexpected Host header'});return;
+  }
   try{
     const url=new URL(req.url,base);
     if(req.method==='GET'&&url.pathname==='/'){

@@ -20,6 +20,9 @@ def render_review(workspace: dict[str, Any]) -> bytes:
         reviewer = "Not recorded" if review is None else review["approver"]
         fields = (("Proposal ID", proposal["proposal_id"]), ("Event ID", event["event_id"]),
                   ("Device", event["device_id"]), ("Occurred at", event["occurred_at"]),
+                  ("Event type", event["event_type"].replace("_", " ")),
+                  ("Classification", event["classification"]),
+                  ("Device health", event["device_health"] or "Not reported"),
                   ("Zone", event["zone"] or "Not supplied"), ("Reviewer label", reviewer))
         definition = "".join(f"<dt>{label}</dt><dd>{escape(value)}</dd>" for label, value in fields)
         cards.append(f"<article><h2>{escape(proposal['action'].replace('_', ' ').capitalize())}</h2>"
@@ -32,7 +35,10 @@ def render_review(workspace: dict[str, Any]) -> bytes:
     timeline = []
     for event in quiet_events:
         fields = (("Event ID", event["event_id"]), ("Device", event["device_id"]),
-                  ("Occurred at", event["occurred_at"]), ("Classification", event["classification"]),
+                  ("Occurred at", event["occurred_at"]),
+                  ("Event type", event["event_type"].replace("_", " ")),
+                  ("Classification", event["classification"]),
+                  ("Device health", event["device_health"] or "Not reported"),
                   ("Zone", event["zone"] or "Not supplied"))
         definition = "".join(f"<dt>{label}</dt><dd>{escape(value)}</dd>" for label, value in fields)
         timeline.append(f"<article><h3>{escape(event['event_type'].replace('_', ' ').capitalize())}</h3>"
@@ -57,7 +63,7 @@ code{{overflow-wrap:anywhere}} @media(max-width:36rem){{dl{{display:block}}dd{{m
 <p>{len(state['events'])} events · {len(state['proposals'])} proposals · {pending} pending</p></header>
 <aside class="notice"><strong>Review copy — no actions are executed.</strong>
 <p>Source label: <strong>{escape(source)}</strong>. This label is an operator declaration, not proof of a Ring session.
-Reviewer labels are not authenticated identities. Use the workbench review command to record an actual decision.</p>
+Event classifications and health values are source-observed labels, not independent verification. Reviewer labels are not authenticated identities. Use the workbench review command to record an actual decision.</p>
 <p>No video, credentials, scripts, trackers, external requests or interactive approval controls are included.</p></aside>
 <main>{''.join(cards)}{activity}</main><footer><p>State SHA-256: <code>{digest}</code></p>
 <p>Provider execution, external actions, contest submission, award and payment remain unverified.</p></footer></body></html>

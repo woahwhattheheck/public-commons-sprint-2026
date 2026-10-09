@@ -49,10 +49,20 @@ export function plan(raw=DEMO){
   const {prices,tasks,maxKw}=inputs(raw);
   const choices=tasks.map(candidates);
   if(choices.some(x=>x.length===0))throw Error('No eligible quiet-hour window for at least one load');
+  // Each remaining load must cost at least its cheapest unconstrained start.
+  // Ignoring simultaneous circuit occupancy gives an admissible lower bound.
+  // Cache option costs so the deep search never recomputes price slices.
+  const optionCosts=choices.map((times,i)=>times.map(start=>costOf(tasks[i],start,prices)));
+  const optimisticSuffix=Array(tasks.length+1).fill(0);
+  for(let i=tasks.length-1;i>=0;i--)
+    optimisticSuffix[i]=optimisticSuffix[i+1]+Math.min(...optionCosts[i]);
   const occupied=Array(24).fill(0);
   const starts=[];
   let baselineStarts=null,winning=null,best=Infinity;
   function visit(i,total){
+    // Valid prices and positive kW make zero a global lower bound; once reached,
+    // further enumeration cannot improve the first optimal schedule.
+    if(best===0)return;
     if(i===tasks.length){
       // First complete placement is the earliest jointly feasible baseline.
       // A greedy prefix can block a later fixed load despite a valid schedule.
@@ -61,10 +71,15 @@ export function plan(raw=DEMO){
       return;
     }
     const task=tasks[i];
-    for(const start of choices[i]){
+    for(let j=0;j<choices[i].length;j++){
+      if(best===0)break;
+      const start=choices[i][j];
       if(!fits(task,start,occupied,maxKw))continue;
-      const next=total+costOf(task,start,prices);
+      const next=total+optionCosts[i][j];
       if(next>best+1e-10)continue;
+      // Retain a generous floating-point margin: skip only branches that
+      // cannot improve even after optimistic remaining-load costs.
+      if(next+optimisticSuffix[i+1]>best+1e-8)continue;
       placement(task,start,occupied,1);starts.push(start);visit(i+1,next);starts.pop();placement(task,start,occupied,-1);
     }
   }

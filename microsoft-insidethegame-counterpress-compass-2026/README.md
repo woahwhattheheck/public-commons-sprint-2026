@@ -40,6 +40,8 @@ The eight-second regain deadline is inclusive. A replay prefix ending at exactly
 
 ## Optional Microsoft Foundry AI narrative draft
 
+Optional live drafts are capped at eight admitted requests per rolling hour and one in flight per process; further requests return 429 before provider contact. See [Foundry admission](FOUNDRY_ADMISSION.md) for the retry contract and deployment limitations.
+
 The server includes a real REST integration adapter for a customer-provisioned **Azure OpenAI model deployed via Microsoft Foundry**. Current Microsoft Foundry REST docs describe `POST /openai/v1/chat/completions`. The endpoint, deployment and API key are sourced only from server environment; the endpoint is restricted to HTTPS on the expected Azure OpenAI resource domain. The browser never receives credentials or request details. No model call happens on the replay path; the visitor must click **Request optional Foundry draft**, which may incur usage charges. Provider output is marked UNVERIFIED and can never replace canonical data and event IDs. Failed calls degrade back to the deterministic cue. No actual Foundry credentials were available/tested here, so neither live compatibility nor paid inference is claimed.
 
 ```sh
