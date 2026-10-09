@@ -27,5 +27,29 @@ class ApprovalBoundary(unittest.TestCase):
                 "status": "PENDING", "amount": unit["amount"]}]}}]}, item, "ORDER1"))
 
 
+    def test_rejects_duplicate_full_amount_and_malformed_capture_records(self):
+        item = CATALOG_BY_SKU["trail-repair"]
+        amount = {"currency_code": "USD", "value": money(item["cents"])}
+        unit = {"reference_id": item["sku"], "amount": amount}
+        capture = {"status": "COMPLETED", "amount": amount}
+
+        def result(payments):
+            return {"id": "ORDER1", "status": "COMPLETED",
+                    "purchase_units": [{**unit, "payments": payments}]}
+
+        self.assertTrue(valid_capture(result({"captures": [capture]}), item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": [capture, dict(capture)]}),
+                                       item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": []}), item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": {"0": capture}}),
+                                       item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": None}), item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": [None]}), item, "ORDER1"))
+        self.assertFalse(valid_capture(result({"captures": [{"status": "COMPLETED",
+                                                             "amount": None}]}),
+                                       item, "ORDER1"))
+        self.assertFalse(valid_capture(result(None), item, "ORDER1"))
+
+
 if __name__ == "__main__":
     unittest.main()
