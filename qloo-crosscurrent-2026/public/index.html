@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#101421">
+<title>CrossCurrent | Culture-driven collaborations</title><link href="/styles.css" rel="stylesheet"></head>
+<body>
+  <header class="topbar wrap"><a class="logo" href="/" aria-label="CrossCurrent home"><span class="mark">↗</span> CrossCurrent</a><span class="edition">AGENTIC CULTURAL INTELLIGENCE / EXPERIMENT 01</span></header>
+  <main class="wrap">
+    <section class="intro"><div class="eyebrow">A cultural bridge-making studio <span class="dash"></span> Qloo Hackathon 2026</div>
+      <h1>Discover unexpected<br><em>common ground.</em></h1>
+      <p class="lead">An evidence-first programming assistant for independent venues, pop-up organizers and the curious. Begin with an artist or cultural touchstone, then explore the places, stories and partners that connect.</p>
+      <div class="changelog"><span class="pulsedot"></span><span id="keyStatus">Checking Qloo connection…</span></div>
+    </section>
+    <div class="layout">
+      <section class="panel form-card" aria-labelledby="start"><div class="section-head"><span class="count">01</span><h2 id="start">Start with a cultural spark</h2></div>
+        <form id="planForm"><label for="seed">Artist, film, book or brand</label><input type="text" id="seed" name="seed" value="Beyoncé" required minlength="2" maxlength="100" placeholder="e.g., Beyoncé">
+          <label for="city">City <span class="optional">(optional)</span></label><input type="text" id="city" name="city" value="New York" maxlength="80" placeholder="e.g., New York">
+          <label for="goal">What are you creating?</label><select id="goal" name="goal"><option value="community-night">A community discovery night</option><option value="independent-venue">An independent venue partnership</option><option value="pop-up-market">A neighborhood pop-up market</option></select>
+          <fieldset><legend>Evidence mode</legend><div class="choice"><label><input type="radio" name="mode" value="demo" checked> Fictional offline demo</label><label><input type="radio" name="mode" value="live"> Live Qloo Insights</label></div></fieldset>
+          <button id="generate" type="submit">Find cultural bridges <span aria-hidden="true">↗</span></button>
+          <p class="hint">Live mode calls Qloo from the server using its dedicated hackathon origin. Demo results are completely fictional and never represented as Qloo findings.</p>
+        </form>
+      </section>
+      <section class="panel result-card" aria-labelledby="results"><div class="section-head"><span class="count">02</span><h2 id="results">Your concept board</h2></div>
+        <div id="display" aria-live="polite"><div class="empty-state"><div class="orbit"><div class="orbit-inner">↗</div></div><h3>Waiting for a spark.</h3><p>Build a speculative concept in demo mode, or connect to Qloo for actual cultural signals and multi-hop cross-domain matching.</p></div></div>
+      </section>
+    </div>
+    <section class="methodology"><span>THE METHOD</span><div><h2>Traceable, not magical.</h2><p>Live mode performs an entity lookup, gathers cross-domain insights, then revisits place fit using both the seed and a newly discovered cultural anchor. Suggestions carry the Qloo IDs behind them and show errors openly—no invented affinity scores or audience predictions.</p></div></section>
+  </main>
+  <footer class="wrap"><span>CrossCurrent / 2026</span><span>Built for transparent creative decisions. No tracking. No user-profile storage.</span></footer>
+  <script src="/app.js" defer></script>
+</body></html>
