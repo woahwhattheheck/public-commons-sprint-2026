@@ -264,6 +264,21 @@ def record(state, event, note):
     state["audit"].append({"step": len(state["audit"]) + 1, "event": event, "detail": note})
 
 
+def require_current_consent(body, state, *, for_capture=False):
+    """A stale browser tab cannot authorize a different plan or returned order."""
+    if (type(body.get("revision")) is not int
+            or body["revision"] != state["revision"]
+            or body.get("generation") != state["generation"]):
+        raise ServiceError(409, "Checkout changed. Refresh and review before approving.")
+    if for_capture:
+        if body.get("order_id") != state.get("order_id"):
+            raise ServiceError(409, "Approved order changed. Refresh before confirming capture.")
+    else:
+        chosen = state["chosen"]
+        if body.get("sku") != chosen["sku"] or body.get("usd") != money(chosen["cents"]):
+            raise ServiceError(409, "Reviewed product or price changed. Refresh before ordering.")
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         # Intentionally do not log PayPal OAuth, payer tokens or session cookies.
@@ -389,6 +404,7 @@ class Handler(BaseHTTPRequestHandler):
                 return summarize(state)
             if state["phase"] != "planned" or body.get("approved") is not True:
                 raise ServiceError(409, "Explicit buyer consent to the selected item and price is required.")
+            require_current_consent(body, state)
             chosen = state["chosen"]
             if FIXTURE and not PAYPAL_READY:
                 oid = "FIXTURE-" + uuid.uuid4().hex[:14]
@@ -418,6 +434,7 @@ class Handler(BaseHTTPRequestHandler):
                 return summarize(state)
             if state["phase"] != "payer_returned" or body.get("confirmed") is not True:
                 raise ServiceError(409, "Buyer must return from approval and explicitly confirm capture.")
+            require_current_consent(body, state, for_capture=True)
             if state["fixture_order"]:
                 state["phase"] = "fixture_completed"
                 record(state, "fixture-capture", "Local fake capture; NOT an actual PayPal payment.")
