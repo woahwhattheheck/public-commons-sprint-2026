@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import urlparse,parse_qs
 from .focused_execution import run_task,verify_run
 from .workloads import TASKS,task_manifest
+from .loopback_guard import allowed_request
 TOKEN=secrets.token_urlsafe(32)
 LOCK=threading.Lock()
 ROOT=Path(__file__).resolve().parents[1]/".focused-runs"
@@ -38,6 +39,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Security-Policy","default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-ancestors 'none'")
         self.end_headers();self.wfile.write(body)
     def do_GET(self):
+        if not allowed_request(self.headers, self.server.server_port):
+            self.send(403, json.dumps({'error':'local browser origin required'}));return
         parsed=urlparse(self.path)
         if parsed.path=="/":
             page=PAGE.replace("__TOKEN__",TOKEN).replace("__TASKS__",json.dumps(task_manifest()))
@@ -52,6 +55,8 @@ class Handler(BaseHTTPRequestHandler):
                 if verify_run(run):self.send(200,json.dumps(run));return
         self.send(404,json.dumps({"error":"retained verified run not found"}))
     def do_POST(self):
+        if not allowed_request(self.headers, self.server.server_port, mutation=True):
+            self.send(403, json.dumps({'error':'local browser origin required'}));return
         if self.path!="/api/run" or self.headers.get("X-Action-Token")!=TOKEN:
             self.send(403,json.dumps({"error":"invalid action token"}));return
         try:

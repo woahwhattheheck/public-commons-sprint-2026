@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VendorMix — Design a festival people will remember</title>
+<style>
+:root{color-scheme:dark;--bg:#101117;--panel:#1d2029;--line:#353945;--accent:#f6bd6d;--ink:#f7f5f0;--muted:#aaadb8;--jade:#8dd7c3}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 78% 0%,#32334a 0%,var(--bg) 48%);color:var(--ink)}
+main{width:min(1080px,calc(100% - 40px));margin:0 auto;padding:38px 0 90px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:2.5px;color:var(--jade);font-weight:700}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px}header .mark{border:1px solid #585d6b;border-radius:24px;padding:6px 12px;font-size:12px;color:#ddd}
+h1{font-size:clamp(34px,6vw,64px);line-height:1.02;letter-spacing:-2px;margin:24px 0 14px;max-width:740px}h1 em{color:var(--accent);font-style:normal}
+.lead{font-size:17px;color:#c1c5cf;max-width:650px;margin:0 0 28px}.shell{display:grid;grid-template-columns:330px 1fr;gap:20px;align-items:start}
+.panel{background:#1b1d28e8;border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 15px 36px #0003}.panel h2{margin:0 0 16px;font-size:18px;letter-spacing:-.4px}
+fieldset{border:0;padding:0;margin:0}label{font-size:12px;display:block;color:#d6d7df;font-weight:700;margin:15px 0 7px}input,select{background:#12131c;border:1px solid #464a57;color:white;border-radius:8px;min-height:42px;padding:10px 11px;font:inherit;width:100%}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.tiny{font-size:12px;color:var(--muted);margin:7px 0}button{background:var(--accent);border:none;color:#1b1710;border-radius:9px;padding:13px 18px;font-weight:800;cursor:pointer;margin-top:18px;width:100%;font-size:14px}button:disabled{opacity:.5;cursor:wait}
+.status{background:#262838;border-radius:9px;padding:11px 12px;margin-bottom:16px;font-size:12px;color:#ccd1d8;border-left:3px solid var(--jade)}.right .intro{color:var(--muted);font-size:14px;margin:4px 0 22px}
+.empty{min-height:370px;display:grid;place-items:center;text-align:center;color:#b8bdc8;border:1px dashed #585d6b;border-radius:13px;padding:36px}.empty strong{display:block;font-size:21px;color:#f4eee5}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:13px 0 25px}.metric{background:#12141c;border-radius:10px;padding:15px}.metric strong{display:block;font-size:26px}.metric span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+section h3{font-size:14px;color:var(--jade);letter-spacing:.6px;text-transform:uppercase;margin:0 0 14px}.cards{display:grid;gap:11px}.vendor{border:1px solid #404452;border-radius:12px;padding:17px 18px;background:#222430}.vendor .top{display:flex;justify-content:space-between;gap:15px;align-items:center}.vendor b{font-size:16px}.tag{display:inline-block;border-radius:40px;background:#3c3939;color:#f7c987;padding:3px 9px;font-size:11px;white-space:nowrap}.vendor p{font-size:12px;color:#b9bec9;margin:9px 0 0}.alternates{margin-top:25px;color:#bfc3cb}.alternates ul{padding-left:19px}.alternates li{margin-bottom:7px}
+.foot{font-size:11px;color:var(--muted);margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}.error{color:#ffbdbd;margin-top:14px;white-space:pre-wrap}.notice{color:var(--accent);font-size:12px}
+@media(max-width:800px){.shell{grid-template-columns:1fr}main{padding-top:22px}.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.panel{padding:18px}header .mark{display:none}}
+</style>
+</head><body><main>
+<header><div class="eyebrow">VendorMix / Cultural intelligence toolkit</div><div class="mark">Qloo Agentic Hackathon • 2026</div></header>
+<h1>Design a festival <em>people will remember.</em></h1>
+<p class="lead">A taste-aware planning assistant for markets and community events. Pick a place, name a few cultural touchstones, and get a lineup built around affinity and variety—not a single obvious bestseller.</p>
+<div class="shell"><form class="panel" id="form"><h2>01 / Set your brief</h2>
+<label for="location">Market / festival city</label><input id="location" value="Louisville, Kentucky" maxlength="90" required>
+<label for="seeds">Audience's favorite places or brands</label><input id="seeds" value="Shake Shack, Blue Bottle Coffee, Momofuku" maxlength="300" required><p class="tiny">Comma-separated, 1–5 recognizable entities. Qloo resolves them when using the live API.</p>
+<label for="slots">Lineup size</label><select id="slots"><option>3</option><option selected>5</option><option>7</option><option>10</option></select>
+<label for="mode">Planning style</label><select id="mode"><option value="balanced" selected>Balanced: taste + variety</option><option value="taste">Taste-first</option><option value="discovery">Discovery: category breadth</option></select>
+<label for="exclusions">Exclude exact vendor names (optional)</label><input id="exclusions" placeholder="e.g. Golden Hour Vinyl">
+<label for="source">Evidence source</label><select id="source"><option value="demo" selected>Synthetic offline showcase</option><option value="qloo">Live Qloo API (server key required)</option></select>
+<p class="tiny">Offline vendor names and scores are invented; they do not represent real businesses or API results.</p>
+<button type="submit" id="submit">Design my lineup →</button><p id="error" class="error" role="alert"></p>
+</form><div class="panel right"><h2>02 / Your recommended lineup</h2><p class="intro">An inspectable ranking, not a booking service. Every choice carries its observed signal and the variety tradeoff behind it.</p>
+<div id="result"><div class="empty"><div><strong>Ready when you are.</strong><p>Use the built-in demo to see a complete plan without credentials or an API request.</p></div></div></div>
+</div></div><p class="foot">VendorMix uses Qloo to inform cultural relevance when a live key is configured. It never claims that an affinity result proves an available supplier, event compliance, nutritional safety, a paid award, or a Devpost submission.</p>
+</main><script>
+const form=document.getElementById('form'),result=document.getElementById('result'),error=document.getElementById('error');
+function el(tag,cls,text){const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=String(text);return node}
+function show(data){result.replaceChildren();const status=el('div','status',data.source);result.append(status);const metrics=el('div','metrics');for(const [k,v]of [['Vendor slots',data.summary.filled+' / '+data.summary.requested],['Categories',data.summary.observedCategories],['Candidates',data.summary.analyzed]]){const item=el('div','metric');item.append(el('strong','',v),el('span','',k));metrics.append(item)}result.append(metrics);
+const section=el('section');section.append(el('h3','','Recommended mix'));const cards=el('div','cards');for(const v of data.selected){const card=el('article','vendor'),top=el('div','top');top.append(el('b','',v.name),el('span','tag',v.category));card.append(top,el('p','',v.explanation));cards.append(card)}section.append(cards);result.append(section);
+if(data.alternatives.length){const alt=el('div','alternates');alt.append(el('h3','','Alternatives kept in view'));const ul=el('ul');for(const v of data.alternatives.slice(0,5))ul.append(el('li','',v.name+' — '+v.category));alt.append(ul);result.append(alt)}
+const warn=el('p','notice',data.summary.warning);result.append(warn);const steps=el('div','alternates');steps.append(el('h3','','Human verification before booking'));const ul=el('ul');for(const text of data.nextSteps)ul.append(el('li','',text));steps.append(ul);result.append(steps)}
+form.addEventListener('submit',async e=>{e.preventDefault();error.textContent='';const button=document.getElementById('submit');button.disabled=true;try{const payload={location:document.getElementById('location').value,seeds:document.getElementById('seeds').value.split(',').map(s=>s.trim()).filter(Boolean),slots:Number(document.getElementById('slots').value),mode:document.getElementById('mode').value,source:document.getElementById('source').value,exclusions:document.getElementById('exclusions').value.split(',').map(s=>s.trim()).filter(Boolean)};const res=await fetch('/api/plan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const body=await res.json();if(!res.ok)throw Error(body.error||'Planning failed');show(body)}catch(err){error.textContent=err.message||'Planning failed'}finally{button.disabled=false}});
+</script></body></html>

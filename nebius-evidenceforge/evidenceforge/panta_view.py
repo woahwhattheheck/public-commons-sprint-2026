@@ -165,6 +165,10 @@ def _percent(value):
     return "Unquoted" if value is None else f"{Decimal(value) * 100:.1f}%"
 
 
+def _exact_quote(value):
+    return "Unquoted" if value is None else html.escape(value)
+
+
 def render_page(snapshot: dict, market_id: str | None = None) -> str:
     """Create a safe, actionable local judge view; values remain untrusted data."""
     selected = selected_context(snapshot, market_id) if market_id is not None else None
@@ -179,6 +183,8 @@ def render_page(snapshot: dict, market_id: str | None = None) -> str:
             f'<article class="card"><div class="label">{label} · {phase}</div>'
             f'<h2>{title}</h2><p>YES {_percent(market["yesPrice"])} '
             f'· NO {_percent(market["noPrice"])}</p>'
+            f'<p>Exact YES {_exact_quote(market["yesPrice"])} '
+            f'· NO {_exact_quote(market["noPrice"])}</p>'
             f'<a href="{html.escape(url, quote=True)}">Inspect {market_key}</a></article>'
         )
     detail = ""
@@ -187,6 +193,8 @@ def render_page(snapshot: dict, market_id: str | None = None) -> str:
         detail = ("<section class=\"card selected\"><h2>Human-selected context</h2>"
                   f"<p>{html.escape(item['title'])}</p>"
                   f"<p>YES {_percent(item['yesPrice'])} · NO {_percent(item['noPrice'])}</p>"
+                  f"<p>Exact YES {_exact_quote(item['yesPrice'])} "
+                  f"· NO {_exact_quote(item['noPrice'])}</p>"
                   f"<p>Selection digest: <code>{selected['selectionSha256']}</code></p>"
                   f'<p><a href="/api/panta?market={quote(item["marketId"], safe="")}">'
                   "Inspect bounded JSON evidence</a></p></section>")

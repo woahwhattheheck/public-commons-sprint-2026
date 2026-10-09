@@ -9,9 +9,17 @@ function normalize(value, path = '$') {
     if (!Number.isSafeInteger(value)) throw new Error(`${path} must be a safe integer`);
     return value;
   }
-  if (Array.isArray(value)) return value.map((v,i) => normalize(v, `${path}[${i}]`));
+  if (Array.isArray(value)) {
+    const out = [];
+    for (let index = 0; index < value.length; index += 1) {
+      if (!Object.hasOwn(value, index)) throw new Error(`${path}[${index}] is a missing array entry`);
+      out.push(normalize(value[index], `${path}[${index}]`));
+    }
+    return out;
+  }
   if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-    const out = {};
+    // Keep the browser byte-for-byte consistent with server canonicalization.
+    const out = Object.create(null);
     for (const key of Object.keys(value).sort()) {
       if (value[key] === undefined) throw new Error(`${path}.${key} is undefined`);
       out[key] = normalize(value[key], `${path}.${key}`);
@@ -75,6 +83,25 @@ export async function verifyBrowserBundle(bundle) {
   if (bundle.receipt.schema !== 'workseal-acceptance/v1' || bundle.receipt.verdict !== 'ACCEPT') throw new Error('bad acceptance receipt');
   if (!isValidRfc3339(bundle.task.deadline)) throw new Error('task deadline must be a valid Gregorian RFC3339 timestamp');
   if (!isValidRfc3339(bundle.receipt.acceptedAt)) throw new Error('receipt acceptedAt must be a valid Gregorian RFC3339 timestamp');
+  // Only the GitHub Actions requirement is actually evaluated in this browser proof.
+  // Recomputed hashes and a self-consistent signature cannot substitute for task policy checks.
+  const policy = bundle.task.acceptancePolicy;
+  if (typeof policy.verifierId !== 'string' || policy.verifierId.length === 0 || policy.verifierId.length > 200 ||
+      typeof policy.verifierVersion !== 'string' || policy.verifierVersion.length === 0 || policy.verifierVersion.length > 100) {
+    throw new Error('invalid task acceptance policy verifier');
+  }
+  if (!Array.isArray(policy.requirements) || policy.requirements.length !== 1) {
+    throw new Error('unsupported acceptance policy requirements: browser proves exactly github-actions');
+  }
+  const requirement = policy.requirements[0];
+  assertExactKeys(requirement, ['id', 'description'], 'acceptance requirement');
+  if (requirement.id !== 'github-actions' || typeof requirement.description !== 'string' ||
+      requirement.description.length === 0 || requirement.description.length > 500) {
+    throw new Error('unsupported acceptance policy requirements: browser proves exactly github-actions');
+  }
+  if (bundle.receipt.verifierId !== policy.verifierId || bundle.receipt.verifierVersion !== policy.verifierVersion) {
+    throw new Error('receipt verifier does not match task acceptance policy');
+  }
   if (bundle.settlementIntent.schema !== 'workseal-settlement-intent/v1') throw new Error('bad settlement intent schema');
 
   const taskDigest = await sha256Hex(bundle.task);

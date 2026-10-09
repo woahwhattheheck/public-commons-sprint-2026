@@ -12,6 +12,15 @@ from .core import EvidenceError, strict_json_loads, _validate_request, _validate
 
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
 
+class _RejectAuthenticatedRedirect(urllib.request.HTTPRedirectHandler):
+    """Provider credentials must never be forwarded to a redirect destination."""
+
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
+
+
+_PROVIDER_OPENER = urllib.request.build_opener(_RejectAuthenticatedRedirect())
+
 
 @dataclass(frozen=True)
 class TokenFactoryResult:
@@ -53,7 +62,7 @@ def _request_json(url: str, token: str, *, body: dict[str, Any] | None = None,
         method = "POST"
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=timeout_seconds) as response:
+        with _PROVIDER_OPENER.open(req, timeout=timeout_seconds) as response:
             raw = response.read(1048577)
             request_id = response.headers.get("request-id") or response.headers.get("x-request-id")
         if len(raw) > 1048576:

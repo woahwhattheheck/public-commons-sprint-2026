@@ -6,17 +6,35 @@
 <header><small>CLAIMPROOF / SANDBOX EDITION</small><div class="row center"><h1 class="hero">Commerce decisions, with receipts and consent.</h1><span class="pill">NO LIVE PAYMENTS</span></div><p class="sub">Review merchant terms, ask better questions, and optionally open a PayPal sandbox order. No AI agent can initiate or capture a payment without a person deliberately authorizing the next step.</p></header>
 <div class="two"><div><section><div class="eyebrow">01 / CART & TERMS</div><h2>What are you buying?</h2><div id="lines"></div><button id="add" class="secondary" type="button">+ Add item</button><p class="hint">USD only, 12 items maximum. Product examples are illustrative; no merchant identity has been independently verified.</p><label for="terms">Merchant return, shipping or digital-fulfillment terms</label><textarea id="terms">Digital product is delivered by email within 24 hours. Refunds are available within 7 days if the access code has not been redeemed. Contact support before purchasing if anything is unclear.</textarea><div class="row" style="margin-top:20px"><button id="review">Review purchase</button><span id="price" class="muted"></span></div></section>
 <section id="review-output" class="hide"><div class="eyebrow">02 / GROUNDED ADVISORY</div><h2>Know what is—and isn't—verified</h2><div class="amount" id="total"></div><p class="muted" id="model-status"></p><div id="warnings"></div><h3>Questions before checkout</h3><div id="advice" class="result"></div><div class="row" style="margin-top:14px"><button id="save-review" type="button" class="secondary">Save pre-purchase review record</button></div><p class="hint">Downloads a local JSON record of the normalized cart, stated merchant terms, deterministic warnings, and advisory. This is not proof of payment or merchant verification.</p><p class="hint">Model text is advisory, not a payment instruction. The server independently fixes the cart price, currency, and merchant-flow state.</p></section></div>
-<div><section class="danger"><div class="eyebrow">03 / HUMAN-APPROVED ORDER</div><h2>Three clear gates</h2><ol><li><strong>Review:</strong> inspect price and terms; receive AI advice.</li><li><strong>Create:</strong> deliberately open a sandbox PayPal order.</li><li><strong>Capture:</strong> after PayPal confirms approval, deliberately authorize sandbox capture.</li></ol><p id="health" class="hint">Checking optional sandbox credentials…</p><div id="create-area" class="hide"><p id="cart-note" class="muted"></p><label><input id="consent-create" type="checkbox" style="width:auto"> I approve creating this exact sandbox order for the shown amount.</label><button id="create" style="margin-top:10px" disabled>Create sandbox order</button></div><div id="approval-area" class="hide"><p>PayPal approval must occur on its sandbox site. Returning to this page alone never captures funds.</p><a id="approval-link" target="_blank" rel="noopener noreferrer">Open PayPal sandbox approval</a><label style="margin-top:20px"><input type="checkbox" id="consent-capture" style="width:auto"> I have approved on PayPal and explicitly authorize sandbox capture.</label><button id="capture" disabled>Capture approved sandbox order</button></div><div id="status-area" class="hide" style="margin-top:12px"><button id="check-status" type="button" class="secondary">Check sandbox status (read only)</button><p class="hint">Reads the existing order. Never creates or captures a payment. Pending or uncertain outcomes need reconciliation before another checkout.</p></div><div id="payment-result" class="result" style="margin-top:16px">No order created.</div></section><section><div class="eyebrow">MODEL BOUNDARY</div><h2>AI advises. You decide.</h2><p class="muted">Configured models receive only the cart and merchant terms. They receive no payment tokens and cannot alter the PayPal amount. An offline deterministic reviewer remains available without model credentials.</p></section></div></div>
+<div><section class="danger"><div class="eyebrow">03 / HUMAN-APPROVED ORDER</div><h2>Three clear gates</h2><ol><li><strong>Review:</strong> inspect price and terms; receive AI advice.</li><li><strong>Create:</strong> deliberately open a sandbox PayPal order.</li><li><strong>Capture:</strong> after PayPal confirms approval, deliberately authorize sandbox capture.</li></ol><p id="health" class="hint">Checking optional sandbox credentials…</p><div id="create-area" class="hide"><p id="cart-note" class="muted"></p><label><input id="consent-create" type="checkbox" style="width:auto"> I approve creating this exact sandbox order for the shown amount.</label><button id="create" style="margin-top:10px" disabled>Create sandbox order</button></div><div id="approval-area" class="hide"><p>PayPal approval must occur on its sandbox site. Returning to this page alone never captures funds.</p><a id="approval-link" target="_blank" rel="noopener noreferrer">Open PayPal sandbox approval</a><label style="margin-top:20px"><input type="checkbox" id="consent-capture" style="width:auto"> I have approved on PayPal and explicitly authorize sandbox capture.</label><button id="capture" disabled>Capture approved sandbox order</button></div><div id="status-area" class="hide"><button id="check-payment" type="button" class="secondary" style="margin-top:16px">Check sandbox order status</button><p class="hint">Read-only check. Never requests a capture or starts another checkout.</p></div><div id="payment-result" class="result" style="margin-top:16px">No order created.</div></section><section><div class="eyebrow">MODEL BOUNDARY</div><h2>AI advises. You decide.</h2><p class="muted">Configured models receive only the cart and merchant terms. They receive no payment tokens and cannot alter the PayPal amount. An offline deterministic reviewer remains available without model credentials.</p></section></div></div>
 <p id="status" role="status" aria-live="polite" class="hint"></p><p class="hint">Prototype competition artifact • Runs locally on 127.0.0.1 • PayPal sandbox only • Not a submitted entry or award.</p></main>
 <script>
-const lines=document.getElementById('lines'),status=document.getElementById('status');let count=0,current=null,order=null,editRevision=0,reviewGeneration=0;
+const lines=document.getElementById('lines'),status=document.getElementById('status');let count=0,current=null,order=null,editRevision=0,reviewGeneration=0,checkoutBusy=false;
 const el=id=>document.getElementById(id), hide=(id,value)=>el(id).classList.toggle('hide',value);function say(s){status.textContent=s}
+function syncCheckoutControls(){
+  el('consent-create').disabled=checkoutBusy||!!order;
+  el('consent-capture').disabled=checkoutBusy;
+  el('create').disabled=checkoutBusy||!current||!!order||!el('consent-create').checked;
+  el('capture').disabled=checkoutBusy||!current||!order||!el('consent-capture').checked||['CAPTURE_PENDING','CAPTURE_UNKNOWN','CAPTURED','CAPTURE_FAILED','CAPTURE_REVERSED','ORDER_VOIDED'].includes(current.state);
+  el('check-payment').disabled=checkoutBusy||!current||!order;
+}
+function setCheckoutBusy(value){checkoutBusy=value;el('review').disabled=value;syncCheckoutControls()}
+function showCaptureResult(result){
+  current.state=result.state;
+  el('consent-capture').checked=false;
+  hide('approval-area',['CAPTURE_PENDING','CAPTURE_UNKNOWN','CAPTURED','CAPTURE_FAILED','CAPTURE_REVERSED','ORDER_VOIDED'].includes(result.state));
+  el('payment-result').textContent='Sandbox order '+result.order_id+': '+result.state+
+    (result.capture_status?' (capture '+result.capture_status+')':'')+'.'+
+    (['CAPTURE_PENDING','CAPTURE_UNKNOWN'].includes(result.state)?' Settlement is not yet verified. Use the read-only status check; do not start another checkout.':'');
+  say(result.state==='CAPTURED'?'Matching sandbox capture verified. No live payment.':'Sandbox status received; no live payment.');
+}
 function clearCheckout(){
   current=null;order=null;
   hide('review-output',true);hide('create-area',true);hide('approval-area',true);hide('status-area',true);
   el('consent-create').checked=false;el('consent-capture').checked=false;
   el('create').disabled=true;el('capture').disabled=true;
   el('approval-link').removeAttribute('href');
+  syncCheckoutControls();
 }
 function invalidateFromEdit(){
   const hadReview=!!current||!!order;
@@ -33,6 +51,7 @@ function updatePreview(){let cents=0;for(const x of inputCart().items){const m=/
 async function api(route,params){const r=await fetch('/api/'+route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(params)});const j=await r.json();if(!r.ok)throw Error(j.error||`HTTP ${r.status}`);return j}
 el('add').onclick=()=>makeLine('Another digital item','ITEM','7.50',1);el('terms').oninput=invalidateFromEdit;makeLine();fetch('/api/health').then(x=>x.json()).then(s=>{el('health').textContent=`PayPal sandbox credentials: ${s.paypal_sandbox_configured?'configured':'not configured'} · AI model: ${s.ai_provider_configured?'configured':'offline reviewer only'}`}).catch(()=>{el('health').textContent='Backend unavailable'});
 el('review').onclick=async()=>{
+  if(checkoutBusy)return;
   const generation=++reviewGeneration,revision=editRevision;
   clearCheckout();
   say('Reviewing terms and fixed cart…');el('review').disabled=true;
@@ -78,51 +97,49 @@ el('save-review').onclick=()=>{
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   say('Saved the pre-purchase review record locally. No payment was verified by this file.');
 };
-el('consent-create').onchange=()=>{el('create').disabled=!el('consent-create').checked};
+el('consent-create').onchange=syncCheckoutControls;
 el('create').onclick=async()=>{
   const approved=current,revision=editRevision;
-  if(!approved||!el('consent-create').checked)return;
-  say('Requesting PayPal sandbox order…');el('create').disabled=true;
+  if(checkoutBusy||!approved||order||!el('consent-create').checked)return;
+  say('Requesting PayPal sandbox order…');setCheckoutBusy(true);
   try{
     const r=await api('create',{review_id:approved.review_id,fingerprint:approved.cart.fingerprint,confirm:true});
     if(approved!==current||revision!==editRevision){
       say('A sandbox order may have been created for an earlier cart; it is not authorized for capture. Review the changed cart again.');return;
     }
-    order=r.order;current.state=r.state;hide('approval-area',false);hide('status-area',false);el('check-status').disabled=false;
+    order=r.order;current.state=r.state;hide('approval-area',false);hide('status-area',false);
     el('approval-link').href=order.approval_url;el('approval-link').textContent='Approve the sandbox order on PayPal ↗';
     el('payment-result').textContent='Order '+order.order_id+' created; no capture. Waiting for buyer approval and separate human action.';
     say('Sandbox order created. Payment not captured.');
-  }catch(e){if(approved===current&&revision===editRevision){say(e.message);el('create').disabled=false}}
+  }catch(e){if(approved===current&&revision===editRevision)say(e.message)}
+  finally{setCheckoutBusy(false)}
 };
-el('consent-capture').onchange=()=>{el('capture').disabled=!el('consent-capture').checked||!!current&&['CAPTURE_PENDING','CAPTURE_UNKNOWN','CAPTURED','CAPTURE_FAILED','CAPTURE_REVERSED','ORDER_VOIDED'].includes(current.state)};
+el('consent-capture').onchange=syncCheckoutControls;
 el('capture').onclick=async()=>{
   const approved=current,requestedOrder=order,revision=editRevision;
-  if(!approved||!requestedOrder||!el('consent-capture').checked)return;
-  say('Checking server-side PayPal approval before sandbox capture…');el('capture').disabled=true;
+  if(checkoutBusy||!approved||!requestedOrder||!el('consent-capture').checked||['CAPTURE_PENDING','CAPTURE_UNKNOWN','CAPTURED','CAPTURE_FAILED','CAPTURE_REVERSED','ORDER_VOIDED'].includes(approved.state))return;
+  say('Checking server-side PayPal approval before sandbox capture…');setCheckoutBusy(true);
   try{
     const r=await api('capture',{review_id:approved.review_id,fingerprint:approved.cart.fingerprint,confirm:true});
     if(approved!==current||requestedOrder!==order||revision!==editRevision){
       el('payment-result').textContent='Earlier authorized sandbox order '+r.order_id+' returned '+r.state+'. The changed cart was not submitted.';
       say('Earlier authorized sandbox response received; review the current cart separately.');return;
     }
-    current.state=r.state;
-    el('capture').disabled=true;el('consent-capture').checked=false;
-    el('payment-result').textContent='PayPal returned '+r.state+' for sandbox order '+r.order_id+'.'+(['CAPTURE_PENDING','CAPTURE_UNKNOWN'].includes(r.state)?' Use the read-only status check; do not start another checkout.':'');
-    say('Sandbox provider response received.');
-  }catch(e){say(e.message);if(approved===current&&revision===editRevision)el('capture').disabled=false}
+    showCaptureResult(r);
+  }catch(e){say(e.message)}
+  finally{setCheckoutBusy(false)}
 };
-el('check-status').onclick=async()=>{
+el('check-payment').onclick=async()=>{
   const approved=current,requestedOrder=order,revision=editRevision;
-  if(!approved||!requestedOrder)return;
-  el('check-status').disabled=true;say('Reading the existing sandbox order; no capture requested…');
+  if(checkoutBusy||!approved||!requestedOrder)return;
+  say('Reading the existing sandbox order; no capture will be requested…');setCheckoutBusy(true);
   try{
     const r=await api('status',{review_id:approved.review_id,fingerprint:approved.cart.fingerprint});
-    if(approved!==current||requestedOrder!==order||revision!==editRevision)return;
-    current.state=r.state;
-    if(r.state!=='ORDER_CREATED'){el('capture').disabled=true;el('consent-capture').checked=false}
-    el('payment-result').textContent='Sandbox order '+r.order_id+': '+r.state+' (provider '+r.capture_status+').';
-    say('Read-only reconciliation finished. No capture was requested.');
+    if(approved!==current||requestedOrder!==order||revision!==editRevision){
+      say('Status returned for an earlier cart. No capture was requested.');return;
+    }
+    showCaptureResult(r);
   }catch(e){if(approved===current&&revision===editRevision)say(e.message)}
-  finally{if(approved===current&&requestedOrder===order&&revision===editRevision)el('check-status').disabled=false}
+  finally{setCheckoutBusy(false)}
 };
 </script></body></html>

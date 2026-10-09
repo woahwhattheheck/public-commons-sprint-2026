@@ -24,13 +24,24 @@ export async function reviewWithModel(cart,{
   } else {
     const u = new URL(endpoint);
     if (!(['https:'].includes(u.protocol) || (u.protocol==='http:' && ['127.0.0.1','localhost'].includes(u.hostname)))) throw new InputError('AI provider endpoint must use HTTPS or loopback');
-    const res = await transport(u.href,{method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify({model,temperature:0.1,messages:[
+    const res = await transport(u.href,{method:'POST',redirect:'error',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify({model,temperature:0.1,messages:[
       {role:'system',content:SYSTEM_REVIEW_PROMPT},
       {role:'user',content:prompt}
     ]}),signal:AbortSignal.timeout(18000)});
+    if (res.redirected) throw new InputError('AI advisory provider redirect is not accepted');
     if (!res.ok) throw new Error(`AI advisory provider HTTP ${res.status}`);
     const data = await res.json();
-    text = data?.choices?.[0]?.message?.content;
+    // A truncated or tool-directed completion can contain valid-looking JSON.
+    // Accept only a completed assistant message; advisory content has no payment authority.
+    const choice = Array.isArray(data?.choices) && data.choices.length === 1 ? data.choices[0] : null;
+    const message = choice?.message;
+    if (choice?.finish_reason !== 'stop' || message?.role !== 'assistant' ||
+        typeof message.content !== 'string' || message.refusal != null ||
+        message.function_call != null ||
+        (message.tool_calls != null && (!Array.isArray(message.tool_calls) || message.tool_calls.length > 0))) {
+      throw new InputError('AI advisory response is malformed or incomplete');
+    }
+    text = message.content;
   }
   if (typeof text !== 'string' || text.length > 6000) throw new InputError('AI response malformed');
   let parsed;

@@ -1,0 +1,45 @@
+{
+  "disclaimer": "SYNTHETIC DEMONSTRATION — NOT REAL PLACES OR QLOO RESULTS",
+  "movie": {
+    "entity_id": "SYNTHETIC-MOVIE-000",
+    "name": "The Clockmaker's Dream"
+  },
+  "places": [
+    {
+      "entity_id": "SYNTHETIC-PLACE-001",
+      "name": "Lantern House Story Gallery",
+      "properties": {
+        "description": "Imaginary storytelling venue."
+      },
+      "tags": [
+        {
+          "name": "cinema"
+        }
+      ]
+    },
+    {
+      "entity_id": "SYNTHETIC-PLACE-002",
+      "name": "Midnight Paper Cafe",
+      "properties": {
+        "description": "Imaginary cafe about film and books."
+      },
+      "tags": [
+        {
+          "name": "coffee"
+        }
+      ]
+    },
+    {
+      "entity_id": "SYNTHETIC-PLACE-003",
+      "name": "Silver Reels Archive",
+      "properties": {
+        "description": "Imaginary museum about film history."
+      },
+      "tags": [
+        {
+          "name": "film"
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import copy
+import io
 import unittest
 from unittest import mock
 
@@ -7,9 +8,8 @@ from proofline.codec import digest_json
 from proofline.vision import PIPELINE_GENERATION
 
 
-class Body:
-    def __init__(self, raw): self.raw = raw
-    def read(self): return self.raw
+class Body(io.BytesIO):
+    pass
 
 
 class FakeS3:

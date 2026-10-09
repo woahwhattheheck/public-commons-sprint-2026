@@ -12,8 +12,7 @@ The local risk-review heuristic distinguishes missing refund language (`RETURNS_
 
 ```bash
 node --version               # >=22
-npm run check:focused        # existing local cart/adapter contracts
-node --test tests/checkout-lifecycle.test.mjs tests/checkout-http.test.mjs # mocked checkout; no external network
+npm run check:focused        # four local contracts, no network access or broad suites
 npm start                    # http://127.0.0.1:3159
 ```
 
@@ -36,11 +35,7 @@ Credentials are server-only. The AI endpoint must be HTTPS or loopback. PayPal t
 
 ### Uncertain PayPal sandbox capture outcomes
 
-A network timeout or HTTP 503 **does not prove that a capture failed**. Never start another checkout solely because an API response was unavailable. Use **Check sandbox status (read only)** while the same local review is retained, or inspect the original order in the PayPal **sandbox** dashboard. `POST /api/status` requires the review ID and cart fingerprint but no payment confirmation: it only reads the existing order. A review in `CAPTURE_PENDING` or `CAPTURE_UNKNOWN` never sends another capture POST, including when the Capture endpoint is called again. An APPROVED order after an uncertain POST does not clear that uncertainty automatically.
-
-Order-level `COMPLETED` is not proof of payment. After capture, the backend reads the authoritative order and verifies the actual capture ID, status, USD currency and exact reviewed amount. Only a capture with `COMPLETED` becomes `CAPTURED`; pending, declined/failed and refunded records remain distinct. Missing or mismatched records require manual reconciliation. See PayPal's [order-status definition](https://developer.paypal.com/api/orders/v2/definitions/order_status).
-
-Concurrent identical operations share one in-flight request per review. Each caller must still supply its own correct fingerprint and, for create/capture, explicit confirmation. Different operations are rejected while one is running rather than queued as hidden payment writes. OAuth tokens are reused within one adapter instance until a conservative expiry and concurrent refreshes share one request. A 401 invalidates the cached token but never automatically replays a write. These are single-process optimizations, not distributed locking or durable order storage.
+A network timeout or HTTP 503 **does not prove that a capture failed**. Never start another checkout solely because an API response was unavailable. Inspect the original order in the PayPal **sandbox** dashboard first. While the same local 30-minute review is retained, another explicitly confirmed Capture action reuses that review's idempotency key. Before any new capture POST, the backend fetches the order: if PayPal already reports `COMPLETED` with one verified successful USD capture of the exact reviewed amount, it reconciles locally and does **not** send a second capture. Mismatched order identity, amount, intent or incomplete capture records are rejected for manual investigation.
 
 This is not a general chargeback, refund or production-payment reconciliation service. In-memory review state is lost on server restart; an unknown provider outcome must be resolved at PayPal before starting a new order. Offline focused cases are in `tests/focused.test.mjs`; they do not prove any live capture occurred.
 

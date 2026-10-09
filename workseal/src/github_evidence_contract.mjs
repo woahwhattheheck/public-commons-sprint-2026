@@ -1,3 +1,5 @@
+import { isValidRfc3339 } from './rfc3339.mjs';
+
 export class GitHubEvidenceError extends Error {
   constructor(code, message) {
     super(message);
@@ -30,7 +32,7 @@ function positiveDecimal(value, name) {
   return value;
 }
 function rfc3339(value, name) {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) || !Number.isFinite(Date.parse(value))) fail('BAD_TIMESTAMP', `${name} must be RFC3339 with timezone`);
+  if (!isValidRfc3339(value)) fail('BAD_TIMESTAMP', `${name} must be RFC3339 with timezone`);
   return value;
 }
 function githubRepo(value) {

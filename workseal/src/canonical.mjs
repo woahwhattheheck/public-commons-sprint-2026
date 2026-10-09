@@ -21,10 +21,18 @@ function normalize(value, path = '$') {
     return value;
   }
 
-  if (Array.isArray(value)) return value.map((entry, index) => normalize(entry, `${path}[${index}]`));
+  if (Array.isArray(value)) {
+    const out = [];
+    for (let index = 0; index < value.length; index += 1) {
+      if (!Object.hasOwn(value, index)) fail('UNDEFINED_VALUE', `${path}[${index}] is a missing array entry`);
+      out.push(normalize(value[index], `${path}[${index}]`));
+    }
+    return out;
+  }
 
   if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-    const out = {};
+    // A JSON key must never invoke Object.prototype.__proto__ while copying.
+    const out = Object.create(null);
     for (const key of Object.keys(value).sort()) {
       if (value[key] === undefined) fail('UNDEFINED_VALUE', `${path}.${key} is undefined`);
       out[key] = normalize(value[key], `${path}.${key}`);

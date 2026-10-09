@@ -8,6 +8,13 @@ Serve `workseal/` over any static HTTP server and open `web/index.html`. The pag
 
 No network, wallet, RPC, transfer, Colosseum account, or provider mutation is performed by the demo. `writePerformed=false` and `externalAuthorityGranted=false` are explicit verification outputs.
 
+### Portable proof for independent reviewers
+
+Choose **Run local demo**, which builds a synthetic signed bundle and verifies it, or paste an existing bundle and choose **Verify pasted bundle**. Once the displayed verdict is PASS, the **Download verified bundle JSON** button becomes available. The generated `workseal-verified-browser-bundle.json` contains the exact signed public-key proof envelope so a reviewer can paste its JSON back into the same demo and verify the signature, GitHub evidence bindings and settlement-intent digests. An edit or failed verification disables export until the current text is verified again.
+
+The downloaded example is **synthetic**, not an authenticated GitHub Actions capture, chain deployment, Colosseum entry or financial settlement. No verifier private key, provider credential or wallet action is exported or invoked. The browser requests the file locally through a Blob URL; downloading it never registers a contest submission.
+
+
 ## GitHub Actions evidence contract
 
 `src/github_evidence_contract.mjs` is browser-safe and strict. A PASS requires:
@@ -38,3 +45,9 @@ The repository workflow `.github/workflows/workseal-browser-evidence.yml` runs t
 ## Remaining chain gate
 
 The merged `src/solana.mjs` adapter remains a transaction-plan MVP. A true onchain escrow/PDA must be compiled/tested with a real Solana toolchain and deployed only with explicit wallet/provider authority. This carrier does not claim that gate is closed.
+
+## Acceptance-policy boundary of browser PASS
+
+The local browser demo evaluates exactly one task policy requirement: `github-actions`, with a retained success outcome and a matching evidence digest. A browser PASS now additionally checks the exact signed receipt verifier ID/version against the task acceptance policy and rejects any task with additional or different policy requirements it cannot evaluate. A bundle with valid self-consistent hashes and an Ed25519 signature is **not** equivalent to proof that unverified buyer criteria were satisfied; a separate verifier implementation is required to support a richer acceptance policy.
+
+As before, the demo does not establish an externally trusted verifier identity, chain settlement, a wallet transaction, bounty acceptance or prize payment. The pinned public key/authority and provider outcome must be verified by an external relying party before any real-world commitment.
