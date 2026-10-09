@@ -184,12 +184,20 @@ def valid_capture(detail, chosen, expected_id):
         return False
     if not same_amount(detail.get("purchase_units"), chosen):
         return False
-    captures = detail.get("purchase_units", [{}])[0].get("payments", {}).get("captures", [])
-    return bool(captures) and all(
-        c.get("status") == "COMPLETED"
-        and c.get("amount", {}).get("currency_code") == "USD"
-        and c.get("amount", {}).get("value") == money(chosen["cents"])
-        for c in captures)
+    payments = detail["purchase_units"][0].get("payments")
+    if not isinstance(payments, dict):
+        return False
+    captures = payments.get("captures")
+    if not isinstance(captures, list) or len(captures) != 1:
+        return False
+    capture = captures[0]
+    if not isinstance(capture, dict):
+        return False
+    amount = capture.get("amount")
+    return (capture.get("status") == "COMPLETED"
+            and isinstance(amount, dict)
+            and amount.get("currency_code") == "USD"
+            and amount.get("value") == money(chosen["cents"]))
 
 
 def approval_url(order):
