@@ -41,3 +41,19 @@ Organizer: [OpenCV AI Competition 2026, powered by AWS](https://opencv26.devpost
 The image-size guard limits memory, an ArUco 4x4 marker 23 provides approximate scale, the mask isolates a narrow red HSV hue band (0–12 or 170–179) with saturation/value floors, 5×5 morphology and contour circle/aspect checks identify *candidate* regions, and a per-image quality controller gates review. No uncalibrated physical units, biological diagnosis, or yield extrapolation. The synthetic fixture has exactly six separated red objects with a known marker and separate blur/glare/marker-missing cases.
 
 MIT license for this original source. OpenCV / NumPy remain separately licensed third-party dependencies; no proprietary media are bundled.
+
+## Duplicate calibration-marker safety
+
+If two or more **qualifying ArUco id 23** markers are visible, choosing the first one
+would make the reported millimeter-per-pixel scale depend on marker detection
+order. OrchardCue now treats this as **ambiguous scale**: it still localizes
+red candidates but sets `reference_marker=null`, omits every candidate's
+`approx_diameter_mm`, and requests `HUMAN_REVIEW_REQUIRED` with the
+`SCALE_MARKER_AMBIGUOUS` reason. All qualifying markers are excluded from
+the fruit mask. An unrelated ArUco ID does not trigger scale ambiguity;
+no qualifying marker continues to report `SCALE_MARKER_MISSING`.
+
+`python test_duplicate_marker.py` is a small reproducible **synthetic-only**
+four-case check (one valid marker, an unrelated ID, duplicate ID 23, no marker).
+It is not field calibration, OpenCV 5 proof, AWS evidence or a contest result.
+

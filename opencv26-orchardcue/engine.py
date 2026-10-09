@@ -35,36 +35,43 @@ def decode_image(raw: bytes) -> np.ndarray:
     return image
 
 
-def _marker(image: np.ndarray, marker_side_mm: float) -> tuple[dict | None, np.ndarray]:
+def _marker(image: np.ndarray, marker_side_mm: float) -> tuple[dict | None, np.ndarray, bool]:
     dictionary = cv2.aruco.getPredefinedDictionary(MARKER_DICTIONARY)
     detector = cv2.aruco.ArucoDetector(dictionary, cv2.aruco.DetectorParameters())
     corners, ids, _ = detector.detectMarkers(image)
     mask = np.full(image.shape[:2], 255, np.uint8)
     if ids is None:
-        return None, mask
+        return None, mask, False
+    eligible = []
     for points, marker_id in zip(corners, ids.flatten()):
         if int(marker_id) != MARKER_ID:
             continue
         xy = points.reshape(-1, 2)
         edges = np.linalg.norm(np.roll(xy, -1, axis=0) - xy, axis=1)
         edge = float(np.mean(edges))
-        if edge < 30:
-            continue
-        region = cv2.convexHull(xy.astype(np.int32))
-        cv2.fillConvexPoly(mask, region, 0)
-        mask = cv2.erode(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13)))
-        return {"id": MARKER_ID, "edge_px": round(edge, 2),
-                "marker_side_mm": marker_side_mm,
-                "mm_per_pixel": round(marker_side_mm / edge, 6),
-                "assumption": "approximate only: marker and fruit are coplanar"}, mask
-    return None, mask
+        if edge >= 30:
+            eligible.append((xy, edge))
+    if not eligible:
+        return None, mask, False
+    # Exclude all eligible reference tags from the fruit/quality mask, even
+    # when scale is ambiguous. Never pick an arbitrary first matching tag.
+    for xy, _ in eligible:
+        cv2.fillConvexPoly(mask, cv2.convexHull(xy.astype(np.int32)), 0)
+    mask = cv2.erode(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13)))
+    if len(eligible) != 1:
+        return None, mask, True
+    edge = eligible[0][1]
+    return {"id": MARKER_ID, "edge_px": round(edge, 2),
+            "marker_side_mm": marker_side_mm,
+            "mm_per_pixel": round(marker_side_mm / edge, 6),
+            "assumption": "approximate only: marker and fruit are coplanar"}, mask, False
 
 
 def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0) -> tuple[dict[str, Any], np.ndarray]:
     if not 10 <= marker_side_mm <= 300:
         raise ValueError("marker_side_mm must be between 10 and 300")
     h, w = image.shape[:2]
-    marker, valid = _marker(image, marker_side_mm)
+    marker, valid, marker_ambiguous = _marker(image, marker_side_mm)
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     saturation, value = hsv[:, :, 1], hsv[:, :, 2]
     good_pixels = valid > 0
@@ -83,7 +90,7 @@ def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0)
     if brightness < 48:
         reasons.append("DARK_RETAKE")
     if marker is None:
-        reasons.append("SCALE_MARKER_MISSING")
+        reasons.append("SCALE_MARKER_AMBIGUOUS" if marker_ambiguous else "SCALE_MARKER_MISSING")
 
     # Narrow, disclosed red fruit detector. Green/yellow varieties are not
     # detected; the system must not make general orchard yield claims.
