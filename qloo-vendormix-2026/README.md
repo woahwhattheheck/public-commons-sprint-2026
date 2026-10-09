@@ -28,7 +28,10 @@ Optional variables: `PORT=4173`, `HOST=127.0.0.1`, `QLOO_API_BASE=https://hackat
 2. Call the official Qloo `POST /v2/insights`, `filter.type=urn:entity:place`, location query, `signal.interests.entities.query` with named entities, `feature.explainability=true`, affinity sorting, 35 results. **One bounded provider call per live plan, no automatic retry.**
 3. Normalize place names, observed Qloo tag/category, numeric `query.affinity` where present. If the endpoint omits numeric affinity, use **clearly marked result-order proxy** rather than inventing a numerical provider score. Unclassifiable entities remain `Unclassified` and do not receive a variety bonus.
 4. Greedily optimize the lineup with deterministic re-evaluation after every pick: `utility = tasteWeight * signal + categoryDiscoveryWeight * unseenCategory - repeatPenalty * sameCategoryCount`. The taste/variety/discovery modes change the weights. Exact-name exclusions apply to the selected candidates. Every chosen place carries a traceable rationale.
+   Optionally choose a hard `categoryCap` integer (1..requested slots), enforced per normalized observed category label, including `Unclassified`. This prevents a second similarly-tagged place from bypassing the limit through case/spacing differences; when a shortage remains, show fewer selections with a reason instead of silently filling with disallowed vendors. Omitting `categoryCap` preserves the original soft-variety behavior.
 5. Show near-misses and human due-diligence steps. **No claim about prices, actual catering availability, dietary/allergen safety, legal compliance or vendor consent is inferred from cultural affinity.**
+
+The browser offers a clearly labeled hard category cap (1, 2, 3) or the backward-compatible soft-variety default. Caps operate on observed tags, NOT verified vendor industries, and can leave slots empty. `lineup.mjs` is a pure deterministic module with five focused offline tests (`node --test test-lineup.mjs`).
 
 The demo fixture is deliberately synthetic; it cannot be used as proof of integration, model accuracy or live provider output. Live behavior needs an authenticated key, authorized Qloo quota and direct end-to-end rehearsal before an external submission. Qloo API failures fail closed rather than silently replacing actual data with fixture results.
 
@@ -36,7 +39,7 @@ The demo fixture is deliberately synthetic; it cannot be used as proof of integr
 
 - `GET /` — responsive zero-dependency UI.
 - `GET /api/health` — readiness and *boolean* key configuration; never emits the key.
-- `POST /api/plan` — validated JSON `location`, `seeds`, `slots`, `mode`, `source`, `exclusions`; returns lineup, alternatives, signal provenance and warnings.
+- `POST /api/plan` — validated JSON `location`, `seeds`, `slots`, `mode`, `source`, `exclusions`, optional numeric `categoryCap`; returns lineup, alternatives, signal provenance, any honest shortfall and warnings.
 - Server caps request size (8 KiB), one upstream call, 12-second upstream timeout and 250 KiB provider response, and only accepts allowed Qloo API origins. Browser receives normalized output, never credentials.
 - HTML renders all provider text using `textContent`, not HTML injection.
 
