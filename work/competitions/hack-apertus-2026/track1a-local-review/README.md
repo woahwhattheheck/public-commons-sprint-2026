@@ -1,6 +1,6 @@
 # Hack Apertus 2026 / Track 1A — local evidence review
 
-This is a **public, offline-only evidence viewer** for the released *Apertus 1A five-issue evidence kit* (shared internal Commons Library `/Commons/competitions/HackApertus2026/hack_apertus_track1a_five_issue_evidence_20261009.zip`; immutable original source SHA-256 `cae2f02e9f40fa96620f653a4652d45253999e9888f6775fbc6bca3602bee6c9`).
+This is a **public, offline-only evidence viewer** for a separately authored Apertus Track 1A five-issue evidence collection kit. An authorized operator may supply their own local `results.jsonl` and optional `review.jsonl` compatible with the documented schema below; the viewer does not download or require any internal project artifact.
 
 ## What works
 
