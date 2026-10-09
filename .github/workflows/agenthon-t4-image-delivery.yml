@@ -72,6 +72,7 @@ jobs:
           set -euo pipefail
           UNIT="$GITHUB_WORKSPACE/organizer/units/t4-EXAMPLE-eps-beat"
           docker run --rm --network=none --read-only --cap-drop=ALL \
+            --user "$(id -u):$(id -g)" \
             --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=16m \
             -e PYTHONDONTWRITEBYTECODE=1 \
             -v "$UNIT:/input:ro" -v "$GITHUB_WORKSPACE/output:/output:rw" \
