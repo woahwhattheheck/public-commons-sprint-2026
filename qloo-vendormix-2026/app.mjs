@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parseCategoryCap, rankLineup } from './lineup.mjs';
 import { boundedQlooResponseBytes } from './response-bound.mjs';
+import { LiveProviderError, fetchLiveQlooResponse } from './live-provider.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
@@ -66,8 +67,8 @@ function providerCandidates(payload) {
 
 async function fetchQloo(input) {
   const token = process.env.QLOO_API_KEY;
-  if (!token) throw new Error('QLOO_API_KEY is not configured; select the labelled synthetic demo');
-  if (!ALLOWED_BASES.has(API_BASE)) throw new Error('QLOO_API_BASE is not an allowed Qloo origin');
+  if (!token) throw new LiveProviderError('QLOO_API_KEY is not configured; select the labelled synthetic demo', 503);
+  if (!ALLOWED_BASES.has(API_BASE)) throw new LiveProviderError('QLOO_API_BASE is not an allowed Qloo origin');
   const body = {
     'filter.type': 'urn:entity:place',
     'filter.location.query': input.location,
@@ -76,20 +77,15 @@ async function fetchQloo(input) {
     'sort_by': 'affinity',
     take: 35
   };
-  let response;
+  const parsed = await fetchLiveQlooResponse({
+    apiBase: API_BASE, apiKey: token, requestBody: body,
+    readBytes: boundedQlooResponseBytes,
+  });
   try {
-    response = await fetch(`${API_BASE}/v2/insights`, {
-      method: 'POST', signal: AbortSignal.timeout(12000),
-      headers: { 'x-api-key': token, 'content-type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify(body)
-    });
-  } catch { throw new Error('Qloo connection timed out or failed; no synthetic results substituted'); }
-  if (!response.ok) throw new Error(`Qloo returned HTTP ${response.status}; no synthetic results substituted`);
-  const bytes = await boundedQlooResponseBytes(response);
-  let parsed;
-  try { parsed = JSON.parse(new TextDecoder().decode(bytes)); }
-  catch { throw new Error('Qloo returned invalid JSON'); }
-  return providerCandidates(parsed);
+    return providerCandidates(parsed);
+  } catch {
+    throw new LiveProviderError('Qloo response contained no usable place candidates');
+  }
 }
 
 export async function buildPlan(inputRaw) {
@@ -135,7 +131,7 @@ const server = http.createServer(async (request, response) => {
       return response.end(JSON.stringify(result));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Plan error';
-      const code = message.startsWith('Qloo returned HTTP 429') ? 429 : 400;
+      const code = err instanceof LiveProviderError ? err.status : 400;
       response.writeHead(code, { 'content-type': 'application/json' });
       return response.end(JSON.stringify({ error: message }));
     }
