@@ -30,6 +30,31 @@ Server-side credentials and access tokens are never sent to the browser. Dispute
 
 PayPal official Disputes v1 API: https://developer.paypal.com/docs/api/customer-disputes/v1/ . PayPal's own API definition: https://github.com/paypal/paypal-rest-api-specifications/blob/main/openapi/customer_disputes_v1.json .
 
+### Real-sandbox dispute list pagination
+
+PayPal's Disputes v1 List API returns a HATEOAS `next` link with an opaque
+`next_page_token` when a merchant has further results. The sandbox list
+now follows that cursor sequentially using only the fixed PayPal sandbox host,
+not arbitrary provider-supplied network destinations. It checks each page's
+10-case limit, unique dispute IDs, cursor progression, expected endpoint and
+link format, rejecting inconsistent paged responses instead of showing a
+misleading partial success.
+
+The local case-review store retains up to 80 cases, so listing stops after
+eight 10-case pages. If another valid next cursor remains, the local UI
+explicitly reports **PARTIAL** and makes clear the displayed 80 cases are
+not the merchant's full dispute portfolio. No case-fetch requests mutate
+PayPal disputes, refunds or payments. Incomplete pagination from an
+upstream error cannot silently fall back to synthetic data.
+
+Run `node --test tests/list_pagination.test.mjs` for the focused original-
+module paging, duplicate-ID, cursor-loop, bounds and fail-closed checks.
+That test substitutes deterministic HTTP fixture responses and does not
+establish real sandbox credentials or provider access.
+
+Official API description:
+https://developer.paypal.com/docs/api/customer-disputes/v1/
+
 ## Optional AI (OpenAI-compatible HTTPS endpoint)
 
     export AI_CHAT_COMPLETIONS_URL='https://authorized-provider.example/v1/chat/completions'
