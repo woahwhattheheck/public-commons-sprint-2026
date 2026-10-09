@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swiss Voices | Apertus evaluation workspace</title>
+<style>
+:root{color-scheme:dark;--bg:#101721;--card:#1c2935;--muted:#a5b7c5;--accent:#85dfca}
+*{box-sizing:border-box}body{background:var(--bg);color:#f2f8fb;font:16px/1.55 system-ui, sans-serif;margin:0}
+header,main,footer{width:min(1000px,94vw);margin:auto}header{padding:40px 0 18px}
+h1{font-size:clamp(2rem,5vw,3.7rem);margin:0;line-height:1.1}h2{margin:0 0 14px}
+p,.hint{color:var(--muted)}.eyebrow{letter-spacing:.12em;color:var(--accent);text-transform:uppercase;font-size:12px}
+main{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:20px 0 40px}
+section{background:var(--card);padding:24px;border:1px solid #34495a;border-radius:18px;min-width:0}
+.wide{grid-column:1/-1}label{font-weight:600;display:block;margin:12px 0 6px}
+textarea,input,select{width:100%;background:#101d28;border:1px solid #607a8b;color:white;padding:10px;border-radius:8px;font:inherit}
+textarea{min-height:80px;resize:vertical}button,.download{border:0;border-radius:9px;padding:10px 16px;background:var(--accent);color:#10222b;font-weight:800;cursor:pointer;display:inline-block;margin:10px 8px 0 0;text-decoration:none}
+button:disabled{opacity:.4;cursor:not-allowed}.secondary{background:#354c5d;color:white}
+.case{border-top:1px solid #435664;padding:16px 0;overflow-wrap:anywhere}.case p{margin:6px 0}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#0d1923;border-radius:8px;font-size:14px}
+.score-row{display:grid;grid-template-columns:1fr 80px;align-items:center;gap:10px}
+#notice{min-height:2rem;color:var(--accent)}small{color:var(--muted)}
+footer{padding-bottom:32px;color:var(--muted)}
+@media(max-width:720px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="eyebrow">Hack Apertus · Track 1B Swiss Voices · Research prototype</div>
+<h1>Local language deserves local evidence.</h1>
+<p>Capture provenance, obtain a second-person evaluation, and export auditable Apertus 1.5 runs. This does not claim native-speaker validation until a human provides it.</p>
+<p id="notice" role="status" aria-live="polite"></p></header>
+<main>
+<section><h2>1 · Create evaluation prompt</h2>
+<form id="create">
+<label for="locale">Swiss locale</label><select id="locale"><option>de-CH</option><option>fr-CH</option><option>it-CH</option><option>rm-CH</option></select>
+<label for="kind">Provenance type</label><select id="kind"><option value="synthetic">Synthetic draft (not speaker validated)</option><option value="public_domain">Public domain (cite source)</option><option value="consented_person">Consented human contribution</option></select>
+<label for="context">Context / region</label><input id="context" maxlength="800" placeholder="e.g. Zurich: a civic-service notice" required>
+<label for="prompt">Local-language task</label><textarea id="prompt" maxlength="1600" required></textarea>
+<label for="attribution">Source citation / contributor alias (no personal data)</label><input id="attribution" maxlength="300" required>
+<label><input type="checkbox" id="consent" style="width:auto"> For a human source: I record the contributor's informed consent</label>
+<button type="submit">Create case</button></form></section>
+<section><h2>2 · Independent human review</h2>
+<p>Approve a reference answer before making a model request. A *different* reviewer must score each saved output. Draft cases are never presented as gold data.</p>
+<form id="approve"><label for="caseId">Case ID</label><input id="caseId" required>
+<label for="reference">Human-approved expected answer or rubric reference</label><textarea id="reference" required></textarea>
+<label for="approver">Approver alias</label><input id="approver" required><button type="submit">Freeze reference</button></form>
+<form id="review"><label for="runId">Run ID to review</label><input id="runId" required>
+<label for="reviewer">Independent reviewer alias</label><input id="reviewer" required>
+<div class="score-row"><label for="fidelity">Language fidelity</label><select id="fidelity"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+<div class="score-row"><label for="accuracy">Swiss context accuracy</label><select id="accuracy"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+<div class="score-row"><label for="respect">Respectful localization</label><select id="respect"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+<label for="notes">Review rationale</label><textarea id="notes" required></textarea><button type="submit">Save review</button></form></section>
+<section class="wide"><h2>3 · Evidence queue</h2><p>Only approved cases can call the Apertus provider. Model requests remain disabled without a server-only <code>APERTUS_API_KEY</code>.</p>
+<a class="download" href="/api/export">Export full JSON evidence</a>
+<button class="secondary" id="refresh">Refresh</button><div id="cases"></div></section>
+</main><footer>All source prompts are human-adjudicated; model output is never marked factually correct by automation. Store consent receipts separately from public data.</footer>
+<script>
+const $=id=>document.getElementById(id);
+const notice=msg=>{$('notice').textContent=msg};
+async function api(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const obj=await r.json();if(!r.ok)throw Error(obj.error||'Request failed');return obj}
+async function act(fn){try{await fn();notice('Saved. Refreshing evidence.');await refresh()}catch(e){notice(e.message)}}
+$('create').onsubmit=e=>{e.preventDefault();act(()=>api('/api/cases',{locale:$('locale').value,source_kind:$('kind').value,context:$('context').value,prompt:$('prompt').value,attribution:$('attribution').value,human_attested:$('consent').checked}))};
+$('approve').onsubmit=e=>{e.preventDefault();act(()=>api('/api/approve',{id:$('caseId').value,reference:$('reference').value,reviewer:$('approver').value}))};
+$('review').onsubmit=e=>{e.preventDefault();act(()=>api('/api/review',{id:$('caseId').value,run_id:$('runId').value,reviewer:$('reviewer').value,notes:$('notes').value,scores:{linguistic_fidelity:Number($('fidelity').value),swiss_context_accuracy:Number($('accuracy').value),respectful_localization:Number($('respect').value)}}))};
+$('refresh').onclick=()=>act(async()=>{});
+function el(tag,text){const n=document.createElement(tag);n.textContent=text;return n}
+async function refresh(){const data=await api('/api/cases');const root=$('cases');root.replaceChildren();if(!data.cases.length)root.append(el('p','No cases yet. Add a prompt with provenance above.'));
+for(const c of data.cases){const item=el('div','');item.className='case';item.append(el('strong',c.locale+' · '+c.id+' · '+c.source_kind));item.append(el('p',c.prompt));item.append(el('small',c.approved?'Approved reference · '+c.approved_by:'Awaiting independent reference approval'));
+const select=el('button','Use this case');select.className='secondary';select.onclick=()=>{$('caseId').value=c.id;window.scrollTo({top:0,behavior:'smooth'})};item.append(select);
+if(c.approved){const run=el('button','Run Apertus');run.onclick=()=>act(()=>api('/api/generate',{id:c.id}));item.append(run)}
+for(const r of c.runs){item.append(el('pre','Run '+r.id+' · '+r.model+'\n'+r.answer));item.append(el('small',r.reviews.length+' independent review(s)'));const sel=el('button','Review run');sel.className='secondary';sel.onclick=()=>{$('caseId').value=c.id;$('runId').value=r.id;window.scrollTo({top:0,behavior:'smooth'})};item.append(sel)}
+root.append(item)}}refresh().catch(e=>notice(e.message));
+</script></body></html>
