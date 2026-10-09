@@ -1,0 +1,13 @@
+{
+  "start_deg": 135,
+  "end_deg": 405,
+  "min_value": 0,
+  "max_value": 100,
+  "units": "synthetic units",
+  "center_px": [220, 220],
+  "radius_px": 174,
+  "min_blur_variance": 25,
+  "max_near_white_fraction": 0.25,
+  "min_dominance": 1.18,
+  "operator_verified": false
+}
