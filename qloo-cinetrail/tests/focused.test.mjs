@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { producePlan, buildPlan, normalizeEntities, cleanInput } from "../server.mjs";
+import { producePlan, buildPlan, normalizeEntities, cleanInput, qlooGet } from "../server.mjs";
 
 test("synthetic mode is explicitly non-real and handles input", async () => {
   const p = await producePlan({ movie:"Amelie", locality:"Louisville", mood:"cozy" }, { key:"" });
@@ -44,3 +44,20 @@ test("unexpected Qloo structures are rejected instead of pretending live evidenc
   const plan = buildPlan({ movie:"film",locality:"town",seed:null,places:[],mode:"live" });
   assert.deepEqual(plan.stops, []);
 });
+
+test("live Qloo requests target canonical hackathon origin without credential-carrying redirects", async () => {
+  const calls = [];
+  const fetcher = async (url, opts) => {
+    calls.push({ url: new URL(url), redirect: opts.redirect, key: opts.headers["X-Api-Key"] });
+    return new Response(JSON.stringify({ results: { entities: [] } }), { status: 200 });
+  };
+  await qlooGet("/search", { query: "Amelie", types: "urn:entity:movie" },
+    { key: "synthetic-test-only", fetcher });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url.origin, "https://hackathon.api.qloo.com");
+  assert.equal(calls[0].url.pathname, "/search");
+  assert.equal(calls[0].redirect, "error");
+  assert.equal(calls[0].key, "synthetic-test-only");
+  assert.equal(new URL("/v2/insights", calls[0].url.origin).pathname, "/v2/insights");
+});
+
