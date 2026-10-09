@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a25">
+  <meta name="description" content="NeighborhoodPulse: a Qloo-powered cultural programming agent for neighborhood spaces and small community venues.">
+  <title>NeighborhoodPulse · Cultural Program Agent</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="header">
+      <a class="brand" href="/" aria-label="NeighborhoodPulse home"><span class="brand-mark">N<span>•</span>P</span><span class="brand-words">NEIGHBORHOOD<br><strong>PULSE</strong></span></a>
+      <div class="top-label"><span class="status-dot"></span> CULTURAL PROGRAMMING AGENT <span class="version">/ V1</span></div>
+    </header>
+
+    <main>
+      <div class="intro-grid">
+        <section class="intro">
+          <div class="eyebrow"><span>01</span> THE SIGNAL</div>
+          <h1>Make culture<br><em>happen locally.</em></h1>
+          <p class="lead">Turn your community’s taste signals into a four-week calendar of music, film, books, and possible local partners — with every recommendation traceable back to Qloo.</p>
+          <div class="intro-badges"><span>4 culture domains</span><span>4 distinct weeks</span><span>Evidence-led, not guesswork</span></div>
+        </section>
+        <section class="builder" aria-label="Generate a calendar">
+          <div class="builder-head"><span>YOUR PROGRAM BRIEF</span><span>v1.0 / OPEN STUDIO</span></div>
+          <form id="planner-form">
+            <label for="city">01 / YOUR COMMUNITY</label>
+            <input id="city" name="city" maxlength="100" required value="Louisville, Kentucky" placeholder="City or neighborhood" autocomplete="address-level2">
+            <label for="tastes">02 / CULTURAL REFERENCE POINTS</label>
+            <textarea id="tastes" name="tastes" rows="3" required placeholder="Up to three artists, movies, or books — one per line">Nina Simone
+Moonlight
+James Baldwin</textarea>
+            <p class="helper">Names will be resolved to Qloo entities in live mode. Search matches are shown in the result for verification.</p>
+            <label for="mode">03 / SOURCE MODE</label>
+            <select id="mode" name="mode">
+              <option value="live">Live Qloo API — requires server key</option>
+              <option value="fixture">Synthetic demonstration — no API key needed</option>
+            </select>
+            <div id="mode-note" class="mode-note">Live results require a server-side Qloo key. This app never sends your key to the browser.</div>
+            <button id="plan-button" class="primary" type="submit">Build four-week program <span aria-hidden="true">↗</span></button>
+          </form>
+        </section>
+      </div>
+
+      <section id="outcome" class="outcome" hidden aria-live="polite">
+        <div class="section-top"><span>02 / THE PROGRAM</span><span id="source-badge" class="source-badge"></span></div>
+        <div class="outcome-heading"><div><h2>Four weeks, one neighborhood.</h2><p id="outcome-caption"></p></div><div class="actions"><button id="export-json" type="button">↓ Export JSON</button><button id="export-csv" type="button">↓ Export CSV</button></div></div>
+        <div id="signal-list" class="signal-strip"></div>
+        <div id="program-grid" class="program-grid"></div>
+        <div class="methodology"><h3>Evidence &amp; guardrails</h3><p>Qloo entities and any reported affinity values are traceable to API results. The event titles and programming structure are locally generated proposals, not Qloo statements. No booking, event hours, price, rights, accessibility or availability is confirmed.</p><button id="reroll" type="button">Regenerate with dismissed items excluded ↻</button></div>
+      </section>
+      <section id="error-panel" class="error-panel" hidden role="alert"></section>
+    </main>
+    <footer><div>NEIGHBORHOODPULSE <span>© 2026 · Open-source prototype</span></div><div>Designed for people who build community, not marketing profiles.</div></footer>
+  </div>
+</body>
+</html>
