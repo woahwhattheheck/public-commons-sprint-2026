@@ -1,0 +1,4 @@
+# Development compatibility only; this is not the final OpenCV 5 competition runtime.
+opencv-python-headless==4.13.0.92
+numpy==2.3.5
+playwright==1.63.0
