@@ -57,7 +57,7 @@ For each replicate with at least four samples, ChipTrace compares the first-half
 
 ### 4.3 Robust trend
 
-A Theil–Sen slope is computed from pairwise slopes and normalized to one baseline cadence step. For very long traces, deterministic regular subsampling bounds work while preserving reproducibility.
+The trend signal is the median of pairwise slopes, normalized to one baseline cadence step. Traces with at most 80 observations use all observations. Longer traces use 80 deterministic, approximately evenly spaced observation indices spanning the sorted trace, including both endpoints, so at most 3,160 pairs are considered. This is a bounded approximation to the full-trace Theil–Sen estimator; it does not guarantee the same estimate for every trace.
 
 ### 4.4 Outlier fraction
 
@@ -110,6 +110,8 @@ The current deterministic output returns overall `REVIEW`, max quality-risk scor
 The test suite covers deterministic fixture generation, repeat analysis equality, receipt tamper detection, HTML scope disclosure, strict unknown-column rejection, duplicate-key rejection, unit mismatch rejection, insufficient-evidence behavior, non-finite-value rejection, cadence-gap observability, and JSON round-trip receipt verification.
 
 The historical multi-Python path-scoped workflow is not present on current main. Current execution evidence is the focused merged-byte CPython 3.13.5 benchmark and test receipt below; no broader hosted matrix is claimed.
+
+A separate focused regression for the full-range sampling repair uses a centered piecewise-linear trace with a flat first half and a rising second half. Its symmetry gives a full-trace Theil–Sen slope of 0.5. The 159-observation case previously returned 0.0 because the first 80 observations were selected; full-range sampling returns 0.5. The same regression checks 79- and 80-observation controls, both of which remain 0.5. This one focused test passed; the historical benchmark and 14-test receipt below were not rerun for this repair.
 
 ## 9. Frozen synthetic benchmark evidence
 
