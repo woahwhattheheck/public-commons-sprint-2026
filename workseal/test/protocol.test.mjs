@@ -264,6 +264,24 @@ test('Solana plan rejects unsupported currency', () => {
   assert.throws(() => makeSolanaSettlementPlan(intent), (e) => e.code === 'UNSUPPORTED_CURRENCY');
 });
 
+test('Solana transfer plan rejects invalid account keys and overflowing lamports', () => {
+  const { state } = acceptedState();
+  const intent = createSettlementIntent(state);
+  assert.throws(() => makeSolanaSettlementPlan({ ...intent, payer: 'not-a-pubkey' }),
+    (e) => e.code === 'BAD_PUBKEY');
+  assert.throws(() => makeSolanaSettlementPlan({ ...intent, payee: 'not-a-pubkey' }),
+    (e) => e.code === 'BAD_PUBKEY');
+  assert.throws(() => makeSolanaSettlementPlan({ ...intent, amountAtomic: '18446744073709551616' }),
+    (e) => e.code === 'BAD_LAMPORTS');
+  assert.throws(() => makeSolanaSettlementPlan({ ...intent, amountAtomic: '9'.repeat(1024) }),
+    (e) => e.code === 'BAD_LAMPORTS');
+  assert.equal(
+    makeSolanaSettlementPlan({ ...intent, amountAtomic: '18446744073709551615' })
+      .instructions[1].lamports,
+    '18446744073709551615',
+  );
+});
+
 test('Solana memo binds exact settlement intent digest', () => {
   const { state } = acceptedState(); const intent = createSettlementIntent(state); const plan = makeSolanaSettlementPlan(intent);
   assert.equal(plan.instructions[0].utf8, `WORKSEAL:v1:${sha256Hex(intent)}`);
