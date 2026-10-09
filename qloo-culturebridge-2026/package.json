@@ -1,0 +1,10 @@
+{
+  "name": "culturebridge-qloo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Cross-taste cultural bridge discovery, powered by Qloo Insights",
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "scripts": {"start": "node src/server.mjs", "check:focused": "node test/focused.mjs"},
+  "license": "MIT"
+}
