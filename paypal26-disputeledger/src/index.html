@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DisputeLedger • PayPal Sandbox Case Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#0c121b;--pane:#172333;--edge:#344557;--blue:#85b7ff;--text:#eaf0f8;--muted:#adbed3;--gold:#e9ca8e}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#1b3351,var(--bg) 65%);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1160px;margin:auto;padding:36px 24px 70px}header{padding-bottom:23px;border-bottom:1px solid var(--edge);margin-bottom:23px}
+.eyebrow{font-size:12px;color:var(--blue);letter-spacing:.21em;font-weight:800}
+h1{font-size:clamp(36px,6vw,66px);letter-spacing:-.055em;line-height:1.05;margin:11px 0}
+h2{font-size:21px;margin:0 0 14px}.sub{max-width:770px;color:var(--muted);font-size:17px}
+.grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:18px}@media(max-width:780px){.grid{grid-template-columns:1fr}}
+section{background:var(--pane);padding:24px;border:1px solid var(--edge);border-radius:18px;margin-bottom:18px}
+button{padding:11px 16px;background:var(--blue);border:0;color:#08172b;border-radius:9px;font-weight:750;cursor:pointer;margin:4px 6px 4px 0}
+button.secondary{background:#263b57;color:var(--text);border:1px solid #587292}button:disabled{opacity:.4;cursor:not-allowed}
+.small{font-size:13px;color:var(--muted)}.warn{border-left:3px solid var(--gold);padding:10px 14px;background:#302b2a;color:#f5dbad;border-radius:6px}
+.item{display:block;background:#111d2a;width:100%;margin:8px 0;padding:12px;text-align:left;color:var(--text);border:1px solid #48617c;font-weight:500}
+.item.selected{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.check{display:flex;align-items:start;gap:10px;margin:10px 0;background:#101e2f;padding:11px;border-radius:8px}
+.check input{margin-top:4px;accent-color:var(--blue)}.code{overflow-wrap:anywhere;white-space:pre-wrap;background:#081322;padding:17px;border-radius:10px;border:1px solid var(--edge);font-size:13px;min-height:65px}
+a{color:var(--blue)}#feedback{min-height:25px}strong{font-weight:750}
+</style></head><body><main>
+<header><div class="eyebrow">DISPUTELEDGER / PAYPAL AI HACKATHON 2026 / SOURCE PROTOTYPE</div>
+<h1>Build the case. Never invent the evidence.</h1>
+<p class="sub">Connect a permitted PayPal <strong>sandbox</strong> merchant app, inspect actual dispute status, and prepare a human-reviewable evidence checklist with optional AI drafting. Nothing is filed, refunded, charged, or resolved here.</p>
+<div class="warn">SANDBOX ONLY · Read-only Disputes API. The synthetic example is not a real PayPal case. Checkboxes mean evidence exists in your own records; this tool cannot validate documents.</div></header>
+<div class="grid"><div>
+<section><div class="eyebrow">01 / FETCH & SELECT</div><h2>Dispute inbox</h2>
+<p id="health" class="small">Checking local configuration…</p>
+<button id="load">Read sandbox cases</button><button id="demo" class="secondary">Load synthetic example</button>
+<div id="cases"></div><p id="feedback" role="status" aria-live="polite" class="small"></p>
+</section>
+<section><div class="eyebrow">02 / DOCUMENT CHECKLIST</div><h2>What can you substantiate?</h2><div id="checks"></div>
+<button id="prepare" disabled>Prepare review packet</button>
+<p class="small">No buyer messages, credentials or identity fields are transmitted to the optional AI model. Select only evidence categories you can substantiate with actual records.</p></section></div>
+<div><section><div class="eyebrow">CASE FACTS</div><h2>Verified versus asserted</h2><div class="code" id="detail">Select a case to inspect status and reason.</div></section>
+<section><div class="eyebrow">03 / HUMAN-REVIEW DRAFT</div><h2>Gaps, not guarantees</h2>
+<div id="report" class="code">No draft prepared. Every packet is local evidence preparation, not a PayPal API submission.</div>
+<button id="save" class="secondary" disabled>Save packet as JSON</button>
+<p class="small">An exported packet is <strong>not</strong> a payment or dispute submission receipt. Evidence must be verified and filed separately through the real PayPal process.</p>
+</section></div></div><p class="small">Local-first prototype · Node 22+ · no production endpoint, no dispute mutations, no contest entry or award claimed.</p></main>
+<script>
+const get=id=>document.getElementById(id),CASE=['delivery','refund','order_record','merchant_terms','buyer_messages'];
+let selection=null, packet=null,records=[];
+const say=x=>get('feedback').textContent=x;
+function renderCases(){
+  const place=get('cases');place.replaceChildren();
+  records.forEach(d=>{
+    const b=document.createElement('button');b.type='button';
+    b.className='item'+(selection?.dispute_id===d.dispute_id?' selected':'');
+    b.textContent=d.dispute_id+' / '+d.status+' / '+d.reason;
+    b.onclick=async()=>{
+      try {
+        let detail=d;
+        if(d.source==='PAYPAL_SANDBOX_API'){
+          say('Refreshing one dispute from PayPal sandbox…');
+          const response=await fetch('/api/detail?id='+encodeURIComponent(d.dispute_id));
+          const json=await response.json();if(!response.ok)throw Error(json.error);
+          detail=json.case;
+        }
+        selection=detail;packet=null;get('save').disabled=true;
+        get('detail').textContent=JSON.stringify(detail,null,2);
+        get('report').textContent='No packet prepared.';
+        get('prepare').disabled=false;renderChecks();renderCases();
+        say(detail.provider_verified?'Read-only sandbox provider details loaded.':'Synthetic demo loaded; no provider data.');
+      } catch(e){say(e.message)}
+    };
+    place.append(b);
+  });
+}
+function renderChecks(){
+  const box=get('checks');box.replaceChildren();
+  for(const value of CASE){
+    const label=document.createElement('label');label.className='check';
+    const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.dataset.key=value;
+    label.append(checkbox,document.createTextNode(value.replaceAll('_',' ')+' — supporting records available'));
+    box.append(label);
+  }
+}
+async function load(url){
+  try {
+    say('Reading…');
+    const response=await fetch(url);const data=await response.json();
+    if(!response.ok)throw Error(data.error||'Read failed');
+    records=data.cases||[data.case];selection=null;packet=null;
+    get('prepare').disabled=true;get('save').disabled=true;
+    get('detail').textContent='Choose a case.';get('report').textContent='No packet prepared.';
+    renderCases();renderChecks();say(records.length+' case(s) loaded. Select one.');
+  }catch(e){say(e.message)}
+}
+get('load').onclick=()=>load('/api/disputes');get('demo').onclick=()=>load('/api/demo');
+get('prepare').onclick=async()=>{
+  if(!selection)return;
+  const evidence=Object.fromEntries([...get('checks').querySelectorAll('input')].map(x=>[x.dataset.key,x.checked]));
+  get('prepare').disabled=true;say('Building read-only evidence draft…');
+  try{
+    const response=await fetch('/api/packet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selection.dispute_id,evidence})});
+    const body=await response.json();if(!response.ok)throw Error(body.error);
+    packet=body;get('report').textContent=JSON.stringify(body,null,2);
+    get('save').disabled=false;say('Draft only. No evidence filed, dispute changed or money moved.');
+  }catch(e){say(e.message)}finally{get('prepare').disabled=false}
+};
+get('save').onclick=()=>{
+  if(!packet)return;
+  const bytes=new Blob([JSON.stringify(packet,null,2)+'\n'],{type:'application/json'});
+  const url=URL.createObjectURL(bytes),a=document.createElement('a');
+  a.href=url;a.download='disputeledger-'+selection.dispute_id+'.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),500);
+  say('Saved the local draft. No PayPal submission has occurred.');
+};
+fetch('/api/health').then(r=>r.json()).then(s=>get('health').textContent='PayPal sandbox: '+(s.paypal_sandbox_configured?'configured':'not configured')+' · Optional AI: '+(s.ai_configured?'configured':'offline checklist only')).catch(()=>get('health').textContent='Backend unavailable');
+renderChecks();
+</script></body></html>
