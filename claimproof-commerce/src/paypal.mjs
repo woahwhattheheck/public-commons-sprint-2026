@@ -31,12 +31,16 @@ function inspectOrder(current, orderId, cart, fullOrder = true) {
         capture.amount?.currency_code !== 'USD' || capture.amount?.value !== cart.total) {
       throw new InputError('PayPal capture identity or amount mismatch; manual reconciliation required');
     }
+    if (['DECLINED','DENIED','FAILED','REFUNDED','PARTIALLY_REFUNDED'].includes(capture.status)) {
+      return {status:capture.status,id:capture.id,order_status:current.status,already_captured:true};
+    }
     if (capture.status === 'PENDING') return {status:'PENDING',id:capture.id,order_status:current.status};
     if (capture.status === 'COMPLETED' && current.status === 'COMPLETED') {
       return {status:'COMPLETED',id:capture.id,order_status:current.status,already_captured:true};
     }
     throw new InputError('PayPal capture is not verified as settled or pending; check the sandbox order');
   }
+  if (current.status === 'VOIDED') return {status:'VOIDED',order_status:current.status};
   if (!['CREATED','SAVED','APPROVED','PAYER_ACTION_REQUIRED'].includes(current.status)) {
     throw new InputError('PayPal order lacks a verified matching capture; manual reconciliation required');
   }
@@ -110,7 +114,8 @@ export class PayPalSandbox {
     if (current.order_status !== 'APPROVED') {
       throw new InputError('PayPal has not confirmed APPROVED state; capture was not requested');
     }
-    const captured = await this.api(`/v2/checkout/orders/${verifiedId}/capture`,{
+    try {
+      const captured = await this.api(`/v2/checkout/orders/${verifiedId}/capture`,{
       method:'POST',body:{},requestId,representation:true
     });
     if (captured?.id !== verifiedId || (captured.intent !== undefined && captured.intent !== 'CAPTURE')) {
@@ -128,6 +133,11 @@ export class PayPalSandbox {
     // Retain readback when the provider returns a minimal or incomplete response.
     // This fallback is a GET, never an automatic replay of the capture POST.
     const settled = await this.captureStatus(verifiedId,cart);
-    return settled.status === 'NOT_CAPTURED' ? {...settled,status:'PENDING'} : {...settled,already_captured:false};
+      return settled.status === 'NOT_CAPTURED' ? {...settled,status:'UNKNOWN'} : {...settled,already_captured:false};
+    } catch {
+      // Once capture was attempted, a failed response/read is not proof that capture failed.
+      // This review remains read-only; no mutation retry.
+      return {status:'UNKNOWN',order_status:'UNKNOWN'};
+    }
   }
 }

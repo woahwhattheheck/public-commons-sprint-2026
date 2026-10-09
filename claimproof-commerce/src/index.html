@@ -15,17 +15,17 @@ function syncCheckoutControls(){
   el('consent-create').disabled=checkoutBusy||!!order;
   el('consent-capture').disabled=checkoutBusy;
   el('create').disabled=checkoutBusy||!current||!!order||!el('consent-create').checked;
-  el('capture').disabled=checkoutBusy||!current||!order||!el('consent-capture').checked||['CAPTURE_PENDING','CAPTURED'].includes(current.state);
+  el('capture').disabled=checkoutBusy||!current||!order||!el('consent-capture').checked||['CAPTURE_PENDING','CAPTURE_UNKNOWN','CAPTURED','CAPTURE_FAILED','CAPTURE_REVERSED','ORDER_VOIDED'].includes(current.state);
   el('check-payment').disabled=checkoutBusy||!current||!order;
 }
 function setCheckoutBusy(value){checkoutBusy=value;el('review').disabled=value;syncCheckoutControls()}
 function showCaptureResult(result){
   current.state=result.state;
   el('consent-capture').checked=false;
-  hide('approval-area',['CAPTURE_PENDING','CAPTURED'].includes(result.state));
+  hide('approval-area',['CAPTURE_PENDING','CAPTURE_UNKNOWN','CAPTURED','CAPTURE_FAILED','CAPTURE_REVERSED','ORDER_VOIDED'].includes(result.state));
   el('payment-result').textContent='Sandbox order '+result.order_id+': '+result.state+
     (result.capture_status?' (capture '+result.capture_status+')':'')+'.'+
-    (result.state==='CAPTURE_PENDING'?' Settlement is not yet verified. Use the read-only status check; do not start another checkout.':'');
+    (['CAPTURE_PENDING','CAPTURE_UNKNOWN'].includes(result.state)?' Settlement is not yet verified. Use the read-only status check; do not start another checkout.':'');
   say(result.state==='CAPTURED'?'Matching sandbox capture verified. No live payment.':'Sandbox status received; no live payment.');
 }
 function clearCheckout(){
@@ -117,7 +117,7 @@ el('create').onclick=async()=>{
 el('consent-capture').onchange=syncCheckoutControls;
 el('capture').onclick=async()=>{
   const approved=current,requestedOrder=order,revision=editRevision;
-  if(checkoutBusy||!approved||!requestedOrder||!el('consent-capture').checked||['CAPTURE_PENDING','CAPTURED'].includes(approved.state))return;
+  if(checkoutBusy||!approved||!requestedOrder||!el('consent-capture').checked||['CAPTURE_PENDING','CAPTURE_UNKNOWN','CAPTURED','CAPTURE_FAILED','CAPTURE_REVERSED','ORDER_VOIDED'].includes(approved.state))return;
   say('Checking server-side PayPal approval before sandbox capture…');setCheckoutBusy(true);
   try{
     const r=await api('capture',{review_id:approved.review_id,fingerprint:approved.cart.fingerprint,confirm:true});
