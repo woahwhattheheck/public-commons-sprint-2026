@@ -119,4 +119,4 @@ See `docs/technical_report.md`, `docs/kaggle_writeup.md`, and `docs/demo_script.
 
 ## Source provenance and license
 
-This ChipTrace subtree is distributed under its own Apache License, Version 2.0 (`LICENSE`), separately from this public repository's root MIT assets. The source was exported from the same original author's private competition work at `woahwhattheheck/commons` commit `4e520baa6bb5e369dc8e706a839c6082c2128372`; source/entrant rights preserved. This code publication alone does not submit the competition or establish an award.
+This ChipTrace subtree is distributed under its own Apache License, Version 2.0 (`LICENSE`), separately from this public repository's root MIT assets. The source was exported from the original author's privately maintained competition workspace at immutable source commit `4e520baa6bb5e369dc8e706a839c6082c2128372`; source/entrant rights preserved. This code publication alone does not submit the competition or establish an award.
