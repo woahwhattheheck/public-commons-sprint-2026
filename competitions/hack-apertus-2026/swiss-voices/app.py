@@ -16,6 +16,8 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from origin_guard import trusted_request
+
 HERE = Path(__file__).resolve().parent
 DB = Path(os.environ.get("SWISS_VOICES_DB", str(HERE / "workspace.json")))
 MODEL = os.environ.get("APERTUS_MODEL", "swiss-ai/apertus-v1.5-8b")
@@ -268,6 +270,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if not trusted_request(self.headers, self.server.server_port):
+            return self.send_json(403, {"error": "Local same-origin requests only"})
         if self.path in ("/api/cases", "/api/export"):
             with LOCK:
                 data = load()
@@ -285,6 +289,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": "Not found"})
 
     def do_POST(self):
+        # Refuse browser cross-origin simple POSTs before reading JSON or making API calls.
+        if not trusted_request(self.headers, self.server.server_port, write=True):
+            return self.send_json(403, {"error": "Local same-origin JSON requests only"})
         paths = {
             "/api/cases": submit_case,
             "/api/approve": approve_case,
