@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Apertus 1A · Local Evidence Review</title>
+<style>
+:root{color-scheme:dark;font:16px/1.5 system-ui,-apple-system,sans-serif;background:#10171f;color:#eef3f9}
+*{box-sizing:border-box}
+body{margin:0 auto;max-width:1100px;padding:1.8rem 1.3rem 5rem}
+header{max-width:820px}
+h1{font-size:clamp(2rem,5vw,3rem);margin:.35rem 0}
+h2{font-size:1.2rem;margin:.3rem 0}
+a{color:#91d6ef}
+.eyebrow{letter-spacing:.13em;text-transform:uppercase;color:#91d6ef;font-size:.78rem}
+.muted,small{color:#b8c9d6}
+.panel,.finding{border:1px solid #34485a;border-radius:15px;padding:1.4rem;margin-top:1.3rem;background:#182531}
+input[type=file]{display:block;margin:.5rem 0 1rem;max-width:100%;font-size:.9rem}
+button{color:#071820;background:#8cd7e5;border:0;border-radius:8px;padding:.75rem 1.1rem;font-weight:700;cursor:pointer}
+button:disabled{opacity:.38;cursor:default}
+.field{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem}
+.error{color:#ffb3a9}.ok{color:#9cf0c6}
+.pill{display:inline-block;border:1px solid #627e94;padding:.25rem .5rem;border-radius:9px;font-size:.76rem;margin:.15rem .2rem .15rem 0}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0d1720;border-radius:9px;padding:1rem;font-size:.85rem;max-height:280px;overflow:auto}
+details{margin:1rem 0;border-top:1px solid #304455;padding-top:.5rem}
+footer{margin-top:3rem}
+#output:empty{display:none}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">Hack Apertus 2026 · Track 1A</div>
+<h1>Evidence review, without a black box.</h1>
+<p>Open local model-capture and independent-review files, verify the supplied text hashes in your browser, and inspect the claims that still need a human decision. <strong>No files are uploaded.</strong></p>
+<p class="muted">This is a companion to the five-issue red-team harness, not proof that a model failed or that any contest entry was submitted. A reviewer-file assertion is not independently authenticated.</p>
+</header>
+<section class="panel" aria-labelledby="file-heading">
+<h2 id="file-heading">1. Select evidence</h2>
+<div class="field">
+<label>Captured model responses (JSONL from runner.py)
+<input id="captures" type="file" accept=".jsonl,.txt,application/json"></label>
+<label>Optional human review decisions (review.jsonl)
+<input id="reviews" type="file" accept=".jsonl,.txt,application/json"></label>
+</div>
+<p class="muted"><small>Locally processed only · 2 MiB/file maximum · SHA-256 verified in Web Crypto · No external scripts, network calls, storage, telemetry, or credentials.</small></p>
+<button id="load">Verify and review</button>
+<button id="export" disabled>Export redacted summary</button>
+<p id="status" role="status" aria-live="polite"></p>
+</section>
+<section id="output" aria-live="polite"></section>
+<footer class="muted">
+<p><strong>Evidence integrity is not truth verification.</strong> Check actual source references, model version, independently reproduced behavior, legal rights, human reviewer qualifications and the official contest instructions before publishing a finding. A confirmed field in JSONL is an assertion, not an organizer verdict.</p>
+<p>Original source harness: Apertus 1A five-issue evidence kit · <a href="https://hackapertus.devpost.com/" rel="noopener">Official competition</a> · Deadline 16 October 2026, 12:00 CEST.</p>
+</footer>
+<script>
+"use strict";
+(() => {
+  const catalog = Object.freeze({
+    "ch-romansh-civic-facts":"Romansh civic facts",
+    "ch-language-equal-dignity":"Language and civic belonging",
+    "ch-regional-bias":"Regional stereotyping",
+    "ch-synthetic-private-data":"Fictitious person's private data",
+    "copyright-long-verbatim":"Copyright reproduction"
+  });
+  const langs = new Set(["de","fr","it"]);
+  const hex64 = /^[a-f0-9]{64}$/i;
+  const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+  const el = (id) => document.getElementById(id);
+  const state = {report:null};
+  function status(message,error=false) {
+    el("status").textContent = message;
+    el("status").className = error ? "error" : "ok";
+  }
+  function fail(message) {throw new Error(message);}
+  function string(x) {return typeof x === "string" ? x : "";}
+  function node(tag,text,css) {
+    const n = document.createElement(tag);
+    if (text !== undefined) n.textContent = String(text);
+    if (css) n.className = css;
+    return n;
+  }
+  function line(parent,tag,text,css) {const n=node(tag,text,css);parent.append(n);return n;}
+  async function digest(s) {
+    if (!globalThis.crypto || !crypto.subtle) fail("Browser SHA-256 unavailable: use a secure localhost or HTTPS context.");
+    const bytes = new TextEncoder().encode(s);
+    const hash = await crypto.subtle.digest("SHA-256",bytes);
+    return [...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,"0")).join("");
+  }
+  async function jsonl(file,maxLines) {
+    if (!file) return [];
+    if (file.size > 2097152) fail("Input too large (2 MiB limit): "+file.name);
+    const txt = await file.text();
+    if (txt.includes("\u0000")) fail("Binary data is not supported.");
+    const lines=txt.split(/\r?\n/).filter(x=>x.trim());
+    if (lines.length > maxLines) fail("Too many JSONL records in "+file.name);
+    return lines.map((s,i)=>{
+      try {const p=JSON.parse(s);if (!p || Array.isArray(p) || typeof p!=="object") fail("JSONL row must be an object");return p;}
+      catch {fail("Invalid JSON object at "+file.name+" line "+(i+1));}
+    });
+  }
+  async function audit(captures,reviews) {
+    const out=new Map();
+    let errorCount=0;
+    for (const e of captures) {
+      if (e.schema !== 1 || !Object.hasOwn(catalog,e.case_id) || !langs.has(e.language))
+        fail("Capture contains unknown schema/case/language.");
+      const key=e.case_id+"|"+e.language;
+      if(out.has(key)) fail("Duplicate capture for "+key);
+      if (!["captured","http_error","transport_error"].includes(e.status))
+        fail("Capture has an unsupported provider status: "+key);
+      if (!/^swiss-ai\/apertus-v1\.5-(8b|70b)$/.test(string(e.model)))
+        fail("Unknown or missing model identifier: "+key);
+      if (!iso.test(string(e.captured_at)) || Number.isNaN(Date.parse(e.captured_at)))
+        fail("Malformed capture timestamp: "+key);
+      if (!hex64.test(string(e.prompt_sha256)) || await digest(string(e.prompt))!==e.prompt_sha256.toLowerCase())
+        fail("Prompt SHA-256 mismatch: "+key);
+      if (e.status === "captured") {
+        if (!string(e.response) || !hex64.test(string(e.response_sha256)) ||
+            await digest(e.response)!==e.response_sha256.toLowerCase())
+          fail("Model output SHA-256 mismatch or missing output: "+key);
+      } else {errorCount++;}
+      if (!hex64.test(string(e.casebook_sha256)) || !hex64.test(string(e.request_sha256)))
+        fail("Malformed source or request digest: "+key);
+      out.set(key,e);
+    }
+    if (!captures.length) fail("No captured model records supplied.");
+    const decisions=new Map();
+    for (const r of reviews) {
+      if (!Object.hasOwn(catalog,r.case_id) || decisions.has(r.case_id) ||
+          !["confirmed","not_confirmed","needs_review"].includes(r.decision))
+        fail("Duplicate or invalid human review.");
+      if(r.decision==="confirmed") {
+        for (const k of ["reviewer","analysis","reproduction","risk"])
+          if(string(r[k]).trim().length < 12) fail("Confirmed review lacks substantive "+k);
+        if (!Array.isArray(r.affected_languages) || !r.affected_languages.length ||
+            !r.affected_languages.every(lang => langs.has(lang) && out.get(r.case_id+"|"+lang)?.status==="captured"))
+          fail("Confirmed review references missing/noncaptured languages.");
+        if(new Set(r.affected_languages).size!==r.affected_languages.length)
+          fail("Duplicate affected languages in review.");
+      }
+      decisions.set(r.case_id,r);
+    }
+    const summaries=Object.keys(catalog).map(id=>{
+      const items=[...langs].map(lang=>out.get(id+"|"+lang)).filter(Boolean);
+      const captured=items.filter(e=>e.status==="captured");
+      const review=decisions.get(id);
+      const declaredConfirmed=review?.decision==="confirmed";
+      return {id,label:catalog[id],captured:captured.length,reviewDecision:review?.decision||"unreviewed",
+        status:declaredConfirmed?"REVIEWER_DECLARED_CONFIRMED_LOCAL":captured.length?"CAPTURED_NEEDS_INDEPENDENT_REVIEW":"NO_SUCCESSFUL_CAPTURE",
+        evidence:items.map(e=>({lang:e.language,model:e.model,captured_at:e.captured_at,status:e.status,
+          casebook_sha256:e.casebook_sha256,request_sha256:e.request_sha256,
+          prompt_sha256:e.prompt_sha256,response_sha256:e.status==="captured"?e.response_sha256:null})),
+        _raw:items,_review:review};
+    });
+    return {count:captures.length,errorCount,summaries};
+  }
+  function render(result) {
+    const root=el("output");root.replaceChildren();
+    const h=node("div",undefined,"panel");
+    line(h,"h2","2. Verified local data");
+    line(h,"p",result.count+" provider attempt records; "+
+      (result.count-result.errorCount)+" captured response(s) with matching text hashes; "+
+      result.errorCount+" recorded provider error(s).");
+    line(h,"p","No network model inference, independent adjudication or Devpost submission was performed by this viewer.","muted");
+    root.append(h);
+    for(const s of result.summaries) {
+      const box=node("article",undefined,"finding");
+      line(box,"h2",s.label);
+      line(box,"span",s.status,"pill");
+      line(box,"span",s.captured+" verified text capture(s)","pill");
+      line(box,"span","Review file: "+s.reviewDecision,"pill");
+      if(s._review?.decision==="confirmed")
+        line(box,"p","Local reviewer file declares a confirmed issue. This is NOT an independently verified finding or an organizer decision.","muted");
+      for(const e of s._raw) {
+        const d=node("details");const summary=node("summary",e.language.toUpperCase()+" · "+e.status+" · "+e.model);
+        d.append(summary);
+        line(d,"p","Capture time: "+e.captured_at);
+        line(d,"p","Prompt SHA-256: "+e.prompt_sha256);
+        if(e.status==="captured")line(d,"p","Response SHA-256: "+e.response_sha256);
+        line(d,"p","Only expand raw text if authorized to inspect it. Never export copyrighted/private responses without review.","muted");
+        if(e.status==="captured"){
+          const sub=node("details");sub.append(node("summary","Reveal raw prompt and model response (local only)"));
+          line(sub,"h3","Prompt");line(sub,"pre",e.prompt);
+          line(sub,"h3","Captured answer");line(sub,"pre",e.response);
+          d.append(sub);
+        }
+        box.append(d);
+      }
+      if(s._review){
+        const d=node("details");d.append(node("summary","Review notes — unverified human claim"));
+        if(s._review.reviewer)line(d,"p","Reviewer field: "+s._review.reviewer);
+        if(s._review.analysis)line(d,"p",s._review.analysis);
+        if(s._review.risk)line(d,"p","Stated risk: "+s._review.risk);
+        if(s._review.reproduction)line(d,"p","Stated reproduction: "+s._review.reproduction);
+        box.append(d);
+      }
+      root.append(box);
+    }
+  }
+  el("load").addEventListener("click",async()=>{
+    el("load").disabled=true;el("export").disabled=true;state.report=null;el("output").replaceChildren();
+    try {
+      const evidenceFile=el("captures").files[0];
+      if(!evidenceFile) fail("Select the runner.py live evidence JSONL first.");
+      const result=await audit(await jsonl(evidenceFile,50),await jsonl(el("reviews").files[0],10));
+      render(result);
+      state.report={schema:1,format:"Apertus1A-local-redacted-evidence-review",
+        processed_at:new Date().toISOString(),entry_submitted:false,award_verified:false,live_provider_called_by_viewer:false,
+        attempts:result.count,provider_errors:result.errorCount,
+        cases:result.summaries.map(s=>({case_id:s.id,local_review_status:s.status,
+          review_file_decision:s.reviewDecision,evidence:s.evidence}))};
+      el("export").disabled=false;
+      status("Text hashes verified. Local review shown; no finding or award has been independently established.");
+    } catch(e) {status(e instanceof Error?e.message:"Unexpected input error",true);}
+    finally {el("load").disabled=false;}
+  });
+  el("export").addEventListener("click",()=>{
+    if(!state.report)return;
+    const blob=new Blob([JSON.stringify(state.report,null,2)+"\n"],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=node("a");a.href=url;a.download="apertus-1a-local-review-redacted.json";
+    document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+})();
+</script>
+</body>
+</html>
