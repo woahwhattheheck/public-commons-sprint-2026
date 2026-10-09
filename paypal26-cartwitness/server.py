@@ -80,6 +80,16 @@ def demo_selection(prompt, affordable):
     return max(affordable, key=score)
 
 
+class _NoAuthRedirect(urllib.request.HTTPRedirectHandler):
+    """Do not forward authenticated provider requests across HTTP redirects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_AUTH_SAFE_OPENER = urllib.request.build_opener(_NoAuthRedirect)
+
+
 def api_json(url, *, method="GET", payload=None, headers=None, auth=None, form=None):
     data = None
     headers = dict(headers or {})
@@ -93,7 +103,7 @@ def api_json(url, *, method="GET", payload=None, headers=None, auth=None, form=N
         headers["Authorization"] = auth
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=12) as resp:
+        with _AUTH_SAFE_OPENER.open(req, timeout=12) as resp:
             raw = resp.read(65536)
         return json.loads(raw)
     except urllib.error.HTTPError as exc:
