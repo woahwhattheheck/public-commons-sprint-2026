@@ -67,6 +67,8 @@ export async function createServer({fixture=FIXTURE}={}){
         finally{busy=false;}
       }
       if(req.method==='POST'&&url.pathname==='/api/decision'){
+        // A sync can replace the reviewed evidence after this handler accepts a decision.
+        if(busy)return respond(res,409,{error:'sync in progress; review after refreshed evidence'});
         const body=await jsonBody(req);
         if(!Number.isSafeInteger(body.version)||body.version!==version)return respond(res,409,{error:'stale report version; refresh and review again'});
         if(!['acknowledged','escalated','open'].includes(body.state))return respond(res,400,{error:'invalid review state'});
