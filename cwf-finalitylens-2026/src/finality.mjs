@@ -101,8 +101,11 @@ export async function queryProvider(provider, signature, opts = {}) {
   const evidence = { id: provider.id, label: provider.label, verdict: 'UNAVAILABLE', slot: null, confirmation: null, blockhash: null, errFingerprint: null, detail: '' };
   try {
     const statuses = await rpc(provider, 'getSignatureStatuses', [[signature], { searchTransactionHistory: true }], opts);
-    const status = statuses?.value?.[0];
-    if (!status) return { ...evidence, verdict: 'MISSING', detail: 'Provider has no signature status' };
+    if (!Array.isArray(statuses?.value) || statuses.value.length !== 1) throw new Error('Invalid signature-status result shape');
+    const status = statuses.value[0];
+    if (status === null) return { ...evidence, verdict: 'MISSING', detail: 'Provider has no signature status' };
+    if (!status || typeof status !== 'object' || Array.isArray(status) || !Object.hasOwn(status, 'err'))
+      throw new Error('Invalid signature-status execution metadata');
     if (!Number.isSafeInteger(status.slot) || status.slot < 0) throw new Error('Invalid signature-status slot');
     evidence.slot = status.slot;
     evidence.confirmation = status.confirmationStatus ?? null;
@@ -112,7 +115,10 @@ export async function queryProvider(provider, signature, opts = {}) {
     const tx = await rpc(provider, 'getTransaction', [signature, { encoding: 'json', commitment: 'finalized', maxSupportedTransactionVersion: 0 }], opts);
     if (!tx) return { ...evidence, verdict: 'INCOMPLETE', detail: 'Finalized status, but transaction not available from provider' };
     if (!Number.isSafeInteger(tx.slot) || tx.slot !== status.slot) return { ...evidence, verdict: 'INCONSISTENT', detail: 'Transaction and status slots differ' };
-    if (tx.meta?.err != null) return { ...evidence, verdict: 'INCONSISTENT', errFingerprint: jsonErrFingerprint(tx.meta.err), detail: 'Status succeeded but transaction meta reports error' };
+    // Solana permits meta:null for unavailable metadata; absence is not successful execution.
+    if (!tx.meta || typeof tx.meta !== 'object' || Array.isArray(tx.meta) || !Object.hasOwn(tx.meta, 'err'))
+      return { ...evidence, verdict: 'INCOMPLETE', detail: 'Transaction execution metadata unavailable' };
+    if (tx.meta.err !== null) return { ...evidence, verdict: 'INCONSISTENT', errFingerprint: jsonErrFingerprint(tx.meta.err), detail: 'Status succeeded but transaction meta reports error' };
     if (!Array.isArray(tx.transaction?.signatures) || !tx.transaction.signatures.includes(signature)) return { ...evidence, verdict: 'INCONSISTENT', detail: 'Queried signature missing from transaction record' };
     const blockhash = tx.transaction?.message?.recentBlockhash;
     if (typeof blockhash !== 'string' || blockhash.length < 32 || blockhash.length > 48) return { ...evidence, verdict: 'INCOMPLETE', detail: 'Transaction blockhash unavailable' };
