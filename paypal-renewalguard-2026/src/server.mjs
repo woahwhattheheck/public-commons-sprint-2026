@@ -3,6 +3,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { DEMO, summarize, validId } from './logic.mjs';
+import { isLocalBrowserRequest } from './local-boundary.mjs';
 
 const PAYPAL = 'https://api-m.sandbox.paypal.com';
 const OPENAI = 'https://api.openai.com/v1/chat/completions';
@@ -117,6 +118,8 @@ async function incoming(req) {
 export function makeServer() {
   return createServer(async (req,res) => {
     try {
+      if (!isLocalBrowserRequest(req.headers))
+        return response(res,403,{error:'Only same-origin local requests are supported'});
       const url = new URL(req.url || '/', 'http://localhost');
       if (req.method === 'GET' && url.pathname === '/') {
         const html = await readFile(new URL('../web/index.html',import.meta.url));
