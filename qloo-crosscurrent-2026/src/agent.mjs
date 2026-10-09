@@ -3,9 +3,18 @@
 export const DOMAINS = Object.freeze(['place', 'artist', 'movie', 'book', 'brand']);
 
 function bestSeed(search, seed) {
+  // Never label an unrelated first Qloo search hit as the requested seed.
+  // Distinct provider IDs with the same normalized display name are also
+  // ambiguous: silently choosing either would poison every downstream insight.
   const normalize = value => value.normalize('NFKD').replace(/[\p{M}\W_]/gu, '').toLowerCase();
+  if (typeof seed !== 'string') return null;
   const target = normalize(seed);
-  return search.find(item => normalize(item.name) === target) ?? search[0] ?? null;
+  if (!target) return null;
+  const exact = search.filter(item => item && typeof item.name === 'string' &&
+    typeof item.id === 'string' && item.id &&
+    normalize(item.name) === target);
+  if (!exact.length || exact.some(item => item.id !== exact[0].id)) return null;
+  return exact[0];
 }
 
 function pickAcrossDomains(results) {
