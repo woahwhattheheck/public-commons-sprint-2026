@@ -80,14 +80,18 @@ def analyze_image(image: np.ndarray, calibration: dict[str, Any]) -> tuple[dict,
     yy, xx = np.ogrid[:gray.shape[0], :gray.shape[1]]
     dial = (xx - cx) ** 2 + (yy - cy) ** 2 < (0.9 * radius) ** 2
     pixels = gray[dial]
-    blur_variance = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    # Sharp scenery outside the instrument must not rescue a blurry dial.
+    laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+    blur_variance = float(laplacian.var())
+    dial_blur_variance = float(laplacian[dial].var())
     saturated_fraction = float(np.mean(pixels >= 253))
     diagnostics = {
         "circle_px": [cx, cy, radius],
         "blur_laplacian_variance": round(blur_variance, 2),
+        "dial_blur_laplacian_variance": round(dial_blur_variance, 2),
         "near_white_fraction": round(saturated_fraction, 4)
     }
-    if blur_variance < float(calibration.get("min_blur_variance", 25)):
+    if dial_blur_variance < float(calibration.get("min_blur_variance", 25)):
         return _fail("blur_or_low_detail", diagnostics=diagnostics), overlay
     if saturated_fraction > float(calibration.get("max_near_white_fraction", 0.25)):
         return _fail("glare_or_clipping", diagnostics=diagnostics), overlay
