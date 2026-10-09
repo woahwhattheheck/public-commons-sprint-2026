@@ -45,3 +45,9 @@ The repository workflow `.github/workflows/workseal-browser-evidence.yml` runs t
 ## Remaining chain gate
 
 The merged `src/solana.mjs` adapter remains a transaction-plan MVP. A true onchain escrow/PDA must be compiled/tested with a real Solana toolchain and deployed only with explicit wallet/provider authority. This carrier does not claim that gate is closed.
+
+## Acceptance-policy boundary of browser PASS
+
+The local browser demo evaluates exactly one task policy requirement: `github-actions`, with a retained success outcome and a matching evidence digest. A browser PASS now additionally checks the exact signed receipt verifier ID/version against the task acceptance policy and rejects any task with additional or different policy requirements it cannot evaluate. A bundle with valid self-consistent hashes and an Ed25519 signature is **not** equivalent to proof that unverified buyer criteria were satisfied; a separate verifier implementation is required to support a richer acceptance policy.
+
+As before, the demo does not establish an externally trusted verifier identity, chain settlement, a wallet transaction, bounty acceptance or prize payment. The pinned public key/authority and provider outcome must be verified by an external relying party before any real-world commitment.

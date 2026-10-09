@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildDemoBundle, canonicalJson, sha256Hex, signedAcceptanceDigest, verifyBrowserBundle } from '../web/core.mjs';
+import { buildDemoBundle, canonicalJson, generateEd25519, sha256Hex, signCanonical, signedAcceptanceDigest, verifyBrowserBundle } from '../web/core.mjs';
 
 test('browser canonical JSON is key-order independent', () => assert.equal(canonicalJson({z:1,a:{y:true,x:'v'}}),canonicalJson({a:{x:'v',y:true},z:1})));
 test('browser sha256 is deterministic', async () => assert.equal(await sha256Hex({b:2,a:1}),await sha256Hex({a:1,b:2})));
@@ -37,4 +37,42 @@ test('browser verifier rejects normalized invalid task and acceptance civil date
     () => verifyBrowserBundle(badReceipt),
     /receipt acceptedAt must be a valid Gregorian RFC3339 timestamp/,
   );
+});
+
+async function reSignTaskBoundBundle(bundle) {
+  // Build a fully self-consistent signed proof after a malicious task-policy change.
+  // A stale signature would already fail; this helper isolates policy-verification correctness.
+  const key = await generateEd25519();
+  bundle.result.taskDigest = await sha256Hex(bundle.task);
+  bundle.receipt.taskDigest = bundle.result.taskDigest;
+  bundle.receipt.resultDigest = await sha256Hex(bundle.result);
+  bundle.publicKeySpkiBase64 = key.publicKeySpkiBase64;
+  bundle.receiptAuthorityFingerprint = key.fingerprint;
+  bundle.signatureBase64 = await signCanonical(bundle.receipt, key.privateKey);
+  bundle.settlementIntent.taskDigest = bundle.result.taskDigest;
+  bundle.settlementIntent.resultDigest = bundle.receipt.resultDigest;
+  bundle.settlementIntent.acceptanceDigest = await signedAcceptanceDigest(bundle.receipt, bundle.signatureBase64, key.fingerprint);
+  bundle.settlementIntent.receiptAuthorityFingerprint = key.fingerprint;
+  return bundle;
+}
+
+test('browser rejects a fully re-signed task with an unverified policy requirement', async () => {
+  const bundle = await buildDemoBundle();
+  bundle.task.acceptancePolicy.requirements = [{ id: 'photo-id-check', description: 'Verify independent identity evidence' }];
+  await reSignTaskBoundBundle(bundle);
+  await assert.rejects(() => verifyBrowserBundle(bundle), /unsupported acceptance policy requirements/);
+});
+
+test('browser rejects a fully re-signed task whose verifier version differs from the receipt', async () => {
+  const bundle = await buildDemoBundle();
+  bundle.task.acceptancePolicy.verifierVersion = 'policy-v2';
+  await reSignTaskBoundBundle(bundle);
+  await assert.rejects(() => verifyBrowserBundle(bundle), /receipt verifier does not match task acceptance policy/);
+});
+
+test('browser rejects a second unverified requirement even with valid GitHub Actions evidence', async () => {
+  const bundle = await buildDemoBundle();
+  bundle.task.acceptancePolicy.requirements.push({ id: 'manual-review', description: 'Human approval required' });
+  await reSignTaskBoundBundle(bundle);
+  await assert.rejects(() => verifyBrowserBundle(bundle), /unsupported acceptance policy requirements/);
 });
