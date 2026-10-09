@@ -26,7 +26,7 @@ The **Read sandbox cases** button performs PayPal sandbox-only:
 2. GET https://api-m.sandbox.paypal.com/v1/customer/disputes?page_size=10.
 3. On selecting a case, GET https://api-m.sandbox.paypal.com/v1/customer/disputes/{id}.
 
-Server-side credentials and access tokens are never sent to the browser. Disputes access requires the proper PayPal Disputes app feature and OAuth scopes; a merchant lacking permission receives an error. Nothing silently falls back to fake PayPal data on API failure. The server is loopback-only; this is NOT a hosted multitenant dashboard.
+Server-side credentials and access tokens are never sent to the browser. Disputes access requires the proper PayPal Disputes app feature and OAuth scopes; a merchant lacking permission receives an error. Nothing silently falls back to fake PayPal data on API failure. The server is loopback-only; this is NOT a hosted multitenant dashboard. Its HTTP server accepts only `Host: 127.0.0.1:PORT` (the address printed on startup), rejecting alternate hostnames and malformed Host values on all routes, including reads. This protects the canonical local browser origin; open the printed URL, not a network alias.
 
 PayPal official Disputes v1 API: https://developer.paypal.com/docs/api/customer-disputes/v1/ . PayPal's own API definition: https://github.com/paypal/paypal-rest-api-specifications/blob/main/openapi/customer_disputes_v1.json .
 
