@@ -64,7 +64,8 @@ const server=http.createServer(async(req,res)=>{
     }
     if(req.method==='GET'&&url.pathname==='/api/disputes'){
       const fetched=await paypal.list();
-      json(res,200,{cases:fetched.map(v=>save(v)),synthetic:false});return;
+      json(res,200,{cases:fetched.items.map(v=>save(v)),
+        pages_read:fetched.pages_read,incomplete:fetched.incomplete,synthetic:false});return;
     }
     if(req.method==='GET'&&url.pathname==='/api/detail'){
       const id=url.searchParams.get('id');
