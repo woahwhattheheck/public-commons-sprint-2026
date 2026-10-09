@@ -23,7 +23,7 @@ function queryUrl(apiBase, path, requestBody) {
     // The named-entity query array is POST-only in the general API docs,
     // and POST /v2/insights is unsupported for the hackathon key.
     if (key === 'signal.interests.entities.query' ||
-        !/^[a-zA-Z][a-zA-Z0-9.]*$/.test(key) ||
+        !/^[a-zA-Z][a-zA-Z0-9._]*$/.test(key) ||
         !(typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value)))) {
       throw new LiveProviderError('Qloo GET does not accept this request parameter', 400);
     }
