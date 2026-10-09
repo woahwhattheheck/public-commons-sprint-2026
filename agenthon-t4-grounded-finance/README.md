@@ -36,10 +36,14 @@ surface before packaging. Competition rules can change.
 4. Document text follows the organizer resolver: use flat `text` when present, otherwise join
    `spans[].text` with one space, and compute citation offsets against that exact resolved string.
 5. Retrieval ranks exact sentences from the frozen corpus and preserves source character offsets.
-6. If `MODEL_ENDPOINT`, `MODEL_TOKEN`, and `MODEL_NAME` are all present, one bounded House request
-   plans labels/numeric predictions for the complete roster. The model never controls citations.
-7. If House access is missing, errors, or emits contract-invalid output, the agent falls back
-   deterministically and still produces a reproducible candidate answer.
+6. If `MODEL_ENDPOINT`, `MODEL_TOKEN`, and `MODEL_NAME` are all present, the frozen roster
+   is sent to the organizer House model in slices of at most 10 entities, capped at **25 admitted
+   requests/unit** and 4,000 output tokens per call (official Track 4 allocation). The planner
+   reserves time for writing within the 600-second unit clock; it never retries a failed call.
+   Earlier valid predictions are retained if a later slice fails, while any unserved roster
+   entries use deterministic fallback. House predictions never control citation identity.
+7. If House access is missing, errors, or emits contract-invalid output, the affected entities
+   fall back deterministically and still produce a reproducible candidate answer.
 8. Every output claim is copied from the exact cited source span.
 9. The output uses the task's exact interval level and deterministic roster order.
 10. If a synthetic unit contains only post-cutoff evidence, the agent writes a schema-shaped
