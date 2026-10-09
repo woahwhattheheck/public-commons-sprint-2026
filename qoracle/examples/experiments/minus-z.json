@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "qubits": 1,
+  "gates": [
+    {
+      "op": "X",
+      "wire": 0
+    },
+    {
+      "op": "Z",
+      "wire": 0
+    },
+    {
+      "op": "X",
+      "wire": 0
+    }
+  ]
+}
