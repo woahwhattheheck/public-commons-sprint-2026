@@ -114,6 +114,17 @@ class ChipTraceTests(unittest.TestCase):
         decoded = json.loads(encoded)
         self.assertTrue(ct.verify_report(decoded))
 
+    def test_theil_sen_preserves_late_drift_across_sampling_boundary(self):
+        # A centered hinge has slopes paired as s and 1-s under reflection,
+        # so its full-trace Theil-Sen median is exactly 0.5. For 159 points,
+        # 80 uniformly spaced observations retain this symmetry; taking only
+        # the first 80 observations instead hides the entire late drift.
+        for count in (79, 80, 159):
+            with self.subTest(count=count):
+                midpoint = (count - 1) / 2
+                points = [(float(i), max(0.0, i - midpoint)) for i in range(count)]
+                self.assertAlmostEqual(ct.theil_sen_slope(points), 0.5)
+
 
 if __name__ == "__main__":
     unittest.main()
