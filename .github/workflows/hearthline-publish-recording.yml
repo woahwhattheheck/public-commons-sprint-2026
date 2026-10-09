@@ -1,0 +1,116 @@
+name: Publish verified Hearthline recording
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['delivery/hearthline-browser-demo-20261009']
+    paths: ['.github/workflows/hearthline-publish-recording.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hearthline-recording-release-20261009-1d4a7d45
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'woahwhattheheck/public-commons-sprint-2026' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_SHA: 1d4a7d45ff44e2f44c9c2641bba1a82113b500bf
+      SOURCE_RUN: '37891589423'
+      RELEASE_TAG: hearthline-browser-demo-20261009-1d4a7d45
+    steps:
+      # No checkout and no execution of code from the downloaded artifact.
+      - name: Verify completed original-repository capture run
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > run.json
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('run.json'))
+          assert run['repository']['full_name'] == os.environ['GITHUB_REPOSITORY']
+          assert run['head_repository']['full_name'] == os.environ['GITHUB_REPOSITORY']
+          assert run['head_sha'] == os.environ['SOURCE_SHA']
+          assert str(run['id']) == os.environ['SOURCE_RUN']
+          assert run['event'] == 'push'
+          assert run['path'] == '.github/workflows/hearthline-browser-recording.yml'
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          print('Original capture run and source revision verified.')
+          PY
+      - name: Download only the exact successful recording artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" \
+            --name "hearthline-browser-demo-$SOURCE_SHA" --dir recording
+      - name: Verify captured bytes and observed end-to-end evidence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path('recording')
+          expected = {
+            'hearthline-browser-demo.mp4': '08ef2fb218126be4a8f76ef8ae6043ad5754f6dc55ad1bb95eb4aa7f79da2878',
+            'hearthline-browser-demo.webm': '339f0e12061bace14fc9a3a1e4df4448a7991974df7d5608ee2e2f25fe4f0768',
+            'browser-evidence.json': '17b8b7d21a54402fead724adae0ac02cfc534229a4fea2c6812d28d6821fa55e',
+            'CAPTURE_RECEIPT.json': 'b1beda0aaa1821e9cde07c5641daa39d37c22a6f8a924a3af847b87c99984ded',
+            'SOURCE_SNAPSHOT.zip': '32c06db5d1932bba8b7997c55d2e20e70ad818d86f462273a159e0398443d705',
+            'final-browser.png': '4c22bf90685bb6397ceb3e574956f9c00217cdecbff570081c7fc330bf2edecf',
+          }
+          for name, digest in expected.items():
+              path = root / name
+              assert path.is_file() and not path.is_symlink()
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == digest, name
+          capture = json.loads((root / 'CAPTURE_RECEIPT.json').read_text())
+          evidence = json.loads((root / 'browser-evidence.json').read_text())
+          assert capture['source_commit'] == os.environ['SOURCE_SHA']
+          assert str(capture['runner']) == os.environ['SOURCE_RUN']
+          assert capture['focused_journey'] == 'passed' and capture['page_errors'] == []
+          assert 0 < capture['duration_seconds'] < 180
+          assert evidence['runtime']['localOutboxItems'] == 1
+          assert evidence['runtime']['receipts'] == 2
+          assert evidence['runtime']['generation'] == 3
+          assert not capture['official_submission'] and not capture['purchases'] and not capture['messages_delivered']
+          (root / 'SHA256SUMS.txt').write_text(''.join(f'{digest}  {name}\n' for name, digest in expected.items()))
+          pathlib.Path('release-notes.md').write_text('''# Hearthline — actual MCP browser demonstration
+
+          **61.8-second genuine Chromium recording.** Create a household mission, observe pre-approval rejection, approve and execute local reminder/shopping-handoff actions, restart the actual MCP process twice and replay the exact original receipts without duplicate effects.
+
+          Captured source: `1d4a7d45ff44e2f44c9c2641bba1a82113b500bf`.
+          Successful capture run: https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37891589423
+          Source contribution: https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/243
+
+          The original Hearthline MCP core and contributor notices remain unchanged. Source snapshot, actual browser-exported evidence, capture receipt, screenshot and SHA-256 checksums accompany MP4/WebM. One local outbox item, two receipts and three server generations were observed; no browser errors.
+
+          Weather/household data are labeled fixtures. There was no Alexa device, LLM, AWS runtime, purchase or delivered message in this demonstration. Browser interactions were automated; rendered states and HTTP responses were produced by the running application, not fabricated.
+
+          This release preserves the existing entrant/contributor rights and provides durable demo assets. Amazon's official entry still requires a public YouTube/Vimeo URL, review of eligibility and an authenticated Devpost submission. This GitHub release alone is not an official entry or award receipt.
+          ''')
+          print('All six public assets match independently reviewed SHA-256 values.')
+          PY
+      - name: Create a distinct public prerelease without replacing existing releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --target "$SOURCE_SHA" --prerelease --latest=false \
+            --title 'Hearthline browser demonstration — 2026-10-09' \
+            --notes-file release-notes.md \
+            recording/hearthline-browser-demo.mp4 \
+            recording/hearthline-browser-demo.webm \
+            recording/browser-evidence.json recording/CAPTURE_RECEIPT.json \
+            recording/SOURCE_SNAPSHOT.zip recording/final-browser.png \
+            recording/SHA256SUMS.txt
+      - name: Read back the published release
+        shell: bash
+        run: |
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --json url,isDraft,isPrerelease,tagName,assets

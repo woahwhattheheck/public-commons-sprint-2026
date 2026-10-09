@@ -1,0 +1,55 @@
+name: Hearthline browser recording
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['delivery/hearthline-browser-demo-20261009']
+    paths:
+      - 'hearthline-browser-demo/**'
+      - '.github/workflows/hearthline-browser-recording.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hearthline-browser-recording-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  record:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned recording dependency and browser
+        run: |
+          python -m pip install --disable-pip-version-check 'playwright==1.56.0'
+          python -m playwright install --with-deps chromium
+          if ! command -v ffmpeg >/dev/null; then sudo apt-get update && sudo apt-get install -y ffmpeg; fi
+      - name: Record one genuine focused browser journey
+        run: python hearthline-browser-demo/record.py --output hearthline-recording
+      - name: Include revision-pinned reproducible source
+        run: git archive --format=zip --output=hearthline-recording/SOURCE_SNAPSHOT.zip HEAD hearthline-alexa-mcp hearthline-browser-demo
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: hearthline-browser-demo-${{ github.sha }}
+          path: hearthline-recording/
+          retention-days: 3
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: hearthline-browser-failure-${{ github.sha }}
+          path: hearthline-recording/
+          retention-days: 1
+          if-no-files-found: ignore
