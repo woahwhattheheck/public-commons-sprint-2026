@@ -26,8 +26,22 @@ export function validateRequest(value) {
   if (!Array.isArray(excluded) || excluded.length > 40 || excluded.some(x => typeof x !== 'string' || !/^[A-Za-z0-9_:\-.]{1,130}$/.test(x))) {
     throw new Error('Excluded entities must be an array of at most 40 valid Qloo IDs.');
   }
-  const mode = value.mode === 'fixture' ? 'fixture' : 'live';
-  return { city, tastes: [...new Set(tastes)], excludedIds: [...new Set(excluded)], mode };
+  // An explicit typo must not silently enter live mode and spend Qloo quota.
+  // Retain the historical live default only when mode is omitted.
+  if (value.mode !== undefined && value.mode !== 'fixture' && value.mode !== 'live') {
+    throw new Error('Mode must be "fixture" or "live".');
+  }
+  const mode = value.mode ?? 'live';
+  // Case-variant repeats resolve to the same upstream taste and cost extra
+  // /search calls. Preserve the spelling of the first distinct reference.
+  const seenTastes = new Set();
+  const uniqueTastes = tastes.filter(t => {
+    const key = t.toLocaleLowerCase('en-US');
+    if (seenTastes.has(key)) return false;
+    seenTastes.add(key);
+    return true;
+  });
+  return { city, tastes: uniqueTastes, excludedIds: [...new Set(excluded)], mode };
 }
 
 function safeName(x) {
