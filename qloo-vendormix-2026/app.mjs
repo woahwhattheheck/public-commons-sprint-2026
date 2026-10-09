@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parseCategoryCap, rankLineup } from './lineup.mjs';
+import { providerEntityId } from './provider-identity.mjs';
 import { boundedQlooResponseBytes } from './response-bound.mjs';
 import { LiveProviderError, fetchLiveQlooResponse } from './live-provider.mjs';
 
@@ -45,7 +46,7 @@ function categoryFrom(entity) {
   return label ? label.replace(/^urn:tag:/, '').replaceAll(':', ' / ') : 'Unclassified';
 }
 
-function providerCandidates(payload) {
+export function providerCandidates(payload) {
   if (payload?.success === false || !Array.isArray(payload?.results?.entities)) {
     throw new Error('Qloo response did not include a usable list of places');
   }
@@ -53,15 +54,17 @@ function providerCandidates(payload) {
   for (const [index, e] of payload.results.entities.entries()) {
     const name = e?.name ?? e?.properties?.name;
     if (typeof name !== 'string' || !name.trim()) continue;
+    const id = providerEntityId(e);
+    if (!id) continue;
     const raw = e?.query?.affinity;
     const hasAffinity = typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 && raw <= 100;
     // Qloo's surfaced API affinity is 0–100; if missing, preserve ordinal result position.
     const affinity = hasAffinity ? (raw > 1 ? raw / 100 : raw) : Math.max(0, 1 - index / Math.max(payload.results.entities.length, 1));
-    candidates.push({ id: String(e?.entity_id ?? e?.id ?? `position-${index}`), name: name.trim(), category: categoryFrom(e), signal: affinity,
+    candidates.push({ id, name: name.trim(), category: categoryFrom(e), signal: affinity,
       signalKind: hasAffinity ? 'provider-affinity' : 'result-order-proxy', ordinal: index + 1,
       evidence: hasAffinity ? `Qloo affinity ${raw} (normalized for lineup scoring)` : `Qloo result position ${index + 1}; no numeric affinity surfaced` });
   }
-  if (!candidates.length) throw new Error('Qloo returned no named places for this request');
+  if (!candidates.length) throw new Error('Qloo returned no named places with provider IDs for this request');
   return candidates;
 }
 
