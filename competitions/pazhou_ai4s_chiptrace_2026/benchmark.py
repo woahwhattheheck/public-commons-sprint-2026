@@ -208,15 +208,35 @@ def validate_citations(report: Mapping[str, Any], triage: Mapping[str, Any]) -> 
 
 
 def _classification_metrics(rows: Iterable[Mapping[str, Any]], prediction_key: str) -> dict[str, Any]:
+    """Measure REVIEW detection without crediting abstentions as negative decisions.
+
+    Precision and false-flag rate condition on classified results. REVIEW recall
+    includes abstained positives in the denominator, and labeled_exact_accuracy
+    includes both classes and every abstention. Sparse ground truth is evaluated
+    separately by abstention_accuracy, not silently treated as a clean control.
+    """
     tp = fp = tn = fn = 0
     considered = 0
+    abstained_review = abstained_supported = 0
     for row in rows:
         expected = str(row["expected_state"])
+        if expected not in {"REVIEW", "SUPPORTED", "INSUFFICIENT_EVIDENCE"}:
+            raise ValueError(f"unrecognized expected benchmark state: {expected}")
         if expected == "INSUFFICIENT_EVIDENCE":
             continue
         considered += 1
+        predicted_state = str(row[prediction_key])
+        if predicted_state == "INSUFFICIENT_EVIDENCE":
+            if expected == "REVIEW":
+                abstained_review += 1
+            else:
+                abstained_supported += 1
+            continue
+        if predicted_state not in {"REVIEW", "SUPPORTED"}:
+            raise ValueError(f"unrecognized predicted benchmark state: {predicted_state}")
+
         positive = expected == "REVIEW"
-        predicted = str(row[prediction_key]) == "REVIEW"
+        predicted = predicted_state == "REVIEW"
         if positive and predicted:
             tp += 1
         elif positive and not predicted:
@@ -226,12 +246,23 @@ def _classification_metrics(rows: Iterable[Mapping[str, Any]], prediction_key: s
         else:
             tn += 1
 
+    classified = tp + fp + tn + fn
+    abstained = abstained_review + abstained_supported
+    assert classified + abstained == considered
     precision = tp / (tp + fp) if tp + fp else 0.0
-    recall = tp / (tp + fn) if tp + fn else 0.0
+    recall = tp / (tp + fn + abstained_review) if tp + fn + abstained_review else 0.0
     f1 = 2.0 * precision * recall / (precision + recall) if precision + recall else 0.0
     false_flag_rate = fp / (fp + tn) if fp + tn else 0.0
+    supported_recall = tn / (tn + fp + abstained_supported) if tn + fp + abstained_supported else 0.0
     return {
         "considered": considered,
+        "classified": classified,
+        "abstained_on_labeled": abstained,
+        "abstained_review": abstained_review,
+        "abstained_supported": abstained_supported,
+        "coverage": round(classified / considered, 6) if considered else 0.0,
+        "labeled_exact_accuracy": round((tp + tn) / considered, 6) if considered else 0.0,
+        "supported_recall": round(supported_recall, 6),
         "tp": tp,
         "fp": fp,
         "tn": tn,
@@ -241,7 +272,6 @@ def _classification_metrics(rows: Iterable[Mapping[str, Any]], prediction_key: s
         "f1": round(f1, 6),
         "false_flag_rate": round(false_flag_rate, 6),
     }
-
 
 def _percentile(values: Sequence[float], fraction: float) -> float:
     if not values:

@@ -36,3 +36,9 @@ Generated as part of the Public Commons Sprint, August 2026.
 ## PermitPulse paid pilot
 
 See `permitpulse_pilot/` for the commercialization-only synthetic pilot carrier. Predecessor `permitpulse-all-gas` submission receipts remain OPEN and `readyForSubmission` remains false.
+
+## October 2026: PayPal AI competition projects
+
+Five runnable application candidates now live in this public repository: [ClaimProof Commerce](claimproof-commerce/README.md), [DisburseLens](paypal-disburselens-2026/README.md), [RenewalGuard](paypal-renewalguard-2026/README.md), [CartWitness](paypal26-cartwitness/README.md), and [DisputeLedger](paypal26-disputeledger/README.md).
+
+[View the judge-entry guide](docs/PAYPAL_AI_2026_ENTRY_READINESS.md) for run commands, source references and required entry steps. These public prototypes are not verified Devpost submissions. The contest deadline is November 12, 2026, noon PST.

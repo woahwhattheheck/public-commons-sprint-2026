@@ -41,6 +41,11 @@ async function body(req){
   return result;
 }
 const server=http.createServer(async(req,res)=>{
+  // Keep the local app pinned to its advertised loopback origin even for GETs.
+  // A loopback bind alone does not validate the HTTP Host authority.
+  if(req.headers.host!==`127.0.0.1:${port}`){
+    json(res,403,{error:'Unexpected Host header'});return;
+  }
   try{
     const url=new URL(req.url,base);
     if(req.method==='GET'&&url.pathname==='/'){
@@ -59,7 +64,8 @@ const server=http.createServer(async(req,res)=>{
     }
     if(req.method==='GET'&&url.pathname==='/api/disputes'){
       const fetched=await paypal.list();
-      json(res,200,{cases:fetched.map(v=>save(v)),synthetic:false});return;
+      json(res,200,{cases:fetched.items.map(v=>save(v)),
+        pages_read:fetched.pages_read,incomplete:fetched.incomplete,synthetic:false});return;
     }
     if(req.method==='GET'&&url.pathname==='/api/detail'){
       const id=url.searchParams.get('id');

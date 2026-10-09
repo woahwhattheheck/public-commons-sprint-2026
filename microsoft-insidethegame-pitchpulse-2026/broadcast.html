@@ -8,40 +8,40 @@
   <link rel="stylesheet" href="/broadcast.css">
 </head>
 <body class="unavailable">
-  <a class="skip-link" href="#moment-title">Skip to current moment</a>
+  <a class="skip-link" id="broadcast-skip" href="#moment-title">Skip to current moment</a>
   <div class="stage">
     <header class="topline">
-      <span class="brand">PITCHPULSE <strong>STUDIO OUTPUT</strong></span>
-      <span class="synthetic">SYNTHETIC REPLAY · FICTIONAL TEAMS · NOT LIVE</span>
+      <span class="brand">PITCHPULSE <strong id="broadcast-studio">STUDIO OUTPUT</strong></span>
+      <span class="synthetic" id="broadcast-synthetic">SYNTHETIC REPLAY · FICTIONAL TEAMS · NOT LIVE</span>
     </header>
-    <main aria-label="Fictional football match graphics">
-      <section class="scoreboard" aria-label="Score and match clock">
+    <main id="broadcast-main" aria-label="Fictional football match graphics">
+      <section class="scoreboard" id="broadcast-scoreboard" aria-label="Score and match clock">
         <div class="team" id="home-name">HARBOR FC</div>
         <div class="score" id="score" aria-live="polite">0 — 0</div>
         <div class="team away" id="away-name">VALLEY FC</div>
-        <div class="clockbox"><span class="overline">MATCH CLOCK</span><strong id="clock">00:00</strong></div>
+        <div class="clockbox"><span class="overline" id="broadcast-clock-label">MATCH CLOCK</span><strong id="clock">00:00</strong></div>
       </section>
       <section class="moment" aria-labelledby="moment-title">
-        <div class="moment-label">RULE-EXPLAINED MOMENT</div>
+        <div class="moment-label" id="broadcast-moment-label">RULE-EXPLAINED MOMENT</div>
         <h1 id="moment-title">Waiting for a synthetic match event</h1>
         <p class="moment-text" id="moment-text">Open the original PitchPulse tab in this browser profile, then press Next event.</p>
-        <div class="proof" aria-label="Evidence trace">
+        <div class="proof" id="broadcast-proof" aria-label="Evidence trace">
           <span id="moment-event">NO EVENT</span>
           <span id="moment-rule">NO RULE</span>
           <span id="moment-expires">NO ACTIVE OVERLAY</span>
         </div>
       </section>
-      <section class="context" aria-label="Event-derived match context">
-        <span class="context-title">EVENT-SOURCED / NOT PREDICTIVE</span>
+      <section class="context" id="broadcast-context" aria-label="Event-derived match context">
+        <span class="context-title" id="broadcast-context-label">EVENT-SOURCED / NOT PREDICTIVE</span>
         <div id="context-metrics" class="metrics">No accepted events yet.</div>
       </section>
     </main>
     <footer>
       <span id="status" role="status" aria-live="polite">CONNECTING TO LOCAL DEMO</span>
-      <span>All names and events fictional · No Premier League data · No cloud narration</span>
+      <span id="broadcast-disclaimer">All names and events fictional · No Premier League data · No cloud narration</span>
     </footer>
   </div>
-  <div class="operator-hint">Press <kbd>C</kbd> for high contrast · Window capture in the <em>same browser profile</em> as the control tab</div>
+  <div class="operator-hint"><span id="broadcast-hint-press">Press</span> <kbd>C</kbd> <span id="broadcast-hint-before">for high contrast · Window capture in the</span> <em id="broadcast-hint-profile">same browser profile</em> <span id="broadcast-hint-after">as the control tab</span></div>
   <script type="module" src="/broadcast.mjs"></script>
 </body>
 </html>

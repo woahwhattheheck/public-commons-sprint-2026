@@ -2,7 +2,10 @@ import {createHash} from 'node:crypto';
 import {classify} from './model.mjs';
 
 const VALID_CURRENCIES=new Set(['USD','EUR','GBP','CAD','AUD','JPY']);
-const TERMINAL=new Set(['SUCCESS','FAILED','RETURNED','BLOCKED','DENIED','REFUNDED','UNCLAIMED']);
+// Only credited SUCCESS is a clear payout; refunded/reversed are final but not paid.
+// UNCLAIMED is still awaiting recipient action and must stay in unresolved totals.
+const NOT_PAID=new Set(['FAILED','RETURNED','BLOCKED','DENIED','REFUNDED','REVERSED']);
+const TERMINAL=new Set(['SUCCESS',...NOT_PAID]);
 export function cents(value,currency='USD'){
   if(!VALID_CURRENCIES.has(currency))throw new Error('unsupported amount currency');
   const minor=currency==='JPY'?0:2;
@@ -67,7 +70,7 @@ export function reconcile(pages,{source='fixture',now=new Date().toISOString()}=
     const flags=[];
     if(duplicate)flags.push('DUPLICATE_SENDER_ITEM_ID');
     if(!TERMINAL.has(status))flags.push('NONFINAL_STATUS');
-    if(status==='FAILED'||status==='DENIED'||status==='BLOCKED'||status==='RETURNED')flags.push('FAILED_OR_RETURNED');
+    if(NOT_PAID.has(status))flags.push('FAILED_OR_RETURNED');
     if(ml.reviewProbability>=0.67)flags.push('MODEL_NOTE_REVIEW');
     const caseId=hash(`${id}:${itemId}`).slice(0,16);
     rows.push({caseId,itemId,senderItemId,status,currency,amount:money(amount,c),receiver:shortReceiver(data.receiver),note:notes,signals:ml,flags,severity:flags.includes('FAILED_OR_RETURNED')?'high':flags.length?'review':'clear'});

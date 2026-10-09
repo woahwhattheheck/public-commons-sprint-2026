@@ -4,6 +4,10 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { parseCategoryCap, rankLineup } from './lineup.mjs';
+import { providerEntityId } from './provider-identity.mjs';
+import { boundedQlooResponseBytes } from './response-bound.mjs';
+import { LiveProviderError, fetchLiveQlooResponse } from './live-provider.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
@@ -30,7 +34,7 @@ function validate(input) {
   if (exclusions.length > 15 || exclusions.some(s => typeof s !== 'string' || s.length > 80)) {
     throw new Error('Too many exclusions');
   }
-  return { location, seeds: seeds.map(s => s.trim()), slots, mode, source, exclusions: exclusions.map(s => s.trim().toLowerCase()).filter(Boolean) };
+  return { location, seeds: seeds.map(s => s.trim()), slots, mode, source, categoryCap: parseCategoryCap(input.categoryCap, slots), exclusions: exclusions.map(s => s.trim().toLowerCase()).filter(Boolean) };
 }
 
 function categoryFrom(entity) {
@@ -42,7 +46,7 @@ function categoryFrom(entity) {
   return label ? label.replace(/^urn:tag:/, '').replaceAll(':', ' / ') : 'Unclassified';
 }
 
-function providerCandidates(payload) {
+export function providerCandidates(payload) {
   if (payload?.success === false || !Array.isArray(payload?.results?.entities)) {
     throw new Error('Qloo response did not include a usable list of places');
   }
@@ -50,22 +54,24 @@ function providerCandidates(payload) {
   for (const [index, e] of payload.results.entities.entries()) {
     const name = e?.name ?? e?.properties?.name;
     if (typeof name !== 'string' || !name.trim()) continue;
+    const id = providerEntityId(e);
+    if (!id) continue;
     const raw = e?.query?.affinity;
     const hasAffinity = typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 && raw <= 100;
     // Qloo's surfaced API affinity is 0–100; if missing, preserve ordinal result position.
     const affinity = hasAffinity ? (raw > 1 ? raw / 100 : raw) : Math.max(0, 1 - index / Math.max(payload.results.entities.length, 1));
-    candidates.push({ id: String(e?.entity_id ?? e?.id ?? `position-${index}`), name: name.trim(), category: categoryFrom(e), signal: affinity,
+    candidates.push({ id, name: name.trim(), category: categoryFrom(e), signal: affinity,
       signalKind: hasAffinity ? 'provider-affinity' : 'result-order-proxy', ordinal: index + 1,
       evidence: hasAffinity ? `Qloo affinity ${raw} (normalized for lineup scoring)` : `Qloo result position ${index + 1}; no numeric affinity surfaced` });
   }
-  if (!candidates.length) throw new Error('Qloo returned no named places for this request');
+  if (!candidates.length) throw new Error('Qloo returned no named places with provider IDs for this request');
   return candidates;
 }
 
 async function fetchQloo(input) {
   const token = process.env.QLOO_API_KEY;
-  if (!token) throw new Error('QLOO_API_KEY is not configured; select the labelled synthetic demo');
-  if (!ALLOWED_BASES.has(API_BASE)) throw new Error('QLOO_API_BASE is not an allowed Qloo origin');
+  if (!token) throw new LiveProviderError('QLOO_API_KEY is not configured; select the labelled synthetic demo', 503);
+  if (!ALLOWED_BASES.has(API_BASE)) throw new LiveProviderError('QLOO_API_BASE is not an allowed Qloo origin');
   const body = {
     'filter.type': 'urn:entity:place',
     'filter.location.query': input.location,
@@ -74,50 +80,15 @@ async function fetchQloo(input) {
     'sort_by': 'affinity',
     take: 35
   };
-  let response;
+  const parsed = await fetchLiveQlooResponse({
+    apiBase: API_BASE, apiKey: token, requestBody: body,
+    readBytes: boundedQlooResponseBytes,
+  });
   try {
-    response = await fetch(`${API_BASE}/v2/insights`, {
-      method: 'POST', signal: AbortSignal.timeout(12000),
-      headers: { 'x-api-key': token, 'content-type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify(body)
-    });
-  } catch { throw new Error('Qloo connection timed out or failed; no synthetic results substituted'); }
-  if (!response.ok) throw new Error(`Qloo returned HTTP ${response.status}; no synthetic results substituted`);
-  const bytes = await response.arrayBuffer();
-  if (bytes.byteLength > 250_000) throw new Error('Qloo response exceeded the bounded result limit');
-  let parsed;
-  try { parsed = JSON.parse(new TextDecoder().decode(bytes)); }
-  catch { throw new Error('Qloo returned invalid JSON'); }
-  return providerCandidates(parsed);
-}
-
-function rankLineup(candidates, input) {
-  const excluded = new Set(input.exclusions);
-  const remaining = candidates.filter(c => !excluded.has(c.name.toLowerCase()));
-  const chosen = [];
-  const counts = new Map();
-  const weights = input.mode === 'taste' ? { taste: 0.92, new: 0.08, repeat: 0.04 }
-    : input.mode === 'discovery' ? { taste: 0.52, new: 0.48, repeat: 0.24 }
-      : { taste: 0.70, new: 0.30, repeat: 0.14 };
-  const seen = new Set();
-  while (chosen.length < input.slots) {
-    const options = remaining.filter(c => !seen.has(c.id) && !chosen.some(v => v.name.toLowerCase() === c.name.toLowerCase())).map(c => {
-      const duplicates = c.category === 'Unclassified' ? 0 : (counts.get(c.category) || 0);
-      const diversity = c.category === 'Unclassified' ? 0 : (duplicates === 0 ? 1 : 0);
-      const utility = weights.taste * c.signal + weights.new * diversity - weights.repeat * duplicates;
-      return { ...c, utility, diversity, repeats: duplicates };
-    });
-    if (!options.length) break;
-    options.sort((a, b) => b.utility - a.utility || a.ordinal - b.ordinal || a.name.localeCompare(b.name));
-    const pick = options[0];
-    chosen.push({ ...pick, explanation: `${pick.evidence}. ${pick.diversity ? 'New observed category for this lineup.' : (pick.repeats ? 'Category repeats; scored with a variety penalty.' : 'No verified category tag; variety bonus withheld.')}` });
-    seen.add(pick.id);
-    if (pick.category !== 'Unclassified') counts.set(pick.category, (counts.get(pick.category) || 0) + 1);
+    return providerCandidates(parsed);
+  } catch {
+    throw new LiveProviderError('Qloo response contained no usable place candidates');
   }
-  const covered = [...counts.keys()].length;
-  return { selected: chosen, alternatives: remaining.filter(c => !chosen.some(v => v.id === c.id)).slice(0, 8),
-    summary: { requested: input.slots, filled: chosen.length, observedCategories: covered, analyzed: remaining.length,
-      strategy: input.mode, warning: 'Taste affinity is not proof of vendor availability, safety, dietary suitability, booking or expected sales.' } };
 }
 
 export async function buildPlan(inputRaw) {
@@ -163,7 +134,7 @@ const server = http.createServer(async (request, response) => {
       return response.end(JSON.stringify(result));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Plan error';
-      const code = message.startsWith('Qloo returned HTTP 429') ? 429 : 400;
+      const code = err instanceof LiveProviderError ? err.status : 400;
       response.writeHead(code, { 'content-type': 'application/json' });
       return response.end(JSON.stringify({ error: message }));
     }

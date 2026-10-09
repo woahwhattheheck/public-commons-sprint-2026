@@ -26,9 +26,34 @@ The **Read sandbox cases** button performs PayPal sandbox-only:
 2. GET https://api-m.sandbox.paypal.com/v1/customer/disputes?page_size=10.
 3. On selecting a case, GET https://api-m.sandbox.paypal.com/v1/customer/disputes/{id}.
 
-Server-side credentials and access tokens are never sent to the browser. Disputes access requires the proper PayPal Disputes app feature and OAuth scopes; a merchant lacking permission receives an error. Nothing silently falls back to fake PayPal data on API failure. The server is loopback-only; this is NOT a hosted multitenant dashboard.
+Server-side credentials and access tokens are never sent to the browser. Disputes access requires the proper PayPal Disputes app feature and OAuth scopes; a merchant lacking permission receives an error. Nothing silently falls back to fake PayPal data on API failure. The server is loopback-only; this is NOT a hosted multitenant dashboard. Its HTTP server accepts only `Host: 127.0.0.1:PORT` (the address printed on startup), rejecting alternate hostnames and malformed Host values on all routes, including reads. This protects the canonical local browser origin; open the printed URL, not a network alias.
 
 PayPal official Disputes v1 API: https://developer.paypal.com/docs/api/customer-disputes/v1/ . PayPal's own API definition: https://github.com/paypal/paypal-rest-api-specifications/blob/main/openapi/customer_disputes_v1.json .
+
+### Real-sandbox dispute list pagination
+
+PayPal's Disputes v1 List API returns a HATEOAS `next` link with an opaque
+`next_page_token` when a merchant has further results. The sandbox list
+now follows that cursor sequentially using only the fixed PayPal sandbox host,
+not arbitrary provider-supplied network destinations. It checks each page's
+10-case limit, unique dispute IDs, cursor progression, expected endpoint and
+link format, rejecting inconsistent paged responses instead of showing a
+misleading partial success.
+
+The local case-review store retains up to 80 cases, so listing stops after
+eight 10-case pages. If another valid next cursor remains, the local UI
+explicitly reports **PARTIAL** and makes clear the displayed 80 cases are
+not the merchant's full dispute portfolio. No case-fetch requests mutate
+PayPal disputes, refunds or payments. Incomplete pagination from an
+upstream error cannot silently fall back to synthetic data.
+
+Run `node --test tests/list_pagination.test.mjs` for the focused original-
+module paging, duplicate-ID, cursor-loop, bounds and fail-closed checks.
+That test substitutes deterministic HTTP fixture responses and does not
+establish real sandbox credentials or provider access.
+
+Official API description:
+https://developer.paypal.com/docs/api/customer-disputes/v1/
 
 ## Optional AI (OpenAI-compatible HTTPS endpoint)
 
@@ -38,6 +63,10 @@ PayPal official Disputes v1 API: https://developer.paypal.com/docs/api/customer-
     npm start
 
 The model receives only case *reason, status, stage, amount/currency and five evidence-category flags*. It never sees dispute IDs, buyer identities, transaction references, case notes, uploaded documents or payment tokens. It is asked for a bounded JSON summary and verification questions, never a fabricated proof of delivery/refund. A malformed, refused or unavailable model response produces an explicit offline checklist instead. No AI-driven PayPal mutation endpoint exists.
+
+### Optional AI response memory budget
+
+The optional chat-completions response is read through a bounded WHATWG byte stream, not a full unbounded `response.text()` allocation. Declared `Content-Length` above 10,000 bytes (or invalid) is rejected before reading; streamed chunks are capped cumulatively at **10,000 UTF-8 bytes** and the body is canceled if exceeded. A response without a readable stream fails closed rather than using an unbounded fallback. This slightly stricter byte bound may reject some large Unicode provider responses that previously passed a character-only limit; the deterministic checklist remains available. This is not a provider-backed cost, accuracy, or latency benchmark.
 
 ## Operator flow
 

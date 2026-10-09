@@ -63,6 +63,19 @@ function readAffinity(x) {
   for (const n of possible) if (typeof n === 'number' && Number.isFinite(n)) return Math.round(n * 1000) / 1000;
   return null;
 }
+/** If Qloo explicitly identifies a *different* known entity class, do not
+ * relabel it just because it arrived in a category-filtered Insights response.
+ * Unknown/omitted type metadata remains eligible for older Qloo payloads.
+ */
+function contradictsCategory(x, category) {
+  for (const value of [x.type, x.entity_type]) {
+    if (typeof value !== 'string') continue;
+    const tag = value.trim().toLowerCase();
+    const kind = tag.startsWith('urn:entity:') ? tag.slice('urn:entity:'.length) : tag;
+    if (CATEGORIES.includes(kind) && kind !== category) return true;
+  }
+  return false;
+}
 /** Never synthesize Qloo entity names, IDs or affinity metrics. */
 export function normalizeEntities(raw, category, excludedIds = []) {
   const excluded = new Set(excludedIds);
@@ -70,7 +83,7 @@ export function normalizeEntities(raw, category, excludedIds = []) {
   return arrayCandidates(raw).flatMap((x, rank) => {
     if (!x || typeof x !== 'object') return [];
     const id = safeId(x); const name = safeName(x);
-    if (!id || !name || seen.has(id) || excluded.has(id)) return [];
+    if (!id || !name || seen.has(id) || excluded.has(id) || contradictsCategory(x, category)) return [];
     seen.add(id);
     const categoryType = typeof x.type === 'string' ? x.type : (x.entity_type || null);
     const affinity = readAffinity(x);

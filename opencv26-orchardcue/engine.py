@@ -16,7 +16,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-VERSION = "orchardcue-0.1"
+VERSION = "orchardcue-0.2"
 MARKER_ID = 23
 MARKER_DICTIONARY = cv2.aruco.DICT_4X4_50
 MAX_SIDE = 2400
@@ -35,20 +35,51 @@ def decode_image(raw: bytes) -> np.ndarray:
     return image
 
 
-def _marker(image: np.ndarray, marker_side_mm: float) -> tuple[dict | None, np.ndarray]:
+def _scale_edge_px(xy: np.ndarray) -> float | None:
+    """Allow approximate scale only for a sufficiently square marker projection.
+
+    This is a conservative image-plane sanity gate, not a perspective correction
+    or proof that the fruit and tag are coplanar. Strongly slanted tags can make
+    a mean-edge-length physical conversion materially misleading.
+    """
+    if xy.shape != (4, 2) or not np.all(np.isfinite(xy)):
+        return None
+    edges = np.roll(xy, -1, axis=0).astype(np.float64) - xy.astype(np.float64)
+    lengths = np.linalg.norm(edges, axis=1)
+    shortest = float(np.min(lengths))
+    longest = float(np.max(lengths))
+    if shortest < 30.0 or longest / shortest > 1.30:
+        return None
+    unit = edges / lengths[:, None]
+    neighboring = np.sum(unit * np.roll(unit, -1, axis=0), axis=1)
+    if np.any(np.abs(neighboring) > 0.32):
+        return None
+    turns = edges[:, 0] * np.roll(edges[:, 1], -1) - edges[:, 1] * np.roll(edges[:, 0], -1)
+    if not (np.all(turns > 0) or np.all(turns < 0)):
+        return None
+    return float(np.mean(lengths))
+
+
+def _marker(image: np.ndarray, marker_side_mm: float) -> tuple[dict | None, np.ndarray, bool | str]:
     dictionary = cv2.aruco.getPredefinedDictionary(MARKER_DICTIONARY)
     detector = cv2.aruco.ArucoDetector(dictionary, cv2.aruco.DetectorParameters())
     corners, ids, _ = detector.detectMarkers(image)
     mask = np.full(image.shape[:2], 255, np.uint8)
     if ids is None:
-        return None, mask
+        return None, mask, False
+    # Two visible fiducials sharing one ID do not identify a unique scale plane.
+    # Abstain before falling back to a single geometry-valid marker.
+    matching = sum(int(marker_id) == MARKER_ID for marker_id in ids.flatten())
+    if matching > 1:
+        return None, mask, "duplicate"
+    unreliable_geometry = False
     for points, marker_id in zip(corners, ids.flatten()):
         if int(marker_id) != MARKER_ID:
             continue
         xy = points.reshape(-1, 2)
-        edges = np.linalg.norm(np.roll(xy, -1, axis=0) - xy, axis=1)
-        edge = float(np.mean(edges))
-        if edge < 30:
+        edge = _scale_edge_px(xy)
+        if edge is None:
+            unreliable_geometry = True
             continue
         region = cv2.convexHull(xy.astype(np.int32))
         cv2.fillConvexPoly(mask, region, 0)
@@ -56,15 +87,15 @@ def _marker(image: np.ndarray, marker_side_mm: float) -> tuple[dict | None, np.n
         return {"id": MARKER_ID, "edge_px": round(edge, 2),
                 "marker_side_mm": marker_side_mm,
                 "mm_per_pixel": round(marker_side_mm / edge, 6),
-                "assumption": "approximate only: marker and fruit are coplanar"}, mask
-    return None, mask
+                "assumption": "approximate only: marker and fruit are coplanar"}, mask, False
+    return None, mask, unreliable_geometry
 
 
 def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0) -> tuple[dict[str, Any], np.ndarray]:
     if not 10 <= marker_side_mm <= 300:
         raise ValueError("marker_side_mm must be between 10 and 300")
     h, w = image.shape[:2]
-    marker, valid = _marker(image, marker_side_mm)
+    marker, valid, marker_geometry_rejected = _marker(image, marker_side_mm)
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     saturation, value = hsv[:, :, 1], hsv[:, :, 2]
     good_pixels = valid > 0
@@ -83,7 +114,9 @@ def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0)
     if brightness < 48:
         reasons.append("DARK_RETAKE")
     if marker is None:
-        reasons.append("SCALE_MARKER_MISSING")
+        reasons.append("SCALE_MARKER_AMBIGUOUS" if marker_geometry_rejected == "duplicate"
+                       else "SCALE_MARKER_GEOMETRY_UNRELIABLE" if marker_geometry_rejected
+                       else "SCALE_MARKER_MISSING")
 
     # Narrow, disclosed red fruit detector. Green/yellow varieties are not
     # detected; the system must not make general orchard yield claims.
@@ -126,6 +159,20 @@ def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0)
         cv2.circle(overlay, (round(cx), round(cy)), round(radius), (255, 220, 60), 2)
         cv2.putText(overlay, str(len(candidate)), (x, max(55, y-9)),
                     cv2.FONT_HERSHEY_SIMPLEX, .55, (255, 255, 255), 2, cv2.LINE_AA)
+    # Evaluate focus where the detected red candidates actually sit. The
+    # whole-image score can be high from leaves and the calibration marker
+    # even when the objects we intend to inspect are defocused. This is a
+    # conservative synthetic-screening threshold, not a field calibration.
+    roi_focus = []
+    for item in candidate:
+        x, y, bw, bh = item["bbox"]
+        margin = 6
+        patch = lap[max(0, y-margin):min(h, y+bh+margin),
+                    max(0, x-margin):min(w, x+bw+margin)]
+        roi_focus.append(float(np.var(patch)))
+    median_roi_focus = float(np.median(roi_focus)) if roi_focus else None
+    if median_roi_focus is not None and median_roi_focus < 60.0:
+        reasons.append("FRUIT_ROI_BLUR_RETAKE")
     if ambiguous:
         reasons.append("MERGED_OR_IRREGULAR_RED_REGIONS")
     if not candidate:
@@ -146,12 +193,15 @@ def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0)
         "reference_marker": marker, "candidate_count": len(candidate),
         "red_candidates": candidate, "ambiguous_regions": ambiguous,
         "quality": {"saturation_laplacian_variance": round(sharpness, 2),
-                    "glare_fraction": round(glare, 5), "mean_brightness": round(brightness, 2)},
+                    "glare_fraction": round(glare, 5), "mean_brightness": round(brightness, 2),
+                    "red_candidate_median_laplacian_variance":
+                        round(median_roi_focus, 2) if median_roi_focus is not None else None},
         "decision": {"action": action, "reason_codes": reasons,
                      "human_confirmation_required": True},
         "limitations": ["Only red fruit-like regions are localized; green fruit is unsupported",
                         "Color/occlusion/overlap can make counts incorrect",
                         "Approximate diameters require coplanar marker and fruit",
+                        "Fruit-local blur threshold is synthetic-only and requires field calibration",
                         "No crop yield or safety decision; synthetic fixture is not field validation"]
     }
     return report, overlay
