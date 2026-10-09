@@ -1,0 +1,3 @@
+PASS actual localhost GET / and read-only route / CSP behavior
+PASS malformed URL returns 400; same process remains healthy
+Result: 2/2 loopback checks passed; no external requests or payment actions
