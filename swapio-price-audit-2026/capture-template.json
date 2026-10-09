@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "notes": "PLACEHOLDER SCHEMA ONLY — NOT LIVE MARKET QUOTES OR CONTEST EVIDENCE. Replace with verified captures and synthetic:false only after real observation.",
+  "cases": [
+    {
+      "id": "PAIR-SIZE-01",
+      "inputMint": "So11111111111111111111111111111111111111112",
+      "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "inputSymbol": "SOL",
+      "outputSymbol": "USDC",
+      "inputDecimals": 9,
+      "outputDecimals": 6,
+      "inputAtoms": "1000000000",
+      "slippageBps": 50,
+      "observations": [
+        {"venue":"Swap.io","capturedAt":"2026-10-09T05:00:00Z","quotedOutputAtoms":"1","screenshot":"evidence/swap.png","route":"FILL FROM REAL UI","quoteKind":"indicative","feeNote":"UNVERIFIED"},
+        {"venue":"Jupiter","capturedAt":"2026-10-09T05:00:03Z","quotedOutputAtoms":"1","screenshot":"evidence/jupiter.png","route":"FILL FROM REAL UI","quoteKind":"indicative","feeNote":"UNVERIFIED"},
+        {"venue":"Raydium","capturedAt":"2026-10-09T05:00:06Z","quotedOutputAtoms":"1","screenshot":"evidence/raydium.png","route":"FILL FROM REAL UI","quoteKind":"indicative","feeNote":"UNVERIFIED"}
+      ]
+    }
+  ]
+}
