@@ -7,6 +7,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MAX_REQUEST_BYTES = 4096;
 const MAX_QLOO_BYTES = 800_000;
 const QLOO_BASE = process.env.QLOO_API_BASE || "https://hackathon.api.qloo.com";
+// Internal metadata: API JSON cannot inject a JS Symbol.
+const QLOO_SOURCE_POSITION = Symbol("qlooSourcePosition");
 // Only Qloo-owned API origins may receive the live server-side credential.
 const TRUSTED_QLOO_ORIGINS = new Set([
   "https://hackathon.api.qloo.com", "https://api.qloo.com", "https://staging.api.qloo.com",
@@ -23,8 +25,10 @@ export function normalizeEntities(payload, kind) {
     : kind === "search" && Array.isArray(payload?.results) ? payload.results
     : kind === "search" && Array.isArray(payload?.entities) ? payload.entities : null;
   if (!Array.isArray(arr)) throw new Error("Qloo " + kind + " response missing entity list");
-  return arr.filter(e => e && typeof e === "object" && typeof e.entity_id === "string" &&
-    e.entity_id.length > 0 && typeof e.name === "string" && e.name.trim().length > 0);
+  return arr.flatMap((e, index) =>
+    e && typeof e === "object" && typeof e.entity_id === "string" &&
+    e.entity_id.length > 0 && typeof e.name === "string" && e.name.trim().length > 0
+      ? [{ ...e, [QLOO_SOURCE_POSITION]: index + 1 }] : []);
 }
 
 export function buildPlan({ movie, locality, mood = "curious", seed, places, mode }) {
@@ -34,6 +38,9 @@ export function buildPlan({ movie, locality, mood = "curious", seed, places, mod
     const id = place.entity_id;
     if (typeof id !== "string" || !id || used.has(id) || typeof place.name !== "string") continue;
     used.add(id);
+    // Keep gaps in upstream order when records were removed or deduplicated.
+    const sourcePosition = mode === "live" && Number.isSafeInteger(place[QLOO_SOURCE_POSITION])
+      ? place[QLOO_SOURCE_POSITION] : stops.length + 1;
     const tags = Array.isArray(place.tags) ? place.tags
       .filter(t => typeof t?.name === "string").map(t => t.name).slice(0, 5) : [];
     const description = typeof place.properties?.description === "string"
@@ -41,12 +48,12 @@ export function buildPlan({ movie, locality, mood = "curious", seed, places, mod
     stops.push({
       qloo_entity_id: id,
       name: place.name.slice(0, 140),
-      qloo_rank: stops.length + 1,
+      qloo_rank: sourcePosition,
       description,
       tags,
       address: typeof place.properties?.address === "string" ? place.properties.address : null,
-      reasoning: "Qloo returned this place for the selected movie and locality; ranked #" +
-        (stops.length + 1) + " in the response. " +
+      reasoning: "Qloo returned this place for the selected movie and locality; source result position #" +
+        sourcePosition + " (not an affinity score). " +
         (tags.length ? "Qloo tags: " + tags.slice(0, 2).join(", ") + "." : "No descriptive tags reported."),
     });
     if (stops.length === 3) break;
