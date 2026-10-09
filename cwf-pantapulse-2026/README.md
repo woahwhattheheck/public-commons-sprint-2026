@@ -17,13 +17,13 @@ Use the sponsor-documented production API base `https://live-api.panta.market/ap
     export PANTA_API_KEY='your-private-key'
     python3 server.py
 
-The backend refuses credential-bearing redirects, bounds JSON to 1 MiB, and uses a 9-second timeout. It reads up to 100 markets from the documented `items` envelope and accepts `marketId`, `title`, `volumeUsdc`, and `status`/`phase`, while retaining legacy fallbacks. Documented list rows may have null `yesPrice`/`noPrice` and no liquidity field; those values remain visibly UNKNOWN rather than being guessed. Unknown collection layouts still fail conspicuously, and live-feed failures never substitute fictional values. This is a read-only schema adapter and never sends financial transactions or makes investment recommendations.
+The backend refuses credential-bearing redirects, bounds JSON to 1 MiB, and uses a 9-second timeout. It reads up to 100 markets from the documented `items` envelope and accepts `marketId`, `title`, `volumeUsdc`, and `status`/`phase`, while retaining legacy fallbacks. Documented list rows may have null `yesPrice`/`noPrice` and no liquidity field. Cards now label the absent quote **PRICE ON DETAIL / NOT VERIFIED IN LIST** and explicitly say that a detail request has *not* been made; this is not a link or a verified detail price. Absent list prices no longer spam the alert panel, while reported low liquidity, missing liquidity on proven-price rows, and extreme proven prices still produce their original caution/unknown signals. Unknown values are never guessed. Unknown collection layouts still fail conspicuously, and live-feed failures never substitute fictional values. This is a read-only schema adapter and never sends financial transactions or makes investment recommendations.
 
 ## Evidence and focused regression
 
     python3 -m unittest discover -s tests -p 'test_market_boundary.py'
 
-One focused local predicate check covers ordinary YES price, low liquidity, unknown/out-of-range price and nonfinite rejection. No full repository tests. `GET /api/feed` produces an observation with UTC timestamp and SHA256 over sorted normalized records; `GET /api/report` produces Markdown. The digest proves only local consistency of the observed normalized fields, not third-party authenticity or that a market resolved correctly.
+The focused regression covers ordinary YES price, low liquidity, unknown/out-of-range price, nonfinite rejection, documented null list prices, and the measured Muse OPT3-20 alert-reclassification invariant; it is runnable without provider credentials. No full repository tests. `GET /api/feed` produces an observation with UTC timestamp and SHA256 over sorted normalized records; `GET /api/report` produces Markdown. The digest proves only local consistency of the observed normalized fields, not third-party authenticity or that a market resolved correctly.
 
 ## Official entry/award gates
 

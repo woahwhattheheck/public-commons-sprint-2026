@@ -86,10 +86,13 @@ def alerts(rows):
     for row in rows:
         p = maybe_decimal(row['yes_probability_pct'], Decimal(0), Decimal(100))
         liq = maybe_decimal(row['liquidity_usd'], Decimal(0))
-        if not row['price_proven']:
-            findings.append({'market': row['id'], 'severity': 'unknown', 'signal': 'Price schema not verified. Do not use as a trading signal.'})
-        elif liq is None:
-            findings.append({'market': row['id'], 'severity': 'unknown', 'signal': 'Liquidity unavailable; no liquidity adequacy claim.'})
+        # In documented list rows, absent YES price is expected coverage metadata,
+        # not a per-market trading signal. The UI labels that state explicitly.
+        # Preserve known low liquidity regardless of price availability, but do
+        # not create an unavailable-liquidity alert for every unpriced list row.
+        if liq is None:
+            if row['price_proven']:
+                findings.append({'market': row['id'], 'severity': 'unknown', 'signal': 'Liquidity unavailable; no liquidity adequacy claim.'})
         elif liq < Decimal('1000'):
             findings.append({'market': row['id'], 'severity': 'caution', 'signal': 'Reported liquidity under $1,000; price may be fragile.'})
         if p is not None and (p < 5 or p > 95):
@@ -175,7 +178,8 @@ class Handler(BaseHTTPRequestHandler):
                    f"Observed UTC: {data['observed_utc']}", f"SHA256 canonical observation: {data['digest']}",
                    '', '## Market observations']
             for m in data['data']:
-                out.append(f"- **{m['question']}**: YES probability {m['yes_probability_pct'] or 'UNKNOWN'}%; reported liquidity ${m['liquidity_usd'] or 'UNKNOWN'}; market ID {m['id']}")
+                price_text = f"{m['yes_probability_pct']}%" if m['price_proven'] else 'UNVERIFIED (detail not fetched)'
+                out.append(f"- **{m['question']}**: YES price {price_text}; reported liquidity ${m['liquidity_usd'] or 'UNKNOWN'}; market ID {m['id']}")
             out += ['', '## Alerts']
             for a in data['alerts']: out.append(f"- {a['market']}: {a['severity']} — {a['signal']}")
             out += ['', 'Source: live Panta API only if `mode=panta-api`; otherwise completely synthetic demo data.',
