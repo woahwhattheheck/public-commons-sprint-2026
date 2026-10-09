@@ -248,7 +248,23 @@ def orchestrate(reference: np.ndarray, first: np.ndarray, aisle: list[list[int]]
         iy = max(0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
         union = a[2] * a[3] + b[2] * b[3] - ix * iy
         return ix * iy / max(1, union) >= 0.22
-    matched = sum(any(overlaps(a, b) for b in follow_boxes) for a in boxes)
+    # A single confirmation finding cannot independently corroborate two first-view
+    # regions. Maximize distinct pairs rather than counting the same match twice.
+    adjacent = [[j for j, b in enumerate(follow_boxes) if overlaps(a, b)] for a in boxes]
+    assigned: dict[int, int] = {}
+
+    def augment(first_idx: int, visited: set[int]) -> bool:
+        for second_idx in adjacent[first_idx]:
+            if second_idx in visited:
+                continue
+            visited.add(second_idx)
+            previous = assigned.get(second_idx)
+            if previous is None or augment(previous, visited):
+                assigned[second_idx] = first_idx
+                return True
+        return False
+
+    matched = sum(augment(i, set()) for i in range(len(adjacent)))
     return {
         "decision": "HUMAN_REVIEW_REQUIRED" if matched else "DISAGREEMENT_REVIEW",
         "first": initial, "second": follow, "persistent_regions": matched,
