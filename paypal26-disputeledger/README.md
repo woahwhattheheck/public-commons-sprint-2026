@@ -39,6 +39,10 @@ PayPal official Disputes v1 API: https://developer.paypal.com/docs/api/customer-
 
 The model receives only case *reason, status, stage, amount/currency and five evidence-category flags*. It never sees dispute IDs, buyer identities, transaction references, case notes, uploaded documents or payment tokens. It is asked for a bounded JSON summary and verification questions, never a fabricated proof of delivery/refund. A malformed, refused or unavailable model response produces an explicit offline checklist instead. No AI-driven PayPal mutation endpoint exists.
 
+### Optional AI response memory budget
+
+The optional chat-completions response is read through a bounded WHATWG byte stream, not a full unbounded `response.text()` allocation. Declared `Content-Length` above 10,000 bytes (or invalid) is rejected before reading; streamed chunks are capped cumulatively at **10,000 UTF-8 bytes** and the body is canceled if exceeded. A response without a readable stream fails closed rather than using an unbounded fallback. This slightly stricter byte bound may reject some large Unicode provider responses that previously passed a character-only limit; the deterministic checklist remains available. This is not a provider-backed cost, accuracy, or latency benchmark.
+
 ## Operator flow
 
 1. Fetch an actual sandbox dispute or load the unmistakably synthetic demo.
