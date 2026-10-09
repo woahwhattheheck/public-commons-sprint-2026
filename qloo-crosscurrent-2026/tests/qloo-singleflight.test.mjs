@@ -60,7 +60,8 @@ test('different request URLs do not incorrectly share responses', async () => {
   const client = new QlooClient({key:'fixture-only',fetcher:async url=>{
     seen.push(String(url));
     await gate.promise;
-    return {ok:true,json:async()=>({query:String(url)})};
+    const query = new URL(url).searchParams.get('query');
+    return {ok:true,json:async()=>({results:[{entity_id:`artist:${query.toLowerCase()}`,name:query}]})};
   }});
   const first = client.get('/search',{query:'Jazz'});
   const second = client.get('/search',{query:'Opera'});
