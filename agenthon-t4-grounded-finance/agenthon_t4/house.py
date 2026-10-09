@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -67,25 +68,29 @@ def _parse_content(content: str) -> dict[str, Any] | None:
     return out
 
 
+MAX_HOUSE_REQUESTS_PER_UNIT = 25  # Track 4 official House allocation.
+MAX_ENTITIES_PER_HOUSE_REQUEST = 10
+MAX_HOUSE_PLAN_SECONDS = 420.0  # Reserve part of the 600s unit clock for output.
+
+
 def plan(task: dict[str, Any], docs: list[CorpusDoc], *, timeout: float = 35.0,
          transport: Callable[..., Any] | None = None) -> dict[str, Any] | None:
-    """Ask only the organizer House route for prediction numbers/labels.
+    """Request bounded roster slices, never exceeding the per-unit House budget.
 
-    Evidence identity and citation spans are never accepted from model output. They are
-    derived independently from the frozen corpus by deterministic retrieval.
+    Every slice uses the same frozen task/corpus generation. Failures retain earlier
+    usable predictions, while deterministic fallback handles unresolved entities.
+    No House retry is issued, even for transient failures or truncated responses.
     """
     config = _endpoint()
     if config is None:
         return None
     url, token, model = config
-    evidence_by_entity: dict[str, list[dict[str, Any]]] = {}
     retrieval = RetrievalIndex(docs)
-    for entity in task["entities"]:
-        spans: list[Evidence] = retrieval.retrieve(task, entity)
-        evidence_by_entity[entity["entity_id"]] = [
-            {"doc_id": item.doc_id, "span_start": item.span_start, "span_end": item.span_end, "text": item.text}
-            for item in spans
-        ]
+    open_request = transport or urllib.request.build_opener(NoRedirect()).open
+    started = time.monotonic()
+    predictions: dict[str, Any] = {}
+    entities = task["entities"]
+    budgeted = min(len(entities), MAX_HOUSE_REQUESTS_PER_UNIT * MAX_ENTITIES_PER_HOUSE_REQUEST)
     system = (
         "You are a bounded quantitative-finance prediction component. Use ONLY the supplied frozen task, roster and evidence spans. "
         "Never invent citations, documents or post-cutoff facts. Return one JSON object and no prose: "
@@ -93,41 +98,64 @@ def plan(task: dict[str, Any], docs: list[CorpusDoc], *, timeout: float = 35.0,
         "For classification, label must be one of task.target.labels. For regression/ranking set label null. "
         "Intervals must be finite and ordered. Do not include resolved outcomes you were not given."
     )
-    user_payload = {
-        "task": {"task_id": task["task_id"], "prompt": task.get("prompt", ""), "cutoff_date": task["cutoff_date"], "interval_level": task["interval_level"], "target": task.get("target", {})},
-        "entities": task["entities"],
-        "evidence": evidence_by_entity,
+    task_context = {
+        "task_id": task["task_id"], "prompt": task.get("prompt", ""),
+        "cutoff_date": task["cutoff_date"], "interval_level": task["interval_level"],
+        "target": task.get("target", {}),
     }
-    try:
-        body = json.dumps({
-            "model": model,
-            "temperature": 0,
-            "max_tokens": min(4000, max(800, 160 * len(task["entities"]))),
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": json.dumps(
-                    user_payload, sort_keys=True, separators=(",", ":"), allow_nan=False
-                )},
-            ],
-        }, separators=(",", ":"), allow_nan=False).encode("utf-8")
-    except (ValueError, TypeError, OverflowError):
-        return None
-    request = urllib.request.Request(url, data=body, method="POST", headers={
-        "Authorization": f"Bearer {token}", "Content-Type": "application/json", "Accept": "application/json"
-    })
-    open_request = transport or urllib.request.build_opener(NoRedirect()).open
-    try:
-        with open_request(request, timeout=timeout) as response:
-            if response.status != 200:
-                return None
-            raw_bytes = response.read(MAX_HOUSE_RESPONSE_BYTES + 1)
-            if len(raw_bytes) > MAX_HOUSE_RESPONSE_BYTES:
-                return None
-        raw = strict_json_text(raw_bytes.decode("utf-8"), max_bytes=MAX_HOUSE_RESPONSE_BYTES)
-        content = raw["choices"][0]["message"]["content"]
-        if not isinstance(content, str):
-            return None
-        return _parse_content(content)
-    except (ContractError, UnicodeDecodeError, OSError, KeyError, IndexError, TypeError,
-            ValueError, urllib.error.URLError):
-        return None
+    for start in range(0, budgeted, MAX_ENTITIES_PER_HOUSE_REQUEST):
+        remaining = MAX_HOUSE_PLAN_SECONDS - (time.monotonic() - started)
+        if remaining <= 1.0:
+            break
+        batch = entities[start:start + MAX_ENTITIES_PER_HOUSE_REQUEST]
+        evidence_by_entity: dict[str, list[dict[str, Any]]] = {}
+        for entity in batch:
+            spans: list[Evidence] = retrieval.retrieve(task, entity)
+            evidence_by_entity[entity["entity_id"]] = [
+                {"doc_id": item.doc_id, "span_start": item.span_start,
+                 "span_end": item.span_end, "text": item.text}
+                for item in spans
+            ]
+        user_payload = {"task": task_context, "entities": batch, "evidence": evidence_by_entity}
+        try:
+            body = json.dumps({
+                "model": model,
+                "temperature": 0,
+                "max_tokens": min(4000, max(800, 200 * len(batch))),
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": json.dumps(
+                        user_payload, sort_keys=True, separators=(",", ":"), allow_nan=False
+                    )},
+                ],
+            }, separators=(",", ":"), allow_nan=False).encode("utf-8")
+            request = urllib.request.Request(url, data=body, method="POST", headers={
+                "Authorization": f"Bearer {token}", "Content-Type": "application/json",
+                "Accept": "application/json",
+            })
+            # Total planning time stays below the per-unit 600-second deadline.
+            with open_request(request, timeout=min(timeout, remaining)) as response:
+                if response.status != 200:
+                    break
+                raw_bytes = response.read(MAX_HOUSE_RESPONSE_BYTES + 1)
+                if len(raw_bytes) > MAX_HOUSE_RESPONSE_BYTES:
+                    break
+            raw = strict_json_text(raw_bytes.decode("utf-8"), max_bytes=MAX_HOUSE_RESPONSE_BYTES)
+            content = raw["choices"][0]["message"]["content"]
+            if not isinstance(content, str):
+                break
+            parsed = _parse_content(content)
+            if parsed is None:
+                break
+            matched = False
+            for entity in batch:
+                entity_id = entity["entity_id"]
+                if entity_id in parsed:
+                    predictions[entity_id] = parsed[entity_id]
+                    matched = True
+            if not matched:
+                break
+        except (ContractError, UnicodeDecodeError, OSError, KeyError, IndexError,
+                TypeError, ValueError, urllib.error.URLError):
+            break
+    return predictions or None
