@@ -22,7 +22,7 @@ QLOO_API_KEY="YOUR_PERSONAL_HACKATHON_KEY" node server.mjs
 
 The default live provider origin is the official hackathon host `https://hackathon.api.qloo.com` (not `api.hackathon.qloo.com`), as confirmed by event support. Outbound Qloo requests explicitly reject HTTP redirects rather than forwarding the server-held `X-Api-Key` to a second host. The configured live origin is still required to be HTTPS without a path, credentials, query, or fragment.
 
-Optionally set QLOO_API_BASE to an approved HTTPS Qloo API origin, plus PORT and HOST (defaults to loopback). Hosting publicly requires HTTPS reverse proxy, origin authorization, per-instance quota and exposure review; this branch does **not** claim a hosted public demo.
+Optionally set QLOO_API_BASE only to a Qloo-owned HTTPS API origin (hackathon, production, or staging); arbitrary hosts are rejected before the outbound request. PORT and HOST remain optional (default loopback). Hosting publicly requires HTTPS reverse proxy, origin authorization, per-instance quota and exposure review; this branch does **not** claim a hosted public demo.
 
 ## Actual source-driven operation
 
