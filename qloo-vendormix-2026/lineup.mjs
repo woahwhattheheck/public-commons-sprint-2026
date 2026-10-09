@@ -23,7 +23,8 @@ export function rankLineup(candidates, input) {
   const excluded = new Set(input.exclusions);
   const remaining = candidates.filter(c => !excluded.has(c.name.toLowerCase()));
   const chosen = [];
-  const counts = new Map();
+  const counts = new Map(); // Prior soft-variety logic ignores Unclassified.
+  const capCounts = new Map(); // Hard constraint still treats unknown tags as one bucket.
   const weights = input.mode === 'taste' ? { taste: 0.92, new: 0.08, repeat: 0.04 }
     : input.mode === 'discovery' ? { taste: 0.52, new: 0.48, repeat: 0.24 }
       : { taste: 0.70, new: 0.30, repeat: 0.14 };
@@ -32,11 +33,11 @@ export function rankLineup(candidates, input) {
     const options = remaining.filter(c =>
       !seen.has(c.id) &&
       !chosen.some(v => v.name.toLowerCase() === c.name.toLowerCase()) &&
-      (input.categoryCap === null || (counts.get(categoryKey(c.category)) || 0) < input.categoryCap)
+      (input.categoryCap === null || (capCounts.get(categoryKey(c.category)) || 0) < input.categoryCap)
     ).map(c => {
       const key = categoryKey(c.category);
-      const duplicates = counts.get(key) || 0;
       const verifiedTag = key !== 'unclassified';
+      const duplicates = verifiedTag ? (counts.get(key) || 0) : 0;
       const diversity = verifiedTag && duplicates === 0 ? 1 : 0;
       const utility = weights.taste * c.signal + weights.new * diversity - weights.repeat * duplicates;
       return { ...c, utility, diversity, repeats: duplicates };
@@ -47,7 +48,8 @@ export function rankLineup(candidates, input) {
     chosen.push({ ...pick, explanation: `${pick.evidence}. ${pick.diversity ? 'New observed category for this lineup.' : (pick.repeats ? 'Category repeats; scored with a variety penalty.' : 'No verified category tag; variety bonus withheld.')}` });
     seen.add(pick.id);
     const key = categoryKey(pick.category);
-    counts.set(key, (counts.get(key) || 0) + 1);
+    capCounts.set(key, (capCounts.get(key) || 0) + 1);
+    if (key !== 'unclassified') counts.set(key, (counts.get(key) || 0) + 1);
   }
   const covered = [...counts.keys()].filter(key => key !== 'unclassified').length;
   const shortfall = chosen.length < input.slots;
