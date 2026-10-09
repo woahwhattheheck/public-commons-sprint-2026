@@ -84,7 +84,11 @@ async function load(url){
     records=data.cases||[data.case];selection=null;packet=null;
     get('prepare').disabled=true;get('save').disabled=true;
     get('detail').textContent='Choose a case.';get('report').textContent='No packet prepared.';
-    renderCases();renderChecks();say(records.length+' case(s) loaded. Select one.');
+    renderCases();renderChecks();
+    say(data.synthetic?'One synthetic demo case loaded; no PayPal request.':
+      records.length+' sandbox case(s) across '+data.pages_read+' page(s). '+
+      (data.incomplete?'PARTIAL: 80-case review limit reached. More disputes exist; this count is not the merchant total.':
+        'Select one.'));
   }catch(e){say(e.message)}
 }
 get('load').onclick=()=>load('/api/disputes');get('demo').onclick=()=>load('/api/demo');
