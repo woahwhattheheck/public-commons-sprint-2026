@@ -21,7 +21,7 @@ const files = new Map([
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
   ['/style.css', ['style.css', 'text/css; charset=utf-8']],
 ]);
-const send = (res, status, payload) => {
+const send = (res, status, payload, extraHeaders = {}) => {
   const body = JSON.stringify(payload);
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -29,6 +29,7 @@ const send = (res, status, payload) => {
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
+    ...extraHeaders,
   });
   res.end(body);
 };
@@ -55,7 +56,7 @@ const server = http.createServer(async (req, res) => {
         return send(res, 400, { error: 'Enter a valid title (2–100 characters), seed type and target type' });
       }
       const provider = mode === 'demo' ? createDemoProvider() : createQlooProvider(process.env.QLOO_API_KEY);
-      const { result, delivery } = await traffic.run({ ...input, mode, execute: () => audit(input, provider) });
+      const { result, delivery } = await traffic.run({ ...input, mode, remoteAddress: req.socket.remoteAddress, execute: () => audit(input, provider) });
       const provenance = mode === 'demo' ? 'SYNTHETIC DEMO — NOT A QLOO RESPONSE'
         : delivery === 'cache' ? 'CACHED LIVE QLOO RESULTS (up to 5 minutes old)'
         : 'LIVE QLOO HACKATHON API';
@@ -64,7 +65,9 @@ const server = http.createServer(async (req, res) => {
       const status = err instanceof TrafficError ? 429 : err instanceof QlooError
         ? (err.status >= 400 && err.status < 600 ? err.status : 502)
         : err?.message?.includes('Enter a seed') || err?.message?.includes('Unsupported Qloo') ? 400 : 502;
-      return send(res, status, { error: String(err?.message || err).slice(0, 240), provenance: 'NO VERIFIED AUDIT' });
+      const retryAfter = err instanceof TrafficError ? err.retryAfter : null;
+      return send(res, status, { error: String(err?.message || err).slice(0, 240), provenance: 'NO VERIFIED AUDIT',
+        ...(retryAfter ? { retryAfterSeconds: retryAfter } : {}) }, retryAfter ? { 'Retry-After': String(retryAfter) } : {});
     }
   }
   const file = files.get(url.pathname);

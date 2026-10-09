@@ -1,3 +1,5 @@
+import { createLiveBudget } from './live-budget.mjs';
+
 /**
  * In-process admission and de-duplication for the public competition demo.
  * This is deliberately conservative: each distinct LIVE audit can invoke Qloo
@@ -5,10 +7,11 @@
  * unbounded upstream request amplifier. No queries or results are persisted.
  */
 export class TrafficError extends Error {
-  constructor(message) {
+  constructor(message, retryAfter = 1) {
     super(message);
     this.name = 'TrafficError';
     this.status = 429;
+    this.retryAfter = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.ceil(retryAfter) : 1;
   }
 }
 
@@ -22,6 +25,9 @@ export function createAuditTraffic({
   const active = new Map();
   const cache = new Map();
   let starts = [];
+  // Process-local, direct-TCP-peer quota in addition to shared hourly admission.
+  // Reverse proxy must apply a separate edge limit; forwarded headers are untrusted.
+  const clientBudget = createLiveBudget({ maxPerHour: maxLivePerHour, maxPerClientWindow: 4, clock: now });
   const hourMs = 3_600_000;
 
   const refreshWindow = () => {
@@ -44,7 +50,7 @@ export function createAuditTraffic({
     };
   };
 
-  async function run({ mode, seed, seedType, target, execute }) {
+  async function run({ mode, seed, seedType, target, remoteAddress, execute }) {
     if (!['live', 'demo'].includes(mode) || typeof execute !== 'function')
       throw new Error('Invalid audit request');
     // All four fields are local inputs; no API credential is part of the key.
@@ -55,11 +61,15 @@ export function createAuditTraffic({
     const running = active.get(key);
     if (running) return { result: await running, delivery: 'coalesced' };
     if (active.size >= maxConcurrent)
-      throw new TrafficError(`At most ${maxConcurrent} independent audits may run concurrently`);
+      throw new TrafficError(`At most ${maxConcurrent} independent audits may run concurrently`, 1);
     if (mode === 'live') {
       refreshWindow();
       if (starts.length >= maxLivePerHour)
-        throw new TrafficError('Public live Qloo hourly request budget reached; retry after the window clears');
+        throw new TrafficError('Public live Qloo hourly request budget reached; retry after the window clears',
+          (starts[0] + hourMs - now()) / 1000);
+      const admission = clientBudget.admit(remoteAddress);
+      if (!admission.allowed)
+        throw new TrafficError(admission.reason, admission.retryAfter);
       starts.push(now());
     }
 
