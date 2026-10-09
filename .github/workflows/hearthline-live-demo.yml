@@ -1,0 +1,33 @@
+name: Hearthline live demo recording
+run-name: Hearthline live demo · ${{ github.sha }}
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hearthline-live-demo-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Prepare recording dependencies
+        run: |
+          python3 -m pip install playwright==1.57.0
+          python3 -m playwright install --with-deps chromium
+          if ! command -v ffmpeg >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - name: Record actual MCP session and process restart
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: python3 tools/hearthline-live-demo/record.py --output "$RUNNER_TEMP/hearthline-live-demo"
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: hearthline-live-demo-${{ github.run_id }}
+          path: ${{ runner.temp }}/hearthline-live-demo/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
