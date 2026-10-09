@@ -60,16 +60,22 @@ export async function createServer({fixture=FIXTURE}={}){
       }
       if(req.method==='POST'&&url.pathname==='/api/sync'){
         if(busy)return respond(res,409,{error:'sync in progress'});
-        const body=await jsonBody(req);
-        if(typeof body.batchId!=='string')return respond(res,400,{error:'batchId string required'});
+        // Reserve the one sync slot before awaiting any potentially streamed request body.
         busy=true;
-        try{const pages=await fetchBatch(body.batchId);refresh(reconcile(pages,{source:'PayPal sandbox read-only API'}));return respond(res,200,{ok:true,version});}
-        finally{busy=false;}
+        try{
+          const body=await jsonBody(req);
+          if(typeof body.batchId!=='string')return respond(res,400,{error:'batchId string required'});
+          const pages=await fetchBatch(body.batchId);
+          refresh(reconcile(pages,{source:'PayPal sandbox read-only API'}));
+          return respond(res,200,{ok:true,version});
+        }finally{busy=false;}
       }
       if(req.method==='POST'&&url.pathname==='/api/decision'){
         // A sync can replace the reviewed evidence after this handler accepts a decision.
         if(busy)return respond(res,409,{error:'sync in progress; review after refreshed evidence'});
         const body=await jsonBody(req);
+        // The sync may have started while a partially sent decision body was read.
+        if(busy)return respond(res,409,{error:'sync in progress; review after refreshed evidence'});
         if(!Number.isSafeInteger(body.version)||body.version!==version)return respond(res,409,{error:'stale report version; refresh and review again'});
         if(!['acknowledged','escalated','open'].includes(body.state))return respond(res,400,{error:'invalid review state'});
         const item=result.items.find(x=>x.caseId===body.caseId);
