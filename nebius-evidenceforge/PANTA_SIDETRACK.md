@@ -23,6 +23,35 @@ The output is evidence, not advice or authority. A product flow may let a human
 select a market snapshot and include its hash in an EvidenceForge request or
 review packet; it must not silently turn prices into repository approval.
 
+## Operator-ordered market change evidence
+
+The read-only Panta catalog can be inspected over two captures, not just one.
+Use the original, bounded Panta adapter to obtain independently hashed v1
+snapshot JSON files, then compare their **captured page membership** and matched
+market quote/volume/phase changes:
+
+```bash
+python -m evidenceforge.panta --category technology --phase primary \
+  > /tmp/panta-before.json
+# At another operator-selected time, run the SAME category/phase/limit:
+python -m evidenceforge.panta --category technology --phase primary \
+  > /tmp/panta-after.json
+python -m evidenceforge.panta_compare /tmp/panta-before.json /tmp/panta-after.json \
+  > /tmp/panta-page-comparison.json
+python -m evidenceforge.panta_compare /tmp/panta-before.json /tmp/panta-after.json --summary
+# Focused behavior only (no live credentials needed):
+python -m unittest tests.test_panta_compare -v
+```
+
+The comparison rechecks both source snapshot hashes, strict schemas, filters and
+read-only authority. It reports decimal-exact YES/NO and volume deltas, phase
+transitions and digest-bound evidence. Because catalog API pages may paginate,
+"absent from later page" is NOT market delisting, and "appeared on later page"
+is NOT new market creation. Snapshot order is supplied by the operator:
+neither capture time, live response provenance, freshness, available liquidity,
+nor tradability is independently authenticated. This changes neither the
+entrant's submission state nor any wallet, transaction or payout.
+
 ## Competition boundary
 
 The Panta API Sidetrack advertises a 5,000 USDG prize pool and permits meaningful
