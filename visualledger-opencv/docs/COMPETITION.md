@@ -22,7 +22,7 @@ Sources:
 
 ## Evidence still required before a final competition submission
 
-1. Real OpenCV 5.x normal + optimized/unit/evaluation run on the exact submitted source.
+1. **Source-only Linux x86-64 OpenCV 5.0.0 run achieved:** [GitHub Actions run 37894218836](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218836), job 113701744025, head b8bac529a0c39eb59c50696f333729caead532a5; actual hosted runner is **not** AWS/arm64. Still required: prove OpenCV 5 execution in the final deployed arm64 container against the submitted source.
 2. Real AWS deployment receipt proving the OpenCV 5 container path and versioned S3 event processing.
 3. Bounded DynamoDB prior-fingerprint query if cross-object duplicate detection is claimed in the demo.
 4. Latency/cost/reliability measurements from that deployment.
@@ -30,3 +30,6 @@ Sources:
 6. Human owner registration/submission on Devpost.
 
 No prize or grant is treated as earned revenue before organizer award/payment evidence.
+## Narrated evidence handoff
+
+The public [reproducible narrator](../submission/render_narrated_video.py) creates an at-most-five-minute video from the unchanged original, hash-verified browser artifact (Actions run 37894218628). The video records the real synthetic OpenCV 4.13 crop/recapture UI rather than synthesizing results; its AWS architecture scene clearly states `NOT VERIFIED`. Separate source-only OpenCV 5.0.0 Linux x86-64 proof is linked above. Judge-accessible final video hosting and Devpost entrant/submission receipt are still required, as is the genuine AWS S3/Lambda/DynamoDB arm64 event.
