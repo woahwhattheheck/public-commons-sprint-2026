@@ -1,0 +1,65 @@
+name: Hearthline portable source bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['delivery/hearthline-browser-demo-20261009']
+    paths: ['.github/workflows/hearthline-source-bundle.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hearthline-source-bundle-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    # This carrier is public. Never spend private-repository runner minutes.
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Package only tracked project source and a byte manifest
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, subprocess, zipfile
+          prefix = 'hearthline-alexa-mcp/'
+          sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          raw = subprocess.check_output(['git', 'ls-tree', '-rz', 'HEAD', '--', prefix])
+          output = pathlib.Path('portable-source')
+          output.mkdir()
+          files = []
+          with zipfile.ZipFile(output / 'hearthline-source.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+              for entry in raw.split(b'\0'):
+                  if not entry:
+                      continue
+                  metadata, name = entry.split(b'\t', 1)
+                  mode, kind, blob = metadata.decode().split()
+                  path = name.decode('utf-8')
+                  if kind != 'blob' or mode not in ('100644', '100755'):
+                      raise SystemExit('Refusing non-regular source entry: ' + path)
+                  if not path.startswith(prefix) or '..' in pathlib.PurePosixPath(path).parts:
+                      raise SystemExit('Invalid project source path')
+                  data = subprocess.check_output(['git', 'cat-file', 'blob', blob])
+                  info = zipfile.ZipInfo(path, date_time=(1980, 1, 1, 0, 0, 0))
+                  info.create_system = 3
+                  info.external_attr = int(mode, 8) << 16
+                  archive.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED)
+                  files.append({'path': path, 'git_blob': blob, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+          if not files:
+              raise SystemExit('No source files found')
+          receipt = {'schema': 'hearthline.portable-source/v1', 'repository': 'woahwhattheheck/public-commons-sprint-2026', 'source_commit': sha, 'files': files, 'archive_sha256': hashlib.sha256((output / 'hearthline-source.zip').read_bytes()).hexdigest()}
+          (output / 'SOURCE_RECEIPT.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          print(json.dumps({'source_commit': sha, 'files': len(files), 'archive_sha256': receipt['archive_sha256']}))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hearthline-source-${{ github.sha }}
+          path: portable-source/
+          retention-days: 3
+          if-no-files-found: error
