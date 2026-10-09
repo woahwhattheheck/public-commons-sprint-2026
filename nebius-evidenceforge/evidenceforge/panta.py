@@ -23,6 +23,13 @@ class PantaError(ValueError):
     """Raised when Panta market evidence is unavailable or malformed."""
 
 
+class _RejectPantaRedirect(urllib.request.HTTPRedirectHandler):
+    """Never forward an API key to a redirected market API URL."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise PantaError("Panta redirect rejected to protect API credentials")
+
+
 def _unique_json_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     """Reject duplicate source fields before producing a signed evidence snapshot."""
     result = {}
@@ -50,7 +57,7 @@ def _canonical_bytes(value: Any) -> bytes:
 def _default_transport(url: str, headers: Mapping[str, str]) -> bytes:
     request = urllib.request.Request(url, headers=dict(headers), method="GET")
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.build_opener(_RejectPantaRedirect()).open(request, timeout=20) as response:
             declared = response.headers.get("Content-Length")
             if declared and int(declared) > MAX_RESPONSE_BYTES:
                 raise PantaError("Panta response exceeds the 1 MB evidence limit")
