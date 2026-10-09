@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CineTrail — Film to city</title>
+<style>
+:root{color-scheme:dark;font:16px/1.5 system-ui,sans-serif;background:#111720;color:#f3f3f3}
+body{margin:0;background:radial-gradient(circle at top left,#303142,#111720 60%);min-height:100vh}
+main{max-width:960px;padding:24px;margin:auto}
+header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #555;padding-bottom:12px}
+mark{color:#ffc66f;background:transparent}
+h1{font-size:clamp(2.5rem,6vw,4.8rem);line-height:1.05;letter-spacing:-.06em;margin:60px 0 20px}
+h2{font-size:2rem;letter-spacing:-.03em}
+.lead{max-width:730px;color:#cad2dd;font-size:1.15rem}
+form{background:#242a37;border:1px solid #495064;padding:24px;border-radius:16px;margin:35px 0}
+.fields{display:grid;grid-template-columns:2fr 2fr 1fr;gap:12px}
+label{display:block;font-weight:650}input,select{width:100%;font:inherit;padding:12px;margin-top:6px;color:#fff;background:#111720;border:1px solid #8991a0;border-radius:8px;box-sizing:border-box}
+button{border:0;color:#161a20;background:#ffca77;padding:12px 20px;border-radius:8px;font:700 1rem system-ui;cursor:pointer;margin-top:18px}
+button:disabled{opacity:.6}
+.notice{background:#3a3024;border:1px solid #a47a39;color:#ffe2af;padding:14px;border-radius:10px}
+.notice[hidden],#result[hidden]{display:none}
+#cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:#232939;border:1px solid #495064;border-radius:12px;padding:20px}
+.card h3{font-size:1.3rem}
+.tag{display:inline-block;padding:3px 8px;border-radius:8px;background:#454a57;margin:3px;font-size:.8rem}
+.small{font-size:.83rem;color:#b8c2d0;overflow-wrap:anywhere}
+footer{margin-top:50px;padding:25px 0;border-top:1px solid #445;color:#afbdcf}
+@media(max-width:700px){.fields,#cards{grid-template-columns:1fr}h1{margin-top:35px}}
+</style>
+<script src="/app.js" defer></script>
+</head>
+<body>
+<main>
+<header><strong style="font-size:1.4rem">Cine<mark>Trail</mark></strong><span id="mode">Loading</span></header>
+<h1>From the <mark>screen</mark> to your city.</h1>
+<p class="lead">Pick a film, a city, and a mood. CineTrail looks up your film in Qloo and recommends three local places using its location-aware taste intelligence. Every suggestion retains its source identity.</p>
+<form id="planner"><div class="fields">
+<label>Film title<input id="movie" required maxlength="80" value="Amélie"></label>
+<label>City or locality<input id="locality" required maxlength="80" value="New York City"></label>
+<label>Mood<select id="mood"><option>curious</option><option>cozy</option><option>adventurous</option></select></label>
+</div><button type="submit" id="submit">Explore CineTrail →</button>
+<p class="small">Qloo movie search → localized place insights → evidence-linked thematic stops. Not navigation directions.</p></form>
+<p id="notice" class="notice" role="status" hidden></p>
+<section id="result" hidden aria-live="polite"><h2 id="title"></h2><p id="label" class="small"></p>
+<div id="cards"></div><p id="evidence" class="small"></p><button id="export">Export evidence JSON</button></section>
+<footer>Qloo Agentic Hackathon 2026 source candidate. Synthetic examples are fictional. No route, travel time, business hours, price or current availability asserted.</footer>
+</main>
+</body></html>
