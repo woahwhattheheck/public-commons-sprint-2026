@@ -82,9 +82,12 @@ export function createQlooClient({ apiKey = process.env.QLOO_API_KEY,
         if (!id || typeof displayName !== 'string') return [];
         return [{ id: String(id), name: displayName, type: x?.type ?? x?.entity_type ?? null }];
       });
-      const exact = safe.find(x => x.name.toLocaleLowerCase() === name.toLocaleLowerCase());
-      if (!(exact || safe[0])) throw new Error(`No Qloo entity matched “${name}”. Choose a more specific culture reference.`);
-      return { query: name, ...(exact || safe[0]) };
+      const key = value => value.normalize('NFKC').trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en-US');
+      const exact = safe.filter(x => key(x.name) === key(name));
+      if (!exact.length) throw new Error(`No exact Qloo entity matched “${name}”. Choose a more specific culture reference.`);
+      if (new Set(exact.map(x => x.id)).size !== 1)
+        throw new Error(`Ambiguous Qloo identity for “${name}”. Choose a more specific culture reference.`);
+      return { query: name, ...exact[0] };
     },
     async recommendations(category, { city, ids, excludedIds = [] }) {
       if (!CATEGORIES.includes(category)) throw new Error('Unsupported category.');
