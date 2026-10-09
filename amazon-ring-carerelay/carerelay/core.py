@@ -173,6 +173,27 @@ class ApprovalRecord:
     external_action_executed: bool = False
 
 
+def _same_event_instant(prior: RingEvent, replay: RingEvent) -> bool:
+    """Treat offset/precision variants of one event instant as the same replay.
+
+    Retain the first accepted representation in the stored event so existing
+    proposal IDs, workspace snapshots and receipts never change on a retry.
+    Every field other than occurred_at must match exactly.
+    """
+    left, right = asdict(prior), asdict(replay)
+    left_time, right_time = left.pop("occurred_at"), right.pop("occurred_at")
+    if left != right:
+        return False
+    try:
+        first = datetime.fromisoformat(left_time)
+        second = datetime.fromisoformat(right_time)
+    except (TypeError, ValueError):
+        return False
+    return (first.tzinfo is not None and second.tzinfo is not None
+            and first.utcoffset() is not None and second.utcoffset() is not None
+            and first == second)
+
+
 class CareRelay:
     """Deterministic, proposal-only reducer over privacy-minimized Ring events.
 
@@ -193,7 +214,7 @@ class CareRelay:
     def ingest(self, event: RingEvent) -> tuple[Proposal, ...]:
         prior = self._events.get(event.event_id)
         if prior is not None:
-            if prior.digest != event.digest:
+            if prior.digest != event.digest and not _same_event_instant(prior, event):
                 raise CareRelayError("event_id collision with different content")
             return tuple(p for p in self._proposals.values() if p.event_id == event.event_id)
         self._events[event.event_id] = event
