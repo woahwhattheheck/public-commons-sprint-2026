@@ -547,10 +547,159 @@ export function refundEscrow(state, { signer, reasonDigest, signatureBase64, obs
   };
 }
 
+function verifyFundingHead(state) {
+  assertSha256(state.fundingObservationDigest, 'fundingObservationDigest');
+  return sha256Hex({
+    type: 'ESCROW_FUNDED',
+    planDigest: state.planDigest,
+    fundingObservationDigest: state.fundingObservationDigest,
+    sequence: 1,
+    previousEventDigest: null,
+  });
+}
+
+function verifySettlementTerminal(state, fundedHead) {
+  const i = state.terminalInstruction;
+  const b = state.plan.binding;
+  assertExactKeys(i, [
+    'kind', 'verifierSigner', 'escrowAuthority', 'sourceTokenAccount', 'destinationTokenAccount',
+    'mint', 'amountAtomic', 'taskDigest', 'resultDigest', 'acceptanceDigest', 'generation',
+    'eventHead', 'authorizationDigest', 'authorizationSignatureBase64', 'writePerformed',
+  ], 'settlementInstruction');
+  if (i.kind !== 'settleEscrowTransferChecked' || i.writePerformed !== false) {
+    fail('BAD_TERMINAL_STATE', 'terminal settlement instruction must be a dry-run transfer plan');
+  }
+  for (const [field, expected] of Object.entries({
+    escrowAuthority: b.escrowPda, sourceTokenAccount: b.vaultAta,
+    destinationTokenAccount: b.workerAta, mint: b.mint, amountAtomic: b.amountAtomic,
+    taskDigest: b.taskDigest,
+  })) {
+    if (i[field] !== expected) fail('TERMINAL_TAMPER', 'settlement ' + field + ' mismatch');
+  }
+  assertSha256(i.resultDigest, 'resultDigest');
+  assertSha256(i.acceptanceDigest, 'acceptanceDigest');
+  assertSha256(i.eventHead, 'eventHead');
+  if (!Number.isSafeInteger(i.generation) || i.generation < 1) fail('BAD_GENERATION', 'terminal generation invalid');
+  if (state.resultDigest !== i.resultDigest || state.acceptanceDigest !== i.acceptanceDigest || state.generation !== i.generation) {
+    fail('TERMINAL_TAMPER', 'terminal outcome differs from signed instruction');
+  }
+  if (ed25519SpkiFingerprint(i.verifierSigner) !== b.receiptAuthorityFingerprint) {
+    fail('AUTHORITY_MISMATCH', 'terminal verifier differs from pinned authority');
+  }
+  const authorization = {
+    schema: 'workseal-solana-settlement-authorization/v1',
+    planDigest: state.planDigest, taskDigest: b.taskDigest,
+    resultDigest: i.resultDigest, acceptanceDigest: i.acceptanceDigest,
+    receiptAuthorityFingerprint: b.receiptAuthorityFingerprint,
+    generation: i.generation, eventHead: i.eventHead,
+    escrowPda: b.escrowPda, mint: b.mint, amountAtomic: b.amountAtomic,
+    payer: b.payer, payee: b.payee,
+  };
+  if (i.authorizationDigest !== sha256Hex(authorization)
+      || !verifyCanonicalAuthorization(authorization, i.authorizationSignatureBase64, i.verifierSigner)) {
+    fail('BAD_TERMINAL_SIGNATURE', 'terminal settlement authorization was not signed by pinned verifier');
+  }
+  const intent = {
+    schema: 'workseal-settlement-intent/v1',
+    taskDigest: b.taskDigest, resultDigest: i.resultDigest,
+    acceptanceDigest: i.acceptanceDigest,
+    receiptAuthorityFingerprint: b.receiptAuthorityFingerprint,
+    generation: i.generation, currency: 'SPL:' + b.mint,
+    amountAtomic: b.amountAtomic, payer: b.payer, payee: b.payee,
+    funding: state.plan.fundingRef, eventHead: i.eventHead,
+  };
+  const settlementDigest = sha256Hex(intent);
+  if (state.terminalDigest !== settlementDigest) {
+    fail('TERMINAL_TAMPER', 'terminal digest does not match signed settlement intent');
+  }
+  const terminalHead = sha256Hex({
+    type: 'ESCROW_SETTLED',
+    planDigest: state.planDigest, settlementDigest,
+    instructionDigest: sha256Hex(i), sequence: 2,
+    previousEventDigest: fundedHead,
+  });
+  if (state.previousEventDigest !== terminalHead) fail('EVENT_HEAD_TAMPER', 'settlement event-chain head mismatch');
+}
+
+function verifyRefundTerminal(state, fundedHead) {
+  const i = state.terminalInstruction;
+  const b = state.plan.binding;
+  assertExactKeys(i, [
+    'kind', 'buyerSigner', 'escrowAuthority', 'sourceTokenAccount', 'destinationTokenAccount',
+    'mint', 'amountAtomic', 'reasonDigest', 'observedUnix', 'refundAfterUnix',
+    'authorizationDigest', 'authorizationSignatureBase64', 'writePerformed',
+  ], 'refundInstruction');
+  if (i.kind !== 'refundEscrowTransferChecked' || i.writePerformed !== false) {
+    fail('BAD_TERMINAL_STATE', 'terminal refund instruction must be a dry-run transfer plan');
+  }
+  for (const [field, expected] of Object.entries({
+    buyerSigner: b.payer, escrowAuthority: b.escrowPda,
+    sourceTokenAccount: b.vaultAta, destinationTokenAccount: b.buyerAta,
+    mint: b.mint, amountAtomic: b.amountAtomic, refundAfterUnix: b.refundAfterUnix,
+  })) {
+    if (i[field] !== expected) fail('TERMINAL_TAMPER', 'refund ' + field + ' mismatch');
+  }
+  assertSha256(i.reasonDigest, 'reasonDigest');
+  if (!Number.isSafeInteger(i.observedUnix) || i.observedUnix < b.refundAfterUnix) {
+    fail('REFUND_NOT_MATURE', 'terminal refund must be authorized after deadline');
+  }
+  if (state.generation !== 0 || state.resultDigest !== null || state.acceptanceDigest !== null) {
+    fail('TERMINAL_TAMPER', 'refund may not include settlement evidence');
+  }
+  const authorization = {
+    schema: 'workseal-solana-refund-authorization/v1',
+    planDigest: state.planDigest, taskDigest: b.taskDigest,
+    escrowPda: b.escrowPda, mint: b.mint, amountAtomic: b.amountAtomic,
+    payer: b.payer, refundAfterUnix: b.refundAfterUnix,
+    reasonDigest: i.reasonDigest,
+  };
+  if (i.authorizationDigest !== sha256Hex(authorization)
+      || !verifyCanonicalAuthorization(authorization, i.authorizationSignatureBase64, i.buyerSigner)) {
+    fail('BAD_TERMINAL_SIGNATURE', 'terminal refund authorization was not signed by buyer');
+  }
+  const terminalDigest = sha256Hex({
+    schema: 'workseal-solana-refund/v1',
+    planDigest: state.planDigest, reasonDigest: i.reasonDigest,
+  });
+  if (state.terminalDigest !== terminalDigest) fail('TERMINAL_TAMPER', 'refund reason digest mismatch');
+  const terminalHead = sha256Hex({
+    type: 'ESCROW_REFUNDED', planDigest: state.planDigest,
+    terminalDigest, instructionDigest: sha256Hex(i),
+    sequence: 2, previousEventDigest: fundedHead,
+  });
+  if (state.previousEventDigest !== terminalHead) fail('EVENT_HEAD_TAMPER', 'refund event-chain head mismatch');
+}
+
 export function verifyEscrowState(state) {
   const current = requireState(state);
-  if (!['UNFUNDED', 'FUNDED', 'SETTLED', 'REFUNDED'].includes(current.phase)) fail('BAD_PHASE', 'unknown escrow phase');
-  if (['SETTLED', 'REFUNDED'].includes(current.phase) && !current.terminalDigest) fail('BAD_TERMINAL_STATE', 'terminal state missing digest');
+  const { phase } = current;
+  if (!['UNFUNDED', 'FUNDED', 'SETTLED', 'REFUNDED'].includes(phase)) {
+    fail('BAD_PHASE', 'unknown escrow phase');
+  }
+  if (phase === 'UNFUNDED') {
+    if (current.sequence !== 0 || current.previousEventDigest !== null
+        || current.fundingObservationDigest !== null || current.terminalDigest !== null
+        || current.terminalInstruction !== undefined || current.generation !== 0
+        || current.resultDigest !== null || current.acceptanceDigest !== null) {
+      fail('BAD_STATE', 'unfunded state must have no funding or terminal evidence');
+    }
+  } else {
+    const fundedHead = verifyFundingHead(current);
+    if (phase === 'FUNDED') {
+      if (current.sequence !== 1 || current.previousEventDigest !== fundedHead
+          || current.terminalDigest !== null || current.terminalInstruction !== undefined
+          || current.generation !== 0 || current.resultDigest !== null || current.acceptanceDigest !== null) {
+        fail('EVENT_HEAD_TAMPER', 'funded state does not match event history');
+      }
+    } else {
+      if (current.sequence !== 2 || !current.terminalDigest) {
+        fail('BAD_TERMINAL_STATE', 'terminal state must have exactly one terminal event');
+      }
+      if (phase === 'SETTLED') verifySettlementTerminal(current, fundedHead);
+      else verifyRefundTerminal(current, fundedHead);
+    }
+  }
+  // Verifies internal signed OFFLINE simulator state only, not a live Solana transaction.
   return {
     valid: true,
     phase: current.phase,
