@@ -210,21 +210,26 @@ def _render_page_from_state(state, source, digest, *, page, size, status, classi
     return (head + "<main>" + cards + activity + "</main>" + _footer(digest)).encode("utf-8")
 
 
-def _summary_from_state(state, source, digest):
-    reviews = {r["proposal_id"]: r for r in state["approvals"]}
-    events = {r["event_id"]: r for r in state["events"]}
-    statuses = Counter("pending" if reviews.get(p["proposal_id"]) is None
-                       else reviews[p["proposal_id"]]["decision"]
-                       for p in state["proposals"])
-    classes = Counter(events[p["event_id"]]["classification"] for p in state["proposals"])
-    kinds = Counter(events[p["event_id"]]["event_type"] for p in state["proposals"])
-    quiet = len(state["events"]) - len({p["event_id"] for p in state["proposals"]})
+def _summary_from_state(state, source, digest, *, size=100, status="all",
+                        classification=None, kind=None):
+    """Use the same validated selection as the review pages, not global totals."""
+    selected, quiet, _ = _page_data(
+        state, size=size, status=status, classification=classification, kind=kind)
+    statuses = Counter("pending" if review is None else review["decision"]
+                       for _, _, review in selected)
+    classes = Counter(event["classification"] for _, event, _ in selected)
+    kinds = Counter(event["event_type"] for _, event, _ in selected)
     summary = (_summary_table("Proposal decisions", statuses) +
                _summary_table("Proposal event classifications", classes) +
                _summary_table("Proposal event types", kinds) +
-               f"<p>{quiet} events have no proposal.</p>")
+               f"<p>{len(selected)} matching proposals · {len(quiet)} matching events "
+               "without proposals.</p>")
+    selection = ("status=" + status +
+                 (f", classification={classification}" if classification is not None else "") +
+                 (f", event type={kind}" if kind is not None else ""))
     head = _preamble(source, digest, state, "workspace summary",
-                     "Aggregate counts from replay-validated source; not provider verification.")
+                     f"Selected rows: {selection}. Whole-workspace totals above remain unchanged. "
+                     "Aggregate counts from replay-validated source, not provider verification.")
     return (head + "<main>" + summary + "</main>" + _footer(digest)).encode("utf-8")
 
 
@@ -236,7 +241,8 @@ def render_paged(workspace, *, page=1, size=100, status="all", classification=No
     state = relay.snapshot()
     digest = workspace["receipt"]["state_sha256"]
     if summary:
-        return _summary_from_state(state, source, digest)
+        return _summary_from_state(state, source, digest, size=size, status=status,
+                                   classification=classification, kind=kind)
     return _render_page_from_state(state, source, digest, page=page, size=size, status=status,
                                    classification=classification, kind=kind)
 
@@ -262,5 +268,7 @@ def export_page_bundle(workspace, directory: Path, *, size=100, status="all",
                                            status=status, classification=classification,
                                            kind=kind, linked=True)
         publish_new(directory / f"page-{page:04d}.html", rendered)
-    publish_new(directory / "summary.html", _summary_from_state(state, source, digest))
+    publish_new(directory / "summary.html", _summary_from_state(
+        state, source, digest, size=size, status=status,
+        classification=classification, kind=kind))
     return total_pages
