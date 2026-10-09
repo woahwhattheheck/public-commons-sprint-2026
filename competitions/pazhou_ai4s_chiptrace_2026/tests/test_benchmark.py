@@ -60,6 +60,41 @@ class ChipTraceBenchmarkTests(unittest.TestCase):
         self.assertGreaterEqual(result["latency_ms"]["median"], 0.0)
         self.assertGreaterEqual(result["latency_ms"]["p95"], result["latency_ms"]["median"])
 
+    def test_labeled_abstention_reduces_coverage_and_exact_accuracy(self):
+        # Historical binary coding counted abstention on a clean control as TN.
+        rows = [
+            {"expected_state": "SUPPORTED", "qc_state": "INSUFFICIENT_EVIDENCE"},
+            {"expected_state": "SUPPORTED", "qc_state": "SUPPORTED"},
+            {"expected_state": "REVIEW", "qc_state": "REVIEW"},
+            {"expected_state": "REVIEW", "qc_state": "INSUFFICIENT_EVIDENCE"},
+            {"expected_state": "INSUFFICIENT_EVIDENCE", "qc_state": "INSUFFICIENT_EVIDENCE"},
+        ]
+        result = bench._classification_metrics(rows, "qc_state")
+        self.assertEqual(result["considered"], 4)
+        self.assertEqual(result["classified"], 2)
+        self.assertEqual(result["abstained_on_labeled"], 2)
+        self.assertEqual(result["abstained_review"], 1)
+        self.assertEqual(result["abstained_supported"], 1)
+        self.assertEqual(result["tp"], 1)
+        self.assertEqual(result["tn"], 1)
+        self.assertEqual(result["fp"], 0)
+        self.assertEqual(result["fn"], 0)
+        self.assertEqual(result["coverage"], 0.5)
+        self.assertEqual(result["labeled_exact_accuracy"], 0.5)
+        self.assertEqual(result["recall"], 0.5)
+        self.assertEqual(result["supported_recall"], 0.5)
+        self.assertEqual(result["f1"], 0.666667)
+
+    def test_classification_rejects_unknown_state_instead_of_silent_negative(self):
+        with self.assertRaises(ValueError):
+            bench._classification_metrics(
+                [{"expected_state": "SUPPORTED", "qc_state": "UNEXPECTED"}], "qc_state"
+            )
+        with self.assertRaises(ValueError):
+            bench._classification_metrics(
+                [{"expected_state": "UNEXPECTED", "qc_state": "SUPPORTED"}], "qc_state"
+            )
+
     def test_citation_validation_detects_tamper(self):
         corpus = bench.build_frozen_corpus(self.root)
         baseline, candidate = corpus["level_shift"]
