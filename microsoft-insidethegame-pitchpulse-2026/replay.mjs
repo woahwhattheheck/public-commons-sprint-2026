@@ -1,7 +1,7 @@
 import {MatchEngine, normalizeEvent, SYNTHETIC_EVENTS} from './engine.mjs';
 
 export const REPLAY_SCHEMA = 'pitchpulse-replay/v1';
-export const MAX_REPLAY_BYTES = 1024*1024;
+export const MAX_REPLAY_BYTES = 2*1024*1024;
 const reject = message => { throw new Error(`Invalid replay: ${message}`); };
 
 export function exportReplay(session) {

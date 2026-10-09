@@ -38,7 +38,7 @@ Two checks cover replay idempotency, proof-linked goal overlay, fan/analyst diff
 
 Each browser cookie jar receives an opaque, HTTP-only `pitchpulse_sid` cookie. Different visitors have independent match engines and demo cursors; tabs sharing a cookie deliberately share the same match. The single-process store allows 64 visitors, expires idle sessions after 30 minutes, and returns 503 with `Retry-After: 60` at capacity instead of evicting an active judge. Health checks and static assets do not allocate sessions. A server restart or idle expiry clears in-memory state; this is not account storage.
 
-Use **Export replay JSON** to keep the normalized event ledger and built-in cursor. **Import replay JSON** restores those values only after validating the entire file in a separate engine. Bad JSON, unsupported fixtures, duplicate IDs, out-of-order events, invalid cursors or files above 1 MiB do not replace the existing match. Existing audience/favorite controls remain local display choices, not part of the replay file.
+Use **Export replay JSON** to keep the normalized event ledger and built-in cursor. **Import replay JSON** restores those values only after validating the entire file in a separate engine. Bad JSON, unsupported fixtures, duplicate IDs, out-of-order events, invalid cursors or files above 2 MiB do not replace the existing match. Existing audience/favorite controls remain local display choices, not part of the replay file.
 
 - `GET /api/replay` exports `pitchpulse-replay/v1` with `fixture: "synthetic"`, `events`, and `nextIndex`.
 - `POST /api/replay` atomically imports that JSON. Send the cookie returned by the first API response; the browser does so automatically.
@@ -61,7 +61,7 @@ Focused HTTP acceptance (Node 22, no external dependencies):
 
     node --test tests/session-replay.focused.test.mjs
 
-Five focused checks cover visitor isolation, replay restoration, invalid-import rollback/custom ledgers, capacity/expiry, and the default-disabled global provider budget. No live provider call is used by these checks.
+Six focused checks cover visitor isolation, replay restoration, invalid-import rollback/custom ledgers, capacity/expiry, the default-disabled global provider budget, and an exact engine-limit replay transfer. No live provider call is used by these checks.
 
 ## Actual competition readiness
 
