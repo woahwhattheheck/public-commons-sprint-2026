@@ -69,3 +69,23 @@ Relevant Microsoft Foundry REST spec: https://learn.microsoft.com/en-us/rest/api
 - `package.json`, `LICENSE`: zero dependency runnable Node application and MIT license.
 
 Original 2026 source authored in the TokenJunkieLabs Commons swarm for the owner's competition exploration. Preserve the human entrant's actual legal ownership, rights and collaborator provenance when publishing or entering. All synthetic and brand-neutral art, no real team/player logos, no footage, no sponsor endorsement or implied prize.
+
+
+## Deterministic judge evidence export
+
+Use **Evidence JSON** or **Evidence CSV** from the replay controls. The server
+exports the exact currently selected synthetic event prefix and selected
+team/language/audience; it does **not** call Foundry, reveal keys, run a model,
+or rely on mutable browser session state. JSON includes the actual event rows,
+engine outcome cues, their evidence IDs and exact source-event SHA-256 digest
+(`SHA-256(UTF-8 JSON.stringify(selectedEvents))`). The digest is
+a reproducibility fingerprint, **not a digital signature** or an attestation of
+real-match authenticity. CSV exports the same outcome citations with quoted,
+spreadsheet-formula-neutralized fields. No outcome is fabricated when the
+prefix contains no complete press window. Source events remain explicitly
+labelled synthetic throughout.
+
+A selected event count must be within the bundled fixture length; team,
+audience, locale and format are validated server-side. The export endpoint
+returns only local synthetic evidence and is never a paid-provider operation.
+The one isolated source contract is `node --test test/evidence-export.focused.test.mjs`.
