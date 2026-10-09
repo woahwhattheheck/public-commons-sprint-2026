@@ -76,6 +76,7 @@ function scoreCandidate(e) {
  * The algorithm never repeats an entity to pad a program; it reports missing data instead.
  */
 export function buildSchedule({ city, tastes, excludedIds = [], mode }, signals, raw) {
+  const excluded = new Set(excludedIds);
   const pools = Object.fromEntries(CATEGORIES.map(k => [k, normalizeEntities(raw[k], k, excludedIds)]));
   const ordered = Object.fromEntries(CATEGORIES.map(kind => [
     kind, [...pools[kind]].sort((a, b) => scoreCandidate(b) - scoreCandidate(a) || a.rank - b.rank),
