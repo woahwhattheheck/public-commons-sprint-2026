@@ -138,7 +138,14 @@ export class QlooClient {
     const timer = setTimeout(() => controller.abort(), 6500);
     try {
       this.calls += 1;
-      const response = await this.fetcher(url, {method: 'GET', headers: { 'X-Api-Key': this.key, Accept: 'application/json'}, signal: controller.signal});
+      const response = await this.fetcher(url, {method: 'GET',
+        headers: { 'X-Api-Key': this.key, Accept: 'application/json'},
+        // The credential must never accompany an automatic redirect to another host.
+        redirect: 'error', signal: controller.signal});
+      // Defensive check for injected fetchers/proxies that ignore redirect: 'error'.
+      // Never accept a forwarded or redirected response as verified Qloo evidence.
+      if (response?.redirected || (response?.url && new URL(response.url).origin !== QLOO_ORIGIN))
+        throw new QlooError('QLOO_UNEXPECTED_RESPONSE_ORIGIN', 502);
       if (!response?.ok) throw new QlooError(response?.status === 429 ? 'QLOO_RATE_LIMIT' :
         response?.status === 401 ? 'QLOO_KEY_REJECTED' : `QLOO_HTTP_${response?.status ?? 'UNKNOWN'}`,
         response?.status === 429 ? 429 : 502);
