@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from .core import CareRelayError
-from .review_page import render_review
+from .review_page import export_page_bundle, render_paged, render_review
 from .workspace import SOURCES, apply_reviews, import_events, load_workspace, publish_new, save_workspace
 
 
@@ -28,6 +28,14 @@ def main(argv: list[str] | None = None) -> int:
     report = commands.add_parser("report", help="export a script-free offline HTML review copy")
     report.add_argument("workspace", type=Path)
     report.add_argument("--out", required=True, type=Path)
+    report.add_argument("--page", type=int, help="single replay-validated page (default: legacy full report)")
+    report.add_argument("--page-size", type=int, default=100, help="proposal and quiet-event rows per page")
+    report.add_argument("--status", choices=("all", "pending", "approved", "rejected"), default="all")
+    report.add_argument("--classification", help="exact source-observed event classification")
+    report.add_argument("--event-type", help="exact source-observed event type")
+    report.add_argument("--summary", action="store_true", help="aggregate table, no event cards")
+    report.add_argument("--all-pages", action="store_true",
+                        help="--out names a NEW directory; export all linked static HTML pages")
     args = parser.parse_args(argv)
     try:
         if args.command == "import":
@@ -40,7 +48,21 @@ def main(argv: list[str] | None = None) -> int:
         else:
             result = load_workspace(args.workspace)
             if args.command == "report":
-                publish_new(args.out, render_review(result))
+                if args.all_pages and (args.page is not None or args.summary):
+                    raise CareRelayError("--all-pages cannot combine with --page or --summary")
+                selection = (args.status != "all" or args.classification is not None or
+                             args.event_type is not None or args.page_size != 100)
+                if args.all_pages:
+                    export_page_bundle(result, args.out, size=args.page_size,
+                                       status=args.status, classification=args.classification,
+                                       kind=args.event_type)
+                elif args.page is not None or args.summary or selection:
+                    publish_new(args.out, render_paged(result, page=args.page or 1,
+                                size=args.page_size, status=args.status,
+                                classification=args.classification, kind=args.event_type,
+                                summary=args.summary))
+                else:
+                    publish_new(args.out, render_review(result))
         state = result["state"]
         reviewed = {r["proposal_id"] for r in state["approvals"]}
         proposed_events = {p["event_id"] for p in state["proposals"]}
@@ -54,6 +76,17 @@ def main(argv: list[str] | None = None) -> int:
                        {key: e[key] for key in ("event_id", "device_id", "occurred_at", "event_type", "classification")}
                        for e in state["events"] if e["event_id"] not in proposed_events],
                    "authority": state["authority"]}
+        if args.command == "report" and (
+                args.page is not None or args.all_pages or args.summary or
+                args.status != "all" or args.classification is not None or
+                args.event_type is not None or args.page_size != 100):
+            # A 5000-event paged HTML export must not still print thousands of
+            # sensitive per-event rows on stdout. Keep exact full inspect semantics.
+            summary["pending_total"] = len(summary.pop("pending"))
+            summary["events_without_proposal_total"] = len(summary.pop("events_without_proposal"))
+            summary["report_page"] = args.page if args.page is not None else (None if args.summary else 1)
+            summary["report_all_pages"] = args.all_pages
+            summary["report_status"] = args.status
         print(json.dumps(summary, sort_keys=True))
         return 0
     except CareRelayError as exc:
