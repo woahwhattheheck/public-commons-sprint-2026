@@ -60,8 +60,10 @@ async function main() {
   const migrated = pool.poolState.isMigrated === 1;
   let successor;
   if (migrationOption === 1) {
+    const feeConfig = sdk.DAMM_V2_MIGRATION_FEE_ADDRESS?.[config.migrationFeeOption];
+    if (!feeConfig) throw new Error('Unsupported DAMM v2 migration fee configuration');
     const derived = sdk.deriveDammV2PoolAddress(
-      pool.poolState.config, pool.poolState.baseMint, config.quoteMint);
+      feeConfig, pool.poolState.baseMint, config.quoteMint);
     const account = migrated ? await conn.getAccountInfo(derived, 'confirmed') : null;
     successor = {
       address: derived.toBase58(),
