@@ -12,6 +12,34 @@ export function parseIntent(command, state) {
   };
   const found = Object.entries(shiftTerms).filter(([, re]) => re.test(t)).map(([id]) => id);
   if (found.length !== 1) return { error: 'Which single shift? Please say setup, welcome desk, workshop, or cleanup.' };
+  // A named negative constraint must never be silently discarded as ordinary prose.
+  // This deliberately understands one explicitly named exclusion at a time; it
+  // clarifies unknown/multiple exclusions instead of guessing who can be booked.
+  const exclusions = [];
+  for (const re of [
+    /\b(?:without|except|exclude|excluding|avoid|skip)\s+([a-z][a-z'-]*)\b/g,
+    /\b(?:do not|don't|never)\s+(?:assign|schedule|choose|pick|book)\s+([a-z][a-z'-]*)\b/g,
+  ]) {
+    for (const match of t.matchAll(re)) {
+      exclusions.push({ name: match[1], after: match.index + match[0].length });
+    }
+  }
+  const hasExclusion = /\b(?:without|except|exclude|excluding|avoid|skip)\b/.test(t)
+    || /\b(?:do not|don't|never)\s+(?:assign|schedule|choose|pick|book)\b/.test(t);
+  let excludedVolunteerId = null;
+  if (hasExclusion) {
+    if (exclusions.length !== 1) {
+      return { error: 'Name exactly one volunteer to exclude (for example, without Iris). I will not guess.' };
+    }
+    const matched = state.volunteers.filter(v => v.name.toLowerCase() === exclusions[0].name);
+    const remainder = t.slice(exclusions[0].after);
+    const nextName = remainder.match(/^\s+([a-z][a-z'-]*)\b/);
+    if (matched.length !== 1 || /^\s+(?:and|or)\b/.test(remainder)
+        || (nextName && state.volunteers.some(v => v.name.toLowerCase() === nextName[1]))) {
+      return { error: 'Please name one known volunteer to exclude per request.' };
+    }
+    excludedVolunteerId = matched[0].id;
+  }
   const isAbsence = /\b(absent|unavailable|cannot make|can't make|called out|is out|is sick)\b/.test(t);
   let absentVolunteerId = null;
   if (isAbsence) {
@@ -19,7 +47,7 @@ export function parseIntent(command, state) {
     if (names.length !== 1) return { error: 'Name exactly one volunteer who is unavailable; I will not guess.' };
     absentVolunteerId = names[0].id;
   }
-  return { shiftId: found[0], absentVolunteerId };
+  return { shiftId: found[0], absentVolunteerId, excludedVolunteerId };
 }
 
 export function overlaps(a, b) {
@@ -34,6 +62,11 @@ export function proposeCoverage(state, command) {
   if (removing && !shift.assigned.includes(removing)) {
     return { ok: false, message: 'That volunteer is not booked on this shift; no schedule change was drafted.', trace: [{ tool: 'schedule_lookup', result: 'not_assigned' }] };
   }
+  if (intent.excludedVolunteerId && intent.excludedVolunteerId !== removing
+      && shift.assigned.includes(intent.excludedVolunteerId)) {
+    return { ok: false, message: 'That excluded volunteer is already assigned to this shift. Explicitly report an absence before requesting a replacement.',
+      trace: [{ tool: 'schedule_lookup', result: 'assigned_volunteer_exclusion_needs_absence' }] };
+  }
   const retained = shift.assigned.filter(id => id !== removing);
   const vacancies = shift.capacity - retained.length;
   const trace = [
@@ -41,9 +74,10 @@ export function proposeCoverage(state, command) {
     { tool: 'schedule_lookup', result: `${retained.length} retained / ${shift.capacity} required` },
   ];
   if (vacancies < 1) return { ok: false, message: 'That shift is already fully covered; no changes proposed.', trace };
-  const rejected = { unavailable: 0, skill: 0, clash: 0, limit: 0, booked: 0 };
+  const rejected = { excluded: 0, unavailable: 0, skill: 0, clash: 0, limit: 0, booked: 0 };
   const scored = [];
   for (const v of state.volunteers) {
+    if (v.id === intent.excludedVolunteerId) { rejected.excluded++; continue; }
     if (v.id === removing || (state.unavailable[v.id] || []).includes(shift.id) || !v.available.includes(shift.id)) {
       rejected.unavailable++; continue;
     }
@@ -58,6 +92,9 @@ export function proposeCoverage(state, command) {
   scored.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
   const selected = scored.slice(0, vacancies);
   trace.push(
+    { tool: 'explicit_exclusion', result: intent.excludedVolunteerId
+      ? `Honored named exclusion for ${state.volunteers.find(v => v.id === intent.excludedVolunteerId).name}`
+      : 'No named exclusions requested' },
     { tool: 'availability_check', result: `${rejected.unavailable} unavailable; ${rejected.booked} already on this shift` },
     { tool: 'skill_match', result: `${rejected.skill} lack required role (${shift.required.join(', ')})` },
     { tool: 'overlap_and_limit', result: `${rejected.clash} time conflicts; ${rejected.limit} weekly-limit conflicts` },
