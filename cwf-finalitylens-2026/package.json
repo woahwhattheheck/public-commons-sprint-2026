@@ -1,0 +1,13 @@
+{
+  "name": "cwf-finalitylens-2026",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "check": "node src/cli.mjs",
+    "test:focused": "node --test test/finality.focused.test.mjs"
+  }
+}
