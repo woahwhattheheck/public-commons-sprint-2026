@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 import {makeSnapshot, TEAMS, validateFixture} from './engine.mjs';
 import {foundryConfigured, suggestedNarrative} from './foundry.mjs';
+import {createFoundryAdmission} from './foundry_quota.mjs';
 import {createEvidenceExport, evidenceCsv} from './evidence_export.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -16,6 +17,8 @@ const DEFAULT_PORT = 3167;
 const port = Number(process.env.PORT || DEFAULT_PORT);
 const host = process.env.HOST || '127.0.0.1';
 if (!Number.isInteger(port) || port <= 0 || port > 65535) throw new Error('Invalid PORT');
+// Existing local replay/export remains free; admitted paid attempts count even on failure.
+const foundryAdmission = createFoundryAdmission();
 
 function send(res, status, data) {
   const body = JSON.stringify(data);
@@ -96,8 +99,16 @@ export const server = createServer(async (req, res) => {
       const snapshot = runSnapshot(await getJSON(req));
       const latest = snapshot.overlays.at(-1);
       if (!latest) return send(res, 422, {error:'No evidence-backed overlay in current frame'});
+      const ticket = foundryAdmission.reserve();
+      if (!ticket.ok) {
+        res.setHeader('Retry-After', String(ticket.retryAfterSeconds));
+        return send(res, 429, {
+          error:'Optional Foundry call capacity reached', retryAfterSeconds:ticket.retryAfterSeconds
+        });
+      }
       try { return send(res, 200, await suggestedNarrative(latest)); }
       catch { return send(res, 502, {error:'Foundry draft unavailable; deterministic overlay retained'}); }
+      finally { ticket.release(); }
     }
     if (req.method === 'GET' && Object.hasOwn(ROUTES,path)) {
       const filename = join(ROOT,'web',ROUTES[path]);
