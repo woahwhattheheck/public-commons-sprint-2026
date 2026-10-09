@@ -101,8 +101,10 @@ class EvidenceForgeTests(unittest.TestCase):
             compile_change(raw, json.dumps({"summary":"s","operations":[]}), MemorySandbox())
 
     def test_nonfinite_rejected(self):
-        with self.assertRaises(EvidenceError):
-            core.strict_json_loads('{"x":NaN}')
+        for number in ("NaN", "Infinity", "-Infinity", "1e309", "-1e309"):
+            with self.subTest(number=number), self.assertRaises(EvidenceError):
+                core.strict_json_loads('{"x":' + number + '}')
+        self.assertEqual(core.strict_json_loads('{"x":2.5}'), {"x": 2.5})
 
     def test_path_traversal_request_rejected(self):
         with self.assertRaisesRegex(EvidenceError, "escapes"):
