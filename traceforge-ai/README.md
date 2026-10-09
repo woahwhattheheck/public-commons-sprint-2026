@@ -159,6 +159,22 @@ python -m compileall -q traceforge tests
 node --check web/app.js
 ```
 
+## Recovered causal/conclusive screen
+
+The deterministic claim gate additionally holds causal or conclusive wording
+when cited non-instruction support has no corresponding assertive wording, or
+when lexical coverage is below 0.50. Observational claims keep the 0.16 floor.
+The analyzer and offline verifier apply the same rule. A checksum-correct
+remint from HOLD to PASS is rejected by the semantic verifier.
+
+This conservative lexical screen adapts the September 15 causal-overclaim
+repair to current source. It is not causal proof or
+natural-language entailment: negation, speculative language, unrelated causal
+statements, and paraphrases remain limitations. PASS means these specific gates
+passed, not that causation is established. Summary/action REVIEW_ONLY boundaries
+are unchanged. Existing packets that relied on the weaker causal gate must be
+reanalyzed; their checksums alone do not satisfy the stricter verifier.
+
 ## Receipt scope
 
 The receipt is an **integrity checksum**, not a signature or third-party attestation. `verify` proves that the supplied analysis body still matches the supplied receipt and current v1 schema. It does not prove that model-generated summary or action text is true, safe, or authorized. Those surfaces carry fixed receipt-bound `REVIEW_ONLY` records. Only individual `CLAIM PASS` findings have passed citation, support, and skeptic gates. Malformed, duplicate-key, non-finite, unknown-field, or type-invalid receipt packets fail closed and never become exceptions at the API boundary.

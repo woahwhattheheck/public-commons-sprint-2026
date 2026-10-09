@@ -136,6 +136,46 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(result["findings"][0]["status"], "HOLD")
         self.assertIn("lexical evidence support", result["findings"][0]["verification_reason"])
 
+    def test_recovered_causal_overclaim_is_held_and_remint_rejected(self):
+        from traceforge.core import sha256_json
+        model = StaticModel(
+            lambda ev: investigator(ev, claim="Database timeout caused permanent customer data deletion"),
+            lambda ev: skeptic(ev),
+        )
+        result = analyze(DEMO_TEXT, model)
+        finding = result["findings"][0]
+        self.assertEqual(finding["support_score"], 0.286)
+        self.assertEqual(finding["status"], "HOLD")
+        self.assertIn("causal or conclusive language", finding["verification_reason"])
+        self.assertTrue(verify_receipt(result))
+        finding["status"] = "PASS"
+        finding["verification_reason"] = "verified evidence claim + skeptic"
+        result["counts"] = {"pass": 1, "hold": 0}
+        digest = sha256_json({key: value for key, value in result.items() if key != "receipt"})
+        result["receipt"]["analysis_sha256"] = digest
+        result["receipt"]["run_id"] = digest[:16]
+        self.assertFalse(verify_receipt(result))
+
+    def test_recovered_assertive_wording_still_requires_half_coverage(self):
+        model = StaticModel(
+            lambda ev: investigator(ev, claim="Database timeout caused permanent customer data deletion", citations=["E0001"]),
+            lambda ev: skeptic(ev),
+        )
+        result = analyze("Database timeout confirmed\n", model)
+        self.assertEqual(result["findings"][0]["status"], "HOLD")
+        self.assertIn("below 0.50", result["findings"][0]["verification_reason"])
+        self.assertTrue(verify_receipt(result))
+
+    def test_recovered_explicit_causal_support_can_pass(self):
+        claim = "Database timeout caused customer data deletion"
+        model = StaticModel(
+            lambda ev: investigator(ev, claim=claim, citations=["E0001"]),
+            lambda ev: skeptic(ev),
+        )
+        result = analyze(claim + "\n", model)
+        self.assertEqual(result["findings"][0]["status"], "PASS")
+        self.assertTrue(verify_receipt(result))
+
     def test_skeptic_rejection_holds_grounded_claim(self):
         model = StaticModel(lambda ev: investigator(ev), lambda ev: skeptic(ev, "REJECT"))
         result = analyze(DEMO_TEXT, model)
