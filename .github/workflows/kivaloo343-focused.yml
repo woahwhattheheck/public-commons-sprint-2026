@@ -1,0 +1,22 @@
+name: Kivaloo 343 existing regression
+on:
+  push:
+    branches: [validation/kivaloo343-20261009-astra]
+    paths: [.github/workflows/kivaloo343-focused.yml]
+permissions:
+  contents: read
+jobs:
+  existing-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: woahwhattheheck/kivaloo
+          ref: 90809b682126948ff6120df1bae10a8a4c721eba
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Run only the existing three allocation-failure cases
+        run: |
+          test "$(git rev-parse HEAD)" = 90809b682126948ff6120df1bae10a8a4c721eba
+          sh tests/kvlds/test_btree_node_dirty_unwind.sh
