@@ -186,3 +186,7 @@ official Ring simulator demonstration.
 Only run the changed-feature targeted regression if needed:
 `python -m unittest tests.test_review_pages -v` from the
 `amazon-ring-carerelay/` checkout. No repository-wide test suite is required.
+
+## Filtered summary follow-up
+
+The optional --summary now reflects the same status, classification, and event-type filters as paged review cards. The summary.html written by --all-pages uses that selection as well. The header continues to show whole-workspace event, proposal and pending totals; separate selected counts below it may differ. A non-all status excludes quiet events because those observations have no review decision. An explicit --page 0 is invalid (page numbers start at 1), rather than being treated as page 1. The default unfiltered report behavior remains unchanged.
