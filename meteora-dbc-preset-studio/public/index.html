@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Meteora DBC Preset Studio</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,sans-serif;background:#0b1019;color:#e7f6f4}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0%,#194036 0%,transparent 46%),#0b1019;min-height:100vh}
+    header,main,footer{max-width:1120px;margin:auto;padding:24px}header{padding-top:50px}
+    h1{font-size:clamp(36px,6vw,65px);letter-spacing:-.055em;margin:8px 0}h2{margin-top:0}
+    p{color:#b3c9cc;line-height:1.6}small{color:#9db6b8}
+    .eyebrow{color:#73edb5;font-weight:700;letter-spacing:.16em;font-size:12px;text-transform:uppercase}
+    .layout{display:grid;grid-template-columns:minmax(280px,420px) minmax(280px,1fr);gap:20px}
+    .panel{border-radius:18px;padding:24px;background:#151f2b;border:1px solid #34534d;min-width:0}
+    label{display:block;color:#c6dce0;font-size:13px;margin:12px 0 6px}
+    input,select{width:100%;padding:11px;border:1px solid #45645e;border-radius:8px;background:#0b1620;color:#fff;font:inherit}
+    input:focus,button:focus-visible,select:focus{outline:2px solid #73edb5;outline-offset:2px}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    button{padding:12px 16px;border:0;border-radius:8px;background:#73edb5;color:#05221c;cursor:pointer;font-weight:700;margin:18px 8px 0 0}
+    button.secondary{color:#e2f8ed;background:transparent;border:1px solid #73edb5}button:disabled{opacity:.5;cursor:not-allowed}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0}
+    .stat{padding:14px;background:#09262c;border:1px solid #276266;border-radius:10px;overflow-wrap:anywhere}
+    .stat b{font-size:12px;color:#b7e0d6;display:block}.stat span{display:block;font-size:18px;margin-top:8px}
+    pre{border:1px solid #315047;border-radius:8px;background:#0c141a;padding:13px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:370px;overflow:auto;font-size:12px}
+    #status{color:#81edbe}li{color:#e8c99c;margin:7px 0}a{color:#82e9b8}
+    @media(max-width:800px){.layout{grid-template-columns:1fr}header{padding-top:22px}}
+  </style>
+</head>
+<body>
+  <header><div class="eyebrow">Meteora DBC · SDK Developer Tools</div>
+    <h1>Preset Studio</h1>
+    <p>Explore configurable launch economics and actual first-party SDK-derived curve parameters without a wallet, RPC endpoint, token launch or financial transfer.</p>
+    <small>Local-only preview · SDK 1.5.13 · Unsignable output</small>
+  </header>
+  <main class="layout">
+    <section class="panel"><h2>Choose a curve preset</h2>
+      <form id="editor">
+        <label for="presetId">Launch template</label><select id="presetId"></select><p id="description"></p>
+        <label for="tokenSupply">Token supply</label><input id="tokenSupply" type="number" step="1" required>
+        <div class="two">
+          <div><label for="initialMarketCap">Initial market cap (USDC)</label><input id="initialMarketCap" type="number" step="1" required></div>
+          <div><label for="migrationMarketCap">Graduation market cap (USDC)</label><input id="migrationMarketCap" type="number" step="1" required></div>
+          <div><label for="startingFeeBps">Starting base fee (bps)</label><input id="startingFeeBps" type="number" step="1" required></div>
+          <div><label for="endingFeeBps">Ending base fee (bps)</label><input id="endingFeeBps" type="number" step="1" required></div>
+          <div><label for="creatorTradingFeePercentage">Creator trading-fee share (%)</label><input id="creatorTradingFeePercentage" type="number" step="1" required></div>
+          <div><label for="creatorLiquidityPercent">Creator available LP (%)</label><input id="creatorLiquidityPercent" type="number" step="1" required></div>
+          <div><label for="lockedLiquidityPercent">Permanently locked LP (%)</label><input id="lockedLiquidityPercent" type="number" step="1" required></div>
+        </div>
+        <button type="submit">Build Meteora config</button>
+        <button class="secondary" type="button" id="download" disabled>Save unsigned JSON</button>
+      </form>
+    </section>
+    <section class="panel"><h2>Real SDK configuration</h2>
+      <p id="status" role="status">Choose a template to inspect its config.</p>
+      <div class="stats">
+        <div class="stat"><b>Migration quote threshold (atomic)</b><span id="threshold">—</span></div>
+        <div class="stat"><b>SHA-256 config digest</b><span id="digest">—</span></div>
+      </div>
+      <h3>Economic review flags</h3><ul id="flags"></ul>
+      <h3>Unsigned DBC ConfigParameters</h3><pre id="output">Not yet generated.</pre>
+    </section>
+  </main>
+  <footer>This tool uses the official Meteora DBC helper; no guarantee of price, suitability, liquidity or award. No on-chain action is available. See <a href="https://docs.meteora.ag/core-products/dbc/what-is-dbc">Meteora DBC protocol docs</a>.</footer>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const names = ["tokenSupply","initialMarketCap","migrationMarketCap",
+      "startingFeeBps","endingFeeBps","creatorTradingFeePercentage",
+      "creatorLiquidityPercent","lockedLiquidityPercent"];
+    let choices = [], last = null;
+    function selectPreset(p) {
+      $("description").textContent = p.description;
+      for (const k of names) $(k).value = String(p[k]);
+      $("flags").replaceChildren(); $("digest").textContent = "—";
+      $("threshold").textContent = "—"; $("output").textContent = "Ready to build " + p.name;
+      $("download").disabled = true; last = null;
+    }
+    $("editor").addEventListener("submit", async (event) => {
+      event.preventDefault(); last = null; $("download").disabled = true;
+      $("status").textContent = "Building with Meteora SDK…";
+      try {
+        const overrides = Object.fromEntries(names.map((k) => [k, Number($(k).value)]));
+        const response = await fetch("/api/build", {
+          method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({presetId:$("presetId").value,overrides})
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Build failed");
+        last = data; $("threshold").textContent = data.migrationQuoteThresholdAtomic;
+        $("digest").textContent = data.configSha256.slice(0,16) + "…";
+        $("output").textContent = JSON.stringify(data.sdkConfig,null,2);
+        $("flags").replaceChildren();
+        for (const flag of data.notes) {
+          const li = document.createElement("li"); li.textContent = flag; $("flags").append(li);
+        }
+        $("status").textContent = "SDK-derived config ready. No funds or signing involved.";
+        $("download").disabled = false;
+      } catch (error) { $("status").textContent = error.message; $("output").textContent = "No config generated."; }
+    });
+    $("download").addEventListener("click", () => {
+      if (!last) return;
+      const url = URL.createObjectURL(new Blob([JSON.stringify(last,null,2)+"\n"], {type:"application/json"}));
+      const link=document.createElement("a");link.href=url;
+      link.download="meteora-unsigned-"+last.preset.id+".json";
+      document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
+    });
+    fetch("/api/catalog").then((r) => r.json()).then((data) => {
+      choices=data.presets;
+      for (const p of choices) {
+        const opt=document.createElement("option");opt.value=p.id;opt.textContent=p.name;$("presetId").append(opt);
+      }
+      $("presetId").addEventListener("change", () => selectPreset(choices.find((p)=>p.id===$("presetId").value)));
+      selectPreset(choices[0]);
+    }).catch((e) => { $("status").textContent = "Could not load presets: " + e.message; });
+  </script>
+</body>
+</html>
