@@ -46,7 +46,11 @@ export function staticReview(cart) {
   const findings = [];
   const terms = cart.merchant_terms.trim();
   if (!terms) findings.push({code:'NO_TERMS',severity:'high',finding:'Merchant terms were not supplied. Ask about returns, support, and fulfillment before purchasing.'});
-  if (terms && !/refund|return/i.test(terms)) findings.push({code:'RETURNS_UNCLEAR',severity:'medium',finding:'The provided terms do not clearly mention refunds or returns.'});
+  // Explicit denial is a policy warning, not evidence of customer-friendly terms.
+  // This is a local keyword heuristic, not an interpretation of consumer law.
+  const restrictiveReturns = /\b(?:all\s+sales\s+(?:are\s+)?final|non[-\s]?refundable|no\s+(?:refunds?|returns?)|(?:refunds?|returns?)\s+(?:are\s+)?(?:not|never)\s+(?:accepted|allowed|offered|available|provided|permitted))\b/i.test(terms);
+  if (restrictiveReturns) findings.push({code:'RETURNS_RESTRICTED',severity:'medium',finding:'The supplied terms appear to restrict refunds or returns. Review the policy and confirm buyer protections before purchasing.'});
+  else if (terms && !/refund|return/i.test(terms)) findings.push({code:'RETURNS_UNCLEAR',severity:'medium',finding:'The provided terms do not clearly mention refunds or returns.'});
   if (terms && !/delivery|shipping|fulfill|digital/i.test(terms)) findings.push({code:'FULFILLMENT_UNCLEAR',severity:'medium',finding:'Fulfillment timing is not explicit in the provided terms.'});
   if (cart.total_cents > 20000) findings.push({code:'LARGE_TOTAL',severity:'medium',finding:'This cart exceeds $200; independently confirm merchant details.'});
   return findings;

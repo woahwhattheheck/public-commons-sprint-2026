@@ -14,6 +14,23 @@ test('offline safety findings never claim unsupported external verification',()=
   assert.equal(staticReview(normalizeCart({...raw,merchantTerms:''}))[0].code,'NO_TERMS');
   assert.deepEqual(staticReview(cart),[]);
 });
+test('explicit no-refund language is surfaced rather than treated as benign return terms',()=>{
+  const policies=[
+    'All sales final. Digital delivery in two days.',
+    'No refunds. Digital fulfillment in two days.',
+    'Returns are not accepted. Digital delivery in two days.',
+    'All items are non-refundable. Digital delivery in two days.'
+  ];
+  for(const merchantTerms of policies){
+    const codes=staticReview(normalizeCart({...raw,merchantTerms})).map(x=>x.code);
+    assert.ok(codes.includes('RETURNS_RESTRICTED'),merchantTerms);
+    assert.ok(!codes.includes('RETURNS_UNCLEAR'),merchantTerms);
+  }
+  const unclear=staticReview(normalizeCart({...raw,merchantTerms:'Digital delivery within two days.'})).map(x=>x.code);
+  assert.ok(unclear.includes('RETURNS_UNCLEAR'));
+  assert.ok(!unclear.includes('RETURNS_RESTRICTED'));
+});
+
 test('PayPal Orders v2 state mismatch prevents capture even when browser claims approval',async()=>{
   const calls=[];
   const transport=async (url,req)=>{
