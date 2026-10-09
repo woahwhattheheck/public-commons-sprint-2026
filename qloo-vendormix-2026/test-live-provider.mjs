@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { LiveProviderError, fetchLiveQlooResponse } from './live-provider.mjs';
 
 const base = 'https://hackathon.api.qloo.com';
-const body = { 'filter.type': 'urn:entity:place' };
+const body = { 'filter.type': 'urn:entity:place', 'sort_by': 'affinity', take: '35' };
 const json = async () => new TextEncoder().encode('{"success":true,"results":{"entities":[]}}');
 const ok = { ok: true, status: 200 };
 const params = { apiBase: base, apiKey: 'only-an-inert-test-string', requestBody: body, readBytes: json };
