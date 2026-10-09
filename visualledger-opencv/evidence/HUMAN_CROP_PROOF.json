@@ -1,0 +1,58 @@
+{
+  "schema": "visualledger-human-crop-local-proof/v1",
+  "date": "2026-10-09",
+  "implementation_issue": 249,
+  "runtime": {
+    "python": "3.13.5",
+    "opencv": "4.13.0",
+    "numpy": "2.3.5",
+    "development_compatibility": true
+  },
+  "canonical_source_blobs": [
+    {
+      "path": "visualledger-opencv/visualledger/agent.py",
+      "git_blob_sha1": "e0b56940cc7a24767bdc92eaa9bddf79ab9536d7",
+      "sha256": "3d6560f342d287a2fff17c17768fe5fe54a4098d12b0ba8ea1e58054fbe79c7d"
+    },
+    {
+      "path": "visualledger-opencv/visualledger/vision.py",
+      "git_blob_sha1": "ea5465d015beba63542dab851c4ffd12e6e83ccd",
+      "sha256": "426a31aebc8c9dce3df2a91878616113dead1e6620631958a3110e2e8b11ff4c"
+    },
+    {
+      "path": "visualledger-opencv/visualledger/synth.py",
+      "git_blob_sha1": "fd3c2be66c831e060f2ccedfc84e58a4369d7abb",
+      "sha256": "f8e9806687b0ada7dfe470923f943522fb411847f64effa2e67ebaa76270c8ce"
+    }
+  ],
+  "source_action": "REQUEST_HUMAN_CROP",
+  "crop_action": "REQUEST_FIELD_EXTRACTION",
+  "crop_dimensions": [
+    760,
+    1050
+  ],
+  "crop_document_candidates": 1,
+  "crop_text_line_count": 51,
+  "source_sha256": "a2d71e79e2555248c96b85afea655891db50cf5397b1065a78e3c30e6660ba66",
+  "crop_receipt_sha256": "c81df6e2bdc50aaffdfc468aa603b0d15af1e2a050fe0d12b776bed2af71719e",
+  "export_zip_bytes": 40839,
+  "export_zip_sha256": "2f2d1398d6e9774d986dd4e3ac1ab7728f35a757a91dce9ea104424f96671f71",
+  "independent_bundle_replay": "REPLAY_MATCHED",
+  "focused_tests": {
+    "file": "tests/test_crop_workspace.py",
+    "passed": 3,
+    "failed": 0,
+    "scope": "canonical source/crop; geometry/context/provenance rejection; actual loopback HTTP workflow"
+  },
+  "javascript_syntax_check": "node --check passed",
+  "browser_capture": {
+    "attempted": true,
+    "accepted": false,
+    "error": "net::ERR_BLOCKED_BY_ADMINISTRATOR",
+    "video_delivered": false
+  },
+  "opencv5_execution": false,
+  "aws_deployed": false,
+  "competition_submitted": false,
+  "prize_or_payment_awarded": false
+}
