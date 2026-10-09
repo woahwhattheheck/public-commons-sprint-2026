@@ -121,3 +121,68 @@ not evidence of that provider demo or a submitted entry. Connect authorized,
 privacy-minimized simulator metadata through the normalization contract; preserve
 a non-secret provider receipt separately and record genuine tool feedback for the
 existing entrant. Do not label the included synthetic fixture as official capture.
+
+## Large replay-validated review exports (Muse 5,000-event corpus)
+
+The original `report --out review.html` remains unchanged: it writes the whole
+escaped, script-free review in one immutable HTML file. For a large original event
+workspace, use the *optional* paged renderer instead. The renderer replays the
+actual saved 10,000-event-max CareRelay source contract before any page output;
+it does not change, infer or record reviews and never invokes Ring.
+
+```sh
+# Standalone static page 2 (a new, immutable destination every time).
+python -m carerelay.workbench report care-03.json --page 2 --page-size 100 --out review-page-2.html
+
+# Filter exact imported labels, not guessed person/clinical identities.
+python -m carerelay.workbench report care-03.json --status pending --classification human --page 1 --out pending-human-1.html
+
+# Aggregate summary only; source status/class/type counts, no event/device cards.
+python -m carerelay.workbench report care-03.json --summary --out review-summary.html
+
+# Complete offline navigation: --out is a NEW directory, not an HTML file.
+# This creates page-0001.html, page-0002.html, ... and summary.html.
+python -m carerelay.workbench report care-03.json --page-size 100 --all-pages --out review-export-01
+```
+
+Open `review-export-01/page-0001.html` directly: First / Previous / Next /
+Last links point to **actual neighboring static HTML files** in that directory.
+There is no local server and no fake `?page=2` request that an offline file
+cannot satisfy. One-page export prints its current page number but intentionally
+does not offer a nonfunctional browser pagination link. The complete bundle
+loads/verifies the source workspace **once**, then renders each page against
+that single immutable state. Existing destinations are never overwritten; a
+new directory is created exclusively and the existing atomic file publisher
+writes each page. In the event of disk failure, partial new bundle pages remain
+under the new directory for owner inspection, not mistaken for a completed export.
+
+Page size is an output control (1–1000 visible proposals and up to the same
+number of quiet events per page), **not** a new bound on events processed or
+simulation sample size. It always considers all previously ingested valid
+source events; proposal and quiet-event pages advance together, with enough
+pages to reach both entire sets. The status filter is
+`all|pending|approved|rejected`; non-`all` status views show only proposals,
+not quiet events. `--event-type` and `--classification` compare exact verified
+source labels. The summary tabulates proposal counts by recorded status,
+classification, and event type plus the overall quiet-event count. Paged report
+CLI stdout reports **counts**, not thousands of private per-event identifiers;
+the unmodified `inspect` command still prints its full queue when explicitly
+requested. Every page carries the original workspace SHA-256, source declaration,
+review authority caution and escaped nine-field proposal and seven-field quiet
+context; no JS/forms/external requests/automatic approvals.
+
+The design decision uses Muse's independently retained 5,000-event
+**actual-source replay** in #sim-data
+(`MUSE-MASSIVE-OPTIMIZATION-WAVE03-20261009-LANE-B-CARERELAY-REVIEW-SCALE`,
+posted 2026-10-09 19:22 EDT), which observed 1,501 proposals and 3,499 other
+events, ~2.03MB unpaged markup versus ~94KB for a 100-proposal+100-quiet page
+(roughly 21.6-fold output reduction in that probe). Those timings and bytes
+were measured on the **prior PR399 candidate**, not claimed as benchmarks of
+this new current-main renderer. Live Ring permission, event authenticity and
+Devpost registration are **unaffected**. This remains a useful original
+contest implementation / operator UX improvement, not a replacement for the
+official Ring simulator demonstration.
+
+Only run the changed-feature targeted regression if needed:
+`python -m unittest tests.test_review_pages -v` from the
+`amazon-ring-carerelay/` checkout. No repository-wide test suite is required.
