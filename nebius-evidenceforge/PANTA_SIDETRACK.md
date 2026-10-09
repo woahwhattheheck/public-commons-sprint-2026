@@ -19,6 +19,14 @@ python -m evidenceforge.panta --category technology --phase primary --limit 20 \
 python -m unittest tests.test_panta -v
 ```
 
+Market prices and USDC volumes are normalized through exact decimal parsing
+rather than binary floats. The snapshot hash therefore distinguishes source
+quotes that differ beyond twelve significant digits. The adapter enforces
+bounded decimal input, rejects ambiguous duplicate source fields, and preserves
+the original value as a plain-decimal string. The browser review displays
+both precise quotes and rounded, display-only percentages. Historical
+snapshots should be recaptured if exact quotation matters.
+
 The output is evidence, not advice or authority. A product flow may let a human
 select a market snapshot and include its hash in an EvidenceForge request or
 review packet; it must not silently turn prices into repository approval.
