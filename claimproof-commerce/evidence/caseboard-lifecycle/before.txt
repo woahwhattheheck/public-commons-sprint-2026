@@ -1,0 +1,40 @@
+ClaimProof caseboard | focused offline lifecycle execution
+Node v22.16.0; source SHA256 92f51f96afa69b95fbeaf006360e03b68e8f2ad2ec52671d887e36982d7eb813
+Actual inline application logic and WebCrypto; DOM/AG Grid are test doubles, not visual acceptance.
+FAIL Clear invalidates pending file reads and pending fingerprint verification :: old read must not repopulate cleared records
+
+1 !== 0
+
+FAIL Concurrent imports enforce the 500-case cap after awaited verification :: concurrent imports must not admit case 501
+
+501 !== 500
+
+FAIL Replacing the selected review refreshes its advisory, then Clear removes it :: The input did not match the regular expression /Updated advisory/. Input:
+
+'REVIEW 00000000-0000-0000-0000-000000000001\n' +
+  'Exported 2026-10-09T06:00:00Z\n' +
+  '\n' +
+  'PROPOSED TOTAL: $2.00 (NOT PAID)\n' +
+  '\n' +
+  'PRODUCTS\n' +
+  '1 × Synthetic review item ($2.00)\n' +
+  '\n' +
+  'ORIGINAL REVIEW WARNINGS\n' +
+  'No deterministic flags\n' +
+  '\n' +
+  'BUYER-SUPPLIED MERCHANT TERMS (UNVERIFIED)\n' +
+  'Synthetic fixture terms\n' +
+  '\n' +
+  'AI ADVISORY (Offline only)\n' +
+  'First advisory\n' +
+  '\n' +
+  '\n' +
+  'SHA-256 a7c5454268a46dbb7d505cd535c0b6065904bc7c9088621ec3fddbeb5447af4d'
+
+FAIL Cart fingerprint validation is retained and the built-in theme is configured :: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- 'quartz'
+
+Result: 0/4 passed; 4 failed

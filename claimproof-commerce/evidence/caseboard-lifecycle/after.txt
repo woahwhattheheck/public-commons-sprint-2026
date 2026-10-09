@@ -1,0 +1,8 @@
+ClaimProof caseboard | focused offline lifecycle execution
+Node v22.16.0; source SHA256 5ced3bbdb1ab9dc6d38db27c120fad2236ba74a40d1a7db416a15d63072eccaa
+Actual inline application logic and WebCrypto; DOM/AG Grid are test doubles, not visual acceptance.
+PASS Clear invalidates pending file reads and pending fingerprint verification
+PASS Concurrent imports enforce the 500-case cap after awaited verification
+PASS Replacing the selected review refreshes its advisory, then Clear removes it
+PASS Cart fingerprint validation is retained and the built-in theme is configured
+Result: 4/4 passed; 0 failed
