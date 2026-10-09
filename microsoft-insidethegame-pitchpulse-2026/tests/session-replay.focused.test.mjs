@@ -65,7 +65,7 @@ test('invalid imports and view options leave state intact; custom replay never a
   assert.equal((await client('/api/replay','POST',replay)).status,422);
   assert.deepEqual((await client('/api/replay')).body,saved);
  }
- assert.equal((await client('/api/replay','POST',{...saved,extra:'x'.repeat(1024*1024)})).status,413);
+ assert.equal((await client('/api/replay','POST',{...saved,extra:'x'.repeat(2*1024*1024)})).status,413);
  assert.equal((await client('/api/next?audience=unknown','POST')).status,422);
  assert.deepEqual((await client('/api/replay')).body,saved);
  // Retransmitting an accepted built-in event must not switch the session into custom mode.
@@ -105,4 +105,22 @@ test('Foundry starts disabled; shared budget serializes calls and counts failure
  await assert.rejects(budget.run(()=>assert.fail('over-budget execution')),{status:429,retryAfter:3600});
  now=3600000;assert.equal(await budget.run(async()=>'new window'),'new window');
  assert.throws(()=>new FoundryBudget({limit:'2junk'}),/Invalid/);
+});
+
+
+test('engine-limit ledger with worst-case player escaping fits the replay budget and round-trips',async t=>{
+ const {visitor}=await fixture(t);const source=visitor(),target=visitor();
+ // JSON-escaped control characters maximize the allowed player string's serialized size.
+ const events=Array.from({length:3000},(_,index)=>({
+  id:`event_${String(index).padStart(42,'0')}`,second:index,team:'Harbor FC',
+  type:'pass',outcome:'complete',player:'\u0000'.repeat(64),duration:0
+ }));
+ const replay={schema:'pitchpulse-replay/v1',fixture:'synthetic',nextIndex:null,events};
+ const accepted=await source('/api/replay','POST',replay);assert.equal(accepted.status,200);
+ const exported=(await source('/api/replay')).body;
+ const file=JSON.stringify(exported,null,2)+'\n';
+ assert.ok(Buffer.byteLength(file)>1024*1024,'exercise the previously rejected valid range');
+ assert.ok(Buffer.byteLength(file)<=2*1024*1024,'the browser must accept its own exported file');
+ const restored=await target('/api/replay','POST',JSON.parse(file));
+ assert.equal(restored.status,200);assert.deepEqual(restored.body,accepted.body);
 });
