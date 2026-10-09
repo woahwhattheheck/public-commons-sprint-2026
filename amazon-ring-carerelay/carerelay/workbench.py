@@ -57,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
                                        status=args.status, classification=args.classification,
                                        kind=args.event_type)
                 elif args.page is not None or args.summary or selection:
-                    publish_new(args.out, render_paged(result, page=args.page or 1,
+                    publish_new(args.out, render_paged(result, page=(args.page if args.page is not None else 1),
                                 size=args.page_size, status=args.status,
                                 classification=args.classification, kind=args.event_type,
                                 summary=args.summary))
