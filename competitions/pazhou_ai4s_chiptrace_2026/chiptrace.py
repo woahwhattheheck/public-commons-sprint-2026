@@ -199,6 +199,30 @@ def _missing_fraction(rows: Sequence[Observation], cadence: float) -> float:
     total = observed + missing
     return missing / total if total else 0.0
 
+def _replicate_time_spans(rows: Sequence[Observation]) -> List[float]:
+    """Duration of each observed replicate, independent of absolute start time."""
+    by_rep: Dict[Tuple[str, str], List[float]] = defaultdict(list)
+    for row in rows:
+        by_rep[row.run_id, row.replicate_id].append(row.time_s)
+    return [max(times) - min(times) for times in by_rep.values()]
+
+
+def _reference_window_coverage(baseline_rows: Sequence[Observation], run_rows: Sequence[Observation]) -> float | None:
+    """Conservative lower-bound coverage of the baseline median replicate span.
+
+    Interior missingness alone cannot detect missing early or late intervals.
+    A shortened candidate can be a legitimate protocol difference, so callers
+    must abstain rather than infer a normal/full-coverage experiment.
+    """
+    reference_spans = [span for span in _replicate_time_spans(baseline_rows) if span > 0]
+    if not reference_spans:
+        return None  # No nonzero reference window to compare against.
+    run_spans = _replicate_time_spans(run_rows)
+    if not run_spans:
+        return 0.0
+    return min(run_spans) / median(reference_spans)
+
+
 def correlation_deltas(baseline_obs: Sequence[Observation], run_obs: Sequence[Observation]) -> Tuple[Dict[str, dict], Dict[str, float]]:
     base = aligned_correlations(baseline_obs)
     run = aligned_correlations(run_obs)
@@ -306,7 +330,25 @@ def analyze(baseline_path: Path, run_path: Path, *, min_points: int=6, min_basel
     if missing_channels:
         raise ContractError(f'run contains channels absent from baseline: {missing_channels}')
     corr_details, per_channel_corr = correlation_deltas(baseline_obs, run_obs)
-    assessments = [assess_channel(ch, run_groups[ch], baselines[ch], per_channel_corr.get(ch, 0.0), min_points, min_baseline_points) for ch in sorted(run_groups)]
+    baseline_groups: Dict[str, List[Observation]] = defaultdict(list)
+    for obs in baseline_obs:
+        baseline_groups[obs.channel].append(obs)
+    assessments = []
+    truncated_windows: List[str] = []
+    for ch in sorted(run_groups):
+        result = assess_channel(ch, run_groups[ch], baselines[ch], per_channel_corr.get(ch, 0.0), min_points, min_baseline_points)
+        coverage = _reference_window_coverage(baseline_groups[ch], run_groups[ch])
+        if coverage is not None and coverage < 0.75:
+            # A run that ends early (or starts late) has no interior timestamp
+            # gaps, yet cannot demonstrate normal quality over the reference
+            # window. Do not present a sample-only risk score as full-coverage.
+            result['state'] = 'INSUFFICIENT_EVIDENCE'
+            result['quality_risk_score'] = None
+            result['uncertainty'] = 1.0
+            result['reasons'].append('observed replicate time span is under 75% of baseline median duration; full-window quality cannot be assessed')
+            result['metrics']['reference_window_coverage'] = round(coverage, 8)
+            truncated_windows.append(ch)
+        assessments.append(result)
     # The absence of an entire baseline channel is not a clean observation.
     # Include it in the ordered channel evidence and abstain overall.
     absent_channels = sorted(set(baselines) - set(run_groups))
@@ -317,9 +359,10 @@ def analyze(baseline_path: Path, run_path: Path, *, min_points: int=6, min_basel
     payload = {'schema': 'chiptrace.report.v1', 'tool': {'name': 'ChipTrace', 'version': VERSION}, 'scope': {'intended_use': 'organ-on-chip research experiment quality control and drift review', 'not_for': ['clinical diagnosis', 'treatment recommendation', 'patient-specific decision making', 'drug efficacy or safety claim'], 'state_semantics': {'SUPPORTED': 'No configured QC review threshold was exceeded; this is not a biological-efficacy claim.', 'REVIEW': 'One or more QC signals warrant researcher review.', 'INSUFFICIENT_EVIDENCE': 'Observation counts are too small for a supported QC state.'}}, 'inputs': {'baseline_file': baseline_path.name, 'baseline_sha256': file_sha256(baseline_path), 'run_file': run_path.name, 'run_sha256': file_sha256(run_path), 'baseline_rows': len(baseline_obs), 'run_rows': len(run_obs)}, 'config': {'min_points': min_points, 'min_baseline_points': min_baseline_points}, 'overall_state': overall, 'max_quality_risk_score': round(max((a['quality_risk_score'] for a in assessments if a['quality_risk_score'] is not None), default=0.0), 3), 'channel_assessments': assessments, 'cross_sensor_correlations': corr_details, 'baseline_model': {k: asdict(v) for k, v in sorted(baselines.items())}}
     # Keep previously published full-coverage demo receipts byte-stable.
     # Explain the wider abstention condition only for reports that need it.
-    if absent_channels:
+    if absent_channels or truncated_windows:
         payload['scope']['state_semantics']['INSUFFICIENT_EVIDENCE'] = (
-            'Observation counts are too small or a baseline channel is absent from the candidate run.'
+            'Observation counts are too small, a baseline channel is absent, or a candidate observation window '
+            'covers less than 75% of its baseline replicate reference duration.'
         )
     payload['receipt_sha256'] = _sha256_bytes(canonical_bytes(payload))
     return payload
