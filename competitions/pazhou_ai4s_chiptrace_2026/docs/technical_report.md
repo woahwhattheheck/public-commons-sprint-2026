@@ -73,11 +73,15 @@ The spread of replicate medians, normalized by baseline scale, identifies disagr
 
 ### 4.7 Cross-sensor structural shift
 
-Channels aligned by `(run_id, replicate_id, time_s)` receive pairwise Pearson correlations when enough points exist. ChipTrace compares candidate and baseline correlations, exposing the largest absolute structural change associated with each channel. This can identify a sensor relationship that changed even when marginal centers remain plausible.
+Channels aligned by `(run_id, replicate_id, time_s)` receive pairwise Pearson correlations when enough points exist. ChipTrace compares candidate and baseline correlations, exposing the largest absolute structural change associated with each channel. This can identify a sensor relationship that changed even when marginal centers remain plausible. Correlation arithmetic scales finite series before centering and accumulation, avoiding intermediate square overflow for large finite sensor magnitudes; zero or near-zero-variance pairs remain unavailable evidence.
 
 ## 5. Evidence states and uncertainty
 
-Signal severities are mapped to [0,1] and combined with fixed documented weights into a 0–100 quality-risk score. A channel returns `REVIEW` if the score is at least 25 or if any configured hard threshold is exceeded. A channel returns `INSUFFICIENT_EVIDENCE` when candidate or baseline sample counts are below configured minima. Otherwise it returns `SUPPORTED`.
+Signal severities are mapped to [0,1] and combined with fixed documented weights into a 0–100 quality-risk score. A channel returns `REVIEW` if the score is at least 25 or if any configured hard threshold is exceeded. `INSUFFICIENT_EVIDENCE` takes precedence when evidence coverage is inadequate. Only a sufficiently covered channel with no exceeded threshold returns `SUPPORTED`.
+
+Coverage checks include candidate and baseline sample minima, absent baseline channels, independent replicate depth, observed duration, and experimental phase. Replicates use `(run_id, replicate_id)`. The candidate must contain at least `min(2, baseline.replicate_count)` independently labelled replicate groups with at least `max(2, min_points // required_replicates)` observations each. With the default `min_points=6` and a multi-replicate baseline, at least two groups with three observations each are required; a nominal second replicate containing only one or two points does not qualify. A single-replicate baseline retains the single-replicate path.
+
+For a nonzero reference interval, the shortest candidate replicate span must cover at least 75% of the median baseline replicate duration. Candidate intervals must also overlap at least 75% of the anchored baseline interval whose start and end are the median replicate endpoints. A full-length trace shifted to a different experiment phase therefore abstains. `time_s` must use a shared protocol-relative elapsed-time origin. A duration or overlap failure reports no channel risk score (`null`) and uncertainty 1.0 rather than presenting a partial-window score as full-window evidence. Entirely absent baseline channels also abstain.
 
 `SUPPORTED` is deliberately defined as *no configured QC review threshold exceeded*. It does not imply biological efficacy, assay validity, clinical safety, or treatment suitability.
 
@@ -112,6 +116,8 @@ The test suite covers deterministic fixture generation, repeat analysis equality
 The historical multi-Python path-scoped workflow is not present on current main. Current execution evidence is the focused merged-byte CPython 3.13.5 benchmark and test receipt below; no broader hosted matrix is claimed.
 
 A separate focused regression for the full-range sampling repair uses a centered piecewise-linear trace with a flat first half and a rising second half. Its symmetry gives a full-trace Theil–Sen slope of 0.5. The 159-observation case previously returned 0.0 because the first 80 observations were selected; full-range sampling returns 0.5. The same regression checks 79- and 80-observation controls, both of which remain 0.5. This one focused test passed; the historical benchmark and 14-test receipt below were not rerun for this repair.
+
+The current source also contains independent-replicate depth, missing-channel, duration and anchored-phase abstention repairs. The retained producer-pinned replicate-depth execution passed 3/3 focused tests on CPython 3.12.3 against commit `972b825e7b8e1c7b31376229d3f5c9d8f96176d2`: adequately sampled two-replicate and single-reference paths remain supported, while a sparse full-span second replicate abstains. That historical focused run is separate from the 14-test benchmark above; neither benchmark nor unrelated tests were rerun for this documentation update.
 
 ## 9. Frozen synthetic benchmark evidence
 
