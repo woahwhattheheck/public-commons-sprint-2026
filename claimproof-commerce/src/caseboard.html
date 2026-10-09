@@ -76,7 +76,15 @@ function dollars(n) { return '$'+(n/100).toLocaleString('en-US',{minimumFraction
 function status(text,isError) { const el=get('status'); el.textContent=text;el.className=isError?'error':'ok'; }
 function phrase(x,max=300) { return typeof x==='string'?x.slice(0,max):''; }
 function safeDate(v) {
-  assert(typeof v==='string'&&v.length<=40&&/^\d{4}-\d\d-\d\dT/.test(v)&&Number.isFinite(Date.parse(v)), 'invalid export date');
+  assert(typeof v==='string'&&v.length<=40, 'invalid export date');
+  const parts=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/.exec(v);
+  assert(parts, 'export date requires an explicit RFC3339 timezone');
+  const [year,month,day,hour,minute,second]=parts.slice(1,7).map(Number);
+  const leap=year%4===0&&(year%100!==0||year%400===0);
+  const days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+  assert(month>=1&&month<=12&&day>=1&&day<=days[month-1]&&hour<=23&&minute<=59&&second<=59, 'invalid export date');
+  if(parts[7]!=='Z')assert(Number(parts[7].slice(1,3))<=23&&Number(parts[7].slice(4,6))<=59, 'invalid export timezone');
+  assert(Number.isFinite(Date.parse(v)), 'invalid export date');
   return v;
 }
 async function verifyRecord(record) {
@@ -198,7 +206,7 @@ if(!window.agGrid||typeof window.agGrid.createGrid!=='function'){
     defaultColDef:{sortable:true,filter:true,resizable:true},
     columnDefs:[
       {headerName:'Priority',field:'level',width:125,sort:'asc',comparator:(a,b)=>({high:0,medium:1,none:2}[a]-{high:0,medium:1,none:2}[b])},
-      {headerName:'Reviewed',field:'time',width:190,valueFormatter:p=>p.value?new Date(p.value).toLocaleString():''},
+      {headerName:'Reviewed',field:'time',width:190,valueFormatter:p=>p.value?new Date(p.value).toLocaleString():'',comparator:(a,b)=>Date.parse(a)-Date.parse(b)},
       {headerName:'Cart',field:'amount_cents',width:135,valueFormatter:p=>dollars(p.value),comparator:(a,b)=>a-b},
       {headerName:'Products',field:'products',minWidth:180,flex:1},
       {headerName:'Findings',field:'codes',minWidth:195,flex:1},
