@@ -39,3 +39,42 @@ test('capture only after server-verified APPROVED state and unchanged amount',as
   assert.equal(response.status,'COMPLETED');
   assert.equal(calls.filter(x=>x.endsWith('/capture')).length,1);
 });
+
+test('completed order with matching settled capture reconciles without a second capture POST',async()=>{
+  const calls=[];
+  const orderId='0KD30046EH157382X';
+  const transport=async(url,req)=>{
+    calls.push({url,method:req.method});
+    if(url.endsWith('/v1/oauth2/token'))return{ok:true,json:async()=>({access_token:'fixture'})};
+    if(url.endsWith('/capture'))throw Error('must never post a duplicate capture');
+    return{ok:true,json:async()=>({
+      id:orderId,intent:'CAPTURE',status:'COMPLETED',
+      purchase_units:[{amount:{currency_code:'USD',value:'19.90'},payments:{captures:[
+        {id:'2PY98415LG287822X',status:'COMPLETED',amount:{currency_code:'USD',value:'19.90'}}
+      ]}}]
+    })};
+  };
+  const sandbox=new PayPalSandbox({clientId:'test',secret:'test',transport});
+  const response=await sandbox.captureApproved(orderId,cart,'12345678-1111-4444-8888-123456789123');
+  assert.equal(response.status,'COMPLETED');
+  assert.equal(response.already_captured,true);
+  assert.equal(calls.filter(x=>x.url.endsWith('/capture')).length,0);
+});
+test('completed order with unverified capture amount fails closed',async()=>{
+  const calls=[];
+  const orderId='0KD30046EH157382X';
+  const transport=async(url,req)=>{
+    calls.push(url);
+    if(url.endsWith('/v1/oauth2/token'))return{ok:true,json:async()=>({access_token:'fixture'})};
+    if(url.endsWith('/capture'))throw Error('must not request capture after completed-order mismatch');
+    return{ok:true,json:async()=>({
+      id:orderId,intent:'CAPTURE',status:'COMPLETED',
+      purchase_units:[{amount:{currency_code:'USD',value:'19.90'},payments:{captures:[
+        {id:'2PY98415LG287822X',status:'COMPLETED',amount:{currency_code:'USD',value:'19.89'}}
+      ]}}]
+    })};
+  };
+  const sandbox=new PayPalSandbox({clientId:'test',secret:'test',transport});
+  await assert.rejects(()=>sandbox.captureApproved(orderId,cart,'12345678-1111-4444-8888-123456789123'),InputError);
+  assert.equal(calls.filter(x=>x.endsWith('/capture')).length,0);
+});
