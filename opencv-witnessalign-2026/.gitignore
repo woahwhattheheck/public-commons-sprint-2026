@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+out/
+demo/fixtures/
+.aws-sam/
+*.key
+.env*
