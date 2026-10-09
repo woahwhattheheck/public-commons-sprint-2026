@@ -77,7 +77,7 @@ function qlooSearchEntries(payload) {
   return entries;
 }
 function normalizedSeedName(value) {
-  return String(value ?? '').normalize('NFKC').trim().replace(/\\s+/g, ' ').toLowerCase();
+  return String(value ?? '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 /** Resolve every name using Qloo /search; never send invented IDs or silently take a fuzzy match. */
