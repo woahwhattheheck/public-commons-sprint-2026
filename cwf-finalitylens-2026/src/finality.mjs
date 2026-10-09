@@ -68,8 +68,16 @@ async function readBoundedJson(response, limit = MAX_RESPONSE_BYTES) {
   try { obj = JSON.parse(Buffer.concat(parts.map(p => Buffer.from(p))).toString('utf8')); }
   catch { throw new Error('RPC returned malformed JSON'); }
   if (!obj || typeof obj !== 'object') throw new Error('Invalid RPC JSON envelope');
-  if (obj.error) throw new Error(`RPC JSON error code ${Number.isSafeInteger(obj.error.code) ? obj.error.code : 'unknown'}`);
-  if (!Object.hasOwn(obj, 'result')) throw new Error('RPC result missing');
+  if (Array.isArray(obj) || obj.jsonrpc !== '2.0' || obj.id !== 1)
+    throw new Error('RPC response protocol version or id mismatch');
+  const hasResult = Object.hasOwn(obj, 'result');
+  const hasError = Object.hasOwn(obj, 'error');
+  if (hasResult === hasError) throw new Error('RPC response must contain exactly one result or error');
+  if (hasError) {
+    if (!obj.error || typeof obj.error !== 'object' || Array.isArray(obj.error))
+      throw new Error('RPC error response malformed');
+    throw new Error(`RPC JSON error code ${Number.isSafeInteger(obj.error.code) ? obj.error.code : 'unknown'}`);
+  }
   return obj.result;
 }
 
