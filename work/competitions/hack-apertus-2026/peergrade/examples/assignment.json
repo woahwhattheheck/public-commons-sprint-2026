@@ -1,0 +1,8 @@
+{
+  "task": "Write a short explanation of one limitation of a randomized trial and how you would report it to the reader.",
+  "student_response": "Randomization reduces confounding on average, but a small sample can still leave important baseline imbalances. I would show group-level baseline characteristics and report uncertainty rather than claiming perfect balance.",
+  "rubric": [
+    {"id": "limitation", "description": "Identifies a real limitation without treating randomization as a guarantee", "max_points": 4},
+    {"id": "reporting", "description": "Describes an appropriate transparent reporting practice", "max_points": 4}
+  ]
+}
