@@ -83,6 +83,17 @@ replicate now yields `INSUFFICIENT_EVIDENCE`, an explicit 1-of-2 evidence count
 and higher uncertainty; the valid one-replicate-baseline behavior remains unchanged.
 This sufficiency gate is not a substitute for assay-specific power analysis.
 
+**Elapsed-time-window overlap:** A gapless, full-length candidate can be
+recorded at a different experimental phase (reference `0..19 s`, candidate
+`100..119 s`); duration-only missingness cannot see it. Each candidate
+replicate must overlap at least 75% of the reference median-start/median-end
+elapsed-time interval. Insufficient overlap produces `INSUFFICIENT_EVIDENCE`,
+null risk, full uncertainty and a `reference_window_overlap_coverage` metric.
+Aligned candidates retain their previous receipts. Baseline and candidate
+must share a protocol-relative elapsed-time origin; do not automatically shift
+timestamps to manufacture alignment. This is a QC evidence-sufficiency gate,
+not a biological conclusion or anomaly severity score.
+
 The current thresholds are an auditable prototype policy, not universal biological constants. A real lab should calibrate them against its assay, device, sensor, sampling plan, and validated QC process.
 
 ## Demo receipt
