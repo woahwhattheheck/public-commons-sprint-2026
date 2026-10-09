@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  WitnessAlign OpenCV visual evidence Lambda; source template only, not a live deployment.
+Resources:
+  WitnessAlign:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures: [x86_64]
+      MemorySize: 2048
+      Timeout: 30
+      Events:
+        Audit:
+          Type: HttpApi
+          Properties:
+            Path: /audit
+            Method: POST
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: .
+      DockerTag: witnessalign-opencv5-v1
+Outputs:
+  AuditUrl:
+    Description: Public path only after owner-authorized AWS deployment and gateway security review.
+    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/audit'
