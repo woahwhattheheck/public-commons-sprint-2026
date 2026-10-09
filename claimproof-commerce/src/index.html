@@ -5,7 +5,7 @@
 </style></head><body><main>
 <header><small>CLAIMPROOF / SANDBOX EDITION</small><div class="row center"><h1 class="hero">Commerce decisions, with receipts and consent.</h1><span class="pill">NO LIVE PAYMENTS</span></div><p class="sub">Review merchant terms, ask better questions, and optionally open a PayPal sandbox order. No AI agent can initiate or capture a payment without a person deliberately authorizing the next step.</p></header>
 <div class="two"><div><section><div class="eyebrow">01 / CART & TERMS</div><h2>What are you buying?</h2><div id="lines"></div><button id="add" class="secondary" type="button">+ Add item</button><p class="hint">USD only, 12 items maximum. Product examples are illustrative; no merchant identity has been independently verified.</p><label for="terms">Merchant return, shipping or digital-fulfillment terms</label><textarea id="terms">Digital product is delivered by email within 24 hours. Refunds are available within 7 days if the access code has not been redeemed. Contact support before purchasing if anything is unclear.</textarea><div class="row" style="margin-top:20px"><button id="review">Review purchase</button><span id="price" class="muted"></span></div></section>
-<section id="review-output" class="hide"><div class="eyebrow">02 / GROUNDED ADVISORY</div><h2>Know what is—and isn't—verified</h2><div class="amount" id="total"></div><p class="muted" id="model-status"></p><div id="warnings"></div><h3>Questions before checkout</h3><div id="advice" class="result"></div><p class="hint">Model text is advisory, not a payment instruction. The server independently fixes the cart price, currency, and merchant-flow state.</p></section></div>
+<section id="review-output" class="hide"><div class="eyebrow">02 / GROUNDED ADVISORY</div><h2>Know what is—and isn't—verified</h2><div class="amount" id="total"></div><p class="muted" id="model-status"></p><div id="warnings"></div><h3>Questions before checkout</h3><div id="advice" class="result"></div><div class="row" style="margin-top:14px"><button id="save-review" type="button" class="secondary">Save pre-purchase review record</button></div><p class="hint">Downloads a local JSON record of the normalized cart, stated merchant terms, deterministic warnings, and advisory. This is not proof of payment or merchant verification.</p><p class="hint">Model text is advisory, not a payment instruction. The server independently fixes the cart price, currency, and merchant-flow state.</p></section></div>
 <div><section class="danger"><div class="eyebrow">03 / HUMAN-APPROVED ORDER</div><h2>Three clear gates</h2><ol><li><strong>Review:</strong> inspect price and terms; receive AI advice.</li><li><strong>Create:</strong> deliberately open a sandbox PayPal order.</li><li><strong>Capture:</strong> after PayPal confirms approval, deliberately authorize sandbox capture.</li></ol><p id="health" class="hint">Checking optional sandbox credentials…</p><div id="create-area" class="hide"><p id="cart-note" class="muted"></p><label><input id="consent-create" type="checkbox" style="width:auto"> I approve creating this exact sandbox order for the shown amount.</label><button id="create" style="margin-top:10px" disabled>Create sandbox order</button></div><div id="approval-area" class="hide"><p>PayPal approval must occur on its sandbox site. Returning to this page alone never captures funds.</p><a id="approval-link" target="_blank" rel="noopener noreferrer">Open PayPal sandbox approval</a><label style="margin-top:20px"><input type="checkbox" id="consent-capture" style="width:auto"> I have approved on PayPal and explicitly authorize sandbox capture.</label><button id="capture" disabled>Capture approved sandbox order</button></div><div id="payment-result" class="result" style="margin-top:16px">No order created.</div></section><section><div class="eyebrow">MODEL BOUNDARY</div><h2>AI advises. You decide.</h2><p class="muted">Configured models receive only the cart and merchant terms. They receive no payment tokens and cannot alter the PayPal amount. An offline deterministic reviewer remains available without model credentials.</p></section></div></div>
 <p id="status" role="status" aria-live="polite" class="hint"></p><p class="hint">Prototype competition artifact • Runs locally on 127.0.0.1 • PayPal sandbox only • Not a submitted entry or award.</p></main>
 <script>
@@ -55,6 +55,28 @@ el('review').onclick=async()=>{
     say('Review ready. Nothing was sent to PayPal.');
   }catch(e){if(generation===reviewGeneration&&revision===editRevision)say(e.message)}
   finally{el('review').disabled=false}
+};
+el('save-review').onclick=()=>{
+  // A local review record is evidence of the questions shown, never of payment or provider state.
+  const review=current;
+  if(!review||!review.cart||!review.cart.fingerprint)return;
+  const record={
+    record_type:'claimproof-prepurchase-review-v1',
+    exported_at:new Date().toISOString(),
+    review_id:review.review_id,
+    cart:review.cart,
+    findings:review.findings,
+    advisory:{model_used:review.ai.model_used,summary:review.ai.summary,questions:review.ai.questions},
+    payment_receipt:false,
+    merchant_verified:false
+  };
+  const blob=new Blob([JSON.stringify(record,null,2)+'\n'],{type:'application/json'});
+  const url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;
+  link.download='claimproof-review-'+review.cart.fingerprint.slice(0,12)+'.json';
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  say('Saved the pre-purchase review record locally. No payment was verified by this file.');
 };
 el('consent-create').onchange=()=>{el('create').disabled=!el('consent-create').checked};
 el('create').onclick=async()=>{
