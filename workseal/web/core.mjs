@@ -9,9 +9,17 @@ function normalize(value, path = '$') {
     if (!Number.isSafeInteger(value)) throw new Error(`${path} must be a safe integer`);
     return value;
   }
-  if (Array.isArray(value)) return value.map((v,i) => normalize(v, `${path}[${i}]`));
+  if (Array.isArray(value)) {
+    const out = [];
+    for (let index = 0; index < value.length; index += 1) {
+      if (!Object.hasOwn(value, index)) throw new Error(`${path}[${index}] is a missing array entry`);
+      out.push(normalize(value[index], `${path}[${index}]`));
+    }
+    return out;
+  }
   if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-    const out = {};
+    // Keep the browser byte-for-byte consistent with server canonicalization.
+    const out = Object.create(null);
     for (const key of Object.keys(value).sort()) {
       if (value[key] === undefined) throw new Error(`${path}.${key} is undefined`);
       out[key] = normalize(value[key], `${path}.${key}`);

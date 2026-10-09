@@ -94,8 +94,24 @@ export function parseStrictJsonBytes(raw, name = 'raw JSON') {
     const match = source.slice(i).match(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/);
     if (!match) fail('BAD_JSON', `${name} contains an invalid number at byte ${i}`);
     i += match[0].length;
-    const value = Number(match[0]);
-    if (!Number.isSafeInteger(value)) fail('UNSAFE_NUMBER', `${name} numbers must be safe integers`);
+    // Validate the exact decimal value BEFORE binary floating-point conversion.
+    // Number('1e-400') is 0 and Number('0.99999999999999999') is 1;
+    // neither is an integer in the retained source JSON.
+    const [, sign, whole, fraction = '', exponentText = '0'] =
+      /^(-?)([0-9]+)(?:\.([0-9]+))?(?:[eE]([+-]?[0-9]+))?$/.exec(match[0]);
+    const digits = (whole + fraction).replace(/^0+/, '');
+    if (digits.length === 0) return sign === '-' ? -0 : 0;
+    const exponent = Number(exponentText);
+    if (!Number.isSafeInteger(exponent)) fail('UNSAFE_NUMBER', `${name} numbers must be exact safe integers`);
+    const integerDigits = digits.length + exponent - fraction.length;
+    // The decimal representation of a safe integer has at most 16 digits.
+    // Bound this before padding, including inputs with enormous exponents.
+    if (integerDigits < 1 || integerDigits > 16 || /[1-9]/.test(digits.slice(integerDigits))) {
+      fail('UNSAFE_NUMBER', `${name} numbers must be exact safe integers`);
+    }
+    const integer = digits.slice(0, integerDigits).padEnd(integerDigits, '0');
+    const value = Number(sign + integer);
+    if (!Number.isSafeInteger(value)) fail('UNSAFE_NUMBER', `${name} numbers must be exact safe integers`);
     return value;
   };
   const parseValue = (depth) => {
@@ -115,7 +131,10 @@ export function parseStrictJsonBytes(raw, name = 'raw JSON') {
         if (seen.has(key)) fail('DUPLICATE_KEY', `${name} contains duplicate object key ${JSON.stringify(key)}`);
         seen.add(key);
         ws(); if (source[i++] !== ':') fail('BAD_JSON', `${name} expected ':' after object key`);
-        out[key] = parseValue(depth + 1);
+        // Match JSON.parse: __proto__ is an own data property, not a setter.
+        Object.defineProperty(out, key, {
+          value: parseValue(depth + 1), enumerable: true, writable: true, configurable: true,
+        });
         if (++count > 10000) fail('JSON_TOO_LARGE', `${name} contains too many object members`);
         ws();
         if (source[i] === '}') { i += 1; return out; }
@@ -169,7 +188,7 @@ function normalizeExpected(input) {
 
 function providerField(object, key, name) {
   plain(object, name);
-  if (!(key in object)) fail('MISSING_PROVIDER_FIELD', `${name}.${key} is required`);
+  if (!Object.hasOwn(object, key)) fail('MISSING_PROVIDER_FIELD', `${name}.${key} is required`);
   return object[key];
 }
 function providerString(object, key, name, max = 1024) { return text(providerField(object,key,name), `${name}.${key}`, max); }
