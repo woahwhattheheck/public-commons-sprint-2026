@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import tempfile
 import threading
+import unicodedata
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -194,6 +195,17 @@ def generate(raw):
     return run
 
 
+def reviewer_key(value):
+    """Canonicalize self-declared reviewer aliases for local equality checks.
+
+    This cannot authenticate a human; it only blocks case/Unicode-width alias
+    variants from accidentally counting as independent local reviews.
+    """
+    if not isinstance(value, str):
+        raise ValueError("Invalid reviewer identity")
+    return unicodedata.normalize("NFKC", value.strip()).casefold()
+
+
 def review_run(raw):
     case_id = clip(raw.get("id"), 40)
     run_id = clip(raw.get("run_id"), 40)
@@ -210,9 +222,10 @@ def review_run(raw):
         run = next((r for r in case["runs"] if r["id"] == run_id), None)
         if run is None:
             raise ValueError("Unknown run ID")
-        if reviewer == case.get("approved_by"):
+        if reviewer_key(reviewer) == reviewer_key(case.get("approved_by")):
             raise ValueError("An independent reviewer is required")
-        if any(r["reviewer"] == reviewer for r in run["reviews"]):
+        if any(reviewer_key(r["reviewer"]) == reviewer_key(reviewer)
+               for r in run["reviews"]):
             raise ValueError("Reviewer already scored this model run")
         review = {"reviewer": reviewer, "scores": scores, "notes": notes,
                   "answer_sha256": run["answer_sha256"]}
