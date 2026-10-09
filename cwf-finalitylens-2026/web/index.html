@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FinalityLens — Solana execution evidence</title>
+<link rel="stylesheet" href="/style.css">
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<div class="wrap">
+<header><div class="brand"><div class="mark" aria-hidden="true">FL</div><div><strong>FinalityLens</strong><span>Transaction evidence console</span></div></div><span id="mode" class="mode">Loading...</span></header>
+<main>
+<div class="eyebrow">SOLANA / READ-ONLY OBSERVABILITY</div>
+<h1>Don't confuse a confirmation<br>with <em>settlement evidence.</em></h1>
+<p class="lead">Compare independent RPC views of one signature. Catch missing transaction history, inconsistent blockhashes and premature “finalized” claims before you trust a status badge.</p>
+<section class="panel input-panel" aria-labelledby="check-title">
+  <div class="section-header"><h2 id="check-title">Inspect a signature</h2><span>NO WALLET · NO SIGNING · NO TRANSACTIONS</span></div>
+  <form id="form">
+  <label for="signature">Base58 transaction signature</label>
+  <input id="signature" name="signature" spellcheck="false" autocomplete="off" placeholder="Paste a Solana signature" required>
+  <div class="controls"><div id="demo-controls"><label for="scenario">Synthetic scenario</label><select id="scenario"><option value="aligned">Matching finalized records</option><option value="pending">Pending or not indexed</option><option value="divergent">Provider disagreement</option><option value="outage">One provider offline</option></select></div><button type="submit" id="check">Check evidence <span aria-hidden="true">↗</span></button></div>
+  </form>
+  <div id="error" class="error" role="alert" hidden></div>
+</section>
+<section class="result panel" id="result" hidden aria-live="polite">
+  <div class="section-header"><h2>Evidence assessment</h2><span id="observed">—</span></div>
+  <div class="assessment"><span id="verdict" class="verdict">—</span><p id="reason"></p></div>
+  <div class="section-header tablehead"><h2>Provider observations</h2><button class="outline" id="download" type="button">Download JSON ↧</button></div>
+  <div class="tablewrap"><table><thead><tr><th>Independent RPC</th><th>Result</th><th>Slot</th><th>Recent blockhash</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <p id="caveat" class="caveat"></p>
+</section>
+<section class="details"><div><div class="small-key">01 / QUERY</div><h3>Status and history</h3><p>Each provider answers <code>getSignatureStatuses</code> using transaction history search.</p></div><div><div class="small-key">02 / CROSS-CHECK</div><h3>Independent evidence</h3><p>Only a finalized successful record with matching slot, signature and transaction blockhash qualifies.</p></div><div><div class="small-key">03 / ABSTAIN</div><h3>Fail closed</h3><p>Missing, divergent or errored responses never become a green payment clearance.</p></div></section>
+</main>
+<footer><span>FinalityLens / open prototype</span><span>Observations are not cryptographic consensus proofs or payout authorization.</span></footer>
+</div>
+</body></html>
