@@ -1,6 +1,7 @@
 // FinalityLens: cross-provider Solana signature evidence, read-only and fail closed.
 // A local quorum is a comparison of RPC responses, NOT a cryptographic finality proof.
 import { createHash } from 'node:crypto';
+import { stableErrorJson } from './stable-error-json.mjs';
 
 const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const MAX_RESPONSE_BYTES = 262144;
@@ -85,7 +86,7 @@ export async function rpc(provider, method, params, opts = {}) {
 
 function jsonErrFingerprint(value) {
   if (value == null) return 'none';
-  return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16);
+  return createHash('sha256').update(stableErrorJson(value)).digest('hex').slice(0, 16);
 }
 
 export async function queryProvider(provider, signature, opts = {}) {
