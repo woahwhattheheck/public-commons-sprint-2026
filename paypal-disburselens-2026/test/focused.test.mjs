@@ -15,7 +15,10 @@ test('one focused payout/AI/integrity and human-review workflow',async()=>{
   assert.equal(report.totals.itemSum,'700.00');
   assert.equal(report.totals.match,true);
   assert.equal(report.items.filter(x=>x.flags.includes('DUPLICATE_SENDER_ITEM_ID')).length,1);
-  assert.equal(report.totals.unresolved,1);
+  // PENDING and UNCLAIMED are not final; FAILED is terminal but still not paid.
+  assert.equal(report.totals.unresolved,2);
+  assert.deepEqual(report.items.filter(x=>x.flags.includes('NONFINAL_STATUS')).map(x=>x.status),['PENDING','UNCLAIMED']);
+  assert.equal(report.items.find(x=>x.status==='FAILED')?.severity,'high');
   assert.equal(report.source,'fixture');
   const extra=structuredClone(fixture);extra.total_pages=2;
   assert.throws(()=>reconcile([extra]),/partial pagination/);
