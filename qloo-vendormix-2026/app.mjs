@@ -46,7 +46,7 @@ function categoryFrom(entity) {
   return label ? label.replace(/^urn:tag:/, '').replaceAll(':', ' / ') : 'Unclassified';
 }
 
-function providerCandidates(payload) {
+export function providerCandidates(payload) {
   if (payload?.success === false || !Array.isArray(payload?.results?.entities)) {
     throw new Error('Qloo response did not include a usable list of places');
   }
