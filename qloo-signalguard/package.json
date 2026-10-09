@@ -1,0 +1,17 @@
+{
+  "name": "signalguard-qloo-audit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Evidence-first audience taste sensitivity auditor for the Qloo Agentic Hackathon",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "check:focused": "node --test tests/audit.focused.test.mjs",
+    "check:traffic": "node --test tests/traffic.focused.test.mjs",
+    "check:transport": "node --test tests/qloo_transport.focused.test.mjs",
+    "check:integrated-quota": "node --test tests/integrated-quota.focused.test.mjs"
+  }
+}

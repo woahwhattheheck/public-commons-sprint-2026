@@ -15,6 +15,11 @@ dependencies = [
 
 [project.scripts]
 visualledger = "visualledger.cli:main"
+visualledger-workspace = "visualledger.workspace:main"
+visualledger-crop-replay = "visualledger.crop:main"
 
 [tool.setuptools]
 packages = ["visualledger"]
+
+[tool.setuptools.package-data]
+visualledger = ["workspace.html", "workspace.css", "workspace.js"]

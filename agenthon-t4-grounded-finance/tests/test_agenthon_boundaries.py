@@ -191,7 +191,7 @@ class AgenthonBoundaryTests(unittest.TestCase):
                 "choices": [{"message": {"content": content}}]
             }).encode())
             env = {
-                "MODEL_ENDPOINT": "https://organizer.example",
+                "MODEL_ENDPOINT": "http://model:8443",
                 "MODEL_TOKEN": "synthetic-token",
                 "MODEL_NAME": "synthetic-model",
             }
@@ -216,13 +216,17 @@ class AgenthonBoundaryTests(unittest.TestCase):
                 )
             self.assertEqual(oversized.sizes, [house.MAX_HOUSE_RESPONSE_BYTES + 1])
 
-    def test_house_endpoint_requires_https_and_redirect_handler_refuses_forwarding(self) -> None:
-        with patch.dict(os.environ, {
-            "MODEL_ENDPOINT": "http://organizer.example",
-            "MODEL_TOKEN": "synthetic-token",
-            "MODEL_NAME": "synthetic-model",
-        }, clear=True):
-            self.assertIsNone(house._endpoint())
+    def test_house_origin_scheme_is_preserved_and_redirects_are_refused(self) -> None:
+        for origin in ("http://model:8443", "https://organizer.example/"):
+            with self.subTest(origin=origin), patch.dict(os.environ, {
+                "MODEL_ENDPOINT": origin,
+                "MODEL_TOKEN": "synthetic-token",
+                "MODEL_NAME": "synthetic-model",
+            }, clear=True):
+                self.assertEqual(house._endpoint(), (
+                    origin.rstrip("/") + "/v1/chat/completions",
+                    "synthetic-token", "synthetic-model",
+                ))
         handler = house.NoRedirect()
         request = urllib.request.Request(
             "https://organizer.example/start",
@@ -231,6 +235,23 @@ class AgenthonBoundaryTests(unittest.TestCase):
         self.assertIsNone(handler.redirect_request(
             request, None, 302, "Found", {}, "https://other.example/next"
         ))
+
+
+    def test_invalid_house_origins_fall_back_before_transport(self) -> None:
+        invalid = (
+            "ftp://model:8443", "http://user:pass@model:8443", "http://model:8443/v1",
+            "http://model:8443?", "http://model:8443#", "http://[broken",
+            "http://model:bad", "http://model:65536", "http://model:\n8443",
+        )
+        def forbidden_transport(*args, **kwargs):
+            self.fail("invalid origin reached transport")
+        validated = agent.validate_task(task())
+        for origin in invalid:
+            with self.subTest(origin=origin), patch.dict(os.environ, {
+                "MODEL_ENDPOINT": origin, "MODEL_TOKEN": "synthetic-token",
+                "MODEL_NAME": "synthetic-model",
+            }, clear=True):
+                self.assertIsNone(house.plan(validated, [], transport=forbidden_transport))
 
 
 if __name__ == "__main__":

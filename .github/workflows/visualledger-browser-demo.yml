@@ -1,0 +1,44 @@
+name: VisualLedger browser demonstration
+on:
+  pull_request:
+    paths:
+      - 'visualledger-opencv/visualledger/workspace.*'
+      - 'visualledger-opencv/visualledger/crop.py'
+      - 'visualledger-opencv/visualledger/agent.py'
+      - 'visualledger-opencv/visualledger/vision.py'
+      - 'visualledger-opencv/visualledger/synth.py'
+      - 'visualledger-opencv/tools/capture_workspace_demo.py'
+      - 'visualledger-opencv/tools/browser-requirements.txt'
+      - '.github/workflows/visualledger-browser-demo.yml'
+permissions:
+  contents: read
+concurrency:
+  group: visualledger-browser-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  synthetic-workflow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install explicit development browser runtime
+        run: |
+          python -m pip install -r visualledger-opencv/tools/browser-requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Record actual crop, export and recapture workflow
+        run: |
+          python visualledger-opencv/tools/capture_workspace_demo.py \
+            --out "$RUNNER_TEMP/visualledger-browser" --allow-opencv4-dev
+      - name: Retain synthetic video, screenshots, ZIP and proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visualledger-synthetic-browser-demo
+          path: ${{ runner.temp }}/visualledger-browser
+          retention-days: 14
+          if-no-files-found: error

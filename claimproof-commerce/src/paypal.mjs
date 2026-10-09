@@ -5,14 +5,22 @@ function assertOrderId(id) {
   if (typeof id !== 'string' || !/^[A-Za-z0-9]{10,30}$/.test(id)) throw new InputError('invalid PayPal order identifier');
   return id;
 }
-// Order completion alone does not establish that its capture settled.
-function inspectOrder(current, orderId, cart) {
+// Capture representations may omit intent/unit amount after the verified GET.
+// Any supplied value still has to match; the capture's own amount is mandatory.
+function inspectUnit(current, orderId, cart, fullOrder = true) {
   const unit = Array.isArray(current?.purchase_units) && current.purchase_units.length === 1
     ? current.purchase_units[0] : null;
-  if (current?.id !== orderId || current.intent !== 'CAPTURE' || !unit ||
-      unit.amount?.currency_code !== 'USD' || unit.amount?.value !== cart.total) {
+  if (current?.id !== orderId || !unit ||
+      ((fullOrder || current.intent !== undefined) && current.intent !== 'CAPTURE') ||
+      ((fullOrder || unit.amount !== undefined) && (unit.amount?.currency_code !== 'USD' || unit.amount?.value !== cart.total)) ||
+      (unit.reference_id !== undefined && unit.reference_id !== cart.fingerprint.slice(0,24))) {
     throw new InputError('PayPal order identity, intent, or unchanged cart total could not be verified');
   }
+  return unit;
+}
+// Order completion alone does not establish that its capture settled.
+function inspectOrder(current, orderId, cart, fullOrder = true) {
+  const unit = inspectUnit(current,orderId,cart,fullOrder);
   const captures = unit.payments?.captures;
   if (captures !== undefined && (!Array.isArray(captures) || captures.length > 1)) {
     throw new InputError('Unexpected PayPal capture records; manual reconciliation required');
@@ -69,11 +77,12 @@ export class PayPalSandbox {
     try { return await pending; }
     finally { if (this.tokenRequest === pending) this.tokenRequest = null; }
   }
-  async api(path,{method='GET',body,requestId}={}) {
+  async api(path,{method='GET',body,requestId,representation=false}={}) {
     const token = await this.accessToken();
     const headers = {Authorization:`Bearer ${token}`,Accept:'application/json'};
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (requestId) headers['PayPal-Request-Id'] = requestId;
+    if (representation) headers.Prefer = 'return=representation';
     const res = await this.transport(`${BASE}${path}`,{
       method,headers,...(body !== undefined ? {body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(20000)
     });
@@ -106,14 +115,28 @@ export class PayPalSandbox {
       throw new InputError('PayPal has not confirmed APPROVED state; capture was not requested');
     }
     try {
-      await this.api(`/v2/checkout/orders/${verifiedId}/capture`,{method:'POST',body:{},requestId});
-      // Capture responses may be minimal. Re-read the authoritative order rather than
-      // treating HTTP success or the outer order status as a verified settlement.
-      const settled = await this.captureStatus(verifiedId,cart);
+      const captured = await this.api(`/v2/checkout/orders/${verifiedId}/capture`,{
+      method:'POST',body:{},requestId,representation:true
+    });
+    if (captured?.id !== verifiedId || (captured.intent !== undefined && captured.intent !== 'CAPTURE')) {
+      throw new InputError('PayPal capture response order identity or intent mismatch; manual reconciliation required');
+    }
+    if (captured.purchase_units !== undefined) {
+      const unit = inspectUnit(captured,verifiedId,cart,false);
+      const captures = unit.payments?.captures;
+      // A populated representation saves one Orders GET. Contradictory records
+      // are rejected rather than hidden by a later read of different data.
+      if (captures !== undefined && (!Array.isArray(captures) || captures.length > 0)) {
+        return {...inspectOrder(captured,verifiedId,cart,false),already_captured:false};
+      }
+    }
+    // Retain readback when the provider returns a minimal or incomplete response.
+    // This fallback is a GET, never an automatic replay of the capture POST.
+    const settled = await this.captureStatus(verifiedId,cart);
       return settled.status === 'NOT_CAPTURED' ? {...settled,status:'UNKNOWN'} : {...settled,already_captured:false};
     } catch {
-      // Once POST may have left, an error cannot establish that no payment happened.
-      // Keep this review read-only even if a later GET still shows APPROVED.
+      // Once capture was attempted, a failed response/read is not proof that capture failed.
+      // This review remains read-only; no mutation retry.
       return {status:'UNKNOWN',order_status:'UNKNOWN'};
     }
   }

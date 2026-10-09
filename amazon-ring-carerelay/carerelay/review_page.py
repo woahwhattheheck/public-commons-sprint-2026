@@ -27,6 +27,20 @@ def render_review(workspace: dict[str, Any]) -> bytes:
                      f"<dl>{definition}</dl></article>")
     if not cards:
         cards.append("<p>No proposals require review for these events.</p>")
+    proposed_events = {row["event_id"] for row in state["proposals"]}
+    quiet_events = [row for row in state["events"] if row["event_id"] not in proposed_events]
+    timeline = []
+    for event in quiet_events:
+        fields = (("Event ID", event["event_id"]), ("Device", event["device_id"]),
+                  ("Occurred at", event["occurred_at"]), ("Classification", event["classification"]),
+                  ("Zone", event["zone"] or "Not supplied"))
+        definition = "".join(f"<dt>{label}</dt><dd>{escape(value)}</dd>" for label, value in fields)
+        timeline.append(f"<article><h3>{escape(event['event_type'].replace('_', ' ').capitalize())}</h3>"
+                        f"<p>No proposal generated</p><dl>{definition}</dl></article>")
+    activity = ("<section aria-labelledby='activity-title'><h2 id='activity-title'>Events without a proposal</h2>"
+                "<p>These events were retained, but the current policy generated no proposal. "
+                "An unknown classification is not evidence of a person or an absence of activity. "
+                "No review decision or external action is implied.</p>" + "".join(timeline) + "</section>") if timeline else ""
     pending = len(state["proposals"]) - len(state["approvals"])
     digest = workspace["receipt"]["state_sha256"]
     html = f"""<!doctype html>
@@ -45,7 +59,7 @@ code{{overflow-wrap:anywhere}} @media(max-width:36rem){{dl{{display:block}}dd{{m
 <p>Source label: <strong>{escape(source)}</strong>. This label is an operator declaration, not proof of a Ring session.
 Reviewer labels are not authenticated identities. Use the workbench review command to record an actual decision.</p>
 <p>No video, credentials, scripts, trackers, external requests or interactive approval controls are included.</p></aside>
-<main>{''.join(cards)}</main><footer><p>State SHA-256: <code>{digest}</code></p>
+<main>{''.join(cards)}{activity}</main><footer><p>State SHA-256: <code>{digest}</code></p>
 <p>Provider execution, external actions, contest submission, award and payment remain unverified.</p></footer></body></html>
 """
     return html.encode("utf-8")

@@ -3,6 +3,12 @@ Transform: AWS::Serverless-2016-10-31
 Description: VisualLedger versioned S3 -> OpenCV 5 Lambda container -> DynamoDB evidence ledger
 
 Parameters:
+  EvidenceBucketName:
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: "[a-z0-9][a-z0-9-]{1,61}[a-z0-9]"
+    Description: Globally unique name for the new evidence bucket; use the same value for bucket and read policy
   ContainerImageUri:
     Type: String
     Description: Immutable ECR image URI containing this exact source generation and OpenCV 5.x
@@ -17,6 +23,7 @@ Resources:
   EvidenceBucket:
     Type: AWS::S3::Bucket
     Properties:
+      BucketName: !Ref EvidenceBucketName
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:
@@ -57,8 +64,9 @@ Resources:
           VISUALLEDGER_TABLE: !Ref EvidenceTable
           VISUALLEDGER_RECORD_HMAC_KEY: !Ref RecordHmacKey
       Policies:
+        # A resource Ref here creates Bucket -> Permission -> Function -> Role -> Bucket.
         - S3ReadPolicy:
-            BucketName: !Ref EvidenceBucket
+            BucketName: !Ref EvidenceBucketName
         - DynamoDBCrudPolicy:
             TableName: !Ref EvidenceTable
       Events:
