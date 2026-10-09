@@ -1,0 +1,107 @@
+name: Chioma PR111 focused evidence
+on:
+  push:
+    branches: [validation/chioma111-20261009-astra-c7]
+    paths: [.github/workflows/chioma111-focused-evidence.yml]
+permissions:
+  contents: read
+concurrency:
+  group: chioma111-focused-evidence-43aa97e
+  cancel-in-progress: false
+jobs:
+  draft-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: woahwhattheheck/chioma-ai-agent
+          ref: 43aa97e143e28a852335a36fd1123dec072e623b
+          path: subject
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10'
+          run_install: false
+      - name: Install unchanged locked dependencies without lifecycle scripts
+        working-directory: subject
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Record the two existing DraftDisputeFilingTool cases
+        working-directory: subject
+        env:
+          CI: 'true'
+          NODE_ENV: test
+          FORCE_COLOR: '1'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import errno, json, os, pathlib, pty, select, subprocess, sys, time
+          source = '43aa97e143e28a852335a36fd1123dec072e623b'
+          head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          if head != source:
+              raise SystemExit('Source head mismatch; no test execution')
+          command = ['pnpm', 'exec', 'jest', '--runInBand', '--runTestsByPath',
+                     'src/tools/disputes.tool.spec.ts', '--testNamePattern=DraftDisputeFilingTool',
+                     '--verbose']
+          out = pathlib.Path('evidence'); out.mkdir()
+          started = time.time(); monotonic = time.monotonic()
+          master, slave = pty.openpty()
+          with (out / 'draft-dispute-filing.cast').open('w', encoding='utf-8') as cast, \
+               (out / 'terminal.log').open('wb') as raw:
+              cast.write(json.dumps({'version': 2, 'width': 140, 'height': 40,
+                  'timestamp': int(started), 'title': 'Chioma PR111 exact-head focused test execution',
+                  'env': {'TERM': 'xterm-256color', 'SHELL': '/bin/bash'}}) + '\n')
+              banner = ('Source: ' + source + '\r\nCommand: ' + ' '.join(command) + '\r\n').encode()
+              raw.write(banner); sys.stdout.buffer.write(banner); sys.stdout.buffer.flush()
+              cast.write(json.dumps([0, 'o', banner.decode()]) + '\n')
+              process = subprocess.Popen(command, stdout=slave, stderr=slave, stdin=subprocess.DEVNULL)
+              os.close(slave)
+              try:
+                  while True:
+                      readable, _, _ = select.select([master], [], [], 1)
+                      if readable:
+                          try:
+                              data = os.read(master, 65536)
+                          except OSError as exc:
+                              if exc.errno == errno.EIO:
+                                  break
+                              raise
+                          if not data:
+                              break
+                          raw.write(data); raw.flush()
+                          sys.stdout.buffer.write(data); sys.stdout.buffer.flush()
+                          cast.write(json.dumps([round(time.monotonic() - monotonic, 6),
+                                                'o', data.decode('utf-8', errors='replace')]) + '\n')
+                          cast.flush()
+                      elif process.poll() is not None:
+                          break
+              finally:
+                  os.close(master)
+              status = process.wait()
+              footer = ('\r\nProcess exit code: ' + str(status) + '\r\n').encode()
+              raw.write(footer); sys.stdout.buffer.write(footer); sys.stdout.buffer.flush()
+              cast.write(json.dumps([round(time.monotonic() - monotonic, 6), 'o', footer.decode()]) + '\n')
+          clean = subprocess.run(['git', 'diff', '--exit-code', '--quiet']).returncode == 0
+          receipt = {'source_repository': 'woahwhattheheck/chioma-ai-agent', 'source_commit': head,
+                     'sponsor_pull_request': 'https://github.com/chioma-housing-protocol-I/chioma-ai-agent/pull/111',
+                     'command': command, 'exit_code': status, 'tracked_source_unchanged': clean,
+                     'recording': 'draft-dispute-filing.cast', 'started_unix': started,
+                     'run_url': os.environ['GITHUB_SERVER_URL'] + '/' + os.environ['GITHUB_REPOSITORY'] +
+                                '/actions/runs/' + os.environ['GITHUB_RUN_ID']}
+          (out / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(receipt, indent=2))
+          if not clean:
+              raise SystemExit('Tracked source changed during execution')
+          raise SystemExit(status)
+          PY
+      - name: Preserve real terminal recording and execution receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chioma111-43aa97e-terminal-evidence
+          path: subject/evidence/
+          if-no-files-found: warn
+          retention-days: 7
