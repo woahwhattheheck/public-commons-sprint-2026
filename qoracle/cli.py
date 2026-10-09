@@ -18,7 +18,10 @@ else:
 def _read(path: Path) -> str:
     if path.is_symlink() or not path.is_file():
         raise OracleError(f"refusing non-regular file {path}")
-    data = path.read_bytes()
+    # Read one byte beyond the permitted size; never materialize the entire
+    # input before enforcing the CLI limit.
+    with path.open("rb") as stream:
+        data = stream.read(1_000_001)
     if len(data) > 1_000_000:
         raise OracleError("input exceeds 1 MiB")
     return data.decode("utf-8")
