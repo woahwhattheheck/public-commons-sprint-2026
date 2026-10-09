@@ -8,8 +8,10 @@ import {SessionStore,sessionCookie,FoundryBudget} from './demo_sessions.mjs';
 import {exportReplay,validateReplay,MAX_REPLAY_BYTES} from './replay.mjs';
 
 const ROOT=dirname(fileURLToPath(import.meta.url));
-const FILES={'/':'index.html','/app.mjs':'app.mjs','/locale.mjs':'locale.mjs','/styles.css':'styles.css'};
-const TYPES={'index.html':'text/html;charset=utf-8','app.mjs':'text/javascript;charset=utf-8','locale.mjs':'text/javascript;charset=utf-8','styles.css':'text/css;charset=utf-8'};
+const FILES={'/':'index.html','/app.mjs':'app.mjs','/locale.mjs':'locale.mjs','/styles.css':'styles.css',
+ '/broadcast':'broadcast.html','/broadcast.mjs':'broadcast.mjs','/broadcast.css':'broadcast.css'};
+const TYPES={'index.html':'text/html;charset=utf-8','app.mjs':'text/javascript;charset=utf-8','locale.mjs':'text/javascript;charset=utf-8','styles.css':'text/css;charset=utf-8',
+ 'broadcast.html':'text/html;charset=utf-8','broadcast.mjs':'text/javascript;charset=utf-8','broadcast.css':'text/css;charset=utf-8'};
 const ROUTES=new Set(['GET /api/state','GET /api/replay','POST /api/replay',
  'POST /api/next','POST /api/reset','POST /api/events','POST /api/explain']);
 const SECURITY={'x-content-type-options':'nosniff','referrer-policy':'no-referrer','cache-control':'no-store',
