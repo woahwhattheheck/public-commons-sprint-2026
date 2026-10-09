@@ -76,13 +76,13 @@ def robust_scale(values: Sequence[float]) -> Tuple[float, str]:
     return (max(abs(c) * 1e-06, 1e-09), 'DEGENERATE_FLOOR')
 
 def theil_sen_slope(points: Sequence[Tuple[float, float]]) -> float:
-    """Deterministic robust slope; cap pair count by regular subsampling for large series."""
+    """Robust slope; use at most 80 points spanning the complete sorted trace."""
     if len(points) < 2:
         return 0.0
     ordered = sorted(points)
     if len(ordered) > 80:
-        step = max(1, len(ordered) // 80)
-        ordered = ordered[::step][:80]
+        last = len(ordered) - 1
+        ordered = [ordered[index * last // 79] for index in range(80)]
     slopes: List[float] = []
     for i, (x1, y1) in enumerate(ordered[:-1]):
         for x2, y2 in ordered[i + 1:]:

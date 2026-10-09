@@ -18,7 +18,7 @@
 
 **Narration:** "OpenCV finds contours, approximates document corners, normalizes perspective and measures blur, contrast, glare, edge density and line structure. A perceptual fingerprint helps identify prior visually similar evidence. The agent records the image hash, measured values, declared thresholds and precise next action. On a clear single document, the resulting route is REQUEST_FIELD_EXTRACTION. That's a request for a downstream step and human verification, never an invoice approval."
 
-**Screen caption:** Existing captured development run uses OpenCV 4.13 compatibility; OpenCV 5 competition run still needed.
+**Screen caption:** Browser footage: OpenCV 4.13 development. Separate [source-proof run](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218836): OpenCV 5.0.0, hosted Linux x86-64 synthetic evaluation. AWS arm64 remains pending.
 
 ## 1:10–1:50 — Unusable evidence branches
 
@@ -48,7 +48,7 @@
 
 **Visual:** Architecture diagram from the report or source SAM template, clearly stamped 'DESIGN / NOT LIVE DEPLOYMENT'. If a separate verified AWS/OpenCV5 receipt arrives before recording, substitute its exact event/metrics, version and source hash; do not estimate.
 
-**Narration:** "The production design begins with a versioned S3 object. An arm64 Lambda container runs the vision engine, and DynamoDB retains scope-bound, generation-bound event records for idempotency and repeat detection. The code checks record integrity, authentication and the exact object version; missing evidence fails closed. The current source includes a repaired SAM deployment graph and local injected-I/O checks. As of this recording draft, there is no proven deployed AWS transaction or OpenCV 5 runtime benchmark, and I'm not claiming one."
+**Narration:** "The production design begins with a versioned S3 object. An arm64 Lambda container would run the vision engine, and DynamoDB would retain scope-bound, generation-bound event records for idempotency and repeat detection. The source checks record integrity, authentication and the exact object version; missing evidence fails closed. A separate verified GitHub Actions source run actually executed OpenCV 5.0.0 on hosted Linux x86-64 and passed the synthetic evaluations. But that is not a deployed AWS arm64 transaction, an AWS latency measurement or a customer benchmark. The remaining hosted deployment proof is pending."
 
 **Screen caption:** AWS/OpenCV 5 deployment evidence pending until independently verified.
 
@@ -56,7 +56,7 @@
 
 **Visual:** Final route table and operator controls; provenance URLs for code/recorded synthetic run.
 
-**Narration:** "VisualLedger connects visual measurements to safe, explainable next steps, with a human at every consequential boundary. It can't sign a document, judge whether a vendor is genuine, move money or contact anyone. The public code, reproducible synthetic walkthrough and evidence checks are available for review. The remaining milestone is a real OpenCV 5 and AWS deployment receipt with measured behavior. That is how we'd turn this source-complete prototype into a judge-verifiable deployed system."
+**Narration:** "VisualLedger connects visual measurements to safe, explainable next steps, with a human at every consequential boundary. It can't sign a document, judge whether a vendor is genuine, move money or contact anyone. The public code, synthetic browser walkthrough and genuine Linux OpenCV 5 source-proof receipt are available for review. The remaining milestone is a deployed arm64 OpenCV 5 and AWS event receipt with measured behavior, plus a finished narrated demo and actual organizer submission."
 
 **End slate:** Source link; documented evidence run; current verification limits; official contest deadline.
 
@@ -65,5 +65,5 @@
 - Capture only actual UI/action transitions and link each shot to its trace. Use the [source and run](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218628); do not treat the successful CI clip as narration.
 - Preserve the expiring Actions artifact and record SHA-256 of the downloaded ZIP and extracted video before editing. Keep original evidence for auditors.
 - Reconcile whether the duplicate shot exists. If missing, record it; do not generate a simulated trace or invent a passing branch.
-- If live AWS/OpenCV 5 receipts arrive, amend the report and narration to reference the exact tested source and measurements. Otherwise retain the 'design only' label.
+- The hosted Linux x86-64 OpenCV 5 source-proof receipt is already confirmed in [run 37894218836](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218836). If a distinct live arm64/AWS event receipt arrives, amend the script with its exact source, measurements and runtime. Otherwise retain the 'AWS design only' label.
 - Export one finished film at or under five minutes, inspect sound, image, captions, runtime-label visibility and link permission; record its actual bytes/hash and final URL. The current script alone does not meet the official final-video requirement.
