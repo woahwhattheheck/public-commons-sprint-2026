@@ -1,0 +1,9 @@
+{
+  "name": "microsoft-insidethegame-offball-ghost-runs-2026",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "scripts": {"start": "node src/server.mjs", "demo": "node src/cli.mjs"},
+  "license": "MIT"
+}
