@@ -1,6 +1,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
 let snapshot = null;
+let newestRequest = 0;
 function error(message) { $("error").textContent = message || ""; }
 function node(tag, text, className) {
   const x = document.createElement(tag);
@@ -23,6 +24,15 @@ async function api(path, data) {
   return body;
 }
 function paint(s) {
+  if (!s || typeof s.generation !== "string" || !s.generation ||
+      !Number.isSafeInteger(s.revision) || s.revision < 0) {
+    error("Invalid checkout state; refresh this page.");
+    return;
+  }
+  // A late response must not repaint a newer server-confirmed checkout phase.
+  // Generation distinguishes sessions after a local server restart.
+  if (snapshot && snapshot.generation === s.generation &&
+      s.revision < snapshot.revision) return;
   snapshot = s;
   $("mode").textContent = [
     s.mode === "fixture" ? "LABELLED FIXTURE MODE" : "SANDBOX-ONLY",
@@ -74,8 +84,9 @@ function paint(s) {
   }
 }
 async function run(path, data) {
+  const request = ++newestRequest;
   try { paint(await api(path, data)); }
-  catch (e) { error(e.message); }
+  catch (e) { if (request === newestRequest) error(e.message); }
 }
 $("planform").addEventListener("submit", event => {
   event.preventDefault();
