@@ -1,0 +1,178 @@
+name: Counterpress actual browser demonstration
+on:
+  push:
+    branches: [delivery/counterpress-browser-demo-20261009-astra-c7]
+    paths: [.github/workflows/counterpress-browser-demo.yml]
+permissions:
+  contents: read
+concurrency:
+  group: counterpress-browser-demo-95e1418d
+  cancel-in-progress: false
+jobs:
+  actual-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 95e1418d10793465edeb878fcbb221c16b1760b6
+          path: source
+          sparse-checkout: microsoft-insidethegame-counterpress-compass-2026
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated recording tools, not project dependencies
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: |
+          mkdir -p evidence/video
+          npm install --prefix "$RUNNER_TEMP/counterpress-browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          node "$RUNNER_TEMP/counterpress-browser/node_modules/playwright/cli.js" install ffmpeg
+      - name: Run unchanged original synthetic application
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = 95e1418d10793465edeb878fcbb221c16b1760b6
+          node source/microsoft-insidethegame-counterpress-compass-2026/src/server.mjs > evidence/server.log 2>&1 &
+          echo $! > evidence/server.pid
+          for i in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:3167/health > evidence/health.json; then break; fi
+            sleep 0.2
+          done
+          node -e 'const h=require("./evidence/health.json"); if(!h.ok || h.foundryConfigured || h.fixture!=="synthetic") process.exit(1)'
+      - name: Record one real replay, persona and bilingual journey
+        env:
+          NODE_PATH: ${{ runner.temp }}/counterpress-browser/node_modules
+        shell: bash
+        run: |
+          node <<'JS'
+          const fs = require('node:fs/promises');
+          const assert = require('node:assert/strict');
+          const { chromium } = require('playwright');
+          (async () => {
+            const start = Date.now();
+            const actions = [], requests = [], errors = [];
+            const browser = await chromium.launch({channel: 'chrome', headless: true});
+            const context = await browser.newContext({viewport: {width: 1440, height: 1080},
+              recordVideo: {dir: 'evidence/video', size: {width: 1440, height: 1080}}});
+            await context.route('**/*', async route => {
+              const u = new URL(route.request().url());
+              if (u.origin !== 'http://127.0.0.1:3167') {
+                errors.push('Unexpected nonlocal browser request: ' + u.origin);
+                return route.abort();
+              }
+              return route.continue();
+            });
+            const page = await context.newPage();
+            page.on('pageerror', error => errors.push(error.message));
+            page.on('request', request => requests.push({method: request.method(),
+              path: new URL(request.url()).pathname}));
+            const video = page.video();
+            async function shot(name) {
+              actions.push({seconds: +( (Date.now()-start)/1000 ).toFixed(3), name,
+                frame: await page.locator('#frame').innerText(),
+                overlay: await page.locator('#overlay').innerText(),
+                evidence: await page.locator('#evidence').innerText(),
+                attempts: await page.locator('#attempts').innerText(),
+                regains: await page.locator('#successes').innerText(),
+                mean_regain: await page.locator('#seconds').innerText(),
+                team: await page.locator('#team').inputValue(),
+                audience: await page.locator('#audience').inputValue(),
+                locale: await page.locator('#locale').inputValue()});
+              await page.screenshot({path: 'evidence/'+name+'.png', fullPage: true});
+            }
+            async function select(id, value) {
+              const response = page.waitForResponse(r => r.url().endsWith('/api/analyze') && r.request().method()==='POST');
+              await page.locator('#'+id).selectOption(value);
+              await response;
+              await page.waitForTimeout(2500);
+            }
+            let success = false;
+            try {
+              await page.goto('http://127.0.0.1:3167/', {waitUntil: 'networkidle'});
+              await page.waitForFunction(() => document.querySelector('#attempts').textContent === '0');
+              assert.equal(await page.locator('#foundry').isDisabled(), true);
+              await page.waitForTimeout(2500);
+              await shot('01-synthetic-start');
+              const bootstrap = await (await context.request.get('http://127.0.0.1:3167/api/bootstrap')).json();
+              assert.equal(bootstrap.foundryConfigured, false);
+              const firstRegain = bootstrap.events.findIndex(e => e.type === 'regain' && e.team === 'Harbor FC');
+              assert.ok(firstRegain >= 0 && firstRegain < 20, 'Expected bounded original regain fixture');
+              for (let n = 0; n <= firstRegain; n++) {
+                const done = page.waitForResponse(r => r.url().endsWith('/api/analyze') && r.request().method()==='POST');
+                await page.locator('#next').click();
+                await done;
+                await page.waitForTimeout(1000);
+              }
+              await page.waitForTimeout(2000);
+              await shot('02-evidence-backed-regain');
+              assert.equal(await page.locator('#successes').innerText(), '1');
+              await select('audience', 'analyst');
+              await shot('03-analyst-evidence');
+              await select('locale', 'es');
+              await shot('04-spanish-analyst');
+              await select('team', 'Metro Rovers');
+              await page.locator('#play').click();
+              await page.waitForFunction(() => document.querySelector('#next').disabled, null, {timeout: 35000});
+              await page.waitForTimeout(2500);
+              await shot('05-metro-closed-window');
+              await select('team', 'Harbor FC');
+              await select('audience', 'casual');
+              await select('locale', 'en');
+              await shot('06-complete-harbor-replay');
+              assert.equal(await page.locator('#successes').innerText(), '2');
+              assert.equal(await page.locator('#seconds').innerText(), '4.5s');
+              const done = page.waitForResponse(r => r.url().endsWith('/api/analyze') && r.request().method()==='POST');
+              await page.locator('#reset').click();
+              await done;
+              await page.waitForTimeout(2200);
+              await shot('07-independent-restart');
+              assert.equal(await page.locator('#attempts').innerText(), '0');
+              assert.ok(!requests.some(r => r.path === '/api/foundry-draft'));
+              assert.deepEqual(errors, []);
+              success = true;
+            } finally {
+              await context.close();
+              await video.saveAs('evidence/counterpress-actual-browser.webm');
+              await browser.close();
+              const receipt = {source_commit: '95e1418d10793465edeb878fcbb221c16b1760b6',
+                source_path: 'microsoft-insidethegame-counterpress-compass-2026',
+                success, elapsed_seconds: (Date.now()-start)/1000, synthetic_fixture: true,
+                model_calls: 0, deployment_performed: false, competition_submission_performed: false,
+                recording: 'counterpress-actual-browser.webm', actions, requests, errors};
+              await fs.writeFile('evidence/recording-receipt.json', JSON.stringify(receipt,null,2)+'\n');
+              console.log(JSON.stringify(receipt,null,2));
+            }
+          })().catch(error => {console.error(error.stack); process.exitCode=1;});
+          JS
+      - name: Convert real recording to portable MP4 and hash output
+        shell: bash
+        run: |
+          set -euo pipefail
+          ffmpeg -hide_banner -loglevel error -i evidence/counterpress-actual-browser.webm \
+            -c:v libx264 -preset veryfast -crf 22 -pix_fmt yuv420p -movflags +faststart \
+            evidence/counterpress-actual-browser.mp4
+          ffprobe -v quiet -print_format json -show_format -show_streams \
+            evidence/counterpress-actual-browser.mp4 > evidence/media-probe.json
+          python3 - <<'PY'
+          import json, pathlib
+          probe = json.loads(pathlib.Path('evidence/media-probe.json').read_text())
+          duration = float(probe['format']['duration'])
+          if not 10 < duration < 120:
+              raise SystemExit('Recording length outside the actual demonstration contract: '+str(duration))
+          print('Actual video seconds:', duration)
+          PY
+          git -C source diff --exit-code --quiet
+          (cd evidence && sha256sum counterpress-actual-browser.webm counterpress-actual-browser.mp4 recording-receipt.json > SHA256SUMS)
+      - name: Preserve actual recording and exact provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: counterpress-95e1418d-actual-browser-demo
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Stop local demo process
+        if: always()
+        run: if test -f evidence/server.pid; then kill "$(cat evidence/server.pid)" || true; fi
