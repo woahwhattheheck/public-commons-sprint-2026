@@ -7,9 +7,12 @@ function renderCards() {
  for(const m of current.filter(m=>(m.question+' '+m.id).toLowerCase().includes(query))) {
   const card=el('article', undefined,'market');card.append(el('small',m.id+' · '+m.status,'id'));
   card.append(el('h3',m.question));let row=el('div',undefined,'evidence');
-  for(const [label,val] of [['YES PRICE',m.yes_probability_pct===null?'UNKNOWN':m.yes_probability_pct+'%'],['LIQUIDITY USD',m.liquidity_usd===null?'UNKNOWN':'$'+m.liquidity_usd],['VOLUME USD',m.volume_usd===null?'UNKNOWN':'$'+m.volume_usd]]){
+  const hasVerifiedPrice=m.price_proven===true&&m.yes_probability_pct!==null;
+  for(const [label,val] of [[hasVerifiedPrice?'YES PRICE':'PRICE ON DETAIL',hasVerifiedPrice?m.yes_probability_pct+'%':'NOT VERIFIED IN LIST'],['LIQUIDITY USD',m.liquidity_usd===null?'UNKNOWN':'$'+m.liquidity_usd],['VOLUME USD',m.volume_usd===null?'UNKNOWN':'$'+m.volume_usd]]){
     let item=el('div');item.append(el('small',label));item.append(el('strong',val));row.append(item);
-  } card.append(row);target.append(card);
+  } card.append(row);
+  if(!hasVerifiedPrice)card.append(el('p','Detail quote not fetched; do not infer a YES probability from this list record.','small'));
+  target.append(card);
  }
  if(!target.childElementCount)target.append(el('p','No matching observations.'));
 }
@@ -20,7 +23,7 @@ async function refresh(){
   $('count').textContent=data.count_displayed+'/'+data.count_total_seen;$('time').textContent=data.observed_utc;$('digest').textContent=data.digest.slice(0,14)+'…';
   $('status').textContent=(data.errors||[]).join(' ')||'Data source fetched. Observations are evidence, not an investment recommendation.';
   const box=$('alerts');box.replaceChildren();for(const a of data.alerts){const item=el('div',undefined,'alert');item.append(el('small',a.market+' / '+a.severity.toUpperCase()));item.append(el('p',a.signal));box.append(item);}
-  if(!box.childElementCount)box.append(el('p','No heuristic warnings for these observed prices.'));
+  if(!box.childElementCount)box.append(el('p','No price or liquidity heuristic warnings for the verified fields. Unknown list prices remain marked on each card.'));
  }catch(e){$('status').textContent='Feed error: '+e.message+'. No synthetic replacement was silently used.'}
  finally{$('refresh').disabled=false;}
 }
