@@ -63,6 +63,8 @@ const get = id => document.getElementById(id);
 const allRows = new Map();
 let api;
 let selected;
+// Clear invalidates work already waiting on a file read or WebCrypto digest.
+let importEpoch=0;
 const encoder = new TextEncoder();
 function assert(condition, message) { if(!condition) throw Error(message); }
 function cents(text) {
@@ -157,23 +159,33 @@ function exportCsv() {
   status('Exported '+(lines.length-1)+' filtered review rows; no payment verification was performed.',false);
 }
 async function onFiles(files) {
+  const epoch=importEpoch;
   if(files.length>128){status('Select no more than 128 review files at a time.',true);return;}
   let accepted=0;const rejected=[];
   for(const file of files) {
     try {
       assert(file.size<=262144,'file exceeds 256 KiB');
-      const parsed=JSON.parse(await file.text());
+      const text=await file.text();
+      if(epoch!==importEpoch)return;
+      const parsed=JSON.parse(text);
       const records=Array.isArray(parsed)?parsed:[parsed];
       assert(records.length<=128,'JSON contains too many entries');
       for(const raw of records) {
-        assert(allRows.size<500||allRows.has(raw.review_id),'review board limit is 500 cases');
         const row=await verifyRecord(raw);
+        if(epoch!==importEpoch)return;
+        // Recheck after the await: another import may have filled the board.
+        assert(allRows.size<500||allRows.has(row.id),'review board limit is 500 cases');
         const earlier=allRows.get(row.id);
         if(earlier)assert(earlier.record.cart.fingerprint===row.record.cart.fingerprint,'same review ID has contradictory evidence');
         allRows.set(row.id,row);accepted++;
+        if(selected===row.id)inspect(row);
       }
-    } catch(e) {rejected.push(file.name+': '+e.message);}
+    } catch(e) {
+      if(epoch!==importEpoch)return;
+      rejected.push(file.name+': '+e.message);
+    }
   }
+  if(epoch!==importEpoch)return;
   refresh();
   status('Imported '+accepted+' source-checked reviews.'+(rejected.length?' Rejected: '+rejected.slice(0,3).join('; '):''),rejected.length>0);
 }
@@ -182,7 +194,7 @@ if(!window.agGrid||typeof window.agGrid.createGrid!=='function'){
   get('files').disabled=true;get('export').disabled=true;
 }else{
   api=agGrid.createGrid(get('grid'),{
-    theme:'legacy',rowData:[],rowHeight:45,headerHeight:46,animateRows:true,
+    theme:agGrid.themeQuartz.withPart(agGrid.colorSchemeDark),rowData:[],rowHeight:45,headerHeight:46,animateRows:true,
     defaultColDef:{sortable:true,filter:true,resizable:true},
     columnDefs:[
       {headerName:'Priority',field:'level',width:125,sort:'asc',comparator:(a,b)=>({high:0,medium:1,none:2}[a]-{high:0,medium:1,none:2}[b])},
@@ -201,7 +213,7 @@ if(!window.agGrid||typeof window.agGrid.createGrid!=='function'){
   get('priority').addEventListener('change',refresh);
   get('files').addEventListener('change',async e=>{await onFiles(Array.from(e.target.files||[]));e.target.value='';});
   get('export').addEventListener('click',()=>{try{exportCsv()}catch(e){status(e.message,true)}});
-  get('clear').addEventListener('click',()=>{allRows.clear();refresh();status('Local review data cleared from the board.',false)});
+  get('clear').addEventListener('click',()=>{importEpoch++;allRows.clear();refresh();status('Local review data cleared from the board.',false)});
 }
 </script>
 </body></html>
