@@ -255,7 +255,16 @@ export function dispatch(operation, rawCommand, { clock } = {}) {
       break;
     }
     case 'evidence': {
+      // Evidence shown to the decision-maker is part of the authorization
+      // context. Once approved, adding evidence without another decision
+      // would let an altered operation execute under the old approval.
       if (['EXECUTED', 'DENIED'].includes(next.status)) throw new Error('terminal operation evidence is immutable');
+      if (next.status === 'APPROVED' || next.status === 'RECONCILIATION_REQUIRED') {
+        throw new Error('approved or in-flight evidence is immutable; create a new operation for a new decision');
+      }
+      if (!Array.isArray(next.evidence) || next.evidence.length >= 20) {
+        throw new Error('operation.evidence must have fewer than 20 entries before adding evidence');
+      }
       const evidence = validateEvidence(command.evidence);
       if (next.evidence.some((item) => item.id === evidence.id)) throw new Error('evidence id already exists');
       next.evidence.push(evidence);
