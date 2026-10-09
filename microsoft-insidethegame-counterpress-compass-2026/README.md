@@ -4,7 +4,7 @@
 
 ## Product and value
 
-Within the first eight seconds after a club loses possession, Counterpress Compass tests whether a sequence of documented team pressure actions ended in a same-team regain. It keeps the evidence IDs, exact event times and a closed observation window; silence and an incomplete stream do not become a false failure. A compact on-screen cue emerges only after a confirmed recovery or an observed timeout. Broadcast viewers can switch between human-friendly captions and fact-dense analyst overlays in English/Spanish, focused on either side. This is **counterpress-window accounting from synthetic events**, not an LLM pretending to understand a match or claiming a tactical causal effect.
+Within the first eight seconds after a club loses possession, Counterpress Compass tests whether a sequence of documented team pressure actions ended in a same-team regain. It keeps the evidence IDs, exact event times and a closed observation window; silence and an incomplete stream do not become a false failure. A compact on-screen cue distinguishes confirmed recovery, observed timeout, and an interrupted observation whose outcome remains unknown. Broadcast viewers can switch between human-friendly captions and fact-dense analyst overlays in English/Spanish, focused on either side. This is **counterpress-window accounting from synthetic events**, not an LLM pretending to understand a match or claiming a tactical causal effect.
 
 The five official challenge stages are realized as (1) timed synthetic fixture ingestion; (2) rolling event-time loss/pressure/regain state machine with evidence IDs; (3) conservative explanations with no invented performance claims; (4) timed, machine-readable broadcast cue objects; and (5) two genuinely different audience variants and two languages. New event fixtures may be authored locally with valid schema; the public demo API deliberately accepts **only event prefix counts from the server's own fixture**, avoiding shared-session mutation and arbitrary user uploads. Every browser is independent, so one judge's stepping cannot move another judge's replay.
 
@@ -27,6 +27,16 @@ curl -s http://127.0.0.1:3167/api/analyze \
   -H 'content-type: application/json' \
   -d '{"count":15,"team":"Harbor FC","audience":"analyst","locale":"en"}'
 ```
+
+## Sparse-event outcome accounting
+
+An additional loss for the same team before the current eight-second window closes interrupts the earlier observation. Without a recorded regain, its outcome is unknown; it is neither a confirmed failure nor a success. The interruption cue reports the actual observed duration and includes the new loss ID as closing evidence in both English and Spanish.
+
+`counterpressAttempts` still includes interrupted press attempts. `resolvedCounterpressAttempts` counts only successful regains and observed expiries; `interruptedAttempts` reports unknown outcomes separately. `successRatePct` is the **resolved-window success rate**, with `successRateBasis: "resolved_counterpress_attempts"`; it is `null` if no outcome has resolved. The browser explicitly shows its successes/resolved denominator and the interrupted count. A paired synthetic fixture has one unknown plus one success (1/1 resolved, 100%, one interrupted), versus one observed expiry plus one success (1/2 resolved, 50%, none interrupted). These are accounting examples, not measured tactical performance.
+
+Run only this regression with `node --test test/interrupted.focused.test.mjs`.
+
+The eight-second regain deadline is inclusive. A replay prefix ending at exactly the deadline does not prove expiry: a later consumed event may have the same timestamp and contain a valid regain. Timeout requires an event timestamp strictly beyond the deadline. The focused `node --test test/boundary.focused.test.mjs` fixture compares a clock at 8s (no outcome yet), an appended regain at the same 8s (success), and a clock at 8.1s without a regain (expiry recorded at the 8s deadline).
 
 ## Optional Microsoft Foundry AI narrative draft
 

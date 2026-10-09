@@ -38,11 +38,13 @@ async function render() {
     el('attempts').textContent=String(state.stats.counterpressAttempts);
     el('successes').textContent=String(state.stats.successes);
     el('seconds').textContent=state.stats.meanRecoverySeconds===null?'—':state.stats.meanRecoverySeconds+'s';
+    const rate=state.stats.successRatePct===null?'—':state.stats.successRatePct+'%';
+    el('resolution').textContent=`Resolved-window success rate: ${rate} (${state.stats.successes}/${state.stats.resolvedCounterpressAttempts}); interrupted / unknown: ${state.stats.interruptedAttempts}.`;
     const eventTime = state.elapsedSeconds;
     const cue = state.overlays.filter(x=>x.showAt<=eventTime && eventTime<x.hideAt).at(-1);
     el('overlay').textContent=cue?cue.text:'No new confirmed counterpress outcome at this event.';
     el('overlay').className=cue?'':'no-overlay';
-    el('evidence').textContent=cue?'EVIDENCE: '+cue.evidenceIds.join(' → ')+' · '+cue.provenance:'Only closed, evidenced eight-second windows can produce cues.';
+    el('evidence').textContent=cue?'EVIDENCE: '+cue.evidenceIds.join(' → ')+' · '+cue.provenance:'Cues distinguish resolved windows from interrupted observations with unknown outcomes.';
     el('foundryResult').textContent='';
   } catch (err) {stop();el('overlay').textContent='Offline replay error: '+String(err.message).slice(0,80);}
 }
