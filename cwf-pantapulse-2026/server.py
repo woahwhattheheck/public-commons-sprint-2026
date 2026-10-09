@@ -7,6 +7,7 @@ import threading
 import urllib.error
 import urllib.parse
 import urllib.request
+from detail_fetch import enrich_market_list
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -18,6 +19,7 @@ BASE = os.getenv('PANTA_API_BASE_URL', '').rstrip('/')
 KEY = os.getenv('PANTA_API_KEY', '')
 MODE = 'panta-api' if BASE and KEY else 'fixture'
 DATA_LOCK = threading.RLock()
+DETAIL_LOCK = threading.Lock()
 FEED = {'mode': MODE, 'data': [], 'observed_utc': None, 'digest': None, 'alerts': [], 'errors': []}
 
 # Mocked sample markets are NOT Panta records or current quotes.
@@ -78,7 +80,9 @@ def market_normalize(raw):
             'liquidity_usd': str(liquidity) if liquidity is not None else None,
             'volume_usd': str(volume) if volume is not None else None,
             'status': str(raw.get('status', raw.get('phase', 'unknown')))[:50],
-            'price_proven': probability is not None}
+            'price_proven': probability is not None,
+            'quote_source': ('detail' if raw.get('_panta_price_from_detail') and probability is not None
+                             else ('list' if probability is not None else 'unverified'))}
 
 
 def alerts(rows):
@@ -132,7 +136,10 @@ def provider_data():
     data = market_collection(root)
     if not isinstance(data, list):
         raise FeedError('Unrecognized Panta market collection schema; API integration unverified.')
-    return data[:100], []
+    try: top_n = int(os.getenv('PANTA_DETAIL_TOP_N', '10'))
+    except ValueError: top_n = 10
+    with DETAIL_LOCK:
+        return enrich_market_list(data[:100], BASE, KEY, market_normalize, top_n=max(0, min(50, top_n)))
 
 
 def refresh():
@@ -143,7 +150,8 @@ def refresh():
     canonical = json.dumps(normalized, sort_keys=True, separators=(',', ':')).encode()
     result = {'mode': MODE, 'data': normalized, 'observed_utc': stamp,
               'digest': hashlib.sha256(canonical).hexdigest(), 'alerts': alerts(normalized),
-              'errors': warnings, 'count_total_seen': len(raw), 'count_displayed': len(normalized)}
+              'errors': warnings, 'count_total_seen': len(raw), 'count_displayed': len(normalized),
+              'detail_quotes_verified': sum(row.get('quote_source') == 'detail' for row in normalized)}
     with DATA_LOCK:
         FEED.clear(); FEED.update(result)
     return result
