@@ -86,8 +86,11 @@ def _quality(gray: np.ndarray, source_dynamic: float, rows: int, cols: int) -> l
 
 
 def inspect(image: np.ndarray, *, rows: int = 4, cols: int = 6,
-            corners: list[list[float]] | None = None) -> dict[str, Any]:
-    """Return auditable evidence and human-owned action, never an automatic repair."""
+            corners: list[list[float]] | None = None,
+            threshold_mode: str = "peer") -> dict[str, Any]:
+    """Return human-owned triage; panel-local thresholding is strictly opt-in."""
+    if type(threshold_mode) is not str or threshold_mode not in {"peer", "panel"}:
+        raise ImageRejected("threshold_mode must be peer or panel")
     if type(rows) is not int or type(cols) is not int or not (2 <= rows <= 12 and 2 <= cols <= 12):
         raise ImageRejected("rows and cols must each be integers from 2 through 12")
     if image.ndim != 2 or image.dtype not in (np.dtype('uint8'), np.dtype('uint16')):
@@ -96,11 +99,16 @@ def inspect(image: np.ndarray, *, rows: int = 4, cols: int = 6,
         raise ImageRejected("invalid image size")
     corrected = _rectify(image, corners)
     gray, dynamic = _to_intensity(corrected)
-    digest = hashlib.sha256(corrected.tobytes() + f'|{rows}|{cols}|v1'.encode()).hexdigest()
+    # Preserve every incumbent peer-mode fingerprint, but avoid aliasing distinct
+    # decisions when the same pixels are deliberately scored in both modes.
+    digest = hashlib.sha256(corrected.tobytes() + f'|{rows}|{cols}|v1'.encode()
+                            + (b'' if threshold_mode == "peer" else b'|panel')).hexdigest()
     reasons = _quality(gray, dynamic, rows, cols)
     base = {"schema": "thermoloom-visual-triage/v1", "capture_sha256": digest,
             "calibrated_temperature": False, "panel_layout": {"rows": rows, "cols": cols},
             "pixel_space": "rectified" if corners is not None else "input", "opencv_version": cv2.__version__}
+    if threshold_mode == "panel":
+        base["threshold_mode"] = "panel"
     if reasons:
         return {**base, "decision": "RETAKE", "review_required": True,
                 "reasons": reasons, "evidence": [], "panel_medians": [],
@@ -132,10 +140,24 @@ def inspect(image: np.ndarray, *, rows: int = 4, cols: int = 6,
         x0, y0, x1, y1 = cell["bounds"]
         patch = cell["pixels"]
         peak = float(np.percentile(patch, 99))
-        med_records.append({"row": cell["row"], "col": cell["col"],
-                            "median_pixel": cell["median"], "p99_pixel": peak})
-        # Use a peer-global cut, not per-panel quantiles that will flag everything.
-        hot = (patch.astype(np.float32) >= median_peer + anomaly_delta).astype(np.uint8)
+        record = {"row": cell["row"], "col": cell["col"],
+                  "median_pixel": cell["median"], "p99_pixel": peak}
+        if threshold_mode == "panel":
+            # A fixed peer-global cut becomes too high as harmless broad lighting
+            # gradients increase between-panel MAD. A local robust cutoff retains
+            # sensitivity to small *within-panel* excess regions instead.
+            local_mad = float(np.median(np.abs(patch.astype(np.float32) - cell["median"])))
+            local_delta = max(26.0, 5.0 * 1.4826 * local_mad)
+            baseline = cell["median"]
+            cutoff = baseline + local_delta
+            record.update({"local_mad_pixel": round(local_mad, 2),
+                           "local_delta_pixel": round(local_delta, 2),
+                           "cutoff_pixel": round(cutoff, 2)})
+        else:
+            baseline = median_peer
+            cutoff = median_peer + anomaly_delta
+        med_records.append(record)
+        hot = (patch.astype(np.float32) >= cutoff).astype(np.uint8)
         hot = cv2.morphologyEx(hot, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         n, labels, stats, _ = cv2.connectedComponentsWithStats(hot, connectivity=8)
         min_area = max(6, round(0.002 * patch.size))
@@ -144,19 +166,26 @@ def inspect(image: np.ndarray, *, rows: int = 4, cols: int = 6,
             if area < min_area or area >= 0.30 * patch.size:
                 continue
             local = patch[labels == idx]
-            delta = round(float(np.median(local)) - median_peer, 2)
+            delta = round(float(np.median(local)) - baseline, 2)
             evidence.append({"row": cell["row"], "col": cell["col"],
                              "bbox_xywh": [x0 + sx, y0 + sy, sw, sh],
                              "area_pixels": area, "relative_intensity_delta": delta,
-                             "reason": "connected region exceeds peer-relative pixel baseline"})
+                             "reason": ("connected region exceeds panel-local robust pixel baseline"
+                                        if threshold_mode == "panel" else
+                                        "connected region exceeds peer-relative pixel baseline")})
     evidence.sort(key=lambda item: (-item["relative_intensity_delta"], item["row"], item["col"]))
     is_alert = bool(evidence)
+    threshold = {"peer_median_pixel": round(median_peer, 2),
+                 "anomaly_delta_pixel": round(anomaly_delta, 2),
+                 "panel_mad_pixel": round(panel_mad, 2)}
+    if threshold_mode == "panel":
+        # Retain the incumbent global reference as comparison metadata, while
+        # recording the actual per-panel cutoffs in panel_medians.
+        threshold["applied_mode"] = "panel_local_median_mad"
     return {**base, "decision": "HUMAN_REVIEW" if is_alert else "MONITOR",
             "review_required": is_alert, "reasons": (["uncalibrated relative anomaly; field diagnosis required"]
                                             if is_alert else []),
-            "threshold": {"peer_median_pixel": round(median_peer, 2),
-                          "anomaly_delta_pixel": round(anomaly_delta, 2),
-                          "panel_mad_pixel": round(panel_mad, 2)},
+            "threshold": threshold,
             "panel_medians": med_records, "evidence": evidence,
             "next_action": ("Confirm capture quality and inspect flagged panels; no autonomous electrical action."
                             if is_alert else "Monitor; no visible relative outlier in this capture.")}
@@ -180,6 +209,8 @@ def main() -> None:
     parser.add_argument("image", type=Path)
     parser.add_argument("--rows", type=int, default=4)
     parser.add_argument("--cols", type=int, default=6)
+    parser.add_argument("--threshold-mode", choices=("peer", "panel"), default="peer",
+                        help="opt-in panel-local synthetic candidate; default keeps incumbent")
     parser.add_argument("--corners-json", type=Path, help="ordered TL,TR,BR,BL pixel corners")
     parser.add_argument("--out", type=Path, help="write JSON receipt")
     parser.add_argument("--overlay", type=Path, help="write image evidence only without rectification")
@@ -187,7 +218,8 @@ def main() -> None:
     try:
         source = decode_image(args.image.read_bytes())
         corners = json.loads(args.corners_json.read_text()) if args.corners_json else None
-        receipt = inspect(source, rows=args.rows, cols=args.cols, corners=corners)
+        receipt = inspect(source, rows=args.rows, cols=args.cols, corners=corners,
+                          threshold_mode=args.threshold_mode)
         if args.overlay:
             if corners is not None:
                 raise ImageRejected("overlay with homography is not yet supported")
