@@ -164,12 +164,15 @@ class ReceiptTests(unittest.TestCase):
 
 
 class FakeResponse:
-    def __init__(self, status=201, body=b"v=0\r\n", location="https://api.amazonvision.com/session/1"):
+    def __init__(self, status=201, body=b"v=0\r\n", location="https://api.amazonvision.com/v1/devices/dev/media/streaming/whep/sessions/session-1"):
         self.status = status
         self._body = body
-        self.headers = {"Location": location}
+        self.headers = {"Location": location, "Content-Type": "application/sdp"}
+        self.closed = False
     def read(self, limit=-1):
         return self._body[:limit]
+    def close(self):
+        self.closed = True
 
 
 class RingRuntimeTests(unittest.TestCase):
