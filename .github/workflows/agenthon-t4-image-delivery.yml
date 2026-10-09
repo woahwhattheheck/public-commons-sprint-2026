@@ -1,0 +1,156 @@
+name: Agenthon T4 image delivery
+on:
+  push:
+    branches: [delivery/agenthon-t4-image-20261009-astra-c7]
+    paths: [.github/workflows/agenthon-t4-image-delivery.yml]
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: agenthon-t4-image-cc8076bc
+  cancel-in-progress: false
+jobs:
+  image-and-public-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      SOURCE_SHA: cc8076bc354cece703dc7d4428d09503e5f56c73
+      ORGANIZER_SHA: 458bc07efc05983de342ccb371e2b3cd793d621f
+      IMAGE: ghcr.io/woahwhattheheck/agenthon-t4-grounded-finance:source-cc8076bc
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cc8076bc354cece703dc7d4428d09503e5f56c73
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: Agenthon-2026/track4-analysis-public
+          ref: 458bc07efc05983de342ccb371e2b3cd793d621f
+          path: organizer
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: Agenthon-2026/Agenthon2026-public
+          ref: v2.5.1
+          path: toolkit
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Build exact source and preserve its license
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(git -C organizer rev-parse HEAD)" = "$ORGANIZER_SHA"
+          mkdir -p evidence context output
+          cp -R source/agenthon-t4-grounded-finance/. context/
+          cp source/LICENSE context/LICENSE
+          printf '\nCOPY LICENSE /app/LICENSE\n' >> context/Dockerfile
+          cp context/Dockerfile evidence/Dockerfile.effective
+          docker build --platform linux/amd64 --pull \
+            --label org.opencontainers.image.source=https://github.com/woahwhattheheck/public-commons-sprint-2026 \
+            --label org.opencontainers.image.revision="$SOURCE_SHA" \
+            --label org.opencontainers.image.licenses=MIT \
+            --iidfile evidence/image-id.txt -t "$IMAGE" context 2>&1 | tee evidence/build.log
+          docker image inspect "$IMAGE" > evidence/image-inspect.json
+          python - <<'PY'
+          import json, pathlib
+          image = json.loads(pathlib.Path('evidence/image-inspect.json').read_text())[0]
+          if (image['Os'], image['Architecture']) != ('linux', 'amd64'):
+              raise SystemExit('Image is not Linux/amd64')
+          if image['Config'].get('Volumes'):
+              raise SystemExit('Image declares forbidden VOLUME')
+          if image['Config']['Labels'].get('qfbench2.interface_version') != '2.0':
+              raise SystemExit('Required interface label absent')
+          print('IMAGE CONTRACT: Linux/amd64, interface 2.0, no VOLUME')
+          PY
+      - name: Run one real public unit with no network
+        shell: bash
+        run: |
+          set -euo pipefail
+          UNIT="$GITHUB_WORKSPACE/organizer/units/t4-EXAMPLE-eps-beat"
+          docker run --rm --network=none --read-only --cap-drop=ALL \
+            --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+            -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$UNIT:/input:ro" -v "$GITHUB_WORKSPACE/output:/output:rw" \
+            "$IMAGE" analyze --offline --task /input/task.json \
+            --corpus /input/corpus --out /output/answer.json 2>&1 | tee evidence/public-unit.log
+          cp output/answer.json evidence/answer.json
+          python -m pip install --disable-pip-version-check jsonschema==4.25.1
+          python - <<'PY'
+          import hashlib, json, pathlib, subprocess
+          import jsonschema
+          schemas = list(pathlib.Path('toolkit/common').rglob('analysis.schema.json'))
+          if len(schemas) != 1:
+              raise SystemExit('Expected exactly one official analysis schema: ' + str(schemas))
+          schema_path = schemas[0]
+          schema = json.loads(schema_path.read_text())
+          answer = json.loads(pathlib.Path('output/answer.json').read_text())
+          task = json.loads(pathlib.Path('organizer/units/t4-EXAMPLE-eps-beat/task.json').read_text())
+          jsonschema.validate(answer, schema)
+          got = [row['entity_id'] for row in answer['entity_predictions']]
+          expected = [row['entity_id'] for row in task['entities']]
+          if got != expected or answer['task_id'] != task['task_id']:
+              raise SystemExit('Task/roster mismatch')
+          receipt = {'public_unit': task['task_id'], 'schema_valid': True,
+              'roster_exact': True, 'network': 'none', 'model_execution': False,
+              'prediction_quality_scored': False,
+              'schema_path': str(schema_path),
+              'schema_sha256': hashlib.sha256(schema_path.read_bytes()).hexdigest(),
+              'toolkit_commit': subprocess.check_output(['git','-C','toolkit','rev-parse','HEAD'],text=True).strip(),
+              'answer_sha256': hashlib.sha256(pathlib.Path('output/answer.json').read_bytes()).hexdigest()}
+          pathlib.Path('evidence/public-unit-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          PY
+      - name: Preserve the built image as a portable archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker save "$IMAGE" | gzip -1 > evidence/agenthon-t4-image.tar.gz
+          sha256sum evidence/agenthon-t4-image.tar.gz > evidence/image-archive.sha256
+      - name: Authenticate the original repository publisher
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish immutable image and check anonymous access
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker push "$IMAGE" 2>&1 | tee evidence/push.log
+          docker image inspect "$IMAGE" > evidence/published-image-inspect.json
+          REF="$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")"
+          printf '%s\n' "$REF" > evidence/image-reference.txt
+          mkdir anonymous-docker-config
+          set +e
+          docker --config "$GITHUB_WORKSPACE/anonymous-docker-config" pull "$REF" > evidence/anonymous-pull.log 2>&1
+          ACCESS_STATUS=$?
+          set -e
+          export ACCESS_STATUS REF
+          python - <<'PY'
+          import json, os, pathlib
+          receipt = {'source_commit': os.environ['SOURCE_SHA'],
+              'organizer_commit': os.environ['ORGANIZER_SHA'],
+              'image_reference': os.environ['REF'],
+              'anonymous_pull_exit_code': int(os.environ['ACCESS_STATUS']),
+              'anonymous_pull_ok': os.environ['ACCESS_STATUS'] == '0',
+              'submission_performed': False,
+              'run_url': os.environ['GITHUB_SERVER_URL']+'/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs/'+os.environ['GITHUB_RUN_ID']}
+          pathlib.Path('evidence/delivery-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt,indent=2))
+          if not receipt['anonymous_pull_ok']:
+              print('IMAGE BUILT AND PUSHED; anonymous access not established. Do not submit this reference as public yet.')
+          PY
+          cat evidence/anonymous-pull.log
+      - name: Upload image and real execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agenthon-t4-source-cc8076bc-image-evidence
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
