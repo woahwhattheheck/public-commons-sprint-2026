@@ -30,7 +30,7 @@ Every route still requires human review. VisualLedger **cannot** approve/reject 
 
 ## Runtime truth
 
-Competition mode fails closed below OpenCV 5.x. Development hosts may opt into `--allow-opencv4-dev`; every resulting trace records that the runtime is not competition-compatible. The source was developed on OpenCV 4.13 because that is what the current free local runner provides. A future real 5.x execution receipt is required before claiming competition-runtime proof.
+Competition mode fails closed below OpenCV 5.x. Development hosts may opt into `--allow-opencv4-dev`; every resulting trace records that the runtime is not competition-compatible. The public browser walkthrough was captured on OpenCV 4.13 development compatibility. A **separate successful Linux x86-64 OpenCV 5.0.0 source evaluation** is established by [Actions run 37894218836](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218836), job 113701744025, source head b8bac529a0c39eb59c50696f333729caead532a5. It is not the recorded browser runtime or a deployed arm64/AWS transaction. The production OpenCV 5 on AWS path remains unverified.
 
 ```bash
 cd visualledger-opencv
@@ -63,7 +63,7 @@ See `docs/ARCHITECTURE.md`, `docs/COMPETITION.md`, and `docs/DEMO_SCRIPT.md`.
 
 ## Truth state
 
-This carrier can establish source/test/demo readiness. It does not establish OpenCV-5 runtime execution, AWS deployment, competition registration/submission, judging result, prize, customer use, savings, payment, or revenue.
+This carrier includes a genuine hosted OpenCV 5.0.0 **Linux x86-64 source run**, independently from its genuine OpenCV 4.13 browser capture. It does not establish OpenCV 5 **AWS arm64 runtime/deployment**, competition registration/submission, judging result, prize, customer use, savings, payment, or revenue.
 
 ## Human crop workspace
 
@@ -81,3 +81,8 @@ source/crop provenance for independent replay and existing offline review.
 Development compatibility remains explicitly labeled. It does not perform OCR,
 approve an invoice, deploy AWS, or submit a competition entry.
 See [human crop workspace instructions](docs/HUMAN_CROP_WORKSPACE.md).
+## Narrated judge-video reproduction
+
+The [source-backed narrator](submission/render_narrated_video.py) converts the **unchanged** original Actions browser-artifact ZIP into a <=5-minute H.264/AAC video, preserving the actual 12.48-second browser clip without recreating browser output. Its first step SHA-256-checks the ZIP `c33016ec8c73f51cd21d67bc1321dd5df425bb10f3aa4fadb3c0a07c6bdfb88d`, validates all six archive members and checks the original browser receipt before rendering. It explicitly distinguishes OpenCV 4.13 development footage from the separate OpenCV 5.0.0 hosted source run and the unverified AWS arm64 deployment.
+
+From `visualledger-opencv/submission`, place `visualledger-browser-evidence-run37894218628.zip` alongside the script, install Python Pillow and system `ffmpeg`, `ffprobe`, `espeak` plus DejaVu Sans fonts, then run `python render_narrated_video.py`. The renderer writes an MP4 and scene/evidence manifest in that directory. No AWS secrets, customer data or cloud spend are required. Running this renderer is **not** the Devpost submission; entrant account, final hosting and source-proof/deployment evidence remain separate.
