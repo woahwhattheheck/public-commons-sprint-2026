@@ -164,7 +164,7 @@ function paint(data){
   out['moment-rule'].textContent=copy.rule+' '+readable(current.proof?.rule,90);
   out['moment-expires'].textContent=copy.expires+' '+formatSecond(current.expiresAtSecond);
  }else{
-  out['moment-title'].textContent=data.acceptedEvents?copy.noHighlight:copy.waiting';
+  out['moment-title'].textContent=data.acceptedEvents?copy.noHighlight:copy.waiting;
   out['moment-text'].textContent=copy.emptyExplanation;
   out['moment-event'].textContent=copy.noEvent;
   out['moment-rule'].textContent=copy.noRule;
