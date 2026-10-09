@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RenewalGuard — PayPal subscription triage</title>
+<style>
+:root{font-family:system-ui,sans-serif;color-scheme:dark;background:#101725;color:#f1f5ff}
+body{max-width:980px;margin:4vh auto;padding:16px}h1{font-size:2.25rem;margin-bottom:4px}
+small,.muted{color:#b5c3d8}button,select{font:inherit;padding:10px 14px;margin:4px;border:1px solid #6d8fb5;border-radius:8px;background:#223452;color:inherit;cursor:pointer}
+button:hover{background:#33517b}button:focus-visible{outline:3px solid #93bdfa}button:disabled{opacity:.5;cursor:wait}
+section{background:#1a263a;margin:15px 0;border:1px solid #34465d;padding:18px;border-radius:10px}
+pre{white-space:pre-wrap;word-break:break-word;background:#111a2a;border-radius:8px;padding:12px}
+li{margin:9px}output{white-space:pre-wrap}strong{color:#c6e1ff}#error{color:#ffada7}#label{color:#a9d5ff}
+</style></head>
+<body><h1>RenewalGuard</h1>
+<p class="muted">Read-only PayPal sandbox subscription triage + optional AI assistance. Human review is mandatory. No outreach, cancellation, payment or charge actions exist.</p>
+<section><label for="mode">Data source:</label>
+<select id="mode"><option value="demo">Synthetic demonstration</option><option value="sandbox">PayPal sandbox account</option></select>
+<button id="load">Load subscriptions</button><span id="label"></span>
+<p id="error" role="alert"></p></section>
+<section><h2>Subscriptions</h2><ul id="list"><li>Choose a source and load its subscriptions.</li></ul></section>
+<section><h2>Current record</h2><pre id="facts">Select a subscription to inspect its present state.</pre>
+<button id="draft" disabled>Request review draft</button>
+<p class="muted">Draft generation re-fetches current PayPal state, checks the exact review fingerprint, and never sends the output.</p></section>
+<section><h2>Unsent proposal</h2><output id="proposal">No draft requested.</output></section>
+<p><small>Sandbox credentials and optional AI key remain server-side. Synthetic demo records are invented. An AI service is unavailable unless configured separately. This is not proof of payment or merchant acceptance.</small></p>
+<script src="/app.js" type="module"></script></body></html>

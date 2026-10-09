@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>PitchPulse — Broadcast-safe synthetic evidence view</title>
+  <link rel="stylesheet" href="/broadcast.css">
+</head>
+<body class="unavailable">
+  <a class="skip-link" href="#moment-title">Skip to current moment</a>
+  <div class="stage">
+    <header class="topline">
+      <span class="brand">PITCHPULSE <strong>STUDIO OUTPUT</strong></span>
+      <span class="synthetic">SYNTHETIC REPLAY · FICTIONAL TEAMS · NOT LIVE</span>
+    </header>
+    <main aria-label="Fictional football match graphics">
+      <section class="scoreboard" aria-label="Score and match clock">
+        <div class="team" id="home-name">HARBOR FC</div>
+        <div class="score" id="score" aria-live="polite">0 — 0</div>
+        <div class="team away" id="away-name">VALLEY FC</div>
+        <div class="clockbox"><span class="overline">MATCH CLOCK</span><strong id="clock">00:00</strong></div>
+      </section>
+      <section class="moment" aria-labelledby="moment-title">
+        <div class="moment-label">RULE-EXPLAINED MOMENT</div>
+        <h1 id="moment-title">Waiting for a synthetic match event</h1>
+        <p class="moment-text" id="moment-text">Open the original PitchPulse tab in this browser profile, then press Next event.</p>
+        <div class="proof" aria-label="Evidence trace">
+          <span id="moment-event">NO EVENT</span>
+          <span id="moment-rule">NO RULE</span>
+          <span id="moment-expires">NO ACTIVE OVERLAY</span>
+        </div>
+      </section>
+      <section class="context" aria-label="Event-derived match context">
+        <span class="context-title">EVENT-SOURCED / NOT PREDICTIVE</span>
+        <div id="context-metrics" class="metrics">No accepted events yet.</div>
+      </section>
+    </main>
+    <footer>
+      <span id="status" role="status" aria-live="polite">CONNECTING TO LOCAL DEMO</span>
+      <span>All names and events fictional · No Premier League data · No cloud narration</span>
+    </footer>
+  </div>
+  <div class="operator-hint">Press <kbd>C</kbd> for high contrast · Window capture in the <em>same browser profile</em> as the control tab</div>
+  <script type="module" src="/broadcast.mjs"></script>
+</body>
+</html>

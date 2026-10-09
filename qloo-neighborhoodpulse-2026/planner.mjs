@@ -66,12 +66,10 @@ export function normalizeEntities(raw, category, excludedIds = []) {
   });
 }
 
-function scoreCandidate(e, week, used, category, pinnedIds) {
+function scoreCandidate(e) {
   const affinity = e.affinity !== null ? Math.max(-2, Math.min(2, e.affinity)) : 0;
-  const positionScore = 1 / Math.sqrt(e.rank || 1);
-  const concentrationPenalty = used.has(e.id) ? 9 : 0;
-  const categoryBoost = week.focus === category ? 0.55 : 0;
-  return affinity + positionScore + categoryBoost + (pinnedIds.includes(e.id) ? 3 : 0) - concentrationPenalty;
+  // Rank breaks close affinity ties, but it is not a probability or confidence.
+  return affinity + 1 / Math.sqrt(e.rank || 1);
 }
 
 /** Generate four distinct briefs with deliberate empty slots if Qloo returns too little.
@@ -80,21 +78,40 @@ function scoreCandidate(e, week, used, category, pinnedIds) {
 export function buildSchedule({ city, tastes, excludedIds = [], mode }, signals, raw) {
   const excluded = new Set(excludedIds);
   const pools = Object.fromEntries(CATEGORIES.map(k => [k, normalizeEntities(raw[k], k, excludedIds)]));
-  const weeks = [];
+  const ordered = Object.fromEntries(CATEGORIES.map(kind => [
+    kind, [...pools[kind]].sort((a, b) => scoreCandidate(b) - scoreCandidate(a) || a.rank - b.rank),
+  ]));
+  const programs = WEEKS.map(() => Object.fromEntries(CATEGORIES.map(k => [k, null])));
   const used = new Set();
+
+  // The former focus "boost" was identical for every candidate in a category:
+  // it never affected ranking and silently put all strongest matches in week 1.
+  // Reserve each category's best available real Qloo entity for its focus week.
   for (let w = 0; w < WEEKS.length; w++) {
-    const week = WEEKS[w];
-    const choices = {};
-    for (const kind of CATEGORIES) {
-      const eligible = pools[kind].filter(x => !used.has(x.id) && !excluded.has(x.id));
-      eligible.sort((a, b) => scoreCandidate(b, week, used, kind, []) - scoreCandidate(a, week, used, kind, []));
-      choices[kind] = eligible[0] ?? null;
-      if (choices[kind]) used.add(choices[kind].id);
+    const kind = WEEKS[w].focus;
+    const best = ordered[kind].find(x => !used.has(x.id));
+    if (best) {
+      programs[w][kind] = best;
+      used.add(best.id);
     }
-    weeks.push({ week: w + 1, title: week.name, format: week.explanation,
-      program: choices, missingCategories: CATEGORIES.filter(k => !choices[k]),
-      notice: 'Planning concept only: no venue, event, rights, reservations, accessibility, or opening hours are verified.' });
   }
+  // Then fill cross-domain companion slots from actual remaining results.
+  // Global used IDs prevent duplicate recommendations, even across categories.
+  for (let w = 0; w < WEEKS.length; w++) {
+    for (const kind of CATEGORIES) {
+      if (programs[w][kind]) continue;
+      const best = ordered[kind].find(x => !used.has(x.id));
+      if (best) {
+        programs[w][kind] = best;
+        used.add(best.id);
+      }
+    }
+  }
+  const weeks = WEEKS.map((week, w) => ({
+    week: w + 1, title: week.name, format: week.explanation,
+    program: programs[w], missingCategories: CATEGORIES.filter(k => !programs[w][k]),
+    notice: 'Planning concept only: no venue, event, rights, reservations, accessibility, or opening hours are verified.',
+  }));
   const totals = Object.fromEntries(CATEGORIES.map(k => [k, pools[k].length]));
   return {
     product: 'NeighborhoodPulse', schemaVersion: 1, mode,
@@ -103,7 +120,7 @@ export function buildSchedule({ city, tastes, excludedIds = [], mode }, signals,
     weeks, availableByCategory: totals, excludedIds: [...excluded],
     methodology: {
       insightTypes: TYPE_TO_SLUG,
-      method: 'Qloo-ranked recommendations allocated once per category across four original event-format briefs; no entity fabrication.',
+      method: 'Top source-backed Qloo candidate for each category reserved for its themed week; remaining category slots filled by rank and available affinity without reuse or fabrication.',
       scoreSemantics: 'affinity is displayed only if explicitly numeric in Qloo response; rank is API return order and is not probability.',
       locality: 'The named-city filter applies to place results only.',
       factsNotVerified: ['opening hours', 'event schedules', 'ticket prices', 'accessibility', 'venue availability', 'broadcast rights', 'sponsorship'],

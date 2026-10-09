@@ -1,0 +1,8 @@
+{
+  "name": "paypal26-disputeledger",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "scripts": {"start": "node src/server.mjs", "check:focused": "node --test tests/focused.test.mjs"}
+}

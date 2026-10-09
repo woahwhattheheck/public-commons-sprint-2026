@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CartWitness · Consent-first shopping</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><span class="eyebrow">PAYPAL × AI · 2026 SANDBOX CHALLENGE</span><h1>Cart<span>Witness</span></h1>
+<p>Turn a shopping intention into a transparent suggestion, then put the buyer—not the agent—in control of checkout.</p>
+<div id="mode" class="mode">Checking environment…</div></header>
+<main>
+<section class="panel"><div class="number">01 / Discover</div><h2>Describe the goal</h2>
+<form id="planform"><label for="prompt">What are you trying to accomplish?</label>
+<textarea id="prompt" rows="3" minlength="8" maxlength="350" required>I'm taking a hiking trip and want a reliable compact repair kit.</textarea>
+<label for="budget">Maximum budget in USD</label><input id="budget" type="number" min="15" max="500" step="0.01" value="60" required>
+<button type="submit" id="planbtn">Find a verified catalogue fit <span>↗</span></button></form>
+<p class="hint">The recommendation can only select from our fixed catalogue and cannot change prices.</p></section>
+<section class="panel"><div class="number">02 / Consent</div><h2>Review before checkout</h2>
+<div id="proposal" class="placeholder">Complete step 01 to see the AI's bounded proposal.</div>
+<form id="orderform" hidden><label class="check"><input id="consent" type="checkbox" required>
+I approve this exact item and USD amount. I understand this is a PayPal sandbox demo.</label>
+<button type="submit" id="orderbtn">Create sandbox checkout <span>↗</span></button></form></section>
+<section class="panel"><div class="number">03 / PayPal approval</div><h2>Authorize, then capture</h2>
+<p class="hint">A real checkout first opens PayPal's sandbox. Returning from PayPal does not capture a payment.</p>
+<a id="approval" class="action-link" hidden>Review in PayPal sandbox ↗</a>
+<form id="captureform" hidden><label class="check"><input id="finalconsent" type="checkbox" required>
+I returned from the buyer approval flow. I explicitly authorize a sandbox capture.</label>
+<button type="submit">Capture approved sandbox order <span>↗</span></button></form>
+<div id="result" class="placeholder">No order created.</div></section>
+<section class="panel audit"><div class="number">04 / Evidence</div><h2>Lifecycle receipts</h2><ol id="events"></ol>
+<button id="reset" class="secondary">Start another example</button>
+<p class="hint">Receipts are local session markers, not a bank statement. There is no live-money endpoint.</p></section>
+</main>
+<div id="error" class="error" role="alert" aria-live="polite"></div>
+<footer>CartWitness · Open-source local demo · No funds sent on a real PayPal account</footer>
+<script src="/app.js" defer></script></body></html>

@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ThermoLoom synthetic-first grayscale PV image triage; review-only output
+Resources:
+  InputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  ReviewBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  Analyzer:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: aws_handler.lambda_handler
+      Runtime: python3.12
+      Architectures: [x86_64]
+      MemorySize: 2048
+      Timeout: 60
+      Environment:
+        Variables:
+          THERMOLOOM_OUTPUT_BUCKET: !Ref ReviewBucket
+          THERMOLOOM_ROWS: '4'
+          THERMOLOOM_COLS: '6'
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref InputBucket
+        - S3WritePolicy:
+            BucketName: !Ref ReviewBucket
+      Events:
+        PngUploaded:
+          Type: S3
+          Properties:
+            Bucket: !Ref InputBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: images/
+                  - Name: suffix
+                    Value: .png
+Outputs:
+  SyntheticOnly:
+    Description: This template is source only. No deploy, thermal calibration, or competition entry is claimed.
+    Value: 'true'

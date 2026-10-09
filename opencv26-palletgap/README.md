@@ -61,6 +61,8 @@ Only the SAM-owned S3 bucket, explicit prefixes and bounded file sizes are accep
 
 ## Evaluation and limitations
 
+**Confirmation integrity:** the engine now rejects *pixel-identical* first and confirmation frames as a frozen/replayed feed and requests a new capture. Run `PYTHONPATH=. python focus/identical_confirmation.py` for the one synthetic replay-versus-fresh confirmation regression. Non-identical pixels do **not** prove capture independence, freshness or camera authenticity; a production upload service still needs trusted frame identities and timestamps. No remote camera or physical safety evaluation is claimed.
+
 Real evaluation should use a fixed-camera dataset with day/night, shadows, vibration, partial occlusion, different load positions and accessible manual labels; measure detection rate, false escalation, abstentions, end-to-end latency and cost. ORB may fail on textureless floors; chroma thresholds can disagree under sunlight; overlap is not real-world distance or a 3D clearance measurement. Reviewers must not infer regulatory compliance from any output. Synthetic fixtures intentionally test program flow, **not predictive accuracy**.
 
 Source: MIT, aligned with the host repository license. Original independent competition candidate; no competition entrant/team registration, AWS execution, win or payout is implied by public source publication.
