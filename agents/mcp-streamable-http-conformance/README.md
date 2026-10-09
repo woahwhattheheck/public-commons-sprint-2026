@@ -8,7 +8,7 @@ The Amazon Build, Ship, Shape Open Source mini-challenge explicitly rewards mean
 
 ## What it checks
 
-- a conformant `initialize` request pinned to supported revision `2025-11-25`, exact version agreement, required `InitializeResult` fields (`capabilities`, `serverInfo`), a configurable policy minimum, and an explicit supported-version table currently containing only `2025-11-25`;
+- a conformant `initialize` request pinned to supported revision `2025-11-25`, exact version agreement, required `InitializeResult` fields (`capabilities`, `serverInfo`), typed optional `instructions`/`_meta` and server metadata/icons while preserving unknown extension fields, a configurable policy minimum, and an explicit supported-version table currently containing only `2025-11-25`;
 - both legal request-response modes: `application/json` and SSE-framed `text/event-stream`, with request responses rejected if they declare neither permitted media type;
 - `notifications/initialized` lifecycle semantics;
 - `ping`, advertised `tools/list`, and advertised `resources/list` discovery;

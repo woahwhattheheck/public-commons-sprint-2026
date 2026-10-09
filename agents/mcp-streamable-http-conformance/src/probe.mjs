@@ -58,6 +58,35 @@ function validServerCapabilities(capabilities) {
   return true;
 }
 
+function validIcon(icon) {
+  if (!isPlainObject(icon) || typeof icon.src !== 'string' || icon.src.length === 0) return false;
+  if (icon.mimeType !== undefined && typeof icon.mimeType !== 'string') return false;
+  if (icon.sizes !== undefined && (!Array.isArray(icon.sizes) || !icon.sizes.every((size) => typeof size === 'string'))) return false;
+  if (icon.theme !== undefined && !['light', 'dark'].includes(icon.theme)) return false;
+  return true;
+}
+
+function validImplementation(implementation) {
+  if (!isPlainObject(implementation)) return false;
+  if (typeof implementation.name !== 'string' || implementation.name.length === 0) return false;
+  if (typeof implementation.version !== 'string' || implementation.version.length === 0) return false;
+  for (const key of ['title', 'description', 'websiteUrl']) {
+    if (implementation[key] !== undefined && typeof implementation[key] !== 'string') return false;
+  }
+  if (implementation.icons !== undefined && (!Array.isArray(implementation.icons) || !implementation.icons.every(validIcon))) return false;
+  return true;
+}
+
+function validInitializeResult(result) {
+  if (!isPlainObject(result)) return false;
+  if (typeof result.protocolVersion !== 'string') return false;
+  if (!validServerCapabilities(result.capabilities)) return false;
+  if (!validImplementation(result.serverInfo)) return false;
+  if (result.instructions !== undefined && typeof result.instructions !== 'string') return false;
+  if (result._meta !== undefined && !isPlainObject(result._meta)) return false;
+  return true;
+}
+
 function validSessionId(value) {
   return typeof value === 'string' && /^[\x21-\x7E]+$/.test(value);
 }
@@ -136,17 +165,17 @@ export async function probeMcpEndpoint(options) {
   const rawSessionId = init.response.headers.get('mcp-session-id');
   const serverInfo = initResult?.serverInfo;
   const capabilitiesValid = validServerCapabilities(initResult?.capabilities);
+  const serverInfoValid = validImplementation(serverInfo);
+  const instructionsValid = initResult?.instructions === undefined || typeof initResult.instructions === 'string';
+  const metaValid = initResult?._meta === undefined || isPlainObject(initResult._meta);
+  const initializeResultValid = validInitializeResult(initResult);
   const initOk = init.response.status === 200 &&
     init.body?.jsonrpc === '2.0' &&
     init.body?.id === 1 &&
-    typeof negotiated === 'string' &&
-    capabilitiesValid &&
-    isPlainObject(serverInfo) &&
-    typeof serverInfo.name === 'string' && serverInfo.name.length > 0 &&
-    typeof serverInfo.version === 'string' && serverInfo.version.length > 0;
+    initializeResultValid;
   checks.push(initOk
     ? pass('initialize-envelope', { httpStatus: init.response.status, negotiatedProtocolVersion: negotiated, sessionIssued: rawSessionId !== null, serverName: serverInfo.name, serverVersion: serverInfo.version })
-    : fail('initialize-envelope', { httpStatus: init.response.status, errorCode: init.body?.error?.code ?? null, requiredFields: { protocolVersion: typeof negotiated === 'string', capabilities: capabilitiesValid, serverInfo: isPlainObject(serverInfo), serverName: typeof serverInfo?.name === 'string' && serverInfo.name.length > 0, serverVersion: typeof serverInfo?.version === 'string' && serverInfo.version.length > 0 } }));
+    : fail('initialize-envelope', { httpStatus: init.response.status, errorCode: init.body?.error?.code ?? null, requiredFields: { protocolVersion: typeof negotiated === 'string', capabilities: capabilitiesValid, serverInfo: serverInfoValid, serverName: typeof serverInfo?.name === 'string' && serverInfo.name.length > 0, serverVersion: typeof serverInfo?.version === 'string' && serverInfo.version.length > 0, instructions: instructionsValid, _meta: metaValid } }));
   if (!initOk) return finalize();
   checks.push(versionAtLeast(negotiated, minimumProtocolVersion)
     ? pass('protocol-minimum', { minimumProtocolVersion, negotiatedProtocolVersion: negotiated })
