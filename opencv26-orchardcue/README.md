@@ -18,6 +18,21 @@ python check_focused.py       # one small synthetic acceptance check; not a full
 
 **OpenCV 5:** current cloud fixture was run with OpenCV 4.13.0 + NumPy 2.3.5, NOT OpenCV 5. Before entering the official 2026 competition, run with a publicly available OpenCV 5 build (including aruco), collect exact version/build hashes and real image results. This demo does not claim the OpenCV 5 contest requirement is already met.
 
+## Red-candidate focus guard (offline, synthetic evidence)
+
+A globally sharp marker or background can conceal *locally blurred red candidates*.
+The focus check now reports `quality.red_candidate_median_laplacian_variance`
+from six-pixel-padded bounding boxes around detected candidate regions, and
+requests `FRUIT_ROI_BLUR_RETAKE` when this median is below **60.0**. The original
+whole-image blur, exposure, glare, marker, and operator-confirmation gates remain.
+
+A single focused check, `python focused_red_roi_blur.py`, generated a sharp-background
+pair from `fixture.py`: six sharp red objects stayed READY_FOR_OPERATOR_REVIEW,
+while six locally blurred objects were sent to RETAKE_REQUIRED. Global focus
+remained above its original 22.0 threshold for both. This threshold and pair
+are **synthetic-only screening evidence**, not field-calibrated diagnostic accuracy
+or official OpenCV 5 / AWS performance. Real orchard validation is still required.
+
 ## Evidence and agentic action contract
 
 `schema=orchardcue-review/1` contains input SHA-256, exact dimensions, ArUco id 23 scale geometry, RGB-to-HSV red mask & contour geometry, blur/glare/brightness diagnostics, visual candidates, limitation notes, and one of three actions:
