@@ -54,10 +54,12 @@ The SAM resource graph was repaired to separate the fixed EvidenceBucketName par
 | --- | --- | --- |
 | [PR #259](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/259), merged | Human crop, original-pixel rectangle, canonical recomputation and portable replay; three focused checks reported passed | Hosted browser then failed local navigation due to administrator block; no AWS |
 | [PR #265](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/265), merged | SAM dependency-cycle source repair and scoped validator definition | Real AWS provisioning, image deployment, throughput or costs |
-| [PR #269](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/269), merged | Actual Chromium synthetic-workspace capture and verifier workflow | OpenCV 5 runtime, customer-document accuracy, narrated final video |
+| [PR #269](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/269), merged | Actual Chromium synthetic-workspace capture and verifier workflow | This browser capture uses OpenCV 4.13 development compatibility; it does not itself establish OpenCV 5, AWS or final narration |
 | [GitHub run 37894218628](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218628) | Completed SUCCESS at 2026-10-09 06:35 UTC; artifact 11599597211, 2,108,440-byte Actions archive, expiry 2026-10-23 06:35 UTC | Entrant registration, AWS round trip, final contest submission or prize |
 
-Source evidence also includes [HUMAN_CROP_PROOF.json](../evidence/HUMAN_CROP_PROOF.json) and [offline-review limits](../docs/OFFLINE_REVIEW.md). The development demonstration used **OpenCV 4.13** under an explicitly flagged compatibility switch; the package metadata requires **OpenCV 5.x** for competition mode. Preserve that distinction on-screen and in narration.
+A **separate genuine hosted OpenCV 5 source execution** is verified: [source-proof run 37894218836](https://github.com/woahwhattheheck/public-commons-sprint-2026/actions/runs/37894218836), job 113701744025, completed SUCCESS on 9 October 2026 against source head `b8bac529a0c39eb59c50696f333729caead532a5`. Its raw job log reports `opencv-python-headless-5.0.0.93`, `opencv=5.0.0`, `competition_opencv5_runtime=True`, two previously completed 66-case test modes and two successful synthetic CLI evaluations. This was hosted **Linux x86-64**, not arm64 Lambda, real S3 or DynamoDB. No new tests were run to prepare this report.
+
+Source evidence also includes [HUMAN_CROP_PROOF.json](../evidence/HUMAN_CROP_PROOF.json) and [offline-review limits](../docs/OFFLINE_REVIEW.md). The recorded browser interaction separately used **OpenCV 4.13** under the development compatibility switch. Do not mislabel browser footage as the OpenCV 5 source-proof run; preserve both environments and their exact source references on-screen.
 
 ## 4. Reproduction and judge access
 
@@ -89,7 +91,7 @@ Remaining honest limitations:
 - Perceptual similarity is a review signal, not proof of duplicate payment or common issuer; prior fingerprint custody is a trust boundary.
 - A crop operator's confirmation does not establish identity, document completeness or provenance. The offline HTML and evidence ZIP may expose raw confidential pixels.
 - Static replay proves internal consistency, not issuer authenticity. The service HMAC seals retained service records, not the underlying document's legal truth.
-- Current public work demonstrates OpenCV 4 development behavior and synthetic browser UX. Actual OpenCV 5 image execution, AWS S3/Dynamo transaction, latency/cost and an external hosted endpoint are unverified.
+- Current public evidence includes genuine OpenCV 5.0.0 image execution and synthetic evaluation on a GitHub-hosted **x86-64** runner, as well as a separate OpenCV 4 development-browser walkthrough. A production **arm64** image, real AWS S3/Dynamo transaction, deployed latency/cost and an external hosted endpoint remain unverified.
 - No historical customer adoption, loss avoided, money moved, competition entry or award is asserted.
 
 The expected utility is a reviewable branching intake system whose visual quality findings change downstream work instead of making financial decisions automatically. Demonstrating business impact responsibly will require an approved, labeled document set, reviewer evaluation and measured false-route rates.
