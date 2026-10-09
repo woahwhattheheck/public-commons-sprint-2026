@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { isValidRfc3339 } from './rfc3339.mjs';
 
 export class WorkSealError extends Error {
   constructor(code, message) {
@@ -67,9 +68,8 @@ export function assertAtomic(value, name = 'amountAtomic') {
 }
 
 export function assertRfc3339(value, name) {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
-    fail('BAD_TIMESTAMP', `${name} must be RFC3339 with an explicit timezone`);
+  if (!isValidRfc3339(value)) {
+    fail('BAD_TIMESTAMP', `${name} must be a valid Gregorian RFC3339 timestamp with an explicit timezone`);
   }
-  if (!Number.isFinite(Date.parse(value))) fail('BAD_TIMESTAMP', `${name} is not parseable`);
   return value;
 }
