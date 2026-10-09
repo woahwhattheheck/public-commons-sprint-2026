@@ -19,6 +19,16 @@ MAX_RESPONSE_BYTES = 1_000_000
 Transport = Callable[[str, Mapping[str, str]], bytes]
 
 
+class _RejectAuthenticatedRedirect(urllib.request.HTTPRedirectHandler):
+    """A credential-bearing Panta request must not follow any HTTP redirect."""
+
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
+
+
+_PANTA_OPENER = urllib.request.build_opener(_RejectAuthenticatedRedirect())
+
+
 class PantaError(ValueError):
     """Raised when Panta market evidence is unavailable or malformed."""
 
@@ -50,7 +60,7 @@ def _canonical_bytes(value: Any) -> bytes:
 def _default_transport(url: str, headers: Mapping[str, str]) -> bytes:
     request = urllib.request.Request(url, headers=dict(headers), method="GET")
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with _PANTA_OPENER.open(request, timeout=20) as response:
             declared = response.headers.get("Content-Length")
             if declared and int(declared) > MAX_RESPONSE_BYTES:
                 raise PantaError("Panta response exceeds the 1 MB evidence limit")
