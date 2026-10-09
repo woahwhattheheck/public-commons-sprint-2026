@@ -115,7 +115,13 @@ export class QlooClient {
     for (const [name, value] of Object.entries(params)) if (value !== '' && value != null) url.searchParams.set(name, String(value));
     const cacheKey = url.toString();
     const cached = this.cache.get(cacheKey);
-    if (cached && cached.until > this.now()) return cached.result;
+    if (cached && cached.until > this.now()) {
+      // Touch on a valid hit: Map iteration order is our bounded LRU queue.
+      this.cache.delete(cacheKey);
+      this.cache.set(cacheKey, cached);
+      return cached.result;
+    }
+    if (cached) this.cache.delete(cacheKey); // stale entries never keep priority
     // A completed-response cache does not protect Qloo from simultaneous identical
     // requests. Share their pending fetch (and its one timeout) without caching
     // failures, so 429 and transient outages remain retryable on the next call.
@@ -153,8 +159,18 @@ export class QlooClient {
       // Validate before the five-minute cache: do not persist schema failures
       // as successful provider responses or convert them to empty recommendations.
       arrayOfEntities(result);
-      if (this.cache.size > 48) this.cache.clear();
-      this.cache.set(cacheKey, { until: this.now() + 300000, result }); // private, server-memory only
+      // Preserve popular responses instead of dropping every cached item on
+      // the 49th distinct key. Revalidate before insertion as above; retain
+      // the original five-minute absolute expiry and exactly 48 max entries.
+      const now = this.now();
+      this.cache.delete(cacheKey); // replacement becomes the most recently used
+      if (this.cache.size >= 48) {
+        for (const [key, value] of this.cache) {
+          if (value.until <= now) this.cache.delete(key);
+        }
+      }
+      while (this.cache.size >= 48) this.cache.delete(this.cache.keys().next().value);
+      this.cache.set(cacheKey, { until: now + 300000, result }); // private, server-memory only
       return result;
     } catch (error) {
       if (error?.name === 'AbortError') throw new QlooError('QLOO_TIMEOUT', 504);
