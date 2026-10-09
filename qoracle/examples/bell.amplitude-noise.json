@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "circuit": {
+    "schema": 1,
+    "qubits": 2,
+    "gates": [
+      {"op": "H", "wire": 0},
+      {"op": "CNOT", "control": 0, "target": 1}
+    ],
+    "observables": ["XX", "YY", "ZZ", "ZI", "IZ"],
+    "probability_wires": [1, 0]
+  },
+  "noise": [
+    {"after_gate": 2, "channel": "AMPLITUDE_DAMPING", "wire": 0, "p": 0.4}
+  ],
+  "sampling": {"shots": 1000, "seed": 20261009}
+}
