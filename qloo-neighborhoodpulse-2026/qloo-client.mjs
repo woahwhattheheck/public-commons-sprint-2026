@@ -15,7 +15,7 @@ const MAX_RESPONSE_BYTES = 1_500_000;
 async function readBoundedJson(response) {
   const tooLarge = () => new Error('Qloo returned an unexpectedly large response.');
   const advertised = response.headers?.get?.('content-length');
-  if (advertised != null && /^\\d+$/.test(advertised) && Number(advertised) > MAX_RESPONSE_BYTES) {
+  if (advertised != null && /^[0-9]+$/.test(advertised) && Number(advertised) > MAX_RESPONSE_BYTES) {
     try { await response.body?.cancel?.(); } catch { /* best-effort upstream cancel */ }
     throw tooLarge();
   }
