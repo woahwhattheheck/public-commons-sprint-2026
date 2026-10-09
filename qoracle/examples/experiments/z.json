@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "qubits": 1,
+  "gates": [
+    {
+      "op": "Z",
+      "wire": 0
+    }
+  ]
+}
