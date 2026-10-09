@@ -22,16 +22,27 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def _endpoint() -> tuple[str, str, str] | None:
-    base = os.environ.get("MODEL_ENDPOINT", "").strip().rstrip("/")
+    base = os.environ.get("MODEL_ENDPOINT", "").strip()
     token = os.environ.get("MODEL_TOKEN", "").strip()
     model = os.environ.get("MODEL_NAME", "").strip()
     if not (base and token and model):
         return None
-    parsed = urllib.parse.urlsplit(base)
-    if (parsed.scheme != "https" or not parsed.hostname or parsed.username is not None
-            or parsed.password is not None or parsed.query or parsed.fragment):
+    # The organizer injects an origin (including HTTP inside the audited network).
+    # Preserve that scheme; do not rewrite it or bypass the environment's proxy.
+    # Contract: Agenthon-2026/Agenthon2026-public/docs/HOUSE-MODEL.md.
+    if any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in base):
         return None
-    return base + "/v1/chat/completions", token, model
+    try:
+        parsed = urllib.parse.urlsplit(base)
+        port = parsed.port  # Validate malformed/out-of-range ports before any request.
+    except ValueError:
+        return None
+    if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+            or parsed.username is not None or parsed.password is not None
+            or parsed.path not in {"", "/"} or "?" in base or "#" in base
+            or port == 0):
+        return None
+    return base.rstrip("/") + "/v1/chat/completions", token, model
 
 
 def _parse_content(content: str) -> dict[str, Any] | None:
