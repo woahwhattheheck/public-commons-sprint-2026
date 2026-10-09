@@ -73,6 +73,8 @@ For each channel, ChipTrace builds a baseline envelope and computes:
 6. **Replicate divergence** — spread of replicate medians relative to baseline scale.
 7. **Cross-sensor shift** — change in aligned Pearson correlation structure versus baseline.
 
+Cross-sensor pair keys preserve ordinary channel names. For channel names containing `|` or `%`, each member is escaped before the two names are joined: `%` to `%25`, then `|` to `%7C`. This prevents different physical sensor pairs from sharing one evidence key or losing correlation-drift attribution. The existing plain-name report keys remain unchanged.
+
 The composite `quality_risk_score` is deterministic and transparent. Hard review thresholds can trigger `REVIEW` even when the weighted score is below 25. Sparse data returns `INSUFFICIENT_EVIDENCE`, never a falsely reassuring pass. An **entire baseline sensor channel missing** from the candidate run also produces an explicit `INSUFFICIENT_EVIDENCE` channel assessment and abstention overall, even if every remaining sensor appears clean. Its quality-risk score is `null` (rendered `n/a`), not a fabricated low-risk reading; the baseline metadata and exact-byte input receipts are retained. Extra channels absent from the baseline remain invalid input.
 
 **Independent-replicate coverage:** if a baseline has at least two independent
