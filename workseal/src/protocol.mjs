@@ -123,6 +123,15 @@ export function makeAcceptanceReceipt({ task, result, checks, acceptedAt }) {
     return { id, ok: check.ok, evidenceDigest: assertSha256(check.evidenceDigest, `checks[${index}].evidenceDigest`) };
   }).sort((a, b) => a.id.localeCompare(b.id));
   if (normalizedChecks.map((c) => c.id).join('\0') !== policyIds.join('\0')) fail('CHECK_SET_MISMATCH', 'check ids do not match policy requirement ids');
+  const committedEvidence = new Map(normalizedResult.evidence.map((e) => [e.id, e.digest]));
+  for (const check of normalizedChecks) {
+    if (!committedEvidence.has(check.id)) {
+      fail('MISSING_REQUIREMENT_EVIDENCE', `accepted requirement ${check.id} has no delivered evidence`);
+    }
+    if (committedEvidence.get(check.id) !== check.evidenceDigest) {
+      fail('EVIDENCE_DIGEST_MISMATCH', `accepted requirement ${check.id} is not bound to the delivered evidence digest`);
+    }
+  }
   if (normalizedChecks.some((c) => !c.ok)) fail('REQUIREMENT_FAILED', 'cannot mint ACCEPT receipt while a requirement is false');
   return {
     schema: RECEIPT_SCHEMA,
