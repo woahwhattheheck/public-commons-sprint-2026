@@ -64,6 +64,21 @@ async function boot(){
   el('foundry').textContent=source.foundryConfigured?'Request optional Foundry draft':'Foundry not configured';
   el('next').addEventListener('click',()=>{if(current<timeline.length){current++;render();}});
   el('reset').addEventListener('click',()=>{stop();current=0;render();});
+  // A downloaded proof is pinned to this click's selected frame, not to a
+  // later auto-play response or a provider-generated narrative.
+  const downloadEvidence = format => {
+    const params = new URLSearchParams({ ...requestBody(), format });
+    const link = document.createElement('a');
+    link.href = '/api/evidence-export?' + params.toString();
+    link.download = 'counterpress-frame-' + current + '.' + format;
+    document.body.append(link);
+    link.click();
+    link.remove();
+  };
+  el('evidenceJson').disabled = false;
+  el('evidenceCsv').disabled = false;
+  el('evidenceJson').addEventListener('click', () => downloadEvidence('json'));
+  el('evidenceCsv').addEventListener('click', () => downloadEvidence('csv'));
   el('play').addEventListener('click',()=>{
     if(timer!==null){stop();return;}
     if(current===timeline.length)current=0;
