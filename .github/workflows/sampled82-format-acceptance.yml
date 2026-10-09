@@ -19,53 +19,35 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Read original contributor source
-        uses: actions/checkout@v4
+      - name: Read restored original contributor source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: woahwhattheheck/sampled
-          ref: b87dad80de5f306b4d07a6f3181f8c9cf04b5d38
+          ref: 251ef5ccea966632550e0522ba6f0496cc2802f4
           persist-credentials: false
           fetch-depth: 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
       - name: Install only the repository-pinned formatter
         run: |
           npm install --prefix "$RUNNER_TEMP/prettier-tool" --ignore-scripts --no-audit --no-fund --no-package-lock prettier@3.6.2
           echo "$RUNNER_TEMP/prettier-tool/node_modules/.bin" >> "$GITHUB_PATH"
-      - name: Required full-project check and changed-file correction evidence
+      - name: Verify exact restored blobs without importing project code
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 251ef5ccea966632550e0522ba6f0496cc2802f4
+          test "$(git hash-object eslint.config.js)" = 718493732dbbfaecccb8e43ea2b9a094022cf43e
+          test "$(git hash-object SECURITY.md)" = 9d9609123c4e64686234496c9ab83cc25fd05471
+          node --check eslint.config.js
+          echo 'RESTORED_BLOB_AND_SYNTAX_CHECK=PASS'
+      - name: Required full-project formatter acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
           printf 'SOURCE_HEAD='; git rev-parse HEAD
           printf 'NODE='; node --version
           printf 'PRETTIER='; prettier --version
-          set +e
-          npm run format:check > "$RUNNER_TEMP/source-format.log" 2>&1
-          full_status=$?
-          cat "$RUNNER_TEMP/source-format.log"
-          echo "SOURCE_FULL_FORMAT_EXIT=$full_status"
-          prettier SECURITY.md package.json .github/workflows/node.yml --check
-          changed_status=$?
-          echo "SOURCE_CHANGED_FORMAT_EXIT=$changed_status"
-          if [ "$changed_status" -ne 0 ]; then
-            prettier SECURITY.md package.json .github/workflows/node.yml --write
-            echo 'BEGIN_FORMAT_ONLY_PATCH'
-            git diff -- SECURITY.md package.json .github/workflows/node.yml
-            echo 'END_FORMAT_ONLY_PATCH'
-            prettier SECURITY.md package.json .github/workflows/node.yml --check
-            echo "CORRECTED_CHANGED_FORMAT_EXIT=$?"
-          fi
-          if [ "$full_status" -ne 0 ]; then
-            git fetch --depth=1 https://github.com/woahwhattheheck/sampled.git 08a2d1db8317e1620ead99f8eb7bdfe1e002aef0
-            fetch_status=$?
-            echo "BASE_FETCH_EXIT=$fetch_status"
-            if [ "$fetch_status" -eq 0 ]; then
-              git worktree add --detach "$RUNNER_TEMP/sampled-baseline" FETCH_HEAD
-              (cd "$RUNNER_TEMP/sampled-baseline" && prettier . --check) > "$RUNNER_TEMP/base-format.log" 2>&1
-              baseline_status=$?
-              cat "$RUNNER_TEMP/base-format.log"
-              echo "BASE_FULL_FORMAT_EXIT=$baseline_status"
-            fi
-          fi
-          exit "$full_status"
+          npm run format:check
+          echo 'SOURCE_FULL_FORMAT_EXIT=0'
