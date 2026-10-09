@@ -16,6 +16,7 @@ import {
   verifyAcceptanceSignature,
 } from '../src/protocol.mjs';
 import { makeSolanaSettlementPlan, SOLANA_MEMO_PROGRAM, SOLANA_SYSTEM_PROGRAM } from '../src/solana.mjs';
+import { pubkeyFromSeed } from '../src/escrow.mjs';
 
 function keys() {
   const pair = generateKeyPairSync('ed25519');
@@ -29,8 +30,8 @@ function task() {
   return {
     schema: 'workseal-task/v1',
     taskId: 'T-1',
-    buyer: { id: 'buyer', settlementAddress: 'Buyer1111111111111111111111111111111111111' },
-    worker: { id: 'worker', settlementAddress: 'Worker111111111111111111111111111111111111' },
+    buyer: { id: 'buyer', settlementAddress: pubkeyFromSeed('workseal-test-buyer-illustrative') },
+    worker: { id: 'worker', settlementAddress: pubkeyFromSeed('workseal-test-worker-illustrative') },
     currency: 'SOL_LAMPORTS',
     amountAtomic: '1000',
     deadline: '2026-10-12T23:59:59Z',
