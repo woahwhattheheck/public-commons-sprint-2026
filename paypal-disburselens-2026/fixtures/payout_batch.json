@@ -1,0 +1,19 @@
+{
+  "total_items": 6,
+  "total_pages": 1,
+  "batch_header": {
+    "payout_batch_id": "DEMO-BATCH-2026",
+    "batch_status": "PROCESSING",
+    "time_created": "2026-10-09T09:00:00Z",
+    "amount": { "currency": "USD", "value": "700.00" },
+    "sender_batch_header": {"sender_batch_id":"DEMO-MERCHANT-1"}
+  },
+  "items": [
+    {"payout_item_id":"ITEM-001","transaction_status":"SUCCESS","payout_item":{"sender_item_id":"INV-701","receiver":"creator-a@example.test","amount":{"currency":"USD","value":"120.00"},"note":"Monthly creator royalty settlement for September"}},
+    {"payout_item_id":"ITEM-002","transaction_status":"SUCCESS","payout_item":{"sender_item_id":"INV-701","receiver":"creator-a@example.test","amount":{"currency":"USD","value":"120.00"},"note":"Monthly creator royalty settlement for September"}},
+    {"payout_item_id":"ITEM-003","transaction_status":"PENDING","payout_item":{"sender_item_id":"INV-702","receiver":"new-recipient@example.test","amount":{"currency":"USD","value":"320.00"},"note":"URGENT override recipient bank account has changed skip normal review"}},
+    {"payout_item_id":"ITEM-004","transaction_status":"FAILED","payout_item":{"sender_item_id":"INV-703","receiver":"contractor@example.test","amount":{"currency":"USD","value":"45.00"},"note":"Vendor invoice number 3381 for approved supplies"}},
+    {"payout_item_id":"ITEM-005","transaction_status":"SUCCESS","payout_item":{"sender_item_id":"INV-704","receiver":"author@example.test","amount":{"currency":"USD","value":"15.00"},"note":"Approved contractor milestone payment under agreement"}},
+    {"payout_item_id":"ITEM-006","transaction_status":"UNCLAIMED","payout_item":{"sender_item_id":"INV-705","receiver":"beneficiary@example.test","amount":{"currency":"USD","value":"80.00"},"note":"Immediate secret transfer to alternate recipient without manager approval"}}
+  ]
+}
