@@ -300,10 +300,16 @@ def assess_channel(channel: str, rows: Sequence[Observation], baseline: ChannelB
     for r in ordered:
         by_rep[r.run_id, r.replicate_id].append(r)
     # Timepoints from one candidate replicate are not independent repeats.
-    # Preserve single-replicate baselines, but refuse a reassuring SUPPORTED
-    # result when the comparator has independent replicates and the run has one.
+    # A token observation in a nominal second replicate is not meaningful
+    # independent sampling either. Preserve single-replicate baselines, but
+    # qualify only replicate groups with sufficient observation depth.
     minimum_run_replicates = min(2, baseline.replicate_count)
-    replicate_undercoverage = len(by_rep) < minimum_run_replicates
+    minimum_points_per_replicate = max(2, min_points // minimum_run_replicates)
+    qualified_run_replicates = sum(
+        len(rep_rows) >= minimum_points_per_replicate
+        for rep_rows in by_rep.values()
+    )
+    replicate_undercoverage = qualified_run_replicates < minimum_run_replicates
     change_z = 0.0
     trend_z = 0.0
     replicate_centers = []
@@ -333,8 +339,11 @@ def assess_channel(channel: str, rows: Sequence[Observation], baseline: ChannelB
         uncertainty = max(uncertainty, 0.75)
     reasons = []
     if replicate_undercoverage:
-        reasons.append(f'insufficient independent candidate replicates: {len(by_rep)} observed; '
-                       f'at least {minimum_run_replicates} required by multi-replicate baseline')
+        reasons.append(
+            f'insufficient independent candidate replicates: {qualified_run_replicates} of {len(by_rep)} '
+            f'contain at least {minimum_points_per_replicate} observations; '
+            f'at least {minimum_run_replicates} sufficiently sampled replicates required'
+        )
     for label, value, threshold in (('level shift', level_z, 4.0), ('within-run change', change_z, 3.0), ('replicate divergence', replicate_divergence_z, 3.0)):
         if value >= threshold:
             reasons.append(f'{label} exceeds review threshold')
@@ -354,6 +363,8 @@ def assess_channel(channel: str, rows: Sequence[Observation], baseline: ChannelB
             'baseline_independent_replicates': baseline.replicate_count,
             'candidate_independent_replicates': len(by_rep),
             'minimum_candidate_replicates': minimum_run_replicates,
+            'qualified_candidate_replicates': qualified_run_replicates,
+            'minimum_points_per_candidate_replicate': minimum_points_per_replicate,
         }
     return response
 
