@@ -228,6 +228,11 @@ def assess_channel(channel: str, rows: Sequence[Observation], baseline: ChannelB
     by_rep: Dict[Tuple[str, str], List[Observation]] = defaultdict(list)
     for r in ordered:
         by_rep[r.run_id, r.replicate_id].append(r)
+    # Timepoints from one candidate replicate are not independent repeats.
+    # Preserve single-replicate baselines, but refuse a reassuring SUPPORTED
+    # result when the comparator has independent replicates and the run has one.
+    minimum_run_replicates = min(2, baseline.replicate_count)
+    replicate_undercoverage = len(by_rep) < minimum_run_replicates
     change_z = 0.0
     trend_z = 0.0
     replicate_centers = []
@@ -249,11 +254,16 @@ def assess_channel(channel: str, rows: Sequence[Observation], baseline: ChannelB
     components = {'level': clamp01(level_z / 6.0), 'change_point': clamp01(change_z / 5.0), 'trend': clamp01(trend_z / 4.0), 'outliers': clamp01(outlier_fraction / 0.25), 'missingness': clamp01(missing_fraction / 0.1), 'replicate_divergence': clamp01(replicate_divergence_z / 5.0), 'cross_sensor_shift': clamp01(corr_delta / 0.75)}
     weights = {'level': 0.2, 'change_point': 0.18, 'trend': 0.12, 'outliers': 0.16, 'missingness': 0.12, 'replicate_divergence': 0.14, 'cross_sensor_shift': 0.08}
     quality_risk = 100.0 * sum((components[k] * weights[k] for k in weights))
-    insufficient = len(rows) < min_points or baseline.n < min_baseline_points
+    insufficient = len(rows) < min_points or baseline.n < min_baseline_points or replicate_undercoverage
     severe = level_z >= 4.0 or change_z >= 3.0 or outlier_fraction >= 0.12 or (missing_fraction >= 0.05) or (replicate_divergence_z >= 3.0) or (corr_delta >= 0.45)
     state = 'INSUFFICIENT_EVIDENCE' if insufficient else 'REVIEW' if quality_risk >= 25.0 or severe else 'SUPPORTED'
     uncertainty = clamp01(1.0 / math.sqrt(max(1, len(rows))) + 1.0 / math.sqrt(max(1, baseline.n)) + 0.5 * missing_fraction + (0.12 if baseline.scale_method == 'DEGENERATE_FLOOR' else 0.0))
+    if replicate_undercoverage:
+        uncertainty = max(uncertainty, 0.75)
     reasons = []
+    if replicate_undercoverage:
+        reasons.append(f'insufficient independent candidate replicates: {len(by_rep)} observed; '
+                       f'at least {minimum_run_replicates} required by multi-replicate baseline')
     for label, value, threshold in (('level shift', level_z, 4.0), ('within-run change', change_z, 3.0), ('replicate divergence', replicate_divergence_z, 3.0)):
         if value >= threshold:
             reasons.append(f'{label} exceeds review threshold')
@@ -263,11 +273,19 @@ def assess_channel(channel: str, rows: Sequence[Observation], baseline: ChannelB
         reasons.append('cadence-derived missingness exceeds review threshold')
     if corr_delta >= 0.45:
         reasons.append('cross-sensor correlation structure shifted')
-    if insufficient:
+    if len(rows) < min_points or baseline.n < min_baseline_points:
         reasons.append('insufficient observations for supported-state decision')
     if not reasons:
         reasons.append('no configured quality-review threshold exceeded')
-    return {'channel': channel, 'state': state, 'quality_risk_score': round(quality_risk, 3), 'uncertainty': round(uncertainty, 6), 'reasons': reasons, 'run_n': len(rows), 'baseline_n': baseline.n, 'unit': baseline.unit, 'modality': baseline.modality, 'baseline_center': round(baseline.center, 10), 'baseline_scale': round(baseline.scale, 10), 'baseline_scale_method': baseline.scale_method, 'metrics': {'run_center': round(run_center, 10), 'level_z': round(level_z, 6), 'max_change_z': round(change_z, 6), 'max_trend_z_per_baseline_step': round(trend_z, 6), 'outlier_fraction': round(outlier_fraction, 8), 'missing_fraction': round(missing_fraction, 8), 'replicate_divergence_z': round(replicate_divergence_z, 6), 'max_cross_sensor_correlation_delta': round(corr_delta, 8)}, 'score_components': {k: round(v, 8) for k, v in components.items()}}
+    response = {'channel': channel, 'state': state, 'quality_risk_score': round(quality_risk, 3), 'uncertainty': round(uncertainty, 6), 'reasons': reasons, 'run_n': len(rows), 'baseline_n': baseline.n, 'unit': baseline.unit, 'modality': baseline.modality, 'baseline_center': round(baseline.center, 10), 'baseline_scale': round(baseline.scale, 10), 'baseline_scale_method': baseline.scale_method, 'metrics': {'run_center': round(run_center, 10), 'level_z': round(level_z, 6), 'max_change_z': round(change_z, 6), 'max_trend_z_per_baseline_step': round(trend_z, 6), 'outlier_fraction': round(outlier_fraction, 8), 'missing_fraction': round(missing_fraction, 8), 'replicate_divergence_z': round(replicate_divergence_z, 6), 'max_cross_sensor_correlation_delta': round(corr_delta, 8)}, 'score_components': {k: round(v, 8) for k, v in components.items()}}
+    if replicate_undercoverage:
+        response['replicate_evidence'] = {
+            'baseline_independent_replicates': baseline.replicate_count,
+            'candidate_independent_replicates': len(by_rep),
+            'minimum_candidate_replicates': minimum_run_replicates,
+        }
+    return response
+
 
 def _missing_channel_assessment(channel: str, baseline: ChannelBaseline) -> dict:
     """Abstain if a baseline sensor has no candidate samples at all.
@@ -320,6 +338,11 @@ def analyze(baseline_path: Path, run_path: Path, *, min_points: int=6, min_basel
     if absent_channels:
         payload['scope']['state_semantics']['INSUFFICIENT_EVIDENCE'] = (
             'Observation counts are too small or a baseline channel is absent from the candidate run.'
+        )
+    if any('replicate_evidence' in a for a in assessments):
+        payload['scope']['state_semantics']['INSUFFICIENT_EVIDENCE'] = (
+            'Observation counts are too small, a required baseline channel is absent, or '
+            'independent candidate replicate coverage is insufficient.'
         )
     payload['receipt_sha256'] = _sha256_bytes(canonical_bytes(payload))
     return payload
