@@ -75,6 +75,14 @@ For each channel, ChipTrace builds a baseline envelope and computes:
 
 The composite `quality_risk_score` is deterministic and transparent. Hard review thresholds can trigger `REVIEW` even when the weighted score is below 25. Sparse data returns `INSUFFICIENT_EVIDENCE`, never a falsely reassuring pass. An **entire baseline sensor channel missing** from the candidate run also produces an explicit `INSUFFICIENT_EVIDENCE` channel assessment and abstention overall, even if every remaining sensor appears clean. Its quality-risk score is `null` (rendered `n/a`), not a fabricated low-risk reading; the baseline metadata and exact-byte input receipts are retained. Extra channels absent from the baseline remain invalid input.
 
+**Independent-replicate coverage:** if a baseline has at least two independent
+`(run_id, replicate_id)` groups, a candidate channel must also contain at least two
+groups before the system can emit `SUPPORTED`. Many repeated timepoints in one
+replicate do not substitute for independent replicates. A single candidate
+replicate now yields `INSUFFICIENT_EVIDENCE`, an explicit 1-of-2 evidence count
+and higher uncertainty; the valid one-replicate-baseline behavior remains unchanged.
+This sufficiency gate is not a substitute for assay-specific power analysis.
+
 The current thresholds are an auditable prototype policy, not universal biological constants. A real lab should calibrate them against its assay, device, sensor, sampling plan, and validated QC process.
 
 ## Demo receipt
