@@ -10,13 +10,14 @@ const wrap = (response) => createQlooClient({
 
 function streamed(chunks, headers = {}) {
   const state = { cancelled: false };
+  let index = 0;
   const body = new ReadableStream({
-    start(controller) {
-      for (const chunk of chunks) controller.enqueue(chunk);
-      controller.close();
+    pull(controller) {
+      if (index < chunks.length) controller.enqueue(chunks[index++]);
+      else controller.close();
     },
     cancel() { state.cancelled = true; },
-  });
+  }, { highWaterMark: 0 });
   return { response: new Response(body, { status: 200, headers }), state };
 }
 
