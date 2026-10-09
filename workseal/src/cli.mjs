@@ -12,6 +12,7 @@ import {
   signAcceptanceReceipt,
 } from './protocol.mjs';
 import { makeSolanaSettlementPlan } from './solana.mjs';
+import { pubkeyFromSeed } from './escrow.mjs';
 
 function demo() {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
@@ -20,8 +21,8 @@ function demo() {
   const task = {
     schema: 'workseal-task/v1',
     taskId: 'demo-agent-contract-001',
-    buyer: { id: 'buyer:demo', settlementAddress: 'Buyer1111111111111111111111111111111111111' },
-    worker: { id: 'agent:demo', settlementAddress: 'Worker111111111111111111111111111111111111' },
+    buyer: { id: 'buyer:demo', settlementAddress: pubkeyFromSeed('workseal-demo-buyer-illustrative') },
+    worker: { id: 'agent:demo', settlementAddress: pubkeyFromSeed('workseal-demo-worker-illustrative') },
     currency: 'SOL_LAMPORTS',
     amountAtomic: '25000000',
     deadline: '2026-10-12T23:59:59Z',

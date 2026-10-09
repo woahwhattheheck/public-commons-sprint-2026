@@ -1,4 +1,5 @@
 import { WorkSealError, assertAtomic, assertNonEmptyString, assertSha256, sha256Hex } from './canonical.mjs';
+import { U64_MAX, decodePubkey } from './escrow.mjs';
 
 export const SOLANA_SYSTEM_PROGRAM = '11111111111111111111111111111111';
 export const SOLANA_MEMO_PROGRAM = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
@@ -11,8 +12,15 @@ export function makeSolanaSettlementPlan(intent, { cluster = 'devnet' } = {}) {
   if (intent.schema !== 'workseal-settlement-intent/v1') fail('BAD_SCHEMA', 'intent is not a WorkSeal settlement intent');
   if (intent.currency !== 'SOL_LAMPORTS') fail('UNSUPPORTED_CURRENCY', 'Solana v1 adapter currently supports SOL_LAMPORTS only');
   const lamports = assertAtomic(intent.amountAtomic, 'intent.amountAtomic');
+  // Solana SystemProgram.transfer encodes lamports as a little-endian u64.
+  // Check the string length before BigInt conversion to bound adversarial input.
+  if (lamports.length > 20 || BigInt(lamports) > U64_MAX) {
+    fail('BAD_LAMPORTS', 'lamports exceed Solana transfer u64 capacity');
+  }
   const payer = assertNonEmptyString(intent.payer, 'intent.payer', 64);
   const payee = assertNonEmptyString(intent.payee, 'intent.payee', 64);
+  decodePubkey(payer, 'intent.payer');
+  decodePubkey(payee, 'intent.payee');
   assertSha256(intent.taskDigest, 'intent.taskDigest');
   assertSha256(intent.resultDigest, 'intent.resultDigest');
   assertSha256(intent.acceptanceDigest, 'intent.acceptanceDigest');

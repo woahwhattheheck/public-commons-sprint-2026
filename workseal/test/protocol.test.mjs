@@ -16,6 +16,7 @@ import {
   verifyAcceptanceSignature,
 } from '../src/protocol.mjs';
 import { makeSolanaSettlementPlan, SOLANA_MEMO_PROGRAM, SOLANA_SYSTEM_PROGRAM } from '../src/solana.mjs';
+import { pubkeyFromSeed } from '../src/escrow.mjs';
 
 function keys() {
   const pair = generateKeyPairSync('ed25519');
@@ -29,8 +30,8 @@ function task() {
   return {
     schema: 'workseal-task/v1',
     taskId: 'T-1',
-    buyer: { id: 'buyer', settlementAddress: 'Buyer1111111111111111111111111111111111111' },
-    worker: { id: 'worker', settlementAddress: 'Worker111111111111111111111111111111111111' },
+    buyer: { id: 'buyer', settlementAddress: pubkeyFromSeed('workseal-test-buyer-illustrative') },
+    worker: { id: 'worker', settlementAddress: pubkeyFromSeed('workseal-test-worker-illustrative') },
     currency: 'SOL_LAMPORTS',
     amountAtomic: '1000',
     deadline: '2026-10-12T23:59:59Z',
@@ -261,6 +262,24 @@ test('Solana plan is deterministic and performs no write', () => {
 test('Solana plan rejects unsupported currency', () => {
   const { state } = acceptedState(); const intent = { ...createSettlementIntent(state), currency: 'USDC' };
   assert.throws(() => makeSolanaSettlementPlan(intent), (e) => e.code === 'UNSUPPORTED_CURRENCY');
+});
+
+test('Solana transfer plan rejects invalid account keys and overflowing lamports', () => {
+  const { state } = acceptedState();
+  const intent = createSettlementIntent(state);
+  assert.throws(() => makeSolanaSettlementPlan({ ...intent, payer: 'not-a-pubkey' }),
+    (e) => e.code === 'BAD_PUBKEY');
+  assert.throws(() => makeSolanaSettlementPlan({ ...intent, payee: 'not-a-pubkey' }),
+    (e) => e.code === 'BAD_PUBKEY');
+  assert.throws(() => makeSolanaSettlementPlan({ ...intent, amountAtomic: '18446744073709551616' }),
+    (e) => e.code === 'BAD_LAMPORTS');
+  assert.throws(() => makeSolanaSettlementPlan({ ...intent, amountAtomic: '9'.repeat(1024) }),
+    (e) => e.code === 'BAD_LAMPORTS');
+  assert.equal(
+    makeSolanaSettlementPlan({ ...intent, amountAtomic: '18446744073709551615' })
+      .instructions[1].lamports,
+    '18446744073709551615',
+  );
 });
 
 test('Solana memo binds exact settlement intent digest', () => {
