@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-_SHA256 = re.compile(r"[0-9a-f]{64}\\Z")
+_SHA256 = re.compile(r"[0-9a-f]{64}$")
 _BLOCK_SIZE = 1024 * 1024
 _MAX_REPORT_BYTES = 32 * 1024 * 1024
 
