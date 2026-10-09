@@ -65,3 +65,28 @@ test('reset with larger revision and new server-generation both render', () => {
   assert.equal(get('orderform').hidden, false);
   assert.match(get('error').textContent, /Invalid checkout state/);
 });
+
+test('4,096 deterministic out-of-order checkout reply sequences preserve newest state', () => {
+  let rng = 0x6a09e667;
+  function next() {
+    rng ^= rng << 13; rng ^= rng >>> 17; rng ^= rng << 5;
+    return rng >>> 0;
+  }
+  for (let trial = 0; trial < 4096; trial++) {
+    const generation = 'sequence-' + trial;
+    const replies = [
+      state(generation, 1, 'planned'),
+      state(generation, 2, 'approval_pending'),
+      state(generation, 3, 'payer_returned'),
+      state(generation, 4, 'fixture_completed')
+    ];
+    for (let j = replies.length - 1; j > 0; j--) {
+      const k = next() % (j + 1);
+      [replies[j], replies[k]] = [replies[k], replies[j]];
+    }
+    for (const reply of replies) paint(reply);
+    assert.match(get('result').textContent, /FIXTURE ONLY/,
+      'trial ' + trial + ' must finish at largest server revision');
+    assert.equal(get('captureform').hidden, true);
+  }
+});
