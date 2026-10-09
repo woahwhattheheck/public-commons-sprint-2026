@@ -7,7 +7,7 @@ from importlib.metadata import version
 import subprocess
 import sys
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
@@ -39,11 +39,11 @@ try:
         page.set_default_timeout(15000)
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(url)
-        page.wait_for_function("!document.getElementById('demo').disabled")
+        expect(page.locator("#demo")).to_be_enabled(timeout=15000)
         runtime = page.evaluate("""async () => { const c = await (await fetch('/api/config')).json();
           return {opencv_version: c.opencv_version, competition_opencv5_runtime: c.competition_opencv5_runtime}; }""")
         page.get_by_role("button", name="Load example").click()
-        page.wait_for_function("document.getElementById('source-action').textContent === 'REQUEST_HUMAN_CROP'")
+        expect(page.locator("#source-action")).to_have_text("REQUEST_HUMAN_CROP", timeout=15000)
         page.screenshot(path=str(OUT / "workspace-before.png"), full_page=True)
         page.wait_for_timeout(1200)
         canvas = page.locator("#canvas")
@@ -67,7 +67,7 @@ try:
         page.locator("#confirm").check()
         page.wait_for_timeout(1200)
         page.locator("#crop").click()
-        page.wait_for_function("document.getElementById('child-action').textContent === 'REQUEST_FIELD_EXTRACTION'")
+        expect(page.locator("#child-action")).to_have_text("REQUEST_FIELD_EXTRACTION", timeout=15000)
         page.locator("#result-title").scroll_into_view_if_needed()
         page.wait_for_timeout(1800)
         with page.expect_download() as transfer:
@@ -79,7 +79,7 @@ try:
         # Demonstrate failure handling using the same actual runtime.
         page.locator("#kind").select_option("blur")
         page.get_by_role("button", name="Load example").click()
-        page.wait_for_function("document.getElementById('source-action').textContent === 'REQUEST_RECAPTURE'")
+        expect(page.locator("#source-action")).to_have_text("REQUEST_RECAPTURE", timeout=15000)
         if not page.locator("#crop").is_disabled() or not page.locator("#export").is_disabled():
             raise RuntimeError("Recapture must disable crop and stale export")
         page.screenshot(path=str(OUT / "workspace-recapture.png"), full_page=True)
@@ -87,12 +87,12 @@ try:
         # Final state: the full source-to-crop transition remains visible.
         page.locator("#kind").select_option("two_docs")
         page.get_by_role("button", name="Load example").click()
-        page.wait_for_function("document.getElementById('source-action').textContent === 'REQUEST_HUMAN_CROP'")
+        expect(page.locator("#source-action")).to_have_text("REQUEST_HUMAN_CROP", timeout=15000)
         for key, value in {"left":40,"top":90,"right":800,"bottom":1140}.items():
             page.locator("#"+key).fill(str(value))
         page.locator("#reason").fill("Select the complete left synthetic document with its border.")
         page.locator("#confirm").check(); page.locator("#crop").click()
-        page.wait_for_function("document.getElementById('child-action').textContent === 'REQUEST_FIELD_EXTRACTION'")
+        expect(page.locator("#child-action")).to_have_text("REQUEST_FIELD_EXTRACTION", timeout=15000)
         page.evaluate("window.scrollTo(0,400)")
         page.wait_for_timeout(1500)
         video = page.video
