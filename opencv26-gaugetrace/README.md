@@ -21,7 +21,7 @@ Calibration JSON specifies start_deg, end_deg, min_value, max_value, units, and 
 
 ### Observed evidence
 
-The JSON output exposes the observation schema, estimated dial value or null, decision, reason, circular ROI, Laplacian image-detail metric, near-white clipping fraction, directional needle contrast and second-best separation. Raw photos are not embedded in JSON. The optional overlay makes the inferred ray and review boundary visible. A failed circle, low detail, bright clipping, low needle contrast, competing directions or outside-calibration needle produces RETAKE_OR_REVIEW.
+The JSON output exposes the observation schema, estimated dial value or null, decision, reason, circular ROI, whole-image and **dial-local** Laplacian detail metrics, near-white clipping fraction, directional needle contrast and second-best separation. The blur gate now uses only the dial-local metric: sharp scenery outside the instrument cannot rescue an out-of-focus dial. The original whole-image diagnostic remains available for comparison. Raw photos are not embedded in JSON. The optional overlay makes the inferred ray and review boundary visible. A failed circle, low detail, bright clipping, low needle contrast, competing directions or outside-calibration needle produces RETAKE_OR_REVIEW.
 
 **Limitations:** Mechanical needle thickness, lens perspective, printed legends inside the radial region, bent glass, reflected needle shadows and lighting all affect results. Hough circle localization is an approximation, not a perspective-corrected metrology measurement. Numeric estimates need instrument-specific test images, a physical reference, and documented error bars before any operational use. Never use in safety-critical automatic control.
 

@@ -35,41 +35,67 @@ def decode_image(raw: bytes) -> np.ndarray:
     return image
 
 
-def _marker(image: np.ndarray, marker_side_mm: float) -> tuple[dict | None, np.ndarray, bool]:
-    """Return one unambiguous scale marker; duplicate IDs invalidate scale."""
+def _scale_edge_px(xy: np.ndarray) -> float | None:
+    """Allow approximate scale only for a sufficiently square marker projection.
+
+    This is a conservative image-plane sanity gate, not a perspective correction
+    or proof that the fruit and tag are coplanar. Strongly slanted tags can make
+    a mean-edge-length physical conversion materially misleading.
+    """
+    if xy.shape != (4, 2) or not np.all(np.isfinite(xy)):
+        return None
+    edges = np.roll(xy, -1, axis=0).astype(np.float64) - xy.astype(np.float64)
+    lengths = np.linalg.norm(edges, axis=1)
+    shortest = float(np.min(lengths))
+    longest = float(np.max(lengths))
+    if shortest < 30.0 or longest / shortest > 1.30:
+        return None
+    unit = edges / lengths[:, None]
+    neighboring = np.sum(unit * np.roll(unit, -1, axis=0), axis=1)
+    if np.any(np.abs(neighboring) > 0.32):
+        return None
+    turns = edges[:, 0] * np.roll(edges[:, 1], -1) - edges[:, 1] * np.roll(edges[:, 0], -1)
+    if not (np.all(turns > 0) or np.all(turns < 0)):
+        return None
+    return float(np.mean(lengths))
+
+
+def _marker(image: np.ndarray, marker_side_mm: float) -> tuple[dict | None, np.ndarray, bool | str]:
     dictionary = cv2.aruco.getPredefinedDictionary(MARKER_DICTIONARY)
     detector = cv2.aruco.ArucoDetector(dictionary, cv2.aruco.DetectorParameters())
     corners, ids, _ = detector.detectMarkers(image)
     mask = np.full(image.shape[:2], 255, np.uint8)
     if ids is None:
         return None, mask, False
-    matching = [points for points, marker_id in zip(corners, ids.flatten())
-                if int(marker_id) == MARKER_ID]
-    # A repeated identifier offers no unique reference plane or scale, even
-    # when one tag is smaller than the normal 30px usability threshold.
-    if len(matching) > 1:
-        return None, mask, True
-    if not matching:
-        return None, mask, False
-    xy = matching[0].reshape(-1, 2)
-    edges = np.linalg.norm(np.roll(xy, -1, axis=0) - xy, axis=1)
-    edge = float(np.mean(edges))
-    if edge < 30:
-        return None, mask, False
-    region = cv2.convexHull(xy.astype(np.int32))
-    cv2.fillConvexPoly(mask, region, 0)
-    mask = cv2.erode(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13)))
-    return {"id": MARKER_ID, "edge_px": round(edge, 2),
-            "marker_side_mm": marker_side_mm,
-            "mm_per_pixel": round(marker_side_mm / edge, 6),
-            "assumption": "approximate only: marker and fruit are coplanar"}, mask, False
+    # Two visible fiducials sharing one ID do not identify a unique scale plane.
+    # Abstain before falling back to a single geometry-valid marker.
+    matching = sum(int(marker_id) == MARKER_ID for marker_id in ids.flatten())
+    if matching > 1:
+        return None, mask, "duplicate"
+    unreliable_geometry = False
+    for points, marker_id in zip(corners, ids.flatten()):
+        if int(marker_id) != MARKER_ID:
+            continue
+        xy = points.reshape(-1, 2)
+        edge = _scale_edge_px(xy)
+        if edge is None:
+            unreliable_geometry = True
+            continue
+        region = cv2.convexHull(xy.astype(np.int32))
+        cv2.fillConvexPoly(mask, region, 0)
+        mask = cv2.erode(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13)))
+        return {"id": MARKER_ID, "edge_px": round(edge, 2),
+                "marker_side_mm": marker_side_mm,
+                "mm_per_pixel": round(marker_side_mm / edge, 6),
+                "assumption": "approximate only: marker and fruit are coplanar"}, mask, False
+    return None, mask, unreliable_geometry
 
 
 def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0) -> tuple[dict[str, Any], np.ndarray]:
     if not 10 <= marker_side_mm <= 300:
         raise ValueError("marker_side_mm must be between 10 and 300")
     h, w = image.shape[:2]
-    marker, valid, marker_ambiguous = _marker(image, marker_side_mm)
+    marker, valid, marker_geometry_rejected = _marker(image, marker_side_mm)
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     saturation, value = hsv[:, :, 1], hsv[:, :, 2]
     good_pixels = valid > 0
@@ -88,7 +114,9 @@ def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0)
     if brightness < 48:
         reasons.append("DARK_RETAKE")
     if marker is None:
-        reasons.append("SCALE_MARKER_AMBIGUOUS" if marker_ambiguous else "SCALE_MARKER_MISSING")
+        reasons.append("SCALE_MARKER_AMBIGUOUS" if marker_geometry_rejected == "duplicate"
+                       else "SCALE_MARKER_GEOMETRY_UNRELIABLE" if marker_geometry_rejected
+                       else "SCALE_MARKER_MISSING")
 
     # Narrow, disclosed red fruit detector. Green/yellow varieties are not
     # detected; the system must not make general orchard yield claims.

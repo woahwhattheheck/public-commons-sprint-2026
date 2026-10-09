@@ -6,7 +6,7 @@ import path from "node:path";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MAX_REQUEST_BYTES = 4096;
 const MAX_QLOO_BYTES = 800_000;
-const QLOO_BASE = process.env.QLOO_API_BASE || "https://api.hackathon.qloo.com";
+const QLOO_BASE = process.env.QLOO_API_BASE || "https://hackathon.api.qloo.com";
 
 export function cleanInput(value, label, max = 80) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > max ||
@@ -99,6 +99,8 @@ export async function qlooGet(endpoint, params, { fetcher = fetch, key = process
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
   const response = await fetcher(url, {
     headers: { "X-Api-Key": key, Accept: "application/json" },
+    // Never follow a provider redirect with a server-side API credential.
+    redirect: "error",
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error("Qloo upstream returned HTTP " + response.status);
