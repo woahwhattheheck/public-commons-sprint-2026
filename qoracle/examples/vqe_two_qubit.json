@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "circuit": {
+    "schema": 1,
+    "qubits": 2,
+    "gates": [
+      {"op": "RY", "wire": 0, "theta": 1.7},
+      {"op": "CNOT", "control": 0, "target": 1}
+    ],
+    "observables": ["ZI", "XX"]
+  },
+  "terms": {"ZI": 0.7, "XX": 0.6},
+  "gate_indices": [0],
+  "max_steps": 80,
+  "initial_step": 1.0,
+  "gradient_tolerance": 1e-7
+}
