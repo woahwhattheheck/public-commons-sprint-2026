@@ -74,9 +74,15 @@ function searchCandidates(doc) {
 export async function resolveEntity(seed,key,fetcher=fetch){
   const {url,data}=await qlooGet('/search',{query:seed,types:'urn:entity:artist,urn:entity:movie,urn:entity:book,urn:entity:videogame',take:10},key,fetcher);
   const candidates=searchCandidates(data);
-  const target=seed.toLowerCase();
-  const best=candidates.find(x=>x.name.toLowerCase()===target)||candidates[0];
-  if(!best)throw new QlooError('NO_MATCH',`Qloo did not resolve a taste seed named "${seed}"`);
+  // Related search hits cannot substitute for the user's requested entity.
+  const canonical = value => value.normalize('NFKC').trim().toLocaleLowerCase('en').replace(/\s+/g,' ');
+  const exact=candidates.filter(x=>canonical(x.name)===canonical(seed));
+  if(!exact.length)throw new QlooError('NO_MATCH',`Qloo did not resolve a taste seed named "${seed}"`);
+  // Names can be shared by different cultural entities across Qloo domains.
+  const uniqueIds=new Set(exact.map(x=>x.id.trim().toLocaleLowerCase('en')));
+  if(uniqueIds.size>1)
+    throw new QlooError('AMBIGUOUS_SEED',`Qloo found multiple entities named "${seed}"; choose a more specific seed.`);
+  const best=exact[0];
   return {id:best.id,name:best.name,url};
 }
 export async function insightForSeed(seedId,kind,key,fetcher=fetch){
