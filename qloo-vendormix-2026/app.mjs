@@ -13,7 +13,7 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '127.0.0.1';
 const API_BASE = process.env.QLOO_API_BASE || 'https://hackathon.api.qloo.com';
-const ALLOWED_BASES = new Set(['https://hackathon.api.qloo.com', 'https://api.qloo.com', 'https://staging.api.qloo.com']);
+const ALLOWED_BASES = new Set(['https://hackathon.api.qloo.com']); // Hackathon keys never authenticate on staging/prod.
 const DEMO = JSON.parse(await readFile(join(ROOT, 'demo-fixture.json'), 'utf8'));
 
 function validate(input) {
@@ -68,20 +68,59 @@ export function providerCandidates(payload) {
   return candidates;
 }
 
+function qlooSearchEntries(payload) {
+  if (payload?.success === false) throw new LiveProviderError('Qloo search declined a taste seed', 502);
+  const entries = Array.isArray(payload?.results?.entities) ? payload.results.entities
+    : Array.isArray(payload?.results) ? payload.results
+    : Array.isArray(payload?.entities) ? payload.entities : null;
+  if (!entries) throw new LiveProviderError('Qloo search response had no recognized entity list', 502);
+  return entries;
+}
+function normalizedSeedName(value) {
+  return String(value ?? '').normalize('NFKC').trim().replace(/\\s+/g, ' ').toLowerCase();
+}
+
+/** Resolve every name using Qloo /search; never send invented IDs or silently take a fuzzy match. */
+export async function resolveSeedIds(seeds, { apiBase, apiKey,
+  fetcher = globalThis.fetch, readBytes = boundedQlooResponseBytes } = {}) {
+  if (!Array.isArray(seeds) || !seeds.length || seeds.length > 5 ||
+      seeds.some(seed => typeof seed !== 'string' || !normalizedSeedName(seed))) {
+    throw new LiveProviderError('Supply one to five named taste seeds', 400);
+  }
+  const ids = [];
+  for (const seed of seeds) {
+    const response = await fetchLiveQlooResponse({
+      apiBase, apiKey, fetcher, readBytes, path: '/search',
+      requestBody: { query: seed, types: 'urn:entity:place,urn:entity:brand', take: 10 },
+    });
+    const exactIds = new Set();
+    for (const entity of qlooSearchEntries(response)) {
+      const name = entity?.name ?? entity?.properties?.name;
+      const id = providerEntityId(entity);
+      if (id && normalizedSeedName(name) === normalizedSeedName(seed)) exactIds.add(id);
+    }
+    if (exactIds.size !== 1) {
+      throw new LiveProviderError('Qloo did not uniquely resolve an exact taste seed; use a more specific name', 422);
+    }
+    ids.push([...exactIds][0]);
+  }
+  return [...new Set(ids)];
+}
+
 async function fetchQloo(input) {
   const token = process.env.QLOO_API_KEY;
   if (!token) throw new LiveProviderError('QLOO_API_KEY is not configured; select the labelled synthetic demo', 503);
-  if (!ALLOWED_BASES.has(API_BASE)) throw new LiveProviderError('QLOO_API_BASE is not an allowed Qloo origin');
-  const body = {
+  if (!ALLOWED_BASES.has(API_BASE)) throw new LiveProviderError('QLOO_API_BASE must be the Qloo hackathon origin');
+  const ids = await resolveSeedIds(input.seeds, { apiBase: API_BASE, apiKey: token });
+  const params = {
     'filter.type': 'urn:entity:place',
     'filter.location.query': input.location,
-    'signal.interests.entities.query': input.seeds.map(name => ({ name })),
-    'feature.explainability': true,
+    'signal.interests.entities': ids.join(','),
     'sort_by': 'affinity',
     take: 35
   };
   const parsed = await fetchLiveQlooResponse({
-    apiBase: API_BASE, apiKey: token, requestBody: body,
+    apiBase: API_BASE, apiKey: token, requestBody: params,
     readBytes: boundedQlooResponseBytes,
   });
   try {
