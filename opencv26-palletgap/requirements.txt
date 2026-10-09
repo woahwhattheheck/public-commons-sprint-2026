@@ -1,0 +1,4 @@
+# Confirm exact OpenCV 5 provider/runtime build in the deployment environment.
+opencv-python-headless>=5.0,<6
+numpy>=2.0,<3
+boto3>=1.35,<2

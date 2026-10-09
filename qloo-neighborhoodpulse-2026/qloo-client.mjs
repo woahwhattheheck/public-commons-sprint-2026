@@ -7,6 +7,49 @@ const APPROVED_ENDPOINTS = new Set([
   'https://api.qloo.com',
 ]);
 
+const MAX_RESPONSE_BYTES = 1_500_000;
+
+/** Bound actual streamed bytes *before* decoding. response.text() alone
+ * can allocate an arbitrarily large upstream body before a length check.
+ */
+async function readBoundedJson(response) {
+  const tooLarge = () => new Error('Qloo returned an unexpectedly large response.');
+  const advertised = response.headers?.get?.('content-length');
+  if (advertised != null && /^[0-9]+$/.test(advertised) && Number(advertised) > MAX_RESPONSE_BYTES) {
+    try { await response.body?.cancel?.(); } catch { /* best-effort upstream cancel */ }
+    throw tooLarge();
+  }
+
+  const reader = response.body?.getReader?.();
+  let raw = '';
+  if (reader) {
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+    let bytes = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!(value instanceof Uint8Array)) throw new Error('Qloo response was not a byte stream.');
+        bytes += value.byteLength;
+        if (bytes > MAX_RESPONSE_BYTES) throw tooLarge();
+        raw += decoder.decode(value, { stream: true });
+      }
+      raw += decoder.decode();
+    } catch (error) {
+      try { await reader.cancel(); } catch { /* preserve original failure */ }
+      throw error;
+    } finally {
+      reader.releaseLock();
+    }
+  } else {
+    // Compatibility for simple synthetic fetch adapters lacking ReadableStream.
+    // Production fetch Response always uses the bounded streaming path above.
+    raw = await response.text();
+    if (new TextEncoder().encode(raw).byteLength > MAX_RESPONSE_BYTES) throw tooLarge();
+  }
+  try { return JSON.parse(raw); } catch { throw new Error('Qloo response was not valid JSON.'); }
+}
+
 /** Host allowlist ensures that an env typo cannot exfiltrate the API key. */
 export function createQlooClient({ apiKey = process.env.QLOO_API_KEY,
   baseUrl = process.env.QLOO_BASE_URL || DEFAULT_ENDPOINT,
@@ -27,9 +70,7 @@ export function createQlooClient({ apiKey = process.env.QLOO_API_KEY,
       // Avoid echoing response body or sending key/URL to browser/logs.
       throw new Error(`Qloo ${path} responded HTTP ${rsp.status}. Check input and API eligibility.`);
     }
-    const text = await rsp.text();
-    if (text.length > 1_500_000) throw new Error('Qloo returned an unexpectedly large response.');
-    try { return JSON.parse(text); } catch { throw new Error('Qloo response was not valid JSON.'); }
+    return readBoundedJson(rsp);
   }
   return {
     async resolve(name) {
