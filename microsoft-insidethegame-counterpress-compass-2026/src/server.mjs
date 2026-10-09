@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 import {makeSnapshot, TEAMS, validateFixture} from './engine.mjs';
 import {foundryConfigured, suggestedNarrative} from './foundry.mjs';
+import {createFoundryQuota} from './foundry_quota.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -12,6 +13,7 @@ validateFixture(FIXTURE);
 const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8'};
 const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css'};
 const DEFAULT_PORT = 3167;
+const foundryQuota = createFoundryQuota();
 const port = Number(process.env.PORT || DEFAULT_PORT);
 const host = process.env.HOST || '127.0.0.1';
 if (!Number.isInteger(port) || port <= 0 || port > 65535) throw new Error('Invalid PORT');
@@ -66,8 +68,15 @@ export const server = createServer(async (req, res) => {
       const snapshot = runSnapshot(await getJSON(req));
       const latest = snapshot.overlays.at(-1);
       if (!latest) return send(res, 422, {error:'No evidence-backed overlay in current frame'});
+      const admission = foundryQuota.reserve();
+      if (!admission.allowed) {
+        res.setHeader('Retry-After', String(admission.retryAfterSeconds));
+        return send(res, 429, {error:'Optional Foundry draft capacity reached',
+          code: admission.reason, retryAfterSeconds: admission.retryAfterSeconds});
+      }
       try { return send(res, 200, await suggestedNarrative(latest)); }
       catch { return send(res, 502, {error:'Foundry draft unavailable; deterministic overlay retained'}); }
+      finally { admission.release(); }
     }
     if (req.method === 'GET' && Object.hasOwn(ROUTES,path)) {
       const filename = join(ROOT,'web',ROUTES[path]);
