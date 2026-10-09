@@ -14,7 +14,8 @@ class MarketBoundary(unittest.TestCase):
         bad = market_normalize({'id':'y','question':'Unknown price','yes_price':'1e309'})
         self.assertIsNone(bad['yes_probability_pct'])
         self.assertFalse(bad['price_proven'])
-        self.assertEqual(alerts([bad]), [])  # Unverified list quote is card metadata, not an alert.
+        self.assertEqual([(a['market'], a['severity']) for a in alerts([bad])],
+                         [('y', 'caution')])  # Malformed non-null quote is a source alert.
         self.assertIsNone(maybe_decimal(float('nan')))
         self.assertIsNone(market_normalize({'id':'z'}))
 
@@ -32,7 +33,16 @@ class MarketBoundary(unittest.TestCase):
         self.assertIsNone(row['yes_probability_pct'])
         self.assertIsNone(row['liquidity_usd'])
         self.assertFalse(row['price_proven'])
-        self.assertEqual(alerts([row]), [])
+        self.assertEqual(alerts([row]), [])  # Sponsor's documented explicit list null stays quiet.
+        primary = market_normalize({'marketId': 'primary-only', 'title': 'Original sponsor',
+                                    'yesPrice': None, 'primaryYesPrice': '0.33'})
+        self.assertEqual(primary['yes_probability_pct'], '33.00')
+        self.assertEqual(primary['price_state'], 'verified')
+        self.assertEqual(primary['quote_source'], 'list')
+        malformed = market_normalize({'marketId': 'bad-source', 'title': 'Invalid source',
+                                      'yesPrice': '1.2'})
+        self.assertEqual(malformed['price_state'], 'malformed')
+        self.assertEqual([a['severity'] for a in alerts([malformed])], ['caution'])
         self.assertEqual(market_collection({'results': []}), [])
         self.assertIsNone(market_collection({'items': {'not': 'a list'}}))
 
