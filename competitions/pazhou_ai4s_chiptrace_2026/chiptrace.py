@@ -53,7 +53,12 @@ def file_sha256(path: Path) -> str:
     return _sha256_bytes(path.read_bytes())
 
 def canonical_bytes(value: object) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
+    # A machine-readable QC receipt must never serialize NaN/Infinity tokens.
+    try:
+        return json.dumps(value, sort_keys=True, separators=(',', ':'),
+                          ensure_ascii=False, allow_nan=False).encode('utf-8')
+    except ValueError as exc:
+        raise ContractError('derived QC report contains unrepresentable numerical evidence') from exc
 
 def clamp01(x: float) -> float:
     return max(0.0, min(1.0, x))
@@ -172,7 +177,10 @@ def build_baselines(obs: Sequence[Observation]) -> Dict[str, ChannelBaseline]:
             raise ContractError(f'baseline channel {channel!r} mixes unit/modality')
         vals = [r.value for r in rows]
         scale, method = robust_scale(vals)
-        result[channel] = ChannelBaseline(channel=channel, unit=next(iter(units)), modality=next(iter(modalities)), n=len(rows), center=median(vals), scale=scale, scale_method=method, cadence_s=_positive_cadence(rows), replicate_count=len({(r.run_id, r.replicate_id) for r in rows}))
+        center = median(vals)
+        if not math.isfinite(center) or not math.isfinite(scale):
+            raise ContractError(f'baseline channel {channel!r}: derived center/scale overflow')
+        result[channel] = ChannelBaseline(channel=channel, unit=next(iter(units)), modality=next(iter(modalities)), n=len(rows), center=center, scale=scale, scale_method=method, cadence_s=_positive_cadence(rows), replicate_count=len({(r.run_id, r.replicate_id) for r in rows}))
     return result
 
 def _pair_channel_encode(channel: str) -> str:
@@ -366,6 +374,31 @@ def assess_channel(channel: str, rows: Sequence[Observation], baseline: ChannelB
             'qualified_candidate_replicates': qualified_run_replicates,
             'minimum_points_per_candidate_replicate': minimum_points_per_replicate,
         }
+    # Finite CSV readings can still overflow derived arithmetic (e.g. a
+    # 1e308 candidate divided by a small but valid reference scale). Publishing
+    # Infinity/NaN as QC evidence makes JSON nonstandard and can corrupt a
+    # receipt. Explicitly abstain and remove unrepresentable derived values.
+    invalid = []
+    for section in ('metrics', 'score_components'):
+        for key, value in response[section].items():
+            if isinstance(value, float) and not math.isfinite(value):
+                invalid.append(f'{section}.{key}')
+                response[section][key] = None
+    for key in ('quality_risk_score', 'uncertainty'):
+        value = response[key]
+        if isinstance(value, float) and not math.isfinite(value):
+            invalid.append(key)
+            response[key] = None
+    if invalid:
+        response['state'] = 'INSUFFICIENT_EVIDENCE'
+        response['quality_risk_score'] = None
+        response['uncertainty'] = 1.0
+        response['score_components'] = {}  # Overflowed scoring cannot be interpreted.
+        response['derived_overflow_abstention'] = sorted(invalid)
+        response['reasons'].append(
+            'finite observations overflowed derived QC arithmetic; '
+            'unrepresentable metrics omitted and manual rescaling/review required'
+        )
     return response
 
 
@@ -444,11 +477,11 @@ def analyze(baseline_path: Path, run_path: Path, *, min_points: int=6, min_basel
     payload = {'schema': 'chiptrace.report.v1', 'tool': {'name': 'ChipTrace', 'version': VERSION}, 'scope': {'intended_use': 'organ-on-chip research experiment quality control and drift review', 'not_for': ['clinical diagnosis', 'treatment recommendation', 'patient-specific decision making', 'drug efficacy or safety claim'], 'state_semantics': {'SUPPORTED': 'No configured QC review threshold was exceeded; this is not a biological-efficacy claim.', 'REVIEW': 'One or more QC signals warrant researcher review.', 'INSUFFICIENT_EVIDENCE': 'Observation counts are too small for a supported QC state.'}}, 'inputs': {'baseline_file': baseline_path.name, 'baseline_sha256': file_sha256(baseline_path), 'run_file': run_path.name, 'run_sha256': file_sha256(run_path), 'baseline_rows': len(baseline_obs), 'run_rows': len(run_obs)}, 'config': {'min_points': min_points, 'min_baseline_points': min_baseline_points}, 'overall_state': overall, 'max_quality_risk_score': round(max((a['quality_risk_score'] for a in assessments if a['quality_risk_score'] is not None), default=0.0), 3), 'channel_assessments': assessments, 'cross_sensor_correlations': corr_details, 'baseline_model': {k: asdict(v) for k, v in sorted(baselines.items())}}
     # Keep previously published full-coverage demo receipts byte-stable.
     # Explain the wider abstention condition only for reports that need it.
-    if absent_channels or truncated_windows or any('replicate_evidence' in a for a in assessments):
+    if absent_channels or truncated_windows or any('replicate_evidence' in a or 'derived_overflow_abstention' in a for a in assessments):
         payload['scope']['state_semantics']['INSUFFICIENT_EVIDENCE'] = (
             'Observation counts are too small, a baseline channel is absent, a candidate observation window '
             'covers less than 75% of its baseline replicate reference duration or anchored elapsed-time window, or independent candidate '
-            'replicate coverage is insufficient.'
+            'replicate coverage is insufficient, or derived arithmetic overflowed.'
         )
     payload['receipt_sha256'] = _sha256_bytes(canonical_bytes(payload))
     return payload
