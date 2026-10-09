@@ -67,6 +67,16 @@ def digest_json(value: Any) -> str:
     return sha256_hex(canonical_json(value))
 
 
+def _unique_object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Reject even nested or Unicode-escaped duplicate keys before canonical use."""
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise CodecError("duplicate JSON object field")
+        value[key] = item
+    return value
+
+
 def loads_strict(raw: bytes | str, *, max_bytes: int = MAX_CANONICAL_BYTES) -> Any:
     if isinstance(raw, str):
         try:
@@ -80,7 +90,7 @@ def loads_strict(raw: bytes | str, *, max_bytes: int = MAX_CANONICAL_BYTES) -> A
     if len(encoded) > max_bytes:
         raise CodecError("input exceeds size limit")
     try:
-        value = json.loads(encoded.decode("utf-8", "strict"))
+        value = json.loads(encoded.decode("utf-8", "strict"), object_pairs_hook=_unique_object_pairs)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise CodecError("invalid JSON") from exc
     _walk(value)
