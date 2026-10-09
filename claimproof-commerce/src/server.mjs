@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {normalizeCart,staticReview,InputError} from './core.mjs';
 import {reviewWithModel} from './ai.mjs';
 import {PayPalSandbox} from './paypal.mjs';
+import {checkout} from './checkout.mjs';
 
 const port=Number(process.env.PORT || 3159);
 if (!Number.isInteger(port)||port < 1024||port > 65535) throw new Error('PORT invalid');
@@ -45,7 +46,7 @@ const server=http.createServer(async(req,res)=>{
       res.end(html);return;
     }
     if(req.method==='GET' && url.pathname==='/api/health'){send(res,200,{ready:true,paypal_sandbox_configured:!!(process.env.PAYPAL_CLIENT_ID&&process.env.PAYPAL_CLIENT_SECRET),ai_provider_configured:process.env.AI_PROVIDER==='anthropic'?!!(process.env.ANTHROPIC_API_KEY&&process.env.ANTHROPIC_MODEL):!!(process.env.AI_CHAT_COMPLETIONS_URL&&process.env.AI_API_KEY&&process.env.AI_MODEL)});return;}
-    if(req.method!=='POST' || !['/api/review','/api/create','/api/capture'].includes(url.pathname)){send(res,404,{error:'route not found'});return;}
+    if(req.method!=='POST' || !['/api/review','/api/create','/api/capture','/api/status'].includes(url.pathname)){send(res,404,{error:'route not found'});return;}
     assertPost(req);const request=await body(req);prune();
     if(url.pathname==='/api/review'){
       const cart=normalizeCart(request);const findings=staticReview(cart);
@@ -56,25 +57,11 @@ const server=http.createServer(async(req,res)=>{
     }
     if (!request||typeof request.review_id!=='string')throw new InputError('review_id required');
     const review=getReview(request.review_id);
-    if(request.fingerprint!==review.cart.fingerprint)throw new InputError('approved cart fingerprint mismatch');
-    if(request.confirm!==true)throw new InputError('explicit human confirmation required');
-    if(url.pathname==='/api/create'){
-      if(review.state!=='REVIEWED' && review.state!=='ORDER_CREATED')throw new InputError('order creation not allowed in this state');
-      if(review.state==='ORDER_CREATED'){send(res,200,{state:review.state,order:review.order});return;}
-      const order=await paypal.create(review.cart,base,review.createRequestId);
-      review.order=order;review.state='ORDER_CREATED';
-      send(res,200,{state:review.state,order,payment_authority:false});return;
-    }
-    if(review.state==='CAPTURED'){send(res,200,{state:review.state,order_id:review.order.order_id});return;}
-    if(review.state!=='ORDER_CREATED'||!review.order)throw new InputError('no order awaits approval');
-    const capture=await paypal.captureApproved(review.order.order_id,review.cart,review.captureRequestId);
-    if(capture.status!=='COMPLETED'){
-      review.state='CAPTURE_PENDING';send(res,202,{state:review.state,order_id:review.order.order_id});return;
-    }
-    review.state='CAPTURED';send(res,200,{state:review.state,order_id:review.order.order_id,capture_status:capture.status});
+    const result=await checkout(review,url.pathname.slice('/api/'.length),request,paypal,base);
+    send(res,['CAPTURE_PENDING','CAPTURE_UNKNOWN'].includes(result.state)?202:200,result);
   }catch(e){
     const client=e instanceof InputError;
-    send(res,client?400:503,{error:client?e.message:'Sandbox provider outcome could not be verified. If a capture was attempted, payment may have completed. Check the PayPal sandbox order before starting another checkout; retry the same review to reuse its idempotency key.'});
+    send(res,client?400:503,{error:client?e.message:'Sandbox provider outcome could not be verified. If a capture was attempted, payment may have completed. Use Check sandbox status on this review or inspect the original PayPal sandbox order before starting another checkout. Status checks never request capture.'});
   }
 });
 server.listen(port,'127.0.0.1',()=>console.log(`ClaimProof Commerce: ${base} (loopback only; sandbox only)`));

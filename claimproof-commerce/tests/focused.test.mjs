@@ -43,7 +43,7 @@ test('PayPal Orders v2 state mismatch prevents capture even when browser claims 
   await assert.rejects(()=>sandbox.captureApproved('0KD30046EH157382X',cart,'12345678-1111-4444-8888-123456789123'),InputError);
   assert.equal(calls.filter(x=>x.url.endsWith('/capture')).length,0);
 });
-test('capture only after server-verified APPROVED state and unchanged amount',async()=>{
+test('capture requires APPROVED; order-only response remains UNKNOWN without settlement',async()=>{
   const calls=[];
   const transport=async (url,req)=>{
     calls.push(url);
@@ -53,7 +53,7 @@ test('capture only after server-verified APPROVED state and unchanged amount',as
   };
   const sandbox=new PayPalSandbox({clientId:'test',secret:'test',transport});
   const response=await sandbox.captureApproved('0KD30046EH157382X',cart,'12345678-1111-4444-8888-123456789123');
-  assert.equal(response.status,'COMPLETED');
+  assert.equal(response.status,'UNKNOWN');
   assert.equal(calls.filter(x=>x.endsWith('/capture')).length,1);
 });
 
