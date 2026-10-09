@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parseCategoryCap, rankLineup } from './lineup.mjs';
+import { boundedQlooResponseBytes } from './response-bound.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
@@ -84,8 +85,7 @@ async function fetchQloo(input) {
     });
   } catch { throw new Error('Qloo connection timed out or failed; no synthetic results substituted'); }
   if (!response.ok) throw new Error(`Qloo returned HTTP ${response.status}; no synthetic results substituted`);
-  const bytes = await response.arrayBuffer();
-  if (bytes.byteLength > 250_000) throw new Error('Qloo response exceeded the bounded result limit');
+  const bytes = await boundedQlooResponseBytes(response);
   let parsed;
   try { parsed = JSON.parse(new TextDecoder().decode(bytes)); }
   catch { throw new Error('Qloo returned invalid JSON'); }
