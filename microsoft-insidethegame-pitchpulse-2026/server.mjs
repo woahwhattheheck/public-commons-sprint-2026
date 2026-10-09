@@ -8,8 +8,10 @@ import {SessionStore,sessionCookie,FoundryBudget} from './demo_sessions.mjs';
 import {exportReplay,validateReplay,MAX_REPLAY_BYTES} from './replay.mjs';
 
 const ROOT=dirname(fileURLToPath(import.meta.url));
-const FILES={'/':'index.html','/app.mjs':'app.mjs','/styles.css':'styles.css'};
-const TYPES={'index.html':'text/html;charset=utf-8','app.mjs':'text/javascript;charset=utf-8','styles.css':'text/css;charset=utf-8'};
+const FILES={'/':'index.html','/app.mjs':'app.mjs','/locale.mjs':'locale.mjs','/styles.css':'styles.css',
+ '/broadcast':'broadcast.html','/broadcast.mjs':'broadcast.mjs','/broadcast.css':'broadcast.css'};
+const TYPES={'index.html':'text/html;charset=utf-8','app.mjs':'text/javascript;charset=utf-8','locale.mjs':'text/javascript;charset=utf-8','styles.css':'text/css;charset=utf-8',
+ 'broadcast.html':'text/html;charset=utf-8','broadcast.mjs':'text/javascript;charset=utf-8','broadcast.css':'text/css;charset=utf-8'};
 const ROUTES=new Set(['GET /api/state','GET /api/replay','POST /api/replay',
  'POST /api/next','POST /api/reset','POST /api/events','POST /api/explain']);
 const SECURITY={'x-content-type-options':'nosniff','referrer-policy':'no-referrer','cache-control':'no-store',
@@ -67,10 +69,21 @@ export function createPitchPulseServer({store=new SessionStore(),budget=new Foun
    if(req.method==='POST')checkOrigin(req);
    const session=store.acquire(req.headers.cookie);
    res.setHeader('set-cookie',sessionCookie(session,secureCookie));
-   const snapshot=()=>({...session.engine.snapshot(view),foundryConfigured:foundryConfigured()&&budget.enabled,
+   const snapshot=(projection={})=>({...session.engine.snapshot({...view,...projection}),
+    lastLedgerSecond:session.engine.events.at(-1)?.second??0,foundryConfigured:foundryConfigured()&&budget.enabled,
     demoRemaining:session.nextIndex===null?0:SYNTHETIC_EVENTS.length-session.nextIndex,
     replayMode:session.nextIndex===null?'custom':'built-in'});
-   if(req.method==='GET'&&url.pathname==='/api/state'){json(res,200,snapshot());return;}
+   // Clock review projects existing session state without mutating the event ledger.
+   // Reject the parameter on mutation routes so a POST cannot imply a historical action.
+   if(url.searchParams.has('asOfSecond')&&!(req.method==='GET'&&url.pathname==='/api/state'))
+    throw new Error('Invalid snapshot clock parameter');
+   if(req.method==='GET'&&url.pathname==='/api/state'){
+    const raw=url.searchParams.get('asOfSecond');
+    if(raw!==null&&!/^(0|[1-9][0-9]{0,3})$/.test(raw))throw new Error('Invalid snapshot clock');
+    const asOfSecond=raw===null?undefined:Number(raw);
+    if(asOfSecond!==undefined&&asOfSecond>5400)throw new Error('Invalid snapshot clock');
+    json(res,200,snapshot(asOfSecond===undefined?{}:{asOfSecond}));return;
+   }
    if(req.method==='GET'&&url.pathname==='/api/replay'){json(res,200,exportReplay(session));return;}
    if(req.method==='POST'&&url.pathname==='/api/replay'){
     const replacement=validateReplay(await readJson(req,MAX_REPLAY_BYTES));

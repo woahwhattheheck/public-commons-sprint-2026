@@ -19,7 +19,7 @@ export function validateFixture(events) {
   return events;
 }
 
-const freezeAttempt = (attempt, status, endSecond, regainer) => ({
+const freezeAttempt = (attempt, status, endSecond, closingEvent) => ({
   id: attempt.loss.id,
   team: attempt.loss.team,
   fromSecond: attempt.loss.second,
@@ -28,7 +28,7 @@ const freezeAttempt = (attempt, status, endSecond, regainer) => ({
   zone: attempt.loss.zone,
   status,
   pressureCount: attempt.pressures.length,
-  evidenceIds: [attempt.loss.id, ...attempt.pressures.map(p => p.id), ...(regainer ? [regainer.id] : [])],
+  evidenceIds: [attempt.loss.id, ...attempt.pressures.map(p => p.id), ...(closingEvent ? [closingEvent.id] : [])],
 });
 
 // The first same-team regain can resolve exactly one active loss window.
@@ -46,7 +46,7 @@ export function derive(events) {
     }
     if (e.type === 'loss') {
       const old = active.get(e.team);
-      if (old) finished.push(freezeAttempt(old, old.pressures.length ? 'interrupted' : 'not_attempted', e.second));
+      if (old) finished.push(freezeAttempt(old, old.pressures.length ? 'interrupted' : 'not_attempted', e.second, e));
       active.set(e.team, {loss: e, pressures: []});
     } else if (e.type === 'pressure') {
       const a = active.get(e.team);
@@ -62,7 +62,9 @@ export function derive(events) {
   if (events.length) {
     const watermark = events.at(-1).second;
     for (const a of active.values()) {
-      if (watermark >= a.loss.second + WINDOW_SECONDS) {
+      // Equal timestamps can still contain an inclusive-boundary regain.
+      // Only a strictly later event proves that the entire window was observed.
+      if (watermark > a.loss.second + WINDOW_SECONDS) {
         finished.push(freezeAttempt(a, a.pressures.length ? 'expired' : 'not_attempted', a.loss.second + WINDOW_SECONDS));
       }
     }
@@ -75,10 +77,14 @@ export function makeSnapshot(events, {team = TEAMS[0], audience = 'casual', loca
   if (!TEAMS.includes(team) || !['casual', 'analyst'].includes(audience) || !['en', 'es'].includes(locale)) throw new TypeError('Unsupported team, audience or locale');
   const attempts = derive(events).filter(x => x.team === team);
   const actionable = attempts.filter(x => x.status !== 'not_attempted');
+  // A second loss without a recorded regain leaves the earlier outcome unknown.
+  // Keep that press in the attempt count, but not in the resolved-window rate.
+  const resolved = actionable.filter(x => x.status === 'success' || x.status === 'expired');
+  const interrupted = actionable.filter(x => x.status === 'interrupted');
   const successes = actionable.filter(x => x.status === 'success');
   const seconds = successes.reduce((sum, s) => sum + s.secondsToRecover, 0);
   const avgSeconds = successes.length ? Math.round((seconds / successes.length) * 10) / 10 : null;
-  const rate = actionable.length ? Math.round(100 * successes.length / actionable.length) : null;
+  const rate = resolved.length ? Math.round(100 * successes.length / resolved.length) : null;
   const overlays = actionable.map(x => ({
     id: x.id,
     showAt: x.toSecond,
@@ -87,17 +93,28 @@ export function makeSnapshot(events, {team = TEAMS[0], audience = 'casual', loca
     evidenceIds: x.evidenceIds,
     status: x.status,
     text: describe(x, audience, locale),
-    metrics: {pressureCount: x.pressureCount, secondsToRecover: x.secondsToRecover, windowSeconds: WINDOW_SECONDS, zone: x.zone},
+    metrics: {pressureCount: x.pressureCount, secondsToRecover: x.secondsToRecover, windowSeconds: WINDOW_SECONDS,
+      observedSeconds: Math.round((x.toSecond - x.fromSecond) * 10) / 10, zone: x.zone},
     provenance: 'SYNTHETIC FIXTURE · DETERMINISTIC EVENT LOG',
   }));
   return {team, audience, locale, elapsedSeconds: events.length ? events.at(-1).second : 0,
     stats: {lossWindows: attempts.length, counterpressAttempts: actionable.length, successes: successes.length,
-      successRatePct: rate, meanRecoverySeconds: avgSeconds},
+      resolvedCounterpressAttempts: resolved.length, interruptedAttempts: interrupted.length,
+      successRatePct: rate, successRateBasis: 'resolved_counterpress_attempts', meanRecoverySeconds: avgSeconds},
     overlays, pendingEvidence: attempts.length - actionable.length,
     provenance: 'SYNTHETIC MATCH ONLY · NOT REAL PREMIER LEAGUE DATA'};
 }
 
 function describe(x, audience, locale) {
+  if (x.status === 'interrupted') {
+    const observed = Math.round((x.toSecond - x.fromSecond) * 10) / 10;
+    if (locale === 'es') return audience === 'casual'
+      ? `${x.team}: observación interrumpida tras ${observed} segundos; resultado desconocido.`
+      : `Contrapresión: ${x.pressureCount} acciones; observación interrumpida a los ${observed}s; resultado desconocido.`;
+    return audience === 'casual'
+      ? `${x.team}: observation interrupted after ${observed} seconds; outcome unknown.`
+      : `Counterpress: ${x.pressureCount} pressure actions; observation interrupted at ${observed}s; outcome unknown.`;
+  }
   const success = x.status === 'success';
   const duration = String(x.secondsToRecover);
   if (locale === 'es') return audience === 'casual'

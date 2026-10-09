@@ -63,6 +63,32 @@ Focused HTTP acceptance (Node 22, no external dependencies):
 
 Six focused checks cover visitor isolation, replay restoration, invalid-import rollback/custom ledgers, capacity/expiry, the default-disabled global provider budget, and an exact engine-limit replay transfer. No live provider call is used by these checks.
 
+## Judge match-clock review and historical overlay truth
+
+Use the **Review at match clock** slider to inspect any second up to the latest accepted
+synthetic event, then **Return to latest**. Moving the slider sends only
+`GET /api/state?asOfSecond=238`; it never rewrites or replays the stored events,
+changes another visitor's session, or calls Foundry. Scores, control metrics,
+source-event IDs, highlight evidence and expiration all project to the chosen
+clock. The top match card shows only active highlights; expired ones remain
+clearly marked in the historical explainability ledger. Next event, reset and
+replay import return to the latest clock. Cloud draft narration is disabled
+while inspecting a historical projection, because the model route narrates
+the real latest ledger.
+
+HTTP `asOfSecond` accepts a canonical integer from 0 to 5400 exclusively on
+`GET /api/state`. Invalid/fractional/signed query values return 422; other
+routes reject this parameter. `lastLedgerSecond` reports the actual final
+event clock so the browser can seek without projecting future match events.
+One focused HTTP regression:
+
+    node --test tests/timeline.focused.test.mjs
+
+It checks earlier clocks, active/expired goals, unchanged replay exports after
+scrubbing, malformed parameter rejection and POST-path projection rejection.
+No real football data, hosted Microsoft service or official entrant action
+is implied by this browser feature.
+
 ## Actual competition readiness
 
 Official rules: https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md . Registration by **Oct 20, 2026 noon PT**; submission by **Oct 27, 2026 11:59pm PT**. Entry must be a *new* entrant-owned original project, use the Microsoft/Azure platform meaningfully, present synthetic match intelligence, have a public GitHub repository URL, a working installable/testable app, and a public demonstration video under two minutes with real running footage. An authorized eligible entrant must register/submit and accept official terms. Stage-one and judging criteria apply. Prototype currently needs **real Azure/Foundry configuration + verified response, public judge-accessible deployment, short video and owner submission** before claiming entry readiness. The sponsor advertises total ARV $14,800–$59,200 contingent on winning human team sizes; monetary portions are specified as e-gift cards rather than settled cash. No award is guaranteed.

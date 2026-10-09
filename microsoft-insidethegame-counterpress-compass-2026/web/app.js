@@ -4,6 +4,8 @@ let timeline = [];
 let current = 0;
 let timer = null;
 let loaded = false;
+let renderSerial = 0;
+let draftSerial = 0;
 
 function fmt(s) { return String(Math.floor(s / 60)).padStart(2,'0') + ':' + String(Math.floor(s % 60)).padStart(2,'0'); }
 async function json(url, body) {
@@ -28,6 +30,10 @@ function drawTimeline() {
 }
 async function render() {
   if (!loaded) return;
+  // User selection, not network completion order, determines the visible frame.
+  const serial = ++renderSerial;
+  ++draftSerial;
+  el('foundryResult').textContent='';
   el('next').disabled = current >= timeline.length;
   el('progress').style.width=(100*current/timeline.length)+'%';
   const e = timeline[current-1];
@@ -35,16 +41,21 @@ async function render() {
   drawTimeline();
   try {
     const state = await json('/api/analyze',requestBody());
+    if (serial !== renderSerial) return;
     el('attempts').textContent=String(state.stats.counterpressAttempts);
     el('successes').textContent=String(state.stats.successes);
     el('seconds').textContent=state.stats.meanRecoverySeconds===null?'—':state.stats.meanRecoverySeconds+'s';
+    const rate=state.stats.successRatePct===null?'—':state.stats.successRatePct+'%';
+    el('resolution').textContent=`Resolved-window success rate: ${rate} (${state.stats.successes}/${state.stats.resolvedCounterpressAttempts}); interrupted / unknown: ${state.stats.interruptedAttempts}.`;
     const eventTime = state.elapsedSeconds;
     const cue = state.overlays.filter(x=>x.showAt<=eventTime && eventTime<x.hideAt).at(-1);
     el('overlay').textContent=cue?cue.text:'No new confirmed counterpress outcome at this event.';
     el('overlay').className=cue?'':'no-overlay';
-    el('evidence').textContent=cue?'EVIDENCE: '+cue.evidenceIds.join(' → ')+' · '+cue.provenance:'Only closed, evidenced eight-second windows can produce cues.';
-    el('foundryResult').textContent='';
-  } catch (err) {stop();el('overlay').textContent='Offline replay error: '+String(err.message).slice(0,80);}
+    el('evidence').textContent=cue?'EVIDENCE: '+cue.evidenceIds.join(' → ')+' · '+cue.provenance:'Cues distinguish resolved windows from interrupted observations with unknown outcomes.';
+  } catch (err) {
+    if (serial !== renderSerial) return;
+    stop();el('overlay').textContent='Offline replay error: '+String(err.message).slice(0,80);
+  }
 }
 async function boot(){
   const source=await json('/api/bootstrap');
@@ -62,9 +73,14 @@ async function boot(){
   for (const c of controls) el(c).addEventListener('change',render);
   el('foundry').addEventListener('click',async()=>{
     const b=el('foundry'); b.disabled=true;b.textContent='Requesting…';
-    try {const d=await json('/api/foundry-draft',requestBody());el('foundryResult').textContent=d.label+': '+d.text;}
-    catch(e){el('foundryResult').textContent='Optional draft unavailable; canonical evidence unaffected.';}
-    finally {b.disabled=false;b.textContent='Request optional Foundry draft';}
+    const frameSerial = renderSerial;
+    const serial = ++draftSerial;
+    try {
+      const d=await json('/api/foundry-draft',requestBody());
+      if (serial === draftSerial && frameSerial === renderSerial) el('foundryResult').textContent=d.label+': '+d.text;
+    } catch(e) {
+      if (serial === draftSerial && frameSerial === renderSerial) el('foundryResult').textContent='Optional draft unavailable; canonical evidence unaffected.';
+    } finally {b.disabled=false;b.textContent='Request optional Foundry draft';}
   });
   await render();
 }

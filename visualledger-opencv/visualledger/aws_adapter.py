@@ -12,6 +12,7 @@ import json
 import os
 import re
 from typing import Any, Callable
+from urllib.parse import unquote_plus
 
 from .agent import TRACE_SCHEMA, canonical, compile_trace
 from .vision import VisionError
@@ -26,6 +27,22 @@ def _text(value: Any, label: str, maximum: int = 512) -> str:
     if type(value) is not str or not value or len(value) > maximum or "\x00" in value:
         raise VisionError(f"invalid {label}")
     return value
+
+
+def _decode_s3_event_key(value: Any) -> str:
+    """Translate the form-URL-encoded S3 notification key once before validation.
+
+    S3 event keys are encoded; GetObject expects the decoded original key.
+    Reject malformed percent escapes/UTF-8 and leave the existing decoded-key
+    safety policy in _normalize_source authoritative.
+    """
+    encoded = _text(value, "S3 event object key", maximum=3072)
+    if re.search(r"%(?![0-9A-Fa-f]{2})", encoded):
+        raise VisionError("malformed percent escape in S3 event key")
+    try:
+        return unquote_plus(encoded, encoding="utf-8", errors="strict")
+    except UnicodeError as exc:
+        raise VisionError("malformed UTF-8 encoding in S3 event key") from exc
 
 
 def _normalize_source(source: Any) -> dict[str, str]:
@@ -48,7 +65,7 @@ def normalize_s3_event(event: Any) -> dict[str, str]:
         s3 = record["s3"]
         source = {
             "bucket": s3["bucket"]["name"],
-            "key": s3["object"]["key"],
+            "key": _decode_s3_event_key(s3["object"]["key"]),
             "version_id": s3["object"]["versionId"],
             "etag": s3["object"]["eTag"],
         }

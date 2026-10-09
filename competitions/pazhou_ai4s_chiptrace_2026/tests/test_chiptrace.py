@@ -92,6 +92,36 @@ class ChipTraceTests(unittest.TestCase):
         self.assertEqual(report["overall_state"], "INSUFFICIENT_EVIDENCE")
         self.assertEqual(report["channel_assessments"][0]["state"], "INSUFFICIENT_EVIDENCE")
 
+    def test_missing_entire_baseline_channel_abstains_instead_of_false_support(self):
+        baseline_path, _ = ct.generate_demo(self.root)
+        baseline_obs = ct.load_csv(baseline_path)
+        # A clean copy of two sensors must not conceal a third missing sensor.
+        clean_without_oxygen = [
+            ct.Observation(
+                run_id="candidate_clean",
+                replicate_id=o.replicate_id,
+                time_s=o.time_s,
+                channel=o.channel,
+                value=o.value,
+                unit=o.unit,
+                source=o.source,
+                modality=o.modality,
+            )
+            for o in baseline_obs
+            if o.channel != "oxygen_index"
+        ]
+        candidate_path = self.root / "candidate_without_oxygen.csv"
+        ct.write_csv(candidate_path, clean_without_oxygen)
+        report = ct.analyze(baseline_path, candidate_path)
+        self.assertEqual(report["overall_state"], "INSUFFICIENT_EVIDENCE")
+        oxygen = next(x for x in report["channel_assessments"] if x["channel"] == "oxygen_index")
+        self.assertEqual(oxygen["state"], "INSUFFICIENT_EVIDENCE")
+        self.assertEqual(oxygen["run_n"], 0)
+        self.assertIsNone(oxygen["quality_risk_score"])
+        self.assertEqual(oxygen["uncertainty"], 1.0)
+        self.assertIn("n/a", ct.render_html(report))
+        self.assertTrue(ct.verify_report(report))
+
     def test_nonfinite_value_is_rejected(self):
         p = self.root / "nan.csv"
         p.write_text(
@@ -113,6 +143,17 @@ class ChipTraceTests(unittest.TestCase):
         encoded = json.dumps(report, sort_keys=True)
         decoded = json.loads(encoded)
         self.assertTrue(ct.verify_report(decoded))
+
+    def test_theil_sen_preserves_late_drift_across_sampling_boundary(self):
+        # A centered hinge has slopes paired as s and 1-s under reflection,
+        # so its full-trace Theil-Sen median is exactly 0.5. For 159 points,
+        # 80 uniformly spaced observations retain this symmetry; taking only
+        # the first 80 observations instead hides the entire late drift.
+        for count in (79, 80, 159):
+            with self.subTest(count=count):
+                midpoint = (count - 1) / 2
+                points = [(float(i), max(0.0, i - midpoint)) for i in range(count)]
+                self.assertAlmostEqual(ct.theil_sen_slope(points), 0.5)
 
 
 if __name__ == "__main__":
