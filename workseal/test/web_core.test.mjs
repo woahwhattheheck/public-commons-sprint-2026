@@ -22,3 +22,19 @@ test('settlement payer cannot diverge from task buyer', async () => { const b=aw
 test('settlement payee cannot diverge from task worker', async () => { const b=await buildDemoBundle(); b.settlementIntent.payee='ATTACKER'; await assert.rejects(()=>verifyBrowserBundle(b),/settlement party mismatch/); });
 test('settlement funding amount cannot diverge from task', async () => { const b=await buildDemoBundle(); b.settlementIntent.funding.amountAtomic='1'; await assert.rejects(()=>verifyBrowserBundle(b),/settlement funding mismatch/); });
 test('unknown settlement fields fail closed', async () => { const b=await buildDemoBundle(); b.settlementIntent.extra='semantic-extension'; await assert.rejects(()=>verifyBrowserBundle(b),/settlement intent field set mismatch/); });
+
+test('browser verifier rejects normalized invalid task and acceptance civil dates', async () => {
+  const badTask = await buildDemoBundle();
+  badTask.task.deadline = '2026-02-30T12:00:00Z';
+  await assert.rejects(
+    () => verifyBrowserBundle(badTask),
+    /task deadline must be a valid Gregorian RFC3339 timestamp/,
+  );
+
+  const badReceipt = await buildDemoBundle();
+  badReceipt.receipt.acceptedAt = '2026-10-08T24:00:00Z';
+  await assert.rejects(
+    () => verifyBrowserBundle(badReceipt),
+    /receipt acceptedAt must be a valid Gregorian RFC3339 timestamp/,
+  );
+});

@@ -1,4 +1,5 @@
 import { assertGitHubActionsExpected } from '../src/github_evidence_contract.mjs';
+import { isValidRfc3339 } from '../src/rfc3339.mjs';
 
 const encoder = new TextEncoder();
 
@@ -72,6 +73,8 @@ export async function verifyBrowserBundle(bundle) {
   if (bundle.task.schema !== 'workseal-task/v1') throw new Error('bad task schema');
   if (bundle.result.schema !== 'workseal-result/v1') throw new Error('bad result schema');
   if (bundle.receipt.schema !== 'workseal-acceptance/v1' || bundle.receipt.verdict !== 'ACCEPT') throw new Error('bad acceptance receipt');
+  if (!isValidRfc3339(bundle.task.deadline)) throw new Error('task deadline must be a valid Gregorian RFC3339 timestamp');
+  if (!isValidRfc3339(bundle.receipt.acceptedAt)) throw new Error('receipt acceptedAt must be a valid Gregorian RFC3339 timestamp');
   if (bundle.settlementIntent.schema !== 'workseal-settlement-intent/v1') throw new Error('bad settlement intent schema');
 
   const taskDigest = await sha256Hex(bundle.task);
