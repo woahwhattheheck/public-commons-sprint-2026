@@ -18,7 +18,7 @@ export function inputs(value=DEMO) {
   for(const t of tasks){
     if(typeof t.id!=='string'||!/^[a-z0-9-]{1,32}$/.test(t.id)||ids.has(t.id))throw Error('Each task must have unique safe ID');ids.add(t.id);
     if(typeof t.label!=='string'||t.label.length>80)throw Error('Invalid task label');
-    if(!Number.isInteger(t.hours)||t.hours<1||t.hours>6||!Number.isInteger(t.earliest)||!Number.isInteger(t.deadline)||t.earliest<0||t.deadline>24||t.earliest+t.hours>t.deadline)throw Error('Invalid task window');
+    if(!Number.isInteger(t.hours)||t.hours<1||t.hours>6||!Number.isInteger(t.earliest)||!Number.isInteger(t.deadline)||t.earliest<0||t.earliest<0||t.deadline>24||t.earliest+t.hours>t.deadline)throw Error('Invalid task window');
     if(typeof t.kw!=='number'||!Number.isFinite(t.kw)||t.kw<=0||t.kw>maxKw)throw Error('Task exceeds max circuit power');
     if(typeof t.quiet!=='boolean')throw Error('Task quiet flag required');
   }
@@ -50,18 +50,13 @@ export function plan(raw=DEMO){
   const choices=tasks.map(candidates);
   if(choices.some(x=>x.length===0))throw Error('No eligible quiet-hour window for at least one load');
   const occupied=Array(24).fill(0);
-  const baselineStarts=[];
-  for(let i=0;i<tasks.length;i++){
-    const start=choices[i].find(h=>fits(tasks[i],h,occupied,maxKw));
-    if(start===undefined)throw Error('No feasible baseline within the circuit limit');
-    baselineStarts.push(start);placement(tasks[i],start,occupied,1);
-  }
-  occupied.fill(0);
   const starts=[];
-  let winning=null,best=Infinity;
+  let baselineStarts=null,winning=null,best=Infinity;
   function visit(i,total){
     if(i===tasks.length){
-      // Stable deterministic earliest preference at equal cost.
+      // First complete placement is the earliest jointly feasible baseline.
+      // A greedy prefix can block a later fixed load despite a valid schedule.
+      if(!baselineStarts)baselineStarts=starts.slice();
       if(total<best-1e-10){best=total;winning=starts.slice();}
       return;
     }
@@ -74,7 +69,7 @@ export function plan(raw=DEMO){
     }
   }
   visit(0,0);
-  if(!winning)throw Error('No feasible shared-circuit schedule');
+  if(!baselineStarts)throw Error('No feasible shared-circuit schedule');
   const baseline=snapshot(tasks,baselineStarts,prices,maxKw);
   const optimized=snapshot(tasks,winning,prices,maxKw);
   return {schema:'gridkind-sim-v1',disclaimer:'Hypothetical quoted prices and devices; no actual grid, meter or device has been read or controlled.',
