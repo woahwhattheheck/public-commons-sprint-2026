@@ -11,13 +11,13 @@ Open http://127.0.0.1:8766. The screen explicitly says **SYNTHETIC OFFLINE FIXTU
 
 ## Actual Panta API
 
-First obtain an API account/key via sponsor's documented path and the correct Panta API HTTPS host. In the official Panta playground, the market discovery endpoint is `GET /markets/`, authenticated using an API key; API base URL is product-configuration-specific (the public playground defaults to localhost:8000/api/v1). We do not guess a production hostname.
+Use the sponsor-documented production API base `https://live-api.panta.market/api/v1`. Market discovery is `GET /markets/`, authenticated with `X-Api-Key`. Obtain the key only through an authorized entrant account; do not place it in source, logs, browser output, or Slack.
 
-    export PANTA_API_BASE_URL='https://your-authorized-panta-provider.example/api/v1'
+    export PANTA_API_BASE_URL='https://live-api.panta.market/api/v1'
     export PANTA_API_KEY='your-private-key'
     python3 server.py
 
-No secrets belong in the repo, response payload, browser or logs. The backend sends `X-Api-Key` to the explicitly configured HTTPS host and refuses credential-bearing redirects. The JSON body is bounded to 1 MiB with 9s timeout. It reads up to 100 markets, recognizes documented common fields, and fails to a conspicuous error on unknown collection layouts; **it never silently substitutes fictional values on live feed failure**. Price fields missing/unknown are displayed as UNKNOWN and produce warning cards. This is a schema-adapter demo: independently confirm real Panta field names with a provider response before claiming a working live integration. The system intentionally never sends financial transactions or makes investment recommendations.
+The backend refuses credential-bearing redirects, bounds JSON to 1 MiB, and uses a 9-second timeout. It reads up to 100 markets from the documented `items` envelope and accepts `marketId`, `title`, `volumeUsdc`, and `status`/`phase`, while retaining legacy fallbacks. Documented list rows may have null `yesPrice`/`noPrice` and no liquidity field; those values remain visibly UNKNOWN rather than being guessed. Unknown collection layouts still fail conspicuously, and live-feed failures never substitute fictional values. This is a read-only schema adapter and never sends financial transactions or makes investment recommendations.
 
 ## Evidence and focused regression
 
