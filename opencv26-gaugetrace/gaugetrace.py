@@ -37,6 +37,32 @@ def _calibration(config: dict[str, Any]) -> tuple[float, float, float, float]:
     return start % 360.0, sweep, low, high
 
 
+def _quality_thresholds(config: dict) -> tuple[float, float, float]:
+    """Validate operator-set gates before any image yields a reading.
+
+    NaN comparisons are always false; without finite positive gates a bad
+    configuration can silently bypass focus, glare or ambiguity abstention.
+    """
+    limits = (
+        ("min_blur_variance", 25.0, lambda n: n > 0.0, "positive"),
+        ("max_near_white_fraction", 0.25, lambda n: 0.0 <= n < 1.0, "within [0, 1)"),
+        ("min_dominance", 1.18, lambda n: n > 1.0, "greater than 1"),
+    )
+    valid = []
+    for name, default, allowed, description in limits:
+        raw = config.get(name, default)
+        if isinstance(raw, bool):
+            raise ValueError(f"{name} must be finite and {description}")
+        try:
+            number = float(raw)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(f"{name} must be finite and {description}") from exc
+        if not math.isfinite(number) or not allowed(number):
+            raise ValueError(f"{name} must be finite and {description}")
+        valid.append(number)
+    return tuple(valid)
+
+
 def _circle(gray: np.ndarray, config: dict) -> tuple[int, int, int] | None:
     height, width = gray.shape
     if "center_px" in config and "radius_px" in config:
@@ -64,6 +90,7 @@ def _circle(gray: np.ndarray, config: dict) -> tuple[int, int, int] | None:
 def analyze_image(image: np.ndarray, calibration: dict[str, Any]) -> tuple[dict, np.ndarray]:
     """Calibrated observation with explicit uncertainty gates, never autonomous approval."""
     start, sweep, low, high = _calibration(calibration)
+    min_blur_variance, max_near_white_fraction, min_dominance = _quality_thresholds(calibration)
     if image is None or image.ndim not in (2, 3):
         raise ValueError("input must be a decoded grayscale/BGR image")
     if image.ndim == 3 and image.shape[2] != 3:
@@ -91,9 +118,9 @@ def analyze_image(image: np.ndarray, calibration: dict[str, Any]) -> tuple[dict,
         "dial_blur_laplacian_variance": round(dial_blur_variance, 2),
         "near_white_fraction": round(saturated_fraction, 4)
     }
-    if dial_blur_variance < float(calibration.get("min_blur_variance", 25)):
+    if dial_blur_variance < min_blur_variance:
         return _fail("blur_or_low_detail", diagnostics=diagnostics), overlay
-    if saturated_fraction > float(calibration.get("max_near_white_fraction", 0.25)):
+    if saturated_fraction > max_near_white_fraction:
         return _fail("glare_or_clipping", diagnostics=diagnostics), overlay
 
     # Scan oriented rays inside the dial, excluding central spindle and outer
@@ -127,7 +154,7 @@ def analyze_image(image: np.ndarray, calibration: dict[str, Any]) -> tuple[dict,
     runner_up = float(np.max(scores[far]))
     dominance = peak / max(runner_up, 0.01)
     diagnostics["directional_dominance"] = round(dominance, 3)
-    if dominance < float(calibration.get("min_dominance", 1.18)):
+    if dominance < min_dominance:
         return _fail("multiple_plausible_needles", diagnostics=diagnostics), overlay
 
     angle_deg = float(angles[winner_index])
