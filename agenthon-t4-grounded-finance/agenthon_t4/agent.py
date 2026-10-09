@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import heapq
 import json
 import math
 import os
@@ -242,54 +243,110 @@ def _query_terms(task: dict[str, Any], entity: dict[str, Any]) -> tuple[set[str]
     prompt = " ".join([str(task.get("prompt", "")), str((task.get("target") or {}).get("name", "")), "earnings revenue margin guidance forecast consensus estimate risk cash flow debt credit"])
     return set(_tokens(identity)), set(_tokens(prompt))
 
-def retrieve(task: dict[str, Any], entity: dict[str, Any], docs: list[CorpusDoc]) -> list[Evidence]:
-    identity_terms, context_terms = _query_terms(task, entity)
-    ticker = str(entity.get("entity_id", "")).lower()
-    scored: list[Evidence] = []
-    for doc in docs:
-        doc_identity_bonus = 4.0 if ticker and doc.ticker.lower() == ticker else 0.0
-        for start, end, text in _sentences(doc):
-            span = text[:MAX_SPAN_CHARS]
-            end = start + len(span)
-            terms = set(_tokens(span))
-            if not terms:
-                continue
-            ident_hits = len(identity_terms & terms)
-            context_hits = len(context_terms & terms)
-            numeric_bonus = min(2.0, 0.4 * sum(ch.isdigit() for ch in span))
+def _evidence_windows(doc: CorpusDoc) -> Iterable[tuple[int, int, str]]:
+    """Cover whole sentences with overlapping, exact-source bounded passages."""
+    overlap = MAX_SPAN_CHARS // 5
+    for sentence_start, sentence_end, _ in _sentences(doc):
+        cursor = sentence_start
+        while cursor < sentence_end:
+            end = min(cursor + MAX_SPAN_CHARS, sentence_end)
+            # Prefer a word boundary, retaining overlap so boundary words are not lost.
+            if end < sentence_end:
+                boundary = doc.text.rfind(" ", cursor + MAX_SPAN_CHARS - overlap, end)
+                if boundary != -1:
+                    end = boundary
+            raw = doc.text[cursor:end]
+            start = cursor + len(raw) - len(raw.lstrip())
+            stop = end - (len(raw) - len(raw.rstrip()))
+            if start < stop:
+                yield start, stop, doc.text[start:stop]
+            if end == sentence_end:
+                break
+            cursor = end - overlap
+
+
+@dataclass(frozen=True, slots=True)
+class _IndexedSpan:
+    doc: CorpusDoc
+    start: int
+    end: int
+    terms: frozenset[str]
+    numeric_bonus: float
+    recency: float
+    length_bonus: float
+    short_penalty: float
+    text_key: str
+
+
+class RetrievalIndex:
+    """Invocation-local prepared corpus; no disk cache or cross-task retained state."""
+
+    def __init__(self, docs: list[CorpusDoc]):
+        spans: list[_IndexedSpan] = []
+        for doc in docs:
             recency = date.fromisoformat(doc.doc_date).toordinal() / 1_000_000.0
-            # Short fragments remain eligible as a fail-safe, but substantive premises rank far
-            # above abbreviation/name-only sentences for the downstream NLI faithfulness gate.
-            length_bonus = min(len(span), 240) / 80.0
-            short_penalty = 20.0 if len(span) < 80 else 0.0
+            for start, end, text in _evidence_windows(doc):
+                terms = frozenset(_tokens(text))
+                if terms:
+                    spans.append(_IndexedSpan(
+                        doc, start, end, terms,
+                        min(2.0, 0.4 * sum(ch.isdigit() for ch in text)),
+                        recency, min(len(text), 240) / 80.0,
+                        20.0 if len(text) < 80 else 0.0,
+                        " ".join(text.split()),
+                    ))
+        self.spans = tuple(spans)
+
+    def retrieve(self, task: dict[str, Any], entity: dict[str, Any]) -> list[Evidence]:
+        identity_terms, context_terms = _query_terms(task, entity)
+        ticker = str(entity.get("entity_id", "")).lower()
+        ranked: list[tuple[float, str, int, int, int]] = []
+        for index, span in enumerate(self.spans):
+            # Reapply the cutoff when querying too, so a prepared index cannot widen it.
+            if span.doc.doc_date > task["cutoff_date"]:
+                continue
+            doc_identity_bonus = 4.0 if ticker and span.doc.ticker.lower() == ticker else 0.0
             score = (
                 doc_identity_bonus
-                + 5.0 * ident_hits
-                + 1.25 * context_hits
-                + numeric_bonus
-                + recency
-                + length_bonus
-                - short_penalty
+                + 5.0 * len(identity_terms & span.terms)
+                + 1.25 * len(context_terms & span.terms)
+                + span.numeric_bonus
+                + span.recency
+                + span.length_bonus
+                - span.short_penalty
             )
-            scored.append(Evidence(doc.doc_id, start, end, doc.text[start:end], score, doc.doc_date))
-    scored.sort(key=lambda e: (-e.score, e.doc_id, e.span_start, e.span_end))
-    chosen: list[Evidence] = []
-    seen: set[tuple[str, int, int]] = set()
-    for item in scored:
-        key = (item.doc_id, item.span_start, item.span_end)
-        if key in seen:
-            continue
-        chosen.append(item)
-        seen.add(key)
-        if len(chosen) >= MAX_EVIDENCE_PER_ENTITY:
-            break
-    if not chosen:
-        # No embargo-eligible premise exists. A post-cutoff citation would be worse: it is an
-        # explicit embargo violation. Emit a schema-shaped unresolved marker so the container
-        # still writes answer.json and exits cleanly; this unit is expected to fail citation
-        # admission, but never by leaking or citing future evidence.
-        return [Evidence("NO_ELIGIBLE_EVIDENCE", 0, 0, "No embargo-eligible evidence available.", -1e9, task["cutoff_date"])]
-    return chosen
+            ranked.append((-score, span.doc.doc_id, span.start, span.end, index))
+        # Heap ordering preserves the original score/doc/offset tie-break without sorting
+        # every candidate when only a few non-redundant passages are needed.
+        heapq.heapify(ranked)
+        chosen: list[Evidence] = []
+        seen_text: set[str] = set()
+        while ranked and len(chosen) < MAX_EVIDENCE_PER_ENTITY:
+            negative_score, _, _, _, index = heapq.heappop(ranked)
+            span = self.spans[index]
+            if span.text_key in seen_text:
+                continue
+            redundant = any(
+                item.doc_id == span.doc.doc_id
+                and max(0, min(item.span_end, span.end) - max(item.span_start, span.start))
+                >= 0.8 * min(item.span_end - item.span_start, span.end - span.start)
+                for item in chosen
+            )
+            if redundant:
+                continue
+            chosen.append(Evidence(
+                span.doc.doc_id, span.start, span.end,
+                span.doc.text[span.start:span.end], -negative_score, span.doc.doc_date,
+            ))
+            seen_text.add(span.text_key)
+        if not chosen:
+            return [Evidence("NO_ELIGIBLE_EVIDENCE", 0, 0, "No embargo-eligible evidence available.", -1e9, task["cutoff_date"])]
+        return chosen
+
+
+def retrieve(task: dict[str, Any], entity: dict[str, Any], docs: list[CorpusDoc]) -> list[Evidence]:
+    # Preserve the public single-entity API; roster callers share one index below.
+    return RetrievalIndex(docs).retrieve(task, entity)
 
 def _numeric_anchor(entity: dict[str, Any], task: dict[str, Any]) -> float:
     target_name = str((task.get("target") or {}).get("name", ""))
@@ -339,8 +396,9 @@ def _claims(evidence: list[Evidence]) -> list[dict[str, Any]]:
 def build_answer(task: dict[str, Any], docs: list[CorpusDoc], model_candidates: dict[str, Any] | None = None) -> dict[str, Any]:
     predictions: list[dict[str, Any]] = []
     evidence_total = 0
+    retrieval = RetrievalIndex(docs)
     for entity in task["entities"]:
-        evidence = retrieve(task, entity, docs)
+        evidence = retrieval.retrieve(task, entity)
         evidence_total += len(evidence)
         candidate = _candidate_from_model(task, entity, model_candidates.get(entity["entity_id"])) if model_candidates is not None else None
         if candidate is None:
