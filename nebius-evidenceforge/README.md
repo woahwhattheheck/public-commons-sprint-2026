@@ -9,7 +9,7 @@ The product is intentionally useful even when the model is wrong: unknown paths,
 
 ## Judge/evaluator path
 
-For actual source computation and measured checks, start with [Focused execution](FOCUSED_EXECUTION.md): three released repository bugs, a restricted pure-Python adapter, source diffs and verifiable run envelopes. The local interface is `python -B -m evidenceforge.web_runtime`; a real Nebius inference remains pending.
+For actual source computation and measured checks, start with [Focused execution](FOCUSED_EXECUTION.md): three released repository bugs, a restricted pure-Python adapter, source diffs and verifiable run envelopes. The local interface is `python -B -m evidenceforge.web_runtime`; a real Nebius inference remains pending. The reviewer server accepts only `http://localhost:8081` or `http://127.0.0.1:8081` with the actual bound port, and rejects requests claiming another browser origin. It remains loopback-only with an independent action token; it is NOT an authenticated public deployment. Run `python -m unittest tests.test_loopback_guard` to check the local-origin boundary without network access.
 
 1. Run the zero-credential CLI demo and verify its receipt.
 2. Open the local browser demo and inspect the same authority boundary visually.
