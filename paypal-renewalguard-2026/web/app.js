@@ -38,13 +38,22 @@ el('mode').addEventListener('change',()=>{
 });
 el('load').addEventListener('click',async()=>{
   const token=++listSeq, mode=el('mode').value;
-  reset();error('');const label=status('Loading…');
+  reset();el('list').replaceChildren();error('');const label=status('Loading…');
   el('load').disabled=true;
   try {
     const data=await request('/api/list?mode=' + mode);
     if(token!==listSeq || el('mode').value!==mode)return;
     const list=el('list');list.replaceChildren();
-    if(!data.items.length){list.textContent='No subscriptions were returned.';return;}
+    const coverage=document.createElement('li');
+    coverage.className='muted';
+    coverage.textContent=mode==='demo'
+      ? data.items.length+' synthetic demonstration records (no PayPal calls).'
+      : data.incomplete
+        ? 'PARTIAL PayPal sandbox list: '+data.items.length+' subscriptions across '+data.pages_read+
+          ' pages (200-record cap). More may exist; this is not a merchant total.'
+        : 'PayPal sandbox list: '+data.items.length+' subscriptions across '+data.pages_read+' page(s).';
+    list.append(coverage);
+    if(!data.items.length)return;
     for(const item of data.items) {
       const li=document.createElement('li'),button=document.createElement('button');
       button.textContent=item.id+' — '+item.status+' ('+item.plan_id+')';

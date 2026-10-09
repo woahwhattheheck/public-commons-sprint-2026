@@ -73,6 +73,13 @@ def _to_intensity(image: np.ndarray) -> tuple[np.ndarray, float]:
     return vals.astype(np.uint8), dynamic
 
 
+def _capture_digest(image: np.ndarray, rows: int, cols: int, threshold_mode: str) -> str:
+    """The pre-existing v1 fingerprint, shared by inspection and drawing."""
+    version = f'|{rows}|{cols}|v1'.encode()
+    suffix = b'' if threshold_mode == "peer" else b'|panel'
+    return hashlib.sha256(image.tobytes() + version + suffix).hexdigest()
+
+
 def _quality(gray: np.ndarray, source_dynamic: float, rows: int, cols: int) -> list[str]:
     h, w = gray.shape
     reasons = []
@@ -101,8 +108,7 @@ def inspect(image: np.ndarray, *, rows: int = 4, cols: int = 6,
     gray, dynamic = _to_intensity(corrected)
     # Preserve every incumbent peer-mode fingerprint, but avoid aliasing distinct
     # decisions when the same pixels are deliberately scored in both modes.
-    digest = hashlib.sha256(corrected.tobytes() + f'|{rows}|{cols}|v1'.encode()
-                            + (b'' if threshold_mode == "peer" else b'|panel')).hexdigest()
+    digest = _capture_digest(corrected, rows, cols, threshold_mode)
     reasons = _quality(gray, dynamic, rows, cols)
     base = {"schema": "thermoloom-visual-triage/v1", "capture_sha256": digest,
             "calibrated_temperature": False, "panel_layout": {"rows": rows, "cols": cols},
@@ -191,11 +197,32 @@ def inspect(image: np.ndarray, *, rows: int = 4, cols: int = 6,
                             if is_alert else "Monitor; no visible relative outlier in this capture.")}
 
 
-def overlay(image: np.ndarray, report: dict[str, Any]) -> np.ndarray:
-    gray, _ = _to_intensity(image)
+def overlay(image: np.ndarray, report: dict[str, Any], *,
+            corners: list[list[float]] | None = None) -> np.ndarray:
+    """Annotate the exact input or perspective-rectified pixels that were inspected."""
+    space = report.get("pixel_space")
+    if space == "rectified":
+        if corners is None:
+            raise ImageRejected("rectified overlay requires the inspection's four corners")
+        frame = _rectify(image, corners)
+    elif space == "input":
+        if corners is not None:
+            raise ImageRejected("input-space report must not be drawn with rectification")
+        frame = image
+    else:
+        raise ImageRejected("unknown report pixel space")
+    layout = report.get("panel_layout")
+    if not isinstance(layout, dict):
+        raise ImageRejected("report panel layout missing")
+    rows, cols = layout.get("rows"), layout.get("cols")
+    mode = report.get("threshold_mode", "peer")
+    if (type(rows) is not int or type(cols) is not int
+            or type(mode) is not str or mode not in {"peer", "panel"}):
+        raise ImageRejected("report fingerprint parameters invalid")
+    if _capture_digest(frame, rows, cols, mode) != report.get("capture_sha256"):
+        raise ImageRejected("overlay pixels or perspective corners do not match inspection")
+    gray, _ = _to_intensity(frame)
     canvas = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-    if report["pixel_space"] != "input":
-        raise ImageRejected("overlay must be rendered using the same rectified image pixels")
     for box in report["evidence"]:
         x, y, w, h = box["bbox_xywh"]
         cv2.rectangle(canvas, (x, y), (x + w, y + h), (0, 0, 255), 2)
@@ -221,9 +248,8 @@ def main() -> None:
         receipt = inspect(source, rows=args.rows, cols=args.cols, corners=corners,
                           threshold_mode=args.threshold_mode)
         if args.overlay:
-            if corners is not None:
-                raise ImageRejected("overlay with homography is not yet supported")
-            cv2.imwrite(str(args.overlay), overlay(source, receipt))
+            if not cv2.imwrite(str(args.overlay), overlay(source, receipt, corners=corners)):
+                raise OSError("unable to write evidence overlay")
         rendered = json.dumps(receipt, indent=2, sort_keys=True)
         if args.out:
             args.out.write_text(rendered + "\n", encoding="utf-8")

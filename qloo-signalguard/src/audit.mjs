@@ -19,6 +19,15 @@ function numberInRange(value, lo, hi) {
 }
 
 const isRecord = item => item !== null && typeof item === 'object' && !Array.isArray(item);
+// Qloo documents concrete entity kinds as urn:entity:* in type/subtype. A
+// generic or absent kind is not proof of a mismatch, but an explicitly
+// different kind must never become evidence for the requested category.
+function matchesDeclaredKind(item, expectedKind) {
+  if (!expectedKind) return true;
+  const kinds = [item.subtype, item.type, item.entity?.subtype, item.entity?.type]
+    .filter(value => typeof value === 'string' && value.startsWith('urn:entity:'));
+  return kinds.every(kind => kind === expectedKind);
+}
 function uniqueIds(rows) {
   const seen = new Set();
   return rows.filter(row => {
@@ -28,26 +37,26 @@ function uniqueIds(rows) {
   });
 }
 
-export function normalizeCandidates(payload) {
+export function normalizeCandidates(payload, expectedKind) {
   const results = payload?.results;
   const raw = Array.isArray(results?.entities) ? results.entities
     : Array.isArray(results) ? results
     : Array.isArray(payload?.entities) ? payload.entities : [];
-  return uniqueIds(raw.slice(0, 30).filter(isRecord).map(item => ({
+  return uniqueIds(raw.slice(0, 30).filter(isRecord).filter(item => matchesDeclaredKind(item, expectedKind)).map(item => ({
     id: String(item.entity_id ?? item.id ?? item.entity?.entity_id ?? ''),
     name: String(item.name ?? item.entity?.name ?? ''),
-    type: String(item.subtype ?? item.type ?? item.entity?.subtype ?? ''),
+    type: String(item.subtype ?? item.entity?.subtype ?? item.type ?? item.entity?.type ?? ''),
   })).filter(row => row.id && row.name));
 }
 
-export function normalizeInsights(payload) {
+export function normalizeInsights(payload, expectedKind) {
   const entities = payload?.results?.entities;
   if (!Array.isArray(entities)) throw new Error('Unexpected Qloo Insights response; entities[] is missing');
-  return uniqueIds(entities.slice(0, 40).filter(isRecord).map(item => ({
+  return uniqueIds(entities.slice(0, 40).filter(isRecord).filter(item => matchesDeclaredKind(item, expectedKind)).map(item => ({
     id: String(item.entity_id ?? item.id ?? ''),
     name: String(item.name ?? ''),
     popularity: numberInRange(item.popularity, 0, 1),
-    type: String(item.subtype ?? ''),
+    type: String(item.subtype ?? item.entity?.subtype ?? item.type ?? item.entity?.type ?? ''),
     description: String(item.properties?.description ?? '').slice(0, 210),
   })).filter(row => row.id && row.name));
 }
@@ -80,12 +89,12 @@ export async function audit({ seed, seedType, target }, provider) {
   const trace = [];
   const normalizedSeed = seed.trim();
   trace.push({ step: 'resolve', detail: 'Resolving the supplied title to a Qloo entity ID' });
-  const candidates = normalizeCandidates(await provider.search(normalizedSeed, seedType));
+  const candidates = normalizeCandidates(await provider.search(normalizedSeed, seedType), seedType);
   if (!candidates.length) return { status: 'abstained', reason: 'No matching Qloo entity ID was returned', trace };
   const exact = candidates.find(c => c.name.toLowerCase() === normalizedSeed.toLowerCase());
   const selected = exact ?? candidates[0];
   trace.push({ step: 'baseline', detail: `Querying ${target} against a Qloo entity signal` });
-  const baseline = normalizeInsights(await provider.insights({ target, entityId: selected.id, take: 15 }));
+  const baseline = normalizeInsights(await provider.insights({ target, entityId: selected.id, take: 15 }), target);
   if (!baseline.length) return { status: 'abstained', reason: 'Qloo returned no baseline entities; an evidence-based audit is not possible', seed: selected, trace };
 
   const availablePops = baseline.map(row => row.popularity).filter(n => n !== null);
@@ -104,7 +113,7 @@ export async function audit({ seed, seedType, target }, provider) {
     const key = i === 0 ? 'low' : 'high';
     try {
       if (settled[i].status !== 'fulfilled') throw settled[i].reason;
-      rows.push(normalizeInsights(settled[i].value));
+      rows.push(normalizeInsights(settled[i].value, target));
     } catch (err) {
       status[key] = 'unavailable';
       rows.push([]);
@@ -139,6 +148,6 @@ export async function audit({ seed, seedType, target }, provider) {
     metrics: { baselineCount: baseline.length, reportedPopularity: availablePops.length, medianPopularity: med, highShare },
     segments: { baseline: segment(baseline, baseline), low: { ...low, status: status.low }, high: { ...high, status: status.high } },
     notes, actions, trace,
-    evidence: 'Qloo entity IDs and popularity filters only; no invented individual-level or demographic data',
+    evidence: 'Qloo entity IDs and popularity filters only; explicitly mismatched entity kinds excluded; no invented individual-level or demographic data',
   };
 }

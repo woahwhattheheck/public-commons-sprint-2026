@@ -16,7 +16,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-VERSION = "orchardcue-0.1"
+VERSION = "orchardcue-0.2"
 MARKER_ID = 23
 MARKER_DICTIONARY = cv2.aruco.DICT_4X4_50
 MAX_SIDE = 2400
@@ -159,6 +159,20 @@ def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0)
         cv2.circle(overlay, (round(cx), round(cy)), round(radius), (255, 220, 60), 2)
         cv2.putText(overlay, str(len(candidate)), (x, max(55, y-9)),
                     cv2.FONT_HERSHEY_SIMPLEX, .55, (255, 255, 255), 2, cv2.LINE_AA)
+    # Evaluate focus where the detected red candidates actually sit. The
+    # whole-image score can be high from leaves and the calibration marker
+    # even when the objects we intend to inspect are defocused. This is a
+    # conservative synthetic-screening threshold, not a field calibration.
+    roi_focus = []
+    for item in candidate:
+        x, y, bw, bh = item["bbox"]
+        margin = 6
+        patch = lap[max(0, y-margin):min(h, y+bh+margin),
+                    max(0, x-margin):min(w, x+bw+margin)]
+        roi_focus.append(float(np.var(patch)))
+    median_roi_focus = float(np.median(roi_focus)) if roi_focus else None
+    if median_roi_focus is not None and median_roi_focus < 60.0:
+        reasons.append("FRUIT_ROI_BLUR_RETAKE")
     if ambiguous:
         reasons.append("MERGED_OR_IRREGULAR_RED_REGIONS")
     if not candidate:
@@ -179,12 +193,15 @@ def analyze(image: np.ndarray, *, raw_sha256: str, marker_side_mm: float = 50.0)
         "reference_marker": marker, "candidate_count": len(candidate),
         "red_candidates": candidate, "ambiguous_regions": ambiguous,
         "quality": {"saturation_laplacian_variance": round(sharpness, 2),
-                    "glare_fraction": round(glare, 5), "mean_brightness": round(brightness, 2)},
+                    "glare_fraction": round(glare, 5), "mean_brightness": round(brightness, 2),
+                    "red_candidate_median_laplacian_variance":
+                        round(median_roi_focus, 2) if median_roi_focus is not None else None},
         "decision": {"action": action, "reason_codes": reasons,
                      "human_confirmation_required": True},
         "limitations": ["Only red fruit-like regions are localized; green fruit is unsupported",
                         "Color/occlusion/overlap can make counts incorrect",
                         "Approximate diameters require coplanar marker and fruit",
+                        "Fruit-local blur threshold is synthetic-only and requires field calibration",
                         "No crop yield or safety decision; synthetic fixture is not field validation"]
     }
     return report, overlay
