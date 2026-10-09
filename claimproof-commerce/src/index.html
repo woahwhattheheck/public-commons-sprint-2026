@@ -70,12 +70,12 @@ el('save-review').onclick=()=>{
     payment_receipt:false,
     merchant_verified:false
   };
-  const blob=new Blob([JSON.stringify(record,null,2)+'\\n'],{type:'application/json'});
+  const blob=new Blob([JSON.stringify(record,null,2)+'\n'],{type:'application/json'});
   const url=URL.createObjectURL(blob),link=document.createElement('a');
   link.href=url;
   link.download='claimproof-review-'+review.cart.fingerprint.slice(0,12)+'.json';
   link.click();
-  URL.revokeObjectURL(url);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
   say('Saved the pre-purchase review record locally. No payment was verified by this file.');
 };
 el('consent-create').onchange=()=>{el('create').disabled=!el('consent-create').checked};
