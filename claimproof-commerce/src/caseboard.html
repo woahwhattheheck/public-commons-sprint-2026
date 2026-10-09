@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ClaimProof | Review Operations</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,Arial;color-scheme:dark;color:#e8edfb;background:#090f1c}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 92% -10%,#1d2f58 0,transparent 38%),#090f1c}
+header{display:flex;justify-content:space-between;align-items:center;padding:18px clamp(18px,4vw,54px);border-bottom:1px solid #283650;background:#0c1729dd;gap:18px;flex-wrap:wrap}
+.mark{display:flex;align-items:center;gap:13px}.logo{display:grid;place-items:center;width:40px;height:40px;background:#a1e6dd;border-radius:11px;color:#103a44;font-weight:900;letter-spacing:-2px}
+h1{font-size:17px;margin:0;letter-spacing:-.4px}header p,small{margin:3px 0 0;color:#90a3c2;font-size:12px}
+a{color:#88dfd4}main{max-width:1480px;padding:28px clamp(18px,4vw,54px);margin:auto}
+.intro{display:flex;gap:20px;align-items:end;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px}
+.eyebrow{text-transform:uppercase;letter-spacing:2.2px;color:#9ae4dc;font-weight:750;font-size:11px}
+h2{font-size:clamp(28px,4vw,41px);font-weight:720;letter-spacing:-1.6px;margin:8px 0}
+.intro p{color:#a6b7d2;max-width:680px;line-height:1.55;font-size:14px;margin:0}
+.button,button,.file-pill{appearance:none;border:1px solid #476079;color:#ebf6ff;background:#1b2c46;border-radius:10px;font:650 13px inherit;padding:11px 15px;cursor:pointer}
+button:hover,.file-pill:hover{background:#263d59}.file-pill{display:inline-block;background:#b4e5e3;color:#152938;border-color:#b4e5e3;font-weight:800}
+.file-pill:hover{background:#d1fffb}input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+.hero-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:0 0 17px}
+.stat,.panel{background:#111e32;border:1px solid #283b56;border-radius:15px;padding:17px 20px}
+.stat .k{font-size:11px;text-transform:uppercase;letter-spacing:1.1px;color:#90a4c4}.stat strong{display:block;font-size:30px;letter-spacing:-1.3px;margin:7px 0 3px}
+.stat span{font-size:12px;color:#8ca3bf}
+.work{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(290px,1fr);gap:15px}
+.filters{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
+input[type=search],select{background:#0b1728;border:1px solid #3e5877;color:#f3f8ff;border-radius:9px;padding:11px 12px;font-size:13px}
+input[type=search]{min-width:190px;flex:1}.hint{color:#8ea4c0;font-size:12px}
+#grid{height:min(59vh,620px);min-height:350px;width:100%}.panel h3{font-size:14px;letter-spacing:.1px;margin:0 0 13px}
+.details{font-size:13px;line-height:1.65;color:#bdcbe2;white-space:pre-wrap;overflow-wrap:anywhere}
+details{border-top:1px solid #35445c;padding-top:13px;margin-top:13px}summary{cursor:pointer;color:#a5f2e4;font-size:12px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#e5eaf9;font-size:12px}
+#status{margin:17px 0 0;color:#a6b8d5;font-size:12px;min-height:22px}.error{color:#ffadb4!important}.ok{color:#90ead8!important}
+footer{padding-top:20px;color:#879db8;font-size:12px;line-height:1.6}
+@media(max-width:960px){.work{grid-template-columns:1fr}}@media(max-width:600px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stat{padding:12px}.stat strong{font-size:24px}main{padding-top:20px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@36.2.0/dist/ag-grid-community.min.js"></script>
+</head>
+<body>
+<header><div class="mark"><div class="logo">CP</div><div><h1>CLAIMPROOF / OPERATIONS</h1><p>Buyer-review evidence, not a payment ledger</p></div></div><small>LOCAL ONLY&nbsp; / &nbsp;PUBLIC AG GRID COMMUNITY</small></header>
+<main>
+<div class="intro"><div><span class="eyebrow">Review intelligence · version 1</span><h2>Understand risk before checkout.</h2><p>Import real <b>ClaimProof pre-purchase review</b> JSON exports to triage policy gaps and AI questions across carts. Source fingerprints are recomputed locally. Nothing here creates an order or sends buyer records to the server.</p></div>
+<div class="hero-actions"><label class="file-pill" for="files">Import review JSON files</label><input id="files" type="file" multiple accept=".json,application/json"><button id="export" type="button">Export filtered CSV</button><button id="clear" type="button">Clear board</button></div></div>
+<section class="stats" aria-label="Review metrics">
+<div class="stat"><div class="k">Verified review exports</div><strong id="count">0</strong><span>Locally checked fingerprints</span></div>
+<div class="stat"><div class="k">High-priority cases</div><strong id="high">0</strong><span>High-severity findings</span></div>
+<div class="stat"><div class="k">Reviewed cart value</div><strong id="volume">$0.00</strong><span>Proposed USD carts, not sales</span></div>
+<div class="stat"><div class="k">AI advisory attached</div><strong id="with-ai">0</strong><span>Advisory content is not verified</span></div>
+</section>
+<div class="work">
+<section class="panel" aria-label="Review grid">
+<div class="filters"><input id="search" type="search" aria-label="Search reviews" placeholder="Search review IDs, risks, items..."><select id="priority" aria-label="Priority filter"><option value="all">All priorities</option><option value="high">High priority</option><option value="medium">Medium priority</option><option value="none">No flagged findings</option></select><span class="hint">Sorted and filtered with AG Grid</span></div>
+<div id="grid" aria-label="AG Grid review cases" role="region"></div>
+<div id="status" role="status" aria-live="polite">Choose JSON files exported with ClaimProof’s “Save pre-purchase review” action. No records are sent to this server.</div>
+</section>
+<aside class="panel"><h3>CASE INTELLIGENCE</h3><div class="details" id="details">Select an imported case to inspect the original buyer-supplied terms, product lines, deterministic risk flags, and model questions. This is a read-only view.</div><details><summary>Evidence and payment boundaries</summary><p class="details">Every imported cart is matched against its SHA-256 fingerprint. These exports are buyer-side review notes; no merchant identity or payment success is authenticated. The PayPal sandbox checkout stays in the existing ClaimProof app and requires separate human approvals. Third-party AG Grid script is loaded from the pinned jsDelivr CDN; browser content security policy disallows network uploads and external connections.</p></details></aside>
+</div>
+<footer>Use <a href="http://127.0.0.1:3159/" rel="noopener noreferrer" target="_blank">ClaimProof Commerce</a> to generate exports first. This board never checks the payment rail and therefore cannot declare a purchase captured, settled, or unpaid.</footer>
+</main>
+<script>
+'use strict';
+const get = id => document.getElementById(id);
+const allRows = new Map();
+let api;
+let selected;
+const encoder = new TextEncoder();
+function assert(condition, message) { if(!condition) throw Error(message); }
+function cents(text) {
+  assert(typeof text === 'string' && /^\d{1,6}(?:\.\d{1,2})?$/.test(text), 'invalid exact decimal');
+  const split = text.split('.');
+  return Number(split[0])*100+Number((split[1] || '').padEnd(2,'0'));
+}
+function dollars(n) { return '$'+(n/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function status(text,isError) { const el=get('status'); el.textContent=text;el.className=isError?'error':'ok'; }
+function phrase(x,max=300) { return typeof x==='string'?x.slice(0,max):''; }
+function safeDate(v) {
+  assert(typeof v==='string'&&v.length<=40&&/^\d{4}-\d\d-\d\dT/.test(v)&&Number.isFinite(Date.parse(v)), 'invalid export date');
+  return v;
+}
+async function verifyRecord(record) {
+  assert(record&&typeof record==='object'&&!Array.isArray(record), 'not a JSON object');
+  assert(record.record_type==='claimproof-prepurchase-review-v1', 'unsupported review schema');
+  assert(record.payment_receipt===false&&record.merchant_verified===false, 'unexpected payment/merchant evidence; import original review export only');
+  assert(typeof record.review_id==='string'&&/^[0-9a-f-]{36}$/i.test(record.review_id), 'invalid review ID');
+  const cart=record.cart;
+  assert(cart&&typeof cart==='object'&&cart.currency==='USD', 'unsupported cart currency');
+  assert(Array.isArray(cart.items)&&cart.items.length>0&&cart.items.length<=12,'invalid item count');
+  assert(typeof cart.merchant_terms==='string'&&cart.merchant_terms.length<=1500,'merchant terms missing or oversized');
+  assert(typeof cart.fingerprint==='string'&&/^[0-9a-f]{64}$/.test(cart.fingerprint),'invalid SHA-256 fingerprint');
+  const items=[], skus=new Set();let total=0;
+  for(const line of cart.items) {
+    assert(line&&typeof line==='object'&&typeof line.sku==='string'&&/^[A-Za-z0-9_-]{1,30}$/.test(line.sku)&&!skus.has(line.sku),'invalid or duplicate SKU');
+    skus.add(line.sku);
+    assert(typeof line.name==='string'&&line.name.length>0&&line.name.length<=120, 'invalid item name');
+    assert(Number.isSafeInteger(line.quantity)&&line.quantity>=1&&line.quantity<=99,'invalid quantity');
+    const unit=cents(line.unit_price),sum=cents(line.line_total);
+    assert(unit>0&&unit*line.quantity===sum,'line amount mismatch');
+    total+=sum;
+    items.push({sku:line.sku,name:line.name,quantity:line.quantity,unit_price:(unit/100).toFixed(2),line_total:(sum/100).toFixed(2)});
+  }
+  assert(total<=2000000&&total===cart.total_cents&&cart.total===(total/100).toFixed(2),'total does not reconcile to item lines');
+  const canonical=JSON.stringify({items:items,total:total,merchantTerms:cart.merchant_terms,currency:'USD'});
+  const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(canonical))),n=>n.toString(16).padStart(2,'0')).join('');
+  assert(hash===cart.fingerprint,'cart fingerprint does not match actual export content');
+  const f=record.findings;
+  assert(Array.isArray(f)&&f.length<=30,'invalid risk findings');
+  for(const item of f){assert(item&&typeof item==='object'&&['high','medium','low','info'].includes(item.severity)&&typeof item.code==='string'&&item.code.length<=80&&typeof item.finding==='string'&&item.finding.length<=500,'invalid finding');}
+  assert(record.advisory&&typeof record.advisory==='object'&&typeof record.advisory.model_used==='boolean','invalid advisory');
+  const reviewed=safeDate(record.exported_at);
+  const level=f.some(x=>x.severity==='high')?'high':f.some(x=>x.severity==='medium')?'medium':'none';
+  return {id:record.review_id,time:reviewed,amount_cents:total,item_count:items.length,level,
+    codes:f.map(x=>x.code).join(', '),products:items.map(x=>x.name).join(', '),
+    ai:record.advisory.model_used?'Attached':'Offline only',
+    short_fp:cart.fingerprint.slice(0,12),record:record};
+}
+function refresh() {
+  let values=Array.from(allRows.values());
+  const p=get('priority').value;
+  if(p!=='all')values=values.filter(x=>x.level===p);
+  api.setGridOption('rowData',values);
+  api.setGridOption('quickFilterText',get('search').value.trim());
+  const all=Array.from(allRows.values());
+  get('count').textContent=String(all.length);
+  get('high').textContent=String(all.filter(x=>x.level==='high').length);
+  get('volume').textContent=dollars(all.reduce((v,x)=>v+x.amount_cents,0));
+  get('with-ai').textContent=String(all.filter(x=>x.ai==='Attached').length);
+  if(selected&&!allRows.has(selected)){selected=undefined;get('details').textContent='Select an imported review to see its source-bound evidence.';}
+}
+function inspect(row) {
+  selected=row.id;
+  const r=row.record;
+  const f=r.findings.map(x=>x.severity.toUpperCase()+' · '+x.code+'\n'+x.finding).join('\n\n') || 'No deterministic flags';
+  const lines=r.cart.items.map(x=>x.quantity+' × '+x.name+' ($'+x.unit_price+')').join('\n');
+  const advisory=phrase(r.advisory.summary,1100);
+  const questions=Array.isArray(r.advisory.questions)?r.advisory.questions.map(x=>'• '+phrase(x,220)).join('\n'):'';
+  get('details').textContent='REVIEW '+row.id+'\nExported '+row.time+
+   '\n\nPROPOSED TOTAL: '+dollars(row.amount_cents)+' (NOT PAID)'+
+   '\n\nPRODUCTS\n'+lines+'\n\nORIGINAL REVIEW WARNINGS\n'+f+
+   '\n\nBUYER-SUPPLIED MERCHANT TERMS (UNVERIFIED)\n'+r.cart.merchant_terms+
+   '\n\nAI ADVISORY ('+row.ai+')\n'+advisory+'\n'+questions+
+   '\n\nSHA-256 '+r.cart.fingerprint;
+}
+function csvCell(x) {
+  let t=String(x??'');
+  if(/^[\s]*[=+@-]/.test(t))t="'"+t;
+  return '"'+t.replace(/"/g,'""')+'"';
+}
+function exportCsv() {
+  const lines=[['Review','Exported','Cart USD','Priority','Flags','Products','AI advisory','Fingerprint'].map(csvCell).join(',')];
+  api.forEachNodeAfterFilterAndSort(node=>{if(!node.data)return;const r=node.data;
+    lines.push([r.id,r.time,(r.amount_cents/100).toFixed(2),r.level,r.codes,r.products,r.ai,r.record.cart.fingerprint].map(csvCell).join(','));
+  });
+  assert(lines.length>1,'No visible cases to export');
+  const blob=new Blob([lines.join('\r\n')+'\r\n'],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='claimproof-review-triage.csv';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  status('Exported '+(lines.length-1)+' filtered review rows; no payment verification was performed.',false);
+}
+async function onFiles(files) {
+  if(files.length>128){status('Select no more than 128 review files at a time.',true);return;}
+  let accepted=0;const rejected=[];
+  for(const file of files) {
+    try {
+      assert(file.size<=262144,'file exceeds 256 KiB');
+      const parsed=JSON.parse(await file.text());
+      const records=Array.isArray(parsed)?parsed:[parsed];
+      assert(records.length<=128,'JSON contains too many entries');
+      for(const raw of records) {
+        assert(allRows.size<500||allRows.has(raw.review_id),'review board limit is 500 cases');
+        const row=await verifyRecord(raw);
+        const earlier=allRows.get(row.id);
+        if(earlier)assert(earlier.record.cart.fingerprint===row.record.cart.fingerprint,'same review ID has contradictory evidence');
+        allRows.set(row.id,row);accepted++;
+      }
+    } catch(e) {rejected.push(file.name+': '+e.message);}
+  }
+  refresh();
+  status('Imported '+accepted+' source-checked reviews.'+(rejected.length?' Rejected: '+rejected.slice(0,3).join('; '):''),rejected.length>0);
+}
+if(!window.agGrid||typeof window.agGrid.createGrid!=='function'){
+  status('AG Grid could not load from the pinned CDN. Check your connection; no review data was uploaded.',true);
+  get('files').disabled=true;get('export').disabled=true;
+}else{
+  api=agGrid.createGrid(get('grid'),{
+    theme:'legacy',rowData:[],rowHeight:45,headerHeight:46,animateRows:true,
+    defaultColDef:{sortable:true,filter:true,resizable:true},
+    columnDefs:[
+      {headerName:'Priority',field:'level',width:125,sort:'asc',comparator:(a,b)=>({high:0,medium:1,none:2}[a]-{high:0,medium:1,none:2}[b])},
+      {headerName:'Reviewed',field:'time',width:190,valueFormatter:p=>p.value?new Date(p.value).toLocaleString():''},
+      {headerName:'Cart',field:'amount_cents',width:135,valueFormatter:p=>dollars(p.value),comparator:(a,b)=>a-b},
+      {headerName:'Products',field:'products',minWidth:180,flex:1},
+      {headerName:'Findings',field:'codes',minWidth:195,flex:1},
+      {headerName:'AI',field:'ai',width:125},
+      {headerName:'Source',field:'short_fp',width:135}
+    ],
+    getRowId:p=>p.data.id,
+    onRowClicked:p=>inspect(p.data),
+    overlayNoRowsTemplate:'<span style="color:#b8c7dd">Import real ClaimProof review exports to begin triage</span>'
+  });
+  get('search').addEventListener('input',refresh);
+  get('priority').addEventListener('change',refresh);
+  get('files').addEventListener('change',async e=>{await onFiles(Array.from(e.target.files||[]));e.target.value='';});
+  get('export').addEventListener('click',()=>{try{exportCsv()}catch(e){status(e.message,true)}});
+  get('clear').addEventListener('click',()=>{allRows.clear();refresh();status('Local review data cleared from the board.',false)});
+}
+</script>
+</body></html>

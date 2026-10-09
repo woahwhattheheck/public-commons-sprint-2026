@@ -1,0 +1,19 @@
+{
+  "synthetic": true,
+  "prediction": {
+    "criteria": [
+      {
+        "id": "limitation",
+        "proposed_points": 4,
+        "evidence": ["a small sample can still leave important baseline imbalances"],
+        "reason": "Identifies baseline imbalance as a possible finite-sample limitation."
+      },
+      {
+        "id": "reporting",
+        "proposed_points": 4,
+        "evidence": ["show group-level baseline characteristics and report uncertainty"],
+        "reason": "Proposes baseline reporting and explicit uncertainty."
+      }
+    ]
+  }
+}

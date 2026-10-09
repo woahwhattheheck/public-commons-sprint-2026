@@ -124,6 +124,28 @@ test('evidence is digest-bound and terminal evidence cannot mutate', () => {
   );
 });
 
+test('approved decision cannot admit different evidence', () => {
+  const approved = apply(make(), { id: 'cmd-approve-1', type: 'approve' }).operation;
+  const before = exportOperation(approved);
+  assert.throws(() => apply(approved, {
+    id: 'cmd-evidence-after', type: 'evidence',
+    evidence: { ...evidence, id: 'late-proof' },
+  }), /immutable/);
+  assert.equal(exportOperation(approved), before);
+});
+
+test('evidence collection respects the 20-entry maximum', () => {
+  const entries = Array.from({ length: 20 }, (_, i) => ({ ...evidence, id: `proof-${i}` }));
+  const op = createOperation({
+    id: 'op-evidence-cap', title: 'Fixture', summary: 'Cap fixture',
+    authority: 'ROUTINE', evidence: entries,
+  }, { clock: () => BASE_TIME });
+  assert.throws(() => apply(op, {
+    id: 'cmd-evidence-over', type: 'evidence',
+    evidence: { ...evidence, id: 'proof-21' },
+  }), /fewer than 20/);
+});
+
 test('unknown command fields are rejected instead of silently discarded', () => {
   assert.throws(
     () => apply(make(), { id: 'cmd-approve-1', type: 'approve', approved: true }),

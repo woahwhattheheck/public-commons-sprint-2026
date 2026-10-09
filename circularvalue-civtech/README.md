@@ -41,3 +41,20 @@ If writing the demo fails, the CLI removes only the case and packet files create
 by that attempt that have not since been replaced. Existing files and unrelated
 directory contents remain untouched. After the storage problem is fixed, retry
 the same directory when the demo output names are free.
+
+## Compare alternatives
+
+**Needs expert review.** Compare two cases on the same valuation basis, inspect
+changed evidence and assumptions, and produce a source-replayable JSON comparison
+plus a self-contained HTML review. Existing single-case commands are unchanged.
+
+```bash
+python -m circularvalue.comparison compile baseline.json option.json --out comparison.json
+python -m circularvalue.comparison verify baseline.json option.json comparison.json
+python -m circularvalue.comparison report baseline.json option.json --out comparison.html
+```
+
+See [comparison semantics and focused validation](docs/COMPARISON.md). Differences
+use a conservative endpoint envelope, not a confidence interval or an assertion
+of realized savings. Reused evidence IDs with changed source hashes are tracked;
+both cases retain their stale-evidence, hypothesis and modeled-value flags.

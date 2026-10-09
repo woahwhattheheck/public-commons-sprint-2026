@@ -51,6 +51,16 @@ class PantaViewTests(unittest.TestCase):
         self.assertIn('&lt;img src=x', page)
         self.assertIn("not independently verified", page)
 
+    def test_human_view_shows_exact_quotes_beside_rounded_percentages(self):
+        precise = {**MARKET, "yesPrice": "0.123456789012345678",
+                   "noPrice": "0.876543210987654322"}
+        page = render_page(
+            verify_snapshot(fixture(items=[precise])), "test-market")
+        self.assertIn("Exact YES 0.123456789012345678", page)
+        self.assertIn("NO 0.876543210987654322", page)
+        self.assertIn("YES 12.3%", page)
+        self.assertIn("not independently verified", page)
+
     def test_rejects_tampering_even_if_data_remains_valid_json(self):
         data = json.loads(fixture())
         data["items"][0]["yesPrice"] = "1"

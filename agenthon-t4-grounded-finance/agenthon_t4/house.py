@@ -8,7 +8,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Callable
 
-from .agent import ContractError, CorpusDoc, Evidence, retrieve, strict_json_text
+from .agent import ContractError, CorpusDoc, Evidence, RetrievalIndex, strict_json_text
 
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL | re.IGNORECASE)
 MAX_HOUSE_RESPONSE_BYTES = 1_000_000
@@ -68,8 +68,9 @@ def plan(task: dict[str, Any], docs: list[CorpusDoc], *, timeout: float = 35.0,
         return None
     url, token, model = config
     evidence_by_entity: dict[str, list[dict[str, Any]]] = {}
+    retrieval = RetrievalIndex(docs)
     for entity in task["entities"]:
-        spans: list[Evidence] = retrieve(task, entity, docs)
+        spans: list[Evidence] = retrieval.retrieve(task, entity)
         evidence_by_entity[entity["entity_id"]] = [
             {"doc_id": item.doc_id, "span_start": item.span_start, "span_end": item.span_end, "text": item.text}
             for item in spans

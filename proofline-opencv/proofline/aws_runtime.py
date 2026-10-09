@@ -7,7 +7,8 @@ from typing import Any
 from .agent import build_review_proposal
 from .aws_contract import S3ObjectEvent, parse_s3_events
 from .codec import canonical_json
-from .vision import inspect_pair
+from .s3_input import S3ImageInputError, read_image_object
+from .vision import MAX_IMAGE_BYTES, inspect_pair
 
 
 class RuntimeErrorProofLine(RuntimeError):
@@ -15,17 +16,10 @@ class RuntimeErrorProofLine(RuntimeError):
 
 
 def _get_object_bytes(s3: Any, bucket: str, key: str, version_id: str = "") -> bytes:
-    kwargs = {"Bucket": bucket, "Key": key}
-    if version_id:
-        kwargs["VersionId"] = version_id
-    response = s3.get_object(**kwargs)
-    body = response.get("Body")
-    if body is None:
-        raise RuntimeErrorProofLine("S3 object body missing")
-    raw = body.read()
-    if not isinstance(raw, (bytes, bytearray)):
-        raise RuntimeErrorProofLine("S3 object body was not bytes")
-    return bytes(raw)
+    try:
+        return read_image_object(s3, bucket, key, version_id, max_bytes=MAX_IMAGE_BYTES)
+    except S3ImageInputError as exc:
+        raise RuntimeErrorProofLine(str(exc)) from exc
 
 
 def _stored_result(
