@@ -18,8 +18,14 @@ async function boundedJson(response){
   }finally{reader.releaseLock();}
   const output=new Uint8Array(length);let pos=0;
   for(const part of buffers){output.set(part,pos);pos+=part.byteLength;}
-  const result=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(output));
-  if(!result||typeof result!=='object')throw new Error('invalid PayPal object');
+  let result;
+  try{
+    result=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(output));
+  }catch{
+    // Parser errors can quote provider bodies; never pass them to the browser.
+    throw new Error('PayPal response is not valid UTF-8 JSON');
+  }
+  if(!result||typeof result!=='object'||Array.isArray(result))throw new Error('PayPal response is not an object');
   return result;
 }
 async function call(url,opts){
