@@ -16,14 +16,18 @@ form{background:#242a37;border:1px solid #495064;padding:24px;border-radius:16px
 .fields{display:grid;grid-template-columns:2fr 2fr 1fr;gap:12px}
 label{display:block;font-weight:650}input,select{width:100%;font:inherit;padding:12px;margin-top:6px;color:#fff;background:#111720;border:1px solid #8991a0;border-radius:8px;box-sizing:border-box}
 button{border:0;color:#161a20;background:#ffca77;padding:12px 20px;border-radius:8px;font:700 1rem system-ui;cursor:pointer;margin-top:18px}
-button:disabled{opacity:.6}
+button:disabled{opacity:.6;cursor:not-allowed}
+button.secondary{font-size:.9rem;color:#fff;background:#414c62;border:1px solid #aab5c9;padding:9px 13px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #ffca77;outline-offset:3px}
 .notice{background:#3a3024;border:1px solid #a47a39;color:#ffe2af;padding:14px;border-radius:10px}
 .notice[hidden],#result[hidden]{display:none}
 #cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .card{background:#232939;border:1px solid #495064;border-radius:12px;padding:20px}
+.card[data-included="false"]{border-style:dashed;opacity:.78}
 .card h3{font-size:1.3rem}
 .tag{display:inline-block;padding:3px 8px;border-radius:8px;background:#454a57;margin:3px;font-size:.8rem}
 .small{font-size:.83rem;color:#b8c2d0;overflow-wrap:anywhere}
+.shortlist-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 footer{margin-top:50px;padding:25px 0;border-top:1px solid #445;color:#afbdcf}
 @media(max-width:700px){.fields,#cards{grid-template-columns:1fr}h1{margin-top:35px}}
 </style>
@@ -42,7 +46,11 @@ footer{margin-top:50px;padding:25px 0;border-top:1px solid #445;color:#afbdcf}
 <p class="small">Qloo movie search → localized place insights → evidence-linked thematic stops. Not navigation directions.</p></form>
 <p id="notice" class="notice" role="status" hidden></p>
 <section id="result" hidden aria-live="polite"><h2 id="title"></h2><p id="label" class="small"></p>
-<div id="cards"></div><p id="evidence" class="small"></p><button id="export">Export evidence JSON</button></section>
+<p>Build a shortlist from the original suggestions. Skipping a place never changes Qloo's source ranking or requests a replacement.</p>
+<p id="shortlist-summary" class="small" role="status" aria-live="polite"></p>
+<div id="cards"></div><p id="evidence" class="small"></p>
+<div class="shortlist-actions"><button type="button" id="reset-shortlist" class="secondary">Restore all suggestions</button>
+<button type="button" id="export">Export selected evidence JSON</button></div></section>
 <footer>Qloo Agentic Hackathon 2026 source candidate. Synthetic examples are fictional. No route, travel time, business hours, price or current availability asserted.</footer>
 </main>
 </body></html>

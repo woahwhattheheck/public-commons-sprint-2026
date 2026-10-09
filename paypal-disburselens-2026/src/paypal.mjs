@@ -46,14 +46,25 @@ export async function fetchBatch(batchId){
   if(typeof batchId!=='string'||! /^[A-Za-z0-9_-]{3,64}$/.test(batchId))throw new Error('invalid payout batch ID');
   const token=await oauth();
   const pages=[];
+  let expectedPages=null;
+  const seenItemIds=new Set();
   for(let page=1;page<=10;page++){
     const url=`${BASE}/v1/payments/payouts/${encodeURIComponent(batchId)}?page=${page}&page_size=100&total_required=true`;
     const payload=await call(url,{method:'GET',headers:{Authorization:`Bearer ${token}`,Accept:'application/json'}});
     if(payload.batch_header?.payout_batch_id!==batchId)throw new Error('sandbox returned an unexpected payout batch');
-    pages.push(payload);
     const total=Number(payload.total_pages??1);
     if(!Number.isSafeInteger(total)||total<1||total>10)throw new Error('payout batch exceeds supported pages');
-    if(page===total)return pages;
+    if(expectedPages===null)expectedPages=total;
+    else if(total!==expectedPages)throw new Error('payout batch pagination changed during read; retry sync');
+    // A changing live batch must not silently reuse a payout item across pages.
+    for(const item of payload.items??[]){
+      const itemId=item?.payout_item_id;
+      if(typeof itemId!=='string'||!itemId)continue;
+      if(seenItemIds.has(itemId))throw new Error('payout item repeated during pagination; retry sync');
+      seenItemIds.add(itemId);
+    }
+    pages.push(payload);
+    if(page===expectedPages)return pages;
   }
   throw new Error('payout batch pagination exceeded');
 }

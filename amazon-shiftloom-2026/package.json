@@ -1,0 +1,10 @@
+{
+  "name": "shiftloom-amazon-alexa-simulation",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Human-approved volunteer coverage planner / simulated Alexa+ developer competition experience",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.mjs", "test:focused": "node --test test/shiftloom.test.mjs" },
+  "dependencies": {}
+}

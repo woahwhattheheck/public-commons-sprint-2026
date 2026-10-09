@@ -22,6 +22,8 @@ Requirements: Node 22+ (no npm install required). From this directory:
   explicitly returns a rule-based placeholder, not an AI-generated result.
 - Focused isolated logic contract: \`npm run test:focused\`.
 
+The local HTTP handler rejects non-loopback Host headers, cross-origin browser Origin headers, and cross-site Fetch Metadata before any provider read or draft. This protects this local demo from common DNS-rebinding/browser-trigger scenarios; it is not user authentication.
+
 The server binds to 127.0.0.1 by default; don't deploy it publicly without
 real user authentication and tenant isolation. The app cannot create/cancel
 subscriptions, charge/refund, send customer emails, or alter account state.
@@ -29,6 +31,26 @@ Customer identities and payment instruments are never sent to the optional
 model; provider credentials are never returned to the browser. The current
 status receipt is not a proof of settled funds. Provider failures never
 silently switch from PayPal to demonstration data.
+
+## PayPal sandbox list coverage
+
+PayPal Subscriptions v1 limits each List API page to 20 records. RenewalGuard
+now reads consecutive pages (up to 10 pages / 200 records), displaying how
+many pages and subscriptions it actually received. A full last page triggers
+a confirming next-page request even if PayPal omits its `next` link. If the
+200-record cap is reached while more data could exist, the UI explicitly
+labels the list **PARTIAL**; never interpret its count as the full merchant
+portfolio. Paging is read-only, sequential, and always uses the fixed PayPal
+sandbox origin rather than requesting arbitrary link URLs.
+
+Malformed pages, repeated subscription identifiers across pages, inconsistent
+next links, or failed page requests reject the *entire* list rather than
+showing a misleading partial success. The UI clears any previous list when
+reloading so a request failure cannot leave stale records selectable.
+
+Run the focused source contract with `node --test test-pagination.mjs`.
+Official paging contract:
+https://developer.paypal.com/api/subscriptions/v1/subscriptions-list/
 
 ## Grounding, limitations and entry status
 

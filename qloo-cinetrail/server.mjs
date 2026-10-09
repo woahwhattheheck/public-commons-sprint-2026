@@ -6,7 +6,11 @@ import path from "node:path";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MAX_REQUEST_BYTES = 4096;
 const MAX_QLOO_BYTES = 800_000;
-const QLOO_BASE = process.env.QLOO_API_BASE || "https://api.hackathon.qloo.com";
+const QLOO_BASE = process.env.QLOO_API_BASE || "https://hackathon.api.qloo.com";
+// Only Qloo-owned API origins may receive the live server-side credential.
+const TRUSTED_QLOO_ORIGINS = new Set([
+  "https://hackathon.api.qloo.com", "https://api.qloo.com", "https://staging.api.qloo.com",
+]);
 
 export function cleanInput(value, label, max = 80) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > max ||
@@ -92,13 +96,16 @@ export async function qlooGet(endpoint, params, { fetcher = fetch, key = process
   if (!key) throw new Error("QLOO_API_KEY is required for live mode");
   const origin = new URL(base);
   if (origin.protocol !== "https:" || origin.username || origin.password ||
-      origin.search || origin.hash || origin.pathname !== "/") {
-    throw new Error("QLOO_API_BASE must be an HTTPS origin");
+      origin.search || origin.hash || origin.pathname !== "/" || origin.port ||
+      !TRUSTED_QLOO_ORIGINS.has(origin.origin)) {
+    throw new Error("QLOO_API_BASE must be an approved Qloo HTTPS origin");
   }
   const url = new URL(endpoint, origin);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
   const response = await fetcher(url, {
     headers: { "X-Api-Key": key, Accept: "application/json" },
+    // Never follow a provider redirect with a server-side API credential.
+    redirect: "error",
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error("Qloo upstream returned HTTP " + response.status);
