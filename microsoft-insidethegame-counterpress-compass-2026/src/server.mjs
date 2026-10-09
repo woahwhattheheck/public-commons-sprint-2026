@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 import {makeSnapshot, TEAMS, validateFixture} from './engine.mjs';
 import {foundryConfigured, suggestedNarrative} from './foundry.mjs';
+import {createEvidenceExport, evidenceCsv} from './evidence_export.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -60,6 +61,35 @@ export const server = createServer(async (req, res) => {
       rules: {counterpressWindowSeconds:8, success:'same-team loss, pressure action and regain within window'},
       foundryConfigured: foundryConfigured(), providerCallsOnReplay:0,
     });
+    if (req.method === 'GET' && path === '/api/evidence-export') {
+      const query = new URL(req.url, 'http://localhost').searchParams;
+      const allowed = new Set(['count', 'team', 'audience', 'locale', 'format']);
+      if ([...query.keys()].some(key => !allowed.has(key)) ||
+          [...allowed].some(key => query.getAll(key).length > 1)) {
+        return send(res, 400, {error: 'Unknown or repeated export parameter'});
+      }
+      const countString = query.get('count');
+      if (countString === null || !/^(?:0|[1-9][0-9]{0,3})$/.test(countString)) {
+        return send(res, 400, {error: 'Select a valid event-prefix count'});
+      }
+      const format = query.get('format') || 'json';
+      if (format !== 'json' && format !== 'csv') {
+        return send(res, 400, {error: 'Export format must be json or csv'});
+      }
+      const snapshot = runSnapshot({
+        count: Number(countString), team: query.get('team') || TEAMS[0],
+        audience: query.get('audience') || 'casual', locale: query.get('locale') || 'en'
+      });
+      const report = createEvidenceExport(snapshot);
+      const body = format === 'csv' ? evidenceCsv(report) : JSON.stringify(report, null, 2) + '\n';
+      res.writeHead(200, {
+        'Content-Type': format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="counterpress-frame-' +
+          snapshot.count + '.' + format + '"',
+        'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'
+      });
+      return res.end(body);
+    }
     if (req.method === 'POST' && path === '/api/analyze') return send(res, 200, runSnapshot(await getJSON(req)));
     if (req.method === 'POST' && path === '/api/foundry-draft') {
       if (!foundryConfigured()) return send(res, 503, {error:'Optional Foundry not configured'});
