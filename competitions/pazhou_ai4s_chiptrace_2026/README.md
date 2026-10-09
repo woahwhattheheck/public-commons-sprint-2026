@@ -73,7 +73,7 @@ For each channel, ChipTrace builds a baseline envelope and computes:
 6. **Replicate divergence** — spread of replicate medians relative to baseline scale.
 7. **Cross-sensor shift** — change in aligned Pearson correlation structure versus baseline.
 
-The composite `quality_risk_score` is deterministic and transparent. Hard review thresholds can trigger `REVIEW` even when the weighted score is below 25. Sparse data returns `INSUFFICIENT_EVIDENCE`, never a falsely reassuring pass.
+The composite `quality_risk_score` is deterministic and transparent. Hard review thresholds can trigger `REVIEW` even when the weighted score is below 25. Sparse data returns `INSUFFICIENT_EVIDENCE`, never a falsely reassuring pass. An **entire baseline sensor channel missing** from the candidate run also produces an explicit `INSUFFICIENT_EVIDENCE` channel assessment and abstention overall, even if every remaining sensor appears clean. Its quality-risk score is `null` (rendered `n/a`), not a fabricated low-risk reading; the baseline metadata and exact-byte input receipts are retained. Extra channels absent from the baseline remain invalid input.
 
 The current thresholds are an auditable prototype policy, not universal biological constants. A real lab should calibrate them against its assay, device, sensor, sampling plan, and validated QC process.
 
@@ -119,4 +119,4 @@ See `docs/technical_report.md`, `docs/kaggle_writeup.md`, and `docs/demo_script.
 
 ## Source provenance and license
 
-This ChipTrace subtree is distributed under its own Apache License, Version 2.0 (`LICENSE`), separately from this public repository's root MIT assets. The source was exported from the same original author's private competition work at `woahwhattheheck/commons` commit `4e520baa6bb5e369dc8e706a839c6082c2128372`; source/entrant rights preserved. This code publication alone does not submit the competition or establish an award.
+This ChipTrace subtree is distributed under its own Apache License, Version 2.0 (`LICENSE`), separately from this public repository's root MIT assets. The source was exported from the original author's privately maintained competition workspace at immutable source commit `4e520baa6bb5e369dc8e706a839c6082c2128372`; source/entrant rights preserved. This code publication alone does not submit the competition or establish an award.

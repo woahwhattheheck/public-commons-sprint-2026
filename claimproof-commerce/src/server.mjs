@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {normalizeCart,staticReview,InputError} from './core.mjs';
 import {reviewWithModel} from './ai.mjs';
 import {PayPalSandbox} from './paypal.mjs';
+import {makeSandboxReceipt} from './receipt.mjs';
 
 const port=Number(process.env.PORT || 3159);
 if (!Number.isInteger(port)||port < 1024||port > 65535) throw new Error('PORT invalid');
@@ -49,10 +50,14 @@ async function reviewOperation(review,kind,run){
   finally{if(review.inflight?.promise===promise)review.inflight=null;}
 }
 function captureResult(review,capture){
-  if(review.state==='CAPTURED' && capture.status!=='COMPLETED')throw new InputError('PayPal settlement changed; manual reconciliation required');
-  if(capture.status==='COMPLETED')review.state='CAPTURED';
-  else if(capture.status==='PENDING')review.state='CAPTURE_PENDING';
-  // A read with no capture never resets a previously pending mutation to retryable.
+  const reversed=['REFUNDED','PARTIALLY_REFUNDED'].includes(capture.status);
+  if((review.state==='CAPTURED' && capture.status!=='COMPLETED' && !reversed) ||
+     (review.state==='CAPTURE_REVERSED' && !reversed))throw new InputError('PayPal settlement changed; manual reconciliation required');
+  const states={COMPLETED:'CAPTURED',PENDING:'CAPTURE_PENDING',UNKNOWN:'CAPTURE_UNKNOWN',
+    DECLINED:'CAPTURE_FAILED',DENIED:'CAPTURE_FAILED',FAILED:'CAPTURE_FAILED',
+    REFUNDED:'CAPTURE_REVERSED',PARTIALLY_REFUNDED:'CAPTURE_REVERSED',VOIDED:'ORDER_VOIDED'};
+  if(states[capture.status])review.state=states[capture.status];
+  // A read with no capture never resets a pending or uncertain mutation to retryable.
   return {state:review.state,order_id:review.order.order_id,capture_status:capture.status,
     ...(capture.id?{capture_id:capture.id}:{}),payment_authority:false};
 }
@@ -64,7 +69,7 @@ const server=http.createServer(async(req,res)=>{
       res.end(html);return;
     }
     if(req.method==='GET' && url.pathname==='/api/health'){send(res,200,{ready:true,paypal_sandbox_configured:!!(process.env.PAYPAL_CLIENT_ID&&process.env.PAYPAL_CLIENT_SECRET),ai_provider_configured:process.env.AI_PROVIDER==='anthropic'?!!(process.env.ANTHROPIC_API_KEY&&process.env.ANTHROPIC_MODEL):!!(process.env.AI_CHAT_COMPLETIONS_URL&&process.env.AI_API_KEY&&process.env.AI_MODEL)});return;}
-    if(req.method!=='POST' || !['/api/review','/api/create','/api/capture','/api/status'].includes(url.pathname)){send(res,404,{error:'route not found'});return;}
+    if(req.method!=='POST' || !['/api/review','/api/create','/api/capture','/api/status','/api/receipt'].includes(url.pathname)){send(res,404,{error:'route not found'});return;}
     assertPost(req);const request=await body(req);prune();
     if(url.pathname==='/api/review'){
       const cart=normalizeCart(request);const findings=staticReview(cart);
@@ -77,9 +82,10 @@ const server=http.createServer(async(req,res)=>{
     const review=getReview(request.review_id);
     if(request.fingerprint!==review.cart.fingerprint)throw new InputError('approved cart fingerprint mismatch');
     // Status is an explicit, read-only action: it never authorizes a new capture.
-    if(url.pathname!=='/api/status' && request.confirm!==true)throw new InputError('explicit human confirmation required');
+    if(!['/api/status','/api/receipt'].includes(url.pathname) && request.confirm!==true)throw new InputError('explicit human confirmation required');
     const kind=url.pathname==='/api/create'?'create':
-      url.pathname==='/api/status'||review.state==='CAPTURE_PENDING'?'status':'capture';
+      url.pathname==='/api/receipt'?'receipt':
+      url.pathname==='/api/status'||['CAPTURE_PENDING','CAPTURE_UNKNOWN','CAPTURED','CAPTURE_FAILED','CAPTURE_REVERSED','ORDER_VOIDED'].includes(review.state)?'status':'capture';
     const result=await reviewOperation(review,kind,async()=>{
       if(kind==='create'){
         if(review.state!=='REVIEWED' && review.state!=='ORDER_CREATED')throw new InputError('order creation not allowed in this state');
@@ -89,16 +95,20 @@ const server=http.createServer(async(req,res)=>{
         return {state:review.state,order,payment_authority:false};
       }
       if(!review.order)throw new InputError('no order awaits approval');
-      if(kind==='status')return captureResult(review,await paypal.captureStatus(review.order.order_id,review.cart));
-      if(review.state==='CAPTURED')return {state:review.state,order_id:review.order.order_id,payment_authority:false};
+      if(kind==='status'||kind==='receipt'){
+        const verified=await paypal.captureStatus(review.order.order_id,review.cart);
+        const state=captureResult(review,verified);
+        if(kind==='receipt')return {receipt:makeSandboxReceipt(review,verified,request.review_id),payment_authority:false};
+        return state;
+      }
       if(review.state!=='ORDER_CREATED')throw new InputError('no order awaits approval');
       return captureResult(review,await paypal.captureApproved(review.order.order_id,review.cart,review.captureRequestId));
     });
-    send(res,result.state==='CAPTURE_PENDING'?202:200,result);
+    send(res,['CAPTURE_PENDING','CAPTURE_UNKNOWN'].includes(result.state)?202:200,result);
 
   }catch(e){
     const client=e instanceof InputError;
-    send(res,client?400:503,{error:client?e.message:'Sandbox provider outcome could not be verified. If a capture was attempted, payment may have completed. Check the PayPal sandbox order before starting another checkout; retry the same review to reuse its idempotency key.'});
+    send(res,client?400:503,{error:client?e.message:'Sandbox provider outcome could not be verified. If a capture was attempted, payment may have completed. Use the read-only status check on this review or inspect the original PayPal sandbox order before starting another checkout.'});
   }
 });
 server.listen(port,'127.0.0.1',()=>console.log(`ClaimProof Commerce: ${base} (loopback only; sandbox only)`));

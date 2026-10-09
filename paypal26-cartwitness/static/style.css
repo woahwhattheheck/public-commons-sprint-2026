@@ -1,0 +1,22 @@
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f4f5f7;background:#0c1017;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0;line-height:1.5;background:radial-gradient(ellipse at 15% 0%,#1d2947 0%,#0c1017 53%)}
+header,main,footer{max-width:1100px;margin:auto;padding-left:24px;padding-right:24px}
+header{padding-top:72px;padding-bottom:43px}.eyebrow,.number{color:#93c8ff;text-transform:uppercase;letter-spacing:.13em;font-size:12px;font-weight:700}
+h1{font-weight:850;font-size:clamp(52px,10vw,108px);letter-spacing:-.08em;line-height:1;margin:14px 0 18px}h1 span{color:#8ac7ff}
+header>p{max-width:700px;font-size:20px;color:#c2cadb}h2{font-size:25px;margin:8px 0 20px;letter-spacing:-.025em}
+.mode{display:inline-block;color:#d2e6ff;border:1px solid #3c5775;border-radius:30px;padding:9px 13px;font-size:11px;letter-spacing:.04em}
+main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding-bottom:42px}
+.panel{border:1px solid #29384e;background:#141b27e8;padding:27px;border-radius:18px;min-height:295px}
+label{font-size:14px;color:#d9e7f8;display:block;margin:16px 0 8px}
+input[type=number],textarea{width:100%;border-radius:9px;background:#0a101b;color:white;border:1px solid #44516a;padding:13px;font:inherit;resize:vertical}
+button,.action-link{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;border:0;border-radius:9px;background:#9bd2ff;color:#071525;font-weight:750;font-size:15px;text-decoration:none;padding:13px 16px;margin-top:19px;cursor:pointer}
+button:hover,.action-link:hover{background:#c4e5ff}button:disabled{opacity:.5;cursor:not-allowed}
+button.secondary{border:1px solid #4b637c;background:transparent;color:#d8e5f3}
+.hint,.placeholder{font-size:13px;color:#a4b3c9}.placeholder{border:1px dashed #52637b;border-radius:9px;padding:16px}
+.check{display:flex;gap:10px;align-items:start;background:#263247;border-radius:9px;padding:13px;margin:14px 0}
+.check input{margin-top:5px;accent-color:#9bd2ff}.price{font-size:40px;letter-spacing:-.05em;font-weight:800;color:#8dc8ff}
+#proposal small{color:#9cabbd;display:block}#proposal h3{margin-bottom:3px}
+ol{list-style:none;margin:0;padding:0}ol li{display:flex;flex-direction:column;padding:12px 0;border-bottom:1px solid #29384e;gap:5px;color:#b9c8db;font-size:13px}
+li strong{color:#d7edff}.error:empty{display:none}.error{position:sticky;bottom:12px;margin:10px auto;max-width:1050px;background:#4e2026;color:#ffe2df;border:1px solid #e2716f;border-radius:9px;padding:14px}
+footer{color:#8a9bb2;text-align:center;padding-bottom:40px;font-size:12px}
+[hidden]{display:none!important}@media(max-width:700px){header{padding-top:44px}main{grid-template-columns:1fr}.panel{min-height:0;padding:21px}header>p{font-size:17px}}
