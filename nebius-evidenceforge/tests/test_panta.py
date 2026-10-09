@@ -49,6 +49,43 @@ class PantaSnapshotTests(unittest.TestCase):
             "submission_or_award": False,
         })
 
+    def test_distinct_high_precision_quotes_produce_distinct_evidence(self):
+        first = {**MARKET, "yesPrice": "0.123456789012345678",
+                 "volumeUsdc": "1000000.000000000000000001"}
+        second = {**first, "yesPrice": "0.123456789012345679",
+                  "volumeUsdc": "1000000.000000000000000002"}
+        a = fetch_market_snapshot("k", transport=lambda *_: payload([first]))
+        b = fetch_market_snapshot("k", transport=lambda *_: payload([second]))
+        self.assertEqual(a["items"][0]["yesPrice"], first["yesPrice"])
+        self.assertEqual(a["items"][0]["volumeUsdc"], first["volumeUsdc"])
+        self.assertEqual(b["items"][0]["yesPrice"], second["yesPrice"])
+        self.assertNotEqual(a["snapshotSha256"], b["snapshotSha256"])
+
+    def test_numeric_json_is_parsed_without_binary_float_rounding(self):
+        raw = payload([MARKET]).replace(
+            b'"yesPrice": "0.625"', b'"yesPrice": 0.123456789012345678901')
+        result = fetch_market_snapshot("k", transport=lambda *_: raw)
+        self.assertEqual(result["items"][0]["yesPrice"], "0.123456789012345678901")
+
+    def test_duplicate_source_json_fields_are_not_silently_overwritten(self):
+        raw = payload([MARKET]).replace(
+            b'"yesPrice": "0.625"',
+            b'"yesPrice": "0.625", "yesPrice": "0.1"')
+        with self.assertRaisesRegex(PantaError, "duplicate JSON field"):
+            fetch_market_snapshot("k", transport=lambda *_: raw)
+
+    def test_unbounded_decimal_expansion_and_nonfinite_numbers_fail(self):
+        for candidate in ("1e100000", "1e-100000", "NaN", "Infinity"):
+            with self.subTest(candidate=candidate):
+                with self.assertRaises(PantaError):
+                    fetch_market_snapshot(
+                        "k", transport=lambda *_: payload([
+                            {**MARKET, "volumeUsdc": candidate}]))
+        raw = payload([MARKET]).replace(
+            b'"yesPrice": "0.625"', b'"yesPrice": NaN')
+        with self.assertRaisesRegex(PantaError, "non-finite JSON"):
+            fetch_market_snapshot("k", transport=lambda *_: raw)
+
     def test_primary_price_alias_is_supported(self):
         row = {**MARKET, "yesPrice": None, "noPrice": None,
                "primaryYesPrice": "0.4", "primaryNoPrice": "0.6"}
