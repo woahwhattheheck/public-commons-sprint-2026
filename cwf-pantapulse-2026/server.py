@@ -58,7 +58,7 @@ def maybe_decimal(v, minimum=None, maximum=None):
 def market_normalize(raw):
     """Missing price/volume fields are UNKNOWN, never silently invented."""
     if not isinstance(raw, dict): return None
-    mid = next((raw.get(k) for k in ('id', 'market_id', 'slug') if isinstance(raw.get(k), (str, int))), None)
+    mid = next((raw.get(k) for k in ('id', 'market_id', 'marketId', 'slug') if isinstance(raw.get(k), (str, int))), None)
     question = next((raw.get(k) for k in ('question', 'title', 'name') if isinstance(raw.get(k), str)), None)
     if not mid or not question: return None
     # Explicitly documented schema alternatives; unknown Panta API versions remain unknown.
@@ -67,7 +67,7 @@ def market_normalize(raw):
         get_path(raw, 'prices', 'yes'), get_path(raw, 'probabilities', 'yes')) if v is not None), None)
     probability = maybe_decimal(price, Decimal('0'), Decimal('1'))
     liq = next((raw.get(k) for k in ('liquidity_usd', 'liquidityUsd', 'liquidity') if raw.get(k) is not None), None)
-    vol = next((raw.get(k) for k in ('volume_usd', 'volumeUsd', 'volume') if raw.get(k) is not None), None)
+    vol = next((raw.get(k) for k in ('volume_usd', 'volumeUsd', 'volumeUsdc', 'volume') if raw.get(k) is not None), None)
     liquidity = maybe_decimal(liq, Decimal(0), Decimal('1e12'))
     volume = maybe_decimal(vol, Decimal(0), Decimal('1e12'))
     mid = str(mid)[:120]
@@ -77,7 +77,7 @@ def market_normalize(raw):
             'yes_probability_pct': str((probability * 100).quantize(Decimal('0.01'))) if probability is not None else None,
             'liquidity_usd': str(liquidity) if liquidity is not None else None,
             'volume_usd': str(volume) if volume is not None else None,
-            'status': str(raw.get('status', 'unknown'))[:50],
+            'status': str(raw.get('status', raw.get('phase', 'unknown')))[:50],
             'price_proven': probability is not None}
 
 
@@ -97,6 +97,18 @@ def alerts(rows):
     return findings
 
 
+def market_collection(root):
+    """Return a documented market list without inventing or coercing records."""
+    if isinstance(root, list):
+        return root
+    if isinstance(root, dict):
+        for key in ('items', 'results', 'markets', 'data'):
+            value = root.get(key)
+            if isinstance(value, list):
+                return value
+    return None
+
+
 def provider_data():
     if not BASE or not KEY: return FIXTURES, ['SYNTHETIC fixture mode; connect first-party Panta API for live markets.']
     url = urllib.parse.urlsplit(BASE)
@@ -114,7 +126,7 @@ def provider_data():
         raise FeedError(f'Panta provider unavailable ({getattr(exc, "code", "connection error")}).') from exc
     try: root = json.loads(payload)
     except ValueError as exc: raise FeedError('Panta provider response was not valid JSON.') from exc
-    data = root.get('results', root.get('markets', root.get('data'))) if isinstance(root, dict) else root
+    data = market_collection(root)
     if not isinstance(data, list):
         raise FeedError('Unrecognized Panta market collection schema; API integration unverified.')
     return data[:100], []
