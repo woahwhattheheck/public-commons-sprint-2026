@@ -8,10 +8,10 @@ function renderCards() {
   const card=el('article', undefined,'market');card.append(el('small',m.id+' · '+m.status,'id'));
   card.append(el('h3',m.question));let row=el('div',undefined,'evidence');
   const hasVerifiedPrice=m.price_proven===true&&m.yes_probability_pct!==null;
-  for(const [label,val] of [[hasVerifiedPrice?'YES PRICE':'PRICE ON DETAIL',hasVerifiedPrice?m.yes_probability_pct+'%':'NOT VERIFIED IN LIST'],['LIQUIDITY USD',m.liquidity_usd===null?'UNKNOWN':'$'+m.liquidity_usd],['VOLUME USD',m.volume_usd===null?'UNKNOWN':'$'+m.volume_usd]]){
+  for(const [label,val] of [[hasVerifiedPrice?(m.quote_source==='detail'?'YES PRICE · VERIFIED DETAIL':'YES PRICE · LIST'):'PRICE ON DETAIL',hasVerifiedPrice?m.yes_probability_pct+'%':'NOT VERIFIED'],['LIQUIDITY USD',m.liquidity_usd===null?'UNKNOWN':'$'+m.liquidity_usd],['VOLUME USD',m.volume_usd===null?'UNKNOWN':'$'+m.volume_usd]]){
     let item=el('div');item.append(el('small',label));item.append(el('strong',val));row.append(item);
   } card.append(row);
-  if(!hasVerifiedPrice)card.append(el('p','Detail quote not fetched; do not infer a YES probability from this list record.','small'));
+  if(!hasVerifiedPrice)card.append(el('p','No verified YES quote was returned by the list or by any configured detail request.','small'));
   target.append(card);
  }
  if(!target.childElementCount)target.append(el('p','No matching observations.'));
