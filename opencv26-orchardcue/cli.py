@@ -13,6 +13,15 @@ MANIFEST_NAME = 'cli-run.json'
 MAX_INPUT_BYTES = 8_000_000  # Match engine.decode_image before allocating raw input bytes.
 
 
+def _read_image_bounded(image: Path) -> bytes:
+    """Bound allocation even when a file grows after the optional stat preflight."""
+    with image.open('rb') as stream:
+        raw = stream.read(MAX_INPUT_BYTES + 1)
+    if len(raw) > MAX_INPUT_BYTES:
+        raise ValueError('image exceeds 8,000,000-byte limit')
+    return raw
+
+
 def render_page(report: dict) -> str:
     decision = report['decision']
     action = html.escape(decision['action'])
@@ -78,9 +87,7 @@ def main():
             raise ValueError('--marker-mm must be finite and between 10 and 300')
         if args.image.stat().st_size > MAX_INPUT_BYTES:
             raise ValueError('image exceeds 8,000,000-byte limit')
-        raw = args.image.read_bytes()
-        if len(raw) > MAX_INPUT_BYTES:
-            raise ValueError('image exceeds 8,000,000-byte limit')
+        raw = _read_image_bounded(args.image)
         image_sha = hashlib.sha256(raw).hexdigest()
         report = _existing_review(args.output, image_sha, args.marker_mm, replace=args.replace)
         if report is None:
