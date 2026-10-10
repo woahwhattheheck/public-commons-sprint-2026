@@ -72,3 +72,38 @@ test('cannot override bazaar with preexisting data; rejects unknown result safel
     catalogDecision:{decision:'unknown',reason:'account secret\nstack trace'}});
   assert.deepEqual(decode(out),{bazaar:{status:'rejected',rejectedReason:'CATALOGING_REJECTED'}});
 });
+
+
+test('sibling collision, cycle and near-cap wire failure occur before settled catalog mutation', () => {
+  const side = new BazaarSettlementSidechannel();
+  const params = { paymentPayload: payload(), settlement: settlement(), sequence: 1 };
+  const before = side.version;
+  assert.throws(() => side.processSettled({
+    ...params, otherExtensionResponses: { bazaar: { status: 'success' } },
+  }), /OTHER_EXTENSION_KEY_INVALID/);
+  assert.equal(side.size, 0);
+  assert.equal(side.version, before);
+
+  const cyclic = {}; cyclic.self = cyclic;
+  assert.throws(() => side.processSettled({
+    ...params, otherExtensionResponses: { paymentidentifier: cyclic },
+  }), /OTHER_EXTENSION_OUTCOMES_NOT_JSON/);
+  assert.equal(side.size, 0);
+  assert.equal(side.version, before);
+
+  // Sibling JSON alone is below 16,384 bytes. Adding the worst possible
+  // Bazaar rejection extension would make the final HTTP header too large.
+  const nearLimit = { paymentidentifier: { note: 'x'.repeat(16_260) } };
+  assert.ok(Buffer.byteLength(JSON.stringify(nearLimit), 'utf8') < 16_384);
+  assert.throws(() => side.processSettled({
+    ...params, otherExtensionResponses: nearLimit,
+  }), /EXTENSION_RESPONSES_TOO_LARGE/);
+  assert.equal(side.size, 0);
+  assert.equal(side.version, before);
+
+  const accepted = side.processSettled(params);
+  assert.equal(accepted.catalogDecision.decision, 'accepted');
+  assert.deepEqual(decode(accepted), { bazaar: { status: 'success' } });
+  assert.equal(side.size, 1);
+  assert.equal(side.version, before + 1);
+});
