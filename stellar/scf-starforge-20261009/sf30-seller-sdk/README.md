@@ -1,6 +1,103 @@
 # SF-30 — Declarative HTTP seller metadata for Stellar x402 Bazaar
 
-**Status:** Actual Node.js 22+ seller-side metadata compiler and loopback HTTP `402 Payment Required` example. MIT. No npm dependencies, hosted Actions or payment execution. It does not create a live facilitator, fake settlement receipts, or assume sellers have been authenticated.
+**Status:** Node.js 22+ seller metadata compiler and runnable resource service. MIT. The compiler and challenge-only service need no npm dependencies. The optional payment runtime delegates verification and settlement to the official x402 SDK and an explicitly configured facilitator.
+
+## Run a seller service
+
+From the repository root:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs \
+  --config stellar/scf-starforge-20261009/sf30-seller-sdk/examples/service.json
+```
+
+The startup line reports the loopback URL and mode. Open
+`http://127.0.0.1:8423/_seller/health` to inspect the running routes, or
+`http://127.0.0.1:8423/_seller/offers` for the original compiled Bazaar offers.
+`GET /dataset` returns the actual SF30 `402` response and `PAYMENT-REQUIRED`
+header. Without a facilitator, application handlers are never invoked.
+Use `--port 0` to select an available port, or `--port 9000` for a fixed one.
+
+The example payment asset and recipient are placeholders for local onboarding.
+For a real service, replace them with your verified Stellar asset and recipient,
+choose explicit atomic-unit prices, and set `publicOrigin` to the HTTPS origin
+served by your reverse proxy. The listener remains on `127.0.0.1`; incoming Host
+or forwarding headers cannot rewrite the configured payment identity.
+
+### Supply an application
+
+The JSON config has schema `stellar-forge.seller-service.v1` and a `routes` array.
+Each route has a unique `id`, a fixed `path`, and an original SF30 `definition`
+containing method, description, payment terms and optional Bazaar examples.
+The service derives `definition.url` from the configured origin and path.
+
+Choose one response source per route:
+
+- `response`: a static JSON value, useful for a protected dataset or onboarding.
+- `handler`: an export from a trusted local ESM module supplied through
+  `--handlers`. Paths passed to `--handlers` are relative to the config file's
+  directory, or may be absolute.
+
+For example, replace `response` with `"handler": "dataset"` in a copy of
+`examples/service.json`, then launch with `--handlers application.mjs` when
+that config is kept beside `examples/application.mjs`.
+
+Handlers receive `{method, url, query, body, headers}` and return
+`{status, headers, body}`. `url` is a URL object, repeated query parameters are
+arrays, and JSON POST bodies are parsed once. Responses may contain JSON,
+strings or Buffers. Application payment headers are reserved for the native
+SDK. The adapter buffers the result and validates its encoding and headers
+before settlement; it releases successful content only after native success.
+Application errors use the native cancellation path. There is no automatic
+settlement retry.
+
+### Enable the native x402 runtime
+
+Install the optional packages in this checkout using the versions used for the
+integration acceptance:
+
+```sh
+npm install --no-save --ignore-scripts \
+  @x402/core@2.28.0 @x402/stellar@2.28.0 @x402/extensions@2.28.0
+
+node stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs \
+  --config /path/to/your-seller.json \
+  --facilitator https://your-facilitator.example/facilitator
+```
+
+The factory constructs the official `x402ResourceServer` and
+`x402HTTPResourceServer`, registers the original `ExactStellarScheme` for each
+configured network and the native Bazaar extension, and initializes against
+the supplied facilitator. Atomic prices pass through as `{asset, amount}`;
+the adapter does not implement payment cryptography or float conversion.
+For an explicitly local facilitator, use `http://127.0.0.1:PORT` and
+`--allow-local-facilitator`.
+
+Embedding applications can import `compileSellerRoutes()` and
+`createSellerResourceHandler()` from `resource-server.mjs`, or
+`startSellerService()` from `serve.mjs`. `createNativeSellerServer()` accepts
+an explicit native-compatible facilitator client, so operators can use their
+existing SDK client configuration without putting secrets in seller JSON.
+
+Supported runtime routes are exact-scheme GET, HEAD and JSON POST on fixed
+paths. Parameterized routes, other HTTP methods, response streaming and `upto`
+execution are rejected by this adapter. The broader metadata compiler remains
+available unchanged for integrations supporting those shapes.
+
+### Recorded integration acceptance
+
+The source was exercised on Node 24.19.0 with original x402 packages 2.28.0:
+challenge-only startup, health/offers, native challenge, refused verification,
+successful native verify → handler → settle → `PAYMENT-RESPONSE`, refused
+settlement withholding the result, handler cancellation, response-header
+validation, explicit JSON null and POST JSON handling all passed in one run.
+The facilitator used controlled in-process outcomes; this records native SDK
+interoperability, not a network transaction. No hosted CI is required.
+
+Upstream source anchors: x402 Foundation HTTP resource server blob
+`776995dca892660dad6644bd0c05d0ed8c769552`, Express lifecycle reference blob
+`77d64f382682c2b6994a0c79906e02248c7253f5`, and exact Stellar server blob
+`b7bf2adcfb48cbf355e401c50ff1eafdee9792a6`.
 
 ## First-party source contract
 
