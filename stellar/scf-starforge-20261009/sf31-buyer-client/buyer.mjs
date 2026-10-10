@@ -137,17 +137,30 @@ async function readDiscoveryJSON(response) {
 function noRedirect(response, sent){
   if(response.status>=300&&response.status<400)throw new BuyerError('REDIRECT_DENIED','Location not followed',{paymentSent:sent});
 }
+function validReportedHash(network, transaction){
+  if(typeof transaction!=='string')return false;
+  // Stellar RPC requires 64-character lowercase hexadecimal transaction hashes.
+  // This validates a seller's claim; it does not verify ledger settlement.
+  return /^stellar:/i.test(network) ? /^[a-f0-9]{64}$/.test(transaction) : transaction.length>0;
+}
 function receiptResult(response, requirement){
   const raw=response.headers.get('payment-response');
   if(!raw)return { settlement:'UNKNOWN',receipt:null,reason:'MISSING_PAYMENT_RESPONSE' };
   let receipt;
   try{receipt=decodeHeader(raw,'PAYMENT_RESPONSE');}
   catch{return { settlement:'UNKNOWN',receipt:null,reason:'INVALID_PAYMENT_RESPONSE' };}
-  if (receipt.network!==requirement.network || typeof receipt.transaction!=='string' || typeof receipt.success!=='boolean')
+  if(receipt.network!==requirement.network || typeof receipt.transaction!=='string' || typeof receipt.success!=='boolean')
     return {settlement:'UNKNOWN',receipt:null,reason:'RECEIPT_MISMATCH'};
-  if(receipt.success===true && receipt.transaction)
+  const pending=receipt.success===false && receipt.errorReason==='settlement_pending';
+  if((receipt.success===true || pending) && !validReportedHash(receipt.network,receipt.transaction))
+    return {settlement:'UNKNOWN',receipt:null,reason:'INVALID_TRANSACTION_HASH'};
+  if(receipt.success===true && receipt.amount!==undefined && receipt.amount!==requirement.amount)
+    return {settlement:'UNKNOWN',receipt:null,reason:'SETTLED_AMOUNT_MISMATCH'};
+  if(receipt.success===true && typeof receipt.errorReason==='string' && receipt.errorReason.length)
+    return {settlement:'UNKNOWN',receipt:null,reason:'CONTRADICTORY_RECEIPT'};
+  if(receipt.success===true)
     return {settlement:'REPORTED_SUCCESS',receipt,reason:null};
-  if(receipt.success===false && receipt.errorReason==='settlement_pending' && receipt.transaction)
+  if(pending)
     return {settlement:'PENDING',receipt,reason:'settlement_pending'};
   if(receipt.success===false && receipt.errorReason!=='settlement_pending')
     return {settlement:'REPORTED_FAILED',receipt,reason:receipt.errorReason??'PAYMENT_REJECTED'};
