@@ -23,6 +23,26 @@ test('rejects over-i128 offered and actual values before BigInt conversion',()=>
   assert.throws(()=>inspectRequest('verify',envelope('exact','9'.repeat(80)),
     {network,scheme:'exact'}),/ACCEPTED_PAYMENT_TERMS_INVALID/);
 });
+test('huge untrusted amounts are rejected before decimal-regex scanning',()=>{
+  const huge='9'.repeat(2*1024*1024);
+  const original=RegExp.prototype.test;
+  let scannedOversized=0;
+  // Catch a future regression even if BigInt is not reached and the rejection still succeeds.
+  RegExp.prototype.test=function(value){
+    if(typeof value==='string' && value.length>max.length){
+      scannedOversized++;
+      throw new Error('OVERSIZED_DECIMAL_REGEX_SCANNED');
+    }
+    return original.call(this,value);
+  };
+  try {
+    assert.throws(()=>inspectRequest('verify',envelope('exact',huge),
+      {network,scheme:'exact'}),/ACCEPTED_PAYMENT_TERMS_INVALID/);
+    assert.throws(()=>inspectRequest('settle',envelope('upto',max,huge),
+      {network,scheme:'upto'}),/REQUIREMENTS_PAYMENT_TERMS_INVALID/);
+    assert.equal(scannedOversized,0);
+  } finally {RegExp.prototype.test=original;}
+});
 test('invalid recorded and settlement-response amounts never pass wire audit',()=>{
   assert.throws(()=>inspectResponse('settle',
     {success:true,network,transaction:'tx',amount:over},
