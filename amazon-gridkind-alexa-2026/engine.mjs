@@ -56,13 +56,16 @@ export function plan(raw=DEMO){
   const optimisticSuffix=Array(tasks.length+1).fill(0);
   for(let i=tasks.length-1;i>=0;i--)
     optimisticSuffix[i]=optimisticSuffix[i+1]+Math.min(...optionCosts[i]);
+  const globalLowerBound=optimisticSuffix[0];
   const occupied=Array(24).fill(0);
   const starts=[];
   let baselineStarts=null,winning=null,best=Infinity;
   function visit(i,total){
-    // Valid prices and positive kW make zero a global lower bound; once reached,
-    // further enumeration cannot improve the first optimal schedule.
-    if(best===0)return;
+    // The unconstrained option-cost suffix is also a lower bound for the complete
+    // plan. Choices are visited in lexicographic start order, so the first
+    // feasible schedule that attains it is the exact earliest optimal schedule.
+    // Equal-cost alternative windows cannot improve cost or tie-break output.
+    if(best<=globalLowerBound+1e-10)return;
     if(i===tasks.length){
       // First complete placement is the earliest jointly feasible baseline.
       // A greedy prefix can block a later fixed load despite a valid schedule.
@@ -72,7 +75,7 @@ export function plan(raw=DEMO){
     }
     const task=tasks[i];
     for(let j=0;j<choices[i].length;j++){
-      if(best===0)break;
+      if(best<=globalLowerBound+1e-10)break;
       const start=choices[i][j];
       if(!fits(task,start,occupied,maxKw))continue;
       const next=total+optionCosts[i][j];
@@ -91,3 +94,4 @@ export function plan(raw=DEMO){
     baseline,optimized,avoidedCost:Math.max(0,(Math.round(baseline.cost*100)-Math.round(optimized.cost*100))/100),prices,decisionTrace:{search:'enumerate joint finite task windows',constraints:['task deadlines','quiet hours','max simultaneous kW'],optionsEvaluated:choices.map(a=>a.length)},
   };
 }
+
