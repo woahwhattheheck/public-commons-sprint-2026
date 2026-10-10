@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-spend-governor/v1",
+  "assets": [
+    {
+      "network": "stellar:testnet",
+      "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      "max_single": "5000000",
+      "max_total": "40000000",
+      "max_per_utc_day": "10000000",
+      "max_per_actor_utc_day": "7000000",
+      "max_per_service_utc_day": "8000000"
+    }
+  ]
+}
