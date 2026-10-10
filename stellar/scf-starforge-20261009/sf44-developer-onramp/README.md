@@ -1,6 +1,6 @@
 # SF-44: Stellar Bazaar developer onramp
 
-**Runnability:** Node.js 22+ standard-library developer kit against the **actual shipped** [PR451 public Bazaar discovery core](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/451), imported from `../../../scf46-stellar-bazaar/src/catalog.mjs`. Pinned source Git blob `f34f38a3af8f1b9e23ff4607812b4ee6297480a5`, checked at runtime.
+**Runnability:** Node.js 22+ standard-library developer kit against the **actual shipped** [PR451 public Bazaar discovery core](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/451), imported from `../../../scf46-stellar-bazaar/src/catalog.mjs`. Pinned source Git blob `7b4390f9a119399bdb8e27db5796697f1314da8b`, checked at runtime.
 
 **Important:** This is a REAL local HTTP exercise of the existing discovery code, not a Stellar payment facilitator or a live testnet seller. No wallet, payment, ledger, settlement, seller validation, SCF application, or charge occurs. A deliberately invalid wallet recipient makes the fixture non-payable.
 
@@ -62,3 +62,26 @@ The focused check uses the actual imported PR451 Node source with loopback netwo
 A true funded-RFP demo still needs (1) current official protocol/version/network, (2) genuinely x402-protected **seller** endpoint returning authentic 402 and verified terms, (3) trustworthy seller identity and settlement→schema validation→catalog ingestion, (4) ordinary MCP buyer discovery and tool invocation **without hard-coded endpoint**, (5) explicit wallet consent/budget policies and genuine controlled testnet transaction receipts, (6) independent full onboarding on second fresh environment. None of those six are silently satisfied by this module. Grant submission remains on **OWNER HOLD**; the [published historical RFP](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/rfp-track) is labeled Q3/SCF #45, not verified #46.
 
 New SF-44 source: MIT; baseline discovery component and the public repo already carry their own MIT terms. No new GitHub workflows, GitHub Actions dispatch, private source import, payments, cloud purchases, external outreach or forms.
+
+
+## Post-release: source-exact Bazaar → MCP agent onramp
+
+The prior SF44 exact-source pin went stale when PR451's real Bazaar catalog evolved under SF23/SF28. This onramp now pins the **current main** Git object `7b4390f9a119399bdb8e27db5796697f1314da8b`; the original source check otherwise failed against the current imported file. The local-only fixture has explicit deliberately NONPAYABLE terms `amount=10000`, `asset=NONPAYABLE_DEMO_ASSET`, `payTo=INVALID_DEMO_RECIPIENT_NOT_A_WALLET` for read-only MCP price preview. These are not Stellar asset or recipient values.
+
+The additive `mcp-onramp.mjs` actually composes TWO accepted original source engines, not replacements: PR451/SF23's real HTTP Bazaar catalog and SF32's Streamable HTTP MCP JSON-RPC server. It launches ephemeral loopback servers, sends genuine `initialize`, `tools/list`, `bazaar_search` (which performs an original catalog GET), `bazaar_preview`, denied `bazaar_execute_approved`, `bazaar_status`, `bazaar_cancel`, deliberately unwired `sf43_discover_review_and_pay`, and an anonymous request refused with HTTP 401. Its outbound request adapter permits ONLY local discovery; even future accidental callbacks cannot access a merchant from this demo. One random bearer stays in the client closure, never in the printed receipt.
+
+From the PUBLIC repo root, Node.js 22+, no install or wallet:
+
+```bash
+node stellar/scf-starforge-20261009/sf44-developer-onramp/mcp-onramp.mjs
+```
+
+Targeted native Node check (no hosted GitHub Actions):
+
+```bash
+node --test stellar/scf-starforge-20261009/sf44-developer-onramp/test/mcp-onramp.test.mjs
+```
+
+**Executable acceptance contract**: actual source-backed 1-result catalog search, MCP 2025-11-25 tools discovery, sample price `PREVIEWED`, absent-signer rejection `SIGNER_NOT_CONNECTED` without a paid request, quote remains `PREVIEWED` until `CANCELLED`, SF43 refusal `AGENT_COMMERCE_UNAVAILABLE`, anonymous HTTP 401, one local catalog GET, zero merchant HTTP requests, no blockchain transaction. The CLI prints its actual measured result when run; this README does not claim a provider-backed live payment.
+
+**Payable integration remains separate:** SF43 and authorized existing local/Muse operators own genuine seller 402, official Stellar testnet signature, confirmed token transfer/ledger receipt and independent fulfillment proof. This SF44 local demo never invokes the seller, has no signer/approval callback, cannot register a real paid listing, and cannot satisfy a funded-RFP award by itself. No mainnet, merchant charge, production deployment, SCF interest/application, buyer outreach, private repository, CI or GitHub Actions involved.
