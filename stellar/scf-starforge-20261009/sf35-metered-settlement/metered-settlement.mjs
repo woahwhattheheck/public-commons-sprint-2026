@@ -14,6 +14,9 @@ const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const snap = x => JSON.parse(JSON.stringify(x));
 const hash = x => createHash('sha256').update(x).digest('hex');
 function amount(x, name, {allowZero=true}={}) {
+  // Reject impossible Soroban i128 decimals before regexp or BigInt parsing.
+  // 2^127-1 has 39 decimal digits; longer inputs cannot represent valid amounts.
+  if (typeof x === 'string' && x.length > 39) throw new MeterError('AMOUNT_OUT_OF_RANGE', name);
   if (!canonical(x)) throw new MeterError('INVALID_ATOMIC', name);
   const n=BigInt(x);
   if (n>I128_MAX || (!allowZero && n===0n)) throw new MeterError('AMOUNT_OUT_OF_RANGE',name);
