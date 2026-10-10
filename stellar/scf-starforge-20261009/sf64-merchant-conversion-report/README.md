@@ -2,6 +2,10 @@
 
 This is a customer-readable delivery package for the **actual existing SF52 seller visibility diagnostic**. It does not implement another crawler, x402 settlement interface, or simulated merchant; it imports the original [SF52 `diagnose()`](../sf52-merchant-visibility/diagnose.mjs) without changing it, then renders its observed seller 402 and facilitator catalog scan as a portable static report. The archive reports repair opportunities that could support an independently agreed fixed-price merchant conversion audit. It does not represent a customer commitment, grant application, transaction or receipt.
 
+## Original SF52 unpaid-200 compatibility
+
+SF52's real `inspectChallenge(200, null)` returns `UNPAID_GET_HTTP_200`, not the older generic `NOT_HTTP_402` state. The portable report identifies this exact original-source case as a HIGH-priority checkout-discovery failure, even when the catalog URL is already listed. It tells the merchant to check default free-tier or cached-success routing and expose an unpaid 402 on the intended paid route; historic `NOT_HTTP_402` reports remain interpretable. A visible resource listing is not proof the current origin advertises a valid offer. The focused package test imports the actual SF52 decoder rather than manufacturing an outdated status.
+
 ## Two execution modes (Node 22+, no packages)
 
 Live, **read-only GET only**: the same original source performs the seller probe and catalog paging. No buyer signature, POST, index registration, payment, RPC, contact, or GitHub Actions.
