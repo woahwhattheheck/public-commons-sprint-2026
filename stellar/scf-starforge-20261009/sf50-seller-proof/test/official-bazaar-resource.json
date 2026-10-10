@@ -1,0 +1,21 @@
+{
+  "accepts": [
+    {
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "extra": {"name": "USD Coin", "version": "2"},
+      "amount": "200",
+      "maxTimeoutSeconds": 60,
+      "network": "eip155:8453",
+      "payTo": "0xa2477E16dCB42E2AD80f03FE97D7F1a1646cd1c0",
+      "scheme": "exact"
+    }
+  ],
+  "extensions": {
+    "bazaar": {"info": {"input": {"type": "http", "method": "GET", "queryParams": {"city": "San Francisco"}},
+                        "output": {"type": "json", "example": {"city": "San Francisco", "weather": "foggy", "temperature": 60}}}}
+  },
+  "lastUpdated": "2025-08-09T01:07:04.005Z",
+  "resource": "https://api.example.com/x402/weather",
+  "type": "http",
+  "x402Version": 2
+}
