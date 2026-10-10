@@ -104,8 +104,10 @@ export class TruthfulSupported {
         }));
         const deadline=new Promise((_,reject)=>{
           timeout=setTimeout(()=>{
-            controller.abort();
+            // Reject the raced deadline BEFORE notifying a cooperative probe,
+            // so its abort handler cannot turn an expired check into success.
             reject(new SupportedError('READINESS_PROBE_TIMEOUT'));
+            controller.abort();
           },this.#probeTimeoutMs);
         });
         proof=await Promise.race([probe,deadline]);
