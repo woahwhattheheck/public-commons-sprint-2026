@@ -111,18 +111,69 @@ export function project(input, paidCalls, architecture = 'edge_db') {
 
 /** An optimistic break-even bound (omitted costs assumed zero ONLY for bound calculation). */
 export function optimisticBreakEven(input, architecture = 'edge_db') {
-  const profit = n => project(input, n, architecture).contribution_ceiling_usd;
-  if (profit(0) >= 0) return 0;
-  let upper = 1;
-  while (upper < 1e12 && profit(upper) < 0) upper *= 2;
-  if (profit(upper) < 0) return null;
-  let lower = 0;
-  while (lower + 1 < upper) {
-    const mid = lower + Math.floor((upper - lower) / 2);
-    if (profit(mid) >= 0) upper = mid;
-    else lower = mid;
+  checkValues(input);
+  if (!['edge_db', 'vm_db'].includes(architecture)) {
+    throw new RangeError('architecture must be edge_db or vm_db');
   }
-  return upper;
+  const a = input.assumptions;
+  const p = input.pricing;
+  const callsPerPaid = a.discovery_queries_per_paid + a.http_calls_per_paid;
+  const fixedRequests = a.fixed_http_calls_month;
+  // Use raw dollars for the threshold: project() rounds reported dollars to cents.
+  const profit = n => {
+    const requests = n * callsPerPaid + fixedRequests;
+    const cpuMs = requests * a.cpu_ms_per_http_call;
+    const web = architecture === 'edge_db'
+      ? p.workers_base_usd
+        + Math.max(0, requests - p.workers_included_requests) / 1e6 * p.workers_overage_usd_per_million
+        + Math.max(0, cpuMs - p.workers_included_cpu_ms) / 1e6 * p.workers_overage_usd_per_million_cpu_ms
+      : p.vm_monthly_usd * p.vm_nodes;
+    const optional = (a.rpc_usd_per_million ?? 0) * n * a.rpc_calls_per_paid / 1e6
+      + (a.index_and_search_usd_per_month ?? 0)
+      + (a.observability_security_support_usd_per_month ?? 0)
+      + (a.other_ops_usd_per_month ?? 0);
+    const cost = web + p.pg_ha_usd + optional
+      + n * a.onchain_attempts_per_paid * a.xlm_per_onchain_attempt * a.illustrative_xlm_usd;
+    const revenue = n * a.operator_fee_usd_per_paid
+      + a.subscribers * a.subscriber_fee_usd_per_month;
+    return revenue - cost;
+  };
+  if (profit(0) >= 0) return 0;
+  const maxCalls = 1e12;
+  const kinks = [];
+  if (architecture === 'edge_db') {
+    // At most two affine slope changes: Workers request and CPU allowances.
+    const addKink = (included, base, rate) => {
+      if (rate <= 0) return;
+      const at = (included - base) / rate;
+      if (!Number.isFinite(at) || at < 0 || at > maxCalls) return;
+      kinks.push(Math.floor(at), Math.ceil(at));
+    };
+    addKink(p.workers_included_requests, fixedRequests, callsPerPaid);
+    addKink(p.workers_included_cpu_ms, fixedRequests * a.cpu_ms_per_http_call,
+      callsPerPaid * a.cpu_ms_per_http_call);
+  }
+  const points = [...new Set([0, ...kinks])]
+    .filter(n => Number.isSafeInteger(n) && n >= 0 && n <= maxCalls)
+    .sort((a, b) => a - b);
+  const firstNonnegative = (lo, hi) => {
+    while (lo + 1 < hi) {
+      const mid = lo + Math.floor((hi - lo) / 2);
+      if (profit(mid) >= 0) hi = mid;
+      else lo = mid;
+    }
+    return hi;
+  };
+  let lo = 0;
+  // Each piece is affine. Inspect every allowance boundary, since a narrow
+  // profitable interval may disappear before the next geometric doubling.
+  for (const hi of points.slice(1)) {
+    if (profit(hi) >= 0) return firstNonnegative(lo, hi);
+    lo = hi;
+  }
+  let hi = Math.max(lo + 1, 1);
+  while (hi < maxCalls && profit(hi) < 0) hi = Math.min(maxCalls, hi * 2);
+  return profit(hi) >= 0 ? firstNonnegative(lo, hi) : null;
 }
 
 // Node CLI. Does not execute when imported by a separate local focused check.
