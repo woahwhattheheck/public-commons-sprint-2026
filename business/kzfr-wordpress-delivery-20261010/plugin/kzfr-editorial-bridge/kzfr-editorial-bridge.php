@@ -2,12 +2,13 @@
 /**
  * Plugin Name: KZFR Editorial Bridge (Independent Candidate)
  * Description: Portable WordPress editorial content model for a KZFR website-redesign proof. Does not ingest or replace Creek Studio.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires at least: 6.3
  * Requires PHP: 8.0
  * License: GPL-2.0-or-later
  */
 if (!defined('ABSPATH')) { exit; }
+require_once __DIR__ . '/editor-fields.php';
 
 /** No DNS/network calls: this is only a link allowlist, never an audio fetch. */
 function kzfr_bridge_creek_url($value) {
