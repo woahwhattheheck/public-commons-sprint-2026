@@ -14,10 +14,12 @@
 ```sh
 node cli.mjs pins
 node cli.mjs audit ./observations.json
-node cli.mjs supported https://YOUR-AUTHORIZED-FACILITATOR.EXAMPLE    # GET only
+node cli.mjs supported https://x402.org/facilitator                # read-only GET
 node cli.mjs horizon stellar:testnet 012345...64hex              # GET root + transaction only
 node --test test/conformance.test.mjs                         # focused local test
 ```
+
+The `supported` command retains a facilitator's base path. For example, `https://x402.org/facilitator` probes `https://x402.org/facilitator/supported`. The default transport validates public DNS records, pins its resolved address for TLS, rejects redirects, and bounds time and response size. Caller-injected transports are intended for local regression tests.
 
 `audit` expects `{ "schema":"sf38.v1", "observations":[...] }`. Each observation has a unique `id`, `phase` (`supported`, `verify`, or `settle`), `network` (one of `stellar:testnet` or `stellar:pubnet`), `scheme` (`exact`, `upto`), a **recorded** `response`, and for verify/settle the exact `request` body containing `x402Version:2`, `paymentPayload:{x402Version:2,accepted,payload}` and `paymentRequirements`. Use source-authenticated captured API wire bytes and timestamps in your own custody, redact secrets before sharing. This tool does not create or transmit payment authorization. Do not invent signed payloads as evidence.
 
