@@ -111,3 +111,19 @@ test('template cannot rebind a catalog entry to an unrelated path on the same se
   c.resource.url='https://weather.example.org/cities/12';
   assert.equal(reconcileHttpQuote({...args(c,r),requestUrl:other}).decision,'allow');
 });
+
+test('returned payment extras remain immutable after receipt commitment',()=>{
+  const c=catalog(),q=quote();
+  c.accepts[0].extra={areFeesSponsored:false,meta:{tags:['paid']}};
+  q.accepts[0].extra={areFeesSponsored:false,meta:{tags:['paid']}};
+  const out=reconcileHttpQuote(args(c,response(q)));
+  assert.equal(out.decision,'allow');
+  assert.equal(Object.isFrozen(out.paymentRequirement),true);
+  assert.equal(Object.isFrozen(out.paymentRequirement.extra),true);
+  assert.equal(Object.isFrozen(out.paymentRequirement.extra.meta),true);
+  assert.equal(Object.isFrozen(out.paymentRequirement.extra.meta.tags),true);
+  assert.throws(()=>{out.paymentRequirement.extra.areFeesSponsored=true},TypeError);
+  assert.throws(()=>{out.paymentRequirement.extra.meta.tags.push('changed')},TypeError);
+  assert.deepEqual(out.paymentRequirement.extra,{areFeesSponsored:false,meta:{tags:['paid']}});
+  assert.equal(reconcileHttpQuote(args(c,response(q))).receiptSha256,out.receiptSha256);
+});
