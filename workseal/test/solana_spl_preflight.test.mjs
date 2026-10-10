@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { preflightSolanaSplTokenAccounts, SolanaSplPreflightError } from '../src/solana_spl_preflight.mjs';
+import { makeSolanaSplSettlementPlan } from '../src/solana_spl.mjs';
 
 const tokenProgram = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 const mint = 'So11111111111111111111111111111111111111112';
@@ -9,15 +10,18 @@ const payee = tokenProgram;
 const source = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 const destination = 'dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN';
 const digest = 'a'.repeat(64);
-const plan = {
-  schema: 'workseal-solana-spl-plan/v1', unsigned: true, writePerformed: false,
-  onchainEscrowEnforced: false, cluster: 'devnet', settlementDigest: digest,
-  currency: `SPL_TOKEN:${mint}`, mint, decimals: 6, amountAtomic: '201', authority: 'OPERATOR_CHECKS',
-  tokenAccountPreflight: { tokenProgram, mint, decimals: 6, owner: payer, destinationOwner: payee,
-    sourceTokenAccount: source, destinationTokenAccount: destination },
-  instructions: [{kind:'memo',utf8:`WORKSEAL:v1:${digest}`},{kind:'transferChecked',programId:tokenProgram,
-    mint,owner:payer,sourceTokenAccount:source,destinationTokenAccount:destination,amountAtomic:'201',decimals:6}],
-};
+const plan = makeSolanaSplSettlementPlan({
+  schema: 'workseal-settlement-intent/v1',
+  taskDigest: digest,
+  resultDigest: 'b'.repeat(64),
+  acceptanceDigest: 'c'.repeat(64),
+  receiptAuthorityFingerprint: 'd'.repeat(64),
+  eventHead: 'e'.repeat(64),
+  generation: 1,
+  currency: `SPL_TOKEN:${mint}`,
+  amountAtomic: '201',
+  payer, payee, funding: {},
+}, { mint, sourceTokenAccount: source, destinationTokenAccount: destination, decimals: 6 });
 const record = (type, info) => ({
   executable: false, owner: tokenProgram, data: { program: 'spl-token', parsed: { type, info } },
 });
@@ -42,6 +46,20 @@ test('SPL finalized read-only preflight accepts the bound accounts and rejects u
   assert.equal(good.status,'FINALIZED_RPC_ACCOUNT_MATCH');
   assert.equal(good.slot,1234);
   assert.equal(good.noTransactionCreated,true);
+  const badPlan = async mutate => {
+    const candidate = structuredClone(plan);
+    mutate(candidate);
+    await assert.rejects(preflightSolanaSplTokenAccounts(candidate, {
+      fetchImpl: async () => { throw new Error('invalid plan reached the RPC transport'); },
+    }), error => error instanceof SolanaSplPreflightError && error.code === 'INVALID_PLAN');
+  };
+  await badPlan(p => { p.instructions[0].programId = tokenProgram; });
+  await badPlan(p => { p.instructions[1].dataHex = '0cca0000000000000006'; });
+  await badPlan(p => { p.instructions[1].accounts[3].isSigner = false; });
+  await badPlan(p => { [p.instructions[1].accounts[0], p.instructions[1].accounts[1]] =
+    [p.instructions[1].accounts[1], p.instructions[1].accounts[0]]; });
+  await badPlan(p => { p.instructions[1].accounts.push(p.instructions[1].accounts[0]); });
+  await badPlan(p => { p.instructions[1].accounts[0].unrecognized = 'extra'; });
   const bad = async (field,values) => {
     await assert.rejects(preflightSolanaSplTokenAccounts(plan,{fetchImpl:fixture(values)}),
       err => err instanceof SolanaSplPreflightError && err.code===field);
