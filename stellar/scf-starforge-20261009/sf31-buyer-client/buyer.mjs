@@ -1,5 +1,5 @@
 // MIT License. SF31 non-custodial x402 v2 buyer transport. No embedded keys or signing.
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 
 const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -63,14 +63,34 @@ function choose(challenge, expectation){
   if(!object(expectation) || !expectation.network || !expectation.asset || !expectation.payTo || !expectation.maxAtomic)
     throw new BuyerError('EXPLICIT_TERMS_REQUIRED');
   if (!amount(expectation.maxAtomic))throw new BuyerError('BAD_SPEND_LIMIT');
+  if (expectation.maxTimeoutSeconds!==undefined &&
+      (!Number.isInteger(expectation.maxTimeoutSeconds) || expectation.maxTimeoutSeconds<1 ||
+       expectation.maxTimeoutSeconds>86400))
+    throw new BuyerError('BAD_TIMEOUT_LIMIT');
   const matches=challenge.accepts.filter(x=>x.scheme===(expectation.scheme??'exact') &&
     x.network===expectation.network && x.asset===expectation.asset && x.payTo===expectation.payTo &&
     BigInt(x.amount)<=BigInt(expectation.maxAtomic) &&
+    (expectation.maxTimeoutSeconds===undefined ||
+      x.maxTimeoutSeconds<=expectation.maxTimeoutSeconds) &&
     (!expectation.paymentFlow || (x.extra?.paymentFlow??'authorization')===expectation.paymentFlow));
   if (!matches.length)throw new BuyerError('PAYMENT_TERMS_NOT_AUTHORIZED');
   // Require a unique offered requirement. No invisible selection across nonidentical extras.
   if (matches.length!==1)throw new BuyerError('AMBIGUOUS_PAYMENT_TERMS');
   return matches[0];
+}
+// The policy sees the exact requirement subsequently handed to the signer.
+// Freeze the full JSON value graph so an async approver cannot mutate its terms.
+function immutableTerms(value){
+  const copy=structuredClone(value);
+  const stack=[copy];
+  while(stack.length){
+    const current=stack.pop();
+    if(!current || typeof current!=='object' || Object.isFrozen(current))continue;
+    for(const child of Object.values(current))
+      if(child && typeof child==='object')stack.push(child);
+    Object.freeze(current);
+  }
+  return copy;
 }
 function prepareBody(body){
   if(body==null)return undefined;
@@ -149,14 +169,21 @@ export class X402BuyerClient {
       requirement:null,response:first,attempts:1,settlement:'NOT_REQUESTED',receipt:null,reason:null});
     const challenge=canonicalChallenge(decodeHeader(first.headers.get('payment-required'),'PAYMENT_REQUIRED'),resource);
     const requirement=choose(challenge,expect);
+    const acceptedTerms=immutableTerms(requirement);
+    // Body identity is part of approval, including the distinction between
+    // an absent body and a present zero-byte body. Never put body data in logs.
     const intent=Object.freeze({intentId,url:resource.href,method:verb,
-      scheme:requirement.scheme,network:requirement.network,amount:requirement.amount,
-      asset:requirement.asset,payTo:requirement.payTo,maxAtomic:expect.maxAtomic});
+      scheme:acceptedTerms.scheme,network:acceptedTerms.network,amount:acceptedTerms.amount,
+      asset:acceptedTerms.asset,payTo:acceptedTerms.payTo,maxAtomic:expect.maxAtomic,
+      maxTimeoutSeconds:acceptedTerms.maxTimeoutSeconds,acceptedTerms,
+      bodyPresent:data!==undefined,
+      bodyBytes:data===undefined?0:Buffer.byteLength(data),
+      bodySha256:createHash('sha256').update(data??'').digest('hex')});
     const allowed=await approve(intent);
     if(allowed!==true)throw new BuyerError('PAYMENT_NOT_APPROVED');
     // External signer must use the canonical x402 SDK/scheme and return its v2 envelope;
     // this transport does not construct, authorize or fake any blockchain transaction.
-    const signed=await sign({intent,challenge:structuredClone(challenge),accepted:structuredClone(requirement)});
+    const signed=await sign({intent,challenge:structuredClone(challenge),accepted:structuredClone(acceptedTerms)});
     if(!object(signed)||signed.x402Version!==2||!object(signed.payload)||
       !same(signed.accepted,requirement)||!same(signed.resource,challenge.resource)||
       !same(signed.extensions??{},challenge.extensions??{}))throw new BuyerError('SIGNER_ENVELOPE_MISMATCH');
