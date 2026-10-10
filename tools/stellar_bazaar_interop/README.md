@@ -23,11 +23,12 @@ For a real public remote Bazaar, from a networked operator environment (this too
 ```
 python3 bazaar_interop.py census \
   --provider 'first=https://first.example.org' \
-  --provider 'second=https://second.example.org' \
+  --provider 'prefixed=https://api.example.org/platform/v2/x402' \
+  --provider 'stellar=https://second.example.org/discovery/resources?network=stellar%3Atestnet' \
   --raw-dir raw-20261009 --page-size 100 --output bazaar-report.json
 ```
 
-Replace these **example hostnames** with specific confirmed public facilitator HTTPS origins. No hosted endpoint was probed when this initial code was authored. The tool fetches `GET /discovery/resources` pages, preserving exact response bytes and SHA-256 in `--raw-dir`; it rejects redirections, non-public origins, malformed JSON, and repeated pages rather than endlessly collecting an ignored `offset`. It deliberately does not auto-discover or invoke untrusted listing URLs.
+Replace these **example hostnames** with specific confirmed public facilitator HTTPS endpoints. A bare origin receives `/discovery/resources`; a safe provider base path receives that suffix; an exact path already ending in `/discovery/resources` is preserved. Bounded static query filters such as `network=stellar:testnet` are retained while the tool replaces any supplied `limit` and `offset` with its own pagination values. No hosted endpoint was probed when this initial code was authored. The tool preserves exact response bytes and SHA-256 in `--raw-dir`; it rejects redirections, userinfo, fragments, path traversal, non-default ports, non-public DNS, malformed JSON, and repeated pages rather than endlessly collecting an ignored `offset`. It deliberately does not auto-discover or invoke untrusted listing URLs.
 
 `resources[*].terms_conflict` indicates conflicting `scheme`, `network`, `asset`, `payTo`, or `amount` for the same `(kind, resource, toolName)` across independent sources, **without** resolving or suppressing the observations. Original payment terms remain visible with raw snapshot SHA. Invalid records appear in `diagnostics`; they cannot be silently used to advertise payable services.
 
