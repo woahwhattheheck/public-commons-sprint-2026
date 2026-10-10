@@ -96,3 +96,18 @@ test('Soroban i128 extremes cannot become a buyer-approved signed amount',()=>{
   assert.equal(reconcileHttpQuote({...args(),maxAtomicUnits:overflow}).reason,'BUYER_CAP_REQUIRED');
   assert.equal(reconcileHttpQuote({...args(),maxAtomicUnits:'0'}).reason,'BUYER_CAP_EXCEEDED');
 });
+
+test('template cannot rebind a catalog entry to an unrelated path on the same seller origin',()=>{
+  const c=catalog(), q=quote();
+  const other='https://weather.example.org/cities/23';
+  c.extensions.bazaar.routeTemplate='/cities/:id';
+  q.extensions.bazaar.routeTemplate='/cities/:id';
+  q.resource.url=other;
+  const r=response(q,{url:other});
+  assert.equal(reconcileHttpQuote({...args(c,r),requestUrl:other}).reason,
+    'DISCOVERY_RESOURCE_MISMATCH');
+  // An advertised concrete catalog URL from that route remains a valid basis
+  // for a different bound :id (already required by the preexisting test).
+  c.resource.url='https://weather.example.org/cities/12';
+  assert.equal(reconcileHttpQuote({...args(c,r),requestUrl:other}).decision,'allow');
+});
