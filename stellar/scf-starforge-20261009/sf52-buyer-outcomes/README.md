@@ -2,7 +2,7 @@
 
 MIT. Node 22 standard library. Source-contract adapter for real, current accepted public modules:
 
-- `../sf31-buyer-client/buyer.mjs`, `X402BuyerClient.call()` / `BuyerError` (Git blob `bdba522124f42eec39cda1176a36ddf8cd5e6004`).
+- `../sf31-buyer-client/buyer.mjs`, `X402BuyerClient.call()` / `BuyerError` (current observed Git blob `56f83314e1417b6b165e63efa7f5e0c6260fc8d1`, October 10).
 - `../sf43-agent-commerce/verify.mjs`, `checkStellarTestnetTransaction()` (Git blob `03fc89a93052ab81882ad11ad609f4abe87271d5`).
 
 This module **does not implement a second protocol, facilitator, simulated payment network or wallet**. It consumes ordinary results already emitted by those modules and joins evidence. No provider call, payment, signing, onchain transaction, grant action or hosted GitHub Actions job occurs.
@@ -45,6 +45,21 @@ node --test stellar/scf-starforge-20261009/sf52-buyer-outcomes/test/outcomes.tes
 The zero-network reducer has bounded 8 MiB input, ≤100,000 records, a *single terminal observation per `intentId`*, exact BigInt addition, and separate counts of attempted signed requests, seller-reported success, confirmed testnet asset transfers and observed HTTP payloads. Duplicate intent IDs are **rejected**. Distinct intent IDs cannot reuse the *same independently verified transfer proof* (network, transaction hash, asset, recipient, atomic amount): the reducer throws `DUPLICATE_CHAIN_TRANSFER_PROOF` rather than inflate verified transfer counts or token totals. Different real transaction hashes continue to count independently. This current SF43 proof contract does not carry an event index, so two otherwise identical events within one batched transaction cannot be credited as distinct until uniquely disambiguated by stronger source proof. This prevents a single witnessed transfer from being counted twice. Aggregated amounts remain **asset-denominated atomic testnet token units**, never USD, paid contracts, revenue or cash. The adapter redacts raw `Response`/headers and `BuyerError.cause` by design.
 
 Source-accurate focused Node22 reducer proof: five targeted tests including cross-intent proof reuse — seller-only, independent SF43 match and HTTP delivery, hostile cross-term mismatch, pending/error/duplicate. This verifies the reducer, **not** an original provider integration or an SCF-funded milestone. For proper product claims, consume already-authorized original SF41/Muse public-corpus, current canonical SDK version and actual Stellar testnet ledger data.
+
+## Non-402 unpaid HTTP failure compatibility
+
+The merged original SF31 client reports `UNPAID_HTTP_ERROR` for a failed first unsigned
+HTTP response (for example, HTTP 503); it **does not** approve or sign payment, and its
+single attempt has `settlement: NOT_REQUESTED`. SF52 now accepts that exact result
+without throwing, preserves the unpaid-failure state and reports
+`counts.unpaidHttpFailures` separately from signed attempts, seller-reported settlement
+and chain verification. Free `NO_PAYMENT_REQUIRED` requires HTTP 2xx. Contradictory
+payment receipts, signed attempts or HTTP 402 for the unpaid failure are rejected.
+
+The focused regression imports the **original current SF31 buyer source** and injects
+a real Node `Response(503)`, then executes the original SF52 capture and aggregate
+path: `node --test stellar/scf-starforge-20261009/sf52-buyer-outcomes/test/outcomes.test.mjs`.
+This test does not send HTTP to the network, authorize a payment or trigger Actions.
 
 ## Revenue/application use
 
