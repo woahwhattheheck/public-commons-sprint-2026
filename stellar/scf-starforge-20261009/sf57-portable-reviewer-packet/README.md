@@ -15,6 +15,35 @@ The first command **runs the already-published original SF53 `readOriginalEviden
 
 The verifier checks file bytes against a fresh deterministic rendering of the included source report and manifest. **Checksums are not signatures**: they do not establish who ran the original source, the correctness of upstream modules, consent, chain finality, a customer, funding or a submitted grant. Preserve and cite the original Git commit/source SHA and share only under the founder's authorized review workflow.
 
+## Package an existing original observation
+
+An existing SF53 JSON report can be packaged without rerunning its commerce,
+wire or source-preflight modules. Use this route for the original Muse output
+or a retained source run; the input must be the SF53 report itself, not a
+summary, manifest or newly invented report.
+
+```sh
+node stellar/scf-starforge-20261009/sf57-portable-reviewer-packet/packet.mjs --report /path/to/original-report.json --out /tmp/stellar-review-archived
+node stellar/scf-starforge-20261009/sf57-portable-reviewer-packet/packet.mjs --verify /tmp/stellar-review-archived
+```
+
+This mode retains the original observation timestamp, source identities,
+warnings and outcomes. A previous failure remains a failure; packaging it does
+not turn it into a current checkout observation. The offline HTML identifies
+the archived input and its SHA-256. In addition to the usual three files, the
+packet contains `source-report.json`, preserving the input bytes exactly. The
+manifest records its original basename (no local directory), byte count,
+SHA-256 and canonical report SHA-256. Verification requires the original input
+bytes to match those checksums and normalize to the included `report.json`.
+The filename is descriptive metadata, not proof of an author or Git commit.
+
+Archived inputs must be regular UTF-8 JSON files no larger than 1 MiB and pass
+the same SF53 schema and restriction checks as newly generated evidence. An
+existing output directory is never replaced. The existing `--out` route still
+runs the original source once, and `--verify` continues to accept earlier
+three-file packets unchanged. No source modules are imported by `--report` or
+`--verify`.
+
 ## Review gate
 
 `SOURCE_CONTRACTS_PASS_ONLY` appears **only** if original SF51, SF46, and SF52 report their expected source-bound statuses; all reported paid/signed/chain counts remain zero; source pins have no changes or missing files; no release-preflight failures occur; and the SF53 safety restriction flags remain false. Unexpected outcomes become `REVIEW_REQUIRED`, not a green demo. Any changed restriction contract, malformed observation timestamp, invalid/oversized JSON, or nonfinite number blocks generation. Source warnings remain visible. The output never claims funded Stellar settlement, customer adoption, grant submission or award.
