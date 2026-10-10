@@ -153,6 +153,8 @@ This harness is synthetic research-software QC characterization. It is not wet-l
 
 Measured source-pinned 200 × 200 design/held-out sweep: [`docs/operating_curve_200x200_20261010.md`](docs/operating_curve_200x200_20261010.md).
 
+Distinct heterogeneity and weak-effect transition sweep: [docs/operating_curve_transition_20261010.md](docs/operating_curve_transition_20261010.md).
+
 ## Competition status and authority boundary
 
 This repository carrier is source/test/demo/report readiness only. It does not assert Kaggle registration, terms acceptance, official submission, organizer validation, finalist status, score, ranking, prize, payment, or revenue. Any eventual competition action must preserve the event's current rules, data licenses, attribution requirements, and identity/entry requirements.
