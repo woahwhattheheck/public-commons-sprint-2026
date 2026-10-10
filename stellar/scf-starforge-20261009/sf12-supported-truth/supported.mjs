@@ -89,7 +89,7 @@ export class TruthfulSupported {
     const {signers}=checkCanonical(canonical);
     const kinds=[];
     const readyAssets=[];
-    const signerSet=new Set();
+    const perNetworkProofs=new Map();
     const seenKinds=new Set();
     for(const network of NETWORKS) {
       const policy=this.#config[network];
@@ -140,16 +140,26 @@ export class TruthfulSupported {
         kinds.push({x402Version:2,scheme:entry.scheme,network,extra:{...entry.extra}});
       }
       if(kinds.some(k=>k.network===network)){
-        for(const signer of commonSigners)signerSet.add(signer);
+        perNetworkProofs.set(network,{checkedAtUnix:proof.checkedAtUnix,signers:commonSigners});
         for(const asset of healthyAssets)readyAssets.push({network,...asset});
       }
     }
-    kinds.sort((a,b)=>a.network.localeCompare(b.network)||a.scheme.localeCompare(b.scheme));
-    readyAssets.sort((a,b)=>a.network.localeCompare(b.network)||a.asset.localeCompare(b.asset));
+    // Do not return early-network readiness that expired during a later probe.
+    const responseNow=perNetworkProofs.size?this.#time():null;
+    if(responseNow!==null&&(!Number.isSafeInteger(responseNow)||responseNow<0))
+      throw new SupportedError('BAD_CLOCK');
+    const live=new Set([...perNetworkProofs].filter(([,p])=>
+      p.checkedAtUnix<=responseNow+2&&(responseNow-p.checkedAtUnix)<=this.#maxAgeSeconds
+    ).map(([network])=>network));
+    const activeKinds=kinds.filter(k=>live.has(k.network));
+    const activeAssets=readyAssets.filter(a=>live.has(a.network));
+    const activeSigners=new Set([...perNetworkProofs].filter(([network])=>live.has(network)).flatMap(([,p])=>p.signers));
+    activeKinds.sort((a,b)=>a.network.localeCompare(b.network)||a.scheme.localeCompare(b.scheme));
+    activeAssets.sort((a,b)=>a.network.localeCompare(b.network)||a.asset.localeCompare(b.asset));
     // Disabling unsupported extensions is safer than advertising a registered
     // global extension with unknown runtime network or scheme dependencies.
-    const response={kinds,extensions:[],signers:{'stellar:*':[...signerSet].sort()}};
-    return {supported:response,assetManifest:{x402Version:2,assets:readyAssets},ready:kinds.length>0};
+    const response={kinds:activeKinds,extensions:[],signers:{'stellar:*':[...activeSigners].sort()}};
+    return {supported:response,assetManifest:{x402Version:2,assets:activeAssets},ready:activeKinds.length>0};
   }
 }
 function json(res,status,body){

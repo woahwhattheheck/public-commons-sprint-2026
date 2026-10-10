@@ -65,10 +65,25 @@ export class BazaarSettlementSidechannel {
     this.#catalog = catalog;
   }
   processSettled({ paymentPayload, settlement, sequence, otherExtensionResponses } = {}) {
+    // The catalog mutation is permanent, so all sibling/transport constraints
+    // must pass BEFORE the original SF25 ingest can commit a seller listing.
+    // Retain one cloned sibling snapshot: caller getters cannot change it
+    // between preflight and the final facilitator->resource-server encoding.
+    const validatedSiblings = otherOutcomes(otherExtensionResponses);
+    if (hasBazaar(paymentPayload)) {
+      // Max possible sanitized rejection code (96 chars + ':' + 80 chars).
+      // This reserves the worst wire header, not just the shorter success
+      // outcome. A near-limit sibling can otherwise throw AFTER commit.
+      const worst = { ...validatedSiblings, bazaar: {
+        status: 'rejected', rejectedReason: 'A'.repeat(96) + ':' + 'a'.repeat(80),
+      } };
+      if (Buffer.byteLength(JSON.stringify(worst), 'utf8') > MAX_HEADER_BYTES)
+        throw new RangeError('EXTENSION_RESPONSES_TOO_LARGE');
+    }
     // SF25 enforces the verified-settlement and original seller/canonical terms gate.
     const result = this.#catalog.ingest({ paymentPayload, settlement, sequence });
     const wire = encodeCatalogSidechannel({ paymentPayload,
-      catalogDecision: result, otherExtensionResponses });
+      catalogDecision: result, otherExtensionResponses: validatedSiblings });
     return { catalogDecision: result, ...wire,
       catalogSize: this.#catalog.size, catalogVersion: this.#catalog.version };
   }

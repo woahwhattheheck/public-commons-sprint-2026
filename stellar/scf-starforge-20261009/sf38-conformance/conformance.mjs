@@ -18,7 +18,9 @@ const text = x => typeof x === 'string' && x.trim().length > 0;
 // Soroban integer amounts are signed i128, not arbitrary-precision decimal.
 // Reject oversized wire values before BigInt conversion or ledger claims.
 const MAX_STELLAR_I128_ATOMIC = '170141183460469231731687303715884105727';
-const atomic = x => typeof x === 'string' && /^(0|[1-9][0-9]*)$/.test(x) &&
+const atomic = x => typeof x === 'string' &&
+  x.length <= MAX_STELLAR_I128_ATOMIC.length &&
+  /^(0|[1-9][0-9]*)$/.test(x) &&
   (x.length < MAX_STELLAR_I128_ATOMIC.length ||
     (x.length === MAX_STELLAR_I128_ATOMIC.length && x <= MAX_STELLAR_I128_ATOMIC));
 const sha = x => createHash('sha256').update(x).digest('hex');

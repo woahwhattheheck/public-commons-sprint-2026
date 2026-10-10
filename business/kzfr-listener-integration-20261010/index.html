@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Internal KZFR listener journey concept preserving the station's WordPress and Creek Studio service boundaries.">
+  <title>KZFR · Community radio, connected · Internal concept</title>
+  <style>
+    :root { font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#fffaf1; background:#111c1b; --lime:#ddf18c; --ink:#111c1b; --sand:#fff3d6; --coral:#ff9b7d; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; line-height:1.55; }
+    a { color:inherit; }
+    button,input,select { font:inherit; }
+    :focus-visible { outline:3px solid var(--lime); outline-offset:4px; }
+    .skip { position:absolute; left:1rem; top:-6rem; padding:.8rem; background:var(--lime); color:var(--ink); z-index:99; }
+    .skip:focus { top:.7rem; }
+    .container { max-width:1200px; margin:auto; padding-inline:clamp(1.2rem,4vw,3rem); }
+    .note { padding:.6rem 1rem; text-align:center; background:#ddf18c; color:#19251e; font-size:.82rem; font-weight:700; letter-spacing:.02em; }
+    .nav { display:flex; justify-content:space-between; align-items:center; gap:2rem; padding-block:1.4rem; flex-wrap:wrap; }
+    .brand { display:flex; align-items:center; gap:.8rem; font-weight:900; text-decoration:none; letter-spacing:-.04em; font-size:1.65rem; }
+    .brandmark { background:var(--coral); color:var(--ink); border-radius:50%; width:2.5rem; height:2.5rem; display:grid; place-items:center; }
+    nav { display:flex; gap:clamp(.7rem,2vw,1.8rem); align-items:center; flex-wrap:wrap; }
+    nav a { text-decoration:none; font-weight:650; font-size:.93rem; }
+    nav a:hover { text-decoration:underline; text-underline-offset:6px; }
+    .nav-action { border:1px solid #82938b; padding:.55rem .95rem; border-radius:40px; }
+    .hero { display:grid; grid-template-columns:1.16fr .84fr; gap:clamp(2rem,5vw,5rem); padding-block:5rem 6rem; align-items:center; }
+    .eyebrow { color:var(--lime); text-transform:uppercase; letter-spacing:.21em; font-weight:800; font-size:.77rem; }
+    h1,h2,h3,p { margin-top:0; }
+    h1,h2 { letter-spacing:-.065em; line-height:1.06; }
+    h1 { font-size:clamp(3.4rem,8vw,7rem); margin-block:1.5rem 1.6rem; max-width:11ch; }
+    h1 em { font-style:normal; color:var(--lime); }
+    .intro { color:#c3d0c7; max-width:57ch; font-size:1.08rem; }
+    .buttons { display:flex; flex-wrap:wrap; gap:.8rem; margin-top:2rem; }
+    .button { display:inline-flex; text-decoration:none; align-items:center; justify-content:center; border-radius:40px; min-height:3.2rem; padding:.75rem 1.35rem; background:var(--lime); color:var(--ink); font-weight:800; border:2px solid var(--lime); }
+    .button.secondary { color:var(--sand); background:transparent; border-color:#768b7a; }
+    .button:hover { transform:translateY(-1px); }
+    .radio { position:relative; min-height:440px; border-radius:2.4rem; padding:2rem; background:var(--coral); color:var(--ink); overflow:hidden; box-shadow:18px 18px 0 #344539; }
+    .radio::before { content:""; position:absolute; width:420px; height:420px; border:4px solid #e16e58; border-radius:50%; right:-15rem; top:-12rem; box-shadow:0 0 0 30px #ffac8f,0 0 0 34px #d66a55,0 0 0 70px #ffad91,0 0 0 74px #d66a55; opacity:.6; }
+    .radio > * { position:relative; }
+    .radio-tag { font-size:.78rem; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
+    .radio-dial { border:4px solid #24332d; border-radius:1.1rem; margin-top:5rem; background:#203128; color:var(--lime); padding:1.4rem; }
+    .radio-dial .freq { font-size:clamp(4rem,9vw,6.5rem); line-height:1; letter-spacing:-.08em; font-weight:900; }
+    .bars { display:flex; align-items:flex-end; gap:6px; height:42px; margin:1.3rem 0; }
+    .bars span { flex:1; max-width:10px; border-radius:2px; background:var(--lime); height:var(--h); }
+    .radio-foot { margin-top:1rem; font-size:.9rem; font-weight:650; }
+    .service-strip { padding:2rem 0; border-top:1px solid #51645b; border-bottom:1px solid #51645b; }
+    .three { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+    .feature { display:flex; gap:1rem; align-items:flex-start; }
+    .feature .icon { font-size:1.5rem; color:var(--lime); }
+    .feature strong { display:block; }
+    .feature span { font-size:.86rem; color:#b9c7c0; }
+    .shows { background:var(--sand); color:#18261d; border-radius:2.4rem 2.4rem 0 0; padding-block:5rem 6rem; margin-top:5rem; }
+    .section-top { display:flex; justify-content:space-between; gap:2rem; align-items:end; flex-wrap:wrap; margin-bottom:2rem; }
+    h2 { font-size:clamp(2.5rem,5vw,4.5rem); margin-bottom:.7rem; }
+    .dark-intro { max-width:55ch; color:#536057; }
+    .filters { background:#fff; border:1px solid #b7bdae; border-radius:1.2rem; display:grid; grid-template-columns:2fr 1fr; gap:1.2rem; padding:1.25rem; }
+    .field { display:flex; flex-direction:column; gap:.4rem; }
+    label { font-size:.86rem; font-weight:800; }
+    input,select { border:1px solid #7b897f; border-radius:.65rem; padding:.7rem .8rem; width:100%; background:#fff; color:#19291f; min-height:2.8rem; }
+    .result-count { margin:1.2rem 0; color:#42554b; font-size:.9rem; }
+    .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+    .show { display:flex; flex-direction:column; border:1px solid #c5c9b8; border-radius:1.1rem; padding:1.3rem; background:#fffefa; min-height:230px; }
+    .show .time { font-size:.82rem; color:#566457; font-weight:800; }
+    .show h3 { font-size:1.45rem; margin:1rem 0 .5rem; letter-spacing:-.03em; }
+    .chips { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:auto; }
+    .chip { background:#e9efdb; color:#304538; font-size:.75rem; border-radius:40px; padding:.18rem .55rem; font-weight:800; }
+    .show a { display:inline-block; color:#31533c; font-weight:800; margin-top:.9rem; }
+    .linkout { padding:1.5rem 0 0; }
+    .linkout a { font-weight:800; }
+    .handoff { padding-block:5rem; }
+    .handoff h2 { max-width:15ch; }
+    .handoff-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:2rem; }
+    .panel { padding:2rem; border:1px solid #536458; border-radius:1.3rem; }
+    .panel h3 { font-size:1.5rem; }
+    .panel p { color:#c3d0c7; }
+    .panel a { color:var(--lime); font-weight:800; }
+    footer { background:#0a1312; padding-block:2.4rem; border-top:1px solid #485a50; }
+    footer .fine { font-size:.85rem; color:#b5c4ba; }
+    @media (max-width:800px) { .hero { grid-template-columns:1fr; padding-block:2.5rem 3rem; } .radio { min-height:350px; } .three { grid-template-columns:1fr; gap:1.5rem; } .cards { grid-template-columns:repeat(2,1fr); } }
+    @media (max-width:600px) { .nav { gap:1.5rem; } .cards,.filters,.handoff-grid { grid-template-columns:1fr; } .shows { margin-top:3rem; } .radio { box-shadow:8px 8px 0 #344539; } }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .button:hover { transform:none; } }
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<div class="note">INTERNAL LISTENER-JOURNEY PROOF · NOT KZFR'S LIVE WEBSITE · NO AUDIO OR DONATION HANDLING</div>
+<header class="container nav">
+  <a class="brand" href="#top" aria-label="KZFR concept home"><span class="brandmark" aria-hidden="true">↗</span> KZFR <span style="font-size:.75rem;font-weight:750;letter-spacing:0">90.1 FM</span></a>
+  <nav aria-label="Main navigation"><a href="#shows">Programs</a><a href="#services">Listen & archive</a><a href="#handoff">How it connects</a><a class="nav-action" href="https://kzfr-donate.creek.org/" rel="noreferrer">Donate ↗</a></nav>
+</header>
+<main id="main">
+  <div id="top" class="container hero">
+    <div>
+      <div class="eyebrow">Chico · Northern California · Listener-supported radio</div>
+      <h1>Real radio.<br><em>Real people.</em></h1>
+      <p class="intro">Your neighborhood, on the air. One clear route to today's shows, the real Creek Studio archive, and the people who keep KZFR sounding like home.</p>
+      <div class="buttons"><a class="button" href="https://kzfr.org/" rel="noreferrer">▶ Listen on KZFR ↗</a><a class="button secondary" href="#shows">Explore programs ↓</a></div>
+      <p style="font-size:.8rem;color:#b7c6bc;margin-top:1.2rem">Live player stays with KZFR's existing provider until approved integration specifications are supplied.</p>
+    </div>
+    <div class="radio" aria-label="Decorative illustration of the KZFR radio frequency">
+      <div class="radio-tag">A local signal · since 1990</div>
+      <div class="radio-dial"><div class="radio-tag">Community frequency</div><div class="freq">90.1</div><div class="bars" aria-hidden="true"><span style="--h:22%"></span><span style="--h:56%"></span><span style="--h:88%"></span><span style="--h:47%"></span><span style="--h:78%"></span><span style="--h:35%"></span><span style="--h:93%"></span><span style="--h:40%"></span><span style="--h:66%"></span></div><div style="letter-spacing:.15em;font-size:.77rem;font-weight:850">KZFR / CHICO / CA</div></div>
+      <div class="radio-foot">People-powered. Community-owned.</div>
+    </div>
+  </div>
+  <section class="service-strip" id="services" aria-label="Station services"><div class="container three">
+    <div class="feature"><span class="icon" aria-hidden="true">◉</span><div><strong>Listen live</strong><span>Open the station's current player, without replacing its stream.</span></div></div>
+    <div class="feature"><span class="icon" aria-hidden="true">♫</span><div><strong>Find past shows</strong><span><a href="https://kzfr.studio.creek.org/" rel="noreferrer">Browse the existing Creek Studio archive ↗</a></span></div></div>
+    <div class="feature"><span class="icon" aria-hidden="true">♥</span><div><strong>Keep radio local</strong><span><a href="https://kzfr-donate.creek.org/" rel="noreferrer">Support KZFR through its existing donation provider ↗</a></span></div></div>
+  </div></section>
+  <section id="shows" class="shows" aria-labelledby="shows-heading"><div class="container">
+    <div class="section-top"><div><div class="eyebrow" style="color:#60732c">Meet the programming</div><h2 id="shows-heading">Find your frequency.</h2><p class="dark-intro">Browse a source-backed snapshot of KZFR's published Saturday schedule. This is not a live now-playing feed, and these are not archived audio records.</p></div></div>
+    <div class="filters" role="search"><div class="field"><label for="showsearch">Search program names or genres</label><input id="showsearch" type="search" autocomplete="off" placeholder="Try: folk, swing, music…"></div><div class="field"><label for="genre">Genre</label><select id="genre"><option>All</option></select></div></div>
+    <p id="resultcount" class="result-count" role="status" aria-live="polite">Loading source-backed program snapshot…</p>
+    <div id="programcards" class="cards" aria-label="Program listings"></div>
+    <p class="linkout">For full schedules and ongoing updates: <a href="https://kzfr.org/programs" rel="noreferrer">Visit KZFR's original schedule ↗</a></p>
+  </div></section>
+  <section id="handoff" class="container handoff" aria-labelledby="handoff-heading"><div class="eyebrow">Real integration · no replacement backend</div><h2 id="handoff-heading">Built around what already works.</h2><p class="intro">The source RFP requires WordPress core and tells vendors to keep Creek Studio's existing streaming, archive, scheduling and radio-content systems. The engineering work is the accessible connection, migration and acceptance layer.</p>
+    <div class="handoff-grid"><div class="panel"><h3>Creek stays in charge of audio</h3><p>Live player and archive integration would use buyer-approved endpoints and agreements. The proof sends listeners to the actual existing services until that contract is settled.</p><a href="https://kzfr.studio.creek.org/" rel="noreferrer">Visit source archive ↗</a></div><div class="panel"><h3>KZFR owns the new site</h3><p>WordPress templates, migration checks, WCAG 2.1 AA acceptance, staff administration, backups and a practical handoff. No user credentials, donations or listener data are collected here.</p><a href="https://kzfr.org/RFP" rel="noreferrer">Original buyer RFP ↗</a></div></div>
+  </section>
+</main>
+<footer><div class="container"><div class="brand" style="margin-bottom:1rem">KZFR · Listener journey concept</div><p class="fine">Internal proof for a potential KZFR website project. Not commissioned, approved, hosted or endorsed by KZFR or Creek Studio. Published program snapshot observed October 10, 2026. Existing third-party links remain owned by their providers. No bid or contact sent.</p><p class="fine">Source: <a href="https://kzfr.org/RFP">KZFR RFP</a> · <a href="https://kzfr.org/programs">KZFR programs</a> · <a href="https://kzfr.org/events/categories/kzfr">Current events</a> · <a href="https://kzfr.org/pages/underwrite">Underwriting</a></p></div></footer>
+<script type="module">
+  import { selectPrograms, validatePrograms } from './handoff.mjs';
+  const search = document.querySelector('#showsearch');
+  const genre = document.querySelector('#genre');
+  const cards = document.querySelector('#programcards');
+  const status = document.querySelector('#resultcount');
+  const source = 'https://kzfr.org/programs';
+  try {
+    const result = await fetch('./programs.json', { cache: 'no-store' });
+    if (!result.ok) throw new Error('Local program data unavailable');
+    const { programs } = await result.json();
+    if (validatePrograms(programs).length) throw new Error('Source data failed local contract');
+    const categories = [...new Set(programs.flatMap(p => p.categories))].sort();
+    for (const category of categories) { const opt = document.createElement('option'); opt.value = category; opt.textContent = category; genre.append(opt); }
+    function update() {
+      const rows = selectPrograms(programs, { query: search.value, category: genre.value });
+      cards.replaceChildren();
+      rows.forEach(row => {
+        const article = document.createElement('article'); article.className = 'show';
+        const time = document.createElement('div'); time.className = 'time'; time.textContent = `${row.day} · ${row.start}–${row.end} PT`;
+        const name = document.createElement('h3'); name.textContent = row.name;
+        const chips = document.createElement('div'); chips.className = 'chips';
+        row.categories.forEach(cat => { const chip = document.createElement('span'); chip.className = 'chip'; chip.textContent = cat; chips.append(chip); });
+        const link = document.createElement('a'); link.href = source; link.rel = 'noreferrer'; link.textContent = 'Official schedule ↗';
+        article.append(time, name, chips, link); cards.append(article);
+      });
+      status.textContent = `${rows.length} published Saturday program${rows.length === 1 ? '' : 's'} shown`;
+    }
+    search.addEventListener('input', update); genre.addEventListener('change', update); update();
+  } catch { status.textContent = 'Program snapshot unavailable. Use the link to KZFR’s official schedule below.'; }
+</script>
+</body>
+</html>
