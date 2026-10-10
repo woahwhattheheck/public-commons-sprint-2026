@@ -6,6 +6,7 @@ import {createHash} from 'node:crypto';
 import {resolve,join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {performance} from 'node:perf_hooks';
+import {parseCaptureFilters,buildNativePageURL} from './capture_filters.mjs';
 
 const args=process.argv.slice(2);
 const option=n=>{const i=args.indexOf(n);return i<0?null:args[i+1]};
@@ -88,13 +89,12 @@ async function main(){
   if(envname&&!token)throw Error('Bearer environment variable missing');
   const pageLimit=Number(option('--page-size')||100);
   if(!Number.isSafeInteger(pageLimit)||pageLimit<1||pageLimit>100)throw Error('page-size 1..100 per x402 native spec');
+  const filters=parseCaptureFilters(args);
   await mkdir(dir,{recursive:true});
   const sources=[],statuses=[],pageTimes=[],seenPages=new Map();
   let offset=0,expectedTotal=null,coverage=null;
   while(true){
-    const url=new URL(original);
-    url.searchParams.set('offset',String(offset));
-    url.searchParams.set('limit',String(pageLimit));
+    const url=buildNativePageURL(original,filters,offset,pageLimit);
     let raw=null,res=null,started,err=null;
     for(let attempt=0;attempt<4;attempt++){
       started=performance.now();
@@ -132,7 +132,7 @@ async function main(){
     if(page.complete){coverage=page.coverage;break;}
   }
   const manifest={schema:'SCF-SF41/capture-v1',generated_at:new Date().toISOString(),
-    endpoint:original.origin+original.pathname,claimed_permission:permission,
+    endpoint:original.origin+original.pathname,filters,claimed_permission:permission,
     page_size:pageLimit,expected_total:expectedTotal,rows_captured:offset,
     pagination_coverage:coverage,sources,read_only:true,does_not_prove_paid_settlement:true};
   const manifestText=JSON.stringify(manifest,null,2)+'\n';

@@ -1,3 +1,4 @@
+import {assertNativePageScope,validateCaptureFilters} from './capture_filters.mjs';
 // MIT. Authentic single-provider x402 Bazaar capture-v1 manifest completeness proof.
 // Accepts original observed page metadata, never invented provider rows or purchases.
 const number=(v)=>Number.isSafeInteger(v)&&v>=0;
@@ -21,6 +22,7 @@ export function inspectCaptureCoverage(manifest,pages){
   }
   if(manifest.endpoint!==[...endpoints][0])fail('endpoint differs from page origin/path');
   if(!positive(manifest.page_size)||manifest.page_size>100)fail('invalid captured page_size');
+  const filters=validateCaptureFilters(manifest.filters??{});
   if(!number(manifest.rows_captured)||manifest.rows_captured!==rows)
     fail('rows_captured does not equal source page row sum');
   let target=manifest.expected_total??null,offset=0,proof='DECLARED_TOTAL_MATCHED';
@@ -28,6 +30,7 @@ export function inspectCaptureCoverage(manifest,pages){
   const hashes=new Set();
   for(let i=0;i<pages.length;i++){
     const p=pages[i],u=urls[i];
+    assertNativePageScope(u,filters);
     const requestedOffset=Number(u.searchParams.get('offset'));
     const requestedLimit=Number(u.searchParams.get('limit'));
     if(!u.searchParams.has('offset')||!u.searchParams.has('limit')||
