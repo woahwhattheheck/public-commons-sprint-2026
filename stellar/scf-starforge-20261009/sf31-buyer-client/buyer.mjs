@@ -190,9 +190,10 @@ export class X402BuyerClient {
     if(typeof fetchImpl!=='function')throw new TypeError('fetchImpl required');
     this.fetch=fetchImpl;this.allowLocal=allowLocal;
   }
-  async discover({origin,query,filters={},limit=20,signal}={}){
+  async discover({origin,query,filters={},limit=20,offset=0,signal}={}){
     const u=requireURL(origin,{allowLocal:this.allowLocal});
     if (!Number.isInteger(limit)||limit<1||limit>100)throw new BuyerError('BAD_DISCOVERY_LIMIT');
+    if (!Number.isSafeInteger(offset)||offset<0)throw new BuyerError('BAD_DISCOVERY_OFFSET');
     // Respect a caller-selected provider deployment prefix (e.g. Coinbase CDP's
     // /platform/v2/x402) while preserving the legacy root /discovery/* routes.
     // u is already validated by requireURL; any caller query is discarded.
@@ -204,6 +205,7 @@ export class X402BuyerClient {
       u.searchParams.set(k,v);
     }
     u.searchParams.set('limit',String(limit));
+    if(offset>0)u.searchParams.set('offset',String(offset));
     let res;
     try{res=await this.fetch(u,{method:'GET',redirect:'manual',signal});}catch(e){throw new BuyerError('DISCOVERY_TRANSPORT_FAILED','',{cause:e});}
     noRedirect(res,false);
