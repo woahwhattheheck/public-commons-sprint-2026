@@ -98,6 +98,39 @@ function prepareBody(body){
   if(body instanceof Uint8Array && body.byteLength<=1_048_576)return Uint8Array.from(body);
   throw new BuyerError('NONREPLAYABLE_BODY');
 }
+// Catalog responses are untrusted network input. Apply the limit to bytes actually
+// received, not Content-Length (which an origin can omit or misrepresent).
+const MAX_DISCOVERY_BYTES = 256 * 1024;
+async function readDiscoveryJSON(response) {
+  if (!response.body || typeof response.body.getReader !== 'function')
+    throw new BuyerError('BAD_DISCOVERY_RESPONSE');
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0, complete = false;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) { complete = true; break; }
+      if (!(value instanceof Uint8Array)) throw new BuyerError('BAD_DISCOVERY_RESPONSE');
+      total += value.byteLength;
+      if (total > MAX_DISCOVERY_BYTES) throw new BuyerError('DISCOVERY_RESPONSE_TOO_LARGE');
+      chunks.push(value);
+    }
+  } catch (e) {
+    if (e instanceof BuyerError) throw e;
+    throw new BuyerError('DISCOVERY_TRANSPORT_FAILED', '', { cause: e });
+  } finally {
+    if (!complete) { try { await reader.cancel(); } catch {} }
+    reader.releaseLock();
+  }
+  try {
+    // Malformed UTF-8 must not be silently substituted in seller metadata.
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks, total)));
+  } catch {
+    throw new BuyerError('BAD_DISCOVERY_RESPONSE');
+  }
+}
+
 function noRedirect(response, sent){
   if(response.status>=300&&response.status<400)throw new BuyerError('REDIRECT_DENIED','Location not followed',{paymentSent:sent});
 }
@@ -141,7 +174,7 @@ export class X402BuyerClient {
     try{res=await this.fetch(u,{method:'GET',redirect:'manual',signal});}catch(e){throw new BuyerError('DISCOVERY_TRANSPORT_FAILED','',{cause:e});}
     noRedirect(res,false);
     if(!res.ok)throw new BuyerError('DISCOVERY_HTTP_'+res.status);
-    const body=await res.json().catch(()=>{throw new BuyerError('BAD_DISCOVERY_RESPONSE');});
+    const body=await readDiscoveryJSON(res);
     if(!Array.isArray(body?.resources)||!object(body?.pagination))throw new BuyerError('BAD_DISCOVERY_RESPONSE');
     return {source:u.href,resources:body.resources,pagination:body.pagination};
   }
