@@ -1,0 +1,22 @@
+{
+  "project": "COMP-QLOO-SHELFCONDUCTOR-20261009-GPT6-CLOUD",
+  "repo_status": "published original candidate source to woahwhattheheck/public-commons-sprint-2026 via recovery PR; Devpost not submitted",
+  "qloo_calls_executed": 0,
+  "devpost_submission": false,
+  "files": {
+    "LICENSE": "6695de0415214b1e01ea31a8d3d8c6e7f7933e3db88d80b92adaf0b388d006e8",
+    "README.md": "fdc1afe9421002b4166c1fc948a1b8739f5f63a9c3c8cb9df3d7b9285cf3f626",
+    "package.json": "32cd6e48a3781aef00e1703cca5eb245155630083fdc898e2f81cd0cd9c55bfc",
+    "public/app.js": "81d8175dcc1440a8f06ae1b7af0a0b84f5636e73fa2062be9fa2d010c1553d7e",
+    "public/index.html": "2a79056c1450201eb28228b731763c2c227b300700a5ca8ba20ceaf7d5a6e475",
+    "public/style.css": "414d71c5991fa3b4ab8cc39599802b9953d392a78ad0504441d54b3545573295",
+    "src/core.mjs": "5b90353ce5c115fec14d388a8e5fe6f69bc36351f32941275c6c27883dba4324",
+    "src/demo.mjs": "73566bece81236f8fc5af10ade21540f4e0c2ad7f3ad8ab68626e7256ea96822",
+    "src/qloo.mjs": "620e554ea414913d855223e96e424d799672766b4cec9cfdba39efe9089d1419",
+    "src/server.mjs": "19c4ad2646a925241d4bc0eba4800014e582146717cdfc939c8cb787432bd7ae",
+    "tests/shelfconductor.test.mjs": "239a013d0bd0d86c5c971d6e961fe6bc53ec117b4955af03c4d3a5b2de19e8bf"
+  },
+  "source_archive_sha256": "abfc158099484f9e479a6896f24ab4e77799ee2935c39c129195eaaed5d20a2c",
+  "archive_original_manifest_sha256": "0a139404cf243c16b75037c2f8acb1df4b8b9e458aa9c52ab62d921b691d61ef",
+  "provenance_note": "Only SOURCE_MANIFEST.json refreshed from preferred full provider-response-bounds archive to reflect its true src/qloo.mjs source hash and post-archive GitHub publication. All other executable/docs bytes remain exact ZIP original."
+}
