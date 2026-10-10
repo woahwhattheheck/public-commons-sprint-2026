@@ -61,3 +61,12 @@ This is **not** proof that a seller-provided payer belongs to the current agent 
 The official [Stellar RPC `getEvents` contract](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getEvents) requires that `startLedger` and `endLedger` be **omitted** when `pagination.cursor` is supplied. Previously the first-party SF43 on-chain verifier sent `startLedger` on every event page; the second page could be rejected by a conforming RPC, so a genuinely matching token transfer beyond the first page would remain `TX_INCLUDED_TRANSFER_UNVERIFIED` with `TOKEN_EVENTS_UNAVAILABLE`. It now sends the transaction's `startLedger` only on the first page and the opaque returned cursor on subsequent pages, preserving token contract, transaction hash, payer, recipient and exact signed atomic amount checks.
 
 `node --test test/event-pagination.test.mjs` exercises both a successful two-page exact SEP-41 transfer and a mismatched second-page atomic amount using an offline, RPC-contract-enforcing fixture. This is a source-level compatibility check, **not** a claimed live Stellar transaction, settlement, grant award or payment receipt; use the existing SF43 authorized testnet lane for actual on-chain acceptance.
+
+
+## SF43 verifier input budgets (October 10, 2026)
+
+The original read-only testnet verifier now rejects malformed and unbounded caller `maxEventPages` values before any RPC request. The allowed range is integer 1–100, default 12; invalid values return `EVENT_PAGE_BUDGET_INVALID`. The existing official Stellar `getEvents` cursor contract is unchanged.
+
+`parseExactTestnetTerms` validates the caller's atomic spending ceiling as a positive decimal no longer than 39 digits **before** a regular expression or BigInt conversion. Safe numeric and bigint ceilings remain supported. A 39-digit policy maximum larger than signed-i128 is allowed, but the quoted transfer itself must still be within signed-i128. This does not authorize the caller to sign, pay, or settle.
+
+Run the one new first-party Node 22 focused regression: `node --test stellar/scf-starforge-20261009/sf43-agent-commerce/test/input-bounds.test.mjs`. No hosted Actions, external testnet call, wallet, or grant submission is required by that test.
