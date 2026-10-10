@@ -6,7 +6,9 @@ const quote={x402Version:2,accepts:[{scheme:'exact',network:'stellar:testnet',
  asset,payTo,amount:'10000'}]};
 test('operator cap bounds reject oversized values and preserve normal caps',()=>{
   assert.throws(()=>parseExactTestnetTerms(quote,'9'.repeat(1000)),/Explicit positive maximum/);
-  assert.equal(parseExactTestnetTerms(quote,'10000').accepts,undefined);
+  assert.equal(parseExactTestnetTerms(quote,'10000').amount,'10000');
+  assert.equal(parseExactTestnetTerms(quote,'170141183460469231731687303715884105728').amount,'10000');
+  assert.throws(()=>parseExactTestnetTerms(quote,'9999'),/exceeds approved maximum/);
   assert.equal(parseExactTestnetTerms(quote,10000n).amount,'10000');
 });
 test('invalid event budgets fail before the RPC request',async()=>{
