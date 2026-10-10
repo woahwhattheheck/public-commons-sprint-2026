@@ -130,7 +130,7 @@ test('malformed seller envelope facts quarantine and retain a verifiable bounded
   assert.equal(events[1].sellerId, '[invalid object]');
   assert.equal(events[2].sequence, '[invalid bigint]');
   assert.equal(events[3].sequence, '[invalid object]');
-  assert.match(events[4].sellerId, /^\\[invalid long string: 50000 UTF-8 bytes\\]$/);
+  assert.equal(events[4].sellerId, '[invalid long string: 50000 UTF-8 bytes]');
   assert.equal(verifyAuditTrail(events), true);
   events[2].reason = 'FAKED';
   assert.equal(verifyAuditTrail(events), false);
