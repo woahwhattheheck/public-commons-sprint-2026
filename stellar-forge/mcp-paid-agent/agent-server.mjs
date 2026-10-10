@@ -109,7 +109,7 @@ export class McpPaidToolBroker {
       const handle=randomUUID();this.#records.set(handle,{...info,createdAt:Date.now()});
       listed.push({handle,resource:row.resource,resourceType:input.type,
         method:input.method??null,toolName:input.toolName??null,
-        accepts:row.accepts.map(sanitizedPrice),allowedOrigin:this.#trustedOrigins.has(origin)});
+        accepts:eligible.map(sanitizedPrice),allowedOrigin:this.#trustedOrigins.has(origin)});
     }
     while(this.#records.size>this.#maxRecords)this.#records.delete(this.#records.keys().next().value);
     return {resources:listed,partialResults:body.partialResults??false,pagination:body.pagination??null};
