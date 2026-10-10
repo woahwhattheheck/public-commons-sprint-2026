@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { BazaarCatalog,isValidRouteTemplate,sanitizeResourceServiceMetadata,createDiscoveryServer } from '../src/catalog.mjs';
+import { BazaarCatalog,isValidRouteTemplate,sanitizeResourceServiceMetadata,createDiscoveryServer,validateCatalogEntry } from '../src/catalog.mjs';
 const schema={type:'object',properties:{input:{type:'object'}},required:['input']};
 const entry = (name,type='http',i={}) => ({
   resource:{url:`https://example.org/${name}`,description:`${name} forecast for cities`,serviceName:'Weather API',tags:['Weather','weather','Forecast']},
@@ -52,4 +52,45 @@ test('public endpoints read-only and return concrete machine errors',async()=>{
     const invalid=await fetch(root+'/discovery/search');assert.equal(invalid.status,400);assert.ok((await invalid.json()).reason);
     const post=await fetch(root+'/discovery/resources',{method:'POST'});assert.equal(post.status,405);
   }finally {await new Promise(resolve=>server.close(resolve));}
+});
+
+// SF-39 cross-module route guard: legacy one-decode catalog used to accept
+// double-encoded traversal that the existing SF-28 identity module rejects.
+test('SF-39 rejects repeated encoding and canonicalizes safe route aliases', () => {
+  for (const unsafe of ['/weather/%252e%252e/admin', '/weather/%252fadmin', '/weather/%25252e%25252e/admin']) {
+    assert.equal(isValidRouteTemplate(unsafe), false, unsafe);
+  }
+  assert.equal(isValidRouteTemplate('/cities/:city'), true);
+  assert.equal(isValidRouteTemplate('/cities/%3Acity'), true);
+
+  const catalog = new BazaarCatalog();
+  const one = entry('cities/louisville');
+  one.extensions.bazaar.routeTemplate = '/cities/:city';
+  catalog.insertValidated(one);
+  const two = entry('cities/indy');
+  two.extensions.bazaar.routeTemplate = '/cities/%3Acity';
+  catalog.insertValidated(two);
+  assert.equal(catalog.size, 1, 'safe percent-encoded aliases share one catalog identity');
+  assert.equal(catalog.list().resources[0].extensions.bazaar.routeTemplate, '/cities/:city');
+
+  const fallback = entry('cities/safe');
+  fallback.extensions.bazaar.routeTemplate = '/cities/%252e%252e/admin';
+  const parsed = validateCatalogEntry(fallback);
+  assert.equal(parsed.entry.extensions.bazaar.routeTemplate, undefined, 'hostile template must not be published');
+  assert.equal(parsed.id.includes('%252e%252e'), false);
+});
+
+test('SF-39 checks raw resource URL before URL parser dot-segment normalization', () => {
+  const catalog = new BazaarCatalog();
+  for (const url of [
+    'https://example.org/weather/%2e%2e/admin',
+    'https://example.org/weather/%252e%252e/admin',
+    'https://example.org/weather/%252fadmin',
+    'https://example.org/weather/../admin',
+  ]) {
+    const sample = entry('weather');
+    sample.resource.url = url;
+    assert.throws(() => catalog.insertValidated(sample), /Invalid resource URL/, url);
+  }
+  assert.equal(catalog.size, 0, 'rejections cannot mutate the public catalog');
 });
