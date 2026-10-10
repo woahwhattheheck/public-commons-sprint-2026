@@ -1,0 +1,3 @@
+{
+  "name":"qloo-shelfconductor","version":"1.0.0","private":true,"type":"module","description":"Stock-aware independent bookstore hand-selling recommendations with Qloo taste signals","scripts":{"start":"node src/server.mjs","test:focused":"node --test tests/shelfconductor.test.mjs"},"engines":{"node":">=22"},"license":"MIT"
+}
