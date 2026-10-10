@@ -1,0 +1,1 @@
+{"name":"@commons/scf30-seller-discovery","private":true,"version":"0.1.0","type":"module","description":"Dependency-free x402 v2 Stellar Bazaar seller discovery helper","engines":{"node":">=22"},"scripts":{"test:focused":"node --test test/seller.test.mjs"},"license":"MIT"}
