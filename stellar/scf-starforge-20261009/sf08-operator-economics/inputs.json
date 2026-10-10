@@ -1,0 +1,31 @@
+{
+  "scenario_paid_calls": [1000, 100000, 1000000, 10000000],
+  "assumptions": {
+    "discovery_queries_per_paid": 5,
+    "http_calls_per_paid": 2,
+    "fixed_http_calls_month": 0,
+    "cpu_ms_per_http_call": 5,
+    "onchain_attempts_per_paid": 1,
+    "xlm_per_onchain_attempt": 0.0023,
+    "illustrative_xlm_usd": 0.20,
+    "operator_fee_usd_per_paid": 0.001,
+    "subscribers": 0,
+    "subscriber_fee_usd_per_month": 0,
+    "rpc_calls_per_paid": 3,
+    "burst_multiplier": 20,
+    "rpc_usd_per_million": null,
+    "index_and_search_usd_per_month": null,
+    "observability_security_support_usd_per_month": null,
+    "other_ops_usd_per_month": null
+  },
+  "pricing": {
+    "workers_base_usd": 5,
+    "workers_included_requests": 10000000,
+    "workers_overage_usd_per_million": 0.30,
+    "workers_included_cpu_ms": 30000000,
+    "workers_overage_usd_per_million_cpu_ms": 0.02,
+    "pg_ha_usd": 60,
+    "vm_monthly_usd": 12,
+    "vm_nodes": 2
+  }
+}
