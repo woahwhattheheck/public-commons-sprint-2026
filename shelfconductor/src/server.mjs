@@ -12,8 +12,10 @@ const client=makeQlooClient({apiKey:process.env.QLOO_API_KEY,maxCalls:Number(pro
 function reply(res,code,data){const body=JSON.stringify(data);res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'"});res.end(body);}
 async function bodyJson(req){
   if(req.headers['content-type']?.split(';')[0]!=='application/json')throw new InputError('INVALID_INPUT','Content-Type must be application/json');
-  let size=0,s='';for await(const chunk of req){size+=chunk.length;if(size>150000)throw new InputError('TOO_LARGE','body exceeds 150KB');s+=chunk.toString('utf8');}
-  try{return JSON.parse(s);}catch{throw new InputError('INVALID_JSON','Malformed JSON');}
+  let size=0;const chunks=[];
+  for await(const chunk of req){size+=chunk.length;if(size>150000)throw new InputError('TOO_LARGE','body exceeds 150KB');chunks.push(chunk);}
+  try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks,size)));}
+  catch{throw new InputError('INVALID_JSON','Malformed JSON or UTF-8');}
 }
 export function createHandler({qloo=client}={}){return async(req,res)=>{
   try{
