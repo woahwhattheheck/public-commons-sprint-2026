@@ -127,7 +127,10 @@ export function analyzeOne(record) {
  */
 export function aggregateOutcomes(records) {
   requireOk(Array.isArray(records) && records.length<=100_000, 'RECORDS_INVALID_OR_TOO_MANY');
-  const seen=new Set(), outcomes=[], byAsset=new Map();
+  // A distinct intentId is not evidence of a distinct on-chain transfer. SF43
+  // reports a matched event but does not expose an event index, so identical
+  // transfer tuples must not be credited twice from a reused receipt.
+  const seen=new Set(), seenChainProofs=new Set(), outcomes=[], byAsset=new Map();
   const counts={ total:0,signedAttempts:0,sellerReportedSuccess:0,verifiedTransfers:0,
     transferAndBodyObserved:0,proofConflicts:0,uncertainOrPending:0 };
   for(const record of records) {
@@ -140,6 +143,11 @@ export function aggregateOutcomes(records) {
     if(['SIGNED_RESULT_UNCERTAIN','PENDING_RECONCILIATION','SELLER_REPORTED_ONLY',
       'TRANSFER_VERIFIED_DELIVERY_UNCONFIRMED'].includes(result.status))counts.uncertainOrPending++;
     if(result.independentlyVerifiedTransfer) {
+      const c=record.chain;
+      const proofKey=JSON.stringify([result.network,c.transaction,result.asset,
+        record.buyer.requirement.payTo,result.amountAtomic]);
+      requireOk(!seenChainProofs.has(proofKey), 'DUPLICATE_CHAIN_TRANSFER_PROOF');
+      seenChainProofs.add(proofKey);
       counts.verifiedTransfers++;
       const key=JSON.stringify([result.network,result.asset]);
       byAsset.set(key,(byAsset.get(key)||0n)+BigInt(result.amountAtomic));
