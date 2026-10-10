@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 /**
  * SF-30: dependency-free seller-side x402 v2 Bazaar discovery metadata.
  * The seller's canonical x402 HTTP/MCP middleware remains responsible for
@@ -51,10 +52,18 @@ function validResource(url, allowHttpLoopback = false) {
   let parsed;
   try { parsed = new URL(url); } catch { fail('resource.url must be an absolute URL'); }
   if (parsed.username || parsed.password || parsed.hash || parsed.href !== url) fail('resource.url must be canonical and have no credentials or fragment');
-  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname.toLowerCase());
-  if (parsed.protocol !== 'https:' && !(allowHttpLoopback && loopback && parsed.protocol === 'http:')) {
+  const hostname = parsed.hostname.toLowerCase().replace(/\.$/, '');
+  const ipHost = hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(hostname);
+  const localName = ['localhost', 'local', 'localdomain', 'internal', 'home.arpa',
+    'ip6-localhost', 'ip6-loopback'].includes(hostname) ||
+    ['.localhost', '.localhost.localdomain', '.local', '.localdomain',
+      '.internal', '.home.arpa'].some(suffix => hostname.endsWith(suffix));
+  const loopbackDev = allowHttpLoopback && loopback && parsed.protocol === 'http:';
+  if (parsed.protocol !== 'https:' && !loopbackDev)
     fail('resource.url must use HTTPS; HTTP permitted only for explicit loopback development');
-  }
+  if ((isIP(ipHost) !== 0 || localName) && !loopbackDev)
+    fail('Private or local seller resource host not permitted');
   return parsed;
 }
 function checkedMetadata(resource, allowHttpLoopback) {
