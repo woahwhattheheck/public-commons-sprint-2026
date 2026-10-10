@@ -267,9 +267,19 @@ export function createMcpHttpHandler(broker,{bearerToken,allowedClientOrigins=[]
     if(!String(req.headers['content-type']??'').toLowerCase().startsWith('application/json'))return send(415,jsonErr(-32600,'Content type must be application/json'));
     const accept=String(req.headers.accept??'');
     if(!accept.includes('application/json')||!accept.includes('text/event-stream'))return send(406,jsonErr(-32600,'Accept must include application/json and text/event-stream'));
-    let raw='';try{
-      for await(const c of req){raw+=c.toString('utf8');if(raw.length>128*1024)throw new Error('Too large');}
+    // HTTP stream chunks are byte boundaries, not UTF-8 character boundaries.
+    // Enforce the 128 KiB limit on raw bytes before decoding the whole body.
+    const chunks=[];let byteCount=0;
+    try {
+      for await(const c of req){
+        byteCount+=c.byteLength;
+        if(byteCount>128*1024)throw new Error('Too large');
+        chunks.push(c);
+      }
     }catch{return send(413,jsonErr(-32700,'Invalid or oversized body'));}
+    let raw;
+    try{raw=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks,byteCount));}
+    catch{return send(400,jsonErr(-32700,'Invalid UTF-8 body'));}
     let rpc;try{rpc=JSON.parse(raw);}catch{return send(400,jsonErr(-32700,'Parse error'));}
     const id=rpc?.id??null;
     if(!plain(rpc)||rpc.jsonrpc!=='2.0'||typeof rpc.method!=='string'||Array.isArray(rpc))return send(400,jsonErr(-32600,'Invalid JSON-RPC request',id));
