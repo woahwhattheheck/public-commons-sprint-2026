@@ -64,3 +64,13 @@ This test does not send HTTP to the network, authorize a payment or trigger Acti
 ## Revenue/application use
 
 SF49 commercial diagnostics can use the *separate* `sellerReportedSuccess`, `verifiedTransfers`, `transferAndBodyObserved`, `proofConflicts` and `uncertainOrPending` fields to locate what actually breaks after a discovered offer. A scoped diagnostic could report *which expected checkout step failed and why* for an opted-in seller without handling their keys or charging anyone. SCF SF10 may use genuine authorized findings with operator consent and exact provenance, but **neither a grant submission nor a pilot buyer has been obtained by this module**. Existing SF31/SF33/SF43/SF46/SF49/SF51 owners retain all existing source and buyer relationships.
+
+## Seller receipt observation bounds
+
+`captureBuyerResult()` now retains a seller-reported network only when it is
+`stellar:testnet` or `stellar:pubnet`, and a seller-reported transaction only
+when it is a lowercase 64-character hexadecimal hash. All other values become
+`null` in the portable observation; no arbitrary unbounded seller text is
+copied into receipt fields. The reported success flag is not independently
+verified. Invalid or missing receipt proof remains in the existing unverified
+or conflicting result states. No payment calls or network requests are added.
