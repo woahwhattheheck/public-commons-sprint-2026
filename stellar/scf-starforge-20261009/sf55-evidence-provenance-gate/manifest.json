@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "purpose": "SF55 source-pinned evidence inventory for existing SCF46 grant and paid-merchant QA owners. Not a provider or customer acceptance certificate.",
+  "claims": [
+    {
+      "id": "sf31_buyer_transport",
+      "kind": "source",
+      "file": "stellar/scf-starforge-20261009/sf31-buyer-client/buyer.mjs",
+      "git_blob_sha1": "56f83314e1417b6b165e63efa7f5e0c6260fc8d1"
+    },
+    {
+      "id": "sf50_seller_quote",
+      "kind": "source",
+      "file": "stellar/scf-starforge-20261009/sf50-seller-proof/proof.mjs",
+      "git_blob_sha1": "323794bfb1f6ef44bcfcc016ff508d5d6ae81345"
+    },
+    {
+      "id": "sf52_outcomes",
+      "kind": "source",
+      "file": "stellar/scf-starforge-20261009/sf52-buyer-outcomes/outcomes.mjs",
+      "git_blob_sha1": "c7ab2d281aaa2d28ade4e9d8daca80d689724376"
+    },
+    {
+      "id": "sf54_settlement_sidechannel",
+      "kind": "source",
+      "file": "stellar/scf-starforge-20261009/sf54-cataloging-sidechannel/sidechannel.mjs",
+      "git_blob_sha1": "46a1aac4661d395e7a26e5a6ba0163da2efcb222"
+    },
+    {
+      "id": "sf44_onramp",
+      "kind": "source",
+      "file": "stellar/scf-starforge-20261009/sf44-developer-onramp/mcp-onramp.mjs",
+      "git_blob_sha1": "234a3f57af9c5349093add7dad97675d32355a0f"
+    },
+    {
+      "id": "sf54_focused_test_source",
+      "kind": "focused_run",
+      "file": "stellar/scf-starforge-20261009/sf54-cataloging-sidechannel/test/sidechannel.test.mjs",
+      "git_blob_sha1": "cd87b676afcd1bbfe0d3dea7ff67ccf4de463fe9"
+    },
+    {
+      "id": "genuine_stellar_ledger_settlement",
+      "kind": "provider_receipt",
+      "note": "Existing Muse real-source testnet receipt owner; only actual provider receipt can establish transfer"
+    },
+    {
+      "id": "merchant_willingness_to_pay",
+      "kind": "buyer_traction",
+      "note": "Human-buyer consent-based evidence; no booked revenue established here"
+    },
+    {
+      "id": "scf46_interest_and_invitation",
+      "kind": "grant_status",
+      "note": "Original SF10 founder application owner; no application or invitation confirmed"
+    },
+    {
+      "id": "scf46_award_or_payment",
+      "kind": "grant_status",
+      "note": "No SCF funding or actual award represented"
+    }
+  ]
+}
