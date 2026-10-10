@@ -1,0 +1,10 @@
+{
+  "name": "qloo-accesslens-2026",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Accessibility-first, provenance-aware cultural venue planning with Qloo artist affinities",
+  "engines": {"node": ">=22"},
+  "scripts": {"start": "node server.mjs", "check:focused": "node --test test/planner.test.mjs"},
+  "license": "MIT"
+}
