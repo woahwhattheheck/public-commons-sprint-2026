@@ -1,0 +1,3351 @@
+{
+  "case_receipt_sha256": "35021bce46e1b86826c73789624944e6d406659ef622f9c83d335507eb60a3ae",
+  "citation": {
+    "article_url": "https://www.nature.com/articles/s41467-024-48910-0",
+    "authors": "Izadifar Z, et al.",
+    "doi": "10.1038/s41467-024-48910-0",
+    "journal": "Nature Communications",
+    "license": "CC BY 4.0",
+    "source_data_url": "https://media.springernature.com/original/springer-static/esm/art%3A10.1038%2Fs41467-024-48910-0/MediaObjects/41467_2024_48910_MOESM4_ESM.xlsx",
+    "year": 2024
+  },
+  "config": {
+    "core_analyses_run": true,
+    "min_baseline_points": 12,
+    "min_points": 6
+  },
+  "core": {
+    "file": "chiptrace.py",
+    "git_blob_sha1": "4cdd8beaa7009e05fb93913f13b02ec42edfe6ba",
+    "matches_expected_blob": true,
+    "sha256": "2e7a0edb130ff70ddd8b58b1d1dc989b5165f443840d101c8e266bd8b249b68a",
+    "version": "1.0.0"
+  },
+  "data_classes": {
+    "generated": "Synthetic fault control: reference is the measured group; candidate is a generated copy of the same group with one predeclared change. Shows software behaviour only.",
+    "measured": "Values in this section are TEER measurements reported in the source workbook (unit cell A1: Ohm.cm2). Synthetic fault-control copies appear only in the Fault controls section and are not measurements."
+  },
+  "dispositions": {
+    "biological_quality": "INSUFFICIENT_EVIDENCE",
+    "cross_group_comparison": "NOT_PERFORMED",
+    "independent_baseline": "NONE_AVAILABLE",
+    "interpolation": "NOT_PERFORMED",
+    "pooling": "NOT_PERFORMED",
+    "qc_ground_truth": "NONE_IN_SOURCE",
+    "source_identity": "SOURCE_IDENTITY_UNVERIFIED"
+  },
+  "excluded": [
+    {
+      "item": "Fig. 3h",
+      "reason": "unit and normalization not stated; baseline-zeroed, predominantly negative values"
+    },
+    {
+      "item": "Fig. 3i",
+      "reason": "no such sheet in the workbook"
+    }
+  ],
+  "fault_controls": [
+    {
+      "candidate_file": "FI1_remove_one_source_cell.csv",
+      "candidate_sha256": "5aadca07651c8f4cf68fe08a68a24761f0f8a8ff51e84352b6137e6fe6dfac22",
+      "cell": "L9",
+      "core": {
+        "analysis_kind": "SYNTHETIC_FAULT_CONTROL",
+        "biological_quality_disposition": "INSUFFICIENT_EVIDENCE",
+        "channels": [
+          {
+            "channel": "barrier_TEER",
+            "core_state": "INSUFFICIENT_EVIDENCE",
+            "metrics": {
+              "level_z": 0.025324,
+              "max_change_z": 2.525723,
+              "max_cross_sensor_correlation_delta": 0.0,
+              "max_trend_z_per_baseline_step": 0.47641,
+              "missing_fraction": 0.3,
+              "outlier_fraction": 0.02857143,
+              "reference_window_coverage": 0.0,
+              "replicate_divergence_z": 1.806011,
+              "run_center": 123.728
+            },
+            "quality_risk_score": null,
+            "reasons": [
+              "cadence-derived missingness exceeds review threshold",
+              "observed replicate time span is under 75% of baseline median duration; full-window quality cannot be assessed"
+            ],
+            "uncertainty": 1.0
+          }
+        ],
+        "core_config": {
+          "min_baseline_points": 12,
+          "min_points": 6
+        },
+        "core_inputs": {
+          "baseline_file": "s2b_transwell_measured.csv",
+          "baseline_rows": 36,
+          "baseline_sha256": "b577864c3fd3687a5d79cdb76698ee387f62cba24ca38709193eb43aa9fa63e4",
+          "run_file": "FI1_remove_one_source_cell.csv",
+          "run_rows": 35,
+          "run_sha256": "5aadca07651c8f4cf68fe08a68a24761f0f8a8ff51e84352b6137e6fe6dfac22"
+        },
+        "core_overall_state": "INSUFFICIENT_EVIDENCE",
+        "core_receipt_sha256": "7b5827363fdd9d7f745497799e5977db868bd6d6cc459df47b229f635c8659f5",
+        "core_receipt_verifies": true,
+        "core_report_file": "fault_FI1_remove_one_source_cell.json",
+        "interpretation": "Synthetic fault control: reference is the measured group; candidate is a generated copy of the same group with one predeclared change. Shows software behaviour only.",
+        "source_identity": "SOURCE_IDENTITY_UNVERIFIED"
+      },
+      "description": "candidate copy omits measured cell L9; no value is added",
+      "group": "transwell",
+      "id": "FI1_remove_one_source_cell",
+      "kind": "remove_cell",
+      "lineage": [
+        {
+          "action": "unchanged",
+          "generated_time_s": 0.0,
+          "generated_value": 74.556,
+          "parent_cell": "J3",
+          "parent_time_s": 0.0,
+          "parent_value": 74.556
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 86400.0,
+          "generated_value": 377.34,
+          "parent_cell": "J4",
+          "parent_time_s": 86400.0,
+          "parent_value": 377.34
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 187.91,
+          "parent_cell": "J6",
+          "parent_time_s": 259200.0,
+          "parent_value": 187.91
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 118.94,
+          "parent_cell": "J7",
+          "parent_time_s": 345600.0,
+          "parent_value": 118.94
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 432000.0,
+          "generated_value": 159.22,
+          "parent_cell": "J8",
+          "parent_time_s": 432000.0,
+          "parent_value": 159.22
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 518400.0,
+          "generated_value": 27.436,
+          "parent_cell": "J9",
+          "parent_time_s": 518400.0,
+          "parent_value": 27.436
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 604800.0,
+          "generated_value": 94.24,
+          "parent_cell": "J10",
+          "parent_time_s": 604800.0,
+          "parent_value": 94.24
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 0.0,
+          "generated_value": 88.996,
+          "parent_cell": "K3",
+          "parent_time_s": 0.0,
+          "parent_value": 88.996
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 86400.0,
+          "generated_value": 342.76,
+          "parent_cell": "K4",
+          "parent_time_s": 86400.0,
+          "parent_value": 342.76
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 195.016,
+          "parent_cell": "K6",
+          "parent_time_s": 259200.0,
+          "parent_value": 195.016
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 175.94,
+          "parent_cell": "K7",
+          "parent_time_s": 345600.0,
+          "parent_value": 175.94
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 432000.0,
+          "generated_value": 83.334,
+          "parent_cell": "K8",
+          "parent_time_s": 432000.0,
+          "parent_value": 83.334
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 518400.0,
+          "generated_value": 58.254,
+          "parent_cell": "K9",
+          "parent_time_s": 518400.0,
+          "parent_value": 58.254
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 604800.0,
+          "generated_value": 103.702,
+          "parent_cell": "K10",
+          "parent_time_s": 604800.0,
+          "parent_value": 103.702
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 0.0,
+          "generated_value": 62.434,
+          "parent_cell": "L3",
+          "parent_time_s": 0.0,
+          "parent_value": 62.434
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 86400.0,
+          "generated_value": 416.176,
+          "parent_cell": "L4",
+          "parent_time_s": 86400.0,
+          "parent_value": 416.176
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 123.728,
+          "parent_cell": "L6",
+          "parent_time_s": 259200.0,
+          "parent_value": 123.728
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 78.622,
+          "parent_cell": "L7",
+          "parent_time_s": 345600.0,
+          "parent_value": 78.622
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 432000.0,
+          "generated_value": 128.212,
+          "parent_cell": "L8",
+          "parent_time_s": 432000.0,
+          "parent_value": 128.212
+        },
+        {
+          "action": "removed",
+          "generated_time_s": null,
+          "generated_value": null,
+          "parent_cell": "L9",
+          "parent_time_s": 518400.0,
+          "parent_value": 11.4
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 604800.0,
+          "generated_value": 80.712,
+          "parent_cell": "L10",
+          "parent_time_s": 604800.0,
+          "parent_value": 80.712
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 691200.0,
+          "generated_value": 61.674,
+          "parent_cell": "L11",
+          "parent_time_s": 691200.0,
+          "parent_value": 61.674
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 0.0,
+          "generated_value": 56.886,
+          "parent_cell": "M3",
+          "parent_time_s": 0.0,
+          "parent_value": 56.886
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 86400.0,
+          "generated_value": 397.708,
+          "parent_cell": "M4",
+          "parent_time_s": 86400.0,
+          "parent_value": 397.708
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 269.496,
+          "parent_cell": "M6",
+          "parent_time_s": 259200.0,
+          "parent_value": 269.496
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 211.85,
+          "parent_cell": "M7",
+          "parent_time_s": 345600.0,
+          "parent_value": 211.85
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 691200.0,
+          "generated_value": 61.37,
+          "parent_cell": "M11",
+          "parent_time_s": 691200.0,
+          "parent_value": 61.37
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 86400.0,
+          "generated_value": 369.322,
+          "parent_cell": "N4",
+          "parent_time_s": 86400.0,
+          "parent_value": 369.322
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 278.73,
+          "parent_cell": "N6",
+          "parent_time_s": 259200.0,
+          "parent_value": 278.73
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 114.646,
+          "parent_cell": "N7",
+          "parent_time_s": 345600.0,
+          "parent_value": 114.646
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 691200.0,
+          "generated_value": 55.86,
+          "parent_cell": "N11",
+          "parent_time_s": 691200.0,
+          "parent_value": 55.86
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 244.074,
+          "parent_cell": "O6",
+          "parent_time_s": 259200.0,
+          "parent_value": 244.074
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 161.842,
+          "parent_cell": "O7",
+          "parent_time_s": 345600.0,
+          "parent_value": 161.842
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 691200.0,
+          "generated_value": 44.84,
+          "parent_cell": "O11",
+          "parent_time_s": 691200.0,
+          "parent_value": 44.84
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 251.446,
+          "parent_cell": "P6",
+          "parent_time_s": 259200.0,
+          "parent_value": 251.446
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 216.22,
+          "parent_cell": "Q6",
+          "parent_time_s": 259200.0,
+          "parent_value": 216.22
+        }
+      ],
+      "measurement_status": "GENERATED_NOT_MEASURED",
+      "parent_csv_sha256": "70732bd81fbf613179e43f998ab64953fe7d213f02576ebb443bc5d3285fd8f5",
+      "parent_workbook_sha256": "0667dee0329276f70c50e65aaac0efa44518fffd447aef9fcc21ff706ad4ed1e",
+      "reference_file": "s2b_transwell_measured.csv",
+      "reference_sha256": "b577864c3fd3687a5d79cdb76698ee387f62cba24ca38709193eb43aa9fa63e4",
+      "rows_generated": 35,
+      "rows_parent": 36,
+      "tag": "synthetic_fault_injection"
+    },
+    {
+      "candidate_file": "FI2_scale_one_series.csv",
+      "candidate_sha256": "c964d8080b3adbd9cd77ca7f638fe264646fd6a527c2e9b5b3ced6ec129f58ba",
+      "core": {
+        "analysis_kind": "SYNTHETIC_FAULT_CONTROL",
+        "biological_quality_disposition": "INSUFFICIENT_EVIDENCE",
+        "channels": [
+          {
+            "channel": "barrier_TEER",
+            "core_state": "INSUFFICIENT_EVIDENCE",
+            "metrics": {
+              "level_z": 0.197518,
+              "max_change_z": 5.404044,
+              "max_cross_sensor_correlation_delta": 0.0,
+              "max_trend_z_per_baseline_step": 0.908165,
+              "missing_fraction": 0.28,
+              "outlier_fraction": 0.08333333,
+              "reference_window_coverage": 0.33333333,
+              "replicate_divergence_z": 4.140121,
+              "run_center": 463.54815
+            },
+            "quality_risk_score": null,
+            "reasons": [
+              "within-run change exceeds review threshold",
+              "replicate divergence exceeds review threshold",
+              "cadence-derived missingness exceeds review threshold",
+              "observed replicate time span is under 75% of baseline median duration; full-window quality cannot be assessed"
+            ],
+            "uncertainty": 1.0
+          }
+        ],
+        "core_config": {
+          "min_baseline_points": 12,
+          "min_points": 6
+        },
+        "core_inputs": {
+          "baseline_file": "s2b_cervix_chip_measured.csv",
+          "baseline_rows": 36,
+          "baseline_sha256": "637119571eec087df5379109221bb5b3448f9faa55fbf74cc7c7ff973ef35457",
+          "run_file": "FI2_scale_one_series.csv",
+          "run_rows": 36,
+          "run_sha256": "c964d8080b3adbd9cd77ca7f638fe264646fd6a527c2e9b5b3ced6ec129f58ba"
+        },
+        "core_overall_state": "INSUFFICIENT_EVIDENCE",
+        "core_receipt_sha256": "56a2462ee04d2c53a382aa6e03ea02930acb9e28a9399b49d251c86e974ba259",
+        "core_receipt_verifies": true,
+        "core_report_file": "fault_FI2_scale_one_series.json",
+        "interpretation": "Synthetic fault control: reference is the measured group; candidate is a generated copy of the same group with one predeclared change. Shows software behaviour only.",
+        "source_identity": "SOURCE_IDENTITY_UNVERIFIED"
+      },
+      "description": "candidate copy multiplies every measured value of source series F by 3",
+      "factor": 3.0,
+      "group": "cervix_chip",
+      "id": "FI2_scale_one_series",
+      "kind": "scale_series",
+      "lineage": [
+        {
+          "action": "unchanged",
+          "generated_time_s": 172800.0,
+          "generated_value": 998.6754,
+          "parent_cell": "B5",
+          "parent_time_s": 172800.0,
+          "parent_value": 998.6754
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 631.9014,
+          "parent_cell": "B6",
+          "parent_time_s": 259200.0,
+          "parent_value": 631.9014
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 879.8514,
+          "parent_cell": "B7",
+          "parent_time_s": 345600.0,
+          "parent_value": 879.8514
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 432000.0,
+          "generated_value": 486.2118,
+          "parent_cell": "B8",
+          "parent_time_s": 432000.0,
+          "parent_value": 486.2118
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 604800.0,
+          "generated_value": 223.8756,
+          "parent_cell": "B10",
+          "parent_time_s": 604800.0,
+          "parent_value": 223.8756
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 172800.0,
+          "generated_value": 890.5881,
+          "parent_cell": "C5",
+          "parent_time_s": 172800.0,
+          "parent_value": 890.5881
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 691200.0,
+          "generated_value": 81.3858,
+          "parent_cell": "C11",
+          "parent_time_s": 691200.0,
+          "parent_value": 81.3858
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 172800.0,
+          "generated_value": 440.8845,
+          "parent_cell": "D5",
+          "parent_time_s": 172800.0,
+          "parent_value": 440.8845
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 663.4188,
+          "parent_cell": "D6",
+          "parent_time_s": 259200.0,
+          "parent_value": 663.4188
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 352.4802,
+          "parent_cell": "D7",
+          "parent_time_s": 345600.0,
+          "parent_value": 352.4802
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 604800.0,
+          "generated_value": 71.4927,
+          "parent_cell": "D10",
+          "parent_time_s": 604800.0,
+          "parent_value": 71.4927
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 691200.0,
+          "generated_value": 87.1812,
+          "parent_cell": "D11",
+          "parent_time_s": 691200.0,
+          "parent_value": 87.1812
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 432000.0,
+          "generated_value": 38.0595,
+          "parent_cell": "E8",
+          "parent_time_s": 432000.0,
+          "parent_value": 38.0595
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 604800.0,
+          "generated_value": 34.3002,
+          "parent_cell": "E10",
+          "parent_time_s": 604800.0,
+          "parent_value": 34.3002
+        },
+        {
+          "action": "value_scaled",
+          "generated_time_s": 172800.0,
+          "generated_value": 2133.6957,
+          "parent_cell": "F5",
+          "parent_time_s": 172800.0,
+          "parent_value": 711.2319
+        },
+        {
+          "action": "value_scaled",
+          "generated_time_s": 259200.0,
+          "generated_value": 2589.3927,
+          "parent_cell": "F6",
+          "parent_time_s": 259200.0,
+          "parent_value": 863.1309
+        },
+        {
+          "action": "value_scaled",
+          "generated_time_s": 345600.0,
+          "generated_value": 3423.285,
+          "parent_cell": "F7",
+          "parent_time_s": 345600.0,
+          "parent_value": 1141.095
+        },
+        {
+          "action": "value_scaled",
+          "generated_time_s": 432000.0,
+          "generated_value": 1116.1017000000002,
+          "parent_cell": "F8",
+          "parent_time_s": 432000.0,
+          "parent_value": 372.0339
+        },
+        {
+          "action": "value_scaled",
+          "generated_time_s": 604800.0,
+          "generated_value": 391.2111,
+          "parent_cell": "F10",
+          "parent_time_s": 604800.0,
+          "parent_value": 130.4037
+        },
+        {
+          "action": "value_scaled",
+          "generated_time_s": 691200.0,
+          "generated_value": 515.6595,
+          "parent_cell": "F11",
+          "parent_time_s": 691200.0,
+          "parent_value": 171.8865
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 86400.0,
+          "generated_value": 1151.414,
+          "parent_cell": "G4",
+          "parent_time_s": 86400.0,
+          "parent_value": 1151.414
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 172800.0,
+          "generated_value": 648.0582,
+          "parent_cell": "G5",
+          "parent_time_s": 172800.0,
+          "parent_value": 648.0582
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 723.9003,
+          "parent_cell": "G6",
+          "parent_time_s": 259200.0,
+          "parent_value": 723.9003
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 1284.539,
+          "parent_cell": "G7",
+          "parent_time_s": 345600.0,
+          "parent_value": 1284.539
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 432000.0,
+          "generated_value": 1250.859,
+          "parent_cell": "G8",
+          "parent_time_s": 432000.0,
+          "parent_value": 1250.859
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 0.0,
+          "generated_value": 336.4051,
+          "parent_cell": "H3",
+          "parent_time_s": 0.0,
+          "parent_value": 336.4051
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 86400.0,
+          "generated_value": 581.7486,
+          "parent_cell": "H4",
+          "parent_time_s": 86400.0,
+          "parent_value": 581.7486
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 172800.0,
+          "generated_value": 749.1006,
+          "parent_cell": "H5",
+          "parent_time_s": 172800.0,
+          "parent_value": 749.1006
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 259200.0,
+          "generated_value": 301.8727,
+          "parent_cell": "H6",
+          "parent_time_s": 259200.0,
+          "parent_value": 301.8727
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 518400.0,
+          "generated_value": 142.5748,
+          "parent_cell": "H9",
+          "parent_time_s": 518400.0,
+          "parent_value": 142.5748
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 0.0,
+          "generated_value": 371.1504,
+          "parent_cell": "I3",
+          "parent_time_s": 0.0,
+          "parent_value": 371.1504
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 86400.0,
+          "generated_value": 403.4724,
+          "parent_cell": "I4",
+          "parent_time_s": 86400.0,
+          "parent_value": 403.4724
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 345600.0,
+          "generated_value": 328.3045,
+          "parent_cell": "I7",
+          "parent_time_s": 345600.0,
+          "parent_value": 328.3045
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 432000.0,
+          "generated_value": 304.9338,
+          "parent_cell": "I8",
+          "parent_time_s": 432000.0,
+          "parent_value": 304.9338
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 518400.0,
+          "generated_value": 255.6614,
+          "parent_cell": "I9",
+          "parent_time_s": 518400.0,
+          "parent_value": 255.6614
+        },
+        {
+          "action": "unchanged",
+          "generated_time_s": 604800.0,
+          "generated_value": 243.5356,
+          "parent_cell": "I10",
+          "parent_time_s": 604800.0,
+          "parent_value": 243.5356
+        }
+      ],
+      "measurement_status": "GENERATED_NOT_MEASURED",
+      "parent_csv_sha256": "70732bd81fbf613179e43f998ab64953fe7d213f02576ebb443bc5d3285fd8f5",
+      "parent_workbook_sha256": "0667dee0329276f70c50e65aaac0efa44518fffd447aef9fcc21ff706ad4ed1e",
+      "reference_file": "s2b_cervix_chip_measured.csv",
+      "reference_sha256": "637119571eec087df5379109221bb5b3448f9faa55fbf74cc7c7ff973ef35457",
+      "rows_generated": 36,
+      "rows_parent": 36,
+      "series": "F",
+      "tag": "synthetic_fault_injection"
+    },
+    {
+      "candidate_file": "FI3_time_origin_misassigned.csv",
+      "candidate_sha256": "707ac079f46e25aabac433e7e6fc04c6971dbff0286c57325e73b2edc3fc0c1c",
+      "core": {
+        "analysis_kind": "SYNTHETIC_FAULT_CONTROL",
+        "biological_quality_disposition": "INSUFFICIENT_EVIDENCE",
+        "channels": [
+          {
+            "channel": "barrier_TEER",
+            "core_state": "INSUFFICIENT_EVIDENCE",
+            "metrics": {
+              "level_z": 0.0,
+              "max_change_z": 2.525723,
+              "max_cross_sensor_correlation_delta": 0.0,
+              "max_trend_z_per_baseline_step": 0.47641,
+              "missing_fraction": 0.28,
+              "outlier_fraction": 0.02777778,
+              "reference_window_coverage": 0.0,
+              "replicate_divergence_z": 1.817065,
+              "run_center": 121.334
+            },
+            "quality_risk_score": null,
+            "reasons": [
+              "cadence-derived missingness exceeds review threshold",
+              "observed replicate time span is under 75% of baseline median duration; full-window quality cannot be assessed"
+            ],
+            "uncertainty": 1.0
+          }
+        ],
+        "core_config": {
+          "min_baseline_points": 12,
+          "min_points": 6
+        },
+        "core_inputs": {
+          "baseline_file": "s2b_transwell_measured.csv",
+          "baseline_rows": 36,
+          "baseline_sha256": "b577864c3fd3687a5d79cdb76698ee387f62cba24ca38709193eb43aa9fa63e4",
+          "run_file": "FI3_time_origin_misassigned.csv",
+          "run_rows": 36,
+          "run_sha256": "707ac079f46e25aabac433e7e6fc04c6971dbff0286c57325e73b2edc3fc0c1c"
+        },
+        "core_overall_state": "INSUFFICIENT_EVIDENCE",
+        "core_receipt_sha256": "d6d52be2f88efb94fb2487454b87d2a286cb12fbe4272f7e795f1124d0530906",
+        "core_receipt_verifies": true,
+        "core_report_file": "fault_FI3_time_origin_misassigned.json",
+        "interpretation": "Synthetic fault control: reference is the measured group; candidate is a generated copy of the same group with one predeclared change. Shows software behaviour only.",
+        "source_identity": "SOURCE_IDENTITY_UNVERIFIED"
+      },
+      "description": "candidate copy anchors time_s at differentiation day 0 instead of source day -3 (all times +259200 s)",
+      "group": "transwell",
+      "id": "FI3_time_origin_misassigned",
+      "kind": "time_offset",
+      "lineage": [
+        {
+          "action": "time_offset",
+          "generated_time_s": 259200.0,
+          "generated_value": 74.556,
+          "parent_cell": "J3",
+          "parent_time_s": 0.0,
+          "parent_value": 74.556
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 345600.0,
+          "generated_value": 377.34,
+          "parent_cell": "J4",
+          "parent_time_s": 86400.0,
+          "parent_value": 377.34
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 518400.0,
+          "generated_value": 187.91,
+          "parent_cell": "J6",
+          "parent_time_s": 259200.0,
+          "parent_value": 187.91
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 604800.0,
+          "generated_value": 118.94,
+          "parent_cell": "J7",
+          "parent_time_s": 345600.0,
+          "parent_value": 118.94
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 691200.0,
+          "generated_value": 159.22,
+          "parent_cell": "J8",
+          "parent_time_s": 432000.0,
+          "parent_value": 159.22
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 777600.0,
+          "generated_value": 27.436,
+          "parent_cell": "J9",
+          "parent_time_s": 518400.0,
+          "parent_value": 27.436
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 864000.0,
+          "generated_value": 94.24,
+          "parent_cell": "J10",
+          "parent_time_s": 604800.0,
+          "parent_value": 94.24
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 259200.0,
+          "generated_value": 88.996,
+          "parent_cell": "K3",
+          "parent_time_s": 0.0,
+          "parent_value": 88.996
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 345600.0,
+          "generated_value": 342.76,
+          "parent_cell": "K4",
+          "parent_time_s": 86400.0,
+          "parent_value": 342.76
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 518400.0,
+          "generated_value": 195.016,
+          "parent_cell": "K6",
+          "parent_time_s": 259200.0,
+          "parent_value": 195.016
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 604800.0,
+          "generated_value": 175.94,
+          "parent_cell": "K7",
+          "parent_time_s": 345600.0,
+          "parent_value": 175.94
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 691200.0,
+          "generated_value": 83.334,
+          "parent_cell": "K8",
+          "parent_time_s": 432000.0,
+          "parent_value": 83.334
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 777600.0,
+          "generated_value": 58.254,
+          "parent_cell": "K9",
+          "parent_time_s": 518400.0,
+          "parent_value": 58.254
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 864000.0,
+          "generated_value": 103.702,
+          "parent_cell": "K10",
+          "parent_time_s": 604800.0,
+          "parent_value": 103.702
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 259200.0,
+          "generated_value": 62.434,
+          "parent_cell": "L3",
+          "parent_time_s": 0.0,
+          "parent_value": 62.434
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 345600.0,
+          "generated_value": 416.176,
+          "parent_cell": "L4",
+          "parent_time_s": 86400.0,
+          "parent_value": 416.176
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 518400.0,
+          "generated_value": 123.728,
+          "parent_cell": "L6",
+          "parent_time_s": 259200.0,
+          "parent_value": 123.728
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 604800.0,
+          "generated_value": 78.622,
+          "parent_cell": "L7",
+          "parent_time_s": 345600.0,
+          "parent_value": 78.622
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 691200.0,
+          "generated_value": 128.212,
+          "parent_cell": "L8",
+          "parent_time_s": 432000.0,
+          "parent_value": 128.212
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 777600.0,
+          "generated_value": 11.4,
+          "parent_cell": "L9",
+          "parent_time_s": 518400.0,
+          "parent_value": 11.4
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 864000.0,
+          "generated_value": 80.712,
+          "parent_cell": "L10",
+          "parent_time_s": 604800.0,
+          "parent_value": 80.712
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 950400.0,
+          "generated_value": 61.674,
+          "parent_cell": "L11",
+          "parent_time_s": 691200.0,
+          "parent_value": 61.674
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 259200.0,
+          "generated_value": 56.886,
+          "parent_cell": "M3",
+          "parent_time_s": 0.0,
+          "parent_value": 56.886
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 345600.0,
+          "generated_value": 397.708,
+          "parent_cell": "M4",
+          "parent_time_s": 86400.0,
+          "parent_value": 397.708
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 518400.0,
+          "generated_value": 269.496,
+          "parent_cell": "M6",
+          "parent_time_s": 259200.0,
+          "parent_value": 269.496
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 604800.0,
+          "generated_value": 211.85,
+          "parent_cell": "M7",
+          "parent_time_s": 345600.0,
+          "parent_value": 211.85
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 950400.0,
+          "generated_value": 61.37,
+          "parent_cell": "M11",
+          "parent_time_s": 691200.0,
+          "parent_value": 61.37
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 345600.0,
+          "generated_value": 369.322,
+          "parent_cell": "N4",
+          "parent_time_s": 86400.0,
+          "parent_value": 369.322
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 518400.0,
+          "generated_value": 278.73,
+          "parent_cell": "N6",
+          "parent_time_s": 259200.0,
+          "parent_value": 278.73
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 604800.0,
+          "generated_value": 114.646,
+          "parent_cell": "N7",
+          "parent_time_s": 345600.0,
+          "parent_value": 114.646
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 950400.0,
+          "generated_value": 55.86,
+          "parent_cell": "N11",
+          "parent_time_s": 691200.0,
+          "parent_value": 55.86
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 518400.0,
+          "generated_value": 244.074,
+          "parent_cell": "O6",
+          "parent_time_s": 259200.0,
+          "parent_value": 244.074
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 604800.0,
+          "generated_value": 161.842,
+          "parent_cell": "O7",
+          "parent_time_s": 345600.0,
+          "parent_value": 161.842
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 950400.0,
+          "generated_value": 44.84,
+          "parent_cell": "O11",
+          "parent_time_s": 691200.0,
+          "parent_value": 44.84
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 518400.0,
+          "generated_value": 251.446,
+          "parent_cell": "P6",
+          "parent_time_s": 259200.0,
+          "parent_value": 251.446
+        },
+        {
+          "action": "time_offset",
+          "generated_time_s": 518400.0,
+          "generated_value": 216.22,
+          "parent_cell": "Q6",
+          "parent_time_s": 259200.0,
+          "parent_value": 216.22
+        }
+      ],
+      "measurement_status": "GENERATED_NOT_MEASURED",
+      "offset_s": 259200,
+      "parent_csv_sha256": "70732bd81fbf613179e43f998ab64953fe7d213f02576ebb443bc5d3285fd8f5",
+      "parent_workbook_sha256": "0667dee0329276f70c50e65aaac0efa44518fffd447aef9fcc21ff706ad4ed1e",
+      "reference_file": "s2b_transwell_measured.csv",
+      "reference_sha256": "b577864c3fd3687a5d79cdb76698ee387f62cba24ca38709193eb43aa9fa63e4",
+      "rows_generated": 36,
+      "rows_parent": 36,
+      "tag": "synthetic_fault_injection"
+    }
+  ],
+  "groups": [
+    {
+      "absent_cell_count": 36,
+      "absent_cells": [
+        "B3",
+        "C3",
+        "D3",
+        "E3",
+        "F3",
+        "G3",
+        "B4",
+        "C4",
+        "D4",
+        "E4",
+        "F4",
+        "E5",
+        "I5",
+        "C6",
+        "E6",
+        "I6",
+        "C7",
+        "E7",
+        "H7",
+        "C8",
+        "D8",
+        "H8",
+        "B9",
+        "C9",
+        "D9",
+        "E9",
+        "F9",
+        "G9",
+        "C10",
+        "G10",
+        "H10",
+        "B11",
+        "E11",
+        "G11",
+        "H11",
+        "I11"
+      ],
+      "columns": "BCDEFGHI",
+      "eligibility": {
+        "baseline_n": 36,
+        "baseline_n_meets_min_baseline_points": true,
+        "core_cadence_s": 86400.0,
+        "core_center": 387.75315,
+        "core_min_points_per_group": 3,
+        "core_required_groups": 2,
+        "core_scale": 383.73728085,
+        "core_scale_method": "MAD",
+        "reference_median_span_s": 518400.0,
+        "series": [
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": false,
+            "meets_points_per_group": true,
+            "observations": 5,
+            "replicate_id": "unverified_source_series_B",
+            "span_days": 5.0,
+            "span_fraction_of_reference": 0.833333,
+            "span_s": 432000.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": false,
+            "meets_points_per_group": false,
+            "observations": 2,
+            "replicate_id": "unverified_source_series_C",
+            "span_days": 6.0,
+            "span_fraction_of_reference": 1.0,
+            "span_s": 518400.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": false,
+            "meets_points_per_group": true,
+            "observations": 5,
+            "replicate_id": "unverified_source_series_D",
+            "span_days": 6.0,
+            "span_fraction_of_reference": 1.0,
+            "span_s": 518400.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": false,
+            "meets_min_points": false,
+            "meets_points_per_group": false,
+            "observations": 2,
+            "replicate_id": "unverified_source_series_E",
+            "span_days": 2.0,
+            "span_fraction_of_reference": 0.333333,
+            "span_s": 172800.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": true,
+            "meets_points_per_group": true,
+            "observations": 6,
+            "replicate_id": "unverified_source_series_F",
+            "span_days": 6.0,
+            "span_fraction_of_reference": 1.0,
+            "span_s": 518400.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": false,
+            "meets_min_points": false,
+            "meets_points_per_group": true,
+            "observations": 5,
+            "replicate_id": "unverified_source_series_G",
+            "span_days": 4.0,
+            "span_fraction_of_reference": 0.666667,
+            "span_s": 345600.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": false,
+            "meets_points_per_group": true,
+            "observations": 5,
+            "replicate_id": "unverified_source_series_H",
+            "span_days": 6.0,
+            "span_fraction_of_reference": 1.0,
+            "span_s": 518400.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": true,
+            "meets_points_per_group": true,
+            "observations": 6,
+            "replicate_id": "unverified_source_series_I",
+            "span_days": 7.0,
+            "span_fraction_of_reference": 1.166667,
+            "span_s": 604800.0
+          }
+        ],
+        "series_below_75pct_span": 2,
+        "series_meeting_75pct_span": 6,
+        "series_meeting_min_points": 2,
+        "series_meeting_points_per_group": 6,
+        "source_series_label_status": "SOURCE_IDENTITY_UNVERIFIED",
+        "source_series_labels": 8
+      },
+      "grid_cell_count": 72,
+      "header_cell": "B2",
+      "key": "cervix_chip",
+      "label": "Cervix Chip",
+      "measured_subset": {
+        "construction": "header plus byte-identical parent CSV lines for this run_id only",
+        "file": "s2b_cervix_chip_measured.csv",
+        "rows": 36,
+        "sha256": "637119571eec087df5379109221bb5b3448f9faa55fbf74cc7c7ff973ef35457"
+      },
+      "observed_cell_count": 36,
+      "run_id": "doi10.1038-s41467-024-48910-0_supp-s2b_cervix-chip",
+      "self_reference_replay": {
+        "analysis_kind": "SOFTWARE_REPLAY_CONSISTENCY",
+        "biological_quality_disposition": "INSUFFICIENT_EVIDENCE",
+        "channels": [
+          {
+            "channel": "barrier_TEER",
+            "core_state": "INSUFFICIENT_EVIDENCE",
+            "metrics": {
+              "level_z": 0.0,
+              "max_change_z": 1.801348,
+              "max_cross_sensor_correlation_delta": 0.0,
+              "max_trend_z_per_baseline_step": 0.372818,
+              "missing_fraction": 0.28,
+              "outlier_fraction": 0.0,
+              "reference_window_coverage": 0.33333333,
+              "replicate_divergence_z": 2.906244,
+              "run_center": 387.75315
+            },
+            "quality_risk_score": null,
+            "reasons": [
+              "cadence-derived missingness exceeds review threshold",
+              "observed replicate time span is under 75% of baseline median duration; full-window quality cannot be assessed"
+            ],
+            "uncertainty": 1.0
+          }
+        ],
+        "core_config": {
+          "min_baseline_points": 12,
+          "min_points": 6
+        },
+        "core_inputs": {
+          "baseline_file": "s2b_cervix_chip_measured.csv",
+          "baseline_rows": 36,
+          "baseline_sha256": "637119571eec087df5379109221bb5b3448f9faa55fbf74cc7c7ff973ef35457",
+          "run_file": "s2b_cervix_chip_measured.csv",
+          "run_rows": 36,
+          "run_sha256": "637119571eec087df5379109221bb5b3448f9faa55fbf74cc7c7ff973ef35457"
+        },
+        "core_overall_state": "INSUFFICIENT_EVIDENCE",
+        "core_receipt_sha256": "58ae3082ffe5ab9e3689c82e03fa558174a4bec8e00d51546786ebe562cdac3a",
+        "core_receipt_verifies": true,
+        "core_report_file": "replay_cervix_chip.json",
+        "interpretation": "Software replay consistency demonstration: the same measured group is both reference and candidate. Not a validation and not evidence of biological quality.",
+        "source_identity": "SOURCE_IDENTITY_UNVERIFIED"
+      },
+      "series": [
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "B5",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, B5",
+              "source_day": -1,
+              "time_s": 172800.0,
+              "unit": "Ohm.cm2",
+              "value": 998.6754
+            },
+            {
+              "cell": "B6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, B6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 631.9014
+            },
+            {
+              "cell": "B7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, B7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 879.8514
+            },
+            {
+              "cell": "B8",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, B8",
+              "source_day": 2,
+              "time_s": 432000.0,
+              "unit": "Ohm.cm2",
+              "value": 486.2118
+            },
+            {
+              "cell": "B10",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, B10",
+              "source_day": 4,
+              "time_s": 604800.0,
+              "unit": "Ohm.cm2",
+              "value": 223.8756
+            }
+          ],
+          "replicate_id": "unverified_source_series_B",
+          "series_column": "B"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "C5",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, C5",
+              "source_day": -1,
+              "time_s": 172800.0,
+              "unit": "Ohm.cm2",
+              "value": 890.5881
+            },
+            {
+              "cell": "C11",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, C11",
+              "source_day": 5,
+              "time_s": 691200.0,
+              "unit": "Ohm.cm2",
+              "value": 81.3858
+            }
+          ],
+          "replicate_id": "unverified_source_series_C",
+          "series_column": "C"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "D5",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, D5",
+              "source_day": -1,
+              "time_s": 172800.0,
+              "unit": "Ohm.cm2",
+              "value": 440.8845
+            },
+            {
+              "cell": "D6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, D6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 663.4188
+            },
+            {
+              "cell": "D7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, D7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 352.4802
+            },
+            {
+              "cell": "D10",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, D10",
+              "source_day": 4,
+              "time_s": 604800.0,
+              "unit": "Ohm.cm2",
+              "value": 71.4927
+            },
+            {
+              "cell": "D11",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, D11",
+              "source_day": 5,
+              "time_s": 691200.0,
+              "unit": "Ohm.cm2",
+              "value": 87.1812
+            }
+          ],
+          "replicate_id": "unverified_source_series_D",
+          "series_column": "D"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "E8",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, E8",
+              "source_day": 2,
+              "time_s": 432000.0,
+              "unit": "Ohm.cm2",
+              "value": 38.0595
+            },
+            {
+              "cell": "E10",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, E10",
+              "source_day": 4,
+              "time_s": 604800.0,
+              "unit": "Ohm.cm2",
+              "value": 34.3002
+            }
+          ],
+          "replicate_id": "unverified_source_series_E",
+          "series_column": "E"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "F5",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, F5",
+              "source_day": -1,
+              "time_s": 172800.0,
+              "unit": "Ohm.cm2",
+              "value": 711.2319
+            },
+            {
+              "cell": "F6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, F6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 863.1309
+            },
+            {
+              "cell": "F7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, F7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 1141.095
+            },
+            {
+              "cell": "F8",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, F8",
+              "source_day": 2,
+              "time_s": 432000.0,
+              "unit": "Ohm.cm2",
+              "value": 372.0339
+            },
+            {
+              "cell": "F10",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, F10",
+              "source_day": 4,
+              "time_s": 604800.0,
+              "unit": "Ohm.cm2",
+              "value": 130.4037
+            },
+            {
+              "cell": "F11",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, F11",
+              "source_day": 5,
+              "time_s": 691200.0,
+              "unit": "Ohm.cm2",
+              "value": 171.8865
+            }
+          ],
+          "replicate_id": "unverified_source_series_F",
+          "series_column": "F"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "G4",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, G4",
+              "source_day": -2,
+              "time_s": 86400.0,
+              "unit": "Ohm.cm2",
+              "value": 1151.414
+            },
+            {
+              "cell": "G5",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, G5",
+              "source_day": -1,
+              "time_s": 172800.0,
+              "unit": "Ohm.cm2",
+              "value": 648.0582
+            },
+            {
+              "cell": "G6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, G6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 723.9003
+            },
+            {
+              "cell": "G7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, G7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 1284.539
+            },
+            {
+              "cell": "G8",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, G8",
+              "source_day": 2,
+              "time_s": 432000.0,
+              "unit": "Ohm.cm2",
+              "value": 1250.859
+            }
+          ],
+          "replicate_id": "unverified_source_series_G",
+          "series_column": "G"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "H3",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, H3",
+              "source_day": -3,
+              "time_s": 0.0,
+              "unit": "Ohm.cm2",
+              "value": 336.4051
+            },
+            {
+              "cell": "H4",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, H4",
+              "source_day": -2,
+              "time_s": 86400.0,
+              "unit": "Ohm.cm2",
+              "value": 581.7486
+            },
+            {
+              "cell": "H5",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, H5",
+              "source_day": -1,
+              "time_s": 172800.0,
+              "unit": "Ohm.cm2",
+              "value": 749.1006
+            },
+            {
+              "cell": "H6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, H6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 301.8727
+            },
+            {
+              "cell": "H9",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, H9",
+              "source_day": 3,
+              "time_s": 518400.0,
+              "unit": "Ohm.cm2",
+              "value": 142.5748
+            }
+          ],
+          "replicate_id": "unverified_source_series_H",
+          "series_column": "H"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "I3",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, I3",
+              "source_day": -3,
+              "time_s": 0.0,
+              "unit": "Ohm.cm2",
+              "value": 371.1504
+            },
+            {
+              "cell": "I4",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, I4",
+              "source_day": -2,
+              "time_s": 86400.0,
+              "unit": "Ohm.cm2",
+              "value": 403.4724
+            },
+            {
+              "cell": "I7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, I7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 328.3045
+            },
+            {
+              "cell": "I8",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, I8",
+              "source_day": 2,
+              "time_s": 432000.0,
+              "unit": "Ohm.cm2",
+              "value": 304.9338
+            },
+            {
+              "cell": "I9",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, I9",
+              "source_day": 3,
+              "time_s": 518400.0,
+              "unit": "Ohm.cm2",
+              "value": 255.6614
+            },
+            {
+              "cell": "I10",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, I10",
+              "source_day": 4,
+              "time_s": 604800.0,
+              "unit": "Ohm.cm2",
+              "value": 243.5356
+            }
+          ],
+          "replicate_id": "unverified_source_series_I",
+          "series_column": "I"
+        }
+      ],
+      "source_cell_grid": [
+        {
+          "cells": [
+            {
+              "cell": "B3",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "C3",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "D3",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "E3",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "F3",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "G3",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "H3",
+              "status": "OBSERVED",
+              "value": 336.4051
+            },
+            {
+              "cell": "I3",
+              "status": "OBSERVED",
+              "value": 371.1504
+            }
+          ],
+          "day_cell": "A3",
+          "source_day": -3,
+          "time_s": 0
+        },
+        {
+          "cells": [
+            {
+              "cell": "B4",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "C4",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "D4",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "E4",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "F4",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "G4",
+              "status": "OBSERVED",
+              "value": 1151.414
+            },
+            {
+              "cell": "H4",
+              "status": "OBSERVED",
+              "value": 581.7486
+            },
+            {
+              "cell": "I4",
+              "status": "OBSERVED",
+              "value": 403.4724
+            }
+          ],
+          "day_cell": "A4",
+          "source_day": -2,
+          "time_s": 86400
+        },
+        {
+          "cells": [
+            {
+              "cell": "B5",
+              "status": "OBSERVED",
+              "value": 998.6754
+            },
+            {
+              "cell": "C5",
+              "status": "OBSERVED",
+              "value": 890.5881
+            },
+            {
+              "cell": "D5",
+              "status": "OBSERVED",
+              "value": 440.8845
+            },
+            {
+              "cell": "E5",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "F5",
+              "status": "OBSERVED",
+              "value": 711.2319
+            },
+            {
+              "cell": "G5",
+              "status": "OBSERVED",
+              "value": 648.0582
+            },
+            {
+              "cell": "H5",
+              "status": "OBSERVED",
+              "value": 749.1006
+            },
+            {
+              "cell": "I5",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A5",
+          "source_day": -1,
+          "time_s": 172800
+        },
+        {
+          "cells": [
+            {
+              "cell": "B6",
+              "status": "OBSERVED",
+              "value": 631.9014
+            },
+            {
+              "cell": "C6",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "D6",
+              "status": "OBSERVED",
+              "value": 663.4188
+            },
+            {
+              "cell": "E6",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "F6",
+              "status": "OBSERVED",
+              "value": 863.1309
+            },
+            {
+              "cell": "G6",
+              "status": "OBSERVED",
+              "value": 723.9003
+            },
+            {
+              "cell": "H6",
+              "status": "OBSERVED",
+              "value": 301.8727
+            },
+            {
+              "cell": "I6",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A6",
+          "source_day": 0,
+          "time_s": 259200
+        },
+        {
+          "cells": [
+            {
+              "cell": "B7",
+              "status": "OBSERVED",
+              "value": 879.8514
+            },
+            {
+              "cell": "C7",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "D7",
+              "status": "OBSERVED",
+              "value": 352.4802
+            },
+            {
+              "cell": "E7",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "F7",
+              "status": "OBSERVED",
+              "value": 1141.095
+            },
+            {
+              "cell": "G7",
+              "status": "OBSERVED",
+              "value": 1284.539
+            },
+            {
+              "cell": "H7",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "I7",
+              "status": "OBSERVED",
+              "value": 328.3045
+            }
+          ],
+          "day_cell": "A7",
+          "source_day": 1,
+          "time_s": 345600
+        },
+        {
+          "cells": [
+            {
+              "cell": "B8",
+              "status": "OBSERVED",
+              "value": 486.2118
+            },
+            {
+              "cell": "C8",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "D8",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "E8",
+              "status": "OBSERVED",
+              "value": 38.0595
+            },
+            {
+              "cell": "F8",
+              "status": "OBSERVED",
+              "value": 372.0339
+            },
+            {
+              "cell": "G8",
+              "status": "OBSERVED",
+              "value": 1250.859
+            },
+            {
+              "cell": "H8",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "I8",
+              "status": "OBSERVED",
+              "value": 304.9338
+            }
+          ],
+          "day_cell": "A8",
+          "source_day": 2,
+          "time_s": 432000
+        },
+        {
+          "cells": [
+            {
+              "cell": "B9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "C9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "D9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "E9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "F9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "G9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "H9",
+              "status": "OBSERVED",
+              "value": 142.5748
+            },
+            {
+              "cell": "I9",
+              "status": "OBSERVED",
+              "value": 255.6614
+            }
+          ],
+          "day_cell": "A9",
+          "source_day": 3,
+          "time_s": 518400
+        },
+        {
+          "cells": [
+            {
+              "cell": "B10",
+              "status": "OBSERVED",
+              "value": 223.8756
+            },
+            {
+              "cell": "C10",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "D10",
+              "status": "OBSERVED",
+              "value": 71.4927
+            },
+            {
+              "cell": "E10",
+              "status": "OBSERVED",
+              "value": 34.3002
+            },
+            {
+              "cell": "F10",
+              "status": "OBSERVED",
+              "value": 130.4037
+            },
+            {
+              "cell": "G10",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "H10",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "I10",
+              "status": "OBSERVED",
+              "value": 243.5356
+            }
+          ],
+          "day_cell": "A10",
+          "source_day": 4,
+          "time_s": 604800
+        },
+        {
+          "cells": [
+            {
+              "cell": "B11",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "C11",
+              "status": "OBSERVED",
+              "value": 81.3858
+            },
+            {
+              "cell": "D11",
+              "status": "OBSERVED",
+              "value": 87.1812
+            },
+            {
+              "cell": "E11",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "F11",
+              "status": "OBSERVED",
+              "value": 171.8865
+            },
+            {
+              "cell": "G11",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "H11",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "I11",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A11",
+          "source_day": 5,
+          "time_s": 691200
+        }
+      ],
+      "value_range_cells": "B3:I11"
+    },
+    {
+      "absent_cell_count": 36,
+      "absent_cells": [
+        "N3",
+        "O3",
+        "P3",
+        "Q3",
+        "O4",
+        "P4",
+        "Q4",
+        "J5",
+        "K5",
+        "L5",
+        "M5",
+        "N5",
+        "O5",
+        "P5",
+        "Q5",
+        "P7",
+        "Q7",
+        "M8",
+        "N8",
+        "O8",
+        "P8",
+        "Q8",
+        "M9",
+        "N9",
+        "O9",
+        "P9",
+        "Q9",
+        "M10",
+        "N10",
+        "O10",
+        "P10",
+        "Q10",
+        "J11",
+        "K11",
+        "P11",
+        "Q11"
+      ],
+      "columns": "JKLMNOPQ",
+      "eligibility": {
+        "baseline_n": 36,
+        "baseline_n_meets_min_baseline_points": true,
+        "core_cadence_s": 86400.0,
+        "core_center": 121.334,
+        "core_min_points_per_group": 3,
+        "core_required_groups": 2,
+        "core_scale": 94.5365064,
+        "core_scale_method": "MAD",
+        "reference_median_span_s": 604800.0,
+        "series": [
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": true,
+            "meets_points_per_group": true,
+            "observations": 7,
+            "replicate_id": "unverified_source_series_J",
+            "span_days": 7.0,
+            "span_fraction_of_reference": 1.0,
+            "span_s": 604800.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": true,
+            "meets_points_per_group": true,
+            "observations": 7,
+            "replicate_id": "unverified_source_series_K",
+            "span_days": 7.0,
+            "span_fraction_of_reference": 1.0,
+            "span_s": 604800.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": true,
+            "meets_points_per_group": true,
+            "observations": 8,
+            "replicate_id": "unverified_source_series_L",
+            "span_days": 8.0,
+            "span_fraction_of_reference": 1.142857,
+            "span_s": 691200.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": false,
+            "meets_points_per_group": true,
+            "observations": 5,
+            "replicate_id": "unverified_source_series_M",
+            "span_days": 8.0,
+            "span_fraction_of_reference": 1.142857,
+            "span_s": 691200.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": true,
+            "meets_min_points": false,
+            "meets_points_per_group": true,
+            "observations": 4,
+            "replicate_id": "unverified_source_series_N",
+            "span_days": 7.0,
+            "span_fraction_of_reference": 1.0,
+            "span_s": 604800.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": false,
+            "meets_min_points": false,
+            "meets_points_per_group": true,
+            "observations": 3,
+            "replicate_id": "unverified_source_series_O",
+            "span_days": 5.0,
+            "span_fraction_of_reference": 0.714286,
+            "span_s": 432000.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": false,
+            "meets_min_points": false,
+            "meets_points_per_group": false,
+            "observations": 1,
+            "replicate_id": "unverified_source_series_P",
+            "span_days": 0.0,
+            "span_fraction_of_reference": 0.0,
+            "span_s": 0.0
+          },
+          {
+            "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+            "meets_75pct_span": false,
+            "meets_min_points": false,
+            "meets_points_per_group": false,
+            "observations": 1,
+            "replicate_id": "unverified_source_series_Q",
+            "span_days": 0.0,
+            "span_fraction_of_reference": 0.0,
+            "span_s": 0.0
+          }
+        ],
+        "series_below_75pct_span": 3,
+        "series_meeting_75pct_span": 5,
+        "series_meeting_min_points": 3,
+        "series_meeting_points_per_group": 6,
+        "source_series_label_status": "SOURCE_IDENTITY_UNVERIFIED",
+        "source_series_labels": 8
+      },
+      "grid_cell_count": 72,
+      "header_cell": "J2",
+      "key": "transwell",
+      "label": "Transwell",
+      "measured_subset": {
+        "construction": "header plus byte-identical parent CSV lines for this run_id only",
+        "file": "s2b_transwell_measured.csv",
+        "rows": 36,
+        "sha256": "b577864c3fd3687a5d79cdb76698ee387f62cba24ca38709193eb43aa9fa63e4"
+      },
+      "observed_cell_count": 36,
+      "run_id": "doi10.1038-s41467-024-48910-0_supp-s2b_transwell",
+      "self_reference_replay": {
+        "analysis_kind": "SOFTWARE_REPLAY_CONSISTENCY",
+        "biological_quality_disposition": "INSUFFICIENT_EVIDENCE",
+        "channels": [
+          {
+            "channel": "barrier_TEER",
+            "core_state": "INSUFFICIENT_EVIDENCE",
+            "metrics": {
+              "level_z": 0.0,
+              "max_change_z": 2.525723,
+              "max_cross_sensor_correlation_delta": 0.0,
+              "max_trend_z_per_baseline_step": 0.47641,
+              "missing_fraction": 0.28,
+              "outlier_fraction": 0.02777778,
+              "reference_window_coverage": 0.0,
+              "replicate_divergence_z": 1.817065,
+              "run_center": 121.334
+            },
+            "quality_risk_score": null,
+            "reasons": [
+              "cadence-derived missingness exceeds review threshold",
+              "observed replicate time span is under 75% of baseline median duration; full-window quality cannot be assessed"
+            ],
+            "uncertainty": 1.0
+          }
+        ],
+        "core_config": {
+          "min_baseline_points": 12,
+          "min_points": 6
+        },
+        "core_inputs": {
+          "baseline_file": "s2b_transwell_measured.csv",
+          "baseline_rows": 36,
+          "baseline_sha256": "b577864c3fd3687a5d79cdb76698ee387f62cba24ca38709193eb43aa9fa63e4",
+          "run_file": "s2b_transwell_measured.csv",
+          "run_rows": 36,
+          "run_sha256": "b577864c3fd3687a5d79cdb76698ee387f62cba24ca38709193eb43aa9fa63e4"
+        },
+        "core_overall_state": "INSUFFICIENT_EVIDENCE",
+        "core_receipt_sha256": "5ff3ed3c487d709fe6ae76e25489ebc49b967ea298bc4cc87deacbc815b01282",
+        "core_receipt_verifies": true,
+        "core_report_file": "replay_transwell.json",
+        "interpretation": "Software replay consistency demonstration: the same measured group is both reference and candidate. Not a validation and not evidence of biological quality.",
+        "source_identity": "SOURCE_IDENTITY_UNVERIFIED"
+      },
+      "series": [
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "J3",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, J3",
+              "source_day": -3,
+              "time_s": 0.0,
+              "unit": "Ohm.cm2",
+              "value": 74.556
+            },
+            {
+              "cell": "J4",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, J4",
+              "source_day": -2,
+              "time_s": 86400.0,
+              "unit": "Ohm.cm2",
+              "value": 377.34
+            },
+            {
+              "cell": "J6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, J6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 187.91
+            },
+            {
+              "cell": "J7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, J7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 118.94
+            },
+            {
+              "cell": "J8",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, J8",
+              "source_day": 2,
+              "time_s": 432000.0,
+              "unit": "Ohm.cm2",
+              "value": 159.22
+            },
+            {
+              "cell": "J9",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, J9",
+              "source_day": 3,
+              "time_s": 518400.0,
+              "unit": "Ohm.cm2",
+              "value": 27.436
+            },
+            {
+              "cell": "J10",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, J10",
+              "source_day": 4,
+              "time_s": 604800.0,
+              "unit": "Ohm.cm2",
+              "value": 94.24
+            }
+          ],
+          "replicate_id": "unverified_source_series_J",
+          "series_column": "J"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "K3",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, K3",
+              "source_day": -3,
+              "time_s": 0.0,
+              "unit": "Ohm.cm2",
+              "value": 88.996
+            },
+            {
+              "cell": "K4",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, K4",
+              "source_day": -2,
+              "time_s": 86400.0,
+              "unit": "Ohm.cm2",
+              "value": 342.76
+            },
+            {
+              "cell": "K6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, K6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 195.016
+            },
+            {
+              "cell": "K7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, K7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 175.94
+            },
+            {
+              "cell": "K8",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, K8",
+              "source_day": 2,
+              "time_s": 432000.0,
+              "unit": "Ohm.cm2",
+              "value": 83.334
+            },
+            {
+              "cell": "K9",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, K9",
+              "source_day": 3,
+              "time_s": 518400.0,
+              "unit": "Ohm.cm2",
+              "value": 58.254
+            },
+            {
+              "cell": "K10",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, K10",
+              "source_day": 4,
+              "time_s": 604800.0,
+              "unit": "Ohm.cm2",
+              "value": 103.702
+            }
+          ],
+          "replicate_id": "unverified_source_series_K",
+          "series_column": "K"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "L3",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, L3",
+              "source_day": -3,
+              "time_s": 0.0,
+              "unit": "Ohm.cm2",
+              "value": 62.434
+            },
+            {
+              "cell": "L4",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, L4",
+              "source_day": -2,
+              "time_s": 86400.0,
+              "unit": "Ohm.cm2",
+              "value": 416.176
+            },
+            {
+              "cell": "L6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, L6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 123.728
+            },
+            {
+              "cell": "L7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, L7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 78.622
+            },
+            {
+              "cell": "L8",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, L8",
+              "source_day": 2,
+              "time_s": 432000.0,
+              "unit": "Ohm.cm2",
+              "value": 128.212
+            },
+            {
+              "cell": "L9",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, L9",
+              "source_day": 3,
+              "time_s": 518400.0,
+              "unit": "Ohm.cm2",
+              "value": 11.4
+            },
+            {
+              "cell": "L10",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, L10",
+              "source_day": 4,
+              "time_s": 604800.0,
+              "unit": "Ohm.cm2",
+              "value": 80.712
+            },
+            {
+              "cell": "L11",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, L11",
+              "source_day": 5,
+              "time_s": 691200.0,
+              "unit": "Ohm.cm2",
+              "value": 61.674
+            }
+          ],
+          "replicate_id": "unverified_source_series_L",
+          "series_column": "L"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "M3",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, M3",
+              "source_day": -3,
+              "time_s": 0.0,
+              "unit": "Ohm.cm2",
+              "value": 56.886
+            },
+            {
+              "cell": "M4",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, M4",
+              "source_day": -2,
+              "time_s": 86400.0,
+              "unit": "Ohm.cm2",
+              "value": 397.708
+            },
+            {
+              "cell": "M6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, M6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 269.496
+            },
+            {
+              "cell": "M7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, M7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 211.85
+            },
+            {
+              "cell": "M11",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, M11",
+              "source_day": 5,
+              "time_s": 691200.0,
+              "unit": "Ohm.cm2",
+              "value": 61.37
+            }
+          ],
+          "replicate_id": "unverified_source_series_M",
+          "series_column": "M"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "N4",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, N4",
+              "source_day": -2,
+              "time_s": 86400.0,
+              "unit": "Ohm.cm2",
+              "value": 369.322
+            },
+            {
+              "cell": "N6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, N6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 278.73
+            },
+            {
+              "cell": "N7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, N7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 114.646
+            },
+            {
+              "cell": "N11",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, N11",
+              "source_day": 5,
+              "time_s": 691200.0,
+              "unit": "Ohm.cm2",
+              "value": 55.86
+            }
+          ],
+          "replicate_id": "unverified_source_series_N",
+          "series_column": "N"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "O6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, O6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 244.074
+            },
+            {
+              "cell": "O7",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, O7",
+              "source_day": 1,
+              "time_s": 345600.0,
+              "unit": "Ohm.cm2",
+              "value": 161.842
+            },
+            {
+              "cell": "O11",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, O11",
+              "source_day": 5,
+              "time_s": 691200.0,
+              "unit": "Ohm.cm2",
+              "value": 44.84
+            }
+          ],
+          "replicate_id": "unverified_source_series_O",
+          "series_column": "O"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "P6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, P6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 251.446
+            }
+          ],
+          "replicate_id": "unverified_source_series_P",
+          "series_column": "P"
+        },
+        {
+          "identity_status": "SOURCE_IDENTITY_UNVERIFIED",
+          "observations": [
+            {
+              "cell": "Q6",
+              "source": "https://www.nature.com/articles/s41467-024-48910-0 | Source Data, Supp Fig. S2b, Q6",
+              "source_day": 0,
+              "time_s": 259200.0,
+              "unit": "Ohm.cm2",
+              "value": 216.22
+            }
+          ],
+          "replicate_id": "unverified_source_series_Q",
+          "series_column": "Q"
+        }
+      ],
+      "source_cell_grid": [
+        {
+          "cells": [
+            {
+              "cell": "J3",
+              "status": "OBSERVED",
+              "value": 74.556
+            },
+            {
+              "cell": "K3",
+              "status": "OBSERVED",
+              "value": 88.996
+            },
+            {
+              "cell": "L3",
+              "status": "OBSERVED",
+              "value": 62.434
+            },
+            {
+              "cell": "M3",
+              "status": "OBSERVED",
+              "value": 56.886
+            },
+            {
+              "cell": "N3",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "O3",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "P3",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "Q3",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A3",
+          "source_day": -3,
+          "time_s": 0
+        },
+        {
+          "cells": [
+            {
+              "cell": "J4",
+              "status": "OBSERVED",
+              "value": 377.34
+            },
+            {
+              "cell": "K4",
+              "status": "OBSERVED",
+              "value": 342.76
+            },
+            {
+              "cell": "L4",
+              "status": "OBSERVED",
+              "value": 416.176
+            },
+            {
+              "cell": "M4",
+              "status": "OBSERVED",
+              "value": 397.708
+            },
+            {
+              "cell": "N4",
+              "status": "OBSERVED",
+              "value": 369.322
+            },
+            {
+              "cell": "O4",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "P4",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "Q4",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A4",
+          "source_day": -2,
+          "time_s": 86400
+        },
+        {
+          "cells": [
+            {
+              "cell": "J5",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "K5",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "L5",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "M5",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "N5",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "O5",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "P5",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "Q5",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A5",
+          "source_day": -1,
+          "time_s": 172800
+        },
+        {
+          "cells": [
+            {
+              "cell": "J6",
+              "status": "OBSERVED",
+              "value": 187.91
+            },
+            {
+              "cell": "K6",
+              "status": "OBSERVED",
+              "value": 195.016
+            },
+            {
+              "cell": "L6",
+              "status": "OBSERVED",
+              "value": 123.728
+            },
+            {
+              "cell": "M6",
+              "status": "OBSERVED",
+              "value": 269.496
+            },
+            {
+              "cell": "N6",
+              "status": "OBSERVED",
+              "value": 278.73
+            },
+            {
+              "cell": "O6",
+              "status": "OBSERVED",
+              "value": 244.074
+            },
+            {
+              "cell": "P6",
+              "status": "OBSERVED",
+              "value": 251.446
+            },
+            {
+              "cell": "Q6",
+              "status": "OBSERVED",
+              "value": 216.22
+            }
+          ],
+          "day_cell": "A6",
+          "source_day": 0,
+          "time_s": 259200
+        },
+        {
+          "cells": [
+            {
+              "cell": "J7",
+              "status": "OBSERVED",
+              "value": 118.94
+            },
+            {
+              "cell": "K7",
+              "status": "OBSERVED",
+              "value": 175.94
+            },
+            {
+              "cell": "L7",
+              "status": "OBSERVED",
+              "value": 78.622
+            },
+            {
+              "cell": "M7",
+              "status": "OBSERVED",
+              "value": 211.85
+            },
+            {
+              "cell": "N7",
+              "status": "OBSERVED",
+              "value": 114.646
+            },
+            {
+              "cell": "O7",
+              "status": "OBSERVED",
+              "value": 161.842
+            },
+            {
+              "cell": "P7",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "Q7",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A7",
+          "source_day": 1,
+          "time_s": 345600
+        },
+        {
+          "cells": [
+            {
+              "cell": "J8",
+              "status": "OBSERVED",
+              "value": 159.22
+            },
+            {
+              "cell": "K8",
+              "status": "OBSERVED",
+              "value": 83.334
+            },
+            {
+              "cell": "L8",
+              "status": "OBSERVED",
+              "value": 128.212
+            },
+            {
+              "cell": "M8",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "N8",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "O8",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "P8",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "Q8",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A8",
+          "source_day": 2,
+          "time_s": 432000
+        },
+        {
+          "cells": [
+            {
+              "cell": "J9",
+              "status": "OBSERVED",
+              "value": 27.436
+            },
+            {
+              "cell": "K9",
+              "status": "OBSERVED",
+              "value": 58.254
+            },
+            {
+              "cell": "L9",
+              "status": "OBSERVED",
+              "value": 11.4
+            },
+            {
+              "cell": "M9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "N9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "O9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "P9",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "Q9",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A9",
+          "source_day": 3,
+          "time_s": 518400
+        },
+        {
+          "cells": [
+            {
+              "cell": "J10",
+              "status": "OBSERVED",
+              "value": 94.24
+            },
+            {
+              "cell": "K10",
+              "status": "OBSERVED",
+              "value": 103.702
+            },
+            {
+              "cell": "L10",
+              "status": "OBSERVED",
+              "value": 80.712
+            },
+            {
+              "cell": "M10",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "N10",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "O10",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "P10",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "Q10",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A10",
+          "source_day": 4,
+          "time_s": 604800
+        },
+        {
+          "cells": [
+            {
+              "cell": "J11",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "K11",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "L11",
+              "status": "OBSERVED",
+              "value": 61.674
+            },
+            {
+              "cell": "M11",
+              "status": "OBSERVED",
+              "value": 61.37
+            },
+            {
+              "cell": "N11",
+              "status": "OBSERVED",
+              "value": 55.86
+            },
+            {
+              "cell": "O11",
+              "status": "OBSERVED",
+              "value": 44.84
+            },
+            {
+              "cell": "P11",
+              "status": "ABSENT",
+              "value": null
+            },
+            {
+              "cell": "Q11",
+              "status": "ABSENT",
+              "value": null
+            }
+          ],
+          "day_cell": "A11",
+          "source_day": 5,
+          "time_s": 691200
+        }
+      ],
+      "value_range_cells": "J3:Q11"
+    }
+  ],
+  "next_measurement_request": {
+    "data_rules": "coded, non-personal identifiers only; no donor, patient or personal information",
+    "items": [
+      {
+        "id": "R1_series_identity",
+        "missing_evidence": "SOURCE_IDENTITY_UNVERIFIED",
+        "request": "For each workbook column B:Q, state whether all values come from one physical device or well measured on successive days, and give a coded device/well identifier per cell."
+      },
+      {
+        "id": "R2_replicate_structure",
+        "missing_evidence": "independent biological replicate count",
+        "request": "For each column, give coded experiment-batch and cell-lot labels so independent replicates can be counted."
+      },
+      {
+        "id": "R3_absent_cells",
+        "missing_evidence": "reason for blank source cells",
+        "request": "For each blank cell, state whether it was not scheduled, not measured, or excluded, and the exclusion rule. Cervix Chip: 36 cells (B3, C3, D3, E3, F3, G3, B4, C4, D4, E4, F4, E5, I5, C6, E6, I6, C7, E7, H7, C8, D8, H8, B9, C9, D9, E9, F9, G9, C10, G10, H10, B11, E11, G11, H11, I11); Transwell: 36 cells (N3, O3, P3, Q3, O4, P4, Q4, J5, K5, L5, M5, N5, O5, P5, Q5, P7, Q7, M8, N8, O8, P8, Q8, M9, N9, O9, P9, Q9, M10, N10, O10, P10, Q10, J11, K11, P11, Q11)"
+      },
+      {
+        "id": "R4_phase_matched_reference",
+        "missing_evidence": "independent reference on a shared time origin",
+        "request": "Per group, designate a pre-specified reference set of series, distinct from candidate series, measured on the same source-day schedule (-3 to 5) with the same TEER instrument, electrode, blank subtraction and area correction."
+      },
+      {
+        "id": "R5_measurement_annotations",
+        "missing_evidence": "QC ground truth",
+        "request": "Any recorded per-cell measurement events (electrode fault, bubble, temperature, medium-change timing) if they exist."
+      },
+      {
+        "id": "R6_fig3h_units",
+        "missing_evidence": "unit and normalization for Fig. 3h",
+        "request": "Unit and normalization reference for the Fig. 3h series before they can be included."
+      }
+    ],
+    "purpose": "evidence required before any disposition other than INSUFFICIENT_EVIDENCE"
+  },
+  "schema": "chiptrace.real_source_case.v1",
+  "source": {
+    "adapter_metadata_file_sha256": "27397050206c4482ba86a7d7bce0d9a3b37e064e9a385ef88bb46f1cae42076a",
+    "adapter_metadata_public": {
+      "article_url": "https://www.nature.com/articles/s41467-024-48910-0",
+      "csv_bytes": 14801,
+      "csv_header": [
+        "run_id",
+        "replicate_id",
+        "time_s",
+        "channel",
+        "value",
+        "unit",
+        "source",
+        "modality"
+      ],
+      "csv_sha256": "70732bd81fbf613179e43f998ab64953fe7d213f02576ebb443bc5d3285fd8f5",
+      "figure3h_note": "Excluded from normalized TEER CSV: two HE and three LEHP series, baseline-zeroed and predominantly negative values, no explicit unit/normalization header; do not treat as absolute TEER. Workbook has no Fig. 3i sheet.",
+      "license": "CC BY 4.0 as stated on the article rights page",
+      "missing_cells": "left absent; no zero-fill, interpolation, averaging, or synthetic observations",
+      "observed_value_rows": 72,
+      "qc_coverage": "At min_points=6 there are two chip source columns (F,I) and three Transwell source columns (J,K,L) with at least six cells. These are not verified independent chips and the two model groups are not QC labels. No baseline/candidate phase pairing exists here; descriptive coverage only, no QC pass/score.",
+      "qc_labels": "No sensor-fault, bad-run, or QC labels; Cervix Chip/Transwell and differentiation day are experimental metadata, not QC labels.",
+      "series_observation_counts": {
+        "Cervix Chip": {
+          "B": {
+            "days": [
+              -1,
+              0,
+              1,
+              2,
+              4
+            ],
+            "observations": 5,
+            "span_days": 5
+          },
+          "C": {
+            "days": [
+              -1,
+              5
+            ],
+            "observations": 2,
+            "span_days": 6
+          },
+          "D": {
+            "days": [
+              -1,
+              0,
+              1,
+              4,
+              5
+            ],
+            "observations": 5,
+            "span_days": 6
+          },
+          "E": {
+            "days": [
+              2,
+              4
+            ],
+            "observations": 2,
+            "span_days": 2
+          },
+          "F": {
+            "days": [
+              -1,
+              0,
+              1,
+              2,
+              4,
+              5
+            ],
+            "observations": 6,
+            "span_days": 6
+          },
+          "G": {
+            "days": [
+              -2,
+              -1,
+              0,
+              1,
+              2
+            ],
+            "observations": 5,
+            "span_days": 4
+          },
+          "H": {
+            "days": [
+              -3,
+              -2,
+              -1,
+              0,
+              3
+            ],
+            "observations": 5,
+            "span_days": 6
+          },
+          "I": {
+            "days": [
+              -3,
+              -2,
+              1,
+              2,
+              3,
+              4
+            ],
+            "observations": 6,
+            "span_days": 7
+          }
+        },
+        "Transwell": {
+          "J": {
+            "days": [
+              -3,
+              -2,
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "observations": 7,
+            "span_days": 7
+          },
+          "K": {
+            "days": [
+              -3,
+              -2,
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "observations": 7,
+            "span_days": 7
+          },
+          "L": {
+            "days": [
+              -3,
+              -2,
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "observations": 8,
+            "span_days": 8
+          },
+          "M": {
+            "days": [
+              -3,
+              -2,
+              0,
+              1,
+              5
+            ],
+            "observations": 5,
+            "span_days": 8
+          },
+          "N": {
+            "days": [
+              -2,
+              0,
+              1,
+              5
+            ],
+            "observations": 4,
+            "span_days": 7
+          },
+          "O": {
+            "days": [
+              0,
+              1,
+              5
+            ],
+            "observations": 3,
+            "span_days": 5
+          },
+          "P": {
+            "days": [
+              0
+            ],
+            "observations": 1,
+            "span_days": 0
+          },
+          "Q": {
+            "days": [
+              0
+            ],
+            "observations": 1,
+            "span_days": 0
+          }
+        }
+      },
+      "sheet": "Supp Fig. S2b",
+      "source_cells": {
+        "cervix_chip_matrix": "B3:I11",
+        "chip_group_header": "B2",
+        "time_days": "A3:A11",
+        "time_header": "A2",
+        "transwell_group_header": "J2",
+        "transwell_matrix": "J3:Q11",
+        "unit": "A1"
+      },
+      "source_series_identity": {
+        "adapter_label": "unverified_source_series_<column-letter>",
+        "csv_field": "replicate_id",
+        "independent_biological_replicate_identity": "not verified; do not count column positions as proven independent chips",
+        "same_physical_chip_longitudinal_identity": "not explicitly established in paper/workbook",
+        "workbook_provides": "wide columns with values by differentiation day"
+      },
+      "source_time_days": [
+        -3,
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "source_url": "https://media.springernature.com/original/springer-static/esm/art%3A10.1038%2Fs41467-024-48910-0/MediaObjects/41467_2024_48910_MOESM4_ESM.xlsx",
+      "time_origin": {
+        "differentiation_day_0_time_s": 259200,
+        "meaning": "first reported day in S2b",
+        "source_day": -3,
+        "source_differentiation_day_values_preserved_in_source_and_cell_refs": true,
+        "time_s_formula": "(differentiation_day - (-3)) * 86400"
+      },
+      "workbook_bytes": 60701,
+      "workbook_read_mode": "openpyxl read_only=True, data_only=True, keep_links=False; formulas and macros not executed",
+      "workbook_sha256": "0667dee0329276f70c50e65aaac0efa44518fffd447aef9fcc21ff706ad4ed1e"
+    },
+    "normalized_csv_bytes": 14801,
+    "normalized_csv_sha256": "70732bd81fbf613179e43f998ab64953fe7d213f02576ebb443bc5d3285fd8f5",
+    "sheet": "Supp Fig. S2b",
+    "workbook_bytes": 60701,
+    "workbook_sha256": "0667dee0329276f70c50e65aaac0efa44518fffd447aef9fcc21ff706ad4ed1e"
+  },
+  "time_origin": {
+    "day_cells": "A3:A11",
+    "differentiation_day_0_time_s": 259200,
+    "source_day_minus_3_time_s": 0,
+    "time_s_formula": "(source_day + 3) * 86400"
+  }
+}

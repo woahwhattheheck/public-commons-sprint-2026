@@ -1,0 +1,234 @@
+{
+  "source_url": "https://media.springernature.com/original/springer-static/esm/art%3A10.1038%2Fs41467-024-48910-0/MediaObjects/41467_2024_48910_MOESM4_ESM.xlsx",
+  "article_url": "https://www.nature.com/articles/s41467-024-48910-0",
+  "license": "CC BY 4.0 as stated on the article rights page",
+  "workbook_bytes": 60701,
+  "workbook_sha256": "0667dee0329276f70c50e65aaac0efa44518fffd447aef9fcc21ff706ad4ed1e",
+  "workbook_read_mode": "openpyxl read_only=True, data_only=True, keep_links=False; formulas and macros not executed",
+  "sheet": "Supp Fig. S2b",
+  "source_cells": {
+    "unit": "A1",
+    "time_header": "A2",
+    "chip_group_header": "B2",
+    "transwell_group_header": "J2",
+    "time_days": "A3:A11",
+    "cervix_chip_matrix": "B3:I11",
+    "transwell_matrix": "J3:Q11"
+  },
+  "source_time_days": [
+    -3,
+    -2,
+    -1,
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "time_origin": {
+    "source_day": -3,
+    "meaning": "first reported day in S2b",
+    "time_s_formula": "(differentiation_day - (-3)) * 86400",
+    "differentiation_day_0_time_s": 259200,
+    "source_differentiation_day_values_preserved_in_source_and_cell_refs": true
+  },
+  "source_series_identity": {
+    "csv_field": "replicate_id",
+    "adapter_label": "unverified_source_series_<column-letter>",
+    "workbook_provides": "wide columns with values by differentiation day",
+    "same_physical_chip_longitudinal_identity": "not explicitly established in paper/workbook",
+    "independent_biological_replicate_identity": "not verified; do not count column positions as proven independent chips"
+  },
+  "series_observation_counts": {
+    "Cervix Chip": {
+      "B": {
+        "observations": 5,
+        "days": [
+          -1,
+          0,
+          1,
+          2,
+          4
+        ],
+        "span_days": 5
+      },
+      "C": {
+        "observations": 2,
+        "days": [
+          -1,
+          5
+        ],
+        "span_days": 6
+      },
+      "D": {
+        "observations": 5,
+        "days": [
+          -1,
+          0,
+          1,
+          4,
+          5
+        ],
+        "span_days": 6
+      },
+      "E": {
+        "observations": 2,
+        "days": [
+          2,
+          4
+        ],
+        "span_days": 2
+      },
+      "F": {
+        "observations": 6,
+        "days": [
+          -1,
+          0,
+          1,
+          2,
+          4,
+          5
+        ],
+        "span_days": 6
+      },
+      "G": {
+        "observations": 5,
+        "days": [
+          -2,
+          -1,
+          0,
+          1,
+          2
+        ],
+        "span_days": 4
+      },
+      "H": {
+        "observations": 5,
+        "days": [
+          -3,
+          -2,
+          -1,
+          0,
+          3
+        ],
+        "span_days": 6
+      },
+      "I": {
+        "observations": 6,
+        "days": [
+          -3,
+          -2,
+          1,
+          2,
+          3,
+          4
+        ],
+        "span_days": 7
+      }
+    },
+    "Transwell": {
+      "J": {
+        "observations": 7,
+        "days": [
+          -3,
+          -2,
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "span_days": 7
+      },
+      "K": {
+        "observations": 7,
+        "days": [
+          -3,
+          -2,
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "span_days": 7
+      },
+      "L": {
+        "observations": 8,
+        "days": [
+          -3,
+          -2,
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "span_days": 8
+      },
+      "M": {
+        "observations": 5,
+        "days": [
+          -3,
+          -2,
+          0,
+          1,
+          5
+        ],
+        "span_days": 8
+      },
+      "N": {
+        "observations": 4,
+        "days": [
+          -2,
+          0,
+          1,
+          5
+        ],
+        "span_days": 7
+      },
+      "O": {
+        "observations": 3,
+        "days": [
+          0,
+          1,
+          5
+        ],
+        "span_days": 5
+      },
+      "P": {
+        "observations": 1,
+        "days": [
+          0
+        ],
+        "span_days": 0
+      },
+      "Q": {
+        "observations": 1,
+        "days": [
+          0
+        ],
+        "span_days": 0
+      }
+    }
+  },
+  "observed_value_rows": 72,
+  "missing_cells": "left absent; no zero-fill, interpolation, averaging, or synthetic observations",
+  "csv_bytes": 14801,
+  "csv_sha256": "70732bd81fbf613179e43f998ab64953fe7d213f02576ebb443bc5d3285fd8f5",
+  "csv_header": [
+    "run_id",
+    "replicate_id",
+    "time_s",
+    "channel",
+    "value",
+    "unit",
+    "source",
+    "modality"
+  ],
+  "figure3h_note": "Excluded from normalized TEER CSV: two HE and three LEHP series, baseline-zeroed and predominantly negative values, no explicit unit/normalization header; do not treat as absolute TEER. Workbook has no Fig. 3i sheet.",
+  "qc_labels": "No sensor-fault, bad-run, or QC labels; Cervix Chip/Transwell and differentiation day are experimental metadata, not QC labels.",
+  "qc_coverage": "At min_points=6 there are two chip source columns (F,I) and three Transwell source columns (J,K,L) with at least six cells. These are not verified independent chips and the two model groups are not QC labels. No baseline/candidate phase pairing exists here; descriptive coverage only, no QC pass/score."
+}
