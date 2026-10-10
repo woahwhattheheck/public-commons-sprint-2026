@@ -15,7 +15,12 @@ export const SOURCE = Object.freeze({
 });
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const text = x => typeof x === 'string' && x.trim().length > 0;
-const atomic = x => typeof x === 'string' && /^(0|[1-9][0-9]*)$/.test(x);
+// Soroban integer amounts are signed i128, not arbitrary-precision decimal.
+// Reject oversized wire values before BigInt conversion or ledger claims.
+const MAX_STELLAR_I128_ATOMIC = '170141183460469231731687303715884105727';
+const atomic = x => typeof x === 'string' && /^(0|[1-9][0-9]*)$/.test(x) &&
+  (x.length < MAX_STELLAR_I128_ATOMIC.length ||
+    (x.length === MAX_STELLAR_I128_ATOMIC.length && x <= MAX_STELLAR_I128_ATOMIC));
 const sha = x => createHash('sha256').update(x).digest('hex');
 const HASH = /^[a-f0-9]{64}$/;
 const HORIZON = Object.freeze({
