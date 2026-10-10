@@ -4,6 +4,9 @@ import { createHash } from 'node:crypto';
 
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const decimal = s => typeof s === 'string' && /^(0|[1-9][0-9]{0,77})$/.test(s);
+// SEP-41 Soroban token amounts use signed i128, not arbitrary JSON decimals.
+const SOROBAN_I128_MAX = (1n << 127n) - 1n;
+const boundedAtomic = s => decimal(s) && BigInt(s) <= SOROBAN_I128_MAX;
 const error = reason => ({ decision: 'reject', reason });
 
 function canonical(value) {
@@ -47,7 +50,7 @@ function normalized(t) {
       !['stellar:testnet', 'stellar:pubnet'].includes(t.network) ||
       typeof t.asset !== 'string' || t.asset.length < 1 || t.asset.length > 256 ||
       typeof t.payTo !== 'string' || t.payTo.length < 1 || t.payTo.length > 256 ||
-      !decimal(t.amount) || BigInt(t.amount) <= 0n ||
+      !boundedAtomic(t.amount) || BigInt(t.amount) <= 0n ||
       !Number.isSafeInteger(t.maxTimeoutSeconds) || t.maxTimeoutSeconds <= 0 ||
       t.maxTimeoutSeconds > 86400 || (t.extra !== undefined && !plain(t.extra))) {
     throw new TypeError('Invalid canonical payment terms');
@@ -104,7 +107,7 @@ export function reconcileHttpQuote({
     if (!Array.isArray(allowedNetworks) || !allowedNetworks.includes(selection.network) ||
         !Array.isArray(allowedSchemes) || !allowedSchemes.includes(selection.scheme))
       return error('BUYER_POLICY_SCHEME_OR_NETWORK');
-    if (!decimal(maxAtomicUnits)) return error('BUYER_CAP_REQUIRED');
+    if (!boundedAtomic(maxAtomicUnits)) return error('BUYER_CAP_REQUIRED');
     if (!Array.isArray(catalogEntry.accepts)) return error('CATALOG_TERMS_MISSING');
     // Every quoted and cataloged option must parse safely; malformed alternatives
     // cannot be silently skipped by a convenience SDK's default selector.
