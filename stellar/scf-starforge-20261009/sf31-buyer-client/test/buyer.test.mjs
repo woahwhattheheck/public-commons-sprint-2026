@@ -119,7 +119,7 @@ test('untrusted catalog/resource HTTPS IP literals and private hostnames are blo
 test('explicit developer loopback exception does not allow arbitrary IP hosts',async()=>{
   let requests=0;
   const buyer=new X402BuyerClient({allowLocal:true,fetchImpl:async()=>{
-    requests++;return new Response('',{status:204});
+    requests++;return new Response(null,{status:204});
   }});
   const local=await buyer.call({...settings('http://127.0.0.1:4040/protected')});
   assert.equal(local.status,'NO_PAYMENT_REQUIRED');assert.equal(requests,1);
