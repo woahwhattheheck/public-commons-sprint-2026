@@ -8,7 +8,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { BazaarCatalog, createDiscoveryServer, validateCatalogEntry } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 
-const EXPECTED_BLOB = '66beed7c3a4b617ab90680ec5fe8318e934e74f7';
+// Checked at this source commit; pin overrides require an explicit exact Git blob SHA-1.
+const EXPECTED_BLOB = '7b4390f9a119399bdb8e27db5796697f1314da8b';
 const catalogPath = fileURLToPath(new URL('../../../scf46-stellar-bazaar/src/catalog.mjs', import.meta.url));
 const args = process.argv.slice(2);
 const option = (name) => { const p = args.indexOf(name); return p >= 0 ? args[p + 1] : null; };
@@ -64,16 +65,18 @@ function topDiagnostic(rawLimit, entries) {
 }
 async function execute() {
   if (args.includes('--help')) {
-    process.stdout.write('node run.mjs --manifest sources.json --queries queries.json --out ./run [--repeat 5] [--candidate ./candidate.mjs]\n');
+    process.stdout.write('node run.mjs --manifest sources.json --queries queries.json --out ./run [--repeat 5] [--candidate ./candidate.mjs] [--catalog-blob 40hex-git-blob]\n');
     return;
   }
   const manifestPath=resolve(required('--manifest')),queryPath=resolve(required('--queries'));
   const outputDir=resolve(required('--out'));
   const repeat = Number(option('--repeat') || '1');
   if (!Number.isSafeInteger(repeat) || repeat <= 0) throw Error('--repeat must be positive safe integer');
+  const expectedBlob = args.includes('--catalog-blob') ? required('--catalog-blob') : EXPECTED_BLOB;
+  if (!/^[0-9a-f]{40}$/.test(expectedBlob)) throw Error('--catalog-blob must be one exact lowercase 40-character Git blob SHA-1');
   const sourceText=await readFile(catalogPath);
   const blob=createHash('sha1').update(Buffer.concat([Buffer.from('blob '+sourceText.length+'\0'),sourceText])).digest('hex');
-  if (blob !== EXPECTED_BLOB) throw Error('Unmodified original source changed: expected git blob '+EXPECTED_BLOB+' got '+blob);
+  if (blob !== expectedBlob) throw Error('Unmodified original source changed: expected git blob '+expectedBlob+' got '+blob);
   const manifest=JSON.parse(await readFile(manifestPath,'utf8'));
   const queryDoc=JSON.parse(await readFile(queryPath,'utf8'));
   if (!Array.isArray(manifest.sources)||!manifest.sources.length) throw Error('sources must be nonempty actual-provider captures');
@@ -206,7 +209,7 @@ async function execute() {
     schema:'SCF-SF41/source-exact-research-v1',kind:'original-native-source-with-actual-provider-captures',
     generated_at:new Date().toISOString(),
     baseline:{repo:'woahwhattheheck/public-commons-sprint-2026',path:'scf46-stellar-bazaar/src/catalog.mjs',
-      github_blob_sha1:blob,byte_sha256:sha256(sourceText)},
+      github_blob_sha1:blob,expected_github_blob_sha1:expectedBlob,byte_sha256:sha256(sourceText)},
     inputs:{manifest_sha256:sha256(await readFile(manifestPath)),
       queries_sha256:sha256(await readFile(queryPath)),
       sources:corpus,query_count:tests.length,repeat},
