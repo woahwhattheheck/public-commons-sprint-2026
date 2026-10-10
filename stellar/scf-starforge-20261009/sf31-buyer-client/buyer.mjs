@@ -122,9 +122,15 @@ export class X402BuyerClient {
     if(!['GET','POST','PUT','PATCH','DELETE','HEAD'].includes(verb))throw new BuyerError('BAD_METHOD');
     if(['GET','HEAD'].includes(verb)&&body!=null)throw new BuyerError('BAD_METHOD_BODY');
     if(typeof approve!=='function'||typeof sign!=='function')throw new BuyerError('APPROVAL_AND_SIGNER_REQUIRED');
-    if(!object(headers) || Object.keys(headers).some(k=>/^(payment-signature|authorization|cookie|host)$/i.test(k)))
+    // Inspect the actual header entries sent by fetch. Headers and Map inputs
+    // expose no keys via Object.keys(), despite carrying request headers.
+    if(!object(headers))throw new BuyerError('FORBIDDEN_CALLER_HEADERS');
+    let safeHeaders;
+    try {safeHeaders=new Headers(headers);}
+    catch(e){throw new BuyerError('BAD_CALLER_HEADERS','',{cause:e});}
+    if([...safeHeaders.keys()].some(k=>/^(payment-signature|authorization|proxy-authorization|cookie|host)$/i.test(k)))
       throw new BuyerError('FORBIDDEN_CALLER_HEADERS');
-    const data=prepareBody(body); const safeHeaders=new Headers(headers);
+    const data=prepareBody(body);
     const options={method:verb,headers:safeHeaders,body:data,redirect:'manual',signal};
     let first;
     try{first=await this.fetch(resource,options);}catch(e){throw new BuyerError('INITIAL_TRANSPORT_FAILED','',{cause:e});}
