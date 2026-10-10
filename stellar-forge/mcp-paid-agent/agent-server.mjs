@@ -79,8 +79,10 @@ export class McpPaidToolBroker {
     this.#timeLimit=timeoutMs;this.#quoteTTL=quoteTTL;this.#maxRecords=maxRecords;
     this.#agentCommerce=agentCommerce;
   }
+  // Resource/catalog redirects must never escape the operator-approved origin.
+  // In particular, a 3xx must not forward PAYMENT-SIGNATURE to a new host.
   async #get(url){
-    const resp=await this.#fetch(url,{method:'GET',headers:{accept:'application/json'},signal:AbortSignal.timeout(this.#timeLimit)});
+    const resp=await this.#fetch(url,{method:'GET',headers:{accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(this.#timeLimit)});
     if(!resp.ok)fail('DISCOVERY_UNAVAILABLE','Bazaar returned HTTP '+resp.status);
     const data=await readData(resp,2*1024*1024);if(data.truncated)fail('DISCOVERY_TOO_LARGE','Bazaar response exceeds configured limit');
     let value;try{value=JSON.parse(data.body);}catch{fail('DISCOVERY_INVALID','Invalid Bazaar JSON');}
@@ -176,7 +178,7 @@ export class McpPaidToolBroker {
     if(!asBool(permission))fail('APPROVAL_REQUIRED','Operator independently denied or has not authorized payment');
     q.status='EXECUTING';q.attempts++;
     try {
-      const first=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json'},signal:AbortSignal.timeout(this.#timeLimit)});
+      const first=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(this.#timeLimit)});
       if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';return statOf(q);}
       if(first.status!==402){
         q.status=first.ok?'FREE_SUCCESS':'PROBE_REJECTED';
@@ -193,7 +195,7 @@ export class McpPaidToolBroker {
         !plain(payload?.payload))fail('SIGNER_INVALID','Signer returned mismatched x402 v2 payload');
       if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';return statOf(q);}
       q.signedRequestDispatched=true;
-      const second=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json','PAYMENT-SIGNATURE':Buffer.from(JSON.stringify(payload)).toString('base64')},signal:AbortSignal.timeout(this.#timeLimit)});
+      const second=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json','PAYMENT-SIGNATURE':Buffer.from(JSON.stringify(payload)).toString('base64')},redirect:'error',signal:AbortSignal.timeout(this.#timeLimit)});
       if(q.status==='INDETERMINATE')return statOf(q);
       const responseHeader=second.headers.get('payment-response');
       let receipt=null;if(responseHeader){try{receipt=strictBytes(responseHeader);}catch{receipt=null;}}
