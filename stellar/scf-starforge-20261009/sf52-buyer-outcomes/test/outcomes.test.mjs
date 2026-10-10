@@ -104,3 +104,16 @@ test('seller receipt capture bounds untrusted network and transaction values',()
   assert.deepEqual(captureBuyerResult(buyer('i-canonical'),{observedAt:at}).buyer.receipt,
     {success:true,network:'stellar:testnet',transaction:tx});
 });
+
+test('buyer i128 length: exact MAX accepted, MAX+1 and megadigit observations refused',()=>{
+  const max='170141183460469231731687303715884105727';
+  const valid=captureBuyerResult({...buyer('i-max'),requirement:{...requireTerms,amount:max}},{observedAt:at});
+  assert.equal(valid.buyer.requirement.amount,max);
+  const unsafe=['170141183460469231731687303715884105728','0','01', '9'.repeat(1_000_000)];
+  for(const bad of unsafe){
+    const wire={...buyer('i-overflow'),requirement:{...requireTerms,amount:bad}};
+    assert.throws(()=>captureBuyerResult(wire,{observedAt:at}),/BUYER_PAYMENT_TERMS_INVALID/);
+    const raw={...valid,buyer:{...valid.buyer,requirement:{...requireTerms,amount:bad}}};
+    assert.throws(()=>analyzeOne(raw),/BUYER_PAYMENT_TERMS_INVALID/);
+  }
+});

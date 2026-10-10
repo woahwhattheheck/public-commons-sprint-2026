@@ -13,7 +13,10 @@ const MAX_I128 = 170141183460469231731687303715884105727n;
 const hash = v => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v);
 const obj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const tag = v => typeof v === 'string' && /^[\w.:-]{1,128}$/.test(v);
-const amount = v => typeof v === 'string' && /^[1-9][0-9]*$/.test(v) && BigInt(v) <= MAX_I128;
+// Positive Soroban i128 atomics fit in at most 39 decimal digits.
+// Bound untrusted observations before regex and BigInt work.
+const amount = v => typeof v === 'string' && v.length <= 39 &&
+  /^[1-9][0-9]*$/.test(v) && BigInt(v) <= MAX_I128;
 function requireOk(ok, code) { if (!ok) throw new TypeError(code); }
 function date(v) {
   const d = typeof v === 'string' ? new Date(v) : null;
