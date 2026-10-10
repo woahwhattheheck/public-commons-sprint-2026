@@ -6,17 +6,17 @@ A small, customer-reviewable **browser view of the actual public Stellar Forge s
 
 In a full checkout of `woahwhattheheck/public-commons-sprint-2026`, with Node 22:
 
-`@sh
+```sh
 node stellar/scf-starforge-20261009/sf53-local-proof-workbench/serve.mjs
-`@
+```
 
 Open the printed **127.0.0.1** URL on **the same machine**. The launcher runs the original SF51 `runLocalSourceSmoke()` once, plus `assessRelease({strictPins:false})` from SF46. It displays the resulting timestamp, actual source import/preflight state, Git blob pin matches/drift, and the limited original checkout-smoke path: discovery, local HTTP 402, signed call count, cancelled quote replay and zero payments. It does not silently refresh pins or source state. A failure is shown as a failure. The browser can only GET an in-memory snapshot; refresh cannot trigger another proof run, payment or registration. A full public live deployment is not implied by this local operator UI.
 
 For one isolated original workbench HTTP/security contract check, without hosting CI or contacting any payment system:
 
-`@sh
+```sh
 node --test stellar/scf-starforge-20261009/sf53-local-proof-workbench/test/workbench.test.mjs
-`@
+```
 
 This check injects known module *return values* to test report presentation boundaries; **the launcher imports the real SF51/SF46 source**. To validate the true end-to-end local commerce run, use the actual launcher above. The test is not an acceptance substitute for paid Stellar transactions.
 
