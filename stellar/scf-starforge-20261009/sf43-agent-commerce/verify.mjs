@@ -4,6 +4,7 @@
 const RPC = 'https://soroban-testnet.stellar.org';
 const HASH = /^[0-9a-f]{64}$/;
 const AMOUNT = /^[1-9][0-9]*$/;
+const PAYER = /^[GC][A-Z2-7]{55}$/;
 const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const failure = (code, more = {}) => ({ status: 'NOT_VERIFIED', reason: code, ...more });
@@ -62,6 +63,14 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
       typeof expected.payTo !== 'string' || !/^G[A-Z2-7]{55}$/.test(expected.payTo) ||
       typeof expected.amount !== 'string' || !AMOUNT.test(expected.amount))
     return failure('TERMS_INVALID');
+  // The fee-paying transaction source is the facilitator; the actual token
+  // payer comes from the client-signed transfer authorization and SEP-41 event.
+  // A seller-reported payer alone is not proof, so bind it to that event below.
+  if(typeof receipt.payer!=='string' || !PAYER.test(receipt.payer))
+    return failure('RECEIPT_PAYER_MISSING_OR_INVALID');
+  if(expected.payer!==undefined &&
+      (typeof expected.payer!=='string' || !PAYER.test(expected.payer) || expected.payer!==receipt.payer))
+    return failure('EXPECTED_PAYER_MISMATCH');
   let tx;
   try { tx=await callRpc('getTransaction',{hash:receipt.transaction},fetchImpl,rpcEndpoint); }
   catch (error) { return failure('RPC_TRANSACTION_LOOKUP_FAILED',{detail:error.message}); }
@@ -88,10 +97,11 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
         // Only the canonical Stellar SDK decoder, not a text search over XDR, can
         // derive the exact transfer event's source/recipient/atomic value.
         const decoded=await decodeContractEvent(event);
-        if (decoded?.name === 'transfer' && decoded.to === expected.payTo &&
-            String(decoded.amount) === expected.amount) {
+        if (decoded?.name === 'transfer' && decoded.from === receipt.payer &&
+            decoded.to === expected.payTo && String(decoded.amount) === expected.amount) {
           return {status:'TOKEN_TRANSFER_MATCHED_TESTNET',...inclusion,
-            contractId:expected.asset,recipient:expected.payTo,amountAtomic:expected.amount,
+            contractId:expected.asset,payer:receipt.payer,
+            recipient:expected.payTo,amountAtomic:expected.amount,
             eventId:event.id??null,proof:'RPC_TX_AND_SEP41_TRANSFER_EVENT_MATCH'};
         }
       }
