@@ -7,7 +7,8 @@ import {fixturePlan, normalizeRequest,planAuditedVenues} from './src/engine.mjs'
 import {QlooClient,ProviderError} from './src/qloo.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const mode=process.env.ACCESSLENS_MODE==='live'?'live':'fixture';
+const mode=process.env.ACCESSLENS_MODE ?? 'fixture';
+if (!['fixture','live'].includes(mode)) throw new Error('ACCESSLENS_MODE must be fixture or live');
 const key=process.env.QLOO_API_KEY||'';
 if (mode==='live' && !key) throw new Error('QLOO_API_KEY required for LIVE mode; never silently downgrade to fixture');
 if (mode==='live' && !process.env.ACCESSLENS_VENUES_FILE) throw new Error('Audited operator venue catalog required for LIVE mode');
