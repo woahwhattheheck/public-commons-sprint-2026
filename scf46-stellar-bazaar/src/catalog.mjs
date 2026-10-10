@@ -137,7 +137,12 @@ export class BazaarCatalog {
     const filters = filtersFrom(params);
     const offset = asInteger(params.get('offset'),0,1_000_000);
     const limit = asInteger(params.get('limit'),20,100);
-    const all = [...this.#entries.values()].filter(row => matches(row, filters));
+    // Map insertion order depends on ingest/restart history. Canonical-key
+    // ordering makes offset pagination stable across equivalent rebuilds.
+    const all = [...this.#entries.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([, row]) => row)
+      .filter(row => matches(row, filters));
     return { resources: all.slice(offset,offset+limit),pagination:{offset,limit,total:all.length} };
   }
   search(params = new URLSearchParams()) {
