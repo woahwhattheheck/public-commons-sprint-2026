@@ -20,6 +20,21 @@ function optionalRate(n, label) {
   if (n === null || n === undefined) return null;
   return nonNegative(n, label);
 }
+// JavaScript serializes NaN and Infinity as JSON null, disguising missing finance
+// figures. Fail before returning an unusable or misleading grant scenario.
+function finiteProjection(n, label) {
+  if (!Number.isFinite(n)) {
+    throw new RangeError(`${label} exceeds the finite numeric range; reduce assumptions or volume`);
+  }
+  return n;
+}
+function paidCallCount(n) {
+  nonNegative(n, 'paidCalls');
+  if (!Number.isSafeInteger(n)) {
+    throw new RangeError('paidCalls must be a nonnegative safe integer');
+  }
+  return n;
+}
 function checkValues(input) {
   if (typeof input !== 'object' || input === null) throw new TypeError('input object required');
   for (const [section, keys] of Object.entries({
@@ -54,7 +69,7 @@ function checkValues(input) {
  */
 export function project(input, paidCalls, architecture = 'edge_db') {
   checkValues(input);
-  nonNegative(paidCalls, 'paidCalls');
+  paidCallCount(paidCalls);
   if (!['edge_db', 'vm_db'].includes(architecture)) {
     throw new RangeError('architecture must be edge_db or vm_db');
   }
@@ -85,7 +100,7 @@ export function project(input, paidCalls, architecture = 'edge_db') {
   const knownOrAssumed = infrastructureQuoted + hypotheticalSponsorUsd
     + Object.values(optionalCosts).reduce((t, v) => t + (v ?? 0), 0);
   const contributionCeiling = revenues - knownOrAssumed;
-  return {
+  const projection = {
     architecture,
     paid_calls_month: paidCalls,
     discovery_queries_month: paidCalls * a.discovery_queries_per_paid,
@@ -107,6 +122,15 @@ export function project(input, paidCalls, architecture = 'edge_db') {
     complete_budget: omissions.length === 0,
     successful_onchain_sponsor_cost_is_illustrative: true,
   };
+  for (const [key, value] of Object.entries(projection)) {
+    if (typeof value === 'number') finiteProjection(value, key);
+    if (key === 'optional_costs_usd') {
+      for (const [costKey, cost] of Object.entries(value)) {
+        if (cost !== null) finiteProjection(cost, `optional_costs_usd.${costKey}`);
+      }
+    }
+  }
+  return projection;
 }
 
 /** An optimistic break-even bound (omitted costs assumed zero ONLY for bound calculation). */
@@ -136,7 +160,10 @@ export function optimisticBreakEven(input, architecture = 'edge_db') {
       + n * a.onchain_attempts_per_paid * a.xlm_per_onchain_attempt * a.illustrative_xlm_usd;
     const revenue = n * a.operator_fee_usd_per_paid
       + a.subscribers * a.subscriber_fee_usd_per_month;
-    return revenue - cost;
+    for (const [name, value] of Object.entries({ requests, cpuMs, web, optional, cost, revenue })) {
+      finiteProjection(value, `break_even.${name}`);
+    }
+    return finiteProjection(revenue - cost, 'break_even.contribution');
   };
   if (profit(0) >= 0) return 0;
   const maxCalls = 1e12;
