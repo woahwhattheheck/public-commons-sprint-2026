@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stellar Forge — Local Proof Workbench</title>
+  <link rel="stylesheet" href="/app.css">
+  <script type="module" src="/app.js"></script>
+</head><body>
+<header class="hero">
+  <div class="eyebrow">STELLAR FORGE / SCF ENGINEERING</div>
+  <h1>Local proof workbench<span>.</span></h1>
+  <p>Operator-local, source-coupled acceptance from published Bazaar, MCP and x402 modules. No wallet. No funds. No hosted CI.</p>
+  <div class="context"><span id="observed">Reading original source evidence…</span><span>One original run at server launch</span></div>
+</header>
+<main>
+  <div class="notice" role="note"><strong>Engineering evidence, not a transaction receipt.</strong> A passing smoke verifies source-connected local HTTP discovery, preview and cancellation. It does not verify a Stellar testnet transfer, merchant adoption or grant eligibility.</div>
+  <section class="row" aria-label="Proof status">
+    <article class="metric"><div class="kicker">LOCAL CHECKOUT TRACE</div><h2 id="smoke-status">…</h2><p>Original SF51 catalog + MCP broker</p></article>
+    <article class="metric"><div class="kicker">RELEASE SOURCE CONTRACT</div><h2 id="release-status">…</h2><p>Original SF46 import + pin preflight</p></article>
+    <article class="metric"><div class="kicker">PROVEN SIGNED CALLS</div><h2 id="signed">—</h2><p>Zero is the intentional local-demo limit</p></article>
+    <article class="metric"><div class="kicker">PAYMENT OPERATIONS</div><h2 id="payments">—</h2><p>No authorization, signer or mainnet</p></article>
+  </section>
+  <section class="layout"><article class="panel">
+    <h2>Local buyer path</h2>
+    <p class="muted">Genuine source HTTP and MCP transports; payments deliberately cannot execute.</p>
+    <div class="steps"><div><b>01</b><span>Catalog discovery</span><strong id="discovered">—</strong></div>
+    <div><b>02</b><span>Origin HTTP 402</span><strong id="seller402">—</strong></div>
+    <div><b>03</b><span>Cancelled replay prevented</span><strong id="replay">—</strong></div>
+    <div><b>04</b><span>Real testnet transactions</span><strong id="testnet">—</strong></div></div>
+  </article><article class="panel">
+    <h2>Source release health</h2>
+    <p class="muted">Exact Git blob pins can drift when other owners publish improvements; drift is visible, not automatically accepted.</p>
+    <div class="counts"><div><strong id="matching">—</strong><span>Pin matches</span></div><div><strong id="changed">—</strong><span>Updated blobs</span></div><div><strong id="missing">—</strong><span>Missing files</span></div></div>
+    <p id="source-note" class="source-note">Awaiting recorded source checks.</p>
+  </article></section>
+  <section class="panel"><div class="sectionhead"><div><h2>Source provenance</h2><p class="muted">Module evidence read at server startup; no fabricated commerce acceptance.</p></div><span class="legend">Original SF46 manifest</span></div>
+  <div class="tablewrap"><table><thead><tr><th>Module</th><th>Status</th><th>Observed Git blob</th></tr></thead><tbody id="sources"><tr><td colspan="3">Loading…</td></tr></tbody></table></div>
+  </section>
+  <section class="panel"><h2>Open acceptance gates</h2><p>Independent signed Stellar testnet receipt, authorized seller resource and buyer adoption, final network deployment, and SCF application approval remain separate activities. This workbench does not initiate any of them.</p><p id="errors" class="error" role="alert"></p></section>
+</main><footer>Stellar Forge · MIT · Local process only · <code>127.0.0.1</code></footer>
+</body></html>
