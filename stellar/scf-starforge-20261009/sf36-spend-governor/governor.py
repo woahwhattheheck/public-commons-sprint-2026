@@ -9,12 +9,14 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import ipaddress
 import json
 import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 SCHEMA="stellar-spend-governor/v1"
 MAX_AMOUNT=2**63-1
@@ -59,6 +61,40 @@ def as_time(s: str)->datetime:
 def now_utc()->datetime:return datetime.now(timezone.utc)
 
 
+def require_resource_url(value: Any)->str:
+    """Reject ambiguous/unparsable purchase origins before issuing owner consent.
+
+    Preserve the exact URL for HMAC binding. DNS resolution, redirects, challenge
+    matching and signer equivalence remain the original client/operator's work.
+    """
+    if not isinstance(value,str) or not (9<=len(value)<=2048) or not value.startswith('https://'):
+        raise Denied('resource must be a bounded HTTPS URL with a host')
+    if any(ord(c)<33 or ord(c)>126 for c in value) or '\\' in value or '#' in value:
+        raise Denied('resource contains unsafe URL bytes or a fragment')
+    try:
+        parsed=urlsplit(value)
+        host=parsed.hostname
+        port=parsed.port
+    except ValueError as exc:
+        raise Denied('resource has an invalid HTTPS authority') from exc
+    if parsed.scheme!='https' or not parsed.netloc or not host or '@' in parsed.netloc or port==0:
+        raise Denied('resource has an invalid HTTPS authority')
+    labels=host.split('.')
+    legacy_ip=all(re.fullmatch(r'(?:0x[0-9a-f]+|[0-9]+)',label) for label in labels)
+    if (len(host)>253 or len(labels)<2 or legacy_ip or
+        host in {'localhost','local','localdomain','internal','home.arpa','ip6-localhost','ip6-loopback'} or
+        any(host.endswith(x) for x in ('.localhost','.local','.localdomain','.internal','.home.arpa')) or
+        not all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?',label) for label in labels)):
+        raise Denied('resource has an unsafe or non-DNS host')
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    else:
+        raise Denied('resource address literal not allowed')
+    return value
+
+
 def validate_request(obj:dict[str,Any])->dict[str,Any]:
     if not isinstance(obj,dict) or set(obj)!=set(REQUEST_FIELDS):
         raise Denied('canonical buyer purchase intent fields mismatch')
@@ -69,8 +105,7 @@ def validate_request(obj:dict[str,Any])->dict[str,Any]:
     if not isinstance(r['asset'],str) or not re.fullmatch(r'[A-Z2-7]{56}',r['asset']):
         raise Denied('asset must be Soroban SEP-41 contract identifier, not classic asset alias')
     if r['scheme'] not in ('exact','upto'):raise Denied('unsupported payment scheme')
-    if not isinstance(r['resource'],str) or not r['resource'].startswith('https://') or len(r['resource'])>2048:
-        raise Denied('resource must be bounded HTTPS URL')
+    require_resource_url(r['resource'])
     if parse_amount(r['max_amount'],'max_amount')<1:raise Denied('max_amount must be positive')
     # A resource URL and amount alone do not identify a payment: recipient,
     # expiry, HTTP operation, body and accepted x402 requirement must bind too.
