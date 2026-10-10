@@ -3,6 +3,7 @@ import { isIP } from 'node:net';
 // This prepares a PaymentRequired offer; only the canonical facilitator may
 // authenticate payment, verify finality and promote a listing to a trusted catalog.
 const DRAFT = 'https://json-schema.org/draft/2020-12/schema';
+const SOROBAN_I128_MAX = (1n << 127n) - 1n;
 const METHODS = new Set(['GET', 'HEAD', 'DELETE', 'POST', 'PUT', 'PATCH']);
 const BODY = new Set(['POST', 'PUT', 'PATCH']);
 const TYPES = new Set(['string', 'integer', 'number', 'boolean']);
@@ -109,6 +110,8 @@ function terms(payment) {
     throw new TypeError('Only scheme exact is implemented; upto needs dedicated verified contract');
   if (typeof payment.amount !== 'string' || !/^[1-9][0-9]*$/.test(payment.amount) ||
       payment.amount.length > 39) throw new TypeError('amount must be positive base units as a decimal string');
+  if (BigInt(payment.amount) > SOROBAN_I128_MAX)
+    throw new RangeError('Payment amount exceeds signed Soroban i128 limit');
   requiredString(payment.asset, 'SEP-41 asset', 128);
   requiredString(payment.payTo, 'payTo', 128);
   if (typeof payment.maxTimeoutSeconds !== 'number' || !Number.isSafeInteger(payment.maxTimeoutSeconds) ||
