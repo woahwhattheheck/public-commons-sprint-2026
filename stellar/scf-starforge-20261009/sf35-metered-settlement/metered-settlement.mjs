@@ -202,6 +202,8 @@ export class MeteredUptoSettlement {
     if(this.status!=='VERIFIED')throw new MeterError('SESSION_NOT_METERABLE');
     const next=amount(units,'usage.units',{allowZero:false});
     const total=BigInt(this.#state.units)+next;
+    // Bound the persisted aggregate usage, not only each individual increment.
+    if(total>I128_MAX)throw new MeterError('USAGE_OUT_OF_RANGE','cumulative units');
     const cost=charge(total,this.#quote.numerator,this.#quote.denominator);
     if(cost>this.#quote.maximum)throw new MeterError('METER_EXCEEDS_AUTHORIZED_CEILING');
     const events=[...this.#state.events,{sequence:this.#state.events.length+1,kind,units:next.toString(),cumulative:total.toString()}];
