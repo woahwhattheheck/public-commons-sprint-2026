@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { makeFrontdoor, originOnly } from '../frontdoor.mjs';
+import { makeFrontdoor, originOnly, combineSupported } from '../frontdoor.mjs';
 
 async function listen(server) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -32,7 +32,7 @@ test('routes original v2 bytes by both matching network descriptors; merges actu
         if (req.url === '/supported') {
           res.end(JSON.stringify({
             kinds: [{x402Version: 2, scheme: 'exact', network, extra: {areFeesSponsored: name === 'testnet'}}],
-            extensions: ['common-ext', `${name}-only`], signers: {[network]: [`${name}-signer`]}
+            extensions: ['common-ext', `${name}-only`], signers: {'stellar:*': [`shared-signer`, `${name}-signer`]}
           }));
         } else {
           res.end(JSON.stringify({success: true, network, originalBytes: raw}));
@@ -51,7 +51,7 @@ test('routes original v2 bytes by both matching network descriptors; merges actu
     const advertised = await supported.json();
     assert.deepEqual(advertised.kinds.map(x => x.network), ['stellar:testnet', 'stellar:pubnet']);
     assert.deepEqual(advertised.extensions, ['common-ext']);
-    assert.deepEqual(Object.keys(advertised.signers), ['stellar:testnet', 'stellar:pubnet']);
+    assert.deepEqual(advertised.signers, {'stellar:*': ['shared-signer', 'testnet-signer', 'pubnet-signer']});
     for (const network of ['stellar:testnet', 'stellar:pubnet']) {
       const body = JSON.stringify(payload(network), null, 1); // odd whitespace must survive forwarding
       const response = await fetch(base + '/verify', {method: 'POST', headers, body});
@@ -74,10 +74,10 @@ test('routes original v2 bytes by both matching network descriptors; merges actu
 
 test('fails closed on untrusted redirect and bad backend advertised network', async () => {
   const badPeer = createServer((req, res) => {
-    if (req.url === '/supported') res.end(JSON.stringify({kinds: [{x402Version: 2, scheme: 'exact', network: 'stellar:pubnet'}]}));
+    if (req.url === '/supported') res.end(JSON.stringify({kinds: [{x402Version: 2, scheme: 'exact', network: 'stellar:pubnet'}], signers: {'stellar:*':['testnet-signer']}}));
     else {res.writeHead(302, {location: 'https://attacker.example/settle'}); res.end('');}
   });
-  const goodPeer = createServer((req, res) => res.end(JSON.stringify({kinds: [{x402Version: 2, scheme: 'exact', network: 'stellar:pubnet'}]})));
+  const goodPeer = createServer((req, res) => res.end(JSON.stringify({kinds: [{x402Version: 2, scheme: 'exact', network: 'stellar:pubnet'}], signers: {'stellar:*':['pubnet-signer']}})));
   let edge;
   try {
     const a = await listen(badPeer), b = await listen(goodPeer);
@@ -90,6 +90,14 @@ test('fails closed on untrusted redirect and bad backend advertised network', as
     assert.equal(response.status, 502);
     assert.equal((await response.json()).error, 'UPSTREAM_REDIRECT_DENIED');
   } finally {if (edge) await close(edge); await close(badPeer); await close(goodPeer);}
+});
+
+test('rejects network-indexed signer maps that differ from native @x402/core CAIP family contract', () => {
+  const kinds = net => [{x402Version: 2, scheme: 'exact', network: net}];
+  assert.throws(() => combineSupported([
+    {kinds: kinds('stellar:testnet'), signers: {'stellar:testnet': ['invalid']}},
+    {kinds: kinds('stellar:pubnet'), signers: {'stellar:*': ['valid']}}
+  ]), /SUPPORTED_BAD_SIGNERS/);
 });
 
 test('origin guard rejects credentials, paths and external HTTP', () => {
