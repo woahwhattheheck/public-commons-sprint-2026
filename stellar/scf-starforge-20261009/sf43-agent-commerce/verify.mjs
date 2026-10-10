@@ -4,6 +4,11 @@
 const RPC = 'https://soroban-testnet.stellar.org';
 const HASH = /^[0-9a-f]{64}$/;
 const AMOUNT = /^[1-9][0-9]*$/;
+// Soroban contract token amounts are signed i128, not arbitrary-precision
+// positive integers. Keep comparisons in BigInt; never coerce to Number.
+const SOROBAN_I128_MAX = 170141183460469231731687303715884105727n;
+const sorobanAmount = value => typeof value === 'string' &&
+  AMOUNT.test(value) && value.length <= 39 && BigInt(value) <= SOROBAN_I128_MAX;
 const PAYER = /^[GC][A-Z2-7]{55}$/;
 const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -28,7 +33,7 @@ export function parseExactTestnetTerms(challenge, maxAtomic) {
   if (!plain(term) || term.scheme !== 'exact' || term.network !== 'stellar:testnet' ||
       typeof term.asset !== 'string' || !/^C[A-Z2-7]{55}$/.test(term.asset) ||
       typeof term.payTo !== 'string' || !/^G[A-Z2-7]{55}$/.test(term.payTo) ||
-      typeof term.amount !== 'string' || !AMOUNT.test(term.amount))
+      !sorobanAmount(term.amount))
     throw new TypeError('Unexpected Stellar testnet scheme, recipient, asset contract or atomic amount');
   if (BigInt(term.amount) > BigInt(maxAtomic)) throw new RangeError('Quoted atomic amount exceeds approved maximum');
   return structuredClone(term);
@@ -61,7 +66,7 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
     return failure('RECEIPT_NETWORK_SUCCESS_OR_HASH_INVALID');
   if (typeof expected.asset !== 'string' || !/^C[A-Z2-7]{55}$/.test(expected.asset) ||
       typeof expected.payTo !== 'string' || !/^G[A-Z2-7]{55}$/.test(expected.payTo) ||
-      typeof expected.amount !== 'string' || !AMOUNT.test(expected.amount))
+      !sorobanAmount(expected.amount))
     return failure('TERMS_INVALID');
   // The fee-paying transaction source is the facilitator; the actual token
   // payer comes from the client-signed transfer authorization and SEP-41 event.
@@ -132,8 +137,8 @@ export function parseSep41TransferAmount(native) {
       native.to_muxed_id != null) return null;
     raw=native.amount;
   }
-  if (typeof raw==='bigint') return raw>0n?raw.toString():null;
-  if (typeof raw==='string') return /^[1-9][0-9]*$/.test(raw)?raw:null;
+  if (typeof raw==='bigint') return raw>0n && raw<=SOROBAN_I128_MAX?raw.toString():null;
+  if (typeof raw==='string') return sorobanAmount(raw)?raw:null;
   if (typeof raw==='number') return Number.isSafeInteger(raw)&&raw>0?String(raw):null;
   return null;
 }
