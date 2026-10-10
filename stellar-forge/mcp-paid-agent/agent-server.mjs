@@ -5,6 +5,7 @@
  * No wallet, payer, approval or private key lives in this source.
  */
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { mcpAgentCommerceTool } from '../../stellar/scf-starforge-20261009/sf43-agent-commerce/mcp-buyer-acceptance.mjs';
 
 export const MCP_VERSION='2025-11-25';
 const plain = x => x!==null && typeof x==='object' && !Array.isArray(x);
@@ -46,7 +47,9 @@ const schemas={
   bazaar_status:{name:'bazaar_status',description:'Inspect the exact state of a prior quote; no network call.',inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
   bazaar_cancel:{name:'bazaar_cancel',description:'Cancel an unexecuted quote. Signed/unknown transactions require external reconciliation.',inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
 };
-const TOOLS=Object.values(schemas);
+const TOOLS=[...Object.values(schemas),mcpAgentCommerceTool];
+if(new Set(TOOLS.map(tool=>tool.name)).size!==TOOLS.length)
+  throw new Error('Duplicate MCP tool registration');
 
 /**
  * Ownership of signPayment and approve stays with the embedding operator.
@@ -55,9 +58,10 @@ const TOOLS=Object.values(schemas);
  */
 export class McpPaidToolBroker {
   #catalogUrl;#trustedOrigins;#approve;#sign;#fetch;#records=new Map();#quotes=new Map();
-  #timeLimit;#quoteTTL;#maxRecords;
+  #timeLimit;#quoteTTL;#maxRecords;#agentCommerce;
   constructor({discoveryUrl,allowedResourceOrigins=[],approve=()=>false,signPayment=null,
-    fetchImpl=defaultFetch,timeoutMs=8000,quoteTTL=10*60*1000,maxRecords=500}={}){
+    fetchImpl=defaultFetch,timeoutMs=8000,quoteTTL=10*60*1000,maxRecords=500,
+    agentCommerce=null}={}){
     if(!discoveryUrl)throw new TypeError('Explicit configured discoveryUrl required');
     this.#catalogUrl=new URL(discoveryUrl);
     if(!['https:','http:'].includes(this.#catalogUrl.protocol)||this.#catalogUrl.username||this.#catalogUrl.password||
@@ -65,8 +69,10 @@ export class McpPaidToolBroker {
     this.#trustedOrigins=new Set(allowedResourceOrigins.map(resourceOrigin));
     if(typeof approve!=='function'||typeof fetchImpl!=='function')throw new TypeError('Operator hooks required');
     if(signPayment!==null&&typeof signPayment!=='function')throw new TypeError('Invalid signer callback');
+    if(agentCommerce!==null&&typeof agentCommerce!=='function')throw new TypeError('Invalid SF43 agent-commerce adapter');
     this.#approve=approve;this.#sign=signPayment;this.#fetch=fetchImpl;
     this.#timeLimit=timeoutMs;this.#quoteTTL=quoteTTL;this.#maxRecords=maxRecords;
+    this.#agentCommerce=agentCommerce;
   }
   async #get(url){
     const resp=await this.#fetch(url,{method:'GET',headers:{accept:'application/json'},signal:AbortSignal.timeout(this.#timeLimit)});
@@ -204,6 +210,9 @@ export class McpPaidToolBroker {
       case 'bazaar_execute_approved':return this.execute(args);
       case 'bazaar_status':return this.status(args);
       case 'bazaar_cancel':return this.cancel(args);
+      case 'sf43_discover_review_and_pay':
+        if(!this.#agentCommerce)fail('AGENT_COMMERCE_UNAVAILABLE','SF43 requires an explicitly injected approved adapter');
+        return this.#agentCommerce(structuredClone(args));
       default:fail('TOOL_NOT_FOUND','Unknown tool '+String(name));
     }
   }
