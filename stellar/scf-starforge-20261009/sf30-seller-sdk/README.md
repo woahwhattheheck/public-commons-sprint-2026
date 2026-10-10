@@ -51,3 +51,9 @@ No SCF interest/application submitted; published Q3/#45 RFP does not itself esta
 Advertised seller resources must be HTTPS URLs with a public-looking hostname. The compiler rejects literal IP hosts (IPv4, IPv6, canonicalized numeric aliases), loopback names and reserved internal names such as `.localhost`, `.local`, `.internal`, and `.home.arpa` before constructing a payment offer. This matches the current SF31 buyer preflight: a new seller offering a private resource address would otherwise create an unusable or unsafe Bazaar listing. `allowLocalhost:true` permits only explicit `http://127.0.0.1:PORT/` developer fixtures; it does **not** permit other IPs or private names, even under HTTPS.
 
 This is URL-level validation, **not DNS resolution protection**. A public-looking hostname may still resolve/rebind to private IP space. Production sellers and consumers need verified host ownership and resolver/connect-time network egress policy; listing visibility still is not proof of seller identity or of settlement. No payment or network connection happens during offer compilation.
+
+## Query parameter dictionary safety
+
+The compiler treats query parameter names as untrusted metadata: `__proto__`, `prototype` and `constructor` are rejected, preventing ambiguous or prototype-affecting JSON Schema keys. Other valid names inherited by ordinary JavaScript objects, such as `toString` and `hasOwnProperty`, remain usable and must serialize as **own** query example/schema properties. This is seller-side metadata hygiene only, not request authentication or an x402 settlement guarantee.
+
+Focused regression: `node --test stellar/scf-starforge-20261009/sf30-seller-sdk/test/query-keys.test.mjs`.
