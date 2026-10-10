@@ -1,12 +1,13 @@
 // MIT. One focused end-to-end check using actual public Bazaar and SF32 MCP HTTP.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runReadOnlyMcpOnramp } from '../mcp-onramp.mjs';
+import { runReadOnlyMcpOnramp, assessLocalSourcePin } from '../mcp-onramp.mjs';
 
 test('source discovery -> MCP preview -> no-signer refusal -> cancel, zero merchant traffic', async () => {
   const receipt = await runReadOnlyMcpOnramp();
   assert.equal(receipt.mode, 'REAL_SOURCE_LOCAL_READ_ONLY_MCP');
-  assert.equal(receipt.originalSources.sourcePinMatches, true);
+  assert.equal(receipt.originalSources.sourcePolicy,
+    receipt.originalSources.sourcePinMatches ? 'PIN_MATCH' : 'UNPINNED_LOCAL_DEMO');
   assert.equal(receipt.originalSources.mcpProtocolVersion, '2025-11-25');
   assert.equal(receipt.discoveredResources, 1);
   assert.deepEqual(receipt.audit, { discoveryHttpRequests: 1, merchantHttpRequests: 0 });
@@ -22,4 +23,19 @@ test('source discovery -> MCP preview -> no-signer refusal -> cancel, zero merch
   assert.equal(receipt.blockchainTransaction, null);
   assert.equal(receipt.settled, false);
   assert.equal(receipt.grantSubmitted, false);
+});
+
+
+test('real source drift reports its status without blocking the local demo', () => {
+  const observed = { baselineMatches: false,
+    actualGitBlob: '1111111111111111111111111111111111111111',
+    baselineGitBlob: '2222222222222222222222222222222222222222' };
+  assert.deepEqual(assessLocalSourcePin(observed), {
+    mode: 'UNPINNED_LOCAL_DEMO', currentGitBlob: observed.actualGitBlob,
+    recordedGitBlob: observed.baselineGitBlob,
+  });
+  assert.throws(() => assessLocalSourcePin(observed, {strictSourcePin: true}), /source changed/);
+  assert.equal(assessLocalSourcePin(observed, {strictSourcePin: 'true'}).mode, 'UNPINNED_LOCAL_DEMO');
+  assert.equal(assessLocalSourcePin({...observed, baselineMatches: true}, {strictSourcePin:true}).mode, 'PIN_MATCH');
+  assert.throws(() => assessLocalSourcePin({baselineMatches: false}), /provenance/);
 });

@@ -1,6 +1,6 @@
 # SF-44: Stellar Bazaar developer onramp
 
-**Runnability:** Node.js 22+ standard-library developer kit against the **actual shipped** [PR451 public Bazaar discovery core](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/451), imported from `../../../scf46-stellar-bazaar/src/catalog.mjs`. Pinned source Git blob `7b4390f9a119399bdb8e27db5796697f1314da8b`, checked at runtime.
+**Runnability:** Node.js 22+ standard-library developer kit against the **actual shipped** [PR451 public Bazaar discovery core](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/451), imported from `../../../scf46-stellar-bazaar/src/catalog.mjs`. Recorded baseline source Git blob `0f95a2f3c95d10ef6e8410d10f2ba24a7c9a44de` compared with the actual imported Git blob at runtime.
 
 **Important:** This is a REAL local HTTP exercise of the existing discovery code, not a Stellar payment facilitator or a live testnet seller. No wallet, payment, ledger, settlement, seller validation, SCF application, or charge occurs. A deliberately invalid wallet recipient makes the fixture non-payable.
 
@@ -66,7 +66,7 @@ New SF-44 source: MIT; baseline discovery component and the public repo already 
 
 ## Post-release: source-exact Bazaar → MCP agent onramp
 
-The prior SF44 exact-source pin went stale when PR451's real Bazaar catalog evolved under SF23/SF28. This onramp now pins the **current main** Git object `7b4390f9a119399bdb8e27db5796697f1314da8b`; the original source check otherwise failed against the current imported file. The local-only fixture has explicit deliberately NONPAYABLE terms `amount=10000`, `asset=NONPAYABLE_DEMO_ASSET`, `payTo=INVALID_DEMO_RECIPIENT_NOT_A_WALLET` for read-only MCP price preview. These are not Stellar asset or recipient values.
+The prior SF44 exact-source pin went stale when PR451's real Bazaar catalog evolved under SF23/SF28. This onramp records baseline Git object `0f95a2f3c95d10ef6e8410d10f2ba24a7c9a44de`; subsequent accepted catalog commits are reported honestly rather than breaking local nonpayable demo execution. The local-only fixture has explicit deliberately NONPAYABLE terms `amount=10000`, `asset=NONPAYABLE_DEMO_ASSET`, `payTo=INVALID_DEMO_RECIPIENT_NOT_A_WALLET` for read-only MCP price preview. These are not Stellar asset or recipient values.
 
 The additive `mcp-onramp.mjs` actually composes TWO accepted original source engines, not replacements: PR451/SF23's real HTTP Bazaar catalog and SF32's Streamable HTTP MCP JSON-RPC server. It launches ephemeral loopback servers, sends genuine `initialize`, `tools/list`, `bazaar_search` (which performs an original catalog GET), `bazaar_preview`, denied `bazaar_execute_approved`, `bazaar_status`, `bazaar_cancel`, deliberately unwired `sf43_discover_review_and_pay`, and an anonymous request refused with HTTP 401. Its outbound request adapter permits ONLY local discovery; even future accidental callbacks cannot access a merchant from this demo. One random bearer stays in the client closure, never in the printed receipt.
 
@@ -85,3 +85,42 @@ node --test stellar/scf-starforge-20261009/sf44-developer-onramp/test/mcp-onramp
 **Executable acceptance contract**: actual source-backed 1-result catalog search, MCP 2025-11-25 tools discovery, sample price `PREVIEWED`, absent-signer rejection `SIGNER_NOT_CONNECTED` without a paid request, quote remains `PREVIEWED` until `CANCELLED`, SF43 refusal `AGENT_COMMERCE_UNAVAILABLE`, anonymous HTTP 401, one local catalog GET, zero merchant HTTP requests, no blockchain transaction. The CLI prints its actual measured result when run; this README does not claim a provider-backed live payment.
 
 **Payable integration remains separate:** SF43 and authorized existing local/Muse operators own genuine seller 402, official Stellar testnet signature, confirmed token transfer/ledger receipt and independent fulfillment proof. This SF44 local demo never invokes the seller, has no signer/approval callback, cannot register a real paid listing, and cannot satisfy a funded-RFP award by itself. No mainnet, merchant charge, production deployment, SCF interest/application, buyer outreach, private repository, CI or GitHub Actions involved.
+
+
+## Source drift: working local demo and separate strict release audit (2026-10-10)
+
+Source repairs legitimately change the original imported Bazaar catalog Git blob.
+The old hard-coded source-pin requirement blocked SF44 cold-start demonstrations
+each time another accepted catalog security fix landed.
+
+Run the genuine, nonpayable local Bazaar + SF32 MCP integration on Node 22+:
+
+```sh
+node stellar/scf-starforge-20261009/sf44-developer-onramp/mcp-onramp.mjs
+```
+
+The receipt records actual Git blob, recorded reviewed baseline, and
+`sourcePinMatches`. Its `sourcePolicy` is `PIN_MATCH` or
+`UNPINNED_LOCAL_DEMO`. A mismatch remains visible, but does not stop an
+entirely local, unsigned demo. No merchant can be called by the onramp's
+outbound adapter and its sample asset and payee are deliberately nonpayable.
+
+For a separate release provenance gate that rejects all mismatches:
+
+```sh
+node stellar/scf-starforge-20261009/sf44-developer-onramp/mcp-onramp.mjs --strict-source-pin
+```
+
+Review the actual changed source and intentionally update the recorded
+baseline before treating it as a reviewed release. Neither mode authorizes
+signing, paying, deployment or an SCF application.
+
+Focused validation, without hosted GitHub Actions:
+
+```sh
+node --test stellar/scf-starforge-20261009/sf44-developer-onramp/test/mcp-onramp.test.mjs
+node --test stellar/scf-starforge-20261009/sf44-developer-onramp/test/onboard.test.mjs
+```
+
+These exercise the real imported source via loopback and source-provenance
+policy; they do not claim external provider payment or testnet acceptance.
