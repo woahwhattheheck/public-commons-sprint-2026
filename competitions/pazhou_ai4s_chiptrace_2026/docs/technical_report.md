@@ -83,6 +83,8 @@ Coverage checks include candidate and baseline sample minima, absent baseline ch
 
 For a nonzero reference interval, the shortest candidate replicate span must cover at least 75% of the median baseline replicate duration. Candidate intervals must also overlap at least 75% of the anchored baseline interval whose start and end are the median replicate endpoints. A full-length trace shifted to a different experiment phase therefore abstains. `time_s` must use a shared protocol-relative elapsed-time origin. A duration or overlap failure reports no channel risk score (`null`) and uncertainty 1.0 rather than presenting a partial-window score as full-window evidence. Entirely absent baseline channels also abstain.
 
+Finite input validation alone does not guarantee finite derived evidence. If a channel's derived metrics or scoring arithmetic become non-finite, ChipTrace returns `INSUFFICIENT_EVIDENCE`, replaces unrepresentable metrics with `null`, clears the score components, sets the channel risk score to `null` and uncertainty to 1.0, and records the affected fields in `derived_overflow_abstention`. The reason directs the researcher to rescale or review the measurements. A non-finite derived baseline center or scale is rejected with a contract error. Canonical receipt serialization rejects NaN and Infinity, keeping report receipts within standard JSON.
+
 `SUPPORTED` is deliberately defined as *no configured QC review threshold exceeded*. It does not imply biological efficacy, assay validity, clinical safety, or treatment suitability.
 
 The report also carries a bounded uncertainty indicator driven by candidate count, baseline count, missingness, and degenerate baseline scale. The uncertainty is an audit signal, not a frequentist confidence interval.
