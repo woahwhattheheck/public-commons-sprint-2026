@@ -110,7 +110,12 @@ export class MeteredUptoSettlement {
     amount:this.#state.chargeAtomic,ceiling:this.#state.maxAtomic,
     usageDigest:this.#state.usageDigest??null,transaction:this.#state.transaction??null,
     ledgerProof:this.#state.ledgerProof??null,finality:this.status==='LEDGER_CONFIRMED'});}
-  async #commit(update){this.#state={...this.#state,...update};await replaceAtomic(this.#file,this.#state);}
+  async #commit(update){
+    // The on-disk journal is authoritative. Never expose a transition that failed to persist.
+    const next={...this.#state,...update};
+    await replaceAtomic(this.#file,next);
+    this.#state=next;
+  }
   async #exclusive(fn){
     if(this.#busy)throw new MeterError('CONCURRENT_SESSION_MUTATION');
     this.#busy=true;try{return await fn();}finally{this.#busy=false;}
