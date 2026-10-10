@@ -61,3 +61,13 @@ Next independent proof: authenticated approved operator boot existing `@x402/cor
 ## Operator readiness deadline and fresh timestamps
 
 `TruthfulSupported` bounds each injected network readiness probe to **5 seconds by default** (`probeTimeoutMs`, 10–30000 milliseconds). A hung, rejected, or timed-out probe fails closed for that network; `/supported` cannot wait indefinitely for it. Pass the optional supplied `signal` from the probe callback into your actual RPC/HTTP clients to cooperate with cancellation; the deadline also bounds a probe that ignores the signal. Do not mistake the timeout for a transaction or signer timeout. `checkedAtUnix` is validated using the clock **after** the probe resolves (within `maxAgeSeconds`, default 30 seconds). Check actual RPC/fee/signer/asset readiness; do not claim provider support based on an offline mock.
+
+## Local HTTP Host authority (2026-10-10)
+
+The loopback `/supported`, `/supported/assets` and `/health` listener also checks the *incoming Host header*, not just its bound IP address. Only literal `127.0.0.1`, `localhost`, and `[::1]` authorities are accepted, optionally with a canonical explicit port equal to the actual listener port. Foreign DNS names, suffix tricks, encoded/nonnumeric authorities, mismatched/invalid ports, multiple Host headers and absent Host are refused (403 from the handler or HTTP 400 from Node's parser). This closes the browser DNS-rebinding path to otherwise private capability and health snapshots. It does not authenticate remote requests: keep this listener bound to loopback, and enforce existing authentication/rate limits on any reverse proxy or externally exposed facilitator.
+
+Focused boundary check (Node 22; real local HTTP requests to the real SF12 listener):
+
+    node --test stellar/scf-starforge-20261009/sf12-supported-truth/test/host-authority.test.mjs
+
+The offline check makes no Stellar transaction, wallet/signing request or remote RPC call. Local host authority is a transport boundary, not a claim of SDK conformance or live payment acceptance.
