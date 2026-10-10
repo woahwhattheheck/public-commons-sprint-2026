@@ -16,7 +16,10 @@ export async function route(req,res){const url=new URL(req.url,'http://localhost
       const sources=mode==='live'?await buildLiveComparison({seedA,seedB,kind}):demoResults(seedA,seedB,kind);
       return write(res,200,buildAgentResponse({seedA,seedB,kind,mode,...sources}));
     }catch(err){let status=err instanceof QlooError?(err.code==='RATE_LIMIT'?429:err.code==='AUTH'?502:err.code==='NOT_CONFIGURED'?503:err.code==='NO_MATCH'?422:err.code==='AMBIGUOUS_SEED'?409:502):400;
-      return write(res,status,{error:String(err.message||'Request failed').slice(0,300),code:err.code||'VALIDATION'});}
+      const body={error:String(err.message||'Request failed').slice(0,300),code:err.code||'VALIDATION'};
+      if(err instanceof QlooError && err.code==='NO_MATCH' && Array.isArray(err.suggestions))
+        body.suggestions=err.suggestions.slice(0,3);
+      return write(res,status,body);}
   }
   const f=files.get(url.pathname);if(!f)return write(res,404,{error:'Not found'});
   try{const contents=await readFile(path.join(publicRoot,f[0]));res.writeHead(200,{'Content-Type':f[1],'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});res.end(contents)}
