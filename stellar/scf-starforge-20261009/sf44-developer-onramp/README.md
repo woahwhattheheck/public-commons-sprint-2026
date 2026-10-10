@@ -124,3 +124,10 @@ node --test stellar/scf-starforge-20261009/sf44-developer-onramp/test/onboard.te
 
 These exercise the real imported source via loopback and source-provenance
 policy; they do not claim external provider payment or testnet acceptance.
+
+
+## Loopback catalog redirect boundary
+
+The local, nonpayable SF44 MCP onramp accepts only its own explicit `127.0.0.1` catalog origin. `createCatalogOnlyFetch` now forces the native Node fetch option `redirect: 'error'`, overriding a caller's follow setting and rejecting a 302 rather than permitting a new destination. Checking only the initial request origin was insufficient: native fetch follows redirects unless instructed otherwise.
+
+Focused regression: `node --test stellar/scf-starforge-20261009/sf44-developer-onramp/test/catalog-redirect-egress.test.mjs`. It uses two real loopback HTTP servers, checks URL and Request attempts and verifies no request reaches the second origin. It does not submit payments or demonstrate real Stellar settlement.
