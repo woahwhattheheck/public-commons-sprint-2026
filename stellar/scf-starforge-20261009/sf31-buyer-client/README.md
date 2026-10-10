@@ -52,3 +52,9 @@ Pin: x402 Foundation [specification v2](https://github.com/x402-foundation/x402/
 ### Catalog discovery byte boundary
 
 `discover()` consumes the actual HTTP response body through a bounded stream and rejects more than **256 KiB of decoded response bytes**, regardless of a server's `Content-Length` header. It parses JSON only after a fatal UTF-8 decode; malformed encodings and malformed JSON return `BAD_DISCOVERY_RESPONSE`, and oversized replies return `DISCOVERY_RESPONSE_TOO_LARGE`. A transport failure while reading returns `DISCOVERY_TRANSPORT_FAILED`. A valid large catalog should be paginated by the upstream server; this client deliberately will not allocate an unbounded body from an untrusted origin. Run the one focused regression with `node --test test/discovery-stream.test.mjs` locally (no hosted Actions).
+
+### Discovery deployments under a URL prefix
+
+The `origin` for `discover()` can be a trusted provider's **base path**, not only a host root. For example, `https://api.example.com/platform/v2/x402` is requested at `/platform/v2/x402/discovery/resources` or `/platform/v2/x402/discovery/search`; an ordinary `https://host` continues to use `/discovery/*`. The optional terminal slash is ignored. Pass the *base prefix*, not the entire `/discovery/resources` endpoint. URL credentials and fragments remain forbidden, and any preexisting URL query is discarded before building the discovery request. Actual provider availability still requires that provider to implement these routes. No change to buyer payment approval, signing, HTTP 402, response caps, or redirect controls.
+
+Focused first-party loopback regression: `node --test test/discovery-prefix.test.mjs`. No external seller, payment or GitHub Actions run is needed.
