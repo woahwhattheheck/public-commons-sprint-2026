@@ -12,13 +12,13 @@ MIT. This is an executable full-corpus read-only research workbench for the ACTU
 
 ## Capture native provider filters without scope drift
 
-The official x402 Bazaar \`GET /discovery/resources\` contract supports five
-read-only filters: \`type\`, \`payTo\`, \`scheme\`, \`network\`, \`extensions\`.
-Pass any subset as repeated explicit CLI flags. Each requested offset page uses
-identical filters, and \`sources.json\` saves the exact \`filters\` object. Original
+The official x402 Bazaar `GET /discovery/resources` contract supports five
+read-only filters: `type`, `payTo`, `scheme`, `network`, `extensions`.
+Pass any subset using distinct CLI flags (each option at most once). Each requested offset page uses
+identical filters, and `sources.json` saves the exact `filters` object. Original
 page URLs retain the native query; replay coverage rejects altered, missing,
 duplicated or undeclared filter parameters. Unfiltered historical manifests
-without \`filters\` remain compatible, but filtered and unfiltered captures
+without `filters` remain compatible, but filtered and unfiltered captures
 must never be presented as the same native corpus.
 
 To target the public Stellar testnet catalog documented by Vellar (read-only):
