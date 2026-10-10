@@ -21,7 +21,14 @@ MAX_AMOUNT=2**63-1
 ID_PATTERN=re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
 NETWORKS={"stellar:testnet", "stellar:pubnet"}
 CURRENCY_FIELDS=("max_single", "max_total", "max_per_utc_day", "max_per_actor_utc_day", "max_per_service_utc_day")
-REQUEST_FIELDS=("request_id", "actor", "service", "network", "asset", "scheme", "max_amount", "resource")
+# Consent must identify the same purchase the x402 signer is about to authorize.
+# Reject unknown fields instead of silently dropping e.g. a caller-provided payTo.
+REQUEST_FIELDS=("request_id", "actor", "service", "network", "asset", "scheme", "max_amount", "resource",
+                "pay_to", "max_timeout_seconds", "method", "body_present", "body_bytes",
+                "body_sha256", "accepted_terms_sha256")
+HTTP_METHODS={"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"}
+EMPTY_BODY_SHA256=hashlib.sha256(b'').hexdigest()
+CONSENT_KIND='owner-consent/complete-intent-v2'
 
 class Denied(ValueError):
     """Decision is DENIED: safely do not create or submit a payment."""
@@ -53,8 +60,8 @@ def now_utc()->datetime:return datetime.now(timezone.utc)
 
 
 def validate_request(obj:dict[str,Any])->dict[str,Any]:
-    if not isinstance(obj,dict) or any(k not in obj for k in REQUEST_FIELDS):
-        raise Denied('incomplete canonical buyer request')
+    if not isinstance(obj,dict) or set(obj)!=set(REQUEST_FIELDS):
+        raise Denied('canonical buyer purchase intent fields mismatch')
     r={k:obj[k] for k in REQUEST_FIELDS}
     for k in ("request_id","actor","service"):
         if not isinstance(r[k],str) or not ID_PATTERN.fullmatch(r[k]):raise Denied(f'invalid {k}')
@@ -65,6 +72,28 @@ def validate_request(obj:dict[str,Any])->dict[str,Any]:
     if not isinstance(r['resource'],str) or not r['resource'].startswith('https://') or len(r['resource'])>2048:
         raise Denied('resource must be bounded HTTPS URL')
     if parse_amount(r['max_amount'],'max_amount')<1:raise Denied('max_amount must be positive')
+    # A resource URL and amount alone do not identify a payment: recipient,
+    # expiry, HTTP operation, body and accepted x402 requirement must bind too.
+    payee=r['pay_to']
+    if not isinstance(payee,str) or not (1<=len(payee)<=256) or payee!=payee.strip() or any(ord(c)<33 or ord(c)>126 for c in payee):
+        raise Denied('pay_to must be a bounded nonempty printable payment recipient')
+    timeout=r['max_timeout_seconds']
+    if type(timeout) is not int or not (1<=timeout<=86400):
+        raise Denied('max_timeout_seconds must be an integer in 1..86400')
+    if not isinstance(r['method'],str) or r['method'] not in HTTP_METHODS:
+        raise Denied('method must be an uppercase supported HTTP verb')
+    present=r['body_present'];size=r['body_bytes']
+    if type(present) is not bool or type(size) is not int or not (0<=size<=1_048_576):
+        raise Denied('body presence/byte length invalid')
+    if (not present) and size!=0:
+        raise Denied('body absent but byte length is nonzero')
+    for field in ('body_sha256','accepted_terms_sha256'):
+        if not isinstance(r[field],str) or not re.fullmatch(r'[0-9a-f]{64}',r[field]):
+            raise Denied(field+' must be lowercase SHA-256 hex')
+    if not present and r['body_sha256']!=EMPTY_BODY_SHA256:
+        raise Denied('absent body must have the SHA-256 of empty bytes')
+    if r['method'] in ('GET','HEAD') and present:
+        raise Denied('GET/HEAD cannot carry a request body')
     return r
 
 
@@ -118,7 +147,7 @@ def issue_consent(consent_key:bytes,request:dict,expiry_utc:str)->str:
     expiry=as_time(expiry_utc)
     if expiry<=now_utc():raise Denied('consent expiry must be in the future')
     if (expiry-now_utc()).total_seconds()>900:raise Denied('consent expires later than 15 minute safety window')
-    return token_for(secret(consent_key,'consent key'),{'kind':'owner-consent','request':r,'expires_at':expiry_utc})
+    return token_for(secret(consent_key,'consent key'),{'kind':CONSENT_KIND,'request':r,'expires_at':expiry_utc})
 
 
 def issue_finality_attestation(operator_key:bytes,reservation_id:str,actual_amount:str,receipt_ref:str,proof_sha256:str)->str:
@@ -212,7 +241,7 @@ class Governor:
     def reserve(self,request:dict,consent_token:str)->dict:
         r=validate_request(request);day=now_utc().date().isoformat()
         claims=token_claims(self.ck,consent_token)
-        if claims.get('kind')!='owner-consent' or claims.get('request')!=r:
+        if claims.get('kind')!=CONSENT_KIND or claims.get('request')!=r:
             raise Denied('explicit owner consent does not bind exactly to this payment request')
         if as_time(claims.get('expires_at'))<=now_utc():raise Denied('explicit owner consent expired')
         digest=hashlib.sha256(canonical(r)).hexdigest()

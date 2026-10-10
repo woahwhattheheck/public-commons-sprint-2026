@@ -21,7 +21,7 @@ Direct authoritative specs, pinned at engineering time:
 - Asset/network allowlist for exactly `stellar:testnet` / `stellar:pubnet` and 56-character Stellar contract IDs; no default permission to spend.
 - Canonical **base-unit string only** arithmetic. Reject floats, JSON numbers, negative and noncanonical integer encodings; support values up to signed 64-bit maximum. Units are in the asset contract's own base units, NOT human-readable XLM, USD or decimals; external SDK must perform verified decimal conversion.
 - Five caps **per asset and network**: one payment request, lifetime total, UTC calendar-day total, per-agent/day, per-service/day. Rolling windows are a possible later extension, not claimed here.
-- Explicit operator-issued HMAC-SHA256 consent bound to **all** payment parameters (including resource URL), unique request ID and a 15-minute maximum expiry. Buyer agent never receives the HMAC key; agent cannot mint new permissions or change signed terms.
+- Explicit operator-issued HMAC-SHA256 **v2** consent bound to the complete purchase intent: resource URL, recipient/payee, network, asset, scheme, signed maximum, timeout, HTTP method, body bytes/presence/hash and canonical accepted payment-terms SHA-256, plus unique request ID and a 15-minute maximum expiry. Buyer agent never receives the HMAC key; agent cannot mint new permissions or change signed terms.
 - Atomic SQLite `BEGIN IMMEDIATE` reservation and idempotent retry handling, WAL + synchronous FULL; reserve **max** of `upto`, full price of `exact`. Current-state budgets include unreconciled reservations, preventing accidental overbooking.
 - Separate trusted finality observer attestation, also HMAC signed, binding original provider receipt reference, its SHA-256 and the actual charged amount. The receiver enforces `actual <= reserved max` (`exact` additionally requires exact equality). Multiple reservations cannot claim the same network receipt. No agent API for releasing unsettled pending reservations.
 - Persistent HMAC-chained append-only event journal AND a reconstructed reservation projection integrity check before mutation. This is **tamper-evident against unauthorized edits given separate secret custody**, not a cryptographically anchored defense against malicious FULL database rollback. Pin/checkpoint journal digest outside this service for rollback evidence.
@@ -30,7 +30,7 @@ Direct authoritative specs, pinned at engineering time:
 ## Integration, trusted roles and exact flow
 
 ```python
-import os, json
+import os, json, hashlib
 from datetime import datetime, timezone, timedelta
 from governor import Governor, issue_consent, issue_finality_attestation
 policy=json.load(open('policy.example.json',encoding='utf-8'))
@@ -39,11 +39,20 @@ ck=os.environ['GOVERNOR_CONSENT_KEY'].encode()    # >=32 random bytes
 ak=os.environ['GOVERNOR_AUDIT_KEY'].encode()      # >=32 random bytes
 ok=os.environ['GOVERNOR_OPERATOR_KEY'].encode()   # >=32 random bytes
 ledger=Governor('buyer-ledger.sqlite',policy,ck,ak,ok)
-# The caller constructs a request with ALL eight required fields:
+# Trusted buyer/operator confirms the EXACT offered x402 accepted terms and
+# obtains this canonical digest from the real SDK; these values are illustrative.
+# The fake payee here is NOT a valid funded production Stellar account.
+payee='G'+'A'*55
+asset='CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA'
+terms={'scheme':'upto','network':'stellar:testnet','asset':asset,'payTo':payee,
+       'amount':'1000000','maxTimeoutSeconds':60}
+terms_hash=hashlib.sha256(json.dumps(terms,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 request={'request_id':'nonce-001','actor':'agent-01','service':'api-vendor',
  'resource':'https://api.vendor.example/priced','network':'stellar:testnet',
- 'asset':'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA',
- 'scheme':'upto','max_amount':'1000000'}
+ 'asset':asset,'scheme':'upto','max_amount':'1000000',
+ 'pay_to':payee,'max_timeout_seconds':60,'method':'GET',
+ 'body_present':False,'body_bytes':0,'body_sha256':hashlib.sha256(b'').hexdigest(),
+ 'accepted_terms_sha256':terms_hash}
 print(ledger.estimate(request))  # informative only
 # Operator separately approves exact request and issues a short-lived token:
 permit=issue_consent(ck,request,(datetime.now(timezone.utc)+timedelta(minutes=5)).isoformat())
@@ -58,6 +67,14 @@ ledger.close()
 **The snippet is illustrative operator wiring**, not evidence that a live network receipt exists. The `a*64` digest in the snippet is a placeholder to be replaced by an actual independently verified provider receipt hash; never use that placeholder operationally.
 
 The HMAC **issuer and finality watcher are privileged operations**: deploy separately from untrusted agents/tool calls and do not expose them through MCP. Their source-of-truth permission/finality verification, key rotation, ledger/account controls, and external independent checkpoint are additional production tasks. An attacker who obtains those keys or DB admin plus signing authority can forge approvals. Do not claim this module alone enforces Soroban wallet allowances or bank-level guarantees.
+
+### Complete-intent consent boundary (source upgrade, October 10)
+
+This source now requires **15 exact, named fields** for each new consent and reservation. Older eight-field operator permits will fail closed; previously signed consent tokens are not silently upgraded or accepted. Existing already-reserved SQLite entries remain auditable and may be reconciled by the trusted watcher, but an unsettled reservation must not be released merely because the permit format changed. An operator must reapprove a new exact intent and use a new request ID after a rejected upgrade attempt, subject to the remaining budget.
+
+The new fields are `pay_to` (exact eventual x402 recipient), `max_timeout_seconds` (1–86400), uppercase HTTP `method`, boolean `body_present`, integer `body_bytes` (0..1,048,576), lowercase `body_sha256` of the actual request bytes, and `accepted_terms_sha256` of the canonical **complete** x402 `accepts` requirement. The last hash covers original scheme-specific `extra` metadata as well as the visible recipient/network/asset/max/expiry fields. The buyer/operator must compute and compare it against the original live 402 challenge *before issuing consent*, and reject any mismatch between approved terms, the subsequent signer payload, and the reserved request. This module checks the exact owner-approved field values and HMAC but **does not itself fetch a 402, independently verify a seller, or recompute the quote digest**. Caller-invented hashes are not payment verification. The original SF-31 buyer handles the wire challenge and signer; a source-bound, independently authorized integration is still required.
+
+`body_present` keeps absent and zero-length request bodies distinct, and `GET`/`HEAD` must have no body; absent body requires zero bytes and SHA-256 of the empty byte string. The governor rejects unknown fields rather than silently stripping a caller-supplied payee. No Stellar payee-format/trustline/merchant-account validation is implied: original wallet and server SDKs own those checks. The local SQLite journal still stores a cryptographic request digest, not a human-readable payee log; retain the exact approved request in the privileged operator's evidence store for audit.
 
 ### Policy composition with Stellar smart accounts and `upto`
 
