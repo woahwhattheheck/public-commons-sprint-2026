@@ -107,6 +107,14 @@ const MAX_DISCOVERY_BYTES = 256 * 1024;
 async function readDiscoveryJSON(response) {
   if (!response.body || typeof response.body.getReader !== 'function')
     throw new BuyerError('BAD_DISCOVERY_RESPONSE');
+  // Deny an advertised over-limit body before allocating a reader. A dishonest
+  // short length is still caught by the independent streaming byte count.
+  const declaredLength = response.headers.get('content-length');
+  if (declaredLength !== null && /^[0-9]+$/.test(declaredLength) &&
+      BigInt(declaredLength) > BigInt(MAX_DISCOVERY_BYTES)) {
+    void response.body.cancel().catch(() => {});
+    throw new BuyerError('DISCOVERY_RESPONSE_TOO_LARGE');
+  }
   const reader = response.body.getReader();
   const chunks = [];
   let total = 0, complete = false;
@@ -123,7 +131,9 @@ async function readDiscoveryJSON(response) {
     if (e instanceof BuyerError) throw e;
     throw new BuyerError('DISCOVERY_TRANSPORT_FAILED', '', { cause: e });
   } finally {
-    if (!complete) { try { await reader.cancel(); } catch {} }
+    // Cancellation is best-effort: a hostile source can leave cancel() pending
+    // forever, but over-limit discovery rejection must never depend on it.
+    if (!complete) { try { void reader.cancel().catch(() => {}); } catch {} }
     reader.releaseLock();
   }
   try {
