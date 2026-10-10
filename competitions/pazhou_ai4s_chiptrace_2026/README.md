@@ -132,6 +132,25 @@ Accepted execution evidence on the merged exact bytes used CPython 3.13.5 and fi
 
 This is a synthetic research-software QC benchmark floor, not biological or competition validation.
 
+
+## Synthetic operating-curve characterization
+
+`operating_curve_experiment.py` imports the current `chiptrace.py` core unchanged and runs deterministic, predeclared synthetic intervention conditions across separate design and held-out seeds. It records correct detections, misses, false flags, abstentions, and contract errors instead of forcing successful outcomes. Generator labels come only from the declared intervention parameters; they are not biological ground truth or organizer scoring.
+
+Run a reproducible starter sweep from the repository root:
+
+```bash
+python competitions/pazhou_ai4s_chiptrace_2026/operating_curve_experiment.py \
+  --out /tmp/chiptrace-oc \
+  --design-trials 200 \
+  --heldout-trials 200 \
+  --min-points 6
+```
+
+The output directory contains the pre-run `conditions.json`, raw per-trial `decisions.jsonl`, generated exact-input artifacts, and `summary.json` with per-condition outcome counts plus an explicitly exploratory design-selected threshold evaluated on held-out trials. Custom conditions may be supplied with `--conditions-json`; use `--extend-defaults` only when the added conditions are genuinely distinct. Preserve source hashes and publish raw counts, sensitivity, false-positive rate, and abstentions—not a pass-only summary.
+
+This harness is synthetic research-software QC characterization. It is not wet-lab, biological, clinical, or competition validation, and it does not change ChipTrace's production evidence policy.
+
 ## Competition status and authority boundary
 
 This repository carrier is source/test/demo/report readiness only. It does not assert Kaggle registration, terms acceptance, official submission, organizer validation, finalist status, score, ranking, prize, payment, or revenue. Any eventual competition action must preserve the event's current rules, data licenses, attribution requirements, and identity/entry requirements.
