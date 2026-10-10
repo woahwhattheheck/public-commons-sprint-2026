@@ -107,6 +107,27 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
     reason:sawTargetTx?'NO_MATCHING_SEP41_TRANSFER':'TOKEN_TRANSFER_NOT_INDEXED'};
 }
 
+/** Parse official Stellar SDK scValToNative transfer data. Legacy SEP-41
+ * carries scalar i128; modern SEP-41/SAC carries {amount:i128,to_muxed_id?:...}.
+ * A muxed destination is not proven to match a base-G-address-only payTo.
+ */
+export function parseSep41TransferAmount(native) {
+  let raw=native;
+  if (native instanceof Map) {
+    if (!native.has('amount') || [...native.keys()].some(k=>!['amount','to_muxed_id'].includes(k)) || native.get('to_muxed_id') != null) return null;
+    raw=native.get('amount');
+  } else if (native !== null && typeof native === 'object') {
+    if (Array.isArray(native) || !Object.hasOwn(native,'amount') ||
+      Object.keys(native).some(k=>!['amount','to_muxed_id'].includes(k)) ||
+      native.to_muxed_id != null) return null;
+    raw=native.amount;
+  }
+  if (typeof raw==='bigint') return raw>0n?raw.toString():null;
+  if (typeof raw==='string') return /^[1-9][0-9]*$/.test(raw)?raw:null;
+  if (typeof raw==='number') return Number.isSafeInteger(raw)&&raw>0?String(raw):null;
+  return null;
+}
+
 /** Prefer actual @stellar/stellar-sdk provided by @x402/stellar installation. */
 export async function createOfficialEventDecoder() {
   const sdk=await import('@stellar/stellar-sdk');
@@ -115,6 +136,8 @@ export async function createOfficialEventDecoder() {
     if (!Array.isArray(event.topic) || event.topic.length < 3 || !event.value) return null;
     const [name,from,to]=event.topic.slice(0,3).map(decode);
     if (typeof name !== 'string' || name !== 'transfer') return null;
-    return {name,from:String(from),to:String(to),amount:String(decode(event.value))};
+    const amount=parseSep41TransferAmount(decode(event.value));
+    if (amount===null) return null;
+    return {name,from:String(from),to:String(to),amount};
   };
 }
