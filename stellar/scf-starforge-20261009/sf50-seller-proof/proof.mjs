@@ -17,19 +17,43 @@ const plain = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 // V2 binds the complete advertised Bazaar schema and chosen accepts option.
 // Strict canonical JSON refuses silent dropping of undefined/non-JSON values.
 const MAX_CONTRACT_BYTES = 65536;
-function canonicalContract(value, depth=0, meter={nodes:0}) {
-  if (++meter.nodes > 10000 || depth > 32) throw new TypeError('Bazaar contract too complex');
-  if (value === null || typeof value === 'boolean') return JSON.stringify(value);
-  if (typeof value === 'string') {
-    if (Buffer.byteLength(value,'utf8') > MAX_CONTRACT_BYTES) throw new TypeError('Bazaar contract string too long');
-    return JSON.stringify(value);
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
-  if (Array.isArray(value)) return '[' + value.map(v=>canonicalContract(v,depth+1,meter)).join(',') + ']';
-  if (plain(value) && [Object.prototype,null].includes(Object.getPrototypeOf(value))) {
-    return '{' + Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonicalContract(value[k],depth+1,meter)).join(',') + '}';
-  }
-  throw new TypeError('Bazaar proof contract must contain JSON values only');
+function canonicalContract(value) {
+  // Enforce the byte cap as each token is emitted, not after recursively
+  // constructing an untrusted metadata string that could consume huge memory.
+  let nodes=0, bytes=0;
+  const parts=[];
+  const emit=part=>{
+    bytes+=Buffer.byteLength(part,'utf8');
+    if(bytes>MAX_CONTRACT_BYTES) throw new RangeError('Bazaar contract exceeds 64 KiB');
+    parts.push(part);
+  };
+  const write=(v,depth)=>{
+    if(++nodes>10000 || depth>32) throw new TypeError('Bazaar contract too complex');
+    if(v===null || typeof v==='boolean'){emit(JSON.stringify(v));return;}
+    if(typeof v==='string'){
+      if(Buffer.byteLength(v,'utf8')>MAX_CONTRACT_BYTES) throw new TypeError('Bazaar contract string too long');
+      emit(JSON.stringify(v));return;
+    }
+    if(typeof v==='number' && Number.isFinite(v)){emit(JSON.stringify(v));return;}
+    if(Array.isArray(v)){
+      emit('[');
+      for(let i=0;i<v.length;i++){if(i)emit(',');write(v[i],depth+1);}
+      emit(']');return;
+    }
+    if(plain(v) && [Object.prototype,null].includes(Object.getPrototypeOf(v))){
+      emit('{');
+      const keys=Object.keys(v).sort();
+      for(let i=0;i<keys.length;i++){
+        if(i)emit(',');
+        emit(JSON.stringify(keys[i])+':');
+        write(v[keys[i]],depth+1);
+      }
+      emit('}');return;
+    }
+    throw new TypeError('Bazaar proof contract must contain JSON values only');
+  };
+  write(value,0);
+  return parts.join('');
 }
 function hashAdvertisedContract(entry, selectedAcceptTerms) {
   const serialized=canonicalContract({bazaar:entry.extensions.bazaar,selectedAcceptTerms});
