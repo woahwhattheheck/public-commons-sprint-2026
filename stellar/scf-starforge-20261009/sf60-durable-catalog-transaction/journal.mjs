@@ -213,7 +213,9 @@ export class DurableCatalogTransaction {
     return this.#enqueue(async()=>{
       this.#assert();
       const operation=normalizeUpsert(candidate,authority,provenance);
-      if(this.#operations.some(old=>old.kind==='upsert' && stable(old)===stable(operation))) {
+      // Only the most recent accepted operation can be an idempotent replay.
+      // A stale older revision must still hit the original sequence guard.
+      if(this.#operations.at(-1)?.kind==='upsert' && stable(this.#operations.at(-1))===stable(operation)) {
         return {decision:'soft_drop',reason:'EXACT_REPLAY',head:this.head};
       }
       const output=await this.#commit(operation);
