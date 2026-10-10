@@ -5,7 +5,7 @@ import os
 import tempfile
 from datetime import datetime,timezone,timedelta
 from pathlib import Path
-from governor import Governor,Denied,issue_consent,issue_finality_attestation
+from governor import Governor,Denied,validate_request,issue_consent,issue_finality_attestation
 
 asset='CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA' # asset from canonical Stellar exact spec example; no live wallet
 policy={'schema':'stellar-spend-governor/v1','assets':[{ 'network':'stellar:testnet','asset':asset,
@@ -92,6 +92,25 @@ with tempfile.TemporaryDirectory() as p:
     deny(lambda:corrupted.audit(),'ledger projection tamper')
     corrupted.close()
 
+
+# Do not HMAC-consent ambiguous origin strings that a browser/SDK would parse
+# differently. The original SF31 buyer still owns network and signer identity.
+accepted=('https://api.vendor.example/priced','https://demo.example.net:8443/v2/items?q=one',
+          'https://a-b.vendor.test/x','https://0x.example.org')
+rejected=('https://','https://trusted.example@attacker.example/path',
+          'https://good.example/#ignored','https://good.example:invalid/x',
+          'https://good.example:65536/','https://good.example:0/',
+          'https://good.example\\@evil.example/','https://good.example/\nfoo',
+          'https://localhost/','https://127.0.0.1/','https://0x7f000001/',
+          'https://0x7f.0.0.1/','https://2130706433/','https://a.internal/',
+          'https://example.com./','https://vendor/','http://vendor.example/')
+for i,url in enumerate(accepted):
+    intent=req(f'valid-url-{i}',1);intent['resource']=url
+    assert validate_request(intent)['resource']==url
+for i,url in enumerate(rejected):
+    intent=req(f'rejected-url-{i}',1);intent['resource']=url
+    deny(lambda intent=intent:validate_request(intent),'resource')
+
 # SQLite memory/URI configurations cannot back durable spending reservations.
 # Without this guard the process exits with all reserved maximums forgotten.
 for unsafe_db in (':memory:', 'file::memory:?cache=shared'):
@@ -111,5 +130,6 @@ with tempfile.TemporaryDirectory() as p:
 print(json.dumps({'focused_check':'PASS','behaviors':['authorization bound to request','atomic max reserve and idempotency',
    'day+actor+service+total caps','upto actual <= reserved and excess released','duplicate receipt prevented',
    'signed receipt attestation','exact scheme no undersettlement','persisted journal tamper detected',
-   'recipient, timeout, HTTP method, body and accepted terms HMAC-bound','unknown/missing approval fields fail closed'],
+   'recipient, timeout, HTTP method, body and accepted terms HMAC-bound','unknown/missing approval fields fail closed',
+   'parsed HTTPS host, credentials, fragments, invalid ports, loopback and legacy numeric IP refused'],
    'network_io':'NONE','money_movements':0,'performance_claim':'NONE'},indent=2))

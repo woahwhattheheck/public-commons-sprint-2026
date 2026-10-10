@@ -76,6 +76,12 @@ The new fields are `pay_to` (exact eventual x402 recipient), `max_timeout_second
 
 `body_present` keeps absent and zero-length request bodies distinct, and `GET`/`HEAD` must have no body; absent body requires zero bytes and SHA-256 of the empty byte string. The governor rejects unknown fields rather than silently stripping a caller-supplied payee. No Stellar payee-format/trustline/merchant-account validation is implied: original wallet and server SDKs own those checks. The local SQLite journal still stores a cryptographic request digest, not a human-readable payee log; retain the exact approved request in the privileged operator's evidence store for audit.
 
+### Resource URL authority preflight (October 10)
+
+Before issuing a purchase-intent consent, SF-36 now parses the claimed HTTPS resource authority instead of trusting only a `https://` prefix. Absent or malformed DNS hosts, embedded credentials, raw control characters, backslashes, fragments, invalid ports, address literals, legacy numeric/hex IP encodings, local/private DNS suffixes and ambiguous single-label hosts are rejected. A normal public ASCII/Punycode DNS name with a valid optional HTTPS port, path and query is retained *byte for byte* for HMAC identity binding. The extra preflight is aligned with SF-31's default public-resource policy rather than an assertion that text-prefix HTTPS is safe.
+
+This is a **lexical and authority check**, not DNS rebinding prevention, network fetching, external service authentication or an attestation that the subsequent SDK signs identical terms. Operators must still independently validate original 402 terms, exact URL/canonical-host behavior, resolved destination and any redirect prohibition in the live SF-31 signer path. It performs no network or payment action.
+
 ### Policy composition with Stellar smart accounts and `upto`
 
 1. Agent asks to call exact paid HTTP/MCP resource; merchant terms supplied through trusted SDK.
