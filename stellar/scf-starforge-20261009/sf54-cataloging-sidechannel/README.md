@@ -15,6 +15,22 @@ report rejected with a bounded machine-readable reason. An absent Bazaar
 extension contributes no Bazaar key. Other trusted extension outcomes are
 preserved without letting callers preempt the Bazaar decision.
 
+## Settlement-commit ordering
+
+The facilitator must validate the **entire** sibling-extension response envelope
+before committing an otherwise accepted seller catalog entry. Previously,
+`processSettled` invoked stateful SF25 `ingest` and only then serialized the
+`EXTENSION-RESPONSES` sibling fields. An invalid `bazaar` collision, cyclic
+metadata or sibling body just below the 16-KiB cap could throw after a real
+catalog mutation, leaving no valid transport response for that call.
+
+The adapter now snapshots and validates sibling fields **before SF25 ingest** and
+reserves the worst possible sanitized Bazaar rejection header byte length.
+An invalid extension response throws without changing the catalog's size,
+version, listing or seller sequence. The existing accepted/replay behavior and
+on-wire header format remain unchanged. This preflight is not a settlement
+verifier, authorization mechanism or substitute for an authenticated caller.
+
 ## Use (in the public repository checkout, Node 22+)
 
 ~~~js

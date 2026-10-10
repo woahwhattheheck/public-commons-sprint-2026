@@ -22,3 +22,7 @@ node --test stellar-forge/catalog-lifecycle/lifecycle.test.mjs
 The test round-trips the repository's preserved x402 Foundation Bazaar discovery example at `tools/stellar_bazaar_interop/official_bazaar_resource.json`, keeps its Base-network payment facts exact, exercises correction/freshness/retirement, and rejects unverifiable provenance, numeric amount coercion, seller takeover, corrupt history and an unknown schema version.
 
 This is catalog state machinery, not seller-signature, settlement, Soroban, KYC, or legal-ownership verification. SF-27 remains the enforced hostile-ingestion authority boundary. No provider call, wallet, transaction, deployment, workflow, SCF form or grant claim is made here.
+
+## Hostile-input and restore boundaries
+
+The catalog bounds untrusted atomic payment strings to **78 decimal digits before regex scanning or BigInt parsing** (the unsigned 256-bit decimal width). Chain-specific numeric validity remains the buyer's separate settlement-time duty. Snapshot restoration rejects repeated resource identifiers rather than silently overwriting a prior revision or retired history. Original-source focused regressions cover both behaviors; no hosted Actions, payment attempt or provider fetch is required.
