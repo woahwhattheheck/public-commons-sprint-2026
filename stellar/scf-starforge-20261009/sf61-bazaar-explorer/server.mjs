@@ -33,6 +33,18 @@ function normalizeUpstream(address) {
   return url.origin;
 }
 
+function normalizeLocalUpstream(address) {
+  const url = new URL(address);
+  // The ORIGINAL SF60 service binds only to IPv4 127.0.0.1 and rejects any
+  // nonliteral Host. No hostnames, DNS, credentials or custom remote targets.
+  if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
+      !url.port || url.username || url.password || url.search || url.hash ||
+      !['/', '/discovery/resources'].includes(url.pathname)) {
+    throw new TypeError('SF60 backend must be an explicit http://127.0.0.1:<port> origin');
+  }
+  return url.origin;
+}
+
 function selectDiscoveryRequest(url, upstream) {
   if (url.searchParams.size > 11) throw new RangeError('Too many query parameters');
   const view = url.searchParams.get('view') ?? 'list';
@@ -116,22 +128,26 @@ function send(res, status, data, mime = 'application/json; charset=utf-8') {
 }
 
 /**
- * Serve a real existing original SF44 discovery endpoint or an explicit public
- * HTTPS native Bazaar GET endpoint. This server has no registration, wallet,
+ * Serve original SF44, independently operated original SF60, or an explicitly
+ * selected public HTTPS Bazaar GET endpoint. This has no registration, wallet,
  * signer, paid-origin, verify, settle, or mutable catalog route.
  */
-export async function startExplorer({ fixture = false, upstream = null, port = 0 } = {}) {
+export async function startExplorer({ fixture = false, upstream = null, localUpstream = null, port = 0 } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535)
     throw new RangeError('Invalid local listener port');
-  if (fixture === Boolean(upstream)) throw new TypeError('Choose exactly one original discovery source');
+  if ([fixture, Boolean(upstream), Boolean(localUpstream)].filter(Boolean).length !== 1)
+    throw new TypeError('Choose exactly one original discovery source');
   let development = null;
   let server = null;
   try {
-    const source = fixture ? 'LOCAL_NONPAYABLE_SF44_FIXTURE' : 'PUBLIC_FACILITATOR_READ_ONLY';
+    const source = fixture ? 'LOCAL_NONPAYABLE_SF44_FIXTURE' :
+      localUpstream ? 'ORIGINAL_SF60_DURABLE_CATALOG' : 'PUBLIC_FACILITATOR_READ_ONLY';
     let upstreamOrigin;
     if (fixture) {
       development = await startLocalDevelopmentCatalog();
       upstreamOrigin = development.baseUrl;
+    } else if (localUpstream) {
+      upstreamOrigin = normalizeLocalUpstream(localUpstream);
     } else {
       upstreamOrigin = normalizeUpstream(upstream);
     }
@@ -210,21 +226,25 @@ export async function startExplorer({ fixture = false, upstream = null, port = 0
 function cli() {
   const args = process.argv.slice(2);
   if (args.includes('--help')) {
-    console.log('Use: node server.mjs --fixture [--port 0] OR --upstream https://public-facilitator.example [--port 0]');
+    console.log('Use: node server.mjs --fixture OR --local-upstream http://127.0.0.1:8787 OR --upstream https://public-facilitator.example [--port 0]');
     return;
   }
   const count = name => args.filter(value => value === name).length;
-  if (args.some((arg, i) => !['--fixture', '--upstream', '--port'].includes(arg) &&
-      !(i > 0 && ['--upstream', '--port'].includes(args[i - 1]))) ||
-      count('--fixture') > 1 || count('--upstream') > 1 || count('--port') > 1 ||
-      (args.includes('--fixture') && args.includes('--upstream'))) {
+  if (args.some((arg, i) => !['--fixture', '--upstream', '--local-upstream', '--port'].includes(arg) &&
+      !(i > 0 && ['--upstream', '--local-upstream', '--port'].includes(args[i - 1]))) ||
+      count('--fixture') > 1 || count('--upstream') > 1 ||
+      count('--local-upstream') > 1 || count('--port') > 1 ||
+      [args.includes('--fixture'), args.includes('--upstream'),
+        args.includes('--local-upstream')].filter(Boolean).length > 1) {
     throw new TypeError('Unknown, duplicate or conflicting CLI options');
   }
   const value = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1]; };
   const portArg = value('--port');
   const port = portArg === null ? 0 : Number(portArg);
-  const fixture = args.includes('--fixture') || !args.includes('--upstream');
-  return startExplorer({ fixture, upstream: value('--upstream'), port }).then(session => {
+  const fixture = args.includes('--fixture') ||
+    (!args.includes('--upstream') && !args.includes('--local-upstream'));
+  return startExplorer({ fixture, upstream: value('--upstream'),
+    localUpstream: value('--local-upstream'), port }).then(session => {
     console.log(JSON.stringify({ status: 'RUNNING', url: session.url, source: session.source,
       paidRequestsEnabled: false }, null, 2));
     let stopping = false;
