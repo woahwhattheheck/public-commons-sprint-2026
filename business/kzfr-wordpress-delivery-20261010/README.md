@@ -44,3 +44,29 @@ php tests/wp-bridge-smoke.php
 ```
 
 No hosted Actions, full repository test suites, real donations, customer credentials, protected-site scraping or client submissions were used. Target runtime is WordPress >=6.3, PHP >=8.0, and the official Twenty Twenty-One parent. The actual parent and child theme activated in official Playground staging; home, filtered programs, upcoming events and underwriters rendered HTTP 200. Native editor save, accepted metadata persistence, invalid-value retention, correction notice and explicit clear passed in the real WordPress runtime. This was one focused editor/runtime check; no browser, visual or full-suite acceptance is claimed. WordPress core parent dependency satisfies the RFP’s request to utilize existing core/popular themes, subject to client approval. Site performance and rendered WCAG remain unmeasured. License headers are provided for source portability, not a claim of third-party approval.
+
+## Reviewed CSV content migration
+
+Activate the companion plugin, then open **Tools → Station content import** as a site administrator. Upload an approved UTF-8 CSV, review the content and station details, select the rows to import, and choose **Create selected drafts**. The result links directly to the ordinary WordPress editor. Editors can then review, revise and publish through their existing WordPress permissions.
+
+The CSV requires these named columns, in any order:
+
+```text
+source_id,type,title,content,excerpt,genre,creek_url,event_date,website
+```
+
+- `source_id`: a stable inventory identifier, retained across uploads; use 1–160 letters, digits, `.`, `_`, `:`, `/` or `-`.
+- `type`: `program`, `event` or `underwriter`; `title` is required.
+- `content`: editorial HTML filtered through WordPress’s allowed post markup; `excerpt` is plain text.
+- `genre`: one program genre. `creek_url` is optional for programs and must use the existing approved Creek host.
+- `event_date`: required for events, in `YYYY-MM-DD`; leave unrelated type-specific fields empty.
+- `website`: optional HTTPS underwriter URL.
+
+The importer creates **drafts only**. An existing source ID, including one in the trash, is shown as already imported and is left unchanged. Re-uploading a completed file therefore cannot overwrite a staff edit or create a duplicate. To revise imported content, open its editor. The preview expires after 30 minutes, is retained for its uploading administrator only and is not placed in the public media library. A file can contain up to 500 records and 1 MiB. Imports serialize to prevent concurrent duplicate IDs; an interrupted import retains completed drafts, which are skipped when the file is uploaded again. If a host terminates PHP before cleanup, an administrator can remove the `kzfr_bridge_content_import_lock` WordPress option before resuming.
+
+This is the plugin’s editorial format, not a claim to understand a Creek API export. Map an authorized inventory to these columns before import; the importer does not crawl pages, invent broadcast dates, download audio, move donations or publish content.
+
+### Actual local product run
+
+The CSV importer was exercised together with the existing native editor fields in official WordPress Playground 3.1.57 using **WordPress 6.8, PHP 8.3 and its SQLite integration**. One ordinary administrator journey uploaded and previewed a source-grounded [Bon Matin!](https://kzfr.org/shows/bon-matin) program record, selected it, created one draft with its genre and source ID, re-uploaded the same row without creating another draft, and opened the actual WordPress post editor containing the labeled Station details panel. The draft used only the public title and a short paraphrase; no buyer data or protected material was migrated. No additional test suite or fixture was added. This verifies the combined import-to-editor workflow in that local runtime; it does not establish MySQL-hosted performance or access to KZFR’s installation. The earlier staging and editor execution described above remains unchanged.
+
