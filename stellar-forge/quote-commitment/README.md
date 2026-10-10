@@ -43,3 +43,7 @@ For MCP the invocation shape is `{kind:'mcp',resourceURL:serverURL,toolName}`. A
 **Integration handoff:** SF-31 SDK calls this helper between actual 402 receipt and signer; SF-36 separately enforces budgets and transaction journals; SF-27 handles seller-authenticated catalog ingress; SF-26 handles MCP catalog records. No overlapping owner source files are edited here. A future separate source-coupled integration can replay real unaffiliated x402 provider traffic without contacting or spending money automatically.
 
 License: MIT, same as public Bazaar prototype.
+
+## Checked signer-input boundary
+
+The returned `accepted` object includes only the reviewed x402 requirement fields: `scheme`, `network`, `asset`, `payTo`, `amount`, plus `maxTimeoutSeconds` and `extra` when explicitly present in the selected payment option. Arbitrary additional top-level fields supplied by an untrusted HTTP 402 are *not* passed to signer code, even if the core quote fields happen to match. Payment-scheme-specific metadata belongs under a separately reviewed `extra` contract. The preflight result is not a wallet authorization by itself.

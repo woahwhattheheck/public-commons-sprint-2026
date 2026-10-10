@@ -69,3 +69,24 @@ test('unverifiable or lossy facts and corrupt migrations fail closed', () => {
   const corrupt = catalog.snapshot(); corrupt.resources[0].history[0].record.contentDigest = '0'.repeat(64);
   assert.throws(() => LifecycleCatalog.fromSnapshot(corrupt), /SNAPSHOT_DIGEST_INVALID/);
 });
+
+test('original catalog bounds hostile atomic text and refuses duplicate restored IDs', () => {
+  const giant = structuredClone(official);
+  giant.accepts[0].amount = '9'.repeat(100000);
+  assert.throws(() => normalizeDiscoveryRecord(giant, provenance()),
+    /PAYMENT_AMOUNT_MUST_BE_POSITIVE_BASE_UNIT_STRING/);
+
+  const catalog = new LifecycleCatalog();
+  const inserted = catalog.upsert(official, provenance({
+    authority: 'signed_export', sellerId: 'seller.example'
+  }), 1);
+  const retired = catalog.retire(inserted.id, {
+    sellerId: 'seller.example', sequence: 2,
+    provenance: provenance({ authority: 'signed_export', sellerId: 'seller.example' }),
+    reason: 'withdrawn'
+  });
+  assert.equal(retired.reason, 'RETIRED');
+  const repeated = catalog.snapshot();
+  repeated.resources.push(structuredClone(repeated.resources[0]));
+  assert.throws(() => LifecycleCatalog.fromSnapshot(repeated), /SNAPSHOT_DUPLICATE_RESOURCE/);
+});
