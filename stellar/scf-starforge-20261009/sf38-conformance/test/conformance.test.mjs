@@ -110,3 +110,12 @@ test('public HTTPS probe rejects private origins and all nonpublic DNS answers',
     {address:'8.8.8.8',family:4},{address:'2606:4700:4700::1111',family:6}
   ]),{address:'8.8.8.8',family:4});
 });
+
+test('Horizon response rejects excessive bytes without advertised length',async()=>{
+  const tx='a'.repeat(64);
+  const upstream=async url=>url.endsWith('/')
+    ?new Response(JSON.stringify({network_passphrase:'Test SDF Network ; September 2015'}))
+    :new Response(' '.repeat(262145));
+  await assert.rejects(checkHorizonInclusion({network,transaction:tx,fetchImpl:upstream}),
+    /HORIZON_BODY_TOO_LARGE/);
+});
