@@ -76,3 +76,19 @@ Canonical source contracts, retrieved October 10, 2026:
 - https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md
 
 No repository Actions/workflow execution is required by this code.
+
+## SF-33 agent recovery envelopes
+
+The MCP bridge now imports the released SF-33 error contract from
+`stellar/scf-starforge-20261009/sf33-failure-contract/contract.mjs`.
+Tool failures keep the existing `code` and `reason` fields and add a sanitized
+`recovery` envelope with machine-readable next steps. `RESOURCE_STALE` and
+`CHALLENGE_MISMATCH` require fresh terms and authorization; unknown errors stop.
+An `INDETERMINATE` quote status includes a `settle`-stage recovery envelope
+requiring ledger/provider reconciliation. A returned transaction hash is never
+considered confirmed by this module; no auto payment retry or signature occurs.
+The SF-33 source is maintained independently, and this bridge never alters
+canonical x402 `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, `/verify` or `/settle` wire bodies.
+
+Focused boundary check: `node --test stellar-forge/mcp-paid-agent/recovery-overlay.test.mjs`
+(no paid network requests, local fake transport only).
