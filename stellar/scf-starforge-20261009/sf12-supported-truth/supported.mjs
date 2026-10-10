@@ -3,6 +3,7 @@
 // operator-provided runtime probes must be live, fresh and positive before advertising.
 // No wallet custody, signing, funding, fee claims, network calls or SDK replacement.
 import {createServer} from 'node:http';
+import {isLoopbackHostAuthority} from './host-authority.mjs';
 
 const NETWORKS = new Set(['stellar:testnet', 'stellar:pubnet']);
 const PLAIN = o => o !== null && typeof o === 'object' && !Array.isArray(o);
@@ -163,6 +164,10 @@ export function createSupportedServer({gateway,hostname='127.0.0.1'}={}){
   if(typeof gateway?.snapshot!=='function')throw new SupportedError('GATEWAY_REQUIRED');
   if(hostname!=='127.0.0.1'&&hostname!=='::1')throw new SupportedError('LOOPBACK_ONLY');
   return createServer(async(req,res)=>{
+    if (!isLoopbackHostAuthority(req)) {
+      json(res,403,{error:'LOCAL_HOST_REQUIRED'});
+      return;
+    }
     if(req.method!=='GET'){json(res,405,{error:'METHOD_NOT_ALLOWED'});return;}
     if(req.url!=='/supported'&&req.url!=='/supported/assets'&&req.url!=='/health'){
       json(res,404,{error:'NOT_FOUND'});return;
