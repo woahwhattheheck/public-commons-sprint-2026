@@ -1,0 +1,243 @@
+// MIT. SF61: same-origin, loopback-only, GET-only viewer for original x402 v2 Bazaar discovery.
+// The original SF44 fixture is the ONLY default source. Real providers require explicit CLI opt-in.
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { startLocalDevelopmentCatalog } from '../sf44-developer-onramp/onboard.mjs';
+
+const HOST = '127.0.0.1';
+const MAX_PAGE_BYTES = 16 * 1024 * 1024;
+const STATIC = Object.freeze({
+  '/': ['index.html', 'text/html; charset=utf-8'],
+  '/app.mjs': ['app.mjs', 'text/javascript; charset=utf-8'],
+  '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
+});
+const HEADERS = Object.freeze({
+  'cache-control': 'no-store',
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'DENY',
+  'referrer-policy': 'no-referrer',
+  'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+});
+const FILTERS = new Set(['network', 'type', 'scheme', 'payTo', 'extensions']);
+
+function normalizeUpstream(address) {
+  const url = new URL(address);
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
+      !['/', '/discovery/resources'].includes(url.pathname) || url.port ||
+      url.hostname === 'localhost' || url.hostname.endsWith('.local') ||
+      url.hostname.endsWith('.internal')) {
+    throw new TypeError('An explicit public HTTPS facilitator root is required (no credentials, port, or query)');
+  }
+  return url.origin;
+}
+
+function selectDiscoveryRequest(url, upstream) {
+  if (url.searchParams.size > 11) throw new RangeError('Too many query parameters');
+  const view = url.searchParams.get('view') ?? 'list';
+  if (!['list', 'search'].includes(view)) throw new RangeError('Unknown read-only view');
+  const allowed = new Set([...FILTERS, 'view', 'limit', ...(view === 'list' ? ['offset'] : ['cursor', 'query'])]);
+  const output = new URL(view === 'list' ? '/discovery/resources' : '/discovery/search', upstream);
+  for (const key of url.searchParams.keys()) {
+    if (!allowed.has(key) || url.searchParams.getAll(key).length !== 1)
+      throw new RangeError('Unknown or repeated query parameter');
+  }
+  for (const key of FILTERS) {
+    const value = url.searchParams.get(key);
+    if (value === null || value === '') continue;
+    if (value.length > 256 || /[\x00-\x1f\x7f]/.test(value)) throw new RangeError('Invalid discovery filter');
+    if (key === 'network' && !['stellar:testnet', 'stellar:pubnet'].includes(value))
+      throw new RangeError('Only explicit Stellar networks are supported');
+    if (key === 'type' && !['http', 'mcp'].includes(value))
+      throw new RangeError('Invalid Bazaar resource type');
+    output.searchParams.set(key, value);
+  }
+  const limit = url.searchParams.get('limit') ?? '25';
+  if (!/^[1-9][0-9]?$|^100$/.test(limit)) throw new RangeError('Page limit must be 1..100');
+  output.searchParams.set('limit', limit);
+  if (view === 'list') {
+    const offset = url.searchParams.get('offset') ?? '0';
+    if (!/^(0|[1-9][0-9]{0,6})$/.test(offset)) throw new RangeError('Invalid offset');
+    output.searchParams.set('offset', offset);
+  } else {
+    const query = url.searchParams.get('query');
+    if (typeof query !== 'string' || !query.trim() || query.length > 1024 ||
+        /[\x00-\x1f\x7f]/.test(query)) throw new RangeError('Search query is required (max 1024 chars)');
+    output.searchParams.set('query', query);
+    const cursor = url.searchParams.get('cursor');
+    if (cursor !== null) {
+      if (cursor.length > 512 || !/^[A-Za-z0-9_-]+$/.test(cursor))
+        throw new RangeError('Invalid opaque cursor');
+      output.searchParams.set('cursor', cursor);
+    }
+  }
+  return { view, upstreamUrl: output };
+}
+
+async function boundedJson(response) {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!/json/i.test(contentType)) throw new Error('Discovery endpoint did not return JSON');
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > MAX_PAGE_BYTES) throw new Error('Page exceeds maximum size');
+  if (!response.body) throw new Error('No provider response body');
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_PAGE_BYTES) throw new Error('Page exceeds maximum size');
+      chunks.push(Buffer.from(value));
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  return JSON.parse(Buffer.concat(chunks, size).toString('utf8'));
+}
+
+function rowsOf(body) {
+  if (Array.isArray(body)) return body;
+  if (Array.isArray(body?.resources)) return body.resources;
+  if (Array.isArray(body?.items)) return body.items;
+  if (Array.isArray(body?.data?.resources)) return body.data.resources;
+  if (Array.isArray(body?.data?.items)) return body.data.items;
+  throw new Error('Unexpected native Bazaar resources/items response');
+}
+
+function send(res, status, data, mime = 'application/json; charset=utf-8') {
+  res.writeHead(status, { ...HEADERS, 'content-type': mime });
+  res.end(data);
+}
+
+/**
+ * Serve a real existing original SF44 discovery endpoint or an explicit public
+ * HTTPS native Bazaar GET endpoint. This server has no registration, wallet,
+ * signer, paid-origin, verify, settle, or mutable catalog route.
+ */
+export async function startExplorer({ fixture = false, upstream = null, port = 0 } = {}) {
+  if (!Number.isInteger(port) || port < 0 || port > 65535)
+    throw new RangeError('Invalid local listener port');
+  if (fixture === Boolean(upstream)) throw new TypeError('Choose exactly one original discovery source');
+  let development = null;
+  let server = null;
+  try {
+    const source = fixture ? 'LOCAL_NONPAYABLE_SF44_FIXTURE' : 'PUBLIC_FACILITATOR_READ_ONLY';
+    let upstreamOrigin;
+    if (fixture) {
+      development = await startLocalDevelopmentCatalog();
+      upstreamOrigin = development.baseUrl;
+    } else {
+      upstreamOrigin = normalizeUpstream(upstream);
+    }
+    const assets = new Map(await Promise.all(Object.entries(STATIC).map(async ([route, [file, mime]]) =>
+      [route, { bytes: await readFile(new URL(file, import.meta.url)), mime }])));
+    let expectedHost = '';
+    server = createServer(async (req, res) => {
+      const reply = (status, obj) => send(res, status, JSON.stringify(obj));
+      try {
+        // The URL comes from an untrusted browser. Do not let Host headers, CORS,
+        // query args, redirects or arbitrary URLs choose the remote target.
+        if (req.socket.localAddress !== HOST || req.socket.remoteAddress !== HOST ||
+            req.headers.host !== expectedHost) return reply(403, { error: 'LOCAL_ORIGIN_ONLY' });
+        if (req.method !== 'GET') return reply(405, { error: 'GET_ONLY' });
+        if (!req.url || req.url.length > 4096) return reply(400, { error: 'BAD_URL' });
+        const request = new URL(req.url, 'http://127.0.0.1');
+        if (request.pathname === '/api/source' && request.search === '')
+          return reply(200, { mode: source, origin: fixture ? 'original SF44 fixture' : upstreamOrigin,
+            paidRequestsEnabled: false, autoPaymentEnabled: false });
+        if (request.pathname === '/api/discovery') {
+          let target;
+          try { target = selectDiscoveryRequest(request, upstreamOrigin); }
+          catch (error) { return reply(400, { error: 'INVALID_QUERY', reason: String(error.message).slice(0, 180) }); }
+          let response;
+          try {
+            response = await fetch(target.upstreamUrl, {
+              method: 'GET', redirect: 'error', headers: { accept: 'application/json' },
+              signal: AbortSignal.timeout(10000),
+            });
+            if (!response.ok) {
+              await response.body?.cancel();
+              return reply(502, { error: 'SOURCE_HTTP_ERROR', sourceStatus: response.status });
+            }
+            const parsed = await boundedJson(response);
+            const rows = rowsOf(parsed);
+            return reply(200, {
+              mode: source, view: target.view, observedAt: new Date().toISOString(),
+              resources: rows, pagination: parsed?.pagination ?? {},
+              partialResults: parsed?.partialResults === true,
+              x402Version: parsed?.x402Version ?? null,
+              completeResponse: false, // This is one native provider page, not a captured whole catalog.
+              readOnly: true, paidRequestsEnabled: false,
+            });
+          } catch (error) {
+            return reply(502, { error: 'SOURCE_UNAVAILABLE',
+              reason: String(error.message).replace(/[\r\n]/g, ' ').slice(0, 160) });
+          }
+        }
+        const asset = assets.get(req.url);
+        if (!asset) return reply(404, { error: 'NOT_FOUND' });
+        return send(res, 200, asset.bytes, asset.mime);
+      } catch {
+        if (!res.headersSent) reply(500, { error: 'EXPLORER_INTERNAL_ERROR' });
+        else if (!res.writableEnded) res.end();
+      }
+    });
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(port, HOST, resolve);
+    });
+    expectedHost = HOST + ':' + server.address().port;
+    return {
+      source, url: 'http://' + expectedHost,
+      async close() {
+        await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+        if (development) await development.close();
+      },
+    };
+  } catch (error) {
+    if (server?.listening) await new Promise(resolve => server.close(resolve));
+    if (development) await development.close();
+    throw error;
+  }
+}
+
+function cli() {
+  const args = process.argv.slice(2);
+  if (args.includes('--help')) {
+    console.log('Use: node server.mjs --fixture [--port 0] OR --upstream https://public-facilitator.example [--port 0]');
+    return;
+  }
+  const count = name => args.filter(value => value === name).length;
+  if (args.some((arg, i) => !['--fixture', '--upstream', '--port'].includes(arg) &&
+      !(i > 0 && ['--upstream', '--port'].includes(args[i - 1]))) ||
+      count('--fixture') > 1 || count('--upstream') > 1 || count('--port') > 1 ||
+      (args.includes('--fixture') && args.includes('--upstream'))) {
+    throw new TypeError('Unknown, duplicate or conflicting CLI options');
+  }
+  const value = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1]; };
+  const portArg = value('--port');
+  const port = portArg === null ? 0 : Number(portArg);
+  const fixture = args.includes('--fixture') || !args.includes('--upstream');
+  return startExplorer({ fixture, upstream: value('--upstream'), port }).then(session => {
+    console.log(JSON.stringify({ status: 'RUNNING', url: session.url, source: session.source,
+      paidRequestsEnabled: false }, null, 2));
+    let stopping = false;
+    const stop = async () => {
+      if (stopping) return;
+      stopping = true;
+      try { await session.close(); }
+      catch (error) { console.error(error); process.exitCode = 1; }
+    };
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
+  });
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === fileURLToPath(new URL('file://' + process.argv[1]))) {
+  Promise.resolve().then(cli).catch(error => { console.error(error); process.exitCode = 1; });
+}
