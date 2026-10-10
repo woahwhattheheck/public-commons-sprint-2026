@@ -1,6 +1,7 @@
 <?php
 /** Accessible classic WordPress theme starter. Content types live in the portable companion plugin. */
 if (!defined('ABSPATH')) { exit; }
+require_once __DIR__ . '/inc/station-services.php';
 
 function kzfr_theme_setup() {
     add_theme_support('title-tag');
@@ -35,6 +36,7 @@ function kzfr_theme_fallback_menu() {
         array($base . '#listen', 'Listen'),
         array(get_post_type_archive_link('kzfr_program') ?: $base . '#programs', 'Programs'),
         array(get_post_type_archive_link('kzfr_event') ?: $base . '#community', 'Events'),
+        array(get_post_type_archive_link('kzfr_underwriter') ?: $base . '#community', 'Underwriters'),
         array($base . '#support', 'Support'),
     ) as $entry) {
         echo '<li><a href="' . esc_url($entry[0]) . '">' . esc_html($entry[1]) . '</a></li>';
