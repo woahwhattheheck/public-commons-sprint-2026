@@ -159,21 +159,29 @@ export async function fetchOriginProof(entry,{nonce,timeoutMs=5000}={}) {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 15000) throw new RangeError('Invalid timeout');
   const {origin}=quoteOf(entry);
   const url=new URL(origin);
-  const pinned=await publicAddress(url.hostname);
+  // One absolute deadline covers DNS, TLS handshake and the full response body.
+  // Socket idle timeouts alone can be defeated by a trickling response; and DNS
+  // resolution can hang before a request-level timeout would even be installed.
+  const deadline=AbortSignal.timeout(timeoutMs);
+  const timedOut=new Promise((_,reject)=>{
+    deadline.addEventListener('abort',()=>reject(new Error('Seller proof exceeded DNS/TLS/response deadline')), {once:true});
+  });
+  const pinned=await Promise.race([publicAddress(url.hostname),timedOut]);
   const path=`${WELL_KNOWN}?nonce=${encodeURIComponent(nonce)}`;
   return await new Promise((resolve,reject)=>{
     const req=https.request({protocol:'https:',hostname:url.hostname,port:443,path,method:'GET',
+      signal:deadline,
       headers:{accept:'application/json','user-agent':'StellarBazaarSellerProof/1'},
       lookup:(_hostname,_options,cb)=>cb(null,pinned.address,pinned.family)},res=>{
       if (res.statusCode!==200) {res.resume();reject(new Error(`Seller origin returned HTTP ${res.statusCode}`));return;}
       const type=String(res.headers['content-type']||'').toLowerCase();
-      if (!type.startsWith('application/json')) {res.resume();reject(new Error('Seller proof must be JSON'));return;}
+      if (!/^application\/json(?:\s*;|$)/.test(type)) {res.resume();reject(new Error('Seller proof must be JSON'));return;}
       const chunks=[];let count=0;
       res.on('data',chunk=>{count+=chunk.length;if(count>65536){res.destroy(new RangeError('Seller proof exceeds 64 KiB'));return;}chunks.push(chunk);});
       res.on('end',()=>{try{resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));}catch(e){reject(e);}});
       res.on('error',reject);
     });
-    req.setTimeout(timeoutMs,()=>req.destroy(new Error('Seller HTTPS timeout')));
+    // The AbortSignal owns the hard wall clock timeout for this request.
     req.on('error',reject);req.end();
   });
 }
