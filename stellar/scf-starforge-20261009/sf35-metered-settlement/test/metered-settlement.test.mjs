@@ -109,3 +109,20 @@ test('rejects oversized atomic decimals before bigint parsing and preserves jour
   await s.recordUnits('2');
   assert.deepEqual(s.tally,{units:'2',chargeAtomic:'2',ceilingAtomic:'10'});
 }));
+
+test('aggregate usage respects signed i128 even when charged amount stays below ceiling',()=>sandbox(async dir=>{
+  const max=(1n<<127n)-1n, first=(max-1n).toString();
+  const x=makeInput({numerator:'1',denominator:max.toString()},'units');
+  for(const terms of [x.paymentRequired.accepts[0],x.paymentPayload.accepted,x.verifyRequirements])
+    terms.amount='2';
+  x.paymentPayload.payload.maxAmount='2';
+  const s=await Engine.open({...x,journalDir:dir,verifyPayment});
+  await s.recordUnits(first);
+  assert.deepEqual(s.tally,{units:first,chargeAtomic:'1',ceilingAtomic:'2'});
+  await assert.rejects(()=>s.recordUnits('2'),{code:'USAGE_OUT_OF_RANGE'});
+  assert.equal((await Engine.inspect({journalDir:dir,authorizationId:s.id})).units,first);
+  assert.equal(s.status,'VERIFIED');
+  await s.recordUnits('1');
+  assert.deepEqual(s.tally,{units:max.toString(),chargeAtomic:'1',ceilingAtomic:'2'});
+  assert.equal((await s.seal()).units,max.toString());
+}));
