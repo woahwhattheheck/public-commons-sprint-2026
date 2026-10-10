@@ -5,6 +5,9 @@ import { isIP } from 'node:net';
 
 const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const amount = v => typeof v === 'string' && /^(0|[1-9][0-9]*)$/.test(v);
+const STELLAR_I128_MAX = '170141183460469231731687303715884105727';
+const validStellarAtomic = x => typeof x==='string' && x.length<=39 && amount(x) &&
+  (x.length<STELLAR_I128_MAX.length || (x.length===39 && x<=STELLAR_I128_MAX));
 // x402 v2 requirements, resource and extensions are JSON objects: member order is not protocol meaning.
 // Require exact structural equality (including nested fields and ordered arrays), not identical serialization order.
 const same = (a,b) => isDeepStrictEqual(a,b);
@@ -50,7 +53,8 @@ function canonicalChallenge(challenge, requested) {
   for(const pay of challenge.accepts){
     if (!object(pay) || !['exact','upto'].includes(pay.scheme) ||
       typeof pay.network!=='string' || !/^[a-z0-9]+:[A-Za-z0-9-]{1,128}$/.test(pay.network) ||
-      !amount(pay.amount) || !pay.asset || typeof pay.asset!=='string' ||
+      !amount(pay.amount) || (pay.network.startsWith('stellar:') && !validStellarAtomic(pay.amount)) ||
+      !pay.asset || typeof pay.asset!=='string' ||
       typeof pay.payTo!=='string' || !pay.payTo ||
       !Number.isInteger(pay.maxTimeoutSeconds) || pay.maxTimeoutSeconds<1 ||
       pay.maxTimeoutSeconds>86400 || (pay.extra!==undefined && !object(pay.extra)))
@@ -220,6 +224,8 @@ export class X402BuyerClient {
     if([...safeHeaders.keys()].some(k=>/^(payment-signature|authorization|proxy-authorization|cookie|host)$/i.test(k)))
       throw new BuyerError('FORBIDDEN_CALLER_HEADERS');
     const data=prepareBody(body);
+    if(typeof expect?.network==='string' && expect.network.startsWith('stellar:') &&
+       !validStellarAtomic(expect.maxAtomic))throw new BuyerError('BAD_SPEND_LIMIT');
     const options={method:verb,headers:safeHeaders,body:data,redirect:'manual',signal};
     let first;
     try{first=await this.fetch(resource,options);}catch(e){throw new BuyerError('INITIAL_TRANSPORT_FAILED','',{cause:e});}
