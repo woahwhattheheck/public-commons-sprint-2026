@@ -27,7 +27,14 @@ export function decodeX402Header(raw, name='PAYMENT-RESPONSE') {
 export function parseExactTestnetTerms(challenge, maxAtomic) {
   if (!plain(challenge) || challenge.x402Version !== 2 || !Array.isArray(challenge.accepts))
     throw new TypeError('PaymentRequired x402Version 2 required');
-  if (!AMOUNT.test(String(maxAtomic)) || challenge.accepts.length !== 1)
+  // Bound operator policy text before regex and BigInt, preserving original
+  // 39-digit policy ceilings even when higher than the Soroban i128 maximum.
+  const maxText = typeof maxAtomic === 'string' ? maxAtomic :
+    (typeof maxAtomic === 'number' && Number.isSafeInteger(maxAtomic) && maxAtomic > 0) ?
+      String(maxAtomic) :
+    (typeof maxAtomic === 'bigint' && maxAtomic > 0n && maxAtomic < 10n**39n) ?
+      maxAtomic.toString() : '';
+  if (maxText.length > 39 || !AMOUNT.test(maxText) || challenge.accepts.length !== 1)
     throw new TypeError('Explicit positive maximum and unambiguous one-offer quote required');
   const term = challenge.accepts[0];
   if (!plain(term) || term.scheme !== 'exact' || term.network !== 'stellar:testnet' ||
@@ -35,7 +42,7 @@ export function parseExactTestnetTerms(challenge, maxAtomic) {
       typeof term.payTo !== 'string' || !/^G[A-Z2-7]{55}$/.test(term.payTo) ||
       !sorobanAmount(term.amount))
     throw new TypeError('Unexpected Stellar testnet scheme, recipient, asset contract or atomic amount');
-  if (BigInt(term.amount) > BigInt(maxAtomic)) throw new RangeError('Quoted atomic amount exceeds approved maximum');
+  if (BigInt(term.amount) > BigInt(maxText)) throw new RangeError('Quoted atomic amount exceeds approved maximum');
   return structuredClone(term);
 }
 
@@ -71,6 +78,9 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
   // The fee-paying transaction source is the facilitator; the actual token
   // payer comes from the client-signed transfer authorization and SEP-41 event.
   // A seller-reported payer alone is not proof, so bind it to that event below.
+  // Caller-supplied pagination is a finite RPC work budget.
+  if (!Number.isSafeInteger(maxEventPages) || maxEventPages < 1 || maxEventPages > 100)
+    return failure('EVENT_PAGE_BUDGET_INVALID');
   if(typeof receipt.payer!=='string' || !PAYER.test(receipt.payer))
     return failure('RECEIPT_PAYER_MISSING_OR_INVALID');
   if(expected.payer!==undefined &&
