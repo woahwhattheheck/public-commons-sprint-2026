@@ -160,7 +160,9 @@ export class McpPaidToolBroker {
   status({quoteId}={}){const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');return statOf(q);}
   cancel({quoteId}={}){
     const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
-    if(q.status==='PREVIEWED'){q.status='CANCELLED';return statOf(q);}
+    if(q.status==='PREVIEWED'||q.status==='APPROVAL_PENDING'){
+      q.status='CANCELLED';return statOf(q);
+    }
     if(q.status==='EXECUTING'){
       q.status=q.signedRequestDispatched?'INDETERMINATE':'CANCEL_REQUESTED';
       q.failure=q.signedRequestDispatched?'Signed call may have reached merchant; reconcile before any reattempt':null;
@@ -174,8 +176,24 @@ export class McpPaidToolBroker {
     if(Date.now()>q.expiresAt){q.status='EXPIRED';return statOf(q);}
     if(!this.#sign)fail('SIGNER_NOT_CONNECTED','Operator has not connected an x402 v2 signer');
     // Approval is an out-of-model trusted callback; "approved":true tool args never count.
-    const permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,accepted:structuredClone(q.accepted)}));
-    if(!asBool(permission))fail('APPROVAL_REQUIRED','Operator independently denied or has not authorized payment');
+    // Reserve the quote synchronously before the first await: concurrent MCP
+    // calls must not independently authorize/sign/dispatch the same payment.
+    q.status='APPROVAL_PENDING';
+    let permission;
+    try {
+      permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,accepted:structuredClone(q.accepted)}));
+    }catch(e){
+      if(q.status==='CANCELLED')return statOf(q);
+      q.status='PREVIEWED'; // approval errors retain the original retry semantics
+      throw e;
+    }
+    // Cancellation/expiration during asynchronous human approval must win.
+    if(q.status==='CANCELLED')return statOf(q);
+    if(Date.now()>q.expiresAt){q.status='EXPIRED';return statOf(q);}
+    if(!asBool(permission)){
+      q.status='PREVIEWED'; // a denial does not authorize or consume payment
+      fail('APPROVAL_REQUIRED','Operator independently denied or has not authorized payment');
+    }
     q.status='EXECUTING';q.attempts++;
     try {
       const first=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(this.#timeLimit)});
