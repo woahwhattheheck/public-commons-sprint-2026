@@ -1,0 +1,102 @@
+{
+  "version": "2026-10-09.sf04.1",
+  "scope": "SCF Starforge SF-04 source-pinned build-versus-reuse census, source only; no protocol execution",
+  "source_lock": {
+    "foundation": {
+      "repository": "x402-foundation/x402",
+      "commit": "7f2b2f1f77fa5317615735e3378a6fad41cccb4e",
+      "license": "Apache-2.0",
+      "license_blob": "b09cd7856d58590578ee1a4f3ad45d1310a97f87",
+      "stellar_package_version_declared": "2.28.0",
+      "stellar_package_manifest_blob": "934d791b9226ec38fd08327c775eca7b71043cc0",
+      "stellar_facilitator_scheme_blob": "b454b15451b2d4cdd20e59646274f143909e6226",
+      "stellar_exact_spec_blob": "702624ad929411553c8635e60dad855e55fc9b82",
+      "bazaar_spec_blob": "442708e76d5a129e0c1393471d8ed71e3604c94e",
+      "upto_generic_spec_blob": "202dae031d453db9cf46cd52de92c1800aee33f5",
+      "mcp_package_version_declared": "2.28.0",
+      "mcp_manifest_blob": "8fa3064e80bd7b388d2d026b51ed983907cce3e1"
+    },
+    "stellar_reference": {
+      "repository": "stellar/x402-stellar",
+      "commit": "45d735ab3f30a50286d11286b7d7e584fa69bc77",
+      "license": "Apache-2.0",
+      "license_blob": "ece1adf90dce5e3c0b1abff7facfc978216293bb",
+      "facilitator_manifest_blob": "96edc04ba876ead8ec15ff367288765d172b18a3",
+      "facilitator_app_blob": "bc1d7540de5f3ee8be427ed6417da99faed1a4eb",
+      "facilitator_manifest_x402_stellar_range": "^2.23.0",
+      "facilitator_manifest_version": "1.0.0",
+      "facilitator_manifest_private": true
+    },
+    "excluded_agpl_reference": {
+      "repository": "OpenZeppelin/openzeppelin-relayer",
+      "commit": "d7f151f371a2fd75839f98c7525523bd286926f0",
+      "license": "AGPL-3.0-or-later",
+      "license_blob": "0ad25db4bd1d86c452db3f9602ccdbe172438f52",
+      "allowed_as_project_base": false
+    }
+  },
+  "capabilities": [
+    {
+      "id": "exact_stellar_core",
+      "decision": "reuse",
+      "status": "first_party_source_exists",
+      "source_path": "x402-foundation/x402/typescript/packages/mechanisms/stellar/src/exact/facilitator/scheme.ts",
+      "evidence_blob": "b454b15451b2d4cdd20e59646274f143909e6226",
+      "details": "ExactStellarScheme facilitator, Soroban auth validation and XDR settlement path; reuse upstream, not a claim of our deployed conformance"
+    },
+    {
+      "id": "stellar_exact_network_spec",
+      "decision": "reuse_spec",
+      "status": "first_party_spec_exists",
+      "source_path": "x402-foundation/x402/specs/schemes/exact/scheme_exact_stellar.md",
+      "evidence_blob": "702624ad929411553c8635e60dad855e55fc9b82",
+      "details": "x402 v2, CAIP-2 stellar:testnet and stellar:pubnet, PaymentPayload payload.transaction and fee sponsorship"
+    },
+    {
+      "id": "reference_http_facilitator",
+      "decision": "adapt_permissively",
+      "status": "first_party_source_exists",
+      "source_path": "stellar/x402-stellar/examples/facilitator/src/app.ts",
+      "evidence_blob": "bc1d7540de5f3ee8be427ed6417da99faed1a4eb",
+      "details": "Express POST /verify, POST /settle, GET /supported, GET /health; API key, rate limiter and fee-bump/channel signing. Config registers a selected network; separate deployments or dual-network routing still need actual proof."
+    },
+    {
+      "id": "bazaar_schema",
+      "decision": "reuse_spec_build_index_and_search",
+      "status": "upstream_extension_spec_exists",
+      "source_path": "x402-foundation/x402/specs/extensions/bazaar.md",
+      "evidence_blob": "442708e76d5a129e0c1393471d8ed71e3604c94e",
+      "details": "Protocol metadata input.type http or mcp and schema validation exist as specification. Actual catalog, ingress discovery, search and ranking are separate deliverables."
+    },
+    {
+      "id": "upto_stellar",
+      "decision": "build_and_contribute_spec_upstream",
+      "status": "no_stellar_specific_spec_in_pinned_upto_directory",
+      "source_path": "x402-foundation/x402/specs/schemes/upto/scheme_upto.md",
+      "evidence_blob": "202dae031d453db9cf46cd52de92c1800aee33f5",
+      "details": "Pinned upto directory lists generic, EVM, SVM; pinned Stellar mechanism src enumerates exact only. Need single use, time bounds, recipient binding, cap, possibly contract; no claim about newer changes elsewhere."
+    },
+    {
+      "id": "generic_mcp_sdk",
+      "decision": "reuse_primitives_not_claim_bazaar_complete",
+      "status": "upstream_library_exists",
+      "source_path": "x402-foundation/x402/typescript/packages/mcp/package.json",
+      "evidence_blob": "8fa3064e80bd7b388d2d026b51ed983907cce3e1",
+      "details": "@x402/mcp v2.28.0 generic bridge exists. Explicit Bazaar search and paid-call proxy behavior must still be implemented and acceptance-tested."
+    },
+    {
+      "id": "agpl_relayer",
+      "decision": "exclude_dependency_path",
+      "status": "license_incompatible_with_rfp_path",
+      "source_path": "OpenZeppelin/openzeppelin-relayer/LICENSE",
+      "evidence_blob": "0ad25db4bd1d86c452db3f9602ccdbe172438f52",
+      "details": "AGPLv3 license is not compatible with the RFP's permissive project-base requirement; no dependency or source copy."
+    }
+  ],
+  "unverified": [
+    "Current published npm dist-tag and exact transitive installed versions are not verified by repository manifest alone",
+    "Neither dual-network full end-to-end conformance nor any live payment or settled transaction hash was executed",
+    "Production readiness and third-party audit status are not established by code presence",
+    "SCF RFP Q3/#45 to Build #46 applicability is assigned to separate SF-01 research"
+  ]
+}
