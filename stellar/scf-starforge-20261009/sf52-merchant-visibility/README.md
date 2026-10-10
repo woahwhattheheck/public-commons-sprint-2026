@@ -23,6 +23,19 @@ Catalog row identity: the original SF46 Bazaar serializes a resource as `resourc
 
 Output fields: `challenge` reports the seller's observed v2 payment requirements and Bazaar extension presence, `extensionResponse` reports indexing status **only if supplied**, and `catalog` reports raw pagination/coverage, resource URL match and same-payTo alternative URLs. `LISTED` means the URL is visible and any supplied network/payTo selectors match one actual accepted option. `LISTED_WRONG_NETWORK` means no listed option uses the desired network; `LISTED_WRONG_PAYTO` means no listed option uses the requested recipient; `LISTED_PAYMENT_ROUTE_MISMATCH` means the network and payTo each appear, but never on the same accepted option. `NOT_LISTED_IN_EXHAUSTED_CATALOG` means this particular catalog did not expose the exact resource URL after an exhaustively completed scan. `INCONCLUSIVE_CATALOG` means no missing-resource conclusion is allowed. To keep memory bounded, `catalog.matches` includes at most 50 records, while `matchingResourceCount` and `matchingEvidence` summarize *all* matching records, including those beyond the display sample.
 
+
+### First-party seller correction: unpaid 200 prevents a discovery declaration
+
+In [x402#2993, seller's correction](https://github.com/x402-foundation/x402/issues/2993#issuecomment-5139187559), the operator traced absent Bazaar listings to its own **default free-tier unpaid GET returning HTTP 200 rather than 402**. An indexer requesting that route had no challenge to collect; after the seller made free calls opt-in and exposed the normal unpaid 402, the operator observed indexing after a subsequent genuine payment. The same seller also corrected previous measurements that mistook HTTP 200 for actual on-chain settlement. This is a different root cause from a facilitator failing to index a valid 402, and this merchant's Base-mainnet behavior is **not** a claim about a Stellar production deployment.
+
+The tool now exposes an independent `sellerDiscovery` state in addition to the catalog verdict:
+- `UNPAID_200_NO_402_DECLARATION`: an unauthenticated GET returned 200 instead of a challenge; check default free-tier, cached-success and health-shortcut routing. A crawler using the same GET cannot learn the x402 declaration from that response.
+- `UNPAID_402_BAZAAR_VISIBLE`: a valid unpaid 402 offers Bazaar metadata. **Neither indexing nor settlement is implied**.
+- `UNPAID_402_WITHOUT_BAZAAR`: payment terms were advertised, but Bazaar metadata was absent.
+- `NO_VALID_UNPAID_BAZAAR_402`: check the actual HTTP response, decoding and fetch failure before drawing conclusions.
+
+The catalog verdict remains independently evidence-bounded: an exhaustively missing URL is reported missing even after the seller changes to 402, because switching response mode does **not** itself prove an indexer refreshed a listing. The report makes no payment calls and never infers a settlement from a 200 status. The same issue separately reported a seller-specific description-length verification cliff; other facilitator resources successfully settle with longer descriptions, so this tool deliberately does **not** invent a universal length cutoff.
+
 Read-only original-source focused local Node HTTP checks:
 
 ```sh
