@@ -7,7 +7,7 @@ MIT. **Runnable service, not a protocol fork.** Official SCF x402 RFP requires a
 - `POST /verify` and `POST /settle`: read the **original** x402 v2 `paymentPayload` + `paymentRequirements`, require their `accepted.network` and `network` to agree and resolve exactly one of the two Stellar networks, require matching scheme, forward raw original UTF-8 request bytes to that configured network's actual `/verify` or `/settle` backend, and return its JSON response/status without editing payment signatures or amounts. The upstream original `@x402/stellar` implementation remains responsible for authentic cryptographic validation, replay rejection, fee sponsorship and actual chain settlement.
 - `GET /supported`: call BOTH real backends, refuse partial or cross-network kinds, combine each network's actual advertised v2 kinds, and deduplicate signer addresses under the original Stellar CAIP family `stellar:*` (not invented per-network signer keys). Global extensions are intersection-only, rather than claiming a feature unsupported by one network.
 - `GET /healthz`: shows **configuration only**, not a live chain, paid service or SLA health check.
-- Exact routes only; auth secrets aren't logged or sent to the wrong upstream. Body/response caps, concurrent-request cap, timeouts and redirect denial prevent unsafe unbounded relay. No arbitrary URL forwarding or client-supplied origin is possible. Default bind is `127.0.0.1`; a non-loopback bind refuses to boot without inbound operator bearer authentication. In production, terminate TLS and apply identity/rate limiting at the operator ingress as well.
+- Exact routes only; auth secrets aren't logged or sent to the wrong upstream. Body/response caps, concurrent-request cap, timeouts and redirect denial prevent unsafe unbounded relay. Inbound POST bodies have a hard 8-second wall-clock deadline, not merely an upstream HTTP timeout. A client that sends part of a body then stalls has its socket terminated and admission slot released, so later original native x402 requests can proceed. The aborted client sees a disconnected socket, not a guaranteed 408 response. No arbitrary URL forwarding or client-supplied origin is possible. Default bind is `127.0.0.1`; a non-loopback bind refuses to boot without inbound operator bearer authentication. In production, terminate TLS and apply identity/rate limiting at the operator ingress as well.
 
 ### Start (Node 22+, no npm dependencies)
 
@@ -22,7 +22,7 @@ SF58_ACCESS_TOKEN="$OPERATOR_CREATED_STRONG_GATEWAY_TOKEN" \
 node stellar/scf-starforge-20261009/sf58-dual-network-frontdoor/server.mjs
 ```
 
-`SF58_TESTNET_ORIGIN` and `SF58_PUBNET_ORIGIN` must be credential-free HTTPS origins, or local HTTP loopback origins for self-hosted backends. An origin cannot contain an arbitrary route, query, userinfo or redirect. Use `SF58_LISTEN_ADDRESS` and `SF58_PORT` to override the default local bind and port 8788. The optional upstream bearer tokens are independent and never accepted from caller headers. Protect configuration with existing secret custody, not a committed `.env` file.
+`SF58_TESTNET_ORIGIN` and `SF58_PUBNET_ORIGIN` must be credential-free HTTPS origins, or local HTTP loopback origins for self-hosted backends. An origin cannot contain an arbitrary route, query, userinfo or redirect. Use `SF58_LISTEN_ADDRESS` and `SF58_PORT` to override the default local bind and port 8788. `SF58_BODY_TIMEOUT_MS` adjusts the absolute inbound body deadline in positive integer milliseconds (default `8000`). This is independent of the original 12-second upstream deadline. Tune at the reverse proxy as well; a stalled body is disconnected and must never be forwarded to the original backend. The optional upstream bearer tokens are independent and never accepted from caller headers. Protect configuration with existing secret custody, not a committed `.env` file.
 
 For an actual `/supported` request, supply `Authorization: Bearer <operator token>` when configured. A provider must advertise real native x402 v2 Stellar kinds and `signers: {"stellar:*": ["...account address..."]}` as in upstream `x402Facilitator.getSupported()`; SF58 never claims a scheme/fee-sponsor status not supplied by its actual backend. `POST` requests require `Content-Type: application/json` and the ordinary x402 v2 `paymentPayload` / `paymentRequirements` structure. No real payment or XDR is provided in these instructions.
 
@@ -30,6 +30,7 @@ Focused local edge validation (mock upstreams **only** for route-contract regres
 
 ```bash
 node --test stellar/scf-starforge-20261009/sf58-dual-network-frontdoor/test/frontdoor.test.mjs
+node --test stellar/scf-starforge-20261009/sf58-dual-network-frontdoor/test/body-read.test.mjs
 ```
 
 ## Deployment, acceptance and owner handoff
