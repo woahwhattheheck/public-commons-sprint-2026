@@ -24,6 +24,18 @@ test('signed i128 only, zero is legal at settle',()=>{
  for(const x of ['01','0','-1','1.2','1e4','170141183460469231731687303715884105728'])
    assert.throws(()=>atomicAmount(x));
 });
+test('untrusted overlong amounts are rejected before BigInt across upto wire phases',()=>{
+ const huge='9'.repeat(256*1024);
+ assert.throws(()=>atomicAmount(huge),{name:'RangeError',message:'AMOUNT_OUTSIDE_SIGNED_I128'});
+ for(const stage of ['accepted','verify','settle','payload']){
+  const a=input();
+  if(stage==='accepted') a.paymentPayload.accepted.amount=huge;
+  if(stage==='verify') a.verifyRequirements.amount=huge;
+  if(stage==='settle') a.settleRequirements.amount=huge;
+  if(stage==='payload') a.paymentPayload.payload.maxAmount=huge;
+  assert.throws(()=>inspectUptoPhase(a),/AMOUNT_OUTSIDE_SIGNED_I128/,stage);
+ }
+});
 test('explicit stateless and contract negotiation prevents downgrade',()=>{
  assert.equal(resolveUptoProfile({uptoProfile:'contract'},{supportedProfiles:['stateless','contract']}).profile,'contract');
  assert.throws(()=>resolveUptoProfile({}, {supportedProfiles:['stateless','contract'],allowSingleStatelessLegacy:true}));
