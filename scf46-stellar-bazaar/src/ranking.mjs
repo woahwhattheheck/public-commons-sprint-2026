@@ -32,17 +32,41 @@ function toFields(row) {
 // Never uses fuzzy scores as proof of semantic equivalence.
 function editDistanceWithin(a, b, limit) {
   if (Math.abs(a.length - b.length) > limit) return false;
-  let previous = Array.from({length:b.length+1}, (_,i)=>i);
+  if (a === b) return true;
+  // The caller permits at most one or two substitutions/insertions/deletions.
+  // Cells farther than `limit` from the diagonal cannot change the answer;
+  // only allocate/visit that narrow band, rather than O(a.length*b.length).
+  const beyond = limit + 1;
+  const n = b.length;
+  let previousStart = 0;
+  let previousEnd = Math.min(n, limit);
+  let previous = Array.from({length:previousEnd+1}, (_,j)=>j);
   for (let i=1;i<=a.length;i++) {
-    const current = [i]; let rowMin = current[0];
-    for (let j=1;j<=b.length;j++) {
-      current[j] = Math.min(previous[j]+1,current[j-1]+1,previous[j-1]+(a[i-1]===b[j-1]?0:1));
-      rowMin = Math.min(rowMin,current[j]);
+    const start = Math.max(0, i-limit);
+    const end = Math.min(n, i+limit);
+    const current = new Array(end-start+1);
+    let rowMin = beyond;
+    for (let j=start;j<=end;j++) {
+      let value;
+      if (j === 0) value = i;
+      else {
+        const above = j >= previousStart && j <= previousEnd
+          ? previous[j-previousStart] + 1 : beyond;
+        const left = j > start ? current[j-1-start] + 1 : beyond;
+        const diagonal = j-1 >= previousStart && j-1 <= previousEnd
+          ? previous[j-1-previousStart] + (a[i-1] === b[j-1] ? 0 : 1) : beyond;
+        value = Math.min(above, left, diagonal);
+      }
+      current[j-start] = value;
+      if (value < rowMin) rowMin = value;
     }
     if (rowMin > limit) return false;
     previous = current;
+    previousStart = start;
+    previousEnd = end;
   }
-  return previous[b.length] <= limit;
+  return b.length >= previousStart && b.length <= previousEnd &&
+    previous[b.length-previousStart] <= limit;
 }
 
 export function analyzeQuery(query) {
