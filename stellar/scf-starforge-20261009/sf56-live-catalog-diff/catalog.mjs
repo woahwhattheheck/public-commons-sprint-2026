@@ -83,6 +83,18 @@ function vendorPayload(item) {
   return item;
 }
 
+function normalizeVellarEnvelope(item) {
+  const page = vendorPayload(item);
+  if (!obj(page)) return page;
+  const flatTotal = page.total;
+  const nestedTotal = obj(page.pagination) ? page.pagination.total : undefined;
+  if (flatTotal !== undefined && nestedTotal !== undefined && flatTotal !== nestedTotal) {
+    throw Error('Conflicting Vellar pagination totals');
+  }
+  const total = flatTotal ?? nestedTotal;
+  return total === flatTotal ? page : { ...page, total };
+}
+
 export function analyzePages(pages, { source = PROVIDER, network = NETWORK, capturedAt = new Date().toISOString() } = {}) {
   if (!Array.isArray(pages) || pages.length < 1 || pages.length > MAX_PAGES) throw Error('Invalid page count');
   if (source !== PROVIDER || network !== NETWORK) throw Error('Wrong provider or network');
@@ -91,7 +103,7 @@ export function analyzePages(pages, { source = PROVIDER, network = NETWORK, capt
   const quarantined = [], offers = [], seenResource = new Set(), pageHashes = [];
   let expectedTotal = null, scanned = 0;
   for (const [i, item] of pages.entries()) {
-    const page = vendorPayload(item);
+    const page = normalizeVellarEnvelope(item);
     if (!obj(page) || !Array.isArray(page.items)) throw Error(`Vellar page ${i} must have items[]`);
     if (page.items.length > LIMIT) throw Error(`Vellar page ${i} exceeds page limit`);
     if (!Number.isSafeInteger(page.total) || page.total < 0) throw Error(`Vellar page ${i} missing safe total`);
@@ -197,7 +209,10 @@ export async function fetchVellar({ fetchImpl = globalThis.fetch, timeoutMs = 25
     url.searchParams.set('network',NETWORK);url.searchParams.set('limit',String(LIMIT));url.searchParams.set('offset',String(offset));
     const response=await fetchImpl(url.href,{method:'GET',redirect:'error',headers:{accept:'application/json'},signal:AbortSignal.timeout(timeoutMs)});
     const body=await boundedResponse(response);
-    let payload;try{payload=JSON.parse(body);}catch{throw Error('Malformed discovery JSON');}
+    let payload;try{payload=normalizeVellarEnvelope(JSON.parse(body));}catch(error){
+      if (error?.message === 'Conflicting Vellar pagination totals') throw error;
+      throw Error('Malformed discovery JSON');
+    }
     if (!obj(payload)||!Array.isArray(payload.items)||!Number.isSafeInteger(payload.total)) throw Error('Malformed Vellar pagination envelope');
     if(declaredTotal!==null && declaredTotal!==payload.total) throw Error('Provider total changed across pages');
     declaredTotal=payload.total;
