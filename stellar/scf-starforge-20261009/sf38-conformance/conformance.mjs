@@ -1,6 +1,9 @@
 // MIT — SCF SF-38. Read-only, source-pinned x402 v2 Stellar wire + ledger-inclusion audit.
 // No signing, RPC submit, /settle POST, wallet, or state changes in this module.
 import { createHash } from 'node:crypto';
+import { lookup } from 'node:dns/promises';
+import { BlockList, isIP } from 'node:net';
+import https from 'node:https';
 
 export const NETWORKS = Object.freeze(['stellar:testnet','stellar:pubnet']);
 export const SCHEMES = Object.freeze(['exact','upto']);
@@ -134,21 +137,91 @@ export function auditCapture(capture) {
     assertion:'Recorded response shape alone does not prove signature, original SDK interoperability or settled transfer'};
 }
 
-/** Only read-only GET to URL supplied by operator; no credentials and no redirects. */
-export async function probeSupported(url,{fetchImpl=fetch,timeoutMs=12000}={}) {
-  const u=new URL(url);
-  insist(u.protocol==='https:' && !u.username && !u.password && !u.hash &&
-    u.search==='' && !['localhost','127.0.0.1'].includes(u.hostname), 'PROBE_HTTPS_ORIGIN_REQUIRED');
+// Block private, loopback, link-local, documentation, reserved and mapped IPs.
+// Validate ALL DNS answers, then connect to the validated answer without another
+// resolver lookup, preserving TLS SNI/hostname verification for the original host.
+const disallowedProbeAddress = new BlockList();
+for (const [address, prefix] of [
+  ['0.0.0.0',8],['10.0.0.0',8],['100.64.0.0',10],['127.0.0.0',8],
+  ['169.254.0.0',16],['172.16.0.0',12],['192.0.0.0',24],['192.0.2.0',24],
+  ['192.168.0.0',16],['198.18.0.0',15],['198.51.100.0',24],
+  ['203.0.113.0',24],['224.0.0.0',4],['240.0.0.0',4]
+]) disallowedProbeAddress.addSubnet(address,prefix,'ipv4');
+for (const [address, prefix] of [
+  ['::',128],['::1',128],['fc00::',7],['fe80::',10],
+  ['ff00::',8],['2001:db8::',32],['::ffff:0:0',96]
+]) disallowedProbeAddress.addSubnet(address,prefix,'ipv6');
+
+export function selectPublicProbeAddress(answers) {
+  if (!Array.isArray(answers) || answers.length===0 ||
+      answers.some(a=>![4,6].includes(a?.family) ||
+        typeof a.address!=='string' ||
+        disallowedProbeAddress.check(a.address,`ipv${a.family}`))) {
+    throw new TypeError('SUPPORTED_DNS_NONPUBLIC_OR_EMPTY');
+  }
+  return answers[0];
+}
+function checkedSupportedUrl(raw) {
+  const u=new URL(raw);
+  const host=u.hostname.toLowerCase().replace(/\\.$/,'');
+  if (u.protocol!=='https:' || u.username || u.password || u.hash || u.search || u.port ||
+      isIP(host) || !host.includes('.') ||
+      ['localhost','local','internal','test','invalid','example'].some(s=>
+        host===s || host.endsWith('.'+s))) throw new TypeError('SUPPORTED_PUBLIC_HTTPS_ORIGIN_REQUIRED');
+  // Facilitators commonly mount their API under /facilitator: preserve that
+  // path while ensuring an existing /supported suffix is not duplicated.
+  const prefix=u.pathname.replace(/\\/+$/,'');
+  const path=prefix.endsWith('/supported')?prefix:prefix+'/supported';
+  return new URL(path||'/supported',u.origin).href;
+}
+async function pinnedSupportedGet(target,signal) {
+  const u=new URL(target);
+  const address=await Promise.race([
+    lookup(u.hostname,{all:true,verbatim:true}).then(selectPublicProbeAddress),
+    new Promise((_,reject)=>signal.addEventListener('abort',()=>
+      reject(new Error('SUPPORTED_PROBE_TIMEOUT')),{once:true}))
+  ]);
+  return new Promise((resolve,reject)=>{
+    const req=https.request(u,{
+      method:'GET',signal,headers:{accept:'application/json'},
+      lookup:(_host,_opts,cb)=>cb(null,address.address,address.family)
+    },res=>{
+      if(res.statusCode!==200) {
+        res.resume();reject(new Error('SUPPORTED_HTTP_'+res.statusCode));return;
+      }
+      let count=0;const chunks=[];
+      res.on('data',chunk=>{
+        count+=chunk.length;
+        if(count>262144) {res.destroy(new Error('SUPPORTED_BODY_TOO_LARGE'));return;}
+        chunks.push(chunk);
+      });
+      res.on('error',reject);
+      res.on('end',()=>resolve(new Response(Buffer.concat(chunks),{status:200})));
+    });
+    req.on('error',reject);
+    req.end();
+  });
+}
+
+/** GET /supported at the supplied official facilitator path, never POST, no redirects.
+ * Default live transport pins public DNS answers to its TLS connection; an
+ * explicitly injected fetchImpl exists only for focused caller tests.
+ */
+export async function probeSupported(url,{fetchImpl,timeoutMs=12000}={}) {
   insist(Number.isSafeInteger(timeoutMs) && timeoutMs>=100 && timeoutMs<=60000,'BAD_PROBE_TIMEOUT');
-  const target=new URL('/supported',u.origin).href;
-  const response=await fetchImpl(target,{method:'GET',redirect:'error',signal:AbortSignal.timeout(timeoutMs),
-    headers:{accept:'application/json'}});
+  const target=checkedSupportedUrl(url);
+  const signal=AbortSignal.timeout(timeoutMs);
+  const response=fetchImpl
+    ? await fetchImpl(target,{method:'GET',redirect:'error',signal,
+        headers:{accept:'application/json'}})
+    : await pinnedSupportedGet(target,signal);
   insist(response.status===200,'SUPPORTED_HTTP_'+response.status);
   // Stream bounded data; do not trust Content-Length and never store provider auth headers.
+  insist(response.body && typeof response.body.getReader==='function','SUPPORTED_BODY_MISSING');
   const reader=response.body.getReader();let size=0;const chunks=[];
-  try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;
+  try {while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;
     insist(size<=262144,'SUPPORTED_BODY_TOO_LARGE');chunks.push(value);}}
-  finally{reader.releaseLock();}
+  finally {reader.releaseLock();}
   const raw=Buffer.concat(chunks).toString('utf8');
   const parsed=JSON.parse(raw);const checked=inspectSupported(parsed);
   return {at:new Date().toISOString(),url:target,httpStatus:200,rawSHA256:sha(raw),
