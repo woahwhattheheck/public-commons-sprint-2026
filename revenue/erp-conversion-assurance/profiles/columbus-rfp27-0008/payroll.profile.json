@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "dataset": "columbus_rfp27_0008_payroll_parallel_illustrative_v1",
+  "keys": [
+    "pay_period_end",
+    "pay_cycle",
+    "employee_token",
+    "check_sequence"
+  ],
+  "amounts": [
+    {
+      "name": "gross_pay",
+      "scale": 2,
+      "tolerance": "0.00"
+    },
+    {
+      "name": "net_pay",
+      "scale": 2,
+      "tolerance": "0.00"
+    },
+    {
+      "name": "employee_tax",
+      "scale": 2,
+      "tolerance": "0.00"
+    },
+    {
+      "name": "deductions",
+      "scale": 2,
+      "tolerance": "0.00"
+    },
+    {
+      "name": "employer_fringe",
+      "scale": 2,
+      "tolerance": "0.00"
+    }
+  ],
+  "group_by": [
+    "pay_period_end",
+    "pay_cycle"
+  ],
+  "source_columns": {
+    "pay_period_end": "PayPeriodEnd",
+    "pay_cycle": "RunID",
+    "employee_token": "EmployeeToken",
+    "check_sequence": "CheckSequence",
+    "gross_pay": "GrossPay",
+    "net_pay": "NetPay",
+    "employee_tax": "EmpTax",
+    "deductions": "Deductions",
+    "employer_fringe": "EmployerFringe"
+  },
+  "target_columns": {
+    "pay_period_end": "PeriodEnd",
+    "pay_cycle": "PayrollCycle",
+    "employee_token": "EmployeeCrosswalk",
+    "check_sequence": "PaymentSeq",
+    "gross_pay": "Gross",
+    "net_pay": "Net",
+    "employee_tax": "TaxWithheld",
+    "deductions": "EmployeeDeductions",
+    "employer_fringe": "EmployerFringeCost"
+  }
+}
