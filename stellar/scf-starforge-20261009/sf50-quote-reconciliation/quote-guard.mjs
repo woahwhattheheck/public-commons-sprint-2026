@@ -37,12 +37,19 @@ function routeMatches(catalog, requested) {
 function matchesTemplate(template, requested, catalog) {
   if (typeof template !== 'string' || !template.startsWith('/') || template.length > 2048) return false;
   if (catalog.origin !== requested.origin || catalog.search !== requested.search) return false;
-  const a = template.split('/'), b = requested.pathname.split('/');
-  if (a.length !== b.length) return false;
-  return a.every((part, i) => {
-    if (part.startsWith(':')) return /^:[A-Za-z_][\w]*$/.test(part) && b[i].length > 0;
-    return part === b[i];
-  });
+  const parts = template.split('/');
+  const matches = url => {
+    const actual = url.pathname.split('/');
+    if (parts.length !== actual.length) return false;
+    return parts.every((part, i) => {
+      if (part.startsWith(':')) return /^:[A-Za-z_][\w]*$/.test(part) && actual[i].length > 0;
+      return part === actual[i];
+    });
+  };
+  // Both the indexed record and the fresh origin URL must belong to the
+  // same advertised template. A matching seller quote alone cannot bind a
+  // different catalog route to this request.
+  return matches(catalog) && matches(requested);
 }
 
 function normalized(t) {
