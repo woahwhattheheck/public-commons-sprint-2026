@@ -73,18 +73,21 @@ export class AssetRegistry {
  */
 export async function validatePaymentTerms(req, registry, { verifyRecipient, now=Date.now() }={}) {
   check(object(req) && registry instanceof AssetRegistry,'Payment terms and trusted registry required');
-  check(req.scheme === 'exact' && typeof req.asset==='string', 'Unsupported scheme or asset');
-  const a = registry.get(req.network,req.asset,now);
-  check(typeof req.amount==='string' && integral(req.amount), 'Canonical atomic amount string required');
-  const amount=BigInt(req.amount);
+  // Snapshot all caller-controlled payment terms before validation and before
+  // awaiting a trusted recipient check. Never re-read mutable request fields.
+  const terms=Object.freeze({scheme:req.scheme,network:req.network,asset:req.asset,amount:req.amount,payTo:req.payTo});
+  check(terms.scheme === 'exact' && typeof terms.asset==='string', 'Unsupported scheme or asset');
+  const a = registry.get(terms.network,terms.asset,now);
+  check(typeof terms.amount==='string' && integral(terms.amount), 'Canonical atomic amount string required');
+  const amount=BigInt(terms.amount);
   check(amount>0n && amount<=MAX_I128, 'Amount out of signed i128 range');
-  check(typeof req.payTo==='string' && ACCOUNT.test(req.payTo),'Invalid Stellar recipient address format');
+  check(typeof terms.payTo==='string' && ACCOUNT.test(terms.payTo),'Invalid Stellar recipient address format');
   check(typeof verifyRecipient==='function', 'Trusted recipient-state verifier required');
   // Resolver must assert expected chain/asset/recipient and freshly observed status.
-  const result=await verifyRecipient(Object.freeze({network:a.network,asset:a.asset,payTo:req.payTo}));
-  check(object(result) && result.network===a.network && result.asset===a.asset && result.payTo===req.payTo && result.ready === true, 'Recipient not verified for this asset/network');
+  const result=await verifyRecipient(Object.freeze({network:a.network,asset:a.asset,payTo:terms.payTo}));
+  check(object(result) && result.network===a.network && result.asset===a.asset && result.payTo===terms.payTo && result.ready === true, 'Recipient not verified for this asset/network');
   check(Number.isSafeInteger(result.observedAtMs) && result.observedAtMs <= now && now - result.observedAtMs<=60_000,'Recipient verification stale');
-  return Object.freeze({network:a.network,asset:a.asset,scheme:'exact',payTo:req.payTo,amount:req.amount,decimalAmount:formatAtomic(req.amount,a.decimals),metadataSource:a.source,verifiedRecipientAtMs:result.observedAtMs});
+  return Object.freeze({network:a.network,asset:a.asset,scheme:'exact',payTo:terms.payTo,amount:terms.amount,decimalAmount:formatAtomic(terms.amount,a.decimals),metadataSource:a.source,verifiedRecipientAtMs:result.observedAtMs});
 }
 
 export const StellarUSDC = Object.freeze({
