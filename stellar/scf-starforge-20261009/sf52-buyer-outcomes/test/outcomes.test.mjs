@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {captureBuyerResult,captureBuyerError,analyzeOne,aggregateOutcomes} from '../outcomes.mjs';
+import {X402BuyerClient} from '../../sf31-buyer-client/buyer.mjs';
 const tx='a'.repeat(64), sha='b'.repeat(64), at='2026-10-10T06:00:00.000Z';
 const requireTerms={scheme:'exact',network:'stellar:testnet',asset:'C'+'A'.repeat(55),
   payTo:'G'+'B'.repeat(55),amount:'25000',maxTimeoutSeconds:60};
@@ -59,4 +60,34 @@ test('pending, throw after signed send, duplicates and unsafe evidence',()=>{
   assert.equal(JSON.stringify(e).includes('private'),false);
   assert.throws(()=>aggregateOutcomes([r,r]),/DUPLICATE_INTENT_ID/);
   assert.equal(analyzeOne({...r,chain:{...chain,network:'stellar:pubnet'},delivery}).status,'PROOF_CONFLICT');
+});
+
+test('original SF31 unsigned HTTP error remains visible in SF52 without a paid attempt',async()=>{
+  let requests=0, approvals=0, signatures=0;
+  const client=new X402BuyerClient({allowLocal:true,fetchImpl:async()=>{
+    requests++;return new Response('origin unavailable',{status:503});
+  }});
+  const result=await client.call({
+    intentId:'original-503',url:'http://localhost:5678/resource',method:'GET',
+    expect:{scheme:'exact',network:'stellar:testnet',asset:requireTerms.asset,
+      payTo:requireTerms.payTo,maxAtomic:'25000'},
+    approve:async()=>{approvals++;return true;},
+    sign:async()=>{signatures++;throw new Error('signing must not occur');}
+  });
+  assert.equal(result.status,'UNPAID_HTTP_ERROR');
+  assert.equal(result.httpStatus,503);
+  assert.equal(result.settlement,'NOT_REQUESTED');
+  assert.deepEqual([requests,approvals,signatures],[1,0,0]);
+  const captured=captureBuyerResult(result,{observedAt:at});
+  const report=aggregateOutcomes([captured]);
+  assert.equal(report.outcomes[0].status,'UNPAID_HTTP_ERROR');
+  assert.equal(report.counts.unpaidHttpFailures,1);
+  assert.equal(report.counts.signedAttempts,0);
+  assert.equal(report.counts.verifiedTransfers,0);
+  assert.equal(report.counts.sellerReportedSuccess,0);
+  assert.deepEqual(report.observedTransferAtomicByAsset,[]);
+  assert.throws(()=>captureBuyerResult({...result,receipt:{success:true}},{observedAt:at}),
+    /UNPAID_HTTP_RESULT_INCONSISTENT/);
+  assert.throws(()=>captureBuyerResult({...result,status:'NO_PAYMENT_REQUIRED'},{observedAt:at}),
+    /FREE_RESULT_INCONSISTENT/);
 });
