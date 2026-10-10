@@ -75,3 +75,12 @@ test('official network passphrase+tx inclusion separate from transfer proof',asy
   const wrong=async url=>new Response(JSON.stringify({network_passphrase:'Public Global Stellar Network ; September 2015'}));
   await assert.rejects(checkHorizonInclusion({network,transaction:tx,fetchImpl:wrong}),/PASSPHRASE_MISMATCH/);
 });
+
+test('Horizon response rejects excessive bytes without advertised length',async()=>{
+  const tx='a'.repeat(64);
+  const upstream=async url=>url.endsWith('/')
+    ?new Response(JSON.stringify({network_passphrase:'Test SDF Network ; September 2015'}))
+    :new Response(' '.repeat(262145));
+  await assert.rejects(checkHorizonInclusion({network,transaction:tx,fetchImpl:upstream}),
+    /HORIZON_BODY_TOO_LARGE/);
+});
