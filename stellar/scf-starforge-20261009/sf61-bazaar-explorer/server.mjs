@@ -67,7 +67,10 @@ function selectDiscoveryRequest(url, upstream) {
     output.searchParams.set('query', query);
     const cursor = url.searchParams.get('cursor');
     if (cursor !== null) {
-      if (cursor.length > 512 || !/^[A-Za-z0-9_-]+$/.test(cursor))
+      // Native x402 Bazaar search cursors are opaque strings: providers may use
+      // padded base64 or signed tokens with +, / and =. URLSearchParams
+      // re-encodes the exact value for the fixed, operator-selected upstream.
+      if (cursor.length === 0 || cursor.length > 512 || /[\x00-\x1f\x7f]/.test(cursor))
         throw new RangeError('Invalid opaque cursor');
       output.searchParams.set('cursor', cursor);
     }
