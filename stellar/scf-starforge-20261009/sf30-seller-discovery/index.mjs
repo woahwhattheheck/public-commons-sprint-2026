@@ -13,6 +13,8 @@ const DRAFT = 'https://json-schema.org/draft/2020-12/schema';
 const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH']);
 const METHODS_QUERY = new Set(['GET', 'HEAD', 'DELETE']);
 const ALLOWED_SCHEMES = new Set(['exact', 'upto']);
+// Canonical positive Soroban SEP-41 transfer amounts fit signed i128.
+const MAX_SOROBAN_I128 = '170141183460469231731687303715884105727';
 const OMIT = Symbol('missing-example');
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const own = (value, key) => Object.hasOwn(value, key);
@@ -99,6 +101,9 @@ function checkedPayment(payment) {
   if (typeof p.network !== 'string' || !/^stellar:[A-Za-z0-9_-]+$/.test(p.network)) fail('A Stellar CAIP-2 network is required');
   nonempty(p.asset, 'asset'); nonempty(p.payTo, 'payTo');
   if (typeof p.amount !== 'string' || !/^[1-9]\d*$/.test(p.amount)) fail('amount must be a positive atomic-unit decimal string');
+  if (p.amount.length > MAX_SOROBAN_I128.length ||
+      (p.amount.length === MAX_SOROBAN_I128.length && p.amount > MAX_SOROBAN_I128))
+    fail('amount exceeds Stellar signed i128 maximum');
   if (!Number.isSafeInteger(p.maxTimeoutSeconds) || p.maxTimeoutSeconds <= 0) fail('maxTimeoutSeconds must be a positive integer');
   const { scheme, network, amount, asset, payTo, maxTimeoutSeconds } = p;
   return { scheme, network, amount, asset, payTo, maxTimeoutSeconds, ...(p.extra === undefined ? {} : { extra: p.extra }) };
