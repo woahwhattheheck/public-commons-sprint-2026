@@ -1,0 +1,5 @@
+{
+  "sample_only": true,
+  "claim": "This illustrates a baseline-linked acceptance artifact and is not DFPS, bidder, or agency evidence.",
+  "cases": [{"case": "EXAMPLE-001", "source": "illustrative", "target": "illustrative", "result": "pass"}]
+}

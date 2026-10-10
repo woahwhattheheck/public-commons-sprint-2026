@@ -1,0 +1,29 @@
+{
+  "schema": "tj-ivv-evidence/v1",
+  "baseline": "sample-revision-1",
+  "review_as_of": "2026-10-10T06:00:00Z",
+  "implementer_org": "EXAMPLE IMPLEMENTER - NOT A REAL BIDDER",
+  "requirements": [
+    {
+      "id": "SAMPLE-REQ-01",
+      "critical": true,
+      "required_tests": [
+        "SAMPLE-TEST-01"
+      ],
+      "description": "Sample traceability and independent review integrity; NOT a DFPS requirement"
+    }
+  ],
+  "observations": [
+    {
+      "id": "SAMPLE-OBS-01",
+      "requirement_id": "SAMPLE-REQ-01",
+      "test_id": "SAMPLE-TEST-01",
+      "baseline": "sample-revision-1",
+      "outcome": "pass",
+      "observed_at": "2026-10-10T05:50:00Z",
+      "reviewer_org": "EXAMPLE INDEPENDENT REVIEWER - NO CUSTOMER",
+      "artifact_path": "artifacts/acceptance-note.json",
+      "sha256": "ad77e971719188753a64d54467c33b63ef2055b0014d1f39146ee6cd51f74976"
+    }
+  ]
+}
