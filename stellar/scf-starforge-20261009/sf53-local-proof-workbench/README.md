@@ -30,3 +30,16 @@ This check injects known module *return values* to test report presentation boun
 ## Revenue/grant handoff
 
 The workbench is a self-serve local technical demonstration for an approved commercial discovery/checkout-assurance conversation. A scoped paid diagnostic can use separate, owner-authorized seller evidence and contract milestones, but it is **not** paid revenue or a representation that SCF has accepted the project. The SCF application assembly remains owner-held and unsent. Report sourced local engineering results distinctly from independent third-party acceptance.
+
+## Added original SF52 seller→buyer wire acceptance
+
+At process startup, the same read-only workbench also imports **the already published** `../sf52-seller-buyer-wire/acceptance.mjs` and invokes `runSellerBuyerWire()`. That exact module imports the existing SF30 `compileHttpSellerOffer`/`paymentRequiredResponse` and SF31 `X402BuyerClient`, opens a real ephemeral `127.0.0.1` HTTP server, and sends six unsigned HTTP POST requests. It checks the legitimate offer refused by an operator plus original buyer pre-approval denials for under-budget cap, payee mismatch, amount/network drift, and resource URL mismatch. Both source owner modules remain unchanged.
+
+The new **SELLER → BUYER WIRE** panel displays six original HTTP probe outcomes, five policy-preapproval blocks and zero signed requests. Its pass gate checks all six exact denial codes, one intentional operator refusal, exactly six real HTTP probes, and zero signatures, signing callbacks, chain transactions or seller payments. Missing/failed source imports and unexpected wire output are **FAIL**, not a passing local demo. The browser still fetches only the server-captured read-only JSON and cannot initiate another probe. Native original SF52 and SF53 checks are available without GitHub Actions:
+
+~~~sh
+node --test stellar/scf-starforge-20261009/sf52-seller-buyer-wire/test/acceptance.test.mjs
+node --test stellar/scf-starforge-20261009/sf53-local-proof-workbench/test/workbench.test.mjs
+~~~
+
+This demonstrates genuine original Node HTTP/402 interoperability and an intentionally nonpayable decision boundary. It **does not** claim Stellar signer interoperability, live chain finality, real merchant onboarding, a funded buyer, or an approved SCF application. Any authenticated testnet transaction and facilitator/merchant evidence must be supplied by its existing authorized owner before a grant packet claims those gates.
