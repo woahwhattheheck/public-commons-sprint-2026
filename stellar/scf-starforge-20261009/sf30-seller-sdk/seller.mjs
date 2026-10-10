@@ -168,10 +168,15 @@ export function paymentRequiredResponse(offer) {
   if (offer?.x402Version !== 2 || !Array.isArray(offer.accepts) ||
       !plain(offer.extensions?.bazaar)) throw new TypeError('Valid v2 offer required');
   const body = JSON.stringify(offer);
+  // The shipped SF31 buyer rejects base64 PAYMENT-REQUIRED headers over 32 KiB.
+  // Refuse an unconsumable offer before advertising a 402 to an agent.
+  const paymentRequiredHeader = Buffer.from(body).toString('base64');
+  if (paymentRequiredHeader.length > 32768)
+    throw new RangeError('PAYMENT-REQUIRED header exceeds 32768-byte SF31 buyer limit');
   return {
     statusCode: 402,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store',
-      'PAYMENT-REQUIRED': Buffer.from(body).toString('base64') },
+      'PAYMENT-REQUIRED': paymentRequiredHeader },
     body,
   };
 }

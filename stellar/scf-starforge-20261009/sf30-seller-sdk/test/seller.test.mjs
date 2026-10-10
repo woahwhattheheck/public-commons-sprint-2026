@@ -114,3 +114,27 @@ test('seller amounts enforce signed Soroban i128 maximum', () => {
     }), /signed Soroban i128 limit/);
   }
 });
+
+
+test('PAYMENT-REQUIRED base64 header stays within the shipped SF31 buyer wire budget', () => {
+  const headerLimit = 32768;
+  // Base64 length 32768 represents a 24576-byte JSON body.
+  const maxBodyBytes = headerLimit / 4 * 3;
+  const sellerInput = input();
+  const offerWithExample = size => compileHttpSellerOffer({
+    ...sellerInput, outputExample: { blob: 'x'.repeat(size) }
+  });
+  const fixedBytes = Buffer.byteLength(JSON.stringify(offerWithExample(0)));
+  const payloadBytes = maxBodyBytes - fixedBytes;
+  assert.ok(payloadBytes > 0);
+  const exactlyAtLimit = offerWithExample(payloadBytes);
+  assert.equal(Buffer.byteLength(JSON.stringify(exactlyAtLimit)), maxBodyBytes);
+  const wire = paymentRequiredResponse(exactlyAtLimit);
+  assert.equal(wire.headers['PAYMENT-REQUIRED'].length, headerLimit);
+  assert.deepEqual(JSON.parse(Buffer.from(wire.headers['PAYMENT-REQUIRED'], 'base64')), exactlyAtLimit);
+  // One more JSON byte needs four more base64 characters, and must fail closed.
+  const tooLarge = offerWithExample(payloadBytes + 1);
+  assert.equal(Buffer.from(JSON.stringify(tooLarge)).toString('base64').length, 32772);
+  assert.throws(() => paymentRequiredResponse(tooLarge),
+    error => error instanceof RangeError && /32768-byte SF31 buyer limit/.test(error.message));
+});
