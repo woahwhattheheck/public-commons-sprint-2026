@@ -43,3 +43,9 @@ Run the focused software contract check: `node --test test/verify.test.mjs`. At 
 | User-visible real transaction result | Exact transaction hash, network, ledger, amount and outcome | None until a genuine event is supplied |
 
 This lane is explicitly **not a complete SF-43 product demo** until the actual two exemplar traces, including onchain transfer, are present. The code and acceptance harness are immediately runnable where the actual official signer/testnet environment is already installed. No application, external outreach, mainnet wallet, paid Actions or grants were touched.
+
+## October 10 SEP-41 source-format interoperability follow-up
+
+Official [Stellar token events](https://developers.stellar.org/docs/tokens/token-interface) permit both legacy scalar `i128` and modern `{amount:i128,to_muxed_id?:...}` map transfer event values. Actual [Stellar SDK `scValToNative`](https://stellar.github.io/js-stellar-base/scval.js.html) returns a JS object for map ScVal and BigInt for i128. Previous `String(decode(event.value))` incorrectly turned correct modern event amounts into `[object Object]`, making legitimate testnet transfers unprovable.
+
+`parseSep41TransferAmount` accepts legacy scalar and modern SDK-native map exact positive decimal atomic units; rejects non-null muxed destination, unknown map fields, unsafe/negative/zero/noncanonical amounts. The independent existing RPC `getTransaction` and `getEvents` exact token, tx, payTo, atomic amount gates still apply. Focused source-coupled test extends original `test/verify.test.mjs`; run `node --test stellar/scf-starforge-20261009/sf43-agent-commerce/test/verify.test.mjs` on authorized local checkout; actual wallet/testnet receipt still owned by original SF43/Muse.
