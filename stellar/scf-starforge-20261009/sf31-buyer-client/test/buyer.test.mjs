@@ -279,3 +279,35 @@ test('Soroban signed-i128 buyer quote ceiling preserves max valid and rejects ov
   assert.equal(approved,1);assert.equal(signedCount,1);
   assert.equal(state.paid.length,1);
 }));
+
+test('initial unsigned HTTP failures are not treated as successful free delivery',async()=>{
+  const requests=[];
+  let approvals=0,signatures=0;
+  let status=503;
+  const buyer=new X402BuyerClient({fetchImpl:async (_url,options)=>{
+    requests.push({ method:options.method,signature:options.headers.has('payment-signature') });
+    return new Response(null,{status});
+  }});
+  for(const code of [400,401,403,404,429,500,503]){
+    status=code;
+    const result=await buyer.call({...settings('https://example.org/protected'),
+      approve:()=>{approvals++;return true;},
+      sign:()=>{signatures++;throw new Error('no signer on unsigned failure');}
+    });
+    assert.equal(result.status,'UNPAID_HTTP_ERROR');
+    assert.equal(result.reason,'HTTP_'+code);
+    assert.equal(result.httpStatus,code);
+    assert.equal(result.attempts,1);
+    assert.equal(result.requirement,null);
+    assert.equal(result.settlement,'NOT_REQUESTED');
+  }
+  status=204;
+  const free=await buyer.call(settings('https://example.org/protected'));
+  assert.equal(free.status,'NO_PAYMENT_REQUIRED');
+  assert.equal(free.reason,null);
+  assert.equal(free.httpStatus,204);
+  assert.equal(free.attempts,1);
+  assert.equal(approvals,0);assert.equal(signatures,0);
+  assert.equal(requests.length,8);
+  assert.ok(requests.every(x=>x.method==='POST' && !x.signature));
+});

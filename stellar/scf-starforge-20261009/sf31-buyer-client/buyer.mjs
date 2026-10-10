@@ -230,8 +230,17 @@ export class X402BuyerClient {
     let first;
     try{first=await this.fetch(resource,options);}catch(e){throw new BuyerError('INITIAL_TRANSPORT_FAILED','',{cause:e});}
     noRedirect(first,false);
-    if(first.status!==402) return standardResult({intentId,status:'NO_PAYMENT_REQUIRED',resource:resource.href,
-      requirement:null,response:first,attempts:1,settlement:'NOT_REQUESTED',receipt:null,reason:null});
+    if (first.status !== 402) {
+      // A free 2xx response needs no payment; a non-402 HTTP failure is not
+      // successful free delivery. Preserve the single unsigned attempt and
+      // its original response without invoking policy or the payment signer.
+      const freeSuccess = first.ok;
+      return standardResult({intentId,
+        status:freeSuccess ? 'NO_PAYMENT_REQUIRED' : 'UNPAID_HTTP_ERROR',
+        resource:resource.href,requirement:null,response:first,attempts:1,
+        settlement:'NOT_REQUESTED',receipt:null,
+        reason:freeSuccess ? null : 'HTTP_'+first.status});
+    }
     const challenge=canonicalChallenge(decodeHeader(first.headers.get('payment-required'),'PAYMENT_REQUIRED'),resource);
     const requirement=choose(challenge,expect);
     const acceptedTerms=immutableTerms(requirement);
