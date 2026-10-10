@@ -15,12 +15,12 @@ To intentionally create a fresh EMPTY catalog, add --create-empty and supply a
 private empty directory. This option never seeds simulated sellers or payments.
 --one-shot captures one original Bazaar page parity report and closes both ports.
 Without --one-shot, the browser stays available until Ctrl-C or SIGTERM.
-No hosted CI, paid provider calls, wallets, signatures, or outgoing contact.
+Optional --capture-full FILE --capture-network stellar:testnet --capture-limit 100\nwalks every native local SF60 list page and compares its original SF61 response\nbefore a private, no-clobber raw-response SHA capture is saved. No remote calls.\nNo hosted CI, paid provider calls, wallets, signatures, or outgoing contact.
 `;
 
 export function parseOptions(argv) {
   if (argv.length === 1 && argv[0] === '--help') return { help: true };
-  const valKeys = new Set(['--directory', '--atlas-port', '--report']);
+  const valKeys = new Set(['--directory', '--atlas-port', '--report', '--capture-full', '--capture-network', '--capture-limit']);
   const flags = new Set(['--create-empty', '--one-shot']);
   const values = Object.create(null);
   for (let i = 0; i < argv.length; i++) {
@@ -40,7 +40,19 @@ export function parseOptions(argv) {
     throw new RangeError('--atlas-port must be an integer from 0 to 65535');
   if (values['--report'] && !String(values['--report']).trim())
     throw new TypeError('--report requires a writable file path');
+  if ((values['--capture-network'] || values['--capture-limit']) && !values['--capture-full'])
+    throw new TypeError('Capture filters require --capture-full.');
+  const captureNetwork = values['--capture-network'] ?? null;
+  if (captureNetwork && !['stellar:testnet', 'stellar:pubnet'].includes(captureNetwork))
+    throw new RangeError('Capture network must be stellar:testnet or stellar:pubnet');
+  const captureLimit = values['--capture-limit'] ?? '100';
+  if (!/^[1-9][0-9]?$|^100$/.test(captureLimit))
+    throw new RangeError('Capture page limit must be 1..100');
   return {
+    ...(values['--capture-full'] ? {
+      fullCapture: resolve(values['--capture-full']), captureNetwork,
+      captureLimit: Number(captureLimit),
+    } : {}),
     directory: resolve(values['--directory']),
     createEmpty: Boolean(values['--create-empty']),
     atlasPort: Number(rawPort),
@@ -119,6 +131,13 @@ export async function openDemo(options, implementation = null) {
       port: 0, createEmpty: options.createEmpty });
     viewer = await deps.startExplorer({ localUpstream: backend.origin, port: options.atlasPort });
     const proof = await observeParity({ backendOrigin: backend.origin, atlasUrl: viewer.url });
+    let fullCapture = null;
+    if (options.fullCapture) {
+      const { captureFullCatalog } = await import('./capture.mjs');
+      fullCapture = await captureFullCatalog({ backendOrigin: backend.origin,
+        atlasUrl: viewer.url, directory: options.directory, destination: options.fullCapture,
+        network: options.captureNetwork ?? null, limit: options.captureLimit ?? 100 });
+    }
     if (options.report) {
       // Never overwrite or silently expose operator data; only page digests,
       // counts and journal head are recorded, never raw seller rows or keys.
@@ -127,7 +146,7 @@ export async function openDemo(options, implementation = null) {
     }
     let closing;
     return {
-      atlasUrl: viewer.url, sourceOrigin: backend.origin, proof,
+      atlasUrl: viewer.url, sourceOrigin: backend.origin, proof, fullCapture,
       close() {
         if (!closing) closing = (async () => {
           try { await viewer.close(); } finally { await backend.close(); }
@@ -147,7 +166,8 @@ async function cli() {
   const session = await openDemo(options);
   console.log(JSON.stringify({ status: 'READY', atlasUrl: session.atlasUrl,
     originalDurableSource: session.sourceOrigin, parity: session.proof,
-    report: options.report, retainedJournalOwner: 'ORIGINAL_SF60' }, null, 2));
+    report: options.report, fullCapture: session.fullCapture,
+    retainedJournalOwner: 'ORIGINAL_SF60' }, null, 2));
   if (options.oneShot) return session.close();
   let stopping = false;
   const stop = () => {
