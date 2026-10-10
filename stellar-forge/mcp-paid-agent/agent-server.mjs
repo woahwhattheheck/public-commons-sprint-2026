@@ -160,7 +160,9 @@ export class McpPaidToolBroker {
   status({quoteId}={}){const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');return statOf(q);}
   cancel({quoteId}={}){
     const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
-    if(q.status==='PREVIEWED'){q.status='CANCELLED';return statOf(q);}
+    if(q.status==='PREVIEWED'||q.status==='APPROVAL_PENDING'){
+      q.status='CANCELLED';return statOf(q);
+    }
     if(q.status==='EXECUTING'){
       q.status=q.signedRequestDispatched?'INDETERMINATE':'CANCEL_REQUESTED';
       q.failure=q.signedRequestDispatched?'Signed call may have reached merchant; reconcile before any reattempt':null;
@@ -173,9 +175,25 @@ export class McpPaidToolBroker {
     if(q.status!=='PREVIEWED')return statOf(q); // replay never dispatches a second request
     if(Date.now()>q.expiresAt){q.status='EXPIRED';return statOf(q);}
     if(!this.#sign)fail('SIGNER_NOT_CONNECTED','Operator has not connected an x402 v2 signer');
-    // Approval is an out-of-model trusted callback; "approved":true tool args never count.
-    const permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,accepted:structuredClone(q.accepted)}));
-    if(!asBool(permission))fail('APPROVAL_REQUIRED','Operator independently denied or has not authorized payment');
+    // Atomically claim the quote BEFORE awaiting external approval. Otherwise two
+    // concurrent callers can both observe PREVIEWED and dispatch two signed calls.
+    // No merchant request or signature is made in APPROVAL_PENDING.
+    q.status='APPROVAL_PENDING';
+    let permission;
+    try {
+      // Approval is an out-of-model trusted callback; tool args never count.
+      permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,accepted:structuredClone(q.accepted)}));
+    } catch(error) {
+      if(q.status==='CANCELLED')return statOf(q);
+      q.status='PREVIEWED'; // no network/signature: operator may retry explicitly
+      throw error;
+    }
+    if(q.status==='CANCELLED')return statOf(q);
+    if(!asBool(permission)){
+      q.status='PREVIEWED';
+      fail('APPROVAL_REQUIRED','Operator independently denied or has not authorized payment');
+    }
+    if(Date.now()>q.expiresAt){q.status='EXPIRED';return statOf(q);}
     q.status='EXECUTING';q.attempts++;
     try {
       const first=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(this.#timeLimit)});
