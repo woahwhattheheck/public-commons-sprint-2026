@@ -27,6 +27,31 @@ test('HTTP templates dedup, MCP tools distinct at the same resource URL',()=>{
   const y=entry('mcp','mcp',{toolName:'forecast'});y.resource.url='https://example.org/mcp';c.insertValidated(y);
   assert.equal(c.size,3);assert.equal(c.list(new URLSearchParams('type=mcp')).resources.length,2);
 });
+test('MCP tool identity cannot alias a separate catalog resource', () => {
+  const catalog = new BazaarCatalog();
+  const published = entry('mcp', 'mcp', {toolName:'execute'});
+  published.resource.url = 'https://api.example/rates|admin';
+  const other = entry('mcp', 'mcp', {toolName:'admin|execute'});
+  other.resource.url = 'https://api.example/rates';
+
+  // Before validation both distinct tool identities joined to the same key:
+  // mcp|https://api.example/rates|admin|execute.
+  const originalKey = catalog.insertValidated(published);
+  assert.equal(originalKey, 'mcp|https://api.example/rates|admin|execute');
+  assert.throws(() => catalog.insertValidated(other), /Invalid MCP tool/);
+  assert.equal(catalog.size, 1, 'invalid tool cannot replace existing seller terms');
+  assert.equal(catalog.list(new URLSearchParams('type=mcp')).resources[0].resource.url, published.resource.url);
+
+  for (const badName of ['', 'bad name', 'admin|execute', 'agent/execute', 'a'.repeat(129), '☃']) {
+    const invalid = entry('mcp', 'mcp', {toolName:badName});
+    assert.throws(() => catalog.insertValidated(invalid), /Invalid MCP tool/, badName);
+  }
+  const valid = entry('mcp', 'mcp', {toolName:'weather.v2_1-forecast'});
+  valid.resource.url = 'https://api.example/rates';
+  catalog.insertValidated(valid);
+  assert.equal(catalog.size, 2, 'all valid SF28-compatible identifiers remain usable');
+});
+
 test('filters apply to actual payment accepts and extension types',()=>{
   const c=new BazaarCatalog(); c.insertValidated(entry('weather'));c.insertValidated(entry('image','mcp'));
   assert.equal(c.list(new URLSearchParams('network=stellar:testnet&scheme=exact&payTo=GTESTADDRESS&extensions=bazaar')).resources.length,2);
