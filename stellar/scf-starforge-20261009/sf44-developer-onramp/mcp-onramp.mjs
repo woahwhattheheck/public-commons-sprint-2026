@@ -47,6 +47,34 @@ export function assessLocalSourcePin(source, { strictSourcePin = false } = {}) {
   });
 }
 
+/**
+ * Restrict the SF44 discovery transport to the actual loopback catalog.
+ * A same-origin 302 can otherwise escape this guard because native fetch()
+ * follows redirects by default. Force redirect:error even if callers pass
+ * a Request whose redirect mode (or init.redirect) requests following.
+ * This is an egress restriction, not a seller credential or authorization.
+ */
+export function createCatalogOnlyFetch(catalogOrigin, audit, fetchImpl = fetch) {
+  const allowed = new URL(catalogOrigin);
+  if (allowed.protocol !== 'http:' || allowed.hostname !== '127.0.0.1' ||
+      !allowed.port || allowed.username || allowed.password ||
+      allowed.pathname !== '/' || allowed.search || allowed.hash) {
+    throw new TypeError('SF44 discovery catalog must be an explicit loopback HTTP origin');
+  }
+  if (!audit || typeof audit !== 'object') {
+    throw new TypeError('SF44 catalog audit counter object required');
+  }
+  return (input, options = {}) => {
+    const target = new URL(input instanceof Request ? input.url : String(input));
+    if (target.origin !== allowed.origin || target.username || target.password) {
+      audit.merchantHttpRequests++;
+      throw new Error('External merchant requests are prohibited in SF44 onramp');
+    }
+    audit.discoveryHttpRequests++;
+    return fetchImpl(input, { ...options, redirect: 'error' });
+  };
+}
+
 export async function startReadOnlyMcpOnramp(options = {}) {
   const source = await sourceProvenance();
   const sourcePolicy = assessLocalSourcePin(source, options);
@@ -61,15 +89,7 @@ export async function startReadOnlyMcpOnramp(options = {}) {
       // Allow only a fake source URL to reach PREVIEW; actual merchant access is
       // impossible even if a future caller accidentally connects a signer.
       allowedResourceOrigins: [fictitiousOrigin],
-      fetchImpl: (input, options) => {
-        const target = new URL(String(input));
-        if (target.origin !== catalogOrigin) {
-          audit.merchantHttpRequests++;
-          throw new Error('External merchant requests are prohibited in SF44 onramp');
-        }
-        audit.discoveryHttpRequests++;
-        return fetch(input, options);
-      }
+      fetchImpl: createCatalogOnlyFetch(catalogOrigin, audit)
       // approve defaults to DENY and signPayment defaults to null.
     });
     const bearerToken = randomBytes(32).toString('hex');
