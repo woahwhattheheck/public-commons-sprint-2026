@@ -7,6 +7,7 @@ import { dirname, resolve, basename, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { inspectCaptureCoverage } from '../sf41-real-source-replay/capture_coverage.mjs';
 import { stableResourceIdentity } from '../sf45-discovery-recovery/recovery.mjs';
+import { recoverLegacyCaptureFilters } from './legacy_filters.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -78,6 +79,7 @@ export function snapshotFromNative({manifest, pages, manifestSha256}) {
   if (!object(manifest) || !Array.isArray(manifest.sources) || !manifest.sources.length ||
       manifest.schema !== 'SCF-SF41/capture-v1') bad('SF41_MANIFEST_REQUIRED');
   if (!Array.isArray(pages) || pages.length !== manifest.sources.length) bad('MISSING_ORIGINAL_PAGES');
+  const { effectiveManifest, filterEvidence } = recoverLegacyCaptureFilters(manifest);
   const entries = new Map(), nativePages=[], scopes=new Set();
   for (let i=0;i<pages.length;i++) {
     const source=manifest.sources[i],raw=Buffer.from(pages[i]);
@@ -104,13 +106,13 @@ export function snapshotFromNative({manifest, pages, manifestSha256}) {
     }
   }
   if (scopes.size!==1) bad('MIXED_PROVIDER_FILTER_SCOPE');
-  const coverage=inspectCaptureCoverage(manifest,nativePages);
+  const coverage=inspectCaptureCoverage(effectiveManifest,nativePages);
   if (!coverage.verified) bad('NOT_SINGLE_COMPLETE_PROVIDER',coverage.status);
   const timestamp=requireInstant(manifest.generated_at);
   return {schema:'SCF-SF56/snapshot-v1',timestamp,scope:[...scopes][0],
     manifest_sha256:manifestSha256??fingerprint(manifest),
     count:entries.size,capture_rows:coverage.rows,coverage:coverage.status,
-    entries};
+    filter_evidence:filterEvidence,entries};
 }
 
 /** Deterministic, one-to-one change review for SAME native provider/filter scope. */
@@ -137,9 +139,11 @@ export function compareSnapshots(before,after) {
   }
   return {schema:'SCF-SF56/catalog-delta-v1',kind:'read-only-native-provider-observation',
     original_source:{before:{captured_at:before.timestamp,manifest_sha256:before.manifest_sha256,
-      pages_complete:before.coverage,observed_routes:before.count,rows:before.capture_rows},
+      pages_complete:before.coverage,observed_routes:before.count,rows:before.capture_rows,
+      filter_evidence:before.filter_evidence},
       after:{captured_at:after.timestamp,manifest_sha256:after.manifest_sha256,
-        pages_complete:after.coverage,observed_routes:after.count,rows:after.capture_rows},
+        pages_complete:after.coverage,observed_routes:after.count,rows:after.capture_rows,
+      filter_evidence:after.filter_evidence},
       provider_scope:before.scope},
     summary:{changed_routes:changes.length,review_routes:changes.filter(x=>x.priority==='REVIEW').length,
       ...types,unchanged_routes:ids.length-changes.length},

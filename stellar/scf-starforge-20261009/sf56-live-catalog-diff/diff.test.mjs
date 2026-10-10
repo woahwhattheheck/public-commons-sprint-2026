@@ -53,3 +53,21 @@ test('native evidence integrity: reject tampered bytes, truncated total, mixed f
   assert.throws(()=>snapshot(capture([makeRow('one'),makeRow('one')])),/NONUNIQUE_CANONICAL_ROUTE/);
   assert.throws(()=>compareSnapshots(after,before),/INCOMPARABLE_PROVIDER_OR_FILTER/);
 });
+
+test('recorded original legacy native GET filter recovers without changing source manifest',()=>{
+  const old=capture([makeRow('one')],{otherFilter:'&network=stellar%3Atestnet'});
+  const originalManifest=JSON.stringify(old.manifest);
+  const modern=capture([makeRow('one')],{when:'2026-10-10T20:00:00.000Z',otherFilter:'&network=stellar%3Atestnet'});
+  modern.manifest.filters={network:'stellar:testnet'};
+  const before=snapshot(old),after=snapshot(modern),delta=compareSnapshots(before,after);
+  assert.equal(JSON.stringify(old.manifest),originalManifest); // original evidence immutable
+  assert.equal(before.filter_evidence,'DERIVED_FROM_ORIGINAL_SOURCE_URLS');
+  assert.equal(after.filter_evidence,'DECLARED_IN_ORIGINAL_MANIFEST');
+  assert.equal(delta.summary.changed_routes,0);
+  assert.equal(delta.original_source.before.filter_evidence,'DERIVED_FROM_ORIGINAL_SOURCE_URLS');
+  assert.throws(()=>snapshot(capture([makeRow('one')],{otherFilter:'&network=stellar%3Atestnet&network=stellar%3Apubnet'})),/LEGACY_DUPLICATE_PAGE_QUERY/);
+  assert.throws(()=>snapshot(capture([makeRow('one')],{otherFilter:'&unrecognized=1'})),/LEGACY_UNSUPPORTED_PAGE_QUERY/);
+  const forged=capture([makeRow('one')],{otherFilter:'&network=stellar%3Atestnet'});
+  forged.manifest.filters={};
+  assert.throws(()=>snapshot(forged),/Undeclared native page query network/); // explicit declaration wins
+});
