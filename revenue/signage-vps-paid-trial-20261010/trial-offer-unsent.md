@@ -1,0 +1,14 @@
+# UNSENT — potential buyer reply, not a quote accepted by customer
+
+Original buyer/thread (posted June 12, 2026): https://community.n8n.io/t/hiring-openclaw-vps-person-paid-trial-task-ongoing-work-remote-any-timezone/299185
+Status on Oct 10: thread still active; **original buyer's current hiring decision is not verified**. Contact is not sent, and local operator must first confirm this remains open.
+
+James — on your Telegram photo question: I would persist the Telegram message ID, sender, timestamp and file ID, then fetch the photo once and store it durably with a checksum and idempotency key. I'd match the job using an explicit caption/job reference against your live Monday.com records; without a unique match I'd ask the staff member to confirm rather than guessing. Once confirmed, I'd attach the object link and photo-event metadata to the correct Monday.com item and acknowledge that write. An unanswered or failed record match stays in an auditable review queue rather than being lost.
+
+The closest public artifact I can offer for the infrastructure portion is a read-only Ubuntu/OpenClaw hardening acceptance auditor plus source-pinned runbook: https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/revenue/signage-vps-paid-trial-20261010. It checks the specific SSH/UFW/systemd/version/env-file/listening-port requirements you published; it is a source artifact, not a claim that your host has already been set up. It deliberately does not retrieve or publish secrets or alter your server.
+
+Proposed **$450 fixed** for the exact first trial: owner-provided fresh Ubuntu 24.04 VPS, pinned OpenClaw under a dedicated unprivileged systemd account, SSH+firewall+fail2ban hardening, agreed CrowdSec/Netdata or justified alternative, masked acceptance report, rollback/runbook, and a recorded walkthrough. No production migrations, paid hosting charges, n8n/monday.com production integration, or ongoing pager duty are included. Optional ongoing support **$60/hour** after separately approved scope; no work starts until fixed scope and payment terms are agreed.
+
+Timezone: US Eastern (EDT, UTC-4 on October 10; Australian daylight time is 15 hours ahead). Urgent-response SLA and availability: **OWNER TO CONFIRM** before publication; do not promise 24/7 response. The first question I would ask before committing is whether this paid trial is still open, since the original thread dates to June.
+
+**Internal delivery gate:** owner review of price, public portfolio link, availability and first-person experience; send only through an authorized existing n8n account, no blind DM or fabricated references. Cash pipeline state is PROSPECT only.
