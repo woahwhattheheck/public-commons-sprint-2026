@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
+import { inspectCaptureCoverage } from './capture_coverage.mjs';
 import { BazaarCatalog, createDiscoveryServer, validateCatalogEntry } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 
 // Checked at this source commit; pin overrides require an explicit exact Git blob SHA-1.
@@ -82,7 +83,7 @@ async function execute() {
   if (!Array.isArray(manifest.sources)||!manifest.sources.length) throw Error('sources must be nonempty actual-provider captures');
   if (!Array.isArray(queryDoc.cases)||!queryDoc.cases.length) throw Error('queries.cases must be nonempty');
   const catalog=new BazaarCatalog();
-  const seen=new Map(),anomalies=[],corpus=[];
+  const seen=new Map(),anomalies=[],corpus=[],nativePages=[];
   const counts={raw:0,valid:0,inserted:0,identicalDuplicates:0,conflictingDuplicates:0,rejected:0};
   const errorHistogram={};
   for (const src of manifest.sources) {
@@ -95,6 +96,8 @@ async function execute() {
     const hash=sha256(raw);
     if (hash.toLowerCase() !== src.sha256.toLowerCase()) throw Error('Capture checksum mismatch for '+src.id);
     const payload=JSON.parse(raw.toString('utf8')), rows=rowsFrom(payload);
+    nativePages.push({source:src,rows:rows.length,sha256:hash,
+      pagination:payload?.pagination??null,version:payload?.x402Version??null});
     const record={id:src.id,source_url:src.url,captured_at:src.captured_at,status:200,
       permission:src.permission,sha256:hash,rows:rows.length,inserted:0,rejected:0,duplicate:0};
     for (let i=0;i<rows.length;i++) {
@@ -127,6 +130,7 @@ async function execute() {
     }
     corpus.push(record);
   }
+  const captureCoverage=inspectCaptureCoverage(manifest,nativePages);
   if (!catalog.size) throw Error('No source-native Bazaar rows accepted. See capture schema/metadata, not fake records.');
   const testCases=queryDoc.cases;
   const tests=testCases.map(t=>({
@@ -212,13 +216,14 @@ async function execute() {
       github_blob_sha1:blob,expected_github_blob_sha1:expectedBlob,byte_sha256:sha256(sourceText)},
     inputs:{manifest_sha256:sha256(await readFile(manifestPath)),
       queries_sha256:sha256(await readFile(queryPath)),
-      sources:corpus,query_count:tests.length,repeat},
+      sources:corpus,capture_coverage:captureCoverage,query_count:tests.length,repeat},
     corpus_stats:{...counts,distinct:catalog.size,top_rejection_reasons:topDiagnostic(20,errorHistogram),
       anomalies_count:anomalies.length},
     timings:{baseline_ms:{p50:percentile(latencyBaseline,.5),p95:percentile(latencyBaseline,.95),n:latencyBaseline.length},
       candidate_ms:candidate?{p50:percentile(latencyCandidate,.5),p95:percentile(latencyCandidate,.95),n:latencyCandidate.length}:null,
       native_loopback_get_ms:{p50:percentile(networkLatencies,.5),p95:percentile(networkLatencies,.95),n:networkLatencies.length}},
     run_count:runs.length,provider_label_status:'Collector-supplied actual captures; no independent paid settlement asserted',
+    native_capture_coverage_verified:captureCoverage.verified,
     comparisons:!!candidate,
     note:'No on-chain payment, paid origin request, settlement, or provider health probe performed by this code.'
   };
