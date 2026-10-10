@@ -93,6 +93,18 @@ canonical x402 `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, `/verify` or `/settle` w
 Focused boundary check: `node --test stellar-forge/mcp-paid-agent/recovery-overlay.test.mjs`
 (no paid network requests, local fake transport only).
 
+## Atomic approval and cancellation
+
+A quote transitions synchronously from PREVIEWED to APPROVAL_PENDING **before**
+awaiting the operator-controlled asynchronous approval callback. A second concurrent
+execute call sees the pending status and cannot sign or dispatch a duplicate payment.
+An operator cancellation during approval is terminal; later approval cannot undo it.
+A quote that expires while approval is pending does not reach the signer or merchant.
+Approval denial returns the quote to PREVIEWED for a fresh explicit operator decision;
+callback errors likewise do not retain a false in-flight lock. This is a per-process
+single-flight guarantee; production replicas must add shared durable idempotency and
+signed-request reconciliation. Focused regression lives in `agent-server.test.mjs`.
+
 ## Outbound redirect origin fence
 
 All three native HTTP fetch edges (configured Bazaar discovery GET, operator-allowed

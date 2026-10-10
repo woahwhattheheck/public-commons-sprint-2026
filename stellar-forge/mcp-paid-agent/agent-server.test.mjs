@@ -139,6 +139,47 @@ test('SF43 tool dispatches only through an explicitly injected adapter',async()=
     /Invalid SF43 agent-commerce adapter/);
 });
 
+test('concurrent execute claims one quote before asynchronous approval and only signs once',async()=>{
+  const f=await fixture();let releaseApproval=()=>{},enteredApproval=()=>{},approvals=0;
+  const gate=new Promise(resolve=>{releaseApproval=resolve;});
+  const entered=new Promise(resolve=>{enteredApproval=resolve;});
+  try {
+    const broker=brokerFor(f,{approve:async()=>{approvals++;enteredApproval();await gate;return true;}});
+    const found=await broker.search({query:'weather'});
+    const quote=broker.preview({handle:found.resources[0].handle});
+    const first=broker.execute({quoteId:quote.quoteId});
+    await entered;
+    assert.equal(broker.status({quoteId:quote.quoteId}).status,'APPROVAL_PENDING');
+    assert.equal((await broker.execute({quoteId:quote.quoteId})).status,'APPROVAL_PENDING');
+    assert.equal(f.probes,0);assert.equal(f.signed,0);
+    releaseApproval();
+    const result=await first;
+    assert.equal(result.status,'CONFIRMED_BY_SERVER');
+    assert.equal(result.attempts,1);assert.equal(approvals,1);
+    assert.equal(f.probes,1);assert.equal(f.signed,1);
+    assert.equal((await broker.execute({quoteId:quote.quoteId})).status,'CONFIRMED_BY_SERVER');
+    assert.equal(f.signed,1);
+  }finally{releaseApproval();await f.cleanup();}
+});
+
+test('cancel during pending approval prevents payment even if approval later succeeds',async()=>{
+  const f=await fixture();let releaseApproval=()=>{},enteredApproval=()=>{};
+  const gate=new Promise(resolve=>{releaseApproval=resolve;});
+  const entered=new Promise(resolve=>{enteredApproval=resolve;});
+  try {
+    const broker=brokerFor(f,{approve:async()=>{enteredApproval();await gate;return true;}});
+    const found=await broker.search({query:'weather'});
+    const quote=broker.preview({handle:found.resources[0].handle});
+    const pending=broker.execute({quoteId:quote.quoteId});
+    await entered;
+    assert.equal(broker.cancel({quoteId:quote.quoteId}).status,'CANCELLED');
+    releaseApproval();
+    assert.equal((await pending).status,'CANCELLED');
+    assert.equal((await broker.execute({quoteId:quote.quoteId})).status,'CANCELLED');
+    assert.equal(f.probes,0);assert.equal(f.signed,0);
+  }finally{releaseApproval();await f.cleanup();}
+});
+
 test('signed-retry provider loss remains INDETERMINATE and cannot auto-charge again',async()=>{
   const f=await fixture();let calls=0;
   try{
