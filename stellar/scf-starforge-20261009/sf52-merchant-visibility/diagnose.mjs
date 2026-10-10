@@ -127,7 +127,7 @@ export async function inspectCatalog({catalogUrl, targetResource, payTo, network
     throw new TypeError('Invalid pagination options');
   }
   const matches = [], samePayToOtherResource = [];
-  const seenKeys = new Set(), seenPageSignatures = new Set();
+  const seenKeys = new Set(), seenPageSignatures = new Set(), seenCursors = new Set();
   let offset = 0, cursor = null, useCursor = false, knownTotal = null;
   let complete = false, pages = 0, rawRows = 0, reason = null;
   for (let i = 0; i < maxPages; i++) {
@@ -172,29 +172,37 @@ export async function inspectCatalog({catalogUrl, targetResource, payTo, network
     seenPageSignatures.add(signature);
     const pagination = body?.pagination && typeof body.pagination === 'object' ? body.pagination : {};
     if (Number.isSafeInteger(pagination.total) && pagination.total >= 0) knownTotal = pagination.total;
+    const nextCursor = pagination.nextCursor ?? pagination.next_cursor ?? pagination.cursor;
+    // A filtered cursor page may legitimately be empty while another page has
+    // rows. Follow its actual next cursor BEFORE claiming the catalog exhausted.
+    // A repeated cursor (including A -> B -> A) cannot establish exhaustion.
+    if (typeof nextCursor === 'string' && nextCursor.length > 0) {
+      if (seenCursors.has(nextCursor) || (useCursor && nextCursor === cursor)) {
+        reason = `Repeated cursor at page ${pages}; provider pagination made no progress`;
+        break;
+      }
+      seenCursors.add(nextCursor);
+      useCursor = true;
+      cursor = nextCursor;
+      continue;
+    }
+    if (knownTotal !== null && seenKeys.size > knownTotal) {
+      reason = 'Provider declared total contradicts observed unique rows';
+      break;
+    }
+    if (useCursor) {
+      if (knownTotal !== null && seenKeys.size < knownTotal) reason = 'Cursor ended before declared total';
+      else complete = true;
+      break;
+    }
     if (knownTotal !== null && seenKeys.size >= knownTotal) { complete = true; break; }
     if (!items.length) {
       if (knownTotal !== null && seenKeys.size < knownTotal) reason = 'Empty page before declared total';
       else complete = true;
       break;
     }
-    const nextCursor = pagination.nextCursor ?? pagination.next_cursor ?? pagination.cursor;
-    if (typeof nextCursor === 'string' && nextCursor.length > 0 && nextCursor !== cursor) {
-      useCursor = true;
-      cursor = nextCursor;
-    } else if (useCursor) {
-      if (knownTotal !== null && rawRows < knownTotal) reason = 'Cursor ended before declared total';
-      else complete = true;
-      break;
-    } else {
-      // Short last pages prove completion only without a contradictory total.
-      if (items.length < pageLimit && knownTotal === null) {
-        // One additional empty page confirms the end when no total was advertised.
-        offset += items.length;
-        continue;
-      }
-      offset += items.length;
-    }
+    // Offset-only providers without a total get an extra empty-page probe.
+    offset += items.length;
   }
   if (!complete && !reason) reason = `Reached maxPages=${maxPages} before proving catalog exhaustiveness`;
   return {endpoint: endpoint.toString(), pages, rawRows, uniqueKeys: seenKeys.size,
