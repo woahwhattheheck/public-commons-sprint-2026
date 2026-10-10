@@ -124,7 +124,15 @@ export function reviewPaymentRequired({ quote, paymentRequired, invocation, nowM
     if (terms.amount !== expected.amount) continue;
     amount = true;
     if (terms.maxTimeoutSeconds !== expected.maxTimeoutSeconds || canonical(terms.extra) !== canonical(expected.extra)) continue;
-    return { ok: true, quoteId: quote.quoteId, accepted: structuredClone(offered) };
+    // Downstream signers must receive ONLY the payment facts reviewed here.
+    // Additional top-level fields in an untrusted 402 are not authorized.
+    const accepted = {
+      scheme: terms.scheme, network: terms.network, asset: terms.asset,
+      payTo: terms.payTo, amount: terms.amount,
+    };
+    if (Object.hasOwn(offered, 'maxTimeoutSeconds')) accepted.maxTimeoutSeconds = terms.maxTimeoutSeconds;
+    if (Object.hasOwn(offered, 'extra')) accepted.extra = structuredClone(terms.extra);
+    return { ok: true, quoteId: quote.quoteId, accepted };
   }
   return reject(!route ? 'PAYMENT_ROUTE_CHANGED' : !recipient ? 'RECIPIENT_CHANGED' : !amount ? 'AMOUNT_CHANGED' : 'PAYMENT_TERMS_CHANGED');
 }
