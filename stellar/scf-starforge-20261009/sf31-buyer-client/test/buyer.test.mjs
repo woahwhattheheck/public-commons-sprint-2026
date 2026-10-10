@@ -73,6 +73,38 @@ test('challenge URL or signer accepted fields differ: payment never sent',async(
   assert.equal(state.paid.length,0);
 }));
 
+test('x402 v2 JSON key order is irrelevant, but signer may not change approved terms',async()=>fixture(async({state,buyer,url})=>{
+  const reorder=({challenge,accepted})=>({
+    x402Version:2,
+    resource:{description:challenge.resource.description,url:challenge.resource.url},
+    accepted:{
+      extra:{name:accepted.extra.name},maxTimeoutSeconds:accepted.maxTimeoutSeconds,
+      payTo:accepted.payTo,asset:accepted.asset,amount:accepted.amount,
+      network:accepted.network,scheme:accepted.scheme
+    },
+    payload:{offlineFixtureMarker:true},
+    extensions:{bazaar:{schema:{type:'object'},info:{service:'fixture'}}}
+  });
+  const success=await buyer.call({...settings(url),sign:reorder});
+  assert.equal(success.status,'DELIVERED_REPORTED_SETTLED');
+  assert.equal(state.paid.length,1);
+  assert.deepEqual(state.paid[0].accepted,terms);
+  // Nested extra mutation or an added extension must not be treated as equivalent.
+  for(const mutate of [
+    payment=>{payment.accepted.extra.name='UNAPPROVED';},
+    payment=>{payment.accepted.extra.unapproved=true;},
+    payment=>{payment.extensions.bazaar.info.service='OTHER';},
+    payment=>{payment.resource.url=url+'?changed=1';}
+  ]){
+    await assert.rejects(buyer.call({...settings(url),sign:input=>{
+      const payment=reorder(input);
+      mutate(payment);
+      return payment;
+    }}),e=>e.code==='SIGNER_ENVELOPE_MISMATCH');
+  }
+  assert.equal(state.paid.length,1); // only the equivalent signed request reached the seller
+}));
+
 test('pending, missing receipt, redirected paid request remain terminal with no retry',async()=>fixture(async({state,buyer,url})=>{
   state.response='pending';const pending=await buyer.call(settings(url));
   assert.equal(pending.status,'SETTLEMENT_PENDING');assert.equal(pending.receipt.transaction,'test-hash');

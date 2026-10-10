@@ -1,10 +1,13 @@
 // MIT License. SF31 non-custodial x402 v2 buyer transport. No embedded keys or signing.
 import { randomUUID, createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { isIP } from 'node:net';
 
 const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const amount = v => typeof v === 'string' && /^(0|[1-9][0-9]*)$/.test(v);
-const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+// x402 v2 requirements, resource and extensions are JSON objects: member order is not protocol meaning.
+// Require exact structural equality (including nested fields and ordered arrays), not identical serialization order.
+const same = (a,b) => isDeepStrictEqual(a,b);
 const HEADER_LIMIT = 32768;
 
 export class BuyerError extends Error {
