@@ -69,16 +69,19 @@ export class TruthfulSupported {
   #config;
   #probe;
   #maxAgeSeconds;
+  #probeTimeoutMs;
   #time;
-  constructor({facilitator,config,probe,time=()=>Math.floor(Date.now()/1000),maxAgeSeconds=30}={}){
+  constructor({facilitator,config,probe,time=()=>Math.floor(Date.now()/1000),maxAgeSeconds=30,probeTimeoutMs=5000}={}){
     if(typeof facilitator?.getSupported!=='function'||typeof probe!=='function'||typeof time!=='function'||
-       !Number.isSafeInteger(maxAgeSeconds)||maxAgeSeconds<1||maxAgeSeconds>300)
+       !Number.isSafeInteger(maxAgeSeconds)||maxAgeSeconds<1||maxAgeSeconds>300||
+       !Number.isSafeInteger(probeTimeoutMs)||probeTimeoutMs<10||probeTimeoutMs>30000)
       throw new SupportedError('CANONICAL_ADAPTER_OR_PROBE_REQUIRED');
     this.#facilitator=facilitator;
     this.#config=cleanConfig(config);
     this.#probe=probe;
     this.#time=time;
     this.#maxAgeSeconds=maxAgeSeconds;
+    this.#probeTimeoutMs=probeTimeoutMs;
   }
   async snapshot(){
     const canonical=this.#facilitator.getSupported();
@@ -87,14 +90,31 @@ export class TruthfulSupported {
     const readyAssets=[];
     const signerSet=new Set();
     const seenKinds=new Set();
-    const now=this.#time();
-    if(!Number.isSafeInteger(now)||now<0)throw new SupportedError('BAD_CLOCK');
     for(const network of NETWORKS) {
       const policy=this.#config[network];
       if(!policy?.enabled) continue;
+      // An injected probe is not trusted to terminate or honor cancellation.
+      // Bound each awaited result, signal cooperative cancellation, and fail closed.
+      const controller=new AbortController();
+      let timeout;
       let proof;
-      try{proof=await this.#probe({network,assets:policy.assets.map(x=>({...x})),schemes:[...policy.schemes]});}
-      catch {continue;}
+      try {
+        const probe=Promise.resolve().then(()=>this.#probe({
+          network,assets:policy.assets.map(x=>({...x})),schemes:[...policy.schemes],signal:controller.signal
+        }));
+        const deadline=new Promise((_,reject)=>{
+          timeout=setTimeout(()=>{
+            controller.abort();
+            reject(new SupportedError('READINESS_PROBE_TIMEOUT'));
+          },this.#probeTimeoutMs);
+        });
+        proof=await Promise.race([probe,deadline]);
+      } catch {continue;}
+      finally {clearTimeout(timeout);}
+      // Freshness is measured AFTER the potentially slow RPC/fee probe returns.
+      // Pre-probe timestamps would allow old readiness to remain advertised.
+      const now=this.#time();
+      if(!Number.isSafeInteger(now)||now<0)throw new SupportedError('BAD_CLOCK');
       const assets=new Set(policy.assets.map(x=>x.asset));
       if(!checkProbe(proof,network,now,this.#maxAgeSeconds,assets)) continue;
       const commonSigners=proof.signers.filter(s=>signers.includes(s));
