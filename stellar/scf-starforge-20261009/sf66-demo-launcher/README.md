@@ -41,3 +41,20 @@ For an already archived original 27/27 Vellar Stellar-testnet catalog: use the e
 ## Boundaries
 
 The launcher uses only original modules imported at runtime from sibling folders. SF60 remains the exclusive lock/write owner and SF61 the canonical UI. All listeners bind to `127.0.0.1`. No arbitrary upstream URLs, remote sellers, identity claims, network transactions, signer, account registration, outreach, full SCF application or hosted GitHub Actions. Existing SF10 founder, SF60/SF61 owners and Muse source replay continue to own their workstreams. The actionable gain is a trustworthy one-command **locally operable** UI with an observed self-check useful for demos and grant reviewer walkthroughs.
+
+## Full original native-page capture (optional additive module)
+
+The original launch.mjs remains the one supported operator entrypoint. An additive
+`capture.mjs` exports `captureFullCatalog({backendOrigin, atlasUrl, directory,
+destination, network, limit})`, which consumes its already-running real SF60 and
+SF61 loopback services without booting another writer or browser. It captures
+all stable native SF60 filtered list pages and their original Atlas proxy JSON,
+checks page parity and stable journal health, and creates one private, atomic,
+no-clobber JSON file with original response bytes and SHA-256 digests.
+
+An operator integrating this module into the original launcher can call it after
+`openDemo(options)` returns, passing that session's `sourceOrigin` and
+`atlasUrl`, and then call `session.close()` in a `finally` block. This
+path is intentionally a composable export, not a second CLI or duplicated
+catalog. An authentic populated original SF60 journal is required to claim
+observed resource coverage. Both services remain local; no payment occurs.
