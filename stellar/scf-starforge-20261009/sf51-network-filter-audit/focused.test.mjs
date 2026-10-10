@@ -33,4 +33,23 @@ assert.deepEqual(multi.accepts.map(x=>x.network),['eip155:8453','stellar:testnet
 assert.throws(()=>validatePairUrls('http://facilitator.example.org/discovery/resources?network=stellar%3Atestnet',input.controlUrl,'stellar:testnet'),/SOURCE_PAIR_NOT_SAME_HTTPS_DISCOVERY/);
 assert.throws(()=>auditPair({...input,controlUrl:base+'stellar%3Atestnet'}),/SOURCE_PAIR_NETWORK_FILTER_INVALID/);
 assert.throws(()=>auditPair({...input,filteredBytes:Buffer.from('not-json')}),/PAGE_INVALID_JSON/);
-console.log('SF51 PASS: source-schema page parsing, original raw SHA retention, network-filter failures, mixed-network allow, safe per-network offer selection, URL guards; no paid calls.');
+// Pair parity must not treat hours-apart original GETs as one catalog snapshot.
+const stale = auditPair({...input,controlAt:'2026-10-10T06:22:00.001Z'});
+assert.equal(stale.observed.capture_skew_ms,120001);
+assert.equal(stale.observed.pair_temporally_comparable,false);
+assert.equal(stale.observed.same_page_identities,null);
+assert.equal(stale.observed.identical_raw_page_bytes,null);
+assert.equal(stale.observed.equal_pagination_total,null);
+assert.equal(stale.finding,'RETURNED_ROWS_WITHOUT_REQUESTED_NETWORK');
+assert.equal(stale.source.filtered_sha256,bad.source.filtered_sha256);
+const boundary=auditPair({...input,controlAt:'2026-10-10T06:22:00Z'});
+assert.equal(boundary.observed.pair_temporally_comparable,true);
+assert.equal(boundary.observed.same_page_identities,true);
+for(const invalid of ['2026-10-10T06:20:00','2026-02-30T06:20:00Z',
+  '2026-10-10T06:20:00+15:00','2026-10-10T06:20:00-00:00']){
+  assert.throws(()=>auditPair({...input,filteredAt:invalid}),/CAPTURE_TIME_INVALID/);
+}
+const offset=auditPair({...input,controlAt:'2026-10-10T02:20:01-04:00'});
+assert.equal(offset.observed.capture_skew_ms,1000);
+assert.equal(offset.observed.pair_temporally_comparable,true);
+console.log('SF51 PASS: source-schema page parsing, original raw SHA retention, network-filter failures, mixed-network allow, safe per-network offer selection, URL guards; no paid calls., capture temporal coherence; no paid calls.');
