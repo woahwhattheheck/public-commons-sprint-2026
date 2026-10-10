@@ -12,6 +12,7 @@ const server = makeFrontdoor({
     'stellar:pubnet': {origin: process.env.SF58_PUBNET_ORIGIN, bearer: process.env.SF58_PUBNET_BEARER || null}
   },
   inboundToken,
+  bodyTimeoutMs: Number(process.env.SF58_BODY_TIMEOUT_MS || '8000'),
   // Local self-hosted backend sockets only. Never allows arbitrary external HTTP.
   allowLoopbackHttp: true
 });
