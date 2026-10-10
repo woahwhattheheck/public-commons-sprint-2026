@@ -69,3 +69,34 @@ test('actual loopback Node HTTP GET /supported and /assets truth shape; invalid 
   res=await fetch(base+'/health');assert.equal(res.status,200);
  }finally{await new Promise(resolve=>http.close(resolve));}
 });
+
+test('a hung operator probe is timed out, its AbortSignal is cancelled and capabilities fail closed',async()=>{
+ let aborted=false;
+ const g=new TruthfulSupported({facilitator:SDK(),config:conf(),time:()=>now,maxAgeSeconds:30,
+  probeTimeoutMs:20,probe:({signal})=>new Promise(resolve=>{
+   signal.addEventListener('abort',()=>{aborted=true;resolve(makeProof(T));},{once:true});
+  })});
+ const started=Date.now();
+ const r=await g.snapshot();
+ assert.deepEqual(r.supported.kinds,[]);
+ assert.equal(aborted,true);
+ assert.ok(Date.now()-started<1000,'/supported must not hang awaiting an operator probe');
+});
+test('readiness TTL is checked at completion, not the instant a slow probe began',async()=>{
+ let clock=now;
+ const g=new TruthfulSupported({facilitator:SDK(),config:conf(),maxAgeSeconds:30,
+  time:()=>clock,probe:async ({network})=>{clock+=31;return makeProof(network);}});
+ const r=await g.snapshot();
+ assert.deepEqual(r.supported.kinds,[]);
+ assert.deepEqual(r.assetManifest.assets,[]);
+});
+test('post-probe freshness preserves live source kinds and rejects bad deadline policy',async()=>{
+ assert.throws(()=>new TruthfulSupported({facilitator:SDK(),config:conf(),
+  probe:async()=>makeProof(T),probeTimeoutMs:0}),/CANONICAL_ADAPTER_OR_PROBE_REQUIRED/);
+ let clock=now;
+ const g=new TruthfulSupported({facilitator:SDK(),config:conf(),maxAgeSeconds:30,
+  time:()=>clock,probeTimeoutMs:100,probe:async ({network})=>{
+   clock+=10;return {...makeProof(network),checkedAtUnix:clock};
+  }});
+ assert.deepEqual((await g.snapshot()).supported.kinds,[kinds[0]]);
+});
