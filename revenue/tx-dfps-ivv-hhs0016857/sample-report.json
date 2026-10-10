@@ -1,0 +1,23 @@
+{
+  "as_of": "2026-10-10T06:00:00+00:00",
+  "baseline": "sample-revision-1",
+  "independent_verification_only": true,
+  "issues": [],
+  "observations_total": 1,
+  "pass": true,
+  "payment_or_buyer_compliance_proven": false,
+  "requirements": [
+    {
+      "critical": true,
+      "evidence_errors": [],
+      "id": "SAMPLE-REQ-01",
+      "status": "PASS",
+      "tests": {
+        "SAMPLE-TEST-01": "PASS"
+      }
+    }
+  ],
+  "requirements_passed": 1,
+  "requirements_total": 1,
+  "schema": "tj-ivv-audit/v1"
+}
