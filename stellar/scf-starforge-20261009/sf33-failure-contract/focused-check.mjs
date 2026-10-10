@@ -15,7 +15,17 @@ assert.equal(gateNextAction(f).decision,'reconcile_before_any_new_payment');
 f = explainFailure({stage:'settle',response:{success:false,errorReason:'settlement_pending',transaction:'abc',network:'stellar:testnet'}});
 assert.equal(gateNextAction(f,{ledgerReceipt:{confirmed:true,success:true,transaction:'other',network:'stellar:testnet'}}).decision,'reconcile_before_any_new_payment');
 assert.equal(gateNextAction(f,{ledgerReceipt:{confirmed:true,success:true,transaction:'abc',network:'stellar:pubnet'}}).decision,'reconcile_before_any_new_payment');
-assert.equal(gateNextAction(f,{ledgerReceipt:{confirmed:true,success:true,transaction:'abc',network:'stellar:testnet'}}).decision,'already_settled');
+const expectedPayment={from:'G_SOURCE',payTo:'G_RECIPIENT',asset:'C_USDC',amount:'25000'};
+const receipt={confirmed:true,success:true,transaction:'abc',network:'stellar:testnet',
+  transferVerified:true,transfers:[{from:'G_SOURCE',to:'G_RECIPIENT',asset:'C_USDC',amount:'25000'}]};
+assert.equal(gateNextAction(f,{ledgerReceipt:{confirmed:true,success:true,transaction:'abc',network:'stellar:testnet'}}).decision,'reconcile_before_any_new_payment');
+assert.equal(gateNextAction(f,{ledgerReceipt:receipt}).decision,'reconcile_before_any_new_payment');
+assert.equal(gateNextAction(f,{ledgerReceipt:{...receipt,transferVerified:false},expectedPayment}).decision,'reconcile_before_any_new_payment');
+assert.equal(gateNextAction(f,{ledgerReceipt:{...receipt,transfers:[]},expectedPayment}).decision,'reconcile_before_any_new_payment');
+assert.equal(gateNextAction(f,{ledgerReceipt:{...receipt,transfers:[{...receipt.transfers[0],amount:'24999'}]},expectedPayment}).decision,'reconcile_before_any_new_payment');
+assert.equal(gateNextAction(f,{ledgerReceipt:{...receipt,transfers:[{...receipt.transfers[0],to:'G_OTHER'}]},expectedPayment}).decision,'reconcile_before_any_new_payment');
+assert.equal(gateNextAction(f,{ledgerReceipt:receipt,expectedPayment:{...expectedPayment,amount:'0'}}).decision,'reconcile_before_any_new_payment');
+assert.equal(gateNextAction(f,{ledgerReceipt:receipt,expectedPayment}).decision,'already_settled');
 
 f = explainFailure({stage:'settle',response:{success:false,errorReason:'settlement_pending',transaction:'',network:'stellar:testnet'}});
 assert.equal(f.code,'invalid_settlement_pending_response');
