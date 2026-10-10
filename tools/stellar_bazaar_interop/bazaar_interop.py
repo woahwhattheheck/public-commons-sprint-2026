@@ -15,10 +15,11 @@ import hashlib
 import ipaddress
 import json
 from pathlib import Path
+import re
 import socket
 import sys
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 from urllib.request import build_opener, HTTPRedirectHandler, Request
 
 SOURCE_SPEC = "https://github.com/x402-foundation/x402/blob/main/docs/extensions/bazaar.mdx"
@@ -178,12 +179,32 @@ class _NoRedirect(HTTPRedirectHandler):
         raise CensusError("redirect_refused")
 
 
-def _external_https_origin(raw: str) -> str:
+def _external_https_endpoint(raw: str) -> str:
     p = urlsplit(raw)
-    if p.scheme != "https" or not p.hostname or p.username or p.password or p.fragment or p.query or p.path not in ("", "/"):
-        raise CensusError("provider_origin_must_be_bare_https")
+    if p.scheme != "https" or not p.hostname or p.username or p.password or p.fragment:
+        raise CensusError("provider_endpoint_must_be_https")
     if p.port not in (None, 443):
         raise CensusError("non_default_https_port_refused")
+    if re.search(r"%(?![0-9A-Fa-f]{2})", p.path):
+        raise CensusError("provider_path_invalid_encoding")
+    decoded_path = unquote(p.path)
+    if ("\\" in decoded_path or "//" in decoded_path
+            or any(ord(ch) < 32 or ord(ch) == 127 for ch in decoded_path)
+            or any(part in (".", "..") for part in decoded_path.split("/"))):
+        raise CensusError("provider_path_refused")
+    endpoint_path = p.path.rstrip("/")
+    if not endpoint_path:
+        endpoint_path = "/discovery/resources"
+    elif not endpoint_path.endswith("/discovery/resources"):
+        endpoint_path += "/discovery/resources"
+    try:
+        static_query = parse_qsl(p.query, keep_blank_values=True, strict_parsing=True,
+                                 max_num_fields=32)
+    except ValueError as exc:
+        raise CensusError("provider_query_invalid") from exc
+    if any(not key or any(ord(ch) < 32 or ord(ch) == 127 for ch in key + value)
+           for key, value in static_query):
+        raise CensusError("provider_query_invalid")
     try:
         address = ipaddress.ip_address(p.hostname)
     except ValueError:
@@ -199,7 +220,17 @@ def _external_https_origin(raw: str) -> str:
         raise CensusError(f"provider_dns_error:{type(exc).__name__}") from exc
     if not addresses or any(not ipaddress.ip_address(item[4][0]).is_global for item in addresses):
         raise CensusError("provider_dns_not_public")
-    return urlunsplit(("https", p.netloc.lower(), "", "", "")).rstrip("/")
+    return urlunsplit(("https", p.netloc.lower(), endpoint_path,
+                       urlencode(static_query, doseq=True), ""))
+
+
+def _page_url(endpoint: str, *, page_size: int, offset: int) -> str:
+    p = urlsplit(endpoint)
+    static_query = [(key, value) for key, value in parse_qsl(
+        p.query, keep_blank_values=True, strict_parsing=True, max_num_fields=32
+    ) if key.lower() not in ("limit", "offset")]
+    static_query.extend((("limit", str(page_size)), ("offset", str(offset))))
+    return urlunsplit((p.scheme, p.netloc, p.path, urlencode(static_query, doseq=True), ""))
 
 
 def _get_json(url: str, *, timeout: float) -> tuple[bytes, object]:
@@ -222,13 +253,13 @@ def _get_json(url: str, *, timeout: float) -> tuple[bytes, object]:
 def _probe(provider: str, raw_origin: str, *, page_size: int, timeout: float, evidence_dir: Path) -> list[dict]:
     if page_size < 1 or page_size > 1000:
         raise CensusError("page_size_must_be_1_to_1000")
-    origin = _external_https_origin(raw_origin)
+    endpoint = _external_https_endpoint(raw_origin)
     evidence_dir.mkdir(parents=True, exist_ok=True)
     offset = 0
     seen_page_hashes = set()
     result = []
     while True:
-        url = origin + "/discovery/resources?" + urlencode({"limit": page_size, "offset": offset})
+        url = _page_url(endpoint, page_size=page_size, offset=offset)
         body, envelope = _get_json(url, timeout=timeout)
         sha = digest(body)
         if sha in seen_page_hashes:
@@ -275,7 +306,7 @@ def main(argv=None) -> int:
     decode.add_argument("value")
     scan = cmd.add_parser("census", help="compare original offline responses and/or read-only actual public provider APIs")
     scan.add_argument("--snapshot", action="append", default=[], metavar="JSON_FILE")
-    scan.add_argument("--provider", action="append", default=[], metavar="NAME=HTTPS_ORIGIN")
+    scan.add_argument("--provider", action="append", default=[], metavar="NAME=HTTPS_ENDPOINT")
     scan.add_argument("--output", required=True)
     scan.add_argument("--raw-dir", default="bazaar_raw_receipts")
     scan.add_argument("--page-size", type=int, default=100)
@@ -290,7 +321,7 @@ def main(argv=None) -> int:
         snapshots = [_load_snapshot(path) for path in args.snapshot]
         for entry in args.provider:
             if "=" not in entry:
-                raise CensusError("provider_format_name_equals_https_origin")
+                raise CensusError("provider_format_name_equals_https_endpoint")
             name, origin = entry.split("=", 1)
             if not name or not all(ch.isascii() and (ch.isalnum() or ch in "_-") for ch in name):
                 raise CensusError("invalid_provider_name")
