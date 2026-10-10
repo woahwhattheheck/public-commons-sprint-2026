@@ -166,7 +166,7 @@ export function selectPublicProbeAddress(answers) {
       answers.some(a=>![4,6].includes(a?.family) ||
         typeof a.address!=='string' ||
         disallowedProbeAddress.check(a.address,`ipv${a.family}`) ||
-        (a.family===6 && mappedProbeAddress.check(a.address,'ipv6'))) {
+        (a.family===6 && mappedProbeAddress.check(a.address,'ipv6')))) {
     throw new TypeError('SUPPORTED_DNS_NONPUBLIC_OR_EMPTY');
   }
   return answers[0];
