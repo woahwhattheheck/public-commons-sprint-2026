@@ -72,3 +72,11 @@ node --test test/repo-integration.test.mjs
 ## Scope and honest completion threshold
 
 The helper intentionally avoids a second registry, payment verification, live MCP capability authentication, production wallet/deployment, real-world settlement claims, and SCF form submission. End-to-end monetization depends on a real payment facilitator + seller account and proof of settled sale. SCF #46 eligibility and submission are separate owner-gated decisions; this package is reusable product IP, not an award.
+
+## Seller resource host preflight
+
+Public `resource.url` metadata is constrained to a canonical HTTPS URL with a public-looking host. Literal IPv4/IPv6 hosts and local/reserved hostnames (including `.localhost`, `.local`, `.internal` and `.home.arpa`) are rejected, matching the existing SF31 buyer refusal to call local destinations. The original explicit `allowHttpLoopback: true` example option still permits HTTP `localhost`, `127.0.0.1` and `[::1]` for **local developer fixtures only**. That flag never makes HTTPS private-host listings acceptable.
+
+This is seller metadata validation, not DNS resolution or network egress enforcement. A public-looking hostname can resolve to a private destination at connection time; production callers must enforce egress and DNS rebinding controls when opening sockets. The compiler still does not authenticate the seller or prove any payment.
+
+Focused check: `node --test stellar/scf-starforge-20261009/sf30-seller-discovery/test/resource-host.test.mjs`.
