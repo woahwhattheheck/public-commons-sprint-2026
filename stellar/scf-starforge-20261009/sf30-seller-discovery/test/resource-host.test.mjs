@@ -19,7 +19,7 @@ test('public Seller Discovery rejects private and local resource hosts', () => {
   const blocked = [
     'https://127.0.0.1/paid', 'https://10.2.3.4/paid',
     'https://192.168.1.5/paid', 'https://169.254.169.254/latest',
-    'https://[::1]/paid', 'https://[::ffff:127.0.0.1]/paid',
+    'https://[::1]/paid', 'https://[::ffff:7f00:1]/paid',
     'https://localhost/paid', 'https://api.internal/paid',
     'https://seller.home.arpa/paid', 'https://seller.local/paid',
     'https://sub.localhost/paid',
