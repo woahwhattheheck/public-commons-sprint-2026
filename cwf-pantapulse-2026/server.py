@@ -66,13 +66,19 @@ def market_normalize(raw):
     # Explicitly documented schema alternatives; unknown Panta API versions remain unknown.
     # Explicit sponsor null-list quotes are not malformed observations.
     # Non-null malformed/out-of-range values must remain visible as source cautions.
+    direct_price_keys = ('yes_price', 'yesPrice', 'primaryYesPrice', 'yes_probability')
+    known_price_field = (any(key in raw for key in direct_price_keys)
+                         or (isinstance(raw.get('prices'), dict) and 'yes' in raw['prices'])
+                         or (isinstance(raw.get('probabilities'), dict)
+                             and 'yes' in raw['probabilities']))
     candidates = (raw.get('yes_price'), raw.get('yesPrice'), raw.get('primaryYesPrice'),
                   raw.get('yes_probability'), get_path(raw, 'prices', 'yes'),
                   get_path(raw, 'probabilities', 'yes'))
     price = next((v for v in candidates if v is not None), None)
     probability = maybe_decimal(price, Decimal('0'), Decimal('1'))
     price_state = ('verified' if probability is not None else
-                   ('malformed' if price is not None else 'unavailable'))
+                   ('malformed' if price is not None else
+                    ('unavailable' if known_price_field else 'schema_unknown')))
     liq = next((raw.get(k) for k in ('liquidity_usd', 'liquidityUsd', 'liquidity') if raw.get(k) is not None), None)
     vol = next((raw.get(k) for k in ('volume_usd', 'volumeUsd', 'volumeUsdc', 'volume') if raw.get(k) is not None), None)
     liquidity = maybe_decimal(liq, Decimal(0), Decimal('1e12'))
@@ -96,6 +102,9 @@ def alerts(rows):
         if row.get('price_state') == 'malformed':
             findings.append({'market': row['id'], 'severity': 'caution',
                              'signal': 'Provider supplied an invalid or out-of-range YES quote; not price evidence.'})
+        elif row.get('price_state') == 'schema_unknown':
+            findings.append({'market': row['id'], 'severity': 'unknown',
+                             'signal': 'Provider supplied no recognized YES-price field; verify the source schema.'})
         p = maybe_decimal(row['yes_probability_pct'], Decimal(0), Decimal(100))
         liq = maybe_decimal(row['liquidity_usd'], Decimal(0))
         # In documented list rows, absent YES price is expected coverage metadata,
