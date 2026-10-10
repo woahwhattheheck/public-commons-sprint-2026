@@ -96,7 +96,7 @@ function distinctCommonExtensions(a, b) {
 }
 export function combineSupported(results) {
   if (!Array.isArray(results) || results.length !== 2) throw new HttpError(502, 'SUPPORTED_MISSING_NETWORK');
-  const kinds = [], signers = {};
+  const kinds = [], signingAddresses = new Set();
   for (let i = 0; i < NETWORKS.length; i++) {
     const network = NETWORKS[i];
     const src = results[i];
@@ -108,15 +108,20 @@ export function combineSupported(results) {
       }
       kinds.push(kind);
     }
-    const peerSigners = src.signers?.[network];
-    if (peerSigners !== undefined) {
-      if (!Array.isArray(peerSigners) || peerSigners.some(x => typeof x !== 'string')) {
-        throw new HttpError(502, 'SUPPORTED_BAD_SIGNERS');
-      }
-      signers[network] = peerSigners;
+    // ORIGINAL @x402/core x402Facilitator.getSupported() keys signers by the
+    // scheme's CAIP FAMILY, not concrete network. @x402/stellar ExactStellarScheme
+    // advertises caipFamily = 'stellar:*' on BOTH testnet and pubnet.
+    const signers = src.signers;
+    if (!signers || typeof signers !== 'object' || Array.isArray(signers) ||
+        Object.keys(signers).some(x => x !== 'stellar:*') ||
+        !Array.isArray(signers['stellar:*']) || !signers['stellar:*'].length ||
+        signers['stellar:*'].some(x => typeof x !== 'string' || !x)) {
+      throw new HttpError(502, 'SUPPORTED_BAD_SIGNERS');
     }
+    for (const signer of signers['stellar:*']) signingAddresses.add(signer);
   }
-  return {kinds, extensions: distinctCommonExtensions(results[0].extensions, results[1].extensions), signers};
+  return {kinds, extensions: distinctCommonExtensions(results[0].extensions, results[1].extensions),
+    signers: {'stellar:*': [...signingAddresses]}};
 }
 
 /**
