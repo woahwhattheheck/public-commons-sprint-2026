@@ -1,0 +1,14 @@
+{
+  "source": "https://kzfr.org/programs",
+  "observed": "2026-10-10",
+  "note": "Published Saturday schedule snapshot, not a live now-playing feed or archive listing.",
+  "programs": [
+    {"name":"Bon Matin!", "day":"Saturday", "start":"07:00", "end":"09:00", "categories":["Zydeco","Cajun"], "source":"https://kzfr.org/programs"},
+    {"name":"Island Rhythms", "day":"Saturday", "start":"09:00", "end":"11:00", "categories":["World Music"], "source":"https://kzfr.org/programs"},
+    {"name":"2-Penny Opera", "day":"Saturday", "start":"11:00", "end":"13:30", "categories":["Bluegrass","Folk","Jazz"], "source":"https://kzfr.org/programs"},
+    {"name":"Studio 416", "day":"Saturday", "start":"13:30", "end":"15:00", "categories":["Live Music","Interviews"], "source":"https://kzfr.org/programs"},
+    {"name":"Swing City", "day":"Saturday", "start":"15:00", "end":"16:00", "categories":["Swing"], "source":"https://kzfr.org/programs"},
+    {"name":"Ska-T's T Party", "day":"Saturday", "start":"16:00", "end":"17:00", "categories":["Roots","Blues"], "source":"https://kzfr.org/programs"},
+    {"name":"All Mixed Up", "day":"Saturday", "start":"17:00", "end":"19:30", "categories":["Eclectic Music","Rock"], "source":"https://kzfr.org/programs"}
+  ]
+}
