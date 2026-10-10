@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "dataset": "fund_period_balances",
+  "keys": ["fiscal_year", "fund", "account"],
+  "amounts": [
+    {"name": "debits", "scale": 2, "tolerance": "0.00"},
+    {"name": "credits", "scale": 2, "tolerance": "0.00"}
+  ],
+  "group_by": ["fiscal_year", "fund"],
+  "source_columns": {"fiscal_year":"FiscalYr", "fund":"FundCode", "account":"GLAccount", "debits":"Debit", "credits":"Credit"},
+  "target_columns": {"fiscal_year":"FY", "fund":"FundID", "account":"AccountID", "debits":"DebitAmt", "credits":"CreditAmt"}
+}
