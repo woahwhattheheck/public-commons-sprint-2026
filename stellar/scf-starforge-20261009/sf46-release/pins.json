@@ -1,0 +1,113 @@
+{
+  "schema": "stellar-forge.release-pins.v1",
+  "recorded_date": "2026-10-10",
+  "actor": "woahwhattheheck",
+  "scope": "Source composition contract only; no claim of SCF submission, production deployment, paid settlement or provider acceptance.",
+  "pin_kind": "git_blob_sha1",
+  "sources": [
+    {
+      "id": "catalog",
+      "path": "scf46-stellar-bazaar/src/catalog.mjs",
+      "sha": "bcb87cb3439a9feecd315c3a41fef1cf475f7a95",
+      "exports": [
+        "BazaarCatalog",
+        "createDiscoveryServer",
+        "validateCatalogEntry"
+      ]
+    },
+    {
+      "id": "mcp_broker",
+      "path": "stellar-forge/mcp-paid-agent/agent-server.mjs",
+      "sha": "94c89eabd871372102888e5aee5848debb35cf41",
+      "exports": [
+        "McpPaidToolBroker",
+        "createMcpHttpHandler",
+        "MCP_VERSION"
+      ]
+    },
+    {
+      "id": "buyer",
+      "path": "stellar/scf-starforge-20261009/sf31-buyer-client/buyer.mjs",
+      "sha": "78aca43bfd17c79ac837b21b1e4eb505e7351e76",
+      "exports": [
+        "X402BuyerClient",
+        "BuyerError"
+      ]
+    },
+    {
+      "id": "recovery",
+      "path": "stellar/scf-starforge-20261009/sf33-failure-contract/contract.mjs",
+      "sha": "08724453a7d7f020e7a0efc02bdbfc2d94834706",
+      "exports": [
+        "explainFailure",
+        "gateNextAction"
+      ]
+    },
+    {
+      "id": "metering",
+      "path": "stellar/scf-starforge-20261009/sf35-metered-settlement/metered-settlement.mjs",
+      "sha": "7be2be721e2b3d0cc9d1791c2129ba634a6d7e85",
+      "exports": [
+        "MeteredUptoSettlement"
+      ]
+    },
+    {
+      "id": "conformance",
+      "path": "stellar/scf-starforge-20261009/sf38-conformance/conformance.mjs",
+      "sha": "cc69a6c492c457391e0b9155a953032704530c24",
+      "exports": [
+        "inspectSupported",
+        "auditCapture",
+        "checkHorizonInclusion"
+      ]
+    },
+    {
+      "id": "receipt",
+      "path": "stellar/scf-starforge-20261009/sf43-agent-commerce/verify.mjs",
+      "sha": "03fc89a93052ab81882ad11ad609f4abe87271d5",
+      "exports": [
+        "parseExactTestnetTerms",
+        "checkStellarTestnetTransaction"
+      ]
+    },
+    {
+      "id": "seller_proof",
+      "path": "stellar/scf-starforge-20261009/sf50-seller-proof/proof.mjs",
+      "sha": "d8a38b4be830d5c3be7acd71884fee0864ed1ef1",
+      "exports": [
+        "verifyPinnedProof",
+        "verifyOriginProof"
+      ]
+    }
+  ],
+  "gates": [
+    {
+      "gate": "source_modules_load_and_api_match",
+      "state": "MEASURABLE_BY_THIS_PREFLIGHT"
+    },
+    {
+      "gate": "source_blob_pins_match",
+      "state": "MEASURABLE_WITH_STRICT_PINS"
+    },
+    {
+      "gate": "merchant_authorized_catalog_ingest",
+      "state": "EXTERNAL_ACCEPTANCE_REQUIRED"
+    },
+    {
+      "gate": "independent_operator_approval_and_funds",
+      "state": "EXTERNAL_ACCEPTANCE_REQUIRED"
+    },
+    {
+      "gate": "canonical_x402_stellar_testnet_settlement_receipt",
+      "state": "EXTERNAL_ACCEPTANCE_REQUIRED"
+    },
+    {
+      "gate": "two_network_conformance_and_mainnet_deployment",
+      "state": "EXTERNAL_ACCEPTANCE_REQUIRED"
+    },
+    {
+      "gate": "SCF46_invitation_eligibility_and_owner_application",
+      "state": "EXTERNAL_APPROVAL_REQUIRED"
+    }
+  ]
+}
