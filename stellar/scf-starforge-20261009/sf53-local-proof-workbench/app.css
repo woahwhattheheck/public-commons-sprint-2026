@@ -1,0 +1,36 @@
+:root { color-scheme:dark; font:16px/1.5 system-ui,sans-serif; background:#0d1420; color:#e4edf9 }
+* { box-sizing:border-box }
+body { margin:0 }
+.hero,main,footer { max-width:1120px; padding:32px; margin:auto }
+.hero { padding-top:72px; padding-bottom:34px }
+.eyebrow,.kicker,.legend { color:#9eb7d5; letter-spacing:.13em; font-size:.75rem; font-weight:700 }
+h1 { font-size:clamp(2.5rem,6vw,4.4rem); letter-spacing:-.05em; line-height:1.1; margin:16px 0 }
+h1 span { color:#7cbdec }
+h2 { font-size:1.25rem; margin:0 0 10px }
+.hero p,.muted,.metric p { color:#a8bad1 }
+.hero p { max-width:710px; font-size:1.1rem }
+.context { display:flex; flex-wrap:wrap; gap:12px; color:#a0b5ce; font-size:.82rem }
+.context span { border:1px solid #30435c; border-radius:50px; padding:7px 11px }
+.notice { padding:19px 21px; margin-bottom:22px; background:#172439; border-left:3px solid #79b9e8; border-radius:8px }
+.row { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:20px }
+.metric,.panel { background:#162234; border:1px solid #2e4159; padding:22px; border-radius:14px }
+.metric h2 { margin:18px 0 10px; overflow-wrap:anywhere }
+.metric p { font-size:.82rem; margin:0 }
+.good { color:#87e4b6 } .bad,.error { color:#f1a99e }
+.layout { display:grid; grid-template-columns:1fr 1fr; gap:20px }
+.panel { margin-bottom:20px }
+.steps>div { display:flex; gap:12px; border-bottom:1px solid #31445e; padding:12px 0 }
+.steps b { color:#8dc1ee } .steps span { flex:1 }
+.counts { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:24px 0 }
+.counts div { display:flex; flex-direction:column; background:#20334b; padding:12px; border-radius:10px }
+.counts strong { font-size:2rem; font-variant-numeric:tabular-nums }
+.counts span { color:#adbfdb; font-size:.75rem }
+.sectionhead { display:flex; justify-content:space-between; gap:12px }
+.tablewrap { overflow-x:auto }
+table { width:100%; border-collapse:collapse; font-size:.84rem }
+th,td { padding:13px 10px; border-bottom:1px solid #31445e; text-align:left }
+th { color:#a0b5ce }
+td:nth-child(3) { font: .75rem ui-monospace,monospace; overflow-wrap:anywhere }
+footer { font-size:.8rem; color:#8ca3bf }
+@media(max-width:800px) { .row { grid-template-columns:repeat(2,1fr) } .layout { grid-template-columns:1fr } }
+@media(max-width:500px) { .hero,main,footer { padding:18px } .hero { padding-top:45px } .metric,.panel { padding:14px } }
