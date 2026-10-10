@@ -39,3 +39,8 @@ Run `node --test test/buyer.test.mjs`. The test exercises canonical x402 v2 requ
 Pin: x402 Foundation [specification v2](https://github.com/x402-foundation/x402/blob/main/specs/x402-specification-v2.md) §§5.1–5.3 and [HTTP transport v2](https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/http.md). Project's currently shipped [Bazaar core](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/scf46-stellar-bazaar/src/catalog.mjs), blob `66beed7c3a4b617ab90680ec5fe8318e934e74f7`. See standalone SF-33 failure recovery and SF-36 spend governor ownership; this SDK does not replace either.
 
 **Do not run GitHub Actions for verification.** Public work intentionally has no workflow files or CI dependency.
+
+
+### Catalog discovery byte boundary
+
+`discover()` consumes the actual HTTP response body through a bounded stream and rejects more than **256 KiB of decoded response bytes**, regardless of a server's `Content-Length` header. It parses JSON only after a fatal UTF-8 decode; malformed encodings and malformed JSON return `BAD_DISCOVERY_RESPONSE`, and oversized replies return `DISCOVERY_RESPONSE_TOO_LARGE`. A transport failure while reading returns `DISCOVERY_TRANSPORT_FAILED`. A valid large catalog should be paginated by the upstream server; this client deliberately will not allocate an unbounded body from an untrusted origin. Run the one focused regression with `node --test test/discovery-stream.test.mjs` locally (no hosted Actions).
