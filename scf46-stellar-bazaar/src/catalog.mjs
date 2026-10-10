@@ -2,15 +2,14 @@
 import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 import { inspectResourceURL, inspectRouteTemplate } from '../../stellar-forge/route-identity/identity.mjs';
+import { rankBazaarEntries } from './ranking.mjs';
 
 const plain = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const printable = (v) => typeof v === 'string' && v.length > 0 && v.length <= 32 && /^[\x20-\x7E]+$/.test(v);
-const terms = (s) => [...new Set(String(s ?? '').toLowerCase().match(/[a-z0-9]+/g) ?? [])];
 const ALLOWED = new Set(['type','payTo','network','scheme','extensions']);
 
 export function isValidRouteTemplate(template) {
-  // Share SF-28's bounded multi-decode safety rules with catalog ingestion.
-  // One-pass decoding permitted double-encoded traversal and route aliases.
+  // Reuse SF28 multi-decode path validation at the actual catalog boundary.
   return inspectRouteTemplate(template).ok;
 }
 
@@ -58,10 +57,10 @@ function matches(row, filters) {
 function keyOf(entry) {
   const info = entry.extensions?.bazaar?.info?.input;
   if (!plain(info) || !['http','mcp'].includes(info.type)) throw new TypeError('Valid HTTP or MCP Bazaar info required');
-  // Inspect raw URL BEFORE WHATWG canonicalization can erase dot segments.
-  const inspectedURL = inspectResourceURL(entry.resource?.url);
-  if (!inspectedURL.ok) throw new TypeError(`Invalid resource URL: ${inspectedURL.reason}`);
-  const url = inspectedURL.url;
+  // Reject raw encoded traversal before WHATWG URL normalization.
+  const checked = inspectResourceURL(entry.resource?.url);
+  if (!checked.ok) throw new TypeError(`Invalid resource URL: ${checked.reason}`);
+  const url = checked.url;
   if (info.type === 'mcp') {
     if (typeof info.toolName !== 'string' || !info.toolName.trim() || !plain(info.inputSchema)) throw new TypeError('Invalid MCP tool');
     return ['mcp',url.href,info.toolName].join('|');
@@ -90,19 +89,6 @@ export function validateCatalogEntry(entry) {
   if (template.ok) sanitized.extensions.bazaar.routeTemplate = template.canonicalPath;
   else delete sanitized.extensions.bazaar.routeTemplate;
   return { id, entry: sanitized };
-}
-function searchScore(row, q) {
-  const t = terms(q); if (!t.length) return 0;
-  const resource = row.resource;
-  const input = row.extensions.bazaar.info.input;
-  const weighted = [[resource.serviceName,8],[resource.tags?.join(' '),7],[resource.description,4],
-    [input.description,5],[input.toolName,5],[resource.url,1]];
-  let score = 0;
-  for (const term of t) for (const [part,weight] of weighted) {
-    if (terms(part).includes(term)) score += weight;
-  }
-  if (String(resource.description ?? '').toLowerCase().includes(q.toLowerCase())) score += 6;
-  return score;
 }
 const signature = (query, filters) => createHash('sha256').update(JSON.stringify([query, filters])).digest('hex').slice(0,20);
 const encode = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
@@ -161,9 +147,8 @@ export class BazaarCatalog {
       if (c?.v !== this.#version || c?.h !== digest || !Number.isSafeInteger(c.at) || c.at < 0) throw new RangeError('Stale or invalid cursor');
       at = c.at;
     }
-    const ranked = [...this.#entries.entries()].map(([key,row]) => ({key,row,score:searchScore(row,q)}))
-      .filter(e => e.score > 0 && matches(e.row,filters))
-      .sort((a,b) => b.score - a.score || a.key.localeCompare(b.key));
+    const ranked = rankBazaarEntries([...this.#entries.entries()]
+      .filter(([,row]) => matches(row,filters)),q);
     const page = ranked.slice(at,at+limit).map(e => e.row);
     const next = at+limit < ranked.length ? encode({v:this.#version,h:digest,at:at+limit}) : null;
     return { resources:page,partialResults:next !== null,pagination:{limit:page.length,cursor:next} };
