@@ -14,6 +14,22 @@ try {
   put('observed', 'Observed ' + r.observedAt);
   state('smoke-status', r.commerce.status === 'PASS_LOCAL_SOURCE_SMOKE', r.commerce.status);
   state('release-status', r.release.status === 'PASS_SOURCE_CONTRACTS_ONLY', r.release.status);
+  state('wire-status', r.wire?.status === 'PASS_DENIED_WIRE_POLICY', r.wire?.status ?? 'NOT RECORDED');
+  put('wire-probes', r.wire?.httpProbes);
+  put('wire-blocked', r.wire?.blockedBeforeApproval);
+  put('wire-signed', r.wire?.signedRequests);
+  const wireRows = byId('wire-decisions');
+  wireRows.replaceChildren();
+  for (const decision of r.wire?.decisions ?? []) {
+    const row = document.createElement('tr');
+    for (const value of [decision.label, decision.denial,
+      String(decision.approvals ?? '—') + ' / ' + String(decision.signatures ?? '—')]) {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      row.appendChild(cell);
+    }
+    wireRows.appendChild(row);
+  }
   put('signed', r.commerce.signedRequests);
   put('payments', r.commerce.paidCalls);
   put('discovered', r.commerce.discovered);
@@ -33,10 +49,11 @@ try {
     }
     tbody.appendChild(row);
   }
-  const issues = [r.commerce.detail, r.release.detail, ...(r.release.failures ?? [])].filter(Boolean);
+  const issues = [r.commerce.detail, r.release.detail, r.wire?.detail, ...(r.release.failures ?? [])].filter(Boolean);
   if (issues.length) put('errors', 'Source check needs attention: ' + issues.join(' · '));
 } catch (error) {
   state('smoke-status', false, 'REPORT UNAVAILABLE');
   state('release-status', false, 'NOT CHECKED');
+  state('wire-status', false, 'NOT CHECKED');
   put('errors', String(error?.message ?? error));
 }
