@@ -15,6 +15,10 @@ This is the original standalone asset admission and amount normalization module 
 * `validatePaymentTerms(paymentRequirements, registry, {verifyRecipient,now})` enforces `scheme:'exact'`, signed-i128 atomic bounds, original `asset`, `network`, `payTo`, and refuses a missing, stale or inconsistent async trusted recipient verifier. The verifier **must** be implemented by the caller against a trusted Stellar RPC/network and the *actual* contract-account balance/trustline and contract restriction state. Never pass a client-provided `ready:true` or infer readiness from a superficial address regex. Address format validation is syntactic, NOT checksum or actual account existence validation; the trusted verifier must perform full Stellar address decoding, network and state validation.
 * `assets.d.ts` is the typed contract; it returns a read-only admission record. No real payment or recipient claim is made by these checks.
 
+## Bounded decimal input before BigInt
+
+`parseAtomic` enforces the maximum representable decimal text length (39 digits + decimal point + at most 18 fraction digits = 58 characters) **before** running the canonical-number regex or converting to `BigInt`. This bounds CPU and memory for untrusted giant integers/fractions while preserving exact signed-i128 conversion, positive/zero policy and up to 18 token decimals. Larger inputs fail closed instead of being scanned or parsed. The bound is a maximum only: smaller out-of-range amounts are still rejected by the exact i128 check.
+
 ## Focused validation
 
 From this directory in an approved local/cloud checkout:
@@ -23,7 +27,7 @@ From this directory in an approved local/cloud checkout:
 node --test assets.test.mjs
 ```
 
-This executes **5 focused offline tests** (actual pinned upstream 1.50 USDC canonical example, 7-decimal precision, i128 boundaries, stale/mismatched token policies, unverified/wrong-network/missing recipient behavior). It is intentionally not a broad repository suite and creates no hosted GitHub Actions charge.
+This executes **8 focused offline tests** (actual pinned upstream 1.50 USDC canonical example, 7-decimal precision, i128 boundaries, stale/mismatched token policies, unverified/wrong-network/missing recipient behavior). It is intentionally not a broad repository suite and creates no hosted GitHub Actions charge.
 
 ## Integration and remaining production work
 
