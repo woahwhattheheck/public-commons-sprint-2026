@@ -32,9 +32,14 @@ export function sanitizeResourceServiceMetadata(resource) {
       if (result.iconUrl.length > 2048 || /[\x00-\x1f\x7f]/.test(result.iconUrl)) throw Error('invalid');
       const u = new URL(result.iconUrl);
       const h = decodeURIComponent(u.hostname).toLowerCase().replace(/\.$/,'');
+      // Discovery consumers may fetch icons. Do not advertise explicitly local
+      // DNS names as otherwise public-looking icon URLs; syntax-only protection,
+      // not a substitute for a consumer's DNS/IP checks at fetch time.
+      const localName = ['localhost','local','localdomain','internal','home.arpa',
+        'ip6-localhost','ip6-loopback'].includes(h) ||
+        ['.localhost','.local','.localdomain','.internal','.home.arpa'].some(s => h.endsWith(s));
       if (!['http:', 'https:'].includes(u.protocol) || u.username || u.password || isIP(h) ||
-          ['localhost','localhost.localdomain','ip6-localhost','ip6-loopback'].includes(h) ||
-          /^\d+$/.test(h) || /^0x[0-9a-f]+$/.test(h)) throw Error('invalid');
+          localName || /^\d+$/.test(h) || /^0x[0-9a-f]+$/.test(h)) throw Error('invalid');
     } catch { delete result.iconUrl; }
   } else delete result.iconUrl;
   return result;
