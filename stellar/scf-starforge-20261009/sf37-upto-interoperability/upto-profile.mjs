@@ -13,8 +13,12 @@ const integer = (v, name, {min=0,max=Number.MAX_SAFE_INTEGER}={}) => {
   if (!Number.isSafeInteger(v) || v < min || v > max) throw new TypeError(name + ': unsafe integer');
   return v;
 };
+const MAX_I128_DECIMAL_DIGITS = MAX_I128.toString().length;
 export function atomicAmount(value, {allowZero=false}={}) {
-  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/.test(value))
+  if (typeof value !== 'string') throw new TypeError('AMOUNT_NOT_CANONICAL_ATOMIC_STRING');
+  // Reject overlength x402 decimals before regex scanning or arbitrary-precision parsing.
+  if (value.length > MAX_I128_DECIMAL_DIGITS) throw new RangeError('AMOUNT_OUTSIDE_SIGNED_I128');
+  if (!/^(0|[1-9][0-9]*)$/.test(value))
     throw new TypeError('AMOUNT_NOT_CANONICAL_ATOMIC_STRING');
   const n=BigInt(value);
   if (n > MAX_I128 || (!allowZero && n===0n)) throw new RangeError('AMOUNT_OUTSIDE_SIGNED_I128');
