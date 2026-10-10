@@ -45,3 +45,9 @@ The output `schema` constrains the **shape of Bazaar `info`**, not API request-b
 Generated offer metadata is serializable and standalone; call the canonical x402 server middleware to advertise/verify/settle on live networks. This library deliberately returns the `PaymentRequired` envelope instead of duplicating canonical cryptographic/payment code. Before a real testnet acceptance, replace placeholders, validate real wallet/asset and exact official version, and wire real 402→signature→verify→settle→PaymentPayload extension echo→SF25 ingest→Bazaar readback.
 
 No SCF interest/application submitted; published Q3/#45 RFP does not itself establish eligibility for SCF #46. Source code and test fixtures only; no customer, paid testnet receipt, grant award or revenue claimed.
+
+## Seller resource host preflight
+
+Advertised seller resources must be HTTPS URLs with a public-looking hostname. The compiler rejects literal IP hosts (IPv4, IPv6, canonicalized numeric aliases), loopback names and reserved internal names such as `.localhost`, `.local`, `.internal`, and `.home.arpa` before constructing a payment offer. This matches the current SF31 buyer preflight: a new seller offering a private resource address would otherwise create an unusable or unsafe Bazaar listing. `allowLocalhost:true` permits only explicit `http://127.0.0.1:PORT/` developer fixtures; it does **not** permit other IPs or private names, even under HTTPS.
+
+This is URL-level validation, **not DNS resolution protection**. A public-looking hostname may still resolve/rebind to private IP space. Production sellers and consumers need verified host ownership and resolver/connect-time network egress policy; listing visibility still is not proof of seller identity or of settlement. No payment or network connection happens during offer compilation.
