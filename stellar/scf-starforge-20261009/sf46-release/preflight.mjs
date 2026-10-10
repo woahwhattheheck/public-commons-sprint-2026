@@ -1,17 +1,26 @@
 // MIT. Offline SCF SF46 release-source preflight. Never initiates commerce.
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { resolve, join, relative, isAbsolute } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const defaultRepoRoot = fileURLToPath(new URL('../../../', import.meta.url));
-const pathInside = (root, path) => {
+// Check both lexical and resolved on-disk paths before opening any source.
+// Return the resolved path itself to avoid following an unchecked symlink.
+const pathInside = async (root, path) => {
   const full = resolve(root, path);
   const rel = relative(root, full);
   if (!rel || rel === '..' || rel.startsWith('../') || isAbsolute(rel)) {
     throw new TypeError('Manifest contains an unsafe source path');
   }
-  return full;
+  const [canonicalRoot, canonicalFile] = await Promise.all([realpath(root), realpath(full)]);
+  const diskRel = relative(canonicalRoot, canonicalFile);
+  if (!diskRel || diskRel === '..' || diskRel.startsWith('../') || isAbsolute(diskRel)) {
+    const error = new TypeError('Manifest source resolves outside repository root');
+    error.code = 'SOURCE_ESCAPE';
+    throw error;
+  }
+  return canonicalFile;
 };
 
 export function gitBlobSha(bytes) {
@@ -47,19 +56,20 @@ export async function assessRelease({
       throw new TypeError('Malformed or duplicate SF46 source pin');
     }
     pathsSeen.add(source.path);
-    const full = pathInside(absoluteRoot, source.path);
     let actual = null;
     let status = 'MISSING';
     try {
+      const full = await pathInside(absoluteRoot, source.path);
       actual = gitBlobSha(await readFile(full));
       status = actual === source.sha ? 'PIN_MATCH' : 'SOURCE_CHANGED';
     } catch (error) {
-      if (error?.code !== 'ENOENT') status = 'READ_ERROR';
+      if (error?.code === 'SOURCE_ESCAPE') status = 'UNSAFE_PATH';
+      else if (error?.code !== 'ENOENT') status = 'READ_ERROR';
     }
     const line = {id: source.id, path: source.path, expectedGitBlob: source.sha,
       actualGitBlob: actual, status};
     report.sources.push(line);
-    if (status === 'MISSING' || status === 'READ_ERROR') {
+    if (status === 'MISSING' || status === 'READ_ERROR' || status === 'UNSAFE_PATH') {
       report.failures.push(source.id + ': ' + status);
     } else if (status === 'SOURCE_CHANGED') {
       const message = source.id + ': changed Git blob; review source against approved contracts';
@@ -69,7 +79,7 @@ export async function assessRelease({
   // Import exactly the locally installed facade, not a remote service.
   // This exercises actual dependency resolution and actual export contracts.
   try {
-    const api = await import(pathToFileURL(pathInside(absoluteRoot,
+    const api = await import(pathToFileURL(await pathInside(absoluteRoot,
       'stellar/scf-starforge-20261009/sf46-release/index.mjs')).href);
     for (const source of manifest.sources) {
       for (const name of source.exports) {
