@@ -127,6 +127,9 @@ export async function inspectCatalog({catalogUrl, targetResource, payTo, network
     throw new TypeError('Invalid pagination options');
   }
   const matches = [], samePayToOtherResource = [];
+  // Keep a bounded sample for display, but classify using ALL matching records.
+  let matchingResourceCount = 0;
+  const matchEvidence = {network: false, payTo: false, paired: false};
   const seenKeys = new Set(), seenPageSignatures = new Set(), seenCursors = new Set();
   let offset = 0, cursor = null, useCursor = false, knownTotal = null;
   let complete = false, pages = 0, rawRows = 0, reason = null;
@@ -156,11 +159,21 @@ export async function inspectCatalog({catalogUrl, targetResource, payTo, network
       const accepts = Array.isArray(item?.accepts) ? item.accepts : [];
       const related = typeof payTo === 'string' && accepts.some(x =>
         typeof x?.payTo === 'string' && x.payTo.toLowerCase() === payTo.toLowerCase());
+      const hasNetwork = network ? accepts.some(x => x?.network === network) : null;
+      // It is not enough for network and recipient to occur on DIFFERENT
+      // alternatives; the seller must actually accept their paired route.
+      const hasPair = network && payTo ? accepts.some(x =>
+        x?.network === network && typeof x?.payTo === 'string' &&
+        x.payTo.toLowerCase() === payTo.toLowerCase()) : null;
       if (resource === target) {
-        matches.push({resource, type: item?.type ?? null, toolName: String(toolName),
-          x402Version: item?.x402Version ?? null, networks: networkSummary(item),
-          desiredNetworkFound: network ? networkSummary(item).includes(network) : null,
-          desiredPayToFound: payTo ? related : null});
+        matchingResourceCount++;
+        matchEvidence.network ||= Boolean(hasNetwork);
+        matchEvidence.payTo ||= Boolean(related);
+        matchEvidence.paired ||= Boolean(hasPair);
+        if (matches.length < 50) matches.push({resource, type: item?.type ?? null,
+          toolName: String(toolName), x402Version: item?.x402Version ?? null,
+          networks: networkSummary(item), desiredNetworkFound: hasNetwork,
+          desiredPayToFound: payTo ? related : null, desiredPaymentRouteFound: hasPair});
       } else if (related && samePayToOtherResource.length < 15) {
         samePayToOtherResource.push({resource, networks: networkSummary(item)});
       }
@@ -207,8 +220,13 @@ export async function inspectCatalog({catalogUrl, targetResource, payTo, network
   if (!complete && !reason) reason = `Reached maxPages=${maxPages} before proving catalog exhaustiveness`;
   return {endpoint: endpoint.toString(), pages, rawRows, uniqueKeys: seenKeys.size,
     declaredTotal: knownTotal, complete, incompleteReason: reason,
-    matchingResourceCount: matches.length, matches: matches.slice(0, 50),
-    matchingPayToOtherResources: samePayToOtherResource};
+    matchingResourceCount,
+    matchingEvidence: {
+      desiredNetworkFound: network ? matchEvidence.network : null,
+      desiredPayToFound: payTo ? matchEvidence.payTo : null,
+      desiredPaymentRouteFound: network && payTo ? matchEvidence.paired : null
+    },
+    matches, matchingPayToOtherResources: samePayToOtherResource};
 }
 
 export async function diagnose({resourceUrl, catalogUrl, payTo, network, extensionResponses,
@@ -226,8 +244,13 @@ export async function diagnose({resourceUrl, catalogUrl, payTo, network, extensi
   const extension = bazaarExtensionOutcome(extensionResponses);
   let verdict = 'INCONCLUSIVE_CATALOG';
   if (summary.matchingResourceCount) {
-    verdict = network && summary.matches.every(m => !m.desiredNetworkFound)
-      ? 'LISTED_WRONG_NETWORK' : 'LISTED';
+    if (network && !summary.matchingEvidence.desiredNetworkFound)
+      verdict = 'LISTED_WRONG_NETWORK';
+    else if (derivedPayTo && !summary.matchingEvidence.desiredPayToFound)
+      verdict = 'LISTED_WRONG_PAYTO';
+    else if (network && derivedPayTo && !summary.matchingEvidence.desiredPaymentRouteFound)
+      verdict = 'LISTED_PAYMENT_ROUTE_MISMATCH';
+    else verdict = 'LISTED';
   } else if (summary.complete) verdict = 'NOT_LISTED_IN_EXHAUSTED_CATALOG';
   return {
     schema: 'stellar-forge.seller-visibility.v1', mode: 'READ_ONLY_UNAUTHENTICATED',
@@ -237,7 +260,11 @@ export async function diagnose({resourceUrl, catalogUrl, payTo, network, extensi
       ? 'Missing from this facilitator catalog at read time; successful payment alone does not prove catalog indexing.'
       : verdict === 'INCONCLUSIVE_CATALOG'
         ? 'Catalog coverage incomplete; do not interpret this as absence.'
-        : 'Listing observed; check matching network, payment terms and seller origin separately.',
+        : verdict === 'LISTED_PAYMENT_ROUTE_MISMATCH'
+          ? 'URL indexed, but no single accepted option combines the requested network and payTo.'
+          : verdict === 'LISTED_WRONG_PAYTO'
+            ? 'URL indexed, but its listed payment recipients do not match the seller recipient.'
+            : 'Listing observed; check matching network, payment terms and seller origin separately.',
     excludes: ['No settlement or wallet verification', 'No facilitator indexing trigger', 'No payment made']
   };
 }
