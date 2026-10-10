@@ -91,9 +91,9 @@ export class McpPaidToolBroker {
   }
   async search(args){
     if(!plain(args)||!maxText(args.query,1024)||!args.query.trim())fail('INVALID_PARAMS','Search query required');
-    const u = new URL(this.#catalogUrl);
-    if (!u.pathname.endsWith("/")) u.pathname += "/";
-    u.pathname += "discovery/search";
+    const u=new URL(this.#catalogUrl);
+    if(!u.pathname.endsWith('/'))u.pathname+='/';
+    u.pathname+='discovery/search';
     for(const k of ['query','cursor','limit','network','scheme','asset','maxAmount']){
       const v=args[k];if(v===undefined)continue;
       if(!['limit'].includes(k)&&!maxText(v,4096))fail('INVALID_PARAMS','Invalid '+k);
@@ -274,24 +274,50 @@ export function createMcpHttpHandler(broker,{bearerToken,allowedClientOrigins=[]
     if(origin&&!allowedOrigins.has(origin))return send(403,jsonErr(-32000,'Origin not allowed'));
     if(!safeCompare(req.headers.authorization,`Bearer ${bearerToken}`))return send(401,jsonErr(-32001,'Unauthorized'));
     if(req.method==='GET')return send(405,jsonErr(-32601,'SSE stream not supported'));
-    if(req.method!=='POST')return send(405,jsonErr(-32601,'Method not allowed'));
-    if(req.headers['content-type']!=='application/json')return send(415,jsonErr(-32700,'JSON only'));
-    let body='';for await(const chunk of req){body+=chunk;if(body.length>64*1024)return send(413,jsonErr(-32700,'Request too large'));}
-    let msg;try{msg=JSON.parse(body);}catch{return send(400,jsonErr(-32700,'Parse error'));}
-    if(!plain(msg)||msg.jsonrpc!=='2.0'||!maxText(msg.method,64))return send(400,jsonErr(-32600,'Invalid Request',msg.id??null));
-    const id=msg.id??null;
+    if(req.method!=='POST')return send(405,jsonErr(-32601,'POST required'));
+    if(!String(req.headers['content-type']??'').toLowerCase().startsWith('application/json'))return send(415,jsonErr(-32600,'Content type must be application/json'));
+    const accept=String(req.headers.accept??'');
+    if(!accept.includes('application/json')||!accept.includes('text/event-stream'))return send(406,jsonErr(-32600,'Accept must include application/json and text/event-stream'));
+    // HTTP stream chunks are byte boundaries, not UTF-8 character boundaries.
+    // Enforce the 128 KiB limit on raw bytes before decoding the whole body.
+    const chunks=[];let byteCount=0;
     try {
-      if(msg.method==='initialize')return send(200,rpcReply(id,{protocolVersion:MCP_VERSION,capabilities:{tools:{}},serverInfo:{name:'sf32-mcp-paid-tool-broker',version:'0.1.0'}}));
-      if(msg.method==='notifications/initialized')return send(202,{});
-      if(msg.method==='tools/list')return send(200,rpcReply(id,{tools:TOOLS}));
-      if(msg.method==='tools/call'){
-        if(!plain(msg.params)||!maxText(msg.params.name,64))fail('INVALID_PARAMS','Tool name required');
-        const result=await broker.call(msg.params.name,msg.params.arguments??{});
-        return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(result)}],structuredContent:result,isError:false}));
+      for await(const c of req){
+        byteCount+=c.byteLength;
+        if(byteCount>128*1024)throw new Error('Too large');
+        chunks.push(c);
       }
-      return send(200,jsonErr(-32601,'Method not found',id));
+    }catch{return send(413,jsonErr(-32700,'Invalid or oversized body'));}
+    let raw;
+    try{raw=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks,byteCount));}
+    catch{return send(400,jsonErr(-32700,'Invalid UTF-8 body'));}
+    let rpc;try{rpc=JSON.parse(raw);}catch{return send(400,jsonErr(-32700,'Parse error'));}
+    const id=rpc?.id??null;
+    if(!plain(rpc)||rpc.jsonrpc!=='2.0'||typeof rpc.method!=='string'||Array.isArray(rpc))return send(400,jsonErr(-32600,'Invalid JSON-RPC request',id));
+    if(rpc.method==='notifications/initialized'){
+      res.writeHead(202);res.end();return;
+    }
+    if(rpc.method!=='initialize'&&req.headers['mcp-protocol-version']!==MCP_VERSION)return send(400,jsonErr(-32602,'Unsupported or missing MCP-Protocol-Version',id));
+    if(id===null && rpc.method!=='notifications/initialized')return send(400,jsonErr(-32600,'Request ID required'));
+    if(rpc.method==='initialize')return send(200,rpcReply(id,{protocolVersion:MCP_VERSION,
+      capabilities:{tools:{listChanged:false}},serverInfo:{name:'stellar-bazaar-paid-bridge',version:'0.1.0'},
+      instructions:'Search and preview are read-only. Calls need out-of-band operator approval and an external x402 signer.'}));
+    if(rpc.method==='ping')return send(200,rpcReply(id,{}));
+    if(rpc.method==='tools/list')return send(200,rpcReply(id,{tools:TOOLS}));
+    if(rpc.method!=='tools/call')return send(200,jsonErr(-32601,'Method not found',id));
+    const name=rpc.params?.name,args=rpc.params?.arguments??{};
+    if(typeof name!=='string'||!plain(args))return send(200,jsonErr(-32602,'Invalid tool arguments',id));
+    try{
+      const data=await broker.call(name,args);
+      return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(data)}],structuredContent:data,isError:false}));
     }catch(e){
-      const err={code:e.code??'TOOL_ERROR',reason:e.message??'Error',recovery:explainFailure({stage:'tool',error:e,traceId:id})};
+      // SF-33 hints are additive; preserve existing MCP wire fields and never
+      // treat an agent-visible hint as authority to sign or retry a payment.
+      const recoveryCode=e.code==='RESOURCE_STALE'||e.code==='CHALLENGE_MISMATCH'
+        ? 'discovery_stale_terms' : e.code==='TOOL_NOT_FOUND'
+          ? 'mcp_tool_missing' : 'unknown_upstream_error';
+      const recovery=explainFailure({stage:name==='bazaar_search'?'discovery':'mcp',reason:recoveryCode});
+      const err={code:e.code??'TOOL_ERROR',reason:e.message??'Error',recovery};
       return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(err)}],structuredContent:err,isError:true}));
     }
   };
