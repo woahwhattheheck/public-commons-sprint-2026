@@ -30,19 +30,18 @@ async function closeServer(server) {
  * Returned rpc() retains its random bearer token in a closure; the token is
  * never printed by this module or included in the acceptance receipt.
  */
-/** Strict by default: only an explicit operator may exercise an unpinned,
- * locally imported source with the nonpayable, no-signer demo. An opt-in is
- * NOT an approval for a live seller, public deployment or Stellar payment. */
-export function enforceLocalSourcePin(source, { allowUnpinnedLocalSource = false } = {}) {
+/** Local nonpayable integration reports source drift and stays runnable.
+ * Strict source-pin audit is an explicit option; neither path approves live commerce. */
+export function assessLocalSourcePin(source, { strictSourcePin = false } = {}) {
   if (!source || typeof source.baselineMatches !== 'boolean' ||
       typeof source.actualGitBlob !== 'string' ||
       typeof source.baselineGitBlob !== 'string')
     throw new TypeError('Source provenance must include checked actual and baseline Git blobs');
-  if (!source.baselineMatches && allowUnpinnedLocalSource !== true)
+  if (!source.baselineMatches && strictSourcePin === true)
     throw new Error('SF44 Bazaar source changed (' + source.actualGitBlob +
-      '); review source or explicitly opt in to an UNPINNED LOCAL NONPAYABLE DEMO');
+      '); strict source-pin audit requires review and an updated baseline');
   return Object.freeze({
-    mode: source.baselineMatches ? 'PIN_MATCH' : 'UNPINNED_LOCAL_OPT_IN',
+    mode: source.baselineMatches ? 'PIN_MATCH' : 'UNPINNED_LOCAL_DEMO',
     currentGitBlob: source.actualGitBlob,
     recordedGitBlob: source.baselineGitBlob,
   });
@@ -50,7 +49,7 @@ export function enforceLocalSourcePin(source, { allowUnpinnedLocalSource = false
 
 export async function startReadOnlyMcpOnramp(options = {}) {
   const source = await sourceProvenance();
-  const sourcePolicy = enforceLocalSourcePin(source, options);
+  const sourcePolicy = assessLocalSourcePin(source, options);
   const catalog = await startLocalDevelopmentCatalog();
   let server;
   try {
@@ -218,11 +217,11 @@ export async function runReadOnlyMcpOnramp(options = {}) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
-  if (args.length > 1 || (args.length === 1 && args[0] !== '--allow-unpinned-local-source')) {
-    console.error('Usage: node mcp-onramp.mjs [--allow-unpinned-local-source]');
+  if (args.length > 1 || (args.length === 1 && args[0] !== '--strict-source-pin')) {
+    console.error('Usage: node mcp-onramp.mjs [--strict-source-pin]');
     process.exitCode = 2;
   } else {
-    runReadOnlyMcpOnramp({ allowUnpinnedLocalSource: args.length === 1 })
+    runReadOnlyMcpOnramp({ strictSourcePin: args.length === 1 })
       .then(value => console.log(JSON.stringify(value, null, 2)))
       .catch(err => { console.error(err.message); process.exitCode = 1; });
   }
