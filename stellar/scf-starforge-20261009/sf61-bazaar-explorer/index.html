@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Bazaar Atlas · Stellar Service Discovery</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead">
+      <a class="wordmark" href="/" aria-label="Bazaar Atlas home">
+        <span class="glyph" aria-hidden="true">✳</span>
+        <span>BAZAAR <strong>ATLAS</strong></span>
+      </a>
+      <span class="build-mark">STELLAR / X402 / READ ONLY</span>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="eyebrow"><span class="pulse" aria-hidden="true"></span> A SOURCE-CONNECTED CATALOG EXPLORER</div>
+        <h1 id="page-title">Discover the endpoint.<br><em>Inspect the terms.</em></h1>
+        <p class="hero-copy">Explore Stellar-compatible x402 Bazaar listings, the HTTP and MCP interfaces they declare, and their individual payment options. No wallet connection, signing, settlement, or automatic purchase.</p>
+        <div class="source-banner" role="status">
+          <span class="source-dot" aria-hidden="true"></span>
+          <div class="source-text"><span class="caption">CATALOG SOURCE</span><strong id="source-kind">Connecting to local service…</strong><span id="source-origin">Read-only provider discovery</span></div>
+          <span class="no-pay">NO PAYMENT PATH</span>
+        </div>
+      </section>
+
+      <section class="workspace" aria-labelledby="explore-title">
+        <div class="workspace-head">
+          <div>
+            <span class="caption">01 / EXPLORE</span>
+            <h2 id="explore-title">Resource discovery</h2>
+          </div>
+          <p class="workspace-note">Reads native GET /discovery/resources and GET /discovery/search. Original provider pages are not rewritten into new listings.</p>
+        </div>
+
+        <form id="query-form" class="filters">
+          <div class="field field-query">
+            <label for="query">Describe a service or leave blank to browse</label>
+            <input id="query" type="search" maxlength="1024" placeholder="e.g. forecast, trading, research, data…" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="network">Network</label>
+            <select id="network">
+              <option value="stellar:testnet">Stellar testnet</option>
+              <option value="stellar:pubnet">Stellar pubnet</option>
+              <option value="">All declared networks</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="type">Resource type</label>
+            <select id="type">
+              <option value="">HTTP + MCP</option>
+              <option value="http">HTTP endpoint</option>
+              <option value="mcp">MCP tool</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="scheme">Payment scheme</label>
+            <select id="scheme">
+              <option value="">Any offered scheme</option>
+              <option value="exact">Exact</option>
+              <option value="upto">Up to</option>
+            </select>
+          </div>
+          <div class="field field-payto">
+            <label for="payto">Pay-to recipient <span>(optional exact match)</span></label>
+            <input id="payto" maxlength="256" spellcheck="false" autocomplete="off" placeholder="Original recipient string">
+          </div>
+          <div class="actions">
+            <button class="primary" type="submit">Explore catalog <span aria-hidden="true">↗</span></button>
+            <button class="secondary" type="button" id="clear">Reset</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="inventory" aria-labelledby="results-title">
+        <div class="inventory-header">
+          <div>
+            <span class="caption">02 / SOURCE RESULTS</span>
+            <h2 id="results-title">Discovered listings <span id="count" aria-live="polite"></span></h2>
+          </div>
+          <div class="inventory-actions">
+            <button class="secondary small" id="export" type="button" disabled>Export observed page ↓</button>
+          </div>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite">Loading catalog source…</p>
+        <div id="results" class="result-grid"></div>
+        <div class="pager">
+          <button class="secondary" id="prev" type="button" disabled>← Previous</button>
+          <span id="page-info" aria-live="polite">Page 1</span>
+          <button class="secondary" id="next" type="button" disabled>Next →</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-main"><span class="glyph" aria-hidden="true">✳</span> <strong>Bazaar Atlas</strong> <span>SF61 · Open-source operator surface</span></div>
+      <p>The catalog describes possible offers; it does not authenticate sellers, prove payment, or establish endorsement. Amounts are unconverted atomic units, never USD. No displayed URL is automatically opened or fetched by your browser.</p>
+      <p>Built upon the original Commons Bazaar catalog and native x402 discovery wire. Offline demo mode uses an explicitly nonpayable SF44 fixture.</p>
+    </footer>
+  </div>
+</body>
+</html>
