@@ -14,7 +14,13 @@ const integer = (v, name, {min=0,max=Number.MAX_SAFE_INTEGER}={}) => {
   return v;
 };
 export function atomicAmount(value, {allowZero=false}={}) {
-  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/.test(value))
+  if (typeof value !== 'string')
+    throw new TypeError('AMOUNT_NOT_CANONICAL_ATOMIC_STRING');
+  // Reject untrusted overlong input before scanning decimal digits or calling BigInt.
+  // Signed i128 has at most 39 canonical decimal digits.
+  if (value.length > MAX_I128.toString().length)
+    throw new RangeError('AMOUNT_OUTSIDE_SIGNED_I128');
+  if (!/^(0|[1-9][0-9]*)$/.test(value))
     throw new TypeError('AMOUNT_NOT_CANONICAL_ATOMIC_STRING');
   const n=BigInt(value);
   if (n > MAX_I128 || (!allowZero && n===0n)) throw new RangeError('AMOUNT_OUTSIDE_SIGNED_I128');

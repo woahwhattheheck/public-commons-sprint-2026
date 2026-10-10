@@ -24,6 +24,21 @@ test('signed i128 only, zero is legal at settle',()=>{
  for(const x of ['01','0','-1','1.2','1e4','170141183460469231731687303715884105728'])
    assert.throws(()=>atomicAmount(x));
 });
+test('oversize untrusted atomics reject before regex/BigInt at every preflight boundary',()=>{
+  const tooLong='9'.repeat(200_000);
+  assert.throws(()=>atomicAmount(tooLong),/AMOUNT_OUTSIDE_SIGNED_I128/);
+  assert.equal(atomicAmount('170141183460469231731687303715884105727'),(1n<<127n)-1n);
+  for(const stage of ['accepted','verify','settle','payload']){
+    const req=input('stateless');
+    if(stage==='accepted')req.paymentPayload.accepted.amount=tooLong;
+    if(stage==='verify')req.verifyRequirements.amount=tooLong;
+    if(stage==='settle')req.settleRequirements.amount=tooLong;
+    if(stage==='payload')req.paymentPayload.payload.maxAmount=tooLong;
+    assert.throws(()=>inspectUptoPhase(req),/AMOUNT_OUTSIDE_SIGNED_I128/,stage);
+  }
+  const zero=input('stateless','0');
+  assert.equal(inspectUptoPhase(zero).actual,'0');
+});
 test('explicit stateless and contract negotiation prevents downgrade',()=>{
  assert.equal(resolveUptoProfile({uptoProfile:'contract'},{supportedProfiles:['stateless','contract']}).profile,'contract');
  assert.throws(()=>resolveUptoProfile({}, {supportedProfiles:['stateless','contract'],allowSingleStatelessLegacy:true}));
