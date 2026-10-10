@@ -3,6 +3,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { startLocalDevelopmentCatalog } from '../sf44-developer-onramp/onboard.mjs';
 
 const HOST = '127.0.0.1';
@@ -238,6 +239,6 @@ function cli() {
   });
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === fileURLToPath(new URL('file://' + process.argv[1]))) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   Promise.resolve().then(cli).catch(error => { console.error(error); process.exitCode = 1; });
 }
