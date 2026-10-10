@@ -65,3 +65,13 @@ test('changing payment-amount getter is read once into immutable snapshot',async
  assert.equal(observed.decimalAmount,'1.5');
  assert.equal(reads,1);
 });
+
+test('oversized decimal strings are rejected before regex or BigInt; exact i128 range survives',()=>{
+ const max='170141183460469231731687303715884105727';
+ assert.equal(parseAtomic('170141183460469231731.687303715884105727',18),max);
+ assert.throws(()=>parseAtomic('170141183460469231731.687303715884105728',18),/signed i128/);
+ assert.equal(parseAtomic('0.000000000000000001',18),'1');
+ assert.equal(parseAtomic('0.000000000000000000',18,{allowZero:true}),'0');
+ assert.throws(()=>parseAtomic('9'.repeat(100_000),18),/representable length/);
+ assert.throws(()=>parseAtomic('0.'+'1'.repeat(100_000),18),/representable length/);
+});

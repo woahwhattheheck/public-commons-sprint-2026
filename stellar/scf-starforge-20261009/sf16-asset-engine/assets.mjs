@@ -14,8 +14,12 @@ const USDC_ADDRESSES = Object.freeze({
 
 /** Exact decimal-to-atomic conversion: never accepts IEEE-754 numbers, exponents or rounding. */
 export function parseAtomic(decimal, decimals, { allowZero=false }={}) {
-  check(typeof decimal === 'string' && /^(0|[1-9]\d*)(\.\d+)?$/.test(decimal), 'Decimal MUST be a canonical positive decimal string');
   check(Number.isInteger(decimals) && decimals >= 0 && decimals <= 18, 'Invalid token decimals');
+  // A signed i128 has at most 39 base-10 digits and token scale <=18.
+  // Fence untrusted input before an unbounded regex scan or BigInt parse.
+  check(typeof decimal === 'string' && decimal.length <= 39 + 1 + 18,
+    'Decimal input exceeds signed i128 representable length');
+  check(/^(0|[1-9]\d*)(\.\d+)?$/.test(decimal), 'Decimal MUST be a canonical positive decimal string');
   const [whole, fraction=''] = decimal.split('.');
   check(fraction.length <= decimals, 'Fractional precision exceeds token decimals');
   const units = BigInt(whole)*10n**BigInt(decimals) + BigInt((fraction+'0'.repeat(decimals)).slice(0,decimals) || '0');
