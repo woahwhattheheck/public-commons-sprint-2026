@@ -9,6 +9,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 require_once __DIR__ . '/editor-fields.php';
+require_once __DIR__ . '/editorial-workbench.php';
 
 /** No DNS/network calls: this is only a link allowlist, never an audio fetch. */
 function kzfr_bridge_creek_url($value) {
