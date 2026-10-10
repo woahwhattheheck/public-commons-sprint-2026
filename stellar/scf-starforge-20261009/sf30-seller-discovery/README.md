@@ -80,3 +80,11 @@ Public `resource.url` metadata is constrained to a canonical HTTPS URL with a pu
 This is seller metadata validation, not DNS resolution or network egress enforcement. A public-looking hostname can resolve to a private destination at connection time; production callers must enforce egress and DNS rebinding controls when opening sockets. The compiler still does not authenticate the seller or prove any payment.
 
 Focused check: `node --test stellar/scf-starforge-20261009/sf30-seller-discovery/test/resource-host.test.mjs`.
+
+## Soroban signed i128 amount fence
+
+A declared Stellar x402 `accepts[].amount` is a **canonical positive atomic-unit decimal string** and cannot exceed Soroban's signed-i128 maximum, `170141183460469231731687303715884105727` (2^127 − 1). This contract applies to both supported `exact` and `upto` metadata schemes and matches the existing seller, buyer and testnet transaction verification lanes. Invalid or physically impossible amounts are rejected when compiling seller metadata, before generating the HTTP 402 `PAYMENT-REQUIRED` header. Amounts are never interpreted as USD or converted from whole tokens.
+
+The limit is enforced by length and lexicographic comparison only after validating the positive canonical decimal grammar, so extreme untrusted decimal lengths do not require constructing giant BigInts.
+
+Focused regression: `node --test stellar/scf-starforge-20261009/sf30-seller-discovery/test/amount-i128.test.mjs`. This compiler emits metadata only and does not prove a payment, sign, settle or call a facilitator.
