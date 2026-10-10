@@ -65,7 +65,7 @@ export function bazaarExtensionOutcome(headerValue) {
 }
 
 export function inspectChallenge(status, header) {
-  if (status !== 402) return {httpStatus: status, state: 'NOT_HTTP_402'};
+  if (status !== 402) return {httpStatus: status, state: status === 200 ? 'UNPAID_GET_HTTP_200' : 'NOT_HTTP_402'};
   if (!header) return {httpStatus: status, state: 'NO_PAYMENT_REQUIRED_HEADER'};
   try {
     const payment = decodeJsonHeader(header, 'PAYMENT-REQUIRED');
@@ -84,6 +84,27 @@ export function inspectChallenge(status, header) {
   } catch (error) {
     return {httpStatus: status, state: 'INVALID_PAYMENT_REQUIRED', error: String(error.message)};
   }
+}
+
+// Diagnostic classification only: never attempts payment, settlement, indexing or a paid retry.
+export function sellerDiscoveryReadiness(challenge) {
+  if (challenge.state === 'UNPAID_GET_HTTP_200') return {
+    state: 'UNPAID_200_NO_402_DECLARATION',
+    diagnosis: 'An unauthenticated GET returned HTTP 200, not a 402 payment declaration. A Bazaar crawler using the same route cannot observe the paid offer from that response.',
+    nextAction: 'Check default free-tier, cache, and health-shortcut paths. If discovery requires a paid offer, expose a 402 with Bazaar metadata on the unauthenticated path and make free access explicitly opt-in.'
+  };
+  if (challenge.state === 'X402_402' && challenge.bazaarExtension) return {
+    state: 'UNPAID_402_BAZAAR_VISIBLE',
+    diagnosis: 'An unauthenticated 402 with Bazaar metadata is visible. Catalog indexing and any actual settlement remain separate checks.'
+  };
+  if (challenge.state === 'X402_402') return {
+    state: 'UNPAID_402_WITHOUT_BAZAAR',
+    diagnosis: 'The HTTP 402 lists payment terms but no Bazaar declaration; a discovery crawler may not have the resource metadata it needs.'
+  };
+  return {
+    state: 'NO_VALID_UNPAID_BAZAAR_402',
+    diagnosis: 'A valid unauthenticated HTTP 402 with Bazaar metadata was not observed; inspect the seller response and any fetch or decoding error.'
+  };
 }
 
 async function getBody(response) {
@@ -262,9 +283,11 @@ export async function diagnose({resourceUrl, catalogUrl, payTo, network, extensi
   return {
     schema: 'stellar-forge.seller-visibility.v1', mode: 'READ_ONLY_UNAUTHENTICATED',
     seller: resource.toString(), network: network ?? null, desiredPayTo: derivedPayTo ?? null,
-    challenge, extensionResponse: extension, catalog: summary, verdict,
+    challenge, sellerDiscovery: sellerDiscoveryReadiness(challenge), extensionResponse: extension, catalog: summary, verdict,
     interpretation: verdict === 'NOT_LISTED_IN_EXHAUSTED_CATALOG'
-      ? 'Missing from this facilitator catalog at read time; successful payment alone does not prove catalog indexing.'
+      ? (challenge.state === 'UNPAID_GET_HTTP_200'
+        ? 'Not listed in this exhausted catalog, and the seller gave an unpaid HTTP 200 rather than a 402 declaration. Free-tier or cache shortcuts can prevent crawler discovery; verify the challenge path before attributing absence to the facilitator.'
+        : 'Missing from this facilitator catalog at read time; successful payment alone does not prove catalog indexing.')
       : verdict === 'INCONCLUSIVE_CATALOG'
         ? 'Catalog coverage incomplete; do not interpret this as absence.'
         : verdict === 'LISTED_PAYMENT_ROUTE_MISMATCH'
