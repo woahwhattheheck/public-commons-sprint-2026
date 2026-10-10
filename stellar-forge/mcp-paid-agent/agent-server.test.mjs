@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { BazaarCatalog,createDiscoveryServer } from '../../scf46-stellar-bazaar/src/catalog.mjs';
 import { McpPaidToolBroker,createMcpHttpHandler,MCP_VERSION } from './agent-server.mjs';
+import { mcpAgentCommerceTool } from '../../stellar/scf-starforge-20261009/sf43-agent-commerce/mcp-buyer-acceptance.mjs';
 
 const schema={type:'object',properties:{input:{type:'object'}},required:['input']};
 const accepted={scheme:'exact',network:'stellar:testnet',amount:'17000',asset:'USDC:TEST',payTo:'GSELLER'};
@@ -106,6 +107,14 @@ test('MCP Streamable HTTP single-response: initialize, tools/list, tools/call, s
     assert.equal(init.status,200);assert.equal((await init.json()).result.protocolVersion,MCP_VERSION);
     const listed=await call('tools/list');const parsed=await listed.json();
     assert.ok(parsed.result.tools.some(t=>t.name==='bazaar_execute_approved'));
+    const names=parsed.result.tools.map(t=>t.name);
+    assert.equal(new Set(names).size,names.length);
+    assert.deepEqual(parsed.result.tools.find(t=>t.name===mcpAgentCommerceTool.name),mcpAgentCommerceTool);
+    const unavailable=await call('tools/call',{name:mcpAgentCommerceTool.name,arguments:{
+      search:'weather',targetResourceURL:f.provider.url+'/weather',maxAtomic:'17000'}});
+    const unavailableBody=await unavailable.json();
+    assert.equal(unavailableBody.result.isError,true);
+    assert.equal(unavailableBody.result.structuredContent.code,'AGENT_COMMERCE_UNAVAILABLE');
     const searched=await call('tools/call',{name:'bazaar_search',arguments:{query:'weather'}});
     assert.equal((await searched.json()).result.structuredContent.resources.length,1);
     const disallowedOrigin=await call('tools/list',{}, {origin:'https://attacker.example'});
@@ -115,6 +124,19 @@ test('MCP Streamable HTTP single-response: initialize, tools/list, tools/call, s
     const get=await fetch(mcp.url,{method:'GET',headers:{authorization:'Bearer '+token}});assert.equal(get.status,405);
     assert.equal(f.probes,0);assert.equal(f.signed,0);
   }finally{if(mcp)await close(mcp);await f.cleanup();}
+});
+
+test('SF43 tool dispatches only through an explicitly injected adapter',async()=>{
+  const args={search:'weather',targetResourceURL:'https://seller.example/weather',
+    targetMethod:'GET',maxAtomic:'17000'};
+  let received=null;
+  const broker=new McpPaidToolBroker({discoveryUrl:'https://catalog.example',
+    agentCommerce:async input=>{received=input;return {decision:'NOT_AUTHORIZED',reason:'FOCUSED_ADAPTER'};}});
+  const result=await broker.call(mcpAgentCommerceTool.name,args);
+  assert.deepEqual(received,args);
+  assert.deepEqual(result,{decision:'NOT_AUTHORIZED',reason:'FOCUSED_ADAPTER'});
+  assert.throws(()=>new McpPaidToolBroker({discoveryUrl:'https://catalog.example',agentCommerce:{}}),
+    /Invalid SF43 agent-commerce adapter/);
 });
 
 test('signed-retry provider loss remains INDETERMINATE and cannot auto-charge again',async()=>{
