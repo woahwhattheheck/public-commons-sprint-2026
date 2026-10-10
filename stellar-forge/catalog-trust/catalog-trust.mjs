@@ -32,6 +32,19 @@ function reject(reason, detail = undefined) {
   return { ok: false, reason, ...(detail === undefined ? {} : { detail }) };
 }
 
+// Audit facts include *untrusted* seller IDs and sequence values even before
+// their type gates run. Keep diagnostics bounded and JSON-safe so a rejected
+// envelope cannot crash the hash-chained audit writer.
+function auditScalar(value) {
+  if (value === undefined || value === null || typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const size = Buffer.byteLength(value, 'utf8');
+    return size <= 512 ? value : `[invalid long string: ${size} UTF-8 bytes]`;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  return `[invalid ${Array.isArray(value) ? 'array' : typeof value}]`;
+}
+
 function inspectTree(value, limits, depth = 0, state = { nodes: 0 }) {
   state.nodes += 1;
   if (state.nodes > limits.maxNodes) return reject('METADATA_NODE_LIMIT');
@@ -117,7 +130,8 @@ export class CatalogTrustBoundary {
   }
 
   #record(decision, reason, facts = {}) {
-    const event = canonical({ index: this.#audit.length + 1, decision, reason, ...facts });
+    const safeFacts = Object.fromEntries(Object.entries(facts).map(([key, value]) => [key, auditScalar(value)]));
+    const event = canonical({ index: this.#audit.length + 1, decision, reason, ...safeFacts });
     const eventHash = digest({ previousHash: this.#auditHead, event });
     this.#auditHead = eventHash;
     this.#audit.push(Object.freeze({ ...event, previousHash: this.#audit.at(-1)?.eventHash ?? '0'.repeat(64), eventHash }));
