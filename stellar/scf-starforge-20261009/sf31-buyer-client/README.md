@@ -34,6 +34,12 @@ Both `discover(origin)` and `call(url)` refuse literal IPv4/IPv6 addresses (incl
 
 **Operator network boundary:** a public hostname can still resolve or rebind to a private IP; this URL preflight alone is NOT DNS pinning or a complete SSRF control. Deploy catalog and buyer egress behind a resolver/connect-time public-IP policy or egress allowlist (TLS hostname verified, redirects disabled) before using untrusted sellers in production. Do not auto-trust a discovered API or pay without verified seller binding, current offer and explicit operator policy.
 
+### Discovery cancellation and advertised-size fence
+
+The existing 256 KiB incremental body cap remains authoritative for chunked and understated responses. `discover()` now also rejects a numeric `Content-Length` exceeding the cap **before reading any bytes**, with `DISCOVERY_RESPONSE_TOO_LARGE`. After an over-limit or invalid response, stream cancellation is best-effort and **not awaited**: a remote stream that never resolves its cancel request cannot indefinitely delay the caller's rejection. Neither condition changes paid-call behavior or authenticates returned catalogues.
+
+Focused offline regression: `node --test test/discovery-cancel.test.mjs` (injected streams only; no hosted Actions).
+
 ## Focused verification and provenance
 
 Run `node --test test/buyer.test.mjs`. The test exercises canonical x402 v2 request/response headers over a real local Node HTTP server, with the **same documented GET /discovery/resources response shape** as the separately published `BazaarCatalog`/`createDiscoveryServer` module. It does not execute that original module or claim a deployed provider integration. Its scheme payload and settlement receipt are intentionally fixture objects: **not signed Stellar transactions, payment success, seller authentication, mainnet or testnet evidence**. The test's error cases cover quote drift, wrong resource/method, approval denial, signer mismatch, outstanding status and a lost paid response; no double-spend retry.
