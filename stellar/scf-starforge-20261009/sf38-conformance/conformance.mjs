@@ -163,14 +163,14 @@ export function selectPublicProbeAddress(answers) {
 }
 function checkedSupportedUrl(raw) {
   const u=new URL(raw);
-  const host=u.hostname.toLowerCase().replace(/\\.$/,'');
+  const host=u.hostname.toLowerCase().replace(/\.$/,'');
   if (u.protocol!=='https:' || u.username || u.password || u.hash || u.search || u.port ||
       isIP(host) || !host.includes('.') ||
       ['localhost','local','internal','test','invalid','example'].some(s=>
         host===s || host.endsWith('.'+s))) throw new TypeError('SUPPORTED_PUBLIC_HTTPS_ORIGIN_REQUIRED');
   // Facilitators commonly mount their API under /facilitator: preserve that
   // path while ensuring an existing /supported suffix is not duplicated.
-  const prefix=u.pathname.replace(/\\/+$/,'');
+  const prefix=u.pathname.replace(/\/+$/,'');
   const path=prefix.endsWith('/supported')?prefix:prefix+'/supported';
   return new URL(path||'/supported',u.origin).href;
 }
