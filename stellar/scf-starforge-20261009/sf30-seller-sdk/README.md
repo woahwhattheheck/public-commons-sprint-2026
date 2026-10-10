@@ -32,7 +32,7 @@ const offer = compileHttpSellerOffer({
 const { statusCode, headers, body } = paymentRequiredResponse(offer);
 ```
 
-The output `schema` constrains the **shape of Bazaar `info`**, not API request-body validation; individual query parameter examples and descriptions are preserved. `amount` is a positive **string of atomic units**, not a decimal floating-point price. Only canonical `exact` is supported: claiming `upto` would be wrong without a real bounded authorization scheme. Seller SDK checks input shape and metadata; signature, SEP-41 contract, StrKey checksum, seller/payTo ownership, settled receipt, and real facilitation must be handled by canonical `@x402/stellar` and the existing trusted integration.
+The output `schema` constrains the **shape of Bazaar `info`**, not API request-body validation; individual query parameter examples and descriptions are preserved. `amount` is a positive **string of atomic units**, not a decimal floating-point price. Only canonical `exact` is supported: claiming `upto` would be wrong without a real bounded authorization scheme. The decimal atomic amount is bounded by the signed Soroban `i128` transfer range (`1` through `170141183460469231731687303715884105727`), not merely by digit count; a 39-digit value can otherwise exceed that maximum and produce an unsatisfiable offer. This is a seller-side preflight, not payment execution. Seller SDK checks input shape and metadata; signature, SEP-41 contract, StrKey checksum, seller/payTo ownership, settled receipt, and real facilitation must be handled by canonical `@x402/stellar` and the existing trusted integration.
 
 ## Actual catalog readback after authentic settlement
 
