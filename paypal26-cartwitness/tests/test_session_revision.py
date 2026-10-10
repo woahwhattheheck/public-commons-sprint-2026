@@ -28,7 +28,10 @@ class CheckoutRevision(unittest.TestCase):
                          {original["generation"]})
         self.assertEqual(Handler.action(None, "/api/capture", {"confirmed": True}, state)["revision"], 2)
 
-        reset = Handler.action(None, "/api/reset", {}, state)
+        reset = Handler.action(None, "/api/reset", {
+            "generation": completed["generation"],
+            "revision": completed["revision"],
+        }, state)
         self.assertEqual(reset["phase"], "idle")
         self.assertEqual(reset["revision"], 3)
         self.assertEqual(reset["generation"], original["generation"])
@@ -39,3 +42,4 @@ class CheckoutRevision(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
