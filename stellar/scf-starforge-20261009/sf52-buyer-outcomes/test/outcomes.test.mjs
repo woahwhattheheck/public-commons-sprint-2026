@@ -23,9 +23,25 @@ test('reported payment is not counted as a verified transfer',()=>{
 test('SF43 exact transfer evidence and HTTP body are separate gates',()=>{
   const r={...captureBuyerResult(buyer('i-two'),{observedAt:at}),chain,delivery};
   assert.equal(analyzeOne(r).status,'TRANSFER_AND_HTTP_BODY_OBSERVED');
-  const agg=aggregateOutcomes([r,{...r,intentId:'i-three',delivery:null}]);
+  const secondTx='c'.repeat(64);
+  const independent={...r,intentId:'i-three',delivery:null,
+    buyer:{...r.buyer,receipt:{...r.buyer.receipt,transaction:secondTx}},
+    chain:{...chain,transaction:secondTx}};
+  const agg=aggregateOutcomes([r,independent]);
   assert.equal(agg.counts.verifiedTransfers,2);assert.equal(agg.counts.transferAndBodyObserved,1);
   assert.equal(agg.observedTransferAtomicByAsset[0].atomicTotal,'50000');
+});
+test('reused on-chain proof under distinct intents cannot inflate verified transfers',()=>{
+  const first={...captureBuyerResult(buyer('i-proof-a'),{observedAt:at}),chain,delivery};
+  const alias={...first,intentId:'i-proof-b'};
+  assert.throws(()=>aggregateOutcomes([first,alias]),/DUPLICATE_CHAIN_TRANSFER_PROOF/);
+  // A forged conflicting ledger cannot launder the same transaction and event.
+  assert.throws(()=>aggregateOutcomes([first,{...alias,chain:{...chain,ledger:124}}]),
+    /DUPLICATE_CHAIN_TRANSFER_PROOF/);
+  // An unverified seller receipt is not independently counted and is not
+  // affected by the duplicate chain-proof fence.
+  const sellerOnly={...alias,chain:null,delivery:null};
+  assert.equal(aggregateOutcomes([first,sellerOnly]).counts.verifiedTransfers,1);
 });
 test('network/amount/recipient mismatches cannot claim paid success',()=>{
   const r=captureBuyerResult(buyer('i-four'),{observedAt:at});
