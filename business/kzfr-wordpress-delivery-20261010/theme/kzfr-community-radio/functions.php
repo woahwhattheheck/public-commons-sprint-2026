@@ -13,8 +13,10 @@ function kzfr_theme_setup() {
 add_action('after_setup_theme', 'kzfr_theme_setup');
 function kzfr_theme_assets() {
     $version = wp_get_theme()->get('Version');
-    wp_enqueue_style('kzfr-community-style', get_stylesheet_uri(), array(), $version);
-    wp_enqueue_script('kzfr-community-menu', get_template_directory_uri() . '/assets/site.js', array(), $version, true);
+    // The official WordPress Twenty Twenty-One parent enqueues this handle.
+    // Child CSS loads after parent CSS, preserving parent updates and overriding layout.
+    wp_enqueue_style('kzfr-community-style', get_stylesheet_uri(), array('twenty-twenty-one-style'), $version);
+    wp_enqueue_script('kzfr-community-menu', get_stylesheet_directory_uri() . '/assets/site.js', array(), $version, true);
 }
 add_action('wp_enqueue_scripts', 'kzfr_theme_assets');
 
