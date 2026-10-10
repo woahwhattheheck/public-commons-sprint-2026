@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
+import { createHash } from 'node:crypto';
 import { X402BuyerClient,BuyerError } from '../buyer.mjs';
 const b64=x=>Buffer.from(JSON.stringify(x)).toString('base64');
 const terms={scheme:'exact',network:'stellar:TESTNET',amount:'20',asset:'stellar-asset-fixture',payTo:'GBUYER_TEST_PAYTO',maxTimeoutSeconds:60,extra:{name:'USD'}};
@@ -127,3 +128,71 @@ test('explicit developer loopback exception does not allow arbitrary IP hosts',a
     e=>e.code==='UNSAFE_RESOURCE_HOST');
   assert.equal(requests,1);
 });
+
+test('approval receives immutable full accepted terms and exact posted body identity',async()=>fixture(async({state,buyer,url})=>{
+  let approved;
+  const result=await buyer.call({...settings(url),
+    approve:intent=>{
+      approved=intent;
+      assert.equal(intent.maxTimeoutSeconds,60);
+      assert.deepEqual(intent.acceptedTerms,terms);
+      assert.equal(Object.isFrozen(intent),true);
+      assert.equal(Object.isFrozen(intent.acceptedTerms),true);
+      assert.equal(Object.isFrozen(intent.acceptedTerms.extra),true);
+      assert.equal(intent.bodyPresent,true);
+      assert.equal(intent.bodyBytes,12);
+      assert.equal(intent.bodySha256,createHash('sha256').update('request body').digest('hex'));
+      assert.throws(()=>{intent.acceptedTerms.extra.name='tampered';},TypeError);
+      return true;
+    },
+    sign:({intent,challenge,accepted})=>{
+      assert.strictEqual(intent,approved);
+      assert.notStrictEqual(accepted,intent.acceptedTerms);
+      assert.deepEqual(accepted,terms);
+      return signed({challenge,accepted});
+    }
+  });
+  assert.equal(result.status,'DELIVERED_REPORTED_SETTLED');
+  assert.equal(state.paid.length,1);
+}));
+
+test('policy rejects unapproved extra and caller caps timeout before signing',async()=>fixture(async({state,buyer,url})=>{
+  state.paymentRequired={x402Version:2,resource:{url},accepts:[{
+    ...terms,extra:{name:'UNAPPROVED_REPAYMENT_CONDITION'}
+  }]};
+  let signerCalls=0,approvalCalls=0;
+  await assert.rejects(buyer.call({...settings(url),
+    approve:intent=>{
+      approvalCalls++;
+      return intent.acceptedTerms.extra?.name==='USD';
+    },
+    sign:()=>{signerCalls++;throw Error('not allowed');}
+  }),e=>e.code==='PAYMENT_NOT_APPROVED');
+  assert.equal(approvalCalls,1);
+  state.paymentRequired=null;
+  approvalCalls=0;
+  await assert.rejects(buyer.call({...settings(url),
+    expect:{...expected,maxTimeoutSeconds:30},
+    approve:()=>{approvalCalls++;return true;},
+    sign:()=>{signerCalls++;throw Error('not allowed');}
+  }),e=>e.code==='PAYMENT_TERMS_NOT_AUTHORIZED');
+  assert.equal(approvalCalls,0);
+  assert.equal(signerCalls,0);
+  assert.equal(state.paid.length,0);
+}));
+
+test('request fingerprint binds exact replayable body bytes and presence',async()=>fixture(async({buyer,url})=>{
+  const intents=[];
+  for(const data of [undefined,'',new Uint8Array([0,255]),'request body']){
+    await assert.rejects(buyer.call({...settings(url),body:data,
+      approve:intent=>{intents.push(intent);return false;}
+    }),e=>e.code==='PAYMENT_NOT_APPROVED');
+  }
+  assert.equal(intents.length,4);
+  assert.equal(intents[0].bodyPresent,false);
+  assert.equal(intents[1].bodyPresent,true);
+  assert.equal(intents[0].bodySha256,intents[1].bodySha256);
+  assert.equal(intents[2].bodyBytes,2);
+  assert.equal(intents[2].bodySha256,createHash('sha256').update(Buffer.from([0,255])).digest('hex'));
+  assert.notEqual(intents[3].bodySha256,intents[2].bodySha256);
+}));
