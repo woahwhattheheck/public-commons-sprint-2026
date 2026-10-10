@@ -32,3 +32,13 @@ Relevant potential prime **research targets, not contacted or committed**:
 **Conditional proposed specialist transaction, not a promise or price to City:** ask incumbent sales owner to evaluate one narrowly separable paid **pre-award schema-readiness QA package** or **post-award data-dictionary/sample acceptance screen**, contingent on selected prime agreement and permissible City subcontract disclosure/approval. Internal *illustrative offer, unaccepted*: $2,500 fixed for a 5-business-day technical gate: capture exact City approved schema, configured original field map, run original partner sample metadata+attribute files, explain failing fields and provide second-pass signed-off quality report (up to two passes). Requires prime-supplied real Esri artifacts, written limited scope, no field collection, no extraction/transmission of protected parcel data, and separate professional geospatial expert for CRS/ground truth. Do not send or commit price without owner decision.
 
 **Owner choice:** seek documented qualified-prime interest and allowed subcontract route, or **NO BID**. No buyer/partner contacted, no actual data received, no cash, submission or payment. More public-source demos without a prospective paying prime are not next priority.
+
+## Existing fleet commercial pipeline integration
+
+Run the **existing** public `business/lead-to-paid-work-pipeline-20261010/pipeline.mjs` source against this package's `pipeline-case.json` input. Do not fork/rewrite its engine or alter the unrelated buyer-owner cases:
+
+```bash
+node business/lead-to-paid-work-pipeline-20261010/pipeline.mjs business/midland-tx-27000010-qa/pipeline-case.json /secure/midland-decision --now=2026-10-10T23:00:00Z
+```
+
+The input records nine distinct mandatory prime/City-approval gates, original 2:00 p.m. local (CDT) Oct 28 deadline, the source-transcription caveat, two candidate firms with expressly limited documented evidence, three reviewable acceptance milestones, and an **unapproved** illustrative fixed fee. No actual delivery costs, insured prime, client references, City subcontract approval, account sign-in, written customer authorization or positive payment receipt is included. Engine must return **HOLD** until original commercial owner obtains and verifies these records. Never infer outreach authority from the command. It performs no external communication.
