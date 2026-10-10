@@ -29,7 +29,7 @@ const make=async({approve,signPayment,counts})=>{
     }
     counts.signed++;
     return new Response('{"ok":true}',{status:200,headers:{
-      'PAYMENT-RESPONSE':b64({success:true,network:'stellar:testnet',transaction:'test-fixture'})
+      'PAYMENT-RESPONSE':b64({success:true,network:'stellar:testnet',transaction:'b'.repeat(64)})
     }});
   };
   const broker=new McpPaidToolBroker({discoveryUrl:catalog,
