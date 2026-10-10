@@ -92,3 +92,19 @@ canonical x402 `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, `/verify` or `/settle` w
 
 Focused boundary check: `node --test stellar-forge/mcp-paid-agent/recovery-overlay.test.mjs`
 (no paid network requests, local fake transport only).
+
+## Outbound redirect origin fence
+
+All three native HTTP fetch edges (configured Bazaar discovery GET, operator-allowed
+merchant GET/HEAD quote probe, and signed PAYMENT-SIGNATURE execution) explicitly
+set Node Fetch RequestInit `redirect: 'error'`. A seller-controlled 3xx cannot
+re-route the request to a different origin after the original operator allowlist
+check, nor forward a signed custom payment header. A redirect in the post-signing
+phase leaves the quote INDETERMINATE and requires externally verified settlement
+before considering another authorization. This intentionally also rejects same-
+origin redirects; merchants/catalog operators must publish their final canonical
+endpoints. Custom `fetchImpl` injections MUST honor the supplied redirect setting.
+
+Focused non-payment local network regression:
+`node --test stellar-forge/mcp-paid-agent/redirect-fence.test.mjs`
+uses actual loopback 302/307 responses and asserts no unauthorized receiver hit.
