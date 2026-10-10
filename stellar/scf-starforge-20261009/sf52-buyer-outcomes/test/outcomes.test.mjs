@@ -91,3 +91,16 @@ test('original SF31 unsigned HTTP error remains visible in SF52 without a paid a
   assert.throws(()=>captureBuyerResult({...result,status:'NO_PAYMENT_REQUIRED'},{observedAt:at}),
     /FREE_RESULT_INCONSISTENT/);
 });
+
+test('seller receipt capture bounds untrusted network and transaction values',()=>{
+  const oversized='invalid-'+('q'.repeat(32000));
+  const invalid={...buyer('i-invalid'),receipt:{success:true,network:oversized,transaction:oversized}};
+  const captured=captureBuyerResult(invalid,{observedAt:at});
+  assert.deepEqual(captured.buyer.receipt,{success:true,network:null,transaction:null});
+  assert.equal(JSON.stringify(captured).includes(oversized),false);
+  assert.equal(analyzeOne(captured).status,'SELLER_RECEIPT_CONFLICT');
+  const other={...buyer('i-other'),receipt:{success:true,network:'eip155:8453',transaction:tx}};
+  assert.deepEqual(captureBuyerResult(other,{observedAt:at}).buyer.receipt,{success:true,network:null,transaction:tx});
+  assert.deepEqual(captureBuyerResult(buyer('i-canonical'),{observedAt:at}).buyer.receipt,
+    {success:true,network:'stellar:testnet',transaction:tx});
+});
