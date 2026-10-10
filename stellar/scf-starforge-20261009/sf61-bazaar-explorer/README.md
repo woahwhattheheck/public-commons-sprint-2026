@@ -16,6 +16,24 @@ Open the printed local address in a browser on the same machine. The process imp
 
 The explorer runs another loopback HTTP listener whose UI sends only same-origin GET requests. Those are forwarded exclusively to the original SF44 GET discovery endpoints. No duplicated catalog, ranking engine, mock HTTP service or remote merchant access is introduced. Ctrl-C closes both listeners.
 
+## Connect to the ORIGINAL persistent SF60 catalog
+
+The complementary [SF60 durable journal discovery service](../sf60-durable-catalog-transaction/SERVING.md) shipped in [PR635](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/635). The viewer now connects directly to that service without creating another catalog owner, lock, ingester or backend API. Start the existing operator's SF60 service **in its own process**, using a real existing catalog directory:
+
+~~~sh
+# Terminal A: operator-owned durable SF60 journal (example port 8787)
+node stellar/scf-starforge-20261009/sf60-durable-catalog-transaction/service.mjs \
+  --directory /private/catalog --port 8787
+
+# Terminal B: canonical SF61 browser over exactly that service's read-only GET routes
+node stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs \
+  --local-upstream http://127.0.0.1:8787
+~~~
+
+Open the **SF61** printed browser origin in the same machine. Terminal B fetches the existing SF60's exact original GET /discovery/resources and /discovery/search, then returns native resource rows to the static Atlas browser. Terminal B never touches the journal directory or opens another journal lock. Terminal A owns the SF60 lock for the entire lifetime, and can also mount serveDiscovery({catalog}) in its existing authenticated owner process as documented by the backend author. Close the viewer with Ctrl-C and then the journal service; do not start a second SF60 standalone owner while an existing owner holds the journal.
+
+The --local-upstream option accepts **only a literal IPv4 http://127.0.0.1:<port>** with an explicit port, no credentials, path/query/fragment or alternate hostname. It never follows redirect responses or forwards credentials, cookies or arbitrary browser URLs. Both HTTP listeners remain bound to the local loopback interface. This is local operator access rather than multi-user authentication; protect the host and do not expose either port over public interfaces. If the backend has no catalog records, Atlas shows an empty page instead of inventing listings.
+
 ## Operator-selected actual public facilitator
 
 For the first-party named Vellar Stellar testnet Bazaar endpoint identified in the [SF41 original-source research](../sf41-real-source-replay/README.md), opt in explicitly:
@@ -35,7 +53,7 @@ The browser sends native network, type, scheme and payTo filters. Blank query ca
 
 Each catalog card shows the resource URL as **text, not a clickable merchant request**, source descriptions, tool or HTTP method when declared, tags and individual offered terms. UI text is inserted using DOM textContent, never interpreted as untrusted markup. Optional export saves the actual observed page to local JSON with mode, observation timestamp and requested filters.
 
-CLI switches: --fixture (default), --upstream with explicit public HTTPS facilitator, and --port for a local listener (0 means ephemeral).
+CLI switches: --fixture (default), --local-upstream with an existing SF60 read-only local source, --upstream with an explicit public HTTPS facilitator, and --port for a local listener (0 means ephemeral).
 
 ### What a reviewer can use
 
