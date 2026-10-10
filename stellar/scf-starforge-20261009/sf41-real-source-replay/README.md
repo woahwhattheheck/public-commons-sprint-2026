@@ -24,6 +24,8 @@ If an actual original provider requires auth, use an EXISTING authorized environ
 
 capture.mjs restricts traffic to original HTTPS facilitator GET /discovery/resources; never accesses payment origin, /settle or /verify. It refuses redirects, honors relevant Retry-After headers and fetches ALL native offset pages without an arbitrary max-page quota. Raw response bytes, origin URL, status, retrieval timestamp, SHA-256, declared access mode and measured latency are saved in sources.json and page files. This is *real provider retrieval*, not reverse-engineered page text.
 
+A complete capture checks native pagination offset, total and duplicates across all pages. Short pages are not terminal while more rows remain. Without a total, capture continues to the explicit empty page. Each response streams through a 16 MiB per-page limit; saved artifacts use exclusive creation to protect prior runs. The manifest records `pagination_coverage`. After an interrupted capture, choose a new output directory. Run the five source-level regressions with `node --test stellar/scf-starforge-20261009/sf41-real-source-replay/test/capture-integrity.test.mjs`; existing Muse/local teams handle full first-party source execution separately.
+
 For several authorized independent captures, combine the sources arrays in one sources.json, copying exact raw JSON pages into that manifest's directory and avoiding conflicting filenames. Each SHA256 is independently rechecked.
 
 ## Full native source replay

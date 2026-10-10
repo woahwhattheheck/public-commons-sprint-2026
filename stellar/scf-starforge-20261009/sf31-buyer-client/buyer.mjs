@@ -1,5 +1,6 @@
 // MIT License. SF31 non-custodial x402 v2 buyer transport. No embedded keys or signing.
 import { randomUUID, createHash } from 'node:crypto';
+import { isIP } from 'node:net';
 
 const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const amount = v => typeof v === 'string' && /^(0|[1-9][0-9]*)$/.test(v);
@@ -16,8 +17,17 @@ function requireURL(value,{allowLocal=false}={}) {
   let u;
   try {u=new URL(value);} catch {throw new BuyerError('BAD_URL');}
   if (u.username || u.password || u.hash) throw new BuyerError('BAD_URL');
-  const local = ['localhost','127.0.0.1','[::1]'].includes(u.hostname.toLowerCase());
+  const host = u.hostname.toLowerCase().replace(/\.$/, '');
+  const local = ['localhost','127.0.0.1','[::1]'].includes(host);
   if (u.protocol !== 'https:' && !(allowLocal && local && u.protocol==='http:')) throw new BuyerError('HTTPS_REQUIRED');
+  // Discovery returns untrusted seller endpoints. Refuse address literals and
+  // private DNS namespaces BEFORE making either unsigned or signed requests.
+  // Explicit allowLocal is ONLY for loopback developer fixtures.
+  const ipHost = host.startsWith('[') && host.endsWith(']') ? host.slice(1,-1) : host;
+  const localName = ['localhost','local','localdomain','internal','home.arpa','ip6-localhost','ip6-loopback'].includes(host) ||
+    ['.localhost','.localhost.localdomain','.local','.localdomain','.internal','.home.arpa'].some(s=>host.endsWith(s));
+  if ((isIP(ipHost)!==0 || localName) && !(allowLocal && local))
+    throw new BuyerError('UNSAFE_RESOURCE_HOST');
   return u;
 }
 function decodeHeader(raw, kind) {
@@ -142,9 +152,13 @@ export class X402BuyerClient {
     if(!['GET','POST','PUT','PATCH','DELETE','HEAD'].includes(verb))throw new BuyerError('BAD_METHOD');
     if(['GET','HEAD'].includes(verb)&&body!=null)throw new BuyerError('BAD_METHOD_BODY');
     if(typeof approve!=='function'||typeof sign!=='function')throw new BuyerError('APPROVAL_AND_SIGNER_REQUIRED');
-    if(!object(headers) || Object.keys(headers).some(k=>/^(payment-signature|authorization|cookie|host)$/i.test(k)))
+    if(!object(headers))throw new BuyerError('FORBIDDEN_CALLER_HEADERS');
+    let safeHeaders;
+    try {safeHeaders=new Headers(headers);}
+    catch(e){throw new BuyerError('BAD_CALLER_HEADERS','',{cause:e});}
+    if([...safeHeaders.keys()].some(k=>/^(payment-signature|authorization|proxy-authorization|cookie|host)$/i.test(k)))
       throw new BuyerError('FORBIDDEN_CALLER_HEADERS');
-    const data=prepareBody(body); const safeHeaders=new Headers(headers);
+    const data=prepareBody(body);
     const options={method:verb,headers:safeHeaders,body:data,redirect:'manual',signal};
     let first;
     try{first=await this.fetch(resource,options);}catch(e){throw new BuyerError('INITIAL_TRANSPORT_FAILED','',{cause:e});}
