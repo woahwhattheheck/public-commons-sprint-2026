@@ -7,8 +7,25 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 export const APPROX_MONTH_SECONDS = 30 * 24 * 60 * 60;
-const CENT = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
-const SIX = (n) => Math.round((n + Number.EPSILON) * 1e6) / 1e6;
+function finiteNumber(n, label) {
+  if (!Number.isFinite(n)) throw new RangeError(`${label} must remain finite`);
+  return n;
+}
+const CENT = (n) => finiteNumber(
+  Math.round((finiteNumber(n, 'monetary calculation') + Number.EPSILON) * 100) / 100,
+  'cent-rounded monetary calculation');
+const SIX = (n) => finiteNumber(
+  Math.round((finiteNumber(n, 'rate calculation') + Number.EPSILON) * 1e6) / 1e6,
+  'six-decimal rate calculation');
+
+// Refuse NaN / Infinity in any derived field before JSON can turn it into null.
+function finiteProjection(value, path = 'projection') {
+  if (typeof value === 'number') return finiteNumber(value, path);
+  if (value !== null && typeof value === 'object') {
+    for (const [key, v] of Object.entries(value)) finiteProjection(v, `${path}.${key}`);
+  }
+  return value;
+}
 
 function nonNegative(n, label) {
   if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) {
@@ -55,6 +72,9 @@ function checkValues(input) {
 export function project(input, paidCalls, architecture = 'edge_db') {
   checkValues(input);
   nonNegative(paidCalls, 'paidCalls');
+  if (!Number.isSafeInteger(paidCalls)) {
+    throw new RangeError('paidCalls must be a nonnegative safe integer count');
+  }
   if (!['edge_db', 'vm_db'].includes(architecture)) {
     throw new RangeError('architecture must be edge_db or vm_db');
   }
@@ -85,7 +105,7 @@ export function project(input, paidCalls, architecture = 'edge_db') {
   const knownOrAssumed = infrastructureQuoted + hypotheticalSponsorUsd
     + Object.values(optionalCosts).reduce((t, v) => t + (v ?? 0), 0);
   const contributionCeiling = revenues - knownOrAssumed;
-  return {
+  return finiteProjection({
     architecture,
     paid_calls_month: paidCalls,
     discovery_queries_month: paidCalls * a.discovery_queries_per_paid,
@@ -106,7 +126,7 @@ export function project(input, paidCalls, architecture = 'edge_db') {
     omitted_cost_categories: omissions,
     complete_budget: omissions.length === 0,
     successful_onchain_sponsor_cost_is_illustrative: true,
-  };
+  });
 }
 
 /** An optimistic break-even bound (omitted costs assumed zero ONLY for bound calculation). */
@@ -136,7 +156,7 @@ export function optimisticBreakEven(input, architecture = 'edge_db') {
       + n * a.onchain_attempts_per_paid * a.xlm_per_onchain_attempt * a.illustrative_xlm_usd;
     const revenue = n * a.operator_fee_usd_per_paid
       + a.subscribers * a.subscriber_fee_usd_per_month;
-    return revenue - cost;
+    return finiteNumber(revenue - cost, 'optimistic break-even contribution');
   };
   if (profit(0) >= 0) return 0;
   const maxCalls = 1e12;

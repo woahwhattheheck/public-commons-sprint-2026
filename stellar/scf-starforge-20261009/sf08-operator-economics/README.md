@@ -12,7 +12,7 @@ Requires Node 20+ only; no npm install, API keys, external calls or GitHub Actio
 node model.mjs inputs.json > scenarios.json
 ```
 
-The generated `scenarios.json` is the reproducible default calculation. Change the input file locally for real pricing quotes, different volume assumptions, retry rates, FX scenarios, paid discovery vs free read mix, or an operating-fee scenario, then rerun. The program validates nonnegative finite inputs and keeps unknown costs **null**, not quietly priced at zero. Both architectures use the same merchant behavior assumptions, but *neither has been capacity tested*.
+The generated `scenarios.json` is the reproducible default calculation. Change the input file locally for real pricing quotes, different volume assumptions, retry rates, FX scenarios, paid discovery vs free read mix, or an operating-fee scenario, then rerun. The program validates nonnegative finite assumptions, requires an integer paid-call count within JavaScript's safe-integer range, and rejects *derived* nonfinite counts, rates and currency calculations rather than serializing Infinity/NaN as JSON null. Per-call average rates may remain fractional. Unknown costs stay **null**, not quietly priced at zero. Both architectures use the same merchant behavior assumptions, but *neither has been capacity tested*.
 
 ## First-party price inputs (USD; retrieved Oct 9, 2026)
 
