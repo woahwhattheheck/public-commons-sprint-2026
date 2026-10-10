@@ -2,6 +2,8 @@
  * JSON-RPC account observations are advisory; they do not prove a signed receipt,
  * secure chain endpoint, escrow, or continued balances at transaction signing.
  */
+import { SOLANA_MEMO_PROGRAM, SPL_TOKEN_PROGRAM } from './solana_spl.mjs';
+
 export class SolanaSplPreflightError extends Error {
   constructor(code, message) {
     super(message);
@@ -10,7 +12,7 @@ export class SolanaSplPreflightError extends Error {
   }
 }
 
-const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+const TOKEN_PROGRAM = SPL_TOKEN_PROGRAM;
 const RPC_ENDPOINTS = Object.freeze({
   devnet: 'https://api.devnet.solana.com',
   testnet: 'https://api.testnet.solana.com',
@@ -21,6 +23,23 @@ const DECIMAL_ATOMIC = /^[1-9][0-9]*$/;
 
 function fail(code, message) {
   throw new SolanaSplPreflightError(code, message);
+}
+
+// Byte and signer-role binding for the exact unsigned maker's transfer plan.
+// A downstream wallet can serialize these fields directly into an instruction.
+function exactAccountMeta(actual, pubkey, isSigner, isWritable) {
+  return actual && typeof actual === 'object' && !Array.isArray(actual)
+    && Object.keys(actual).length === 3
+    && actual.pubkey === pubkey && actual.isSigner === isSigner
+    && actual.isWritable === isWritable;
+}
+
+function encodedTransferChecked(atomic, decimals) {
+  const bytes = Buffer.alloc(10);
+  bytes.writeUInt8(12, 0);
+  bytes.writeBigUInt64LE(BigInt(atomic), 1);
+  bytes.writeUInt8(decimals, 9);
+  return bytes.toString('hex');
 }
 
 function checkPlan(plan) {
@@ -56,15 +75,30 @@ function checkPlan(plan) {
       || !/^[0-9a-f]{64}$/.test(plan.settlementDigest)) {
     fail('INVALID_PLAN', 'plan currency/memo digest is not pinned');
   }
+  const memo = plan.instructions?.[0];
   const transfer = plan.instructions?.[1];
-  if (plan.instructions?.length !== 2 || plan.instructions[0]?.kind !== 'memo'
-      || plan.instructions[0]?.utf8 !== `WORKSEAL:v1:${plan.settlementDigest}`
-      || transfer?.kind !== 'transferChecked' || transfer?.programId !== TOKEN_PROGRAM
-      || transfer?.mint !== plan.mint || transfer?.owner !== preflight.owner
-      || transfer?.sourceTokenAccount !== preflight.sourceTokenAccount
-      || transfer?.destinationTokenAccount !== preflight.destinationTokenAccount
-      || transfer?.amountAtomic !== plan.amountAtomic || transfer?.decimals !== plan.decimals) {
-    fail('INVALID_PLAN', 'instruction and account preflight do not agree');
+  const memoKeys = ['programId', 'kind', 'utf8'];
+  const transferKeys = ['programId', 'kind', 'sourceTokenAccount', 'mint',
+    'destinationTokenAccount', 'owner', 'amountAtomic', 'decimals', 'accounts', 'dataHex'];
+  if (plan.instructions?.length !== 2 || !memo || !transfer
+      || Object.keys(memo).length !== memoKeys.length
+      || memoKeys.some(key => !Object.hasOwn(memo, key))
+      || Object.keys(transfer).length !== transferKeys.length
+      || transferKeys.some(key => !Object.hasOwn(transfer, key))
+      || memo.programId !== SOLANA_MEMO_PROGRAM || memo.kind !== 'memo'
+      || memo.utf8 !== `WORKSEAL:v1:${plan.settlementDigest}`
+      || transfer.kind !== 'transferChecked' || transfer.programId !== TOKEN_PROGRAM
+      || transfer.mint !== plan.mint || transfer.owner !== preflight.owner
+      || transfer.sourceTokenAccount !== preflight.sourceTokenAccount
+      || transfer.destinationTokenAccount !== preflight.destinationTokenAccount
+      || transfer.amountAtomic !== plan.amountAtomic || transfer.decimals !== plan.decimals
+      || transfer.dataHex !== encodedTransferChecked(plan.amountAtomic, plan.decimals)
+      || !Array.isArray(transfer.accounts) || transfer.accounts.length !== 4
+      || !exactAccountMeta(transfer.accounts[0], preflight.sourceTokenAccount, false, true)
+      || !exactAccountMeta(transfer.accounts[1], plan.mint, false, false)
+      || !exactAccountMeta(transfer.accounts[2], preflight.destinationTokenAccount, false, true)
+      || !exactAccountMeta(transfer.accounts[3], preflight.owner, true, false)) {
+    fail('INVALID_PLAN', 'serialized transfer bytes, account metas or memo differ from the bound plan');
   }
   return preflight;
 }
