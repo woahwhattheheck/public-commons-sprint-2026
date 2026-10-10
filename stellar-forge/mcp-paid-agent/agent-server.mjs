@@ -219,7 +219,12 @@ export class McpPaidToolBroker {
       let receipt=null;if(responseHeader){try{receipt=strictBytes(responseHeader);}catch{receipt=null;}}
       q.result={httpStatus:second.status,paidAttempted:true,content:second.ok?await readData(second):null,paymentResponse:receipt?{
         success:receipt.success===true,network:receipt.network??null,transaction:receipt.transaction??null}:null};
-      q.status=second.ok&&receipt?.success===true?'CONFIRMED_BY_SERVER':'INDETERMINATE';
+      // A server success header without the quoted Stellar network and a
+      // valid transaction hash is not even a coherent x402 settlement claim.
+      const receiptMatchesQuote=receipt?.success===true&&
+        receipt.network===q.accepted.network&&
+        typeof receipt.transaction==='string'&&/^[0-9a-f]{64}$/i.test(receipt.transaction);
+      q.status=second.ok&&receiptMatchesQuote?'CONFIRMED_BY_SERVER':'INDETERMINATE';
       if(q.status==='INDETERMINATE')q.failure='Signed request dispatched; obtain provider reconciliation before any reattempt';
       return statOf(q);
     }catch(e){
