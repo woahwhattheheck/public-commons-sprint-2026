@@ -1,0 +1,197 @@
+// MIT. Stateless, network-bound HTTP frontdoor for TWO independent x402 v2 Stellar facilitators.
+// Cryptographic verify/settle belongs to the operator's native @x402/stellar backends.
+import { createServer } from 'node:http';
+import { createHash, timingSafeEqual } from 'node:crypto';
+
+export const NETWORKS = Object.freeze(['stellar:testnet', 'stellar:pubnet']);
+const DEFAULT_MAX_BODY = 1024 * 1024;
+const DEFAULT_MAX_CONCURRENT = 32;
+const DEFAULT_TIMEOUT_MS = 12000;
+
+export function originOnly(raw, {allowLoopbackHttp = false} = {}) {
+  if (typeof raw !== 'string' || !raw.trim()) throw new TypeError('Missing facilitator origin');
+  let url;
+  try { url = new URL(raw); } catch { throw new TypeError('Invalid facilitator origin'); }
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if ((url.protocol !== 'https:' && !(allowLoopbackHttp && local && url.protocol === 'http:')) ||
+      !url.hostname || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+    throw new TypeError('Facilitator URL must be a credential-free HTTPS origin (or explicitly enabled HTTP loopback)');
+  }
+  return url.origin;
+}
+
+const hash = text => createHash('sha256').update(text).digest();
+function authorized(actual, token) {
+  if (token === null) return true;
+  const bearer = /^Bearer ([^\s]+)$/i.exec(actual ?? '')?.[1] ?? '';
+  return timingSafeEqual(hash(bearer), hash(token));
+}
+
+class HttpError extends Error {
+  constructor(status, code) { super(code); this.status = status; this.code = code; }
+}
+function json(res, status, body) {
+  res.writeHead(status, {'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff'});
+  res.end(JSON.stringify(body));
+}
+async function bodyBytes(req, maxBytes) {
+  const declared = Number(req.headers['content-length']);
+  if (Number.isFinite(declared) && declared > maxBytes) throw new HttpError(413, 'BODY_TOO_LARGE');
+  const parts = [];
+  let total = 0;
+  for await (const part of req) {
+    total += part.byteLength;
+    if (total > maxBytes) throw new HttpError(413, 'BODY_TOO_LARGE');
+    parts.push(part);
+  }
+  if (!total) throw new HttpError(400, 'EMPTY_BODY');
+  return Buffer.concat(parts, total);
+}
+function targetNetwork(bytes) {
+  let request;
+  try { request = JSON.parse(bytes.toString('utf8')); }
+  catch { throw new HttpError(400, 'INVALID_JSON'); }
+  const requirements = request?.paymentRequirements;
+  const payload = request?.paymentPayload;
+  const network = requirements?.network;
+  // Both independent v2 descriptors must bind the SAME native Stellar ledger.
+  if (!NETWORKS.includes(network) || payload?.accepted?.network !== network) {
+    throw new HttpError(400, 'NETWORK_NOT_BOUND');
+  }
+  if (payload.x402Version !== 2 ||
+      typeof requirements?.scheme !== 'string' || !requirements.scheme ||
+      payload?.accepted?.scheme !== requirements.scheme) {
+    throw new HttpError(400, 'X402_V2_SCHEME_MISMATCH');
+  }
+  return network;
+}
+async function readLimited(response, maxBytes) {
+  const length = Number(response.headers.get('content-length'));
+  if (Number.isFinite(length) && length > maxBytes) throw new HttpError(502, 'UPSTREAM_RESPONSE_TOO_LARGE');
+  const reader = response.body?.getReader();
+  if (!reader) throw new HttpError(502, 'UPSTREAM_EMPTY_BODY');
+  const parts = [];
+  let count = 0;
+  try {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      count += value.byteLength;
+      if (count > maxBytes) throw new HttpError(502, 'UPSTREAM_RESPONSE_TOO_LARGE');
+      parts.push(Buffer.from(value));
+    }
+  } finally { await reader.cancel().catch(() => {}); }
+  const raw = Buffer.concat(parts, count);
+  let data;
+  try { data = JSON.parse(raw.toString('utf8')); }
+  catch { throw new HttpError(502, 'UPSTREAM_NOT_JSON'); }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new HttpError(502, 'UPSTREAM_NOT_OBJECT');
+  return {raw, data};
+}
+
+function distinctCommonExtensions(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return [];
+  const others = new Set(b.map(x => JSON.stringify(x)));
+  return a.filter(x => others.has(JSON.stringify(x)));
+}
+export function combineSupported(results) {
+  if (!Array.isArray(results) || results.length !== 2) throw new HttpError(502, 'SUPPORTED_MISSING_NETWORK');
+  const kinds = [], signers = {};
+  for (let i = 0; i < NETWORKS.length; i++) {
+    const network = NETWORKS[i];
+    const src = results[i];
+    if (!Array.isArray(src?.kinds) || !src.kinds.length) throw new HttpError(502, 'SUPPORTED_MISSING_NETWORK');
+    for (const kind of src.kinds) {
+      // A misconfigured upstream may not advertise the other ledger as its own.
+      if (kind?.network !== network || kind?.x402Version !== 2 || typeof kind?.scheme !== 'string') {
+        throw new HttpError(502, 'SUPPORTED_NETWORK_MISMATCH');
+      }
+      kinds.push(kind);
+    }
+    const peerSigners = src.signers?.[network];
+    if (peerSigners !== undefined) {
+      if (!Array.isArray(peerSigners) || peerSigners.some(x => typeof x !== 'string')) {
+        throw new HttpError(502, 'SUPPORTED_BAD_SIGNERS');
+      }
+      signers[network] = peerSigners;
+    }
+  }
+  return {kinds, extensions: distinctCommonExtensions(results[0].extensions, results[1].extensions), signers};
+}
+
+/**
+ * upstreams: { 'stellar:testnet': {origin, bearer?}, 'stellar:pubnet': {origin, bearer?} }
+ * Does not generate signatures, relay an unknown destination, or perform settlement itself.
+ */
+export function makeFrontdoor({upstreams, inboundToken = null, allowLoopbackHttp = false,
+  maxBodyBytes = DEFAULT_MAX_BODY, maxConcurrent = DEFAULT_MAX_CONCURRENT,
+  timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = fetch} = {}) {
+  if (inboundToken !== null && (typeof inboundToken !== 'string' || inboundToken.length < 16)) {
+    throw new TypeError('Inbound token must be at least 16 characters');
+  }
+  if (!Number.isSafeInteger(maxBodyBytes) || maxBodyBytes < 1 ||
+      !Number.isSafeInteger(maxConcurrent) || maxConcurrent < 1 ||
+      !Number.isSafeInteger(timeoutMs) || timeoutMs < 1) throw new TypeError('Invalid limits');
+  const peers = {};
+  for (const network of NETWORKS) {
+    const cfg = upstreams?.[network];
+    peers[network] = {origin: originOnly(cfg?.origin, {allowLoopbackHttp}), bearer: cfg?.bearer ?? null};
+    if (peers[network].bearer !== null && (typeof peers[network].bearer !== 'string' || !peers[network].bearer)) {
+      throw new TypeError('Bad upstream auth configuration');
+    }
+  }
+  let inflight = 0;
+  const queryPeer = async (network, path, raw = null) => {
+    const peer = peers[network];
+    const headers = {accept: 'application/json'};
+    if (raw) headers['content-type'] = 'application/json';
+    if (peer.bearer) headers.authorization = `Bearer ${peer.bearer}`;
+    const response = await fetchImpl(peer.origin + path, {
+      method: raw ? 'POST' : 'GET', headers, body: raw ?? undefined,
+      redirect: 'manual', signal: AbortSignal.timeout(timeoutMs)
+    });
+    if (response.status >= 300 && response.status < 400) throw new HttpError(502, 'UPSTREAM_REDIRECT_DENIED');
+    const result = await readLimited(response, maxBodyBytes * 2);
+    return {status: response.status, ...result};
+  };
+  return createServer(async (req, res) => {
+    const pathname = (() => { try { const url = new URL(req.url, 'http://localhost'); return url.search ? null : url.pathname; } catch { return null; } })();
+    if (req.method === 'GET' && pathname === '/healthz') {
+      json(res, 200, {status: 'configured', networks: NETWORKS}); return;
+    }
+    if (!authorized(req.headers.authorization, inboundToken)) {
+      json(res, 401, {error: 'UNAUTHORIZED'}); return;
+    }
+    if (!((req.method === 'GET' && pathname === '/supported') ||
+          (req.method === 'POST' && ['/verify', '/settle'].includes(pathname)))) {
+      json(res, 404, {error: 'ROUTE_NOT_FOUND'}); return;
+    }
+    if (inflight >= maxConcurrent) { json(res, 429, {error: 'BUSY'}); return; }
+    inflight++;
+    try {
+      if (pathname === '/supported') {
+        const peersResult = await Promise.all(NETWORKS.map(x => queryPeer(x, '/supported')));
+        if (peersResult.some(x => x.status !== 200)) throw new HttpError(502, 'UPSTREAM_SUPPORTED_FAILED');
+        json(res, 200, combineSupported(peersResult.map(x => x.data)));
+        return;
+      }
+      const type = req.headers['content-type'] ?? '';
+      if (!/^application\/json\s*(?:;|$)/i.test(type)) throw new HttpError(415, 'JSON_REQUIRED');
+      const bytes = await bodyBytes(req, maxBodyBytes);
+      const network = targetNetwork(bytes);
+      const peer = await queryPeer(network, pathname, bytes);
+      if (peer.data.network !== undefined && peer.data.network !== network) {
+        throw new HttpError(502, 'UPSTREAM_NETWORK_MISMATCH');
+      }
+      // The response is validated as JSON, then forwarded BYTE-FOR-BYTE and with the native status.
+      res.writeHead(peer.status, {'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store', 'x-content-type-options': 'nosniff'});
+      res.end(peer.raw);
+    } catch (err) {
+      const isTimeout = err?.name === 'TimeoutError' || err?.name === 'AbortError';
+      const code = err instanceof HttpError ? err.code : isTimeout ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_UNAVAILABLE';
+      const status = err instanceof HttpError ? err.status : isTimeout ? 504 : 502;
+      json(res, status, {error: code});
+    } finally { inflight--; }
+  });
+}
