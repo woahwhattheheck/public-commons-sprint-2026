@@ -25,6 +25,8 @@ This module treats `extra.uptoProfile` as mandatory whenever more than one profi
 node --test stellar/scf-starforge-20261009/sf37-upto-interoperability/test/upto-profile.test.mjs
 ```
 
+Untrusted `amount` / `maxAmount` decimal strings longer than the 39-digit positive signed-i128 ceiling are rejected *before* regular-expression scanning or BigInt allocation. The same original-source preflight boundary applies to offer, accepted, verify, settle, and stateless/stateful payload maximums.
+
 No npm dependencies, no GitHub Actions. The 8 focused Node v22.16.0 checks run actual original JavaScript functions against exact **documented upstream wire shapes**, including both separate proposed profiles, amount limits (with BigInt canonical signed i128), source offer/verify/settle drift, trusted settlement contract binding, zero-charge, over-cap, profile downgrades, and malformed expiry. No simulated cryptographic signature truth or fabricated RPC calls. Source files `upto-profile.mjs`, `test/upto-profile.test.mjs`, `UPSTREAM_REVIEW.md`.
 
 ## Integrating after upstream convergence
