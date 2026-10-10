@@ -90,3 +90,47 @@ test('strict original header and resource parsing',()=>{
   assert.throws(()=>decodeJsonHeader('bad $$$'),/Invalid/);
   assert.equal(resourceKey('https://Example.org/a/'),'https://example.org/a');
 });
+test('network and payTo must share one original catalog accepts tuple, including beyond 50 displayed rows', async () => {
+  const alternatives = [
+    {network:'stellar:testnet', payTo:'GTESTNETRECIPIENT', scheme:'exact', asset:'native', amount:'10'},
+    {network:'stellar:pubnet', payTo:'GPUBNETRECIPIENT', scheme:'exact', asset:'native', amount:'10'}
+  ];
+  const seller = await loopback((_req,res) => {
+    res.writeHead(402, {'payment-required':asHeader({x402Version:2,accepts:alternatives,
+      extensions:{bazaar:{info:{input:{type:'http',method:'GET'}}}}})});
+    res.end();
+  });
+  let addMatchingOption = false;
+  const catalog = await loopback((_req,res) => {
+    const rows = Array.from({length:50}, (_,i) => ({
+      resource:seller.url+'/pulse',type:'http',accepts:alternatives,
+      extensions:{bazaar:{info:{input:{type:'http',method:'GET',toolName:'route-'+i}}}}
+    }));
+    if (addMatchingOption) rows.push({
+      resource:seller.url+'/pulse',type:'http',
+      accepts:[{network:'stellar:testnet',payTo:'GPUBNETRECIPIENT',scheme:'exact',asset:'native',amount:'10'}],
+      extensions:{bazaar:{info:{input:{type:'http',method:'GET',toolName:'route-50'}}}}
+    });
+    res.writeHead(200, {'content-type':'application/json'});
+    res.end(JSON.stringify({items:rows,pagination:{total:rows.length}}));
+  });
+  const run = () => diagnose({resourceUrl:seller.url+'/pulse',
+    catalogUrl:catalog.url+'/discovery/resources',allowLoopback:true,
+    payTo:'GPUBNETRECIPIENT',network:'stellar:testnet',pageLimit:100});
+  try {
+    const mismatched = await run();
+    assert.equal(mismatched.catalog.complete,true);
+    assert.equal(mismatched.catalog.matchingResourceCount,50);
+    assert.equal(mismatched.catalog.matchingEvidence.desiredNetworkFound,true);
+    assert.equal(mismatched.catalog.matchingEvidence.desiredPayToFound,true);
+    assert.equal(mismatched.catalog.matchingEvidence.desiredPaymentRouteFound,false);
+    assert.equal(mismatched.verdict,'LISTED_PAYMENT_ROUTE_MISMATCH');
+    addMatchingOption = true;
+    const valid = await run();
+    assert.equal(valid.catalog.complete,true);
+    assert.equal(valid.catalog.matchingResourceCount,51);
+    assert.equal(valid.catalog.matches.length,50);
+    assert.equal(valid.catalog.matchingEvidence.desiredPaymentRouteFound,true);
+    assert.equal(valid.verdict,'LISTED');
+  } finally { await catalog.close(); await seller.close(); }
+});
