@@ -21,7 +21,14 @@ export function requireEndpoint(value, {allowLoopback = false} = {}) {
 
 export function resourceKey(value) {
   try {
-    const url = new URL(value);
+    // Original BazaarCatalog serializes resource as {url, ...metadata};
+    // some external providers return a flat URL string. Accept either
+    // without ever coercing an untrusted object into a URL candidate.
+    const locator = typeof value === 'string' ? value :
+      value !== null && typeof value === 'object' && !Array.isArray(value) &&
+      typeof value.url === 'string' ? value.url : null;
+    if (locator === null) return null;
+    const url = new URL(locator);
     if (!['https:', 'http:'].includes(url.protocol)) return null;
     url.hash = '';
     if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\/+$/, '');
