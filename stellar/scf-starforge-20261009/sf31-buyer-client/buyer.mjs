@@ -193,7 +193,11 @@ export class X402BuyerClient {
   async discover({origin,query,filters={},limit=20,signal}={}){
     const u=requireURL(origin,{allowLocal:this.allowLocal});
     if (!Number.isInteger(limit)||limit<1||limit>100)throw new BuyerError('BAD_DISCOVERY_LIMIT');
-    u.pathname=query?'/discovery/search':'/discovery/resources';u.search='';
+    // Respect a caller-selected provider deployment prefix (e.g. Coinbase CDP's
+    // /platform/v2/x402) while preserving the legacy root /discovery/* routes.
+    // u is already validated by requireURL; any caller query is discarded.
+    const prefix=u.pathname.replace(/\/+$/,'');
+    u.pathname=prefix+(query?'/discovery/search':'/discovery/resources');u.search='';
     if(query)u.searchParams.set('query',query);
     for(const [k,v] of Object.entries(filters)){
       if(!['network','scheme','payTo','type','extensions'].includes(k)||typeof v!=='string')throw new BuyerError('BAD_DISCOVERY_FILTER');
