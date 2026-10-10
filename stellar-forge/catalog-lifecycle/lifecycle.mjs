@@ -54,7 +54,10 @@ function ownershipConfidence(provenance) {
 function normalizePayment(term) {
   if (!plain(term)) throw new TypeError('PAYMENT_TERM_INVALID');
   const amount = term.amount ?? term.maxAmountRequired;
-  if (typeof amount !== 'string' || !/^[0-9]+$/.test(amount) || BigInt(amount) <= 0n) {
+  // 78 decimal digits cover the uint256 width. Check length BEFORE a
+  // regex scan or BigInt parse on seller-controlled input.
+  if (typeof amount !== 'string' || amount.length === 0 || amount.length > 78 ||
+      !/^[0-9]+$/.test(amount) || BigInt(amount) <= 0n) {
     throw new TypeError('PAYMENT_AMOUNT_MUST_BE_POSITIVE_BASE_UNIT_STRING');
   }
   for (const field of ['asset', 'network', 'payTo', 'scheme']) {
@@ -193,6 +196,7 @@ export class LifecycleCatalog {
       if (!plain(item) || !safeText(item.id, 4096) || !Array.isArray(item.history) || !item.history.length) {
         throw new TypeError('SNAPSHOT_RESOURCE_INVALID');
       }
+      if (catalog.#history.has(item.id)) throw new TypeError('SNAPSHOT_DUPLICATE_RESOURCE');
       let sequence = 0;
       for (const revision of item.history) {
         validateSequence(revision.sequence);
