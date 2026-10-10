@@ -38,12 +38,19 @@ function fits(t,start,occupied,maxKw){
 }
 function placement(t,start,occupied,dir){for(let h=start;h<start+t.hours;h++)occupied[h]+=dir*t.kw}
 function costOf(t,start,prices){return t.kw*prices.slice(start,start+t.hours).reduce((a,b)=>a+b,0)}
+// Monetary presentation must not depend on caller task order. Keep the
+// optimizer's original numerical search and per-task costs unchanged.
+function displayedTotal(tasks,starts,prices){
+  const entries=tasks.map((task,i)=>({id:task.id,amount:costOf(task,starts[i],prices)}));
+  entries.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
+  return Number(entries.reduce((sum,entry)=>sum+entry.amount,0).toFixed(4));
+}
 function snapshot(tasks,starts,prices,maxKw){
   const profile=Array(24).fill(0);
   return {items:tasks.map((task,i)=>{
     const start=starts[i];placement(task,start,profile,1);
     return {id:task.id,label:task.label,start,end:start+task.hours,kw:task.kw,kwh:task.kw*task.hours,cost:Number(costOf(task,start,prices).toFixed(4))};
-  }),cost:Number(tasks.reduce((s,t,i)=>s+costOf(t,starts[i],prices),0).toFixed(4)),hourlyKw:profile.map(v=>Number(v.toFixed(4))),maxKw};
+  }),cost:displayedTotal(tasks,starts,prices),hourlyKw:profile.map(v=>Number(v.toFixed(4))),maxKw};
 }
 export function plan(raw=DEMO){
   const {prices,tasks,maxKw}=inputs(raw);
