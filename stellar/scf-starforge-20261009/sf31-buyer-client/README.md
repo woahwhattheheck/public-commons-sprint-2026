@@ -28,23 +28,6 @@ const result = await buyer.call({
 
 The address/network/asset strings are illustrative placeholders, **not** a real payable endpoint or assertions that `stellar:pubnet` is the correct upstream CAIP-2 network. Use actual original 402 terms and official signer output, not these placeholders, for live operation. Query results may be untrusted, so present them to the user/operator before choosing an endpoint. Default requires HTTPS and exact signed resource URL. `allowLocal:true` allows only loopback HTTP for offline checks. User-supplied `Cookie`, `Authorization`, `Host` and `PAYMENT-SIGNATURE` headers are blocked. Signatures are never logged; no cross-origin redirects are followed; input bodies must be replayable and at most 1 MiB. Only one selected payment requirement is permitted; `upto` is deliberately not accepted without an independent scheme-specific approval integration and is not advertised as live. The SHA-256 fingerprint contains request body bytes only (not HTTP headers); it is a policy binding aid, **not** a seller attestation or a signature over headers. An absent body and a present empty body share the empty SHA-256, so inspect `bodyPresent` as well. The signer still receives its own cloned requirement, never the policy's frozen reference.
 
-### Provider-mounted catalog paths and subsequent pages
-
-`discover({origin})` keeps any **caller-authorized HTTPS base path** before appending `/discovery/resources` or `/discovery/search`. For example, `https://catalog.example/platform/v2/x402/` requests `https://catalog.example/platform/v2/x402/discovery/resources?limit=20`, not `https://catalog.example/discovery/resources`. A plain root origin remains unchanged. The `origin` value is the catalog *mount point*, not the complete `/discovery/resources` endpoint. The same origin trust check, manual redirect refusal, and 256 KiB response cap apply.
-
-The optional `offset` argument (default `0`) lets a caller request successive provider pages without silently discarding results. It must be a **nonnegative safe integer** or `BAD_DISCOVERY_OFFSET` is raised before any fetch. Zero is omitted from the query string to retain existing root-origin request URLs. This client does not infer provider pagination rules or fetch additional pages automatically: inspect the returned `pagination` and advance `offset` using the server's actual result semantics.
-
-```js
-const page = await buyer.discover({
-  origin: 'https://catalog.example/platform/v2/x402',
-  filters: {network: 'stellar:testnet'},
-  limit: 20,
-  offset: 40
-});
-```
-
-Focused original-module regression: `node --test test/discovery-route.test.mjs` in this directory, using the unmodified `Response` streaming implementation and the current `X402BuyerClient`. No public endpoint, funds, keys, CI, or external payment required.
-
 ### Untrusted catalog destination preflight
 
 Both `discover(origin)` and `call(url)` refuse literal IPv4/IPv6 addresses (including canonicalized numeric/hex IPv4 aliases) and localhost/private DNS namespace suffixes over HTTPS by default, **before any outbound request, approval or signing**. They return `BuyerError('UNSAFE_RESOURCE_HOST')`. This prevents a seller-controlled discovery record from directly targeting metadata-service or loopback/IP-based private infrastructure. `allowLocal:true` remains explicitly for loopback development fixtures only; it does not exempt arbitrary IPs or .internal/.local hosts. `HTTP` outside that explicit mode remains denied.
@@ -69,3 +52,15 @@ Pin: x402 Foundation [specification v2](https://github.com/x402-foundation/x402/
 ### Catalog discovery byte boundary
 
 `discover()` consumes the actual HTTP response body through a bounded stream and rejects more than **256 KiB of decoded response bytes**, regardless of a server's `Content-Length` header. It parses JSON only after a fatal UTF-8 decode; malformed encodings and malformed JSON return `BAD_DISCOVERY_RESPONSE`, and oversized replies return `DISCOVERY_RESPONSE_TOO_LARGE`. A transport failure while reading returns `DISCOVERY_TRANSPORT_FAILED`. A valid large catalog should be paginated by the upstream server; this client deliberately will not allocate an unbounded body from an untrusted origin. Run the one focused regression with `node --test test/discovery-stream.test.mjs` locally (no hosted Actions).
+
+### Discovery deployments under a URL prefix
+
+The `origin` for `discover()` can be a trusted provider's **base path**, not only a host root. For example, `https://api.example.com/platform/v2/x402` is requested at `/platform/v2/x402/discovery/resources` or `/platform/v2/x402/discovery/search`; an ordinary `https://host` continues to use `/discovery/*`. The optional terminal slash is ignored. Pass the *base prefix*, not the entire `/discovery/resources` endpoint. URL credentials and fragments remain forbidden, and any preexisting URL query is discarded before building the discovery request. Actual provider availability still requires that provider to implement these routes. No change to buyer payment approval, signing, HTTP 402, response caps, or redirect controls.
+
+Focused first-party loopback regression: `node --test test/discovery-prefix.test.mjs`. No external seller, payment or GitHub Actions run is needed.
+
+### Explicit discovery page offset
+
+`discover({ origin, limit, offset })` accepts a nonnegative safe-integer `offset` for requesting a later Bazaar page. The default `offset: 0` is omitted to preserve existing URLs; positive values are encoded after `limit`. Invalid offsets fail with `BAD_DISCOVERY_OFFSET` before any fetch. The client returns the provider's actual `pagination` unchanged and does not infer totals or auto-fetch subsequent pages. Caller-authorized deployment prefixes remain governed by the separately merged prefix handling.
+
+Focused offline regression: `node --test test/discovery-offset.test.mjs`.

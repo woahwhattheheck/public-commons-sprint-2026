@@ -38,7 +38,7 @@ export function createOpsHandler({catalog, discoveryHandler, nowMs=()=>performan
   if (typeof discoveryHandler!=='function'||typeof nowMs!=='function'||typeof readyCheck!=='function'||(observe!==undefined&&typeof observe!=='function'))throw new TypeError('Trusted catalog/handler and clock required');
   for(const [v,lo,hi] of [[requestsPerWindow,1,1_000_000],[windowMs,100,3_600_000],[maxClients,1,50_000],[maxInFlight,1,100_000],[sampleCap,10,10_000],[readyTimeoutMs,25,30_000]])
     if(!validNumber(v,lo,hi))throw new RangeError('Invalid bounded operations policy');
-  let active=0, completed=0, rejectedRate=0, rejectedLoad=0;
+  let active=0, completed=0, abortedResponses=0, rejectedRate=0, rejectedLoad=0;
   const clients=new Map(), summary=new Map();
   const bucketFor=(ip,t)=>{
     let b=clients.get(ip);
@@ -53,18 +53,28 @@ export function createOpsHandler({catalog, discoveryHandler, nowMs=()=>performan
     }
     return b;
   };
-  const record=(route,status,ms)=>{
-    const q=summary.get(route)??{total:0,classes:{'2xx':0,'3xx':0,'4xx':0,'5xx':0},samples:[]};
-    q.total++;q.classes[classify(status)]++;
-    q.samples.push(Math.max(0,ms));if(q.samples.length>sampleCap)q.samples.shift();
-    summary.set(route,q);completed++;
-    try{observe?.({route,status,durationMs:Number(Math.max(0,ms).toFixed(3))});}catch{/* observers never affect requests */}
-  };
+  const record=(route,status,ms,aborted=false)=>{
+    const q=summary.get(route)??{total:0,abortedResponses:0,classes:{'2xx':0,'3xx':0,'4xx':0,'5xx':0},samples:[]};
+    q.total++;
+    if(aborted){
+      // A socket closed before finish is not a successful HTTP response,
+      // even if Node already wrote a 200 status with an incomplete body.
+      q.abortedResponses++;abortedResponses++;
+    }else{
+      q.classes[classify(status)]++;
+      q.samples.push(Math.max(0,ms));if(q.samples.length>sampleCap)q.samples.shift();
+      completed++;
+    }
+    summary.set(route,q);
+    const event={route,status:aborted?null:status,durationMs:Number(Math.max(0,ms).toFixed(3))};
+    if(aborted)event.aborted=true;
+    try{observe?.(event);}catch{/* observers never affect requests */}
+  };
   const localOnly=(req)=>LOCAL.has(req.socket?.remoteAddress??'') && localHostOnly(req);
   const snapshot=()=>{
     const routes={};
-    for(const [k,v] of summary)routes[k]={requests:v.total,statusClasses:{...v.classes},p50Ms:quantile(v.samples,0.5),p95Ms:quantile(v.samples,0.95),sampleCount:v.samples.length};
-    return {kind:'bazaar-local-process-telemetry',uptime:'not_measured_by_this_adapter',completedRequests:completed,inFlight:active,rateLimited:rejectedRate,overloaded:rejectedLoad,routeMetrics:routes};
+    for(const [k,v] of summary)routes[k]={requests:v.total,abortedResponses:v.abortedResponses,statusClasses:{...v.classes},p50Ms:quantile(v.samples,0.5),p95Ms:quantile(v.samples,0.95),sampleCount:v.samples.length};
+    return {kind:'bazaar-local-process-telemetry',uptime:'not_measured_by_this_adapter',completedRequests:completed,abortedResponses,inFlight:active,rateLimited:rejectedRate,overloaded:rejectedLoad,routeMetrics:routes};
   };
   const checkReady=async()=>{
     let timer;
@@ -82,12 +92,13 @@ export function createOpsHandler({catalog, discoveryHandler, nowMs=()=>performan
   async function handler(req,res){
     const started=nowMs(), route=routeOf(req), ip=req.socket?.remoteAddress??'unknown';
     let finished=false, admitted=false;
-    const done=()=>{
-      if(finished)return;finished=true;
-      if(admitted)active--;
-      record(route,res.statusCode||500,nowMs()-started);
-    };
-    res.once('finish',done);res.once('close',done);
+    const done=(aborted=false)=>{
+      if(finished)return;finished=true;
+      if(admitted)active--;
+      record(route,res.statusCode||500,nowMs()-started,aborted);
+    };
+    res.once('finish',()=>done(false));
+    res.once('close',()=>done(!res.writableFinished));
     try {
       if(['/readyz','/healthz','/metrics'].includes(route)){
         if(!localOnly(req)){send(res,403,{error:'LOCAL_ONLY'});return;}

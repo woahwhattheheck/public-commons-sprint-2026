@@ -56,3 +56,9 @@ This is URL-level validation, **not DNS resolution protection**. A public-lookin
 ## HTTP 402 header interoperability
 
 The canonical x402 v2 \`PAYMENT-REQUIRED\` header is Base64-encoded JSON. This SDK's emitted header is bounded to **32,768 Base64 characters** because the shipped SF31 buyer transport rejects any longer header. \`paymentRequiredResponse()\` throws \`RangeError\` *before responding* when large Bazaar examples or other seller metadata would exceed that actual buyer limit. The focused test preserves the exact 32,768-character boundary and rejects 32,772. Keep seller examples compact; never truncate payment terms, an encoded header, or signed content to fit. This is a local SDK interoperability ceiling, not a universal x402 protocol limit. Reverse proxies or HTTP clients may impose smaller ceilings and must be checked separately.
+
+## Query parameter dictionary safety
+
+The compiler treats query parameter names as untrusted metadata: `__proto__`, `prototype` and `constructor` are rejected, preventing ambiguous or prototype-affecting JSON Schema keys. Other valid names inherited by ordinary JavaScript objects, such as `toString` and `hasOwnProperty`, remain usable and must serialize as **own** query example/schema properties. This is seller-side metadata hygiene only, not request authentication or an x402 settlement guarantee.
+
+Focused regression: `node --test stellar/scf-starforge-20261009/sf30-seller-sdk/test/query-keys.test.mjs`.
