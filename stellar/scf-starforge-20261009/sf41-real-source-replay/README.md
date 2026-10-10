@@ -10,6 +10,31 @@ MIT. This is an executable full-corpus read-only research workbench for the ACTU
 - [SF49 first-party issue ledger](../../scf_2026/SF49_PUBLIC_SIGNALS_20261009.json): nine public reports; public-issue-query-probes.json contains derived, UNLABELED engineering queries. They are not live user query logs and not a search relevance ground truth. To add true judgments, supply known relevant canonical entry IDs and a label_source URI per query.
 - Lane ownership: SF24 owns real-corpus quality labels; SF42 owns search index optimization; SF45 owns resilient client; SF50 owns quote-term reconciliation. This SF41 workstream supplies original captures, strict native source replay, performance/provenance and reusable Muse/cloud experiments, not a duplicate search system.
 
+## Capture native provider filters without scope drift
+
+The official x402 Bazaar `GET /discovery/resources` contract supports five
+read-only filters: `type`, `payTo`, `scheme`, `network`, `extensions`.
+Pass any subset using distinct CLI flags (each option at most once). Each requested offset page uses
+identical filters, and `sources.json` saves the exact `filters` object. Original
+page URLs retain the native query; replay coverage rejects altered, missing,
+duplicated or undeclared filter parameters. Unfiltered historical manifests
+without `filters` remain compatible, but filtered and unfiltered captures
+must never be presented as the same native corpus.
+
+To target the public Stellar testnet catalog documented by Vellar (read-only):
+
+    node stellar/scf-starforge-20261009/sf41-real-source-replay/capture.mjs \
+      --url https://vellar-facilitator-testnet-production.up.railway.app/discovery/resources \
+      --id vellar-stellar-testnet --out /tmp/scf41-vellar-testnet \
+      --permission public-read --network stellar:testnet
+
+The URL is a first-party documented endpoint; this command is not itself a
+claim of provider uptime, an executed network request, or a payment. Run
+against the genuinely observed provider and preserve the resulting native bytes,
+SHA-256 and capture timestamp. Scope checks prove the same query filters were
+requested across pages, not that a provider truthfully applied them to every row.
+To compare an unfiltered baseline, capture separately into a different folder.
+
 ## Collect complete real provider resources
 
 From project root, using an operator-authorized *actual* HTTPS facilitator whose original GET resources endpoint is accessible:
