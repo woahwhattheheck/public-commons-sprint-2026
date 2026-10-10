@@ -81,13 +81,29 @@ export function explainFailure({stage, reason, response = null, traceId, retryAf
 /** Trust only an independently obtained canonical ledger receipt, never model text.
  * All results have maySubmitPayment=false: a separate operator must authorize any payment.
  */
-export function gateNextAction(failure, {ledgerReceipt, explicitNewAuthorization = false} = {}) {
+// Do not infer a payment transfer from transaction inclusion alone.
+const PAYMENT_ATOMIC = /^[1-9][0-9]{0,77}$/;
+function matchingVerifiedTransfer(receipt, expectedPayment) {
+  if (receipt?.transferVerified !== true || !Array.isArray(receipt.transfers) ||
+      receipt.transfers.length !== 1 || !expectedPayment) return false;
+  const transfer = receipt.transfers[0];
+  if (!transfer || typeof transfer !== 'object' || Array.isArray(transfer)) return false;
+  if (!['from','payTo','asset'].every(k => clean(expectedPayment[k]) !== null) ||
+      typeof expectedPayment.amount !== 'string' ||
+      !PAYMENT_ATOMIC.test(expectedPayment.amount)) return false;
+  return transfer.from === expectedPayment.from &&
+    transfer.to === expectedPayment.payTo && transfer.asset === expectedPayment.asset &&
+    transfer.amount === expectedPayment.amount;
+}
+
+export function gateNextAction(failure, {ledgerReceipt, expectedPayment, explicitNewAuthorization = false} = {}) {
   if (!failure || failure.version !== VERSION) throw new TypeError('unrecognized failure envelope');
   if (failure.settlementMayBePending) {
     const transaction = failure.settlement?.transaction;
     const network = failure.settlement?.network;
     const settled = Boolean(transaction && network && ledgerReceipt?.confirmed === true &&
-      ledgerReceipt?.success === true && ledgerReceipt.transaction === transaction && ledgerReceipt.network === network);
+      ledgerReceipt?.success === true && ledgerReceipt.transaction === transaction && ledgerReceipt.network === network &&
+      matchingVerifiedTransfer(ledgerReceipt, expectedPayment));
     return Object.freeze({decision: settled ? 'already_settled' : 'reconcile_before_any_new_payment',
       maySubmitPayment: false, requiresManualReview: !settled});
   }
