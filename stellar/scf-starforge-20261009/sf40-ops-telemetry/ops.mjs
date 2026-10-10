@@ -4,6 +4,20 @@ import { performance } from 'node:perf_hooks';
 
 const KNOWN_ROUTES = new Set(['/discovery/resources','/discovery/search','/healthz','/readyz','/metrics']);
 const LOCAL = new Set(['127.0.0.1','::1','::ffff:127.0.0.1']);
+const LOCAL_HOSTS = new Set(['localhost','127.0.0.1','[::1]','[::ffff:7f00:1]']);
+// A loopback TCP peer alone is not enough: a browser can DNS-rebind an
+// attacker-controlled Host to 127.0.0.1. Reject nonliteral loopback hosts.
+const localHostOnly = req => {
+  const raw = req.headers?.host;
+  if (typeof raw !== 'string' || raw.length > 128 || /[\s\/@?#\\]/.test(raw)) return false;
+  try {
+    const parsed = new URL('http://' + raw);
+    return LOCAL_HOSTS.has(parsed.hostname) && parsed.pathname === '/' &&
+      parsed.search === '' && parsed.hash === '' &&
+      parsed.username === '' && parsed.password === '' &&
+      (!parsed.port || (Number(parsed.port) >= 1 && Number(parsed.port) <= 65535));
+  } catch { return false; }
+};
 const validNumber=(n,min,max)=>Number.isSafeInteger(n)&&n>=min&&n<=max;
 const sortLatency=items=>items.slice().sort((a,b)=>a-b);
 const quantile=(values,p)=>values.length?Number(sortLatency(values)[Math.ceil(p*values.length)-1].toFixed(3)):null;
@@ -46,7 +60,7 @@ export function createOpsHandler({catalog, discoveryHandler, nowMs=()=>performan
     summary.set(route,q);completed++;
     try{observe?.({route,status,durationMs:Number(Math.max(0,ms).toFixed(3))});}catch{/* observers never affect requests */}
   };
-  const localOnly=(req)=>LOCAL.has(req.socket?.remoteAddress??'');
+  const localOnly=(req)=>LOCAL.has(req.socket?.remoteAddress??'') && localHostOnly(req);
   const snapshot=()=>{
     const routes={};
     for(const [k,v] of summary)routes[k]={requests:v.total,statusClasses:{...v.classes},p50Ms:quantile(v.samples,0.5),p95Ms:quantile(v.samples,0.95),sampleCount:v.samples.length};
