@@ -136,7 +136,9 @@ export class BazaarCatalog {
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([, row]) => row)
       .filter(row => matches(row, filters));
-    return { resources: all.slice(offset,offset+limit),pagination:{offset,limit,total:all.length} };
+    // Public read results must not expose the authoritative mutable entry objects.
+    // Clone only the returned page, not the whole filtered catalog.
+    return { resources: all.slice(offset,offset+limit).map(row => structuredClone(row)),pagination:{offset,limit,total:all.length} };
   }
   search(params = new URLSearchParams()) {
     const q = params.get('query');
@@ -152,7 +154,7 @@ export class BazaarCatalog {
     }
     const ranked = rankBazaarEntries([...this.#entries.entries()]
       .filter(([,row]) => matches(row,filters)),q);
-    const page = ranked.slice(at,at+limit).map(e => e.row);
+    const page = ranked.slice(at,at+limit).map(e => structuredClone(e.row));
     const next = at+limit < ranked.length ? encode({v:this.#version,h:digest,at:at+limit}) : null;
     return { resources:page,partialResults:next !== null,pagination:{limit:page.length,cursor:next} };
   }
