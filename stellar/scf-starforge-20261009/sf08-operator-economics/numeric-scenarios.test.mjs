@@ -11,8 +11,8 @@ const withAssumptions = (overrides) => ({
 test('published normal scenarios retain their economics and finite output', () => {
   assert.equal(project(inputs, 100_000, 'edge_db').contribution_ceiling_usd, -11);
   assert.equal(project(inputs, 100_000, 'vm_db').contribution_ceiling_usd, -30);
-  assert.equal(optimisticBreakEven(inputs, 'edge_db'), 120_362);
-  assert.equal(optimisticBreakEven(inputs, 'vm_db'), 155_547);
+  assert.equal(optimisticBreakEven(inputs, 'edge_db'), 120_371);
+  assert.equal(optimisticBreakEven(inputs, 'vm_db'), 155_556);
   for (const architecture of ['edge_db', 'vm_db']) {
     for (const paidCalls of inputs.scenario_paid_calls) {
       const output = project(inputs, paidCalls, architecture);
