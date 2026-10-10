@@ -78,3 +78,25 @@ test('a real loopback catalog response can be paged and drift is detected', asyn
     assert.equal(v.decision, 'TERMS_DRIFT'); assert.equal(v.settlementAuthenticated, false);
   } finally { await new Promise(resolve => server.close(resolve)); }
 });
+
+
+test('seller resource URLs exclude the destinations blocked by the consumer buyer', () => {
+  const denied = [
+    'https://127.0.0.1/paid', 'https://0x7f000001/paid',
+    'https://10.25.0.2/paid', 'https://169.254.169.254/latest/meta-data',
+    'https://192.168.1.1/paid', 'https://[::1]/paid',
+    'https://[::ffff:127.0.0.1]/paid', 'https://localhost./paid',
+    'https://seller.local/paid', 'https://api.internal/paid',
+    'https://seller.home.arpa/paid', 'https://sub.localhost/paid'
+  ];
+  for (const url of denied) {
+    assert.throws(() => compileHttpSellerOffer({ ...input(), url }), /Disallowed resource host/, url);
+    assert.throws(() => compileHttpSellerOffer({ ...input(), url }, { allowLocalhost:true }),
+      /Disallowed resource host/, 'dev exception must not allow '+url);
+  }
+  assert.equal(compileHttpSellerOffer(input()).resource.url, 'https://seller.example/weather');
+  assert.equal(compileHttpSellerOffer({ ...input(), url:'http://127.0.0.1:4874/weather' },
+    {allowLocalhost:true}).resource.url, 'http://127.0.0.1:4874/weather');
+  assert.throws(() => compileHttpSellerOffer({ ...input(), url:'http://127.0.0.1:4874/weather' }),
+    /Paid resource URL must be HTTPS/);
+});
