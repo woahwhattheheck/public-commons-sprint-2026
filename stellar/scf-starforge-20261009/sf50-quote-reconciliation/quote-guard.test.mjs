@@ -77,3 +77,22 @@ test('exact authorized dynamic template stays on catalog host and path family',(
   assert.equal(x.decision,'allow');
   assert.equal(reconcileHttpQuote({...args(c,r),requestUrl:'https://weather.example.org/cities/23/extra'}).decision,'reject');
 });
+
+test('Soroban i128 extremes cannot become a buyer-approved signed amount',()=>{
+  const max=((1n<<127n)-1n).toString(), overflow=((1n<<127n)).toString();
+  // Original main accepted a 39-digit 9...9 quote when buyer cap matched it.
+  for (const scheme of ['exact','upto']) {
+    const c=catalog(),q=quote(),sel={...selection,scheme};
+    c.accepts[0].scheme=scheme;q.accepts[0].scheme=scheme;
+    c.accepts[0].amount=max;q.accepts[0].amount=max;
+    assert.equal(reconcileHttpQuote({...args(c,response(q)),selection:sel,
+      allowedSchemes:[scheme],maxAtomicUnits:max}).decision,'allow');
+    for (const amount of [overflow,'9'.repeat(39),'9'.repeat(78)]) {
+      c.accepts[0].amount=amount;q.accepts[0].amount=amount;
+      assert.equal(reconcileHttpQuote({...args(c,response(q)),selection:sel,
+        allowedSchemes:[scheme],maxAtomicUnits:max}).reason,'MALFORMED_QUOTE_OR_RESOURCE');
+    }
+  }
+  assert.equal(reconcileHttpQuote({...args(),maxAtomicUnits:overflow}).reason,'BUYER_CAP_REQUIRED');
+  assert.equal(reconcileHttpQuote({...args(),maxAtomicUnits:'0'}).reason,'BUYER_CAP_EXCEEDED');
+});
