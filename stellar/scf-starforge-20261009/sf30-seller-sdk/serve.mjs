@@ -1,0 +1,173 @@
+// MIT. Runnable SF30 seller service using the original compiler and native x402 adapter.
+import { createServer } from 'node:http';
+import { readFile, stat } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+import { compileSellerRoutes, createSellerResourceHandler } from './resource-server.mjs';
+
+const SCHEMA = 'stellar-forge.seller-service.v1';
+const HOST = '127.0.0.1';
+const OWN = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+const USAGE = `Usage: node serve.mjs --config FILE [--port 8423] [--handlers FILE]
+                     [--facilitator HTTPS_URL] [--allow-local-facilitator]
+
+Without --facilitator the server serves real SF30 payment challenges only.
+--handlers loads application functions from a trusted local ESM module.
+The listener binds to 127.0.0.1. Use an operator-managed HTTPS proxy for deployment.
+Inspect GET /_seller/health and GET /_seller/offers to see the running configuration.`;
+
+function validateConfig(config) {
+  if (!object(config) || config.schema !== SCHEMA || !Array.isArray(config.routes) ||
+      config.routes.length < 1 || config.routes.length > 64) {
+    throw new TypeError('Expected seller-service.v1 config with 1–64 routes');
+  }
+  const seen = new Set();
+  for (const route of config.routes) {
+    if (!object(route) || !/^[A-Za-z0-9_-]{1,64}$/.test(route.id ?? '') ||
+        seen.has(route.id) || !object(route.definition) ||
+        typeof route.path !== 'string' || !/^\/[A-Za-z0-9_.~/-]*$/.test(route.path) ||
+        route.path.startsWith('/_seller/') || route.path.includes('//') ||
+        new URL(route.path, 'https://seller.example').pathname !== route.path) {
+      throw new TypeError('Each route needs a unique ID, canonical fixed path and SF30 definition');
+    }
+    seen.add(route.id);
+    if (OWN(route.definition, 'url')) throw new TypeError('Use route.path and publicOrigin instead of definition.url');
+    if (OWN(route, 'handler') === OWN(route, 'response')) {
+      throw new TypeError('Each route must choose exactly one handler export or static JSON response');
+    }
+    if (OWN(route, 'handler') && !/^[A-Za-z_$][\w$]{0,127}$/.test(route.handler)) {
+      throw new TypeError('Invalid application handler export name');
+    }
+  }
+  if (config.publicOrigin !== undefined) {
+    const origin = new URL(config.publicOrigin);
+    if (origin.protocol !== 'https:' || origin.username || origin.password ||
+        origin.search || origin.hash || origin.pathname !== '/' ||
+        origin.origin !== config.publicOrigin.replace(/\/$/, '')) {
+      throw new TypeError('publicOrigin must be an HTTPS origin without path or credentials');
+    }
+  }
+  return config;
+}
+
+export async function readSellerConfig(path) {
+  const info = await stat(path);
+  if (!info.isFile() || info.size > 1024 * 1024) throw new TypeError('Config must be a regular JSON file up to 1 MiB');
+  const bytes = await readFile(path);
+  if (bytes.length > 1024 * 1024) throw new RangeError('Config exceeds 1 MiB');
+  return validateConfig(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
+}
+
+function facilitatorEndpoint(raw, allowLocal) {
+  const url = new URL(raw);
+  const local = allowLocal === true && url.protocol === 'http:' && url.hostname === HOST;
+  if ((!local && url.protocol !== 'https:') || url.username || url.password || url.search || url.hash) {
+    throw new TypeError('Facilitator requires HTTPS; local HTTP needs --allow-local-facilitator');
+  }
+  return url.href.replace(/\/$/, '');
+}
+
+/** Start one service. An embedding app can supply a nativeFactory for its own facilitator. */
+export async function startSellerService({ config, port = 8423, handlers = {}, nativeFactory = null } = {}) {
+  validateConfig(config);
+  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('port must be 0–65535');
+  if (!object(handlers) || nativeFactory !== null && typeof nativeFactory !== 'function') {
+    throw new TypeError('Invalid handler map or nativeFactory');
+  }
+  for (const route of config.routes) {
+    if (route.handler && (!OWN(handlers, route.handler) || typeof handlers[route.handler] !== 'function')) {
+      throw new TypeError(`Application handler export missing: ${route.handler}`);
+    }
+  }
+  let dispatch = (_req, res) => { res.writeHead(503, { 'retry-after': '1' }); res.end(); };
+  const server = createServer((req, res) => {
+    Promise.resolve().then(() => dispatch(req, res)).catch(() => {
+      if (!res.headersSent) res.writeHead(500, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      if (!res.writableEnded) res.end('{"error":"SELLER_REQUEST_FAILED"}');
+    });
+  });
+  server.requestTimeout = 15000;
+  server.headersTimeout = 10000;
+  server.keepAliveTimeout = 5000;
+  const close = () => new Promise((done, fail) => {
+    server.close(error => error ? fail(error) : done());
+    server.closeIdleConnections?.();
+  });
+  try {
+    await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); });
+    const url = `http://${HOST}:${server.address().port}`;
+    const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : url;
+    const compiled = compileSellerRoutes(config.routes.map(route => ({
+      id: route.id,
+      definition: { ...route.definition, url: origin + route.path },
+      handler: route.handler ? handlers[route.handler] : async () => ({
+        status: 200, headers: { 'content-type': 'application/json' }, body: structuredClone(route.response),
+      }),
+    })), { allowLocalhost: !config.publicOrigin });
+    const nativeServer = nativeFactory ? await nativeFactory(compiled) : null;
+    if (nativeFactory && !nativeServer) throw new TypeError('Native factory did not return a resource server');
+    const resources = createSellerResourceHandler({ compiled, nativeServer });
+    const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
+    const info = { schema: SCHEMA, mode, routes: config.routes.map(route => ({
+      id: route.id, method: route.definition.method, url: origin + route.path,
+    })) };
+    dispatch = (req, res) => {
+      if (req.url === '/_seller/health' || req.url === '/_seller/offers') {
+        if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405, { allow: 'GET, HEAD' }); res.end(); return; }
+        const payload = req.url === '/_seller/health' ? info : compiled.routes.map(route => route.offer);
+        res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff' });
+        res.end(req.method === 'HEAD' ? '' : JSON.stringify(payload));
+        return;
+      }
+      return resources(req, res);
+    };
+    return { server, url, mode, compiled, close };
+  } catch (error) {
+    if (server.listening) await close();
+    throw error;
+  }
+}
+
+export async function main(args = process.argv.slice(2)) {
+  if (args.length === 1 && args[0] === '--help') { process.stdout.write(USAGE + '\n'); return null; }
+  const options = new Map();
+  for (let i = 0; i < args.length; i++) {
+    const flag = args[i];
+    if (options.has(flag)) throw new TypeError('Duplicate option: ' + flag);
+    if (flag === '--allow-local-facilitator') { options.set(flag, true); continue; }
+    if (!['--config', '--port', '--handlers', '--facilitator'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--')) {
+      throw new TypeError(USAGE);
+    }
+    options.set(flag, args[++i]);
+  }
+  if (!options.has('--config') || options.has('--allow-local-facilitator') && !options.has('--facilitator')) throw new TypeError(USAGE);
+  const configPath = resolve(options.get('--config'));
+  const config = await readSellerConfig(configPath);
+  const portText = options.get('--port') ?? '8423';
+  if (!/^\d{1,5}$/.test(portText)) throw new TypeError('port must be 0–65535');
+  const handlers = options.has('--handlers') ?
+    await import(pathToFileURL(resolve(dirname(configPath), options.get('--handlers'))).href) : {};
+  let nativeFactory = null;
+  if (options.has('--facilitator')) {
+    const url = facilitatorEndpoint(options.get('--facilitator'), options.get('--allow-local-facilitator'));
+    const [{ HTTPFacilitatorClient }, { createNativeSellerServer }] = await Promise.all([
+      import('@x402/core/server'), import('./native-factory.mjs'),
+    ]);
+    nativeFactory = compiled => createNativeSellerServer(compiled, {
+      facilitatorClient: new HTTPFacilitatorClient({ url }),
+    });
+  }
+  const session = await startSellerService({ config, port: Number(portText), handlers, nativeFactory });
+  process.stdout.write(JSON.stringify({ url: session.url, mode: session.mode,
+    health: session.url + '/_seller/health', offers: session.url + '/_seller/offers' }) + '\n');
+  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
+    session.close().then(() => { process.exitCode = 0; }, () => { process.exitCode = 1; });
+  });
+  return session;
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(error => { process.stderr.write(String(error?.message ?? error) + '\n'); process.exitCode = 1; });
+}
