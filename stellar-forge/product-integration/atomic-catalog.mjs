@@ -38,6 +38,16 @@ export class AtomicCatalogIntegration {
       if (lifecycleResult.decision !== 'accepted') return lifecycleResult;
       stagedLive = this.#live.clone();
       catalogKey = stagedLive.insertValidated(candidate.entry);
+      // Lifecycle identity is route-template based, while the public HTTP
+      // catalog key also includes the concrete URL query. A seller correction
+      // can therefore change catalogKey without changing lifecycleResult.id.
+      // Remove the previous public alias in the staged copy, otherwise stale
+      // price/metadata remain discoverable and retirement only removes the
+      // newest alias. Rejections do not publish the staged changes.
+      const previousKey = this.#catalogKeys.get(lifecycleResult.id);
+      if (previousKey && previousKey !== catalogKey && !stagedLive.removeValidated(previousKey)) {
+        return { decision: 'reject', reason: 'PROJECTION_MISSING', id: lifecycleResult.id };
+      }
     } catch (error) {
       return { decision: 'reject', reason: 'INTEGRATION_PREFLIGHT_REJECTED', detail: error?.message ?? 'Error' };
     }
