@@ -32,9 +32,14 @@ export function sanitizeResourceServiceMetadata(resource) {
       if (result.iconUrl.length > 2048 || /[\x00-\x1f\x7f]/.test(result.iconUrl)) throw Error('invalid');
       const u = new URL(result.iconUrl);
       const h = decodeURIComponent(u.hostname).toLowerCase().replace(/\.$/,'');
+      // Discovery consumers may fetch icons. Do not advertise explicitly local
+      // DNS names as otherwise public-looking icon URLs; syntax-only protection,
+      // not a substitute for a consumer's DNS/IP checks at fetch time.
+      const localName = ['localhost','local','localdomain','internal','home.arpa',
+        'ip6-localhost','ip6-loopback'].includes(h) ||
+        ['.localhost','.local','.localdomain','.internal','.home.arpa'].some(s => h.endsWith(s));
       if (!['http:', 'https:'].includes(u.protocol) || u.username || u.password || isIP(h) ||
-          ['localhost','localhost.localdomain','ip6-localhost','ip6-loopback'].includes(h) ||
-          /^\d+$/.test(h) || /^0x[0-9a-f]+$/.test(h)) throw Error('invalid');
+          localName || /^\d+$/.test(h) || /^0x[0-9a-f]+$/.test(h)) throw Error('invalid');
     } catch { delete result.iconUrl; }
   } else delete result.iconUrl;
   return result;
@@ -97,10 +102,19 @@ export function validateCatalogEntry(entry) {
 }
 const signature = (query, filters) => createHash('sha256').update(JSON.stringify([query, filters])).digest('hex').slice(0,20);
 const encode = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
-const decode = (str) => { try {return JSON.parse(Buffer.from(str, 'base64url').toString());} catch {throw new RangeError('Invalid cursor');}};
-const asInteger = (v, fallback, max) => {
+const decode = (str) => {
+  // Valid cursors are tiny canonical base64url JSON payloads. Validate length
+  // and alphabet before decoding attacker-controlled input.
+  if (typeof str !== 'string' || !str.length || str.length > 512 || !/^[A-Za-z0-9_-]+$/.test(str)) throw new RangeError('Invalid cursor');
+  try {
+    const raw = Buffer.from(str, 'base64url');
+    if (raw.toString('base64url') !== str) throw new RangeError('Invalid cursor');
+    return JSON.parse(raw.toString('utf8'));
+  } catch {throw new RangeError('Invalid cursor');}
+};
+const asInteger = (v, fallback, max, min = 0) => {
   if (v === null) return fallback;
-  if (!/^\d+$/.test(v) || !Number.isSafeInteger(Number(v)) || Number(v) > max) throw new RangeError('Invalid pagination parameter');
+  if (!/^\d+$/.test(v) || !Number.isSafeInteger(Number(v)) || Number(v) < min || Number(v) > max) throw new RangeError('Invalid pagination parameter');
   return Number(v);
 };
 
@@ -131,7 +145,7 @@ export class BazaarCatalog {
   list(params = new URLSearchParams()) {
     const filters = filtersFrom(params);
     const offset = asInteger(params.get('offset'),0,1_000_000);
-    const limit = asInteger(params.get('limit'),20,100);
+    const limit = asInteger(params.get('limit'),20,100,1);
     // Map insertion order depends on ingest/restart history. Canonical-key
     // ordering makes offset pagination stable across equivalent rebuilds.
     const all = [...this.#entries.entries()]
@@ -146,7 +160,7 @@ export class BazaarCatalog {
     const q = params.get('query');
     if (typeof q !== 'string' || !q.trim() || q.length > 1024) throw new RangeError('query is required (max 1024 chars)');
     const filters = filtersFrom(params);
-    const limit = asInteger(params.get('limit'),20,100);
+    const limit = asInteger(params.get('limit'),20,100,1);
     const digest = signature(q, filters);
     let at = 0;
     if (params.has('cursor')) {

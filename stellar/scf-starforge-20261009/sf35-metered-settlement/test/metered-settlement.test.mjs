@@ -90,3 +90,22 @@ test('journal write failure leaves live tally and original persisted record unch
   assert.deepEqual(s.tally,{units:'3',chargeAtomic:'3',ceilingAtomic:'10'});
   assert.equal((await Engine.inspect({journalDir:dir,authorizationId:s.id})).units,'3');
 }));
+
+test('rejects oversized atomic decimals before bigint parsing and preserves journal',()=>sandbox(async dir=>{
+  const s=await Engine.open({...makeInput({numerator:'1',denominator:'1'},'units'),journalDir:dir,verifyPayment});
+  const huge='9'.repeat(1_000_000); // 1 MB client-origin decimal, not an accepted i128
+  await assert.rejects(()=>s.recordUnits(huge),{code:'AMOUNT_OUT_OF_RANGE'});
+  await assert.rejects(()=>s.recordUnits('0'.repeat(40)),{code:'AMOUNT_OUT_OF_RANGE'});
+  await assert.rejects(()=>s.recordUnits('170141183460469231731687303715884105728'),{code:'AMOUNT_OUT_OF_RANGE'});
+  assert.deepEqual(s.tally,{units:'0',chargeAtomic:'0',ceilingAtomic:'10'});
+  const invalidPrice=makeInput({numerator:huge,denominator:'1'},'units');
+  await assert.rejects(()=>Engine.open({...invalidPrice,journalDir:dir,verifyPayment}),{code:'AMOUNT_OUT_OF_RANGE'});
+  const invalidOffer=makeInput({numerator:'1',denominator:'1'},'units');
+  for(const t of [invalidOffer.paymentPayload.accepted,invalidOffer.paymentRequired.accepts[0],
+    invalidOffer.verifyRequirements]) t.amount=huge;
+  invalidOffer.paymentPayload.payload.maxAmount=huge;
+  await assert.rejects(()=>Engine.open({...invalidOffer,journalDir:dir,verifyPayment}),{code:'AMOUNT_OUT_OF_RANGE'});
+  assert.equal((await Engine.inspect({journalDir:dir,authorizationId:s.id})).units,'0');
+  await s.recordUnits('2');
+  assert.deepEqual(s.tally,{units:'2',chargeAtomic:'2',ceilingAtomic:'10'});
+}));

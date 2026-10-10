@@ -40,3 +40,38 @@ test('amount and recipient safety reject no trusted string path or mismatched te
   await assert.rejects(()=>validatePaymentTerms({...req,...p},mk(),{now,verifyRecipient:async input=>verified(input)}));
  }
 });
+
+test('async recipient verifier cannot rewrite already-validated payment terms',async()=>{
+ const candidate={...req};
+ const observed=await validatePaymentTerms(candidate,mk(),{now,verifyRecipient:async input=>{
+   candidate.amount='23000000';candidate.payTo='G'+'B'.repeat(55);
+   candidate.network='stellar:pubnet';candidate.scheme='upto';
+   return verified(input);
+ }});
+ assert.equal(candidate.amount,'23000000');
+ assert.equal(observed.amount,'15000000');
+ assert.equal(observed.decimalAmount,'1.5');
+ assert.equal(observed.payTo,req.payTo);
+ assert.equal(observed.network,'stellar:testnet');
+ assert.equal(observed.scheme,'exact');
+});
+
+test('changing payment-amount getter is read once into immutable snapshot',async()=>{
+ let reads=0;
+ const candidate={...req};
+ Object.defineProperty(candidate,'amount',{get(){reads++;return reads===1?'15000000':'23000000';}});
+ const observed=await validatePaymentTerms(candidate,mk(),{now,verifyRecipient:async input=>verified(input)});
+ assert.equal(observed.amount,'15000000');
+ assert.equal(observed.decimalAmount,'1.5');
+ assert.equal(reads,1);
+});
+
+test('oversized decimal strings are rejected before regex or BigInt; exact i128 range survives',()=>{
+ const max='170141183460469231731687303715884105727';
+ assert.equal(parseAtomic('170141183460469231731.687303715884105727',18),max);
+ assert.throws(()=>parseAtomic('170141183460469231731.687303715884105728',18),/signed i128/);
+ assert.equal(parseAtomic('0.000000000000000001',18),'1');
+ assert.equal(parseAtomic('0.000000000000000000',18,{allowZero:true}),'0');
+ assert.throws(()=>parseAtomic('9'.repeat(100_000),18),/representable length/);
+ assert.throws(()=>parseAtomic('0.'+'1'.repeat(100_000),18),/representable length/);
+});

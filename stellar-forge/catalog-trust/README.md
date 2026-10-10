@@ -22,3 +22,5 @@ node --test stellar-forge/catalog-trust/catalog-trust.test.mjs
 The cases exercise the production `BazaarCatalog.insertValidated` path with a valid listing, forged seller, unauthorized recipient, duplicate seller origin, metadata bomb, same-sequence race, exact replay, authorized price update, invalid parser method and tampered audit event. No network, wallet, payment or GitHub workflow is used.
 
 Source boundary: MIT original code, built against public main `0f39db4872c65a01c2f96036a2dfb4a2538eee99`; production catalog blob `f34f38a3af8f1b9e23ff4607812b4ee6297480a5`. SF-28 route identity remains separate and unchanged.
+
+Malformatted, unauthenticated envelope IDs and sequence values are sanitized into bounded JSON-safe audit facts *before* the rejection hash is constructed. This prevents BigInt, cyclic objects, and extremely long identifiers from turning a quarantine into an uncaught audit exception or oversized log record. Valid seller IDs, sequences, and the existing hash-chain verification retain their ordinary representation. The regression exercises these rejection paths without publishing a listing.

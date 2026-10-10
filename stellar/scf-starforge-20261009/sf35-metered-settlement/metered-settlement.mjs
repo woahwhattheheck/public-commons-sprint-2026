@@ -14,6 +14,9 @@ const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const snap = x => JSON.parse(JSON.stringify(x));
 const hash = x => createHash('sha256').update(x).digest('hex');
 function amount(x, name, {allowZero=true}={}) {
+  // Reject impossible Soroban i128 decimals before regexp or BigInt parsing.
+  // 2^127-1 has 39 decimal digits; longer inputs cannot represent valid amounts.
+  if (typeof x === 'string' && x.length > 39) throw new MeterError('AMOUNT_OUT_OF_RANGE', name);
   if (!canonical(x)) throw new MeterError('INVALID_ATOMIC', name);
   const n=BigInt(x);
   if (n>I128_MAX || (!allowZero && n===0n)) throw new MeterError('AMOUNT_OUT_OF_RANGE',name);
@@ -84,15 +87,29 @@ function charge(units,numerator,denominator) {return (units*numerator+denominato
 function eventDigest(events) {return hash(JSON.stringify(events));}
 async function replaceAtomic(path,obj){
   const temp=path+'.'+randomUUID()+'.tmp';
+  // Before rename, the old journal remains authoritative and a local write
+  // failure can be retried. Once rename is attempted, disk state is uncertain.
+  let renameStarted=false;
   try {
     const h=await open(temp,'wx',0o600);
     try {await h.writeFile(JSON.stringify(obj,null,2)+'\n');await h.sync();}
     finally {await h.close();}
+    renameStarted=true;
     await rename(temp,path);
     // rename() atomically replaces the name, but only the containing directory
     // fsync makes that replacement durable across power loss.
     await syncParentDirectory(path);
-  } catch(e) {await rm(temp,{force:true}).catch(()=>{});throw e;}
+  } catch(e) {
+    await rm(temp,{force:true}).catch(()=>{});
+    if (renameStarted) {
+      // A rename may have reached the filesystem even if its call or the
+      // subsequent directory fsync throws. Never reuse this session blindly.
+      const uncertain=new MeterError('JOURNAL_DURABILITY_UNKNOWN',String(e?.code??e?.message??e));
+      uncertain.cause=e;
+      throw uncertain;
+    }
+    throw e;
+  }
 }
 function verifyResult(result) {
   if(!plain(result) || result.isValid!==true)throw new MeterError('UPSTREAM_VERIFY_DENIED');
@@ -120,9 +137,11 @@ export class MeteredUptoSettlement {
     const next={...this.#state,...update};
     try{await replaceAtomic(this.#file,next);}
     catch(e){
-      // A rename may already have happened when a directory fsync fails.
-      // Never let this instance settle/retry from an uncertain in-memory state.
-      this.#durabilityUnknown=true;
+      // Pre-rename write/open/sync failure left the authoritative journal
+      // unchanged, so retain the prior state and permit a safe retry.
+      // Once rename was attempted, keep the instance locked for reconciliation.
+      if(e instanceof MeterError && e.code==='JOURNAL_DURABILITY_UNKNOWN')
+        this.#durabilityUnknown=true;
       throw e;
     }
     this.#state=next;

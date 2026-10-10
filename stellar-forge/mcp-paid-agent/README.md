@@ -126,3 +126,9 @@ Focused offline original broker check:
 It exercises one 402+signed retry, a simultaneous same-quote call, cancellation
 during a delayed approval, and denial. Responses are in-memory Node Fetch
 fixtures, not real Stellar payments.
+
+## Discovery path-prefix preservation
+
+`McpPaidToolBroker.search()` appends `discovery/search` to the operator-configured `discoveryUrl` path. A base of `https://facilitator.example/x402` or `https://facilitator.example/x402/` searches `https://facilitator.example/x402/discovery/search`. A root base still resolves to `/discovery/search`. Leading-slash absolute construction is not used, so a configured prefix is never discarded. Existing query filters, origin guards, redirect policy, and constructor rejection of credentials/query/fragment remain unchanged.
+
+Focused regression: `node --test stellar-forge/mcp-paid-agent/discovery-prefix.test.mjs`

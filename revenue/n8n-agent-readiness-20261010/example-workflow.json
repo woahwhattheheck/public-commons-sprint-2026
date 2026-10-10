@@ -1,0 +1,10 @@
+{
+  "name": "Offline structural fixture — no customer data",
+  "active": true,
+  "settings": {"errorWorkflow":"example-workflow-external-error-handler"},
+  "nodes": [
+    {"name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":2,"parameters":{"responseMode":"responseNode"},"position":[0,0]},
+    {"name":"Respond","type":"n8n-nodes-base.respondToWebhook","typeVersion":1,"parameters":{},"position":[220,0]}
+  ],
+  "connections": {"Webhook":{"main":[[{"node":"Respond","type":"main","index":0}]]}}
+}

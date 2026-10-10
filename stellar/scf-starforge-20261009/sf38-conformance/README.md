@@ -9,6 +9,8 @@
 * [Stellar upstream](https://github.com/stellar/x402-stellar/tree/45d735ab3f30a50286d11286b7d7e584fa69bc77) exact SHA `45d735ab3f30a50286d11286b7d7e584fa69bc77`.
 * Existing fleet [SF37 v2 Stellar `upto` profile](../sf37-upto-interoperability/upto-profile.mjs) blob `e5a0fd3b273aa33c16d2cf1184f6940a7ebf90d5`, and [SF43 genuine-testnet acceptance](../sf43-agent-commerce/verify.mjs) blob `16ff274599b9b3e6586b9e2f2a8072d248f7e69a`. **Reuse** their structural and event-derived transfer verification rather than treating this recorder as a replacement. Open Foundation Stellar `upto` proposals #3134/#3098 are not an approved SDK or live mainnet guarantee.
 
+The original signed-i128 atomic-string validator short-circuits overlong untrusted decimals **before** its canonical-decimal regular expression. The focused wire regression asserts no regex is invoked on oversized accepted/settle amount strings. Valid 39-digit signed-i128 values, canonical formatting and `upto` zero-settlement rules are unchanged.
+
 ## Actual command surface
 
 ```sh

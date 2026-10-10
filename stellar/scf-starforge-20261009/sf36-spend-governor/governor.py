@@ -9,19 +9,28 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import ipaddress
 import json
 import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 SCHEMA="stellar-spend-governor/v1"
 MAX_AMOUNT=2**63-1
 ID_PATTERN=re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
 NETWORKS={"stellar:testnet", "stellar:pubnet"}
 CURRENCY_FIELDS=("max_single", "max_total", "max_per_utc_day", "max_per_actor_utc_day", "max_per_service_utc_day")
-REQUEST_FIELDS=("request_id", "actor", "service", "network", "asset", "scheme", "max_amount", "resource")
+# Consent must identify the same purchase the x402 signer is about to authorize.
+# Reject unknown fields instead of silently dropping e.g. a caller-provided payTo.
+REQUEST_FIELDS=("request_id", "actor", "service", "network", "asset", "scheme", "max_amount", "resource",
+                "pay_to", "max_timeout_seconds", "method", "body_present", "body_bytes",
+                "body_sha256", "accepted_terms_sha256")
+HTTP_METHODS={"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"}
+EMPTY_BODY_SHA256=hashlib.sha256(b'').hexdigest()
+CONSENT_KIND='owner-consent/complete-intent-v2'
 
 class Denied(ValueError):
     """Decision is DENIED: safely do not create or submit a payment."""
@@ -52,9 +61,43 @@ def as_time(s: str)->datetime:
 def now_utc()->datetime:return datetime.now(timezone.utc)
 
 
+def require_resource_url(value: Any)->str:
+    """Reject ambiguous/unparsable purchase origins before issuing owner consent.
+
+    Preserve the exact URL for HMAC binding. DNS resolution, redirects, challenge
+    matching and signer equivalence remain the original client/operator's work.
+    """
+    if not isinstance(value,str) or not (9<=len(value)<=2048) or not value.startswith('https://'):
+        raise Denied('resource must be a bounded HTTPS URL with a host')
+    if any(ord(c)<33 or ord(c)>126 for c in value) or '\\' in value or '#' in value:
+        raise Denied('resource contains unsafe URL bytes or a fragment')
+    try:
+        parsed=urlsplit(value)
+        host=parsed.hostname
+        port=parsed.port
+    except ValueError as exc:
+        raise Denied('resource has an invalid HTTPS authority') from exc
+    if parsed.scheme!='https' or not parsed.netloc or not host or '@' in parsed.netloc or port==0:
+        raise Denied('resource has an invalid HTTPS authority')
+    labels=host.split('.')
+    legacy_ip=all(re.fullmatch(r'(?:0x[0-9a-f]+|[0-9]+)',label) for label in labels)
+    if (len(host)>253 or len(labels)<2 or legacy_ip or
+        host in {'localhost','local','localdomain','internal','home.arpa','ip6-localhost','ip6-loopback'} or
+        any(host.endswith(x) for x in ('.localhost','.local','.localdomain','.internal','.home.arpa')) or
+        not all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?',label) for label in labels)):
+        raise Denied('resource has an unsafe or non-DNS host')
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    else:
+        raise Denied('resource address literal not allowed')
+    return value
+
+
 def validate_request(obj:dict[str,Any])->dict[str,Any]:
-    if not isinstance(obj,dict) or any(k not in obj for k in REQUEST_FIELDS):
-        raise Denied('incomplete canonical buyer request')
+    if not isinstance(obj,dict) or set(obj)!=set(REQUEST_FIELDS):
+        raise Denied('canonical buyer purchase intent fields mismatch')
     r={k:obj[k] for k in REQUEST_FIELDS}
     for k in ("request_id","actor","service"):
         if not isinstance(r[k],str) or not ID_PATTERN.fullmatch(r[k]):raise Denied(f'invalid {k}')
@@ -62,9 +105,30 @@ def validate_request(obj:dict[str,Any])->dict[str,Any]:
     if not isinstance(r['asset'],str) or not re.fullmatch(r'[A-Z2-7]{56}',r['asset']):
         raise Denied('asset must be Soroban SEP-41 contract identifier, not classic asset alias')
     if r['scheme'] not in ('exact','upto'):raise Denied('unsupported payment scheme')
-    if not isinstance(r['resource'],str) or not r['resource'].startswith('https://') or len(r['resource'])>2048:
-        raise Denied('resource must be bounded HTTPS URL')
+    require_resource_url(r['resource'])
     if parse_amount(r['max_amount'],'max_amount')<1:raise Denied('max_amount must be positive')
+    # A resource URL and amount alone do not identify a payment: recipient,
+    # expiry, HTTP operation, body and accepted x402 requirement must bind too.
+    payee=r['pay_to']
+    if not isinstance(payee,str) or not (1<=len(payee)<=256) or payee!=payee.strip() or any(ord(c)<33 or ord(c)>126 for c in payee):
+        raise Denied('pay_to must be a bounded nonempty printable payment recipient')
+    timeout=r['max_timeout_seconds']
+    if type(timeout) is not int or not (1<=timeout<=86400):
+        raise Denied('max_timeout_seconds must be an integer in 1..86400')
+    if not isinstance(r['method'],str) or r['method'] not in HTTP_METHODS:
+        raise Denied('method must be an uppercase supported HTTP verb')
+    present=r['body_present'];size=r['body_bytes']
+    if type(present) is not bool or type(size) is not int or not (0<=size<=1_048_576):
+        raise Denied('body presence/byte length invalid')
+    if (not present) and size!=0:
+        raise Denied('body absent but byte length is nonzero')
+    for field in ('body_sha256','accepted_terms_sha256'):
+        if not isinstance(r[field],str) or not re.fullmatch(r'[0-9a-f]{64}',r[field]):
+            raise Denied(field+' must be lowercase SHA-256 hex')
+    if not present and r['body_sha256']!=EMPTY_BODY_SHA256:
+        raise Denied('absent body must have the SHA-256 of empty bytes')
+    if r['method'] in ('GET','HEAD') and present:
+        raise Denied('GET/HEAD cannot carry a request body')
     return r
 
 
@@ -118,7 +182,7 @@ def issue_consent(consent_key:bytes,request:dict,expiry_utc:str)->str:
     expiry=as_time(expiry_utc)
     if expiry<=now_utc():raise Denied('consent expiry must be in the future')
     if (expiry-now_utc()).total_seconds()>900:raise Denied('consent expires later than 15 minute safety window')
-    return token_for(secret(consent_key,'consent key'),{'kind':'owner-consent','request':r,'expires_at':expiry_utc})
+    return token_for(secret(consent_key,'consent key'),{'kind':CONSENT_KIND,'request':r,'expires_at':expiry_utc})
 
 
 def issue_finality_attestation(operator_key:bytes,reservation_id:str,actual_amount:str,receipt_ref:str,proof_sha256:str)->str:
@@ -134,10 +198,24 @@ class Governor:
     def __init__(self,db: str|Path,policy:dict,consent_key:bytes,audit_key:bytes,operator_key:bytes):
         self.limits=validate_policy(policy)
         self.ck=secret(consent_key,'consent key');self.ak=secret(audit_key,'audit key');self.ok=secret(operator_key,'operator key')
-        self.db=sqlite3.connect(str(db),isolation_level=None,timeout=30)
-        self.db.execute('PRAGMA busy_timeout=30000')
-        self.db.execute('PRAGMA journal_mode=WAL')
-        self.db.execute('PRAGMA synchronous=FULL')
+        # A memory-backed database loses every reserved maximum at process
+        # exit. SQLite also silently declines WAL on unsupported databases,
+        # returning the actual mode from PRAGMA journal_mode=WAL.
+        db_path=str(db)
+        if db_path==':memory:' or db_path.startswith('file:'):
+            raise Denied('durable spend ledger requires an on-disk SQLite file path')
+        self.db=sqlite3.connect(db_path,isolation_level=None,timeout=30)
+        try:
+            self.db.execute('PRAGMA busy_timeout=30000')
+            actual_mode=self.db.execute('PRAGMA journal_mode=WAL').fetchone()[0]
+            if actual_mode.lower()!='wal':
+                raise Denied('durable spend ledger requires confirmed SQLite WAL mode')
+            self.db.execute('PRAGMA synchronous=FULL')
+            if self.db.execute('PRAGMA synchronous').fetchone()[0]!=2:
+                raise Denied('durable spend ledger requires confirmed SQLite FULL sync')
+        except BaseException:
+            self.db.close()
+            raise
         self.db.execute('''CREATE TABLE IF NOT EXISTS reservations (
             request_id TEXT PRIMARY KEY, request_digest TEXT NOT NULL,
             actor TEXT NOT NULL, service TEXT NOT NULL, network TEXT NOT NULL,
@@ -212,7 +290,7 @@ class Governor:
     def reserve(self,request:dict,consent_token:str)->dict:
         r=validate_request(request);day=now_utc().date().isoformat()
         claims=token_claims(self.ck,consent_token)
-        if claims.get('kind')!='owner-consent' or claims.get('request')!=r:
+        if claims.get('kind')!=CONSENT_KIND or claims.get('request')!=r:
             raise Denied('explicit owner consent does not bind exactly to this payment request')
         if as_time(claims.get('expires_at'))<=now_utc():raise Denied('explicit owner consent expired')
         digest=hashlib.sha256(canonical(r)).hexdigest()
