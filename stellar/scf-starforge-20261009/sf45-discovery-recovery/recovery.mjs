@@ -126,7 +126,19 @@ export async function fetchDiscoveryCatalog({
         await delay(backoffMs * Math.min(2 ** attempt, 8), undefined, signal ? { signal } : {});
         continue;
       }
-      body = await readJsonBounded(response, maxPageBytes);
+      try {
+        // HTTP headers can arrive before a complete JSON body. If the original
+        // GET stream breaks, spend the remaining bounded GET-only retry budget.
+        body = await readJsonBounded(response, maxPageBytes);
+      } catch (error) {
+        if (signal?.aborted) throw signal.reason;
+        // Complete malformed JSON and oversized streamed responses fail closed.
+        if (error instanceof DiscoveryError) throw error;
+        if (attempt >= maxRetries) throw new DiscoveryError('DISCOVERY_NETWORK_EXHAUSTED', null, error?.name || 'TransportError');
+        retries++;
+        await delay(backoffMs * Math.min(2 ** attempt, 8), undefined, signal ? { signal } : {});
+        continue;
+      }
       break;
     }
     if (response.status === 400 && cursor && typeof body?.reason === 'string' &&
