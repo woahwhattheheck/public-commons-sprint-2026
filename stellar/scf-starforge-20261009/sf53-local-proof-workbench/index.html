@@ -16,6 +16,7 @@
   <section class="row" aria-label="Proof status">
     <article class="metric"><div class="kicker">LOCAL CHECKOUT TRACE</div><h2 id="smoke-status">…</h2><p>Original SF51 catalog + MCP broker</p></article>
     <article class="metric"><div class="kicker">RELEASE SOURCE CONTRACT</div><h2 id="release-status">…</h2><p>Original SF46 import + pin preflight</p></article>
+    <article class="metric"><div class="kicker">ORIGINAL SELLER → BUYER WIRE</div><h2 id="wire-status">…</h2><p>SF52: source-backed six genuine HTTP probes</p></article>
     <article class="metric"><div class="kicker">PROVEN SIGNED CALLS</div><h2 id="signed">—</h2><p>Zero is the intentional local-demo limit</p></article>
     <article class="metric"><div class="kicker">PAYMENT OPERATIONS</div><h2 id="payments">—</h2><p>No authorization, signer or mainnet</p></article>
   </section>
@@ -32,6 +33,14 @@
     <div class="counts"><div><strong id="matching">—</strong><span>Pin matches</span></div><div><strong id="changed">—</strong><span>Updated blobs</span></div><div><strong id="missing">—</strong><span>Missing files</span></div></div>
     <p id="source-note" class="source-note">Awaiting recorded source checks.</p>
   </article></section>
+  <section class="panel" aria-label="Seller-to-buyer policy evidence">
+    <div class="sectionhead"><div><h2>Original seller → buyer wire decisions</h2>
+    <p class="muted">SF52 imports SF30 seller compiler and SF31 buyer directly. Six actual localhost HTTP POST/402 probes; no signing or settlement.</p></div><span class="legend">Original SF52 acceptance</span></div>
+    <div class="counts"><div><strong id="wire-probes">—</strong><span>HTTP 402 probes</span></div><div><strong id="wire-blocked">—</strong><span>Blocked before approval</span></div><div><strong id="wire-signed">—</strong><span>Signed requests</span></div></div>
+    <div class="tablewrap"><table><thead><tr><th>Probe</th><th>Original buyer decision</th><th>Approvals / signatures</th></tr></thead>
+    <tbody id="wire-decisions"><tr><td colspan="3">Loading…</td></tr></tbody></table></div>
+    <p class="muted">One operator sees the valid terms and refuses. The other five are rejected before policy approval. A failed original module or unexpected signing is displayed as a failure, never as a pass.</p>
+  </section>
   <section class="panel"><div class="sectionhead"><div><h2>Source provenance</h2><p class="muted">Module evidence read at server startup; no fabricated commerce acceptance.</p></div><span class="legend">Original SF46 manifest</span></div>
   <div class="tablewrap"><table><thead><tr><th>Module</th><th>Status</th><th>Observed Git blob</th></tr></thead><tbody id="sources"><tr><td colspan="3">Loading…</td></tr></tbody></table></div>
   </section>

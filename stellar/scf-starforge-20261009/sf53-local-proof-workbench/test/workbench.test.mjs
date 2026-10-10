@@ -9,6 +9,19 @@ const smokeSuccess = () => ({
   executedPaymentCalls: 0, signedRequests: 0, testnetTransactions: 0,
   cancelledReplay: true, protocol: '2025-11-25',
 });
+const wireSuccess = () => ({
+  status: 'PASS', actualHttpRequests: 6, signedHttpRequests: 0,
+  signingCallbacks: 0, chainTransactions: 0, sellerPayments: 0,
+  quoteDecisions: [
+    { label:'approved terms, operator refuses', denied:'PAYMENT_NOT_APPROVED', requests:1, approvals:1, signatures:0 },
+    ...Array.from({ length:4 }, (_, i) => ({
+      label:'terms denied ' + i, denied:'PAYMENT_TERMS_NOT_AUTHORIZED',
+      requests:1, approvals:0, signatures:0,
+    })),
+    { label:'resource URL mismatch', denied:'RESOURCE_MISMATCH',
+      requests:1, approvals:0, signatures:0 },
+  ],
+});
 const sourceSuccess = () => ({
   status: 'PASS_SOURCE_CONTRACTS_ONLY',
   sources: [{ id: 'catalog', status: 'PIN_MATCH', actualGitBlob: 'a'.repeat(40), expectedGitBlob: 'a'.repeat(40) },
@@ -19,7 +32,7 @@ const sourceSuccess = () => ({
 
 test('source-native runner accepts only an unspendable local smoke and keeps real release drift visible', async () => {
   let a = 0, b = 0;
-  const report = await readOriginalEvidence({
+  const report = await readOriginalEvidence({ wireRunner: async () => wireSuccess(),
     smokeRunner: async () => { a++; return smokeSuccess(); },
     releaseRunner: async (opts) => { assert.equal(opts.strictPins, false); b++; return sourceSuccess(); },
     observedAt: '2026-10-10T07:00:00.000Z',
@@ -28,17 +41,20 @@ test('source-native runner accepts only an unspendable local smoke and keeps rea
   assert.equal(report.commerce.status, 'PASS_LOCAL_SOURCE_SMOKE');
   assert.equal(report.release.status, 'PASS_SOURCE_CONTRACTS_ONLY');
   assert.equal(report.release.changedPins, 1);
+  assert.equal(report.wire.status, 'PASS_DENIED_WIRE_POLICY');
+  assert.equal(report.wire.httpProbes, 6);
+  assert.equal(report.wire.blockedBeforeApproval, 5);
   assert.equal(report.release.warnings.length, 1);
   assert.equal(report.restrictions.browserCanTriggerPayment, false);
 });
 
 test('positive paid or signed activity cannot be mislabeled as safe local acceptance', async () => {
-  const report = await readOriginalEvidence({
+  const report = await readOriginalEvidence({ wireRunner: async () => wireSuccess(),
     smokeRunner: async () => ({...smokeSuccess(), signedRequests: 1}),
     releaseRunner: async () => sourceSuccess(),
   });
   assert.equal(report.commerce.status, 'FAIL_INVARIANT');
-  const failure = await readOriginalEvidence({
+  const failure = await readOriginalEvidence({ wireRunner: async () => wireSuccess(),
     smokeRunner: async () => {throw Error('read-only source incompatibility');},
     releaseRunner: async () => ({ ...sourceSuccess(), status: 'FAIL_SOURCE_PREFLIGHT', failures: ['missing export'] }),
   });
@@ -46,8 +62,35 @@ test('positive paid or signed activity cannot be mislabeled as safe local accept
   assert.equal(failure.release.status, 'FAIL_SOURCE_PREFLIGHT');
 });
 
+test('original wire evidence fails visibly for signing drift, unexpected payment or broken source', async () => {
+  const shared = { smokeRunner: async () => smokeSuccess(), releaseRunner: async () => sourceSuccess() };
+  for (const mutation of [
+    { signedHttpRequests: 1 }, { chainTransactions: 1 },
+    { quoteDecisions: wireSuccess().quoteDecisions.slice(0, 5) },
+  ]) {
+    const report = await readOriginalEvidence({
+      ...shared, wireRunner: async () => ({ ...wireSuccess(), ...mutation }),
+    });
+    assert.equal(report.wire.status, 'FAIL_WIRE_INVARIANT');
+  }
+  const sourceFailure = await readOriginalEvidence({
+    ...shared, wireRunner: async () => { throw Error('Original seller wire failed'); },
+  });
+  assert.equal(sourceFailure.wire.status, 'FAIL_WIRE_SOURCE');
+  assert.match(sourceFailure.wire.detail, /Original seller wire failed/);
+});
+
+test('actual published seller-to-buyer wire runs, without payment or signer', async () => {
+  const report = await readOriginalEvidence({
+    smokeRunner: async () => smokeSuccess(), releaseRunner: async () => sourceSuccess(),
+  });
+  assert.equal(report.wire.status, 'PASS_DENIED_WIRE_POLICY');
+  assert.equal(report.wire.signedRequests, 0);
+  assert.equal(report.wire.chainTransactions, 0);
+});
+
 test('browser exposes a frozen read-only source report, rejects rebinding/writes and serves CSP', async () => {
-  const report = await readOriginalEvidence({ smokeRunner: async()=>smokeSuccess(), releaseRunner: async()=>sourceSuccess() });
+  const report = await readOriginalEvidence({ wireRunner: async () => wireSuccess(), smokeRunner: async()=>smokeSuccess(), releaseRunner: async()=>sourceSuccess() });
   const workbench = await startWorkbench({ report });
   try {
     const base = workbench.url;
