@@ -1,0 +1,64 @@
+{
+  "schema": "SCF-SF41/unlabeled-source-linked-query-seeds-v1",
+  "provenance": "Derived from public first-party issue descriptions (SF49 original 9-source packet); search expressions are engineering probes, NOT observed live user queries, NOT a relevance ground-truth set.",
+  "source_ledger": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf_2026/SF49_PUBLIC_SIGNALS_20261009.json",
+  "cases": [
+    {
+      "id": "X402-3657-method-mismatch",
+      "query": "paid api POST method headers",
+      "label_source": "https://github.com/x402-foundation/x402/issues/3657",
+      "limit": 20
+    },
+    {
+      "id": "X402-3511-search-method",
+      "query": "chat POST request body method",
+      "label_source": "https://github.com/x402-foundation/x402/issues/3511",
+      "limit": 20
+    },
+    {
+      "id": "X402-3121-mcp-canonical",
+      "query": "financial analysis mcp tool",
+      "label_source": "https://github.com/x402-foundation/x402/issues/3121",
+      "limit": 20,
+      "filters": {
+        "type": "mcp"
+      }
+    },
+    {
+      "id": "STELLAR-55-currency",
+      "query": "stellar payment USD price",
+      "label_source": "https://github.com/stellar/x402-stellar/issues/55",
+      "limit": 20
+    },
+    {
+      "id": "STELLAR-71-metered",
+      "query": "metered API payment approval",
+      "label_source": "https://github.com/stellar/x402-stellar/issues/71",
+      "limit": 20
+    },
+    {
+      "id": "X402-3226-verify-only",
+      "query": "verified discovery catalog",
+      "label_source": "https://github.com/x402-foundation/x402/issues/3226",
+      "limit": 20
+    },
+    {
+      "id": "STELLAR-74-checkout",
+      "query": "stellar wallet paywall",
+      "label_source": "https://github.com/stellar/x402-stellar/issues/74",
+      "limit": 20
+    },
+    {
+      "id": "X402-2942-listing",
+      "query": "resource catalog indexing",
+      "label_source": "https://github.com/x402-foundation/x402/issues/2942",
+      "limit": 20
+    },
+    {
+      "id": "X402-3500-buyer-policy",
+      "query": "agent spend limit",
+      "label_source": "https://github.com/x402-foundation/x402/issues/3500",
+      "limit": 20
+    }
+  ]
+}
