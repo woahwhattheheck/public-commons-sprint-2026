@@ -66,3 +66,7 @@ One directly relevant Node 22 Linux check: `node --test stellar/scf-starforge-20
 ## Input complexity guard (post-2026-10-10)
 
 Atomic amounts and usage units are canonical unsigned decimal strings bounded to Stellar/Soroban signed-i128 (39 decimal digits maximum). An untrusted oversized decimal is rejected **before** the regular expression or `BigInt` conversion; this prevents very large public input values from consuming unnecessary parser CPU and memory. Existing numeric values and ledger/reconciliation semantics are unchanged. The original focused test now covers a million-digit metering argument, oversized price and advertised ceiling inputs, the exact i128 overflow boundary, unchanged on-disk tally, and a subsequent valid usage event. This is an input parser guard, not a replacement for request body size limits or the existing approved real-wire/testnet checks.
+
+## Cumulative usage range (2026-10-10)
+
+The Soroban signed-i128 limit applies to the *aggregate* `units` journal tally, as well as to each individual `recordUnits()` input. Even when a very small per-unit price would keep the payment below the authorized ceiling, a second usage event that would push the cumulative tally beyond `(2**127)-1` is rejected before any journal write. The prior tally remains available, including for an in-range final record and `seal()`. The focused original metering regression checks the actual journal before and after this rejection. This change makes no settlement, wallet, or facilitator call.
