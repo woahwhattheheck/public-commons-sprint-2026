@@ -4,9 +4,9 @@
 
 ## Buyer need -> eligible prime -> independent, payable slice
 
-- Buyer: Oregon DEQ Built Environment / Materials Management. Source ID `S-34000-00018168`. Clarification deadline **October 14, 2026 4 PM PT**, proposal **October 21, 2026 4 PM PT**, verify against native RFP attachment before any bidder action.
+- Buyer: Oregon DEQ Built Environment / Materials Management. Source ID `S-34000-00018168`. Clarification deadline **October 14, 2026 4 PM PT**, proposal **October 21, 2026 4 PM PT**. Existing owner **read the original 54-page issuer PDF** (attachment #814025) and verified these clocks, anticipated **one award up to $250,000** and original requirements at https://github.com/woahwhattheheck/commons/issues/33089#issuecomment-6096200615 ; bidder must still check for later addenda.
 - Prime candidate order for **original business relationship owner**: **Sourcemap** for original facility/material tier-N physical traceability; **Prewave** for supplier/ESG graph; **Resilinc** for site and commodity risk. They are not committed to any proposal, subaward, or conversation. EC3/EPD databases may contribute product metadata but are not substitutes for full upstream mappings.
-- Critical gate: prime must itself offer already-operational SaaS, own/legally license the data and be able to satisfy buyer security, Oregon authorization, support, documentation, insurance and past-performance constraints. A product demo or an open-source parser does not confer that qualification.
+- **Verified hard gate from original RFP §3.1.1:** prime must demonstrate **SOC 2 Type II AND ISO 27001**, **99.9% SLA**, **24/7 technical support**, MFA, permission/audit controls, DR/RTO, GDPR/CCPA, open APIs, CSV/XLSX/Power BI, IoT/telematics and offline caching/sync. RFP §2.4 separately demands 24-hour *weekday response* and staff training. Prime must also own/licence the data and satisfy Oregon authorization, insurance, documented evidence and references. A product demo or our open-source parser confers **no** prime eligibility. Original scoring: 30 mapping, 30 data, 15 risk, 15 security/support/implementation, 10 price.
 
 ## Proposed fixed-price Stage-0 paid proof, contingent on prime agreement
 
@@ -20,6 +20,10 @@ Deliverables due within five business days **after** prime provides legally shar
 4. Focused operator acceptance session with 5-product results, corrected re-run, small handoff guide and explicit follow-on price/risks. Prime retains proposal, compliance assurances, buyer communications and legally authorized supplier datasets.
 
 Acceptance criteria (testable on partner-supplied original data): **5/5** named product manifests accepted structurally or each rejected with a reproducible specific reason; deterministic source-to-market paths and evidence-age flags; no cross-product link leakage; each required risk pair accounted for as documented/unknown; rerun produces same report from same bytes/config; prime signs off data handling. *Not* all five chains must pass the evidence gate: identification of real gaps is a legitimate QA outcome. Invoice/price/payment depends on later written agreement.
+
+## Do not double-quote the same prospective partner
+
+The original issuer-PDF custodian independently proposed a **broader $4,500 fixed/three-product CSV/XLSX/Power BI export integration** workshare in https://github.com/woahwhattheheck/commons/issues/33089#issuecomment-6096200615 . THIS file's narrower $2,500/five-product **offline evidence-shape audit** is an *alternative*, not an add-on to send automatically. A separate qualified Sourcemap partner-route owner has a consent-ready business packet in https://github.com/woahwhattheheck/commons/issues/33089#issuecomment-6096212819 . Founder/existing relationship owner must select **one** accurate and deliverable scope/price after examining vendor needs, data rights and prime response. No independent contact, duplicate draft, two quotes, or new relationship owner. The original issuer PDF and latest amendments overrule every secondary summary.
 
 ## Conversion queue, not a new broadcast
 
