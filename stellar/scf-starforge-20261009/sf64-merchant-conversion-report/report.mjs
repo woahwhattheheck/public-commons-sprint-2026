@@ -58,7 +58,7 @@ export function interpret(report) {
   const add = (priority, finding, action) => tasks.push({priority, finding, action});
   const status = report.challenge.state;
   const statusCode = report.challenge.httpStatus;
-  if (status === 'NOT_HTTP_402' && statusCode === 200) {
+  if (statusCode === 200 && (status === 'UNPAID_GET_HTTP_200' || status === 'NOT_HTTP_402')) {
     add('HIGH', 'Unauthenticated seller GET returned HTTP 200 rather than an x402 payment challenge.',
       'Confirm whether a default free tier bypasses the paid route. If this operation is intended to require payment, make free access opt-in and recheck the original 402 before escalating index issues.');
   } else if (status === 'NOT_HTTP_402') {
