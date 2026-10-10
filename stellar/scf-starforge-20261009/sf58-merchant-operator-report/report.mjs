@@ -163,4 +163,4 @@ export async function runCli(args = process.argv.slice(2)) {
   return made.report;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
-  runCli().catch(e => { process.stderr.write('SF58: ' + e.message + '\n'; process.exitCode = 2; });
+  runCli().catch(e => { process.stderr.write('SF58: ' + e.message + '\n'); process.exitCode = 2; });
