@@ -91,11 +91,16 @@ export function createOpsHandler({catalog, discoveryHandler, nowMs=()=>performan
   };
   async function handler(req,res){
     const started=nowMs(), route=routeOf(req), ip=req.socket?.remoteAddress??'unknown';
-    let finished=false, admitted=false;
+    let finished=false, admitted=false, backendSettled=false, released=false;
+    // A disconnected socket does not cancel async discovery work. Keep its
+    // admission slot until BOTH the HTTP response ends and backend work settles.
+    const release=()=>{
+      if(!released && admitted && finished && backendSettled){released=true;active--;}
+    };
     const done=(aborted=false)=>{
       if(finished)return;finished=true;
-      if(admitted)active--;
       record(route,res.statusCode||500,nowMs()-started,aborted);
+      release();
     };
     res.once('finish',()=>done(false));
     res.once('close',()=>done(!res.writableFinished));
@@ -116,7 +121,12 @@ export function createOpsHandler({catalog, discoveryHandler, nowMs=()=>performan
       b.used++;
       if(active>=maxInFlight){rejectedLoad++;send(res,503,{error:'OVERLOADED'},{'retry-after':'1'});return;}
       admitted=true;active++;
-      await discoveryHandler(req,res);
+      try{
+        await discoveryHandler(req,res);
+      }finally{
+        backendSettled=true;
+        release();
+      }
     } catch {
       if(!res.headersSent){send(res,500,{error:'INTERNAL_ERROR'});return;}
       if(!res.writableEnded)res.end();
