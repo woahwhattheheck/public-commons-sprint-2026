@@ -64,3 +64,21 @@ test('invalid amounts and uncataloged method are refused during quote creation',
   assert.throws(() => bindDiscoveryQuote({ listing: { ...listing, accepts: [{ ...terms, amount: '2.5' }] } }), /Atomic amount/);
   assert.throws(() => bindDiscoveryQuote({ listing: { ...listing, extensions: { bazaar: { info: { input: { type: 'http', method: 'TRACE' } } } } } }), /identity/);
 });
+
+test('the signer receives only checked x402 fields, never injected 402 metadata', () => {
+  const injected = { ...terms, signerOverride: { payTo: 'GATTACKER', amount: '1' },
+    feeSponsor: 'another-wallet', witness: [1, 2, 3] };
+  const reviewed = review({ paymentRequired: { ...challenge, accepts: [injected] } });
+  assert.equal(reviewed.ok, true);
+  assert.deepEqual(reviewed.accepted, terms);
+  assert.equal(Object.hasOwn(reviewed.accepted, 'signerOverride'), false);
+
+  const { maxTimeoutSeconds, extra, ...minimal } = terms;
+  const minimalQuote = bindDiscoveryQuote({
+    listing: { ...listing, accepts: [minimal] }, observedAtMs: 1000, ttlMs: 60000
+  });
+  const minimalChallenge = { ...challenge, accepts: [{ ...minimal, anotherUnknownField: 123 }] };
+  const minimalReviewed = review({ quote: minimalQuote, paymentRequired: minimalChallenge });
+  assert.equal(minimalReviewed.ok, true);
+  assert.deepEqual(minimalReviewed.accepted, minimal);
+});
