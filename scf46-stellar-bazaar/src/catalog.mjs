@@ -7,6 +7,8 @@ import { rankBazaarEntries } from './ranking.mjs';
 const plain = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const printable = (v) => typeof v === 'string' && v.length > 0 && v.length <= 32 && /^[\x20-\x7E]+$/.test(v);
 const ALLOWED = new Set(['type','payTo','network','scheme','extensions']);
+// SF28 identity grammar also prevents pipe-delimited MCP catalog key aliasing.
+const MCP_TOOL_NAME = /^[A-Za-z0-9_.-]{1,128}$/;
 
 export function isValidRouteTemplate(template) {
   // Reuse SF28 multi-decode path validation at the actual catalog boundary.
@@ -65,7 +67,7 @@ function keyOf(entry) {
   if (!checked.ok) throw new TypeError(`Invalid resource URL: ${checked.reason}`);
   const url = checked.url;
   if (info.type === 'mcp') {
-    if (typeof info.toolName !== 'string' || !info.toolName.trim() || !plain(info.inputSchema)) throw new TypeError('Invalid MCP tool');
+    if (typeof info.toolName !== 'string' || !MCP_TOOL_NAME.test(info.toolName) || !plain(info.inputSchema)) throw new TypeError('Invalid MCP tool');
     return ['mcp',url.href,info.toolName].join('|');
   }
   if (!['GET','HEAD','DELETE','POST','PUT','PATCH'].includes(info.method)) throw new TypeError('Invalid HTTP method');
