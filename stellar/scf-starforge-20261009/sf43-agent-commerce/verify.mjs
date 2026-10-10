@@ -92,7 +92,9 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
   try {
     while (pages++ < maxEventPages) {
       const result = await callRpc('getEvents',{
-        startLedger:tx.ledger, filters:[{type:'contract',contractIds:[expected.asset]}],
+        // Stellar RPC requires startLedger omitted once a pagination cursor is sent.
+        ...(page ? {} : {startLedger:tx.ledger}),
+        filters:[{type:'contract',contractIds:[expected.asset]}],
         pagination:{limit:200,...(page?{cursor:page}:{})},
       },fetchImpl,rpcEndpoint);
       const events=Array.isArray(result.events)?result.events:[];
