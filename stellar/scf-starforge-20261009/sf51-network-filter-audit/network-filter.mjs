@@ -7,7 +7,25 @@ export const SCHEMA = 'stellar-scf51/network-filter-original-response-v1';
 const sha = raw => createHash('sha256').update(raw).digest('hex');
 const obj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const failure = (code, detail) => { throw new Error(code + (detail ? ': ' + detail : '')); };
-const stamp = x => typeof x === 'string' && Number.isFinite(Date.parse(x)) && /^\d{4}-\d\d-\d\dT/.test(x);
+// Captures compared as one experiment must have genuine offset-aware instants.
+const MAX_PAIR_SKEW_MS = 120_000;
+function captureTimestamp(x) {
+  if (typeof x !== 'string' || x.length > 48) failure('CAPTURE_TIME_INVALID');
+  const m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.\d{1,3})?(Z|[+-]\d\d:\d\d)$/.exec(x);
+  if (!m) failure('CAPTURE_TIME_INVALID');
+  const [,year,month,day,hour,minute,second,offset] = m;
+  const days = new Date(Date.UTC(+year,+month,0)).getUTCDate();
+  if (+year < 2020 || +month < 1 || +month > 12 || +day < 1 || +day > days ||
+      +hour > 23 || +minute > 59 || +second > 59) failure('CAPTURE_TIME_INVALID');
+  if (offset !== 'Z') {
+    const oh=+offset.slice(1,3), om=+offset.slice(4,6);
+    if (oh > 14 || om > 59 || (oh === 14 && om !== 0) || offset === '-00:00')
+      failure('CAPTURE_TIME_INVALID');
+  }
+  const t = Date.parse(x);
+  if (!Number.isFinite(t)) failure('CAPTURE_TIME_INVALID');
+  return t;
+}
 
 export function rawPage(bytes) {
   const raw = Buffer.from(bytes);
@@ -68,7 +86,10 @@ function sameIdentities(a, b) {
 export function auditPair({ filteredBytes, controlBytes, filteredUrl, controlUrl, network,
   filteredAt, controlAt }) {
   const source = validatePairUrls(filteredUrl,controlUrl,network);
-  if (!stamp(filteredAt) || !stamp(controlAt)) failure('CAPTURE_TIME_INVALID');
+  const filteredTime = captureTimestamp(filteredAt);
+  const controlTime = captureTimestamp(controlAt);
+  const captureSkewMs = Math.abs(filteredTime - controlTime);
+  const pairComparable = captureSkewMs <= MAX_PAIR_SKEW_MS;
   const filtered = rawPage(filteredBytes), control = rawPage(controlBytes);
   const anomalies=[];
   for (const [index,row] of filtered.items.entries()) {
@@ -80,9 +101,10 @@ export function auditPair({ filteredBytes, controlBytes, filteredUrl, controlUrl
     }
   }
   const safe = selectNetworkResources(filtered.items,network);
-  const countSame = sameIdentities(filtered,control);
-  const identicalByteSha = filtered.raw_sha256 === control.raw_sha256;
-  const equalTotal = filtered.total !== null && filtered.total === control.total;
+  // Filtered-row correctness survives a stale control capture; cross-page parity does not.
+  const countSame = pairComparable ? sameIdentities(filtered,control) : null;
+  const identicalByteSha = pairComparable ? filtered.raw_sha256 === control.raw_sha256 : null;
+  const equalTotal = pairComparable ? filtered.total !== null && filtered.total === control.total : null;
   return {
     schema:SCHEMA,kind:'read-only-original-provider-filter-audit',
     specification:'https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md',
@@ -92,7 +114,8 @@ export function auditPair({ filteredBytes, controlBytes, filteredUrl, controlUrl
       filtered_bytes:filtered.bytes,control_bytes:control.bytes},
     observed:{requested_network:network,filtered_rows:filtered.items.length,
       filtered_total:filtered.total,control_rows:control.items.length,
-      control_total:control.total,matching_network_rows:safe.length,
+      control_total:control.total,capture_skew_ms:captureSkewMs,
+      pair_temporally_comparable:pairComparable,matching_network_rows:safe.length,
       nonmatching_rows:anomalies.length,same_page_identities:countSame,
       identical_raw_page_bytes:identicalByteSha,equal_pagination_total:equalTotal},
     finding:anomalies.length ? 'RETURNED_ROWS_WITHOUT_REQUESTED_NETWORK' :
@@ -101,7 +124,7 @@ export function auditPair({ filteredBytes, controlBytes, filteredUrl, controlUrl
     buyer_safe_candidates:safe.map(r=>({resource:r.resource??null,
       type:r.type??null,tool_name:r.extensions?.bazaar?.info?.input?.toolName??null,
       matching_accepts:r.accepts.length})),
-    caveat:'This evaluates supplied captured original GET page bytes only. A network match is necessary, not sufficient, to purchase: authenticate seller/recipient/asset/price and apply the user spend governor. No origin purchase, verify, settle, Stellar transaction, or grant eligibility claim.'
+    caveat:'This evaluates supplied captured original GET page bytes only. A network match is necessary, not sufficient, to purchase: authenticate seller/recipient/asset/price and apply the user spend governor. Control comparisons are null when the capture pair is over 120 seconds apart. No origin purchase, verify, settle, Stellar transaction, or grant eligibility claim.'
   };
 }
 
