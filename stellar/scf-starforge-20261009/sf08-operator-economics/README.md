@@ -14,6 +14,8 @@ node model.mjs inputs.json > scenarios.json
 
 The generated `scenarios.json` is the reproducible default calculation. Change the input file locally for real pricing quotes, different volume assumptions, retry rates, FX scenarios, paid discovery vs free read mix, or an operating-fee scenario, then rerun. The program validates nonnegative finite inputs and keeps unknown costs **null**, not quietly priced at zero. Both architectures use the same merchant behavior assumptions, but *neither has been capacity tested*.
 
+**Numeric safety (Oct 10 fix):** `scenario_paid_calls` entries passed to `project()` must be nonnegative safe integers; fractional/unsafe payment counts are rejected. Even individually finite assumptions can overflow combined request, CPU, optional-price or revenue projections. The model now raises `RangeError` rather than returning `Infinity`/`NaN` that JSON would misleadingly write as `null`. The same fail-closed guard applies to break-even profit calculations. Very large or unsupported scenarios require rescaling inputs, not treating overflow as valid zero cost. Focused local regression: `node numeric-safety.test.mjs` (no hosted CI). The displayed break-even integers above were also corrected to match the existing current formula; this change does not add observed revenue, funded operating costs, or provider capacity evidence.
+
 ## First-party price inputs (USD; retrieved Oct 9, 2026)
 
 | Modeled component | Source-backed posted price | Interpretation / important omissions |
@@ -39,7 +41,7 @@ All rows use **five free discovery queries + two additional Worker HTTP interact
 | 1,000,000 | 7,000,000 | $65.10 | $84.00 | $460.00 | $474.90 | $456.00 |
 | 10,000,000 | 70,000,000 | $89.40 | $84.00 | $4,600.00 | $5,310.60 | $5,316.00 |
 
-**Interpretation:** each table contribution is an **optimistic ceiling conditional on an unverified fee/business model and excluding four unknown cost categories**. It is *not profit*. At the stated assumptions, the model's optimistic monthly break-even threshold is **120,362 successful calls (edge)** or **155,547 (VM)**. Any nonzero omitted spending increases these thresholds; any observed extra chain attempts or FX increase may remove contribution entirely. A hypothetical operator fee must be justified by seller willingness and competitive pricing; no revenue exists here.
+**Interpretation:** each table contribution is an **optimistic ceiling conditional on an unverified fee/business model and excluding four unknown cost categories**. It is *not profit*. At the stated assumptions, the model's optimistic monthly break-even threshold is **120,371 successful calls (edge)** or **155,556 (VM)**. Any nonzero omitted spending increases these thresholds; any observed extra chain attempts or FX increase may remove contribution entirely. A hypothetical operator fee must be justified by seller willingness and competitive pricing; no revenue exists here.
 
 At 1M paid calls/month, the 7M HTTP requests represent only ~2.70 **average** HTTP RPS, but ~54.01 RPS with a **modeled 20× burst**. At 10M, modeled burst is ~540 RPS. Neither vendor resource tier has been shown capable of serving this burst with required latency and 99% availability. For a 30-day month, a 99% availability objective equates to a **432-minute maximum downtime** and requires measurement of the *whole discover/verify/settle chain*, not just the healthcheck process.
 
