@@ -43,6 +43,13 @@ class MarketBoundary(unittest.TestCase):
                                       'yesPrice': '1.2'})
         self.assertEqual(malformed['price_state'], 'malformed')
         self.assertEqual([a['severity'] for a in alerts([malformed])], ['caution'])
+        unknown = market_normalize({'marketId': 'unknown-source', 'title': 'Unknown schema',
+                                    'yesPriceUsd': '0.5'})
+        absent = market_normalize({'marketId': 'absent-source', 'title': 'Absent schema'})
+        self.assertEqual(unknown['price_state'], 'schema_unknown')
+        self.assertEqual(absent['price_state'], 'schema_unknown')
+        self.assertEqual([a['severity'] for a in alerts([unknown])], ['unknown'])
+        self.assertEqual([a['severity'] for a in alerts([absent])], ['unknown'])
         self.assertEqual(market_collection({'results': []}), [])
         self.assertIsNone(market_collection({'items': {'not': 'a list'}}))
 
