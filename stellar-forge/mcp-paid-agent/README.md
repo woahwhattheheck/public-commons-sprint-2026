@@ -108,3 +108,21 @@ endpoints. Custom `fetchImpl` injections MUST honor the supplied redirect settin
 Focused non-payment local network regression:
 `node --test stellar-forge/mcp-paid-agent/redirect-fence.test.mjs`
 uses actual loopback 302/307 responses and asserts no unauthorized receiver hit.
+
+## Asynchronous approval single-flight
+
+A quote becomes `APPROVAL_PENDING` synchronously **before** awaiting the
+independent operator callback. Another `bazaar_execute_approved` call for the
+same quote observes that state, rather than separately requesting approval or
+signing. Cancelling during the pending approval immediately marks the quote
+`CANCELLED`; when the callback eventually resolves, no merchant fetch or
+signature occurs. Expiry is rechecked after approval. Denial or an approval
+callback error restores `PREVIEWED` for an explicitly initiated new attempt,
+without issuing a payment request. This closes the concurrent-MCP-call race in
+the previously separate sequential replay guard.
+
+Focused offline original broker check:
+`node --test stellar-forge/mcp-paid-agent/approval-singleflight.test.mjs`.
+It exercises one 402+signed retry, a simultaneous same-quote call, cancellation
+during a delayed approval, and denial. Responses are in-memory Node Fetch
+fixtures, not real Stellar payments.
