@@ -1,8 +1,9 @@
 // MIT. Portable, offline, unauthenticated checksums for first-party SF53 local evidence.
 // This module never makes HTTP calls, signs transactions, or submits grant material.
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile, lstat } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { constants } from 'node:fs';
+import { mkdir, mkdtemp, open, readFile, rename, rm, writeFile, lstat } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const SCHEMA = 'stellar-forge.sf57.portable-reviewer.v1';
@@ -10,6 +11,7 @@ const EXPECTED = 'stellar-forge.sf53.local-proof.v1';
 const hash = content => createHash('sha256').update(content).digest('hex');
 const esc = value => String(value ?? '—').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[ch]);
 const goodNumber = x => Number.isSafeInteger(x) && x >= 0;
+const MAX_REPORT_BYTES = 1024 * 1024;
 
 function canonical(value, depth = 0) {
   if (depth > 24) throw new TypeError('Evidence nesting limit');
@@ -30,7 +32,7 @@ function canonical(value, depth = 0) {
 function normalize(report) {
   const r = canonical(report);
   const encoded = JSON.stringify(r);
-  if (Buffer.byteLength(encoded) > 1024 * 1024) throw new RangeError('Evidence exceeds 1 MiB limit');
+  if (Buffer.byteLength(encoded) > MAX_REPORT_BYTES) throw new RangeError('Evidence exceeds 1 MiB limit');
   if (r?.schema !== EXPECTED || !r?.commerce || !r?.release || !r?.wire || !r?.restrictions) {
     throw new TypeError('Expected real SF53 report schema and evidence sections');
   }
@@ -93,30 +95,86 @@ export function renderPacket(input) {
   return { json, html, manifest: JSON.stringify(manifest, null, 2) + '\n', classification: status };
 }
 
-export async function writePacket(report, outputDirectory) {
+// An archived report retains its original observation and exact input bytes.
+// This metadata describes the supplied file; it does not authenticate its author.
+function archivePacket(built, sourceReport, originalFileName) {
+  if (!Buffer.isBuffer(sourceReport) || sourceReport.length > MAX_REPORT_BYTES) {
+    throw new RangeError('Archived evidence exceeds 1 MiB limit');
+  }
+  if (typeof originalFileName !== 'string' || !originalFileName ||
+      originalFileName.length > 255 || /[\\/\x00-\x1f\x7f]/.test(originalFileName)) {
+    throw new TypeError('Invalid archived report filename');
+  }
+  const archivedInput = {
+    mode: 'ARCHIVED_REPORT_NO_RERUN', fileName: 'source-report.json',
+    originalFileName, byteLength: sourceReport.length, sha256: hash(sourceReport),
+    canonicalReportSha256: hash(built.json),
+  };
+  const archiveSection = `<section><h2>Archived original observation</h2><p>This packet reuses <code>${esc(originalFileName)}</code>; no source modules were rerun. The original observation time, outcomes and source identities are retained.</p><p>Exact input: <code>source-report.json</code> · ${archivedInput.byteLength} bytes · SHA-256 <code>${archivedInput.sha256}</code></p><p><small>Filename and checksums identify the supplied file, not its author or an independently authenticated Git checkout.</small></p></section>\n`;
+  const html = built.html.replace('<section><h2>Portable bundle integrity</h2>',
+    archiveSection + '<section><h2>Portable bundle integrity</h2>');
+  const manifest = JSON.parse(built.manifest);
+  manifest.htmlSha256 = hash(html);
+  manifest.fileNames.push('source-report.json');
+  manifest.archivedInput = archivedInput;
+  return { ...built, html, manifest: JSON.stringify(manifest, null, 2) + '\n', sourceReport };
+}
+
+async function readArchivedReport(file) {
+  const handle = await open(file, constants.O_RDONLY | constants.O_NONBLOCK);
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile()) throw new TypeError('Archived report must be a regular file');
+    if (stat.size > MAX_REPORT_BYTES) throw new RangeError('Archived evidence exceeds 1 MiB limit');
+    const bytes = await handle.readFile();
+    if (bytes.length > MAX_REPORT_BYTES) throw new RangeError('Archived evidence exceeds 1 MiB limit');
+    const report = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    return { bytes, report };
+  } finally { await handle.close(); }
+}
+
+async function writeBuiltPacket(built, outputDirectory) {
   if (typeof outputDirectory !== 'string' || !outputDirectory.trim()) throw new TypeError('Output directory required');
   const output = resolve(outputDirectory);
   try { await lstat(output); throw new Error('Output exists; refuse to overwrite reviewer packet'); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
-  const built = renderPacket(report);
   await mkdir(dirname(output), { recursive: true });
   const stage = await mkdtemp(join(dirname(output), '.sf57-'));
   try {
-    await Promise.all([
+    const writes = [
       writeFile(join(stage, 'report.json'), built.json, { flag:'wx', mode:0o600 }),
       writeFile(join(stage, 'review.html'), built.html, { flag:'wx', mode:0o600 }),
       writeFile(join(stage, 'manifest.json'), built.manifest, { flag:'wx', mode:0o600 }),
-    ]);
+    ];
+    if (built.sourceReport) writes.push(writeFile(join(stage, 'source-report.json'),
+      built.sourceReport, { flag:'wx', mode:0o600 }));
+    await Promise.all(writes);
     await rename(stage, output);
   } catch (error) { await rm(stage, { recursive:true, force:true }); throw error; }
   return { path: output, classification: built.classification };
+}
+
+export async function writePacket(report, outputDirectory) {
+  return writeBuiltPacket(renderPacket(report), outputDirectory);
+}
+
+export async function writeArchivedPacket(reportPath, outputDirectory) {
+  const { bytes, report } = await readArchivedReport(reportPath);
+  return writeBuiltPacket(archivePacket(renderPacket(report), bytes, basename(reportPath)), outputDirectory);
 }
 
 export async function verifyPacket(directory) {
   const target = resolve(directory);
   const [json, html, manifest] = await Promise.all(['report.json', 'review.html', 'manifest.json']
     .map(p => readFile(join(target, p), 'utf8')));
-  const expected = renderPacket(JSON.parse(json));
+  const metadata = JSON.parse(manifest);
+  let expected = renderPacket(JSON.parse(json));
+  if (Object.hasOwn(metadata, 'archivedInput')) {
+    const { bytes, report } = await readArchivedReport(join(target, 'source-report.json'));
+    const original = renderPacket(report);
+    if (original.json !== expected.json) throw new Error('Archived input does not match canonical report');
+    expected = archivePacket(original, bytes, metadata.archivedInput?.originalFileName);
+  }
   if (expected.json !== json || expected.html !== html || expected.manifest !== manifest) {
     throw new Error('Reviewer packet mismatch: report, HTML or manifest was modified');
   }
@@ -124,14 +182,26 @@ export async function verifyPacket(directory) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const [mode, folder] = process.argv.slice(2);
+  const usage = 'Usage: node packet.mjs --out NEW_DIRECTORY [--report ORIGINAL_REPORT.json] | --verify EXISTING_DIRECTORY';
   try {
-    if (mode === '--verify' && folder && process.argv.length === 4) {
-      console.log(JSON.stringify(await verifyPacket(folder)));
-    } else if (mode === '--out' && folder && process.argv.length === 4) {
-      const { readOriginalEvidence } = await import('../sf53-local-proof-workbench/serve.mjs');
-      const result = await writePacket(await readOriginalEvidence(), folder);
+    const args = process.argv.slice(2), options = new Map();
+    for (let i = 0; i < args.length; i += 2) {
+      const flag = args[i], value = args[i + 1];
+      if (!['--out', '--report', '--verify'].includes(flag) || options.has(flag) ||
+          !value || value.startsWith('--')) throw new Error(usage);
+      options.set(flag, value);
+    }
+    if (options.has('--verify') && options.size === 1) {
+      console.log(JSON.stringify(await verifyPacket(options.get('--verify'))));
+    } else if (options.has('--out') && !options.has('--verify')) {
+      let result;
+      if (options.has('--report')) {
+        result = await writeArchivedPacket(options.get('--report'), options.get('--out'));
+      } else {
+        const { readOriginalEvidence } = await import('../sf53-local-proof-workbench/serve.mjs');
+        result = await writePacket(await readOriginalEvidence(), options.get('--out'));
+      }
       console.log(JSON.stringify(result));
-    } else throw new Error('Usage: node packet.mjs --out NEW_DIRECTORY | --verify EXISTING_DIRECTORY');
+    } else throw new Error(usage);
   } catch (error) { console.error(String(error.message ?? error)); process.exitCode = 1; }
 }
