@@ -100,3 +100,18 @@ test('post-probe freshness preserves live source kinds and rejects bad deadline 
   }});
  assert.deepEqual((await g.snapshot()).supported.kinds,[kinds[0]]);
 });
+
+test('aggregate readiness drops expired first network after a slower second network probe',async()=>{
+ const policy=conf();policy[P].enabled=true;
+ let clock=now;
+ const gate=new TruthfulSupported({facilitator:SDK(),config:policy,maxAgeSeconds:30,
+  time:()=>clock,probe:async ({network})=>{
+   if(network===P)clock=now+31;
+   return {...makeProof(network),checkedAtUnix:network===T?now:clock};
+  }});
+ const outcome=await gate.snapshot();
+ assert.deepEqual(outcome.supported.kinds.map(x=>x.network),[P]);
+ assert.deepEqual(outcome.assetManifest.assets.map(x=>x.network),[P]);
+ assert.deepEqual(outcome.supported.signers['stellar:*'],[signer]);
+ assert.equal(outcome.ready,true);
+});
