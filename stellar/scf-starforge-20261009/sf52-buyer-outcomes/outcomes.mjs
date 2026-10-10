@@ -54,8 +54,8 @@ export function captureBuyerResult(buyer, { observedAt = new Date().toISOString(
   }
   const receipt = buyer.receipt && obj(buyer.receipt) ? {
     success: buyer.receipt.success === true,
-    network: typeof buyer.receipt.network === 'string' ? buyer.receipt.network : null,
-    transaction: typeof buyer.receipt.transaction === 'string' ? buyer.receipt.transaction : null,
+    network: ['stellar:testnet', 'stellar:pubnet'].includes(buyer.receipt.network) ? buyer.receipt.network : null,
+    transaction: hash(buyer.receipt.transaction) ? buyer.receipt.transaction : null,
   } : null;
   return Object.freeze({ intentId:buyer.intentId, observedAt:date(observedAt),
     buyer:{ status:buyer.status, attempts:buyer.attempts, httpStatus:buyer.httpStatus,
