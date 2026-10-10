@@ -18,6 +18,32 @@ test('metadata soft-drop and dedup exact ASCII behavior',()=>{
   assert.equal(sanitizeResourceServiceMetadata({iconUrl:'http://%31%32%37.0.0.1/a'}).iconUrl,undefined);
   assert.equal(sanitizeResourceServiceMetadata({serviceName:'☃'}).serviceName,undefined);
 });
+test('public catalog never advertises reserved local-network icon hostnames',()=>{
+  const blocked = [
+    'http://printer.local/preview.png',
+    'https://dashboard.internal/logo.svg',
+    'https://router.home.arpa/icon',
+    'https://localhost.localdomain/logo',
+    'https://files.localdomain/preview.png',
+    'https://DEVICE.INTERNAL./logo.png',
+    'http://localhost./icon',
+  ];
+  for (const iconUrl of blocked) {
+    assert.equal(sanitizeResourceServiceMetadata({iconUrl}).iconUrl,undefined,iconUrl);
+  }
+  for (const iconUrl of [
+    'https://cdn.example.org/logo.png',
+    'http://images.example.org/logo.svg',
+  ]) {
+    assert.equal(sanitizeResourceServiceMetadata({iconUrl}).iconUrl,iconUrl);
+  }
+  const catalog=new BazaarCatalog();
+  const unsafe=entry('local-icon');
+  unsafe.resource.iconUrl='https://router.home.arpa/badge.png';
+  catalog.insertValidated(unsafe);
+  assert.equal(catalog.list().resources[0].resource.iconUrl,undefined,
+    'real discovery output must not leak an RFC-reserved local icon URL');
+});
 test('HTTP templates dedup, MCP tools distinct at the same resource URL',()=>{
   const c = new BazaarCatalog(); const a=entry('users/123');
   a.extensions.bazaar.routeTemplate='/users/:id'; c.insertValidated(a);
