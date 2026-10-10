@@ -47,3 +47,9 @@ if (decision.decision !== 'allow') throw new Error(decision.reason);
 ## Focused local checks
 
 `node --test stellar/scf-starforge-20261009/sf50-quote-reconciliation/*.test.mjs` from the public repo root. A single changed-behavior suite exercises 9 isolated reconciliation cases and the actual PR451 HTTP/catalog source path. This is not a full x402 conformance certification. Preserve any upstream SHA changes and re-run this same one check when integrating.
+
+## Bazaar v2 HTTP input-contract drift guard (2026-10-10)
+
+A matching live payee and amount are insufficient if the origin's newly advertised invocation requirements differ from those the buyer discovered. Per the [first-party x402 Bazaar extension](https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md), `extensions.bazaar.info.input` carries HTTP query/header examples, body type/body example and operation method; `extensions.bazaar.schema` describes that info shape. The buyer gate now requires equal static input and schema metadata between the catalog entry and fresh HTTP 402. For valid `routeTemplate` families, only per-request `pathParams` are excluded from comparison, since concrete route values may differ. The existing route/origin/method/amount/payee checks remain unchanged. A stale contract rejects as `ORIGIN_BAZAAR_INPUT_CONTRACT_DRIFT`: refetch and reapprove instead of signing old discovery metadata. This stricter gate may reject benign changed examples until the catalog is refreshed.
+
+Original module focused offline regression: `node --test stellar/scf-starforge-20261009/sf50-quote-reconciliation/input-contract.test.mjs`. It exercises matching GET/POST quotes, changed live query/header/schema/body, dynamic route path-parameter variability and missing schemas. No hosted CI, wallet or payment.
