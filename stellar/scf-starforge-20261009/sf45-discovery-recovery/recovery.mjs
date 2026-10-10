@@ -15,6 +15,36 @@ export class DiscoveryError extends Error {
   }
 }
 
+// Read the actual decompressed response stream, never unbounded Response.json().
+// A declared size is just a fast rejection; enforce the limit on received bytes.
+async function readJsonBounded(response, maxPageBytes) {
+  const declared = response.headers.get('content-length');
+  if (declared && /^\d+$/.test(declared) && BigInt(declared) > BigInt(maxPageBytes)) {
+    await response.body?.cancel();
+    throw new DiscoveryError('DISCOVERY_RESPONSE_TOO_LARGE', response.status);
+  }
+  if (!response.body) throw new DiscoveryError('DISCOVERY_INVALID_JSON', response.status);
+  const reader = response.body.getReader();
+  const parts = [];
+  let length = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > maxPageBytes) throw new DiscoveryError('DISCOVERY_RESPONSE_TOO_LARGE', response.status);
+      parts.push(Buffer.from(value));
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  try { return JSON.parse(Buffer.concat(parts, length).toString('utf8')); }
+  catch { throw new DiscoveryError('DISCOVERY_INVALID_JSON', response.status); }
+}
+
 export function stableResourceIdentity(resource) {
   const input = resource?.extensions?.bazaar?.info?.input;
   if (!['http', 'mcp'].includes(input?.type) || typeof resource?.resource?.url !== 'string')
@@ -40,6 +70,9 @@ export async function fetchDiscoveryCatalog({
   maxRestarts = 2,
   timeoutMs = 1500,
   backoffMs = 50,
+  maxPageBytes = 4 * 1024 * 1024,
+  maxResources = 50_000,
+  maxPages = 5_000,
   signal,
   onPage
 }) {
@@ -51,15 +84,18 @@ export async function fetchDiscoveryCatalog({
       !Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 20 ||
       !Number.isInteger(maxRestarts) || maxRestarts < 0 || maxRestarts > 20 ||
       !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000 ||
-      !Number.isInteger(backoffMs) || backoffMs < 0 || backoffMs > 60_000)
+      !Number.isInteger(backoffMs) || backoffMs < 0 || backoffMs > 60_000 ||
+      !Number.isInteger(maxPageBytes) || maxPageBytes < 1 || maxPageBytes > 16 * 1024 * 1024 ||
+      !Number.isInteger(maxResources) || maxResources < 1 || maxResources > 200_000 ||
+      !Number.isInteger(maxPages) || maxPages < 1 || maxPages > MAX_PAGES)
     throw new TypeError('Invalid bounded retry/pagination configuration');
   const root = new URL(baseUrl);
   if (!['http:', 'https:'].includes(root.protocol) || root.username || root.password || root.search || root.hash || root.pathname !== '/')
     throw new TypeError('Absolute discovery root URL without userinfo/path required');
   const started = performance.now();
   let attempts = 0, retries = 0, restarts = 0, pages = 0;
-  let results = [], seen = new Set(), cursor = null;
-  while (pages < MAX_PAGES) {
+  let results = [], seen = new Set(), cursors = new Set(), cursor = null;
+  while (pages < maxPages) {
     signal?.throwIfAborted();
     const url = new URL('/discovery/search', root);
     url.searchParams.set('query', query);
@@ -90,14 +126,13 @@ export async function fetchDiscoveryCatalog({
         await delay(backoffMs * Math.min(2 ** attempt, 8), undefined, signal ? { signal } : {});
         continue;
       }
-      try { body = await response.json(); }
-      catch { throw new DiscoveryError('DISCOVERY_INVALID_JSON', response.status); }
+      body = await readJsonBounded(response, maxPageBytes);
       break;
     }
     if (response.status === 400 && cursor && typeof body?.reason === 'string' &&
         body.reason === 'Stale or invalid cursor') {
       if (restarts >= maxRestarts) throw new DiscoveryError('DISCOVERY_STALE_EXHAUSTED', 400);
-      restarts++; cursor = null; results = []; seen = new Set(); pages = 0;
+      restarts++; cursor = null; results = []; seen = new Set(); cursors = new Set(); pages = 0;
       continue;
     }
     if (!response.ok) throw new DiscoveryError('DISCOVERY_HTTP_REJECTED', response.status, body?.reason);
@@ -106,7 +141,10 @@ export async function fetchDiscoveryCatalog({
     const priorCursor = cursor;
     for (const row of body.resources) {
       const key = stableResourceIdentity(row);
-      if (!seen.has(key)) { seen.add(key); results.push(row); }
+      if (!seen.has(key)) {
+        if (seen.size >= maxResources) throw new DiscoveryError('DISCOVERY_RESOURCE_BOUND_EXHAUSTED');
+        seen.add(key); results.push(row);
+      }
     }
     pages++;
     if (onPage) await onPage({ pages, total: results.length, cursor: priorCursor, nextCursor: body.pagination.cursor });
@@ -118,8 +156,9 @@ export async function fetchDiscoveryCatalog({
         paymentCalls: 0, settlementReceipts: 0
       };
     }
-    if (typeof cursor !== 'string' || cursor.length > 4096 || cursor === priorCursor)
+    if (typeof cursor !== 'string' || !cursor.length || cursor.length > 4096 || cursors.has(cursor))
       throw new DiscoveryError('DISCOVERY_CURSOR_LOOP');
+    cursors.add(cursor);
   }
   throw new DiscoveryError('DISCOVERY_PAGE_BOUND_EXHAUSTED');
 }
