@@ -40,7 +40,7 @@ test('catalog redirects cannot reach a different origin', async () => {
     const ok = await limited(origin + '/ok');
     assert.deepEqual(await ok.json(), { resources: [] });
     assert.equal(ok.status, 200);
-    await assert.rejects(() => limited(secondUrl), /External merchant requests/);
+    assert.throws(() => limited(secondUrl), /External merchant requests/);
     assert.equal(secondOriginHits, 0);
     assert.deepEqual(audit, { discoveryHttpRequests: 3, merchantHttpRequests: 1 });
   } finally {
