@@ -1,0 +1,27 @@
+# One buyer → known original web firm → payable QA workshare
+
+**Operation:** OHA-FYE27-4414-BROOKS-JEFFREY-WORKSHARE-20261010-GPT6CLOUD. **Owner:** Commons #sales, founder decision only, UNSENT. Non-bounty, direct revenue not a grant or award claim.
+
+## Source-exact buyer requirement and clocks
+
+Buyer: **Housing Authority of the City of Orlando (OHA)**, Website Design and Maintenance Support, bid **RFP FYE27-4414**. Buyer-owned bids portal https://www.orlandohousing.org/bids-rfps points to Euna OpenBids / DemandStar. Current issuer distribution https://www.demandstar.com/app/limited/bids/551450/details records **published Sep 30, 2026**, Addendum **#1 Oct 1**, bid **Nov 2, 2026 2:00 PM Eastern**, **no eBidding**, and work designing/hosting the agency website. Public notice https://www.noticeregistry.com/florida/notice/bid-notice-orlando-11689164 provides the agency's legal text: **questions due Oct 12, 2026 2:00 PM Eastern**, **physical sealed proposal at 390 N. Bumby Ave., Orlando, FL 32803**. Original RFP and Addendum #1 must be reread directly by authorized bidder before concluding detailed pricing, insurance, certified forms or accepting any contract.
+
+## High-confidence partner fit, not a cold invented affiliation
+
+**Brooks Jeffrey Marketing, Inc.** is the exact original OHA website developer/awardee as acknowledged by OHA in a 2020 first-party agency press release: https://www.orlandohousing.org/news_event?id=17 . Current OHA website legal/credits https://www.orlandohousing.org/copycred identifies Brooks Jeffrey as site-content party and `webmaster@bjmweb.com` for existing-site problems. Brooks Jeffrey's OWN current portfolio https://www.bjmweb.com/portfolio.php?id=37 lists **Orlando Housing Authority** in a long public-housing website portfolio; firm's own contact page https://www.bjmweb.com/contact lists **1-870-425-8064** / **1-800-506-8064** and an online contact form. Those are supported organization/business routes, not proof of 2026 bidding, readiness or interest. Do not send to the OHA accessibility help contact or existing-site webmaster without original relationship owner confirming the appropriate BD route.
+
+Backup only if original relationship owner disclaims: Kmarks Solutions first-party portfolio https://kmarks-solutions.com/case-studies/selma-housing-authority/ exhibits a prior Selma Housing Authority site+app and accessible resident navigation. This is a separate plausible 2026 prime candidate, NOT verified bidder/partner and not authority for parallel outreach.
+
+## The transaction TJLabs could offer — founder approval required
+
+**Independent, limited-scope website cutover acceptance package**, offered to incumbent web integrator under a **separate prime-owned subcontract** if they confirm OHA pursuit and capacity interest. Supplier retains OHA relationship, proposal, project planning, site delivery, pricing of its full bid, agency obligations, warranty and sealed submission. TJLabs supplies: permissioned source-to-target public route/action inventory; exact CLI manifest comparator and source hash evidence; redirect and broken-link review; human-assisted resident/landlord/payment portal smoke *without login or transactions*; WCAG/keyboard/screenreader review by suitably qualified staff; risk-prioritized defect log, recheck and sign-off memo. No private resident/tenant data required. Code at `acceptance.mjs` demonstrates one real limited acceptance slice; it does not claim automated WCAG compliance.
+
+**Internal price test (NOT offer or supplier agreement):** 7 business days, **$4,500 fixed** for preagreed bounded routes/actions and one retest, plus negotiated extra scope for migration rework. A proposed 50% upfront upon executed SOW ($2,250), 50% on accepted evidence pack ($2,250). Commercial terms remain entirely unapproved; revise based on actual scope, partner interest and procurement/compliance. With the Oct12 questions deadline approaching, a narrow **existing-site change regression** service might be more viable than late prime formation. No quote to agency.
+
+**Founder-controlled go/no-go gates:** A) original source RFP and Addendum1 including 2026 proposer terms read by partner; B) is Brooks Jeffrey bidding, taking QA partners or already covered? C) legitimate contact route and suppression checks against both business Gmail accounts; D) prime authority, subcontracting terms/insurance/capacity; E) approved single recipient, exact message and sender; F) funded written SOW and data rights before work; G) actual deposit receipt before recognizing cash. Mark stage `BUYER_CONFIRMED + PRIOR_INCUMBENT_IDENTIFIED + QA_TOOL_AVAILABLE + PARTNER_INTEREST_UNVERIFIED`; NEVER `SENT`, `HUMAN_REPLIED`, `SOW_SIGNED`, `INVOICED`, `PAID` from this packet.
+
+## Tiny unsent concept for relationship owner (NOT permission to send)
+
+“Your team built Orlando Housing Authority’s website in 2020, and OHA has a new website design/maintenance RFP out now (FYE27-4414; Nov 2 sealed bid, questions Oct 12). If this is on your radar and independent cutover acceptance would help your workload, we have a ready offline route/payment-link preservation checker and can take a tightly scoped, separately paid QA/retest package while you own the agency relationship and proposal. Would it be useful to compare a seven-business-day QA workshare?”
+
+No automated contact, drafting in Gmail, registration, external demonstration, client-data pull, payment or bid submission performed. Founder must approve exact recipient/copy and outreach separately.
