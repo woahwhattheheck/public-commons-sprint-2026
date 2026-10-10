@@ -115,6 +115,9 @@ export function reconcileHttpQuote({
     if (quotedUrl.href !== target.href) return error('ORIGIN_RESOURCE_MISMATCH');
     const liveInput = quote.extensions?.bazaar?.info?.input;
     if (liveInput?.type !== 'http' || liveInput.method !== method ||
+        // The live 402 must preserve the complete advertised invocation contract.
+        // Equal payment terms and HTTP method do not authorize changed inputs.
+        canonical(liveInput) !== canonical(input) ||
         (quote.extensions.bazaar.routeTemplate ?? null) !== (template ?? null))
       return error('ORIGIN_DISCOVERY_IDENTITY_DRIFT');
     if (!plain(selection) || !['scheme','network','asset','payTo'].every(k => typeof selection[k] === 'string' && selection[k]))
