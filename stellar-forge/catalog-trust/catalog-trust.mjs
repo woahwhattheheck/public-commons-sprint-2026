@@ -7,6 +7,7 @@
  * only then calls the real BazaarCatalog.insertValidated parser/indexer.
  */
 import { createHash } from 'node:crypto';
+import { validateCatalogEntry } from '../../scf46-stellar-bazaar/src/catalog.mjs';
 
 const FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -176,11 +177,11 @@ export class CatalogTrustBoundary {
     if (!payments.ok) return this.#finish('quarantine', payments.reason, { ...facts, detail: payments.detail });
 
     const candidateHash = digest({ sellerId, sequence, entry });
-    let catalogKey;
+    let catalogKey, validatedEntry;
     try {
-      // The real parser computes the canonical resource identity. It is invoked
-      // only after every trust check above; failures cannot mutate the catalog.
-      catalogKey = this.#catalog.insertValidated(structuredClone(entry));
+      // Compute the exact parser key and sanitized entry without mutating the
+      // live catalog. Replay, sequence and ownership gates run before commit.
+      ({ id: catalogKey, entry: validatedEntry } = validateCatalogEntry(entry));
     } catch (error) {
       return this.#finish('quarantine', 'CATALOG_PARSER_REJECTED', { ...facts, error: error?.name ?? 'Error' });
     }
@@ -189,16 +190,14 @@ export class CatalogTrustBoundary {
       return this.#finish('soft_drop', 'EXACT_REPLAY', { ...facts, catalogKey }, { catalogKey });
     }
     if (previous && sequence <= previous.sequence) {
-      // insertValidated overwrote the Map entry, so restore the last trusted
-      // snapshot before returning. This keeps observable listings frozen.
-      this.#catalog.insertValidated(structuredClone(previous.entry));
       return this.#finish('quarantine', sequence === previous.sequence ? 'CONFLICTING_REPLAY' : 'STALE_SEQUENCE',
         { ...facts, catalogKey, previousSequence: previous.sequence });
     }
     if (previous && previous.sellerId !== sellerId) {
-      this.#catalog.insertValidated(structuredClone(previous.entry));
       return this.#finish('quarantine', 'RESOURCE_SELLER_CONFLICT', { ...facts, catalogKey, owner: previous.sellerId });
     }
+
+    this.#catalog.insertValidated(validatedEntry);
 
     this.#sellerSigners.set(sellerId, signer);
     this.#originOwners.set(origin, sellerId);

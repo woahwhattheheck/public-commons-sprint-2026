@@ -70,6 +70,23 @@ function keyOf(entry) {
   const path = isValidRouteTemplate(template) ? template : url.pathname;
   return ['http',url.origin,path,url.search,info.method].join('|');
 }
+
+/**
+ * Parse and sanitize a trusted-caller candidate without mutating a catalog.
+ * Trust/sequence/ownership checks belong to the caller; this only applies the
+ * same structural rules as insertValidated and returns the exact eventual key.
+ */
+export function validateCatalogEntry(entry) {
+  if (!plain(entry?.resource) || !Array.isArray(entry.accepts) || entry.accepts.length === 0 ||
+      !plain(entry.extensions?.bazaar) || !plain(entry.extensions.bazaar.info) ||
+      !plain(entry.extensions.bazaar.schema)) throw new TypeError('Missing validated Bazaar envelope');
+  if (entry.accepts.some(a => !plain(a) || typeof a.network !== 'string' || typeof a.scheme !== 'string' || typeof a.payTo !== 'string')) throw new TypeError('Invalid payment terms');
+  const id = keyOf(entry);
+  const sanitized = structuredClone(entry);
+  sanitized.resource = sanitizeResourceServiceMetadata(sanitized.resource);
+  if (!isValidRouteTemplate(sanitized.extensions.bazaar.routeTemplate)) delete sanitized.extensions.bazaar.routeTemplate;
+  return { id, entry: sanitized };
+}
 function searchScore(row, q) {
   const t = terms(q); if (!t.length) return 0;
   const resource = row.resource;
@@ -98,16 +115,23 @@ export class BazaarCatalog {
   // settlement, seller/recipient binding, and JSON Schema Draft 2020-12. NEVER
   // route this method directly to an unauthenticated HTTP client or payment payload.
   insertValidated(entry) {
-    if (!plain(entry?.resource) || !Array.isArray(entry.accepts) || entry.accepts.length === 0 ||
-        !plain(entry.extensions?.bazaar) || !plain(entry.extensions.bazaar.info) ||
-        !plain(entry.extensions.bazaar.schema)) throw new TypeError('Missing validated Bazaar envelope');
-    if (entry.accepts.some(a => !plain(a) || typeof a.network !== 'string' || typeof a.scheme !== 'string' || typeof a.payTo !== 'string')) throw new TypeError('Invalid payment terms');
-    const id = keyOf(entry);
-    const sanitized = structuredClone(entry);
-    sanitized.resource = sanitizeResourceServiceMetadata(sanitized.resource);
-    if (!isValidRouteTemplate(sanitized.extensions.bazaar.routeTemplate)) delete sanitized.extensions.bazaar.routeTemplate;
+    const { id, entry: sanitized } = validateCatalogEntry(entry);
     this.#entries.set(id, sanitized); this.#version++;
     return id;
+  }
+  /** Internal integration primitive: remove an already-authorized key. */
+  removeValidated(id) {
+    if (typeof id !== 'string') throw new TypeError('Catalog key required');
+    const removed = this.#entries.delete(id);
+    if (removed) this.#version++;
+    return removed;
+  }
+  /** Stage an isolated transaction while preserving the cursor generation. */
+  clone() {
+    const copy = new BazaarCatalog();
+    copy.#entries = new Map([...this.#entries].map(([key, value]) => [key, structuredClone(value)]));
+    copy.#version = this.#version;
+    return copy;
   }
   list(params = new URLSearchParams()) {
     const filters = filtersFrom(params);
@@ -136,6 +160,7 @@ export class BazaarCatalog {
     return { resources:page,partialResults:next !== null,pagination:{limit:page.length,cursor:next} };
   }
   get size() {return this.#entries.size;}
+  get version() {return this.#version;}
 }
 
 export function createDiscoveryServer(catalog) {
