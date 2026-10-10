@@ -43,15 +43,37 @@ function inspectSchema(schema, depth = 0, state = { nodes: 0 }) {
     if ((key === '$ref' || key === '$id') && (typeof value !== 'string' || !value.startsWith('#'))) {
       return 'SCHEMA_EXTERNAL_REFERENCE';
     }
+    // A malformed assertion keyword cannot be treated as an absent assertion.
+    // Network-supplied schemas must fail closed rather than over-admit info.
+    if (key === 'type') {
+      const types = Array.isArray(value) ? value : [value];
+      if (!types.length || types.some(t => typeof t !== 'string' || !Object.hasOwn(TYPES, t)) ||
+          new Set(types).size !== types.length) return 'SCHEMA_TYPE_INVALID';
+    }
+    if (['minLength', 'maxLength', 'minItems', 'maxItems'].includes(key) &&
+        (!Number.isSafeInteger(value) || value < 0)) return 'SCHEMA_' + key.toUpperCase() + '_INVALID';
+    if (['minimum', 'maximum'].includes(key) &&
+        (typeof value !== 'number' || !Number.isFinite(value))) return 'SCHEMA_' + key.toUpperCase() + '_INVALID';
+    if (key === 'uniqueItems' && typeof value !== 'boolean') return 'SCHEMA_UNIQUEITEMS_INVALID';
+    if (key === 'required' && (!Array.isArray(value) ||
+        value.some(k => typeof k !== 'string') || new Set(value).size !== value.length))
+      return 'SCHEMA_REQUIRED_INVALID';
+    if (key === 'enum' && (!Array.isArray(value) || value.length === 0))
+      return 'SCHEMA_ENUM_INVALID';
+    if (['title', 'description'].includes(key) && typeof value !== 'string')
+      return 'SCHEMA_' + key.toUpperCase() + '_INVALID';
+    if (key === 'examples' && !Array.isArray(value)) return 'SCHEMA_EXAMPLES_INVALID';
     if (['properties', '$defs', 'definitions'].includes(key)) {
       if (!plain(value)) return `SCHEMA_${key.toUpperCase()}_INVALID`;
       for (const child of Object.values(value)) {
         const error = inspectSchema(child, depth + 1, state); if (error) return error;
       }
-    } else if (['items', 'additionalProperties'].includes(key) && (plain(value) || typeof value === 'boolean')) {
+    } else if (['items', 'additionalProperties'].includes(key)) {
+      if (!plain(value) && typeof value !== 'boolean')
+        return 'SCHEMA_' + key.toUpperCase() + '_INVALID';
       const error = inspectSchema(value, depth + 1, state); if (error) return error;
     } else if (['anyOf', 'allOf', 'oneOf'].includes(key)) {
-      if (!Array.isArray(value)) return `SCHEMA_${key.toUpperCase()}_INVALID`;
+      if (!Array.isArray(value) || value.length === 0) return `SCHEMA_${key.toUpperCase()}_INVALID`;
       for (const child of value) {
         const error = inspectSchema(child, depth + 1, state); if (error) return error;
       }

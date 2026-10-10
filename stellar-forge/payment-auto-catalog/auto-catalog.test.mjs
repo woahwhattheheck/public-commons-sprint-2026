@@ -70,3 +70,50 @@ test('local fragment refs work while cyclic or unsupported schemas fail closed',
   const unsupported = payload().extensions.bazaar; unsupported.schema.patternProperties = {};
   assert.equal(validateBazaarExtension(unsupported).reason, 'SCHEMA_KEYWORD_UNSUPPORTED:patternProperties');
 });
+
+
+test('untrusted assertion keyword shapes fail closed before catalog commit', () => {
+  const malformed = [
+    ['root', 'type', 'constructor'],
+    ['root', 'type', ['object', 'object']],
+    ['root', 'minLength', '10'],
+    ['root', 'maxItems', -1],
+    ['root', 'minimum', '0'],
+    ['root', 'uniqueItems', 'true'],
+    ['root', 'required', ['input', 'input']],
+    ['root', 'enum', 'example'],
+    ['root', 'anyOf', []],
+    ['input', 'items', 'false'],
+    ['input', 'additionalProperties', 'false'],
+  ];
+  for (const [scope, key, value] of malformed) {
+    const extension = payload().extensions.bazaar;
+    const target = scope === 'root' ? extension.schema : extension.schema.properties.input;
+    target[key] = value;
+    const checked = validateBazaarExtension(extension);
+    assert.equal(checked.ok, false, scope + '.' + key);
+    assert.match(checked.reason, /^SCHEMA_.*_INVALID$/, scope + '.' + key);
+  }
+  const catalog = new PaymentAutoCatalog();
+  const forged = payload();
+  forged.extensions.bazaar.schema.properties.input.additionalProperties = 'false';
+  forged.extensions.bazaar.info.input.unlisted = 'unvalidated property';
+  const outcome = catalog.ingest({ paymentPayload: forged, settlement: settlement(), sequence: 1 });
+  assert.equal(outcome.decision, 'soft_drop');
+  assert.equal(outcome.reason, 'SCHEMA_ADDITIONALPROPERTIES_INVALID');
+  assert.equal(catalog.size, 0);
+});
+
+test('valid structural schema boolean assertions still pass the original ingestion path', () => {
+  const extension = payload().extensions.bazaar;
+  extension.schema.properties.input.additionalProperties = false;
+  extension.schema.properties.input.required = ['type', 'method'];
+  extension.schema.properties.input.minLength = 0;
+  extension.schema.examples = [{ input: { type: 'http', method: 'GET' } }];
+  assert.deepEqual(validateBazaarExtension(extension), { ok: true });
+  const valid = payload();
+  valid.extensions.bazaar = extension;
+  const catalog = new PaymentAutoCatalog();
+  assert.equal(catalog.ingest({ paymentPayload: valid, settlement: settlement(), sequence: 1 }).decision, 'accepted');
+  assert.equal(catalog.size, 1);
+});
