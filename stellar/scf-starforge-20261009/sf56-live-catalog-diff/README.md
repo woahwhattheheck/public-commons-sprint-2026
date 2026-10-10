@@ -24,3 +24,24 @@ Use the existing **SF41 original-source capture owner** and the existing Muse ru
 Original public main source at claim time (2026-10-10): SF41 `capture_coverage.mjs` Git blob `8414b34ee57fba1cd783245755f4ff88725c419b`; SF45 `recovery.mjs` blob `c0eaa456cc05fb7b1c121ff3a77b4fdfed596621`. SF41 `run.mjs` is the original provider-schema adapter reference, blob `6c5378c5d01f2449ac609b448a0b9e31c4beafa3`. These are dependency identity receipts, not a frozen fork; later code should be rechecked against current main before replay.
 
 One focused native-format contract check: `node --test stellar/scf-starforge-20261009/sf56-live-catalog-diff/diff.test.mjs`. It tests the format and failure handling only; **real** provider delta requires two distinct original SF41 captures. Existing Muse owns any broad original-corpus replay. No wide repository suite or hosted CI should be launched for this addition.
+## Original SF41 legacy filter-bearing capture compatibility
+
+A previous authentic SF41 capture can have a recorded HTTPS `sources[].url` with
+`network=stellar:testnet` but no `manifest.filters` member. The SF56 diff now
+accepts that **legacy shape only**, deriving the exact supported nonpagination
+filters from **each original recorded GET URL**, then running the existing SF41
+coverage, native pagination, byte-SHA and canonical-route checks unchanged.
+
+- This is an in-memory compatibility view. Original `sources.json` and raw
+  response bytes remain unmodified; delta `manifest_sha256` still identifies
+  the **original** manifest bytes. No rows, filter values or receipts are invented.
+- Existing explicit `manifest.filters` remains authoritative, even `{}`.
+  Unsupported/duplicate URL parameters, invalid values, mixed page filters,
+  missing page controls or non-HTTPS sources fail closed.
+- Delta `original_source.before/after.filter_evidence` distinguishes
+  `DERIVED_FROM_ORIGINAL_SOURCE_URLS` from
+  `DECLARED_IN_ORIGINAL_MANIFEST`. Derived filters are metadata provenance,
+  **not** seller identity, payment success, or a new live-capture claim.
+- This resolves the documented original Vellar 27/27 old/new manifest mismatch
+  without having to discard the older real capture or overwrite source evidence.
+  The original SF41/Muse owner still runs the final 1:1 capture-pair replay.
