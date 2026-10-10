@@ -78,7 +78,13 @@ test('exact replay soft-drops, authorized monotonic update replaces one listing'
   const entry = baseEntry();
   const candidate = { sellerId: 'seller-1', sequence: 4, entry };
   assert.equal(trust.ingest(candidate, authority()).reason, 'NEW_RESOURCE');
+  const version = catalog.version;
   assert.equal(trust.ingest(candidate, authority()).reason, 'EXACT_REPLAY');
+  assert.equal(catalog.version, version);
+
+  const stale = baseEntry(); stale.resource.description = 'stale rewrite';
+  assert.equal(trust.ingest({ sellerId: 'seller-1', sequence: 3, entry: stale }, authority()).reason, 'STALE_SEQUENCE');
+  assert.equal(catalog.version, version);
 
   const updated = baseEntry(); updated.accepts[0].maxAmountRequired = '15000';
   const accepted = trust.ingest({ sellerId: 'seller-1', sequence: 5, entry: updated }, authority());
