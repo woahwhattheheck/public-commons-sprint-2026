@@ -40,3 +40,28 @@ test('amount and recipient safety reject no trusted string path or mismatched te
   await assert.rejects(()=>validatePaymentTerms({...req,...p},mk(),{now,verifyRecipient:async input=>verified(input)}));
  }
 });
+
+test('async recipient verifier cannot rewrite already-validated payment terms',async()=>{
+ const candidate={...req};
+ const observed=await validatePaymentTerms(candidate,mk(),{now,verifyRecipient:async input=>{
+   candidate.amount='23000000';candidate.payTo='G'+'B'.repeat(55);
+   candidate.network='stellar:pubnet';candidate.scheme='upto';
+   return verified(input);
+ }});
+ assert.equal(candidate.amount,'23000000');
+ assert.equal(observed.amount,'15000000');
+ assert.equal(observed.decimalAmount,'1.5');
+ assert.equal(observed.payTo,req.payTo);
+ assert.equal(observed.network,'stellar:testnet');
+ assert.equal(observed.scheme,'exact');
+});
+
+test('changing payment-amount getter is read once into immutable snapshot',async()=>{
+ let reads=0;
+ const candidate={...req};
+ Object.defineProperty(candidate,'amount',{get(){reads++;return reads===1?'15000000':'23000000';}});
+ const observed=await validatePaymentTerms(candidate,mk(),{now,verifyRecipient:async input=>verified(input)});
+ assert.equal(observed.amount,'15000000');
+ assert.equal(observed.decimalAmount,'1.5');
+ assert.equal(reads,1);
+});
