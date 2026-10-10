@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 // MIT — SF-30. Seller-side declarative x402 v2 Bazaar metadata for HTTP endpoints.
 // This prepares a PaymentRequired offer; only the canonical facilitator may
 // authenticate payment, verify finality and promote a listing to a trusted catalog.
@@ -17,10 +18,19 @@ function requiredString(x, name, limit = 512) {
 }
 function resourceUrl(raw, allowLocalhost) {
   const u = new URL(requiredString(raw, 'resource.url', 2048));
-  if (u.username || u.password || u.hash || u.search || (u.protocol !== 'https:' &&
-      !(allowLocalhost === true && u.protocol === 'http:' && u.hostname === '127.0.0.1')))
+  const host = u.hostname.toLowerCase().replace(/\.$/, '');
+  const loopbackDev = allowLocalhost === true && u.protocol === 'http:' && host === '127.0.0.1';
+  if (u.username || u.password || u.hash || u.search ||
+      (u.protocol !== 'https:' && !loopbackDev))
     throw new TypeError('Paid resource URL must be HTTPS, without credentials, fragment or query');
-  if (!u.hostname || u.hostname === 'localhost' || u.hostname.endsWith('.localhost'))
+  // Seller metadata must not advertise private destinations that SF31 buyers
+  // reject. URL canonicalization also normalizes hex/octal/numeric IPv4 forms.
+  const ipHost = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
+  const localName = ['localhost', 'local', 'localdomain', 'internal', 'home.arpa',
+    'ip6-localhost', 'ip6-loopback'].includes(host) ||
+    ['.localhost', '.localhost.localdomain', '.local', '.localdomain',
+      '.internal', '.home.arpa'].some(s => host.endsWith(s));
+  if (!host || ((isIP(ipHost) !== 0 || localName) && !loopbackDev))
     throw new TypeError('Disallowed resource host');
   return u.href;
 }
