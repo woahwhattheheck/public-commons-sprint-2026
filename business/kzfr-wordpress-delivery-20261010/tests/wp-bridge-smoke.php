@@ -44,4 +44,6 @@ $GLOBALS['meta_url'] = 'https://kzfr.studio.creek.org/archives/';
 kzfr_assert(kzfr_theme_creek_link(10) === $GLOBALS['meta_url'], 'theme returns approved provider link');
 $GLOBALS['meta_url'] = 'https://attacker.example/video';
 kzfr_assert(kzfr_theme_creek_link(10) === '', 'theme revalidates persisted provider link');
+kzfr_assert(strpos(file_get_contents(__DIR__ . '/../theme/kzfr-community-radio/style.css'), 'Template: twentytwentyone') !== false, 'official WP parent set');
+kzfr_assert(strpos(file_get_contents(__DIR__ . '/../theme/kzfr-community-radio/functions.php'), 'get_stylesheet_directory_uri()') !== false, 'child assets resolve from child, not parent');
 echo 'PASS: original WordPress source, scoped post types/REST/editor ownership, URL allowlist, date validation, provider handoff\n';
