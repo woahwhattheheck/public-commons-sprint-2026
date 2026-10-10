@@ -51,3 +51,41 @@ test('strict canonical inputs: no float/implicit conversion, non-HTTPS or malfor
   e.accepts[0].amount='200';e.resource='http://api.example.com/x402/weather';assert.throws(()=>signProof(e,{nonce,privateKeyPem:keys.privateKey,now}));
   e.resource=fixture.resource;delete e.extensions.bazaar.info.input.type;assert.throws(()=>signProof(e,{nonce,privateKeyPem:keys.privateKey,now}));
 });
+
+test('v2 binds full official HTTP Bazaar info, route, and complete selected payment terms',()=>{
+  const original=proof();
+  for (const change of [
+    e=>{e.extensions.bazaar.info.input.queryParams.city='Boston';},
+    e=>{e.extensions.bazaar.info.output.example.weather='sunny';},
+    e=>{e.extensions.bazaar.routeTemplate='/x402/:other';},
+    e=>{e.accepts[0].maxTimeoutSeconds=120;},
+    e=>{e.accepts[0].extra.version='3';}
+  ]) {
+    const changed=copy();change(changed);
+    assert.throws(()=>verify(changed,original),/differs from original resource and quote/);
+  }
+  const ordered=copy();
+  ordered.accepts[0]=Object.fromEntries(Object.entries(ordered.accepts[0]).reverse());
+  ordered.extensions.bazaar.info=Object.fromEntries(Object.entries(ordered.extensions.bazaar.info).reverse());
+  assert.equal(verify(ordered,original).verified,true);
+  assert.match(original.statement.identity.contractSha256,/^[a-f0-9]{64}$/);
+});
+test('v2 binds MCP inputSchema, tool metadata and selected terms to the seller proof',()=>{
+  const m=copy();m.resource='https://seller.example.net/mcp';
+  m.extensions.bazaar.info.input={type:'mcp',toolName:'weather',inputSchema:{
+    type:'object',properties:{city:{type:'string'}},required:['city']}};
+  const original=signProof(m,{nonce,privateKeyPem:keys.privateKey,now});
+  assert.equal(verify(m,original).verified,true);
+  const tampered=structuredClone(m);
+  tampered.extensions.bazaar.info.input.inputSchema.properties.city.type='number';
+  assert.throws(()=>verify(tampered,original),/differs from original resource and quote/);
+  tampered.extensions.bazaar.info.input.inputSchema.properties.city.type='string';
+  tampered.extensions.bazaar.info.input.description='Changed tool behavior';
+  assert.throws(()=>verify(tampered,original),/differs from original resource and quote/);
+});
+test('v2 rejects non-JSON/oversized seller metadata before signing',()=>{
+  const e=copy();e.extensions.bazaar.info.input.queryParams.city=undefined;
+  assert.throws(()=>signProof(e,{nonce,privateKeyPem:keys.privateKey,now}),/JSON values only/);
+  e.extensions.bazaar.info.input.queryParams.city='a'.repeat(65537);
+  assert.throws(()=>signProof(e,{nonce,privateKeyPem:keys.privateKey,now}),/too long/);
+});
