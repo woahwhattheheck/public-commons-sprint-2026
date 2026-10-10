@@ -1,0 +1,127 @@
+{
+  "schema_version": "1.0",
+  "status": "ILLUSTRATIVE_UNSENT",
+  "scenario_name": "SCF SF-47 hypothetical 90k award, 180-day three-deliverable development schedule; NOT a verified staffing quote",
+  "award_request_usd": "90000",
+  "project_end_day": 180,
+  "team_budget_inputs_are_hypothetical": true,
+  "milestones": [
+    {
+      "tranche": 1,
+      "submit_day": 60,
+      "review_and_payment_lag_days": 14,
+      "deliverable": "Original-source, self-hostable Bazaar discovery MVP and static legal resource metadata; working offline install on a clean cloud machine, not a sketch",
+      "measurable_proof": "Versioned public source README and signed/hash-pinned original-resource sample; independent query/lookup acceptance with exact current x402 input/outputs"
+    },
+    {
+      "tranche": 2,
+      "submit_day": 120,
+      "review_and_payment_lag_days": 14,
+      "deliverable": "Source-compatible Stellar testnet x402 discovery/paid MCP agent flow plus permissioned true original data quality benchmark",
+      "measurable_proof": "Actual authorized Stellar testnet transaction and seller-provided paid endpoint receipt, immutable upstream SDK pins, paired exact-original corpus search quality, failure cases"
+    },
+    {
+      "tranche": 3,
+      "submit_day": 180,
+      "review_and_payment_lag_days": 14,
+      "deliverable": "Production-ready self-host release, mainnet readiness and documentation; mainnet deployment only with explicit separate owner approval and eligible jurisdiction",
+      "measurable_proof": "Public release hash, operator controls, structured error & evidence logs, reviewer-verifiable network/scheme conformance, real approved deployment/usage metrics or formally agreed legal exception"
+    }
+  ],
+  "future_costs": [
+    {
+      "id": "T1-core-catalog",
+      "category": "core-development",
+      "start_day": 0,
+      "end_day": 59,
+      "tranche": 1,
+      "amount_usd": "18000",
+      "future_only": true,
+      "measurable_proof": "Working canonical x402 protocol adapter and opt-in source index with written acceptance contract",
+      "quote_status": "UNSOURCED_PLACEHOLDER_NOT_A_RATE"
+    },
+    {
+      "id": "T1-acceptance",
+      "category": "verification",
+      "start_day": 0,
+      "end_day": 59,
+      "tranche": 1,
+      "amount_usd": "9000",
+      "future_only": true,
+      "measurable_proof": "Source-hashed original sample coverage and independent discover/contract acceptance",
+      "quote_status": "UNSOURCED_PLACEHOLDER_NOT_A_RATE"
+    },
+    {
+      "id": "T1-experience",
+      "category": "frontend-ux",
+      "start_day": 0,
+      "end_day": 59,
+      "tranche": 1,
+      "amount_usd": "3000",
+      "future_only": true,
+      "measurable_proof": "Merchant and buyer command workflow and accepted developer quickstart",
+      "quote_status": "UNSOURCED_PLACEHOLDER_NOT_A_RATE"
+    },
+    {
+      "id": "T2-interop",
+      "category": "core-development",
+      "start_day": 60,
+      "end_day": 119,
+      "tranche": 2,
+      "amount_usd": "22000",
+      "future_only": true,
+      "measurable_proof": "Canonical Stellar testnet payment handshake and paid MCP agent tool transport",
+      "quote_status": "UNSOURCED_PLACEHOLDER_NOT_A_RATE"
+    },
+    {
+      "id": "T2-proof",
+      "category": "verification",
+      "start_day": 60,
+      "end_day": 119,
+      "tranche": 2,
+      "amount_usd": "8000",
+      "future_only": true,
+      "measurable_proof": "Actual opt-in buyer/seller testnet receipts and exact original discovery test corpus comparison",
+      "quote_status": "UNSOURCED_PLACEHOLDER_NOT_A_RATE"
+    },
+    {
+      "id": "T3-ops",
+      "category": "core-development",
+      "start_day": 120,
+      "end_day": 179,
+      "tranche": 3,
+      "amount_usd": "22000",
+      "future_only": true,
+      "measurable_proof": "Vendor-neutral release, observability, reliability/security configuration and open deployment method",
+      "quote_status": "UNSOURCED_PLACEHOLDER_NOT_A_RATE"
+    },
+    {
+      "id": "T3-release",
+      "category": "release",
+      "start_day": 120,
+      "end_day": 179,
+      "tranche": 3,
+      "amount_usd": "8000",
+      "future_only": true,
+      "measurable_proof": "Public released SDK/docs, reviewer-verifiable acceptance receipts and operator recovery guide",
+      "quote_status": "UNSOURCED_PLACEHOLDER_NOT_A_RATE"
+    }
+  ],
+  "illustrative_xlm_usd_at_payment": [
+    "0.10",
+    "0.30",
+    "0.60"
+  ],
+  "owner_gates": [
+    "NO SCF interest/full application submission",
+    "NO requested funding or accepted award",
+    "No vendor contracts/human rate quotes known",
+    "No mainnet wallet spending or operator contacts",
+    "No private repo edits, GitHub Actions or broad CI tests",
+    "No reimbursement for prior swarm work"
+  ],
+  "primary_sources": [
+    "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines",
+    "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award"
+  ]
+}
