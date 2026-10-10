@@ -30,10 +30,54 @@ async function closeServer(server) {
  * Returned rpc() retains its random bearer token in a closure; the token is
  * never printed by this module or included in the acceptance receipt.
  */
-export async function startReadOnlyMcpOnramp() {
+/** Local nonpayable integration reports source drift and stays runnable.
+ * Strict source-pin audit is an explicit option; neither path approves live commerce. */
+export function assessLocalSourcePin(source, { strictSourcePin = false } = {}) {
+  if (!source || typeof source.baselineMatches !== 'boolean' ||
+      typeof source.actualGitBlob !== 'string' ||
+      typeof source.baselineGitBlob !== 'string')
+    throw new TypeError('Source provenance must include checked actual and baseline Git blobs');
+  if (!source.baselineMatches && strictSourcePin === true)
+    throw new Error('SF44 Bazaar source changed (' + source.actualGitBlob +
+      '); strict source-pin audit requires review and an updated baseline');
+  return Object.freeze({
+    mode: source.baselineMatches ? 'PIN_MATCH' : 'UNPINNED_LOCAL_DEMO',
+    currentGitBlob: source.actualGitBlob,
+    recordedGitBlob: source.baselineGitBlob,
+  });
+}
+
+/**
+ * Restrict the SF44 discovery transport to the actual loopback catalog.
+ * A same-origin 302 can otherwise escape this guard because native fetch()
+ * follows redirects by default. Force redirect:error even if callers pass
+ * a Request whose redirect mode (or init.redirect) requests following.
+ * This is an egress restriction, not a seller credential or authorization.
+ */
+export function createCatalogOnlyFetch(catalogOrigin, audit, fetchImpl = fetch) {
+  const allowed = new URL(catalogOrigin);
+  if (allowed.protocol !== 'http:' || allowed.hostname !== '127.0.0.1' ||
+      !allowed.port || allowed.username || allowed.password ||
+      allowed.pathname !== '/' || allowed.search || allowed.hash) {
+    throw new TypeError('SF44 discovery catalog must be an explicit loopback HTTP origin');
+  }
+  if (!audit || typeof audit !== 'object') {
+    throw new TypeError('SF44 catalog audit counter object required');
+  }
+  return (input, options = {}) => {
+    const target = new URL(input instanceof Request ? input.url : String(input));
+    if (target.origin !== allowed.origin || target.username || target.password) {
+      audit.merchantHttpRequests++;
+      throw new Error('External merchant requests are prohibited in SF44 onramp');
+    }
+    audit.discoveryHttpRequests++;
+    return fetchImpl(input, { ...options, redirect: 'error' });
+  };
+}
+
+export async function startReadOnlyMcpOnramp(options = {}) {
   const source = await sourceProvenance();
-  if (!source.baselineMatches)
-    throw new Error('SF44 actual Bazaar source drifted; update the source pin before running');
+  const sourcePolicy = assessLocalSourcePin(source, options);
   const catalog = await startLocalDevelopmentCatalog();
   let server;
   try {
@@ -45,15 +89,7 @@ export async function startReadOnlyMcpOnramp() {
       // Allow only a fake source URL to reach PREVIEW; actual merchant access is
       // impossible even if a future caller accidentally connects a signer.
       allowedResourceOrigins: [fictitiousOrigin],
-      fetchImpl: (input, options) => {
-        const target = new URL(String(input));
-        if (target.origin !== catalogOrigin) {
-          audit.merchantHttpRequests++;
-          throw new Error('External merchant requests are prohibited in SF44 onramp');
-        }
-        audit.discoveryHttpRequests++;
-        return fetch(input, options);
-      }
+      fetchImpl: createCatalogOnlyFetch(catalogOrigin, audit)
       // approve defaults to DENY and signPayment defaults to null.
     });
     const bearerToken = randomBytes(32).toString('hex');
@@ -82,7 +118,7 @@ export async function startReadOnlyMcpOnramp() {
     };
     let closed = false;
     return {
-      mcpUrl, source, rpc,
+      mcpUrl, source, sourcePolicy, rpc,
       audit: () => ({ ...audit }),
       async close() {
         if (closed) return;
@@ -111,8 +147,8 @@ async function callTool(demo, name, args) {
  * Real wire-level demonstration with real original PR451 and SF32 source.
  * No fake settlement, funded testnet or charge: it proves the safe pre-pay UX.
  */
-export async function runReadOnlyMcpOnramp() {
-  const demo = await startReadOnlyMcpOnramp();
+export async function runReadOnlyMcpOnramp(options = {}) {
+  const demo = await startReadOnlyMcpOnramp(options);
   try {
     const init = await demo.rpc('initialize', {
       protocolVersion: MCP_VERSION,
@@ -174,6 +210,7 @@ export async function runReadOnlyMcpOnramp() {
       originalSources: {
         bazaarCatalogGitBlob: demo.source.actualGitBlob,
         sourcePinMatches: demo.source.baselineMatches,
+        sourcePolicy: demo.sourcePolicy.mode,
         mcpProtocolVersion: MCP_VERSION
       },
       mcpToolsAdvertised: names,
@@ -199,6 +236,13 @@ export async function runReadOnlyMcpOnramp() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runReadOnlyMcpOnramp().then(value => console.log(JSON.stringify(value, null, 2)))
-    .catch(err => { console.error(err.message); process.exitCode = 1; });
+  const args = process.argv.slice(2);
+  if (args.length > 1 || (args.length === 1 && args[0] !== '--strict-source-pin')) {
+    console.error('Usage: node mcp-onramp.mjs [--strict-source-pin]');
+    process.exitCode = 2;
+  } else {
+    runReadOnlyMcpOnramp({ strictSourcePin: args.length === 1 })
+      .then(value => console.log(JSON.stringify(value, null, 2)))
+      .catch(err => { console.error(err.message); process.exitCode = 1; });
+  }
 }

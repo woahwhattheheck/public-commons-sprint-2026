@@ -5,6 +5,9 @@ import { isIP } from 'node:net';
 
 const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const amount = v => typeof v === 'string' && /^(0|[1-9][0-9]*)$/.test(v);
+const STELLAR_I128_MAX = '170141183460469231731687303715884105727';
+const validStellarAtomic = x => typeof x==='string' && x.length<=39 && amount(x) &&
+  (x.length<STELLAR_I128_MAX.length || (x.length===39 && x<=STELLAR_I128_MAX));
 // x402 v2 requirements, resource and extensions are JSON objects: member order is not protocol meaning.
 // Require exact structural equality (including nested fields and ordered arrays), not identical serialization order.
 const same = (a,b) => isDeepStrictEqual(a,b);
@@ -50,7 +53,8 @@ function canonicalChallenge(challenge, requested) {
   for(const pay of challenge.accepts){
     if (!object(pay) || !['exact','upto'].includes(pay.scheme) ||
       typeof pay.network!=='string' || !/^[a-z0-9]+:[A-Za-z0-9-]{1,128}$/.test(pay.network) ||
-      !amount(pay.amount) || !pay.asset || typeof pay.asset!=='string' ||
+      !amount(pay.amount) || (pay.network.startsWith('stellar:') && !validStellarAtomic(pay.amount)) ||
+      !pay.asset || typeof pay.asset!=='string' ||
       typeof pay.payTo!=='string' || !pay.payTo ||
       !Number.isInteger(pay.maxTimeoutSeconds) || pay.maxTimeoutSeconds<1 ||
       pay.maxTimeoutSeconds>86400 || (pay.extra!==undefined && !object(pay.extra)))
@@ -107,6 +111,14 @@ const MAX_DISCOVERY_BYTES = 256 * 1024;
 async function readDiscoveryJSON(response) {
   if (!response.body || typeof response.body.getReader !== 'function')
     throw new BuyerError('BAD_DISCOVERY_RESPONSE');
+  // Deny an advertised over-limit body before allocating a reader. A dishonest
+  // short length is still caught by the independent streaming byte count.
+  const declaredLength = response.headers.get('content-length');
+  if (declaredLength !== null && /^[0-9]+$/.test(declaredLength) &&
+      BigInt(declaredLength) > BigInt(MAX_DISCOVERY_BYTES)) {
+    void response.body.cancel().catch(() => {});
+    throw new BuyerError('DISCOVERY_RESPONSE_TOO_LARGE');
+  }
   const reader = response.body.getReader();
   const chunks = [];
   let total = 0, complete = false;
@@ -123,7 +135,9 @@ async function readDiscoveryJSON(response) {
     if (e instanceof BuyerError) throw e;
     throw new BuyerError('DISCOVERY_TRANSPORT_FAILED', '', { cause: e });
   } finally {
-    if (!complete) { try { await reader.cancel(); } catch {} }
+    // Cancellation is best-effort: a hostile source can leave cancel() pending
+    // forever, but over-limit discovery rejection must never depend on it.
+    if (!complete) { try { void reader.cancel().catch(() => {}); } catch {} }
     reader.releaseLock();
   }
   try {
@@ -137,17 +151,30 @@ async function readDiscoveryJSON(response) {
 function noRedirect(response, sent){
   if(response.status>=300&&response.status<400)throw new BuyerError('REDIRECT_DENIED','Location not followed',{paymentSent:sent});
 }
+function validReportedHash(network, transaction){
+  if(typeof transaction!=='string')return false;
+  // Stellar RPC requires 64-character lowercase hexadecimal transaction hashes.
+  // This validates a seller's claim; it does not verify ledger settlement.
+  return /^stellar:/i.test(network) ? /^[a-f0-9]{64}$/.test(transaction) : transaction.length>0;
+}
 function receiptResult(response, requirement){
   const raw=response.headers.get('payment-response');
   if(!raw)return { settlement:'UNKNOWN',receipt:null,reason:'MISSING_PAYMENT_RESPONSE' };
   let receipt;
   try{receipt=decodeHeader(raw,'PAYMENT_RESPONSE');}
   catch{return { settlement:'UNKNOWN',receipt:null,reason:'INVALID_PAYMENT_RESPONSE' };}
-  if (receipt.network!==requirement.network || typeof receipt.transaction!=='string' || typeof receipt.success!=='boolean')
+  if(receipt.network!==requirement.network || typeof receipt.transaction!=='string' || typeof receipt.success!=='boolean')
     return {settlement:'UNKNOWN',receipt:null,reason:'RECEIPT_MISMATCH'};
-  if(receipt.success===true && receipt.transaction)
+  const pending=receipt.success===false && receipt.errorReason==='settlement_pending';
+  if((receipt.success===true || pending) && !validReportedHash(receipt.network,receipt.transaction))
+    return {settlement:'UNKNOWN',receipt:null,reason:'INVALID_TRANSACTION_HASH'};
+  if(receipt.success===true && receipt.amount!==undefined && receipt.amount!==requirement.amount)
+    return {settlement:'UNKNOWN',receipt:null,reason:'SETTLED_AMOUNT_MISMATCH'};
+  if(receipt.success===true && typeof receipt.errorReason==='string' && receipt.errorReason.length)
+    return {settlement:'UNKNOWN',receipt:null,reason:'CONTRADICTORY_RECEIPT'};
+  if(receipt.success===true)
     return {settlement:'REPORTED_SUCCESS',receipt,reason:null};
-  if(receipt.success===false && receipt.errorReason==='settlement_pending' && receipt.transaction)
+  if(pending)
     return {settlement:'PENDING',receipt,reason:'settlement_pending'};
   if(receipt.success===false && receipt.errorReason!=='settlement_pending')
     return {settlement:'REPORTED_FAILED',receipt,reason:receipt.errorReason??'PAYMENT_REJECTED'};
@@ -163,16 +190,22 @@ export class X402BuyerClient {
     if(typeof fetchImpl!=='function')throw new TypeError('fetchImpl required');
     this.fetch=fetchImpl;this.allowLocal=allowLocal;
   }
-  async discover({origin,query,filters={},limit=20,signal}={}){
+  async discover({origin,query,filters={},limit=20,offset=0,signal}={}){
     const u=requireURL(origin,{allowLocal:this.allowLocal});
     if (!Number.isInteger(limit)||limit<1||limit>100)throw new BuyerError('BAD_DISCOVERY_LIMIT');
-    u.pathname=query?'/discovery/search':'/discovery/resources';u.search='';
+    if (!Number.isSafeInteger(offset)||offset<0)throw new BuyerError('BAD_DISCOVERY_OFFSET');
+    // Respect a caller-selected provider deployment prefix (e.g. Coinbase CDP's
+    // /platform/v2/x402) while preserving the legacy root /discovery/* routes.
+    // u is already validated by requireURL; any caller query is discarded.
+    const prefix=u.pathname.replace(/\/+$/,'');
+    u.pathname=prefix+(query?'/discovery/search':'/discovery/resources');u.search='';
     if(query)u.searchParams.set('query',query);
     for(const [k,v] of Object.entries(filters)){
       if(!['network','scheme','payTo','type','extensions'].includes(k)||typeof v!=='string')throw new BuyerError('BAD_DISCOVERY_FILTER');
       u.searchParams.set(k,v);
     }
     u.searchParams.set('limit',String(limit));
+    if(offset>0)u.searchParams.set('offset',String(offset));
     let res;
     try{res=await this.fetch(u,{method:'GET',redirect:'manual',signal});}catch(e){throw new BuyerError('DISCOVERY_TRANSPORT_FAILED','',{cause:e});}
     noRedirect(res,false);
@@ -197,12 +230,23 @@ export class X402BuyerClient {
     if([...safeHeaders.keys()].some(k=>/^(payment-signature|authorization|proxy-authorization|cookie|host)$/i.test(k)))
       throw new BuyerError('FORBIDDEN_CALLER_HEADERS');
     const data=prepareBody(body);
+    if(typeof expect?.network==='string' && expect.network.startsWith('stellar:') &&
+       !validStellarAtomic(expect.maxAtomic))throw new BuyerError('BAD_SPEND_LIMIT');
     const options={method:verb,headers:safeHeaders,body:data,redirect:'manual',signal};
     let first;
     try{first=await this.fetch(resource,options);}catch(e){throw new BuyerError('INITIAL_TRANSPORT_FAILED','',{cause:e});}
     noRedirect(first,false);
-    if(first.status!==402) return standardResult({intentId,status:'NO_PAYMENT_REQUIRED',resource:resource.href,
-      requirement:null,response:first,attempts:1,settlement:'NOT_REQUESTED',receipt:null,reason:null});
+    if (first.status !== 402) {
+      // A free 2xx response needs no payment; a non-402 HTTP failure is not
+      // successful free delivery. Preserve the single unsigned attempt and
+      // its original response without invoking policy or the payment signer.
+      const freeSuccess = first.ok;
+      return standardResult({intentId,
+        status:freeSuccess ? 'NO_PAYMENT_REQUIRED' : 'UNPAID_HTTP_ERROR',
+        resource:resource.href,requirement:null,response:first,attempts:1,
+        settlement:'NOT_REQUESTED',receipt:null,
+        reason:freeSuccess ? null : 'HTTP_'+first.status});
+    }
     const challenge=canonicalChallenge(decodeHeader(first.headers.get('payment-required'),'PAYMENT_REQUIRED'),resource);
     const requirement=choose(challenge,expect);
     const acceptedTerms=immutableTerms(requirement);

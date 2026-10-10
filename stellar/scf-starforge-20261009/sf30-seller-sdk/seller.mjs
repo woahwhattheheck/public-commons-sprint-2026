@@ -7,6 +7,8 @@ const SOROBAN_I128_MAX = (1n << 127n) - 1n;
 const METHODS = new Set(['GET', 'HEAD', 'DELETE', 'POST', 'PUT', 'PATCH']);
 const BODY = new Set(['POST', 'PUT', 'PATCH']);
 const TYPES = new Set(['string', 'integer', 'number', 'boolean']);
+// Avoid JavaScript prototype keys in metadata later consumed as JSON dictionaries.
+const RESERVED_QUERY_NAMES = new Set(['__proto__', 'prototype', 'constructor']);
 const ASCII = /^[\x20-\x7e]+$/;
 const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const plain = o => !!o && typeof o === 'object' && !Array.isArray(o);
@@ -55,12 +57,13 @@ function serviceMetadata(o) {
 function parameters(input, method) {
   const paramDefs = input.queryParameters ?? [];
   if (!Array.isArray(paramDefs) || paramDefs.length > 32) throw new TypeError('Too many query parameters');
-  const queryParams = {};
-  const properties = {};
+  const queryParams = Object.create(null);
+  const properties = Object.create(null);
   const required = [];
   for (const p of paramDefs) {
     obj(p);
-    if (!/^[a-zA-Z_][a-zA-Z0-9_-]{0,63}$/.test(p.name || '') || hasOwn(properties, p.name))
+    if (!/^[a-zA-Z_][a-zA-Z0-9_-]{0,63}$/.test(p.name || '') ||
+        RESERVED_QUERY_NAMES.has(p.name) || hasOwn(properties, p.name))
       throw new TypeError('Parameter name invalid or repeated');
     if (!TYPES.has(p.type)) throw new TypeError(`Unsupported parameter type: ${p.name}`);
     const desc = requiredString(p.description, `${p.name} description`, 512);
@@ -168,10 +171,15 @@ export function paymentRequiredResponse(offer) {
   if (offer?.x402Version !== 2 || !Array.isArray(offer.accepts) ||
       !plain(offer.extensions?.bazaar)) throw new TypeError('Valid v2 offer required');
   const body = JSON.stringify(offer);
+  // The shipped SF31 buyer rejects base64 PAYMENT-REQUIRED headers over 32 KiB.
+  // Refuse an unconsumable offer before advertising a 402 to an agent.
+  const paymentRequiredHeader = Buffer.from(body).toString('base64');
+  if (paymentRequiredHeader.length > 32768)
+    throw new RangeError('PAYMENT-REQUIRED header exceeds 32768-byte SF31 buyer limit');
   return {
     statusCode: 402,
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store',
-      'PAYMENT-REQUIRED': Buffer.from(body).toString('base64') },
+      'PAYMENT-REQUIRED': paymentRequiredHeader },
     body,
   };
 }

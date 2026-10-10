@@ -34,3 +34,7 @@ No npm dependencies, no GitHub Actions. The 8 focused Node v22.16.0 checks run a
 3. Resource server calls `/verify` with the unchanged signed ceiling M, meters actual usage m, calls `/settle` with m, and facilitator re-checks original **M** and original contract/recipient/network before invoking the appropriate profile settlement contract. Both must use the actual authored upstream SDK—not this offline preflight as an authorization oracle.
 4. Independently observe final transaction/hash and ledger event; reconcile PENDING by original transaction and nonce. Treat zero usage as a consumed one-time authorization after successful settlement.
 5. Request maintainer alignment of #3134 and #3098 from the **owner-approved outreach lane only**. Do not open a competing upstream PR or imply the code has been accepted. A real SCF interest/application remains owner-held.
+
+## Early decimal resource bound
+
+`atomicAmount()` rejects input longer than the maximum 39 decimal digits for a signed Soroban i128 **before** applying the canonical-decimal regex or invoking `BigInt`. This protects buyer-side `accepted`, `verify`, `settle` and stateless/stateful advisory payload amount preflight from extremely long untrusted amount strings. Existing canonical atomic amount checks, i128 MAX/MAX+1 refusal, and zero-only-at-settle semantics remain unchanged. The new focused original-source regression covers all four common entry paths with a 200,000-digit input; it does not execute payments or perform network simulation.

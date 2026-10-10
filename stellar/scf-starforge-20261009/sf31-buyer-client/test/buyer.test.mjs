@@ -6,7 +6,8 @@ import { once } from 'node:events';
 import { createHash } from 'node:crypto';
 import { X402BuyerClient,BuyerError } from '../buyer.mjs';
 const b64=x=>Buffer.from(JSON.stringify(x)).toString('base64');
-const terms={scheme:'exact',network:'stellar:TESTNET',amount:'20',asset:'stellar-asset-fixture',payTo:'GBUYER_TEST_PAYTO',maxTimeoutSeconds:60,extra:{name:'USD'}};
+const TX_HASH='a'.repeat(64);
+const terms={scheme:'exact',network:'stellar:testnet',amount:'20',asset:'stellar-asset-fixture',payTo:'GBUYER_TEST_PAYTO',maxTimeoutSeconds:60,extra:{name:'USD'}};
 const expected={scheme:'exact',network:terms.network,asset:terms.asset,payTo:terms.payTo,maxAtomic:'20'};
 async function fixture(fn){
   const state={calls:[],paid:[],response:'success',paymentRequired:null};
@@ -25,10 +26,14 @@ async function fixture(fn){
     if(!auth){res.writeHead(402,{'PAYMENT-REQUIRED':b64(state.paymentRequired??challenge)});res.end();return;}
     const obj=JSON.parse(Buffer.from(auth,'base64').toString());
     state.paid.push(obj);
+    if(state.receiptOverride){
+      res.writeHead(state.receiptStatus??200,{'PAYMENT-RESPONSE':b64(state.receiptOverride)});
+      res.end();return;
+    }
     if(state.response==='redirect'){res.writeHead(302,{Location:'http://example.com/steal'});res.end();return;}
-    if(state.response==='pending'){res.writeHead(402,{'PAYMENT-RESPONSE':b64({success:false,errorReason:'settlement_pending',transaction:'test-hash',network:terms.network})});res.end();return;}
+    if(state.response==='pending'){res.writeHead(402,{'PAYMENT-RESPONSE':b64({success:false,errorReason:'settlement_pending',transaction:TX_HASH,network:terms.network})});res.end();return;}
     if(state.response==='missing'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({data:'fixture no receipt'}));return;}
-    res.writeHead(200,{'PAYMENT-RESPONSE':b64({success:true,transaction:'test-hash',network:terms.network}),'content-type':'application/json'});
+    res.writeHead(200,{'PAYMENT-RESPONSE':b64({success:true,transaction:TX_HASH,network:terms.network}),'content-type':'application/json'});
     res.end(JSON.stringify({data:'fixture fulfilled'}));
   });
   server.listen(0,'127.0.0.1');await once(server,'listening');
@@ -48,7 +53,7 @@ test('real GET discovery HTTP, 402 -> policy -> signer -> one v2 paid POST + rec
   assert.deepEqual(state.calls.map(x=>x.auth),[false,true]);
   assert.equal(state.paid[0].x402Version,2);assert.deepEqual(state.paid[0].accepted,terms);
   assert.equal(state.paid[0].payload.offlineFixtureMarker,true);
-  assert.equal(result.receipt.transaction,'test-hash');
+  assert.equal(result.receipt.transaction,TX_HASH);
 }));
 
 test('quote drift and recipient mismatch: block before approval or signing',async()=>fixture(async({state,buyer,url})=>{
@@ -107,7 +112,7 @@ test('x402 v2 JSON key order is irrelevant, but signer may not change approved t
 
 test('pending, missing receipt, redirected paid request remain terminal with no retry',async()=>fixture(async({state,buyer,url})=>{
   state.response='pending';const pending=await buyer.call(settings(url));
-  assert.equal(pending.status,'SETTLEMENT_PENDING');assert.equal(pending.receipt.transaction,'test-hash');
+  assert.equal(pending.status,'SETTLEMENT_PENDING');assert.equal(pending.receipt.transaction,TX_HASH);
   state.response='missing';const missing=await buyer.call(settings(url));
   assert.equal(missing.status,'PAYMENT_OUTCOME_UNKNOWN');assert.equal(missing.reason,'MISSING_PAYMENT_RESPONSE');
   state.response='redirect';await assert.rejects(buyer.call(settings(url)),e=>e.code==='REDIRECT_DENIED'&&e.paymentSent);
@@ -228,3 +233,81 @@ test('request fingerprint binds exact replayable body bytes and presence',async(
   assert.equal(intents[2].bodySha256,createHash('sha256').update(Buffer.from([0,255])).digest('hex'));
   assert.notEqual(intents[3].bodySha256,intents[2].bodySha256);
 }));
+
+test('Stellar receipt hash, optional settled amount and contradictory response are checked',async()=>fixture(async({state,buyer,url})=>{
+  const cases=[
+    [{success:true,transaction:'short-hash',network:terms.network},'INVALID_TRANSACTION_HASH',200],
+    [{success:false,errorReason:'settlement_pending',transaction:'short-hash',network:terms.network},'INVALID_TRANSACTION_HASH',402],
+    [{success:true,transaction:TX_HASH,network:terms.network,amount:'21'},'SETTLED_AMOUNT_MISMATCH',200],
+    [{success:true,transaction:TX_HASH,network:terms.network,errorReason:'settlement_pending'},'CONTRADICTORY_RECEIPT',200],
+    [{success:true,transaction:TX_HASH.toUpperCase(),network:terms.network},'INVALID_TRANSACTION_HASH',200]
+  ];
+  for(const [receipt,reason,status] of cases){
+    state.receiptOverride=receipt;state.receiptStatus=status;
+    const result=await buyer.call(settings(url));
+    assert.equal(result.status,'PAYMENT_OUTCOME_UNKNOWN');
+    assert.equal(result.settlement,'UNKNOWN');
+    assert.equal(result.reason,reason);
+    assert.equal(result.receipt,null);
+  }
+  state.receiptOverride={success:true,transaction:TX_HASH,network:terms.network,amount:terms.amount};
+  state.receiptStatus=200;
+  const valid=await buyer.call(settings(url));
+  assert.equal(valid.status,'DELIVERED_REPORTED_SETTLED');
+  assert.equal(valid.receipt.transaction,TX_HASH);
+  assert.equal(state.calls.length,(cases.length+1)*2);
+}));
+
+test('Soroban signed-i128 buyer quote ceiling preserves max valid and rejects overflow',async()=>fixture(async({state,buyer,url})=>{
+  const MAX='170141183460469231731687303715884105727';
+  const ABOVE='170141183460469231731687303715884105728';
+  let approved=0,signedCount=0;
+  const approve=()=>{approved++;return true;};
+  const sign=ctx=>{signedCount++;return signed(ctx);};
+  await assert.rejects(buyer.call({...settings(url),
+    expect:{...expected,maxAtomic:ABOVE},approve,sign}),e=>e.code==='BAD_SPEND_LIMIT');
+  assert.equal(state.calls.length,0);
+  state.paymentRequired={x402Version:2,resource:{url},accepts:[{...terms,amount:ABOVE}]};
+  await assert.rejects(buyer.call({...settings(url),approve,sign}),e=>e.code==='BAD_PAYMENT_REQUIREMENTS');
+  assert.equal(state.calls.length,1);
+  assert.equal(approved,0);assert.equal(signedCount,0);
+  state.paymentRequired={x402Version:2,resource:{url},accepts:[{...terms,amount:MAX}]};
+  const valid=await buyer.call({...settings(url),
+    expect:{...expected,maxAtomic:MAX},approve,sign});
+  assert.equal(valid.status,'DELIVERED_REPORTED_SETTLED');
+  assert.equal(valid.requirement.amount,MAX);
+  assert.equal(approved,1);assert.equal(signedCount,1);
+  assert.equal(state.paid.length,1);
+}));
+
+test('initial unsigned HTTP failures are not treated as successful free delivery',async()=>{
+  const requests=[];
+  let approvals=0,signatures=0;
+  let status=503;
+  const buyer=new X402BuyerClient({fetchImpl:async (_url,options)=>{
+    requests.push({ method:options.method,signature:options.headers.has('payment-signature') });
+    return new Response(null,{status});
+  }});
+  for(const code of [400,401,403,404,429,500,503]){
+    status=code;
+    const result=await buyer.call({...settings('https://example.org/protected'),
+      approve:()=>{approvals++;return true;},
+      sign:()=>{signatures++;throw new Error('no signer on unsigned failure');}
+    });
+    assert.equal(result.status,'UNPAID_HTTP_ERROR');
+    assert.equal(result.reason,'HTTP_'+code);
+    assert.equal(result.httpStatus,code);
+    assert.equal(result.attempts,1);
+    assert.equal(result.requirement,null);
+    assert.equal(result.settlement,'NOT_REQUESTED');
+  }
+  status=204;
+  const free=await buyer.call(settings('https://example.org/protected'));
+  assert.equal(free.status,'NO_PAYMENT_REQUIRED');
+  assert.equal(free.reason,null);
+  assert.equal(free.httpStatus,204);
+  assert.equal(free.attempts,1);
+  assert.equal(approvals,0);assert.equal(signatures,0);
+  assert.equal(requests.length,8);
+  assert.ok(requests.every(x=>x.method==='POST' && !x.signature));
+});

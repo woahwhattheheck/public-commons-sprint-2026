@@ -1,0 +1,89 @@
+{
+  "baseline_model": {
+    "barrier_TEER": {
+      "cadence_s": 86400.0,
+      "center": 121.334,
+      "channel": "barrier_TEER",
+      "modality": "TEER",
+      "n": 36,
+      "replicate_count": 8,
+      "scale": 94.53650640000001,
+      "scale_method": "MAD",
+      "unit": "Ohm.cm2"
+    }
+  },
+  "channel_assessments": [
+    {
+      "baseline_center": 121.334,
+      "baseline_n": 36,
+      "baseline_scale": 94.5365064,
+      "baseline_scale_method": "MAD",
+      "channel": "barrier_TEER",
+      "metrics": {
+        "level_z": 0.025324,
+        "max_change_z": 2.525723,
+        "max_cross_sensor_correlation_delta": 0.0,
+        "max_trend_z_per_baseline_step": 0.47641,
+        "missing_fraction": 0.3,
+        "outlier_fraction": 0.02857143,
+        "reference_window_coverage": 0.0,
+        "replicate_divergence_z": 1.806011,
+        "run_center": 123.728
+      },
+      "modality": "TEER",
+      "quality_risk_score": null,
+      "reasons": [
+        "cadence-derived missingness exceeds review threshold",
+        "observed replicate time span is under 75% of baseline median duration; full-window quality cannot be assessed"
+      ],
+      "run_n": 35,
+      "score_components": {
+        "change_point": 0.50514454,
+        "cross_sensor_shift": 0.0,
+        "level": 0.00422059,
+        "missingness": 1.0,
+        "outliers": 0.11428571,
+        "replicate_divergence": 0.36120226,
+        "trend": 0.11910252
+      },
+      "state": "INSUFFICIENT_EVIDENCE",
+      "uncertainty": 1.0,
+      "unit": "Ohm.cm2"
+    }
+  ],
+  "config": {
+    "min_baseline_points": 12,
+    "min_points": 6
+  },
+  "cross_sensor_correlations": {},
+  "inputs": {
+    "baseline_file": "s2b_transwell_measured.csv",
+    "baseline_rows": 36,
+    "baseline_sha256": "b577864c3fd3687a5d79cdb76698ee387f62cba24ca38709193eb43aa9fa63e4",
+    "run_file": "FI1_remove_one_source_cell.csv",
+    "run_rows": 35,
+    "run_sha256": "5aadca07651c8f4cf68fe08a68a24761f0f8a8ff51e84352b6137e6fe6dfac22"
+  },
+  "max_quality_risk_score": 0.0,
+  "overall_state": "INSUFFICIENT_EVIDENCE",
+  "receipt_sha256": "7b5827363fdd9d7f745497799e5977db868bd6d6cc459df47b229f635c8659f5",
+  "schema": "chiptrace.report.v1",
+  "scope": {
+    "intended_use": "organ-on-chip research experiment quality control and drift review",
+    "not_for": [
+      "clinical diagnosis",
+      "treatment recommendation",
+      "patient-specific decision making",
+      "drug efficacy or safety claim"
+    ],
+    "state_semantics": {
+      "INSUFFICIENT_EVIDENCE": "Observation counts are too small, a baseline channel is absent, a candidate observation window covers less than 75% of its baseline replicate reference duration or anchored elapsed-time window, or independent candidate replicate coverage is insufficient, or derived arithmetic overflowed.",
+      "REVIEW": "One or more QC signals warrant researcher review.",
+      "SUPPORTED": "No configured QC review threshold was exceeded; this is not a biological-efficacy claim."
+    }
+  },
+  "tool": {
+    "name": "ChipTrace",
+    "version": "1.0.0"
+  }
+}

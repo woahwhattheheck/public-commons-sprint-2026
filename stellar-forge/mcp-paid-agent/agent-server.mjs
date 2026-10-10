@@ -91,7 +91,9 @@ export class McpPaidToolBroker {
   }
   async search(args){
     if(!plain(args)||!maxText(args.query,1024)||!args.query.trim())fail('INVALID_PARAMS','Search query required');
-    const u=new URL('/discovery/search',this.#catalogUrl);
+    const u=new URL(this.#catalogUrl);
+    if(!u.pathname.endsWith('/'))u.pathname+='/';
+    u.pathname+='discovery/search';
     for(const k of ['query','cursor','limit','network','scheme','asset','maxAmount']){
       const v=args[k];if(v===undefined)continue;
       if(!['limit'].includes(k)&&!maxText(v,4096))fail('INVALID_PARAMS','Invalid '+k);
@@ -120,7 +122,8 @@ export class McpPaidToolBroker {
       const info={resource:row.resource,input,accepts:eligible,origin,
         fingerprint:hash([url,input,eligible]),type:input.type};
       const handle=randomUUID();this.#records.set(handle,{...info,createdAt:Date.now()});
-      listed.push({handle,resource:row.resource,resourceType:input.type,
+      // A caller-visible search result must not alias the private discovered URL.
+      listed.push({handle,resource:structuredClone(row.resource),resourceType:input.type,
         method:input.method??null,toolName:input.toolName??null,
         accepts:eligible.map(sanitizedPrice),allowedOrigin:this.#trustedOrigins.has(origin)});
     }
@@ -142,6 +145,9 @@ export class McpPaidToolBroker {
     const allowed=row.input.queryParams&&plain(row.input.queryParams)?Object.keys(row.input.queryParams):[];
     if(Object.keys(qs).some(k=>!allowed.includes(k)))fail('INPUT_NOT_ADVERTISED','Query keys must be advertised by the seller');
     const u=new URL(row.resource.url);
+    // Check the actual URL as well as its cached discovery origin before quoting.
+    if(resourceOrigin(u.href)!==row.origin||!this.#trustedOrigins.has(u.origin))
+      fail('ORIGIN_UNAPPROVED','Discovered resource origin changed; search again');
     for(const [k,v] of Object.entries(qs)){
       if(!maxText(k,100)||!maxText(v,1024))fail('INVALID_PARAMS','Invalid query value');
       u.searchParams.set(k,v);

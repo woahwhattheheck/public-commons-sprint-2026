@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { BazaarCatalog, createDiscoveryServer } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 
 const upstream = new URL('../../../scf46-stellar-bazaar/src/catalog.mjs', import.meta.url);
-const PINNED_SOURCE_BLOB = '7b4390f9a119399bdb8e27db5796697f1314da8b';
+const PINNED_SOURCE_BLOB = '0f95a2f3c95d10ef6e8410d10f2ba24a7c9a44de';
 
 export async function sourceProvenance() {
   const bytes = await readFile(upstream);

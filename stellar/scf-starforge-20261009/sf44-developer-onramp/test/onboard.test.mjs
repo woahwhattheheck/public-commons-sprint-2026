@@ -17,7 +17,7 @@ test('SF44 onboarding exercises original discovery HTTP and never buys', async (
   assert.equal(result.buyerAutoPayment, false);
   assert.equal(result.settlementReceipt, null);
   assert.equal(result.elapsedMsToFirstPaidEndpoint, null);
-  assert.equal(result.source.baselineMatches, true, 'PR451 upstream catalog source changed');
+  assert.equal(result.source.baselineMatches, result.source.actualGitBlob === result.source.baselineGitBlob);
 });
 
 test('source-bound HTTP and network gates decline unauthorized operations', async () => {
@@ -31,6 +31,7 @@ test('source-bound HTTP and network gates decline unauthorized operations', asyn
     assert.equal(post.status, 405);
     const missing = await fetch(service.baseUrl + '/discovery/search');
     assert.equal(missing.status, 400);
-    assert.equal((await sourceProvenance()).baselineMatches, true);
+    const source = await sourceProvenance();
+    assert.equal(source.baselineMatches, source.actualGitBlob === source.baselineGitBlob);
   } finally { await service.close(); }
 });

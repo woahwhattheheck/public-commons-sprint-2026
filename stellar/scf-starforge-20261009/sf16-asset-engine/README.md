@@ -15,6 +15,10 @@ This is the original standalone asset admission and amount normalization module 
 * `validatePaymentTerms(paymentRequirements, registry, {verifyRecipient,now})` enforces `scheme:'exact'`, signed-i128 atomic bounds, original `asset`, `network`, `payTo`, and refuses a missing, stale or inconsistent async trusted recipient verifier. The verifier **must** be implemented by the caller against a trusted Stellar RPC/network and the *actual* contract-account balance/trustline and contract restriction state. Never pass a client-provided `ready:true` or infer readiness from a superficial address regex. Address format validation is syntactic, NOT checksum or actual account existence validation; the trusted verifier must perform full Stellar address decoding, network and state validation.
 * `assets.d.ts` is the typed contract; it returns a read-only admission record. No real payment or recipient claim is made by these checks.
 
+## Bounded decimal input before BigInt
+
+`parseAtomic` enforces the maximum representable decimal text length (39 digits + decimal point + at most 18 fraction digits = 58 characters) **before** running the canonical-number regex or converting to `BigInt`. This bounds CPU and memory for untrusted giant integers/fractions while preserving exact signed-i128 conversion, positive/zero policy and up to 18 token decimals. Larger inputs fail closed instead of being scanned or parsed. The bound is a maximum only: smaller out-of-range amounts are still rejected by the exact i128 check.
+
 ## Focused validation
 
 From this directory in an approved local/cloud checkout:
@@ -23,8 +27,14 @@ From this directory in an approved local/cloud checkout:
 node --test assets.test.mjs
 ```
 
-This executes **5 focused offline tests** (actual pinned upstream 1.50 USDC canonical example, 7-decimal precision, i128 boundaries, stale/mismatched token policies, unverified/wrong-network/missing recipient behavior). It is intentionally not a broad repository suite and creates no hosted GitHub Actions charge.
+This executes **8 focused offline tests** (actual pinned upstream 1.50 USDC canonical example, 7-decimal precision, i128 boundaries, stale/mismatched token policies, unverified/wrong-network/missing recipient behavior). It is intentionally not a broad repository suite and creates no hosted GitHub Actions charge.
 
 ## Integration and remaining production work
 
 Keep the module separate from the owner's SF-17 fee sponsorship, SF-18 payment replay, SF-19 custody, SF-34 `upto`, SF-46 ingestion and SF-31 buyer SDK. Before live acceptance, connect and authenticate actual network metadata and appropriate recipient proof through the owner-controlled RPC boundary; account for contract-specific authorization and trustline behavior. The module only supports **exact** payment scheme, since `upto` settlement paths require independent end-to-end finality/authorization semantics. Do not treat source checks or illustrative proof callbacks as successful mainnet/testnet settlement. Follow the SCF grant-application hold and no-GitHub-Actions cost guard.
+
+## Immutable accepted-terms snapshot across async recipient verification
+
+SF16 copies the five supplied payment terms (`scheme`, `network`, `asset`, `amount`, `payTo`) into a frozen local snapshot **before** policy checks and before awaiting `verifyRecipient`. The validator uses those exact same captured strings for allowlist/amount/recipient checks and for its returned frozen admission record. No property from the mutable caller request is consulted after the snapshot. This prevents a caller from changing a validated atomic amount, chain, asset or recipient during an asynchronous recipient-state check, or from supplying a stateful amount getter that yields different values on successive reads. This remains a read-only local validator; callers must still pass a genuinely trusted live recipient resolver and perform independent signing/settlement checks.
+
+Focused original-source regression command: `node --test stellar/scf-starforge-20261009/sf16-asset-engine/assets.test.mjs` from repository root (or `node --test assets.test.mjs` from this directory). New scenarios mutate amount/network/payee during the async callback and exercise a getter that changes its returned amount on repeated reads.

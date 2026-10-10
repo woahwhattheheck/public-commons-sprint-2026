@@ -6,7 +6,9 @@ Negative modifications below are unit-level software diagnostics, NOT live simul
 from pathlib import Path
 import json
 import tempfile
-from bazaar_interop import census, decode_extension_responses, CensusError, _load_snapshot
+import bazaar_interop as module
+from bazaar_interop import (census, decode_extension_responses, CensusError,
+                            _external_https_endpoint, _load_snapshot, _page_url)
 
 source = Path(__file__).with_name("official_bazaar_resource.json")
 original = json.loads(source.read_text())
@@ -36,4 +38,35 @@ s2["data"]["resources"] = [modified]
 conflict = census([s1,s2])
 assert conflict["summary"]["conflicting_payment_identity_count"] == 1
 assert len(conflict["resources"][0]["observations"]) == 2
-print("PASS: original x402 Bazaar resource fields and official extension header parsed; independent origin duplicates preserved; changed-payTo conflict surfaced. No network/payment performed.")
+
+# Pure transport-addressing checks. Patch DNS only so no network request occurs.
+original_getaddrinfo = module.socket.getaddrinfo
+module.socket.getaddrinfo = lambda *args, **kwargs: [
+    (module.socket.AF_INET, module.socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443))
+]
+try:
+    assert _external_https_endpoint("https://facilitator.example") == \
+        "https://facilitator.example/discovery/resources"
+    assert _external_https_endpoint("https://api.example/platform/v2/x402") == \
+        "https://api.example/platform/v2/x402/discovery/resources"
+    filtered = _external_https_endpoint(
+        "https://facilitator.example/discovery/resources?network=stellar%3Atestnet&limit=2&offset=9"
+    )
+    assert _page_url(filtered, page_size=100, offset=200) == \
+        "https://facilitator.example/discovery/resources?network=stellar%3Atestnet&limit=100&offset=200"
+    for refused in (
+        "https://user@example.com/discovery/resources",
+        "https://example.com/a/%2e%2e/private",
+        "https://example.com/discovery/resources#fragment",
+        "https://example.com:444/discovery/resources",
+    ):
+        try:
+            _external_https_endpoint(refused)
+        except CensusError:
+            pass
+        else:
+            raise AssertionError(f"unsafe provider endpoint accepted: {refused}")
+finally:
+    module.socket.getaddrinfo = original_getaddrinfo
+
+print("PASS: original x402 Bazaar fixture/header parsed; independent observations and changed-payTo conflict preserved; safe provider base paths and static filters retained with pagination override. No network/payment performed.")

@@ -106,3 +106,32 @@ test('parser rejections quarantine without publishing a resource', () => {
   assert.equal(catalog.size, 0);
   assert.equal(verifyAuditTrail(trust.auditTrail()), true);
 });
+
+test('malformed seller envelope facts quarantine and retain a verifiable bounded audit', () => {
+  const catalog = new BazaarCatalog();
+  const trust = new CatalogTrustBoundary(catalog);
+  const cyclic = {}; cyclic.self = cyclic;
+  const invalid = [
+    [{ sellerId: 1n, sequence: 1, entry: baseEntry() }, 'SELLER_IDENTITY_MISMATCH'],
+    [{ sellerId: cyclic, sequence: 1, entry: baseEntry() }, 'SELLER_IDENTITY_MISMATCH'],
+    [{ sellerId: 'seller-1', sequence: 1n, entry: baseEntry() }, 'SEQUENCE_INVALID'],
+    [{ sellerId: 'seller-1', sequence: cyclic, entry: baseEntry() }, 'SEQUENCE_INVALID'],
+    [{ sellerId: 'x'.repeat(50000), sequence: 1, entry: baseEntry() }, 'SELLER_IDENTITY_MISMATCH'],
+  ];
+  for (const [candidate, reason] of invalid) {
+    const result = trust.ingest(candidate, authority());
+    assert.equal(result.decision, 'quarantine');
+    assert.equal(result.reason, reason);
+    assert.equal(catalog.size, 0);
+  }
+  const events = trust.auditTrail();
+  assert.equal(events.length, invalid.length);
+  assert.equal(events[0].sellerId, '[invalid bigint]');
+  assert.equal(events[1].sellerId, '[invalid object]');
+  assert.equal(events[2].sequence, '[invalid bigint]');
+  assert.equal(events[3].sequence, '[invalid object]');
+  assert.equal(events[4].sellerId, '[invalid long string: 50000 UTF-8 bytes]');
+  assert.equal(verifyAuditTrail(events), true);
+  events[2].reason = 'FAKED';
+  assert.equal(verifyAuditTrail(events), false);
+});
