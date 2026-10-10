@@ -20,7 +20,8 @@
 Run the new snapshot-preflight.mjs from this branch and supply --root pointing to a separate checkout at frozen commit a84c561967056682eef810455227b7db18d1461b. The runner was added after that commit, so it is not present inside the frozen source checkout. No network, signer, settlement, registration or hosted CI is performed by the check.
 
 ```sh
-node stellar/scf-starforge-20261009/sf46-release/snapshot-preflight.mjs
+git worktree add /tmp/scf46-frozen a84c561967056682eef810455227b7db18d1461b
+node stellar/scf-starforge-20261009/sf46-release/snapshot-preflight.mjs --root /tmp/scf46-frozen
 node --test stellar/scf-starforge-20261009/sf46-release/test/source-snapshot.test.mjs
 ```
 
