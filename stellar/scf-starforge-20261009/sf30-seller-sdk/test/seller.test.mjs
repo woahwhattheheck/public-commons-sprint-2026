@@ -100,3 +100,17 @@ test('seller resource URLs exclude the destinations blocked by the consumer buye
   assert.throws(() => compileHttpSellerOffer({ ...input(), url:'http://127.0.0.1:4874/weather' }),
     /Paid resource URL must be HTTPS/);
 });
+
+test('seller amounts enforce signed Soroban i128 maximum', () => {
+  const maximum = '170141183460469231731687303715884105727';
+  const overflow = '170141183460469231731687303715884105728';
+  const atMaximum = compileHttpSellerOffer({
+    ...input(), payment: {...input().payment, amount: maximum}
+  });
+  assert.equal(atMaximum.accepts[0].amount, maximum);
+  for (const invalid of [overflow, '999999999999999999999999999999999999999']) {
+    assert.throws(() => compileHttpSellerOffer({
+      ...input(), payment: {...input().payment, amount: invalid}
+    }), /signed Soroban i128 limit/);
+  }
+});
