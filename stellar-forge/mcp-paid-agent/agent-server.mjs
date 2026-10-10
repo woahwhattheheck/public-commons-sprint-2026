@@ -6,6 +6,7 @@
  */
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mcpAgentCommerceTool } from '../../stellar/scf-starforge-20261009/sf43-agent-commerce/mcp-buyer-acceptance.mjs';
+import { explainFailure } from '../../stellar/scf-starforge-20261009/sf33-failure-contract/contract.mjs';
 
 export const MCP_VERSION='2025-11-25';
 const plain = x => x!==null && typeof x==='object' && !Array.isArray(x);
@@ -32,7 +33,11 @@ async function readData(response,max=64*1024){
 }
 const statOf=q=>({quoteId:q.quoteId,status:q.status,resource:q.resource,method:q.method,
   selected:sanitizedPrice(q.accepted),expiresAt:q.expiresAt,attempts:q.attempts,
-  result:q.result??null,failure:q.failure??null});
+  result:q.result??null,failure:q.failure??null,
+  ...(q.status==='INDETERMINATE'?{recovery:explainFailure({stage:'settle',
+    response:{success:false,errorReason:'unexpected_settle_error',
+      transaction:q.result?.paymentResponse?.transaction??null,
+      network:q.result?.paymentResponse?.network??null},traceId:q.quoteId})}:{})});
 const defaultFetch=(...args)=>fetch(...args);
 const schemas={
   bazaar_search:{
@@ -265,7 +270,13 @@ export function createMcpHttpHandler(broker,{bearerToken,allowedClientOrigins=[]
       const data=await broker.call(name,args);
       return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(data)}],structuredContent:data,isError:false}));
     }catch(e){
-      const err={code:e.code??'TOOL_ERROR',reason:e.message??'Error'};
+      // SF-33 hints are additive; preserve existing MCP wire fields and never
+      // treat an agent-visible hint as authority to sign or retry a payment.
+      const recoveryCode=e.code==='RESOURCE_STALE'||e.code==='CHALLENGE_MISMATCH'
+        ? 'discovery_stale_terms' : e.code==='TOOL_NOT_FOUND'
+          ? 'mcp_tool_missing' : 'unknown_upstream_error';
+      const recovery=explainFailure({stage:name==='bazaar_search'?'discovery':'mcp',reason:recoveryCode});
+      const err={code:e.code??'TOOL_ERROR',reason:e.message??'Error',recovery};
       return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(err)}],structuredContent:err,isError:true}));
     }
   };
