@@ -5,6 +5,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { syncCreatedDirectoryChain, syncParentDirectory } from './journal-durability.mjs';
 
 const I128_MAX = (1n << 127n) - 1n;
 const NETWORKS = new Set(['stellar:testnet', 'stellar:pubnet']);
@@ -88,6 +89,9 @@ async function replaceAtomic(path,obj){
     try {await h.writeFile(JSON.stringify(obj,null,2)+'\n');await h.sync();}
     finally {await h.close();}
     await rename(temp,path);
+    // rename() atomically replaces the name, but only the containing directory
+    // fsync makes that replacement durable across power loss.
+    await syncParentDirectory(path);
   } catch(e) {await rm(temp,{force:true}).catch(()=>{});throw e;}
 }
 function verifyResult(result) {
@@ -100,10 +104,10 @@ export class MeterError extends Error {
 }
 
 export class MeteredUptoSettlement {
-  #file; #state; #wire; #quote; #busy=false;
+  #file; #state; #wire; #quote; #busy=false; #durabilityUnknown=false;
   constructor(file,state,wire,quote){this.#file=file;this.#state=state;this.#wire=wire;this.#quote=quote;}
   get id(){return this.#state.id;}
-  get status(){return this.#state.status;}
+  get status(){return this.#durabilityUnknown?'DURABILITY_UNKNOWN':this.#state.status;}
   get tally(){return {units:this.#state.units,chargeAtomic:this.#state.chargeAtomic,ceilingAtomic:this.#state.maxAtomic};}
   get receipt(){return snap({id:this.id,status:this.status,network:this.#state.network,
     source:this.#state.resource,price:this.#state.price,units:this.#state.units,
@@ -112,11 +116,19 @@ export class MeteredUptoSettlement {
     ledgerProof:this.#state.ledgerProof??null,finality:this.status==='LEDGER_CONFIRMED'});}
   async #commit(update){
     // The on-disk journal is authoritative. Never expose a transition that failed to persist.
+    if(this.#durabilityUnknown)throw new MeterError('JOURNAL_DURABILITY_UNKNOWN');
     const next={...this.#state,...update};
-    await replaceAtomic(this.#file,next);
+    try{await replaceAtomic(this.#file,next);}
+    catch(e){
+      // A rename may already have happened when a directory fsync fails.
+      // Never let this instance settle/retry from an uncertain in-memory state.
+      this.#durabilityUnknown=true;
+      throw e;
+    }
     this.#state=next;
   }
   async #exclusive(fn){
+    if(this.#durabilityUnknown)throw new MeterError('JOURNAL_DURABILITY_UNKNOWN');
     if(this.#busy)throw new MeterError('CONCURRENT_SESSION_MUTATION');
     this.#busy=true;try{return await fn();}finally{this.#busy=false;}
   }
@@ -129,7 +141,10 @@ export class MeteredUptoSettlement {
     if(now<q.p.validAfter || now>=q.p.deadline)throw new MeterError('TIME_WINDOW_NOT_ACTIVE');
     nonempty(paymentRequired.resource?.url,'resource.url');
     if(typeof journalDir!=='string'||!journalDir.trim())throw new MeterError('JOURNAL_DIR_REQUIRED');
-    await mkdir(journalDir,{recursive:true,mode:0o700});
+    const firstCreated=await mkdir(journalDir,{recursive:true,mode:0o700});
+    // A newly created journal directory also needs its ancestor names synced;
+    // syncing just the journal's own file entries is insufficient.
+    await syncCreatedDirectoryChain(journalDir,firstCreated);
     // Signed authorization entry is the unique one-use identity. A different
     // merchant cannot reopen the same signed entry with a changed request ID.
     const id=hash(q.p.authEntries[0]);
@@ -144,6 +159,9 @@ export class MeteredUptoSettlement {
       if(e.code==='EEXIST')throw new MeterError('AUTHORIZATION_ALREADY_RESERVED');throw e;
     }
     try{await h.writeFile(JSON.stringify(s,null,2)+'\n');await h.sync();}finally{await h.close();}
+    // Do not call an authenticator or create chargeable sessions until the
+    // O_EXCL authorization reservation is durable in the directory.
+    await syncParentDirectory(file);
     const session=new MeteredUptoSettlement(file,s,wire,q);
     try{
       // Only a trusted genuine SDK/facilitator adapter may implement this hook.
