@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "dataset": "columbus_rfp27_0008_gl_journal_illustrative_v1",
+  "keys": [
+    "fiscal_year",
+    "fund",
+    "posting_period",
+    "document_id",
+    "line_id",
+    "account_class",
+    "account_code"
+  ],
+  "amounts": [
+    {
+      "name": "debits",
+      "scale": 2,
+      "tolerance": "0.00"
+    },
+    {
+      "name": "credits",
+      "scale": 2,
+      "tolerance": "0.00"
+    }
+  ],
+  "group_by": [
+    "fiscal_year",
+    "fund"
+  ],
+  "source_columns": {
+    "fiscal_year": "FiscalYear",
+    "fund": "Fund",
+    "posting_period": "Period",
+    "document_id": "Journal",
+    "line_id": "Line",
+    "account_class": "AccountClass",
+    "account_code": "AccountCode",
+    "debits": "Debit",
+    "credits": "Credit"
+  },
+  "target_columns": {
+    "fiscal_year": "FY",
+    "fund": "FundID",
+    "posting_period": "PostingPeriod",
+    "document_id": "DocumentID",
+    "line_id": "DocumentLine",
+    "account_class": "AccountType",
+    "account_code": "AccountID",
+    "debits": "DebitAmount",
+    "credits": "CreditAmount"
+  }
+}

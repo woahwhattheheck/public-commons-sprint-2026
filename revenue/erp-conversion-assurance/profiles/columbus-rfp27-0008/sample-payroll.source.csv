@@ -1,0 +1,3 @@
+PayPeriodEnd,RunID,EmployeeToken,CheckSequence,GrossPay,NetPay,EmpTax,Deductions,EmployerFringe
+2026-09-30,PR-01,SAMPLE-EMP-A,1,1200.00,920.00,220.00,60.00,70.00
+2026-09-30,PR-01,SAMPLE-EMP-B,1,950.00,730.00,170.00,50.00,62.00
