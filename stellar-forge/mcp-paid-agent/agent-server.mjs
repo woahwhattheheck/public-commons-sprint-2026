@@ -91,7 +91,9 @@ export class McpPaidToolBroker {
   }
   async search(args){
     if(!plain(args)||!maxText(args.query,1024)||!args.query.trim())fail('INVALID_PARAMS','Search query required');
-    const u=new URL('/discovery/search',this.#catalogUrl);
+    const u=new URL(this.#catalogUrl);
+    if(!u.pathname.endsWith('/'))u.pathname+='/';
+    u.pathname+='discovery/search';
     for(const k of ['query','cursor','limit','network','scheme','asset','maxAmount']){
       const v=args[k];if(v===undefined)continue;
       if(!['limit'].includes(k)&&!maxText(v,4096))fail('INVALID_PARAMS','Invalid '+k);
