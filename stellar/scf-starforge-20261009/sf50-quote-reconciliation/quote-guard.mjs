@@ -60,6 +60,18 @@ function matchesTemplate(template, requested, catalog) {
   return matches(catalog) && matches(requested);
 }
 
+// Bazaar v2 `info.input` carries the invocation shape, including HTTP body
+// type, query/header examples and schema. A matching price does not authorize
+// a different advertised invocation contract. For parameterized URLs, ONLY
+// concrete pathParams may change between the catalog sample and the live URL.
+function bazaarInvocationContract(extension, template) {
+  if (!plain(extension?.info?.input) || !plain(extension.schema))
+    throw new TypeError('Bazaar invocation contract required');
+  const input = structuredClone(extension.info.input);
+  if (template) delete input.pathParams;
+  return canonical({ input, schema: extension.schema });
+}
+
 function normalized(t) {
   if (!plain(t) || !['exact', 'upto'].includes(t.scheme) ||
       !['stellar:testnet', 'stellar:pubnet'].includes(t.network) ||
@@ -117,6 +129,9 @@ export function reconcileHttpQuote({
     if (liveInput?.type !== 'http' || liveInput.method !== method ||
         (quote.extensions.bazaar.routeTemplate ?? null) !== (template ?? null))
       return error('ORIGIN_DISCOVERY_IDENTITY_DRIFT');
+    if (bazaarInvocationContract(catalogEntry.extensions.bazaar, template) !==
+        bazaarInvocationContract(quote.extensions.bazaar, template))
+      return error('ORIGIN_BAZAAR_INPUT_CONTRACT_DRIFT');
     if (!plain(selection) || !['scheme','network','asset','payTo'].every(k => typeof selection[k] === 'string' && selection[k]))
       return error('EXPLICIT_SELECTION_REQUIRED');
     if (!Array.isArray(allowedNetworks) || !allowedNetworks.includes(selection.network) ||
