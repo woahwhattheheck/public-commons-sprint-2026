@@ -52,9 +52,17 @@ all stable native SF60 filtered list pages and their original Atlas proxy JSON,
 checks page parity and stable journal health, and creates one private, atomic,
 no-clobber JSON file with original response bytes and SHA-256 digests.
 
-An operator integrating this module into the original launcher can call it after
-`openDemo(options)` returns, passing that session's `sourceOrigin` and
-`atlasUrl`, and then call `session.close()` in a `finally` block. This
-path is intentionally a composable export, not a second CLI or duplicated
-catalog. An authentic populated original SF60 journal is required to claim
+Use the original operator entrypoint, now with additive optional arguments:
+
+```sh
+node stellar/scf-starforge-20261009/sf66-demo-launcher/launch.mjs \
+  --directory /private/existing-original-catalog \
+  --capture-full /private/evidence/sf66-source.json \
+  --capture-network stellar:testnet --capture-limit 100 --one-shot
+```
+
+Without `--capture-full`, the original single-page parity and viewer behavior
+remain unchanged. Capture-network and capture-limit are valid only with a
+full-source output. `captureFullCatalog()` is also exported from capture.mjs
+for existing native operators, but is NOT a second CLI, journal owner or catalog. An authentic populated original SF60 journal is required to claim
 observed resource coverage. Both services remain local; no payment occurs.
