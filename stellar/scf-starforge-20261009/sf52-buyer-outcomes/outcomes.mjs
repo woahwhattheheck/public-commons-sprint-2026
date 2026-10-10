@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
 export const VERSION = 'scf52.buyer-outcome.v1';
-const STATES = new Set(['NO_PAYMENT_REQUIRED', 'DELIVERED_REPORTED_SETTLED',
+const STATES = new Set(['NO_PAYMENT_REQUIRED', 'UNPAID_HTTP_ERROR', 'DELIVERED_REPORTED_SETTLED',
   'SETTLEMENT_PENDING', 'PAYMENT_REPORTED_FAILED', 'PAYMENT_OUTCOME_UNKNOWN',
   'BLOCKED_BEFORE_SIGNATURE']);
 const MAX_I128 = 170141183460469231731687303715884105727n;
@@ -40,9 +40,15 @@ export function captureBuyerResult(buyer, { observedAt = new Date().toISOString(
     'BUYER_ATTEMPTS_INVALID');
   requireOk(Number.isSafeInteger(buyer.httpStatus) && buyer.httpStatus >= 100 && buyer.httpStatus <= 599,
     'BUYER_HTTP_STATUS_INVALID');
-  if (buyer.status === 'NO_PAYMENT_REQUIRED') {
-    requireOk(accepted === null && buyer.settlement === 'NOT_REQUESTED' && buyer.attempts === 1,
-      'FREE_RESULT_INCONSISTENT');
+  if (buyer.status === 'NO_PAYMENT_REQUIRED' || buyer.status === 'UNPAID_HTTP_ERROR') {
+    // SF31 distinguishes a free successful HTTP response from an unsuccessful
+    // unsigned first request. Neither may invent signed attempts or receipts.
+    const free = buyer.status === 'NO_PAYMENT_REQUIRED';
+    requireOk(accepted === null && buyer.settlement === 'NOT_REQUESTED' &&
+      buyer.attempts === 1 && buyer.receipt == null &&
+      (free ? buyer.httpStatus >= 200 && buyer.httpStatus < 300 :
+        buyer.httpStatus !== 402 && (buyer.httpStatus < 200 || buyer.httpStatus >= 300)),
+      free ? 'FREE_RESULT_INCONSISTENT' : 'UNPAID_HTTP_RESULT_INCONSISTENT');
   } else {
     requireOk(accepted !== null && buyer.attempts === 2, 'PAID_RESULT_MISSING_SIGNED_ATTEMPT');
   }
@@ -82,7 +88,8 @@ export function analyzeOne(record) {
   const c=record.chain??null;
   const d=record.delivery??null;
   let state, evidence='NONE', ledger=null;
-  if (b.status==='BLOCKED_BEFORE_SIGNATURE' || b.status==='NO_PAYMENT_REQUIRED') {
+  if (b.status==='BLOCKED_BEFORE_SIGNATURE' || b.status==='NO_PAYMENT_REQUIRED' ||
+      b.status==='UNPAID_HTTP_ERROR') {
     requireOk(!c && !d && !t && !paid, 'NONPAYMENT_HAS_PAID_EVIDENCE');
     state=b.status;
   } else if (!t) {
@@ -131,12 +138,13 @@ export function aggregateOutcomes(records) {
   // reports a matched event but does not expose an event index, so identical
   // transfer tuples must not be credited twice from a reused receipt.
   const seen=new Set(), seenChainProofs=new Set(), outcomes=[], byAsset=new Map();
-  const counts={ total:0,signedAttempts:0,sellerReportedSuccess:0,verifiedTransfers:0,
+  const counts={ total:0,unpaidHttpFailures:0,signedAttempts:0,sellerReportedSuccess:0,verifiedTransfers:0,
     transferAndBodyObserved:0,proofConflicts:0,uncertainOrPending:0 };
   for(const record of records) {
     const result=analyzeOne(record);
     requireOk(!seen.has(result.intentId), 'DUPLICATE_INTENT_ID');seen.add(result.intentId);
     outcomes.push(result);counts.total++;
+    if(result.status==='UNPAID_HTTP_ERROR')counts.unpaidHttpFailures++;
     if(result.signedAttempt)counts.signedAttempts++;
     if(result.sellerReportedSuccess)counts.sellerReportedSuccess++;
     if(result.status==='PROOF_CONFLICT'||result.status==='SELLER_RECEIPT_CONFLICT') counts.proofConflicts++;
