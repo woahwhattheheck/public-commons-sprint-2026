@@ -1,11 +1,11 @@
 // MIT License. Seller-origin + payment-quote proof for x402 v2 Bazaar.
 // This is NOT Stellar wallet ownership, payment verification or settlement.
-import {createPrivateKey, createPublicKey, randomBytes, sign, verify} from 'node:crypto';
+import {createHash, createPrivateKey, createPublicKey, randomBytes, sign, verify} from 'node:crypto';
 import {lookup} from 'node:dns/promises';
 import {BlockList, isIP} from 'node:net';
 import https from 'node:https';
 
-export const PROOF_DOMAIN = 'stellar-bazaar-seller-origin-quote-proof/v1';
+export const PROOF_DOMAIN = 'stellar-bazaar-seller-origin-quote-proof/v2';
 export const WELL_KNOWN = '/.well-known/x402-bazaar-proof';
 const METHODS = new Set(['GET', 'HEAD', 'DELETE', 'POST', 'PUT', 'PATCH']);
 const MAX_LIFETIME_MS = 120_000;
@@ -13,6 +13,30 @@ const CLOCK_SKEW_MS = 5_000;
 const CHALLENGE_RE = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes base64url
 const ACCEPTS_RE = /^\d+$/; // x402 atomic amount string; no floating point conversions
 const plain = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+// V2 binds the complete advertised Bazaar schema and chosen accepts option.
+// Strict canonical JSON refuses silent dropping of undefined/non-JSON values.
+const MAX_CONTRACT_BYTES = 65536;
+function canonicalContract(value, depth=0, meter={nodes:0}) {
+  if (++meter.nodes > 10000 || depth > 32) throw new TypeError('Bazaar contract too complex');
+  if (value === null || typeof value === 'boolean') return JSON.stringify(value);
+  if (typeof value === 'string') {
+    if (Buffer.byteLength(value,'utf8') > MAX_CONTRACT_BYTES) throw new TypeError('Bazaar contract string too long');
+    return JSON.stringify(value);
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
+  if (Array.isArray(value)) return '[' + value.map(v=>canonicalContract(v,depth+1,meter)).join(',') + ']';
+  if (plain(value) && [Object.prototype,null].includes(Object.getPrototypeOf(value))) {
+    return '{' + Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonicalContract(value[k],depth+1,meter)).join(',') + '}';
+  }
+  throw new TypeError('Bazaar proof contract must contain JSON values only');
+}
+function hashAdvertisedContract(entry, selectedAcceptTerms) {
+  const serialized=canonicalContract({bazaar:entry.extensions.bazaar,selectedAcceptTerms});
+  if (Buffer.byteLength(serialized,'utf8') > MAX_CONTRACT_BYTES) throw new RangeError('Bazaar contract exceeds 64 KiB');
+  return createHash('sha256').update('stellar-bazaar-advertised-contract/v2\0','utf8')
+    .update(serialized,'utf8').digest('hex');
+}
 
 function nonEmpty(v, field) {
   if (typeof v !== 'string' || !v.trim() || v.length > 2048) throw new TypeError(`Invalid ${field}`);
@@ -57,6 +81,7 @@ function quoteOf(entry, selectedAccept = 0) {
     amount:a.amount,
     payTo:nonEmpty(a.payTo,'accepts.payTo')
   };
+  identity.contractSha256=hashAdvertisedContract(entry,a);
   return {origin:url.origin,resourceUrl:url.href,identity,selectedAccept,quote};
 }
 
