@@ -134,3 +134,39 @@ test('network and payTo must share one original catalog accepts tuple, including
     assert.equal(valid.verdict,'LISTED');
   } finally { await catalog.close(); await seller.close(); }
 });
+
+test('unpaid HTTP 200 default-free path is distinguishable from a discoverable 402, without claiming settlement',async()=>{
+  let freeByDefault = true;
+  const seller = await loopback((_req,res)=>{
+    if (freeByDefault) {
+      res.writeHead(200, {'content-type':'application/json'});
+      res.end(JSON.stringify({free:true}));
+    } else {
+      res.writeHead(402, {'payment-required':challenge});
+      res.end(JSON.stringify({x402Version:2}));
+    }
+  });
+  const catalog = await loopback((_req,res)=>{
+    res.writeHead(200, {'content-type':'application/json'});
+    res.end(JSON.stringify({items:[],pagination:{total:0}}));
+  });
+  const run = () => diagnose({resourceUrl:seller.url+'/pulse',
+    catalogUrl:catalog.url+'/discovery/resources',allowLoopback:true,
+    network:'eip155:8453'});
+  try {
+    const before = await run();
+    assert.equal(before.challenge.httpStatus,200);
+    assert.equal(before.challenge.state,'UNPAID_GET_HTTP_200');
+    assert.equal(before.sellerDiscovery.state,'UNPAID_200_NO_402_DECLARATION');
+    assert.match(before.sellerDiscovery.nextAction,/free-tier/);
+    assert.equal(before.verdict,'NOT_LISTED_IN_EXHAUSTED_CATALOG');
+    assert.match(before.interpretation,/before attributing absence/);
+    freeByDefault = false;
+    const after = await run();
+    assert.equal(after.challenge.state,'X402_402');
+    assert.equal(after.sellerDiscovery.state,'UNPAID_402_BAZAAR_VISIBLE');
+    // A newly visible unpaid 402 is not itself a payment or an indexed listing.
+    assert.equal(after.verdict,'NOT_LISTED_IN_EXHAUSTED_CATALOG');
+    assert.equal(after.extensionResponse.state,'NOT_PROVIDED');
+  } finally {await catalog.close();await seller.close();}
+});
