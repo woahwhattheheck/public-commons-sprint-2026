@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {createServer} from 'node:http';
+import {createServer,request} from 'node:http';
 import {once} from 'node:events';
 import {createOpsHandler} from './ops.mjs';
 const catalog={size:2,version:3,list:()=>({resources:[]}),search:()=>({resources:[]})};
@@ -81,5 +81,24 @@ test('asynchronous readiness checks fail closed on false, rejection and timeout'
    probe=()=>Promise.resolve(true);
    r=await fetch(root+'/readyz');assert.equal(r.status,200);assert.equal((await r.json()).ready,true);
    assert.equal((await fetch(root+'/healthz')).status,200);
+ });
+});
+
+test('control routes require literal loopback Host names as well as loopback sockets', async()=>{
+ const ops=createOpsHandler({catalog,discoveryHandler:backend});
+ await withServer(ops.handler,async root=>{
+  const port=Number(new URL(root).port);
+  const statusFor=(path,host)=>new Promise((resolve,reject)=>{
+   const req=request({hostname:'127.0.0.1',port,path,headers:{host}},res=>{
+    res.resume();res.on('end',()=>resolve(res.statusCode));
+   });
+   req.on('error',reject);req.end();
+  });
+  for(const host of ['localhost','localhost:'+port,'127.0.0.1:'+port,'[::1]:'+port,'[::ffff:7f00:1]:'+port])
+   assert.equal(await statusFor('/metrics',host),200,host);
+  for(const host of ['attacker.example','127.0.0.1.attacker.example','attacker.example:8780','user@127.0.0.1','127.0.0.1/metrics','127.0.0.1:99999'])
+   for(const route of ['/metrics','/healthz','/readyz'])
+    assert.equal(await statusFor(route,host),403,route+' Host='+host);
+  assert.equal(await statusFor('/discovery/resources','attacker.example'),200,'public discovery unaffected');
  });
 });
