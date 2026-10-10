@@ -94,3 +94,32 @@ test('SF-39 checks raw resource URL before URL parser dot-segment normalization'
   }
   assert.equal(catalog.size, 0, 'rejections cannot mutate the public catalog');
 });
+
+test('payment filters are conjunctive within ONE accepted quote on list, search and HTTP', async () => {
+  const c = new BazaarCatalog();
+  const offer = entry('forecast');
+  offer.accepts = [
+    {network:'stellar:testnet',scheme:'exact',payTo:'GTESTADDRESS',asset:'USDC:TEST',amount:'10'},
+    {network:'stellar:pubnet',scheme:'upto',payTo:'GOTHERADDRESS',asset:'USDC:PUB',amount:'20'}
+  ];
+  c.insertValidated(offer);
+  const mixed = 'network=stellar:testnet&scheme=upto&payTo=GOTHERADDRESS';
+  assert.equal(c.list(new URLSearchParams(mixed)).resources.length, 0, 'never synthesize a cross-option listing');
+  assert.equal(c.search(new URLSearchParams('query=forecast&'+mixed)).resources.length, 0, 'search uses same payment filter');
+  assert.equal(c.list(new URLSearchParams('network=stellar:testnet&scheme=exact&payTo=GTESTADDRESS')).resources.length, 1);
+  assert.equal(c.list(new URLSearchParams('network=stellar:pubnet&scheme=upto&payTo=GOTHERADDRESS')).resources.length, 1);
+  assert.equal(c.list(new URLSearchParams('scheme=upto')).resources.length, 1, 'single-option filters still match');
+  const server=createServer(createDiscoveryServer(c));
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try {
+    const base=`http://127.0.0.1:${server.address().port}`;
+    for(const path of ['/discovery/resources?'+mixed,'/discovery/search?query=forecast&'+mixed]) {
+      const response=await fetch(base+path);
+      assert.equal(response.status,200);
+      const body=await response.json();
+      assert.deepEqual(body.resources,[],path);
+    }
+  } finally {
+    await new Promise(resolve=>server.close(resolve));
+  }
+});
