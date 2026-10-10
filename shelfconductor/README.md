@@ -20,7 +20,7 @@ The UI accepts a UTF-8 CSV file with a header and columns:
 
 `sku,title,author,category,price_cents,stock,qloo_id,shelf_note`
 
-Retailer-supplied `qloo_id` values must be **real, verified Qloo book entity IDs**, not slug guesses or names; our app does not automatically attach an uncertain book edition. Rows with missing IDs are excluded. Inventory is transferred only to this local/server session; it is never fetched from Qloo. All price/stock/genre/staff notes come from the retailer, not Qloo.
+Retailer-supplied `qloo_id` values must be **real, verified Qloo book entity IDs**, not slug guesses or names; our app does not automatically attach an uncertain book edition. Rows with missing IDs are excluded. Inventory is transferred only to this local/server session; it is never fetched from Qloo. JSON planning requests retain UTF-8 titles across network chunks, with the existing 150KB raw-byte ceiling enforced before decoding. Invalid JSON or malformed UTF-8 returns `INVALID_JSON` before provider activity. All price/stock/genre/staff notes come from the retailer, not Qloo.
 
 The included **SYNTHETIC DEMO** uses fake book titles and fictional IDs under `synthetic:demo:*` and outputs visible `SYNTHETIC_DEMO`. It cannot be mistaken for a provider call. Live API refusal or exhausted budget returns an explicit error; there is NO automatic demo fallback. At present, Qloo does not give retailer stock, local price or sales authority, and ShelfConductor never asserts otherwise.
 
