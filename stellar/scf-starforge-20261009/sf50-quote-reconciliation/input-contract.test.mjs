@@ -66,3 +66,19 @@ test('missing schema is not a stable authentic v2 Bazaar contract',()=>{
   delete c.extensions.bazaar.schema;
   assert.equal(decision(c,q).reason,'MALFORMED_QUOTE_OR_RESOURCE');
 });
+
+test('static Bazaar output metadata is bound to the approved catalog row',()=>{
+  const c=catalog(), q=quote();
+  c.extensions.bazaar.info.output={type:'json',example:{weather:{unit:'C',value:20}}};
+  q.extensions.bazaar.info.output={type:'json',example:{weather:{unit:'C',value:20}}};
+  c.extensions.bazaar.schema.properties.output={type:'object'};
+  q.extensions.bazaar.schema.properties.output={type:'object'};
+  assert.equal(decision(c,q).decision,'allow');
+  q.extensions.bazaar.info.output.example.weather.unit='F';
+  assert.equal(decision(c,q).reason,'ORIGIN_BAZAAR_OUTPUT_METADATA_DRIFT');
+  q.extensions.bazaar.info.output.example.weather.unit='C';
+  delete q.extensions.bazaar.info.output;
+  assert.equal(decision(c,q).reason,'ORIGIN_BAZAAR_OUTPUT_METADATA_DRIFT');
+  q.extensions.bazaar.info.output={example:{weather:{value:20,unit:'C'}},type:'json'};
+  assert.equal(decision(c,q).decision,'allow');
+});

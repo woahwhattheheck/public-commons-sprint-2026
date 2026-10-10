@@ -53,3 +53,20 @@ if (decision.decision !== 'allow') throw new Error(decision.reason);
 A matching live payee and amount are insufficient if the origin's newly advertised invocation requirements differ from those the buyer discovered. Per the [first-party x402 Bazaar extension](https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md), `extensions.bazaar.info.input` carries HTTP query/header examples, body type/body example and operation method; `extensions.bazaar.schema` describes that info shape. The buyer gate now requires equal static input and schema metadata between the catalog entry and fresh HTTP 402. For valid `routeTemplate` families, only per-request `pathParams` are excluded from comparison, since concrete route values may differ. The existing route/origin/method/amount/payee checks remain unchanged. A stale contract rejects as `ORIGIN_BAZAAR_INPUT_CONTRACT_DRIFT`: refetch and reapprove instead of signing old discovery metadata. This stricter gate may reject benign changed examples until the catalog is refreshed.
 
 Original module focused offline regression: `node --test stellar/scf-starforge-20261009/sf50-quote-reconciliation/input-contract.test.mjs`. It exercises matching GET/POST quotes, changed live query/header/schema/body, dynamic route path-parameter variability and missing schemas. No hosted CI, wallet or payment.
+
+## Bazaar output metadata parity (2026-10-10)
+
+The original buyer-side reconciliation also binds static advertised
+`extensions.bazaar.info.output` and any other static `info` metadata
+between the discovered catalog row and actual origin HTTP 402. Equal
+payee, price, input schema and route are insufficient when the product
+output description changes. Such drift rejects with
+`ORIGIN_BAZAAR_OUTPUT_METADATA_DRIFT`, requiring catalog refresh and
+buyer reapproval. JSON key order is immaterial. For a valid dynamic
+route, the existing exception for concrete `info.input.pathParams`
+continues. Schema/input drift retain their existing error contract.
+This is metadata equality, NOT seller authentication, delivery proof,
+validation against JSON Schema, transaction finality or payment.
+
+Focused, offline Node 22 check (not run in this handoff):
+`node --test stellar/scf-starforge-20261009/sf50-quote-reconciliation/input-contract.test.mjs`.

@@ -132,6 +132,14 @@ export function reconcileHttpQuote({
     if (bazaarInvocationContract(catalogEntry.extensions.bazaar, template) !==
         bazaarInvocationContract(quote.extensions.bazaar, template))
       return error('ORIGIN_BAZAAR_INPUT_CONTRACT_DRIFT');
+    // info.output and any other static advertised Bazaar product metadata
+    // remain part of the buyer's pre-payment selection, not just info.input.
+    const staticInfo = ext => {
+      const { input: _invocation, ...otherInfo } = structuredClone(ext.info);
+      return canonical(otherInfo);
+    };
+    if (staticInfo(catalogEntry.extensions.bazaar) !== staticInfo(quote.extensions.bazaar))
+      return error('ORIGIN_BAZAAR_OUTPUT_METADATA_DRIFT');
     if (!plain(selection) || !['scheme','network','asset','payTo'].every(k => typeof selection[k] === 'string' && selection[k]))
       return error('EXPLICIT_SELECTION_REQUIRED');
     if (!Array.isArray(allowedNetworks) || !allowedNetworks.includes(selection.network) ||
