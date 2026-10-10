@@ -89,3 +89,11 @@ test('v2 rejects non-JSON/oversized seller metadata before signing',()=>{
   e.extensions.bazaar.info.input.queryParams.city='a'.repeat(65537);
   assert.throws(()=>signProof(e,{nonce,privateKeyPem:keys.privateKey,now}),/too long/);
 });
+
+test('v2 enforces aggregate serialized-byte limit while visiting a large metadata array',()=>{
+  const e=copy();
+  e.extensions.bazaar.info.output.example.bulk=Array.from({length:1000},(_,i)=>'x'.repeat(1024)+i);
+  assert.throws(()=>signProof(e,{nonce,privateKeyPem:keys.privateKey,now}),/exceeds 64 KiB/);
+  delete e.extensions.bazaar.info.output.example.bulk;
+  assert.equal(verify(e).verified,true);
+});
