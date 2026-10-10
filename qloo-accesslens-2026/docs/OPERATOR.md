@@ -1,6 +1,6 @@
 # Live operator guide
 
-1. Install Node.js 22 or newer. Run `node server.mjs` to inspect the explicitly synthetic demo. No npm install or Qloo key required.
+1. Install Node.js 22 or newer. Run `node server.mjs` to inspect the explicitly synthetic demo. No npm install or Qloo key required. An unset `ACCESSLENS_MODE` defaults to `fixture`; explicit values must be exactly `fixture` or `live`. A blank, misspelled or differently cased mode fails at startup before provider activity, rather than starting a fictional demo by accident.
 2. For **live** data, obtain an official Qloo hackathon API key and keep it strictly in the server environment (`QLOO_API_KEY`). Set `ACCESSLENS_MODE=live` and `ACCESSLENS_VENUES_FILE` to an absolute path outside any public repository. All API requests go to `https://hackathon.api.qloo.com` and use `X-Api-Key`.
 3. The private JSON catalog must be a top-level array of venue records with unique, *real* `qloo_id` values obtained by official Qloo `/search` against `urn:entity:place` and independently audited `id`, `name`, `city`, `capacity` (integer), `cost_usd` (number), `step_free`, `low_sensory`, `accessible_toilet` (each true/false), `audit_source` (human-readable evidence), `audit_date` (`YYYY-MM-DD`). Synthetic example:
 
