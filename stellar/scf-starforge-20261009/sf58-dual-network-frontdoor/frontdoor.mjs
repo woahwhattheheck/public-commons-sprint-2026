@@ -2,11 +2,13 @@
 // Cryptographic verify/settle belongs to the operator's native @x402/stellar backends.
 import { createServer } from 'node:http';
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { boundedBodyBytes, BodyReadError } from './body-read.mjs';
 
 export const NETWORKS = Object.freeze(['stellar:testnet', 'stellar:pubnet']);
 const DEFAULT_MAX_BODY = 1024 * 1024;
 const DEFAULT_MAX_CONCURRENT = 32;
 const DEFAULT_TIMEOUT_MS = 12000;
+const DEFAULT_BODY_TIMEOUT_MS = 8000;
 
 export function originOnly(raw, {allowLoopbackHttp = false} = {}) {
   if (typeof raw !== 'string' || !raw.trim()) throw new TypeError('Missing facilitator origin');
@@ -33,19 +35,6 @@ class HttpError extends Error {
 function json(res, status, body) {
   res.writeHead(status, {'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff'});
   res.end(JSON.stringify(body));
-}
-async function bodyBytes(req, maxBytes) {
-  const declared = Number(req.headers['content-length']);
-  if (Number.isFinite(declared) && declared > maxBytes) throw new HttpError(413, 'BODY_TOO_LARGE');
-  const parts = [];
-  let total = 0;
-  for await (const part of req) {
-    total += part.byteLength;
-    if (total > maxBytes) throw new HttpError(413, 'BODY_TOO_LARGE');
-    parts.push(part);
-  }
-  if (!total) throw new HttpError(400, 'EMPTY_BODY');
-  return Buffer.concat(parts, total);
 }
 function targetNetwork(bytes) {
   let request;
@@ -130,13 +119,15 @@ export function combineSupported(results) {
  */
 export function makeFrontdoor({upstreams, inboundToken = null, allowLoopbackHttp = false,
   maxBodyBytes = DEFAULT_MAX_BODY, maxConcurrent = DEFAULT_MAX_CONCURRENT,
-  timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = fetch} = {}) {
+  timeoutMs = DEFAULT_TIMEOUT_MS, bodyTimeoutMs = DEFAULT_BODY_TIMEOUT_MS,
+  fetchImpl = fetch} = {}) {
   if (inboundToken !== null && (typeof inboundToken !== 'string' || inboundToken.length < 16)) {
     throw new TypeError('Inbound token must be at least 16 characters');
   }
   if (!Number.isSafeInteger(maxBodyBytes) || maxBodyBytes < 1 ||
       !Number.isSafeInteger(maxConcurrent) || maxConcurrent < 1 ||
-      !Number.isSafeInteger(timeoutMs) || timeoutMs < 1) throw new TypeError('Invalid limits');
+      !Number.isSafeInteger(timeoutMs) || timeoutMs < 1 ||
+      !Number.isSafeInteger(bodyTimeoutMs) || bodyTimeoutMs < 1) throw new TypeError('Invalid limits');
   const peers = {};
   for (const network of NETWORKS) {
     const cfg = upstreams?.[network];
@@ -182,7 +173,7 @@ export function makeFrontdoor({upstreams, inboundToken = null, allowLoopbackHttp
       }
       const type = req.headers['content-type'] ?? '';
       if (!/^application\/json\s*(?:;|$)/i.test(type)) throw new HttpError(415, 'JSON_REQUIRED');
-      const bytes = await bodyBytes(req, maxBodyBytes);
+      const bytes = await boundedBodyBytes(req, maxBodyBytes, bodyTimeoutMs);
       const network = targetNetwork(bytes);
       const peer = await queryPeer(network, pathname, bytes);
       if (peer.data.network !== undefined && peer.data.network !== network) {
@@ -194,9 +185,11 @@ export function makeFrontdoor({upstreams, inboundToken = null, allowLoopbackHttp
       res.end(peer.raw);
     } catch (err) {
       const isTimeout = err?.name === 'TimeoutError' || err?.name === 'AbortError';
-      const code = err instanceof HttpError ? err.code : isTimeout ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_UNAVAILABLE';
-      const status = err instanceof HttpError ? err.status : isTimeout ? 504 : 502;
-      json(res, status, {error: code});
+      const controlled = err instanceof HttpError || err instanceof BodyReadError;
+      const code = controlled ? err.code : isTimeout ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_UNAVAILABLE';
+      const status = controlled ? err.status : isTimeout ? 504 : 502;
+      // An expired inbound socket has been terminated. Do not write after close.
+      if (!res.destroyed) json(res, status, {error: code});
     } finally { inflight--; }
   });
 }
