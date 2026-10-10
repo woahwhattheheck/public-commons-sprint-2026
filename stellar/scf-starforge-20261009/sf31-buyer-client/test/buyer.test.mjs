@@ -257,3 +257,25 @@ test('Stellar receipt hash, optional settled amount and contradictory response a
   assert.equal(valid.receipt.transaction,TX_HASH);
   assert.equal(state.calls.length,(cases.length+1)*2);
 }));
+
+test('Soroban signed-i128 buyer quote ceiling preserves max valid and rejects overflow',async()=>fixture(async({state,buyer,url})=>{
+  const MAX='170141183460469231731687303715884105727';
+  const ABOVE='170141183460469231731687303715884105728';
+  let approved=0,signedCount=0;
+  const approve=()=>{approved++;return true;};
+  const sign=ctx=>{signedCount++;return signed(ctx);};
+  await assert.rejects(buyer.call({...settings(url),
+    expect:{...expected,maxAtomic:ABOVE},approve,sign}),e=>e.code==='BAD_SPEND_LIMIT');
+  assert.equal(state.calls.length,0);
+  state.paymentRequired={x402Version:2,resource:{url},accepts:[{...terms,amount:ABOVE}]};
+  await assert.rejects(buyer.call({...settings(url),approve,sign}),e=>e.code==='BAD_PAYMENT_REQUIREMENTS');
+  assert.equal(state.calls.length,1);
+  assert.equal(approved,0);assert.equal(signedCount,0);
+  state.paymentRequired={x402Version:2,resource:{url},accepts:[{...terms,amount:MAX}]};
+  const valid=await buyer.call({...settings(url),
+    expect:{...expected,maxAtomic:MAX},approve,sign});
+  assert.equal(valid.status,'DELIVERED_REPORTED_SETTLED');
+  assert.equal(valid.requirement.amount,MAX);
+  assert.equal(approved,1);assert.equal(signedCount,1);
+  assert.equal(state.paid.length,1);
+}));
