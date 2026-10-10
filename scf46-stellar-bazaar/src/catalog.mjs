@@ -1,6 +1,7 @@
 // MIT. x402 v2 Bazaar discovery-core prototype: no settlement or external registrations.
 import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
+import { inspectResourceURL, inspectRouteTemplate } from '../../stellar-forge/route-identity/identity.mjs';
 import { rankBazaarEntries } from './ranking.mjs';
 
 const plain = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -8,10 +9,8 @@ const printable = (v) => typeof v === 'string' && v.length > 0 && v.length <= 32
 const ALLOWED = new Set(['type','payTo','network','scheme','extensions']);
 
 export function isValidRouteTemplate(template) {
-  if (typeof template !== 'string' || !/^\/[a-zA-Z0-9_/:.\-~%]+$/.test(template)) return false;
-  let decoded;
-  try { decoded = decodeURIComponent(template); } catch { return false; }
-  return !decoded.includes('..') && !decoded.includes('://');
+  // Reuse SF28 multi-decode path validation at the actual catalog boundary.
+  return inspectRouteTemplate(template).ok;
 }
 
 export function sanitizeResourceServiceMetadata(resource) {
@@ -58,16 +57,18 @@ function matches(row, filters) {
 function keyOf(entry) {
   const info = entry.extensions?.bazaar?.info?.input;
   if (!plain(info) || !['http','mcp'].includes(info.type)) throw new TypeError('Valid HTTP or MCP Bazaar info required');
-  const url = new URL(entry.resource?.url);
-  if (!['https:','http:'].includes(url.protocol) || url.username || url.password) throw new TypeError('Invalid resource URL');
+  // Reject raw encoded traversal before WHATWG URL normalization.
+  const checked = inspectResourceURL(entry.resource?.url);
+  if (!checked.ok) throw new TypeError(`Invalid resource URL: ${checked.reason}`);
+  const url = checked.url;
   if (info.type === 'mcp') {
     if (typeof info.toolName !== 'string' || !info.toolName.trim() || !plain(info.inputSchema)) throw new TypeError('Invalid MCP tool');
     return ['mcp',url.href,info.toolName].join('|');
   }
   if (!['GET','HEAD','DELETE','POST','PUT','PATCH'].includes(info.method)) throw new TypeError('Invalid HTTP method');
   // Different concrete path parameter values collapse to the same canonical entry.
-  const template = entry.extensions.bazaar.routeTemplate;
-  const path = isValidRouteTemplate(template) ? template : url.pathname;
+  const template = inspectRouteTemplate(entry.extensions.bazaar.routeTemplate);
+  const path = template.ok ? template.canonicalPath : url.pathname;
   return ['http',url.origin,path,url.search,info.method].join('|');
 }
 
@@ -84,7 +85,9 @@ export function validateCatalogEntry(entry) {
   const id = keyOf(entry);
   const sanitized = structuredClone(entry);
   sanitized.resource = sanitizeResourceServiceMetadata(sanitized.resource);
-  if (!isValidRouteTemplate(sanitized.extensions.bazaar.routeTemplate)) delete sanitized.extensions.bazaar.routeTemplate;
+  const template = inspectRouteTemplate(sanitized.extensions.bazaar.routeTemplate);
+  if (template.ok) sanitized.extensions.bazaar.routeTemplate = template.canonicalPath;
+  else delete sanitized.extensions.bazaar.routeTemplate;
   return { id, entry: sanitized };
 }
 const signature = (query, filters) => createHash('sha256').update(JSON.stringify([query, filters])).digest('hex').slice(0,20);
