@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {inspectSupported,inspectRequest,inspectResponse,auditCapture,
-  probeSupported,checkHorizonInclusion} from '../conformance.mjs';
+  probeSupported,selectPublicProbeAddress,checkHorizonInclusion} from '../conformance.mjs';
 const network='stellar:testnet';
 const kind={x402Version:2,scheme:'exact',network,extra:{areFeesSponsored:true}};
 const supported={kinds:[kind],extensions:[],signers:{'stellar:*':[]}};
@@ -74,4 +74,39 @@ test('official network passphrase+tx inclusion separate from transfer proof',asy
   assert.deepEqual(calls.map(x=>x[1]),['GET','GET']);
   const wrong=async url=>new Response(JSON.stringify({network_passphrase:'Public Global Stellar Network ; September 2015'}));
   await assert.rejects(checkHorizonInclusion({network,transaction:tx,fetchImpl:wrong}),/PASSPHRASE_MISMATCH/);
+});
+
+test('official facilitator prefix resolves to the actual supported endpoint only once',async()=>{
+  const calls=[];
+  const fake=async(url,options)=>{
+    calls.push([url,options.method,options.redirect]);
+    return new Response(JSON.stringify(supported),{status:200});
+  };
+  const a=await probeSupported('https://x402.org/facilitator',{fetchImpl:fake});
+  const b=await probeSupported('https://x402.org/facilitator/supported',{fetchImpl:fake});
+  assert.equal(a.url,'https://x402.org/facilitator/supported');
+  assert.equal(b.url,a.url);
+  assert.deepEqual(calls,[
+    ['https://x402.org/facilitator/supported','GET','error'],
+    ['https://x402.org/facilitator/supported','GET','error']
+  ]);
+});
+test('public HTTPS probe rejects private origins and all nonpublic DNS answers',async()=>{
+  const fake=async()=>new Response(JSON.stringify(supported),{status:200});
+  for(const url of [
+    'https://127.0.0.1/facilitator','https://169.254.169.254/facilitator',
+    'https://router.local/facilitator','https://intranet.internal/facilitator',
+    'https://example.com:8443/facilitator','https://x402.org/facilitator?api_key=secret',
+    'http://x402.org/facilitator'
+  ]) await assert.rejects(probeSupported(url,{fetchImpl:fake}),/SUPPORTED_PUBLIC_HTTPS/);
+  assert.throws(()=>selectPublicProbeAddress([]),/NONPUBLIC/);
+  for(const answers of [
+    [{address:'10.0.0.1',family:4}],
+    [{address:'2606:4700:4700::1111',family:6},{address:'::1',family:6}],
+    [{address:'8.8.8.8',family:4},{address:'192.168.1.10',family:4}],
+    [{address:'::ffff:127.0.0.1',family:6}]
+  ]) assert.throws(()=>selectPublicProbeAddress(answers),/NONPUBLIC/);
+  assert.deepEqual(selectPublicProbeAddress([
+    {address:'8.8.8.8',family:4},{address:'2606:4700:4700::1111',family:6}
+  ]),{address:'8.8.8.8',family:4});
 });
