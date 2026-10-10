@@ -20,6 +20,18 @@ function optionalRate(n, label) {
   if (n === null || n === undefined) return null;
   return nonNegative(n, label);
 }
+
+// Never allow Infinity/NaN to leak into JSON, where JSON.stringify turns them
+// into null. Check both reported metrics and break-even trial contributions.
+function finiteResult(value, label) {
+  if (typeof value === 'number' && !Number.isFinite(value)) {
+    throw new RangeError(`${label} must be finite; reduce scenario sizes or rates`);
+  }
+  if (value !== null && typeof value === 'object') {
+    for (const [key, part] of Object.entries(value)) finiteResult(part, `${label}.${key}`);
+  }
+  return value;
+}
 function checkValues(input) {
   if (typeof input !== 'object' || input === null) throw new TypeError('input object required');
   for (const [section, keys] of Object.entries({
@@ -55,6 +67,9 @@ function checkValues(input) {
 export function project(input, paidCalls, architecture = 'edge_db') {
   checkValues(input);
   nonNegative(paidCalls, 'paidCalls');
+  if (!Number.isSafeInteger(paidCalls)) {
+    throw new RangeError('paidCalls must be a nonnegative safe integer');
+  }
   if (!['edge_db', 'vm_db'].includes(architecture)) {
     throw new RangeError('architecture must be edge_db or vm_db');
   }
@@ -85,7 +100,7 @@ export function project(input, paidCalls, architecture = 'edge_db') {
   const knownOrAssumed = infrastructureQuoted + hypotheticalSponsorUsd
     + Object.values(optionalCosts).reduce((t, v) => t + (v ?? 0), 0);
   const contributionCeiling = revenues - knownOrAssumed;
-  return {
+  return finiteResult({
     architecture,
     paid_calls_month: paidCalls,
     discovery_queries_month: paidCalls * a.discovery_queries_per_paid,
@@ -106,7 +121,7 @@ export function project(input, paidCalls, architecture = 'edge_db') {
     omitted_cost_categories: omissions,
     complete_budget: omissions.length === 0,
     successful_onchain_sponsor_cost_is_illustrative: true,
-  };
+  }, 'project');
 }
 
 /** An optimistic break-even bound (omitted costs assumed zero ONLY for bound calculation). */
@@ -136,7 +151,7 @@ export function optimisticBreakEven(input, architecture = 'edge_db') {
       + n * a.onchain_attempts_per_paid * a.xlm_per_onchain_attempt * a.illustrative_xlm_usd;
     const revenue = n * a.operator_fee_usd_per_paid
       + a.subscribers * a.subscriber_fee_usd_per_month;
-    return revenue - cost;
+    return finiteResult(revenue - cost, 'break-even contribution');
   };
   if (profit(0) >= 0) return 0;
   const maxCalls = 1e12;
