@@ -34,6 +34,9 @@ def deny(fn,expected):
 
 with tempfile.TemporaryDirectory() as p:
     db=Path(p)/'ledger.db';g=Governor(db,policy,*keys)
+    # The WAL/FULL settings must actually be in effect for a durable ledger.
+    assert g.db.execute('PRAGMA journal_mode').fetchone()[0].lower()=='wal'
+    assert g.db.execute('PRAGMA synchronous').fetchone()[0]==2
     x=req('request-a',600)
     assert g.estimate(x)['approved'] is True
     assert g.reserve(x,consent(x))['outcome']=='RESERVED'
@@ -88,6 +91,12 @@ with tempfile.TemporaryDirectory() as p:
     corrupted=Governor(db,policy,*keys)
     deny(lambda:corrupted.audit(),'ledger projection tamper')
     corrupted.close()
+
+# SQLite memory/URI configurations cannot back durable spending reservations.
+# Without this guard the process exits with all reserved maximums forgotten.
+for unsafe_db in (':memory:', 'file::memory:?cache=shared'):
+    deny(lambda unsafe_db=unsafe_db:Governor(unsafe_db,policy,*keys),
+         'on-disk SQLite file path')
 
 # Exact scheme must not release funds via partial 'upto' semantics.
 with tempfile.TemporaryDirectory() as p:

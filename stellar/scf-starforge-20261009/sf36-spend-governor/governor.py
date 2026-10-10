@@ -163,10 +163,24 @@ class Governor:
     def __init__(self,db: str|Path,policy:dict,consent_key:bytes,audit_key:bytes,operator_key:bytes):
         self.limits=validate_policy(policy)
         self.ck=secret(consent_key,'consent key');self.ak=secret(audit_key,'audit key');self.ok=secret(operator_key,'operator key')
-        self.db=sqlite3.connect(str(db),isolation_level=None,timeout=30)
-        self.db.execute('PRAGMA busy_timeout=30000')
-        self.db.execute('PRAGMA journal_mode=WAL')
-        self.db.execute('PRAGMA synchronous=FULL')
+        # A memory-backed database loses every reserved maximum at process
+        # exit. SQLite also silently declines WAL on unsupported databases,
+        # returning the actual mode from PRAGMA journal_mode=WAL.
+        db_path=str(db)
+        if db_path==':memory:' or db_path.startswith('file:'):
+            raise Denied('durable spend ledger requires an on-disk SQLite file path')
+        self.db=sqlite3.connect(db_path,isolation_level=None,timeout=30)
+        try:
+            self.db.execute('PRAGMA busy_timeout=30000')
+            actual_mode=self.db.execute('PRAGMA journal_mode=WAL').fetchone()[0]
+            if actual_mode.lower()!='wal':
+                raise Denied('durable spend ledger requires confirmed SQLite WAL mode')
+            self.db.execute('PRAGMA synchronous=FULL')
+            if self.db.execute('PRAGMA synchronous').fetchone()[0]!=2:
+                raise Denied('durable spend ledger requires confirmed SQLite FULL sync')
+        except BaseException:
+            self.db.close()
+            raise
         self.db.execute('''CREATE TABLE IF NOT EXISTS reservations (
             request_id TEXT PRIMARY KEY, request_digest TEXT NOT NULL,
             actor TEXT NOT NULL, service TEXT NOT NULL, network TEXT NOT NULL,
