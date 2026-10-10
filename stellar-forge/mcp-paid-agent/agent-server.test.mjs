@@ -11,7 +11,7 @@ const openServer=async handler=>{const server=createServer(handler);await new Pr
 const close=async ({server})=>new Promise(resolve=>server.close(resolve));
 const b64=o=>Buffer.from(JSON.stringify(o)).toString('base64');
 
-async function fixture({mismatch=false}={}){
+async function fixture({mismatch=false,settlementResponse={}}={}){
   let probes=0,signed=0,signatures=[];
   const provider=await openServer((req,res)=>{
     if(!req.url.startsWith('/weather')){res.writeHead(404);res.end();return;}
@@ -24,7 +24,8 @@ async function fixture({mismatch=false}={}){
     }
     signed++;
     signatures.push(JSON.parse(Buffer.from(req.headers['payment-signature'],'base64').toString('utf8')));
-    res.writeHead(200,{'PAYMENT-RESPONSE':b64({success:true,network:'stellar:testnet',transaction:'loopback-only-receipt'}),'content-type':'application/json'});
+    const receipt={success:true,network:'stellar:testnet',transaction:'a'.repeat(64),...settlementResponse};
+    res.writeHead(200,{'PAYMENT-RESPONSE':b64(receipt),'content-type':'application/json'});
     res.end(JSON.stringify({forecast:'rain',provenance:'loopback fixture'}));
   });
   const catalog=new BazaarCatalog();
@@ -55,7 +56,7 @@ test('actual PR451 catalog GET/search and safe approval→canonical 402→signed
     allow=true;
     const done=await broker.call('bazaar_execute_approved',{quoteId:quote.quoteId});
     assert.equal(done.status,'CONFIRMED_BY_SERVER');assert.equal(done.attempts,1);
-    assert.equal(done.result.paymentResponse.transaction,'loopback-only-receipt');
+    assert.equal(done.result.paymentResponse.transaction,'a'.repeat(64));
     assert.equal(JSON.parse(done.result.content.body).forecast,'rain');
     assert.equal(f.probes,1);assert.equal(f.signed,1);assert.equal(approvals,2);
     assert.equal(f.signatures[0].x402Version,2);
@@ -137,6 +138,28 @@ test('SF43 tool dispatches only through an explicitly injected adapter',async()=
   assert.deepEqual(result,{decision:'NOT_AUTHORIZED',reason:'FOCUSED_ADAPTER'});
   assert.throws(()=>new McpPaidToolBroker({discoveryUrl:'https://catalog.example',agentCommerce:{}}),
     /Invalid SF43 agent-commerce adapter/);
+});
+
+test('seller success with wrong network or missing/malformed Stellar hash stays INDETERMINATE',async()=>{
+  for(const settlementResponse of [
+    {network:'stellar:pubnet'}, {network:null}, {transaction:''},
+    {transaction:'not-a-stellar-transaction-hash'},
+  ]){
+    const f=await fixture({settlementResponse});
+    try{
+      const broker=brokerFor(f,{approve:()=>true});
+      const found=await broker.search({query:'weather'});
+      const quote=broker.preview({handle:found.resources[0].handle});
+      const result=await broker.execute({quoteId:quote.quoteId});
+      assert.equal(result.status,'INDETERMINATE');
+      assert.equal(result.attempts,1);
+      assert.equal(result.result.paymentResponse.success,true); // not trusted
+      assert.match(result.failure,/reconciliation/);
+      assert.equal(f.probes,1);assert.equal(f.signed,1);
+      assert.equal((await broker.execute({quoteId:quote.quoteId})).status,'INDETERMINATE');
+      assert.equal(f.signed,1); // no second potentially costly signed request
+    }finally{await f.cleanup();}
+  }
 });
 
 test('signed-retry provider loss remains INDETERMINATE and cannot auto-charge again',async()=>{
