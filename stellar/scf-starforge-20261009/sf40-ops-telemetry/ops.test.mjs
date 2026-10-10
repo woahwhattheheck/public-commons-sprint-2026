@@ -68,3 +68,18 @@ test('backend exceptions redact their internals and return 500 without leaking p
  });
  assert.equal(ops.snapshot().routeMetrics['/discovery/search'].statusClasses['5xx'],1);
 });
+
+test('asynchronous readiness checks fail closed on false, rejection and timeout',async()=>{
+ let probe=()=>Promise.resolve(false);
+ const ops=createOpsHandler({catalog,discoveryHandler:backend,readyCheck:()=>probe(),readyTimeoutMs:25});
+ await withServer(ops.handler,async root=>{
+   let r=await fetch(root+'/readyz');assert.equal(r.status,503);assert.equal((await r.json()).ready,false);
+   probe=()=>Promise.reject(new Error('secret RPC detail'));
+   r=await fetch(root+'/readyz');assert.equal(r.status,503);assert.equal((await r.json()).ready,false);
+   probe=()=>new Promise(()=>{});
+   r=await fetch(root+'/readyz');assert.equal(r.status,503);assert.equal((await r.json()).ready,false);
+   probe=()=>Promise.resolve(true);
+   r=await fetch(root+'/readyz');assert.equal(r.status,200);assert.equal((await r.json()).ready,true);
+   assert.equal((await fetch(root+'/healthz')).status,200);
+ });
+});
