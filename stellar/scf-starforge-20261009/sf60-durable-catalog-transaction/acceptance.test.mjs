@@ -35,6 +35,7 @@ test('SF60 original trust+life+catalog commit, rewrite, lock, retire, reboot and
     const corrected=offer();corrected.accepts[0].maxAmountRequired='15000';
     assert.equal((await tx.ingest({sellerId:'seller-1',sequence:2,entry:corrected},authority,provenance())).decision,'accepted');
     assert.equal(tx.list().resources[0].accepts[0].maxAmountRequired,'15000');
+    await assert.rejects(()=>tx.ingest(first,authority,provenance()),/TRUST_STALE_SEQUENCE/);
     const meta=tx.lookupCatalogKey(key);
     assert.equal((await tx.retire({catalogKey:key,sellerId:'seller-1',signer:authority.signer,sequence:3,provenance:provenance(),reason:'seller withdrew route'})).reason,'RETIRED');
     assert.equal(tx.list().resources.length,0);

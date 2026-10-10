@@ -6,7 +6,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { open, mkdir, readFile, rename, unlink, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { BazaarCatalog } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
+import { BazaarCatalog, validateCatalogEntry } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 import { CatalogTrustBoundary, verifyAuditTrail } from '../../../stellar-forge/catalog-trust/catalog-trust.mjs';
 import { LifecycleCatalog } from '../../../stellar-forge/catalog-lifecycle/lifecycle.mjs';
 
@@ -213,9 +213,14 @@ export class DurableCatalogTransaction {
     return this.#enqueue(async()=>{
       this.#assert();
       const operation=normalizeUpsert(candidate,authority,provenance);
-      // Only the most recent accepted operation can be an idempotent replay.
-      // A stale older revision must still hit the original sequence guard.
-      if(this.#operations.at(-1)?.kind==='upsert' && stable(this.#operations.at(-1))===stable(operation)) {
+      // Use the original Bazaar parser identity, not a guessed resource URL.
+      // Interleaved unrelated sellers must not make a legitimate current
+      // record non-idempotent, but older revisions MUST remain stale.
+      const key = validateCatalogEntry(operation.candidate.entry).id;
+      const current = this.#state.byCatalog.get(key);
+      if (current && !current.retired && current.sellerId === operation.candidate.sellerId &&
+          current.sequence === operation.candidate.sequence &&
+          this.#operations.some(old => old.kind === 'upsert' && stable(old) === stable(operation))) {
         return {decision:'soft_drop',reason:'EXACT_REPLAY',head:this.head};
       }
       const output=await this.#commit(operation);
