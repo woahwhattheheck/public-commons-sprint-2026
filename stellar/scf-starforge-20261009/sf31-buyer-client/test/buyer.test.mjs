@@ -94,3 +94,36 @@ test('refuse remote http and unbounded/nonreplayable requests',async()=>{
   await assert.rejects(buyer.call({...settings('http://127.0.0.1:4321/protected')}),e=>e.code==='HTTPS_REQUIRED');
   await assert.rejects(buyer.call({...settings('https://example.com/paid'),body:new ReadableStream()}),e=>e.code==='NONREPLAYABLE_BODY');
 });
+
+
+test('untrusted catalog/resource HTTPS IP literals and private hostnames are blocked before any IO',async()=>{
+  let requests=0,consents=0,signatures=0;
+  const buyer=new X402BuyerClient({fetchImpl:()=>{requests++;throw Error('unexpected egress');}});
+  const forbidden=[
+    'https://127.0.0.1/paid', 'https://localhost./paid',
+    'https://10.24.0.12/paid', 'https://169.254.169.254/latest/meta-data',
+    'https://192.168.0.1/paid', 'https://[::1]/paid',
+    'https://[::ffff:127.0.0.1]/paid', 'https://0x7f000001/paid',
+    'https://seller.local/paid', 'https://api.internal/paid',
+    'https://seller.home.arpa/paid', 'https://sub.localhost/paid'
+  ];
+  for(const target of forbidden){
+    await assert.rejects(buyer.discover({origin:target}),e=>e.code==='UNSAFE_RESOURCE_HOST',target+' discovery');
+    await assert.rejects(buyer.call({...settings(target),approve:()=>{consents++;return true;},
+      sign:()=>{signatures++;throw Error('unexpected signature');}}),
+      e=>e.code==='UNSAFE_RESOURCE_HOST',target+' paid call');
+  }
+  assert.equal(requests,0);assert.equal(consents,0);assert.equal(signatures,0);
+});
+
+test('explicit developer loopback exception does not allow arbitrary IP hosts',async()=>{
+  let requests=0;
+  const buyer=new X402BuyerClient({allowLocal:true,fetchImpl:async()=>{
+    requests++;return new Response(null,{status:204});
+  }});
+  const local=await buyer.call({...settings('http://127.0.0.1:4040/protected')});
+  assert.equal(local.status,'NO_PAYMENT_REQUIRED');assert.equal(requests,1);
+  await assert.rejects(buyer.call(settings('https://10.5.6.7/protected')),
+    e=>e.code==='UNSAFE_RESOURCE_HOST');
+  assert.equal(requests,1);
+});

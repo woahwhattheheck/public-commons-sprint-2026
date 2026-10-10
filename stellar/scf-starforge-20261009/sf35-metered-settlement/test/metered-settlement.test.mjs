@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,rename} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {MeteredUptoSettlement as Engine} from '../metered-settlement.mjs';
@@ -72,4 +72,21 @@ test('zero measured usage can settle without emitting token transfer',()=>sandbo
   assert.equal((await s.seal()).amount,'0');
   await s.submit({verifyPayment,submitAuthorizedPayment});
   assert.equal((await s.reconcile({observeTransaction:async e=>proof(e)})).finality,true);
+}));
+
+test('journal write failure leaves live tally and original persisted record unchanged, then allows one clean retry',()=>sandbox(async dir=>{
+  const s=await Engine.open({...makeInput({numerator:'1',denominator:'1'},'units'),journalDir:dir,verifyPayment});
+  const relocated=dir+'-temporarily-unavailable';
+  await rename(dir,relocated);
+  try {
+    await assert.rejects(()=>s.recordUnits('3'),{code:'ENOENT'});
+    assert.deepEqual(s.tally,{units:'0',chargeAtomic:'0',ceilingAtomic:'10'});
+    assert.equal(s.status,'VERIFIED');
+  } finally {
+    await rename(relocated,dir);
+  }
+  assert.equal((await Engine.inspect({journalDir:dir,authorizationId:s.id})).units,'0');
+  await s.recordUnits('3');
+  assert.deepEqual(s.tally,{units:'3',chargeAtomic:'3',ceilingAtomic:'10'});
+  assert.equal((await Engine.inspect({journalDir:dir,authorizationId:s.id})).units,'3');
 }));

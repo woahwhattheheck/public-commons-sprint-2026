@@ -47,11 +47,14 @@ function filtersFrom(params) {
   return f;
 }
 function matches(row, filters) {
-  for (const [k,v] of Object.entries(filters)) {
-    if (k === 'type' && row.extensions?.bazaar?.info?.input?.type !== v) return false;
-    else if (k === 'extensions' && !Object.hasOwn(row.extensions, v)) return false;
-    else if (['payTo','network','scheme'].includes(k) && !row.accepts.some(a => a[k] === v)) return false;
-  }
+  if (Object.hasOwn(filters, 'type') && row.extensions?.bazaar?.info?.input?.type !== filters.type) return false;
+  if (Object.hasOwn(filters, 'extensions') && !Object.hasOwn(row.extensions, filters.extensions)) return false;
+  // Network, scheme and recipient MUST match one actual offered payment option.
+  // Matching each parameter against a different option fabricates an offer that
+  // the seller never published (e.g. testnet from one, pubnet payTo from another).
+  const paymentKeys = ['payTo', 'network', 'scheme'].filter(k => Object.hasOwn(filters, k));
+  if (paymentKeys.length && !row.accepts.some(option =>
+    paymentKeys.every(k => option?.[k] === filters[k]))) return false;
   return true;
 }
 function keyOf(entry) {

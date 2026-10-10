@@ -241,8 +241,18 @@ export async function checkHorizonInclusion({network,transaction,fetchImpl=fetch
     insist(res.status===200,'HORIZON_HTTP_'+res.status);
     const length=Number(res.headers?.get('content-length')??0);
     insist(!length || length<=262144,'HORIZON_BODY_TOO_LARGE');
-    const body=await res.text();insist(Buffer.byteLength(body)<=262144,'HORIZON_BODY_TOO_LARGE');
-    return JSON.parse(body);};
+    const chunks=[];let bytes=0;const reader=res.body.getReader();
+    try {
+      while(true) {
+        const {done,value}=await reader.read();
+        if(done)break;
+        bytes+=value.byteLength;
+        insist(bytes<=262144,'HORIZON_BODY_TOO_LARGE');
+        chunks.push(value);
+      }
+    } catch(e) {await reader.cancel().catch(()=>{});throw e;}
+    finally {reader.releaseLock();}
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));};
   const root=await read(base+'/');
   insist(root.network_passphrase===passphrase,'HORIZON_NETWORK_PASSPHRASE_MISMATCH');
   const tx=await read(base+'/transactions/'+transaction);
