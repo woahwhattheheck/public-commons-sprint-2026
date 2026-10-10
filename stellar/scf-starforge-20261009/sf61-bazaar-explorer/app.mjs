@@ -269,7 +269,9 @@ async function source() {
     if (!response.ok) throw new Error('Local source unavailable');
     const origin = await response.json();
     $('source-kind').textContent = origin.mode === 'LOCAL_NONPAYABLE_SF44_FIXTURE' ?
-      'Original SF44 nonpayable development catalog' : 'Operator-selected public facilitator';
+      'Original SF44 nonpayable development catalog' :
+      origin.mode === 'ORIGINAL_SF60_DURABLE_CATALOG' ?
+      'Original SF60 persistent catalog · local source' : 'Operator-selected public facilitator';
     $('source-origin').textContent = origin.origin;
   } catch {
     $('source-kind').textContent = 'Discovery source unavailable';
