@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { BazaarCatalog, createDiscoveryServer } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 
 const upstream = new URL('../../../scf46-stellar-bazaar/src/catalog.mjs', import.meta.url);
-const PINNED_SOURCE_BLOB = 'f34f38a3af8f1b9e23ff4607812b4ee6297480a5';
+const PINNED_SOURCE_BLOB = '7b4390f9a119399bdb8e27db5796697f1314da8b';
 
 export async function sourceProvenance() {
   const bytes = await readFile(upstream);
@@ -24,7 +24,8 @@ export function developmentOnlyRecord() {
       tags: ['weather', 'forecast'],
       description: 'Example weather forecast endpoint; not a commercial paid service'
     },
-    accepts: [{ network: 'stellar:testnet', scheme: 'exact', payTo: 'INVALID_DEMO_RECIPIENT_NOT_A_WALLET' }],
+    accepts: [{ network: 'stellar:testnet', scheme: 'exact', payTo: 'INVALID_DEMO_RECIPIENT_NOT_A_WALLET',
+      asset: 'NONPAYABLE_DEMO_ASSET', amount: '10000' }],
     extensions: {
       bazaar: {
         info: {
