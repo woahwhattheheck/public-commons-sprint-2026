@@ -152,6 +152,8 @@ export class X402BuyerClient {
     if(!['GET','POST','PUT','PATCH','DELETE','HEAD'].includes(verb))throw new BuyerError('BAD_METHOD');
     if(['GET','HEAD'].includes(verb)&&body!=null)throw new BuyerError('BAD_METHOD_BODY');
     if(typeof approve!=='function'||typeof sign!=='function')throw new BuyerError('APPROVAL_AND_SIGNER_REQUIRED');
+    // Inspect the actual header entries sent by fetch. Headers and Map inputs
+    // expose no keys via Object.keys(), despite carrying request headers.
     if(!object(headers))throw new BuyerError('FORBIDDEN_CALLER_HEADERS');
     let safeHeaders;
     try {safeHeaders=new Headers(headers);}
