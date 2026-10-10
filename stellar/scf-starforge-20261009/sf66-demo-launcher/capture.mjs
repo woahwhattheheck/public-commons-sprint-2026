@@ -1,51 +1,12 @@
-// MIT. Operator-local composition of the ORIGINAL SF60 durable catalog and SF61 Bazaar Atlas.
-// No independent catalog, registry, crawler, facilitator, signer, or payment lifecycle.
+// MIT. Source-native full-page evidence capture for the existing canonical SF66 launcher.
+// Only consumes actual locally running original SF60/SF61 read-only GET endpoints.
+// No independent service, checkout process, catalog, wallet, or paid provider access.
 import { createHash, randomUUID } from 'node:crypto';
 import { link, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { openDiscovery } from '../sf60-durable-catalog-transaction/service.mjs';
-import { startExplorer } from '../sf61-bazaar-explorer/server.mjs';
 
 const MAX_PAGE_BYTES = 16 * 1024 * 1024;
-const DEFAULT_LIMIT = 100;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-
-function parsePort(value) {
-  if (!/^(0|[1-9]\d*)$/.test(value ?? '')) throw new Error('Ports must be integers 0..65535');
-  const port = Number(value);
-  if (!Number.isSafeInteger(port) || port > 65535) throw new Error('Ports must be integers 0..65535');
-  return port;
-}
-
-function parseArguments(args) {
-  const usage = 'Usage: node desk.mjs --directory EXISTING_JOURNAL [--create-empty] [--ui-port 0] [--backend-port 0] [--network stellar:testnet|stellar:pubnet] [--limit 100] [--snapshot OUTPUT.json] [--once]';
-  const values = new Map();
-  for (let i = 0; i < args.length; i++) {
-    const key = args[i];
-    if (key === '--help' && args.length === 1) return { help: usage };
-    if (!['--directory', '--create-empty', '--ui-port', '--backend-port', '--network', '--limit', '--snapshot', '--once'].includes(key) || values.has(key)) {
-      throw new Error(usage);
-    }
-    if (['--create-empty', '--once'].includes(key)) { values.set(key, true); continue; }
-    const next = args[++i];
-    if (!next || next.startsWith('--')) throw new Error(usage);
-    values.set(key, next);
-  }
-  if (!values.has('--directory')) throw new Error(usage);
-  const limit = values.has('--limit') ? Number(values.get('--limit')) : DEFAULT_LIMIT;
-  if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error('Page limit must be 1..100');
-  const network = values.get('--network') ?? null;
-  if (network !== null && !['stellar:testnet', 'stellar:pubnet'].includes(network)) throw new Error('Unsupported Stellar network');
-  return {
-    directory: resolve(values.get('--directory')),
-    createEmpty: values.has('--create-empty'),
-    backendPort: parsePort(values.get('--backend-port') ?? '0'),
-    uiPort: parsePort(values.get('--ui-port') ?? '0'),
-    network, limit, snapshot: values.get('--snapshot') ? resolve(values.get('--snapshot')) : null,
-    once: values.has('--once'),
-  };
-}
 
 async function jsonGet(url) {
   const response = await fetch(url, {
@@ -166,61 +127,35 @@ async function writeExclusiveAtomic(destination, bytes) {
   finally { await unlink(temp).catch(() => {}); }
 }
 
-export async function runOperatorDesk(config) {
-  let backend = null;
-  let explorer = null;
-  let closed = false;
-  const close = async () => {
-    if (closed) return;
-    closed = true;
-    try { if (explorer) await explorer.close(); }
-    finally { if (backend) await backend.close(); }
-  };
-  try {
-    backend = await openDiscovery({ directory: config.directory, port: config.backendPort, createEmpty: config.createEmpty });
-    explorer = await startExplorer({ localUpstream: backend.origin, port: config.uiPort });
-    const starting = await observe({ backend, explorer, config });
-    let capture = null;
-    if (config.snapshot) {
-      capture = await snapshot({ backend, explorer, config, starting });
-      const bytes = Buffer.from(JSON.stringify(capture, null, 2) + '\n');
-      await writeExclusiveAtomic(config.snapshot, bytes);
+/** Capture every original SF60 list page and its unmodified SF61 Atlas proxy response.
+ * Called ONLY by the original `sf66-demo-launcher/launch.mjs` after opening both
+ * canonical listeners. Does not create or own a second journal/server.
+ */
+export async function captureFullCatalog({ backendOrigin, atlasUrl, directory, destination,
+  network = null, limit = 100 } = {}) {
+  for (const address of [backendOrigin, atlasUrl]) {
+    if (typeof address !== 'string') throw new TypeError('Actual loopback origin required');
+    const url = new URL(address);
+    if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port ||
+        url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
+      throw new Error('Actual SF60/SF61 loopback origins required');
     }
-    return {
-      backendOrigin: backend.origin, explorerUrl: explorer.url,
-      journalDirectory: config.directory,
-      nativeHealth: starting.health.data,
-      snapshotPath: config.snapshot,
-      snapshotRows: capture?.count ?? null,
-      snapshotSha256: capture ? hash(Buffer.from(JSON.stringify(capture, null, 2) + '\n')) : null,
-      close,
-    };
-  } catch (error) {
-    await close().catch(closeError => { error.message += '; close: ' + closeError.message; });
-    throw error;
   }
-}
-
-async function main() {
-  const config = parseArguments(process.argv.slice(2));
-  if (config.help) { console.log(config.help); return; }
-  const desk = await runOperatorDesk(config);
-  console.log(JSON.stringify({ status: 'READY', originalSource: 'SF60+SF61', ui: desk.explorerUrl,
-    journal: desk.journalDirectory, health: desk.nativeHealth,
-    snapshot: desk.snapshotPath, rows: desk.snapshotRows, snapshotSha256: desk.snapshotSha256,
-    readOnly: true, paymentsEnabled: false }));
-  if (config.once) { await desk.close(); return; }
-  let stopping = false;
-  const stop = async () => {
-    if (stopping) return;
-    stopping = true;
-    try { await desk.close(); }
-    catch (error) { console.error(error.message); process.exitCode = 1; }
-  };
-  process.once('SIGINT', stop);
-  process.once('SIGTERM', stop);
-}
-
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().catch(error => { console.error('SF66_OPERATOR_DESK_FAILED: ' + error.message); process.exitCode = 1; });
+  if (typeof directory !== 'string' || !directory.trim() ||
+      typeof destination !== 'string' || !destination.trim())
+    throw new TypeError('Explicit existing journal and output path required');
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+    throw new RangeError('Original native page limit must be 1..100');
+  if (network !== null && !['stellar:testnet', 'stellar:pubnet'].includes(network))
+    throw new RangeError('Only source-native Stellar network filters are supported');
+  const backend = { origin: backendOrigin };
+  const explorer = { url: atlasUrl };
+  const config = { directory: resolve(directory), network, limit };
+  const starting = await observe({ backend, explorer, config });
+  const result = await snapshot({ backend, explorer, config, starting });
+  const bytes = Buffer.from(JSON.stringify(result, null, 2) + '\n');
+  const path = resolve(destination);
+  await writeExclusiveAtomic(path, bytes);
+  return { path, count: result.count, pages: result.pages.length,
+    sha256: hash(bytes), filter: network, nativeJournalHead: starting.health.data.journalHead };
 }
