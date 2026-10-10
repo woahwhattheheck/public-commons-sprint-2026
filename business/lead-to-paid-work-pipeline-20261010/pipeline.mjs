@@ -55,23 +55,33 @@ export function evaluate(op, now = new Date()) {
   const fee = share.feeUsd;
   const costs = share.costUsd;
   const margin = decimal(fee) && fee > 0 && decimal(costs) ? (fee-costs)/fee : null;
-  const businessReady = margin !== null && margin >= (op.minimumMargin ?? .25) && deliverable;
+  const minimumMargin = op.minimumMargin ?? .25;
+  const marginPolicyValid = decimal(minimumMargin) && minimumMargin < 1;
+  const feeApproved = share.feeStatus === 'OWNER_APPROVED_PROPOSAL';
+  // A guessed price, negative policy threshold or mathematically positive margin is not quote authority.
+  const businessReady = marginPolicyValid && feeApproved && margin !== null && margin >= minimumMargin && deliverable;
   const contact = op.communication || {};
   const authorized = contact.ownerApproved === true && contact.doNotContact !== true && !!text(contact.approvalReceipt);
   const stageEvents = Array.isArray(op.events) ? op.events : [];
   const allowedEvents = new Set(['BUYER_CONFIRMED','PRIME_CONFIRMED','PARTNER_REPLIED','SOW_SIGNED','INVOICE_SENT','PAYMENT_CONFIRMED']);
   const stages = ['SOURCED','BUYER_CONFIRMED','PRIME_CONFIRMED','PARTNER_REPLIED','SOW_SIGNED','INVOICE_SENT','PAYMENT_CONFIRMED'];
   let stageIndex=0;
+  let recordedPaidUsd=0;
+  let lastEventAt=0;
   const validEvents=[];
   for(const e of stageEvents){
     if(!allowedEvents.has(e.kind)) continue;
-    if(stages[stageIndex+1] !== e.kind || !url(e.receiptUrl) || !text(e.timestamp)) continue;
+    if(stages[stageIndex+1] !== e.kind || !url(e.receiptUrl)) continue;
+    const at = typeof e.timestamp === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?(?:Z|[+-]\d\d:\d\d)$/.test(e.timestamp) ? Date.parse(e.timestamp) : NaN;
+    if(!Number.isFinite(at) || at < lastEventAt) continue;
     if(e.kind==='PAYMENT_CONFIRMED' && !(decimal(e.amountUsd)&&e.amountUsd>0&&text(e.transactionId))) continue;
     validEvents.push(e.kind);
     stageIndex++;
+    lastEventAt=at;
+    if(e.kind==='PAYMENT_CONFIRMED') recordedPaidUsd=e.amountUsd;
   }
   const stage=stages[stageIndex];
-  const provenPaidUsd = stage === 'PAYMENT_CONFIRMED' ? stageEvents.find(e=>e.kind==='PAYMENT_CONFIRMED')?.amountUsd ?? 0 : 0;
+  const provenPaidUsd = stage === 'PAYMENT_CONFIRMED' ? recordedPaidUsd : 0;
   const blockers = [];
   if(buyer.status !== 'OPEN') blockers.push(`BUYER_STATUS_${buyer.status}`);
   if(!sourceReady) blockers.push('FIRST_PARTY_SOURCE_REVIEW_MISSING');
@@ -79,6 +89,8 @@ export function evaluate(op, now = new Date()) {
   if(due === 'EXPIRED') blockers.push('EXPIRED');
   if(!best) blockers.push('NO_PRIME_WITH_ALL_MANDATORY_DOCUMENTATION');
   if(!deliverable) blockers.push('NO_ACCEPTANCE_BASED_WORKSHARE');
+  if(!marginPolicyValid) blockers.push('INVALID_MINIMUM_MARGIN_POLICY');
+  if(!feeApproved) blockers.push('PROPOSAL_FEE_NOT_OWNER_APPROVED');
   if(!businessReady) blockers.push('FEES_COSTS_OR_MINIMUM_MARGIN_UNSET');
   if(!authorized) blockers.push('OWNER_CONTACT_APPROVAL_REQUIRED');
   const nextActions = [];
@@ -87,13 +99,13 @@ export function evaluate(op, now = new Date()) {
   if(buyer.status!=='OPEN') nextActions.push('Reconfirm this exact revision remains open; never reuse a cancelled edition');
   if(!best) nextActions.push('Obtain buyer-specific prime eligibility documentation from a qualified partner');
   if(!deliverable) nextActions.push('Define bounded QA/implementation milestones with objective acceptance');
-  if(!businessReady) nextActions.push('Approve real fee, cost, and minimum margin; do not treat estimates as sales');
+  if(!businessReady) nextActions.push('Verify proposed fee and delivery costs, owner-approve proposal price (feeStatus OWNER_APPROVED_PROPOSAL), and record minimum margin of 0–99.99%; internal estimate is not an offer');
   if(!authorized) nextActions.push('Obtain named owner approval and receipt before any external contact');
   if(!blockers.length) nextActions.push('Owner may authorize one tailored unsent prime approach; no automatic sending');
   return {
     key,buyer:{name:buyer.name,id:buyer.opportunityId,revision:buyer.revision,status:buyer.status,sourceUrl:buyer.sourceUrl,deadlineText:deadline.originalText||'',deadlineIso:deadlineKnown?normalizedDeadline:null},
     owner:op.owner,sourceReview:sourceReady?'RECORDED_ISSUER_REVIEW':'UNREVIEWED',deadlineState:due,
-    partners,selectedPrime:best?.name||null,workshare:{summary:share.summary||'',milestones,feeUsd:decimal(fee)?fee:null,costUsd:decimal(costs)?costs:null,margin:margin===null?null:Number(margin.toFixed(4)),feeStatus:share.feeStatus||'UNSET'},
+    partners,selectedPrime:best?.name||null,workshare:{summary:share.summary||'',milestones,feeUsd:decimal(fee)?fee:null,costUsd:decimal(costs)?costs:null,margin:margin===null?null:Number(margin.toFixed(4)),minimumMargin:marginPolicyValid?minimumMargin:null,feeStatus:share.feeStatus||'UNSET',feeApproved},
     outreachAuthorized:authorized,stage,recordedReceipts:validEvents,provenPaidUsd,readyForOwnerApproach:blockers.length===0,blockers,nextActions
   };
 }
@@ -109,6 +121,24 @@ export function renderMarkdown(rs,now){
     out+='**Blocking gates:** '+(r.blockers.join('; ')||'none; owner release remains separate')+'\n\n';
     out+='**Next operator moves:**\n'+r.nextActions.map(x=>`- ${x}`).join('\n')+'\n';
     if(r.workshare.milestones.length) out+='\n**Acceptance milestones:**\n'+r.workshare.milestones.map(m=>`- ${m.deliverable}: ${m.acceptance}`).join('\n')+'\n';
+  }
+  return out;
+}
+
+export function renderWorkshareSheet(rs,now){
+  let out=`# Internal prime-led specialist workshare sheets\n\nGenerated ${now.toISOString()}. UNSENT OPERATOR MATERIAL. No bid, quote, contact, contract, payment or authorization is created by generating this file. Human review and a qualified contracting prime are always required.\n`;
+  for(const r of rs){
+    out+=`\n---\n\n## ${r.buyer.name} | ${r.buyer.id} | ${r.buyer.revision}\n\n`;
+    out+=`**Approval state:** ${r.readyForOwnerApproach?'INTERNAL OWNER REVIEW ONLY':'HOLD'}; **relationship owner:** ${r.owner}.\n\n`;
+    out+=`**Buyer source:** ${r.buyer.sourceUrl}\n\n**Issuer deadline:** ${r.buyer.deadlineText} (${r.deadlineState}).\n\n`;
+    out+=`**Potential contracting prime:** ${r.selectedPrime||'NONE QUALIFIED IN PROVIDED DOCUMENTARY EVIDENCE'}.\n\n`;
+    out+=`**Specialist workshare:** ${r.workshare.summary||'NOT YET SCOPED'}.\n\n`;
+    out+=`**Milestone acceptance schedule:**\n`;
+    out+=r.workshare.milestones.length ? r.workshare.milestones.map((m,i)=>`${i+1}. Deliverable: ${m.deliverable}\n   Acceptance: ${m.acceptance}`).join('\n')+'\n' : 'No signed-off deliverables or acceptance yet.\n';
+    out+=`\n**Externally usable fee:** ${r.workshare.feeApproved && r.workshare.feeUsd !== null ? money(r.workshare.feeUsd)+' (internal approval recorded; offer remains UNSENT)' : 'WITHHELD: OWNER HAS NOT APPROVED PRICE'}.\n\n`;
+    out+=`**Partner fit:** ${r.partners.map(p=>`${p.name}: ${p.documented}/${p.required} mandatory clauses documented, ${p.eligibleToConsider?'potential candidate':'not qualified on provided records'}`).join('; ')||'No candidates assessed'}.\n\n`;
+    out+=`**Blocking items:** ${r.blockers.length?r.blockers.join('; '):'None in these supplied records; separate sender/recipient review is still required'}.\n\n`;
+    out+='**Human next action:** '+(r.nextActions[0]||'Owner review real source, counterpart and commercial conditions')+'; independently confirm original buyer and partner permissions before any communication.\n';
   }
   return out;
 }
@@ -137,7 +167,8 @@ async function main(){
   await mkdir(out,{recursive:true});
   await writeFile(path.join(out,'decisions.json'),JSON.stringify({generatedAt:now.toISOString(),opportunities:rs},null,2)+'\n');
   await writeFile(path.join(out,'decision-board.md'),renderMarkdown(rs,now));
+  await writeFile(path.join(out,'workshare-sheet.md'),renderWorkshareSheet(rs,now));
   await writeFile(path.join(out,'index.html'),renderHtml(rs,now));
-  console.log(JSON.stringify({generatedAt:now.toISOString(),fileCount:3,opportunities:rs.length,hold:rs.filter(r=>!r.readyForOwnerApproach).length,ownerReview:rs.filter(r=>r.readyForOwnerApproach).length,recordedCash:rs.reduce((n,r)=>n+r.provenPaidUsd,0),outputDir:out},null,2));
+  console.log(JSON.stringify({generatedAt:now.toISOString(),fileCount:4,opportunities:rs.length,hold:rs.filter(r=>!r.readyForOwnerApproach).length,ownerReview:rs.filter(r=>r.readyForOwnerApproach).length,recordedCash:rs.reduce((n,r)=>n+r.provenPaidUsd,0),outputDir:out},null,2));
 }
 if(process.argv[1] && import.meta.url===new URL(`file://${path.resolve(process.argv[1])}`).href){main().catch(e=>{console.error(e.message);process.exitCode=1;});}
