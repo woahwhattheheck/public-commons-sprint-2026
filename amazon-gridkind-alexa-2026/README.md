@@ -28,3 +28,17 @@ Say “Find a cheaper schedule for tonight”, inspect item times and relative p
 ## Original-owner competition handoff
 
 Existing HomeOps and Hearthline Alexa candidates are separate products. This source package is a new GridKind candidate; do not conflate their Devpost entrants. To make this candidate submission-ready, an authorized entrant must assess overlap/eligibility, confirm product direction, record a genuine short browser demo, create a durable public MIT source repository and file real Devpost fields/feedback. No app was submitted or prize awarded as a result of this prototype.
+
+
+## Flat-tariff symmetry bound
+
+The scheduler treats the sum of each task's cheapest unconstrained option as a global admissible lower bound. Candidate starts are visited in ascending order, so the first feasible schedule that reaches that bound is also the lexicographically earliest optimal schedule. Equal-cost flat-tariff alternatives are not enumerated after that proof point.
+
+This preserves the exact cost, task order, tie-break output, infeasible error text, and circuit constraints. The source-pinned Muse OPT3-02 residual panel measured 41/41 exact output matches with zero mismatches; worst-case runtime fell from 5.94 ms to 0.09 ms on that retained VM panel. Those are diagnostic VM measurements, not an official organizer score.
+
+Focused source regression:
+
+```bash
+node amazon-gridkind-alexa-2026/test-flat-symmetry.focused.mjs
+```
+
