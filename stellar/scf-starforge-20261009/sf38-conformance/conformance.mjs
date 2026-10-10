@@ -149,14 +149,17 @@ for (const [address, prefix] of [
 ]) disallowedProbeAddress.addSubnet(address,prefix,'ipv4');
 for (const [address, prefix] of [
   ['::',128],['::1',128],['fc00::',7],['fe80::',10],
-  ['ff00::',8],['2001:db8::',32],['::ffff:0:0',96]
+  ['ff00::',8],['2001:db8::',32]
 ]) disallowedProbeAddress.addSubnet(address,prefix,'ipv6');
 
+const mappedProbeAddress = new BlockList();
+mappedProbeAddress.addSubnet('::ffff:0:0',96,'ipv6');
 export function selectPublicProbeAddress(answers) {
   if (!Array.isArray(answers) || answers.length===0 ||
       answers.some(a=>![4,6].includes(a?.family) ||
         typeof a.address!=='string' ||
-        disallowedProbeAddress.check(a.address,`ipv${a.family}`))) {
+        disallowedProbeAddress.check(a.address,`ipv${a.family}`) ||
+        (a.family===6 && mappedProbeAddress.check(a.address,'ipv6'))) {
     throw new TypeError('SUPPORTED_DNS_NONPUBLIC_OR_EMPTY');
   }
   return answers[0];
