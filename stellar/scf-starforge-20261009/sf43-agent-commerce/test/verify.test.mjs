@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {decodeX402Header,parseExactTestnetTerms,checkStellarTestnetTransaction} from '../verify.mjs';
+import {decodeX402Header,parseExactTestnetTerms,checkStellarTestnetTransaction,parseSep41TransferAmount} from '../verify.mjs';
 
 const hash='a'.repeat(64);
 const asset='C'+'A'.repeat(55), recipient='G'+'A'.repeat(55);
@@ -67,4 +67,32 @@ test('mismatched amount, recipient or asset cannot be approved by event text',as
 test('RPC error remains an error, never becomes settlement evidence',async()=>{
   const check=await checkStellarTestnetTransaction({receipt,expected,fetchImpl:async()=>({ok:false,status:429}),rpcEndpoint:local});
   assert.equal(check.status,'NOT_VERIFIED');assert.equal(check.reason,'RPC_TRANSACTION_LOOKUP_FAILED');
+});
+
+
+test('official SEP-41/CAP-67 SDK-native scalar and map transfer amounts reconcile, without map stringification',async()=>{
+  const nativeVariants=[
+    10000n,
+    {amount:10000n},
+    {amount:10000n,to_muxed_id:null},
+    new Map([['amount',10000n],['to_muxed_id',null]])
+  ];
+  const evt={id:'new-map',txHash:hash,contractId:asset,topic:['XDR'],value:'XDR'};
+  for(const native of nativeVariants){
+    const amount=parseSep41TransferAmount(native);
+    assert.equal(amount,'10000');
+    const check=await checkStellarTestnetTransaction({receipt,expected,fetchImpl:fakeRpc('SUCCESS',[evt]),rpcEndpoint:local,
+      decodeContractEvent:async()=>({name:'transfer',from:'G'+'B'.repeat(55),to:recipient,amount})});
+    assert.equal(check.status,'TOKEN_TRANSFER_MATCHED_TESTNET');
+  }
+  for(const invalid of [
+    {amount:10000n,to_muxed_id:7n},
+    {amount:10000n,to_muxed_id:'memo'},
+    {amount:10000n,unknown_field:true},
+    {to_muxed_id:null},
+    {amount:0n},0n,-1n,'1e4','010000',2**54,[],null
+  ]) assert.equal(parseSep41TransferAmount(invalid),null);
+  const noProof=await checkStellarTestnetTransaction({receipt,expected,fetchImpl:fakeRpc('SUCCESS',[evt]),rpcEndpoint:local,
+    decodeContractEvent:async()=>({name:'transfer',to:recipient,amount:parseSep41TransferAmount({amount:10000n,to_muxed_id:1})})});
+  assert.equal(noProof.status,'TX_INCLUDED_TRANSFER_UNVERIFIED');
 });
