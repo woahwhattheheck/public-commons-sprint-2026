@@ -34,7 +34,8 @@ test('actual Vellar x402 v2 quote tuple, exact price/payee diff and quarantine',
 });
 
 test('fetch executes original provider discovery GET only, retains exact HTTP body sha and complete declared count',async()=>{
-  const body=JSON.stringify({items:[QUOTE],total:1});
+  // Exact x402 v2 provider shape observed in the 27-row Vellar capture.
+  const body=JSON.stringify({items:[QUOTE],pagination:{total:1,limit:100,offset:0}});
   const calls=[];
   const {pages,snapshot}=await fetchVellar({capturedAt:date,fetchImpl:async(url,init)=>{
     calls.push([url,init.method,init.redirect]);
@@ -46,4 +47,12 @@ test('fetch executes original provider discovery GET only, retains exact HTTP bo
   assert.equal(snapshot.declaredTotal,1);
   assert.equal(pages[0].body,body);
   assert.match(snapshot.pageHashes[0].sha256,/^[a-f0-9]{64}$/);
+});
+
+
+test('rejects conflicting flat and x402 v2 pagination totals',()=>{
+  assert.throws(
+    ()=>analyzePages([{offset:0,payload:{items:[],total:0,pagination:{total:1}}}],{capturedAt:date}),
+    /Conflicting Vellar pagination totals/
+  );
 });
