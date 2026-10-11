@@ -57,6 +57,8 @@ test('pinned options, real TLS identity, native discovery and original one-retry
     if (req.url.startsWith('/discovery/')) {
       res.setHeader('content-type','application/json');
       res.end(JSON.stringify({items:[{resource:origin+'/paid',accepts:[terms]}],pagination:{total:1,limit:20,offset:0}}));
+    } else if (req.url.startsWith('/identity')) {
+      res.writeHead(402,{'PAYMENT-REQUIRED':encode({...challenge,resource:{url:origin+req.url}})}); res.end();
     } else if (req.url === '/paid' && !req.headers['payment-signature']) {
       res.writeHead(402,{'PAYMENT-REQUIRED':encode(challenge)}); res.end();
     } else if (req.url === '/paid') {
@@ -111,5 +113,17 @@ test('pinned options, real TLS identity, native discovery and original one-retry
   const cancellation=await transport(origin+'/slow'); await cancellation.body.cancel();
   const oversized=new X402BuyerClient({fetchImpl:(url,init) => transport(origin+'/large',init)});
   await assert.rejects(oversized.discover({origin}),{code:'DISCOVERY_RESPONSE_TOO_LARGE'});
+  // WHATWG URL.search is empty for both /identity and /identity?. The original
+  // buyer binds href exactly, so the wire request must preserve the empty query.
+  let identityApprovals=0;
+  for (const suffix of ['', '?', '?city=New%20York&city=C%2B%2B&empty=']) {
+    const url=origin+'/identity'+suffix;
+    await assert.rejects(buyer.call({url,expect:{...terms,maxAtomic:'5'},
+      approve:intent => { identityApprovals++; assert.equal(intent.url,url); return false; },
+      sign:() => assert.fail('Identity check must not sign'),
+    }),{code:'PAYMENT_NOT_APPROVED'});
+    assert.equal(hits.at(-1).path,'/identity'+suffix);
+  }
+  assert.equal(identityApprovals,3);
   assert.ok(pins.every(ip => ip === '8.8.8.8'));
 });
