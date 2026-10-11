@@ -70,6 +70,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   delivery-workspace                         Configure receivers and operate retained delivery recovery
   delivery-destinations                      Route original events to independently operated receivers
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
+  merchant-order-recovery                    Snapshot and restore original orders, usage and paid files
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields

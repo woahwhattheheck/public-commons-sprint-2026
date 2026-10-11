@@ -31,6 +31,7 @@
         <div class="workspace-terms"><span id="checkout-network" class="badge"></span><span id="checkout-amount" class="mono"></span></div>
         <div class="toolbar">
           <button id="workspace-open" type="button">Workspace</button>
+          <button id="recovery-open" type="button">Recovery</button>
           <button id="support-export" type="button" data-needs-init>Export support</button>
           <button id="enroll-open" class="primary" type="button" data-needs-init>Enroll file</button>
         </div>
@@ -134,5 +135,33 @@
       <div class="dialog-footer"><button type="button" data-close="access-dialog">Cancel</button><button id="access-submit" class="primary" type="submit">Apply change</button></div>
     </form>
   </dialog>
+  <dialog id="recovery-dialog" aria-labelledby="recovery-title">
+    <div class="dialog-heading"><div><span class="eyebrow">Merchant continuity</span><h2 id="recovery-title">Recover orders and paid files</h2></div><button type="button" class="icon-button" data-close="recovery-dialog" aria-label="Close recovery">×</button></div>
+    <div class="dialog-body">
+      <p>Save the merchant database and every enrolled file together. A recovery image retains entitlements, access settings, purchased plans, usage reservations and saved responses.</p>
+      <form id="recovery-create-form">
+        <label class="field">Snapshot name<input id="recovery-name" type="text" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,79}" autocomplete="off" spellcheck="false" required><span class="field-help">Use the same name to reopen a completed snapshot after an interrupted response.</span></label>
+        <div class="button-row"><button id="recovery-create" type="submit">Create or reopen snapshot</button><button id="recovery-new-name" type="button">New name</button></div>
+      </form>
+      <section class="detail-section" aria-labelledby="recovery-saved-title">
+        <div class="section-heading"><h3 id="recovery-saved-title">Saved snapshots</h3><button id="recovery-refresh" type="button">Refresh</button></div>
+        <div class="table-wrap"><table class="order-table"><thead><tr><th scope="col">Name</th><th scope="col">Saved</th><th scope="col" class="numeric">Orders</th><th scope="col">Status</th></tr></thead><tbody id="recovery-rows"></tbody></table></div>
+        <p id="recovery-empty" class="muted" hidden>No snapshots are saved in this desk’s private export directory.</p>
+        <button id="recovery-more" type="button" hidden>Next snapshots</button>
+      </section>
+      <section id="recovery-selected" class="detail-section" hidden>
+        <h3>Selected snapshot</h3><dl id="recovery-facts" class="facts"></dl>
+        <form id="recovery-restore-form">
+          <label class="field">Restoration name<input id="recovery-restore-name" type="text" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,79}" autocomplete="off" spellcheck="false" required><span class="field-help">Creates a new private merchant state directory. Reusing this name reopens its saved result.</span></label>
+          <button id="recovery-restore" type="submit">Restore selected snapshot</button>
+        </form>
+      </section>
+      <div id="recovery-feedback" class="form-feedback" role="status" hidden></div>
+      <dl id="recovery-result" class="facts" hidden></dl>
+      <p class="muted">Recovery images contain private paid content and customer records. Use the installed merchant-recovery command to encrypt an image for transfer. Keep the checkout configuration, original outbox and private runtime settings with your existing host recovery material.</p>
+    </div>
+    <div class="dialog-footer"><button type="button" data-close="recovery-dialog">Close</button></div>
+  </dialog>
+
 </body>
 </html>
