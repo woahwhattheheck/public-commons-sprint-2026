@@ -1,6 +1,6 @@
 // MIT. The workbench exports declarations consumed by the original native tools.
 import { SOURCE_LABELS, LIMIT_RANGES, SQLITE_SNAPSHOT_OPTIONS, createFleetDraft, newFleetTenant, newFleetSource,
-  importFleetDraft, validateFleetDraft, createFleetPacket, fleetCommands, commandText } from './fleet-onboarding.mjs';
+  importFleetDraft, importFleetSource, validClickHouseColumnTypes, validateFleetDraft, createFleetPacket, fleetCommands, commandText } from './fleet-onboarding.mjs';
 import { zipWorkspace } from './onboarding.mjs';
 
 const $ = id => document.getElementById(id);
@@ -174,6 +174,23 @@ function sourceCard(tenant, source, index, prefix) {
     renderMerchants(); clearErrors();
   }, { disabled: tenant.sources.length <= 1 }));
   card.append(heading);
+  const sourceFile = el('input'); sourceFile.type = 'file'; sourceFile.accept = '.json,application/json'; sourceFile.hidden = true;
+  const importButton = button('Import source JSON', () => sourceFile.click());
+  importButton.dataset.field = key + '.clickhouseColumnTypes';
+  sourceFile.addEventListener('change', async () => {
+    const file = sourceFile.files?.[0]; if (!file) return;
+    try {
+      if (file.size > 1024 * 1024) throw Error('Choose an original source JSON file of at most 1 MiB.');
+      const imported = importFleetSource(await file.text(), source.name);
+      const position = tenant.sources.indexOf(source);
+      if (position < 0) throw Error('This source was removed. Import into the intended source card.');
+      tenant.sources[position] = imported; renderMerchants(); clearErrors();
+      status(`Imported ${SOURCE_LABELS[imported.kind]} source into ${tenant.id} / ${imported.name}. Review its host path and runtime before exporting the fleet.`);
+    } catch (error) { status(error.message); }
+    finally { sourceFile.value = ''; }
+  });
+  const importActions = el('div', undefined, 'setup-actions'); importActions.append(importButton, sourceFile);
+  card.append(importActions);
   const fields = el('div', undefined, 'fleet-editor-grid');
   fields.append(field('Package alias', source.name, key + '.name', value => {
     const old = source.name; source.name = value;
@@ -189,13 +206,15 @@ function sourceCard(tenant, source, index, prefix) {
     if (value !== 'python') source.pythonRoot = '';
     if (value !== 'duckdbPackage') source.duckdbPython = '';
     if (value !== 'sqlitePackage') for (const key of Object.keys(SQLITE_SNAPSHOT_OPTIONS)) delete source[key];
+    if (value !== 'clickhousePackage') delete source.clickhouseColumnTypes;
     if (!['workspace', 'jsonrpcPackage'].includes(value)) delete source.allowLoopbackUpstream;
     renderMerchants();
   }, { options: Object.entries(SOURCE_LABELS) }));
   const labels = { workspace: 'API workspace directory', python: 'Python application description',
     duckdbPackage: 'Prepared DuckDB package directory', s3Package: 'Configured S3 package directory',
     jsonrpcPackage: 'Prepared Stellar RPC package directory',
-    sqlitePackage: 'SQLite workbench export directory', mysqlPackage: 'Prepared MySQL package directory' };
+    sqlitePackage: 'SQLite workbench export directory', mysqlPackage: 'Prepared MySQL package directory',
+    clickhousePackage: 'Prepared ClickHouse package directory' };
   fields.append(field(labels[source.kind] ?? 'Source path', source.path, key + '.path', value => { source.path = value; },
     { hint: 'A host path. Relative paths resolve from fleet-setup.json.', maxLength: 4096, placeholder: '../packages/merchant-current' }));
   if (source.kind === 'python') fields.append(field('Python source root', source.pythonRoot, key + '.pythonRoot',
@@ -217,6 +236,25 @@ function sourceCard(tenant, source, index, prefix) {
     'Staging captures the committed SQLite data, including committed WAL changes, into the retained release. Later database changes appear in the next staged release.', 'hint'));
   if (source.kind === 'mysqlPackage') card.append(el('p',
     'The prepared package retains named queries, payment terms and connection environment references. Running releases read the live MySQL or MariaDB database using credentials on the merchant host.', 'hint'));
+  if (source.kind === 'clickhousePackage') {
+    card.append(el('p', 'The retained package keeps ClickHouse queries, typed inputs, limits and payment terms. Its endpoint and credentials come from the merchant host environment. Every start checks the live database schema.', 'hint'));
+    if (validClickHouseColumnTypes(source.clickhouseColumnTypes)) {
+      const review = el('details', undefined, 'fleet-fields'), queries = Object.entries(source.clickhouseColumnTypes);
+      review.append(el('summary', `Reviewed output schema · ${queries.length} queries · ${queries.reduce((count, [, columns]) => count + columns.length, 0)} columns`),
+        el('p', 'This ordered native review is retained in the source definition and checked by the original ClickHouse release engine at every start.', 'hint'));
+      for (const [query, columns] of queries) {
+        review.append(el('h4', query));
+        const wrap = el('div', undefined, 'fleet-table-wrap'), table = el('table'), head = el('thead'), row = el('tr');
+        for (const label of ['Order', 'Column', 'ClickHouse type']) { const th = el('th', label); th.scope = 'col'; row.append(th); }
+        head.append(row); table.append(head); const body = el('tbody');
+        for (const [index, column] of columns.entries()) {
+          const item = el('tr'); item.append(el('td', index + 1), el('td', column.name), el('td', column.type)); body.append(item);
+        }
+        table.append(body); wrap.append(table); review.append(wrap);
+      }
+      card.append(review);
+    } else card.append(el('p', 'Import the original workspace’s source JSON to retain its prior ordered output-schema review with this package.', 'hint'));
+  }
   const runtime = el('div', undefined, 'fleet-runtime-options');
   runtime.append(check('Allow a local facilitator on this host', source.allowLocalFacilitator, key + '.allowLocalFacilitator',
     value => { source.allowLocalFacilitator = value; }));
