@@ -15,6 +15,7 @@ import { analysisLauncher } from './analysis.mjs';
 const now = () => new Date().toISOString();
 const ACTION = /^[A-Za-z0-9][A-Za-z0-9_-]{7,99}$/;
 const FILES = new Set(['dataset.jsonl', 'dataset.csv', 'review.html', 'manifest.json']);
+const savedRecord = (records, id) => Object.hasOwn(records, id) ? records[id] : null;
 const revision = report => identity({ sessionId: report.sessionId, configurationSha256: report.configurationSha256,
   status: report.status, completedPages: report.completedPages, snapshot: report.snapshot,
   capAllocatedAtomic: report.capAllocatedAtomic, pages: report.pages, nextPage: report.nextPage });
@@ -43,7 +44,7 @@ export async function openDatasetWorkspace({ stateDirectory, profilePath = null,
   }
   function entry(id) {
     check(ID.test(id ?? ''), 'DATASET_SESSION_SELECTION_INVALID');
-    return state.sessions[id] ?? (() => { throw fault('DATASET_SESSION_NOT_FOUND', 'Choose an existing acquired or prepared dataset.', 404); })();
+    return savedRecord(state.sessions, id) ?? (() => { throw fault('DATASET_SESSION_NOT_FOUND', 'Choose an existing acquired or prepared dataset.', 404); })();
   }
   async function definition(record) {
     const raw = await readPrivate(join(record.session, 'session.json'));
@@ -65,7 +66,7 @@ export async function openDatasetWorkspace({ stateDirectory, profilePath = null,
     const record = { id, label, session, room, kind, reviewId, sessionId: native.config.operation.intentId,
       configurationSha256: native.configurationSha256, definitionSha256: digest(raw),
       workspace: native.workspaceDirectory ?? null, createdAt: native.createdAt };
-    const prior = state.sessions[id];
+    const prior = savedRecord(state.sessions, id);
     if (prior) check(['session', 'room', 'sessionId', 'configurationSha256', 'definitionSha256', 'reviewId']
       .every(key => prior[key] === record[key]), 'DATASET_PROFILE_SOURCE_CHANGED', 'A source name already belongs to another original acquisition.', 409);
     else { state.sessions[id] = record; await save(); }
@@ -109,7 +110,7 @@ export async function openDatasetWorkspace({ stateDirectory, profilePath = null,
     check(['run', 'recover', 'deliver', 'finalize', 'analysis'].includes(input.kind), 'DATASET_ACTION_INVALID');
     const requestHash = identity(input);
     function existing() {
-      const old = state.jobs[input.actionId];
+      const old = savedRecord(state.jobs, input.actionId);
       if (!old) return null;
       check(old.requestHash === requestHash, 'DATASET_ACTION_ID_CONFLICT', 'This action ID belongs to a different operation.', 409);
       return publicJob(old);
@@ -264,13 +265,13 @@ export async function openDatasetWorkspace({ stateDirectory, profilePath = null,
     source: id => receiving.describe(id),
     review: value => exclusive(() => receiving.review(value)),
     prepare: reviewId => exclusive(async () => {
-      const proof = await receiving.reviewed(reviewId), prior = state.sessions[proof.name];
+      const proof = await receiving.reviewed(reviewId), prior = savedRecord(state.sessions, proof.name);
       check(!prior || prior.reviewId === reviewId, 'DATASET_SESSION_NAME_EXISTS', 'Choose another name; this session name already belongs to a different acquisition.', 409);
       const value = await receiving.provision(reviewId);
       return attach({ id: value.name, label: value.name, session: value.session, room: value.room, kind: 'received', reviewId });
     }),
     session: sessionView, start,
-    job: id => { const job = state.jobs[id]; check(job, 'DATASET_JOB_NOT_FOUND', 'This saved operation is not present.', 404); return publicJob(job); },
+    job: id => { const job = savedRecord(state.jobs, id); check(job, 'DATASET_JOB_NOT_FOUND', 'This saved operation is not present.', 404); return publicJob(job); },
     async cancel(id) {
       check(active?.job.id === id && ['run', 'finalize'].includes(active.job.kind), 'DATASET_JOB_NOT_CANCELLABLE', 'Only the current native page or purchase continuation can be stopped.', 409);
       active.controller.abort(); return publicJob(active.job);
