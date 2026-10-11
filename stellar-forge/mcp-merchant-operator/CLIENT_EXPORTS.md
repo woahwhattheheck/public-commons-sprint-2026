@@ -191,3 +191,20 @@ transport: `url`, `exportId`, `directory`, optional `tokenEnv`, `environment`,
 the original verified server snapshots. Accounting, support and customer exports
 retain their own scopes and close behavior. No extra service, dependency, signer
 or payment implementation is installed.
+
+## Existing release console and retained inventory
+
+Open the original SF82 console with `--client-exports` selecting this merchant's
+existing `exportsDirectory`. Its Customer SDK handover section uses the same
+canonical exporter, completion/adoption functions and `RetainedFileReads`
+authority as these MCP tools. The complete guide is
+[CLIENT_HANDOVER.md](../../stellar/scf-starforge-20261009/sf82-seller-pilot/CLIENT_HANDOVER.md).
+
+The additive `merchant_client_export_list` tool returns paged retained entries
+without reloading each SDK payload; use optional `after` and `limit` (1–50).
+`merchant_client_export_status` retains its full-file verification and defaults;
+add `includeOffers: true` for the original canonical snapshot with every operation
+and payment alternative. The original client tool signatures, completion receipt,
+chunk transport and downloader remain compatible. The single shared implementation
+lives in `client-exports.mjs`; each MCP or console owns only its temporary readers
+and retains the same host-selected customer files across shutdown.
