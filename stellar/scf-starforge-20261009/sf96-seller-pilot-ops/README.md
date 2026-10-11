@@ -43,6 +43,43 @@ node stellar/scf-starforge-20261009/sf96-seller-pilot-ops/pilot-ops.mjs start \
 
 For a production merchant, forward native SF82 runtime flags after `--`, such as trusted `--handlers`, `--facilitator`, and `--allow-local-facilitator` where supported. The original SF82 saves/resumes its own settings, validates its compiled manifest and preserves ownership of the seller process; our CLI neither edits its artifacts nor accepts secrets. `--ops-port 0` asks the original operations listener for a free port, so always use the **new** printed address when capturing after restart.
 
+## Existing HTTP API backend
+
+For a merchant with an existing GET, HEAD or JSON POST backend, forward original
+SF82 `--upstreams BINDINGS_JSON` in place of `--handlers`. No JavaScript wrapper
+is needed. Start the original local dataset backend from the
+[SF82 upstream walkthrough](../sf82-seller-pilot/README.md#connect-an-existing-http-api),
+then run this complete operations flow from the repository root:
+
+```sh
+P=stellar/scf-starforge-20261009/sf82-seller-pilot
+mkdir -p -m 700 /tmp/scf-upstream-support
+node stellar/scf-starforge-20261009/sf96-seller-pilot-ops/pilot-ops.mjs start \
+  --ops-port 0 --support-parent /tmp/scf-upstream-support -- \
+  --spec "$P/examples/upstream-openapi.json" \
+  --config "$P/examples/upstream-selections.json" \
+  --bindings "$P/examples/upstream-route-bindings.json" \
+  --upstreams "$P/examples/upstreams.json" --allow-loopback-upstream \
+  --out /tmp/scf-upstream-pilot --port 0
+```
+
+Request the printed seller's `/api/dataset?region=north` route to observe a real
+unpaid 402 in the same session's operations dashboard. The backend is not called
+in challenge-only mode. SF82 saves the original binding bytes privately and
+resolves environment credential values freshly at launch. Stop both listeners
+with Ctrl-C and use this native resume path without the original input files:
+
+```sh
+node stellar/scf-starforge-20261009/sf96-seller-pilot-ops/pilot-ops.mjs start \
+  --ops-port 0 --support-parent /tmp/scf-upstream-support -- \
+  --resume /tmp/scf-upstream-pilot
+```
+
+Deliberate backend changes use `--upstreams` again; public merchant bindings can
+clear saved loopback permission with `--disallow-loopback-upstream`. Production
+payment still uses the original SF30 facilitator and packages. All existing
+support capture commands work with this same upstream-backed session.
+
 ## Scope and interpretation
 
 All start arguments after `--` go unchanged into SF82's original CLI. SF82 remains responsible for seller readiness, manifest verification, trusted handler invocation, and payment mode. SF30 remains responsible for live route attribution and latency. SF93 remains responsible for private support output, source hashes and safe capture limits. This module composes their native calls and closes listeners if attaching operations fails. No remote service, persistent daemon, customer-facing dashboard deployment, wallet, settlement adapter, retries or new backend exists here.
