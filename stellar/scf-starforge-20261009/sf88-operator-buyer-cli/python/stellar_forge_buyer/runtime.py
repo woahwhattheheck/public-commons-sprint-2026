@@ -15,6 +15,7 @@ from .errors import NativeError, StateError
 from .storage import parse
 
 CLI = Path("stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs")
+BRIDGE = CLI.parent / "python" / "bridge.mjs"
 
 
 @dataclass(frozen=True)
@@ -38,7 +39,12 @@ class Runtime:
         self.timeout = timeout
         self.output_limit = output_limit
 
-    def run(self, arguments, *, logs: Path | None = None, started=None) -> Run:
+    def run(self, arguments, *, logs: Path | None = None, started=None, target="buyer") -> Run:
+        if target not in ("buyer", "application"):
+            raise StateError("ORIGINAL_RUNTIME_TARGET_INVALID")
+        entry = self.cli if target == "buyer" else self.checkout / BRIDGE
+        if not entry.is_file():
+            raise StateError("ORIGINAL_APPLICATION_RUNTIME_REQUIRED")
         # Keep the controlling terminal. SF81/SF62 opens /dev/tty itself; this
         # wrapper never synthesizes answers or replaces the native approval.
         stdout = bytearray()
@@ -55,7 +61,7 @@ class Runtime:
                     fd = os.open(logs / (name + ".json"), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
                     log_files[name] = os.fdopen(fd, "wb", buffering=0)
             try:
-                process = subprocess.Popen([self.node, str(self.cli), *map(str, arguments)],
+                process = subprocess.Popen([self.node, str(entry), *map(str, arguments)],
                     cwd=self.checkout, env=self.environment, shell=False,
                     stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except OSError:
@@ -131,8 +137,8 @@ class Runtime:
         except StateError:
             return None
 
-    def checked(self, arguments, *, mode: str) -> dict:
-        result = self.run(arguments)
+    def checked(self, arguments, *, mode: str, target="buyer") -> dict:
+        result = self.run(arguments, target=target)
         if result.returncode or result.error or result.output is None or result.output.get("mode") != mode:
             raise NativeError(result.error or "NATIVE_COMMAND_FAILED", returncode=result.returncode)
         return result.output

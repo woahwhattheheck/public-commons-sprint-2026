@@ -40,12 +40,19 @@ export function compilePythonMerchant(input, { baseDir = process.cwd() } = {}) {
   if (!Array.isArray(environment) || environment.length > 64 || new Set(environment).size !== environment.length ||
       environment.some(key => typeof key !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(key)))
     throw new TypeError('environment must list unique environment variable names');
+  const lifecycle = input.lifecycle ?? {};
+  if (!object(lifecycle) || Object.keys(lifecycle).some(key => !['startup', 'shutdown'].includes(key)) ||
+      Object.values(lifecycle).some(value => typeof value !== 'string' || !name.test(value) || reserved.has(value)) ||
+      Object.values(lifecycle).some(value => Object.hasOwn(input.functions, value)))
+    throw new TypeError('lifecycle names startup/shutdown hooks separately from public functions');
   const options = {
     application: resolve(baseDir, input.application), executable,
     environment: [...environment],
     workerCount: bound(input.workerCount ?? 1, 1, 8, 'workerCount (1–8)'),
     maxPending: bound(input.maxPending ?? 32, 1, 256, 'maxPending (1–256)'),
     startupTimeoutMs: bound(input.startupTimeoutMs ?? 10000, 100, 30000, 'startupTimeoutMs'),
+    shutdownTimeoutMs: bound(input.shutdownTimeoutMs ?? 5000, 100, 30000, 'shutdownTimeoutMs'),
+    lifecycle: { ...lifecycle },
   };
   const functions = Object.create(null), routes = [];
   for (const [id, raw] of Object.entries(input.functions)) {

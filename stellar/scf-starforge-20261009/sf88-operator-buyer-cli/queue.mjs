@@ -111,6 +111,10 @@ async function workspaceExecution(cfg, path) {
   return {environment:workspace.operatorEnvironment,
     evidenceRpcEndpoint:selectTestnetEvidenceEndpoint(workspace.manifest.signer.rpcUrl)};
 }
+// Preserve the finalizer's original environment-only interface.
+export async function workspaceEnvironment(cfg, path) {
+  return (await workspaceExecution(cfg, path)).environment;
+}
 async function ensureAbsent(path, code) {
   try { await lstat(path); fail(code); }
   catch (e) { if (e.code !== 'ENOENT') throw e; }
@@ -147,10 +151,11 @@ function outcomeView(terminal) {
 }
 async function inspect(root, intentId) {
   const {id, directory, request, ticket} = await readRequest(root, intentId);
-  const [attempt, terminal, recovery] = await Promise.all([
+  const [attempt, terminal, recovery, finalization] = await Promise.all([
     optionalJson(join(directory, 'attempt.json')),
     optionalJson(join(directory, 'terminal.json')),
     optionalJson(join(directory, 'recovery.json')),
+    optionalJson(join(directory, 'finalization.json')),
   ]);
   if (attempt) need(attempt.schema === SCHEMA && attempt.intentId === intentId &&
     attempt.configSha256 === request.configSha256, 'INBOX_ATTEMPT_INVALID');
@@ -158,6 +163,9 @@ async function inspect(root, intentId) {
     terminal.intentId === intentId, 'INBOX_TERMINAL_INVALID');
   if (recovery) need(attempt && recovery.schema === SCHEMA && recovery.attemptId === attempt.id &&
     recovery.intentId === intentId, 'INBOX_RECOVERY_INVALID');
+  if (finalization) need(attempt && finalization.schema === 'stellar-forge.sf88.inbox-finalization.v1' &&
+    finalization.attemptId === attempt.id && finalization.intentId === intentId &&
+    finalization.configSha256 === request.configSha256, 'INBOX_FINALIZATION_VIEW_INVALID');
   const state = attempt?.kind === 'CANCELLED' ? 'CANCELLED' : recovery ? 'RECOVERED' :
     terminal ? 'ATTEMPT_RECORDED' : attempt ? 'RUNNING_OR_INTERRUPTED' : 'QUEUED';
   return {
@@ -169,7 +177,7 @@ async function inspect(root, intentId) {
     dependencies:request.dependencies, evidencePath:request.evidencePath,
     responseDestination:request.responseDestination,
     attempt, outcome:outcomeView(terminal), lastError:terminal?.error ?? null,
-    recovery, retry:'NO_AUTOMATIC_RETRY',
+    recovery, finalization, retry:'NO_AUTOMATIC_RETRY',
   };
 }
 
