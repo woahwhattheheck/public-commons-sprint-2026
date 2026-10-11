@@ -2,6 +2,7 @@
 import {createHash} from 'node:crypto';
 import {createOfficialEventDecoder} from '../sf43-agent-commerce/verify.mjs';
 import {reconcileRpc} from '../sf86-rpc-transfer-reconcile/verify.mjs';
+import {DEFAULT_RPC,TESTNET_RPC_ENDPOINTS} from '../sf86-rpc-transfer-reconcile/terms.mjs';
 import {originalRecordFromEvidence} from '../sf86-rpc-transfer-reconcile/cli.mjs';
 import {openOutbox} from '../sf98-merchant-delivery/outbox.mjs';
 
@@ -17,10 +18,13 @@ try {
   const record=input.source?.schema==='scf82.checkout-evidence.v1'?
     originalRecordFromEvidence(input.source):input.source;
   if(input.action==='observe') {
-    // Endpoint, decoder and fetch are fixed original production dependencies.
+    // Provider selection is restricted to the original public testnet list;
+    // decoder and fetch remain fixed original production dependencies.
     // Saved verdicts and loopback replay cannot reach the privileged worker.
+    const rpcEndpoint=input.rpcEndpoint??DEFAULT_RPC;
+    if(!TESTNET_RPC_ENDPOINTS.includes(rpcEndpoint))throw new Error('RPC_ENDPOINT_NOT_ALLOWED');
     const decodeContractEvent=await createOfficialEventDecoder();
-    console.log(JSON.stringify(await reconcileRpc({record,payer:input.payer,decodeContractEvent})));
+    console.log(JSON.stringify(await reconcileRpc({record,payer:input.payer,decodeContractEvent,rpcEndpoint})));
   } else if(input.action==='merchant') {
     const rows=await (await openOutbox(input.outbox)).rows();
     const request=record.operatorReservation.approved_request;
