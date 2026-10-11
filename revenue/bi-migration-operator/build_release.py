@@ -7,7 +7,7 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
-DIRECTORIES = ("bi_operator", "web", "vendor", "schemas", "examples")
+DIRECTORIES = ("bi_operator", "web", "vendor", "schemas", "examples", "tools")
 TOP_LEVEL = (
     "BI_OPERATOR.py", "prepare_project.py", "OPEN_POWER_BI.ps1",
     "build_release.py", "requirements.txt", "README.md", "OPERATOR_GUIDE.md",
