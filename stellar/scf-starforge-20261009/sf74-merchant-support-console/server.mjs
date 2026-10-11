@@ -5,7 +5,9 @@ import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
 import {parseArgs, capture} from '../sf70-merchant-intake/run.mjs';
+import {compare} from '../sf76-merchant-remediation-delta/compare.mjs';
 
 const ASSETS = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
@@ -14,6 +16,8 @@ const ASSETS = Object.freeze({
 });
 const ROOT = new URL('.', import.meta.url);
 const MAX_BODY = 8192;
+const MAX_SOURCE = 2_000_000; // Same per-file limit as the original SF76 CLI.
+const MAX_COMPARISON_BODY = 4 * Math.ceil(MAX_SOURCE / 3) * 4 + 512;
 const HEADERS = Object.freeze({
   'cache-control': 'no-store, max-age=0',
   'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'",
@@ -46,22 +50,51 @@ function argsFromForm(input, allowLoopback) {
   // Keep the exact canonical SF70 endpoint, network, address, method and origin validation.
   return parseArgs(argv);
 }
-async function boundedBody(req) {
+async function boundedBody(req, maximum = MAX_BODY) {
   if (req.headers['content-type']?.split(';')[0]?.trim().toLowerCase() !== 'application/json')
     throw Object.assign(new TypeError('Content-Type must be application/json'), {status:415});
   const length = Number(req.headers['content-length']);
-  if (Number.isFinite(length) && length > MAX_BODY)
-    throw Object.assign(new TypeError('Intake payload exceeds 8 KiB'), {status:413});
+  if (Number.isFinite(length) && length > maximum)
+    throw Object.assign(new TypeError('Request payload exceeds byte limit'), {status:413});
   let size = 0;
   const chunks = [];
   for await (const chunk of req) {
     size += chunk.byteLength;
-    if (size > MAX_BODY) throw Object.assign(new TypeError('Intake payload exceeds 8 KiB'), {status:413});
+    if (size > maximum) throw Object.assign(new TypeError('Request payload exceeds byte limit'), {status:413});
     chunks.push(chunk);
   }
   if (!size) throw new TypeError('Intake payload is empty');
   try { return JSON.parse(Buffer.concat(chunks, size).toString('utf8')); }
   catch { throw new TypeError('Invalid JSON document'); }
+}
+
+function compareUploadedSources(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new TypeError('Expected before and after source files');
+  const fields = ['before', 'after', 'postBefore', 'postAfter'];
+  if (Object.keys(input).some(key => !fields.includes(key))) throw new TypeError('Unexpected source field');
+  function source(field, required = false) {
+    const encoded = input[field];
+    if (encoded === undefined || encoded === null) {
+      if (required) throw new TypeError('Missing ' + field + ' source');
+      return null;
+    }
+    if (typeof encoded !== 'string' || !encoded.length ||
+        encoded.length > Math.ceil(MAX_SOURCE / 3) * 4)
+      throw new TypeError(field + ' source must contain 1..2,000,000 bytes');
+    // Hash the uploaded bytes, never a parsed/reformatted JSON representation.
+    const bytes = Buffer.from(encoded, 'base64');
+    if (bytes.toString('base64') !== encoded || !bytes.length || bytes.length > MAX_SOURCE)
+      throw new TypeError(field + ' source has invalid encoding or size');
+    let data;
+    try { data = JSON.parse(new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(bytes)); }
+    catch { throw new TypeError(field + ' source must be valid UTF-8 JSON'); }
+    return {data, sha: createHash('sha256').update(bytes).digest('hex')};
+  }
+  const before = source('before', true), after = source('after', true);
+  const pb = source('postBefore'), pa = source('postAfter');
+  return compare({before: before.data, after: after.data, beforeSha: before.sha, afterSha: after.sha,
+    postBefore: pb?.data, postAfter: pa?.data, postBeforeSha: pb?.sha, postAfterSha: pa?.sha});
 }
 
 // Injection is only for the focused loopback HTTP-contract check, not for deployed usage.
@@ -87,6 +120,18 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         const data = await readFile(new URL(filename, ROOT));
         res.writeHead(200, {'content-type': mime}); res.end(data);
       } catch { json(res, 500, {error: 'STATIC_ASSET_UNAVAILABLE'}); }
+      return;
+    }
+    if (route === '/api/compare' && req.method === 'POST') {
+      if (req.headers.origin !== ownOrigin) { json(res, 403, {error: 'ORIGIN_MISMATCH'}); return; }
+      try {
+        // Original SF76 is a pure offline comparison: no capture, paths or network calls.
+        const report = compareUploadedSources(await boundedBody(req, MAX_COMPARISON_BODY));
+        json(res, 200, {report});
+      } catch (error) {
+        json(res, Number(error?.status) || 422, {error: 'INVALID_COMPARISON',
+          detail: String(error?.message ?? error).slice(0, 240)});
+      }
       return;
     }
     if (route === '/api/intake' && req.method === 'POST') {
