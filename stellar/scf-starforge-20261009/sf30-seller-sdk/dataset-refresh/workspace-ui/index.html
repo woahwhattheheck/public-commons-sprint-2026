@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dataset publisher</title><link rel="stylesheet" href="/workspace.css">
+  <script src="/workspace.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><div><span class="eyebrow">STELLAR FORGE / MERCHANT OPERATIONS</span><h1>Dataset publisher</h1></div><span class="tag">Local workspace</span></header>
+  <main>
+    <div class="section-head"><div><h2 id="dataset-name">Connecting to the seller</h2><p id="dataset-subtitle">Published data, retained versions and a private working draft.</p></div><button id="refresh" type="button">Refresh status</button></div>
+    <p id="notice" role="status" aria-live="polite" class="notice">Loading the current version…</p>
+    <section class="stats" aria-label="Current publication">
+      <div><span>Current revision</span><strong id="revision">—</strong></div>
+      <div><span>Published rows</span><strong id="row-count">—</strong></div>
+      <div><span>Retained CSV bytes</span><strong id="retained-bytes">—</strong></div>
+      <div><span>Version capacity</span><strong id="version-capacity">—</strong></div>
+    </section>
+
+    <div class="publishing-grid">
+      <section class="panel"><h2>Prepare new data</h2><p>Upload a CSV with the published columns and types. Inspect it before changing the live dataset.</p>
+        <form id="upload-form"><label class="file-label" for="csv-file">CSV file</label><input id="csv-file" name="csv" type="file" accept=".csv,text/csv" required>
+          <div class="actions"><button id="upload" type="submit" class="primary">Validate upload</button><span id="upload-limit" class="muted"></span></div>
+        </form>
+        <p class="small muted">A rejected upload leaves the current publication and existing draft available.</p>
+      </section>
+      <section class="panel" aria-labelledby="draft-title"><div class="section-head tight"><h2 id="draft-title">Working draft</h2><span id="draft-state" class="tag">None</span></div>
+        <div id="empty-draft"><p>No unpublished draft in this session.</p><p class="muted small">Closing the workspace removes its unpublished drafts. Published versions remain with the seller.</p></div>
+        <div id="draft-details" hidden>
+          <dl class="details"><dt>File</dt><dd id="draft-file"></dd><dt>Rows / size</dt><dd id="draft-size"></dd><dt>Reviewed against</dt><dd id="draft-base"></dd><dt>New snapshot</dt><dd id="draft-snapshot" class="mono wrap"></dd></dl>
+          <p id="draft-warning" class="small"></p>
+          <div class="actions"><button id="preview-draft" type="button">Inspect draft</button><button id="review-current" type="button" hidden>Review on latest revision</button><button id="publish" type="button" class="primary">Publish draft</button><button id="discard" type="button" class="quiet">Discard</button></div>
+          <p class="small muted">Publishing changes data at the seller’s existing route and payment terms.</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel preview-panel" aria-labelledby="preview-title">
+      <div class="section-head"><div><h2 id="preview-title">Inspect data</h2><p id="preview-source" class="mono small wrap">No version selected.</p></div><button id="preview-current" type="button">Inspect current</button></div>
+      <form id="query-form"><fieldset id="query-fields">
+        <div class="query-grid"><div><label for="columns">Columns</label><select id="columns" multiple size="5" aria-describedby="columns-help"></select><p id="columns-help" class="small muted">All columns are selected initially.</p></div>
+          <div><label for="sort">Order</label><select id="sort"><option value="">CSV order</option></select><label for="limit">Rows per page</label><input id="limit" type="number" min="1" max="250" value="25"></div>
+          <div class="filter-panel"><div class="section-head tight"><label>Filters</label><button id="add-filter" type="button" class="small-button">Add filter</button></div><div id="filters"></div><p id="no-filters" class="small muted">All rows. Add conditions to narrow the preview.</p></div>
+        </div>
+        <div class="actions"><button id="run-query" type="submit" class="primary">Run preview</button><span id="query-note" class="small muted">Preview reads the selected local snapshot.</span></div>
+      </fieldset></form>
+      <div class="result-head"><p id="result-count" class="small">No result yet.</p><div class="actions"><button id="copy-query" type="button" class="small-button" disabled>Copy query</button><button id="export-page" type="button" class="small-button" disabled>Export page JSON</button></div></div>
+      <code id="executed-query" class="query-code" hidden></code>
+      <div class="table-scroll" tabindex="0" aria-label="Dataset preview"><table id="results"><thead></thead><tbody></tbody></table><p id="empty-result" class="empty">Select a version to inspect its data.</p></div>
+      <nav class="pagination" aria-label="Preview pages"><button id="previous" type="button" disabled>Previous page</button><span id="page-position" class="small muted"></span><button id="next" type="button" disabled>Next page</button></nav>
+    </section>
+
+    <section class="panel" aria-labelledby="versions-title"><div class="section-head"><div><h2 id="versions-title">Published versions</h2><p id="retention-policy">Current and retained snapshots from the original seller.</p></div><button id="collect" type="button">Collect expired</button></div>
+      <div class="table-scroll" tabindex="0" aria-label="Retained dataset versions"><table id="versions"><thead><tr><th>Snapshot</th><th>Status</th><th>Rows</th><th>CSV size</th><th>Retained until</th><th>Readers</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+      <div id="activation-review" class="activation" hidden><strong>Make this retained version current?</strong><p id="activation-summary" class="mono small wrap"></p><p class="small">New queries will use this version. Existing readers keep their original retained snapshot.</p><div class="actions"><button id="confirm-activation" type="button" class="primary">Make current</button><button id="cancel-activation" type="button">Cancel</button></div></div>
+    </section>
+    <footer><span>Uses the running seller’s original publication and retention controls.</span><a id="resource-link" hidden target="_blank" rel="noreferrer">Open public data route ↗</a></footer>
+  </main>
+</body>
+</html>
