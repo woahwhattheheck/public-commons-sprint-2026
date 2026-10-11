@@ -271,3 +271,9 @@ This operation authors and exercises merchant source configuration. Backend
 read receipts report the actual upstream result. Native buyer preparation
 preserves its original intent and terms; a paid purchase is recorded only by
 the original settlement and delivery flow.
+
+### Writer lifetime and restart selection
+
+A private workbench has one native writer lifetime. The browser model composes the existing SF30 history writer lock in a private scope beside the canonical workspace path, before reading, recovering or initializing workspace state. Model initialization and listener failures release that writer; normal close drains accepted mutations before release. The original native lock owns process identity and stale-owner recovery. Direct `openCubeWorkbench` callers must await `model.close()` when finished.
+
+Completed schema applications form an immutable parent chain. Reopening validates the applied records and their native versions, then selects the unique terminal application; wall-clock timestamps remain descriptive. Missing parents, competing successors or cycles are reported explicitly. Retrying an application after its complete directory was committed reconciles that same chain and returns the existing native version.
