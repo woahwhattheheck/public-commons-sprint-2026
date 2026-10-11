@@ -12,7 +12,7 @@ After SF52 PR665, catalog-only POST/MCP resources use `CATALOG_NON_GET_ONLY`. Th
 
 ## Two execution modes (Node 22+, no packages)
 
-Live, **read-only GET only**: the same original source performs the seller probe and catalog paging. No buyer signature, POST, index registration, payment, RPC, contact, or GitHub Actions.
+Live, **read-only GET only**: the native source pages the catalog and probes seller GET-capable/ambiguous routes; complete catalog-proven POST/MCP-only routes are not GET-probed. No buyer signature, POST, index registration, payment, RPC, contact, or GitHub Actions.
 
 ```sh
 node stellar/scf-starforge-20261009/sf64-merchant-conversion-report/report.mjs \
