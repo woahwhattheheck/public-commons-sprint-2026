@@ -80,7 +80,8 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify({status:'CONFIG_VALID',routes:config.routes.length,
       upstreamBindings:upstreams.length,protectedUpstreamBindings:upstreams.filter(row => row.protected).length,
       cachedUpstreamBindings:upstreams.filter(row => row.cache).length,
-      oauthUpstreamBindings:upstreams.filter(row => row.oauth2).length}) + '\n');
+      oauthUpstreamBindings:upstreams.filter(row => row.oauth2).length,
+      supplierQuotaBindings:upstreams.filter(row => row.supplierAccount).length}) + '\n');
     await application.close();
     return null;
   }
@@ -101,6 +102,7 @@ export async function main(args = process.argv.slice(2)) {
       maxInFlight:options.maxInFlight,drainGraceMs:options.drainGraceMs});
   } catch(error) { await application.close(); throw error; }
   session.upstreamSnapshot = application.snapshot;
+  if (application.supplierQuotaSnapshot) session.supplierQuotaSnapshot = application.supplierQuotaSnapshot;
   session.operationControl = application.operationControl;
   session.invalidateUpstreamCache = application.invalidateCache;
   const nativeClose = session.close.bind(session);
