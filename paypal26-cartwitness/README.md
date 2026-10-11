@@ -19,6 +19,18 @@ For genuine model selection and live sandbox integration, set environment variab
 
 Use PayPal's **personal sandbox buyer** during approval. The local server must remain available at 127.0.0.1:8765 for PayPal to redirect the browser. No PayPal production host or live-money endpoint exists in the code.
 
+## Buyer-side catalogue comparison
+
+Once a plan exists, the review screen displays the **original six server-priced
+catalogue items** in price order, marks the AI/fixture recommendation, and
+separates items affordable at the *original planned budget* from those above
+that budget. This is a read-only, same-origin price comparison, not extra AI
+output, a stock check, merchant feed or a way to silently substitute the
+product. Switching goals or budget requires the original Plan action. The
+existing checkout remains bound to the exact original SKU/price and requires
+its two independent human consents. No PayPal request is made by rendering
+the comparison, and the browser never chooses prices or submits a new SKU.
+
 ## Real flow
 
 1. Select from six owner-defined, server-priced catalogue SKUs; AI receives only items within the buyer's budget and must return a valid SKU and concise explanation. Invalid AI output fails closed. Without model credentials, the only fallback is opt-in, visibly labelled fixture mode.
