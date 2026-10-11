@@ -85,6 +85,18 @@ The default payment flow is `authorization`. If the chosen provider tuple explic
 
 ### Node application
 
+An existing original operator workspace can be adopted directly, including an explicitly authored request for a new page:
+
+```sh
+node customer.mjs prepare --workspace /absolute/private/operator-workspace \
+  --config /absolute/private/transfers-request.json --state /absolute/private/node-customer \
+  --source-root "$STARFORGE_SOURCE_ROOT"
+```
+
+The maintained `Buyer.fromWorkspace` uses the original native workspace binding. It preserves the request's explicit terms and intent, original policy/ledger/evidence and selected transport; the atomic ceiling must fit the current workspace and signer caps. Its private operator keys stay in the original child. Omit `--config` to retain the workspace's current operation. `--profile` cannot accompany `--workspace`. Original signer prerequisites and the controlling terminal are checked before the application's permanent attempt; the manifest's selected evidence RPC follows the same native execution.
+
+For an independently supplied original profile, the existing configuration route remains available:
+
 ```sh
 node customer.mjs prepare --config /absolute/private/transfers-request.json \
   --state /absolute/private/node-customer --profile /absolute/private/operator-profile.json \
@@ -93,7 +105,7 @@ node customer.mjs review --state /absolute/private/node-customer \
   --intent customer-transfers-page-0 --source-root "$STARFORGE_SOURCE_ROOT"
 ```
 
-`--profile` is optional for offline preparation. For execution, use an established original operator profile containing the original policy/ledger/interpreter/actor/service paths, signer module, payer and any native transport settings. The original SF36 keys (`SF36_CONSENT_KEY_B64`, `SF36_AUDIT_KEY_B64`, `SF36_OPERATOR_KEY_B64`) and the signer's own wallet environment must be supplied to that operator process through its existing private environment. A workspace's `operator-keys.json` is not a profile or a public artifact. The Node SDK owns its own application evidence/response destination and refuses injected approval/sign callbacks.
+In the `--config` route without a workspace, `--profile` is optional for offline preparation. For execution, use an established original operator profile containing the original policy/ledger/interpreter/actor/service paths, signer module, payer and any native transport settings. The original SF36 keys (`SF36_CONSENT_KEY_B64`, `SF36_AUDIT_KEY_B64`, `SF36_OPERATOR_KEY_B64`) and the signer's own wallet environment must be supplied to that operator process through its existing private environment. A workspace's `operator-keys.json` is not a profile or a public artifact. The Node SDK owns its own application evidence/response destination and refuses injected approval/sign callbacks.
 
 Only the following explicit command starts the original terminal approval and buyer attempt:
 
@@ -134,7 +146,7 @@ node customer.mjs next-page --state /absolute/private/node-customer \
   --source-root "$STARFORGE_SOURCE_ROOT"
 ```
 
-Review and prepare that file before choosing to execute it. The command performs no purchase. Since the provider dataset can change between requests, page continuation does not claim a consistent historical snapshot or complete wallet history.
+Prepare that file with `--workspace /absolute/private/operator-workspace --config /absolute/private/transfers-page-1.json`, using the same Node application state; then review its new intent before choosing to execute it. The original workspace binding keeps the operator and total/daily ledger budgets shared across those explicit pages. The command performs no purchase. Since the provider dataset can change between requests, page continuation does not claim a consistent historical snapshot or complete wallet history.
 
 ## Failure, throughput and recovery behavior
 

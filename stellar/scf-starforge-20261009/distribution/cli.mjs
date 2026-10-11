@@ -44,6 +44,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
+  delivery-destinations                      Route original events to independently operated receivers
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
@@ -71,6 +72,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   dataset-refresh                            Publish and select retained dataset versions
   dataset-publisher                          Publish CSV versions and prepare original buyer acquisition
   buyer-dataset                              Acquire, resume and deliver a complete selected dataset
+  buyer-dataset-workspace                    Review and operate original datasets in the browser
   catalog-serve / catalog                     Host and operate live seller discovery
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   catalog-workspace                          Review signed declarations and retained catalog operations

@@ -160,7 +160,7 @@ $('woo-plugin-download').addEventListener('click',async () => {
   try {
     const value=createWooPluginPacket(await runner());
     download(zipWorkspace(value.files),'woo-plugin-setup.zip','application/zip');
-    status('Plugin preparation tool downloaded. Follow INSTALL.md to copy the three original PHP files from your toolkit, install them in WordPress, then export the saved product routes.');
+    status('Plugin preparation tool downloaded. Follow INSTALL.md to copy the complete original plugin and operating guide from your toolkit, install them in WordPress, then export the saved product routes.');
   }catch(error){fail(error);}
 });
 $('woo-route-input').addEventListener('change',async event => {

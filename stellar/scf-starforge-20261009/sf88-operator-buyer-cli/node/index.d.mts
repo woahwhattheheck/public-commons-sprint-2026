@@ -91,6 +91,13 @@ export interface ImportOptions {
   /** Reviewed merchant HTTP deadline; independent of the native subprocess deadline. */
   requestTimeoutMs?: number;
 }
+export interface WorkspaceImportOptions extends Omit<ImportOptions, 'operatorProfile'> {
+  /** Optional explicit native request/config merged with the workspace by its original binding. */
+  configuration?: string | JsonObject;
+  /** Explicit new intent for the selected request; never inferred during recovery. */
+  intentId?: string;
+  signal?: AbortSignal;
+}
 export interface Review {
   readonly intentId: string;
   readonly configSha256: string;
@@ -98,12 +105,15 @@ export interface Review {
   readonly ticketSha256: string | null;
   readonly reviewedAt: string;
   readonly native: JsonObject;
+  /** Original workspace chosen at preparation; its keys are not in application metadata. */
+  readonly nativeWorkspace?: string;
 }
 export interface OperationStatus {
   intentId: string; directory: string; state: string;
   resultRecoverable: boolean; nativeStatus: unknown; deliveryStatus: string | null;
   /** Present after this prepared operation is assigned to an original inbox. */
   inboxDirectory?: string;
+  nativeWorkspace?: string;
   retry: 'NO_AUTOMATIC_RETRY';
 }
 export interface NativeSummary extends JsonObject {
@@ -151,6 +161,8 @@ export class Buyer {
   inspectOperationHandoff(file: string, options?: { accept?: number; signal?: AbortSignal }): Promise<OperationHandoffView>;
   operation(intentId: string): Operation;
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
+  /** Adopt original operator configuration; keys are loaded only by its native child. */
+  fromWorkspace(directory: string, options?: WorkspaceImportOptions): Promise<Operation>;
   fromOperationHandoff(file: string, options: {
     accept: number; operatorProfile?: OperatorProfile | string; signal?: AbortSignal;
     responseFile?: ResponseCaptureOptions;
