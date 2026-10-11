@@ -11,6 +11,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('operations port must be 0–65535');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
+    ['/fulfillment', 'delivery.html', 'text/html; charset=utf-8'],
     ['/console.mjs', 'console.mjs', 'text/javascript; charset=utf-8'],
     ['/delivery-panel.mjs', 'delivery-panel.mjs', 'text/javascript; charset=utf-8'],
     ['/recent.mjs', 'recent.mjs', 'text/javascript; charset=utf-8'],
