@@ -1,0 +1,8 @@
+sku,category,description,units,available,rating,internal_note
+W-001,widget,"Widget, small",12,true,4.5,not exposed
+W-002,widget,"Widget ""medium""",0,false,,not exposed
+W-003,widget,"Widget large
+with case",7,true,4.2,not exposed
+B-001,bracket,Left bracket,31,true,4.8,not exposed
+B-002,bracket,Right bracket,29,true,4.7,not exposed
+T-001,tool,Assembly tool,0,false,3.9,not exposed

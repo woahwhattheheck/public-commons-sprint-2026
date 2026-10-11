@@ -1,0 +1,16 @@
+{
+  "schema": "stellar-forge.csv-dataset.v1",
+  "file": "inventory-dataset.csv",
+  "name": "Fictional inventory example",
+  "columns": {
+    "sku": "string",
+    "category": "string",
+    "description": "string",
+    "units": "integer",
+    "available": "boolean",
+    "rating": { "type": "number", "nullable": true }
+  },
+  "filters": ["sku", "category", "available"],
+  "defaultLimit": 2,
+  "maxLimit": 100
+}
