@@ -1,131 +1,86 @@
-# GridKind — simulated Alexa+ affordability planner
+# GridKind household scheduling workspace
 
-A standalone, original **simulated Alexa+ experience** prototype for Amazon Build, Ship, Shape 2026 (Alexa+ track). This is **not** an Alexa/Amazon integration, smart-home device controller, live meter, tariff feed, or Devpost entry. The [official rules](https://amazonappdev2026.devpost.com/rules) permit an alternate simulated Alexa+ experience using an agentic tool, no mandatory MCP runtime hook; require an actual demo video under 3 min, public code with license or judges' private repo access, feedback and entrant submission by **Oct 23, 2026, noon PDT**.
+GridKind turns a household's flexible loads and 24-hour price assumptions into a feasible schedule. It keeps named household inputs, original plans, tariff comparisons, approvals, and labeled simulated receipts in one retained workspace.
 
-GridKind simulates an agent that autonomously calls a constraint-aware optimizer on 24-hour **hypothetical** hourly prices; checks shared 3 kW circuit and quiet hours; explains baseline vs cheaper plan; requests separate human approval; then dispatches **only in-memory, labeled simulated device commands**, with replay-safe receipts and reset. It is a verifiable planner, not a generic chat wrapper or a text-only storyboard. One front-end browser session is isolated from others by a unique HttpOnly cookie. No external network/API calls, keys, utility data, or device pairing. The browser UI stylesheet is served as same-origin `/style.css` under the existing strict `style-src 'self'` policy; no inline CSS permission is needed.
+The original joint optimizer respects each load's duration and deadline, 22:00–07:00 quiet hours, and the shared circuit cap. The original agent proposes a schedule, accepts approval for its exact plan ID, and executes the simulated schedule with an idempotent receipt. The household workspace makes those decisions available across server restarts and portable handoffs.
 
-## Run
+## Run the application
 
-Node.js >= 22, no packages to install:
+Use Node.js 24; the complete browser workflow was exercised with Node 24.19.0 and Chromium 153. Runtime packages are built into Node.
 
 ```bash
+cd amazon-gridkind-alexa-2026
 node server.mjs
-# visit http://127.0.0.1:4181
-node --test test.mjs    # two focused behavioral checks, no broad suite
 ```
 
-For loopback-only hosting, requests must use the matching local Host (`127.0.0.1`, `localhost`, or `[::1]`) and listening port; forged public Host headers are rejected before a session is created. An explicit non-loopback `HOST` remains an intentional deployment choice.
+Open http://127.0.0.1:4181. The default saved workspace is `~/.local/share/gridkind`.
 
-Say “Find a cheaper schedule for tonight”, inspect item times and relative prices, click **Approve** and then **Execute simulation**. The receipt shows `simulated: true`, `liveDeviceCalls: 0`. Use **Clear current plan** to discard the current proposal. The UI shows no live-service or AWS/official account claim.
-
-## Plan your own hypothetical scenario
-
-The browser now exposes the original optimizer's inputs. Choose which of the
-three example loads to include, edit each load's power, duration and allowed
-window, and choose whether it must avoid 22:00–07:00 quiet hours. Set a shared
-circuit cap and hypothetical off-peak, daytime and evening rates. Rates use the
-displayed fixed time bands; they are not fetched from a utility.
-
-Click **Plan this scenario** to compare the earliest jointly feasible schedule
-with the cheaper schedule. Planning commands in **Ask GridKind** use those same
-settings. A changed field disables approval and execution until a new plan is
-generated. Infeasible inputs show the existing optimizer's explanation and do
-not authorize the previous schedule. Approval still binds the exact plan ID,
-and execution emits only the existing simulated receipt.
-
-The last valid scenario stays with the original browser session and is restored
-on reload. **Clear current plan** clears its approval and receipt while retaining
-the settings; **Restore example** edits the form back to the original example and
-requires replanning. Exported agent views are copies, so editing a returned view
-cannot mutate an approved schedule.
-
-Run the focused original-engine and browser-script flow check with:
+To select a workspace explicitly:
 
 ```bash
-node --test test-scenario-flow.focused.mjs
+node server.mjs --workspace /absolute/path/to/gridkind-households --port 4181
 ```
 
-## Portable household scenario: real cross-session handoff
+The same directory and browser cookie reopen the same households. `GRIDKIND_WORKSPACE`, `PORT`, and `HOST` are also supported. Keep the default loopback host for a personal local workspace. An explicitly selected non-loopback host exposes a shared HTTP service and should be operated within the intended trusted environment.
 
-The original browser now has **Download my scenario**, **Open a GridKind scenario
-file**, a human-readable preview and **Apply imported assumptions** directly
-below the editable household loads. This is not a new simulator or agent.
+## Complete household workflow
 
-1. On the original running page, choose/edit loads, constraints and three-band
-   hypothetical tariff. Download `gridkind-hypothetical-scenario.json`; a valid
-   unplanned draft is exportable, and a current proposal may contribute an
-   **illustrative, non-authoritative** baseline/optimized cost summary.
-2. On another browser/computer, open the JSON file locally. The first step only
-   reads and previews the scenario. The UI accepts one of the three original load
-   identities with correct labels, whole-hour windows and duration, the 24-hour
-   three-band tariff, finite costs and circuit power. It rejects duplicate loads,
-   unknown fields, bad bounds, receipt/approval fields and files over 40 KB.
-3. **Apply imported assumptions** invokes the original HTTP `cancel` first,
-   clearing server-held proposal, approval and simulated receipt. If that call
-   fails the imported inputs are not applied. The browser then updates the
-   *existing* editor, invalidates any tariff comparison and requires the
-   original `propose -> approve -> execute` sequence. Previously approved IDs
-   and receipts from either browser cannot be imported or used.
+1. Name the household and choose **New from current inputs**. The current editor becomes its first saved input revision.
+2. Choose loads, allowed hours, duration, quiet-hour constraints, circuit cap, and hypothetical prices. The simple editor retains the three original example loads and tariff bands. **Edit hourly rates and custom loads** exposes all 24 prices and up to five named loads with ordinary editable controls.
+3. Give the input revision a useful name and choose **Save inputs**, or choose **Plan this scenario** to save and plan it together. An infeasible input keeps the existing household available and reports the original optimizer's reason.
+4. Review earliest feasible cost, optimized cost, start times, and the hourly profile. **Approve this exact schedule** binds the original proposal ID. **Execute simulation** records the original simulated commands and receipt.
+5. Use **What if the tariff changed?** to compare retaining the current starts with replanning the same loads under another tariff. The completed original analyzer report is saved in household history.
+6. Choose **Use this tariff for a new plan**, or open an older comparison in history and select its alternative. This restores that comparison's loads and constraints with the selected prices, then starts the original fresh-plan and approval flow.
+7. Open any saved record to inspect its input windows, plan, decisions, tariff report, and exact JSON. **Use these saved inputs** restores an earlier revision for fresh planning.
+8. Download a household backup. In another browser or on another machine, preview that file and choose **Restore as a new household**. The restored household retains every saved record and its original identity and digest.
 
-This is a user-owned **hypothetical input artifact**, not a shared trusted
-authorization, tariff feed, utility bill, smart-device command or cross-account
-session transfer. No scenario is uploaded or transmitted to an external server.
-The browser creates and opens JSON locally; the original GridKind server still
-performs planning in the active browser session. The file carries explicit
-`kind='gridkind/hypothetical-scenario'` and `version=1`; plan ID in the optional
-illustrative summary is informative only, never passed to the original agent.
+Opening another household or restoring a saved record first retains a valid edited draft. A draft with incomplete values remains in the editor so its fields can be corrected. **Reopen saved inputs** returns the editor to the current saved scenario. A stale tab cannot apply its previous household's approval to the newly selected household; its draft stays available to create a separate household.
 
-To inspect the exact portable format or run the focused pure source exercise
-from the original `scenario-handoff.js` module, import
-`makeScenarioHandoff`, `readScenarioHandoff` and
-`validatePortableScenario` directly in Node >=22. No npm or hosted CI.
+## What survives reopening
 
-## Compare a changed tariff
+The SQLite workspace retains named households, input revisions, original proposal views, tariff comparisons, approvals, simulated receipts, and their record relationships. Each record includes the original scenario and source hashes for the optimizer, agent, and analyzer used to produce it.
 
-After planning, **What if the tariff changed?** compares the current optimized schedule
-with a newly optimized schedule under hypothetical off-peak, daytime and evening
-rates. The loads, deadlines, quiet hours and circuit cap stay those of the current
-proposal. Costs use four decimal places; changed start hours show what replanning
-would require. **Download comparison JSON** saves the original rate-robustness report.
+Reloading a page in the same live server session keeps its active proposal. Opening a saved household, restarting the server, restoring inputs, or importing a backup starts with the saved scenario and a fresh active approval flow. Historical approvals and receipts remain readable in the decision history. The next proposal receives a new revision and plan ID. Household and live-session identity also scope server-issued proposal IDs, so identical inputs in two households cannot exchange approval IDs.
 
-The panel uses the existing `robustness/compare.mjs` analyzer and `engine.mjs`
-optimizer through `POST /api/robustness`. The endpoint binds `proposalId` to this
-browser session's current proposal and returns HTTP 409 if it has been replaced
-or cleared. It cannot change a proposal, approval, execution receipt or history.
-Editing the main scenario requires planning again; editing alternative rates
-invalidates the comparison and its download. Late results never replace newer edits.
+A backup uses `gridkind-household/v1`, ordered records, a SHA-256 digest for each record, and a digest over the household payload. Restore checks the complete payload, record identities, order, parent references, input shape, and digests before a single database transaction creates the new household. Those hashes check content integrity; imported historical results remain supplied data. Applying an imported scenario runs the installed original optimizer before its new approval.
 
-Comparison does not apply the alternative tariff or approve a new schedule.
-To use different rates, edit the main scenario and plan it through the existing
-workflow. All costs remain hypothetical; this does not read utilities or devices.
+Household ownership follows the random HttpOnly, SameSite=Strict browser cookie. Download a backup before clearing browser data or moving machines. For a complete server migration, stop the process and copy the chosen workspace directory; use the same browser cookie or restore a household backup in the new browser.
 
-The focused HTTP and shipped-module workflow can be run with
-`node --experimental-vm-modules test-robustness-flow.focused.mjs`. Its small DOM
-fixture exercises the actual scripts and download bytes, not browser rendering.
+## Original portable scenario sharing
 
-## Agentic tools and method
+**Share a simple scenario** preserves the original preview/apply format from PR890: the three example load identities, the three fixed tariff bands, and an optional illustrative cost summary. This compact 40 KB input file is useful for sharing an example. The full household backup supports custom loads, individual hourly rates, and complete decision history.
 
-- `plan` enumerates feasible whole-hour placements for 1–5 tasks. It respects deadlines, quiet hours, and a shared circuit power ceiling, comparing the **earliest jointly feasible** baseline with the joint minimum-cost schedule. It will move a flexible load later if a greedy prefix would block a fixed load; task hours outside the 0–24 hour horizon are rejected.
-- `makeAgent` routes a speech-like command to the scheduling/explanation tools, maintains proposal revision and approved exact ID, and exposes a guarded, idempotent simulated-execution tool.
-- No task is scheduled after plan mutation until a human approves the new plan ID. A retry cannot send duplicate simulated commands.
-- Price vector is a fictional 24-hour $/kWh curve ($0.12 off-peak, $0.25 general, $0.43 peak); task powers and times are illustrated assumptions, not a consumer energy claim. Savings are differences **within this one hypothetical scenario**, not forecast actual household savings.
+Applying a simple scenario uses the original cancellation operation before filling the editor. The next schedule follows the original propose → approve → simulated-execute sequence.
 
-## Original-owner competition handoff
+## Original optimizer and accepted simulations
 
-Existing HomeOps and Hearthline Alexa candidates are separate products. This source package is a new GridKind candidate; do not conflate their Devpost entrants. To make this candidate submission-ready, an authorized entrant must assess overlap/eligibility, confirm product direction, record a genuine short browser demo, create a durable public MIT source repository and file real Devpost fields/feedback. No app was submitted or prize awarded as a result of this prototype.
+`engine.mjs` and `robustness/compare.mjs` remain the original implementations. The optimizer enumerates jointly feasible whole-hour placements for 1–5 tasks, preserves the earliest feasible baseline, and selects the minimum-cost schedule with its original tie handling. The accepted flat-tariff symmetry bound stops equivalent alternatives once the admissible lower bound is achieved.
 
+The original Muse OPT3-02 retained panel had 41 exact output/error matches; its later 7,500-case continuation is retained in the original simulation channel. This workspace consumes those accepted results and source instead of duplicating the optimizer study. The supplied `robustness/sample.json` preserves the original three-load scenario and tariff alternatives.
 
-## Flat-tariff symmetry bound
+In the real browser walkthrough, those exact original inputs produced a modeled earliest-feasible cost of $4.4540 and an optimized cost of $2.0360. Repricing at the supplied flat $0.22/kWh alternative produced $2.6840 for both the retained and freshly optimized schedules. These numbers describe the entered hypothetical scenario.
 
-The scheduler treats the sum of each task's cheapest unconstrained option as a global admissible lower bound. Candidate starts are visited in ascending order, so the first feasible schedule that reaches that bound is also the lexicographically earliest optimal schedule. Equal-cost flat-tariff alternatives are not enumerated after that proof point.
+## Storage and HTTP integration
 
-This preserves the exact cost, task order, tie-break output, infeasible error text, and circuit constraints. The source-pinned Muse OPT3-02 residual panel measured 41/41 exact output matches with zero mismatches; worst-case runtime fell from 5.94 ms to 0.09 ms on that retained VM panel. Those are diagnostic VM measurements, not an official organizer score.
+`workspace.mjs` owns the SQLite household store. Mutations use an immediate transaction and a workspace revision check. The server forks the original in-memory agent, saves the resulting household record, and only then replaces the live agent. A failed database write therefore leaves the previous live agent available.
 
-Focused source regression:
+The existing `GET /api/state`, `POST /api/action`, and `POST /api/robustness` remain the native routes. State adds a `workspace` field. The browser includes its `revision`, `generation`, and `householdId` with each mutation. The comparison response additionally identifies the saved record and updated workspace metadata.
 
-```bash
-node amazon-gridkind-alexa-2026/test-flat-symmetry.focused.mjs
-```
+Household routes:
 
+| Route | Purpose |
+| --- | --- |
+| `GET /api/workspace/history` | Paged saved-record summaries for an owned household |
+| `GET /api/workspace/record` | Exact saved record and digest |
+| `GET /api/workspace/export` | Complete household backup |
+| `POST /api/workspace` | Create, select, rename, save, restore, adopt tariff, preview import, or import |
 
+The service retains strict same-origin static assets and mutation checks. All imported names and historical results are rendered as text. The workspace directory is created with private permissions; the database uses mode 0600. Local APIs continue to use the original application controls.
 
+## Operator walkthrough and competition handoff
+
+The [official Amazon developer hackathon rules](https://amazonappdev2026.devpost.com/rules) allow the alternate simulated Alexa+ experience. The current deadline is **October 23, 2026, noon PDT / 19:00 UTC**. The entrant supplies a public video under three minutes and the required source, product description, feedback, and submission fields. The original entrant and media owner remain the delivery route.
+
+Use the complete household journey for the actual product recording: enter inputs, inspect a plan, compare a tariff, select it for a fresh plan, approve and simulate, then reopen its saved history. The original `DEVPOST_SUBMISSION_FEEDBACK_20261010.md` retains the entrant's competition-field guidance. The included MIT license applies to this source.
+
+The rendered workflow covers original inputs, retained comparisons, explicit approval and idempotent simulation, five custom loads, a stopped-and-restarted SQLite server, exact record recovery, a separate-browser backup restore, a changed backup rejected before mutation, concurrent-tab handling, and desktop/390px layout.
