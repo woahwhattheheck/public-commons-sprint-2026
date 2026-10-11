@@ -9,6 +9,7 @@ import { loadOperationTicket, operationTicketView, parseOperationTicketBytes } f
 import { MAX_REQUEST_BODY_BYTES, requestBodyPin } from './request-body.mjs';
 
 export const OPERATION_HANDOFF_SCHEMA = 'stellar-forge.operation-handoff.v1';
+export const OPERATION_REQUEST_HANDOFF_SCHEMA = 'stellar-forge.operation-handoff.v2';
 export const OPERATION_HANDOFF_MAX_BYTES = 4*Math.ceil(MAX_REQUEST_BODY_BYTES/3)+2*1024*1024;
 const limits = {ticket:16384, body:MAX_REQUEST_BODY_BYTES, discovery:1048576};
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
@@ -78,36 +79,45 @@ function unpacked(value, limit) {
 }
 
 function unpackHandoff(value) {
-  need(shape(value,['schema','intentId','url','headers','ticketHeader','rowIndex','files']) &&
-    value.schema===OPERATION_HANDOFF_SCHEMA && shape(value.files,Object.keys(limits)),
+  const legacy=value?.schema===OPERATION_HANDOFF_SCHEMA;
+  need((legacy || value?.schema===OPERATION_REQUEST_HANDOFF_SCHEMA) &&
+    shape(value,['schema','intentId','url',...(legacy?[]:['method']),'headers','ticketHeader','rowIndex','files']) &&
+    shape(value.files,Object.keys(limits)) &&
+    (value.files.ticket!==null || !legacy && value.ticketHeader===null),
     'OPERATION_HANDOFF_SCHEMA_INVALID');
-  // null represents an absent body; a packed zero-byte file remains present.
-  return Object.fromEntries(Object.entries(limits).map(([name,limit])=>[name,name==='body'&&value.files.body===null?null:unpacked(value.files[name],limit)]));
+  // v1 stays a ticketed POST. v2 preserves the original buyer's optional ticket
+  // and six methods. A null body is absent; a packed zero-byte file is present.
+  return Object.fromEntries(Object.entries(limits).map(([name,limit])=>[name,
+    (name==='body'||name==='ticket'&&!legacy)&&value.files[name]===null?null:unpacked(value.files[name],limit)]));
 }
 function prepareHandoff(value, directory, acceptIndex, {files=unpackHandoff(value),requireCurrent=true}={}) {
   const paths={ticket:join(directory,'operation-ticket.json'),body:join(directory,'request.body'),
     discovery:join(directory,'offers.json'),headers:join(directory,'request.headers.json'),config:join(directory,'review.json')};
   const prepared=prepareReview(files.discovery,{rowIndex:value.rowIndex,acceptIndex,
-    intentId:value.intentId,url:value.url,method:'POST',...(files.body===null?{}:{bodyFile:paths.body,...requestBodyPin(files.body)}),headers:value.headers,
-    ticketFile:paths.ticket,ticketHeader:value.ticketHeader});
-  const ticket=parseOperationTicketBytes(files.ticket,prepared.draft.operation,{requireCurrent});
+    intentId:value.intentId,url:value.url,method:value.schema===OPERATION_HANDOFF_SCHEMA?'POST':value.method,
+    ...(files.body===null?{}:{bodyFile:paths.body,...requestBodyPin(files.body)}),headers:value.headers,
+    ...(files.ticket===null?{}:{ticketFile:paths.ticket,ticketHeader:value.ticketHeader})});
+  const ticket=files.ticket===null?null:parseOperationTicketBytes(files.ticket,prepared.draft.operation,{requireCurrent});
   return {...prepared,files,paths,ticket};
 }
 
 /** Copies original bytes only. No merchant paths, signer, policy or executable
  * settings enter this document. The receiving buyer chooses a payment option. */
-export function createOperationHandoff({draft,discoveryBytes,ticketBytes,bodyBytes}) {
+export function createOperationHandoff({draft,discoveryBytes,ticketBytes,bodyBytes,directory}) {
   const op=operation(draft?.operation), source=draft.preparedFrom;
-  need(op.method==='POST' && op.ticketFile && source &&
+  need(source &&
     source.discoveryFileSha256===sha256(discoveryBytes),'OPERATION_HANDOFF_PREPARED_REQUEST_REQUIRED');
+  need(op.ticketFile?ticketBytes instanceof Uint8Array:ticketBytes==null,'OPERATION_HANDOFF_TICKET_PRESENCE_MISMATCH');
   const present=op.bodyFile!==undefined;
   need(present?bodyBytes instanceof Uint8Array:bodyBytes==null,'OPERATION_HANDOFF_BODY_PRESENCE_MISMATCH');
   if (op.bodySha256!==undefined) need(bodyBytes.length===op.bodyBytes&&sha256(bodyBytes)===op.bodySha256,'OPERATION_HANDOFF_BODY_CHANGED');
-  const value={schema:OPERATION_HANDOFF_SCHEMA,intentId:op.intentId,url:op.url,
-    headers:op.headers,ticketHeader:op.ticketHeader,rowIndex:source.rowIndex,
-    files:{ticket:packed(ticketBytes,limits.ticket),body:present?packed(bodyBytes,limits.body):null,
+  const legacy=op.method==='POST'&&Boolean(op.ticketFile);
+  const value={schema:legacy?OPERATION_HANDOFF_SCHEMA:OPERATION_REQUEST_HANDOFF_SCHEMA,intentId:op.intentId,url:op.url,
+    ...(legacy?{}:{method:op.method}),headers:op.headers,ticketHeader:op.ticketHeader??null,rowIndex:source.rowIndex,
+    files:{ticket:op.ticketFile?packed(ticketBytes,limits.ticket):null,body:present?packed(bodyBytes,limits.body):null,
       discovery:packed(discoveryBytes,limits.discovery)}};
-  const prepared=prepareHandoff(value,dirname(path(op.ticketFile)),source.acceptIndex);
+  const target=directory===undefined?dirname(path(op.ticketFile??op.bodyFile)):path(directory);
+  const prepared=prepareHandoff(value,target,source.acceptIndex);
   need(canonical(prepared.draft.operation.expect)===canonical(op.expect),'OPERATION_HANDOFF_OFFER_CHANGED');
   need(json(value).length<=OPERATION_HANDOFF_MAX_BYTES,'OPERATION_HANDOFF_FILE_TOO_LARGE');
   return value;
@@ -134,7 +144,8 @@ export async function inspectOperationHandoff({file,directory,acceptIndex,requir
       const prepared=prepareHandoff(value,directory,index,{files,requireCurrent});
       first??=prepared;
       if(index===acceptIndex) selected=prepared;
-      choices.push({acceptIndex:index,acceptedTerms:prepared.draft.operation.expect});
+      choices.push({acceptIndex:index,acceptedTerms:prepared.draft.operation.expect,
+        offeredTerms:structuredClone(prepared.draft.preparedFrom.originalListing.accepts[index])});
     } catch(error) {
       if(error.code==='DISCOVERY_ACCEPT_NOT_FOUND') break;
       firstError??=error;
@@ -172,25 +183,39 @@ export async function readOperationHandoffRequest({file,directory,acceptIndex,re
 
 /** Create-only receiver. The original review config is written last, after all
  * private inputs are durable; an interrupted import never exposes a ready config. */
-export async function importOperationHandoff({file,directory,acceptIndex}) {
+export async function importOperationHandoff({file,directory,acceptIndex,resume=false}) {
   path(directory);
+  need(typeof resume==='boolean','OPERATION_HANDOFF_RESUME_INVALID');
   const raw=await privateBytes(file,OPERATION_HANDOFF_MAX_BYTES), value=decode(raw);
   const prepared=prepareHandoff(value,directory,acceptIndex);
   const parent=dirname(directory);
   need(await realpath(parent)===parent && (await stat(parent)).isDirectory(),
     'OPERATION_HANDOFF_PARENT_REQUIRED');
+  let created=true;
   try { await mkdir(directory,{mode:0o700}); }
-  catch(error) { throw new InputError(error.code==='EEXIST'?'OPERATION_HANDOFF_DESTINATION_EXISTS':'OPERATION_HANDOFF_DESTINATION_UNAVAILABLE'); }
+  catch(error) {
+    if(error.code!=='EEXIST'||!resume)throw new InputError(error.code==='EEXIST'?'OPERATION_HANDOFF_DESTINATION_EXISTS':'OPERATION_HANDOFF_DESTINATION_UNAVAILABLE');
+    created=false;
+    const info=await stat(directory);
+    need(await realpath(directory)===directory&&info.isDirectory()&&(info.mode&0o077)===0&&
+      (typeof process.getuid!=='function'||info.uid===process.getuid()),'OPERATION_HANDOFF_PRIVATE_DIRECTORY_REQUIRED');
+  }
+  async function retain(filename,data) {
+    try {await writePrivate(filename,data);}
+    catch(error) {
+      if(error.code!=='EEXIST'||!resume)throw error;
+      need((await privateBytes(filename,data.length)).equals(Buffer.from(data)),'OPERATION_HANDOFF_RETAINED_INPUT_CHANGED');
+    }
+  }
   try {
-    for (const name of Object.keys(limits)) if (prepared.files[name]!==null) await writePrivate(prepared.paths[name],prepared.files[name]);
-    await writePrivate(prepared.paths.headers,json(prepared.draft.operation.headers));
+    for (const name of Object.keys(limits)) if (prepared.files[name]!==null) await retain(prepared.paths[name],prepared.files[name]);
+    await retain(prepared.paths.headers,json(prepared.draft.operation.headers));
     await loadOperationTicket(prepared.draft.operation,{requireCurrent:true});
     await syncDirectory(directory);
-    await writePrivate(prepared.paths.config,prepared.data);
+    await retain(prepared.paths.config,prepared.data);
     await syncDirectory(directory); await syncDirectory(parent);
   } catch(error) {
-    await rm(directory,{recursive:true,force:true});
-    await syncDirectory(parent);
+    if(created){await rm(directory,{recursive:true,force:true});await syncDirectory(parent);}
     throw error instanceof InputError ? error : new InputError('OPERATION_HANDOFF_IMPORT_FAILED');
   }
   return {mode:'OFFLINE_OPERATION_IMPORTED',...view(prepared,file,raw),
@@ -203,8 +228,7 @@ export async function importOperationHandoff({file,directory,acceptIndex}) {
 export async function exportOperationHandoff({configFile,discoveryFile,out}) {
   const draft=decode(await privateBytes(configFile,65536)), op=operation(draft.operation);
   const ticket=await loadOperationTicket(op,{requireCurrent:true});
-  need(ticket,'OPERATION_HANDOFF_PREPARED_REQUEST_REQUIRED');
-  const value=createOperationHandoff({draft,ticketBytes:ticket.sourceBytes,
+  const value=createOperationHandoff({draft,ticketBytes:ticket?.sourceBytes,directory:dirname(configFile),
     bodyBytes:op.bodyFile===undefined?undefined:await privateBytes(op.bodyFile,limits.body),
     discoveryBytes:await privateBytes(discoveryFile,limits.discovery)});
   const raw=json(value), destination=path(out), parent=dirname(destination), info=await stat(parent);

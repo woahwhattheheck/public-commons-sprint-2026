@@ -46,6 +46,27 @@ supports interrupted-install continuation, fresh-directory upgrades, recovery,
 and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
 for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
 
+### Runtime installation workspace
+
+Use the private browser workspace to select an original archive, review its exact
+adapter dependencies, and prepare, install, inspect, compare, upgrade and recover
+customer runtimes through the same maintained installer:
+
+```sh
+starforge runtime-workspace init --workspace /srv/starforge/runtime-workspace
+starforge runtime-workspace attach --workspace /srv/starforge/runtime-workspace \
+  --runtime /srv/starforge/runtimes/merchant-01 --label "Merchant production"
+starforge runtime-workspace serve --workspace /srv/starforge/runtime-workspace
+```
+
+Open the private URL printed by `serve`. The workspace retains selected runtimes,
+reviewed profiles, operation progress and logs across browser and server restarts.
+Long-running installation operations continue independently of the browser. Its
+Deployment view exports the exact source/dependency roots, profile, original
+manifest and command needed by the existing managed-release and merchant-host
+workflows. The [complete runtime workspace guide](runtime-workspace/README.md)
+covers archive upload, selected adapters, local Node headers, recovery and handoff.
+
 ### Versioned installation, upgrade and rollback
 
 Use `starforge installation` to put a selected maintained package into the
@@ -702,6 +723,7 @@ or automatically retry a request.
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge postgres-publisher` | Review and publish complete query snapshots; keep the original data product current on a saved cadence |
+| `starforge arcgis` / `arcgis-publisher` | Retain ArcGIS layers, publish reviewed datasets and receive original Esri FeatureSets from finalized buyer deliveries |
 | `starforge sheets-source` | Retain an actual Google cell response, inspect headers and prepare an explicit public projection |
 | `starforge sheets-publisher` | Review and publish selected Sheet observations through the original retained dataset and buyer workflow |
 | `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
@@ -750,7 +772,10 @@ or automatically retry a request.
 | `starforge dataset-refresh` | Publish, retain and activate CSV dataset versions while readers finish their pages |
 | `starforge allium-explorer` | Inspect an approved Allium product and import, run, collect or recover its original saved query |
 | `starforge allium-workspace` | Review retained Allium products/results, publish a versioned merchant, prepare its buyer and reopen a complete workspace |
-| `starforge dataset-publisher` | Upload and publish CSV versions, select the actual offer and export original buyer preparation |
+| `starforge dataset-publisher` | Retain CSV/XLSX sources, publish reviewed selections and export original buyer preparation |
+| `starforge workbook` | Inspect original XLSX, save mappings, compare editions and adopt reviewed updates |
+| `starforge workbook-customer` | Acquire, recover, deliver and analyze the original workbook customer packet |
+| `starforge workbook-receive` | Complete the saved receiving, full query export and portable reopening workflow |
 | `starforge buyer-dataset` | Acquire, pause, resume and deliver all pages of the selected original dataset |
 | `starforge buyer-dataset-workspace` | Review original offers, operate dataset acquisitions, open retained files and use the analysis workspace |
 | `starforge dataset-workspace` | Preview, refresh and select the retained dataset in its private browser workspace |
@@ -932,6 +957,34 @@ npx --no-install starforge paid-file-purchase inspect --handoff /private/custome
 The original checkout guide supplies the native facilitator, authenticated SF98
 delivery and existing receiver configuration for actual payment and file release.
 The desk's order view does not infer settlement or payment from enrollment.
+
+
+
+### Recover original merchant orders and purchased access
+
+The existing merchant desk includes **Recovery** for consistent snapshots of the
+original SF101 database and every enrolled paid file. Restore rebinds those files
+to the new state directory and preserves native events, access policy, purchased
+allowances, unfinished reservations and retained application responses.
+
+The same operation is available from the installed command:
+
+```sh
+starforge merchant-order-recovery snapshot \
+  --state /private/merchant \
+  --out /private/snapshots/merchant-001
+starforge merchant-order-recovery inspect \
+  --snapshot /private/snapshots/merchant-001
+starforge merchant-order-recovery restore \
+  --snapshot /private/snapshots/merchant-001 \
+  --out /private/restored-merchant
+```
+
+Point the original receiver and API application at the returned state path.
+The [merchant order recovery guide](../sf101-merchant-receiver/recovery/README.md)
+covers original checkout/outbox configuration, the separate approved product
+directory, private runtime settings, and encryption through the existing
+`starforge merchant-recovery` command.
 
 ### Resume and recover the entitled file
 
@@ -1218,6 +1271,62 @@ command. The packaged `sf30-seller-sdk/dataset-refresh/WORKSPACE.md` and
 `sf88-operator-buyer-cli/DATASETS.md` contain the full original configuration,
 publication, acquisition and recovery flow. The `./seller/dataset-publisher`
 and `./buyer/dataset-acquisition` imports expose those original APIs.
+
+### Publish and update an original workbook
+
+The same dataset publisher retains XLSX sources, exact cell inspection and saved
+sheet/range/column mappings. Start it with a new private session file so its
+authenticated workbook CLI can use the running workspace:
+
+```sh
+starforge dataset-publisher --state /private/dataset-state \
+  --seller http://127.0.0.1:8423 --resource https://your-api.example/data \
+  --session-file /private/workbook-session.json --port 8431
+starforge workbook --help
+starforge workbook status --session-file /private/workbook-session.json
+```
+
+In the browser, upload the source, inspect its cells and choose the public
+columns, types and formula/date/null decisions. Prepare and review its selected
+CSV, publish through the existing version store, then save the original review
+and prepared buyer downloads.
+
+For a later edition, select the retained baseline mapping and replacement
+worksheet. Review header and column changes, choose the row keys, and compare
+the complete selected data. The retained review includes added, removed,
+changed, moved and unchanged rows, source coordinates and original values.
+Adoption keeps the reviewed mapping and returns to the same prepare/publish
+flow. Historical mappings and completed comparison reports remain reopenable.
+
+```sh
+starforge workbook edition-read --session-file /private/workbook-session.json \
+  --id RETAINED_COMPARISON_ID --kind changed --offset 0 --limit 50
+starforge workbook edition-export --session-file /private/workbook-session.json \
+  --id RETAINED_COMPARISON_ID --out /private/workbook-comparison.json
+starforge workbook-customer --help
+starforge workbook-receive --help
+```
+
+The [workbook merchant guide](../sf30-seller-sdk/dataset-refresh/workbook/README.md)
+and [edition review guide](../sf30-seller-sdk/dataset-refresh/workbook-comparison/README.md)
+cover the complete source and mapping commands. Every installed command forwards
+the original arguments and retains the same private session.
+
+The [workbook customer guide](../sf30-seller-sdk/dataset-refresh/workbook-customer/README.md)
+continues from the exact downloaded review and buyer configuration: create or
+reopen its packet, attach the existing acquisition or initialize its reviewed
+limits, acquire through the original Buyer, deliver its complete dataset and
+copy a portable receiving packet. The same completed session connects to
+Analysis for typed queries and full JSONL/CSV/SQLite export. A saved
+`starforge workbook-receive --ready /absolute/customer/ready.json` invocation
+performs that complete receiving continuation and reopens its retained result.
+
+For an existing Node application, the package exposes
+`./seller/workbook` (merchant bridge and edition operations),
+`./seller/workbook/cli` (the authenticated workspace client),
+`./buyer/workbook` (customer, delivery and Analysis APIs),
+`./buyer/workbook/receiving` (the original receiving composition), and
+`./buyer/workbook/receiver` (the complete saved receiving operation).
 
 ### Receive datasets in the browser
 
@@ -1972,6 +2081,34 @@ and `runMaintenance` from
 These are the original implementations used by the installed command and do
 not create another supervisor or recovery engine.
 
+## Keep encrypted merchant recovery points off the host
+
+The installed `merchant-recovery` command exposes the original SF101 snapshot,
+verification and cold-restore engine. `merchant-recovery-remote` sends those
+unchanged encrypted bundles to an existing private S3-compatible bucket, lists
+completed recovery points, retrieves them and invokes that same restore engine.
+Use the existing `s3` runtime dependency and Linux `flock`.
+
+Create the snapshot with the original host maintenance command above or with an
+actually quiesced local recovery plan. Then follow the
+[remote recovery guide](../sf101-merchant-recovery/REMOTE.md) for the private
+store configuration, credentials, stable operation IDs and new destination
+paths. A typical upload is:
+
+```sh
+npx --no-install starforge merchant-recovery-remote push \
+  --config /private/merchant/recovery-s3.json \
+  --bundle /private/backups/merchant-20261011-001 \
+  --operations /private/recovery-transfers --id merchant-20261011-001 \
+  --pass-env SF101_RECOVERY_PASSPHRASE
+```
+
+The remote inventory publishes a completion record only after the encrypted
+files and original manifest have been uploaded and read back. Interrupted
+operations retain their progress under the same ID. Cold restore authenticates
+the original bundle and creates a new private destination; the original SF99
+maintenance operator handles the later merchant cutover.
+
 ## Operate several merchants
 
 The fleet commands package the existing merchant gateway and its private
@@ -2152,6 +2289,23 @@ returned SHA-256. SQL, probe values, private source and credential references ar
 excluded from the fixed customer archive. Restart the same workspace command to
 reopen saved revisions, reviews and prepared merchants; restarting does not
 automatically launch a seller.
+
+The same screen's **Publish and roll back retained releases** stages the selected
+prepared folder into the existing merchant release system. Open its original
+release console to compare query/price changes, select a generation, start or
+drain/restart the seller, and roll back to the previous retained version. The
+workspace keeps the reviewed native column types with that release and downloads
+the original customer files from the retained copy after the former input folder
+moves. Database data remains live. **Close controls and drain seller** preserves
+release selection/history while closing the owned original processes.
+
+The installed `starforge releases stage --clickhouse-package PREPARED_DIRECTORY`
+and `starforge merchant-mcp init --clickhouse-package PREPARED_DIRECTORY` select
+the same original adapter. Full console, CLI, existing MCP, customer-export and
+recovery instructions are included at
+`source/stellar/scf-starforge-20261009/sf82-seller-pilot/CLICKHOUSE_RELEASES.md`.
+This uses the existing `releases`, `merchant-mcp` and `clickhouse-workspace`
+commands; it adds no archive family or payment protocol.
 
 The existing native facilitator is selected with `--facilitator HTTPS_URL` and the
 same payment dependencies described below. The default serves the original
@@ -3108,6 +3262,38 @@ existing verification and transaction matching rules across both. Pricing
 imports and recovery records keep their own source identities in the same
 merchant review.
 
+### Give customers their purchase and usage statements
+
+Open **Customer statements** in the existing accounting workspace. Save the
+customer profile, bind that customer's original order references, select a
+completed reconciliation and import the original API-pass export. Review the
+statement before retaining its immutable version and customer downloads.
+
+The statement keeps each original payment's asset, recipient, atomic amount and
+verification state. Its usage view joins the exact order and native event to the
+purchased plan and complete retained call history. The purchase period and the
+cumulative usage capture time are displayed separately. Internal merchant costs
+and customer notes remain in the operator workspace.
+
+The installed command opens that same accounting state:
+
+```sh
+starforge merchant-customer-statements state \
+  --workspace /private/merchant/accounting
+starforge merchant-customer-statements help
+starforge merchant-customer-statements export \
+  --workspace /private/merchant/accounting \
+  --id STATEMENT_ID --file statement.html \
+  --output /private/customer-delivery/statement.html
+```
+
+Retained customer files include JSON, payment CSV, usage CSV, printable HTML,
+a manifest and current document status. Original revisions and request identifiers
+keep retries attached to the same retained version. The
+[customer statement guide](../merchant-settlement-accounting/customer-statements/README.md)
+covers profiles, assignments, native usage imports, periods, adjustments,
+withdrawal, export and the complete command API.
+
 ### Exchange a completed reconciliation with an accountant
 
 Open the same retained accounting workspace:
@@ -3204,6 +3390,29 @@ exports the same original reports with optional captured sources. Its ordinary
 `merchant-accounting` command accepts the same optional `--recovered-dir`.
 The public `./merchant/recovery` entry exposes the original importer, collection
 reader and saved-response export for applications embedding this workflow.
+
+## ArcGIS source publication and GIS receiving
+
+Use `starforge arcgis` (or `arcgis-publisher`) for the maintained
+[ArcGIS workflow](../sf30-seller-sdk/arcgis/README.md): capture a FeatureServer or
+MapServer layer, or import retained original feature sets; select explicit
+native fields; review and publish through the existing dataset publisher.
+Stable object IDs, scalar attributes, geometry and coordinate reference stay
+in their original Esri representation. The same merchant supplies the original
+SF88 buyer configuration and snapshot-bound page query.
+
+Prepare the public receiving declaration with `starforge arcgis receiving-plan`
+for the retained candidate. After the original SF100 delivery has been
+finalized, `starforge arcgis receive` streams its exact typed JSONL into a usable
+Esri FeatureSet. It verifies the complete retained page chain and source binding
+before publishing the output. Payment history remains with the original buyer.
+The maintained merchant MCP also accepts a host-declared ArcGIS publisher;
+its source credentials remain private environment references.
+
+The package exports `@tokenjunkielabs/starforge-merchant/seller/arcgis`,
+`/seller/arcgis/publisher` and `/buyer/arcgis` for applications. The component
+reuses the included original publisher, dataset and buyer-delivery modules and
+adds no optional native dependency.
 
 ## Run an existing Python merchant
 
@@ -3942,3 +4151,359 @@ processes on one Linux host. The original `OPERATIONS.md` under the installed
 ownership while already accepted SDK work completes. The existing
 `./facilitator` API retains its runtime entrypoints; `./facilitator/readiness`
 exposes the original RPC probe directly.
+
+## Prepare and receive the SCF grant delivery plan
+
+The maintained release includes the original SF47 scenario, Decimal calculator,
+private browser workspace and headless operator. Use Python 3.10 or newer on Linux alongside
+the package's Node launcher:
+
+```sh
+starforge grant-workspace --help
+starforge grant-workspace init --workspace /absolute/private/scf-planning
+starforge grant-workspace serve --workspace /absolute/private/scf-planning
+```
+
+The same workspace retains source identities, named plans, saved revisions,
+contributor capacity, package pricing, payment timing and the complete deployment
+acceptance plan. Close its browser server before running headless operations so
+the original process lock has one owner. `show`, `estimate`, `save`, `clone` and
+`restore` compose the original model, with explicit expected revisions and durable
+request IDs for saved operations. Omitted planning preserves the reviewed revision.
+
+Use `export` and `import-bundle` for the original complete browser-compatible ZIP;
+`export-all` and `import-all` group those unchanged native bundles for an entire
+saved-plan handover and resume each receiving import through the original request
+ledger. The receiving response maps original plan IDs to their new IDs while
+retaining the complete revision history, saved source and planning assumptions.
+Keep private workspaces and exports outside the installed source directory.
+
+The complete command, input, recovery and receiving guide is
+[SF47 headless planning and receiving](../../scf_2026/sf47_budget_model/workspace/CLI.md),
+installed at `source/stellar/scf_2026/sf47_budget_model/workspace/CLI.md`.
+The CLI also runs directly as `python3 .../workspace/cli.py`; `SF47_PYTHON` selects
+an explicit Python executable for the installed command. All financial calculation
+continues through the original `budget.py` and workspace model.
+
+## Installed direct-provider workspace
+
+The `provider-operator` and `provider-workspace` commands operate the maintained
+SF96 direct-provider flow through the original SF88 buyer. The local desk joins
+retained challenge intake, exact offer and cap review, original private cases,
+native terminal operations, useful-output review and complete encrypted recovery.
+
+Use a POSIX host with Node 22.16 or later, Python 3 and this installed release's
+original SF88 dependency closure. `starforge doctor --native` reports the current
+native dependency setup; the original [signer guide](../sf88-operator-buyer-cli/NATIVE_SIGNER.md)
+and [runtime installer](RUNTIME_INSTALL.md) retain their existing setup
+procedures. The workspace introduces no additional npm package.
+
+Create a private parent and a public host profile. Replace the example identity
+values and paths with the actual selected operator configuration:
+
+```sh
+SF96_PRIVATE="/absolute/private/provider-operations"
+mkdir -m 700 "$SF96_PRIVATE"
+starforge provider-workspace profile \
+  --out "$SF96_PRIVATE/host-profiles.json" \
+  --id provider-operator --label "Provider operator" \
+  --actor ACTUAL_OPERATOR --service ACTUAL_SERVICE \
+  --payer ACTUAL_PUBLIC_G_ADDRESS --python /absolute/python3 \
+  --secret-env EXISTING_WALLET_ENV_NAME
+
+starforge provider-workspace serve \
+  --state "$SF96_PRIVATE/desk" \
+  --profiles "$SF96_PRIVATE/host-profiles.json" --port 8469
+```
+
+Open the printed loopback capability URL and keep its launching terminal open.
+Profiles retain public values and an existing environment-variable name or
+trusted signer reference, never wallet values. Their budgets apply separately
+to each prepared case. A later profile change does not rewrite an existing case.
+Starting without `--profiles` supports attaching and reopening original cases;
+new preparation requires explicitly configured public setup.
+
+In the desk, import an original SF85 capture and its exact header source when
+required, import a complete original SF96 handoff, or explicitly observe an
+allowed endpoint once. Review the actual eligible offer, source provenance and
+independent atomic cap. Preparation uses the original private workspace and
+inbox. An already registered intent returns its existing case.
+
+The original operator remains available alongside the browser:
+
+```sh
+starforge provider-operator show --dir /absolute/original/case
+starforge provider-operator diagnose --dir /absolute/original/case
+starforge provider-operator review --dir /absolute/original/case
+```
+
+The desk's applicable native actions and `provider-operator execute` use the
+same original terminal approval, signer, permanent attempt and spending ledger.
+Read delivery, settlement and accounting outcomes separately, then record useful
+output criteria, local review and private handover. A local reviewer entry does
+not establish customer acceptance. Reopen the same case after interruption;
+original recovery/finalization do not start another purchase.
+
+Complete recovery is also an installed command:
+
+```sh
+starforge provider-workspace backup --dir /absolute/original/case \
+  --out /absolute/private/NEW.sf96case
+starforge provider-workspace inspect --archive /absolute/private/NEW.sf96case
+starforge provider-workspace restore --archive /absolute/private/NEW.sf96case \
+  --expect-directory /absolute/original/case
+```
+
+The passphrase is read without echo from the terminal. The authenticated archive
+contains the original native case, accounting keys, evidence, output and case
+notes/reviews; host wallet values and external signer-module contents are not
+copied. Restore keeps the exact original absolute path and refuses an existing
+destination. Its manifest identifies the actual Python, original source CLI
+and generated/trusted signer dependencies. Keep those required external paths
+and the passphrase in their intended private custody. The separate desk
+navigation/request index is not the archival unit.
+
+The full [provider workspace guide](../sf96-merchant-challenge-handoff/workspace/GUIDE.md)
+covers explicit stopped-owner recovery, retained encrypted upload retry,
+interrupted restore stages and authentication of an already complete archive
+whose presentation index was interrupted. Use `provider-workspace --help`
+for the exact terminal flags.
+
+Native host integrations use `./buyer/provider-operator` for the maintained
+operator functions; `./buyer/provider-workspace` exports `openProviderDesk`
+and `validateProfiles`; `./buyer/provider-workspace/server` exports
+`startProviderWorkspace`; and `./buyer/provider-workspace/recovery` exports
+the original complete-case create/inspect/restore and interrupted-restore
+functions. All resolve to this same packaged source and original native case.
+
+## Tomorrow.io weather operations
+
+`starforge tomorrow --help` opens the complete maintained command surface for location/work selection, reviewed Timeline and PNG capture, staff decisions, operations reports, single-resource recovery, licensed merchant packaging, native customer purchase/recovery and portable handover. `starforge tomorrow serve --workspace PRIVATE_DIRECTORY` serves the industrial browser workspace. The original setup, usage, request semantics and customer/Austin workflows are documented in [Tomorrow weather operations](../sf30-seller-sdk/tomorrow/README.md). All source is included by the existing SF30 component.
+
+## Private SFTP reports and retained dataset commerce
+
+The installed `sftp-workspace` opens a private operator desk for a pinned SFTP
+connection, reviewed CSV/JSON/NDJSON reports and their complete merchant payment
+choices. Each product binds one immutable report revision and opens the original
+dataset publisher console. The original versioned seller, recurring policy and
+snapshot-bound buyer remain the underlying commerce implementation.
+
+Use Node 22.5 or newer on Linux and the maintained `sftp` dependency group, which
+declares the exact `ssh2@1.17.0` package. The original seller, native buyer and
+Linux `flock` dependency requirements still apply. The merchant connects to the
+selected SFTP server through its Node client.
+
+```sh
+starforge doctor --native --feature sftp
+starforge sftp --help
+starforge sftp-workspace --help
+starforge sftp-publisher --help
+```
+
+Save a private source JSON declaration using
+`stellar-forge.sftp-source.v1`, the server operator's confirmed SHA256 host-key
+fingerprint, an absolute remote root and authentication environment reference
+names. A key-file environment value is an absolute private 0600 path.
+Start with `queries: {}` to inspect the folder before authoring the first report.
+
+The source catalogue pages the completely observed directory. Sampling captures
+the entire file and reports its complete row count alongside a limited preview.
+JSON supports an explicit record-array pointer; CSV reuses the original record
+parser; NDJSON reads complete record lines. Public column aliases, scalar types,
+null/missing handling, fixed file path and typed conditions remain in the saved
+report declaration.
+
+Create a publication from a saved report. In its original publisher console,
+save exact parameter inputs and a complete extraction budget, inspect its
+candidate and full capture identity, record the review, and publish. Start the
+native dataset seller from the parent desk and choose an exact advertised
+payment option to prepare the original buyer handoff. Atomic amount strings and
+all payment alternatives retain their original offer semantics.
+
+Every extraction retains the complete received bytes and full digest, negotiated
+host fingerprint and before/after file observations. A transfer interruption
+retains its partial bytes; the next capture validates every saved prefix byte
+before resuming. A reviewed `expectedSha256` can bind an agreed remote edition.
+
+Configure the original recurring policy in that same publication console.
+Complete matching rows must fit its explicit budget. Later file editions become
+new retained candidates; equal content follows the original unchanged-version
+behavior. Existing buyers can keep an earlier snapshot. Close and reopen the
+private desk to restore original source/merchant revisions, publications,
+seller intent, policy and buyer handoffs.
+
+The [source and CLI guide](../sf30-seller-sdk/sftp/README.md) and
+[operator workspace guide](../sf30-seller-sdk/sftp/workspace/README.md) include
+the exact configuration, invocation, field semantics, capture/restart behavior
+and full customer operation. Merchant MCP supports the original publisher under
+`kind: "sftp"`; its [publisher guide](../../../stellar-forge/mcp-merchant-operator/PUBLISHERS.md)
+uses the same native workspace and scheduler.
+
+Programmatic exports are `./seller/sftp` for `createSftpSource`,
+`./seller/sftp/config` for source-file opening and validation,
+`./seller/sftp/publisher` for `openSftpPublisher`,
+`./seller/sftp/workspace` for `startSftpWorkbench`, and
+`./seller/sftp/workspace/model` for `openSftpWorkbench`.
+
+
+## Research dossiers: questions, evidence and portable reports
+
+The installed research workspace turns saved source deliveries into a project
+with questions, retained editions, selected evidence, analyst notes and cited
+findings. It uses the original SF88 buyer's private storage and result primitives.
+The maintained SF88 component supplies the whole application, including its
+browser assets and the original result reader.
+
+### Open the installed operator
+
+Use the maintained Node 22+ runtime and an absolute private data directory whose
+parent already exists:
+
+```sh
+starforge research-workspace --dir /private/research-workspace
+```
+
+Open the complete local URL printed by the command. The generated token fragment
+opens that private session. The server binds to 127.0.0.1; an optional `--port`
+selects its port. Keep the same data directory when restarting to reopen the
+original dossiers and their revision history.
+
+The industrial browser provides the complete working flow:
+
+1. Create a dossier and write its research questions. Each question retains its
+   own notes and status: open, answered or parked.
+2. Add one or several original result files to a question, or attach an existing
+   provider edition by its original handle.
+3. Inspect sources grouped by DOI or URL. Select an edition excerpt, inspect its
+   original citation and result record, and review the provider's current source
+   availability. Objects and arrays remain typed in retained records.
+4. Select evidence, classify it as supporting, contradicting, background or
+   unreviewed, and save analyst notes.
+5. Write findings for a question and attach that question's evidence. Editing a
+   finding keeps its original source references until the operator explicitly
+   replaces them. Notes on unavailable editions remain editable.
+6. Compare revisions to inspect source additions and changes, question and
+   edition changes, and findings with their previous and revised text and
+   reference handles.
+7. Download HTML, Markdown or portable JSON. Reopen the portable project from
+   the project list to retain its original identity, source bytes and history.
+
+Concurrent edits use the current revision. When another operator saves first,
+refresh the dossier and apply the intended edit against its latest state.
+
+### Receive original research results
+
+The result-file selector has two retained input modes. `openalex` accepts the
+original works response containing `meta` and `results`. `research` accepts an
+envelope with schema `sf88-research-results-v1`, an actual `sourceTerms` string
+and the original `results` array. Complete source rows remain alongside the
+normalized display fields; content may be a string, object or array of objects.
+The source upload control accepts UTF-8 JSON files up to 16 MiB and preserves
+their original text. The CLI and Node API accept original retained responses up
+to the engine's 64 MiB limit.
+
+The [complete research-dossier guide](../sf88-operator-buyer-cli/research-dossiers/README.md)
+contains the exact input envelope, original buyer-result integration, source
+contracts and current retention behavior. Its `receiveBuyerResult` API reads an
+already-saved SF88 result's bytes and binds the result's original length and
+SHA-256 to the dossier edition.
+
+Use the installed CLI for file-based operation:
+
+```sh
+starforge research-dossiers help
+starforge research-dossiers create \
+  --store /private/research-workspace \
+  --title "Research review"
+starforge research-dossiers get \
+  --store /private/research-workspace --id DOSSIER_ID
+starforge research-dossiers receive \
+  --store /private/research-workspace --id DOSSIER_ID \
+  --question QUESTION_ID --revision CURRENT_REVISION \
+  --provider openalex --file /private/original-openalex.json \
+  --label "Original result edition"
+starforge research-dossiers export \
+  --store /private/research-workspace --id DOSSIER_ID \
+  --format html --out /private/research-report.html
+starforge research-dossiers export \
+  --store /private/research-workspace --id DOSSIER_ID \
+  --format json --out /private/research-portable.json
+starforge research-dossiers reopen \
+  --store /private/received-research --file /private/research-portable.json
+```
+
+Replace `DOSSIER_ID`, `QUESTION_ID` and `CURRENT_REVISION` with the original
+values returned by the project. Create the question through the operator or the
+CLI's documented `question` command. Select `--format md` for Markdown.
+Portable JSON includes the complete revision history and permitted retained
+source bytes, up to 256 MiB total. An identical portable project reopens
+idempotently; a matching continuation appends to the same history.
+
+### Use the original Valyu edition
+
+The Valyu merchant and customer workspace owns provider requests, editions and
+source access. The research application accepts its existing edition handle:
+
+```json
+{"editionId":"the-original-valyu-edition-id"}
+```
+
+In the operator, choose provider-edition mode, select `valyu`, enter this
+original handle and associate it with the intended question. A configured
+adapter reads the original workspace's current edition view. The dossier
+retains its handle and the analyst's own questions, notes and findings; the
+source owner's current availability governs the displayed provider content.
+
+Applications can use the installed public module with the already-open original
+Valyu store:
+
+```js
+import {
+  openDossierStore,
+  startDossierWorkspace,
+  createValyuEditionProvider,
+} from '@tokenjunkielabs/starforge-merchant/buyer/research-dossiers';
+
+const providers = {
+  valyu: createValyuEditionProvider(originalValyuStore),
+};
+const workspace = await startDossierWorkspace({
+  directory: '/private/research-workspace',
+  providers,
+});
+console.log(workspace.url);
+```
+
+Here `originalValyuStore` is the original provider workspace's existing
+`ValyuStore` instance. Its owner retains its lifecycle; the dossier adapter
+calls `editionView(id)`. A separately launched operator accepts a trusted
+absolute module exporting the same `providers` object:
+
+```sh
+starforge research-workspace \
+  --dir /private/research-workspace \
+  --edition-adapter /private/original-edition-adapters.mjs
+```
+
+The separate `@tokenjunkielabs/starforge-merchant/buyer/research-dossiers/server`
+entry exports `startDossierWorkspace` for applications that need only the
+operator server. Use `openDossierStore(directory, {providers})` for the same
+research engine in an existing application. Source and installed usage share
+the original dossier, revision and edition identities.
+
+## Allocate buyer expenses and issue accountant periods
+
+Use the original SF36 expense workspace with Python 3.11 or later:
+
+```sh
+starforge buyer-expenses --state /absolute/private/buyer-expenses --port 0
+```
+
+Register the existing buyer ledger, review its retained statement capture, assign
+recognition dates and exact cost-center/project allocations, and close a period
+under its named reviewer. Outstanding reservations keep their native maximum;
+amounts stay separate by network and asset. Reopening preserves issued editions.
+The workspace downloads semantic accountant packets and a complete private project
+with included source for receiving. Its fixed command starts the original Python
+server. See the [buyer expense operating guide](../sf36-spend-governor/expense-workspace/README.md)
+for source continuity, coding, review and recovery.

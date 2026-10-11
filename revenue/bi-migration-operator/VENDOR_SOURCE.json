@@ -1,0 +1,169 @@
+{
+  "repository": "https://github.com/navintkr/cognos-to-powerbi",
+  "commit": "1994a986c73f37538cde8235f613d1c29031b505",
+  "license": "MIT",
+  "license_file": "THIRD_PARTY_LICENSES.txt",
+  "files": [
+    {
+      "file": "vendor/cognos2powerbi/__init__.py",
+      "source_path": "src/cognos2powerbi/__init__.py",
+      "bytes": 236,
+      "sha256": "66c546fe59c8e729effef022f6258d0bb0f0f5a155983b218b130168481a49bc",
+      "git_blob_sha": "192157142a90eac5dd36008777981fddd0ecc767"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/batch.py",
+      "source_path": "src/cognos2powerbi/core/batch.py",
+      "bytes": 6773,
+      "sha256": "7c292f8a68d60382ab2de5e2bb825d252c2800516e2de14e7fb957c98c18b1af",
+      "git_blob_sha": "fbfcef1e9ad84e43b1f2df083f583c6f8a72bc1e"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/ai/base.py",
+      "source_path": "src/cognos2powerbi/core/ai/base.py",
+      "bytes": 1424,
+      "sha256": "6fc30ce6cd82e3daf3783fba00bcf13fbd578b83cda61d611e5aff7bae177f03",
+      "git_blob_sha": "e22c9f85e69047cc058e7c5d81955f863eea16b7"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/__init__.py",
+      "source_path": "src/cognos2powerbi/core/__init__.py",
+      "bytes": 95,
+      "sha256": "ec3dc6166be030acfa89ee22cca65b5ee228dbc9c46d2478a0b549820fdef163",
+      "git_blob_sha": "ddbb021726e8190c0dc198558db21d4bccbebf9a"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/ai/__init__.py",
+      "source_path": "src/cognos2powerbi/core/ai/__init__.py",
+      "bytes": 588,
+      "sha256": "2553c05ad9cd774b96a64cc3c145a90efc2a1934fa249b88e4dfd3fa21389f98",
+      "git_blob_sha": "2c0cda0e6ac50b34f600d5558a480c7d4a3a145a"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/ai/providers.py",
+      "source_path": "src/cognos2powerbi/core/ai/providers.py",
+      "bytes": 8764,
+      "sha256": "80c132d03bd71500a995ab347b32dc332e53ee96fae5e723fdf78fe364b7a119",
+      "git_blob_sha": "07b4b4b71222031d67a1ad308a04dc2bd4a8ae65"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/generators/pbip_generator.py",
+      "source_path": "src/cognos2powerbi/core/generators/pbip_generator.py",
+      "bytes": 20893,
+      "sha256": "f113968161d13caaf0c802cc8b320fe5bcdaabfd6fbfdcd98295e10327f46475",
+      "git_blob_sha": "227df85190bf40647eb51e97a972ee46487d6c88"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/detect.py",
+      "source_path": "src/cognos2powerbi/core/detect.py",
+      "bytes": 3248,
+      "sha256": "b8e75dcefc1b4d324ae17ee90d87c2bebc0e966b0f8d47544eea9ce775485b14",
+      "git_blob_sha": "da1add57be6816cb4311f184480ff376cd20a3cd"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/generators/__init__.py",
+      "source_path": "src/cognos2powerbi/core/generators/__init__.py",
+      "bytes": 525,
+      "sha256": "517e89b248f8439564bb7f5b878121df9511532123935c54d5858a1a45a4b4e6",
+      "git_blob_sha": "31017533738c61cb75dae51a3f2b3538454e0118"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/generators/rdl_generator.py",
+      "source_path": "src/cognos2powerbi/core/generators/rdl_generator.py",
+      "bytes": 29368,
+      "sha256": "7a7bf88caf3e96c89e37e01f164ab9007b827f32d19723d494473645cd75059a",
+      "git_blob_sha": "12e0834b177a63a9146a260d76d16789f31cb9ed"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/generators/metadata.py",
+      "source_path": "src/cognos2powerbi/core/generators/metadata.py",
+      "bytes": 1991,
+      "sha256": "031989fb3202ef26bce965a91e60a8abec2dc3c8807495a65bba8fbee0e2bb97",
+      "git_blob_sha": "fb605dd6a43eefa7d660682d86d1b6f6977275c5"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/ir/__init__.py",
+      "source_path": "src/cognos2powerbi/core/ir/__init__.py",
+      "bytes": 742,
+      "sha256": "099f0cb3657241815629f76ed76742d1616f475d294766f712b0ce158a3f7318",
+      "git_blob_sha": "4854ae207d8ec502db5951ca187f8ec69570d87d"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/modeling/star_schema.py",
+      "source_path": "src/cognos2powerbi/core/modeling/star_schema.py",
+      "bytes": 16377,
+      "sha256": "1118aedb9bd4c0fb7a44b995e43be02919e25ad56695a4bbf90574eedecfa99f",
+      "git_blob_sha": "f688bfa81507c0150768e08c1d93e53473e0585c"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/ir/models.py",
+      "source_path": "src/cognos2powerbi/core/ir/models.py",
+      "bytes": 12575,
+      "sha256": "71c37ddf1a614a89aab800cc073b1dc9e05bccdb418540743236151f4a6522ba",
+      "git_blob_sha": "77c4241965c75caf84c7e0d7241f92df8751694f"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/parsers/__init__.py",
+      "source_path": "src/cognos2powerbi/core/parsers/__init__.py",
+      "bytes": 653,
+      "sha256": "d3abb34e4f22bccd754fdbbfad1be313f6e2f6365d056fd6cbcc7c62ef879cbc",
+      "git_blob_sha": "530753710880606d1f33881eb860681171751c11"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/modeling/__init__.py",
+      "source_path": "src/cognos2powerbi/core/modeling/__init__.py",
+      "bytes": 247,
+      "sha256": "62f8f8283d8ceef0302a9e8a8e7a0c817820ee709b661961cdcbf7e1dd591e44",
+      "git_blob_sha": "4bf54f983857627b74ec4484eea793e8eeebeb9b"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/parsers/data_module_parser.py",
+      "source_path": "src/cognos2powerbi/core/parsers/data_module_parser.py",
+      "bytes": 11099,
+      "sha256": "fd92d4bf822ba616a6e00a37a6e4ba7c6df0b5788749c465ddfad9659b1be74e",
+      "git_blob_sha": "830972d3a8833f133255d6f1b93fbe78ab253ca2"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/parsers/report_parser.py",
+      "source_path": "src/cognos2powerbi/core/parsers/report_parser.py",
+      "bytes": 44362,
+      "sha256": "809ac5f70aa180df2e324116d32137dbaa16cf7578542c9dc577676994199291",
+      "git_blob_sha": "30dfb2781a2541c985ccda661e59b8ee315cf314"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/parsers/dashboard_parser.py",
+      "source_path": "src/cognos2powerbi/core/parsers/dashboard_parser.py",
+      "bytes": 12404,
+      "sha256": "a05cee985d6da3ad4e58c6d030f04b79c52d447afdeb24eb85c93d0e80edb282",
+      "git_blob_sha": "d173b86c256c2dfd8a49f86b594db2d84509f965"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/parsers/model_parser.py",
+      "source_path": "src/cognos2powerbi/core/parsers/model_parser.py",
+      "bytes": 7280,
+      "sha256": "bcaef07079ccdc3086f614438091272ebd620fe6991b26656f3df27424a42f60",
+      "git_blob_sha": "78cff12c5f19ec37b3f4628bdba01759b15f6642"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/pipeline.py",
+      "source_path": "src/cognos2powerbi/core/pipeline.py",
+      "bytes": 11410,
+      "sha256": "7dde1ff9ed30117eac125a44b2472caadd4077f09eb641dd82b3b033f9baefd5",
+      "git_blob_sha": "9cdafef89b484f47cae05ce7ecd43151354ecbef"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/translate/__init__.py",
+      "source_path": "src/cognos2powerbi/core/translate/__init__.py",
+      "bytes": 208,
+      "sha256": "32aa2d1ba979fefc65b20fe67e9bd1436028b74175f45730915e8606fb84fb02",
+      "git_blob_sha": "9892f1bbc4189f2d7065b2ea6b8262f3eae9100a"
+    },
+    {
+      "file": "vendor/cognos2powerbi/core/translate/expressions.py",
+      "source_path": "src/cognos2powerbi/core/translate/expressions.py",
+      "bytes": 8711,
+      "sha256": "aec9f194f9ab44a4cee4bcbcb8f33f1b3de29f5d7e8f07bc4c01d48d9184cbee",
+      "git_blob_sha": "0d3322fc1062c98acb941d7ef612eabba8b5fc45"
+    }
+  ]
+}
