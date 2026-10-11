@@ -8,6 +8,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openWorkspaceStore, plain } from './store.mjs';
 import { inspectDraftSchema, reviewDraft, exportDraft, readExport, exportView, startDraftMerchant,
   compareDraft, reviseDraft, readRevisionReport } from './merchant.mjs';
+import { prepareDeployment, readDeployment, deploymentView, inspectDeployment, stageDeployment,
+  prepareHost, readHostRunbook, recoverDeployment, ensureDeploymentStore } from './deployment.mjs';
+import { startReleaseConsole } from '../../sf82-seller-pilot/release-console.mjs';
 
 const STATIC = new Map([['/', ['index.html', 'text/html']], ['/app.mjs', ['app.mjs', 'text/javascript']],
   ['/style.css', ['style.css', 'text/css']]]);
@@ -30,11 +33,15 @@ async function bodyOf(req) {
 const publicDraft = async value => ({ ...value, exports: await Promise.all(value.exports.map(async reference => {
   try { return exportView(await readExport(reference)); }
   catch (error) { return { ...reference, unavailable: true, error: error.message, files: [] }; }
+})), deployments: await Promise.all((value.deployments ?? []).map(async reference => {
+  try { return deploymentView(await readDeployment(reference)); }
+  catch (error) { return { ...reference, unavailable: true, error: error.message }; }
 })) });
 
 export async function startWorkspace({ workspace, port = 0, noSignals = false } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) fail('Port must be 0–65535.');
   const store = await openWorkspaceStore(workspace), token = randomBytes(32).toString('hex');
+  const releaseConsoles = new Map();
   let origin, active = null, stopping = false, busy = false, pending = Promise.resolve();
   const runtime = () => active ? { project: active.project, exportId: active.exportId,
     mode: active.session.mode, url: active.session.url,
@@ -48,6 +55,16 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
     const reference = saved.exports.find(value => value.id === id);
     if (!reference) fail('Choose an export retained in this project.', 404);
     return reference;
+  }
+  function savedDeployment(saved, id) {
+    const reference = (saved.deployments ?? []).find(value => value.id === id);
+    if (!reference) fail('Choose a deployment retained in this project.', 404);
+    return reference;
+  }
+  async function attachDeployment(saved, result) {
+    const updated = await store.save({ id: saved.id, input: saved.input,
+      expectedRevision: saved.revision, deploymentRecord: result.reference });
+    return { project: await publicDraft(updated), deployment: deploymentView(result.record) };
   }
   async function mutate(operation) {
     if (busy) fail('A workspace operation is already in progress.', 409);
@@ -88,6 +105,12 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
           const saved = await store.read(url.searchParams.get('id'));
           return send(200, await readRevisionReport(savedExport(saved, url.searchParams.get('exportId'))));
         }
+        if (url.pathname === '/api/deployment' || url.pathname === '/api/deployment/host') {
+          const saved = await store.read(url.searchParams.get('id'));
+          const reference = savedDeployment(saved, url.searchParams.get('deploymentId'));
+          return send(200, url.pathname === '/api/deployment/host'
+            ? await readHostRunbook(reference, url.searchParams.get('hostId')) : await inspectDeployment(reference));
+        }
         return send(404, { error: 'Not found.' });
       }
       if (req.method !== 'POST') return send(405, { error: 'Use GET or POST.' });
@@ -99,7 +122,11 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
         const saved = await current(body);
         return send(200, await compareDraft(body.input, savedExport(saved, body.baselineExportId)));
       }
-      if (url.pathname === '/api/save') return send(200, await publicDraft(await mutate(() => store.save(body))));
+      if (url.pathname === '/api/save') {
+        if (Object.keys(body).some(key => !['id', 'input', 'expectedRevision'].includes(key)))
+          fail('Save accepts draft fields only; prepare exports and deployments through their workspace actions.');
+        return send(200, await publicDraft(await mutate(() => store.save({ id: body.id, input: body.input, expectedRevision: body.expectedRevision }))));
+      }
       if (url.pathname === '/api/export' || url.pathname === '/api/evolution/prepare') {
         const result = await mutate(async () => {
           const saved = await current(body);
@@ -111,6 +138,35 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
           return { project: await publicDraft(updated), exported: exportView(record) };
         });
         return send(201, result);
+      }
+      if (['/api/deployment/prepare', '/api/deployment/stage', '/api/deployment/host', '/api/deployment/recover'].includes(url.pathname)) {
+        const result = await mutate(async () => {
+          const saved = await current(body);
+          if (url.pathname === '/api/deployment/prepare') return attachDeployment(saved,
+            await prepareDeployment(store, saved, savedExport(saved, body.exportId), { allowLoopbackUpstream: body.allowLoopbackUpstream }));
+          const reference = savedDeployment(saved, body.deploymentId);
+          const prepared = url.pathname === '/api/deployment/stage' ? await stageDeployment(reference, body.options)
+            : url.pathname === '/api/deployment/host' ? await prepareHost(reference, body.host) : await recoverDeployment(reference);
+          return attachDeployment(saved, prepared);
+        });
+        return send(201, result);
+      }
+      if (url.pathname === '/api/deployment/console') {
+        return send(200, await mutate(async () => {
+          const saved = await current(body), reference = savedDeployment(saved, body.deploymentId);
+          await inspectDeployment(reference);
+          const record = await readDeployment(reference); await ensureDeploymentStore(record);
+          let session = releaseConsoles.get(record.releaseStore);
+          if (!session) {
+            session = await startReleaseConsole(record.releaseStore, { port: 0 });
+            if (stopping) { await session.close(); fail('Workspace closed during release console startup.', 503); }
+            releaseConsoles.set(record.releaseStore, session);
+            const forget = () => { if (releaseConsoles.get(record.releaseStore) === session) releaseConsoles.delete(record.releaseStore); };
+            session.closed.then(forget, forget);
+          }
+          return { project: saved.id, store: record.releaseStore, operatorUrl: session.operatorUrl,
+            releaseId: record.release?.id ?? null };
+        }));
       }
       if (url.pathname === '/api/start') {
         const result = await mutate(async () => {
@@ -149,8 +205,12 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
     for (const [name, handler] of signals) process.off(name, handler);
     const closed = new Promise((yes, no) => server.close(error => error ? no(error) : yes()));
     await pending;
-    try { if (active) await active.session.close(); }
-    finally { active = null; await closed; await store.close(); }
+    try {
+      const sessions = [...releaseConsoles.values(), ...(active ? [active.session] : [])];
+      const results = await Promise.allSettled(sessions.map(session => session.close()));
+      const failure = results.find(result => result.status === 'rejected');
+      if (failure) throw failure.reason;
+    } finally { active = null; releaseConsoles.clear(); await closed; await store.close(); }
   })();
   if (!noSignals) for (const name of ['SIGINT', 'SIGTERM']) {
     const handler = () => close().catch(() => { process.exitCode = 1; });
@@ -167,7 +227,7 @@ export async function main(args = process.argv.slice(2)) {
   }
   if (!values.has('--workspace') || values.has('--port') && !/^\d{1,5}$/.test(values.get('--port'))) fail(HELP);
   const session = await startWorkspace({ workspace: resolve(values.get('--workspace')), port: Number(values.get('--port') ?? 0) });
-  console.log('GraphQL merchant workspace: ' + session.url + '\nProjects: ' + session.directory + '\nCtrl-C stops this workspace and its managed merchant.');
+  console.log('GraphQL merchant workspace: ' + session.url + '\nProjects: ' + session.directory + '\nCtrl-C drains this workspace\'s managed merchants and release consoles.');
   return session;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)

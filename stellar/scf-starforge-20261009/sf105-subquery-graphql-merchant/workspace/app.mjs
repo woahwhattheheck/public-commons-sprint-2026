@@ -5,7 +5,8 @@ const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem(tokenKey, fragment); history.replaceState(null, '', location.pathname); }
 const token = fragment || sessionStorage.getItem(tokenKey) || '';
 const state = { saved: null, revision: 0, dirty: false, review: null, operation: 0, exportId: null,
-  queries: null, plan: null, busy: false, baselineId: null, evolution: null };
+  queries: null, plan: null, busy: false, baselineId: null, evolution: null,
+  deploymentId: null, deploymentExportId: null, deploymentInspection: null };
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function node(tag, text, className) {
@@ -61,7 +62,7 @@ function buttons() {
   for (const element of document.querySelectorAll('button,input,select,textarea')) {
     const selected = element.name === 'merchant-export' ? state.saved?.exports.find(item => item.id === element.value) : null;
     const staleExport = selected && (selected.unavailable || selected.inputDigest !== state.saved?.inputDigest);
-    element.disabled = state.busy || element.id === 'project-id' && state.saved !== null || staleExport;
+    element.disabled = state.busy || element.id === 'project-id' && state.saved !== null || staleExport || element.dataset.unavailable === 'true';
   }
   $('export').disabled = state.busy || !state.saved || state.dirty || !state.review;
   $('start').disabled = state.busy || state.dirty || !state.saved || !state.exportId;
@@ -69,6 +70,16 @@ function buttons() {
   $('compare-evolution').disabled = state.busy || !state.saved || !state.baselineId;
   $('prepare-evolution').disabled = state.busy || state.dirty || !state.saved || !state.evolution?.review.ready ||
     state.evolution.inputDigest !== state.saved.inputDigest || state.evolution.baseline.id !== state.baselineId;
+  const deployment = selectedDeployment(), saved = !state.busy && state.saved && !state.dirty;
+  $('prepare-deployment').disabled = !saved || !state.deploymentExportId;
+  $('deployment-export').disabled = state.busy || !state.deploymentExportId;
+  $('deployment-select').disabled = state.busy || !deployment;
+  $('inspect-deployment').disabled = state.busy || !deployment;
+  $('stage-deployment').disabled = !saved || !deployment || Boolean(deployment.release) || Boolean(state.deploymentInspection?.pending);
+  $('prepare-host').disabled = !saved || !deployment || Boolean(state.deploymentInspection?.pending);
+  $('recover-deployment').disabled = !saved || !state.deploymentInspection?.pending;
+  $('deployment-console').disabled = state.busy || !deployment;
+  $('host-facilitator').disabled = state.busy || $('host-mode').value !== 'native';
 }
 function changed() {
   state.dirty = true; state.review = null;
@@ -225,6 +236,8 @@ function loadEditors() {
   renderQueries(); renderPlan();
 }
 function loadDraft(saved) {
+  if (state.saved?.id !== saved.id) { state.deploymentId = null; state.deploymentExportId = null; }
+  state.deploymentInspection = null;
   state.saved = saved; state.revision = saved.currentRevision; state.dirty = false; state.review = null;
   state.operation = 0; state.exportId = saved.exports.filter(item => !item.unavailable && item.inputDigest === saved.inputDigest).at(-1)?.id ?? null;
   $('project-id').value = saved.id; $('project-id').disabled = true;
@@ -235,7 +248,7 @@ function loadDraft(saved) {
   $('review-summary').replaceChildren(); $('review-status').textContent = 'Review this saved project against its retained schema and current compiler.';
   state.baselineId = null; resetEvolution();
   if (saved.revision !== saved.currentRevision) { state.dirty = true; state.exportId = null; }
-  loadEditors(); renderExports(); buttons();
+  loadEditors(); renderExports(); renderDeployments(); buttons();
 }
 function fresh() {
   state.saved = null; state.revision = 0; state.dirty = false; state.review = null; state.operation = 0; state.exportId = null;
@@ -247,7 +260,8 @@ function fresh() {
   $('revision').textContent = 'Unsaved project'; $('review-summary').replaceChildren();
   $('review-status').textContent = 'Review the complete draft using its original schema and merchant compiler.';
   state.baselineId = null; resetEvolution();
-  $('history').replaceChildren(); loadEditors(); renderExports(); buttons();
+  state.deploymentId = null; state.deploymentExportId = null; state.deploymentInspection = null;
+  $('history').replaceChildren(); loadEditors(); renderExports(); renderDeployments(); buttons();
 }
 function discard() { return !state.dirty || confirm('Open another project and discard these unsaved edits?'); }
 async function projects() {
@@ -261,7 +275,7 @@ async function projects() {
       notice('Opened ' + item.id + '.'); await projects();
     }));
     card.className = 'project-card' + (state.saved?.id === item.id ? ' active' : '');
-    card.append(node('strong', item.title ?? item.id), node('small', item.unreadable ? item.error : 'Revision ' + item.revision + ' · ' + item.exports + ' exports'));
+    card.append(node('strong', item.title ?? item.id), node('small', item.unreadable ? item.error : 'Revision ' + item.revision + ' · ' + item.exports + ' exports · ' + (item.deployments ?? 0) + ' deployments'));
     target.append(card);
   }
 }
@@ -328,6 +342,100 @@ function renderBaselines() {
     option.value = record.id; select.append(option);
   }
   select.value = state.baselineId ?? '';
+}
+function selectedDeployment() {
+  return state.saved?.deployments.find(item => item.id === state.deploymentId && !item.unavailable) ?? null;
+}
+function deploymentRequest() { return { id: state.saved.id, expectedRevision: state.revision, deploymentId: state.deploymentId }; }
+function renderDeployments() {
+  const exports = (state.saved?.exports ?? []).filter(item => !item.unavailable);
+  const exportSelect = $('deployment-export'); exportSelect.replaceChildren();
+  if (!exports.some(item => item.id === state.deploymentExportId)) state.deploymentExportId = exports.at(-1)?.id ?? null;
+  for (const record of exports.slice().reverse()) {
+    const option = node('option', 'Draft ' + record.draftRevision + ' · ' + new Date(record.createdAt).toLocaleString() + (record.evolution ? ' · revised merchant' : ' · original merchant'));
+    option.value = record.id; exportSelect.append(option);
+  }
+  if (!exports.length) { const option = node('option', 'Export a merchant first'); option.value = ''; exportSelect.append(option); }
+  exportSelect.value = state.deploymentExportId ?? '';
+  const records = state.saved?.deployments ?? [], select = $('deployment-select'); select.replaceChildren();
+  if (!records.some(item => item.id === state.deploymentId && !item.unavailable)) state.deploymentId = records.filter(item => !item.unavailable).at(-1)?.id ?? null;
+  for (const record of records.slice().reverse()) {
+    const option = node('option', record.unavailable ? 'Unavailable deployment · ' + record.id : 'Draft ' + record.draftRevision + ' · ' + (record.release?.label ?? record.suggestedReleaseId));
+    option.value = record.id; option.disabled = record.unavailable; select.append(option);
+  }
+  if (!records.length) { const option = node('option', 'No prepared deployments'); option.value = ''; select.append(option); }
+  select.value = state.deploymentId ?? '';
+  renderDeployment();
+}
+function renderDeployment() {
+  const record = selectedDeployment(), target = $('deployment-summary'); target.replaceChildren();
+  $('deployment-release-status').replaceChildren(); $('deployment-console-link').replaceChildren();
+  $('deployment-hosts').replaceChildren(); $('host-runbook').replaceChildren();
+  if (!record) {
+    empty(target, 'Prepare an original or revised merchant export to retain its deployable package.');
+    for (const id of ['deployment-release-id', 'deployment-release-label', 'deployment-facilitator', 'host-merchant', 'host-user', 'host-state', 'host-environment', 'host-facilitator']) $(id).value = '';
+    $('host-extra').value = '{}'; return;
+  }
+  const value = state.deploymentInspection?.id === record.id ? state.deploymentInspection : record;
+  target.append(table(['Retained item', 'Identity'], [['Merchant source', 'Draft ' + record.draftRevision + ' · ' + record.exportId],
+    ['Deployment package', record.directory], ['Project release store', record.releaseStore],
+    ['Saved operation', 'Generation ' + record.generation + ' · ' + new Date(record.updatedAt).toLocaleString()]]));
+  target.append(detail('Original deployment inputs and paths', record.prepared), detail('Original merchant lineage', record.source));
+  if (value.inspection) target.append(detail('Current original deployment inspection', value.inspection));
+  if (value.pending) target.append(node('p', 'A completed operation is retained outside the current project pointer. Recover generation ' + value.pending.generation + ' to attach its existing files and identities.', 'subtle'));
+  $('deployment-release-id').value = record.release?.id ?? record.suggestedReleaseId;
+  $('deployment-release-label').value = record.release?.label ?? state.saved.input.title;
+  $('deployment-release-port').value = record.release?.runtime.port ?? 8423;
+  $('deployment-facilitator').value = record.release?.runtime.facilitator ?? '';
+  $('deployment-local-facilitator').checked = record.release?.runtime.allowLocalFacilitator === true;
+  const releaseTarget = $('deployment-release-status');
+  if (record.release) releaseTarget.append(node('p', 'Retained staged release: ' + record.release.id + ' · ' + record.release.mode, 'code'), detail('Exact staged release and runtime options', record.release));
+  else empty(releaseTarget, 'This deployment has no retained staged release.');
+  if (value.releaseStatus) releaseTarget.append(detail('Current original release selection and runtime', value.releaseStatus));
+  const host = record.hosts.at(-1)?.host;
+  $('host-merchant').value = host?.merchant ?? '';
+  $('host-user').value = host?.serviceUser ?? '';
+  $('host-mode').value = host?.mode ?? 'challenge';
+  $('host-state').value = host?.privateRoot ?? '';
+  $('host-environment').value = host?.environmentFile ?? '';
+  $('host-facilitator').value = host?.facilitator ?? '';
+  $('host-seller-port').value = host?.ports?.seller ?? 8423;
+  $('host-operations-port').value = host?.ports?.operations ?? 8424;
+  $('host-extra').value = json(Object.fromEntries(Object.entries(host ?? {}).filter(([key]) =>
+    !['schema', 'merchant', 'serviceUser', 'mode', 'privateRoot', 'environmentFile', 'facilitator', 'ports'].includes(key))));
+  for (const host of (value.hosts ?? []).slice().reverse()) {
+    const card = node('div', undefined, 'deployment-host');
+    card.append(node('h3', host.identity.merchant + ' · ' + host.identity.mode), node('p', host.directory, 'code'),
+      node('p', host.identity.publicOrigin + ' · ' + host.identity.target, 'subtle'));
+    if (host.unavailable) card.append(node('p', host.error, 'subtle'));
+    else if (host.readiness) card.append(node('p', host.readiness.ready ? 'Original host preflight passed.' : 'Host setup required: ' + host.readiness.error, 'subtle'));
+    const read = button('Read installation runbook', () => action('Opening the original host runbook…', async () => {
+      const value = await api('/api/deployment/host?id=' + encodeURIComponent(state.saved.id) + '&deploymentId=' + encodeURIComponent(state.deploymentId) + '&hostId=' + encodeURIComponent(host.id));
+      $('host-runbook').replaceChildren(node('h3', 'Original installation runbook'), node('p', value.path, 'code'),
+        node('p', value.readiness.ready ? 'Original host preflight passed.' : 'Complete host setup before starting services: ' + value.readiness.error, 'subtle'), node('pre', value.text));
+      notice('Opened the exact retained host runbook.');
+    }), true);
+    read.dataset.unavailable = String(Boolean(host.unavailable));
+    card.append(read, detail('Original host result and service identity', { prepared: host.prepared, identity: host.identity }),
+      detail('Retained host files', host.files)); $('deployment-hosts').append(card);
+  }
+}
+async function refreshDeployment() {
+  state.deploymentInspection = await api('/api/deployment?id=' + encodeURIComponent(state.saved.id) + '&deploymentId=' + encodeURIComponent(state.deploymentId));
+  renderDeployment();
+}
+async function acceptDeployment(result) {
+  state.deploymentId = result.deployment.id; loadDraft(result.project);
+  await refreshDeployment(); await projects(); await historyList();
+}
+function hostSettings() {
+  const extra = safeObject($('host-extra').value, 'Additional host settings');
+  if (Object.keys(extra).some(key => !['serviceGroup', 'runtime', 'delivery', 'maxInFlight', 'drainGraceMs', 'historyDays'].includes(key)))
+    throw new Error('Additional host settings support serviceGroup, runtime, delivery, maxInFlight, drainGraceMs and historyDays.');
+  return { ...extra, merchant: $('host-merchant').value.trim(), serviceUser: $('host-user').value.trim(), mode: $('host-mode').value,
+    privateRoot: $('host-state').value.trim(), ports: { seller: Number($('host-seller-port').value), operations: Number($('host-operations-port').value) },
+    ...($('host-environment').value.trim() ? { environmentFile: $('host-environment').value.trim() } : {}),
+    ...($('host-mode').value === 'native' ? { facilitator: $('host-facilitator').value.trim() } : {}) };
 }
 function routeVersion(title, route) {
   const box = node('div', undefined, 'revision-side'); box.append(node('h3', title));
@@ -556,6 +664,48 @@ $('prepare-evolution').addEventListener('click', () => action('Preparing the ori
   renderEvolution({ ...compared, retained: true, draftRevision: result.exported.draftRevision });
   await projects(); await historyList();
   notice('Revised merchant, previous package and buyer handoff prepared in ' + result.exported.evolution.directory + '.');
+}));
+$('deployment-export').addEventListener('change', () => { state.deploymentExportId = $('deployment-export').value || null; buttons(); });
+$('deployment-select').addEventListener('change', () => action('Opening retained deployment…', async () => {
+  state.deploymentId = $('deployment-select').value || null; state.deploymentInspection = null;
+  renderDeployment(); if (state.deploymentId) await refreshDeployment(); notice('Opened retained deployment.');
+}));
+$('host-mode').addEventListener('change', buttons);
+$('prepare-deployment').addEventListener('click', () => action('Preparing the original merchant deployment inputs…', async () => {
+  const result = await api('/api/deployment/prepare', { id: state.saved.id, expectedRevision: state.revision,
+    exportId: state.deploymentExportId, allowLoopbackUpstream: $('deployment-loopback').checked });
+  await acceptDeployment(result); notice('Deployment package retained in ' + result.deployment.directory + '.');
+}));
+$('inspect-deployment').addEventListener('click', () => action('Reading the original deployment and release state…', async () => {
+  await refreshDeployment(); notice('Deployment, release and host identities refreshed.');
+}));
+$('recover-deployment').addEventListener('click', () => action('Attaching the retained completed operation…', async () => {
+  const result = await api('/api/deployment/recover', deploymentRequest()); await acceptDeployment(result);
+  notice('Recovered existing deployment operation ' + result.deployment.generation + '.');
+}));
+$('stage-deployment').addEventListener('click', () => action('Staging the original immutable seller release…', async () => {
+  const facilitator = $('deployment-facilitator').value.trim();
+  const result = await api('/api/deployment/stage', { ...deploymentRequest(), options: {
+    id: $('deployment-release-id').value.trim(), label: $('deployment-release-label').value.trim(),
+    port: Number($('deployment-release-port').value), ...(facilitator ? { facilitator } : {}),
+    ...($('deployment-local-facilitator').checked ? { allowLocalFacilitator: true } : {}) } });
+  await acceptDeployment(result); notice('Release ' + result.deployment.release.id + ' staged. Open the release console to compare and select it.');
+}));
+$('deployment-console').addEventListener('click', () => {
+  const tab = window.open('about:blank', '_blank'); if (tab) tab.opener = null;
+  action('Opening the original release console…', async () => {
+    try {
+      const result = await api('/api/deployment/console', deploymentRequest());
+      const link = node('a', 'Continue in the original release console'); link.href = result.operatorUrl; link.target = '_blank'; link.rel = 'noreferrer';
+      $('deployment-console-link').replaceChildren(link, node('p', result.store, 'code'));
+      if (tab) tab.location.replace(result.operatorUrl);
+      notice('Original release console opened for this project. Its live selection and runtime controls use the retained release store.');
+    } catch (error) { if (tab) tab.close(); throw error; }
+  });
+});
+$('prepare-host').addEventListener('click', () => action('Preparing the original Linux host and installation runbook…', async () => {
+  const result = await api('/api/deployment/host', { ...deploymentRequest(), host: hostSettings() });
+  await acceptDeployment(result); notice('Host package and installation runbook retained in ' + result.deployment.hosts.at(-1).directory + '.');
 }));
 $('start').addEventListener('click', () => action('Starting the original merchant runtime…', async () => {
   const result = await api('/api/start', { id: state.saved.id, expectedRevision: state.revision, exportId: state.exportId,
