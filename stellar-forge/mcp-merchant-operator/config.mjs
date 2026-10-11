@@ -10,6 +10,7 @@ import { createSellerServiceConfig } from '../../stellar/scf-starforge-20261009/
 import { preparePythonRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-python.mjs';
 import { prepareDuckdbRelease, selectDuckdbInterpreter } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-duckdb.mjs';
 import { prepareS3Release } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-s3.mjs';
+import { prepareMysqlRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-mysql.mjs';
 import { prepareJsonrpcRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-jsonrpc.mjs';
 import { prepareSqliteRelease, sqliteSnapshotOptions } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-sqlite.mjs';
 import { readFleetReleasePlan } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/release-operator.mjs';
@@ -99,7 +100,7 @@ export function duckdbSourceView(duckdb) {
   return { ...metadata, interpreter: { configured: true, selectionSha256: hash(interpreter) } };
 }
 function sourceDefinition(source, base, alias) {
-  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage', 'sqlitePackage', 'sqliteSnapshotMaxBytes', 'sqliteSnapshotTimeoutMs', 'runtime']);
+  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage', 'sqlitePackage', 'sqliteSnapshotMaxBytes', 'sqliteSnapshotTimeoutMs', 'mysqlPackage', 'runtime']);
   const runtime = structuredClone(source.runtime ?? {});
   exact(runtime, ['port', 'handlers', 'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
   for (const flag of ['allowLocalFacilitator', 'allowLoopbackUpstream'])
@@ -114,7 +115,12 @@ function sourceDefinition(source, base, alias) {
     throw failure('CONFIGURATION_ERROR', 'A DuckDB interpreter selection requires a prepared DuckDB package.');
   if (source.sqlitePackage === undefined && (source.sqliteSnapshotMaxBytes !== undefined || source.sqliteSnapshotTimeoutMs !== undefined))
     throw failure('CONFIGURATION_ERROR', 'SQLite snapshot selections require a SQLite workbench package.');
-  if (source.sqlitePackage !== undefined) {
+  if (source.mysqlPackage !== undefined) {
+    if (Object.keys(source).some(key => !['label', 'mysqlPackage', 'runtime'].includes(key) && source[key] !== undefined) ||
+        runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
+      throw failure('CONFIGURATION_ERROR', 'Choose a prepared MySQL package or another source. The package owns its original query bindings.');
+    result.mysqlPackage = hostPath(source.mysqlPackage, base);
+  } else if (source.sqlitePackage !== undefined) {
     if (['workspace', 'spec', 'selections', 'bindings', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage'].some(key => source[key] !== undefined) ||
         runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
       throw failure('CONFIGURATION_ERROR', 'Choose the original SQLite workbench package or another source; SQLite owns its query bindings.');
@@ -183,6 +189,18 @@ export async function inspectMerchantSource(source) {
       environment: prepared.environment, credentialValuesChecked: false,
       routes: prepared.service.routes.map(route => ({ method: 'POST', path: route.path, publicPath: route.path,
         resource: route.offer.resource, accepts: route.offer.accepts })) };
+  }
+  if (source.mysqlPackage) {
+    const prepared = await prepareMysqlRelease(source.mysqlPackage), { mysql } = prepared;
+    return { source: source.alias, label: source.label, sourceType: 'MYSQL_MERCHANT_PACKAGE',
+      mode: source.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
+      sourceDigests: { package: mysql.packageManifestSha256, declaration: mysql.sourceConfigSha256,
+        plan: mysql.planSha256, queries: mysql.queryDefinitionSha256, execution: mysql.executionSha256 },
+      inputPackage: { schema: prepared.bundle.schema, manifestSha256: mysql.packageManifestSha256 },
+      application: { type: 'MYSQL_MERCHANT_PACKAGE', ...mysql },
+      environment: mysql.credentialReferences, credentialValuesChecked: false,
+      routes: prepared.service.routes.map(route => ({ method: route.offer.extensions.bazaar.info.input.method,
+        path: route.path, publicPath: route.path, resource: route.offer.resource, accepts: route.offer.accepts })) };
   }
   if (source.s3Package) {
     const prepared = await prepareS3Release(source.s3Package), { s3 } = prepared;
@@ -280,10 +298,10 @@ export async function readMerchantConfig(path) {
   if (config.support || config.receiving) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime = {}, catalog, fleetPlan, accounting, support, receiving }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime = {}, catalog, fleetPlan, accounting, support, receiving }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
-  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime }, process.cwd(), 'initial');
+  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime }, process.cwd(), 'initial');
   if (source.pythonRoot) {
     const sourceRoot = await realpath(source.pythonRoot);
     const destination = join(await realpath(dirname(root)), basename(root));
@@ -313,7 +331,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(receivingConnection ? { receivingConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
-        ...(source.sqlitePackage ? { sqlitePackage: source.sqlitePackage, sqliteSnapshotMaxBytes: source.sqliteSnapshotMaxBytes,
+        ...(source.mysqlPackage ? { mysqlPackage: source.mysqlPackage }
+          : source.sqlitePackage ? { sqlitePackage: source.sqlitePackage, sqliteSnapshotMaxBytes: source.sqliteSnapshotMaxBytes,
           sqliteSnapshotTimeoutMs: source.sqliteSnapshotTimeoutMs }
           : source.jsonrpcPackage ? { jsonrpcPackage: source.jsonrpcPackage }
           : source.s3Package ? { s3Package: source.s3Package }

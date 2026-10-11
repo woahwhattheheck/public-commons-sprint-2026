@@ -211,6 +211,24 @@ Python workers.
 The [Python release guide](../../stellar/scf-starforge-20261009/sf82-seller-pilot/RELEASES.md#release-a-python-project)
 also describes direct terminal operation and the retained project layout.
 
+## Prepare a MySQL merchant
+
+Initialize this same provider with a package from the original MySQL CLI or browser:
+
+```sh
+starforge merchant-mcp init --dir /srv/merchant/operator \
+  --mysql-package /srv/merchant/packages/current --seller-port 8423 \
+  --facilitator https://facilitator.example
+```
+
+The fixed host alias uses `mysqlPackage` with the existing runtime selections.
+`merchant_sources` returns exact source identities, approved columns and parameters,
+payment terms and required environment names. The existing stage, compare,
+activate, owned start/restart/stop, client export and rollback tools operate the
+retained original merchant. Database credentials are resolved when the native seller
+starts; queries continue to read current rows after a configuration rollback.
+See the [complete MySQL release workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/MYSQL_RELEASES.md).
+
 ## Connect an MCP client
 
 Provide the existing operator bearer token through `MCP_ACCESS_TOKEN`, or select
