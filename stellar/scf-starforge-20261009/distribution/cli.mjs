@@ -117,6 +117,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
+  opensearch                                 Preflight and run a native OpenSearch merchant
+  opensearch-prepare                         Prepare named search routes and the original customer client
+  opensearch-workspace                       Save drafts, capture and compare search editions, and prepare merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
   oauth-connection                           Authorize, review, renew and disconnect an existing provider grant
