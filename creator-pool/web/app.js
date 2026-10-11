@@ -66,7 +66,15 @@ const Api = (() => {
         `Request failed (${res.status}${res.statusText ? " " + res.statusText : ""}).`;
       throw new ApiError(msg, res.status, code, detail);
     }
-    return data; // may be {status:"wallet_signature_required", ...} on HTTP 202
+    if(path==="/api/state"){
+       const x=data?.state && typeof data.state==="object" && !data.campaigns ? data.state:data;
+       if(!x||typeof x!=="object"||Array.isArray(x)||!["local","public"].includes(x.mode)||
+          !Array.isArray(x.campaigns)||!Array.isArray(x.submissions)||
+          !(Array.isArray(x.ledger)||Array.isArray(x.events))||
+          !x.network||typeof x.network!=="object"||!x.asset||typeof x.asset!=="object")
+          throw new ApiError("Incomplete campaign state from API; prior data preserved.",502,"invalid_state");
+    }
+    return data; // may be {status:"wallet_signature_required", ...} on HTTP 202
   }
 
   return {
@@ -743,7 +751,77 @@ function journalSave() {
   } catch { /* storage may be unavailable; in-memory journal still works */ }
 }
 
+function validateUnsigned(payload){
+  if(!payload||!/^[1-9]\d*$/.test(String(payload.chainId??""))||
+     !Array.isArray(payload.transactions)||payload.transactions.length<1||payload.transactions.length>12)
+     throw Error("Unsigned transaction batch incomplete. Nothing sent.");
+  for(const tx of payload.transactions){
+    if(!tx||typeof tx.to!=="string"||!/^0x[0-9a-fA-F]{40}$/.test(tx.to)||
+       typeof tx.data!=="string"||!/^0x(?:[0-9a-fA-F]{2})*$/.test(tx.data)||
+       tx.data.length>262146||!/^\d+$/.test(String(tx.value??"0")))
+       throw Error("Invalid unsigned transaction fields. Nothing sent.");
+  }
+}
+
+async function reviewPreparedStep(entry,tx,index){
+  const host=document.getElementById("walletReviewHost");
+  if(!host||!host.hidden)return false;
+  const old=document.activeElement;
+  return await new Promise(resolve=>{
+    const cancel=h("button",{type:"button",class:"btn secondary"},"Keep unsigned");
+    const confirm=h("button",{type:"button",class:"btn primary"},"Open wallet");
+    const body=h("section",{class:"wallet-review-card",role:"dialog","aria-modal":"true","aria-labelledby":"walletReviewHeading"},
+      h("p",{class:"wallet-review-step",text:`Step ${index+1}/${entry.txs.length} · unsigned`}),
+      h("h2",{id:"walletReviewHeading",text:"Review prepared transaction"}),
+      h("p",{text:"Inspect the actual API 202 transaction. No transaction has been sent."}),
+      h("dl",{class:"wallet-review-grid"},
+        h("dt",{text:"Operation"}),h("dd",{text:`${entry.kind}: ${tx.label}`}),
+        h("dt",{text:"Network"}),h("dd",{text:`Chain ${entry.requiredChainId}`}),
+        h("dt",{text:"Signing account"}),h("dd",{class:"mono",text:entry.wallet||"unknown"}),
+        h("dt",{text:"Destination"}),h("dd",{class:"mono",text:tx.to}),
+        h("dt",{text:"Native value (wei)"}),h("dd",{class:"mono",text:tx.value})),
+      h("details",{},h("summary",{text:`Full calldata (${(tx.data.length-2)/2} bytes)`}),
+        h("pre",{class:"wallet-review-hex",text:tx.data})),
+      h("p",{class:"wallet-review-note",text:"Token approvals may authorize spending and transfers may move assets. The wallet must confirm the exact intended action; network fees are separate."}),
+      h("div",{class:"wallet-review-buttons"},cancel,confirm));
+    const scrim=h("div",{class:"wallet-review-scrim"},body);
+    function done(yes){
+      document.removeEventListener("keydown",key);
+      host.replaceChildren();host.hidden=true;
+      if(old?.isConnected && typeof old.focus==="function")old.focus({preventScroll:true});
+      resolve(yes);
+    }
+    function key(e){
+      if(e.key==="Escape"){e.preventDefault();done(false);}
+      if(e.key==="Tab"){
+        const ctrls=[cancel,...body.querySelectorAll("summary"),confirm];
+        if(e.shiftKey&&document.activeElement===ctrls[0]){e.preventDefault();ctrls[ctrls.length-1].focus();}
+        else if(!e.shiftKey&&document.activeElement===ctrls[ctrls.length-1]){e.preventDefault();ctrls[0].focus();}
+      }
+    }
+    cancel.addEventListener("click",()=>done(false));
+    confirm.addEventListener("click",()=>done(true));
+    scrim.addEventListener("click",e=>{if(e.target===scrim)done(false)});
+    document.addEventListener("keydown",key);
+    host.replaceChildren(scrim);host.hidden=false;cancel.focus();
+  });
+}
+
+async function verifyWalletAfterReview(entry){
+  if(ui.staleError||ui.status!=="ready")stopWalletEntry(entry,"Campaign state stale; refresh before signing.");
+  const p=Wallet.provider();
+  if(!p||!entry.wallet||!entry.requiredChainId)stopWalletEntry(entry,"Original wallet/network missing. Nothing sent.");
+  let accounts,chain;
+  try{[accounts,chain]=await Promise.all([
+    p.request({method:"eth_accounts"}),p.request({method:"eth_chainId"})]);}
+  catch{stopWalletEntry(entry,"Wallet/network could not be read. Nothing sent.");}
+  if(!Array.isArray(accounts)||!accounts.some(account=>sameAddr(account,entry.wallet))||
+     chainIdDecFromHex(chain)!==entry.requiredChainId)
+    stopWalletEntry(entry,"Wallet account/network changed during review; nothing sent.");
+}
+
 function journalNew(key, meta, payload) {
+ validateUnsigned(payload);
   return {
     id: key,
     kind: meta.kind || "operation",
@@ -767,15 +845,23 @@ function journalNew(key, meta, payload) {
 }
 
 function journalMerge(entry, payload) {
+ validateUnsigned(payload);
+ if(entry.requiredChainId && entry.requiredChainId!==String(payload.chainId))
+  stopWalletEntry(entry,"Prepared network changed; no new step sent.");
+ if(entry.txs.some(tx=>tx.txHash) &&
+   (entry.txs.length!==payload.transactions.length || payload.transactions.some((t,i)=>{
+     const old=entry.txs[i]; return !old || old.to.toLowerCase()!==t.to.toLowerCase() ||
+       old.data.toLowerCase()!==t.data.toLowerCase() || old.value!==String(t.value??"0");
+   }))) stopWalletEntry(entry,"Prepared steps changed after broadcast; no additional step sent.");
   if (hasUnknownWalletSend(entry)) {
     stopWalletEntry(entry, "Recover the previous transaction hash before requesting this action again.");
   }
   // A repeated identical intent returns the same calldata; keep hashes/status
   // of steps we already broadcast, adopt any new steps verbatim.
   const fresh = journalNew(entry.id, { kind: entry.kind, ...entry.ref }, payload);
-  const seen = new Map(entry.txs.map((t) => [`${t.to}|${t.data}`, t]));
+  const seen = new Map(entry.txs.map((t) => [`${t.to}|${t.data}|${t.value}`, t]));
   entry.txs = fresh.txs.map((t) => {
-    const old = seen.get(`${t.to}|${t.data}`);
+    const old = seen.get(`${t.to}|${t.data}|${t.value}`);
     return old || t;
   });
   entry.requiredChainId = fresh.requiredChainId || entry.requiredChainId;
@@ -924,10 +1010,13 @@ async function continueWalletEntry(entry) {
   for (const tx of entry.txs) {
     if (TX_FINAL.has(tx.status) || (tx.txHash && tx.status !== "rejected")) continue;
     if (!tx.txHash) {
-      tx.status = "awaiting_wallet";
-      tx.detail = null;
-      journalSave();
-      try {
+      const approved = await reviewPreparedStep(entry,tx,entry.txs.indexOf(tx));
+      if(!approved)stopWalletEntry(entry,"Unsigned review canceled; no wallet request sent. Resume to review again.");
+      await verifyWalletAfterReview(entry);
+      tx.status = "awaiting_wallet";
+      tx.detail = null;
+      journalSave();
+      try {
         const hash = await Wallet.sendTransaction(tx);
         if (typeof hash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(hash)) {
           throw new Error("The wallet returned no valid transaction hash.");
@@ -956,6 +1045,8 @@ function walletEntrySummary(entry) {
   const total = entry.txs.length;
   const done = entry.txs.filter((t) => t.status === "reconciled" || t.status === "confirmed").length;
   const reverted = entry.txs.filter((t) => t.status === "reverted").length;
+ if(entry.status==="paused"||entry.status==="waiting_chain")
+   return "Signing paused; unsigned steps await another review.";
   if (entry.status === "done") return `All ${total} transaction${total === 1 ? "" : "s"} confirmed on chain.`;
   if (reverted) return `${reverted} of ${total} transaction${total === 1 ? "" : "s"} reverted on chain — no payment completed.`;
   return `${done}/${total} transaction${total === 1 ? "" : "s"} confirmed; the workspace keeps checking the rest.`;
@@ -982,6 +1073,7 @@ const ui = {
   linkApplied: false,
   pollMs: 8000,
   pollMsPending: 3000,
+ refreshSeq: 0,
 };
 
 function assetUnit() {
@@ -1226,7 +1318,7 @@ function walletOpsPending() {
 function renderNotice() {
   if (!ui.state) { setNotice(null, null); return; }
   if (ui.staleError) {
-    setNotice("error", `Connection lost — showing state from ${ui.state.fetchedAt.toLocaleTimeString()}. ${ui.staleError}`, true);
+    setNotice("error", `Connection lost; writes paused until successful refresh. Showing last confirmed state from ${ui.state.fetchedAt.toLocaleTimeString()}. ${ui.staleError}`, true);
   } else if (ui.state.pending) {
     setNotice("info", "A transaction is awaiting confirmation; the workspace refreshes automatically.");
   } else if (walletOpsPending()) {
@@ -1235,7 +1327,9 @@ function renderNotice() {
     setNotice("info", `${ui.state.actorNotice || "Local demo actors — not authentication."} ${assetUnit()} is a non-monetary demo asset on ${ui.state.networkName || "the declared network"}.`);
   } else if (isPublicMode() && !Wallet.available()) {
     setNotice("warn", "Public mode — browsing works without a wallet, but every action needs an EIP-1193 wallet signature. No wallet provider was detected.");
-  } else if (isPublicMode() && !Wallet.address) {
+   } else if(isPublicMode()&&Wallet.address&&ui.state.chainId&&Wallet.chainIdDec&&Wallet.chainIdDec!==ui.state.chainId){
+   setNotice("warn",`Wrong network: wallet chain ${Wallet.chainIdDec}, required chain ${ui.state.chainId}. Switch before signing.`);
+ } else if (isPublicMode() && !Wallet.address) {
     setNotice("info", "Public mode — connect a wallet to act. The Sponsor/Creator switch changes the view only; the contract enforces the actual wallet.");
   } else {
     setNotice(null, null);
@@ -1599,6 +1693,7 @@ function walletEntryNode(entry) {
 }
 
 async function resumeWalletEntry(entryId) {
+ if(ui.status!=="ready"||ui.staleError){toast("error","Refresh campaign state before resuming signing.");return;}
   const entry = ui.walletOps.get(entryId);
   if (!entry || ui.inflight.has(entryId)) return;
   ui.inflight.add(entryId);
@@ -2526,6 +2621,7 @@ function toast(kind, text) {
 /* ============================ actions ============================ */
 
 async function runAction(key, fn, opts = {}) {
+ if(ui.status!=="ready"||ui.staleError){toast("error","Refresh stale campaign state before a new operation.");return;}
   if (ui.inflight.has(key)) return; // identical action already in flight
   ui.inflight.add(key);
   ui.lastError = null;
@@ -2652,25 +2748,21 @@ async function reconcilePendingWalletOps() {
   }
 }
 
-async function refresh(userInitiated) {
-  try {
-    const raw = await Api.getState();
-    ui.state = normalizeState(raw);
-    ui.status = "ready";
-    ui.staleError = null;
-    reconcileActor();
-    applyBootLink();
-  } catch (err) {
-    if (ui.state) {
-      ui.staleError = err.message || "Refresh failed.";
-    } else {
-      ui.status = "offline";
-      ui.offlineDetail = `${err.message || "Could not reach the backend."} (${Api.base ? Api.base : "same origin"}/api/state)`;
-    }
-  }
-  renderAll();
-  if (userInitiated && ui.status === "ready" && !ui.staleError) toast("ok", "State refreshed.");
-  if (ui.status === "ready") void reconcilePendingWalletOps().then(renderAll);
+async function refresh(userInitiated){
+  const ticket=++ui.refreshSeq;
+  try{
+    const raw=await Api.getState(),fresh=normalizeState(raw);
+    if(ticket!==ui.refreshSeq)return;
+    ui.state=fresh;ui.status="ready";ui.staleError=null;
+    reconcileActor();applyBootLink();
+  }catch(err){
+    if(ticket!==ui.refreshSeq)return;
+    if(ui.state)ui.staleError=err?.message||"Refresh failed.";
+    else{ui.status="offline";ui.offlineDetail=`${err?.message||"Backend unavailable"} (${Api.base||"same origin"}/api/state)`;}
+  }
+  renderAll();
+  if(userInitiated&&ui.status==="ready"&&!ui.staleError)toast("ok","State refreshed.");
+  if(ui.status==="ready"&&!ui.staleError)void reconcilePendingWalletOps().then(renderAll);
 }
 
 function renderAll() {
