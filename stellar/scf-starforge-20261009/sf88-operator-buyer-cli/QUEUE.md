@@ -35,6 +35,15 @@ node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs \
   enqueue --root /private/buyer-inbox --config /private/merchant-request.json
 ```
 
+The operator workspace initializer already creates a complete `operator.json`.
+Pass that existing file directly to `enqueue`; no separate inbox configuration
+or extra operator copy is needed:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs \
+  enqueue --root /private/buyer-inbox --config /private/merchant-operator/operator.json
+```
+
 Enqueue validates the original execution configuration, snapshots its request
 body when present, and records file hashes. It pins the trusted signer entry
 file and the original policy file without copying their contents into the
@@ -97,6 +106,38 @@ In the trusted operator terminal:
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs \
   execute --root /private/buyer-inbox --intent merchant-forecast-001
 ```
+
+For a request prepared by the native operator workspace, explicitly select
+that existing workspace for this one intent:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs \
+  execute --root /private/buyer-inbox --intent merchant-forecast-001 \
+  --workspace /private/merchant-operator
+```
+
+Before creating an attempt marker, the inbox opens the original workspace and
+matches the saved request's operator identity, Python executable, policy and
+ledger paths, signer path, evidence directory and trusted payer. Its network,
+asset and recipient must match the workspace and generated signer; its atomic
+cap must fit both the current workspace cap and the original signer cap. A
+mismatched workspace, absent wallet environment variable, unavailable local SDK
+or invalid private operator key file leaves the job `QUEUED`, with its request
+and budget untouched. Correct the selected workspace and inspect
+the same intent; no attempt marker has been consumed by that refusal.
+
+After a successful match, the original workspace supplies its local SF36
+operator keys directly to the existing execution environment. Keys are never
+written to queue records or reports. The saved queued operation, body snapshot,
+signer, policy, ledger, evidence path and output destination stay authoritative;
+the workspace does not replace them with its current template operation. The
+generated native signer still reads the operator's configured testnet key only
+when SF81 has approved and reserved the actual fresh challenge.
+
+Omitting `--workspace` preserves execution using the operator's existing
+environment. The option is accepted only by `execute`; it does not enqueue,
+approve, replay or run other intents. It also does not make a previously
+attempted job executable again.
 
 The queue checks the saved request and pinned operator files before invoking
 the buyer. A permanent local attempt marker is created before control passes
@@ -204,8 +245,10 @@ configurations, request bodies, evidence, output files, reports and inbox state
 remain in the operator's private directory.
 
 For embedded use, `openQueue(root)` exposes the same enqueue, list, show,
-single-intent run, cancellation and recovery operations as the command. The report is a pure
-function:
+single-intent run, cancellation and recovery operations as the command. Pass
+`queue.run(intentId, {signal, workspace:'/absolute/operator-workspace'})` to
+select an existing workspace explicitly, or omit `workspace` to retain the
+original environment-based execution. The report is a pure function:
 
 ```js
 import { renderQueueReport } from './queue-report.mjs';

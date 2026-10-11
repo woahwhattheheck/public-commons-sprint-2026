@@ -84,6 +84,27 @@ async function dependencySame(dependency, limit) {
   const current = await fingerprint(dependency.path, limit);
   need(current.sha256 === dependency.sha256 && current.bytes === dependency.bytes, 'INBOX_DEPENDENCY_CHANGED_REVIEW_REQUIRED');
 }
+async function workspaceEnvironment(cfg, path) {
+  const {openWorkspace} = await import('./workspace.mjs');
+  const workspace = await openWorkspace(['--dir', rootPath(path)], {execute:true});
+  const {op, owner} = execution(cfg);
+  const {op:workspaceOp, owner:workspaceOwner} = execution(workspace.config);
+  const signer = workspace.manifest.signer;
+  // A selected workspace supplies operator keys, never replacement queue terms.
+  need(['python','actor','service','policy','ledger'].every(key => owner[key] === workspaceOwner[key]) &&
+    cfg.signerModule === workspace.config.signerModule &&
+    cfg.evidenceDir === workspace.config.evidenceDir &&
+    cfg.trustedPayer === workspace.config.trustedPayer && cfg.trustedPayer === signer.expectedPayer,
+    'INBOX_WORKSPACE_OPERATOR_MISMATCH');
+  need(['scheme','network','asset','payTo'].every(key => op.expect[key] === workspaceOp.expect[key]) &&
+    ['network','asset','payTo'].every(key => op.expect[key] === signer[key]),
+    'INBOX_WORKSPACE_TERMS_MISMATCH');
+  // Respect a lower current workspace cap as well as its generated signer cap.
+  const maximum = BigInt(op.expect.maxAtomic);
+  need(maximum > 0n && maximum <= BigInt(workspaceOp.expect.maxAtomic) &&
+    maximum <= BigInt(signer.maxAtomic), 'INBOX_WORKSPACE_CAP_EXCEEDED');
+  return workspace.operatorEnvironment;
+}
 async function ensureAbsent(path, code) {
   try { await lstat(path); fail(code); }
   catch (e) { if (e.code !== 'ENOENT') throw e; }
@@ -232,7 +253,7 @@ export async function openQueue(path) {
     return records.sort((a,b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? '') || a.id.localeCompare(b.id));
   }
 
-  async function run(intentId, {signal} = {}) {
+  async function run(intentId, {signal, workspace} = {}) {
     need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
     need(!signal?.aborted, 'OPERATOR_ABORTED');
     const {directory, request, cfg} = await readRequest(root, intentId);
@@ -241,9 +262,13 @@ export async function openQueue(path) {
     await dependencySame(request.dependencies.policy, 1048576);
     need(!loadedSigners.has(cfg.signerModule) || loadedSigners.get(cfg.signerModule) === request.dependencies.signer.sha256,
       'INBOX_SIGNER_CHANGED_START_FRESH_PROCESS');
+    // Resolve/bind the actual operator workspace before claiming this attempt.
+    // A wrong workspace or unavailable key file must leave the job QUEUED.
+    const environment = workspace === undefined ? undefined : await workspaceEnvironment(cfg, workspace);
     await privateDirectory(cfg.evidenceDir);
     await ensureAbsent(request.evidencePath, 'INBOX_ORIGINAL_EVIDENCE_ALREADY_EXISTS');
     if (request.responseDestination) await ensureAbsent(request.responseDestination, 'INBOX_RESPONSE_DESTINATION_EXISTS');
+    need(!signal?.aborted, 'OPERATOR_ABORTED');
     // Permanent single-attempt claim. It is never expired, stolen or retried.
     const attempt = {schema:SCHEMA, kind:'EXECUTE', id:randomUUID(), intentId,
       configSha256:request.configSha256, startedAt:now(), pid:process.pid, host:hostname()};
@@ -253,7 +278,8 @@ export async function openQueue(path) {
     try {
       const {execute} = await import('./execute.mjs');
       loadedSigners.set(cfg.signerModule, request.dependencies.signer.sha256);
-      summary = await execute(cfg, {signal, emitSummary:false});
+      summary = await execute(cfg, {signal, emitSummary:false,
+        ...(environment === undefined ? {} : {environment})});
       need(object(summary) && summary.intentId === intentId &&
         summary.mode === 'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT', 'INBOX_ORIGINAL_SUMMARY_INVALID');
     } catch (e) {

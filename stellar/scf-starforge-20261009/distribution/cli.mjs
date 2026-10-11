@@ -13,7 +13,7 @@ const help = `Starforge merchant toolkit
 
   starforge init --dir DIRECTORY [--template dataset|application|upstream]
   starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]
-  starforge doctor [--native]
+  starforge doctor [--native] [--feature postgres]
   starforge source
 
 Native commands (arguments pass unchanged to the maintained implementation):
@@ -24,6 +24,12 @@ Native commands (arguments pass unchanged to the maintained implementation):
   handoff     Captured challenge -> review    support     Private seller support case
   commerce    Merchant + buyer session        inbox       Durable selected requests
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
+  client      Export a JS/TypeScript client   releases    Review and operate seller releases
+  buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
+  dataset-delivery Export a saved buyer dataset
+  merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
+  postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
+  sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
@@ -47,14 +53,20 @@ function pairs(args, allowed) {
   }
   return result;
 }
-export async function doctor({ requireNative = false } = {}) {
+export async function doctor({ requireNative = false, requiredFeatures = [] } = {}) {
+  if (!Array.isArray(requiredFeatures) || requiredFeatures.some(name => !Object.hasOwn(specification.featurePeers ?? {}, name)))
+    throw new TypeError('Unknown optional feature. Available: ' + Object.keys(specification.featurePeers ?? {}).join(', '));
   const original = await release();
-  const peers = [];
-  for (const [name, value] of Object.entries(specification.nativePeers)) {
+  const inspectPeers = definitions => Object.entries(definitions).map(([name, value]) => {
     let available = false;
     try { import.meta.resolve(value.probe); available = true; } catch {}
-    peers.push({ name, requestedVersion: value.version, available });
-  }
+    return { name, requestedVersion: value.version, available };
+  });
+  const peers = inspectPeers(specification.nativePeers);
+  const features = Object.entries(specification.featurePeers ?? {}).map(([name, definitions]) => {
+    const dependencies = inspectPeers(definitions);
+    return { name, available: dependencies.every(peer => peer.available), dependencies };
+  });
   const python = spawnSync('python3', ['--version'], { encoding: 'utf8', timeout: 2000, windowsHide: true });
   const nativeDependenciesPresent = peers.every(peer => peer.available);
   const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
@@ -62,10 +74,12 @@ export async function doctor({ requireNative = false } = {}) {
     sourceCommit: original?.sourceCommit ?? null, node: process.version,
     localSellerReady: nodeMajor > 22 || nodeMajor === 22 && nodeMinor >= 16,
     nativeDependenciesPresent, nativeDependencies: peers,
+    optionalFeatures: features,
     operatorPython: python.status === 0 ? python.stdout.trim() || python.stderr.trim() : null,
     operatorPlatform: process.platform === 'win32' ? 'POSIX_HOST_REQUIRED_FOR_ORIGINAL_OPERATOR' : 'POSIX',
     nativeRuntimeConfigured: false };
-  if (!result.localSellerReady || requireNative && !nativeDependenciesPresent) process.exitCode = 1;
+  if (!result.localSellerReady || requireNative && !nativeDependenciesPresent ||
+      features.some(feature => requiredFeatures.includes(feature.name) && !feature.available)) process.exitCode = 1;
   return result;
 }
 function forward(command, args) {
@@ -98,8 +112,15 @@ export async function main(args = process.argv.slice(2)) {
     return print(await release() ?? { package: specification.name, mode: 'SOURCE_CHECKOUT', components: specification.components });
   }
   if (command === 'doctor') {
-    if (rest.length && !(rest.length === 1 && rest[0] === '--native')) throw new TypeError('doctor [--native]');
-    return print(await doctor({ requireNative: rest[0] === '--native' }));
+    let requireNative = false;
+    const requiredFeatures = [];
+    for (let i = 0; i < rest.length; i++) {
+      if (rest[i] === '--native' && !requireNative) requireNative = true;
+      else if (rest[i] === '--feature' && rest[i + 1] && !requiredFeatures.includes(rest[i + 1]))
+        requiredFeatures.push(rest[++i]);
+      else throw new TypeError('doctor [--native] [--feature postgres]');
+    }
+    return print(await doctor({ requireNative, requiredFeatures }));
   }
   if (command === 'init') {
     const options = pairs(rest, ['--dir', '--template']);
