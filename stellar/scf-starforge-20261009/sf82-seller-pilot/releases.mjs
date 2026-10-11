@@ -496,6 +496,36 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
       paymentChanged: changes.filter(c => c.fields.some(f => f.field === 'payment')).length,
       unchanged: [...current.keys()].filter(k => previous.has(k) && !changes.some(c => c.route === k)).length } };
 }
+// Optional operator review metadata travels in the original selection and run
+// records. The console resolves this from the original receiving controller.
+function receivingSnapshot(value, record, generation) {
+  if (value === undefined || value === null) return null;
+  const fail = () => { throw Object.assign(new Error('The receiving review does not match this exact release and selection. Refresh its original review.'),
+    { code: 'RECEIVING_RELEASE_MISMATCH', status: 409 }); };
+  const fields = ['schema', 'releaseId', 'releaseDigest', 'configurationSha256', 'preparedGeneration',
+    'expectedGeneration', 'bindingId', 'profileId', 'reviewId', 'planDigest', 'manifestSha256',
+    'completedAt', 'mode', 'status', 'summary'];
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).some(key => !fields.includes(key)) ||
+      value.schema !== 'stellar-forge.release-receiving-context.v1' ||
+      value.releaseId !== record.id || value.releaseDigest !== record.digest ||
+      value.configurationSha256 !== record.source.serviceConfigSha256 ||
+      value.expectedGeneration !== generation ||
+      !Number.isSafeInteger(value.preparedGeneration) || value.preparedGeneration < 0 ||
+      !['releaseDigest', 'configurationSha256', 'planDigest', 'manifestSha256']
+        .every(key => typeof value[key] === 'string' && /^[a-f0-9]{64}$/.test(value[key])) ||
+      !['bindingId', 'profileId', 'reviewId'].every(key =>
+        typeof value[key] === 'string' && /^[a-z0-9]{8,13}-[a-f0-9]{16}$/.test(value[key])) ||
+      typeof value.completedAt !== 'string' || value.completedAt.length > 40 || !Number.isFinite(Date.parse(value.completedAt)) ||
+      !['mode', 'status'].every(key => typeof value[key] === 'string' &&
+        /^[A-Za-z][A-Za-z0-9_ -]{0,79}$/.test(value[key])) ||
+      !value.summary || typeof value.summary !== 'object' || Array.isArray(value.summary) ||
+      Object.keys(value.summary).length > 16 ||
+      !Object.entries(value.summary).every(([key, count]) => /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(key) &&
+        Number.isSafeInteger(count) && count >= 0)) fail();
+  const { expectedGeneration, ...snapshot } = value;
+  return JSON.parse(JSON.stringify(snapshot));
+}
 async function selectRelease(root, target, options, operation) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isSafeInteger(options?.expectedGeneration) || options.expectedGeneration < 0)
@@ -509,10 +539,11 @@ async function selectRelease(root, target, options, operation) {
     }
     const selected = target ?? state.previous;
     if (!selected) throw new Error('There is no previous release to roll back to.');
-    await releaseRecord(root, selected, true);
+    const { record } = await releaseRecord(root, selected, true);
+    const receivingReview = receivingSnapshot(options.receivingReview, record, state.generation);
     if (state.active === selected) return { changed: false, state };
     const event = { generation: state.generation + 1, operation, from: state.active, to: selected,
-      at: new Date().toISOString(), reason };
+      at: new Date().toISOString(), reason, ...(receivingReview ? { receivingReview } : {}) };
     const next = { ...state, generation: event.generation, active: selected, previous: state.active,
       history: [...state.history, event] };
     if (Buffer.byteLength(JSON.stringify(next)) > LIMIT) throw new Error('Release history reached the store size limit. Retain this store and initialize a new deployment store.');
@@ -583,7 +614,7 @@ export async function releaseStatus(root) {
 // its private cache controls attach before the release reports readiness.
 
 /** Spawn the ORIGINAL foreground launcher so each run gets fresh application imports. */
-export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs, expectedGeneration, handleSignals = true, operationsNavigationOrigin } = {}) {
+export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs, expectedGeneration, handleSignals = true, operationsNavigationOrigin, receivingReview } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 120000 ||
       shutdownGraceMs !== undefined && (!Number.isInteger(shutdownGraceMs) || shutdownGraceMs < 1000 || shutdownGraceMs > 120000))
@@ -658,6 +689,11 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
         (previous.host === undefined || previous.host === hostname()) && alive(previous.pid))
       throw Object.assign(new Error('The previously recorded seller process is still present. This manager cannot start a duplicate or stop a process it does not own.'), { code: 'RELEASE_BUSY' });
     const { record, path } = await releaseRecord(root, state.active, true);
+    const selection = state.history.at(-1);
+    const retainedReview = receivingReview ?? (selection?.generation === state.generation &&
+      selection.to === record.id && selection.receivingReview
+      ? { ...selection.receivingReview, expectedGeneration: state.generation } : undefined);
+    const receiving = receivingSnapshot(retainedReview, record, state.generation);
     ownsWorkerGroup = Boolean(record.python || record.duckdb || record.sqlite);
     if (record.python && shutdownGraceMs === undefined)
       effectiveShutdownGraceMs = Math.max(70000, 60000 + record.python.shutdownTimeoutMs + 5000);
@@ -701,7 +737,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     if (Number.isSafeInteger(child.pid)) await releaseLock.update({ childPid: child.pid });
     observation = { schema: RUN, instanceId, lockToken: releaseLock.owner.token, host: hostname(),
       managerPid: process.pid, pid: child.pid ?? null, releaseId: record.id, releaseDigest: record.digest,
-      selectionGeneration: state.generation, listener: null, mode, phase: 'STARTING', startedAt: new Date().toISOString() };
+      selectionGeneration: state.generation, listener: null, mode, phase: 'STARTING', startedAt: new Date().toISOString(),
+      ...(receiving ? { receivingReview: receiving } : {}) };
     await atomic(join(root, 'runtime.json'), observation);
     if (exitSettled || shutdownRequested) throw new Error(failure ?? 'Original seller stopped before launch.');
     await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId, cacheRoutes }, error => error ? fail(error) : done()));

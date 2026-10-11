@@ -1,4 +1,5 @@
 import { bindDiscoveryControls } from './discovery.mjs';
+import { bindReceivingControls } from './receiving.mjs';
 const $ = selector => document.querySelector(selector);
 const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem('seller-release-token', fragment); history.replaceState(null, '', location.pathname); }
@@ -20,17 +21,21 @@ function stageCommand(release) {
   return command + ' --spec openapi.json --config selections.json --bindings bindings.json';
 }
 function notice(message = '', error = false) { $('#notice').textContent = message; $('#notice').classList.toggle('error', error); }
-async function request(path, payload) {
+async function request(path, payload, representation = 'json') {
   const options = { headers: { 'x-release-token': token }, cache: 'no-store' };
   if (payload !== undefined) { options.method = 'POST'; options.headers['content-type'] = 'application/json'; options.body = JSON.stringify(payload); }
-  const response = await fetch(path, options), value = await response.json();
-  if (!response.ok) throw new Error(value.message ?? 'Operator action failed.');
-  return value;
+  const response = await fetch(path, options);
+  if (!response.ok) {
+    const value = await response.json();
+    throw Object.assign(new Error(value.message ?? 'Operator action failed.'), { code: value.error, status: response.status });
+  }
+  return representation === 'blob' ? response.blob() : response.json();
 }
 function buttons() {
   const blocked = busy || !snapshot || snapshot.console.busy;
   for (const button of document.querySelectorAll('button')) button.disabled = blocked;
   discovery.buttons(blocked);
+  receiving.buttons(blocked);
   if (!snapshot || blocked) return;
   $('#activate').disabled = !comparison || selected === snapshot.state.active;
   $('#rollback').disabled = !snapshot.state.previous;
@@ -193,7 +198,10 @@ function renderStatus(value) {
   const historyRows = $('#history'); historyRows.replaceChildren();
   for (const event of [...value.state.history].reverse().slice(0, 40)) {
     const row = node('tr'); row.append(node('td', date(event.at)), node('td', String(event.generation)),
-      node('td', (event.from ?? 'None') + ' → ' + event.to + ' (' + event.operation + ')'), node('td', event.reason)); historyRows.append(row);
+      node('td', (event.from ?? 'None') + ' → ' + event.to + ' (' + event.operation + ')'), node('td', event.reason));
+    if (event.receivingReview) row.lastElementChild.append(node('div',
+      'Receiving: ' + event.receivingReview.status.replaceAll('_', ' ') + ' · ' + date(event.receivingReview.completedAt)));
+    historyRows.append(row);
   }
   if (!value.state.history.length) { const row = node('tr'), cell = node('td', 'No selection changes yet.'); cell.colSpan = 4; row.append(cell); historyRows.append(row); }
   $('#process-description').textContent = value.runtime.state === 'RESTART_REQUIRED'
@@ -201,6 +209,10 @@ function renderStatus(value) {
     : value.console.managesRunningSeller ? 'This console owns the running seller. Closing the console command stops that seller.'
     : value.runtime.state !== 'STOPPED' ? 'Another manager owns this seller. Stop it from its original terminal or console before starting here.'
     : 'Start the selected seller release. Its prepared configuration, responses and application entry are checked first.';
+  const receivingReview = value.runtime.observed?.receivingReview;
+  if (receivingReview) $('#process-description').append(node('span',
+    ' Receiving review: ' + receivingReview.status.replaceAll('_', ' ') + ', completed ' +
+    date(receivingReview.completedAt) + ', profile prepared at selection ' + receivingReview.preparedGeneration + '.'));
   buttons();
 }
 function fieldPair(field, before, after) {
@@ -284,6 +296,7 @@ function renderDiff(value) {
   $('#selection-actions').hidden = false;
   for (const button of document.querySelectorAll('.release-card')) button.setAttribute('aria-pressed', String(button.dataset.id === selected));
   discovery.selectRelease(value.after);
+  receiving.selectRelease(value.after, value.generation);
   buttons();
 }
 async function choose(releaseId) {
@@ -312,6 +325,9 @@ async function act(action) {
     instanceId: snapshot.console.instanceId, reason: $('#reason').value.trim() || 'Operator ' + action };
   if (action === 'activate') payload.id = selected;
   if (['run', 'restart'].includes(action)) payload.expectedGeneration = snapshot.state.generation;
+  const target = action === 'activate' ? selected : action === 'rollback' ? snapshot.state.previous : snapshot.state.active;
+  const receivingReview = ['activate', 'rollback', 'run', 'restart'].includes(action) ? receiving.selectionReference(target) : null;
+  if (receivingReview) payload.receiving = receivingReview;
   busy = true; buttons(); notice(action === 'run' || action === 'restart' ? 'Starting the selected seller release…' : 'Saving operator action…');
   try {
     const value = await request('/api/' + action, payload); renderStatus(value);
@@ -324,6 +340,8 @@ async function act(action) {
   finally { busy = false; buttons(); }
 }
 const discovery = bindDiscoveryControls({ request, notice, refresh, isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); } });
+const receiving = bindReceivingControls({ request, notice, isBusy: () => busy || !snapshot || snapshot.console.busy,
   setBusy: value => { busy = value; buttons(); } });
 $('#refresh').addEventListener('click', () => { notice(); refresh(); });
 $('#activate').addEventListener('click', () => act('activate'));
