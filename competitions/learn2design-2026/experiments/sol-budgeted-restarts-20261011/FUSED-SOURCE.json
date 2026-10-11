@@ -23,6 +23,14 @@
     "requirements-cpu.txt": {
       "bytes": 429,
       "sha256": "d71566488d1f350494d4d13aec1656dc0aa4836762a09b5800b834adba72324d"
+    },
+    "run_cpu.sh": {
+      "bytes": 993,
+      "sha256": "706c22439029ec50010cd5e566eeffc4172624e4ce6289698ba5726a86f3d8f8"
+    },
+    "run_cpu.py": {
+      "bytes": 1394,
+      "sha256": "b454eefa84ef435cc79f7272b2c59c86b59003ceb550224114a369c14044dc7c"
     }
   }
 }
