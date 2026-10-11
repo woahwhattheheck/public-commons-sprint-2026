@@ -8,6 +8,10 @@ const port=Number(process.env.PORT||3168);
 if(!Number.isInteger(port)||port<1024||port>65535)throw Error('PORT must be 1024-65535');
 const base='http://127.0.0.1:'+port;
 const html=await readFile(new URL('./index.html',import.meta.url));
+const assets={
+  '/app.js':{file:'app.js',type:'text/javascript; charset=utf-8'},
+  '/style.css':{file:'style.css',type:'text/css; charset=utf-8'}
+};
 const paypal=new PayPalDisputes();
 const cases=new Map(), TTL=15*60*1000;
 function prune(){
@@ -50,9 +54,16 @@ const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,base);
     if(req.method==='GET'&&url.pathname==='/'){
       res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store',
-        'Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'",
+        'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'",
         'X-Frame-Options':'DENY','Referrer-Policy':'no-referrer'});
       res.end(html);return;
+    }
+    if(req.method==='GET'&&Object.hasOwn(assets,url.pathname)){
+      const asset=assets[url.pathname];
+      const bytes=await readFile(new URL('./'+asset.file,import.meta.url));
+      res.writeHead(200,{'Content-Type':asset.type,'Cache-Control':'no-store',
+        'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'});
+      res.end(bytes);return;
     }
     if(req.method==='GET'&&url.pathname==='/api/health'){
       json(res,200,{ready:true,paypal_sandbox_configured:paypal.configured,

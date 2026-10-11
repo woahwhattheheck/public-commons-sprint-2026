@@ -76,6 +76,31 @@ The optional chat-completions response is read through a bounded WHATWG byte str
 4. Prepare draft. Missing categories are derived from the dispute reason, with conservative fallback for unfamiliar reasons; AI advice is separate and non-authoritative.
 5. Download the JSON packet for human review. It says DRAFT_ONLY, evidence_submitted=false, payment_verified=false, 0 submission actions and 0 refund actions.
 
+The inbox supports local search by case ID, reason, status or stage and a status
+filter over the currently loaded records. A partial paginated list stays marked
+as partial. Selecting a sandbox case explicitly refreshes its details; source,
+status, stage, amount and source timestamps are shown as readable facts. The
+synthetic example keeps its own source label throughout.
+
+The review desk separates categories marked available by the operator, missing
+categories from the original checklist, and the optional AI advisory. The exact
+JSON remains available for inspection and download. No document is verified by
+checking a box, and a complete checklist does not mean a dispute is ready to file.
+
+Every displayed and downloadable draft is bound to the selected case facts and
+the exact five evidence choices used to prepare it. Changing a checkbox or case
+clears the old draft and disables download until a new packet is prepared.
+Controls stay busy while a list, detail or packet request is pending, preventing
+a late response from being attached to another selection. If the server's case
+facts changed, the returned draft is rejected and the user is asked to refresh
+the selected case explicitly. **Refresh selected case** also reloads an expired
+review and clears its evidence assertions. Requests are never retried automatically.
+
+The UI uses same-origin `/app.js` and `/style.css` assets. The local Host and POST
+origin checks, case-store lifetime, PayPal reader, checklist rules and optional
+AI request remain unchanged. No customer details or evidence assertions are saved
+in browser storage.
+
 No customer-provided personal data is stored or transmitted. Server retains only normalized status/category facts in memory for at most 15 minutes (or 80 cases), lost on restart. Browser exports remain local. The live integration is read-only GET and OAuth POST only, always on sandbox; no live-money endpoint or dispute mutation code exists.
 
 ## Focused check and limitations
