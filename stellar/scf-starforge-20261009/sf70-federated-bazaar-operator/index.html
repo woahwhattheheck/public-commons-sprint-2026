@@ -23,6 +23,11 @@
       <div class="stat"><strong id="time">—</strong><span>Capture time (local)</span></div>
     </section>
     <section id="sources" class="sources" aria-label="Native source coverage"></section>
+    <section class="delta" aria-label="Native source changes">
+      <h2>Changes since previous live capture</h2>
+      <p id="delta-status" class="match" aria-live="polite">First capture is loading. Refresh to compare.</p>
+      <section id="delta-results" class="cards" aria-label="Observed native listing differences"></section>
+    </section>
     <form id="filters" class="toolbar">
       <label>Search observations<input id="query" type="search" autocomplete="off" placeholder="Name, seller URL, description…"></label>
       <label>Provider<select id="provider"><option value="">Both source catalogs</option><option value="vellar">Vellar only</option><option value="periplo">Periplo only</option></select></label>

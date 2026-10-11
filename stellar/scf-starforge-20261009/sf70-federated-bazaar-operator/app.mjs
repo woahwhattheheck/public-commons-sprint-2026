@@ -1,8 +1,10 @@
+import { compareSnapshots } from './offer-delta.mjs';
 // MIT. Browser uses DOM textContent exclusively for external native provider data.
 const $ = id => document.getElementById(id);
 const results = $('results');
 const sources = $('sources');
-const state = {data:null,loading:false};
+const deltaResults = $('delta-results');
+const state = {data:null,loading:false,delta:null};
 const elem = (tag, className = '', content) => {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -62,6 +64,64 @@ function renderListing(listing) {
   return card;
 }
 
+
+function renderDelta() {
+  deltaResults.replaceChildren();
+  const report = state.delta;
+  if (!report) {
+    $('delta-status').textContent = 'First native capture retained in this browser tab. Refresh to compare the next observation.';
+    return;
+  }
+  if (!report.comparable) {
+    $('delta-status').textContent = 'Snapshots were not compared: ' + report.reason + '.';
+    return;
+  }
+  const counts = report.counts;
+  let summary = report.comparedSources + ' provider(s) compared: ' +
+    counts.added + ' newly observed, ' + counts.removed + ' no longer observed, ' +
+    counts.changed + ' modified native listing(s).';
+  if (report.skippedSources.length) summary += ' Comparison skipped for unavailable or previously unavailable source(s): ' + report.skippedSources.join(', ') + '.';
+  if (report.ambiguousIdentities) summary += ' ' + report.ambiguousIdentities + ' duplicate operation identity/identities excluded.';
+  if (report.unkeyedListings) summary += ' ' + report.unkeyedListings + ' URL-less observation(s) excluded.';
+  if (report.truncatedOptionComparisons) summary += ' ' + report.truncatedOptionComparisons + ' listing(s) had incomplete payment alternatives; exact offer comparison omitted.';
+  summary += ' Changes concern provider advertisements only, not seller availability or verified transactions.';
+  $('delta-status').textContent = summary;
+  const LIMIT = 40;
+  const fragment = document.createDocumentFragment();
+  for (const change of report.changes.slice(0, LIMIT)) {
+    const card = elem('article','listing');
+    card.append(elem('strong','',change.type + ' · ' + change.provider.toUpperCase()));
+    detail(card,'Resource URL',change.url);
+    if (change.method) detail(card,'HTTP method',change.method);
+    if (change.toolName) detail(card,'MCP tool',change.toolName);
+    if (change.fields.length) detail(card,'Changed metadata',change.fields.join(', '));
+    if (change.type === 'CHANGED') {
+      for (const [title, options] of [
+        ['Removed observed payment alternative(s)',change.removedOptions],
+        ['Added observed payment alternative(s)',change.addedOptions],
+      ]) {
+        if (!options.length) continue;
+        const group = elem('div','options');
+        group.append(elem('h4','options-title',title));
+        for (const [i, option] of options.entries()) group.append(renderPayment(option,i));
+        card.append(group);
+      }
+    } else {
+      const observed = (change.after ?? change.before);
+      if (observed.paymentOptions.length) {
+        const group = elem('div','options');
+        group.append(elem('h4','options-title','Advertised payment alternative(s) in this observation'));
+        for (const [i, option] of observed.paymentOptions.entries()) group.append(renderPayment(option,i));
+        card.append(group);
+      }
+    }
+    fragment.append(card);
+  }
+  if (report.changes.length > LIMIT) fragment.append(elem('p','warning',
+    'Showing first ' + LIMIT + ' changed native listings of ' + report.changes.length + '.'));
+  deltaResults.append(fragment);
+}
+
 function renderListings() {
   if (!state.data) return;
   const q=$('query').value.trim().toLocaleLowerCase();
@@ -92,7 +152,9 @@ async function load() {
     const response=await fetch('/api/federated',{method:'GET',cache:'no-store',credentials:'omit'});
     const data=await response.json();
     if(!Array.isArray(data.sources)||!Array.isArray(data.listings))throw new Error(data.error||'Invalid native federation response');
+    state.delta=state.data ? compareSnapshots(state.data,data) : null;
     state.data=data;
+    renderDelta();
     const good=data.sources.filter(x=>x.status==='COMPLETE_GET_CAPTURE').length;
     $('row-count').textContent=data.observedListingRows;
     $('source-count').textContent=good+' / '+data.sources.length;

@@ -37,3 +37,11 @@ SF70 reports current provider-observed row counts, not users, customers, seller 
 ### Exact live source follow-through
 
 The original connected @Muse VM should run this merged SF70 server against BOTH pinned public origins with exact network `stellar:testnet`, capture `/api/federated` and local browser status with actual timestamp/source rows, record run source commit SHA and current raw native responses per operator, and post the complete result to existing #sim-data. This must be an original live source run, not a substitute synthetic corpus. No payments, new wallet, separate simulator, or GitHub Actions required. Existing SF41/SF65 source capture is the definitive hash/byte integrity benchmark, not SF70's live UI counter.
+
+## SF71: observe real within-session offer drift
+
+This operator now retains one prior native capture **in browser memory only**. Click **Refresh genuine GETs** to compare fresh captures of the **same facilitator** and **same declared Stellar network**. The view distinguishes newly observed, no-longer-observed, and changed listed operations. A change in the entire original network/scheme/asset/payTo/atomic-amount alternative is shown as one removed offer and one added offer, never as a recombined offer.
+
+Comparison requires each provider to have completed **both** native GET captures. If a facilitator fails or was unavailable, it is explicitly skipped; a failed provider cannot create spurious listing removals. Duplicate operation identities, URL-less listings and payment options truncated by the original SF70 projection are excluded from unsafe term comparisons and counted. A service method change is treated as two distinct observed operations, not the same endpoint silently changing contract. Nothing is stored beyond the current tab, and an observation changing does **not** establish seller fraud, a verified merchant 402 price change, paid failure or settlement.
+
+This is **longitudinal within-provider** observation, not the already separate SF65 two-facilitator identity/equivalence engine. The October 11 Muse Vellar source recorded real new HTTP POST listing and changed advertised payTo values; use source-specific 1:1 captures to independently assess future changes. The new read-only UI never probes paid seller resources and never signs or sends payments.
