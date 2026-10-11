@@ -1545,6 +1545,85 @@ lifecycle guide is included at
 Both commands and public imports target these original implementations; the
 driver dependency is derived from the selected source's `mysql/package.json`.
 
+### Publish a MySQL or MariaDB data product
+
+The same approved MySQL source can publish an immutable dataset with retained
+buyer pages. This product uses the original MySQL pool and prepared statements,
+the shared publisher browser and schedule, and the original dataset version
+writer. Use the MySQL runtime above, Linux and util-linux `flock`.
+
+```sh
+npx --no-install starforge mysql-publisher serve \
+  --workspace /private/catalog-publications --create \
+  --source /private/mysql-workspace/releases/catalog_v1/package/source.json \
+  --state /private/catalog-dataset --port 8447
+```
+
+Open the printed loopback URL. Choose the original named query and fixed inputs,
+approve its public columns and dataset types, select ordering and extraction
+limits, then save the plan. Extract the complete result, inspect the typed
+candidate, record a reviewer and note, and publish against the displayed target.
+The original endpoint page cap does not truncate this extraction. A row, byte,
+type or deadline failure leaves the current published dataset available.
+
+Use transactional source tables such as InnoDB for a consistent database view.
+The extraction sets repeatable-read isolation and opens
+`WITH CONSISTENT SNAPSHOT, READ ONLY`. Its native row stream waits for the
+consumer and commits after the complete result is accepted. Nontransactional
+tables retain their engine's own behavior. The candidate records the observed
+server/connection/isolation, completed transaction, selected output and hashes.
+
+Choose Text for exact DECIMAL values and large integer identifiers. Safe native
+integers, finite native FLOAT/DOUBLE and integer or BIT boolean values have
+explicit dataset mappings. Binary Text uses canonical base64. NULL requires a
+nullable field; the original CSV format refuses an ambiguous real empty string
+in that nullable column. Saved plans retain source/configuration bytes and a
+copied CA, while passwords stay in their original environment reference.
+
+After first publication, configure the original seller with the merchant's
+actual payment terms and retained snapshot selection:
+
+```sh
+npx --no-install starforge dataset-refresh configure \
+  --state /private/catalog-dataset --payment /private/catalog-payment.json \
+  --origin https://merchant.example --path /data --snapshot-selection \
+  --out /private/catalog-seller.json
+npx --no-install starforge dataset-refresh serve \
+  --state /private/catalog-dataset --seller /private/catalog-seller.json \
+  --port 8423 --control-transport loopback
+```
+
+Use the existing facilitator and HTTPS deployment options for native paid
+operation. Stop and reopen the same publisher with the running seller's actual
+loopback address and advertised HTTPS resource:
+
+```sh
+npx --no-install starforge mysql-publisher serve \
+  --workspace /private/catalog-publications --port 8447 \
+  --seller http://127.0.0.1:8423 --resource https://merchant.example/data
+```
+
+In **Buyer handoff**, load the original seller's terms, select the payment
+alternative and enter an intent ID. Download the original SF88 configuration
+and open it in the existing buyer workspace. The selected retained snapshot is
+pinned in the URL; the original buyer owns approval, acquisition and response
+delivery. Later refreshes preserve older retained pages and cursors according
+to the version store's retention policy.
+
+The same browser and CLI offer the original saved publication policy, exact
+target binding, row-change limits, pause/enable, retained history and recovery.
+`starforge mysql-publisher --help` lists all manual and scheduled actions.
+Reopen without `--create` to continue the same source/target-bound workspace.
+The original MySQL command also forwards `starforge mysql publisher ...`.
+
+The public `@tokenjunkielabs/starforge-merchant/seller/mysql/publisher` export
+provides `openMysqlPublisher(options)`. It delegates to the one maintained
+publisher engine with the trusted MySQL source driver. Complete transaction,
+scalar, source/CA, native export, operator and customer instructions are included
+at `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/README.md`.
+The existing `mysql` runtime group supplies the pinned driver; the shared
+publisher source is already part of the whole SF30 component.
+
 ### Build a DuckDB or Parquet merchant
 
 The DuckDB merchant workspace begins with actual local files and generates the
