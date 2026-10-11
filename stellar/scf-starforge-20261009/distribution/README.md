@@ -205,6 +205,8 @@ or automatically retry a request.
 | `starforge fleet-release` | Stage and operate original seller releases with managed fleet rollout, draining and rollback |
 | `starforge revenue-workspace` / `revenue-report` | Review pricing, original merchant traffic and the existing native journal |
 | `starforge merchant-accounting` / `merchant-accounting-workspace` | Reconcile original settlement records, retain ledgers and review imports, comparisons and exceptions |
+| `starforge merchant-accounting-pricing` | Import a saved original pricing report as validated accounting terms |
+| `starforge merchant-accounting-recovery` | Review and retain an original completed purchase, verification and delivered response |
 | `starforge s3` | Inspect selected object-store resources and export an original merchant configuration |
 | `starforge python-merchant` | Inspect, initialize and serve a Python merchant through the original runtime |
 | `starforge availability` | Inspect, pause and resume selected routes through the running seller's original control |
@@ -1133,8 +1135,12 @@ storage; opening the configured source uses its original provider.
 
 ## Review merchant pricing and operations
 
-Use the original merchant pricing workspace with its actual seller configuration
-and existing operations listener:
+Use the original merchant pricing workspace, pricing importer and accounting
+workspace from the same installed package. Keep their private state and the
+merchant's original sources outside the package installation directory.
+
+Use Node 22+ and the merchant's actual seller configuration and existing
+operations listener:
 
 ```sh
 npx --no-install starforge revenue-workspace \
@@ -1143,35 +1149,41 @@ npx --no-install starforge revenue-workspace \
   --ops-url http://127.0.0.1:8424 --port 8457
 ```
 
-For a retained export, replace `--ops-url` with
-`--snapshot /private/merchant/original-seller-traffic.json`. Select exactly one
-source. Add `--native-outbox /private/merchant/existing-sf98-outbox` to include
-the matching original fulfillment journal in saved reviews. The state directory's
-parent must exist; the workspace creates private state on a local filesystem
-supporting atomic hard links and directory synchronization.
+Open the private browser URL printed by the original workspace. Replace the
+configuration and operations port with that merchant's actual values. The parent
+of each private state directory must already exist; pricing state uses a local
+filesystem with atomic hard links and directory synchronization.
 
-Refresh actual operations, enter the merchant's quoted USD values, costs and
-volume targets, review every ordered payment choice, then calculate and save.
-The workspace retains complete immutable reviews and can reopen their reports,
-reuse assumptions, and download original terms and operations. Calculations
-preserve decimal inputs and original atomic amounts. Commercial targets remain
-planning assumptions; observed requests and journal events retain their actual
-operational meaning. The workspace neither changes live prices nor starts a
-seller or payment.
+Choose the current session or retained history in the source panel. For live
+history, select the actual UTC interval and optional original route filter. The
+existing operations service supplies the retained history and effective range.
+For saved exports, replace `--ops-url` with `--snapshot /private/original-session.json`
+or `--history /private/original-history.json`; both file flags may be supplied to
+switch between those fixed exports. File selections retain their exported range.
+Add `--native-outbox /private/merchant/sf98-outbox` to include the original native
+settlement companion for that merchant.
 
-Reproduce a saved review with that version's matched seller, terms and traffic:
+Refresh the selected source, enter the merchant's quoted USD values, quote
+bases, known costs and monthly targets, and review every ordered payment option.
+Calculate with the original analyzer, then save. A saved version retains the
+exact seller, terms, original capture, report and optional native companion.
+Compare saved periods with their original coverage and source identities; reopen
+versions or reuse their assumptions for a new review. The monthly target applies
+once to its original service scope. Unknown costs remain unknown, and observed
+HTTP outcomes retain their original meaning.
+
+After restart, reopen the same `--state` directory. To reproduce a retained-period
+report, use the matched files from one saved version and a new output directory:
 
 ```sh
 npx --no-install starforge revenue-report \
   --config /private/review/seller.json --terms /private/review/terms.json \
-  --snapshot /private/review/snapshot.json --output /private/new-report
+  --history /private/review/history.json --output /private/new-pricing-report
 ```
 
-The complete native `sf97-merchant-revenue-ops/WORKSPACE.md` and its analyzer are
-included. Applications may import `startWorkspace` from
-`@tokenjunkielabs/starforge-merchant/merchant/revenue-workspace`; its `directory`
-option is the same private state passed to CLI `--state`. This workflow adds no
-npm dependency.
+For a session review, replace `--history` with that version's `--snapshot` file.
+The included [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
+describes history enablement, range selection, source retention and comparisons.
 
 ## Operate merchant incidents and support cases
 
@@ -1271,31 +1283,114 @@ The public module entries expose these unchanged original APIs:
 | `./merchant/incidents/operator` | Status, acknowledgment, notification operations, configuration, pruning and `exportIncident` |
 | `./merchant/support-console` | `start` and `createConsoleServer` for the same case desk |
 
-## Reconcile merchant settlements
+## Use saved pricing in merchant accounting
 
-The original accounting workspace brings the existing SF98 journal, original
-verification results and reviewed payment terms into a retained local ledger:
+Download **Report JSON** from the chosen saved pricing version, or select its
+private `versions/VERSION/report/report.json`. The original report supplies the
+normalized payment options and calculated route values; pricing `terms.json` is
+an input to that report and does not contain the complete accounting import.
+
+```sh
+npx --no-install starforge merchant-accounting-pricing \
+  --report /private/merchant/pricing-workspace/versions/VERSION/report/report.json \
+  --out /private/merchant/pricing-import-2026-10-11
+```
+
+Use a new output directory with an existing parent. The import retains the exact
+original report as `pricing-report.json`, produces validated `accounting-terms.json`
+and writes their identities and import summary to `manifest.json`. The directory
+uses mode 0700 and files use 0600. If the quote basis needs a shorter accounting
+reference, add `--reference "Approved merchant quote October 2026"`; the complete
+original basis remains in the retained pricing context. The
+[pricing import guide](../merchant-settlement-accounting/PRICING.md) documents the
+reference rules and the exact mapping.
+
+Every original option keeps its route, method, network, asset, recipient and
+atomic amount. The quote and per-fulfilled variable cost become accounting unit
+terms; unknown costs remain null. Shared fixed costs, challenge costs, targets
+and the pricing observation interval remain attached pricing context. The
+accounting event scope comes from the selected journals and verification inputs.
+
+Open a new accounting workspace using those imported terms and the merchant's
+actual original sources:
 
 ```sh
 npx --no-install starforge merchant-accounting-workspace \
   --workspace /private/merchant/accounting-workspace \
   --outbox /private/merchant/sf98-outbox --proof-dir /private/merchant/sf86-results \
-  --terms /private/merchant/accounting-terms.json
+  --terms /private/merchant/pricing-import-2026-10-11/accounting-terms.json
 ```
 
-Reopen with `--workspace` alone. The original workspace imports terms/proofs,
-runs the maintained reconciliation, searches ledger rows and exceptions, retains
-review notes, compares saved runs, and exports the original reports and source
-TAR. Node 22+, Linux `flock` and `tar` are required. Existing outboxes, verifier
-records and original asset/network terms remain the accounting inputs.
+For an existing workspace, open **Sources & imports**, select the generated
+`accounting-terms.json` under **Merchant accounting terms**, and choose
+**Import & select terms**. Then create a new capture from **Reconcile & review**.
+Earlier runs retain their own terms and sources, so the existing comparison
+shows which assumptions and settlement inputs changed. Search the ledger and
+exceptions, retain review notes, and export the original reports and source TAR.
+Reopen after restart with `--workspace` alone. The accounting workspace requires
+Linux `flock` and `tar` in addition to Node 22+.
 
-The original six output files are `report.json`, `ledger.csv`, `options.csv`,
+For a terminal review, the original accounting command consumes the same terms:
+
+```sh
+npx --no-install starforge merchant-accounting \
+  --outbox /private/merchant/sf98-outbox --proof-dir /private/merchant/sf86-results \
+  --terms /private/merchant/pricing-import-2026-10-11/accounting-terms.json \
+  --out /private/merchant/new-accounting-review
+```
+
+The original outputs are `report.json`, `ledger.csv`, `options.csv`,
 `exceptions.csv`, `review.html` and `manifest.json`. The included
-`merchant-settlement-accounting/README.md` describes the terminal
-`merchant-accounting` command, and `workspace/README.md` documents the complete
-browser and reopening flow. `./merchant/accounting` and
-`./merchant/accounting-workspace` expose their existing reconciliation and
-workspace APIs.
+[accounting workspace guide](../merchant-settlement-accounting/workspace/README.md)
+covers retained imports, captures, review, comparison, export and restart.
+
+### Include an original completed purchase
+
+The same accounting workspace can connect an existing recovered-settlement
+collection in **Sources & imports**, retain and review the original recovery
+request, run the original import, and download the retained response. For CLI
+operation, use the existing request configuration from the
+[recovery guide](../merchant-settlement-accounting/RECOVERY.md):
+
+```sh
+npx --no-install starforge merchant-accounting-recovery review \
+  --config /private/purchase/recovery-request.json
+npx --no-install starforge merchant-accounting-recovery import \
+  --config /private/purchase/recovery-request.json \
+  --recovered-dir /private/merchant/recovered
+npx --no-install starforge merchant-accounting-recovery list \
+  --recovered-dir /private/merchant/recovered
+npx --no-install starforge merchant-accounting-recovery response \
+  --recovered-dir /private/merchant/recovered --id ACTUAL_RECOVERY_ID \
+  --out /private/purchase/reopened-response.json
+```
+
+Use the original approved request, outcome, matching merchant terms, known payer
+and optional saved response. Review checks those retained records. Import uses the existing native SDK and original verifier to read the
+completed transaction from its declared public RPC, then retains the verified
+entry and response. An identical retained import is reused. Use the recovery ID returned by import or list; `response` exports the saved
+body to a new private file. This workflow operates the completed purchase's records.
+
+Connect that collection in the workspace or add
+`--recovered-dir /private/merchant/recovered` to its initial launch. The original
+`merchant-accounting` command accepts the same optional input. Reports retain
+separate captured and recovered origins and time bases, and apply the
+existing verification and transaction matching rules across both. Pricing
+imports and recovery records keep their own source identities in the same
+merchant review.
+
+### Application imports
+
+`@tokenjunkielabs/starforge-merchant/merchant/revenue-workspace` exports the
+original `startWorkspace`; its `directory` is the CLI's private `--state`.
+`./merchant/accounting` and `./merchant/accounting-workspace` expose the original
+reconciler and retained workspace. `./merchant/accounting-pricing` exports
+`createAccountingTermsFromPricingReport`, `preparePricingReportImport` and
+`writePricingReportImport`; use the byte preparation or writer when retaining
+original report provenance. `./merchant/recovery` exposes the same original
+review, import, retained-entry and response APIs used by the CLI. The pricing
+and accounting join adds no package dependency; recovery uses the existing
+native SDK setup.
 
 ## Run an existing Python merchant
 
