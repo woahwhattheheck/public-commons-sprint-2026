@@ -16,6 +16,13 @@ const USAGE = `Buyer runbook — compose original SF88 operations
                        [--workspace /absolute/original-sf88-workspace]
                        [--outbox /absolute/original-outbox --merchant-route ORIGINAL_ROUTE_ID]
   node cli.mjs unlock --run /absolute/existing-run --owner-pid PID
+  node cli.mjs backup-review --state /absolute/workspace --state-root /absolute/private-parent
+  node cli.mjs backup --state /absolute/workspace --state-root /absolute/private-parent
+                     --out /absolute/new-backup --review REVIEW_SHA256 --quiesced [--pass-env NAME]
+  node cli.mjs backup-verify --bundle /absolute/backup [--expect RECORD_SHA256]
+                            [--pass-env NAME] [--python /absolute/current-python]
+  node cli.mjs backup-restore --bundle /absolute/backup [--expect RECORD_SHA256]
+                             [--pass-env NAME] [--python /absolute/current-python]
   node cli.mjs workspace --state /absolute/private-workspace --configs /absolute/buyer-configs
                         [--operator-settings /absolute/private-operator.json]
                         [--run /absolute/existing-run] [--port 8460]
@@ -34,6 +41,12 @@ unlock releases an exact dead local process lease; it preserves every attempt.
 workspace opens the private browser planner and original run controls. Start it
 in the same controlling terminal used for SF81 approval. Existing workspaces can
 omit --configs to reuse their saved source directory.
+backup-review resolves every original operator and retained acquisition under one
+private state root. backup requires the exact reviewed selection and stopped
+external writers. Its encrypted archive checkpoints every native ledger.
+backup-verify authenticates all files and original journals. backup-restore uses
+the original absent-or-empty state root and reopens saved acquisitions without
+executing purchases. Set the passphrase environment variable before launching.
 --operator-settings declares this machine's payer, signer source and maximum
 budgets for receiving private merchant requests. Its path is retained for reopen.
 `;
@@ -59,6 +72,42 @@ function compact({state, reportPath, statusPath,accountingPath}) {
 export async function main(args = process.argv.slice(2)) {
   const [command, ...tail] = args;
   if (!command || command === '--help' || command === 'help') { process.stdout.write(USAGE); return; }
+  if (['backup-review','backup','backup-verify','backup-restore'].includes(command)) {
+    const quiesced=tail.filter(value=>value==='--quiesced').length;
+    need(quiesced<2&&(command==='backup'||quiesced===0),'INVALID_CLI_OPTIONS');
+    const names=command==='backup-review'?['--state','--state-root']:
+      command==='backup'?['--state','--state-root','--out','--review','--pass-env']:
+        ['--bundle','--expect','--pass-env','--python'];
+    const opts=options(tail.filter(value=>value!=='--quiesced'),names);
+    const controller=new AbortController();let interruptedCode,model;
+    const interrupt=()=>{interruptedCode??=130;controller.abort();};
+    const terminate=()=>{interruptedCode??=143;controller.abort();};
+    process.on('SIGINT',interrupt);process.on('SIGTERM',terminate);
+    const context={signal:controller.signal,onProgress:event=>process.stderr.write(JSON.stringify(event)+'\n')};
+    try {
+      let result;
+      if(command==='backup-review'||command==='backup') {
+        need(opts['--state']&&opts['--state-root'],'WORKSPACE_STATE_AND_ROOT_REQUIRED');
+        const {openRunbookWorkspace}=await import('./workspace-model.mjs');
+        model=await openRunbookWorkspace({directory:opts['--state']});
+        const input={stateRoot:opts['--state-root'],output:opts['--out'],
+          expectedReviewSha256:opts['--review'],passEnv:opts['--pass-env'],quiesced:quiesced===1};
+        result=command==='backup-review'?await model.inspectRecovery(input):await model.snapshotRecovery(input,context);
+      } else {
+        need(opts['--bundle'],'WORKSPACE_RECOVERY_BUNDLE_REQUIRED');
+        const recovery=await import('./recovery.mjs');
+        const action=command==='backup-restore'?recovery.restoreRunbookRecovery:recovery.verifyRunbookRecovery;
+        result=await action({bundle:opts['--bundle'],expected:opts['--expect'],passEnv:opts['--pass-env'],python:opts['--python']},context);
+      }
+      print(result);
+      if(result.reopenError||result.publicationSyncError||result.cleanupErrors?.length||result.selectionRecordError||result.leaseReleaseErrors?.length)process.exitCode=2;
+    } finally {
+      await model?.close();
+      process.off('SIGINT',interrupt);process.off('SIGTERM',terminate);
+      if(interruptedCode)process.exitCode=interruptedCode;
+    }
+    return;
+  }
   if (command === 'workspace') {
     const opts = options(tail, ['--state','--configs','--operator-settings','--run','--port']);
     need(opts['--state'], 'WORKSPACE_STATE_DIRECTORY_REQUIRED');
