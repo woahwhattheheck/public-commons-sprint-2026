@@ -57,8 +57,9 @@ npx --no-install starforge doctor --feature openapi
 
 The diagnostic resolves the dependency from the original parser's installed
 source directory. JSON input does not need the YAML engine. YAML import uses
-the original YAML 1.2 core parser with unique keys and bounded aliases, and
-retains the exact source bytes and their SHA-256 in the prepared merchant.
+the original YAML 1.2 core parser with unique keys and bounded aliases. The
+workspace retains the exact source bytes in the prepared merchant; the terminal
+importer records its original input SHA-256 in the compiled manifest.
 The existing schema feature above supplies regular-expression matching when
 the selected contract requires it.
 
@@ -128,12 +129,14 @@ or upstream binding; private backend authentication stays in the selected
 environment references. Save the merchant project and use its existing managed
 seller controls to start, check, stop and reopen it.
 
-The terminal importer accepts the same original JSON or YAML source and
-explicit selection and binding files:
+The terminal importer accepts a merchant-ready JSON or YAML contract with
+explicit selection and binding files. Its declared server must already name
+the exposed service, and selected operations must not require unresolved
+additional authentication:
 
 ```sh
 npx --no-install starforge openapi \
-  --spec "$STARFORGE_PRIVATE/provider-openapi.yaml" \
+  --spec "$STARFORGE_PRIVATE/merchant-openapi.yaml" \
   --config "$STARFORGE_PRIVATE/operation-selections.json" \
   --service-bindings "$STARFORGE_PRIVATE/application-bindings.json" \
   --upstream-bindings "$STARFORGE_PRIVATE/upstream-bindings.json" \
@@ -143,8 +146,16 @@ npx --no-install starforge openapi \
 The output directory must be new. Use the original compiler's selection and
 binding formats described in the included
 `sf61-openapi-seller-import/README.md`; omit an optional bindings flag when that
-binding is not used. Both paths retain the source digest, selected payment
-terms and supported response contracts in the original merchant package.
+binding is not used. The compiler records the input digest, selected payment
+terms and supported response contracts in its original outputs.
+
+For a provider API that needs backend authentication or a different public
+merchant origin, use the workspace's explicit upstream binding. It retains the
+original provider source, authentication references and selected transformation,
+then compiles its emitted `facade-openapi.json`, `selections.json` and
+`route-bindings.json`. This is the saved package's merchant-facing contract;
+`upstreams.json` retains the original bound provider request. Keep the complete
+saved package together when reopening its seller.
 
 ### Retain a file request and issue its original ticket
 
