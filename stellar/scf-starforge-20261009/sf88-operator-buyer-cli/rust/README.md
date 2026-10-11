@@ -11,7 +11,7 @@ Existing Node, Python, Go and Rust consumers can reopen the same original state.
 
 ## Install and select the runtime
 
-A Unix host, Rust 1.74 or newer, Cargo, and the installed merchant package's
+A Unix host, Rust/Cargo 1.75 or newer, and the installed merchant package's
 supported Node release are required. Install the original merchant package using
 its distribution guide, then select the actual SF88 directory inside that
 installation.
@@ -287,11 +287,25 @@ the original operator profile or runtime environment.
 ## Native adoption and source composition
 
 The Rust source composes the original Go bridge from PR1259, merged at
-`3af9ff842de232dfcc964ab68bdabd19bf9e77b7`. The accepted customer fixtures supplied
-by that owner include the settled core response, zero-byte and 35-byte whole
-objects, a 1,843,229-byte assembled archive, five typed dataset rows and exact CSV,
-a settled Inbox order, and retained NDJSON/SSE captures. The single Rust native
-adoption run reopens those originals through the installed runtime.
+`3af9ff842de232dfcc964ab68bdabd19bf9e77b7`. Its complete native adoption finished
+on 2026-10-11 using Rust/Cargo 1.75, Node 24.19.0 and x86_64 Linux. One release
+build produced the library, installed CLI and runnable dataset example; the
+generated version-3 Cargo lockfile records that exact dependency selection.
+
+The installed applications completed 30 original buyer calls: configuration
+creation/review/reopening, a two-row response, zero-byte and 35-byte whole objects,
+a 1,843,229-byte chunked archive, five typed dataset rows and the exact 272-byte
+CSV, a 107-byte Inbox order, two NDJSON records and three complete events from the
+original retained SSE prefix. Core and dataset recovery preserved their original
+`NO_PAYMENT_REQUIRED` result; Inbox delivery preserved
+`DELIVERED_REPORTED_SETTLED`.
+
+A downstream Rust callback stopped after its first complete row and received
+`RUST_OUTPUT_CONSUMER_FAILED` with its private invocation retained after native
+cleanup. A separate real controlling-terminal exercise gave the original Node
+child foreground ownership for its stdin read and restored the original caller
+group before returning. The run rechecked all 56 selected original source files
+and retained their exact bytes. Native build and customer phases exited zero.
 
 Release source must include this crate, its Cargo lockfile, the existing Go
 bridge and the original Node runtime closure. The distribution owner retains
