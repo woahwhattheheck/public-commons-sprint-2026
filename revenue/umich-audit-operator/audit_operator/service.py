@@ -19,7 +19,7 @@ from .archive import create_backup, inspect_backup, restore_backup
 from .model import SCHEMAS, STAGES, current_review, engagement_id, follow_up_queue, readiness, risk_score, validate_payload
 from .store import Conflict, DOMAIN_KINDS, Forbidden, MAX_SOURCE, Store, atomic_write, digest, encoded, fingerprint, identifier, now, private_directory, safe_name
 
-INTERNAL_SOURCE_ROLES = {"import_plan", "receipt_plan", "receipt", "report_projection", "report", "handoff", "received_bundle", "comparison", "native_export"}
+INTERNAL_SOURCE_ROLES = {"import_plan", "receipt_plan", "receipt", "report_projection", "report", "handoff", "received_bundle", "comparison", "native_export", "native_return"}
 GRAPH_DIAGNOSTICS = {"missing_relationship", "missing_review_target", "cross_engagement_relationship", "area_cycle", "relationship_kind_mismatch"}
 SOURCE_ROOT = Path(__file__).resolve().parent.parent
 
@@ -313,7 +313,7 @@ class AuditService:
         if p.get("sha256") and p["sha256"] != digest(data):
             raise ValueError("The upload does not match its original SHA-256.")
         role = p.get("role", "original")
-        if role not in {"original", "evidence", "reference", "target_contract"}:
+        if role not in {"original", "evidence", "reference", "target_contract", "native_return", "received_bundle"}:
             raise ValueError("Choose an original-source role.")
         source = self.store._source(data, p["name"], p.get("media_type", "application/octet-stream"),
                                     role, p.get("namespace", ""), p.get("locator"))
@@ -569,6 +569,11 @@ class AuditService:
         # The internal copy prevents future handoffs from recursively embedding received archives.
         bundle = self.store._source(original, source["name"], "application/zip", "received_bundle",
                                     received["snapshot"]["workspace_id"], source.get("locator"))
+        # Exclude this original transport file from business-source exports without changing its retained metadata.
+        exclusions = json.loads(self.store.setting("transport_source_ids") or "[]")
+        if source["id"] not in exclusions:
+            exclusions.append(source["id"])
+            self.store.db.execute("INSERT OR REPLACE INTO settings VALUES('transport_source_ids',?)", (encoded(exclusions),))
         current = self.store.snapshot(include_history=True)
         # The uploaded original archive itself is not a business source inside a receiving graph.
         current["sources"] = [s for s in current["sources"] if s["sha256"] != source["sha256"]]
@@ -618,8 +623,8 @@ class AuditService:
             rows.append({"question_id": question["id"], "group_id": question["group_id"],
                          "source_pages": question.get("source_pages", []), "question": question["text"],
                          "response": response.get("response", ""), "status": response.get("status", "Not started"),
-                         "evidence_references": response.get("evidence_references", []),
-                         "responder_reference": response.get("responder_reference", ""),
+                         "evidence_ids": response.get("evidence_ids", response.get("evidence_references", [])),
+                         "owner_reference": response.get("owner_reference", response.get("responder_reference", "")),
                          "record_id": record["id"] if record else None, "revision": record["revision"] if record else None})
         value = {"format": "commons-audit-issuer-responses/1", "catalog_sha256": self.catalog_sha,
                  "issuer_source": self.catalog["source"], "exported_at": now(), "exported_by": actor["label"],
@@ -627,7 +632,7 @@ class AuditService:
         stream = io.StringIO(newline="")
         writer = csv.writer(stream)
         fields = ["question_id", "group_id", "source_pages", "question", "response", "status",
-                  "evidence_references", "responder_reference", "record_id", "revision"]
+                  "evidence_ids", "owner_reference", "record_id", "revision"]
         writer.writerow(fields)
         for row in rows:
             writer.writerow([encoded(row[k]) if isinstance(row[k], (list, dict)) else row[k] for k in fields])

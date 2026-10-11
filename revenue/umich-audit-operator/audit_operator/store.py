@@ -549,15 +549,23 @@ class Store:
 
     def snapshot(self, include_history=False):
         with self.lock:
-            result = {"format": "commons-audit-snapshot/1", "workspace_id": self.setting("workspace_id"),
-                      "records": [r for r in self.records() if r["kind"] in DOMAIN_KINDS],
-                      "sources": [s for s in self.sources() if s["role"] not in {
-                          "import_plan", "receipt_plan", "receipt", "report_projection", "report",
-                          "handoff", "received_bundle", "comparison", "native_export"}], "captured_at": now()}
-            if include_history:
-                result["revisions"] = [json.loads(r["body"]) for r in self.db.execute(
-                    "SELECT body FROM revisions ORDER BY kind,id,revision") if json.loads(r["body"])["kind"] in DOMAIN_KINDS]
-        return result
+            own_transaction = not self.db.in_transaction
+            if own_transaction:
+                self.db.execute("BEGIN")
+            try:
+                excluded = set(json.loads(self.setting("transport_source_ids") or "[]"))
+                result = {"format": "commons-audit-snapshot/1", "workspace_id": self.setting("workspace_id"),
+                          "records": [r for r in self.records() if r["kind"] in DOMAIN_KINDS],
+                          "sources": [s for s in self.sources() if s["id"] not in excluded and s["role"] not in {
+                              "import_plan", "receipt_plan", "receipt", "report_projection", "report",
+                              "handoff", "received_bundle", "comparison", "native_export", "native_return"}], "captured_at": now()}
+                if include_history:
+                    result["revisions"] = [json.loads(r["body"]) for r in self.db.execute(
+                        "SELECT body FROM revisions ORDER BY kind,id,revision") if json.loads(r["body"])["kind"] in DOMAIN_KINDS]
+                return result
+            finally:
+                if own_transaction:
+                    self.db.rollback()
 
     def selection_hash(self):
         with self.lock:
