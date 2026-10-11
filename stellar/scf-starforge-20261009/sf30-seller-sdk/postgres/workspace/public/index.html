@@ -52,7 +52,8 @@
           <div class="grid"><label>Seller port (0 chooses a free port) <input id="release-port" type="number" min="0" max="65535" value="8423" required></label><label>Facilitator URL (optional) <input id="release-facilitator" type="url" placeholder="https://facilitator.example" autocomplete="off" spellcheck="false"></label></div>
           <label class="check-label"><input id="release-local-facilitator" type="checkbox">Enable the specified loopback HTTP facilitator</label>
           <p class="muted">Without a facilitator the seller serves payment challenges. Staging preserves the package; selection and start are separate actions in Seller releases.</p>
-          <button id="release-stage" type="submit" disabled>Stage saved package</button>
+          <div class="actions"><button id="release-stage" type="submit" disabled>Stage saved package</button><button id="release-fleet-source" type="button" disabled>Download fleet source</button></div>
+          <p class="muted">Fleet source JSON carries this reviewed package and its facilitator settings. Import it into a source card in Fleet setup to use the original managed fleet; each slot receives its own seller port.</p>
         </form>
         <p id="release-result" role="status" aria-live="polite"></p>
       </div>
