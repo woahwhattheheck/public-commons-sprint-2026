@@ -22,6 +22,8 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  provider-operator                          Original external-provider capture, case and terminal workflow
+  provider-workspace                         Retained provider desk, host profiles and complete case recovery
   runtime-profile                            Select exact dependencies for an original release
   runtime-install                            Install, resume, run, upgrade and recover a customer runtime
   runtime-workspace                          Review, install and recover runtimes in a private browser workspace
