@@ -1,8 +1,9 @@
 // MIT. Agent operations over the retained original merchant accounting workspace.
 import { constants } from 'node:fs';
-import { open, mkdtemp, unlink, rmdir } from 'node:fs/promises';
-import { createHash, randomUUID } from 'node:crypto';
-import { dirname, resolve, join } from 'node:path';
+import { open } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { dirname, resolve } from 'node:path';
+import { RetainedFileReads } from './retained-file-reads.mjs';
 import { openAccountingWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/store.mjs';
 import { openCollectionWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/collection-workspace.mjs';
 import { AccountantWorkspace, ACCOUNTANT_CSV_BYTES } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/accountant-workspace.mjs';
@@ -36,10 +37,6 @@ const periodNames = ['period-close.json', 'review-notes.json'];
 const accountantNames = ['handoff.json', 'accountant.csv', 'review.html', 'original-report.json', 'original-manifest.json', 'input-manifest.json', 'packet-manifest.json', 'accountant-handoff.tar', 'period-close.json', 'review-notes.json', 'returned.csv', 'return.json'];
 const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'file'];
 const supportedMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].filter(supportsSellerMethod);
-const MEMORY_SNAPSHOT_LIMIT = 32 * 1024;
-const SNAPSHOT_BYTES_LIMIT = 256_000_000;
-const SNAPSHOT_COUNT_LIMIT = 4;
-const SNAPSHOT_IDLE_MS = 120_000;
 
 const definitions = [
   ['merchant_accounting_sources', 'List host-configured accounting workspaces and named recovery, verification, collection, pricing and accountant-return inputs. Returns aliases and ownership without local paths or source bytes.', { workspace: alias }, [], readOnly],
@@ -189,7 +186,7 @@ function collectionResult(value, args = {}) {
 
 export class MerchantAccounting {
   #config; #sessions = new Map(); #closing = false; #close; #substitutions;
-  #reads = new Map(); #readTail = Promise.resolve(); #readStats = new Map();
+  #files = new RetainedFileReads({ errorPrefix: 'ACCOUNTING' });
   constructor(config) {
     this.#config = config.accounting ?? { workspaces: {} };
     this.#substitutions = Object.entries(this.#config.workspaces).flatMap(([key, value]) => [
@@ -199,7 +196,7 @@ export class MerchantAccounting {
     ]).sort((a, b) => b[0].length - a[0].length);
   }
   get summary() { return { configured: Object.keys(this.#config.workspaces), owned: [...this.#sessions.keys()], closing: this.#closing,
-    activeFileReads: this.#reads.size, snapshotBytes: [...this.#reads.values()].reduce((sum, read) => sum + read.size, 0) }; }
+    ...this.#files.summary }; }
   #definition(key) {
     named(key); const definition = this.#config.workspaces[key];
     if (!Object.hasOwn(this.#config.workspaces, key)) throw fail('ACCOUNTING_WORKSPACE_NOT_CONFIGURED', 'Choose a workspace from merchant_accounting_sources.');
@@ -230,9 +227,7 @@ export class MerchantAccounting {
         pricingReviews: state.pricingImports?.length ?? 0, periods: state.periods?.definitions.length ?? 0, closes: state.periods?.closes.length ?? 0, handoffs: state.accountantHandoffs?.length ?? 0 },
       periodSelection: state.periods?.selection ?? null,
       latestRun: state.runs[0] ?? null, latestRecoveryJob: state.recoveryJobs[0] ?? null, reviewCounts: state.reviewCounts,
-      fileReads: { originalFileReads: this.#readStats.get(key) ?? 0,
-        sessions: [...this.#reads.values()].filter(read => read.workspace === key).map(read => ({ readId: read.id, kind: read.kind, file: read.metadata,
-          storage: read.handle ? 'PRIVATE_UNLINKED_DESCRIPTOR' : 'MEMORY', closing: Boolean(read.releasing || read.closed), expiresAt: read.expiresAt })) } };
+      fileReads: this.#files.status(key) };
   }
   #result(key, value) {
     if (value?.record?.revisions) value = { ...value, record: handoffBrief(value.record) };
@@ -278,7 +273,7 @@ export class MerchantAccounting {
       record.close = (async () => {
         try {
           await record.opening; await Promise.allSettled([...record.calls]);
-          await Promise.allSettled([...this.#reads.values()].filter(read => read.workspace === key).map(read => this.#releaseRead(read.id)));
+          await this.#files.closeScope(key);
           try { await record.collection?.close(); } finally { await record.workspace?.close(); }
         }
         finally { if (this.#sessions.get(key) === record) this.#sessions.delete(key); }
@@ -288,28 +283,6 @@ export class MerchantAccounting {
     return { workspace: key, ownership: 'CLOSED', retained: true };
   }
   #readKey(args) { return JSON.stringify([args.workspace, args.kind, ...fileSelections.map(key => args[key] ?? null)]); }
-  #touchRead(read) {
-    if (read.closed || read.releasing) return;
-    clearTimeout(read.timer); read.expiresAt = new Date(Date.now() + SNAPSHOT_IDLE_MS).toISOString();
-    read.timer = setTimeout(() => { void this.#releaseRead(read.id).catch(() => {}); }, SNAPSHOT_IDLE_MS);
-    read.timer.unref();
-  }
-  async #disposeRead(read) {
-    if (!read.disposal) {
-      read.closed = true; clearTimeout(read.timer); read.memory = null;
-      read.disposal = (async () => { try { await read.handle?.close(); } finally { this.#reads.delete(read.id); } })();
-    }
-    await read.disposal;
-  }
-  async #releaseRead(id) {
-    const read = this.#reads.get(id);
-    if (!read) return;
-    if (!read.release) {
-      read.releasing = true; clearTimeout(read.timer);
-      read.release = (async () => { await read.tail.catch(() => {}); await this.#disposeRead(read); })();
-    }
-    await read.release;
-  }
   async #originalFile(workspace, args) {
     const { kind, runId, recoveryId, exportId, collectionId, sourceId, reviewId, closeId, handoffId, revisionId, file } = args;
     const selectors = { response: ['recoveryId', 'runId'], report: ['runId', 'file'], export: ['exportId'], collection: ['collectionId', 'sourceId'],
@@ -343,65 +316,12 @@ export class MerchantAccounting {
     if (!handoffId || !accountantNames.includes(file)) throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Accountant retrieval requires handoffId and its original packet filename.');
     return session.accountant.file(handoffId, file, { revisionId });
   }
-  #openRead(workspace, args) {
-    // Serialize whole-file verification/materialization so only one original
-    // reader's large Buffer is live here at a time. Continued chunks are separate.
-    const pending = this.#readTail.then(async () => {
-      if (this.#reads.size >= SNAPSHOT_COUNT_LIMIT) throw fail('ACCOUNTING_READ_CAPACITY', 'Finish or release an existing file read before opening another.');
-      this.#readStats.set(args.workspace, (this.#readStats.get(args.workspace) ?? 0) + 1);
-      const original = await this.#originalFile(workspace, args), bytes = original.bytes, sha = digest(bytes);
-      if (args.expectedSha256 && sha !== args.expectedSha256) throw fail('ACCOUNTING_FILE_CHANGED', 'The original file differs from the requested SHA256.');
-      const retained = [...this.#reads.values()].reduce((sum, read) => sum + read.size, 0);
-      if (bytes.length > SNAPSHOT_BYTES_LIMIT - retained) throw fail('ACCOUNTING_READ_CAPACITY', 'Finish or release existing reads to make room within the 256 MB verified-snapshot budget.');
-      const read = { id: randomUUID(), key: this.#readKey(args), workspace: args.workspace, kind: args.kind,
-        size: bytes.length, tail: Promise.resolve(), closed: false, memory: null, handle: null,
-        metadata: { name: original.name, contentType: original.type ?? (original.name.endsWith('.json') ? 'application/json' : original.name.endsWith('.tar') ? 'application/x-tar' : 'application/octet-stream'), bytes: bytes.length, sha256: sha } };
-      if (bytes.length <= MEMORY_SNAPSHOT_LIMIT) read.memory = bytes;
-      else {
-        // These are already verified original bytes, not a second export. The
-        // private descriptor is unlinked immediately; process exit frees it too.
-        const directory = await mkdtemp(join(workspace.directory, '.mcp-read-'));
-        const path = join(directory, 'snapshot');
-        try {
-          read.handle = await open(path, 'wx+', 0o600);
-          await read.handle.writeFile(bytes); await unlink(path); await rmdir(directory);
-        } catch (error) {
-          await read.handle?.close(); await unlink(path).catch(() => {}); await rmdir(directory).catch(() => {}); throw error;
-        }
-      }
-      this.#reads.set(read.id, read); this.#touchRead(read); return read;
-    });
-    this.#readTail = pending.then(() => {}, () => {});
-    return pending;
-  }
   async #file(workspace, args) {
-    const offset = args.offset ?? 0, limit = args.limit ?? 65536;
-    if ((offset > 0 || args.readId) && !args.expectedSha256) throw fail('ACCOUNTING_INVALID_CHUNK', 'Repeat expectedSha256 when continuing a read or resuming at a later offset.');
-    const read = args.readId ? this.#reads.get(args.readId) : await this.#openRead(workspace, args);
-    if (!read || read.closed || read.releasing) throw fail('ACCOUNTING_READ_NOT_FOUND', 'This file read completed, expired or was released. Open a new original read using the same expectedSha256 to resume.');
-    if (read.workspace !== args.workspace || read.key !== this.#readKey(args)) throw fail('ACCOUNTING_READ_CONFLICT', 'Use this readId only for its original workspace and file selection.');
-    if (args.expectedSha256 && args.expectedSha256 !== read.metadata.sha256) throw fail('ACCOUNTING_FILE_CHANGED', 'The read snapshot differs from the requested SHA256.');
-    if (offset > read.size) { if (!args.readId) await this.#releaseRead(read.id); throw fail('ACCOUNTING_INVALID_CHUNK', 'Use an offset within the verified original file.'); }
-    const pending = read.tail.then(async () => {
-      if (read.closed) throw fail('ACCOUNTING_READ_NOT_FOUND', 'This original file read has completed or been released.');
-      this.#touchRead(read);
-      const length = Math.min(limit, read.size - offset), chunk = read.memory ? read.memory.subarray(offset, offset + length) : Buffer.alloc(length);
-      if (read.handle) {
-        let position = 0;
-        while (position < length) {
-          const result = await read.handle.read(chunk, position, length - position, offset + position);
-          if (!result.bytesRead) throw fail('ACCOUNTING_SNAPSHOT_UNAVAILABLE', 'The private verified read snapshot is unavailable.');
-          position += result.bytesRead;
-        }
-      }
-      const next = offset + length, result = { workspace: args.workspace, kind: args.kind, readId: read.id,
-        ...Object.fromEntries(fileSelections.filter(key => key !== 'file' && args[key] !== undefined).map(key => [key, args[key]])),
-        file: read.metadata, offset, bytesRead: length, nextOffset: next < read.size ? next : null, encoding: 'base64', data: chunk.toString('base64') };
-      if (next === read.size) await this.#disposeRead(read);
-      return result;
-    });
-    read.tail = pending.then(() => {}, () => {});
-    return pending;
+    const value = await this.#files.read({ scope: args.workspace, key: this.#readKey(args), kind: args.kind,
+      directory: workspace.directory, load: () => this.#originalFile(workspace, args),
+      readId: args.readId, offset: args.offset, limit: args.limit, expectedSha256: args.expectedSha256 });
+    return { workspace: args.workspace, kind: args.kind,
+      ...Object.fromEntries(fileSelections.filter(key => key !== 'file' && args[key] !== undefined).map(key => [key, args[key]])), ...value };
   }
   async #execute(operation, args, workspace) {
     const key = args.workspace, session = this.#sessions.get(key);
@@ -503,9 +423,7 @@ export class MerchantAccounting {
       }
       case 'merchant_accounting_file': return this.#file(workspace, args);
       case 'merchant_accounting_file_release': {
-        const read = this.#reads.get(args.readId);
-        if (read && read.workspace !== key) throw fail('ACCOUNTING_READ_CONFLICT', 'Choose a file read owned by this workspace.');
-        await this.#releaseRead(args.readId); return { workspace: key, readId: args.readId, released: true };
+        await this.#files.release(key, args.readId); return { workspace: key, readId: args.readId, released: true };
       }
       default: throw fail('ACCOUNTING_UNKNOWN_TOOL', 'Unknown merchant accounting operation.');
     }
@@ -540,6 +458,7 @@ export class MerchantAccounting {
       this.#closing = true;
       this.#close = (async () => {
         const results = await Promise.allSettled([...this.#sessions.keys()].map(key => this.#closeWorkspace(key)));
+        await this.#files.close();
         const rejected = results.find(result => result.status === 'rejected');
         if (rejected) throw rejected.reason;
       })();
