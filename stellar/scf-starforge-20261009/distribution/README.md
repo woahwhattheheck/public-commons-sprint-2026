@@ -27,6 +27,25 @@ normally. This source-only installation omits optional packages. PostgreSQL
 drivers and native payment packages have their own setup below.
 Git and a Commons checkout are unnecessary on the merchant's machine.
 
+### Prepare a complete customer runtime
+
+The maintained installer selects dependencies from the original archive and keeps
+its package intact. It creates a private runtime with exact versions, an npm lock,
+and explicit source/dependency roots for the original host and container tools:
+
+```sh
+starforge runtime-install prepare --dir /srv/starforge/runtimes/merchant-01 \
+  --archive /srv/starforge/downloads/original-merchant.tgz \
+  --sha256 ORIGINAL_ARCHIVE_SHA256 --native --feature postgres --operator
+starforge runtime-install install --dir /srv/starforge/runtimes/merchant-01
+starforge runtime-install run --dir /srv/starforge/runtimes/merchant-01 -- source
+```
+
+Choose the native and feature options required by that merchant. The same command
+supports interrupted-install continuation, fresh-directory upgrades, recovery,
+and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
+for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
+
 ### Schema pattern support
 
 Merchant request schemas that use regular-expression constraints load the
