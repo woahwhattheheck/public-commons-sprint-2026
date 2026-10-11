@@ -145,6 +145,19 @@ export function checkPaymentAttemptTerms(record,payer) {
   return {intentId, requirement:structuredClone(q), receipt:r == null ? null : structuredClone(r),
     transaction, transactionSource};
 }
+/** A merchant-selected reverse transfer has no buyer reservation or seller receipt. */
+export function checkMerchantRefundTerms({refundId,network,asset,payer,recipient,atomicAmount,transaction}={}) {
+  requireTruth(typeof refundId === 'string' && INTENT.test(refundId), 'INVALID_REFUND_ID');
+  networkProfile(network);
+  requireTruth(validStrKey(asset,'C'), 'INVALID_ASSET_STRKEY');
+  requireTruth(validStrKey(payer,'G') || validStrKey(payer,'C'), 'INVALID_REFUND_PAYER');
+  requireTruth(validStrKey(recipient,'G'), 'INVALID_REFUND_RECIPIENT');
+  requireTruth(payer !== recipient, 'REFUND_ACCOUNTS_MUST_DIFFER');
+  requireTruth(typeof atomicAmount === 'string' && AMOUNT.test(atomicAmount) &&
+    BigInt(atomicAmount) <= I128MAX, 'INVALID_ATOMIC_AMOUNT');
+  requireTruth(typeof transaction === 'string' && TX.test(transaction), 'INVALID_TRANSACTION_HASH');
+  return {intentId:refundId,payer,requirement:{network,asset,payTo:recipient,amount:atomicAmount},receipt:{transaction}};
+}
 function checkNativeTerms(record,payer,{allowPending}) {
   requireTruth(object(record), 'INVALID_NATIVE_RECEIPT_RECORD');
   const {intentId, requirement:q, receipt:r}=record;
