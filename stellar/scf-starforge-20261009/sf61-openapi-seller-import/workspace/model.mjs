@@ -16,6 +16,7 @@ import { parseOpenApiSource } from '../source-document.mjs';
 import { openApiRequestBody, requestBodySummary } from '../request-body.mjs';
 import { openApiResponseStreams } from '../response-stream.mjs';
 import { merchantPaymentRequirements, merchantStreamPolicy } from './stream-plan.mjs';
+import { requirePostmanHeaderReferences } from '../postman/collection.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -111,6 +112,7 @@ export function prepareMerchant(specText, plan) {
       if (typeof name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) fail(key + ': use environment names, never credential values');
       envNames.add(name);
     }
+    requirePostmanHeaderReferences(op,headers);
     let authentication;
     try { authentication = prepareBackendAuthentication(spec,op,row,backend,{allowLoopback:plan.allowLoopbackUpstream===true}); }
     catch(e) { fail(key + ': ' + e.message); }
@@ -264,7 +266,7 @@ export async function savePackage({specText, plan, parent, name}) {
     'For native facilitator mode, replace --challenge-only with --facilitator YOUR_AUTHORIZED_HTTPS_FACILITATOR.',
     'Supply environment variables in the launcher process: ' + (prepared.preview.environment.join(', ') || '(none)') + '.',
     'Authorization variables contain the complete header value, including Bearer or Basic when required.',
-    'Environment values are never stored in this package. After moving the package, adjust command paths.',
+    'The compiler adds environment-variable references only. Supplied source files may already contain private values; keep the complete package private. After moving the package, adjust command paths.',
     '', 'The seller listens on loopback. Route your HTTPS gateway to it while preserving the public paths.',
     'Challenge-only mode returns native payment challenges but does not verify or settle payments.',
     'Inspect the operations URL printed at startup. Stop with Ctrl-C. Resume the same compiled directory.',
