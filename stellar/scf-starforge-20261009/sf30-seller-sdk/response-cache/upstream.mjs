@@ -39,6 +39,7 @@ export function createCachedUpstream(options, cacheOptions) {
   const staticHeaders = headerFactory ? null : frozenHeaders(headers);
   const expose = new Set((fixed.responseHeaders ?? ['content-type', 'content-language']).map(name => name.toLowerCase()));
   fixed.responseHeaders = [...new Set([...expose, ...META])];
+  fixed.cachePolicyMetadata = true;
   const forwarded = [...new Set((fixed.requestHeaders ?? []).map(name => name.toLowerCase()))];
   const varyHeaders = [...new Set([...forwarded, ...(cacheOptions.varyHeaders ?? [])])];
   const ttlMs = cacheOptions.ttlMs ?? 1000;
@@ -82,7 +83,8 @@ export function createCachedUpstream(options, cacheOptions) {
         totals.sourceCompleted++;
         if (result.status >= 400) totals.sourceFailed++;
         if (Buffer.isBuffer(result.body)) totals.sourceResponseBytes += result.body.length;
-        return { ...result, cacheMetadata: { requestTime, responseTime: Date.now(), authenticated } };
+        return { ...result, cacheMetadata: { ...result.cacheMetadata,
+          requestTime, responseTime: Date.now(), authenticated } };
       } finally {
         totals.sourceInFlight--; generation.active--; release(generation);
       }
