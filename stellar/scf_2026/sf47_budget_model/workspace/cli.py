@@ -373,7 +373,7 @@ def operate(args):
         if name == "import-scenario":
             return workspace.create(args.name, prepared, read_json(args.planning) if args.planning else {},
                                     args.note, args.request_id, source_name=Path(args.file).name,
-                                    source_sha=sha256(raw), source_url=args.source_url)
+                                    source_sha=sha256(raw), source_url=args.source_url, source_bytes=raw)
         if name in ("estimate", "save"):
             patch = read_json(args.patch) if args.patch else {}
             planning = planning_input(workspace, args)
