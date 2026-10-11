@@ -130,6 +130,8 @@ Restore verifies the complete archive inventory and hashes, preserves an existin
 
 ## Deployment
 
+The [service deployment guide](DEPLOYMENT.md) and [systemd unit](deploy/mercury-ops.service) connect this same application to a host supervisor, including worker-failure restart, HTTP admission, readiness and graceful shutdown.
+
 Run the application under the existing service supervisor with its source directory as the working directory and a dedicated private data directory. For a public HTTPS hostname behind a trusted reverse proxy, use:
 
 ```sh

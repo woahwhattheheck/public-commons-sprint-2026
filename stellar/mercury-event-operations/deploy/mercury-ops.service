@@ -1,0 +1,28 @@
+[Unit]
+Description=Mercury customer event operations
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=exec
+User=mercury
+Group=mercury
+WorkingDirectory=/opt/mercury-event-operations
+ExecStart=/opt/mercury-runtime/bin/python -B -m mercury_ops --config /var/lib/mercury-operations/config.json --env-file /etc/mercury-operations/secrets.env serve --host 127.0.0.1 --port 8787 --allowed-host mercury-ops.example.com --behind-https-proxy --max-connections 16 --http-timeout 30 --shutdown-timeout 60
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=75
+KillMode=control-group
+UMask=0077
+StateDirectory=mercury-operations
+StateDirectoryMode=0700
+ReadWritePaths=/var/lib/mercury-operations
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
