@@ -9,6 +9,7 @@ import { isDeepStrictEqual as same } from 'node:util';
 import { readSellerConfig, startSellerService } from '../sf30-seller-sdk/serve.mjs';
 import { createNativeSellerServer } from '../sf30-seller-sdk/native-factory.mjs';
 import { startSellerOperations } from '../sf30-seller-sdk/operations/server.mjs';
+import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 import { selectServiceRoute } from '../sf30-seller-sdk/route-path.mjs';
 import { initializeQueue, openQueue } from '../sf88-operator-buyer-cli/queue.mjs';
 import { config as readBuyer, execution } from '../sf88-operator-buyer-cli/config.mjs';
@@ -18,6 +19,8 @@ import { startCheckout } from '../sf101-merchant-receiver/checkout.mjs';
 import { readPurchaseInput, freezePurchase, inspectCommercePurchase, retrieveCommercePurchase } from './commerce-purchase.mjs';
 import { preparePythonCommerce, savePythonCommerce, readPythonCommerce,
   describePythonCommerce, openPythonCommerce } from './commerce-python.mjs';
+import { readUpstreamCommerce, retainUpstreamCommerce, openUpstreamCommerce,
+  describeUpstreamCommerce } from './commerce-upstream.mjs';
 
 const PLAN = 'stellar-forge.commerce-plan.v1';
 const SESSION = 'stellar-forge.commerce-session.v1';
@@ -75,14 +78,22 @@ function facilitator(value) {
   return { url: url.href.replace(/\/$/, ''), allowLocal: value.allowLocal === true };
 }
 function plan(value) {
-  fields(value, ['schema', 'seller', 'buyers', 'operationsPort'], 'COMMERCE_PLAN_INVALID');
+  fields(value, ['schema', 'seller', 'buyers', 'operationsPort', 'operationControls'], 'COMMERCE_PLAN_INVALID');
   need(value.schema === PLAN && Array.isArray(value.buyers) && value.buyers.length >= 1 &&
     value.buyers.length <= 64, 'COMMERCE_PLAN_BUYERS_REQUIRED');
-  const seller = fields(value.seller, ['config', 'checkoutConfig', 'python', 'handlers', 'port', 'facilitator', 'facilitatorConfig'], 'COMMERCE_SELLER_INVALID');
+  const seller = fields(value.seller, ['config', 'checkoutConfig', 'python', 'handlers', 'upstreams',
+    'allowLoopbackUpstream', 'availabilityDirectory', 'port', 'facilitator', 'facilitatorConfig'], 'COMMERCE_SELLER_INVALID');
   need([seller.config, seller.checkoutConfig, seller.python].filter(Boolean).length === 1,
     'COMMERCE_ONE_SELLER_CONFIGURATION_REQUIRED');
   absolute(seller.checkoutConfig ?? seller.python ?? seller.config);
   need(!(seller.checkoutConfig || seller.python) || seller.handlers === undefined, 'COMMERCE_APPLICATION_USES_ORIGINAL_HANDLERS');
+  need(seller.upstreams === undefined || seller.config && seller.handlers === undefined,
+    'COMMERCE_UPSTREAM_USES_CONFIGURED_APPLICATION');
+  need(seller.allowLoopbackUpstream === undefined || seller.upstreams !== undefined &&
+    typeof seller.allowLoopbackUpstream === 'boolean', 'COMMERCE_UPSTREAM_LOOPBACK_INVALID');
+  need(value.operationControls === undefined || typeof value.operationControls === 'boolean',
+    'COMMERCE_OPERATION_CONTROLS_INVALID');
+  if (seller.upstreams !== undefined) absolute(seller.upstreams);
   if (seller.handlers !== undefined) absolute(seller.handlers);
   if (seller.facilitatorConfig !== undefined) absolute(seller.facilitatorConfig);
   need(!seller.facilitatorConfig || seller.facilitator === undefined, 'COMMERCE_ONE_FACILITATOR_REQUIRED');
@@ -95,9 +106,12 @@ function plan(value) {
   });
   return { seller: { config: seller.config ?? null, checkoutConfig: seller.checkoutConfig ?? null, handlers: seller.handlers ?? null,
     python: seller.python ?? null,
+    upstreams: seller.upstreams ?? null, allowLoopbackUpstream: seller.allowLoopbackUpstream === true,
+    availabilityDirectory: seller.availabilityDirectory === undefined ? null :
+      validateAvailabilityDirectory(seller.availabilityDirectory),
     port: port(seller.port, 8423), facilitator: facilitator(seller.facilitator),
     facilitatorConfig: seller.facilitatorConfig ?? null },
-  buyers, operationsPort: port(value.operationsPort, 0) };
+  buyers, operationsPort: port(value.operationsPort, 0), operationControls: value.operationControls === true };
 }
 
 /** Create an original buyer inbox and one persistent merchant configuration. */
@@ -110,6 +124,11 @@ export async function initializeCommerce({ planFile, directory }) {
   const python = input.seller.python ? await preparePythonCommerce(input.seller.python) : null;
   const seller = checkout?.service ?? python?.compiled.service ?? await readSellerConfig(input.seller.config);
   need(typeof seller.publicOrigin === 'string', 'COMMERCE_MERCHANT_PUBLIC_ORIGIN_REQUIRED');
+  const upstream = input.seller.upstreams ? await readUpstreamCommerce(input.seller.upstreams, seller,
+    {allowLoopback:input.seller.allowLoopbackUpstream}) : null;
+  need(!input.operationControls || upstream &&
+    Object.values(upstream.review.bindings).some(binding => binding.idempotency),
+  'COMMERCE_OPERATION_CONTROLS_REQUIRE_IDEMPOTENT_UPSTREAM');
   const handlers = input.seller.handlers ? await sourceFile(input.seller.handlers) : null;
   let facilitatorConfig;
   if (input.seller.facilitatorConfig) {
@@ -146,6 +165,7 @@ export async function initializeCommerce({ planFile, directory }) {
   try {
     await writeNew(join(directory, 'seller.json'), seller);
     const pythonSnapshot = python ? await savePythonCommerce(python, directory) : {};
+    const upstreamSnapshot = upstream ? await retainUpstreamCommerce(join(directory, 'upstreams.json'), upstream) : null;
     const sellerBytes = await readPrivateFile(join(directory, 'seller.json'), 1048576);
     const queueRoot = join(directory, 'inbox');
     const facilitatorPath = facilitatorConfig ? join(directory, 'facilitator.json') : null;
@@ -166,12 +186,14 @@ export async function initializeCommerce({ planFile, directory }) {
       directory, queueRoot, seller: { ...input.seller, config: join(directory, 'seller.json'),
         configSha256: sha(sellerBytes),
         ...pythonSnapshot,
+        upstreams: upstreamSnapshot?.file ?? null,
+        ...(upstreamSnapshot ? {upstreamsSha256:upstreamSnapshot.sha256} : {}),
         checkoutConfig: checkoutPath,
         ...(checkoutPath ? { checkoutConfigSha256: sha(await readPrivateFile(checkoutPath)) } : {}),
         facilitatorConfig: facilitatorPath,
         ...(facilitatorPath ? { facilitatorConfigSha256: sha(await readPrivateFile(facilitatorPath)) } : {}),
         ...(handlers ? { handlersSha256: handlers.sha256 } : {}) },
-      operationsPort: input.operationsPort, buyers };
+      operationsPort: input.operationsPort, operationControls: input.operationControls, buyers };
     await writeNew(join(directory, 'session.json'), session);
     const handle = await open(directory, 'r');
     try { await handle.sync(); } finally { await handle.close(); }
@@ -191,9 +213,24 @@ async function readSession(directory) {
   const sellerBytes = await readPrivateFile(saved.seller.config, 1048576);
   need(sha(sellerBytes) === saved.seller.configSha256,
     'COMMERCE_MERCHANT_CONFIG_CHANGED');
+  if (saved.seller.availabilityDirectory !== undefined && saved.seller.availabilityDirectory !== null)
+    validateAvailabilityDirectory(saved.seller.availabilityDirectory);
   need(!(saved.seller.python && saved.seller.checkoutConfig) &&
     (!(saved.seller.python || saved.seller.checkoutConfig) || !saved.seller.handlers),
     'COMMERCE_ONE_MERCHANT_APPLICATION_REQUIRED');
+  need(!saved.seller.upstreams || !saved.seller.python && !saved.seller.checkoutConfig && !saved.seller.handlers &&
+    saved.seller.upstreams === join(directory, 'upstreams.json') &&
+    /^[a-f0-9]{64}$/.test(saved.seller.upstreamsSha256 ?? ''),
+  'COMMERCE_UPSTREAM_SNAPSHOT_INVALID');
+  need(saved.seller.allowLoopbackUpstream === undefined || typeof saved.seller.allowLoopbackUpstream === 'boolean',
+    'COMMERCE_UPSTREAM_LOOPBACK_INVALID');
+  const upstream = saved.seller.upstreams ? await readUpstreamCommerce(saved.seller.upstreams, parseJson(sellerBytes),
+    {allowLoopback:saved.seller.allowLoopbackUpstream === true, expectedSha256:saved.seller.upstreamsSha256}) : null;
+  need(saved.operationControls === undefined || typeof saved.operationControls === 'boolean',
+    'COMMERCE_OPERATION_CONTROLS_INVALID');
+  need(!saved.operationControls || upstream &&
+    Object.values(upstream.review.bindings).some(binding => binding.idempotency),
+  'COMMERCE_OPERATION_CONTROLS_REQUIRE_IDEMPOTENT_UPSTREAM');
   const python = saved.seller.python ? await readPythonCommerce(saved.seller, directory, parseJson(sellerBytes)) : null;
   if (saved.seller.handlers) need((await sourceFile(saved.seller.handlers)).sha256 === saved.seller.handlersSha256,
     'COMMERCE_HANDLER_CHANGED');
@@ -212,13 +249,15 @@ async function readSession(directory) {
       'COMMERCE_HANDOFF_PATH_CHANGED');
     await inspectCommercePurchase(entry, jobs.find(job => job.operation.intentId === entry.intentId));
   }
-  return { saved, queue, jobs, python };
+  return { saved, queue, jobs, python, upstream };
 }
 export async function inspectCommerce(directory) {
-  const { saved, jobs, python } = await readSession(directory);
+  const { saved, jobs, python, upstream } = await readSession(directory);
   return { schema: SESSION, state: 'SAVED_SESSION', directory,
     sellerConfig: saved.seller.config, sellerPort: saved.seller.port,
+    availabilityDirectory: saved.seller.availabilityDirectory ?? null,
     python: python ? describePythonCommerce(python) : null,
+    upstreams: describeUpstreamCommerce(upstream), operationControls: saved.operationControls === true,
     facilitator: saved.seller.facilitator ?? { config: saved.seller.facilitatorConfig },
     buyers: await Promise.all(jobs.map(async job => ({ ...job,
       paidFile: await inspectCommercePurchase(saved.buyers.find(entry => entry.intentId === job.operation.intentId), job) }))) };
@@ -294,7 +333,7 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
   need(nativeFactory === undefined || typeof nativeFactory === 'function', 'COMMERCE_NATIVE_FACTORY_INVALID');
   need(purchaseFetch === undefined || typeof purchaseFetch === 'function', 'COMMERCE_PURCHASE_TRANSPORT_INVALID');
   need(!nativeFactory || !saved.seller.facilitator && !saved.seller.facilitatorConfig, 'COMMERCE_ONE_FACILITATOR_REQUIRED');
-  const config = await readSellerConfig(saved.seller.config);
+  let config = await readSellerConfig(saved.seller.config);
   let handlers = saved.seller.handlers ? await import(pathToFileURL(saved.seller.handlers).href) : {};
   if (saved.seller.facilitator) {
     const endpoint = facilitator(saved.seller.facilitator);
@@ -302,7 +341,7 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     const client = new HTTPFacilitatorClient({ url: endpoint.url });
     nativeFactory = compiled => createNativeSellerServer(compiled, { facilitatorClient: client });
   }
-  let seller, operations, checkoutSession, ownedFacilitator, python, closing, active;
+  let seller, operations, checkoutSession, ownedFacilitator, python, upstream, closing, active;
   let state = 'STARTING';
   const controller = new AbortController();
   const pending = new Set(), activeRetrievals = new Map();
@@ -327,15 +366,26 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     let pythonShutdown = null;
     try { pythonShutdown = await (python ?? checkoutSession?.source)?.close() ?? null; }
     catch (error) { failures.push(error); }
+    let upstreamShutdown = null;
+    try { upstreamShutdown = await upstream?.close() ?? null; }
+    catch (error) { failures.push(error); }
     const traffic = operations?.observer.snapshot() ?? null;
     try { await (checkoutSession ? checkoutSession.close() : operations?.close()); } catch (error) { failures.push(error); }
     state = 'STOPPED';
     need(failures.length === 0, 'COMMERCE_SHUTDOWN_INCOMPLETE');
-    return { state, shutdown, python: pythonShutdown,
-      drained: shutdown?.drained !== false && shutdown?.forcedClose !== true && pythonShutdown?.clean !== false,
+    return { state, shutdown, python: pythonShutdown, upstreams: upstreamShutdown,
+      drained: shutdown?.drained !== false && shutdown?.forcedClose !== true && pythonShutdown?.clean !== false &&
+        (upstreamShutdown ?? []).every(result => result.drained !== false),
       traffic, buyers: await queue.list() };
   })();
   try {
+    if (saved.seller.upstreams) {
+      ({application:upstream} = await openUpstreamCommerce(saved.seller.upstreams, config, {
+        allowLoopback:saved.seller.allowLoopbackUpstream === true,
+        expectedSha256:saved.seller.upstreamsSha256, environment,
+      }));
+      config = upstream.config; handlers = upstream.handlers;
+    }
     if (pythonApplication) {
       python = await openPythonCommerce(pythonApplication, {
         native: Boolean(nativeFactory || saved.seller.facilitatorConfig), environment,
@@ -358,6 +408,7 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       }
       checkoutSession = await startCheckout(checkout, { port: saved.seller.port,
         operationsPort: saved.operationsPort, nativeFactory: nativeFactory ?? null, env: environment,
+        availabilityDirectory: saved.seller.availabilityDirectory ?? undefined,
         historyDirectory: join(directory, 'usage'), historyRetentionDays: 90,
         ...(ownedFacilitator ? { maxInFlight: 1, drainGraceMs: ownedFacilitator.drainGraceMs } : {}) });
       seller = checkoutSession.seller; operations = checkoutSession.operations;
@@ -368,24 +419,36 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       seller = await startSelfFacilitatedSeller({
         facilitatorConfig: await readConfig(saved.seller.facilitatorConfig),
         config, port: saved.seller.port, handlers, environment,
+        availabilityDirectory: saved.seller.availabilityDirectory ?? undefined,
       });
     } else {
-      seller = await startSellerService({ config, port: saved.seller.port, handlers, nativeFactory: nativeFactory ?? null });
+      seller = await startSellerService({ config, port: saved.seller.port, handlers, nativeFactory: nativeFactory ?? null,
+        availabilityDirectory: saved.seller.availabilityDirectory ?? undefined });
+    }
+    if (upstream) {
+      seller.upstreamSnapshot = upstream.snapshot;
+      seller.operationControl = upstream.operationControl;
+      seller.invalidateUpstreamCache = upstream.invalidateCache;
     }
     for (const job of jobs) {
       const merchant = bindMerchantPurchase(seller.compiled, job);
       await inspectCommercePurchase(saved.buyers.find(entry => entry.intentId === job.operation.intentId), { ...job, merchant });
     }
     operations ??= await startSellerOperations(seller, { port: saved.operationsPort,
-      historyDirectory: join(directory, 'usage'), historyRetentionDays: 90 });
+      historyDirectory: join(directory, 'usage'), historyRetentionDays: 90,
+      operationControls: saved.operationControls === true });
     state = 'RUNNING';
     const status = async () => ({ schema: SESSION, state, directory,
       seller: { url: seller.url, publicOrigin: config.publicOrigin, mode: seller.mode,
         health: seller.url + '/_seller/health', docs: seller.url + '/_seller/docs', lifecycle: seller.lifecycle.snapshot(),
+        ...(upstream ? { upstreams: upstream.snapshot() } : {}),
         ...(python ? { python: python.status() } : {}) },
       facilitator: (ownedFacilitator ?? seller.facilitator)?.status() ?? { mode: saved.seller.facilitator ? 'EXISTING_HTTP_FACILITATOR' :
         nativeFactory ? 'TRUSTED_NATIVE_EMBEDDING' : 'NOT_CONFIGURED' },
       operations: { url: operations.url, traffic: operations.observer.snapshot(),
+        availabilityUrl: saved.seller.availabilityDirectory ? operations.availabilityUrl : null,
+        merchantOperationsUrl: upstream ? operations.merchantOperationsUrl : null,
+        operationControls: saved.operationControls === true,
         historyUrl: operations.history ? operations.url + '/history.json' : null, usageHistory: operations.history?.status() ?? null },
       buyers: await Promise.all((await queue.list()).map(async job => {
         const bound = { ...job, merchant: bindMerchantPurchase(seller.compiled, job) };
