@@ -1,0 +1,67 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "routes": [
+    {
+      "id": "catalog",
+      "path": "/catalog",
+      "definition": {
+        "method": "GET",
+        "serviceName": "SQLite catalog API",
+        "description": "Read-only named catalog query. region is required; after_id defaults to 0. Integers are exact decimal strings. Returns up to 100 rows in id order.",
+        "tags": [
+          "sqlite",
+          "dataset",
+          "example"
+        ],
+        "payment": {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        },
+        "outputExample": {
+          "schema": "stellar-forge.sqlite-result.v1",
+          "query": "catalog",
+          "columns": [
+            "id",
+            "title",
+            "region",
+            "price_cents"
+          ],
+          "rows": [
+            {
+              "id": "1",
+              "title": "Example item",
+              "region": "north",
+              "price_cents": "499"
+            }
+          ],
+          "rowCount": 1,
+          "truncated": false,
+          "integerEncoding": "decimal-string",
+          "blobEncoding": "tagged-base64"
+        },
+        "queryParameters": [
+          {
+            "name": "region",
+            "type": "string",
+            "required": true,
+            "description": "Exact product region. Bound as text, never SQL.",
+            "example": "north"
+          },
+          {
+            "name": "after_id",
+            "type": "string",
+            "required": false,
+            "description": "Exclusive id cursor, decimal integer string. Default 0.",
+            "example": "0"
+          }
+        ]
+      },
+      "handler": "catalogQuery",
+      "admit": "admitCatalog"
+    }
+  ]
+}

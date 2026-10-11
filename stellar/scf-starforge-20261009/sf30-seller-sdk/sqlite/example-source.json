@@ -1,0 +1,18 @@
+{
+  "schema": "stellar-forge.sqlite-source.v1",
+  "database": "catalog.sqlite",
+  "maxPending": 32,
+  "queries": {
+    "catalog": {
+      "sql": "SELECT id, title, region, price_cents FROM products WHERE region = $region AND id > $after_id ORDER BY id",
+      "parameters": {
+        "region": {"type":"string","minLength":1,"maxLength":64},
+        "after_id": {"type":"integer","minimum":"0","default":"0"}
+      },
+      "columns": ["id", "title", "region", "price_cents"],
+      "maxRows": 100,
+      "maxBytes": 524288,
+      "timeoutMs": 1500
+    }
+  }
+}
