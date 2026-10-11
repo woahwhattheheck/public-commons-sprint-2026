@@ -180,11 +180,14 @@ download filename does not create another payment identity. An explicitly
 reconciled merchant reset advances the generation, allowing a fresh intent in
 the same ledger without changing the order's original terms.
 
-The stock SF88 native workspace currently supports **Stellar testnet**. The
-handoff and offline buyer review preserve the merchant's explicit network;
-reviewing a public-network handoff does not create a public-network signer.
-Use the network supported by the merchant's actual seller and the buyer's
-configured original signing path.
+The original SF88 native workspace supports **Stellar testnet and explicitly
+selected Stellar public network**. The handoff and offline review preserve the
+merchant's exact network, asset and recipient; initialization uses that review
+without switching an existing workspace's network. Follow the original
+[mainnet workspace guide](../sf88-operator-buyer-cli/MAINNET.md) for a
+`stellar:pubnet` handoff and use the existing payer and signer for that network.
+The installed Woo journey above exercised testnet with a controlled facilitator;
+it is not a claim of a funded public-network payment.
 
 The handoff contract is `stellar-forge.sf104.checkout-handoff.v1`:
 
