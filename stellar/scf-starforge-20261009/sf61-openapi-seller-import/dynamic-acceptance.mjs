@@ -58,6 +58,7 @@ try {
   const caseCollision = await ask(session, '/api/items/LATEST');
   assert.equal(caseCollision.status, 400);
   assert.equal(JSON.parse(caseCollision.body).error, 'NATIVE_ROUTE_CASE_COLLISION');
+  assert.equal((await ask(session, '/API/ITEMS/LATEST')).status, 400);
   assert.equal((await ask(session, '/api/items/new-id', 'HEAD')).body, '');
   assert.equal((await ask(session, '/api/items/new-id', 'POST', { message: 'live input' })).status, 402);
   for (const suffix of ['a', 'bad%2Fslash', 'bad%252Fslash', '%E0%A4', 'bad%00value'])
@@ -83,6 +84,18 @@ try {
   assert.equal(observed.adapter.getUrl(), 'https://seller.example/api/items/caf%C3%A9');
   assert.equal(calls, 0);
 } finally { await boundary.close(); }
+const fixedOnly = await startSellerService({
+  config: { ...config, routes: config.routes.filter(item => item.id === 'route3') },
+  handlers, port: 0,
+});
+try {
+  const caseVariant = await ask(fixedOnly, '/API/ITEMS/LATEST?days=3');
+  assert.equal(caseVariant.status, 402);
+  const fixedChallenge = JSON.parse(Buffer.from(caseVariant.headers['payment-required'], 'base64'));
+  assert.equal(fixedChallenge.resource.url, 'https://seller.example/API/ITEMS/LATEST?days=3');
+  assert.deepEqual(fixedChallenge.accepts, [payment]);
+  assert.equal((await ask(fixedOnly, '/API/ITEMS/LATEST', 'POST')).status, 405);
+} finally { await fixedOnly.close(); }
 const a = offered('GET').seller, b = structuredClone(a);
 b.extensions.bazaar.routeTemplate = '/api/items/:other';
 b.extensions.bazaar.info.input.pathParams = { other: 'sample' };
