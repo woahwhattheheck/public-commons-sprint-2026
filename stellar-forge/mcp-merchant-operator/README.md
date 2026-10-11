@@ -31,8 +31,8 @@ node stellar-forge/mcp-merchant-operator/serve.mjs init \
 ```
 
 For the original native seller, add `--facilitator` with the existing HTTPS
-facilitator URL. Application bindings additionally require `--handlers` naming
-the existing trusted module. These are host configuration at initialization,
+facilitator URL. Application bindings use `--upstreams` for an existing HTTP API
+or `--handlers` for an existing trusted module. These are host configuration at initialization,
 never MCP tool inputs. The original native SDK packages must be installed for
 native operation. An explicitly configured loopback facilitator uses the
 original `--allow-local-facilitator` option.
@@ -66,6 +66,69 @@ configuration. The original importer snapshots static response files during
 staging, and the original release system retains the trusted handler entry
 hash. Executable module dependencies remain the operator's application.
 
+### Use a saved API onboarding package
+
+Save the merchant's selected routes, prices and backend authentication mappings
+in the original SF61 API workspace. Point initialization to that saved package:
+
+```sh
+node stellar-forge/mcp-merchant-operator/serve.mjs init \
+  --dir /private/my-merchant \
+  --workspace /private/api-packages/merchant-v1 \
+  --name "My merchant" --seller-port 0
+```
+
+The original package reader verifies its manifest and each input file.
+Initialization returns the package identity, input digests and required
+environment-variable names. It validates the source before creating the new
+operator directory. Supply those variables through the host's existing service
+environment before starting MCP; their values are resolved by the original
+upstream launcher when the seller starts.
+
+The configured source now has this shape:
+
+```json
+{
+  "label": "Saved onboarding package",
+  "workspace": "/private/api-packages/merchant-v1",
+  "runtime": { "port": 0 }
+}
+```
+
+Use `workspace` as the whole source selection. Its original facade, payment
+selections, route bindings and upstream configuration travel together. Do not
+combine it with separate source files or a handler module. A new saved package
+can be registered as another alias for the next release; already staged releases
+retain their original snapshots and do not depend on the source package at launch.
+
+### Connect an existing HTTP backend
+
+For explicit SF61 files, add `--upstreams /private/api/upstreams.json` to the
+first initialization command. The file uses the original SF30
+`stellar-forge.seller-upstreams.v1` format. Each service binding's `handler`
+selects one upstream binding. The configuration stores its path as `upstreams`
+alongside `spec`, `selections` and `bindings`.
+
+An explicitly configured local development backend also needs
+`--allow-loopback-upstream`; saved workspace packages retain their own original
+choice. Public backends use the original HTTPS rules. Authentication maps header
+names to environment-variable names through `headerEnv`. Keep values in the
+host environment, including the complete `Bearer` or `Basic` prefix where needed.
+
+`merchant_sources` displays the public route and complete payment choices next
+to the original upstream review: origin, path, method, query mapping, header
+names, credential variable names, response constraints and operation settings.
+It uses the original compiler without reading credential values or contacting
+the backend. `merchant_stage` retains the exact upstream bytes through the
+original release store. `merchant_compare` then shows backend changes as well
+as price and route changes. Activation, restart and rollback use the same tools
+and generation checks below.
+
+For credential rotation, replace the value through the host's deployment
+mechanism, stop the owned seller, and relaunch MCP with the updated environment.
+Start the same selected release. A new origin, path, header mapping or payment
+term is a configuration change: stage, compare and select a new release.
+
 ## Connect an MCP client
 
 Provide the existing operator bearer token through `MCP_ACCESS_TOKEN`, or select
@@ -94,8 +157,8 @@ workspace remains separate and uses its existing approval, budget and signer.
 
 | Tool | Operation |
 | --- | --- |
-| `merchant_sources` | List configured aliases, or inspect selected API routes, all payment choices and input hashes. |
-| `merchant_stage` | Compile an alias to a new immutable release ID. |
+| `merchant_sources` | Inspect configured files or a saved API package, with public routes, payment choices, backend mappings and input hashes. |
+| `merchant_stage` | Compile an alias to a new immutable release ID, retaining the original upstream snapshot when configured. |
 | `merchant_inspect` | Verify the original retained release and inspect its exact digest and terms. |
 | `merchant_compare` | Compare route, price and application changes with the active or specified previous release. |
 | `merchant_activate` | Select a release using its digest and the current selection generation. |
