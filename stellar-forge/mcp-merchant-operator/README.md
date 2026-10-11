@@ -55,6 +55,24 @@ stores and sessions own these operations. See [FLEET.md](FLEET.md) for the full
 host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
 initialization can include the same fleet with `--fleet-plan`.
 
+
+### Deliver customer SDKs from fleet merchants
+
+The original fleet owner now includes a retained customer handover desk for every
+declared tenant and slot. Generate from the exact owned instance, inspect the
+original receipt and offers, complete an inspected legacy export, and retrieve
+its original manifest and SHA-pinned file chunks. Retained exports remain usable
+after slot retirement and provider reopening.
+
+Use `merchant_fleet_client_list`, `merchant_fleet_client_status`,
+`merchant_fleet_client_generate`, `merchant_fleet_client_adopt`,
+`merchant_fleet_client_manifest`, `merchant_fleet_client_file`, and
+`merchant_fleet_client_file_release` with the selected `tenant` and `slot`.
+The managed fleet workspace exposes the same original customer controls, and
+`fleet-release` supplies a resumable `client-download` command. See
+[the fleet customer handover guide](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/CLIENT_HANDOVER.md)
+for the complete browser, foreground CLI, and authenticated MCP workflow.
+
 ## Prepare a merchant
 
 For a prepared Stellar RPC product, initialize with

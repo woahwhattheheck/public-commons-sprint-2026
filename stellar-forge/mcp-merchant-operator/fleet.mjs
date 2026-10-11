@@ -1,5 +1,8 @@
 // MIT. Agent operations over the original retained merchant fleet lifecycle.
 import { randomUUID } from 'node:crypto';
+import { CLIENT_EXPORT_FILES, CLIENT_EXPORT_MANIFEST }
+  from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs';
+import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { describeFleetPackages, openFleetReleaseOperator, readFleetReleasePlan }
   from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/release-operator.mjs';
 
@@ -11,8 +14,32 @@ const identity = { type: 'string', minLength: 1, maxLength: 128 };
 const revision = { type: 'integer', minimum: 1 };
 const error = (code, message) => Object.assign(new Error(message), { code });
 
+function fleetClientTools(tool) {
+  const scope = { tenant, slot: alias }, selected = { ...scope, exportId: release };
+  return [
+    tool('merchant_fleet_client_list', 'List original retained customer SDK exports for one declared merchant and slot. Completion receipts and interrupted exports remain available when that slot is stopped.',
+      { ...scope, after: release, limit: { type: 'integer', minimum: 1, maximum: 50 } }, ['tenant', 'slot'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_client_status', 'Inspect the original five customer files, exact saved payment terms, completion receipt and release provenance for this merchant and slot.',
+      selected, ['tenant', 'slot', 'exportId'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_client_generate', 'Generate the original customer SDK from this exact fleet-owned merchant instance into a new retained export ID. Read the actual slot instanceId from merchant_fleet_status; the source is its live original OpenAPI.',
+      { ...scope, id: release, instanceId: identity }, ['tenant', 'slot', 'id', 'instanceId']),
+    tool('merchant_fleet_client_adopt', 'Retain a completion receipt for the inspected original five legacy customer files in this slot. Requires their exact complete files digest and preserves all payload bytes.',
+      { ...selected, expectedFilesSha256: digest }, ['tenant', 'slot', 'exportId', 'expectedFilesSha256'], { idempotent: true }),
+    tool('merchant_fleet_client_manifest', 'Read the original customer completion manifest and its exact identity in this merchant and slot. Use its SHA-256 to select retained file downloads.',
+      selected, ['tenant', 'slot', 'exportId'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_client_file', 'Read bounded SHA-pinned original customer bytes within one declared merchant, slot and export. Continue using readId, offset and inspected hashes; released or expired reads can reopen the same immutable bytes.',
+      { ...selected, file: { type: 'string', enum: [CLIENT_EXPORT_MANIFEST, ...CLIENT_EXPORT_FILES] },
+        expectedManifestSha256: digest, expectedSha256: digest, readId: identity,
+        offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES } },
+      ['tenant', 'slot', 'exportId', 'file', 'expectedManifestSha256'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_client_file_release', 'Release only this merchant and slot’s temporary original customer file read. The retained customer files and completion receipt remain available.',
+      { ...selected, readId: identity }, ['tenant', 'slot', 'exportId', 'readId'], { readOnly: true, idempotent: true }),
+  ];
+}
+
 export function fleetControlTools(tool) {
   return [
+    ...fleetClientTools(tool),
     tool('merchant_fleet_plan', 'Inspect the host-configured original fleet: plan digest, tenant/slot/package aliases, listener ports and limits. Reads original release stores without starting a process or exposing private paths.', {}, [], { readOnly: true, idempotent: true }),
     tool('merchant_fleet_status', 'Read this MCP process ownership and the original live fleet revision, candidates, exact release mapping, retained rollback history, active requests and drain state. A stopped fleet remains stopped.', {}, [], { readOnly: true, idempotent: true }),
     tool('merchant_fleet_start', 'Start or reopen the original retained multi-store fleet using the exact inspected host-plan digest. Starts its original selected merchant sessions and gateway; does not request a paid resource.', { expectedPlanDigest: digest }, ['expectedPlanDigest'], { openWorld: true }),
@@ -120,18 +147,23 @@ export class MerchantFleet {
           const methods = { merchant_fleet_catalog: 'catalog', merchant_fleet_stage: 'stage',
             merchant_fleet_review: 'review', merchant_fleet_prepare: 'prepare', merchant_fleet_activate: 'activate',
             merchant_fleet_rollback_review: 'reviewRollback', merchant_fleet_rollback: 'rollback', merchant_fleet_retire: 'retire',
-            merchant_fleet_operations: 'operations' };
+            merchant_fleet_operations: 'operations', merchant_fleet_client_list: 'clientList',
+            merchant_fleet_client_status: 'clientInspect', merchant_fleet_client_generate: 'clientGenerate',
+            merchant_fleet_client_adopt: 'clientAdopt', merchant_fleet_client_manifest: 'clientManifest',
+            merchant_fleet_client_file: 'clientFile', merchant_fleet_client_file_release: 'clientFileRelease' };
           const method = methods[name];
           if (!method) throw error('TOOL_NOT_FOUND', 'Unknown fleet operation.');
           const held = this.#owned();
           const result = await held.operator[method](args);
-          if (!['catalog', 'operations'].includes(method)) this.#lastOperation = { action: method, outcome: 'RETURNED', managerId: held.id, at: new Date().toISOString() };
+          if (!['catalog', 'operations', 'clientList', 'clientInspect', 'clientManifest', 'clientFile', 'clientFileRelease'].includes(method))
+            this.#lastOperation = { action: method, outcome: 'RETURNED', managerId: held.id, at: new Date().toISOString() };
           return { managerId: held.id, ...result };
         }
       }
     } catch (cause) { throw publicFailure(cause); }
   }
   cancelStaging() { return this.#held?.operator.cancelStaging() ?? false; }
+  cancelClientTransfers() { return this.#held?.operator.cancelClientTransfers() ?? false; }
   async close() {
     this.#closing = true;
     if (this.#held) await this.#stop(this.#held.id);

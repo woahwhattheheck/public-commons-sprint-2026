@@ -14,6 +14,19 @@
   <section class="panel"><h2>Draining generations</h2><p>Requests already admitted before activation continue on their original configuration.</p><div id="draining"></div></section>
   <section id="managed-processes" class="panel" hidden><h2>Seller processes</h2><p>Retire a drained replacement slot after traffic has moved. The gateway checks it again while the original release session stops.</p><div id="release-processes" class="table-wrap"></div><p id="release-pending" class="small"></p></section>
   <section class="panel"><div class="section-head"><div><h2>Retained history</h2><p>Rollback selects a retained snapshot and creates a new revision after the original sellers pass their checks.</p></div></div><div id="history" class="table-wrap"></div></section>
+  <section id="fleet-clients" class="panel" hidden aria-labelledby="client-heading">
+    <div class="section-head"><div><h2 id="client-heading">Customer SDK handover</h2><p>Generate and deliver the original client for a chosen merchant and release slot.</p></div><span id="client-scope" class="pill"></span></div>
+    <div class="release-form"><label>Merchant<select id="client-tenant"></select></label><label>Release slot<select id="client-slot"></select></label></div>
+    <p id="client-owner" class="small"></p>
+    <div class="release-form"><label>Customer export ID<input id="client-export-id" pattern="[a-z0-9][a-z0-9_-]{0,63}" maxlength="64" autocomplete="off" placeholder="customer-release-1"></label><button id="client-generate" type="button">Generate customer SDK</button><button id="client-inspect" type="button">Inspect retained client</button></div>
+    <p id="client-notice" role="status" aria-live="polite"></p>
+    <div class="table-wrap"><table><thead><tr><th>Customer export</th><th>Saved seller</th><th>Completion</th><th>Original files</th><th>Action</th></tr></thead><tbody id="client-list"></tbody></table></div>
+    <div class="button-row"><button id="client-refresh" type="button">Refresh exports</button><button id="client-first" type="button">First page</button><button id="client-next" type="button">Next page</button></div>
+    <section id="client-review" class="client-review" hidden><h3 id="client-review-title">Retained customer client</h3><p id="client-review-description"></p><dl id="client-identity"></dl><div id="client-offers"></div>
+      <div class="table-wrap"><table><thead><tr><th>Original file</th><th>Size</th><th>SHA-256</th><th>Download</th></tr></thead><tbody id="client-files"></tbody></table></div>
+      <div class="button-row"><button id="client-package" class="primary" type="button">Download customer package</button><button id="client-adopt" type="button" hidden>Retain reviewed completion</button><button id="client-download-stop" type="button" hidden>Stop download</button></div><p id="client-download-progress" role="status" aria-live="polite" class="small"></p>
+    </section>
+  </section>
   <footer><span id="storage">Snapshot storage: —</span><span>Private loopback workspace · Original SF30 sellers and gateway</span></footer>
 </main>
 <dialog id="confirm"><form method="dialog"><h2 id="confirm-title">Confirm change</h2><p id="confirm-description"></p><pre id="confirm-details"></pre><div class="button-row"><button value="cancel">Cancel</button><button id="confirm-apply" value="apply" class="primary">Apply change</button></div></form></dialog>
