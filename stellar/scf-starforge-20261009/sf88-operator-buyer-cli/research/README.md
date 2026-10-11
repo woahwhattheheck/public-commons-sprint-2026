@@ -167,10 +167,10 @@ node sf88-operator-buyer-cli/research/cli.mjs editions \
 | --- | --- |
 | EMPTY | No completed page has been received. The first request starts with `cursor=*`. |
 | PARTIAL | Retained pages are valid and a further provider cursor remains. |
-| COMPLETE | The walk began at `*` and reached the provider's terminal empty result with a null next cursor. |
+| COMPLETE | The walk began at `*` and reached the provider's terminal null next cursor, retaining every record on that final page. |
 | INTERRUPTED | The retained chain or acquisition needs attention; inspect the reason and the pending operation before continuing. |
 
-OpenAlex cursor paging continues until `meta.next_cursor` is null and the results are empty. A short page with another cursor continues. Basic numbered paging has a 10,000-result limit; the workspace uses cursor paging for full cohorts. [Paging through results](https://help.openalex.org/api/paging/)
+The workspace follows the exact cursor chain until `meta.next_cursor` is null. The original terminal response can be empty (`TERMINAL_EMPTY_PAGE`) or contain records (`TERMINAL_CURSOR`); both remain in the edition. An actual 2026-10-11 source capture returned 100 records followed by 69 records and a null cursor, with all 169 distinct IDs matching the reported count. A short page with another cursor continues. Basic numbered paging has a 10,000-result limit; the workspace uses cursor paging for full cohorts. [Paging through results](https://help.openalex.org/api/paging/)
 
 The provider's reported total, the number of received occurrences, and the number of distinct retained IDs are separate measurements. A live dataset may change during a walk. Each page keeps its reported count, timestamp, cursor, byte length, and hash; the coverage summary exposes count changes. COMPLETE describes that saved query's cursor walk.
 
@@ -297,6 +297,22 @@ The programmatic `researchExports` function also emits comparison JSON and added
 By default, the edition export includes page bytes and retained native buyer results. `--without-pages` and `--without-native` produce deliberately smaller handoffs. Preserve the full original edition for later reopening.
 
 CSV cells with spreadsheet formula prefixes receive a leading apostrophe; exact text remains in the JSON. BibTeX and RIS omit unavailable fields, retain the supplied author names, and export only the bibliographic data received in this edition.
+
+## Receive complete exported editions
+
+Use the [complete receiving guide](RECEIVING.md) to hand over one edition or a collection of comparison editions. The receiver verifies every original manifest and file, preserves query revisions, exact source pages, native buyer results and decisions, then opens the complete collection in a new private workspace through the original reader.
+
+~~~bash
+node sf88-operator-buyer-cli/research/receive-cli.mjs inspect \
+  --source /private/delivery/greenhouse-edition
+
+node sf88-operator-buyer-cli/research/receive-cli.mjs receive \
+  --source /private/delivery/greenhouse-first-edition \
+  --source /private/delivery/greenhouse-followup-edition \
+  --workspace /private/received-research
+~~~
+
+Supply full exports with their original page and native-result files. Receiving uses Linux and Python 3 for an atomic no-replace publication; the destination must be new, or the same already-received delivery. Repeating that delivery preserves subsequent reviewer changes. The original researcher UI reopens the receiving path with the normal `serve --workspace` command below.
 
 ## Use the local workspace
 
