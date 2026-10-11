@@ -69,6 +69,9 @@ function csvParser(onRecord, maxCellChars) {
   };
 }
 
+// The SFTP source uses this same record parser before its reviewed projection.
+export { csvParser as createCsvRecordParser };
+
 /** Load one immutable snapshot. Only declared columns are retained and exposed. */
 export async function loadCsvDataset({ file, name, columns, filters = [], ranges = [], sorts = [],
   maxBytes = 64 * 1024 * 1024, maxRows = 250000, maxCellChars = 65536,

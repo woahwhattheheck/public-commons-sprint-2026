@@ -1,5 +1,6 @@
 import { createAuthenticationPanel, appendAuthenticationReview, renderCredentialRuntime } from './authentication-browser.mjs';
 import { createOperationSettings, createOperationPanel } from './operation-panel.mjs';
+import { createRevisionDesk } from './revision-browser.mjs';
 import { createStreamSettings, isStreamFormat, merchantResponseLabel } from './stream-browser.mjs';
 import { createStreamCustomerPanel } from './stream-customer-browser.mjs';
 import { createPostmanPanel, mergePostmanMerchantPlan } from '/postman-browser.mjs';
@@ -7,7 +8,7 @@ const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
 $('migration-link').href='/migrations/#'+token;
-let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false;
+let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 async function api(path,body) {
@@ -23,6 +24,7 @@ function available() {
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;
   $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
   postmanPanel.refresh(busy);
+  revisionDesk?.available(busy);
 }
 function dirty() {
   selectedPackage=null;
@@ -48,6 +50,11 @@ function field(label,value,type='text') {
   const container=make('label',label),input=make('input');input.type=type;input.value=value??'';container.append(input);return {container,input};
 }
 const operationPanel=createOperationPanel({container:$('operation-runtime'),make,field,api,act,notice});
+revisionDesk=createRevisionDesk({container:$('source-revisions'),api,act,notice,onSaved:async(result,configuration)=>{
+  await loadSource(configuration.specText,configuration.plan);preview(result.preview);await saved(result.name,result);
+  $('package-name').value=result.name;$('saved-path').textContent='Saved to '+result.folder+'\n\n'+result.command;$('saved-path').hidden=false;
+  await refresh();
+}});
 function checkField(label,value) {
   const container=make('label',undefined,'check wide'),input=make('input');
   input.type='checkbox';input.checked=value===true;container.append(input,make('span',label));return {container,input};
@@ -212,8 +219,8 @@ function preview(value) {
     for(const route of value.routeChecks.filter(r=>r.state!=='READY'))$('review').append(make('p',route.method+' '+route.id+': '+(route.reason==='MULTIPART_REQUIRES_PRIVATE_FILE_REQUEST'?'select and retain an actual private file in the running operation form.':'add a public request example with its path, query and body values.'),'hint'));}
   appendAuthenticationReview($('review'),value.routes,{make});
 }
-async function saved(name) {
-  selectedPackage=name;$('run-label').textContent='Saved package: '+name;available();
+async function saved(name,value) {
+  selectedPackage=name;$('run-label').textContent='Saved package: '+name;revisionDesk.selectPackage(name,value);available();
   await customerPanel.setPackage(name);
 }
 function runtime(value) {
@@ -265,13 +272,13 @@ async function refresh() {
       make('span',project.title+' · '+countLabel(project.routes,'route')));
     button.addEventListener('click',()=>act(async()=>{
       const loaded=await api('load?name='+encodeURIComponent(project.name));
-      await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);await saved(loaded.name);
+      await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);await saved(loaded.name,loaded);
       $('package-name').value=loaded.name;
       notice('Reopened '+loaded.name+'. Save edits under a new package name.');
     }));$('packages').append(button);
   }
   if(!result.packages.length)$('packages').append(make('p','No saved projects yet.','small'));
-  $('output').textContent='Output: '+result.output;runtime(result.runtime);
+  $('output').textContent='Output: '+result.output;runtime(result.runtime);await revisionDesk.refresh();
 }
 $('file').addEventListener('change',()=>act(async()=>{
   const file=$('file').files[0];if(!file)return;

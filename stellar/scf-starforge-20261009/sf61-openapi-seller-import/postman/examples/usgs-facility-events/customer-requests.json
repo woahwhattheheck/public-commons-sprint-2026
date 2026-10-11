@@ -1,0 +1,53 @@
+{
+  "schema": "commons.customer-request-map.v1",
+  "sellerOrigin": "FILL_FROM_SAVED_MERCHANT",
+  "operations": [
+    {
+      "sourcePointer": "/item/0/item/0",
+      "name": "Search events in a facility region",
+      "method": "GET",
+      "resourcePath": "/fdsnws/event/1/query",
+      "query": {
+        "format": "geojson",
+        "starttime": "2014-08-24T00:00:00Z",
+        "endtime": "2014-08-25T00:00:00Z",
+        "minmagnitude": "4",
+        "minlatitude": "37",
+        "maxlatitude": "39",
+        "minlongitude": "-123",
+        "maxlongitude": "-121",
+        "orderby": "time-asc",
+        "limit": "20000"
+      },
+      "responseMode": "json",
+      "customerUse": "Save the returned GeoJSON with the original buyer response-file writer, then pass it to report.mjs."
+    },
+    {
+      "sourcePointer": "/item/0/item/1",
+      "name": "Count matching events",
+      "method": "GET",
+      "resourcePath": "/fdsnws/event/1/count",
+      "query": {
+        "format": "geojson",
+        "starttime": "2014-08-24T00:00:00Z",
+        "endtime": "2014-08-25T00:00:00Z",
+        "minmagnitude": "4",
+        "minlatitude": "37",
+        "maxlatitude": "39",
+        "minlongitude": "-123",
+        "maxlongitude": "-121"
+      },
+      "responseMode": "json",
+      "customerUse": "Compare inventory with the search result before declaring a complete historical window."
+    },
+    {
+      "sourcePointer": "/item/1/item/0",
+      "name": "Past day magnitude 2.5 and higher",
+      "method": "GET",
+      "resourcePath": "/earthquakes/feed/v1.0/summary/2.5_day.geojson",
+      "query": {},
+      "responseMode": "json",
+      "customerUse": "Save the returned GeoJSON with the original buyer response-file writer, then pass it to report.mjs."
+    }
+  ]
+}

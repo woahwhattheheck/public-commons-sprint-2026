@@ -12,6 +12,8 @@ import { stageMerchantFileRequest, loadMerchantFileRequest, listMerchantFileRequ
 import { MAX_REQUEST_BODY_BYTES } from '../../sf31-buyer-client/request-body.mjs';
 import { readSellerConfig } from '../../sf30-seller-sdk/serve.mjs';
 import { readUpstreamBindings } from '../../sf30-seller-sdk/upstream.mjs';
+import { reviewMerchantRevision, saveMerchantRevision, stageMerchantRevision, releaseCommands,
+  saveMerchantRevisionDraft, readMerchantRevisionDraft, listMerchantRevisionDrafts } from './revisions.mjs';
 import { describeMerchantStreamCustomers, createMerchantStreamCustomer, readMerchantStreamCustomer,
   prepareMerchantStreamCustomer } from './stream-customer.mjs';
 import { openCommerce, completeCommerceShutdown } from '../../sf66-demo-launcher/commerce.mjs';
@@ -27,6 +29,8 @@ STATIC.set('/migrations/','../blockworks/index.html');
 STATIC.set('/migrations/browser.mjs','../blockworks/browser.mjs');
 STATIC.set('/migrations/style.css','../blockworks/style.css');
 STATIC.set('/migrations/comparison-view.mjs','../blockworks/comparison-view.mjs');
+
+STATIC.set('/revision-browser.mjs','revision-browser.mjs');
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
@@ -71,6 +75,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
   let migrationPromise, migrationInstance;
   const migrations = () => migrationPromise ??= createMigrationRoutes({parent:output,origin:()=>origin,parentRuntime:view})
     .then(value=>(migrationInstance=value)).catch(error=>{migrationPromise=null;throw error;});
+
   const cacheView = () => {
     const rows = active?.session.session?.upstreamSnapshot?.().bindings ?? [];
     return rows.filter(row=>row.cachePolicy).map(row=>({binding:row.name,method:row.method,routes:row.routes,
@@ -135,6 +140,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           plan:JSON.parse(await readFile(new URL('./examples/streaming-plan.json',import.meta.url),'utf8'))});
         if (pathname==='/api/packages') return send(200,{packages:await list(),runtime:view(),output});
         if (pathname==='/api/status') return send(200,view());
+        if (pathname==='/api/revisions/drafts') return send(200,{drafts:await listMerchantRevisionDrafts(output)});
+        if (pathname==='/api/revisions/load') return send(200,await readMerchantRevisionDraft(output,url.searchParams.get('name')));
         if (pathname==='/api/customer/options') {
           const project=await readPackage(output,url.searchParams.get('name'));
           return send(200,{...await describeMerchantStreamCustomers(project),customer:customerView(),
@@ -153,7 +160,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         }
         if (pathname==='/api/load') {
           const p=await readPackage(output,url.searchParams.get('name'));
-          return send(200,{name:p.name,specText:p.specText,plan:p.plan,preview:p.manifest.preview});
+          return send(200,{name:p.name,specText:p.specText,plan:p.plan,preview:p.manifest.preview,
+            ...(p.sourceRevision?{sourceRevision:p.sourceRevision,folder:p.folder,release:releaseCommands(p.folder,p.name)}:{})});
         }
         return send(404,{error:'Not found'});
       }
@@ -165,6 +173,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         try { return await (await migrations()).upload(req,url,send); }
         finally {busy=false;finishMutation();}
       }
+
       if (pathname==='/api/operations/stage') {
         if (busy) return send(409,{error:'A workspace operation is in progress'});
         busy=true; let finishMutation;
@@ -182,8 +191,10 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (pathname==='/api/postman/prepare') return send(200,preparePostmanSource(body));
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
+      if (pathname==='/api/revisions/review') return send(200,await reviewMerchantRevision({...body,parent:output}));
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
-        '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close'].includes(pathname) && !pathname.startsWith('/api/migrations/')) return send(404,{error:'Not found'});
+        '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close',
+        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/')) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
@@ -192,6 +203,9 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         if (pathname.startsWith('/api/migrations/')) return await (await migrations()).post(pathname,body,send);
         if ((pathname==='/api/start'||pathname==='/api/customer/open') && migrationInstance?.app.releases.owned().length)
           return send(409,{error:'This workspace owns a running migration seller. Stop it in Data migrations before starting another merchant session.'});
+        if (pathname==='/api/revisions/draft') return send(201,await saveMerchantRevisionDraft({...body,parent:output}));
+        if (pathname==='/api/revisions/save') return send(201,await saveMerchantRevision({...body,parent:output}));
+        if (pathname==='/api/revisions/stage') return send(201,await stageMerchantRevision({...body,parent:output}));
         if (pathname==='/api/save') {
           const result=await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name});
           return send(201,{name:result.name,folder:result.folder,command:result.command,preview:result.preview});
