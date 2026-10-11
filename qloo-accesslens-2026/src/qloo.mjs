@@ -68,4 +68,15 @@ export class QlooClient {
     const insights = await this.get('/v2/insights',{'filter.type':'urn:entity:place','signal.interests.entities':artist.id});
     return {artist, rankedPlaceIds:readPlaceRanks(insights), qlooRequests:this.calls};
   }
+  async searchPlaces(query) {
+    const payload=await this.get('/search',{query,types:'urn:entity:place',take:'12'});
+    return resultEntities(payload).map(item=>{
+      if((item?.subtype??item?.type)!=='urn:entity:place'||!identity(item)||typeof item.name!=='string') throw new ProviderError('QLOO_PLACE_IDENTITY_INCOMPLETE');
+      // Display supplied attributes for an explicit operator identity selection.
+      // They never become accessibility, capacity or price observations.
+      const details={};
+      for(const key of ['address','location','geocode','properties'])if(item[key]!==undefined&&JSON.stringify(item[key]).length<=6000)details[key]=item[key];
+      return {id:identity(item),name:item.name,details};
+    });
+  }
 }

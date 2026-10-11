@@ -2,6 +2,45 @@
 
 The existing SF60 operator records admissions, revisions and signed withdrawals in its original append-only lifecycle. A local tool can lose its response after the writer commits. `workspace-recovery.mjs` joins a retained **original operator command** to that native history. It does not create a second catalog, operation store, signer, browser service, retry loop or payment engine.
 
+## Save the original command before dispatch
+
+The maintained operator CLI performs retention directly; no separate preparation
+step or command store is needed. Add `--retain-command NEW_FILE` to `admit`,
+`apply-withdrawal`, or `apply-batch`. Existing invocations without this option
+retain their original behavior.
+
+```sh
+node operator-cli.mjs admit \
+  --directory /private/catalog \
+  --seller merchant-1 --sequence 1 \
+  --entry /private/received-offer.json --proofs /private/received-proofs.json \
+  --source-url https://merchant.example/offers/export \
+  --observed-at 2026-10-11T16:00:00.000Z \
+  --retain-command /private/admission-command.json \
+  --out /private/admission-receipt.json
+
+node operator-cli.mjs recover \
+  --directory /private/catalog \
+  --command /private/admission-command.json \
+  --out /private/admission-recovery.json \
+  --html /private/admission-recovery.html
+```
+
+Use the real received offer, seller identity, original observation time and
+proofs in a live operation. The example hostname and timestamp are placeholders.
+The same flag retains a complete batch and its native plan-binding fields or the
+original signed withdrawal envelope. It does not extend a proof's expiry.
+
+The CLI reserves every output name before dispatch, writes the exact native
+command (including the same request ID), then syncs both its mode0600 file and
+parent directory before calling the original operator. A retention failure
+prevents dispatch and removes new partial files. An existing retention filename
+is never overwritten. After dispatch begins, the complete retained command
+survives an unsuccessful response, a dropped response, or an output-save failure.
+It contains no control credential. A retained command is not itself evidence
+that dispatch or commit occurred; the recovery action inspects the actual native
+history. It never resubmits that command.
+
 ## Native command to inspect
 
 Retain the exact `operation` and `input` passed to `requestCatalogOperator`. The command may contain the original `schema` and `requestId`, but neither is needed to match a catalog effect. Supported operations are `admit`, `apply-withdrawal`, and the original signed `apply-batch` added in PR922.

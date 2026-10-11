@@ -10,7 +10,7 @@ import {openQueue} from './queue.mjs';
 import {openWorkspace} from './workspace.mjs';
 import {resolveBuyerProxy} from '../sf31-buyer-client/public-transport.mjs';
 import {originalRecordFromEvidence} from '../sf86-rpc-transfer-reconcile/cli.mjs';
-import {checkOriginalTerms, DEFAULT_RPC, TESTNET_RPC_ENDPOINTS} from '../sf86-rpc-transfer-reconcile/terms.mjs';
+import {checkOriginalTerms, resolveRpcEndpoint} from '../sf86-rpc-transfer-reconcile/terms.mjs';
 
 const SCHEMA='stellar-forge.sf88.inbox-finalization.v1';
 const WORKER_SCHEMA='stellar-forge.sf36.finalization.v1';
@@ -119,13 +119,7 @@ export async function finalizeOriginalAttempt({configurationPath,configSha256,in
     'INBOX_WORKSPACE_TERMS_MISMATCH');
   // A later spending-cap reduction does not undo a previously authorized debt.
   // Original SF36 authenticates the actual earlier reservation before finality.
-  let rpcUrl;
-  try {rpcUrl=new URL(active.manifest.signer.rpcUrl??DEFAULT_RPC);}
-  catch {throw new InputError('RPC_ENDPOINT_NOT_ALLOWED');}
-  const rpcEndpoint=rpcUrl.origin;
-  need(rpcUrl.protocol==='https:'&&!rpcUrl.username&&!rpcUrl.password&&
-    !rpcUrl.search&&!rpcUrl.hash&&rpcUrl.pathname==='/'&&
-    TESTNET_RPC_ENDPOINTS.includes(rpcEndpoint),'RPC_ENDPOINT_NOT_ALLOWED');
+  const rpcEndpoint=resolveRpcEndpoint(op.expect.network,active.manifest.signer.rpcUrl);
   let rpcProxyUrl;
   if(workspaceTransport!==null) {
     // Resolve the existing explicit source for this invocation. The actual

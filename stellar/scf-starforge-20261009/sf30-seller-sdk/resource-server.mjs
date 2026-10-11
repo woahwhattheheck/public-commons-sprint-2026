@@ -55,6 +55,16 @@ function importedOffer(raw, allowLocalhost) {
   return offer;
 }
 
+/** Materialize an already-selected original route for its canonical request.
+ * Dispatch retains its original schema and payment-header checks below. */
+export function materializeSellerRequestOffer(route, target, pathParams) {
+  if (!route.binding.dynamic && target.href === route.offer.resource.url) return route.offer;
+  const offer = structuredClone(route.offer);
+  offer.resource.url = target.href;
+  if (route.binding.dynamic) offer.extensions.bazaar.info.input.pathParams = { ...pathParams };
+  return offer;
+}
+
 function freeze(value) {
   if (value && typeof value === 'object') {
     for (const child of Object.values(value)) freeze(child);
@@ -250,12 +260,9 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       const target = new URL(req.url, route.offer.resource.url);
       if (target.hash || target.pathname !== rawPath) return simple(400, 'INVALID_REQUEST_TARGET');
       if (target.href.length > 2048) return simple(414, 'REQUEST_TARGET_TOO_LONG');
-      let requestOffer = route.offer;
-      if (route.binding.dynamic || target.href !== route.offer.resource.url) {
-        requestOffer = structuredClone(route.offer);
-        requestOffer.resource.url = target.href;
+      const requestOffer = materializeSellerRequestOffer(route,target,pathParams);
+      if (requestOffer !== route.offer) {
         if (route.binding.dynamic) {
-          requestOffer.extensions.bazaar.info.input.pathParams = { ...pathParams };
           if (!validateBazaarExtension(requestOffer.extensions.bazaar).ok)
             return simple(400, 'PATH_PARAMETERS_REJECTED');
         }

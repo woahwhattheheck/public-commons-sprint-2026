@@ -23,3 +23,6 @@ export { startCommerceConsole } from '../sf66-demo-launcher/commerce-console.mjs
 export { openCatalogOperator, requestCatalogOperator } from '../sf60-durable-catalog-transaction/operator.mjs';
 export { openDatasetVersions } from '../sf30-seller-sdk/dataset-refresh/versions.mjs';
 export { startVersionedDatasetSeller, datasetControl } from '../sf30-seller-sdk/dataset-refresh/service.mjs';
+export { reviewCommerceSetup, prepareCommerceSetup, inspectCommerceSetup } from '../sf66-demo-launcher/commerce-setup.mjs';
+export { fleetControl } from '../merchant-fleet-gateway/control.mjs';
+export { startFleetWorkspace } from '../merchant-fleet-gateway/workspace/server.mjs';

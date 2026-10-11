@@ -100,7 +100,7 @@ function validateDefinition(value, directory) {
     UUID.test(value.sessionId) && Number.isFinite(Date.parse(value.createdAt)) && object(value.config) &&
     value.configurationSha256 === sha(encoded(value.config)), 'OBJECT_SESSION_INVALID');
   need(Object.keys(value.config).every(key => ['catalog','operation','operator','signerModule','evidenceDir',
-    'trustedPayer','captureBody','bodyCaptureTimeoutMs','preparedFrom'].includes(key)), 'OBJECT_GET_CONFIG_REQUIRED');
+    'trustedPayer','captureBody','bodyCaptureTimeoutMs','preparedFrom','buyerTransport'].includes(key)), 'OBJECT_GET_CONFIG_REQUIRED');
   if (value.config.preparedFrom !== undefined) preparedFrom(value.config.preparedFrom);
   const {op} = execution(value.config);
   need(op.method === 'GET' && op.bodyFile === undefined && value.config.responseFile === undefined &&

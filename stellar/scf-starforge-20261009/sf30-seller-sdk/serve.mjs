@@ -12,6 +12,8 @@ import { compileServicePath } from './route-path.mjs';
 import { readJsonResponseFile, validateResponseFile } from './response-file.mjs';
 import { createSellerDeveloperPortal } from './developer-portal.mjs';
 import { createSellerLifecycle } from './lifecycle.mjs';
+import { createSellerAvailability } from './availability/gate.mjs';
+import { validateAvailabilityDirectory } from './availability/store.mjs';
 import { compileHttpSellerOffer } from './seller.mjs';
 import { responseAssetLimits, validateResponseAssetRoute, prepareResponseAssets,
   composeAssetAdmission, compileAssetRouteOffer } from './response-asset.mjs';
@@ -23,6 +25,7 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const USAGE = `Usage: node serve.mjs --config FILE [--port 8423] [--handlers FILE]
                      [--facilitator HTTPS_URL] [--allow-local-facilitator]
                      [--max-in-flight 64] [--drain-grace-ms 60000] [--request-timeout-ms 120000]
+                     [--availability-dir PRIVATE_ABSOLUTE_DIRECTORY]
 
 Without --facilitator the server serves real SF30 payment challenges only.
 --handlers loads application functions from a trusted local ESM module.
@@ -110,8 +113,9 @@ function facilitatorEndpoint(raw, allowLocal) {
 
 /** Start one service. An embedding app can supply a nativeFactory for its own facilitator. */
 export async function startSellerService({ config, port = 8423, handlers = {},
-  nativeFactory = null, maxInFlight = 64, drainGraceMs = 60000, requestTimeoutMs } = {}) {
+  nativeFactory = null, maxInFlight = 64, drainGraceMs = 60000, requestTimeoutMs, availabilityDirectory } = {}) {
   validateConfig(config);
+  if (availabilityDirectory !== undefined) validateAvailabilityDirectory(availabilityDirectory);
   const totalTimeout = validateRequestTimeout(requestTimeoutMs ?? config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('port must be 0–65535');
   if (!object(handlers) || nativeFactory !== null && typeof nativeFactory !== 'function') {
@@ -151,7 +155,14 @@ export async function startSellerService({ config, port = 8423, handlers = {},
   server.headersTimeout = 10000;
   server.keepAliveTimeout = 5000;
   const lifecycle = createSellerLifecycle(server, { maxInFlight, drainGraceMs });
-  const close = () => lifecycle.close();
+  let availability, closing;
+  const close = () => closing ??= (async () => {
+    const result = await lifecycle.close();
+    // Keep the private writer lease while original native work drains. A forced
+    // drain failure retains it until process exit.
+    await availability?.close();
+    return result;
+  })();
   try {
     await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); });
     const url = `http://${HOST}:${server.address().port}`;
@@ -167,6 +178,8 @@ export async function startSellerService({ config, port = 8423, handlers = {},
         body: fileResponses.has(route.id) ? Buffer.from(fileResponses.get(route.id)) : structuredClone(route.response),
       }),
     })), { allowLocalhost: !config.publicOrigin });
+    if (availabilityDirectory !== undefined)
+      availability = await createSellerAvailability(compiled, availabilityDirectory);
     const nativeServer = nativeFactory ? await nativeFactory(compiled) : null;
     if (nativeFactory && !nativeServer) throw new TypeError('Native factory did not return a resource server');
     const resources = createSellerResourceHandler({ compiled, nativeServer, maxResponseBytes,
@@ -207,11 +220,13 @@ export async function startSellerService({ config, port = 8423, handlers = {},
         res.end(req.method === 'HEAD' ? '' : JSON.stringify(payload));
         return;
       }
-      return lifecycle.handle(req, res, () => resources(req, res));
+      return lifecycle.handle(req, res, () => availability
+        ? availability.handle(req, res, () => resources(req, res)) : resources(req, res));
     };
-    return { server, url, mode, compiled, lifecycle, close };
+    return { server, url, mode, compiled, lifecycle, close, ...(availability ? { availability } : {}) };
   } catch (error) {
     if (server.listening) await close();
+    else await availability?.close();
     throw error;
   }
 }
@@ -223,7 +238,7 @@ export async function main(args = process.argv.slice(2)) {
     const flag = args[i];
     if (options.has(flag)) throw new TypeError('Duplicate option: ' + flag);
     if (flag === '--allow-local-facilitator') { options.set(flag, true); continue; }
-    if (!['--config', '--port', '--handlers', '--facilitator', '--max-in-flight', '--drain-grace-ms', '--request-timeout-ms'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--')) {
+    if (!['--config', '--port', '--handlers', '--facilitator', '--max-in-flight', '--drain-grace-ms', '--request-timeout-ms', '--availability-dir'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--')) {
       throw new TypeError(USAGE);
     }
     options.set(flag, args[++i]);
@@ -246,6 +261,7 @@ export async function main(args = process.argv.slice(2)) {
     });
   }
   const session = await startSellerService({ config, port: Number(portText), handlers, nativeFactory,
+    availabilityDirectory: options.get('--availability-dir'),
     ...(options.has('--request-timeout-ms') ? { requestTimeoutMs: validateRequestTimeout(Number(options.get('--request-timeout-ms'))) } : {}),
     maxInFlight: Number(options.get('--max-in-flight') ?? 64),
     drainGraceMs: Number(options.get('--drain-grace-ms') ?? 60000) });
