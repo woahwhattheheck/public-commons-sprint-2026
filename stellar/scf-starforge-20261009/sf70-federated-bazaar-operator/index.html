@@ -29,7 +29,7 @@
       <section id="delta-results" class="cards" aria-label="Observed native listing differences"></section>
     </section>
     <form id="filters" class="toolbar">
-      <label>Search observations<input id="query" type="search" autocomplete="off" placeholder="Name, seller URL, description…"></label>
+      <label>Search by service or need<input id="query" type="search" maxlength="1024" autocomplete="off" placeholder="Try weather forecast, payment API, or an MCP tool…"></label>
       <label>Provider<select id="provider"><option value="">Both source catalogs</option><option value="vellar">Vellar only</option><option value="periplo">Periplo only</option></select></label>
       <label>Declared operation<select id="operation"><option value="">All native operations</option><option value="GET">HTTP GET</option><option value="POST">HTTP POST</option><option value="HEAD">HTTP HEAD</option><option value="MCP">MCP tools</option><option value="OTHER">Other declared methods</option><option value="UNDECLARED">Undeclared method</option></select></label>
       <button id="refresh" type="button">Refresh genuine GETs</button>
