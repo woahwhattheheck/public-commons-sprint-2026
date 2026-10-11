@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, failure } from './config.mjs';
+import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, initializeS3WorkspaceMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
@@ -15,6 +15,7 @@ const HELP = `Starforge merchant MCP
   init-receiving --dir NEW_DIRECTORY --receiving RECEIVING_CONNECTION_JSON [--name NAME]
   init-python-workspaces --dir NEW_DIRECTORY --python-workspaces CONNECTION_JSON [--name NAME]
   init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json [--name NAME]
+  init-s3-workspaces --dir NEW_DIRECTORY --connection S3_WORKSPACE_CONNECTION.json [--name NAME]
   init --dir NEW_DIRECTORY --spec OPENAPI.json --selections SELECTIONS.json
        --bindings BINDINGS.json [--name NAME] [--seller-port PORT]
        [--handlers TRUSTED_MODULE.mjs | --upstreams UPSTREAMS.json]
@@ -43,6 +44,10 @@ const HELP = `Starforge merchant MCP
   download-python --url MCP_ENDPOINT --workspace ALIAS --export-id EXPORT_ID --out PRIVATE_DIRECTORY
        [--kind export|customer] [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES]
   reopen-python --dir DOWNLOADED_DIRECTORY --workspace-dir NEW_WORKSPACE
+  inspect-s3 --url MCP_ENDPOINT --workspace ALIAS --release-id RELEASE_ID
+       [--token-env ENVIRONMENT_NAME] [--release-digest REVIEWED_DIGEST]
+  download-s3 --url MCP_ENDPOINT --workspace ALIAS --release-id RELEASE_ID --out PRIVATE_DIRECTORY
+       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--release-digest REVIEWED_DIGEST]
 
 Every init source form also accepts --accounting ACCOUNTING_JSON to attach the
 original accounting workspaces and host-selected source aliases. See ACCOUNTING.md.
@@ -53,6 +58,8 @@ optional comma-separated allowlist. The listener binds only to 127.0.0.1.
 Every ordinary init form also accepts --receiving RECEIVING_CONNECTION_JSON
 and --python-workspaces CONNECTION_JSON. PYTHON_WORKSPACES.md explains original
 saved application editing, native preview/release and complete client handoff.
+S3_WORKSPACE.md covers original S3 object authoring, reviewed source pins,
+native merchant activation and exact original customer file delivery.
 Open receiving work explicitly with merchant_receiving_open. RECEIVING.md
 describes saved profiles, live reviews, captured replay and private exports.
 Download resumes its original verified files on another invocation. Reopen uses
@@ -110,6 +117,36 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
   const [command, ...rest] = args;
+  if (command === 'download-s3' || command === 'inspect-s3') {
+    const { downloadS3Customer, inspectS3Customer } = await import('./s3-workspace-download.mjs');
+    const download = command === 'download-s3';
+    const options = pairs(rest, ['--url', '--workspace', '--release-id', '--token-env', '--release-digest',
+      ...(download ? ['--out', '--chunk-bytes'] : [])]);
+    for (const key of ['--url', '--workspace', '--release-id', ...(download ? ['--out'] : [])])
+      if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
+    const rawChunk = options.get('--chunk-bytes');
+    if (rawChunk !== undefined && (!/^[1-9][0-9]{0,4}$/.test(rawChunk) || Number(rawChunk) > 65536))
+      throw failure('CONFIGURATION_ERROR', 'Use a whole chunk byte count from 1 to 65536.');
+    const controller = new AbortController();
+    const stop = () => controller.abort(failure('S3_DOWNLOAD_INTERRUPTED',
+      'Download interrupted. Run the same command to retain completed files and finish the customer inputs.'));
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    try {
+      const args = { url: options.get('--url'), workspace: options.get('--workspace'), releaseId: options.get('--release-id'),
+        tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', signal: controller.signal,
+        ...(options.has('--release-digest') ? { expectedReleaseDigest: options.get('--release-digest') } : {}) };
+      const result = download ? await downloadS3Customer({ ...args, directory: options.get('--out'),
+        ...(rawChunk === undefined ? {} : { chunkSize: Number(rawChunk) }),
+        onProgress: progress => process.stderr.write(JSON.stringify(progress) + '\n') }) : await inspectS3Customer(args);
+      process.stdout.write(JSON.stringify(result) + '\n'); return result;
+    } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
+  }
+  if (command === 'init-s3-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeS3WorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
   if (command === 'download-python' || command === 'reopen-python') {
     const { downloadPythonWorkspace, reopenDownloadedPythonWorkspace } = await import('./python-workspace-download.mjs');
     if (command === 'reopen-python') {
@@ -223,7 +260,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-accounting, init-receiving, init-python-workspaces, init-publishers, serve, inspect-support, inspect-client, download-support, download-client, reopen-support, download-python or reopen-python.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-accounting, init-receiving, init-python-workspaces, init-s3-workspaces, init-publishers, serve, inspect-support, inspect-client, inspect-s3, download-support, download-client, download-s3, reopen-support, download-python or reopen-python.');
   const options = pairs(rest, ['--config', '--port', '--token-env']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),
