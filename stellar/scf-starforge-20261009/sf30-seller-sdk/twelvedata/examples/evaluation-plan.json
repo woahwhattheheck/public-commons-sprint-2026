@@ -1,0 +1,50 @@
+{
+  "schema": "stellar-forge.twelvedata-plan.v1",
+  "apiKeyEnv": "TWELVE_DATA_API_KEY",
+  "timeoutMs": 30000,
+  "maxResponseBytes": 1048576,
+  "maxInFlight": 2,
+  "maxCallsPerMinute": 8,
+  "usage": {
+    "purpose": "internal-evaluation",
+    "authorizationReference": "The provider's published demo evaluation; no redistribution deployment.",
+    "retentionSeconds": 86400
+  },
+  "products": [
+    {
+      "id": "aapl-bars",
+      "path": "/market/bars",
+      "name": "AAPL Market Bars",
+      "description": "Twelve Data AAPL one-minute OHLCV bars. Native price strings, exchange timezone and bar opening timestamps are preserved.",
+      "endpoint": "time_series",
+      "symbols": ["AAPL"],
+      "intervals": ["1min"],
+      "inputs": ["symbol", "outputsize"],
+      "defaults": {"interval": "1min", "outputsize": 30, "timezone": "Exchange", "order": "desc", "adjust": "splits"},
+      "maxRows": 30
+    },
+    {
+      "id": "aapl-quote",
+      "path": "/market/quote",
+      "name": "AAPL Market Quote",
+      "description": "Twelve Data AAPL native quote with original bar opening timestamp, last-quote timestamp when provided, price strings and market-open status.",
+      "endpoint": "quote",
+      "symbols": ["AAPL"],
+      "intervals": ["1day"],
+      "inputs": ["symbol"],
+      "defaults": {"interval": "1day", "timezone": "Exchange"},
+      "maxRows": 1
+    },
+    {
+      "id": "aapl-price",
+      "path": "/market/price",
+      "name": "AAPL Native Price",
+      "description": "Twelve Data latest available AAPL price string. The native price endpoint supplies no timestamp; acquisition time is reported separately.",
+      "endpoint": "price",
+      "symbols": ["AAPL"],
+      "inputs": ["symbol"],
+      "defaults": {},
+      "maxRows": 1
+    }
+  ]
+}
