@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Socrata workspace · Starforge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <header class="topbar">
+    <div><span class="eyebrow">STARFORGE / SOURCE OPERATIONS</span><h1>Socrata workspace</h1></div>
+    <div class="topbar-state"><span id="connection-status" role="status">Connecting</span><button id="refresh-state" type="button">Refresh state</button></div>
+  </header>
+  <div id="session-message" class="notice" hidden></div>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <nav aria-label="Workspace sections">
+        <button type="button" data-section="source" aria-current="page"><span>01</span> Source</button>
+        <button type="button" data-section="capture"><span>02</span> Capture</button>
+        <button type="button" data-section="editions"><span>03</span> Mapping &amp; editions</button>
+        <button type="button" data-section="query"><span>04</span> Query preview</button>
+        <button type="button" data-section="merchant"><span>05</span> Merchant</button>
+        <button type="button" data-section="exports"><span>06</span> Export &amp; recovery</button>
+      </nav>
+      <div class="sidebar-summary"><div class="eyebrow">CURRENT WORKSPACE</div><strong id="workspace-name">No source configured</strong><p id="workspace-summary">Choose a source or restore a package.</p><span id="edition-summary" class="mono"></span></div>
+    </aside>
+    <main id="main">
+      <section id="section-source" data-panel="source" aria-labelledby="source-title">
+        <div class="section-heading"><div><div class="eyebrow">01 / SOURCE</div><h2 id="source-title">Choose and inspect a dataset</h2><p>Keep the provider domain, dataset ID, query and capture protocol together.</p></div></div>
+        <form id="source-form" class="panel">
+          <div class="form-grid">
+            <label>Provider domain<input id="source-domain" name="domain" required placeholder="data.cityofnewyork.us" autocomplete="off"></label>
+            <label>Dataset ID<input id="source-id" name="datasetId" required placeholder="hg8x-zxpr" autocomplete="off" spellcheck="false"></label>
+            <label>Capture protocol<select id="source-protocol" name="protocol"><option value="soda2.1">SODA 2.1 · ordered GET pages</option><option value="soda3">SODA 3 · authenticated query pages</option></select></label>
+            <label>Rows per provider page<input id="source-page-size" name="pageSize" type="number" min="1" max="50000" value="1000" required></label>
+            <label class="span-2">Where expression<textarea id="source-where" name="where" rows="2" placeholder="Leave empty to capture all matching dataset rows." spellcheck="false"></textarea></label>
+            <label class="span-2">Stable order<input id="source-order" name="order" value=":id" required spellcheck="false"><span class="help">An explicit order keeps paging deterministic within the retained provider revision.</span></label>
+          </div>
+          <p class="help">SODA 3 needs a provider credential supplied when this workspace starts. Credentials stay outside source configuration.</p>
+          <div class="actions"><button class="primary" type="submit" data-write>Save source and inspect</button><button type="button" id="inspect-source" data-write>Inspect current source</button></div>
+        </form>
+        <div class="panel">
+          <div class="panel-heading"><h3>Provider metadata</h3><a id="provider-link" href="#" target="_blank" rel="noreferrer" hidden>Open provider dataset</a></div>
+          <div id="metadata-summary" class="muted">Inspect a source to see its name, revision and fields.</div>
+          <div class="table-scroll"><table><caption class="sr-only">Provider fields and declared data types</caption><thead><tr><th>Field</th><th>Provider label</th><th>Provider type</th></tr></thead><tbody id="metadata-fields"></tbody></table></div>
+          <p class="help">Provider numeric text can remain an exact string. A floating timestamp has no timezone; preserve that meaning when choosing your dataset types.</p>
+        </div>
+        <details class="panel">
+          <summary>Search the provider catalog</summary>
+          <form id="search-form" class="form-grid compact">
+            <label>Search phrase<input id="search-query" name="query" required placeholder="Affordable housing"></label>
+            <label>Domain filter<input id="search-domain" name="domain" placeholder="data.cityofnewyork.us"></label>
+            <div class="actions span-2"><button type="submit" data-write>Search catalog</button></div>
+          </form>
+          <div id="search-results" aria-live="polite"></div>
+        </details>
+      </section>
+
+      <section id="section-capture" data-panel="capture" aria-labelledby="capture-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">02 / CAPTURE</div><h2 id="capture-title">Retain the original source pages</h2><p>Inspect one page at a time or run the remaining pages. Resume keeps the same capture and source revision.</p></div><span id="capture-status" class="badge">No capture</span></div>
+        <div class="metrics" id="capture-metrics">
+          <div><span>Retained rows</span><strong id="capture-rows">—</strong></div>
+          <div><span>Expected rows</span><strong id="capture-expected">—</strong></div>
+          <div><span>Pages</span><strong id="capture-pages">—</strong></div>
+          <div><span>Original bytes</span><strong id="capture-bytes">—</strong></div>
+        </div>
+        <div class="panel">
+          <div id="capture-description" class="muted">Save and inspect a source before starting a capture.</div>
+          <progress id="capture-progress" max="1" value="0" hidden aria-label="Rows captured"></progress>
+          <div class="actions">
+            <button type="button" id="start-capture" class="primary" data-write>Start capture</button>
+            <button type="button" id="next-page" data-write>Fetch next page</button>
+            <button type="button" id="run-capture" data-write>Run remaining pages</button>
+            <button type="button" id="pause-capture">Pause after current page</button>
+            <button type="button" id="resume-capture" data-write>Resume and run</button>
+          </div>
+          <p id="capture-loop-status" class="help" aria-live="polite"></p>
+          <pre id="capture-error" class="error-detail" hidden></pre>
+          <details><summary>Capture details</summary><pre id="capture-details">No capture retained.</pre></details>
+        </div>
+        <div class="panel">
+          <h3>Import an existing source capture</h3>
+          <p>Use a retained capture manifest available on the computer running this workspace. The original manifest and page bytes are verified by the source importer.</p>
+          <form id="capture-import-form" class="inline-form">
+            <label>Manifest path<input id="capture-manifest-path" name="manifestPath" required placeholder="/absolute/path/to/capture-manifest.json" autocomplete="off" spellcheck="false"></label>
+            <button type="submit" data-write>Import retained capture</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="section-editions" data-panel="editions" aria-labelledby="editions-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">03 / MAPPING &amp; EDITIONS</div><h2 id="editions-title">Define the customer dataset</h2><p>Choose the fields, types, null rules and query capabilities before building a retained edition.</p></div></div>
+        <form id="mapping-form" class="panel">
+          <div class="form-grid">
+            <label class="span-2">Dataset name<input id="mapping-name" name="name" required placeholder="Queens housing production by building"></label>
+            <label>Default query page size<input id="mapping-page-size" type="number" min="1" value="50" required></label>
+            <label>Maximum query page size<input id="mapping-max-page-size" type="number" min="1" value="250" required></label>
+          </div>
+          <div class="actions mapping-add">
+            <label>Source column<select id="mapping-source-column"><option value="">Inspect a source first</option></select></label>
+            <button type="button" id="add-mapping-column">Add column</button>
+            <button type="button" id="add-all-mapping-columns">Add all as strings</button>
+            <button type="button" id="reset-mapping">Reload saved mapping</button>
+          </div>
+          <div class="actions"><button type="button" id="download-mapping">Download saved mapping</button><label>Load mapping JSON<input id="mapping-file" type="file" accept=".json,application/json"></label></div>
+          <div class="table-scroll mapping-table"><table><caption>Each selected field is explicit. ID columns identify rows across editions; without them, changes compare exact row contents.</caption><thead><tr><th>Source field</th><th>Output name</th><th>Type</th><th>Null policy</th><th>Nullable</th><th>ID</th><th>Filter</th><th>Range</th><th>Sort</th><th></th></tr></thead><tbody id="mapping-columns"></tbody></table></div>
+          <p id="mapping-capabilities" class="help">Choose up to eight columns for each query capability. Native query parameter limits also apply.</p>
+          <p class="help">Empty becomes null requires nullable output. Reject null keeps nulls out of the dataset. Literal JSON stores the original value as JSON text in a non-nullable string column.</p>
+          <div class="actions"><button type="submit" class="primary" data-write>Save mapping</button><button type="button" id="build-edition" data-write>Build retained edition</button><span id="mapping-dirty" class="help"></span></div>
+        </form>
+        <div class="panel">
+          <div class="panel-heading"><h3>Retained editions</h3><span id="active-edition" class="badge">No active edition</span></div>
+          <p>Review the changes, then select the edition used by query preview and merchant preparation.</p>
+          <div id="edition-list"></div>
+        </div>
+      </section>
+
+      <section id="section-query" data-panel="query" aria-labelledby="query-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">04 / QUERY PREVIEW</div><h2 id="query-title">Run the original dataset query</h2><p>Use the active edition’s typed filters, ranges, sorting, projection and native cursor.</p></div></div>
+        <form id="query-form" class="panel">
+          <div class="form-grid">
+            <label>Page limit<input id="query-limit" type="number" min="1" value="50" required></label>
+            <label>Sort<select id="query-sort"><option value="">Source order</option></select></label>
+            <label class="span-2">Output fields<input id="query-fields" placeholder="Leave empty for every output column." spellcheck="false"><span class="help">Comma-separated output names.</span></label>
+          </div>
+          <div class="panel-heading inner"><h3>Conditions</h3><button type="button" id="add-query-condition">Add condition</button></div>
+          <div id="query-conditions"></div>
+          <p class="help">Conditions combine with AND. Empty equality matches null only for a nullable column. Strings are case-sensitive and untrimmed.</p>
+          <details>
+            <summary>Exact native query parameters</summary>
+            <label>Additional query string<textarea id="query-extra" rows="3" spellcheck="false" placeholder="where_borough=Queens&amp;gte_total_units=10"></textarea></label>
+            <p class="help">Duplicate parameter names are rejected here. This field accepts the same parameters as the original dataset engine.</p>
+          </details>
+          <div class="actions"><button type="submit" class="primary" data-write>Run query preview</button><button type="button" id="next-query-page" data-write disabled>Next page</button><button type="button" id="load-saved-query">Load saved query</button><button type="button" id="clear-query">Clear query</button></div>
+        </form>
+        <div class="panel">
+          <p id="query-saved-status" class="help"></p><div class="panel-heading"><h3>Query result</h3><span id="query-result-summary" class="muted">Run a query against an active edition.</span></div>
+          <div class="table-scroll query-table" id="query-result-table"></div>
+          <details><summary>Native result and continuation</summary><pre id="query-result-json">No query run.</pre></details>
+        </div>
+      </section>
+
+      <section id="section-merchant" data-panel="merchant" aria-labelledby="merchant-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">05 / MERCHANT</div><h2 id="merchant-title">Prepare the dataset offer</h2><p>Use the selected edition with the original Starforge seller and its payment terms.</p></div></div>
+        <form id="merchant-form" class="panel">
+          <div class="form-grid">
+            <label>Public seller origin<input id="merchant-origin" type="url" required placeholder="https://api.example.com" autocomplete="off"></label>
+            <label>Dataset route<input id="merchant-path" required value="/data" spellcheck="false"></label>
+            <label>Payment scheme<input value="exact" readonly aria-readonly="true"></label>
+            <label>Network<input id="merchant-network" required placeholder="Seller payment network" autocomplete="off" spellcheck="false"></label>
+            <label class="span-2">Asset<input id="merchant-asset" required placeholder="Asset identifier supported by the seller" autocomplete="off" spellcheck="false"></label>
+            <label>Amount in atomic units<input id="merchant-amount" inputmode="numeric" required pattern="[1-9][0-9]*" placeholder="Positive integer" autocomplete="off"></label>
+            <label>Maximum timeout, seconds<input id="merchant-timeout" type="number" min="1" value="300" required></label>
+            <label class="span-2">Payment recipient<input id="merchant-pay-to" required placeholder="payTo" autocomplete="off" spellcheck="false"></label>
+          </div>
+          <div class="actions"><button type="submit" class="primary" data-write>Prepare merchant configuration</button></div>
+        </form>
+        <div class="panel"><h3>Prepared seller configuration</h3><div id="merchant-summary" class="muted">Select an edition and prepare its offer.</div><pre id="merchant-details" hidden></pre></div>
+      </section>
+
+      <section id="section-exports" data-panel="exports" aria-labelledby="exports-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">06 / EXPORT &amp; RECOVERY</div><h2 id="exports-title">Deliver and reopen the workspace</h2><p>Keep source provenance, dataset editions and merchant configuration together in a retained package.</p></div></div>
+        <div class="panel">
+          <div class="panel-heading"><h3>Create a portable package</h3><button type="button" id="export-package" class="primary" data-write>Export current package</button></div>
+          <p>The compressed package carries the complete workspace. Companion CSV and configuration files are available for the original seller.</p>
+          <div id="export-list"></div>
+        </div>
+        <div class="panel">
+          <h3>Reopen a portable package</h3>
+          <p>Start an empty workspace on the receiving computer, copy the complete exported file set there, then select its package file.</p>
+          <form id="package-import-form" class="inline-form">
+            <label>Package path<input id="package-import-path" required placeholder="/absolute/path/to/package.json" autocomplete="off" spellcheck="false"></label>
+            <button type="submit" id="import-package" data-write>Import package into empty workspace</button>
+          </form>
+          <p id="package-import-status" class="help"></p>
+        </div>
+        <details class="panel"><summary>Current workspace record</summary><pre id="workspace-details">Connecting.</pre></details>
+      </section>
+
+      <details id="action-result-panel" class="panel result-panel">
+        <summary>Latest operation <span id="action-name" class="muted"></span></summary>
+        <pre id="action-result">No operation yet.</pre>
+      </details>
+    </main>
+  </div>
+</body>
+</html>

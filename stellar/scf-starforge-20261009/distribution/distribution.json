@@ -279,7 +279,9 @@
     "research-dossiers": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/cli.mjs",
     "research-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs",
     "webhook-feed": "stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/cli.mjs",
-    "buyer-event-feed": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/cli.mjs"
+    "buyer-event-feed": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/cli.mjs",
+    "socrata": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/cli.mjs",
+    "socrata-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -571,7 +573,12 @@
     "./seller/webhook-feed/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/store.mjs",
     "./seller/webhook-feed/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/merchant.mjs",
     "./buyer/event-feed": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/index.mjs",
-    "./buyer/event-feed/workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workspace.mjs"
+    "./buyer/event-feed/workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workspace.mjs",
+    "./seller/socrata/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/source.mjs",
+    "./seller/socrata/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/workspace.mjs",
+    "./seller/socrata/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/server.mjs",
+    "./seller/socrata/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs",
+    "./seller/releases/dataset": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-dataset.mjs"
   },
   "nativePeers": {
     "@x402/core": {
