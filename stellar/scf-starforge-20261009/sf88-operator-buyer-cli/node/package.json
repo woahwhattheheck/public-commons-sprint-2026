@@ -11,6 +11,22 @@
     ".": {
       "types": "./index.d.mts",
       "import": "./index.mjs"
+    },
+    "./agents": {
+      "types": "./agents/operation.d.mts",
+      "import": "./agents/operation.mjs"
+    },
+    "./agents/langgraph": {
+      "types": "./agents/langgraph.d.mts",
+      "import": "./agents/langgraph.mjs"
+    },
+    "./agents/langchain": {
+      "types": "./agents/langchain.d.mts",
+      "import": "./agents/langchain.mjs"
+    },
+    "./agents/sqlite": {
+      "types": "./agents/sqlite.d.mts",
+      "import": "./agents/sqlite.mjs"
     }
   },
   "files": [
@@ -23,7 +39,30 @@
     "RECOVERY.md",
     "INBOX.md",
     "WORKSPACE.md",
-    "examples"
+    "ACQUISITIONS.md",
+    "examples",
+    "agents",
+    "FRAMEWORKS.md"
   ],
-  "sideEffects": false
+  "sideEffects": false,
+  "peerDependencies": {
+    "@langchain/core": "^1.2.17",
+    "@langchain/langgraph": "^1.4.21",
+    "@langchain/langgraph-checkpoint-sqlite": "^1.0.4",
+    "zod": "^3.25.32 || ^4.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@langchain/core": {
+      "optional": true
+    },
+    "@langchain/langgraph": {
+      "optional": true
+    },
+    "@langchain/langgraph-checkpoint-sqlite": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
+  }
 }

@@ -1,0 +1,10 @@
+{
+  "id": "fulfillment",
+  "label": "Order fulfillment",
+  "url": "https://merchant.example/internal/settlements",
+  "allowedHost": "merchant.example",
+  "secretEnv": "FULFILLMENT_WEBHOOK_SECRET",
+  "routeIds": [],
+  "networks": ["stellar:testnet"],
+  "history": "new"
+}

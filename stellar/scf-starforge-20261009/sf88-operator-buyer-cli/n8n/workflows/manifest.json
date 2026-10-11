@@ -1,0 +1,35 @@
+{
+  "schema": "stellar-forge.n8n-customer-workflows.v1",
+  "nodePackage": "n8n-nodes-starforge-buyer",
+  "nodeType": "n8n-nodes-starforge-buyer.starforgeBuyer",
+  "createdAt": "2026-10-11T20:20:41.738Z",
+  "active": false,
+  "credentialType": "starforgeBuyerWorkspace",
+  "workflows": [
+    {
+      "filename": "01_merchant_packet_intake.json",
+      "purpose": "Actual packet and explicit offered-option index into the original inbox; return only intake identity to the caller."
+    },
+    {
+      "filename": "02_review_operator_handoff.json",
+      "purpose": "Inspect retained original terms and give the operator a hash-bound native terminal command."
+    },
+    {
+      "filename": "03_read_verified_response.json",
+      "purpose": "After native execution, reopen the same intent and return its verified binary, JSON or record result."
+    },
+    {
+      "filename": "04_recover_existing_attempt.json",
+      "purpose": "Explicitly recover an existing attempt through its original evidence and read the same saved response."
+    },
+    {
+      "filename": "05_finalize_and_export_history.json",
+      "purpose": "Continue the selected original reservation, then return its native private HTML history."
+    },
+    {
+      "filename": "06_resume_prepared_intake.json",
+      "purpose": "Complete the same saved Node intake after an interrupted enqueue; no new request or intent is made."
+    }
+  ],
+  "operatorExecution": "Original SF88 terminal handoff from workflow 02; reopen the same intent in workflow 03."
+}

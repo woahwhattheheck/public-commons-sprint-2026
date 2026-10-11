@@ -1,5 +1,11 @@
 # Native buyer for Node applications
 
+The complete [acquisition workflow](ACQUISITIONS.md) joins private merchant
+requests, explicit receiver review, original operator preparation, immutable
+runbooks, native execution/accounting, verified downloads and recovery of every
+original operator journal. Use `AcquisitionWorkspace` directly or
+`buyer.acquisitions(...)`; Node and Python share the same original bridge.
+
 This package connects an application to the **existing SF88 operator buyer**. It
 also fits the original SF30 generated client's `createSellerClient({ buyer })`
 interface. It does not implement a signer, approve payments, decide settlement,
@@ -472,3 +478,7 @@ existing SF88/SF101/SF36 implementation through the same native Runtime.
 See [the complete customer recovery workflow](RECOVERY.md) for passphrase-variable
 selection, quiescing writers, expected-record binding, typed interruption results
 and reopening the same Node and Python applications without repeating purchases.
+
+## LangGraph and LangChain applications
+
+[FRAMEWORKS.md](FRAMEWORKS.md) provides the optional persistent graph, standard LangChain tools, TypeScript customer program, and executable operator CLI. Select one existing `buyer.operation(intentId)` and retain its original state. Graph checkpoints and ToolMessages refer to that same operation, native attempt, and verified response. The base package remains dependency-free; install the optional frameworks only for their corresponding subpath imports.

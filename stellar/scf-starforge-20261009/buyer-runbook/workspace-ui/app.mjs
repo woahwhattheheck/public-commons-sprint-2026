@@ -1,5 +1,6 @@
 // MIT. Browser presentation; the original server-side buyer owns execution.
 import {createHandoffIntakeUI} from './intake.mjs';
+import {createPaidFileUI} from './paid-files.mjs';
 import {createRunbookAccountingUI} from './accounting.mjs';
 import {createRunbookRecoveryUI} from './recovery.mjs';
 const $ = selector => document.querySelector(selector);
@@ -14,7 +15,11 @@ const accountingUI=createRunbookAccountingUI({current:()=>currentRun,action,noti
 const recoveryUI=createRunbookRecoveryUI({request,notice,refreshState,openPanel(){navigation++;show('recovery');}});
 const intakeUI = createHandoffIntakeUI({request,notice,refreshState,
   openPanel(){navigation++;show('requests');},
-  async onPrepared(prepared,item){
+  onPrepared:(prepared,item)=>addReceivedToPlan(prepared,item,'POST')});
+const paidFileUI = createPaidFileUI({request,notice,refreshState,current:()=>currentRun,action,
+  openPanel(){navigation++;show('paid-files');},
+  onPrepared:(prepared,item)=>addReceivedToPlan(prepared,item,'GET')});
+async function addReceivedToPlan(prepared,item,method) {
     await refreshState();
     const saved=draft&&state.drafts.find(value=>value.id===draft.id);
     if(!$('#draft-form').elements['plan-id'].value||saved&&saved.initialization!=='NOT_STARTED')newDraft();
@@ -23,10 +28,11 @@ const intakeUI = createHandoffIntakeUI({request,notice,refreshState,
     }
     if(rows.length>=64)throw new Error('This plan already has 64 operations. Create another plan to add this request.');
     let index=rows.length+1;while(rows.some(row=>row.id==='request-'+index))index++;
-    rows.push({id:'request-'+index,label:('POST '+new URL(item.summary.url).pathname).slice(0,160),config:prepared.configName,saveAs:''});
+    rows.push({id:'request-'+index,label:(method+' '+new URL(item.summary.url).pathname).slice(0,160),
+      config:prepared.configName,saveAs:method==='GET'?'order-'+item.id.slice(5,17)+'-ack.json':''});
     navigation++;currentRun=null;renderEditor();show('draft');setDirty(true);
     notice('Received request added. Save and review this plan, then initialize the acquisition.');
-  }});
+  }
 
 function notice(message, error = false) {
   const element = $('#notice'); element.textContent = message; element.className = error ? 'error' : ''; element.hidden = !message;
@@ -41,7 +47,7 @@ async function request(path, data) {
 const handle = action => async event => { if (event?.type === 'submit') event.preventDefault(); try { await action(event); } catch (error) { notice(error.message,true); } };
 function show(name) {
   view = name;
-  for (const target of ['welcome','draft-panel','run-panel','requests-panel','recovery-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
+  for (const target of ['welcome','draft-panel','run-panel','requests-panel','paid-files-panel','recovery-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
   renderNavigation();
 }
 async function refreshState() {
@@ -49,6 +55,7 @@ async function refreshState() {
   if (generation !== sourceRefresh) return;
   state = result; token = state.token; renderNavigation();
   intakeUI.update(state.intake);
+  paidFileUI.update(state.paidFiles);
   recoveryUI.update(state.recovery);
   $('#terminal-state').textContent = state.terminalAvailable ? 'Operator terminal available' : 'Open in a terminal to execute';
   const valid = state.configurations.filter(item => item.valid).length;
@@ -182,12 +189,12 @@ function renderRun() {
   $('#run-status').textContent = running ? readable(active.status) : lock ? 'Execution owner present' : untouched.length ? 'Ready' : 'Results retained';
   $('#run-metrics').innerHTML = [[rows.length,'Selected operations'],[untouched.length,'Untouched'],[saved.length,'Resources saved'],[attention.length,'Need attention']]
     .map(([value,label]) => `<div class="metric"><strong>${value}</strong><span>${label}</span></div>`).join('');
-  const accountingActive=running&&active.kind==='ACCOUNTING';
-  $('#execution-message').textContent = running ? active.cancelRequested ? 'Cancellation requested' : accountingActive?'Original accounting is active':'Original buyer execution is active' : terminalAvailable ? 'Continue through the operator terminal' : 'Operator terminal required for new purchases';
-  $('#execution-detail').textContent = running ? accountingActive?'Existing attempts are reconciled with their original operator ledgers. Each completed receipt is retained.':'Progress and results update here while the original buyer finishes its current operation.' : terminalAvailable ? 'Each untouched operation receives its original live-term review and terminal approval.' : 'Accounting and resource inspection remain available here. Start this workspace in a controlling terminal to execute new purchases.';
+  const accountingActive=running&&active.kind==='ACCOUNTING',fileActive=running&&active.kind?.startsWith('PAID_FILE_');
+  $('#execution-message').textContent = running ? active.cancelRequested ? 'Cancellation requested' : fileActive?'Customer file transfer is active':accountingActive?'Original accounting is active':'Original buyer execution is active' : terminalAvailable ? 'Continue through the operator terminal' : 'Operator terminal required for new purchases';
+  $('#execution-detail').textContent = running ? fileActive?'The original file transfer keeps its retained bytes for an explicit resume.':accountingActive?'Existing attempts are reconciled with their original operator ledgers. Each completed receipt is retained.':'Progress and results update here while the original buyer finishes its current operation.' : active?.error ? readable(active.error) : terminalAvailable ? 'Each untouched operation receives its original live-term review and terminal approval.' : 'Accounting and resource inspection remain available here. Start this workspace in a controlling terminal to execute new purchases.';
   $('#execute-run').disabled = running || Boolean(lock) || !terminalAvailable || !untouched.length;
   $('#cancel-run').hidden = !running;
-  $('#cancel-run').textContent=accountingActive?'Cancel accounting refresh':'Cancel current execution';
+  $('#cancel-run').textContent=fileActive?'Pause file transfer':accountingActive?'Cancel accounting refresh':'Cancel current execution';
   $('#cancel-run').disabled = Boolean(active?.cancelRequested);
   $('#recover-run').disabled = running || Boolean(lock);
   $('#lease-panel').hidden = !lock;
@@ -214,6 +221,7 @@ function renderRun() {
       <div class="result-actions">${available ? `<button data-preview="${escape(row.id)}">Preview resource</button><a class="button" href="/files/${id}/resources/${escape(row.id)}">Download ${escape(row.downloadName)}</a>` : ''}${only ? `<button data-only="${escape(row.id)}">Execute this operation</button>` : ''}</div>
       ${preview ? `<details data-detail="${escape(row.id)}-resource" ${previewOpen ? 'open' : ''}><summary>${escape(preview.name)} · ${preview.bytes} bytes${preview.truncated ? ' · first 64 KiB shown' : ''}</summary>${preview.text === null ? '<p class="muted">Download this binary resource to open it in its original format.</p>' : `<pre>${escape(preview.text)}</pre>`}</details>` : ''}
       ${accountingUI.operation(row,{runId:id,disabled:running||Boolean(lock),opened})}
+      ${paidFileUI.operation(row,{runId:id,disabled:running||Boolean(lock)})}
       <details data-detail="${escape(row.id)}-terms" ${opened.has(row.id + '-terms') ? 'open' : ''}><summary>Exact request and snapshot</summary>${terms(row)}</details>
       ${row.result || row.lastError ? `<details data-detail="${escape(row.id)}-result" ${opened.has(row.id + '-result') ? 'open' : ''}><summary>Original retained result</summary><pre>${escape(JSON.stringify(row.result ?? row.lastError,null,2))}</pre></details>` : ''}</article>`;
   }).join('');

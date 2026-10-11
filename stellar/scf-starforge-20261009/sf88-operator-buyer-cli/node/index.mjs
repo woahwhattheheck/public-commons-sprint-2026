@@ -6,3 +6,4 @@ export { Dataset, DatasetDelivery, DatasetFile } from './dataset.mjs';
 export { ObjectAcquisition, ObjectReport, ObjectDelivery, ObjectDownloadError } from './object.mjs';
 export { WorkspaceRecovery, WorkspaceRecoveryResult, WorkspaceRecoveryError } from './workspace-recovery.mjs';
 export { Inbox, InboxResult, InboxError, InboxResponse } from './inbox.mjs';
+export { AcquisitionWorkspace, AcquisitionResult, AcquisitionError } from './acquisitions.mjs';

@@ -69,18 +69,54 @@ Admission matching uses the original parser's catalog key, native seller and sig
 
 A batch deduplicates resource-key reads while preserving every input row and its sequence. It reports whether all, some or none of the individual effects are observed. Seeing all members does not establish which request wrote them or prove an atomic batch boundary; they could have been admitted individually. Original saved native receipts and the journal remain authoritative for that distinction.
 
-The engine reads status, the relevant lookup/history pairs, and final status once. `coherentSnapshot` is true only if all of those reads report the same journal head. A change during the read is reported rather than hidden by polling. Read concurrency defaults to four and can be set from one to eight. A single key with multiple batch revisions is fetched once. Native read count, effect count and zero mutation/signature/payment counts are included in the result.
+The default reader uses `inspect-revisions` on the same original operator. It
+requests only the exact resource/sequence pairs needed by the retained command;
+the native lifecycle binary-searches its existing ordered history and returns
+detached selected revisions. Repeated pairs are read once, while every original
+input row remains in the result. Ordinary batches fit in one request. Larger
+responses use explicit pages bound to the same query, journal head and startup
+policy. `coherentSnapshot` describes those observations at that named head, not a
+promise that the catalog is still unchanged after the response.
+
+A changed head or unavailable continuation preserves earlier observations and
+marks the remaining members unavailable; `coherentSnapshot` becomes false. The
+reader does not restart, poll or resubmit. Its default 30-second deadline covers
+the entire recovery operation, including all pages or legacy reads. An optional
+`signal` cancels in-flight transport and prevents more reads. Cancellation and
+expiry reject with `CATALOG_RECOVERY_ABORTED` or `CATALOG_RECOVERY_DEADLINE`.
+
+An older daemon is supported automatically only after its exact HTTP 422
+`UNKNOWN_OPERATOR_COMMAND` response. That compatibility path uses the original
+status/lookup/history/status workflow with the same total deadline. Authentication
+errors, invalid responses and timeouts never trigger fallback. `readMode: 'legacy'`
+selects the old path explicitly; `readMode: 'snapshot'` requires the new daemon.
+Read concurrency defaults to four (1–8) for the legacy path. Existing command,
+retained-state and report formats remain compatible. `readStrategy`,
+`snapshotPages` and `nativeReadCalls` make the actual path inspectable.
+
+The native read command accepts `{targets: [{catalogKey, sequence}], pageBytes}`,
+with 1–1,000 selected pairs and a 4 MiB default page limit (16 KiB–4 MiB). Continue
+using the returned `nextOffset` as `offset`, the returned `journalHead` as
+`expectedHead`, and `targetsSha256` as `expectedTargets`, with the same full target
+array. Every row contains original current identity and either the exact original
+revision or an empty history. `validateRevisionPage` in `revision-snapshot.mjs`
+checks shape, order, progress, query hash, head and policy before consumption.
+This remains a private authenticated operator command, with no second journal or
+persistent snapshot service.
 
 ## Existing browser and worker integration
 
 ```js
 import { reconcileCatalogOperation } from './workspace-recovery.mjs';
 
+const controller = new AbortController();
 const recovery = await reconcileCatalogOperation({
   directory: catalogDirectory,
   operation: retainedCommand.operation,
   input: retainedCommand.input,
   expectedPolicySha256: retainedReview.policySha256 ?? null,
+  signal: controller.signal, // Optional AbortController owned by this operation.
+  timeoutMs: 30000, // One total recovery deadline; 100–120000 milliseconds.
 });
 // Store/display recovery alongside the original local response/unknown state.
 // Do not replace the original command, submit it here, or invent a response.
@@ -107,3 +143,22 @@ Only pass observations fetched from the original private operator, not browser-s
 A focused cloud-Linux journey used the actual original SF50 signing/verifying functions, SF73 admission, SF60 writer/HTTP control/discovery, SF95 signed withdrawal and original native lifecycle. It committed one offer, revised it, withdrew it, then recovered exact current and superseded effects, a batch's individual members, conflicting sequence/provenance, and an absent effect. The recovery reads did not increase the native journal's three committed operations. Local development asset/recipient strings were deliberately unspendable; no ledger payment was attempted.
 
 The separate candidate browser was exercised offline against recorded native responses because managed Chromium rejected loopback navigation. That browser is not introduced by this change; the existing workspace owners retain the one browser product. This module is its complementary recovery implementation.
+
+The selected-revision continuation was exercised on Node 22.16.0 with 1,000
+original SF50-signed offers and two independently pinned development sellers.
+The original signed-batch writer committed those offers; unchanged recovery
+results required 2,002 local requests / 1,497.67 ms through the previous reader
+and one request / 52.56 ms through the selected-revision reader in the same
+local run. At an intentionally small 16 KiB page limit, 84 pages / 190.02 ms
+produced identical results. These are local timings, not production throughput
+or customer usage. Revision, signed withdrawal, restart, same-key history,
+conflicting/absent effects, an actual catalog write between pages, old-daemon
+fallback and controlled cancellation/deadline transport also completed. No
+recovery added a catalog write or performed a payment.
+
+The same exact-revision access is used by the original batch preview's
+before/after projection. On 1,000 original-verifier-checked successive revisions
+to one resource, the prior full-history-copy preview took 5,477.16 ms and the
+selected-revision preview took 215.68 ms in one local comparison. Both native
+preview objects and both subsequently committed journal files were byte-equal.
+Sequence, authority, signature, replay, plan and journal-format rules are unchanged.
