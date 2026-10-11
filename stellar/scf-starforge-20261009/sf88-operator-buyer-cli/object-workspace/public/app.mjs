@@ -7,6 +7,7 @@ if (/^[a-f0-9]{64}$/.test(token)) {
 let state = null, products = [], review = null, selected = null, page = 0, pending = false;
 let section = sessionStorage.getItem('starforge-object-workspace-view') === 'accounting' ? 'accounting' : 'delivery';
 let query = '', filter = 'all', generation = 0, pollTimer, queryTimer, confirmAction = null;
+let downloadWatchUntil = 0;
 const readable = value => String(value ?? '').replace(/_/g, ' ').toLowerCase();
 const integer = value => value === null || value === undefined ? '—' : String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const bytes = value => {
@@ -22,6 +23,8 @@ const messages = {
   OBJECT_WORKSPACE_SESSION_NAME_OCCUPIED: 'That session name already belongs to another reviewed plan. Choose a new name.',
   OBJECT_TOTAL_BUDGET_INSUFFICIENT: 'The whole-download cap must cover every planned request at the selected per-request maximum.',
   OBJECT_WORKSPACE_SAVED_FILE_CHANGED: 'The assembled file no longer matches its recorded bytes. Inspect the original saved results before downloading it.',
+  OBJECT_WORKSPACE_DOWNLOAD_STOPPED: 'The file transfer stopped. Its original assembled file and purchase records remain available.',
+  OBJECT_WORKSPACE_DOWNLOAD_INTERRUPTED: 'The file transfer ended before completion. Download the recorded file again when ready.',
   OBJECT_WORKSPACE_CAPABILITY_REQUIRED: 'Open the complete workspace URL printed by the running command.',
   OBJECT_WORKSPACE_RUN_CHANGED: 'That run has ended or changed. The current run was left unchanged.',
   OBJECT_WORKSPACE_ACCOUNTING_WORKSPACE_REQUIRED: 'This download has no saved native operator workspace. Its existing receipts remain readable; use the original accounting command with the matching workspace to finalize earlier attempts.',
@@ -60,7 +63,8 @@ function selectedParams() {
 }
 function schedulePoll() {
   clearTimeout(pollTimer);
-  if (state?.active && !document.hidden) pollTimer = setTimeout(() => load().catch(showError), 1000);
+  if ((state?.active || Date.now() < downloadWatchUntil) && !document.hidden)
+    pollTimer = setTimeout(() => load().catch(showError), 1000);
 }
 async function load() {
   const current = ++generation, result = await request('/api/state' + selectedParams());
@@ -93,7 +97,10 @@ function renderSessions() {
   if (!state.sessions.length) list.append(element('p', 'No saved downloads yet.', 'list-empty'));
 }
 function explanation(row) {
-  if (state.active?.session === row.id && state.active.kind !== 'DOWNLOAD') return 'An operation is running on the original purchase records. Open Purchase records to follow it or stop it.';
+  if (state.active?.session === row.id && state.active.kind === 'FILE_DOWNLOAD')
+    return state.active.state === 'STOPPING' ? 'Stopping this file transfer and closing its saved-file read.' :
+      'Checking and streaming the recorded file to your browser. Stop file transfer cancels this exact read and leaves the original file available.';
+  if (state.active?.session === row.id && ['FINALIZE','EXPORT'].includes(state.active.kind)) return 'An operation is running on the original purchase records. Open Purchase records to follow it or stop it.';
   if (row.status === 'RUNNING') return 'Downloading through the original buyer. Review each paid request in the terminal. The page updates from completed parts.';
   if (row.status === 'STOPPING') return 'Stopping the active request and retaining its original result. Wait for the run to finish before recovery.';
   if (row.lastRun?.state === 'SETUP_REQUIRED') return 'The original buyer needs its operator setup: ' + readable(row.lastRun.error) + '. Repair that setup, refresh, and deliberately continue.';
@@ -135,6 +142,18 @@ function render() {
   $('assembly-description').textContent = assembly ? assembly.name + ' · ' + bytes(assembly.bytes) + '. Download rechecks the saved file against this recorded SHA-256.' :
     'Assembly reads verified parts in byte order, checks the complete length and digest, and saves a new private file.';
   $('assembly-digest').hidden = !assembly; $('assembly-digest').textContent = assembly?.sha256 ?? '';
+  const fileTransfer = state.active?.session === row.id && state.active.kind === 'FILE_DOWNLOAD' ? state.active : row.lastFileTransfer;
+  $('file-transfer-progress').hidden = !fileTransfer;
+  if (fileTransfer) {
+    const label = fileTransfer.phase === 'VERIFYING' ? 'Checking saved file' : 'Streaming verified file';
+    const count = fileTransfer.phase === 'VERIFYING' ? fileTransfer.verifiedBytes : fileTransfer.streamedBytes;
+    $('file-transfer-progress').textContent = label + ': ' + readable(fileTransfer.state) + ' · ' +
+      bytes(count) + ' / ' + bytes(fileTransfer.totalBytes) + '. ' +
+      (fileTransfer.state === 'COMPLETED' ? 'The stream completed; your browser manages the downloaded copy.' :
+        fileTransfer.state === 'STOPPED' ? 'The original file is retained. Download it again when ready.' :
+        fileTransfer.error ? errorMessage({code:fileTransfer.error}) : '');
+  }
+  $('stop').textContent = state.active?.kind === 'FILE_DOWNLOAD' ? 'Stop file transfer' : 'Stop download';
   $('run').textContent = row.completeChunks ? 'Continue download' : 'Start download';
   $('last-inspection').textContent = row.inspectedAt ? 'Observed ' + new Date(row.inspectedAt).toLocaleTimeString() : '';
   const rows = $('chunk-rows'); rows.replaceChildren();
@@ -161,7 +180,7 @@ function renderAccounting(row) {
   $('accounting-finalized').textContent = integer(counts.finalized);
   $('accounting-unpaid').textContent = integer(counts.unpaid);
   $('accounting-attention').textContent = integer(counts.attention);
-  const running = state.active?.session === row.id && state.active.kind !== 'DOWNLOAD' ? state.active : null;
+  const running = state.active?.session === row.id && ['FINALIZE','EXPORT'].includes(state.active.kind) ? state.active : null;
   const activity = running ?? row.lastFinalization;
   $('accounting-progress').hidden = !activity;
   if (activity) {
@@ -301,6 +320,9 @@ $('assemble').onclick = () => {
 $('download').onclick = () => action(async()=>{
   const result = await request('/api/download-ticket',{session:selected});
   const link = element('a'); link.href = result.url; link.download = state.selected.assembly.name;
+  // A native download starts on its own request. Keep observing long enough
+  // to see that request even if this action's immediate refresh arrives first.
+  downloadWatchUntil = Date.now() + 10000;
   document.body.append(link); link.click(); link.remove();
 });
 async function exportFile(kind) {

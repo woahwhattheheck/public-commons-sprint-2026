@@ -133,7 +133,7 @@ class AccountingWorkspace{
       proofs:this.state.proofs,runs:this.state.runs,exports:this.state.exports,history:this.state.history.slice(-100).reverse(),
       recovery:{directory:this.state.sources.recoveredDir??null,capturedAt:this.state.recoveryCapturedAt,entries:this.state.recoveredEntries},
       recoveryPreviews:this.state.recoveryPreviews,recoveryJobs:this.state.recoveryJobs,
-      pricingImports:this.state.pricingImports??[],periods:this.periods.view(),
+      pricingImports:this.state.pricingImports??[],periods:this.periods.view(),accountantHandoffs:this.state.accountantHandoffs??[],
       reviewCounts:Object.values(this.state.notes).reduce((result,note)=>{result[note.status]++;return result;},{open:0,investigating:0,reviewed:0})});
   }
   async connectRecovered({revision,directory,actor}){return this.serial(async()=>{

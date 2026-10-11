@@ -1,0 +1,29 @@
+.accountant-create-fields{display:grid;grid-template-columns:minmax(260px,1fr) minmax(220px,1fr);gap:18px}
+.accountant-source-summary{border-top:1px solid var(--border);font-size:12px;padding-top:12px;padding-bottom:12px}
+.accountant-source-summary p+p{margin-top:5px}
+#accountant-labels td:first-child{min-width:210px;max-width:330px;overflow-wrap:anywhere}
+#accountant-labels input{min-width:120px;font-size:12px}
+.accountant-layout{display:grid;grid-template-columns:235px minmax(0,1fr);gap:20px;align-items:start}
+.accountant-history #accountant-search{margin-bottom:14px}
+.accountant-history .padded{padding:14px}
+.accountant-history #accountant-more{margin-top:12px;width:100%}
+.accountant-revision-field{padding-top:8px;padding-bottom:0}
+.accountant-lineage{border-top:1px solid var(--border);font-size:12px}
+.accountant-lineage summary{cursor:pointer;font-weight:600}
+.accountant-lineage dd{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;overflow-wrap:anywhere}
+.accountant-return-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,1fr);gap:16px;align-items:start}
+.accountant-return-form button{justify-self:start}
+.accountant-status-help{border-top:1px solid var(--border);padding-top:12px;padding-bottom:12px;font-size:11px;color:var(--muted)}
+.accountant-status-help p{margin-top:5px;max-width:900px}
+.accountant-preview-panel{border-top:1px solid var(--border);background:var(--soft)}
+.accountant-preview-panel .metrics{grid-template-columns:repeat(auto-fit,minmax(95px,1fr))}
+.accountant-preview-panel .table-wrap{margin-top:14px;border:1px solid var(--border);background:#fff}
+.accountant-preview-panel>.actions{margin-top:16px}
+.accountant-preview-panel td{overflow-wrap:anywhere;max-width:250px;font-size:11px}
+.accountant-record-layout{grid-template-columns:minmax(0,55%) minmax(0,1fr)}
+#accountant-metrics{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+#accountant-issues pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;max-height:360px;overflow:auto}
+#accountant-row-detail h3+dl{margin-bottom:22px}
+#accountant-row-detail dd{white-space:pre-wrap}
+@media(max-width:1250px){.accountant-layout{grid-template-columns:1fr}.accountant-history .run-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.accountant-record-layout{grid-template-columns:1fr}.accountant-record-layout .records{border-right:0;border-bottom:1px solid var(--border)}}
+@media(max-width:700px){.accountant-create-fields,.accountant-return-form{grid-template-columns:1fr}.accountant-layout{gap:0}.accountant-history .run-list{grid-template-columns:1fr}}
