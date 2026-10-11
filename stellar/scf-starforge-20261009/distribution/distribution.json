@@ -546,7 +546,10 @@
     "./buyer/valyu": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/workspace.mjs",
     "./buyer/valyu/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/store.mjs",
     "./buyer/valyu/research": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/research.mjs",
-    "./buyer/valyu/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/server.mjs"
+    "./buyer/valyu/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/server.mjs",
+    "./merchant/qbo": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo.mjs",
+    "./merchant/qbo/company": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-company.mjs",
+    "./merchant/qbo/workspace": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/qbo-workspace.mjs"
   },
   "nativePeers": {
     "@x402/core": {
