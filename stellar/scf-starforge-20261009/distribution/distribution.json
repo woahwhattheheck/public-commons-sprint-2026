@@ -420,7 +420,8 @@
     "./commerce-recovery-controller": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery-controller.mjs",
     "./seller/allium": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/explorer.mjs",
     "./seller/allium/workspace": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/model.mjs",
-    "./seller/allium/workspace/server": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/server.mjs"
+    "./seller/allium/workspace/server": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/server.mjs",
+    "./buyer/mcp/payment-reconciliation": "./source/stellar-forge/mcp-paid-agent/payment-reconciliation.mjs"
   },
   "nativePeers": {
     "@x402/core": {
