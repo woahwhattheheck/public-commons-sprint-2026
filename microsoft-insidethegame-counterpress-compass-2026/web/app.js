@@ -1,3 +1,5 @@
+import {ArchiveLink, createArchiveUI} from './archive.js';
+
 const el = id => document.getElementById(id);
 const L = {
   en: {synthetic: 'SYNTHETIC MATCH · invented teams and events', scenario: 'Match situation', seed: 'Seed', dice: 'Random seed', kickoff: 'Kick off',
@@ -43,7 +45,8 @@ const L = {
       rateLine: (s, r, p) => `Tasa de recuperación ${p}% (${s}/${r} ventanas resueltas).`, unclearLine: n => `${n} ventana(s) cortada(s) por otra pérdida: resultado desconocido, no cuenta como fallo.`,
       zoneLine: z => `Contrapresiones exitosas sobre todo en: ${z}.`, pressLine: x => `${x} acciones de presión por contrapresión.`, rivalLine: (t, p) => `${t}: tasa de recuperación ${p}.`}}
 };
-const S = {session: null, events: [], cursor: 0, selectedMomentId: null, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
+const S = {session: null, events: [], cursor: 0, selectedMomentId: null, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, archiveId: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
+let archiveUI;
 const t = () => L[el('locale').value] || L.en;
 const view = () => ({team: el('team').value, audience: el('audience').value, locale: el('locale').value});
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
@@ -74,6 +77,8 @@ const MatchLink = {
 };
 function currentMatchLink() {
   if (!S.session || !S.match || !S.frame || S.frame.sessionId !== S.session.id || S.frame.count !== S.cursor) return null;
+  if (S.archiveId) return ArchiveLink.url(S.archiveId, S.cursor, {team: S.frame.team, audience: S.frame.audience, locale: S.frame.locale}, location.href);
+  if (S.match.preserved) return null;
   return MatchLink.url(S.match, S.cursor, {team: S.frame.team, audience: S.frame.audience, locale: S.frame.locale}, location.href);
 }
 function syncMatchLink(immediate = false) {
@@ -232,6 +237,8 @@ function reviewEvidence(f, o) {
   jump.type = 'button'; jump.disabled = closingIndex < 0;
   jump.addEventListener('click', () => { if (S.session && closingIndex >= 0) void seek(closingIndex + 1); });
   root.append(head, summary, reason, label, chain, observation, jump);
+  if (archiveUI && closingIndex >= 0) root.append(archiveUI.momentButton({count: closingIndex + 1,
+    eventId: S.events[closingIndex].id, label: fmt(o.showAt) + ' · ' + o.text}));
 }
 function drawMoments(f) {
   const T = t(), filter = el('reviewFilter').value, period = el('reviewPeriod').value;
@@ -252,7 +259,7 @@ function drawMoments(f) {
     const body = node('span');
     body.append(node('span', 'chip ' + o.status, T.chip[o.status] || o.status), document.createTextNode(o.text));
     btn.append(node('b', '', fmt(o.showAt)), body);
-    btn.addEventListener('click', () => { S.selectedMomentId = o.id; if (S.frame) drawMoments(S.frame); el('review').focus(); });
+    btn.addEventListener('click', () => { S.selectedMomentId = o.id; if (S.frame) drawMoments(S.frame); archiveUI?.changed(); el('review').focus(); });
     li.append(btn); return li;
   }));
   reviewEvidence(f, selected);
@@ -292,6 +299,7 @@ function ui() {
   el('recover').textContent = T.recover;
   el('recover').hidden = !S.recoverable;
   el('recover').disabled = S.recoveryBusy || !s;
+  archiveUI?.changed();
 }
 function opusKey() { return S.session ? [S.session.id, S.cursor, el('team').value, el('audience').value, el('locale').value].join('|') : ''; }
 function apply(f) {
@@ -379,6 +387,13 @@ async function recoverStream() {
   } catch (e) {
     if (token !== S.req || S.session !== s) return;
     if (e.status === 404 || e.status === 410) {
+      if (S.archiveId) {
+        const archiveId = S.archiveId;
+        if (await openSavedMatch(archiveId, {count, settings: view()})) {
+          S.recoveryBusy = false; notice(''); play(); return;
+        }
+        S.recoverable = true; notice(t().recoverFailed); return;
+      }
       // The server discarded its ephemeral session, not the match definition.
       // Never continue a stale stream or silently replace the selected fixture.
       el('scenario').value = match.scenario; el('seed').value = String(match.seed);
@@ -422,6 +437,7 @@ async function newMatch({count = 0} = {}) {
   const seed = Number(el('seed').value), scenario = el('scenario').value;
   if (!Number.isInteger(seed) || seed < 1 || seed > 999999) { notice(t().badSeed); return; }
   stopStream();
+  if (archiveUI && !await archiveUI.beforeSwitch()) return false;
   const token = ++S.starting; ++S.req;
   notice(t().loading);
   const old = S.session;
@@ -429,7 +445,8 @@ async function newMatch({count = 0} = {}) {
     const s = await api('/api/sessions', 'POST', {scenario, seed});
     if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(s.id), {method: 'DELETE'}).catch(() => {}); return; }
     if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
-    S.session = s; S.match = {scenario, seed}; S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = null;
+    S.session = s; S.match = {scenario, seed}; S.archiveId = null; S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = null;
+    archiveUI?.reset();
     el('matchLink').hidden = true; el('shareStatus').textContent = '';
     el('scrub').max = String(s.total);
     el('blurb').textContent = s.blurb;
@@ -437,19 +454,49 @@ async function newMatch({count = 0} = {}) {
     notice('');
     await seek(Math.min(count, s.total));
     if (count > s.total) notice(t().clampedLink);
+    return S.frame?.sessionId === s.id;
   } catch (e) { if (token === S.starting) notice(e.message); }
+  return false;
+}
+
+async function openSavedMatch(id, {count, settings} = {}) {
+  if (!archiveUI) return false;
+  stopStream();
+  if (!await archiveUI.beforeSwitch()) return false;
+  const token = ++S.starting; ++S.req;
+  const old = S.session;
+  notice(t().loading);
+  try {
+    const {archive, session} = await archiveUI.requestOpen(id);
+    if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(session.id), {method: 'DELETE'}).catch(() => {}); return false; }
+    if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
+    const review = archive.review;
+    S.session = session; S.match = {scenario: session.scenario, seed: session.seed, preserved: true}; S.archiveId = archive.id;
+    S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = review.selectedMomentId;
+    el('scenario').value = session.scenario; el('seed').value = String(session.seed);
+    for (const key of ['team', 'audience', 'locale']) el(key).value = (settings || review.view)[key];
+    el('reviewFilter').value = review.filters.outcome; el('reviewPeriod').value = review.filters.period;
+    el('feedTeam').value = review.filters.feedTeam; el('feedType').value = review.filters.feedType;
+    el('scrub').max = String(session.total); el('blurb').textContent = session.blurb;
+    el('matchLink').hidden = true; el('shareStatus').textContent = ''; el('foundryResult').textContent = '';
+    archiveUI.load(archive); applyI18n();
+    await seek(Math.min(count ?? review.cursor, session.total));
+    if (S.frame?.sessionId !== session.id) return false;
+    notice(''); return true;
+  } catch (error) { if (token === S.starting) notice(error.message); return false; }
 }
 
 async function boot() {
   const b = await api('/api/bootstrap');
   for (const sc of b.scenarios) { const o = node('option', '', sc.label); o.value = sc.id; el('scenario').append(o); }
   el('scenario').value = b.defaultScenario;
-  let linked = null, invalidLink = false;
-  try { linked = MatchLink.read(location.hash, b.scenarios.map(sc => sc.id)); } catch { invalidLink = true; }
+  let linked = null, savedLink = null, invalidLink = false;
+  try { savedLink = ArchiveLink.read(location.hash); if (!savedLink) linked = MatchLink.read(location.hash, b.scenarios.map(sc => sc.id)); } catch { invalidLink = true; }
   if (linked) {
     el('scenario').value = linked.scenario; el('seed').value = String(linked.seed);
     for (const id of ['team', 'audience', 'locale']) el(id).value = linked[id];
   }
+  if (savedLink) for (const key of ['team', 'audience', 'locale']) el(key).value = savedLink.settings[key];
   S.foundry = !!b.foundryConfigured;
   el('foundry').disabled = !S.foundry;
   S.opus = !!b.opusConfigured;
@@ -461,9 +508,9 @@ async function boot() {
   el('dice').addEventListener('click', () => { el('seed').value = String(1 + crypto.getRandomValues(new Uint32Array(1))[0] % 999999); newMatch(); });
   el('play').addEventListener('click', () => (S.playing ? stopStream() : play()));
   el('recover').addEventListener('click', recoverStream);
-  el('reviewFilter').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) drawMoments(S.frame); });
-  el('reviewPeriod').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) { drawMoments(S.frame); drawFeed(); } });
-  for (const id of ['feedTeam', 'feedType']) el(id).addEventListener('change', drawFeed);
+  el('reviewFilter').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) drawMoments(S.frame); archiveUI?.changed(); });
+  el('reviewPeriod').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) { drawMoments(S.frame); drawFeed(); } archiveUI?.changed(); });
+  for (const id of ['feedTeam', 'feedType']) el(id).addEventListener('change', () => { drawFeed(); archiveUI?.changed(); });
   el('step').addEventListener('click', () => { if (S.session) seek(Math.min(S.cursor + 1, S.session.total)); });
   el('restart').addEventListener('click', () => seek(0));
   el('speed').addEventListener('change', () => { if (S.playing) play(); });
@@ -507,11 +554,27 @@ async function boot() {
   addEventListener('pagehide', () => { syncMatchLink(true); if (S.session) fetch('/api/sessions/' + encodeURIComponent(S.session.id), {method: 'DELETE', keepalive: true}).catch(() => {}); });
   addEventListener('pageshow', e => {
     if (!e.persisted || !S.match) return;
+    if (S.archiveId) { void openSavedMatch(S.archiveId, {count: S.cursor, settings: view()}); return; }
     el('scenario').value = S.match.scenario; el('seed').value = String(S.match.seed);
     void newMatch({count: S.cursor}); // pagehide deleted the old session; rebuild the saved view.
   });
+  archiveUI = createArchiveUI({
+    snapshot: () => ({sessionId: S.session?.id, match: S.match, label: S.session?.label,
+      hasFrame: !!S.frame && S.frame.sessionId === S.session?.id && S.frame.count === S.cursor,
+      cursor: S.cursor, view: view(), event: S.frame?.event, eventLabel: S.frame?.event ? eventLine(S.frame.event) : '',
+      selectedMomentId: S.events.some(event => event.id === S.selectedMomentId && event.type === 'loss') ? S.selectedMomentId : null,
+      filters: {outcome: el('reviewFilter').value, period: el('reviewPeriod').value, feedTeam: el('feedTeam').value, feedType: el('feedType').value}}),
+    onSaved: id => { S.archiveId = id; syncMatchLink(true); },
+    onDeleted: () => { S.archiveId = null; if (S.match) S.match.preserved = true; el('matchLink').hidden = true;
+      history.replaceState(null, '', location.pathname + location.search); ui(); },
+    onOpen: openSavedMatch, onJump: seek, onPause: stopStream,
+    onReviewChanged: () => { if (S.frame) drawMoments(S.frame); },
+  });
+  void archiveUI.refreshCollection();
   applyI18n();
-  await newMatch({count: linked?.count || 0});
+  if (savedLink) {
+    if (!await openSavedMatch(savedLink.id, savedLink)) { await newMatch(); notice(t().badLink); }
+  } else await newMatch({count: linked?.count || 0});
   if (invalidLink) notice(t().badLink);
 }
 boot().catch(e => { el('cueText').textContent = 'Could not load the match: ' + String(e.message).slice(0, 80); });
