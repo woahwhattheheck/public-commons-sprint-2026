@@ -347,3 +347,9 @@ Original integration sources:
 - [Shared authenticated MCP HTTP transport](../mcp-paid-agent/http-tools.mjs)
 - [MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
 - [MCP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+
+## Retained merchant accounting
+
+The same provider operates the original merchant accounting workspace, completed-receipt recovery, reconciliation tables, named exception reviews, comparison and exact retained response/report/TAR retrieval. Configure host-selected source aliases with `init-accounting --dir NEW_DIRECTORY --accounting ACCOUNTING_JSON`, attach `--accounting` to an existing source initializer, or add the optional accounting configuration to an existing private merchant host. The original workspace owns revisions, source capture, verification, reports and its lease; no new payment is required to recover a completed purchase.
+
+See [ACCOUNTING.md](ACCOUNTING.md) for the complete installed and subprocess workflow, asynchronous job status, original source selection, SHA-pinned file chunks and durable reopening. Existing release, Python, DuckDB, discovery and fleet operations use the same provider.
