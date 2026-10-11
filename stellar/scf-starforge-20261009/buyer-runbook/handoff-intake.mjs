@@ -291,15 +291,23 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     requests.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
     return {requests,errors,operator,presetError,settingsFile,maxHandoffBytes:OPERATION_HANDOFF_MAX_BYTES};
   }
-  async function environmentForOperation(op) {
+  async function originalOperatorForOperation(op,accounting=false) {
     const path=op.sourceConfig?.path;
-    if(typeof path!=='string'||dirname(path)!==configsDirectory||!/^received-[a-f0-9]{64}\.json$/.test(basename(path)))return process.env;
+    if(typeof path!=='string'||dirname(path)!==configsDirectory||!/^received-[a-f0-9]{64}\.json$/.test(basename(path)))return null;
     const id='request-'+basename(path).slice(9,-5),saved=await ready(id);
     check(saved&&saved.configPath===path&&saved.configSha256===op.sourceConfig.sha256&&
       hash(await bytes(path))===saved.configSha256,'REQUEST_OPERATOR_SETUP_CHANGED',409);
-    const native=await openWorkspace(['--dir',saved.operatorDirectory],{accounting:true});
+    const native=await openWorkspace(['--dir',saved.operatorDirectory],{accounting});
     check(hash(await bytes(native.configPath))===saved.configSha256,'REQUEST_OPERATOR_SETUP_CHANGED',409);
-    return {...process.env,...native.operatorEnvironment};
+    return native;
+  }
+  async function environmentForOperation(op) {
+    const native=await originalOperatorForOperation(op,true);
+    return native?{...process.env,...native.operatorEnvironment}:process.env;
+  }
+  async function workspaceForOperation(op) {
+    const native=await originalOperatorForOperation(op);
+    return native?.manifest.directory??null;
   }
   async function attachment(id,kind) {
     await verifiedSource(id);check(['body','handoff'].includes(kind),'REQUEST_ATTACHMENT_INVALID');
@@ -307,6 +315,6 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     check(raw!==null,'REQUEST_BODY_ABSENT',404);
     return {bytes:raw,name:kind==='body'?'request.body':'merchant-operation.handoff.json'};
   }
-  return {state,get,attachment,environmentForOperation,
+  return {state,get,attachment,environmentForOperation,workspaceForOperation,
     receive:input=>lease(()=>receive(input)),review:input=>lease(()=>review(input)),provision:input=>lease(()=>provision(input))};
 }

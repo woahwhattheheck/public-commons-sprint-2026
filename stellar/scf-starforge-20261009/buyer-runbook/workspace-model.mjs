@@ -6,8 +6,9 @@ import {dirname, isAbsolute, join, relative, resolve, sep} from 'node:path';
 import {isatty} from 'node:tty';
 import {config as nativeConfig, execution, need} from '../sf88-operator-buyer-cli/config.mjs';
 import {MANIFEST_SCHEMA, previewRunbook, initializeRunbook, runbookPlanDigest,
-  readPlan, inspectRunbook, executeRunbook, recoverRunbook, unlockRunbook, acquireRunbookMetadataLease} from './runbook.mjs';
-import {renderReport} from './report.mjs';
+  readPlan, inspectRunbook, executeRunbook, recoverRunbook, unlockRunbook, acquireRunbookMetadataLease,
+  finalizeRunbook,bindRunbookWorkspace} from './runbook.mjs';
+import {renderReport,renderAccountingCSV} from './report.mjs';
 import {openHandoffIntake} from './handoff-intake.mjs';
 
 const SCHEMA = 'stellar-forge.buyer-runbook-workspace.v1';
@@ -245,23 +246,31 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     return {directory, configsDirectory, drafts, acquisitions, errors, active,
       terminalAvailable:await terminalAvailable(), configurations:await configurations(), intake:await intake.state()};
   }
-  async function launch({id, only}) {
+  async function launch({id, only},kind='BUYER') {
     check(!active || active.finishedAt, 'WORKSPACE_EXECUTION_BUSY', 409);
-    check(await terminalAvailable(), 'CONTROLLING_TERMINAL_REQUIRED', 409);
+    if(kind==='BUYER')check(await terminalAvailable(), 'CONTROLLING_TERMINAL_REQUIRED', 409);
     const path = await resolveRun(id), state = await inspectRunbook(path);
     check(!state.executionLock, 'RUNBOOK_EXECUTION_LOCK_EXISTS', 409);
     need(only === undefined || state.operations.some(row => row.id === only), 'UNKNOWN_JOB_ID');
     const controller = new AbortController();
-    const current = {executionId:randomUUID(), runId:id, only:only ?? null, startedAt:now(),
+    const current = {executionId:randomUUID(), runId:id, kind, only:only ?? null, startedAt:now(),
       status:'RUNNING', cancelRequested:false, events:[], finishedAt:null};
     active = current;
-    task = executeRunbook(path, {only, signal:controller.signal, environmentForOperation:intake.environmentForOperation, onProgress:event => {
+    const run=kind==='ACCOUNTING'?finalizeRunbook:executeRunbook;
+    task = run(path, {only, signal:controller.signal,
+      ...(kind==='ACCOUNTING'?{workspaceForOperation:intake.workspaceForOperation}:
+        {environmentForOperation:intake.environmentForOperation}),onProgress:event => {
       current.events.push({...event, at:now()});
       if (current.events.length > 128) current.events.shift();
     }}).then(result => { current.result = result; current.status = result.interrupted ? 'CANCELLED' : 'FINISHED'; },
       error => { current.error = codeOf(error); current.status = 'FAILED'; }).finally(() => { current.finishedAt = now(); });
     current.cancel = () => { current.cancelRequested = true; current.status = 'CANCELLING'; controller.abort(); };
-    return {executionId:current.executionId, runId:id, status:current.status};
+    return {executionId:current.executionId, runId:id, kind, status:current.status};
+  }
+  async function bindAccounting({id,only,workspace}) {
+    check(!active||active.finishedAt,'WORKSPACE_EXECUTION_BUSY',409);
+    const binding=await bindRunbookWorkspace(await resolveRun(id),{only,workspace});
+    return {...await getRun(id),binding};
   }
   function cancel({id, executionId}) {
     check(active?.runId === id && active.executionId === executionId && !active.finishedAt, 'EXECUTION_CHANGED_RELOAD', 409);
@@ -277,8 +286,9 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
   }
   async function exportRun(id, format) {
     const state = await inspectRunbook(await resolveRun(id));
-    check(['json','html'].includes(format), 'INVALID_EXPORT_FORMAT');
-    return {bytes:format === 'json' ? encode(state) : Buffer.from(renderReport(state)), name:state.plan.id + '.' + format};
+    check(['json','html','csv'].includes(format), 'INVALID_EXPORT_FORMAT');
+    return {bytes:format === 'json' ? encode(state) : Buffer.from(format==='csv'?renderAccountingCSV(state):renderReport(state)),
+      name:state.plan.id+(format==='csv'?'-accounting':'')+'.'+format};
   }
   async function download(id, operationId) {
     const state = await inspectRunbook(await resolveRun(id));
@@ -346,6 +356,8 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     save:input => serial(() => mutateDraft(() => saveDraft(input))),
     initialize:input => serial(() => mutateDraft(() => activate(input))),
     execute:input => serial(() => launch(input)), cancel:input => serial(() => cancel(input)),
+    finalize:input => serial(() => launch(input,'ACCOUNTING')),
+    bindAccounting:input => serial(() => bindAccounting(input)),
     recover:input => serial(() => recover(input)), unlock:input => serial(() => unlock(input)),
     async close() { closing = true; await sequence; if (active && !active.finishedAt) active.cancel(); await task; }};
 }
