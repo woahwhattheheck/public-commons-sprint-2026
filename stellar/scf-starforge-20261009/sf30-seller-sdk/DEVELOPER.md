@@ -211,3 +211,12 @@ claimed. The actual HTTP workflow was executed separately in Node.
 Protocol references: [OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html),
 [original x402 protocol](https://github.com/x402-foundation/x402), and the existing
 SF30 compiler, route binder and SF25 schema validator in this repository.
+
+## Python customer applications
+
+The same original saved seller OpenAPI now exports a complete Python customer
+package with `starforge client python export --openapi FILE --out NEW_DIRECTORY`.
+It retains the original five-file JavaScript export, source-specific operation
+types, a Python request adapter, portable request plans and exact native buyer
+preparation/review/reopening. `status`, `resume` and `copy` operate the retained
+package. Follow [the complete Python customer workflow](developer/python-client/PYTHON.md).

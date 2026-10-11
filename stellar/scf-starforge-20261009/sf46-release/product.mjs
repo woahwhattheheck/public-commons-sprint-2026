@@ -165,14 +165,34 @@ export async function install(bundleInput, homeInput, { expected, activate = fal
       config: join(lockedHome, 'config'), merchantState: join(lockedHome, 'state') };
   });
 }
-export async function activate(homeInput, id) {
-  const home = await homeInfo(homeInput);
-  return withHomeLock(home, () => selectUnlocked(home, id));
+// Optional selection guards are checked under the same lock used by install/select.
+// Reopening a completed target is idempotent; a newer different selection stays intact.
+function sameSelection(left, right) {
+  return JSON.stringify(left ? [left.releaseId, left.digest, left.previousReleaseId, left.activatedAt] : null) ===
+    JSON.stringify(right ? [right.releaseId, right.digest, right.previousReleaseId, right.activatedAt] : null);
 }
-export async function rollback(homeInput) {
+function selectionChanged() {
+  throw Object.assign(new Error('The active release changed; refresh the managed home before selecting another release'),
+    { code: 'PRODUCT_SELECTION_CHANGED', status: 409 });
+}
+export async function activate(homeInput, id, { expectedActive } = {}) {
+  const home = await homeInfo(homeInput);
+  return withHomeLock(home, async () => {
+    const current = await activeInfo(home);
+    if (expectedActive !== undefined && !sameSelection(current, expectedActive) && current?.releaseId !== id)
+      selectionChanged();
+    return selectUnlocked(home, id);
+  });
+}
+export async function rollback(homeInput, { expectedActive } = {}) {
   const home = await homeInfo(homeInput);
   return withHomeLock(home, async () => {
     const state = await activeInfo(home);
+    if (expectedActive !== undefined && !sameSelection(state, expectedActive)) {
+      if (expectedActive?.previousReleaseId && state?.releaseId === expectedActive.previousReleaseId)
+        return selectUnlocked(home, expectedActive.previousReleaseId);
+      selectionChanged();
+    }
     if (!state?.previousReleaseId) throw new Error('There is no previous release');
     return selectUnlocked(home, state.previousReleaseId);
   });
