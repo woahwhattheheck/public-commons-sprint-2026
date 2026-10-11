@@ -6,6 +6,7 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { config, operation, need } from '../config.mjs';
+import { MAX_REQUEST_BODY_BYTES } from '../request-body.mjs';
 import { openWorkspace } from '../workspace.mjs';
 import { workspaceEnvironment } from '../queue.mjs';
 import { loadOperationTicket, requireOperationTicketFingerprint } from '../operation-ticket.mjs';
@@ -63,7 +64,7 @@ async function originalApplicationAttempt(directory) {
   need(sha(raw) === attempt.configSha256, 'APPLICATION_ATTEMPT_CONFIG_CHANGED');
   const cfg = await config(configurationPath), op = operation(cfg.operation);
   need(op.intentId === meta.intentId, 'APPLICATION_OPERATION_ID_MISMATCH');
-  const body = op.bodyFile ? await privateApplicationFile(op.bodyFile, 1_048_576) : Buffer.alloc(0);
+  const body = op.bodyFile ? await privateApplicationFile(op.bodyFile, MAX_REQUEST_BODY_BYTES) : Buffer.alloc(0);
   need(sha(body) === attempt.bodySha256, 'APPLICATION_ATTEMPT_BODY_CHANGED');
   const attemptStartedAt = attempt.startedAt ?? attempt.createdAt;
   need(typeof attemptStartedAt === 'string' && Number.isFinite(Date.parse(attemptStartedAt)),

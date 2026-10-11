@@ -5,6 +5,8 @@ from .errors import BuyerError, DeliveryError, NativeError, StateError
 from .objects import ObjectBuyer, ObjectSession, ObjectReport, ObjectDelivery, ObjectDownloadError
 from .recovery import WorkspaceRecovery, WorkspaceRecoveryResult, WorkspaceRecoveryProcess, WorkspaceRecoveryError
 from .result import AccountingResult, BuyerResult, FileDelivery, FileTransfer, SessionAccountingResult
+from .requests import MultipartRequest, UploadFile
+from .streams import SSEEvent, NDJSONRecord, StreamDelivery, read_retained_response, export_saved_stream
 
 __all__ = [
     "WorkspaceRecovery", "WorkspaceRecoveryResult", "WorkspaceRecoveryProcess", "WorkspaceRecoveryError",
@@ -12,4 +14,5 @@ __all__ = [
     "DatasetAcquisition", "DatasetDelivery", "DatasetError",
     "ObjectBuyer", "ObjectSession", "ObjectReport", "ObjectDelivery", "ObjectDownloadError",
     "BuyerError", "DeliveryError", "NativeError", "StateError",
+    "MultipartRequest", "UploadFile", "SSEEvent", "NDJSONRecord", "StreamDelivery", "read_retained_response", "export_saved_stream",
 ]

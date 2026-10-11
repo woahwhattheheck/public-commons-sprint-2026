@@ -19,6 +19,7 @@ BRIDGE = CLI.parent / "python" / "bridge.mjs"
 DATASET_BRIDGE = CLI.parent / "python" / "dataset-bridge.mjs"
 APPLICATIONS = {
     "application": BRIDGE,
+    "consumer": CLI.parent / "python" / "consumer-bridge.mjs",
     "dataset": DATASET_BRIDGE,
     "object": CLI.parent / "python" / "object-bridge.mjs",
 }

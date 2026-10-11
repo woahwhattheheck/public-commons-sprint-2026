@@ -4,7 +4,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from copy import deepcopy
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hashlib
 import io
 import os
@@ -90,6 +90,9 @@ class BuyerResult(_FileReaders):
     record: dict
     expected_destination: Path | None
     max_bytes: int
+    _runtime: object = field(default=None, repr=False, compare=False)
+    _response_file: dict | None = field(default=None, repr=False, compare=False)
+    _operation_directory: Path | None = field(default=None, repr=False, compare=False)
 
     @property
     def native(self) -> dict:
@@ -102,6 +105,23 @@ class BuyerResult(_FileReaders):
     @property
     def delivery(self) -> dict:
         return self.native.get("responseFile") or {"status": "NOT_REQUESTED"}
+
+    @property
+    def stream(self):
+        return deepcopy(self.delivery.get("stream"))
+
+    def export_stream(self, **options):
+        """Reuse original Node parsing and retain a private typed record export."""
+        from .streams import export_stream
+        return export_stream(self, **options)
+
+    def events(self, *, start=0, **options):
+        """Yield typed SSE events from retained bytes; never reconnect."""
+        yield from self.export_stream(format="sse", **options).events(start=start)
+
+    def ndjson(self, *, start=0, **options):
+        """Yield original native JSON values from retained complete records."""
+        yield from self.export_stream(format="ndjson", **options).ndjson(start=start)
 
     @property
     def ok(self) -> bool:
