@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-forge.pilot-conversion-terms.v1",
+  "pilotId": "EXAMPLE-PILOT-NOT-A-CUSTOMER",
+  "merchantName": "Example merchant (not a live lead)",
+  "relationshipOwner": "Example operator",
+  "merchantConsent": {"status":"NOT_RECORDED","receiptUrl":null},
+  "commercial": {"approval":"NOT_APPROVED","feeUsd":null,"estimatedDeliveryCostUsd":null,"approvalReceipt":null},
+  "milestones": [
+    {"id":"api-scope","title":"Merchant API scope approved","owner":"Merchant","acceptance":"Merchant confirms selected OpenAPI routes and public payment terms against their original export."},
+    {"id":"merchant-ops","title":"Operational handoff","owner":"Integrator","acceptance":"Merchant reviews a source-native SF93 case bundle and any service errors, then confirms support boundaries."},
+    {"id":"buyer-review","title":"Independent buyer acceptance","owner":"Buyer reviewer","acceptance":"Buyer inspects the selected original offer/HTTP 402 and records independent checkout/settlement proof only if obtained."},
+    {"id":"commercial-close","title":"Commercial acceptance","owner":"Relationship owner","acceptance":"Record the actual merchant signoff, contract and invoice provider references separately."}
+  ]
+}
