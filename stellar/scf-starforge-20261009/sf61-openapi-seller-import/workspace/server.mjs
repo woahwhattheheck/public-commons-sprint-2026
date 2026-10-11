@@ -16,9 +16,10 @@ import { describeMerchantStreamCustomers, createMerchantStreamCustomer, readMerc
   prepareMerchantStreamCustomer } from './stream-customer.mjs';
 import { openCommerce, completeCommerceShutdown } from '../../sf66-demo-launcher/commerce.mjs';
 import { startCommerceConsole } from '../../sf66-demo-launcher/commerce-console.mjs';
+import { createMigrationRoutes } from '../blockworks/routes.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
+const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css'],['/migrations','../blockworks/index.html'],['/migrations/','../blockworks/index.html'],['/migrations/browser.mjs','../blockworks/browser.mjs'],['/migrations/style.css','../blockworks/style.css']]);
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
@@ -60,6 +61,9 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
   if (!Number.isInteger(port) || port<0 || port>65535) throw new TypeError('Port must be 0–65535');
   const token = randomBytes(32).toString('hex');
   let origin, active=null, customerActive=null, busy=false, shuttingDown=false, mutationDone=Promise.resolve();
+  let migrationPromise, migrationInstance;
+  const migrations = () => migrationPromise ??= createMigrationRoutes({parent:output,origin:()=>origin,parentRuntime:view})
+    .then(value=>(migrationInstance=value)).catch(error=>{migrationPromise=null;throw error;});
   const cacheView = () => {
     const rows = active?.session.session?.upstreamSnapshot?.().bindings ?? [];
     return rows.filter(row=>row.cachePolicy).map(row=>({binding:row.name,method:row.method,routes:row.routes,
@@ -112,6 +116,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (!pathname.startsWith('/api/')) return send(404,{error:'Not found'});
       if (!constantEqual(req.headers['x-workspace-token'],token)) return send(401,{error:'Open the complete workspace URL printed by the launcher'});
       if (req.method==='GET') {
+        if (pathname.startsWith('/api/migrations/')) return await (await migrations()).get(pathname,url,send,res);
         if (pathname==='/api/example') {
           const specText=await readFile(new URL('../../sf82-seller-pilot/examples/upstream-openapi.json',import.meta.url),'utf8');
           return send(200,{specText,plan:{schema:'stellar-forge.api-merchant-plan.v1',sellerServer:'https://merchant.example/api',
@@ -162,12 +167,15 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
-        '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close'].includes(pathname)) return send(404,{error:'Not found'});
+        '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close'].includes(pathname) && !pathname.startsWith('/api/migrations/')) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
       mutationDone=new Promise(yes=>{finishMutation=yes;});
       try {
+        if (pathname.startsWith('/api/migrations/')) return await (await migrations()).post(pathname,body,send);
+        if ((pathname==='/api/start'||pathname==='/api/customer/open') && migrationInstance?.app.releases.owned().length)
+          return send(409,{error:'This workspace owns a running migration seller. Stop it in Data migrations before starting another merchant session.'});
         if (pathname==='/api/save') {
           const result=await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name});
           return send(201,{name:result.name,folder:result.folder,command:result.command,preview:result.preview});
@@ -305,6 +313,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
     shuttingDown=true;
     const closed=new Promise((yes,no)=>server.close(e=>e?no(e):yes()));
     await mutationDone;
+    if (migrationPromise) await (await migrationPromise).close();
     await closeCustomer();
     if (active) {await active.session.close();active=null;}
     await closed;
@@ -326,4 +335,5 @@ export async function main(args=process.argv.slice(2)) {
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href)
   main().catch(e=>{console.error(e.message);process.exitCode=1;});
+
 
