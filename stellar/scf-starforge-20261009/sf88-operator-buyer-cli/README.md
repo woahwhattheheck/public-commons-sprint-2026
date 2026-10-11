@@ -6,7 +6,7 @@ From the complete public sprint checkout, using Node 22+ and Python 3.11+:
 
 1. Put an owner-reviewed config JSON in a private local directory. It contains only chosen public quote terms and paths to trusted operator files and the existing signer module. Keep the SF36 secret keys outside the config in the operator environment.
 2. Review the method, resource URL, base-unit spend cap and body digest without network via: node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs --review --config /private/pilot.json
-3. Optionally use --discover --config /private/pilot.json to read the ORIGINAL catalog without payment or signing. Manually select and review actual source terms. Discovery is not approval.
+3. Optionally use --discover --config /private/pilot.json to read the ORIGINAL catalog without payment or signing. Save the result and use --prepare below to select its actual source terms without retyping them. Discovery is not approval.
 4. Execute with --execute --config /private/pilot.json from the trusted terminal. Original SF81 invokes SF62 terminal review and SF36 durable fresh reservation before the owner-provisioned signer. SF31 makes one unsigned request and at most one signed retry. Original SF82 persists one create-only evidence file and checks canonical testnet RPC when qualified.
 
 The evidence directory must already exist with POSIX permissions 0700. Original SF36 policy and ledger paths are absolute. After any unknown payment outcome, reconcile the original SF36 ledger and chain before another attempt, never replace a stable operation ID to force retry.
@@ -46,6 +46,60 @@ The trusted signer module exports an async sign({intent,challenge,accepted}) fun
 Review makes no external calls. Discover returns original source catalog listings but cannot authorize payment. Execute emits a brief status and the original SF52 aggregate report plus local SF82 evidence file path. Seller-reported settlement, observed HTTP delivery, and independently verified testnet transfer event remain distinct. SCF grant and merchant adoption stay with the existing owners. No hosted GitHub Actions or testnet payment is triggered by publication of this code.
 
 Source lineage: SF31 buyer, SF81 one operator-approved operation, SF82 independent evidence, SF36 existing budget journal.
+
+## Prepare a review config from saved discovery
+
+Start with a catalog-only config containing the `catalog` property shown above;
+no operator, signer or operation is needed for discovery. Save its original output:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs \
+  --discover --config /private/catalog-config.json > /private/catalog.json
+```
+
+Inspect `originalListings` and each row's `accepts` array. Select both **zero-based**
+indices explicitly, supply a stable intent ID for the intended operation, and
+enter the concrete URL including required query values. For a weather listing
+at `/weather` whose advertised method is GET:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs \
+  --prepare --discovery /private/catalog.json --row 0 --accept 0 \
+  --intent-id weather-lagos-001 --url 'https://chosen-seller.example/weather?city=Lagos' \
+  --method GET --out /private/weather-review.json
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs \
+  --review --config /private/weather-review.json
+```
+
+Replace the example URL with the chosen listing's actual origin/path. Preparation
+allows explicit query values; it refuses a different origin/path, unresolved path
+templates or a method contradicting the listing. It does not fill query values or
+request bodies from seller examples. For a body-bearing method, add your own
+absolute `operation.bodyFile` and allowed headers before review.
+
+The command also accepts an unchanged native saved `resources` or `items` catalog
+envelope. Input is limited to 1 MiB; the resulting config must fit the existing
+64 KiB config limit. The destination's trusted parent directory must already exist.
+The config is created with mode `0600` and never overwrites an existing path.
+
+The selected option supplies the original scheme, network, asset, recipient,
+atomic amount, timeout and supported payment flow to `operation.expect`. The
+complete original listing, including every option, unknown provider fields and
+Bazaar input/schema, is retained under `preparedFrom`, with the input file's
+SHA-256 and both selected indices. `--review` displays this saved source context
+alongside the concrete operation. A raw catalog without a source URL records
+`source:null`; no observation time or provider identity is invented.
+
+Preparation makes no network request, loads no signer, copies no operator paths
+from discovery, and generates no credentials or payment approval. The result has
+`captureBody:false`; it is ready for offline review, not execution. Add your own
+trusted operator, signer and evidence settings only after review. The saved listing
+may be stale or edited: its hash identifies the file, not verified seller terms.
+Execution still obtains a fresh original SF31 challenge, requires a unique matching
+option within the displayed caps, and asks the original operator to approve its
+full current terms. `preparedFrom` is review context, not an exact-option commitment
+or a replacement for that approval; no unknown provider field is silently turned
+into signer or payment authority.
 
 ## Save the returned dataset or other output
 
