@@ -2,6 +2,10 @@
 
 A direct **read-only** Node.js companion to the original [SF82 CLI reconciliation](../sf82-chain-transfer-reconcile/README.md). This original RPC path handles **Stellar testnet and pubnet**, using `getNetwork`, `getTransaction` and `getEvents`, and the existing SF43 `createOfficialEventDecoder()` from `@stellar/stellar-sdk`. It checks the approved network and exact token transfer without requiring the `stellar` executable.
 
+See [network selection and accounting compatibility](NETWORKS.md), or use the
+[retained collection workflow](BATCH.md) for original-file preparation, resumable
+chain reads, explicit failed-read retries and the original merchant accounting report.
+
 ## Existing authorized operator workflow
 
 1. Run an **already-authorized** SF81 original buyer checkout on the existing signer/policy/ledger host. Use `sf81ReconciliationRecord(paidResult)` from `../sf82-chain-transfer-reconcile/record.mjs` to export the stripped original record once with private `0600` permissions. Do not copy private keys, an HTTP Response body, cookies or x402 signatures.
@@ -23,7 +27,7 @@ mainnet archive provider. The shared [network catalog](networks.json) also feeds
 the original signer and Python accounting worker. An explicit endpoint must
 belong to the record's original network.
 The observer checks that network's canonical passphrase with `getNetwork` and
-records the selected endpoint. It does not fall back automatically.
+records the selected endpoint and network response digest. It does not fall back automatically.
 For a focused local HTTP check, `--rpc-endpoint http://127.0.0.1:PORT/` retains
 its separate local verdict. Optional `--max-event-pages 24` (range 1–100) limits
 event reads. An endpoint in a seller receipt is never selected.

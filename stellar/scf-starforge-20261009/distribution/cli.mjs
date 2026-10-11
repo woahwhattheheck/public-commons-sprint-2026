@@ -29,7 +29,6 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mcp-native                                Prepare and operate the original native buyer MCP workspace
   mcp-stdio / mcp-client-config              Run and register that buyer with a local MCP host
   merchant-mcp-stdio / merchant-mcp-client-config  Run and register original merchant MCP tools locally
-  buyer-runbook                             Prepare, execute and recover a retained set of buyer jobs
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
@@ -51,6 +50,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   catalog-workspace                          Review signed declarations and retained catalog operations
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
+  buyer-runbook                              Plan, run and recover multi-resource acquisitions
   buyer-object-workspace                     Review and operate original file acquisitions in the browser
   assets                                     Inspect, package and catalog immutable file products
   commerce-setup                             Prepare shared operator budgets and merchant requests
@@ -63,6 +63,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
+  merchant-readiness                         Review every configured Stellar receiving account
   availability                              Review, pause and resume a running seller's selected routes
   cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant
   graphql-onboarding / graphql-merchant      Prepare approved queries and run the original GraphQL seller

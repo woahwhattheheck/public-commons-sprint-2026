@@ -16,6 +16,7 @@ from .storage import parse
 
 CLI = Path("stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs")
 BRIDGE = CLI.parent / "python" / "bridge.mjs"
+DATASET_BRIDGE = CLI.parent / "python" / "dataset-bridge.mjs"
 
 
 @dataclass(frozen=True)
@@ -40,9 +41,10 @@ class Runtime:
         self.output_limit = output_limit
 
     def run(self, arguments, *, logs: Path | None = None, started=None, target="buyer") -> Run:
-        if target not in ("buyer", "application"):
+        entries = {"buyer":CLI, "application":BRIDGE, "dataset":DATASET_BRIDGE}
+        if target not in entries:
             raise StateError("ORIGINAL_RUNTIME_TARGET_INVALID")
-        entry = self.cli if target == "buyer" else self.checkout / BRIDGE
+        entry = self.checkout / entries[target]
         if not entry.is_file():
             raise StateError("ORIGINAL_APPLICATION_RUNTIME_REQUIRED")
         # Keep the controlling terminal. SF81/SF62 opens /dev/tty itself; this

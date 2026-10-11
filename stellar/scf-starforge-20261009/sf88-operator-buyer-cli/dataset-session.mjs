@@ -6,9 +6,10 @@ import { hostname } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { config, operation, execution, InputError, need } from './config.mjs';
 import { execute } from './execute.mjs';
-import { createOperatorApproval } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import { createOperatorApproval, checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { analyzeOne } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { canonical, digest, inspectDatasetPage, object, validateDatasetQuery } from './dataset-page.mjs';
+import { MAX_DATASET_PAGE_BYTES, MAX_DATASET_PAGES } from '../sf100-buyer-dataset-delivery/deliver.mjs';
 
 const VERSION = 'stellar-forge.sf88.dataset-session.v1';
 const MAX_ATOMIC = 170141183460469231731687303715884105727n;
@@ -114,6 +115,10 @@ function validateDefinition(value, directory) {
 export async function createDatasetSession({directory, configPath, workspaceDirectory, maxPages, maxTotalAtomic,
   maxRows = 1000000, maxPageBytes = 1048576, expectedSnapshot = null} = {}) {
   need(typeof directory === 'string' && isAbsolute(directory) && directory === resolve(directory), 'DATASET_ABSOLUTE_SESSION_REQUIRED');
+  // New acquisitions must fit the SAME original exporter they deliver into.
+  // Keep historical definition validation unchanged for existing session recovery.
+  need(isCount(maxPages, 1, MAX_DATASET_PAGES) && isCount(maxPageBytes, 1024, MAX_DATASET_PAGE_BYTES),
+    'DATASET_DELIVERY_LIMITS_EXCEEDED');
   need((configPath !== undefined) !== (workspaceDirectory !== undefined), 'DATASET_ONE_CONFIG_SOURCE_REQUIRED');
   const source = workspaceDirectory === undefined ? await config(configPath)
     : (await (await import('./workspace.mjs')).openWorkspace(['--dir', workspaceDirectory])).config;
@@ -277,12 +282,14 @@ async function originalPreflight(cfg, environment) {
   need(info.isFile(), 'SIGNER_MODULE_MUST_EXIST');
   // Constructor-only original approval validation: no ledger mutation, signer or HTTP call.
   createOperatorApproval({...cfg.operator, environment});
+  await checkOperatorTerminal(cfg.operation.intentId);
 }
 /** Trusted host seam: CLI always supplies the original SF88 execute function. */
 export async function runDatasetSession(directory, {signal, executePage = execute, onPage = () => {},
-  environment = process.env} = {}) {
+  environment = process.env, emitPageSummaries = true} = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof executePage === 'function' && typeof onPage === 'function', 'DATASET_EXECUTOR_INVALID');
+  need(typeof emitPageSummaries === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
   const release = await lock(directory);
   try {
     const definition = validateDefinition(await readJson(join(directory, 'session.json')), directory);
@@ -313,7 +320,8 @@ export async function runDatasetSession(directory, {signal, executePage = execut
         index, intentId:cfg.operation.intentId, configurationSha256:digest(canonical(cfg)),
         capAtomic:cfg.operation.expect.maxAtomic, startedAt:new Date().toISOString()});
       try {
-        const summary = await executePage(cfg, {signal, environment:operatorEnvironment});
+        const summary = await executePage(cfg, {signal, environment:operatorEnvironment,
+          emitSummary:emitPageSummaries});
         await createJson(join(dir, 'result.json'), {schema:'stellar-forge.sf88.dataset-attempt-result.v1', summary});
       } catch (error) {
         await createJson(join(dir, 'failure.json'), {code:safeCode(error), at:new Date().toISOString()});
