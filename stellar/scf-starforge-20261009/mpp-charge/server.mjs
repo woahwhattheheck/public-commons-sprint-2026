@@ -12,6 +12,7 @@ import { preparePurchase, executePurchase, finalizePurchase, purchaseView } from
 import { versions } from './runtime.mjs';
 import { merchantContract, contractOpenAPI } from './customer/contract.mjs';
 import { createCustomerBundle } from './customer/export.mjs';
+import { createCustomerWorkbench, customerWorkbenchProfile } from './customer/workbench.mjs';
 
 const uiRoot=new URL('./public/',import.meta.url);
 function portNumber(value) {
@@ -98,6 +99,7 @@ export async function exportResponse({workspace,group='purchases',recordId,desti
 }
 export async function serveWorkspace({directory,port=8787,environment=process.env}) {
   const workspace=await openWorkspace(directory);
+  const customerWorkbench=createCustomerWorkbench({workspace,environment});
   const token=randomBytes(32).toString('hex'),tokenBytes=Buffer.from(token);
   const jobs=new Map();let merchantServer=null,merchantTransition=false,origin,closed=false;
   function authorized(request) {
@@ -108,7 +110,9 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
   }
   async function snapshot() {
     return {schema:'stellar-forge.mpp-console.v1',metadata:await workspace.metadata(),versions,
-      profiles:{merchant:await workspace.profile('merchant'),buyer:await workspace.profile('buyer')},
+      profiles:{merchant:await workspace.profile('merchant'),buyer:await workspace.profile('buyer'),
+        customer:await workspace.profile('customer')},
+      customerWorkbench:await customerWorkbench.snapshot(),
       merchant:merchantServer?{port:merchantServer.port,profileId:merchantServer.merchant.profileId,
         active:merchantServer.merchant.active()}:null,
       purchases:(await workspace.list('purchases')).map(purchaseView),
@@ -130,7 +134,7 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
       requireValue(request.headers.host===new URL(origin).host,'MPP_WORKSPACE_HOST_INVALID',403);
       const url=new URL(request.url,origin);
       requireValue(url.origin===origin,'MPP_WORKSPACE_ORIGIN_INVALID',403);
-      if(request.method==='GET' && ['/','/app.js','/style.css'].includes(url.pathname)) {
+      if(request.method==='GET' && ['/','/app.js','/customer-workbench.js','/style.css'].includes(url.pathname)) {
         const name=url.pathname==='/'?'index.html':url.pathname.slice(1);
         const body=await readFile(new URL(name,uiRoot));
         await send(response,new Response(body,{headers:{
@@ -161,11 +165,40 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
           'content-disposition':'attachment; filename="'+name+'"','cache-control':'private, no-store',
           'x-content-type-options':'nosniff'}}));return;
       }
+      if(request.method==='GET' && url.pathname==='/api/customer-workbench') {
+        requireValue([...url.searchParams.keys()].every(key=>['offset','limit'].includes(key)) &&
+          [...url.searchParams.keys()].every(key=>url.searchParams.getAll(key).length===1),
+          'MPP_CUSTOMER_LIST_OPTIONS_INVALID');
+        await send(response,Response.json(await customerWorkbench.snapshot({
+          offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??50)
+        }),{headers:{'cache-control':'no-store'}}));return;
+      }
+      const customerResourcePath=/^\/api\/customer-workbench\/purchases\/([^/]+)\/(preview|response)$/.exec(url.pathname);
+      if(request.method==='GET' && customerResourcePath) {
+        const purchaseId=decodeURIComponent(customerResourcePath[1]);
+        if(customerResourcePath[2]==='preview') {
+          await send(response,Response.json(await customerWorkbench.resourcePreview(purchaseId),
+            {headers:{'cache-control':'no-store'}}));return;
+        }
+        const resource=await customerWorkbench.resource(purchaseId);
+        await send(response,new Response(resource.response.body,{headers:{
+          'content-type':'application/octet-stream',
+          'content-disposition':'attachment; filename="mpp-'+purchaseId+'.bin"',
+          'x-content-type-options':'nosniff','cache-control':'private, no-store',
+          'x-mpp-resource-sha256':resource.sha256,'x-mpp-transaction':resource.transaction
+        }}));return;
+      }
       const download=/^\/api\/(purchases|deliveries)\/([^/]+)\/response$/.exec(url.pathname);
       if(request.method==='GET' && download) {
-        const record=await workspace.read(download[1],decodeURIComponent(download[2]));
-        requireValue(record?.response,'MPP_RESPONSE_UNAVAILABLE',404);
-        const output=storedResponse(record.response);
+        const recordId=decodeURIComponent(download[2]);
+        let output;
+        if(download[1]==='purchases' && await customerWorkbench.isCustomerPurchase(recordId)) {
+          output=(await customerWorkbench.resource(recordId)).response;
+        } else {
+          const record=await workspace.read(download[1],recordId);
+          requireValue(record?.response,'MPP_RESPONSE_UNAVAILABLE',404);
+          output=storedResponse(record.response);
+        }
         await send(response,new Response(output.body,{headers:{
           'content-type':'application/octet-stream','content-disposition':'attachment; filename="response.bin"',
           'x-content-type-options':'nosniff','cache-control':'no-store'
@@ -175,9 +208,30 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
         'MPP_JSON_POST_REQUIRED',405);
       const body=JSON.parse((await readBody(request)).toString('utf8'));
       let result;
-      if(url.pathname==='/api/profile') {
+      if(url.pathname==='/api/customer-workbench/intake') {
+        result=await customerWorkbench.intake(body.document);
+      } else if(url.pathname==='/api/customer-workbench/fetch') {
+        result=await customerWorkbench.fetch(body);
+      } else if(url.pathname==='/api/customer-workbench/configure') {
+        result=await customerWorkbench.configure(body);
+      } else if(url.pathname==='/api/customer-workbench/preview') {
+        result=await customerWorkbench.preview(body);
+      } else if(url.pathname==='/api/customer-workbench/refresh') {
+        result=await customerWorkbench.refresh(body);
+      } else if(url.pathname==='/api/customer-workbench/prepare') {
+        result=startJob('Prepare customer purchase',()=>customerWorkbench.prepare(body));
+      } else if(url.pathname==='/api/customer-workbench/retry-prepare') {
+        result=startJob('Retry original customer preparation',()=>customerWorkbench.retryPreparation(body.id));
+      } else if(['/api/customer-workbench/execute','/api/customer-workbench/resume',
+        '/api/customer-workbench/finalize'].includes(url.pathname)) {
+        const operation=url.pathname.split('/').at(-1);
+        result=startJob(operation==='execute'?'Execute customer purchase':operation==='resume'?
+          'Recover customer purchase':'Reconcile customer purchase',
+          ()=>customerWorkbench.action(body.id,operation));
+      } else if(url.pathname==='/api/profile') {
         requireValue(!(merchantServer || merchantTransition) || body.kind!=='merchant','MPP_STOP_MERCHANT_TO_EDIT',409);
-        const profile=body.kind==='merchant'?merchantConfig(body.profile):buyerConfig(body.profile);
+        const profile=body.kind==='merchant'?merchantConfig(body.profile):body.kind==='customer'?
+          customerWorkbenchProfile(body.profile,workspace.root):buyerConfig(body.profile);
         result=await workspace.configure(body.kind,profile,body.revision);
       } else if(url.pathname==='/api/merchant/start') {
         requireValue(!merchantServer && !merchantTransition,'MPP_MERCHANT_ALREADY_RUNNING',409);
@@ -196,11 +250,14 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
         const profile=await workspace.profile('buyer');requireValue(profile,'MPP_BUYER_PROFILE_REQUIRED');
         result=startJob('Prepare purchase',()=>preparePurchase({workspace,profile,challengeId:body.challengeId}));
       } else if(url.pathname==='/api/purchase/execute') {
-        result=startJob('Execute purchase',()=>executePurchase({workspace,purchaseId:body.id,environment,resume:false}));
+        result=startJob('Execute purchase',async()=>await customerWorkbench.isCustomerPurchase(body.id)?
+          customerWorkbench.action(body.id,'execute'):executePurchase({workspace,purchaseId:body.id,environment,resume:false}));
       } else if(url.pathname==='/api/purchase/resume') {
-        result=startJob('Recover purchase',()=>executePurchase({workspace,purchaseId:body.id,environment,resume:true}));
+        result=startJob('Recover purchase',async()=>await customerWorkbench.isCustomerPurchase(body.id)?
+          customerWorkbench.action(body.id,'resume'):executePurchase({workspace,purchaseId:body.id,environment,resume:true}));
       } else if(url.pathname==='/api/purchase/finalize') {
-        result=startJob('Reconcile transfer',()=>finalizePurchase({workspace,purchaseId:body.id,environment}));
+        result=startJob('Reconcile transfer',async()=>await customerWorkbench.isCustomerPurchase(body.id)?
+          customerWorkbench.action(body.id,'finalize'):finalizePurchase({workspace,purchaseId:body.id,environment}));
       } else if(url.pathname==='/api/delivery/recover') {
         result=startJob('Recover delivery',async()=>{
           const row=await workspace.read('deliveries',body.id);
