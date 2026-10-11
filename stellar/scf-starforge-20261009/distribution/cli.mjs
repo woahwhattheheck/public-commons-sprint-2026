@@ -44,6 +44,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
+  buyer-runbook                              Plan, run and recover multi-resource acquisitions
   assets                                     Inspect, package and catalog immutable file products
   commerce-setup                             Prepare shared operator budgets and merchant requests
   upstream-operation                         Issue, inspect and reconcile merchant operation tickets
