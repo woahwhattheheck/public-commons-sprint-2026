@@ -1,0 +1,29 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "routes": [{
+    "id": "catalog",
+    "path": "/catalog",
+    "definition": {
+      "method": "GET",
+      "serviceName": "PostgreSQL catalog API",
+      "description": "Operator-owned catalog query. region is required; after_id defaults to 0. Returns up to 100 rows. Non-null PostgreSQL values preserve their exact text representation.",
+      "tags": ["postgresql", "dataset", "example"],
+      "payment": {
+        "scheme": "exact", "network": "stellar:testnet", "asset": "UNVERIFIED_DEMO_ASSET",
+        "payTo": "UNVERIFIED_DEMO_RECIPIENT", "amount": "10000", "maxTimeoutSeconds": 60
+      },
+      "outputExample": {
+        "schema": "stellar-forge.postgres-result.v1", "query": "catalog",
+        "columns": ["id", "title", "region", "price_cents", "updated_at"],
+        "columnTypes": [{"name":"id","oid":20},{"name":"title","oid":25},{"name":"region","oid":25},{"name":"price_cents","oid":1700},{"name":"updated_at","oid":1184}],
+        "rows": [{"id":"1","title":"Example sensor","region":"north","price_cents":"499","updated_at":"2026-10-11 00:00:00+00"}],
+        "rowCount": 1, "truncated": false, "valueEncoding": "postgres-text", "snapshot": "single-request-repeatable-read"
+      },
+      "queryParameters": [
+        {"name":"region","type":"string","required":true,"description":"Exact product region, bound as text.","example":"north"},
+        {"name":"after_id","type":"string","required":false,"description":"Exclusive id cursor, canonical decimal integer. Default 0.","example":"0"}
+      ]
+    },
+    "handler": "postgresCatalog", "admit": "admitPostgresCatalog"
+  }]
+}
