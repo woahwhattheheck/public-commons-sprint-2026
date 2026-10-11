@@ -3904,3 +3904,36 @@ processes on one Linux host. The original `OPERATIONS.md` under the installed
 ownership while already accepted SDK work completes. The existing
 `./facilitator` API retains its runtime entrypoints; `./facilitator/readiness`
 exposes the original RPC probe directly.
+
+## Prepare and receive the SCF grant delivery plan
+
+The maintained release includes the original SF47 scenario, Decimal calculator,
+private browser workspace and headless operator. Use Python 3.10 or newer on Linux alongside
+the package's Node launcher:
+
+```sh
+starforge grant-workspace --help
+starforge grant-workspace init --workspace /absolute/private/scf-planning
+starforge grant-workspace serve --workspace /absolute/private/scf-planning
+```
+
+The same workspace retains source identities, named plans, saved revisions,
+contributor capacity, package pricing, payment timing and the complete deployment
+acceptance plan. Close its browser server before running headless operations so
+the original process lock has one owner. `show`, `estimate`, `save`, `clone` and
+`restore` compose the original model, with explicit expected revisions and durable
+request IDs for saved operations. Omitted planning preserves the reviewed revision.
+
+Use `export` and `import-bundle` for the original complete browser-compatible ZIP;
+`export-all` and `import-all` group those unchanged native bundles for an entire
+saved-plan handover and resume each receiving import through the original request
+ledger. The receiving response maps original plan IDs to their new IDs while
+retaining the complete revision history, saved source and planning assumptions.
+Keep private workspaces and exports outside the installed source directory.
+
+The complete command, input, recovery and receiving guide is
+[SF47 headless planning and receiving](../../scf_2026/sf47_budget_model/workspace/CLI.md),
+installed at `source/stellar/scf_2026/sf47_budget_model/workspace/CLI.md`.
+The CLI also runs directly as `python3 .../workspace/cli.py`; `SF47_PYTHON` selects
+an explicit Python executable for the installed command. All financial calculation
+continues through the original `budget.py` and workspace model.
