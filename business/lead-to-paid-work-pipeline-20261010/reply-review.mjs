@@ -11,6 +11,23 @@ const sameUrl = (a, b) => {
   } catch { return false; }
 };
 const unique = xs => [...new Set(xs)];
+// This is a sales engagement lane, NOT permission for another first introduction.
+// A warm human reply is actionable even though readyForOwnerApproach is false.
+const lanes = Object.freeze({
+  HUMAN_INTEREST: 'ACTIVE_CUSTOMER_REPLY',
+  HUMAN_REPLY_NEEDS_TRIAGE: 'REVIEW_HUMAN_REPLY',
+  HUMAN_NEUTRAL: 'REVIEW_HUMAN_REPLY',
+  HUMAN_DECLINE: 'CLOSED_DECLINED',
+  CONTACT_ROUTING_AVAILABLE: 'RECONNECT_NAMED_CONTACT',
+  CONTACT_ROUTED_AWAITING_REPLY: 'AWAITING_REPLY',
+  DELIVERY_FAILURE: 'FIX_DELIVERY',
+  OUTBOUND_AWAITING_REPLY: 'AWAITING_REPLY',
+  FOLLOWUP_REVIEW: 'REVIEW_FOLLOWUP',
+  NO_VERIFIED_SEND: 'REVIEW_FIRST_CONTACT',
+  NOT_EVALUATED: 'PROVIDER_DATA_REQUIRED',
+  UNMAPPED: 'SOURCE_BINDING_REQUIRED'
+});
+export const engagementLane = status => lanes[status] || 'REVIEW_PROVIDER_RECORDS';
 
 function hold(decision, reasons, action) {
   if (!reasons.length) return;
@@ -28,7 +45,7 @@ export function attachReplyResults(opportunities, decisions, report) {
       opportunities.length !== decisions.length) throw Error('Reply join requires paired opportunities/decisions');
   if (report == null) {
     for (const d of decisions) d.replyTriage = { status: 'NOT_EVALUATED', caseId: null,
-      reasons: ['NO_PROVIDER_REPLY_SNAPSHOT_SUPPLIED'] };
+      engagementLane: engagementLane('NOT_EVALUATED'), reasons: ['NO_PROVIDER_REPLY_SNAPSHOT_SUPPLIED'] };
     return null;
   }
   if (!Array.isArray(report.cases)) throw Error('Triage output cases[] required');
@@ -55,12 +72,12 @@ export function attachReplyResults(opportunities, decisions, report) {
     if (c && c.status === 'HUMAN_DECLINE') reasons.push('REPLY_CONTACT_DECLINED');
     if (c && c.inboundCount > 0 && c.sentCount === 0) reasons.push('REPLY_INBOUND_OWNER_REVIEW');
     const summary = c ? {
-      caseId, status: c.status, sentCount: c.sentCount, inboundCount: c.inboundCount,
+      caseId, status: c.status, engagementLane: engagementLane(c.status), sentCount: c.sentCount, inboundCount: c.inboundCount,
       humanReplyCount: c.humanReplyCount, autoReplyCount: c.autoReplyCount,
       bounceCount: c.bounceCount, nextAction: c.nextAction,
       // Intentionally no raw body, address, subject, message ID, or private receipt URL on the board.
       reasons: unique(reasons)
-    } : { caseId: caseId || null, status: 'UNMAPPED', reasons: unique(reasons) };
+    } : { caseId: caseId || null, status: 'UNMAPPED', engagementLane: engagementLane('UNMAPPED'), reasons: unique(reasons) };
     d.replyTriage = summary;
     if (reasons.length) {
       issues.push({ opportunityKey: d.key, caseId: caseId || null, reasons: unique(reasons) });
