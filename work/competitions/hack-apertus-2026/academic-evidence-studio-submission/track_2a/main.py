@@ -13,6 +13,7 @@ import time
 import unicodedata
 import urllib.error
 import urllib.request
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
@@ -25,9 +26,10 @@ except ImportError:  # pragma: no cover - diagnostic outside the image
 
 LABEL_NAMES = {0: "entailment", 1: "neutral", 2: "contradiction"}
 LANGS = ("de", "fr", "it")
-STRATEGIES = ("full", "selected")
+STRATEGIES = ("full", "selected", "balanced")
 MODEL_PREFIX = "swiss-ai/Apertus-v1.5-"
 DEFAULT_MODEL = "swiss-ai/Apertus-v1.5-8B"
+USER_AGENT = "HackApertus-OST-Track2A/1.0"
 MAX_EVIDENCE_ITEMS = 5
 MAX_EVIDENCE_CHARS = 5000
 
@@ -205,6 +207,81 @@ def select_context(case: dict[str, Any], pages: list[Passage], limit: int = 8) -
     return [item[2] for item in sorted(chosen, key=lambda item: item[1])]
 
 
+def retrieval_features(text: str) -> Counter[str]:
+    """Language-independent surface anchors, never translated source text.
+
+    Accent folding joins e.g. French/Italian cognates; short character ngrams
+    also tolerate inflection and compounds. These are surface similarities,
+    not semantic cross-language equivalence. Numeric anchors survive a claim
+    language change. The original passages remain untouched for quotation.
+    """
+    folded = "".join(char for char in unicodedata.normalize("NFKD", text.casefold())
+                     if not unicodedata.combining(char))
+    features: Counter[str] = Counter()
+    for token in re.findall(r"[^\W\d_]+|\d+", folded, re.UNICODE):
+        if token.isdecimal():
+            features["n:" + token] += 1
+        elif len(token) >= 3:
+            features["w:" + token] += 1
+            if len(token) >= 5:
+                for offset in range(len(token) - 2):
+                    features["g:" + token[offset:offset + 3]] += 1
+    return features
+
+
+def balanced_context(case: dict[str, Any], pages: list[Passage], limit: int = 8) -> list[Passage]:
+    """Optional sparse-retrieval arm with document-wide coverage.
+
+    BM25-style document frequency and length normalization rank surface
+    anchors. Half the budget is reserved for distributed coverage when source
+    and claim languages differ, because a missing lexical match is not evidence
+    of irrelevance. Same-language cases reserve a quarter. Return original
+    chunks in source order; no gold labels or additional provider calls are used.
+    """
+    chunks = split_passages(pages)
+    budget = min(len(chunks), max(1, limit))
+    if len(chunks) <= budget:
+        return chunks
+    claim = case["claim"]
+    source = case.get("reference") or case.get("booklet")
+    cross_language = claim["language"] != source["language"]
+    query = retrieval_features(claim["text"])
+    query.update(retrieval_features(str(case.get("vote", ""))))
+    features = [retrieval_features(chunk.text) for chunk in chunks]
+    frequencies: Counter[str] = Counter()
+    for terms in features:
+        frequencies.update(terms.keys())
+    lengths = [sum(count for feature, count in terms.items() if not feature.startswith("g:"))
+               for terms in features]
+    mean_length = max(1.0, sum(lengths) / len(lengths))
+    weights = {"w": 1.0, "n": 2.5, "g": 0.15}
+    scored = []
+    for index, terms in enumerate(features):
+        score = 0.0
+        length_factor = 1.2 * (0.25 + 0.75 * lengths[index] / mean_length)
+        for feature in query.keys() & terms.keys():
+            tf = terms[feature]
+            df = frequencies[feature]
+            idf = math.log(1 + (len(chunks) - df + 0.5) / (df + 0.5))
+            score += weights[feature[0]] * idf * tf * 2.2 / (tf + length_factor)
+        scored.append((score, index))
+    coverage = max(1, budget // (2 if cross_language else 4))
+    ranked = sorted(scored, key=lambda item: (-item[0], item[1]))
+    # With no shared surface anchors, use the entire budget for coverage.
+    anchor_budget = 0 if ranked[0][0] == 0 else budget - coverage
+    chosen = {index for _, index in ranked[:anchor_budget]}
+    # Fill the largest uncovered source interval at each step. Endpoints first
+    # avoid the previous prefix tie-break; subsequent midpoints cover the body.
+    while len(chosen) < budget:
+        if not chosen:
+            candidate = 0
+        else:
+            candidate = max((index for index in range(len(chunks)) if index not in chosen),
+                            key=lambda index: (min(abs(index - selected) for selected in chosen), -index))
+        chosen.add(candidate)
+    return [chunks[index] for index in sorted(chosen)]
+
+
 def render_context(passages: list[Passage], max_chars: int) -> str:
     rendered: list[str] = []
     size = 0
@@ -283,7 +360,10 @@ SOURCE:
     request = urllib.request.Request(
         chat_url(base_url),
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        # Public AI requires an identifying User-Agent on every API request.
+        # Keep it deterministic and credential-free across both dev arms.
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
+                 "User-Agent": USER_AGENT},
         method="POST",
     )
     started = time.perf_counter()
@@ -458,7 +538,12 @@ def predict_case(case: dict[str, Any], input_path: Path, data_root: Path, strate
     task = validate_case(case)
     case_id = case["id"]
     _, pages = case_passages(case, input_path, data_root)
-    context_passages = pages if strategy == "full" else select_context(case, pages)
+    if strategy == "full":
+        context_passages = pages
+    elif strategy == "selected":
+        context_passages = select_context(case, pages)
+    else:
+        context_passages = balanced_context(case, pages)
     context = render_context(context_passages, max_chars)
     raw, tokens, _http_ms = invoke_apertus(case, task, context)
     label, evidence = validate_prediction(raw, task, context_passages)
