@@ -51,7 +51,13 @@ const fields = (value, allowed) => {
 export async function startCubeWorkbench(options = {}) {
   const { port = 0, ...modelOptions } = options;
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('port must be 0–65535');
-  const model = await openCubeWorkbench(modelOptions), token = randomBytes(32).toString('base64url');
+  const model = await openCubeWorkbench(modelOptions);
+  try { return await listenCubeWorkbench(model, port); }
+  catch (error) { await model.close().catch(() => {}); throw error; }
+}
+
+async function listenCubeWorkbench(model, port) {
+  const token = randomBytes(32).toString('base64url');
   const tokenBytes = Buffer.from('Bearer ' + token);
   let origin, closing = false, pending = Promise.resolve();
   const mutate = operation => {
@@ -149,7 +155,7 @@ export async function startCubeWorkbench(options = {}) {
     closing = true;
     const stopped = new Promise((done, fail) => server.close(error => error ? fail(error) : done()));
     server.closeIdleConnections();
-    await pending; await stopped;
+    try { await pending; await stopped; } finally { await model.close(); }
   })();
   return { server, model, origin, url: origin + '/#' + token, close };
 }
