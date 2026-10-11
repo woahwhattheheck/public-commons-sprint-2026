@@ -239,6 +239,7 @@ def build_table(table, binding, store, *, columns=None, title=None, description=
     data = ET.tostring(root, encoding="utf-8", xml_declaration=True, pretty_print=True)
     validation = inspect(data)
     return data, {"table": table["name"], "source_kind": kind, "source_sha256": source_digest,
-        "source_rows": rows_count, "fields": fields, "validation": validation,
+        "source_rows": rows_count, "null_token": binding.get("null_token") if kind == "csv" else None,
+        "fields": fields, "validation": validation,
         "scope": "Explicit tabular projection; every row of the selected source is retained. Original model measures and visual layouts require their separately reviewed report implementation.",
         "native_runtime": "awaiting_report_builder_or_report_server_render"}
