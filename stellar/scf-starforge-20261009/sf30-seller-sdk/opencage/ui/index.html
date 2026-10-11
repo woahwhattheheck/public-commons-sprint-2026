@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geocoding workbench · Starforge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
+<body><header><div><span class="brand">STARFORGE</span><strong>Geocoding workbench</strong></div><div id="connection">Opening retained workspace…</div></header>
+<div class="shell"><nav aria-label="Workspace sections"><button class="active" data-view="requests">Requests and review</button><button data-view="merchant">Merchant release</button><button data-view="deliveries">Customer deliveries</button><button data-view="contract">Source contract</button><div class="nav-note">OpenCage · native JSON<br>WGS84 / EPSG:4326</div></nav>
+<main><div id="notice" role="status" hidden></div>
+<section id="view-requests" class="view">
+<div class="heading"><div><p class="eyebrow">SOURCE AND OPERATOR REVIEW</p><h1 id="workspace-title">Location workshare</h1><p id="workspace-subtitle">Retain the source result, review candidates and prepare the customer delivery.</p></div><button id="refresh">Refresh</button></div>
+<div class="requests-layout"><aside class="panel" id="intake"><h2>Prepare a query</h2><form id="query-form">
+<label>Product<select id="product" required></select></label><label>Request ID<input id="request-id" required maxlength="48" pattern="[a-z][a-z0-9-]{0,47}"></label>
+<label id="query-label">Address or coordinates<input id="query" required minlength="2" maxlength="2048" autocomplete="off"></label>
+<label>Native options <span class="hint">JSON object</span><textarea id="options" rows="4" spellcheck="false">{}</textarea></label>
+<details><summary>Review exact provider inputs</summary><pre id="query-preview"></pre></details>
+<p id="key-state" class="hint"></p><button class="primary full" type="submit" id="run-source">Run source request</button>
+</form><details class="import"><summary>Import a retained HTTP result</summary><p class="hint">Choose its original observation and response files. The request and response hash must match.</p>
+<label>Observation JSON<input type="file" id="observation-file" accept=".json,application/json"></label><label>Response JSON<input type="file" id="response-file" accept=".json,application/json"></label>
+<button id="import-result">Import exact result</button></details></aside>
+<div class="records"><section class="panel"><div class="section-bar"><h2>Retained requests</h2><span id="request-count" class="hint"></span></div><div class="table-scroll"><table><thead><tr><th>Request / query</th><th>Outcome</th><th>Candidates</th><th>Decision</th></tr></thead><tbody id="request-list"></tbody></table></div></section>
+<section class="panel" id="review"><div id="review-empty" class="empty">Select a retained request to review its original response.</div><div id="review-content" hidden>
+<div class="section-bar"><div><p class="eyebrow" id="review-id"></p><h2 id="review-query"></h2></div><span class="badge" id="review-state"></span></div>
+<p id="outcome-explanation"></p><dl class="facts" id="review-facts"></dl><p class="hint">Candidates retain provider relevance order. Confidence describes spatial precision, not correctness.</p>
+<div class="table-scroll"><table id="candidate-table"><thead><tr><th>Choose</th><th>Formatted location</th><th>Latitude / longitude</th><th>Precision</th></tr></thead><tbody id="candidate-list"></tbody></table></div>
+<div id="decision-controls"><label>Decision note<textarea id="decision-note" rows="2" maxlength="2000" placeholder="What makes this candidate appropriate for the customer?"></textarea></label>
+<div class="actions"><button id="save-choice" class="primary">Save candidate decision</button><button id="clear-choice">Clear selection</button><button id="export-result">Prepare delivery</button></div></div>
+<div class="actions"><button id="download-response">Download original response</button><button id="download-capture">Download capture record</button></div>
+<details><summary>Native fields, licenses and decision history</summary><pre id="review-native"></pre></details></div></section></div></div>
+</section>
+<section id="view-merchant" class="view" hidden><div class="heading"><div><p class="eyebrow">ORIGINAL SF61 / SF30 / SF82</p><h1>Merchant release</h1><p>Prepare the contract, review its exact terms, then operate the original release.</p></div><button id="refresh-merchant">Refresh status</button></div>
+<div class="two-columns"><section class="panel"><h2>Payment terms</h2><p class="hint">Amounts remain atomic strings. Every offered payment alternative is preserved by the original compiler.</p>
+<label>Terms JSON<textarea id="terms" rows="16" spellcheck="false"></textarea></label><button id="prepare-package" class="primary">Prepare merchant package</button>
+<div id="package-details" hidden><h3>Prepared source</h3><p class="mono wrap" id="package-identity"></p><label>Retained package<select id="package-select"></select></label><div class="table-scroll"><table><thead><tr><th>File</th><th>Bytes</th><th>Download</th></tr></thead><tbody id="package-files"></tbody></table></div></div></section>
+<section class="panel"><h2>Stage and operate</h2><form id="stage-form"><label>Release ID<input id="release-id" value="geocoding-v1" maxlength="48" required></label>
+<label>Release label<input id="release-label" value="Reviewed geocoding merchant" maxlength="200"></label>
+<label>Facilitator URL <span class="hint">optional</span><input id="facilitator" type="url" placeholder="https://your-facilitator.example"></label>
+<p class="hint">Without a facilitator, the original seller serves payment challenges. The provider key is read from the configured environment variable when a source request is dispatched.</p><button type="submit" id="stage-package">Stage reviewed package</button></form>
+<hr><div class="section-bar"><h2>Original release state</h2><span id="release-state" class="badge">UNPREPARED</span></div><dl class="facts" id="release-facts"></dl>
+<label>Staged release<select id="release-select"></select></label><div class="actions"><button id="compare-release">Review changes</button><button id="activate-release" class="primary" disabled>Activate reviewed release</button></div>
+<div class="actions"><button id="start-release">Start active release</button><button id="stop-release">Stop owned release</button><button id="rollback-release">Roll back selection</button></div>
+<details id="release-diff-details"><summary>Exact request and payment changes</summary><pre id="release-diff"></pre></details><details><summary>Original status record</summary><pre id="release-native"></pre></details></section></div></section>
+<section id="view-deliveries" class="view" hidden><div class="heading"><div><p class="eyebrow">RETAINED CUSTOMER OUTPUT</p><h1>Customer deliveries</h1><p>Each delivery joins the original response with one saved decision revision.</p></div><button id="refresh-deliveries">Refresh</button></div>
+<div class="two-columns"><section class="panel"><h2>Prepared deliveries</h2><div id="delivery-list"></div></section><section class="panel"><h2>Selected delivery</h2><div id="delivery-summary" class="empty">Choose a delivery to inspect its source and files.</div><div id="delivery-files"></div><details><summary>Complete delivery record</summary><pre id="delivery-native"></pre></details></section></div></section>
+<section id="view-contract" class="view" hidden><div class="heading"><div><p class="eyebrow">SAVED SOURCE IDENTITY</p><h1>Source contract</h1><p>The workspace source plan is retained with every request. Merchant payment changes create separate prepared packages.</p></div></div>
+<section class="panel"><dl class="facts" id="contract-facts"></dl><div class="table-scroll"><table><thead><tr><th>Product</th><th>Method / path</th><th>Mode</th><th>Native options and defaults</th></tr></thead><tbody id="contract-products"></tbody></table></div>
+<h2>Provider semantics</h2><ul><li>Forward addresses and reverse coordinates use distinct inputs. Reverse coordinates are latitude,longitude; GeoJSON coordinates are longitude,latitude.</li>
+<li>HTTP 200 can contain zero candidates. No result is selected automatically.</li><li>Provider quota exhaustion (402) is represented by the original upstream error contract. It is separate from the merchant's payment challenge.</li>
+<li>Subscription responses may omit rate information. Returned licenses and native fields remain in customer deliveries.</li></ul>
+<p><a href="https://opencagedata.com/api" target="_blank" rel="noreferrer">OpenCage API documentation</a> · <a href="https://opencagedata.com/terms" target="_blank" rel="noreferrer">Provider terms</a></p>
+<details><summary>Complete retained configuration</summary><pre id="configuration"></pre></details></section></section>
+</main></div><footer>Starforge geocoding workshare · Retained source, explicit decisions, original merchant and buyer operations</footer></body></html>
