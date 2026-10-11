@@ -221,7 +221,7 @@ export async function openWorkbench({state,config,referenceFile,root}) {
       preview.bytes <= LIMIT,'GOLDRUSH_COMPLETE_JSON_REQUIRED',409);
     const snapshot = parseWalletResponse(preview.text,{...scope,source:{kind:'buyer',id:resource.id,
       sha256:preview.sha256,bytes:preview.bytes,url:job.operation.url,
-      retrievedAt:resource.createdAt,operator:new URL(job.operation.url).origin}});
+      retrievedAt:null,requestCreatedAt:resource.createdAt,operator:new URL(job.operation.url).origin}});
     return {selection,snapshot,annotation:library.resource(resource.id).annotation,
       resource:{id:resource.id,intentId:resource.intentId,sha256:resource.sha256,bytes:resource.bytes,
         configSha256:resource.configSha256},job:jobView(job)};
