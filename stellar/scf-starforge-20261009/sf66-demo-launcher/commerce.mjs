@@ -24,6 +24,7 @@ import { readUpstreamCommerce, retainUpstreamCommerce, openUpstreamCommerce,
 import { readJsonrpcCommerce, retainJsonrpcCommerce, describeJsonrpcCommerce,
   openJsonrpcCommerce } from './commerce-jsonrpc.mjs';
 import { createJsonrpcCommerceRecovery } from './commerce-jsonrpc-recovery.mjs';
+import { readCommerceRequestInput, readCommerceRequestBytes } from './commerce-request.mjs';
 import { createCommerceStreamAccess } from './commerce-stream.mjs';
 
 const PLAN = 'stellar-forge.commerce-plan.v1';
@@ -569,7 +570,19 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       pending.add(work); activeRpcActions.set(intentId, work);
       return work.finally(() => { pending.delete(work); activeRpcActions.delete(intentId); });
     };
+    const requestAction = (intentId, read) => {
+      const work = (async () => {
+        const job = await jobFor(intentId);
+        need(!controller.signal.aborted, 'COMMERCE_INTERRUPTED');
+        const offer = seller.compiled.routes.find(route => route.id === job.merchant.routeId).offer;
+        return read(job, offer);
+      })();
+      pending.add(work);
+      return work.finally(() => pending.delete(work));
+    };
     return Object.freeze({ seller, operations, status, close, waitForIdle,
+      requestInput: intentId => requestAction(intentId, readCommerceRequestInput),
+      requestBytes: intentId => requestAction(intentId, readCommerceRequestBytes),
       async streamRecords(intentId, options) { return streams.records(await retainedJobFor(intentId), options); },
       async streamAnswer(intentId, options) { return streams.answer(await retainedJobFor(intentId), options); },
       async streamFile(intentId, options) { return streams.file(await retainedJobFor(intentId), options); },
