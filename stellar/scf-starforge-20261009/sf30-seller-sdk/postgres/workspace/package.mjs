@@ -9,6 +9,8 @@ import { WorkspaceInputError } from './plan.mjs';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
 const launcher = fileURLToPath(new URL('../start.mjs', import.meta.url));
+const releaseCli = fileURLToPath(new URL('../../../sf82-seller-pilot/release-cli.mjs', import.meta.url));
+const STAGE = directory => `node ${quote(releaseCli)} stage --store /private/merchant-releases --id postgres-v1 --postgres-package ${quote(directory)}`;
 const RUN = directory => `node ${quote(launcher)} --source ${quote(join(directory, 'source.json'))} --config ${quote(join(directory, 'service.json'))}`;
 const PROFILE_FIELDS = ['maxConnections', 'poolSize', 'maxPending', 'connectTimeoutMs', 'idleTimeoutMs', 'lockTimeoutMs', 'startupTimeoutMs'];
 
@@ -57,6 +59,11 @@ export async function buildMerchantPackage(plan, { profile } = {}) {
     `Without --facilitator, the original seller serves HTTP 402 challenges. Add the original launcher's --facilitator HTTPS_URL option with your existing native SDK setup to enable payment handling. Use an operator-managed HTTPS proxy for the declared publicOrigin.\n\n` +
     `## Product availability\n\nTo pause selected query products for a data refresh, append --availability-dir /private/merchant-availability to the launch command on Linux. Choose a private absolute directory for this seller's durable availability policy and reuse it on restart. Retain the same publicOrigin in service.json, or the same fixed local seller port when no publicOrigin is declared.\n\n` +
     `Open the availabilityControl URL printed at startup to select products and pause or resume them in the existing operations console. Keep that URL private: its fragment grants write access. Paused routes return HTTP 503 before payment handling or query admission. Already admitted requests finish through the original seller lifecycle; the console shows their in-flight count. Other products keep selling. The same controls are available through the maintained availability CLI.\n\n` +
+    `## Retained merchant releases\n\nSet the public HTTPS origin in the original workspace before exporting a retained release. Initialize a new private release store once with node ${quote(releaseCli)} init --store /private/merchant-releases. Then retain this exact package:\n\n` +
+    '```sh\n' + STAGE('.') + '\n```\n\n' +
+    `Open node ${quote(releaseCli)} console --store /private/merchant-releases to compare the original query, parameter, payment and source identities. Select the candidate at its current selection generation, then start it explicitly. The existing Operations console controls availability; the original API explorer supplies customer SDK downloads. Reopen the same store for upgrade, selection history and rollback.\n\n` +
+    `When the workspace starts with --release-store /private/merchant-releases, its Release handoff section retains export file identities and stages a selected saved package directly. A lost stage reply can recover the same immutable release ID, even after the authoring directory moves. A console opened by the workspace and any seller it starts stop when that workspace process closes.\n\n` +
+    `A PostgreSQL release retains configuration, not database contents. Rolling back restores the earlier query and seller choices against the current database. Each retained release has its own durable availability policy; a new release begins with its original default policy.\n\n` +
     `## Data contract\n\nOnly the explicit projected columns are returned. Optional filters use positional PostgreSQL parameters; omitting a filter leaves it unrestricted. This package is a capped ordered query, not a full-dataset export or automatic pagination. Include a unique key in the selected ordering if stable ordering matters. The adapter returns PostgreSQL text values and null, preserving integer and decimal precision.\n\n` +
     `Metadata examples describe parameter formats and were not sampled from table rows. Keep row access restrictions in the database role, approved views and database row policies. Request filters select results; they do not establish a customer's identity.\n\n` +
     `## Files\n\nsource.json is the canonical named-query adapter declaration. service.json is the original SF30 seller declaration. query.sql is a readable copy of the same fixed query. Keep them together. Connection passwords are absent; only environment names and public connection policy are exported. If a custom CA was selected, ca.pem preserves the resolved certificate bundle.\n`;
@@ -87,7 +94,7 @@ export async function saveMerchantPackage(bundle, { outputRoot, queryName, planI
     await mkdir(directory, { mode: 0o700 }); reserved = true;
     await rename(stage, directory);
     return { schema: 'stellar-forge.postgres-workspace-export.v1', directory, planId,
-      files: Object.keys(bundle.files), run: RUN(directory) };
+      files: Object.keys(bundle.files), run: RUN(directory), retainedStage: STAGE(directory) };
   } catch (error) {
     await rm(stage, { recursive: true, force: true });
     if (reserved) await rm(directory, { recursive: true, force: true });
