@@ -7,11 +7,12 @@ import {renderCsv,renderHtml} from '../accountant/engine.mjs';
 import {BitwaveHttpClient,BITWAVE_API_BASE,BITWAVE_TOKEN_ENV} from '../accountant/bitwave-http.mjs';
 import {BITWAVE_DOCS,bitwaveHash,bitwaveCheck as check,bitwaveCanonical,bitwaveId as id,bitwaveText as text,
   bitwaveTargetId,bitwaveJson as json,createBitwavePlan,validateBitwavePlan,bitwaveCreateRequest,bitwaveBatchRequest,
-  bitwaveRowsCsv,readBitwavePage,compareBitwavePages,prepareBitwaveReturn} from '../accountant/bitwave.mjs';
+  bitwaveRowsCsv,bitwavePlanColumns,readBitwavePage,compareBitwavePages,prepareBitwaveReturn} from '../accountant/bitwave.mjs';
 
 export const BITWAVE_REQUEST_BYTES=Math.ceil(64*1024*1024*4/3)+1000000;
 const now=()=>new Date().toISOString(),copy=value=>structuredClone(value);
 const records=workspace=>workspace.state.bitwavePlans??[];
+const adjustmentNames=['adjustments.json','adjustments.csv','adjustments.html'];
 const fileType=name=>({json:'application/json; charset=utf-8',csv:'text/csv; charset=utf-8',html:'text/html; charset=utf-8',tar:'application/x-tar'})[name.split('.').at(-1)]??'application/octet-stream';
 const page=query=>{const offset=Number(query.offset??0),limit=Number(query.limit??50);check(Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=200,'INVALID_BITWAVE_PAGE','Choose a nonnegative offset and 1 to 200 rows.');return {offset,limit};};
 const requestHash=value=>bitwaveHash(bitwaveCanonical(value));
@@ -83,9 +84,13 @@ export class BitwaveWorkspace{
       try{
         await privateDir(join(directory,'captures'));await privateDir(join(directory,'operations'));
         const contents={'plan.json':json(plan),'create-data-source.json':json(bitwaveCreateRequest(plan)),'expected-rows.json':json({items:plan.rows,totalRows:plan.rowCount,nextPageToken:null}),
-          'data-source.csv':bitwaveRowsCsv(plan.rows),'handoff.json':json(handoff),'accountant.csv':renderCsv(handoff,revision),'review.html':renderHtml(handoff,revision)};
+          'data-source.csv':bitwaveRowsCsv(plan.rows,bitwavePlanColumns(plan)),'handoff.json':json(handoff),'accountant.csv':renderCsv(handoff,revision),'review.html':renderHtml(handoff,revision)};
         if(revision)contents['accountant-return.json']=json(revision);
-        for(const name of ['original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json'])if(handoffRecord.files.some(file=>file.name===name))contents[name]=(await this.accountant.file(request.handoffId,name,{revisionId:'initial'})).bytes;
+        check(!handoff.source.adjustments||adjustmentNames.every(name=>handoffRecord.files.some(file=>file.name===name)),
+          'BITWAVE_ADJUSTMENT_FILES_REQUIRED','Retain all three adjustment files from the selected original handoff.',409);
+        for(const name of ['original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json',...adjustmentNames])if(handoffRecord.files.some(file=>file.name===name))contents[name]=(await this.accountant.file(request.handoffId,name,{revisionId:'initial'})).bytes;
+        if(handoff.source.adjustments)check(bitwaveHash(contents['adjustments.json'])===handoff.source.adjustments.sha256&&
+          contents['adjustments.json'].length===handoff.source.adjustments.bytes,'BITWAVE_ADJUSTMENT_SOURCE_CHANGED','Use the exact adjustment snapshot frozen by this handoff.',409);
         for(const batch of plan.batches)contents[batch.file]=json(bitwaveBatchRequest(plan,batch.index));
         const files=[];for(const [name,bytes] of Object.entries(contents))files.push(await writeExact(directory,name,bytes));
         const record={id:planId,name:plan.name,actor:plan.actor,orgId:plan.orgId,createdAt:plan.createdAt,handoffId:plan.handoffId,accountantRevisionId:plan.accountantRevisionId,rowCount:plan.rowCount,source:plan.source,
@@ -102,6 +107,10 @@ export class BitwaveWorkspace{
       this.workspace.expected(value.revision);const record=this.row(planId),dataSourceId=bitwaveTargetId(value.dataSourceId),actor=text(value.actor,'operator',1000),note=text(value.note,'target selection note',2000);
       check(!record.operations.some(item=>item.status==='RUNNING'),'BITWAVE_OPERATION_ACTIVE','Finish the active native operation before choosing its target.',409);
       check(!record.binding||record.binding.dataSourceId===dataSourceId,'BITWAVE_TARGET_ALREADY_BOUND','This frozen plan already belongs to another target. Create a new plan for a different table.',409);
+      const columns=bitwaveCanonical(bitwavePlanColumns(record));
+      check(!records(this.workspace).some(prior=>prior.id!==planId&&prior.orgId===record.orgId&&
+        prior.binding?.dataSourceId===dataSourceId&&bitwaveCanonical(bitwavePlanColumns(prior))!==columns),
+        'BITWAVE_TARGET_SCHEMA_MISMATCH','Choose a data source created for this complete schema; the selected retained table uses different columns.',409);
       if(!record.binding){record.binding={orgId:record.orgId,dataSourceId,selectedAt:now(),selectedBy:actor,note,source:'operator selected native table'};await this.workspace.commit('bitwave_target_selected',actor,{planId,orgId:record.orgId,dataSourceId});}
       return {record:copy(record),state:this.workspace.view()};
     });
@@ -192,7 +201,7 @@ export class BitwaveWorkspace{
     const record=this.row(planId);await this.plan(planId);
     if(name==='bitwave-handoff.tar'){
       const snapshot=copy(record),entries=[];for(const file of snapshot.files)entries.push({name:file.name,bytes:await readExact(this.directory(planId),file)});
-      for(const returned of snapshot.returns)for(const name of ['return.json','returned.csv','accountant.csv','review.html']){
+      for(const returned of snapshot.returns)for(const name of ['return.json','returned.csv','accountant.csv','review.html',...(snapshot.source.adjustments?adjustmentNames:[])]){
         const file=await this.accountant.file(snapshot.handoffId,name,{revisionId:returned.id});entries.push({name:'accountant-returns/'+returned.id+'/'+name,bytes:file.bytes});
       }
       entries.push({name:'delivery-state.json',bytes:json(snapshot)});

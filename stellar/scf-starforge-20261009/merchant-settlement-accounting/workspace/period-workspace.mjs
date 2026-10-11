@@ -88,12 +88,14 @@ export class PeriodWorkspace{
   }
   async file(id,name){
     const close=this.closeRow(id),keys={'period-close.json':'closeSha256','review-notes.json':'reviewNotesSha256'};
-    check(Object.hasOwn(keys,name),'CLOSE_FILE_NOT_FOUND','Choose the original close metadata or frozen review notes.',404);
+    const adjustment=['adjustments.json','adjustments.csv','adjustments.html'].includes(name)?close.adjustmentFiles?.[name]:null;
+    const expected=adjustment?.sha256??(name==='adjustments.json'?close.adjustmentsSha256:close[keys[name]]);
+    check((Object.hasOwn(keys,name)||adjustment||name==='adjustments.json')&&expected,'CLOSE_FILE_NOT_FOUND','Choose the original close metadata, frozen review notes or retained adjustments.',404);
     const path=join(this.workspace.directory,'exports',close.exportId,name),handle=await open(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0));
     let bytes;
     try{const info=await handle.stat();check(info.isFile()&&info.size>0&&info.size<=128_000_000,'CLOSE_FILE_CHANGED','The retained close file changed.',409);bytes=await handle.readFile();}
     finally{await handle.close();}
-    check(hash(bytes)===close[keys[name]],'CLOSE_FILE_CHANGED','The retained close file changed.',409);
+    check(hash(bytes)===expected&&(adjustment?.bytes===undefined||bytes.length===adjustment.bytes),'CLOSE_FILE_CHANGED','The retained close file changed.',409);
     return {bytes,name};
   }
   async detail(id){
@@ -127,7 +129,8 @@ export async function handlePeriodRequest(workspace,{method,path,query={},value}
     if(parts.length===4)return {value:await periods.detail(parts[3])};
     if(parts.length===5&&parts[4]==='notes')return {value:await periods.notes(parts[3],query)};
     if(parts.length===5&&parts[4]==='download')return {file:await workspace.archive(periods.closeRow(parts[3]).exportId),type:'application/x-tar'};
-    if(parts.length===6&&parts[4]==='download')return {file:await periods.file(parts[3],parts[5]),type:'application/json; charset=utf-8'};
+    if(parts.length===6&&parts[4]==='download')return {file:await periods.file(parts[3],parts[5]),
+      type:parts[5].endsWith('.csv')?'text/csv; charset=utf-8':parts[5].endsWith('.html')?'text/html; charset=utf-8':'application/json; charset=utf-8'};
   }
   check(false,'NOT_FOUND','This recorded-activity period operation was not found.',404);
 }
