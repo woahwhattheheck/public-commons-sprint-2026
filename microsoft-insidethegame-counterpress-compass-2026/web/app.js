@@ -15,7 +15,7 @@ const L = {
     zone: {defensive: 'own third', middle: 'middle third', attacking: 'final third'},
     rows: {shots: 'Shots', share: 'Share of on-ball actions', cp: 'Counterpresses', regains: 'Won back within 8s', rate: 'Regain rate (settled)', mean: 'Avg. time to win back', unclear: 'Unclear outcome'},
     chip: {success: 'Won back', expired: 'Timed out', interrupted: 'Unclear'},
-    noMoments: 'No counterpress moments yet.', reviewFilter: 'Filter moments', reviewAll: 'All outcomes', reviewSuccess: 'Won back', reviewExpired: '8s elapsed', reviewInterrupted: 'Unclear', reviewSelected: 'Press evidence', reviewEmpty: 'No settled press windows in this view.', reviewMissing: 'No moments match this filter.', reviewObserved: 'Next observed event', reviewNoNext: 'No later event observed in this match prefix.', reviewCaution: 'The following event is context, not proof the press caused it.', reviewJump: 'Replay this outcome', reviewCount: (n,total) => n + ' of ' + total + ' observed moments', reviewEvidence: 'Recorded evidence', reviewReason: {success: (n,s) => n + ' pressure action(s); same-team regain in ' + s + 's inside the official 8s window.', expired: (n) => n + ' pressure action(s); the log passed 8s without a qualifying regain.', interrupted: (n) => n + ' pressure action(s); a new same-team loss interrupted the window, so recovery is unknown.'}, progress: (c, n) => `Event ${c} of ${n}.`, at: 'at',
+    noMoments: 'No counterpress moments yet.', reviewFilter: 'Filter moments', reviewPeriod: 'Match half', reviewPeriodAll: 'Both halves', reviewPeriodFirst: 'First half', reviewPeriodSecond: 'Second half', feedFilterTeam: 'Feed team', feedBoth: 'Both teams', feedFocus: 'Your club', feedRival: 'Opponent', feedType: 'Event type', feedTypeAll: 'All events', feedEmpty: 'No observed events match these filters.', reviewAll: 'All outcomes', reviewSuccess: 'Won back', reviewExpired: '8s elapsed', reviewInterrupted: 'Unclear', reviewSelected: 'Press evidence', reviewEmpty: 'No settled press windows in this view.', reviewMissing: 'No moments match this filter.', reviewObserved: 'Next observed event', reviewNoNext: 'No later event observed in this match prefix.', reviewCaution: 'The following event is context, not proof the press caused it.', reviewJump: 'Replay this outcome', reviewCount: (n,total) => n + ' of ' + total + ' observed moments', reviewEvidence: 'Recorded evidence', reviewReason: {success: (n,s) => n + ' pressure action(s); same-team regain in ' + s + 's inside the official 8s window.', expired: (n) => n + ' pressure action(s); the log passed 8s without a qualifying regain.', interrupted: (n) => n + ' pressure action(s); a new same-team loss interrupted the window, so recovery is unknown.'}, progress: (c, n) => `Event ${c} of ${n}.`, at: 'at',
     ins: {none: 'Nothing has happened yet — press Play.', front: (t, n) => `${t} are on the front foot: ${n} pressing actions in the last five minutes.`,
       even: n => `An even spell: ${n} pressing actions between the sides in the last five minutes.`, quiet: 'A quiet spell — little pressing in the last five minutes.',
       regainBest: (t, s) => `${t} win the ball back in ${s}s on average after losing it.`, noRegain: t => `${t} haven't won the ball back inside eight seconds yet.`,
@@ -37,7 +37,7 @@ const L = {
     zone: {defensive: 'campo propio', middle: 'zona media', attacking: 'último tercio'},
     rows: {shots: 'Tiros', share: 'Cuota de acciones con balón', cp: 'Contrapresiones', regains: 'Recuperadas en 8s', rate: 'Tasa de recuperación (resueltas)', mean: 'Tiempo medio de recuperación', unclear: 'Resultado incierto'},
     chip: {success: 'Recuperada', expired: 'Sin recuperar', interrupted: 'Incierta'},
-    noMoments: 'Aún no hay momentos de contrapresión.', reviewFilter: 'Filtrar jugadas', reviewAll: 'Todos', reviewSuccess: 'Recuperada', reviewExpired: '8s cumplidos', reviewInterrupted: 'Incierta', reviewSelected: 'Evidencia de presión', reviewEmpty: 'No hay ventanas de presión resueltas en esta vista.', reviewMissing: 'Ninguna jugada coincide con el filtro.', reviewObserved: 'Siguiente jugada observada', reviewNoNext: 'No hay jugadas posteriores observadas en este segmento.', reviewCaution: 'La siguiente jugada es contexto, no prueba de causalidad.', reviewJump: 'Reproducir este resultado', reviewCount: (n,total) => n + ' de ' + total + ' jugadas observadas', reviewEvidence: 'Evidencia registrada', reviewReason: {success: (n,s) => n + ' presión(es); recuperación del mismo equipo en ' + s + 's dentro de 8s.', expired: (n) => n + ' presión(es); pasaron 8s sin una recuperación válida.', interrupted: (n) => n + ' presión(es); otra pérdida interrumpió la ventana y el resultado es desconocido.'}, progress: (c, n) => `Jugada ${c} de ${n}.`, at: 'a los',
+    noMoments: 'Aún no hay momentos de contrapresión.', reviewFilter: 'Filtrar jugadas', reviewPeriod: 'Tiempo', reviewPeriodAll: 'Ambos tiempos', reviewPeriodFirst: 'Primer tiempo', reviewPeriodSecond: 'Segundo tiempo', feedFilterTeam: 'Equipo del feed', feedBoth: 'Ambos equipos', feedFocus: 'Tu club', feedRival: 'Rival', feedType: 'Tipo de jugada', feedTypeAll: 'Todas', feedEmpty: 'Ninguna jugada observada coincide con los filtros.', reviewAll: 'Todos', reviewSuccess: 'Recuperada', reviewExpired: '8s cumplidos', reviewInterrupted: 'Incierta', reviewSelected: 'Evidencia de presión', reviewEmpty: 'No hay ventanas de presión resueltas en esta vista.', reviewMissing: 'Ninguna jugada coincide con el filtro.', reviewObserved: 'Siguiente jugada observada', reviewNoNext: 'No hay jugadas posteriores observadas en este segmento.', reviewCaution: 'La siguiente jugada es contexto, no prueba de causalidad.', reviewJump: 'Reproducir este resultado', reviewCount: (n,total) => n + ' de ' + total + ' jugadas observadas', reviewEvidence: 'Evidencia registrada', reviewReason: {success: (n,s) => n + ' presión(es); recuperación del mismo equipo en ' + s + 's dentro de 8s.', expired: (n) => n + ' presión(es); pasaron 8s sin una recuperación válida.', interrupted: (n) => n + ' presión(es); otra pérdida interrumpió la ventana y el resultado es desconocido.'}, progress: (c, n) => `Jugada ${c} de ${n}.`, at: 'a los',
     ins: {none: 'Aún no ha pasado nada: pulsa Reproducir.', front: (t, n) => `${t} manda: ${n} acciones de presión en los últimos cinco minutos.`,
       even: n => `Fase igualada: ${n} acciones de presión entre ambos en los últimos cinco minutos.`, quiet: 'Fase tranquila: poca presión en los últimos cinco minutos.',
       regainBest: (t, s) => `${t} recupera el balón en ${s}s de media tras perderlo.`, noRegain: t => `${t} aún no ha recuperado el balón en menos de ocho segundos.`,
@@ -225,7 +225,8 @@ function reviewEvidence(f, o) {
   const closingIndex = o.status === 'expired'
     ? S.events.findIndex(e => e.second > o.showAt)
     : S.events.findIndex(e => e.id === lastId);
-  const next = closingIndex < 0 ? null : S.events.slice(closingIndex + 1).find(e => e.type !== 'clock');
+  const afterIndex = o.status === 'expired' ? closingIndex : closingIndex + 1;
+  const next = closingIndex < 0 ? null : S.events.slice(afterIndex).find(e => e.type !== 'clock');
   const observation = node('p', 'review-following', next
     ? T.reviewObserved + ': ' + next.id + ' · ' + fmt(next.second) + ' · ' + eventLine(next)
     : T.reviewNoNext);
@@ -236,8 +237,9 @@ function reviewEvidence(f, o) {
   root.append(head, summary, reason, label, chain, observation, caution, jump);
 }
 function drawMoments(f) {
-  const T = t(), filter = el('reviewFilter').value;
-  const visible = f.overlays.filter(o => filter === 'all' || o.status === filter).slice(-10).reverse();
+  const T = t(), filter = el('reviewFilter').value, period = el('reviewPeriod').value;
+  const visible = f.overlays.filter(o => (filter === 'all' || o.status === filter) &&
+    (period === 'all' || (period === 'first' ? o.showAt < 2700 : o.showAt >= 2700))).slice(-10).reverse();
   el('reviewCount').textContent = T.reviewCount(visible.length, f.overlays.length);
   if (!visible.length) {
     el('moments').replaceChildren(node('li', '', f.overlays.length ? T.reviewMissing : T.noMoments));
@@ -260,11 +262,16 @@ function drawMoments(f) {
 }
 
 function drawFeed() {
-  el('feed').replaceChildren(...S.events.slice(-10).reverse().map(e => {
+  const choice = el('feedTeam').value, type = el('feedType').value, period = el('reviewPeriod').value;
+  const focus = S.frame?.team || 'Harbor FC';
+  const rows = S.events.filter(e => (choice === 'both' || (choice === 'focus' ? e.team === focus : e.team !== focus)) &&
+    (type === 'all' || e.type === type) &&
+    (period === 'all' || (period === 'first' ? e.second < 2700 : e.second >= 2700))).slice(-10).reverse();
+  el('feed').replaceChildren(...(rows.length ? rows.map(e => {
     const li = node('li', e.team === 'Harbor FC' ? 'harbor' : 'metro');
     li.append(node('b', '', fmt(e.second)), node('span', '', eventLine(e)));
     return li;
-  }));
+  }) : [node('li', '', t().feedEmpty)]));
 }
 function drawStrip(f) {
   const marks = [node('div', 'half')];
@@ -458,6 +465,8 @@ async function boot() {
   el('play').addEventListener('click', () => (S.playing ? stopStream() : play()));
   el('recover').addEventListener('click', recoverStream);
   el('reviewFilter').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) drawMoments(S.frame); });
+  el('reviewPeriod').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) { drawMoments(S.frame); drawFeed(); } });
+  for (const id of ['feedTeam', 'feedType']) el(id).addEventListener('change', drawFeed);
   el('step').addEventListener('click', () => { if (S.session) seek(Math.min(S.cursor + 1, S.session.total)); });
   el('restart').addEventListener('click', () => seek(0));
   el('speed').addEventListener('change', () => { if (S.playing) play(); });
