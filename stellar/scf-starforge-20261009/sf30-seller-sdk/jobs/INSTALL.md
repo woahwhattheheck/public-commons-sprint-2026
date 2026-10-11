@@ -220,7 +220,7 @@ The installation-specific runbook retains both absolute `sourceRoot` and `depend
 
 ## Package integration
 
-The existing full `sf30-seller-sdk` component includes this directory, its workspace assets, examples, and documentation. SF31 and SF88 provide the existing buyer and transport dependencies. The distribution should register these original files:
+The existing full `sf30-seller-sdk` component includes this directory, its workspace assets, examples, and documentation. SF31 and SF88 provide the existing buyer and transport dependencies. The distribution registers these original files:
 
 | Distribution entry | Original path below `sf30-seller-sdk/jobs/` |
 | --- | --- |

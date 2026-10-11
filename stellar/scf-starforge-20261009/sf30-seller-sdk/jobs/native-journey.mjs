@@ -24,6 +24,7 @@ import { createJobBuyer, openJobBuyer } from './buyer.mjs';
 const work = await mkdtemp(join(process.env.SF_JOBS_JOURNEY_TMPDIR ?? tmpdir(), 'sf30-paid-jobs-'));
 const stateDirectory = join(work, 'merchant-state'), configPath = join(work, 'merchant.json');
 const gate = join(work, 'release-application'), output = process.env.SF_JOBS_JOURNEY_OUTPUT;
+const keepWork = process.env.SF_JOBS_JOURNEY_KEEP === '1';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const write = (path, value) => writeFile(path, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
 const listen = server => new Promise((resolve, reject) => {
@@ -238,6 +239,7 @@ try {
   assert.equal((await model.deliveryOutbox.rows()).length, 2);
   const summary = {
     result: 'PASS', nativeSdk: NATIVE_SDK_VERSION, node: process.version,
+    ...(keepWork ? { retainedWorkDirectory: work } : {}),
     facilitator: 'LOCAL_PROTOCOL_FIXTURE',
     transport: 'ORIGINAL_SF31_PUBLIC_TRANSPORT_WITH_LOOPBACK_REQUEST_SEAM',
     originalOfflineBuyerReviews: reviews, nativeVerifies: verified, nativeSettlements: settled,
@@ -255,8 +257,9 @@ try {
 } finally {
   try { await closeMerchant(); } finally {
     try { await shutdown(facilitator); } finally {
-      if (journeyCompleted) await rm(work, { recursive: true, force: true });
-      else process.stderr.write(JSON.stringify({ retainedWorkDirectory: work,
+      if (journeyCompleted) {
+        if (!keepWork) await rm(work, { recursive: true, force: true });
+      } else process.stderr.write(JSON.stringify({ retainedWorkDirectory: work,
         purpose: 'Inspect the original failed operation and retained job before any recovery run.' }) + '\n');
     }
   }
