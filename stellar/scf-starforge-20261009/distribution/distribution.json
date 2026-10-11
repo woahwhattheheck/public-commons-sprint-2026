@@ -529,7 +529,13 @@
     "./seller/sftp/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/config.mjs",
     "./seller/sftp/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/publisher/model.mjs",
     "./seller/sftp/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/server.mjs",
-    "./seller/sftp/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/model.mjs"
+    "./seller/sftp/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/model.mjs",
+    "./seller/openapi/postman": {
+      "types": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/collection.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/collection.mjs"
+    },
+    "./seller/openapi/merchant": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/model.mjs",
+    "./seller/openapi/source": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/source-document.mjs"
   },
   "nativePeers": {
     "@x402/core": {
