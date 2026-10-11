@@ -5,7 +5,7 @@ import { open, writeFile, mkdir, lstat, realpath, rename } from 'node:fs/promise
 import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { constants as osConstants } from 'node:os';
+import { constants as osConstants, homedir } from 'node:os';
 import { resolveRuntimeProfile, inspectRuntimeProfile, verifyRuntimeProfile } from './runtime-profile.mjs';
 
 export const INSTALL_SCHEMA = 'stellar-forge.runtime-install.v1';
@@ -215,25 +215,114 @@ async function inspect(installed, { load = true, checkRecordedLock = true } = {}
   return { ready: profileReady(report) && lockMatches, lockSha256: sha256, lockMatches, profile: report };
 }
 
+
+const nativeHost = () => ({ node: process.versions.node, modules: process.versions.modules,
+  platform: process.platform, arch: process.arch });
+function matchingImports(report) {
+  return report.profile.host.ready && report.profile.dependencies.every(dependency =>
+    dependency.checks.every(check => check.state === 'MATCHED' && check.importState === 'LOADED'));
+}
+function nativeReady(report, name) {
+  const dependency = report.profile.dependencies.find(item => item.name === name);
+  return dependency?.checks.every(check => check.native?.state === 'READY') === true;
+}
+async function localNodeHeaders(requested) {
+  const candidates = requested ? [resolve(requested)] : [
+    dirname(dirname(await realpath(process.execPath))),
+    join(homedir(), '.cache', 'node-gyp', process.versions.node),
+    join(homedir(), '.node-gyp', process.versions.node),
+  ];
+  for (const candidate of [...new Set(candidates)]) {
+    try {
+      const root = await realpath(candidate), headers = join(root, 'include', 'node');
+      const versionBytes = await regular(join(headers, 'node_version.h'));
+      const source = versionBytes.toString('utf8');
+      const macro = name => new RegExp('^#define\\s+' + name + '\\s+(\\d+)\\b', 'm').exec(source)?.[1];
+      const actual = ['NODE_MAJOR_VERSION', 'NODE_MINOR_VERSION', 'NODE_PATCH_VERSION'].map(macro).join('.');
+      need(actual === process.versions.node && macro('NODE_MODULE_VERSION') === process.versions.modules,
+        'RUNTIME_NATIVE_HEADERS_MISMATCH', 'Node headers must match this Node version and module ABI');
+      const config = await regular(join(headers, 'config.gypi'));
+      for (const name of ['node.h', 'node_api.h', 'common.gypi']) await regular(join(headers, name));
+      return { directory: root, node: actual, modules: process.versions.modules,
+        versionHeaderSha256: hash(versionBytes), configSha256: hash(config) };
+    } catch (error) {
+      if (requested) throw fail(error.code === 'RUNTIME_NATIVE_HEADERS_MISMATCH' ? error.code :
+        'RUNTIME_NATIVE_HEADERS_UNAVAILABLE', 'Use --node-headers with a local Node header prefix containing include/node for ' +
+        process.versions.node + ' (ABI ' + process.versions.modules + ')');
+    }
+  }
+  throw fail('RUNTIME_NATIVE_HEADERS_REQUIRED', 'Offline native preparation needs matching local Node headers. ' +
+    'Resume with --offline --node-headers NODE_HEADER_PREFIX; the resolved dependency tree is retained');
+}
+async function nativePackage(directory, dependency) {
+  need(dependency.name === 'better-sqlite3' && dependency.native === 'sqlite',
+    'RUNTIME_NATIVE_PREPARATION_UNSUPPORTED');
+  const filename = join(directory, 'node_modules', dependency.name, 'package.json');
+  need(await realpath(filename) === filename, 'RUNTIME_NATIVE_PACKAGE_LOCATION_CHANGED');
+  const data = await readJson(filename);
+  need(data.name === dependency.name && data.version === dependency.version &&
+    data.scripts?.install === 'prebuild-install || node-gyp rebuild --release' &&
+    !['preinstall', 'postinstall', 'prepare'].some(name => data.scripts?.[name]),
+    'RUNTIME_NATIVE_INSTALL_SCRIPT_CHANGED',
+    'The declared native package must retain its original supported install hook');
+  return { name: data.name, version: data.version, install: data.scripts.install };
+}
+function nativeEnvironment({ offline, headers }) {
+  const env = { ...process.env, npm_config_update_notifier: 'false',
+    npm_config_ignore_scripts: 'false', npm_config_offline: String(offline),
+    npm_config_runtime: 'node', npm_config_target: process.versions.node,
+    npm_config_arch: process.arch, npm_config_platform: process.platform,
+    npm_config_build_from_source: String(Boolean(headers)), npm_config_debug: 'false',
+    npm_package_config_node_gyp_target: process.versions.node,
+    npm_package_config_node_gyp_arch: process.arch,
+    'prebuild-install_target': process.versions.node,
+    'prebuild-install_runtime': 'node', 'prebuild-install_arch': process.arch,
+    'prebuild-install_platform': process.platform, 'prebuild-install_path': '.',
+    'prebuild-install_buildFromSource': headers ? 'true' : '',
+    'prebuild-install_force': '', 'prebuild-install_help': '', 'prebuild-install_version': '' };
+  // The original prebuild downloader ignores npm's offline setting. Source
+  // mode skips that downloader; node-gyp receives the exact local headers.
+  delete env.npm_config_nodedir;
+  delete env.npm_package_config_node_gyp_nodedir;
+  delete env.npm_package_config_node_gyp_debug;
+  if (headers) {
+    env.npm_config_nodedir = headers.directory;
+    env.npm_package_config_node_gyp_nodedir = headers.directory;
+  }
+  return env;
+}
+async function runNpm(npm, args, { target, log, lease, env }) {
+  try {
+    return await subprocess(npm, args, { cwd: target, env,
+      stdio: ['ignore', log.fd, log.fd, lease.fd] });
+  } catch (error) {
+    throw fail(error.code === 'ENOENT' ? 'RUNTIME_NPM_UNAVAILABLE' : 'RUNTIME_NPM_PROCESS_FAILED');
+  }
+}
+
 /** Recover a completed interrupted attempt before deciding whether npm must run. */
-export async function installRuntime({ directory, offline = false, cache = null, npm = 'npm' } = {}) {
+export async function installRuntime({ directory, offline = false, cache = null, npm = 'npm', nodeHeaders = null } = {}) {
+  need(typeof offline === 'boolean' && typeof npm === 'string' && npm && !npm.includes('\0') &&
+    (cache === null || typeof cache === 'string' && cache && !cache.includes('\0')) &&
+    (nodeHeaders === null || typeof nodeHeaders === 'string' && nodeHeaders && !nodeHeaders.includes('\0')),
+    'RUNTIME_INSTALL_OPTIONS_INVALID');
   const target = await privateDirectory(directory), lease = await installationLease(target);
-  let installed;
+  let installed, log;
   try {
     installed = await readInstall(target);
     const { plan, profile } = installed;
-    let state = installed.state;
+    let state = installed.state, observed = null;
     if (state.phase === 'READY') {
-      const observed = await inspect(installed);
+      observed = await inspect(installed);
       need(observed.ready, 'RUNTIME_READY_INSTALL_CHANGED',
         'This completed runtime changed. Recover into a new directory to preserve running applications');
       return { status: 'READY', directory: target, reused: true, ...observed,
         sourceRoot: plan.sourceRoot, dependencyRoot: target, entrypoint: plan.entrypoint };
     }
     if (state.phase === 'INSTALLING' || state.phase === 'FAILED') {
-      const observed = await inspect(installed, { checkRecordedLock: false });
+      observed = await inspect(installed, { checkRecordedLock: false });
       if (observed.ready) {
-        state = { ...state, phase: 'READY', completedAt: now(), updatedAt: now(),
+        state = { ...state, phase: 'READY', stage: 'COMPLETE', completedAt: now(), updatedAt: now(),
           lockSha256: observed.lockSha256, recoveredExistingInstall: true };
         await save(target, 'install-state.json', state, true);
         return { status: 'READY', directory: target, recoveredExistingInstall: true, ...observed,
@@ -241,35 +330,81 @@ export async function installRuntime({ directory, offline = false, cache = null,
       }
     }
     const existingLock = await lockDigest(target);
-    const command = existingLock ? 'ci' : 'install';
-    const args = [command, '--global=false', '--location=project', '--workspaces=false', '--prefix', target,
-      '--ignore-scripts', '--no-audit', '--no-fund', '--legacy-peer-deps',
-      '--install-strategy=hoisted', '--package-lock=true', '--omit=dev',
-      ...(offline ? ['--offline'] : []), ...(cache ? ['--cache', resolve(cache)] : [])];
+    // A completed extraction is durable before native preparation begins.
+    // On restart, retain it only while its profile, lock and imports still match.
+    const retainedDependencies = existingLock !== null &&
+      state.dependencyInstall?.lockSha256 === existingLock &&
+      state.dependencyInstall?.profileId === profile.profileId &&
+      observed !== null && matchingImports(observed);
+    const command = retainedDependencies ? 'rebuild' : existingLock ? 'ci' : 'install';
     const attempt = state.attempts + 1, logName = 'install-' + attempt + '-' + randomUUID() + '.log';
-    const log = await open(join(target, logName), 'wx', 0o600);
-    state = { ...state, phase: 'INSTALLING', attempts: attempt, updatedAt: now(), startedAt: now(),
-      command, offline: !!offline, logFile: logName, previousLockSha256: existingLock };
-    let result;
-    try {
+    log = await open(join(target, logName), 'wx', 0o600);
+    const { error: previousError, exitCode: previousExitCode, signal: previousSignal, ...previous } = state;
+    state = { ...previous, phase: 'INSTALLING', stage: retainedDependencies ? 'NATIVE_PREPARATION' : 'DEPENDENCIES',
+      attempts: attempt, updatedAt: now(), startedAt: now(), command, offline, logFile: logName,
+      previousLockSha256: existingLock, resumedNativePreparation: retainedDependencies,
+      nativeHost: nativeHost() };
+    await save(target, 'install-state.json', state, true);
+    if (!retainedDependencies) {
+      const args = [command, '--global=false', '--location=project', '--workspaces=false', '--prefix', target,
+        '--ignore-scripts', '--no-audit', '--no-fund', '--legacy-peer-deps',
+        '--install-strategy=hoisted', '--package-lock=true', '--omit=dev',
+        ...(offline ? ['--offline'] : []), ...(cache ? ['--cache', resolve(cache)] : [])];
+      const result = await runNpm(npm, args, { target, log, lease,
+        env: { ...process.env, npm_config_update_notifier: 'false' } });
+      if (result.code !== 0) {
+        await save(target, 'install-state.json', { ...state, phase: 'FAILED', updatedAt: now(),
+          exitCode: result.code, signal: result.signal, error: 'NPM_INSTALL_FAILED' }, true);
+        throw fail('RUNTIME_NPM_INSTALL_FAILED', 'npm failed; the private installation log is ' + join(target, logName));
+      }
+      const lockSha256 = await lockDigest(target);
+      need(lockSha256, 'RUNTIME_DEPENDENCY_LOCK_UNAVAILABLE');
+      state = { ...state, stage: 'NATIVE_PREPARATION', updatedAt: now(), npmExitCode: 0,
+        dependencyInstall: { profileId: profile.profileId, lockSha256, completedAt: now() },
+        nativePreparation: [] };
       await save(target, 'install-state.json', state, true);
-      result = await subprocess(npm, args, { cwd: target,
-        env: { ...process.env, npm_config_update_notifier: 'false' },
-        stdio: ['ignore', log.fd, log.fd, lease.fd] });
-    } catch (error) {
-      throw fail(error.code === 'ENOENT' ? 'RUNTIME_NPM_UNAVAILABLE' : 'RUNTIME_NPM_PROCESS_FAILED');
-    } finally { await log.sync().catch(() => {}); await log.close(); }
-    if (result.code !== 0) {
-      await save(target, 'install-state.json', { ...state, phase: 'FAILED', updatedAt: now(),
-        exitCode: result.code, signal: result.signal, error: 'NPM_INSTALL_FAILED' }, true);
-      throw fail('RUNTIME_NPM_INSTALL_FAILED', 'npm failed; the private installation log is ' + join(target, logName));
     }
     installed = await readInstall(target);
-    const observed = await inspect(installed, { checkRecordedLock: false });
-    need(observed.ready, 'RUNTIME_DEPENDENCIES_UNAVAILABLE',
-      'Installation finished but the selected versions or native modules are unavailable; inspect this runtime');
-    state = { ...state, phase: 'READY', updatedAt: now(), completedAt: now(),
-      lockSha256: observed.lockSha256, dependencyCount: profile.dependencies.length, npmExitCode: 0 };
+    observed = await inspect(installed, { checkRecordedLock: false });
+    need(matchingImports(observed), 'RUNTIME_DEPENDENCIES_UNAVAILABLE',
+      'The selected dependency versions or imports are unavailable; inspect this runtime');
+    for (const dependency of profile.dependencies.filter(item => item.native)) {
+      if (nativeReady(observed, dependency.name)) continue;
+      const original = await nativePackage(target, dependency);
+      const headers = offline || nodeHeaders ? await localNodeHeaders(nodeHeaders) : null;
+      const preparation = { ...original, kind: dependency.native, state: 'PREPARING', startedAt: now(),
+        host: nativeHost(), method: headers ? 'SOURCE' : 'PREBUILD_OR_SOURCE', headers };
+      state = { ...state, stage: 'NATIVE_PREPARATION', updatedAt: now(),
+        nativePreparation: [...(state.nativePreparation ?? []).filter(item => item.name !== dependency.name), preparation] };
+      await save(target, 'install-state.json', state, true);
+      const args = ['rebuild', dependency.name + '@' + dependency.version, '--global=false', '--location=project',
+        '--workspaces=false', '--prefix', target, '--ignore-scripts=false', '--foreground-scripts',
+        '--no-audit', '--no-fund', '--package-lock=false',
+        ...(offline ? ['--offline'] : []), ...(cache ? ['--cache', resolve(cache)] : [])];
+      const result = await runNpm(npm, args, { target, log, lease, env: nativeEnvironment({ offline, headers }) });
+      if (result.code !== 0) {
+        await save(target, 'install-state.json', { ...state, phase: 'FAILED', updatedAt: now(),
+          exitCode: result.code, signal: result.signal, error: 'NATIVE_PREPARATION_FAILED' }, true);
+        throw fail('RUNTIME_NATIVE_PREPARATION_FAILED',
+          'Native preparation failed; resume this runtime after reviewing ' + join(target, logName));
+      }
+      need(await lockDigest(target) === state.dependencyInstall.lockSha256, 'RUNTIME_NATIVE_LOCK_CHANGED');
+      preparation.state = 'PREPARED';
+      preparation.completedAt = now();
+      state = { ...state, updatedAt: now() };
+      await save(target, 'install-state.json', state, true);
+    }
+    state = { ...state, stage: 'VERIFYING', updatedAt: now() };
+    await save(target, 'install-state.json', state, true);
+    installed = await readInstall(target);
+    observed = await inspect(installed, { checkRecordedLock: false });
+    need(observed.ready && observed.lockSha256 === state.dependencyInstall.lockSha256,
+      'RUNTIME_DEPENDENCIES_UNAVAILABLE',
+      'Installation finished but the selected versions or native operation are unavailable; inspect this runtime');
+    state = { ...state, phase: 'READY', stage: 'COMPLETE', updatedAt: now(), completedAt: now(),
+      lockSha256: observed.lockSha256, dependencyCount: profile.dependencies.length,
+      nativePreparation: (state.nativePreparation ?? []).map(item => ({ ...item,
+        state: 'READY', native: observed.profile.dependencies.find(dep => dep.name === item.name)?.checks[0]?.native })) };
     await save(target, 'install-state.json', state, true);
     return { status: 'READY', directory: target, sourceCommit: plan.source.sourceCommit,
       sourceRoot: plan.sourceRoot, dependencyRoot: target, entrypoint: plan.entrypoint, ...observed };
@@ -281,7 +416,10 @@ export async function installRuntime({ directory, offline = false, cache = null,
       }, true).catch(() => {});
     }
     throw error;
-  } finally { await lease.close(); }
+  } finally {
+    if (log) { await log.sync().catch(() => {}); await log.close(); }
+    await lease.close();
+  }
 }
 
 export async function inspectRuntimeInstall({ directory, load = false, source = false, python } = {}) {
@@ -299,7 +437,7 @@ export async function inspectRuntimeInstall({ directory, load = false, source = 
 
 /** New source/dependencies get a new runtime path; the previous one stays runnable. */
 export async function upgradeRuntime({ from, directory, archive, sha256, native, features, pins, operator,
-  offline = false, cache = null, npm = 'npm', python, install = true } = {}) {
+  offline = false, cache = null, npm = 'npm', python, nodeHeaders = null, install = true } = {}) {
   const previous = await readInstall(from), selection = sourceSelection(previous.profile);
   const prepared = await prepareRuntimeInstall({ directory, archive: archive ?? previous.plan.archivePath,
     sha256: sha256 ?? previous.plan.archiveSha256, from: previous.directory,
@@ -315,14 +453,14 @@ export async function upgradeRuntime({ from, directory, archive, sha256, native,
     need(hash(bytes) === recorded, 'RUNTIME_PREVIOUS_LOCK_CHANGED');
     await writeFile(join(resolve(directory), 'package-lock.json'), bytes, { flag: 'wx', mode: 0o600 });
   }
-  const result = install ? await installRuntime({ directory, offline, cache, npm }) : prepared;
+  const result = install ? await installRuntime({ directory, offline, cache, npm, nodeHeaders }) : prepared;
   return { ...result, previousDirectory: previous.directory,
     comparison: await compareRuntimeInstalls({ before: previous.directory, after: directory }) };
 }
 
 /** Recover preparation as well as installation; retained source bytes are rechecked. */
 export async function recoverRuntime({ from, directory, offline = false, cache = null,
-  npm = 'npm', python, install = true } = {}) {
+  npm = 'npm', python, nodeHeaders = null, install = true } = {}) {
   const previousDirectory = await privateDirectory(from);
   let previous;
   try { previous = await readInstall(previousDirectory); }
@@ -349,11 +487,11 @@ export async function recoverRuntime({ from, directory, offline = false, cache =
     const prepared = await prepareRuntimeInstall({ directory, archive, sha256: preparation.archiveSha256,
       native: selection.native, features: selection.features, pins: selection.pins, operator: selection.operator,
       python: python ?? preparation.python ?? 'python3', from: previousDirectory });
-    const result = install ? await installRuntime({ directory, offline, cache, npm }) : prepared;
+    const result = install ? await installRuntime({ directory, offline, cache, npm, nodeHeaders }) : prepared;
     return { ...result, previousDirectory, recoveredPreparation: true,
       previousPlanError: error.code ?? 'RUNTIME_PLAN_UNAVAILABLE' };
   }
-  return upgradeRuntime({ from: previous.directory, directory, offline, cache, npm, python, install });
+  return upgradeRuntime({ from: previous.directory, directory, offline, cache, npm, python, nodeHeaders, install });
 }
 
 export async function compareRuntimeInstalls({ before, after }) {
@@ -387,5 +525,5 @@ export async function launchRuntime(options) {
 }
 
 function installationRunbook(plan, profile) {
-  return `# Starforge runtime installation\n\nSource: ${plan.source.sourceCommit}\nPackage: ${plan.source.packageVersion}\nProfile: ${profile.profileId}\n\nRun the maintained runtime-install command with --dir pointing at this directory.\nThe original package is at package/; selected dependencies install in the sibling\nnode_modules/. Native module resolution therefore follows the original source.\n\n1. Run runtime-install install --dir DIRECTORY (add --offline for a populated npm cache).\n2. Run runtime-install inspect --dir DIRECTORY --load.\n3. Run runtime-install run --dir DIRECTORY -- source, then use the original product commands.\n\nThe installation has its own package-lock.json. Interrupted installs resume in this\nsame directory; the kernel lock prevents another npm writer. A completed interrupted\nattempt is adopted when the selected dependencies and lock are already present.\n\nUpgrade or recover into a new directory with runtime-install upgrade/recover --from\nTHIS_DIRECTORY --dir NEW_DIRECTORY. Exact recovery reuses the original dependency\nlock through npm ci. Select the new absolute sourceRoot/dependencyRoot in the\noriginal host/container plan and use its existing stop/start/recovery workflow.\nThe previous runtime remains available for that workflow's rollback.\n\nSource root: ${plan.sourceRoot}\nDependency root: ${plan.dependencyRoot}\nOriginal command: ${plan.entrypoint}\n\nPrivate npm logs remain install-N-UUID.log; install-state.json names the current log. Source, signatures, operator state and\ncredentials belong to their existing original components.\n`;
+  return `# Starforge runtime installation\n\nSource: ${plan.source.sourceCommit}\nPackage: ${plan.source.packageVersion}\nProfile: ${profile.profileId}\n\nRun the maintained runtime-install command with --dir pointing at this directory.\nThe original package is at package/; selected dependencies install in the sibling\nnode_modules/. Native module resolution therefore follows the original source.\n\n1. Run runtime-install install --dir DIRECTORY (add --offline for a populated npm cache).\n2. Run runtime-install inspect --dir DIRECTORY --load.\n3. Run runtime-install run --dir DIRECTORY -- source, then use the original product commands.\n\nThe installation has its own package-lock.json. Interrupted installs resume in this\nsame directory; the kernel lock prevents another npm writer. A completed interrupted\nattempt is adopted when the selected dependencies and lock are already present.\n\nUpgrade or recover into a new directory with runtime-install upgrade/recover --from\nTHIS_DIRECTORY --dir NEW_DIRECTORY. Exact recovery reuses the original dependency\nlock through npm ci. Select the new absolute sourceRoot/dependencyRoot in the\noriginal host/container plan and use its existing stop/start/recovery workflow.\nThe previous runtime remains available for that workflow's rollback.\n\nSource root: ${plan.sourceRoot}\nDependency root: ${plan.dependencyRoot}\nOriginal command: ${plan.entrypoint}\n\nDeclared SQLite bindings are prepared with their exact original install hook after\nscript-free dependency extraction. Each readiness inspection operates an isolated\nin-memory database. Offline native builds also need matching local Node headers;\nuse --node-headers NODE_HEADER_PREFIX (containing include/node). Install state\nretains the completed dependency lock before the native stage, so resume preserves\nthat tree and continues preparation under the same kernel lock.\n\nPrivate npm logs remain install-N-UUID.log; install-state.json names the current log. Source, signatures, operator state and\ncredentials belong to their existing original components.\n`;
 }
