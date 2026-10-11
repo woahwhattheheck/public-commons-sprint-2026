@@ -13,6 +13,17 @@ button,.action-link{display:flex;align-items:center;justify-content:space-betwee
 button:hover,.action-link:hover{background:#c4e5ff}button:disabled{opacity:.5;cursor:not-allowed}
 button.secondary{border:1px solid #4b637c;background:transparent;color:#d8e5f3}
 .hint,.placeholder{font-size:13px;color:#a4b3c9}.placeholder{border:1px dashed #52637b;border-radius:9px;padding:16px}
+.catalogue-panel{margin:23px 0 2px;padding-top:15px;border-top:1px solid #334660}
+.catalogue-panel h3{margin:0 0 6px;font-size:16px;letter-spacing:-.01em}
+.catalogue-panel .hint{margin:0 0 13px}
+.catalogue-options{display:grid;gap:8px;font-size:12px;color:#c8d7e9}
+.catalogue-item{display:flex;justify-content:space-between;gap:12px;border:1px solid #2e4056;border-radius:10px;background:#101a29;padding:10px 12px}
+.catalogue-item.is-recommended{border-color:#7cc5ff;background:#1b344c}
+.catalogue-item-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+.catalogue-item-explanation{color:#b4c6da;font-size:11px}
+.catalogue-item-status{color:#94bee7;font-size:11px}
+.catalogue-item-price{flex-shrink:0;white-space:nowrap;color:#d0ebff;text-align:right}
+@media(max-width:430px){.catalogue-item{flex-direction:column}.catalogue-item-price{text-align:left}}
 .check{display:flex;gap:10px;align-items:start;background:#263247;border-radius:9px;padding:13px;margin:14px 0}
 .check input{margin-top:5px;accent-color:#9bd2ff}.price{font-size:40px;letter-spacing:-.05em;font-weight:800;color:#8dc8ff}
 #proposal small{color:#9cabbd;display:block}#proposal h3{margin-bottom:3px}
