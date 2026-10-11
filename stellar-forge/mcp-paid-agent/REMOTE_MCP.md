@@ -159,22 +159,29 @@ launcher also accepts a `fetchImpl` export from its operator module. That fetch
 must honor the supplied abort signal and `redirect: 'manual'`; the remote client
 rejects redirects and any endpoint change outside the approved origin. Streamable
 HTTP stays on the exact endpoint; SSE permits its negotiated same-origin message
-endpoint. Each transport response is limited to 2 MiB; returned content is capped
-at 64 KiB with an explicit truncation flag.
+endpoint. Each transport response is limited to 2 MiB. Status includes a 64 KiB
+preview with an explicit truncation flag. A durable workspace also retains the
+complete native `CallToolResult` JSON in its [result inbox](RESULTS.md).
 
 ## Status, cancellation and recovery
 
 `bazaar_status` returns the saved invocation, state and receipt metadata.
 `bazaar_history` and the existing [private reports](DURABILITY.md) include remote
 quotes. Persisted result bodies are represented by their byte count and SHA-256,
-as in the original HTTP quote store. Payment payloads and live session credentials
-are not written to that store.
+as in the original HTTP quote store. Complete native result files and recovery
+manifests are stored privately under `MCP_STATE_DIR/results`. Use
+`bazaar_results`, `bazaar_read_result`, or `result-cli.mjs` to consume and export
+the original data. Payment payloads and live session credentials are not written
+to the quote store or its recovery manifest.
 
 Cancelling before signed dispatch aborts the remote request and closes its
 connection. A cancellation, transport error or shutdown after signed dispatch
 retains `INDETERMINATE` so the original payment can be reconciled. Re-executing any
 consumed quote returns its saved state without sending another tool call. Restart
 recovers interrupted quotes through the original durable-workspace state machine.
+When a complete result file and manifest survived an interrupted SQLite update,
+`bazaar_recover_result` restores their recorded server completion locally. The
+terminal importer can also attach an original result retained by an older host.
 
 `CONFIRMED_BY_SERVER` requires a successful MCP result plus a successful settlement
 claim for the quoted Stellar network with a valid transaction hash. It describes

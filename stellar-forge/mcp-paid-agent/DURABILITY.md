@@ -110,12 +110,15 @@ export retains the next cursor rather than presenting its first page as complete
 ```js
 import { SqliteQuoteStore } from './quote-store.mjs';
 import { McpPaidToolBroker } from './agent-server.mjs';
+import { McpResultStore } from './result-store.mjs';
+import { join } from 'node:path';
 
 const quoteStore = new SqliteQuoteStore({ directory: '/private/commerce/mcp-quotes' });
 const broker = new McpPaidToolBroker({
   discoveryUrl: trustedCatalogURL,
   allowedResourceOrigins: independentlyApprovedOrigins,
   quoteStore,
+  resultStore: new McpResultStore({ directory: join(quoteStore.directory, 'results') }),
   approve: existingOperatorApproval,
   signPayment: existingNativeSigner,
 });
@@ -131,28 +134,29 @@ takeover or lock-file deletion. Read-only history does not acquire that lock.
 Do not use a network share, delete a live writer file, or copy a running database
 without its WAL. Failed broker construction also closes an accepted store.
 
-Snapshots contain original terms and bounded receipt metadata. Signer payloads,
-credentials and response bodies are not stored. A text response is represented
-on disk by content type, byte length, SHA-256 and truncation flag; after restart,
-`content.omitted:true` replaces its body. The digest describes the broker's
-bounded decoded text, not raw network bytes. Use original SF31/SF88 file delivery
-when the returned resource itself must be kept.
+SQLite snapshots contain original terms and bounded receipt metadata. Signer
+payloads, credentials and response bodies are excluded from those snapshots. A
+text preview is represented by content type, byte length, SHA-256 and truncation
+flag; after restart, `content.omitted:true` replaces its body. The digest describes
+the broker's bounded preview.
+
+The launcher additionally saves complete native MCP results in `results/` using
+the original SF31 reserved file writer and SF88 verified file reader. Each result
+has a private JSON file, a hash bound to the exact quote and invocation, and a
+separate completion manifest. The result and manifest are written before the
+final SQLite update, so a returned native result can survive a failed quote
+update. Local capture continues during the server's shutdown grace; the result
+store closes remaining writers when that grace ends. See [RESULTS.md](RESULTS.md)
+for the inbox, range reads, export and recovery commands. Original HTTP file
+delivery continues through SF31/SF88.
 
 Default capacity is 10,000 quotes with at most 256 KiB per snapshot. A full store
 rejects another preview and preserves all earlier operations. This is local
 process-recovery storage, not a distributed coordinator or a tamper-proof external
-ledger. It cannot detect an operator rolling the entire directory back to an old
-backup. Keep this workspace alongside the original approval ledger, and reuse
-both when restarting.
-
-## Focused exercise
-
-`node stellar-forge/mcp-paid-agent/durable-acceptance.mjs` uses the original Bazaar
-HTTP catalog and original broker with real SQLite and child-process interruption
-at signed dispatch. It covers restart behavior, writer ownership, current-origin
-invalidation, metadata export and a failing-persistence shutdown. Its explicit
-loopback signer/receipt fixtures test application behavior, not a Stellar transfer.
-It does not require repository suites, a wallet or GitHub Actions.
+ledger. A surviving result manifest can repair an older quote snapshot; recovery
+requires the original saved files or an explicitly retained host completion.
+Back up the complete closed workspace alongside the original approval ledger,
+and reuse both when restarting.
 
 References: [Node 22.13 SQLite](https://nodejs.org/download/release/v22.13.0/docs/api/sqlite.html),
 [SQLite transactions](https://www.sqlite.org/lang_transaction.html),
