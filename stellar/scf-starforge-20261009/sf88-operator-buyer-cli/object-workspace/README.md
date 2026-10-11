@@ -11,6 +11,95 @@ its original SF31 transport, SF81 terminal approval, SF36 spending ledger and
 SF82 outcome record. The workspace keeps presentation state in memory; the
 original object session and inbox retain the durable work.
 
+## Receive a merchant's object offer
+
+A customer can prepare a complete download in this browser using the merchant's
+public product description and offers. The original private operator initializer
+creates the buyer's signer reference, policy, SQLite spending ledger and evidence
+directory from a locally declared preset.
+
+Use the same private operator preset as the original
+[receiving runbook](../../buyer-runbook/WORKSPACE.md). Its schema is unchanged:
+
+```json
+{
+  "schema": "stellar-forge.buyer-runbook-operator.v1",
+  "actor": "your-operator",
+  "service": "object-downloads",
+  "payer": "YOUR_STELLAR_G_ACCOUNT",
+  "python": "/absolute/path/to/python3",
+  "maxTotalAtomic": "1000000",
+  "maxDailyAtomic": "250000",
+  "secretEnv": "STELLAR_SECRET"
+}
+```
+
+Replace the payer and Python path with the operator's actual account and Python
+3.11+ executable. Set the two ceilings to the intended limits, in atomic units
+of the selected asset. The example amounts are limits to replace, not a product
+price. Keep this preset mode `0600` outside the installation. It supports the
+same optional `signerProvider`, `rpc` and `httpsProxyEnv` as the original runbook;
+choose either `secretEnv` or `signerProvider`. Values are read on the host.
+The browser does not accept a signer module, credential, executable or private path.
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs \
+  --state /absolute/private/object-buyer \
+  --operator-settings /absolute/private/object-operator.json \
+  --port 8438
+```
+
+Open the complete printed URL and choose **New → Receive a merchant object**.
+
+1. Receive the original `objects.json` and the merchant's saved public offers.
+   Supported inputs are the original seller's `/_seller/offers` array,
+   the S3 release's `stellar-forge.s3-seller-offers.v1` file, and the existing
+   native saved-discovery envelopes. For an original S3 release, obtain
+   `s3/objects.json` and `offers.json` from the same selected release. The private
+   S3 source configuration remains with the merchant.
+2. Choose the object and explicitly select its resource/payment alternative.
+   The existing descriptor selector and `prepareReview` bind the exact HTTPS
+   route, method and payment terms. Whole-file-only entries remain unavailable
+   in this chunk acquisition application. Set the bytes per request, session
+   name, whole-download cap and daily cap. The total must cover every planned
+   chunk at its per-request maximum; both budgets must fit the local preset and
+   each request must fit the daily limit.
+3. **Review received download** shows the file, exact ranges, snapshot, optional
+   whole-file hash, payer, network, asset, recipient and atomic limits. It retains
+   the hashes of both original merchant files and the local preset. A changed
+   preset or source invalidates an uncommitted review.
+4. **Create buyer and download** calls the original native workspace initializer
+   and object-session constructor. It prepares every original inbox job and
+   selects the saved session in the same browser. **Start download** remains the
+   explicit next action, with the original terminal approval and spending checks
+   for each chunk. The existing File delivery, Purchase records, finalization
+   and restart controls operate on that same session.
+
+The received source bytes remain unchanged in private state. The seller array
+and S3 release envelope are projected to the native `{resources: [...]}` review
+format without altering their offer rows; both the uploaded-file hash and native
+preparation hash are retained. These are saved metadata for review. The original
+buyer obtains and binds each actual quote during execution.
+
+Reopen the same `--state` to find received sources, prepared products and saved
+downloads. The preset's original path is retained, so it need only be declared
+on the first launch; editing it requires a fresh review for new preparation.
+Previously prepared products retain their original native limits and signer
+reference. Their policy, signer and workspace files are checked against the
+saved preparation before they are offered as new-download inputs.
+
+Repeating a successful create after a lost response resolves to the same
+private operator and original session. If the host stops after the native
+operator manifest is complete, preparation reopens that same workspace. An
+unfinished operator generation remains unexecutable; the next preparation uses
+the original initializer in a new owned generation. Original metadata leases
+serialize receiving mutations across processes. Existing object-session rules
+handle a session interrupted during its own initial construction; an incomplete
+session name is not overwritten.
+
+The trusted product profile below remains useful for installations that already
+have reviewed native operator workspaces.
+
 ## Prepare the existing operator inputs
 
 Use Node 22 or newer on the operator's Linux/POSIX host. Set up the existing
@@ -213,6 +302,7 @@ The workspace creates this layout beneath its selected private state directory:
 sessions/SESSION_NAME/       original object session, inbox, chunks and receipts
 downloads/SESSION_NAME/      completed file produced by original assembly
 preparations/               temporary reviewed configuration snapshots
+received/                   original public inputs and privately prepared operators
 ```
 
 The native session manifest is the session index. The browser workspace creates
@@ -220,8 +310,8 @@ no separate attempt ledger, payment engine or journal. Temporary configuration
 snapshots are removed after creation; the original session retains the actual
 selected configuration.
 
-Restart with the same `--state` to reopen saved sessions. Supply `--profile` when
-you also want to create new downloads. Reopening a session uses its original
+Restart with the same `--state` to reopen saved sessions and received products.
+Supply `--profile` to add existing trusted product aliases. Reopening a session uses its original
 saved configuration even if the profile is absent or the original input file
 has moved.
 
@@ -263,6 +353,7 @@ import { startObjectWorkspace } from './object-workspace/server.mjs';
 const workspace = await startObjectWorkspace({
   stateDirectory: '/absolute/private/download-workspace',
   profilePath: '/absolute/private/object-products.json',
+  operatorSettings: '/absolute/private/object-operator.json', // optional receiving preset
   port: 0,
 });
 console.log(workspace.url);
@@ -270,9 +361,10 @@ console.log(workspace.url);
 await workspace.close();
 ```
 
-The workspace has no additional runtime dependency. Its package closure is the
-original SF88 object modules and their existing imports, plus the three static
-files in `public/`. Native signing and transport use the existing original buyer
+The workspace has no additional third-party runtime dependency. Its package closure is the
+original SF88 object modules and their existing imports, `intake.mjs`, the
+original `buyer-runbook/handoff-intake.mjs` preset reader and `runbook.mjs`
+metadata lease, plus the three static files in `public/`. Native signing and transport use the existing original buyer
 dependencies. Distribution owners can expose `server.mjs` as a command and its
 `startObjectWorkspace` export without an additional wrapper or bundle.
 
@@ -280,8 +372,10 @@ The listener is intended for the operator's own browser. A per-instance
 capability protects API access; mutations require the exact local Origin. A
 short-lived, single-use local download link permits native browser streaming
 after an authenticated request. The server accepts product and session IDs,
-review revisions and operation IDs, rather than arbitrary paths, modules, URLs,
-seeds or replacement approval callbacks.
+review revisions, operation IDs and the two explicitly received public files.
+Private paths, modules, operator credentials and signer settings come from the
+local launcher and original operator preset. Browser creation requests name the
+exact saved review; they cannot replace its resource or payment terms.
 
 ## Source integration
 
