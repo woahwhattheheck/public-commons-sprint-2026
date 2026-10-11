@@ -141,9 +141,13 @@ handoff=mountScenarioHandoff({
   getDraft:readScenario,
   getProposal:()=>needsPlan?null:state?.proposal,
   isBusy:()=>busy,
-  applyDraft:scenario=>{
+  applyDraft:async scenario=>{
+    // Invalidate the EXISTING server-side approval/receipt first, not just the
+    // buttons. An imported file can never authorize the previously approved plan.
+    const cleared=await call('cancel');
+    if(!cleared)throw Error('Could not clear the previous plan. Imported assumptions were not applied.');
     if(!fillScenario(scenario))throw Error('This scenario is not supported by the editor.');
-    changed(); // Require a fresh original proposal, approval, and simulated execution.
+    changed(); // Fresh original offer -> human approval -> simulated dispatch.
   },
   onProblem:error=>{$('error').textContent=error?.message||'Scenario transfer failed';},
 });
