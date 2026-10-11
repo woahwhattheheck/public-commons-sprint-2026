@@ -257,6 +257,10 @@ export class X402BuyerClient {
         settlement:'NOT_REQUESTED',receipt:null,
         reason:freeSuccess ? null : 'HTTP_'+first.status});
     }
+    // Only the canonical header is used below. Release an unused streaming 402
+    // before validation or a potentially long operator approval. Cancellation
+    // is best-effort and must never make approval depend on a hostile body.
+    try { void first.body?.cancel().catch(() => {}); } catch {}
     const challenge=canonicalChallenge(decodeHeader(first.headers.get('payment-required'),'PAYMENT_REQUIRED'),resource);
     const requirement=choose(challenge,expect);
     const acceptedTerms=immutableTerms(requirement);
