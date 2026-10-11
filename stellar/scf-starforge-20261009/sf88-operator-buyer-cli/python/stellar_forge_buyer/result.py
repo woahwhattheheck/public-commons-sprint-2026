@@ -141,6 +141,14 @@ class FileDelivery(_FileReaders):
         return self.native.get("httpRequests")
 
     @property
+    def transfer(self):
+        return dict(self.native.get("transfer") or {})
+
+    @property
+    def resumed_bytes(self):
+        return self.transfer.get("resumedBytes", 0)
+
+    @property
     def ok(self):
         return self.record.get("returncode") == 0 and not self.record.get("runtimeError")
 
@@ -148,6 +156,45 @@ class FileDelivery(_FileReaders):
         if not self.ok:
             raise DeliveryError("ORIGINAL_FILE_DELIVERY_NOT_COMPLETED")
         return self
+
+
+@dataclass(frozen=True)
+class FileTransfer:
+    """A local inspection of the original SF101 retained transfer."""
+    record: dict
+
+    @property
+    def native(self):
+        return self.record["native"]
+
+    @property
+    def status(self):
+        return self.native["status"]
+
+    @property
+    def destination(self):
+        return Path(self.native["destination"])
+
+    @property
+    def retained_bytes(self):
+        return self.native["retainedBytes"]
+
+    @property
+    def expected_bytes(self):
+        return self.native["expectedBytes"]
+
+    @property
+    def resumable(self):
+        return self.native["resumable"]
+
+    @property
+    def partial_path(self):
+        value = self.native.get("partialPath")
+        return Path(value) if value else None
+
+    @property
+    def removed_partial_bytes(self):
+        return self.native.get("removedPartialBytes", 0)
 
 
 @dataclass(frozen=True)
