@@ -337,6 +337,92 @@ export async function recoverDatasetSession(directory) {
   const release = await lock(directory, true);
   try { return await inspectUnlocked(directory); } finally { await release(); }
 }
+
+/** Account for existing page attempts independently of product-file recovery.
+ * Session/config/attempt lineage is checked before the shared native worker.
+ * Accounting never creates a page or substitutes an earlier purchase attempt. */
+export async function accountDatasetSession(directory, {workspace,offset=0,limit=100,
+  finalize=false,signal,outbox,merchantRoute}={}) {
+  need(Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=250,
+    'DATASET_ACCOUNTING_RANGE_INVALID');
+  need(typeof finalize==='boolean'&&(signal===undefined||signal instanceof AbortSignal),
+    'DATASET_ACCOUNTING_OPTIONS_INVALID');
+  const release=await lock(directory);
+  try {
+    const definition=validateDefinition(await readJson(join(directory,'session.json')),directory);
+    const selectedWorkspace=workspace??definition.workspaceDirectory??null;
+    need(definition.workspaceDirectory===undefined||selectedWorkspace===definition.workspaceDirectory,
+      'DATASET_SAVED_WORKSPACE_MISMATCH');
+    if(finalize)need(typeof selectedWorkspace==='string'&&isAbsolute(selectedWorkspace)&&
+      resolve(selectedWorkspace)===selectedWorkspace,'DATASET_ACCOUNTING_WORKSPACE_REQUIRED');
+    const pages=(await readdir(join(directory,'pages'))).filter(name=>/^[0-9]{6}$/.test(name)).sort();
+    need(pages.length<=definition.limits.maxPages&&pages.every((name,index)=>name===indexName(index+1)),
+      'DATASET_PAGE_GAP');
+    need(offset<=pages.length,'DATASET_ACCOUNTING_RANGE_INVALID');
+    const {finalizeOriginalAttempt,saveFinalizationView,summarizeFinalization,readUnpaidAttempt}=await import('./finalization.mjs');
+    const entries=[];
+    const end=Math.min(pages.length,offset+limit);
+    for(let position=offset;position<end&&!signal?.aborted;position++) {
+      const index=position+1,dir=join(directory,'pages',pages[position]);
+      let previous=null,attempt;
+      try {
+        await privateDirectory(dir);
+        attempt=await readJson(join(dir,'attempt.json'),8192,true);
+        if(!attempt) {entries.push({index,outcome:'NOT_ATTEMPTED'});continue;}
+        const raw=await readPrivate(join(dir,'config.json'),65536);
+        let cfg;
+        try {cfg=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));}
+        catch {throw new InputError('DATASET_STATE_JSON_INVALID');}
+        const query=validateDatasetQuery(cfg.operation?.url,{initial:index===1});
+        const allocated=BigInt(definition.config.operation.expect.maxAtomic)*BigInt(index-1);
+        const expected=pageConfig(definition,index,query.get('cursor')??null,allocated);
+        need(equal(cfg,expected)&&attempt.schema==='stellar-forge.sf88.dataset-attempt.v1'&&
+          attempt.index===index&&attempt.intentId===cfg.operation.intentId&&
+          attempt.configurationSha256===digest(canonical(cfg))&&attempt.capAtomic===cfg.operation.expect.maxAtomic&&
+          Number.isFinite(Date.parse(attempt.startedAt)),'DATASET_ATTEMPT_CHANGED');
+        const viewPath=join(dir,'finalization.json');
+        const retained=(await auxiliaryJson(viewPath,4_000_000)).value;
+        if(retained?.schema==='stellar-forge.sf88.dataset-finalization.v1'&&
+          retained.intentId===attempt.intentId&&retained.attemptSha256===digest(canonical(attempt))&&
+          retained.configSha256===digest(raw))previous=retained;
+        const evidencePath=join(directory,'evidence',digest(attempt.intentId)+'.json');
+        if(!previous) {
+          const unpaid=await readUnpaidAttempt({evidencePath,intentId:attempt.intentId,attemptStartedAt:attempt.startedAt});
+          if(unpaid) {entries.push({index,intentId:attempt.intentId,...unpaid,evidencePath,viewStatus:'ORIGINAL_RESPONSE'});continue;}
+        }
+        let view=previous,viewStatus='READ';
+        if(finalize) {
+          const finalized=await finalizeOriginalAttempt({configurationPath:join(dir,'config.json'),
+            configSha256:digest(raw),intentId:attempt.intentId,
+            evidencePath,
+            bodySha256:null,bodyBytes:0,attemptStartedAt:attempt.startedAt,workspace:selectedWorkspace,
+            sourceEvidenceDirectory:join(directory,'evidence'),signal,outbox,merchantRoute});
+          view={schema:'stellar-forge.sf88.dataset-finalization.v1',intentId:attempt.intentId,
+            sessionId:definition.config.operation.intentId,index,attemptSha256:digest(canonical(attempt)),
+            configSha256:digest(raw),...finalized,
+            recordAuthority:'ORIGINAL_SF36_LEDGER; THIS_FILE_IS_A_SAVED_OPERATOR_VIEW'};
+          if(['FINALIZED','IDEMPOTENT_FINALIZED'].includes(finalized.result.outcome))
+            view.lastFinalized={completedAt:view.completedAt,result:finalized.result};
+          else if(previous?.lastFinalized)view.lastFinalized=previous.lastFinalized;
+          try {await saveFinalizationView(viewPath,view);viewStatus='SAVED';}
+          catch {viewStatus='SAVE_FAILED';}
+        }
+        entries.push({index,intentId:attempt.intentId,...summarizeFinalization(view),viewPath,viewStatus});
+      } catch(error) {
+        entries.push({index,intentId:attempt?.intentId??null,outcome:'NOT_FINALIZED',code:safeCode(error),
+          lastFinalized:summarizeFinalization(previous).lastFinalized});
+      }
+    }
+    const next=offset+entries.length;
+    return {schema:'stellar-forge.sf88.session-accounting.v1',kind:'dataset',directory,
+      sessionId:definition.config.operation.intentId,configurationSha256:definition.configurationSha256,
+      workspace:selectedWorkspace,mode:finalize?'FINALIZE':'VIEW',observedAt:new Date().toISOString(),
+      terms:definition.config.operation.expect,
+      range:{offset,limit,total:pages.length,nextOffset:next<pages.length?next:null},
+      entries,interrupted:signal?.aborted===true,
+      recordAuthority:'ORIGINAL_SF36_LEDGER; PER-PAGE VIEWS ARE SAVED BESIDE THE ORIGINAL ATTEMPT'};
+  } finally {await release();}
+}
 export async function exportDatasetManifest(directory, destination) {
   need(typeof destination === 'string' && isAbsolute(destination), 'DATASET_ABSOLUTE_EXPORT_REQUIRED');
   const release = await lock(directory);

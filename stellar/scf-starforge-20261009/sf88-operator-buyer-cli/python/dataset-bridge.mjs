@@ -3,13 +3,15 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { need } from '../config.mjs';
 import { createDatasetSession, inspectDatasetSession, runDatasetSession,
-  recoverDatasetSession, exportDatasetManifest, deliverDatasetSession } from '../dataset-session.mjs';
+  recoverDatasetSession, exportDatasetManifest, deliverDatasetSession, accountDatasetSession } from '../dataset-session.mjs';
 
 const mode = 'ORIGINAL_PYTHON_DATASET';
 const commands = {
   init:['session','config','workspace','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot'],
   status:['session'], run:['session'], recover:['session'],
   export:['session','out'], deliver:['session','out'],
+  accounting:['session','workspace','offset','limit'],
+  finalize:['session','workspace','offset','limit','outbox','merchant-route'],
 };
 const partial = new Set(['RECONCILIATION_REQUIRED','PAGE_LIMIT_REACHED','TOTAL_CAP_REACHED']);
 const print = result => process.stdout.write(JSON.stringify(result) + '\n');
@@ -19,6 +21,11 @@ const safeCode = error => /^[A-Z0-9_]{1,120}$/.test(error?.code ?? '')
 function integer(value) {
   if (value === undefined) return undefined;
   need(/^[1-9][0-9]{0,9}$/.test(value), 'DATASET_INTEGER_REQUIRED');
+  return Number(value);
+}
+function offset(value) {
+  if(value===undefined)return 0;
+  need(/^(0|[1-9][0-9]{0,9})$/.test(value),'DATASET_INTEGER_REQUIRED');
   return Number(value);
 }
 
@@ -43,7 +50,9 @@ export async function main(args = process.argv.slice(2)) {
   if (command === 'recover') report = await recoverDatasetSession(options.session);
   if (command === 'export') report = await exportDatasetManifest(options.session, options.out);
   if (command === 'deliver') report = await deliverDatasetSession(options.session, options.out);
-  if (command === 'run') {
+  if (command === 'accounting') report = await accountDatasetSession(options.session,{
+    workspace:options.workspace,offset:offset(options.offset),limit:integer(options.limit)});
+  if (command === 'run' || command === 'finalize') {
     const controller = new AbortController();
     const interrupt = () => { process.exitCode = 130; controller.abort(); };
     const terminate = () => { process.exitCode = 143; controller.abort(); };
@@ -51,7 +60,10 @@ export async function main(args = process.argv.slice(2)) {
     try {
       // Keep the ORIGINAL execute function, including its workspace/key preflight.
       // Its existing output option leaves exactly one application JSON envelope.
-      report = await runDatasetSession(options.session, {
+      report = command === 'finalize' ? await accountDatasetSession(options.session,{
+        workspace:options.workspace,offset:offset(options.offset),limit:integer(options.limit),
+        finalize:true,signal:controller.signal,outbox:options.outbox,merchantRoute:options['merchant-route']})
+        : await runDatasetSession(options.session, {
         signal:controller.signal, emitPageSummaries:false,
       });
     } finally {
@@ -60,6 +72,9 @@ export async function main(args = process.argv.slice(2)) {
   }
   print({mode, command, report});
   if (!process.exitCode && partial.has(report.status)) process.exitCode = 2;
+  if (!process.exitCode && command==='finalize' && report.entries.some(entry=>
+    !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','NOT_ATTEMPTED'].includes(entry.outcome)))
+    process.exitCode=2;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))

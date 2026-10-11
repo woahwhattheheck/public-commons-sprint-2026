@@ -598,6 +598,66 @@ export async function recoverObjectSession(directory) {
   } finally { await release(); }
 }
 
+/** Read or finish original chunk reservations without reading product bytes.
+ * Each call returns a bounded range. Existing inbox finalization files retain
+ * complete native results; the caller continues from nextOffset when present. */
+export async function accountObjectSession(directory, {workspace,offset=0,limit=100,
+  finalize=false,signal,outbox,merchantRoute}={}) {
+  need(Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=250,
+    'OBJECT_ACCOUNTING_RANGE_INVALID');
+  need(typeof finalize==='boolean'&&(signal===undefined||signal instanceof AbortSignal),
+    'OBJECT_ACCOUNTING_OPTIONS_INVALID');
+  await privateDirectory(directory);
+  const release=finalize?await acquireLock(directory,{kind:'FINALIZE'}):null;
+  try {
+    const definition=validateDefinition(await readJson(join(directory,'session.json')),directory);
+    const selectedWorkspace=workspace===undefined?definition.workspace:workspace;
+    need(definition.workspace===null||selectedWorkspace===definition.workspace,'OBJECT_SAVED_WORKSPACE_MISMATCH');
+    if(finalize)absolute(selectedWorkspace,'OBJECT_ACCOUNTING_WORKSPACE_REQUIRED');
+    need(offset<=definition.chunkCount,'OBJECT_ACCOUNTING_RANGE_INVALID');
+    const queue=await openQueue(join(directory,'inbox'));
+    const {finalizeQueueIntent,summarizeFinalization,readUnpaidAttempt}=await import('./finalization.mjs');
+    const entries=[];
+    const end=Math.min(definition.chunkCount,offset+limit);
+    for(let index=offset;index<end&&!signal?.aborted;index++) {
+      const plan=chunkPlan(definition,index);
+      let job;
+      try {
+        job=await queue.show(plan.intentId);
+        need((await readPrivate(plan.configPath,65536)).equals(encoded(plan.configuration)),
+          'OBJECT_CHUNK_CONFIG_CHANGED');
+        bindJob(plan,job);
+        if(job.attempt?.kind!=='EXECUTE') {
+          entries.push({index,intentId:plan.intentId,outcome:'NOT_ATTEMPTED'});
+          continue;
+        }
+        if(!job.finalization) {
+          const unpaid=await readUnpaidAttempt({evidencePath:job.evidencePath,
+            intentId:plan.intentId,attemptStartedAt:job.attempt.startedAt});
+          if(unpaid) {entries.push({index,intentId:plan.intentId,...unpaid,
+            evidencePath:job.evidencePath,viewStatus:'ORIGINAL_RESPONSE'});continue;}
+        }
+        if(finalize)job=await finalizeQueueIntent({root:queue.root,intentId:plan.intentId,
+          workspace:selectedWorkspace,signal,outbox,merchantRoute});
+        entries.push({index,intentId:plan.intentId,...summarizeFinalization(job.finalization),
+          viewPath:join(queue.root,'jobs',job.id,'finalization.json'),
+          viewStatus:job.finalizationView?.status??'READ'});
+      } catch(error) {
+        entries.push({index,intentId:plan.intentId,outcome:'NOT_FINALIZED',code:codeOf(error),
+          lastFinalized:summarizeFinalization(job?.finalization).lastFinalized});
+      }
+    }
+    const next=offset+entries.length;
+    return {schema:'stellar-forge.sf88.session-accounting.v1',kind:'object',directory,
+      sessionId:definition.sessionId,configurationSha256:definition.configurationSha256,
+      workspace:selectedWorkspace,mode:finalize?'FINALIZE':'VIEW',observedAt:now(),
+      terms:execution(definition.config).op.expect,
+      range:{offset,limit,total:definition.chunkCount,nextOffset:next<definition.chunkCount?next:null},
+      entries,interrupted:signal?.aborted===true,
+      recordAuthority:'ORIGINAL_SF36_LEDGER; PER-CHUNK VIEWS ARE SAVED IN THE ORIGINAL INBOX'};
+  } finally {if(release)await release();}
+}
+
 /** Stream contiguous verified native chunks into a private create-only object. */
 export async function assembleObjectSession(directory, destination) {
   absolute(destination, 'OBJECT_ABSOLUTE_DESTINATION_REQUIRED');
