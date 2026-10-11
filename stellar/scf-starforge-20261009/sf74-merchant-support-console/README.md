@@ -12,6 +12,8 @@ node stellar/scf-starforge-20261009/sf74-merchant-support-console/server.mjs
 
 For a durable merchant queue, add `--cases-dir "$HOME/.local/share/stellar-forge/merchant-cases" --port 8784`. Open the printed `http://127.0.0.1:<port>/` address. No package installation, account, database or hosted service is required. Nothing is probed on page load. [Case desk operations](CASE_DESK.md) covers the complete save, reopen, follow-up, concurrent-tab and version-recovery flow.
 
+The optional [Handoffs desk](HANDOFF_DESK.md) receives an existing merchant MCP support export, resumes its original saved transfer and opens the received case in this same editor. Configure private host-side source aliases with `--handoff-sources` alongside `--cases-dir`; the browser receives no endpoint credentials or local paths. Completed handoffs and their later case edits remain usable after restart or while the source is offline.
+
 The [runtime support flow](RUNTIME_SUPPORT.md) accepts an original SF93 process packet or the original SF30 `history.json` plus matching SF97 `report.json`. It retains exact sources, method/path variants, saved session coverage and optional native journal reconciliation through case save/reopen and complete private handoff. HEAD is available alongside the other five original seller methods; the maintained diagnostic still performs only its existing unpaid GET/OPTIONS work when original catalog evidence supports GET.
 
 The existing workorder stage accepts either the selected diagnostic captures or **Attached runtime case**. Owner-entered scope, deliverables, acceptance criteria and commercial terms are saved with the case. The same SF77 packet, readable workorder and checklist retain the original source review; a runtime-only case can proceed directly to this handoff. [Runtime workorders](RUNTIME_SUPPORT.md#prepare-a-workorder-from-this-case) covers source selection, reopening and the complete-handoff CLI.
@@ -54,7 +56,7 @@ SF74 is the local UI and HTTP adapter. It imports the existing engines without c
 
 `case-desk.mjs` adds the original page's merchant queue and case lifecycle. `case-store.mjs` persists byte-exact v1 workspaces and compact workflow metadata under a process-selected private directory. It uses revision checks and atomic head selection to preserve concurrent edits; the original diagnostics remain unchanged.
 
-- The server binds to literal 127.0.0.1 and rejects unexpected Host or Origin. CSP blocks external page content. No third-party JavaScript, credentials, wallet or database is used.
+- The server binds to literal 127.0.0.1 and rejects unexpected Host or Origin. CSP blocks external page content. No third-party JavaScript, wallet or database is used. Optional handoff sources use host-provisioned MCP credentials, which remain outside the browser.
 - Only **Run diagnosis** and the separately authorized browser check invoke diagnostic network operations. The network gate permits one intake or preflight at a time.
 - The credentialed-browser option checks the stricter policy without sending cookies or authorization. Before and after must retain the same mode. Unknown legacy mode remains unconfirmed and cannot establish the technical milestone or cleared findings.
 - Comparison and workorder generation are offline and in memory. Each uploaded source or terms file is limited to 2,000,000 bytes. Exact file bytes are transported as base64, decoded and hashed before parsing; no server filesystem path is accepted.
