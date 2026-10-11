@@ -1,0 +1,10 @@
+{
+  "schema": "stellar-forge.seller-upstreams.v1",
+  "bindings": {
+    "merchantDataset": {
+      "origin": "http://127.0.0.1:8425", "path": "/v1/dataset", "method": "GET",
+      "query": ["region"], "responseMode": "json", "responseHeaders": ["etag"],
+      "timeoutMs": 5000, "maxResponseBytes": 1048576, "maxInFlight": 16
+    }
+  }
+}

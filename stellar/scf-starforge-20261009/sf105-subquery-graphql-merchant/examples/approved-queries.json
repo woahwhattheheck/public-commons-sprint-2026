@@ -1,0 +1,43 @@
+{
+  "schema": "stellar-forge.subquery-merchant.v1",
+  "origin": "https://indexer.example",
+  "path": "/graphql",
+  "authorizationEnv": "SUBQUERY_GRAPHQL_AUTH",
+  "timeoutMs": 8000,
+  "maxResponseBytes": 262144,
+  "maxInFlight": 8,
+  "operations": [
+    {
+      "name": "payments",
+      "handler": "getPayments",
+      "admission": "admitPayments",
+      "root": "payments",
+      "maxNodes": 100,
+      "query": "query StellarPayments($first:Int!) { payments(first:$first) { totalCount nodes { id txHash amount } } }",
+      "variables": {
+        "first": {
+          "type": "integer",
+          "required": true,
+          "min": 1,
+          "max": 100
+        }
+      }
+    },
+    {
+      "name": "credits",
+      "handler": "getCredits",
+      "admission": "admitCredits",
+      "root": "credits",
+      "maxNodes": 100,
+      "query": "query StellarCredits($first:Int!) { credits(first:$first) { totalCount nodes { id amount accountId } } }",
+      "variables": {
+        "first": {
+          "type": "integer",
+          "required": true,
+          "min": 1,
+          "max": 100
+        }
+      }
+    }
+  ]
+}
