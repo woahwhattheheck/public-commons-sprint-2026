@@ -6,12 +6,12 @@ import { isAbsolute, join } from 'node:path';
 import { checkStellarTestnetTransaction, createOfficialEventDecoder } from '../sf43-agent-commerce/verify.mjs';
 import { captureBuyerResult, captureBuyerError, aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
 
-const tag = /^[A-Za-z0-9._:-]{1,160}$/;
+const tag = /^[A-Za-z0-9._:-]{1,128}$/; // Original SF52 observation identity limit.
 const payer = /^[GC][A-Z2-7]{55}$/;
 const digest = s => createHash('sha256').update(s).digest('hex');
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 
-async function bodyEvidence(response, maxBytes) {
+async function bodyEvidence(response, maxBytes, timeoutMs) {
   if (!response || typeof response.clone !== 'function' || !Number.isInteger(response.status) ||
       response.status < 200 || response.status >= 300) return { status: 'NO_SUCCESSFUL_HTTP_BODY' };
   let clone;
@@ -19,10 +19,17 @@ async function bodyEvidence(response, maxBytes) {
   if (!clone.body || typeof clone.body.getReader !== 'function') return { status: 'NO_BODY_STREAM' };
   const hash = createHash('sha256');
   const reader = clone.body.getReader();
-  let size = 0;
+  let size = 0, timer;
+  const deadline = new Promise(resolve => {
+    timer = setTimeout(() => resolve({ timedOut: true }), timeoutMs);
+  });
   try {
     for (;;) {
-      const { done, value } = await reader.read();
+      // The race also handles late read rejection after a timeout; no ignored
+      // read can become an unhandled rejection after evidence is returned.
+      const next = await Promise.race([reader.read(), deadline]);
+      if (next.timedOut) return { status: 'BODY_CAPTURE_TIMED_OUT', timeoutMs };
+      const { done, value } = next;
       if (done) return { status: 'HTTP_BODY_OBSERVED', httpStatus: response.status,
         bodySha256: hash.digest('hex'), bodyBytes: size };
       if (!(value instanceof Uint8Array)) return { status: 'INVALID_BODY_CHUNK' };
@@ -32,6 +39,7 @@ async function bodyEvidence(response, maxBytes) {
     }
   } catch { return { status: 'BODY_READ_FAILED' }; }
   finally {
+    clearTimeout(timer);
     try { void reader.cancel().catch(() => {}); } catch {}
     try { reader.releaseLock(); } catch {}
   }
@@ -66,7 +74,8 @@ function reservationMetadata(raw) {
  */
 export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
   decodeContractEvent, rpcEndpoint, rpcFetch, captureBody = false,
-  maxBodyBytes = 1_048_576, observedAt = new Date().toISOString()} = {}) {
+  maxBodyBytes = 1_048_576, bodyCaptureTimeoutMs = 15000,
+  observedAt = new Date().toISOString()} = {}) {
   if (!isObject(buyer) || typeof buyer.call !== 'function' || !isObject(call) ||
       typeof call.intentId !== 'string' || !tag.test(call.intentId))
     throw new TypeError('TRUSTED_BUYER_AND_STABLE_INTENT_REQUIRED');
@@ -80,6 +89,11 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
   if (typeof captureBody !== 'boolean' || !Number.isSafeInteger(maxBodyBytes) ||
       maxBodyBytes < 1 || maxBodyBytes > 8_388_608)
     throw new TypeError('BODY_CAPTURE_LIMIT_INVALID');
+  if (!Number.isSafeInteger(bodyCaptureTimeoutMs) || bodyCaptureTimeoutMs < 1 || bodyCaptureTimeoutMs > 60000)
+    throw new TypeError('BODY_CAPTURE_TIMEOUT_INVALID');
+  // Validate original SF52's exact timestamp contract before a buyer can sign.
+  // This preflight observation is never persisted as an actual buyer attempt.
+  captureBuyerError({intentId:call.intentId,error:{paymentSent:false,code:'EVIDENCE_PREFLIGHT'},observedAt});
   const directory = await stat(outputDir);
   if (!directory.isDirectory()) throw new TypeError('EVIDENCE_PATH_NOT_DIRECTORY');
   const evidencePath = join(outputDir, digest(call.intentId) + '.json');
@@ -102,9 +116,11 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
   const base = error ? captureBuyerError({intentId:call.intentId,error:observedError,observedAt}) :
     captureBuyerResult(result,{observedAt});
   let chain = null, delivery = null;
+  let bodyCapture = {status:captureBody ? 'NO_SUCCESSFUL_PAID_BODY' : 'NOT_REQUESTED'};
   if (!error) {
     if (captureBody && base.buyer.requirement) {
-      const candidate = await bodyEvidence(result.response,maxBodyBytes);
+      const candidate = await bodyEvidence(result.response,maxBodyBytes,bodyCaptureTimeoutMs);
+      bodyCapture = candidate;
       if (candidate.status === 'HTTP_BODY_OBSERVED') {
         delivery = {status:candidate.status,httpStatus:candidate.httpStatus,
           bodySha256:candidate.bodySha256};
@@ -136,7 +152,7 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
   const envelope = {
     schema:'scf82.checkout-evidence.v1', intentId:call.intentId, observedAt,
     operatorReservation:reservationMetadata(result?.operatorReservation ?? error?.operatorReservation),
-    observation, report,
+    observation, report, bodyCapture,
     notes:'Independent testnet proof is credited only by original SF43. No seller receipt, HTTP response, or local simulator equals a payment, customer, grant or revenue claim.',
   };
   // Create-only terminal evidence. Never overwrite/release reservations after
