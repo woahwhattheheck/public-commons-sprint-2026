@@ -15,9 +15,8 @@ async function saveNew(path, write) {
   finally { await file.close().catch(() => {}); await unlink(temporary).catch(() => {}); }
 }
 export async function main(args = process.argv.slice(2)) {
-  if (args[0] === 'collections') return (await import('./collection-cli.mjs')).collectionMain(args.slice(1));
   if (args.includes('--help') || args.length === 0) {
-    process.stdout.write(`Buyer resource library — Node 22.16+\n\nnode cli.mjs COMMAND --state ABS [OPTIONS]\n\nCommands: serve | scan | search | show | preview | download | annotate | export | collections\nCollections: collections --help for saved editions and complete portable handoffs\nFirst open: --inbox ABS or --snapshot ABS, with --files-root ABS (repeatable)\nLimits on first open: --index-bytes N, --max-file-bytes N\nserve: --port N (default an available loopback port)\nsearch: --query TEXT --offset N --limit N --status VERIFIED|UNAVAILABLE|INCOMPLETE --starred true\nshow, preview, download, annotate: --id RESOURCE_ID\ndownload, export: --out ABS (new file in a private directory)\nannotate: --annotation ABS (JSON with expectedRevision, operationId, note, tags, starred)\nReopen the same --state without repeating the source or roots.\n`); return; }
+    process.stdout.write(`Buyer resource library — Node 22.16+\n\nnode cli.mjs COMMAND --state ABS [OPTIONS]\n\nCommands: serve | scan | search | show | preview | download | annotate | export\nFirst open: --inbox ABS or --snapshot ABS, with --files-root ABS (repeatable)\nLimits on first open: --index-bytes N, --max-file-bytes N\nserve: --port N (default an available loopback port)\nsearch: --query TEXT --offset N --limit N --status VERIFIED|UNAVAILABLE|INCOMPLETE --starred true\nshow, preview, download, annotate: --id RESOURCE_ID\ndownload, export: --out ABS (new file in a private directory)\nannotate: --annotation ABS (JSON with expectedRevision, operationId, note, tags, starred)\nReopen the same --state without repeating the source or roots.\n`); return; }
   const [command,...rest] = args;
   const specific = {serve:['--port'],scan:[],search:['--query','--offset','--limit','--status','--starred'],
     show:['--id'],preview:['--id'],download:['--id','--out'],annotate:['--id','--annotation'],export:['--out']};
@@ -43,8 +42,7 @@ export async function main(args = process.argv.slice(2)) {
   try {
     if (command === 'serve') {
       const {serveLibrary} = await import('./server.mjs');
-      const {collectionExtension} = await import('./collection-ui.mjs');
-      host = await serveLibrary(library,{...await collectionExtension(library),port:numeric('--port') ?? 0});
+      host = await serveLibrary(library,{port:numeric('--port') ?? 0});
       print({url:host.url,state:library.state});
       if (!controller.signal.aborted) await new Promise(resolve => controller.signal.addEventListener('abort',resolve,{once:true}));
     } else if (command === 'scan') print(await library.scan({signal:controller.signal}));

@@ -8,7 +8,6 @@ import { parseOpenApiSource } from './source-document.mjs';
 const sha = data => createHash('sha256').update(data).digest('hex');
 
 export async function run(args = process.argv.slice(2), {report = true} = {}) {
-  if (args[0] === 'har') return (await import('./har/cli.mjs')).runHarCLI(args.slice(1));
   if (args[0] === 'postman') return (await import('./postman/cli.mjs')).runPostmanCLI(args.slice(1));
   if (args[0] === 'weather') return (await import('./openweather/cli.mjs')).main(args.slice(1));
   if (args[0] === 'refresh') return (await import('./refresh-cli.mjs')).run(args.slice(1));

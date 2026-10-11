@@ -137,7 +137,6 @@
     "runtime-workspace": "stellar/scf-starforge-20261009/distribution/runtime-workspace/cli.mjs",
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
-    "supplier-quotas": "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/cli.mjs",
     "jsonrpc": "stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/cli.mjs",
     "getblock-stellar": "stellar/scf-starforge-20261009/partners/getblock-stellar/cli.mjs",
     "chainstack-stellar": "stellar/scf-starforge-20261009/partners/chainstack-stellar/cli.mjs",
@@ -301,8 +300,6 @@
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.mjs"
     },
     "./seller/operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/operations/server.mjs",
-    "./seller/supplier-quotas": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/application.mjs",
-    "./seller/supplier-quotas/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/config.mjs",
     "./buyer": {
       "types": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/buyer.d.ts",
       "import": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/buyer.mjs"
@@ -549,10 +546,7 @@
     "./buyer/valyu": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/workspace.mjs",
     "./buyer/valyu/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/store.mjs",
     "./buyer/valyu/research": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/research.mjs",
-    "./buyer/valyu/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/server.mjs",
-    "./merchant/qbo": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo.mjs",
-    "./merchant/qbo/company": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-company.mjs",
-    "./merchant/qbo/workspace": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/qbo-workspace.mjs"
+    "./buyer/valyu/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {

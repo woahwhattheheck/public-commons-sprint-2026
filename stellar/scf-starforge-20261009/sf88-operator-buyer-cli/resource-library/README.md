@@ -143,11 +143,3 @@ Run the local source/file/HTTP/review/restart journey with:
 ```sh
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/resource-library/acceptance.mjs
 ```
-
-## Saved collections and receiving
-
-Use [Resource collections](COLLECTIONS.md) to retain named, revisioned selections,
-export complete source-bound files, and receive the same collection in the original
-searchable library on another machine. The maintained command is
-`starforge inbox library collections --help`; the original browser links to the
-collection workspace.
