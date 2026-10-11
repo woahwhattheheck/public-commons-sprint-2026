@@ -19,6 +19,7 @@ const help = `Starforge merchant toolkit
 
 Native commands (arguments pass unchanged to the maintained implementation):
   seller      JSON/application seller         upstream    Existing API seller
+  jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   operations  Seller + live dashboard         dataset     Dataset API compiler
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
@@ -37,15 +38,20 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
+  delivery-workspace                         Configure receivers and operate retained delivery recovery
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
+  mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
+  mysql-workspace                            Build, review and run a database merchant in the browser
+  clickhouse                                 Preflight and run a retained ClickHouse merchant
+  clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Prepare and operate a merchant from its API contract
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
   duckdb-prepare                             Prepare, verify and reopen native data packages
-  duckdb-workbench                           Author and operate a data merchant in the browser
+  duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
@@ -67,6 +73,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   fleet-release                              Stage, compare and operate original releases across a fleet
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
+  merchant-accounting-pricing                Import a saved original pricing report as accounting terms
+  merchant-accounting-recovery               Review, import and reopen an original completed purchase
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   merchant-readiness                         Review every configured Stellar receiving account
@@ -76,7 +84,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
 
-Optional feature groups: postgres, s3, graphql.
+Optional feature groups: ${[...new Set([
+  ...Object.keys(specification.featurePeers ?? {}),
+  ...Object.keys(specification.runtimePackageManifests ?? {}),
+])].sort().join(', ')}.
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
@@ -107,7 +118,7 @@ export async function doctor({ requireNative = false, requiredFeatures = [] } = 
     if (!manifest.dependencies || typeof manifest.dependencies !== 'object' || Array.isArray(manifest.dependencies) ||
         !Object.keys(manifest.dependencies).length) throw new TypeError('Runtime dependencies missing: ' + path);
     featurePeers[group] = Object.fromEntries(Object.entries(manifest.dependencies ?? {}).map(([name, version]) =>
-      [name, { version, probe: name }]));
+      [name, { version, probe: specification.featurePeers?.[group]?.[name]?.probe ?? name }]));
     // Match the original adapter's location, including a checkout that installed
     // drivers in its postgres directory rather than at the distribution root.
     featureResolvers[group] = createRequire(filename).resolve;

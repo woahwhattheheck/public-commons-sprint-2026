@@ -20,10 +20,27 @@ import { initializeWorkspace } from '../sf88-operator-buyer-cli/workspace.mjs';
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
 import { createNativeSellerServer } from '../sf30-seller-sdk/native-factory.mjs';
 import { drainOnce, sendSignedWebhook } from '../sf98-merchant-delivery/deliver.mjs';
+import {initializeIncidentStore} from '../sf93-seller-support-bundle/incident-store.mjs';
+import {incidentStatus} from '../sf93-seller-support-bundle/incident-operator.mjs';
+import {runIncidentWatch} from '../sf93-seller-support-bundle/watch.mjs';
+import {setTimeout as delay} from 'node:timers/promises';
 
 const execFile = promisify(execCallback), here = dirname(fileURLToPath(import.meta.url));
 const root = await mkdtemp(join(tmpdir(), 'sf101-checkout-'));
-let merchant, receiver, browser;
+let merchant, receiver, browser, watcher, watchError;
+let watchAbort=new AbortController();
+const incidentDirectory=join(root,'incidents');
+const wrongSecretEnv='SF101_JOURNEY_REPAIR_WRONG_SECRET',correctSecretEnv='SF101_JOURNEY_REPAIR_CORRECT_SECRET';
+const originalEnvironment=new Map([wrongSecretEnv,correctSecretEnv].map(name=>[name,process.env[name]]));
+async function until(read,predicate,message) {
+  const deadline=Date.now()+15000;
+  while(Date.now()<deadline) {
+    if(watchError)throw watchError;
+    const value=await read();if(predicate(value))return value;
+    await delay(100);
+  }
+  throw new Error(message);
+}
 const stopReceiver = async () => { if (receiver && receiver.exitCode === null) { receiver.kill('SIGTERM'); await once(receiver, 'exit'); } receiver = null; };
 async function startReceiver(state, secret) {
   const code = "import sys\nfrom pathlib import Path\nfrom http.server import ThreadingHTTPServer\nimport receiver\ns=ThreadingHTTPServer(('127.0.0.1',0),receiver.make_handler(Path(sys.argv[1]),sys.argv[2]))\nprint(s.server_address[1],flush=True)\ns.serve_forever()\n";
@@ -79,8 +96,22 @@ try {
     async verify() { verifies++; return {isValid:true,payer:'local-controlled-payer'}; },
     async settle() { settlements++; return {success:true,transaction:sha('LOCAL_CONTROLLED_NOT_A_TRANSACTION_'+settlements),network:payment.network}; },
   };
-  merchant = await startCheckout(compiled,{port:0,operationsPort:0,nativeFactory:routes=>createNativeSellerServer(routes,{facilitatorClient:facilitator})});
+  // The SAME original sender is injected at its existing transport seam. Every
+  // HMAC request reaches the actual Python receiver; no second delivery engine.
+  const sender = options => sendSignedWebhook({...options,resolver:async()=>[{address:'93.184.216.34',family:4}],
+    transport:(_url,requestOptions,callback)=>httpRequest(receive.url+'/sf98/events',{...requestOptions,lookup:undefined},callback)});
+  const nativeFactory=routes=>createNativeSellerServer(routes,{facilitatorClient:facilitator});
+  merchant = await startCheckout(compiled,{port:0,operationsPort:0,nativeFactory,
+    deliveryWorkspaceDirectory:join(root,'receiver-workspace'),deliveryWorkspaceOptions:{send:sender},
+    incidentSource:{directory:incidentDirectory,merchantId:'approved-files'}});
   let receive = await startReceiver(compiled.state,secret); receiver=receive.child;
+  await initializeIncidentStore({directory:incidentDirectory,config:{schema:'stellar-forge.seller-watch-config.v1',
+    pollMs:250,failurePolls:1,recoveryPolls:1,windowMinutes:1,captureEveryMs:1000,
+    httpErrors:null,disconnects:null,notification:null,merchants:[{id:'approved-files',label:'Approved report merchant',
+      seller:merchant.seller.url,ops:merchant.operations.url,delivery:{required:true,oldestPendingSeconds:300,exhausted:1}}]}});
+  watcher=runIncidentWatch({directory:incidentDirectory,signal:watchAbort.signal});
+  watcher.catch(error=>{watchError=error;});
+  const readIncidents=()=>incidentStatus({directory:incidentDirectory,details:true});
   const fetchDownload = (url,options) => fetch(receive.url+new URL(url).pathname,options);
   await assert.rejects(retrieveFile({handoff,destination:join(root,'pending.csv'),token,fetchImpl:fetchDownload}), {code:'ENTITLEMENT_NOT_AVAILABLE'});
   let response = await fetch(merchant.seller.url+'/purchase/report?sf98_order='+handoff.orderReference);
@@ -103,8 +134,6 @@ try {
   assert.equal(JSON.parse(mapped.stdout).resource,handoff.purchaseUrl);
   let rows = await merchant.outbox.rows(); assert.equal(rows.length,1);
   assert.equal(rows[0].event.orderReference,handoff.orderReference);
-  const sender = options => sendSignedWebhook({...options,resolver:async()=>[{address:'93.184.216.34',family:4}],
-    transport:(_url,requestOptions,callback)=>httpRequest(receive.url+'/sf98/events',{...requestOptions,lookup:undefined},callback)});
   // Continue this SAME payment through an actual receiver credential failure.
   // Advance only the native retry clock; each signed HTTP request reaches the
   // original Python receiver with a current timestamp and the wrong HMAC key.
@@ -116,11 +145,20 @@ try {
     retryClock=Date.parse(rows[0].state.nextAt) || retryClock;
   }
   assert.equal(rows[0].state.state,'EXHAUSTED'); assert.equal(rows[0].state.attempt,8);
+  const opened=(await until(readIncidents,state=>state.incidents.some(item=>item.kind==='DELIVERY_EXHAUSTED'&&item.status==='OPEN'),
+    'Original monitor did not observe the exhausted event')).incidents.find(item=>item.kind==='DELIVERY_EXHAUSTED'&&item.status==='OPEN');
+  process.env[wrongSecretEnv]=wrongSecret;process.env[correctSecretEnv]=secret;
+  const receiverModel=merchant.operations.deliveryWorkspace;
+  const oldProfile=await receiverModel.saveProfile({profile:{name:'Approved report receiver',
+    url:'https://merchant.example/internal/x402-events',allowedHost:'merchant.example',secretEnv:wrongSecretEnv,pollMs:100}});
+  await receiverModel.start({expectedRevision:(await receiverModel.state()).revision,
+    profileId:oldProfile.id,profileRevision:oldProfile.revision,profileSha256:oldProfile.sha256});
   assert.equal((await inspectOrder(compiled,handoff.orderReference)).state,'PENDING');
   const attention=await(await fetch(merchant.operations.url+'/api/delivery/events')).json();
   assert.equal(attention.totalMatching,1); assert.equal(attention.events[0].id,rows[0].event.id);
   const detail=await(await fetch(merchant.operations.url+'/api/delivery/event?id='+rows[0].event.id)).json();
   const recoveryCommand={id:rows[0].event.id,expectedRevision:detail.revision};
+  const acknowledgment={id:opened.id,expectedRevision:opened.revision,by:'Merchant operator',notes:'Repair receiver signing profile and recover the original paid report notification.'};
   const controlToken=new URLSearchParams(new URL(merchant.operations.deliveryControlUrl).hash.slice(1)).get('control');
   response=await fetch(merchant.operations.url+'/api/delivery/requeue',{method:'POST',
     headers:{'content-type':'application/json',origin:merchant.operations.url},body:JSON.stringify(recoveryCommand)});
@@ -132,6 +170,15 @@ try {
       args:['--no-sandbox','--disable-dev-shm-usage']});
     page=await browser.newPage({viewport:{width:1365,height:900}});
     await page.goto(merchant.operations.deliveryControlUrl);
+    await page.locator('#incident-list button').filter({hasText:'Exhausted delivery notifications'}).click();
+    await page.locator('#incident-by').fill(acknowledgment.by);
+    await page.locator('#incident-notes').fill(acknowledgment.notes);
+    // Polling must preserve an operator's note while the original watch runs.
+    await page.getByRole('button',{name:'Refresh',exact:true}).click();
+    assert.equal(await page.locator('#incident-notes').inputValue(),acknowledgment.notes);
+    await page.getByRole('button',{name:'Acknowledge incident',exact:true}).click();
+    await page.waitForFunction(()=>document.getElementById('incident-state')?.textContent==='Acknowledged');
+    await page.getByRole('button',{name:'Inspect delivery queue',exact:true}).click();
     await page.getByRole('button',{name:'Inspect '+handoff.orderReference,exact:true}).click();
     await page.waitForFunction(()=>document.getElementById('requeue')?.disabled===false);
     if(process.env.SF98_JOURNEY_OUTPUT) {
@@ -142,9 +189,31 @@ try {
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
       await page.setViewportSize({width:1365,height:900});
     }
+    const workspaceOpened=page.context().waitForEvent('page');
+    await page.locator('#receiver-workspace-link').click();
+    const receiverPage=await workspaceOpened;
+    await receiverPage.waitForURL(merchant.operations.deliveryWorkspaceUrl);
+    await receiverPage.getByRole('button',{name:'Receivers',exact:true}).click();
+    await receiverPage.locator('.profile-choice').filter({hasText:'Approved report receiver'}).click();
+    await receiverPage.locator('#profile-form input[name=secretEnv]').fill(correctSecretEnv);
+    await receiverPage.getByRole('button',{name:'Save revision',exact:true}).click();
+    await receiverPage.waitForFunction(()=>document.getElementById('profile-identity')?.textContent.includes('revision 2'));
+    await receiverPage.getByRole('button',{name:'Use this revision',exact:true}).click();
+    await receiverPage.getByRole('button',{name:'Run continuously',exact:true}).click();
+    await until(()=>receiverModel.state(),state=>state.selectedProfile?.revision===2&&state.worker.owned?.status==='RUNNING',
+      'Repaired profile was not applied to the original owned worker');
+    if(process.env.SF98_JOURNEY_OUTPUT)await receiverPage.screenshot({path:join(process.env.SF98_JOURNEY_OUTPUT,'receiver-profile-repaired-desktop.png'),fullPage:true});
+    await receiverPage.close();
+    await page.bringToFront();
     await page.getByRole('button',{name:'Requeue notification',exact:true}).click();
-    await page.waitForFunction(()=>document.getElementById('event-state')?.textContent==='Requeued');
+    await page.waitForFunction(()=>['Requeued','Receiver accepted'].includes(document.getElementById('event-state')?.textContent));
   } else {
+    response=await fetch(merchant.operations.url+'/api/delivery/incident/ack',{method:'POST',
+      headers:{'content-type':'application/json',origin:merchant.operations.url,'x-delivery-control':controlToken},body:JSON.stringify(acknowledgment)});
+    assert.equal(response.status,200);assert.equal((await response.json()).incident.status,'ACKNOWLEDGED');
+    const revised=await receiverModel.saveProfile({id:oldProfile.id,expectedRevision:1,profile:{...oldProfile.profile,secretEnv:correctSecretEnv}});
+    await receiverModel.start({expectedRevision:(await receiverModel.state()).revision,profileId:revised.id,
+      profileRevision:revised.revision,profileSha256:revised.sha256});
     response=await fetch(merchant.operations.url+'/api/delivery/requeue',{method:'POST',
       headers:{'content-type':'application/json',origin:merchant.operations.url,'x-delivery-control':controlToken},
       body:JSON.stringify(recoveryCommand)});
@@ -155,12 +224,26 @@ try {
     headers:{'content-type':'application/json',origin:merchant.operations.url,'x-delivery-control':controlToken},
     body:JSON.stringify(recoveryCommand)});
   assert.equal(response.status,409); assert.equal((await response.json()).error,'DELIVERY_STATE_CHANGED');
-  assert.equal((await drainOnce(merchant.outbox,{url:'https://merchant.example/internal/x402-events',allowedHost:'merchant.example',secret,send:sender})).delivered,1);
+  await until(()=>merchant.outbox.rows(),current=>current[0]?.state?.state==='DELIVERED','Owned receiver worker did not deliver original event');
+  const recoveredIncidents=await until(readIncidents,state=>state.incidents.find(item=>item.id===opened.id)?.status==='RECOVERED',
+    'Original monitor did not observe the recovered delivery condition');
+  const recoveredIncident=recoveredIncidents.incidents.find(item=>item.id===opened.id);
+  assert.equal(recoveredIncident.acknowledgment.by,acknowledgment.by);
+  assert.equal(recoveredIncident.signal.exhausted,1);assert.equal(recoveredIncident.recoverySignal.exhausted,0);
+  const workspaceOutcome=await receiverModel.state();
+  assert.equal(workspaceOutcome.selectedProfile.revision,2);assert.equal(workspaceOutcome.desiredMode,'WORKER');
+  assert.equal(workspaceOutcome.jobs.length,1);assert.equal(workspaceOutcome.jobs[0].result.result.outcomes[0].id,rows[0].event.id);
   if(page) {
     await page.getByRole('button',{name:'Refresh',exact:true}).click();
     await page.waitForFunction(()=>document.getElementById('event-state')?.textContent==='Receiver accepted');
+    await page.waitForFunction(()=>document.getElementById('incident-state')?.textContent==='Recovery observed');
     assert((await page.locator('#recovery-result').textContent()).startsWith('Recovered:'));
     if(process.env.SF98_JOURNEY_OUTPUT) await page.screenshot({path:join(process.env.SF98_JOURNEY_OUTPUT,'fulfillment-recovered-desktop.png'),fullPage:true});
+    if(process.env.SF98_JOURNEY_OUTPUT) {
+      await page.setViewportSize({width:390,height:844});
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+      await page.screenshot({path:join(process.env.SF98_JOURNEY_OUTPUT,'incident-recovered-mobile.png'),fullPage:true});
+    }
     await browser.close(); browser=null;
   }
   assert.equal((await inspectOrder(compiled,handoff.orderReference)).state,'ENTITLED');
@@ -186,6 +269,23 @@ try {
   assert.equal(response.status,200); assert(JSON.stringify(view).includes('DELIVERED'));
   await execFile('python3',[join(here,'receiver.py'),'receipt','--state',compiled.state,'--ref',handoff.orderReference,'--out',join(root,'entitlement.json')]);
   assert.equal(JSON.parse(await readFile(join(root,'entitlement.json'))).fileSha256,handoff.file.sha256);
+  // Reopen the SAME merchant listeners and original profile/job history at the
+  // registered addresses. The original watcher keeps its incident and captures.
+  const sellerPort=Number(new URL(merchant.seller.url).port),operationsPort=Number(new URL(merchant.operations.url).port);
+  const priorWatch=(await readIncidents()).worker.instanceId;
+  watchAbort.abort();await watcher;
+  await merchant.close();
+  merchant=await startCheckout(compiled,{port:sellerPort,operationsPort,nativeFactory,
+    deliveryWorkspaceDirectory:join(root,'receiver-workspace'),deliveryWorkspaceOptions:{send:sender},
+    incidentSource:{directory:incidentDirectory,merchantId:'approved-files'}});
+  watchAbort=new AbortController();watcher=runIncidentWatch({directory:incidentDirectory,signal:watchAbort.signal});
+  watcher.catch(error=>{watchError=error;});
+  await until(readIncidents,state=>state.worker.instanceId!==priorWatch&&state.worker.lastSweepAt,'Original monitor did not reopen');
+  const reopenedIncident=await(await fetch(merchant.operations.url+'/api/delivery/incident?id='+opened.id)).json();
+  assert.equal(reopenedIncident.incident.id,opened.id);assert.equal(reopenedIncident.incident.status,'RECOVERED');
+  const reopenedWorkspace=await merchant.operations.deliveryWorkspace.state();
+  assert.equal(reopenedWorkspace.selectedProfile.revision,2);assert.equal(reopenedWorkspace.jobs.length,1);
+  assert.equal((await merchant.outbox.rows()).length,1);assert.equal(settlements,1);
 
   // Continue the SAME real delivered product through the installable Python app.
   // Workspace creation/preparation/review remain offline; the product above has
@@ -239,9 +339,18 @@ print(json.dumps({'pythonApplication':'PASS','nativeAttemptStarted':False,
   assert.equal(ready.mode,'ORIGINAL_PYTHON_WORKSPACE_READY');
   delete applicationResult.configuration;
   applicationResult.nativeWorkspaceBinding='ORIGINAL_HELPER_PASS';
-  console.log(JSON.stringify({result:'PASS',node:process.version,nativeSdk:'2.28.0',verifies,settlements,
-    flow:'original enrollment -> SF88 immutable inbox/review -> approved URL -> SF30 Python/native settlement -> eight actual rejected signed HTTP deliveries -> exhausted operator review -> revision-guarded private recovery -> same SF98 event accepted -> SF101 entitlement -> exact private file/restart',
-    fulfillmentBrowser:process.env.SF98_BROWSER_MODULE ? 'PASS desktop/mobile original HTTP recovery' : 'not requested',
+  const summary={result:'PASS',node:process.version,nativeSdk:'2.28.0',verifies,settlements,
+    flow:'original enrollment -> SF88 immutable inbox/review -> SF30 Python/native settlement -> eight actual rejected signed HTTP deliveries -> original SF93 incident/acknowledgment -> receiver profile revision repair -> owned pause/requeue/resume -> same SF98 event accepted -> observed recovery -> SF101 exact private file -> same merchant/monitor/workspace restart',
+    incident:{id:opened.id,status:recoveredIncident.status,acknowledgedBy:recoveredIncident.acknowledgment.by,
+      originalExhausted:recoveredIncident.signal.exhausted,recoveredExhausted:recoveredIncident.recoverySignal.exhausted},
+    receiverWorkspace:{profileRevisions:2,retainedMaintenanceJobs:1,reopened:true,monitorReopened:true},
+    fulfillmentBrowser:process.env.SF98_BROWSER_MODULE ? 'PASS desktop/mobile incident acknowledgment, profile repair and original HTTP recovery' : 'not requested',
     financialExecution:'controlled local facilitator/approval; no wallet or chain transaction',fileBytes:source.length,
-    pythonApplication:applicationResult}));
-} finally { await browser?.close(); await stopReceiver(); await merchant?.close(); await rm(root,{recursive:true,force:true}); }
+    pythonApplication:applicationResult};
+  if(process.env.SF98_JOURNEY_OUTPUT)await writeFile(join(process.env.SF98_JOURNEY_OUTPUT,'journey.json'),JSON.stringify(summary,null,2)+'\n',{mode:0o600});
+  console.log(JSON.stringify(summary));
+} finally {
+  watchAbort.abort();await watcher?.catch(()=>{});await browser?.close();await stopReceiver();await merchant?.close();
+  for(const [name,value] of originalEnvironment)if(value===undefined)delete process.env[name];else process.env[name]=value;
+  await rm(root,{recursive:true,force:true});
+}

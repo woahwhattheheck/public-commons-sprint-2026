@@ -78,11 +78,13 @@ async function replacePrivate(path, value) {
 }
 function validateVersion(value, id) {
   if (!plain(value) || value.schema !== SCHEMA || value.id !== id || !Number.isSafeInteger(value.revision) || value.revision < 1 ||
-      value.inputDigest !== inputDigest(value.input) || !Array.isArray(value.exports)) fail('Saved project content is inconsistent.');
+      value.inputDigest !== inputDigest(value.input) || !Array.isArray(value.exports) ||
+      value.deployments !== undefined && !Array.isArray(value.deployments)) fail('Saved project content is inconsistent.');
   return value;
 }
 const summary = value => ({ id: value.id, title: value.input.title, revision: value.revision,
-  updatedAt: value.updatedAt, inputDigest: value.inputDigest, exports: value.exports.length });
+  updatedAt: value.updatedAt, inputDigest: value.inputDigest, exports: value.exports.length,
+  deployments: value.deployments?.length ?? 0 });
 
 async function acquireWriter(root) {
   if (process.platform !== 'linux') fail('This workspace requires Linux with util-linux flock.', 501);
@@ -110,6 +112,8 @@ export async function openWorkspaceStore(directory) {
   const root = await privateDir(resolve(directory), true);
   const projects = await privateDir(join(root, 'projects'), true);
   const packages = await privateDir(join(root, 'packages'), true);
+  const deployments = await privateDir(join(root, 'deployments'), true);
+  const releaseStores = await privateDir(join(root, 'release-stores'), true);
   const writer = await acquireWriter(root);
   let busy = false, closed = false;
   async function read(id, revision) {
@@ -144,7 +148,7 @@ export async function openWorkspaceStore(directory) {
     busy = true;
     try { return await operation(); } finally { busy = false; }
   }
-  async function save({ id, input, expectedRevision = 0, exportRecord } = {}) {
+  async function save({ id, input, expectedRevision = 0, exportRecord, deploymentRecord } = {}) {
     return mutate(async () => {
       projectName(id);
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) fail('A current project revision is required.');
@@ -159,8 +163,17 @@ export async function openWorkspaceStore(directory) {
       }
       const now = new Date().toISOString(), revision = expectedRevision + 1;
       let value = { schema: SCHEMA, id, revision, createdAt: previous?.createdAt ?? now,
-        updatedAt: now, inputDigest: inputDigest(draft), input: draft, exports: previous?.exports ?? [] };
+        updatedAt: now, inputDigest: inputDigest(draft), input: draft, exports: previous?.exports ?? [],
+        deployments: previous?.deployments ?? [] };
       if (exportRecord) value.exports = [...value.exports, exportRecord];
+      if (deploymentRecord) {
+        const prior = value.deployments.find(item => item.id === deploymentRecord.id);
+        if (deploymentRecord.generation !== (prior?.generation ?? 0) + 1 ||
+            !value.exports.some(item => item.id === deploymentRecord.exportId) ||
+            prior && (prior.exportId !== deploymentRecord.exportId || prior.directory !== deploymentRecord.directory))
+          fail('Deployment does not continue this project\'s retained package.', 409);
+        value.deployments = [...value.deployments.filter(item => item.id !== deploymentRecord.id), deploymentRecord];
+      }
       const path = join(folder, revision + '.json');
       // A process crash after a version write leaves an unreferenced immutable file.
       // Its exact bytes may be adopted; divergent content is never overwritten.
@@ -169,7 +182,7 @@ export async function openWorkspaceStore(directory) {
         if (error.code !== 'EEXIST') throw error;
         const orphan = validateVersion(await regular(path), id);
         if (orphan.revision !== revision || json(draftInput(orphan.input)) !== json(draft) ||
-            json(orphan.exports) !== json(value.exports))
+            json(orphan.exports) !== json(value.exports) || json(orphan.deployments ?? []) !== json(value.deployments))
           fail('An interrupted save retained a different next revision; save this draft as a new project.', 409);
         value = orphan;
       }
@@ -184,5 +197,5 @@ export async function openWorkspaceStore(directory) {
     // different inode while an existing writer still owns the previous one.
     await writer.close();
   }
-  return { root, packages, read, list, history, save, close };
+  return { root, packages, deployments, releaseStores, read, list, history, save, close };
 }

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from copy import deepcopy
 import csv
 from dataclasses import dataclass
 import hashlib
@@ -12,7 +13,7 @@ import re
 import shutil
 import stat
 
-from .errors import DeliveryError, NativeError
+from .errors import DeliveryError, NativeError, StateError
 from .storage import parse
 
 
@@ -191,4 +192,84 @@ class AccountingResult:
             raise NativeError(self.record.get("runtimeError") or self.result.get("reason") or
                               "ORIGINAL_ACCOUNTING_NOT_FINALIZED",
                               returncode=self.record.get("returncode"))
+        return self
+
+
+@dataclass(frozen=True)
+class SessionAccountingResult:
+    """One native page/chunk accounting range. The original ledger owns finality.
+
+    Amounts and completion describe this range only. A retained prior receipt
+    remains visible in an entry's lastFinalized after a later source failure.
+    """
+    native: dict
+    returncode: int = 0
+    runtime_error: str | None = None
+    interrupted: bool = False
+
+    @classmethod
+    def from_native(cls, native, *, kind, directory, returncode=0,
+                    runtime_error=None, interrupted=False):
+        if (not isinstance(native, dict)
+                or native.get("schema") != "stellar-forge.sf88.session-accounting.v1"
+                or native.get("kind") != kind or native.get("directory") != str(directory)
+                or not isinstance(native.get("sessionId"), str)
+                or not isinstance(native.get("configurationSha256"), str)
+                or not re.fullmatch(r"[a-f0-9]{64}", native.get("configurationSha256", ""))
+                or native.get("mode") not in ("VIEW", "FINALIZE")
+                or not isinstance(native.get("range"), dict)
+                or not isinstance(native.get("entries"), list)):
+            raise StateError("ORIGINAL_SESSION_ACCOUNTING_RESULT_INVALID")
+        window, entries = native["range"], native["entries"]
+        if (any(type(window.get(key)) is not int for key in ("offset", "limit", "total"))
+                or not 0 <= window["offset"] <= window["total"]
+                or not 1 <= window["limit"] <= 250
+                or len(entries) > min(window["limit"], window["total"] - window["offset"])):
+            raise StateError("ORIGINAL_SESSION_ACCOUNTING_RANGE_INVALID")
+        next_offset = window["offset"] + len(entries)
+        if not entries and next_offset < window["total"] and not native.get("interrupted"):
+            raise StateError("ORIGINAL_SESSION_ACCOUNTING_RANGE_INVALID")
+        if window.get("nextOffset") != (next_offset if next_offset < window["total"] else None):
+            raise StateError("ORIGINAL_SESSION_ACCOUNTING_RANGE_INVALID")
+        for position, entry in enumerate(entries):
+            if (not isinstance(entry, dict)
+                    or entry.get("index") != window["offset"] + position + (kind == "dataset")
+                    or not isinstance(entry.get("outcome"), str)):
+                raise StateError("ORIGINAL_SESSION_ACCOUNTING_ENTRY_INVALID")
+            if entry["outcome"] in ("FINALIZED", "IDEMPOTENT_FINALIZED") and (
+                    not isinstance(entry.get("actualAtomicUnits"), str)
+                    or not re.fullmatch(r"[0-9]+", entry["actualAtomicUnits"])
+                    or not isinstance(entry.get("receipt"), str)):
+                raise StateError("ORIGINAL_SESSION_ACCOUNTING_RECEIPT_INVALID")
+        return cls(deepcopy(native), returncode, runtime_error,
+                   interrupted or native.get("interrupted") is True)
+
+    @property
+    def entries(self):
+        return deepcopy(self.native["entries"])
+
+    @property
+    def next_offset(self):
+        return self.native["range"]["nextOffset"]
+
+    @property
+    def attention(self):
+        return [entry for entry in self.entries if entry["outcome"] not in
+                ("FINALIZED", "IDEMPOTENT_FINALIZED", "NO_PAYMENT_REQUIRED", "NOT_ATTEMPTED")
+                or entry.get("viewStatus") == "SAVE_FAILED"]
+
+    @property
+    def window_complete(self):
+        return self.returncode in (0, 2) and not self.interrupted and not self.runtime_error and not self.attention
+
+    @property
+    def recorded_actual_atomic_units(self):
+        """Sum only current finalized native amounts in this displayed range."""
+        return str(sum(int(entry["actualAtomicUnits"]) for entry in self.native["entries"]
+                       if entry["outcome"] in ("FINALIZED", "IDEMPOTENT_FINALIZED")))
+
+    def raise_for_status(self):
+        if not self.window_complete:
+            raise NativeError(self.runtime_error or "ORIGINAL_SESSION_ACCOUNTING_NEEDS_ATTENTION",
+                              returncode=self.returncode)
         return self

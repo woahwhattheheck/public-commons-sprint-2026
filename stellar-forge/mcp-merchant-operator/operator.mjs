@@ -5,9 +5,10 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { stageRelease, inspectRelease, compareReleases, activateRelease, rollbackRelease,
   readReleaseState, releaseStatus, runActiveRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
 import { exportSellerClient } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs';
-import { exact, failure, identifier, line, writePrivate, readMerchantConfig, inspectMerchantSource, pythonSourceView } from './config.mjs';
+import { exact, failure, identifier, line, writePrivate, readMerchantConfig, inspectMerchantSource, pythonSourceView, duckdbSourceView } from './config.mjs';
 import { MerchantDiscovery, discoveryTools } from './discovery.mjs';
 import { cacheControlTools, merchantCacheStatus, merchantCacheInvalidate } from './controls.mjs';
+import { MerchantFleet, fleetControlTools } from './fleet.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const idSchema = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
@@ -22,8 +23,8 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
 }
 export const MERCHANT_TOOLS = [
   tool('merchant_status', 'Inspect original release selection, retained history, seller readiness and this MCP process ownership. Makes only original loopback health/offer reads.', {}, [], { readOnly: true, idempotent: true }),
-  tool('merchant_sources', 'List configured aliases or inspect an original API package, OpenAPI files or Python merchant: exact input hashes, public routes, payment choices, backend or worker configuration and credential environment names. Reads configured local files without credential values, application imports or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
-  tool('merchant_stage', 'Compile a configured source alias into a new immutable original SF82 release, retaining its saved workspace, upstream snapshot or Python declaration and selected application source. Does not activate, import application code, start a listener or make a payment.',
+  tool('merchant_sources', 'List configured aliases or inspect an original API package, OpenAPI files, Python merchant or prepared DuckDB package: exact source and dataset hashes, public routes, payment choices and worker configuration. Reads configured local files without credential values, application imports or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
+  tool('merchant_stage', 'Retain a configured source alias as a new immutable original SF82 release: saved API workspace, upstream snapshot, Python application, or original DuckDB package with its copied datasets. Does not activate, import application code, start a listener or make a payment.',
     { source: idSchema, id: idSchema, label: textSchema }, ['source', 'id']),
   tool('merchant_inspect', 'Inspect and verify one retained original release including complete terms, application hashes and native/challenge mode.', { id: idSchema }, ['id'], { readOnly: true, idempotent: true }),
   tool('merchant_compare', 'Compare a staged release against the active release or a named retained version. Returns exact payment, route and application changes with the selection generation.',
@@ -44,6 +45,7 @@ export const MERCHANT_TOOLS = [
     { instanceId: instanceSchema, id: idSchema }, ['instanceId', 'id']),
   ...discoveryTools(tool),
   ...cacheControlTools(tool),
+  ...fleetControlTools(tool),
 ];
 const definitions = new Map(MERCHANT_TOOLS.map(value => [value.name, value]));
 const mutations = new Set(MERCHANT_TOOLS.filter(value => !value.annotations.readOnlyHint).map(value => value.name));
@@ -55,7 +57,8 @@ function releaseView(release) {
   const { handlerEntry, runtime, ...rest } = release;
   const { handlers, ...options } = runtime;
   return { ...rest, ...(rest.python ? { python: pythonSourceView(rest.python) } : {}),
-    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python) },
+    ...(rest.duckdb ? { duckdb: duckdbSourceView(rest.duckdb) } : {}),
+    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb) },
     handlerEntry: handlerEntry ? { sha256: handlerEntry.sha256, bytes: handlerEntry.bytes, scope: handlerEntry.scope } : null };
 }
 function runtimeView(runtime) {
@@ -87,8 +90,8 @@ async function originalJson(url, maximum = 16 * 1024 * 1024) {
 }
 
 export class MerchantReleaseOperator {
-  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery;
-  constructor(config) { this.#config = config; this.#discovery = new MerchantDiscovery(config); }
+  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet;
+  constructor(config) { this.#config = config; this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
@@ -96,7 +99,7 @@ export class MerchantReleaseOperator {
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary } };
+        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary } };
   }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
@@ -143,6 +146,7 @@ export class MerchantReleaseOperator {
     return inspectMerchantSource(candidate);
   }
   async #execute(name, args) {
+    if (name.startsWith('merchant_fleet_')) return this.#fleet.call(name, args);
     const root = this.#config.releaseStore;
     switch (name) {
       case 'merchant_status': return this.status();
@@ -165,7 +169,8 @@ export class MerchantReleaseOperator {
         return { ...comparison, generation: state.generation, before: releaseView(comparison.before), after: releaseView(comparison.after),
           runtimeChanges: comparison.runtimeChanges.map(change => change.field === 'handlers'
             ? { field: 'applicationConfigured', before: Boolean(change.before), after: Boolean(change.after) }
-            : change.field === 'python' ? { ...change, before: pythonSourceView(change.before), after: pythonSourceView(change.after) } : change) };
+            : change.field === 'python' ? { ...change, before: pythonSourceView(change.before), after: pythonSourceView(change.after) }
+            : change.field === 'duckdb' ? { ...change, before: duckdbSourceView(change.before), after: duckdbSourceView(change.after) } : change) };
       }
       case 'merchant_activate': case 'merchant_rollback': {
         const target = identifier(name === 'merchant_activate' ? args.id : args.to);
@@ -225,7 +230,13 @@ export class MerchantReleaseOperator {
   close() {
     if (this.#close) return this.#close;
     this.#closing = true;
-    this.#close = (async () => { await this.#active; if (this.#managed) await this.#stop(this.#managed.observation.instanceId); })();
+    this.#close = (async () => {
+      await this.#active;
+      const outcomes = await Promise.allSettled([this.#fleet.close(),
+        this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
+      if (outcomes.some(result => result.status === 'rejected'))
+        throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');
+    })();
     return this.#close;
   }
 }

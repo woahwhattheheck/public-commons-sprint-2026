@@ -1,7 +1,8 @@
 # Python applications for the Stellar Forge buyer
 
-Version 0.4.0 joins the original paginated dataset and resumable object applications
-to the same installed package. It retains 0.3.0's original reservation accounting
+Version 0.5.0 completes original reservation accounting and retained receipt views
+for the paginated dataset and resumable object applications joined in 0.4.0.
+It retains 0.3.0's original single-operation reservation accounting
 and history, and 0.2.0's native-workspace execution and approved-file applications.
 Upgrade the Python package and its matching original Node checkout together.
 
@@ -15,8 +16,8 @@ This package adds durable application operations and result recovery around thos
 | --- | --- | --- |
 | One HTTP response | `Buyer.from_workspace` or `Buyer.from_config` | The original request and permanent attempt; `Operation.recover`, `finalize` and local accounting/history |
 | An approved private file | `Buyer.from_paid_file` | The original order handoff, native purchase and separate merchant entitlement; `retrieve_file` and local `recover_file` |
-| A paginated dataset | `DatasetAcquisition.create` | The original dataset session, selected snapshot, per-page attempts and SF100 data room; `recover`, explicit continuation and verified typed rows |
-| A large object | `ObjectBuyer.prepare` | The original object descriptor, chunk queue and assembly receipts; reopen the same session, `recover`, explicit continuation and verified streamed file access |
+| A paginated dataset | `DatasetAcquisition.create` | The original dataset session, selected snapshot, per-page attempts and SF100 data room; `recover`, explicit continuation, verified typed rows and original accounting |
+| A large object | `ObjectBuyer.prepare` | The original object descriptor, chunk queue and assembly receipts; reopen, recover, continue, consume verified streamed files and finalize original reservations |
 
 Each entry point keeps the original source of its state. Dataset and object
 sessions can reopen directories created by the corresponding native tools;
@@ -106,6 +107,72 @@ does not replace those financial records. [OBJECTS.md](OBJECTS.md) and
 `examples/download_object.py` cover exact descriptor selection, interrupted
 recovery, report export and application file consumption.
 
+## Finish dataset and object purchase accounting
+
+The same customer session can now complete its original spending reservations
+and reopen their receipts. `DatasetAcquisition` and `ObjectSession` provide the
+same accounting methods, preserving their original native page or chunk state:
+
+```python
+from stellar_forge_buyer import DatasetAcquisition
+
+acquisition = DatasetAcquisition(
+    checkout="/work/public-commons-sprint-2026",
+    session="/private/customer/weekly-inventory",
+)
+for view in acquisition.finalize_all():
+    # One bounded progress range; the iterator visits every existing page.
+    print(view.native["range"], view.recorded_actual_atomic_units)
+    for entry in view.entries:
+        print(entry["index"], entry["outcome"], entry.get("receipt"))
+    for entry in view.attention:
+        print("Resolve this original attempt:", entry)
+
+# A fresh process reads retained views without wallet, operator keys or RPC.
+saved = acquisition.accounting(offset=0, limit=100)
+print(saved.entries)
+```
+
+For an object, call the same methods on
+`objects.open(existing_session, inspect=False)` to skip reading product bytes.
+The existing `examples/acquire_dataset.py` and `examples/download_object.py`
+commands now include `accounting` and `finalize`; their explicit `finalize`
+action visits every retained range and prints original progress as JSON lines.
+The saved workspace is selected automatically. Pass `workspace` to `finalize`
+or `finalize_all` for a session originally created from a configuration; it must
+match the same original operator, ledger, signer and payment terms. The shared
+native finalizer loads the original accounting keys and observes the selected
+Stellar network, with no signer import, terminal approval or new purchase.
+Optional paired `outbox` and `merchant_route` arguments retain the existing
+merchant-notification workflow.
+
+`finalize_all(page_size=25)` visits all existing page/chunk positions and yields
+each `SessionAccountingResult`, including unsuccessful entries so other original
+reservations can finish. `finalize(offset=0, limit=100)` reconciles one selected
+range; `accounting` reads the equivalent saved views. Limits are 1–250 and range
+offsets are zero-based; dataset entry indices retain their native one-based
+page numbers, while object indices remain zero-based. `next_offset` identifies
+the next range. `window_complete` and `recorded_actual_atomic_units` describe only
+that returned range. The amount sums actual current native finalizations in the
+selected asset; configured caps are not charges.
+
+Inspect `attention` for original source/provider errors, interruption or a display
+save failure. `raise_for_status()` raises when that returned range needs attention.
+Resolve the cause and explicitly finalize the same original range; SF36 reuses an
+existing receipt. `lastFinalized` within an entry retains an earlier successful
+result after a later source failure. When a native worker finishes before the
+calling Python process stops, reopening `accounting` reads the view saved beside
+the original attempt. Keep the same session after a timeout; do not initialize a
+replacement purchase. The Runtime timeout remains configurable for the selected
+operator/RPC workload.
+
+Accounting does not depend on the response files remaining present. Missing
+product bytes therefore do not cancel a previously approved debt, and a financial
+receipt does not establish product delivery. Free original responses report
+`NO_PAYMENT_REQUIRED` without a fabricated ledger receipt. Unattempted positions
+remain `NOT_ATTEMPTED`. The original SF36 ledger remains the financial authority;
+these session files are recoverable views of its original results.
+
 ## Install and buy from an existing configuration
 
 ```sh
@@ -116,7 +183,7 @@ For a published companion wheel, activate the matching maintained Node release
 and install the wheel into the application's existing Python environment:
 
 ```sh
-python -m pip install --upgrade /path/to/stellar_forge_buyer-0.4.0-py3-none-any.whl
+python -m pip install --upgrade /path/to/stellar_forge_buyer-0.5.0-py3-none-any.whl
 export STELLAR_FORGE_CHECKOUT=/path/to/matching-release
 ```
 
@@ -193,8 +260,9 @@ For a workspace or existing configuration using a merchant operation ticket,
 native review supplies the ticket fingerprint without its bearer value. Python
 passes that reviewed fingerprint to the original ticket validator before its
 permanent attempt and to original execution. Replacing or expiring the private
-ticket cannot silently change the reviewed operation. Keep the referenced
-private ticket file for the operation; the original loader and request assembly
+ticket cannot silently change the reviewed operation. Configuration import
+retains a validated private ticket copy inside the operation directory, so the
+received source file can be archived. The original loader and request assembly
 continue to own its bytes and header. The paid-file GET flow uses its separate
 order reference and does not require a merchant POST ticket.
 
@@ -388,6 +456,25 @@ prepared review with its original `ticketFile`, exact body and headers. The
 original ticket reader and request assembly remain responsible for the bearer;
 ordinary request headers never carry it in the Python review. Original SF98
 order references and authentication/payment header handling are retained.
+
+To import the merchant's complete private request on another host:
+
+```python
+operation = buyer.from_operation_handoff(
+    "/private/merchant-operation.handoff.json", accept=0
+)
+operation.configure("/private/operator-profile.json")
+review = operation.review()
+result = operation.execute(review=review)
+```
+
+Choose the actual offered payment option and use the matching native SF88
+runtime. The original importer supplies the reviewed local request; Python keeps
+its own body and validated ticket copies after temporary import files are removed.
+The original stable intent remains unchanged. The packet contains no operator
+or signer settings; configure yours separately. Keep the received packet `0600`
+at a canonical absolute path, and reopen an existing operation with
+`buyer.operation(intent)` instead of importing it again.
 
 ## Restart and consume a completed purchase
 

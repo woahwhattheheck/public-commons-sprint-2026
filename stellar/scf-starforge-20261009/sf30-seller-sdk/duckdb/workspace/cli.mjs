@@ -5,10 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { mkdir } from 'node:fs/promises';
 import { startDuckdbWorkspace } from './server.mjs';
 import { WorkspaceError, publicIssue } from './model.mjs';
+import { readSavedWorkspaceSource } from './store.mjs';
 import { prepareWorkbenchSource } from '../workbench/bootstrap.mjs';
 
 const HELP = `Usage: node duckdb/workspace/cli.mjs --state PRIVATE_DIRECTORY
-  (--source SOURCE.json | --data-dir DATA_DIRECTORY [--database FILE] [--parquet FILE]...)
+  [--source SOURCE.json | --data-dir DATA_DIRECTORY [--database FILE] [--parquet FILE]...]
   [--plan MERCHANT_PLAN.json] [--python /private/duckdb-venv/bin/python]
   [--port 8437] [--seller-port 0] [--operations-port 0]
   [--availability-dir PRIVATE_ABSOLUTE_DIRECTORY]
@@ -16,7 +17,8 @@ const HELP = `Usage: node duckdb/workspace/cli.mjs --state PRIVATE_DIRECTORY
 
 Opens native relation/query authoring, previews, merchant-plan editing, retained drafts/packages and
 the original seller/operations runtime. The private URL printed below opens the app.
-Use the same source and state directory to reopen saved work. SIGINT/SIGTERM drain
+Use --state or --workspace with the saved directory to reopen its retained source.
+SIGINT/SIGTERM drain
 the owned merchant and close the workspace. Native payment uses the configured facilitator.`;
 
 export async function main(args = process.argv.slice(2)) {
@@ -24,7 +26,7 @@ export async function main(args = process.argv.slice(2)) {
   const values = new Map();
   const parquetFiles = [];
   for (let index = 0; index < args.length; index++) {
-    const flag = args[index];
+    const flag = args[index] === '--workspace' ? '--state' : args[index];
     if (flag === '--parquet' && args[index + 1] && !args[index + 1].startsWith('--')) {
       parquetFiles.push(args[++index]); continue;
     }
@@ -34,8 +36,8 @@ export async function main(args = process.argv.slice(2)) {
         !args[index + 1] || args[index + 1].startsWith('--')) throw new WorkspaceError('INVALID_COMMAND_OPTIONS', 422, HELP);
     values.set(flag, args[++index]);
   }
-  if (!values.has('--state') || values.has('--source') === values.has('--data-dir') ||
-      values.has('--source') && (values.has('--database') || parquetFiles.length) ||
+  if (!values.has('--state') || values.has('--source') && values.has('--data-dir') ||
+      !values.has('--data-dir') && (values.has('--database') || parquetFiles.length) ||
       values.has('--allow-local-facilitator') && !values.has('--facilitator'))
     throw new WorkspaceError('SOURCE_AND_WORKSPACE_REQUIRED', 422, HELP);
   const port = (name, fallback) => {
@@ -57,11 +59,12 @@ export async function main(args = process.argv.slice(2)) {
   }
   const directory = resolve(values.get('--state'));
   let sourceFile = values.has('--source') ? resolve(values.get('--source')) : null;
-  if (!sourceFile) {
+  if (!sourceFile && values.has('--data-dir')) {
     await mkdir(directory, { recursive: true, mode: 0o700 });
     ({ sourceFile } = await prepareWorkbenchSource({ dataDirectory: resolve(values.get('--data-dir')),
       database: values.get('--database') ?? ':memory:', parquetFiles, workspace: directory }));
   }
+  sourceFile ??= await readSavedWorkspaceSource(directory);
   const session = await startDuckdbWorkspace({ sourceFile,
     availabilityDirectory: values.get('--availability-dir'),
     directory, ...(values.has('--plan') ? { planFile: resolve(values.get('--plan')) } : {}),

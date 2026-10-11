@@ -15,7 +15,7 @@ state, credentials and unrelated projects are never read into the release.
 
 ## Build once from a committed checkout
 
-Use Node 22 or newer and Git. Run from the repository root:
+Use Node 22.16 or newer and Git. Run from the repository root:
 
 ```sh
 node stellar/scf-starforge-20261009/sf46-release/distribution.mjs pack \
@@ -27,6 +27,15 @@ an exact 40-character commit ID; its default is `HEAD`. Commit the distribution
 source before building. A release prints its source commit, file count, digest,
 versioned installation ID and available commands. The same commit and version
 produce the same release digest. Source files retain their original bytes.
+
+The command catalog is the original
+`stellar/scf-starforge-20261009/distribution/distribution.json` at that same
+commit. Every declared command must be present in the source bundle. Production
+dependency groups come from its `runtimePackageManifests`, reading only each
+original manifest's `dependencies`. The release records the catalog hash, each
+runtime manifest path and hash, and the exact source commit. New maintained
+commands and dependency groups therefore arrive together with their source;
+there is no separate SF46 list to update for each new product component.
 
 The resulting directory is relocatable. It needs neither the original checkout
 nor Git at runtime. Archive that complete directory with an ordinary ZIP/tar
@@ -65,7 +74,10 @@ use absolute paths in service configurations and shared runbooks.
 
 ## Native commands in one installation
 
-Run `node forge.mjs status` to see the paths present in the selected release.
+Run `node forge.mjs status` to see the complete paths present in the selected
+release. `status.commandCatalog` identifies the original catalog and the small
+set of retained portable mappings. The table below describes the operating
+families; `status.commands` is the exact installed map.
 
 | Command after `run` | Existing original entry point |
 | --- | --- |
@@ -95,14 +107,41 @@ Run `node forge.mjs status` to see the paths present in the selected release.
 | `fleet-release` | Original saved-workspace staging, release review and owned seller lifecycle |
 | `revenue-workspace` | Original private merchant pricing workspace and saved operational reports |
 | `revenue-report` | Original SF97 merchant revenue analyzer and optional native settlement companion |
+| `merchant-accounting` | Original settlement reconciliation and report writer |
+| `merchant-accounting-workspace` | Retained source imports, reconciliation, review and comparison workspace |
+| `merchant-accounting-pricing` | Saved original pricing report to validated accounting terms |
+| `merchant-accounting-recovery` | Original completed-purchase review, recovery and retained response CLI |
 | `postgres` | Original PostgreSQL seller and operations launcher |
 | `postgres-init` | Original create-only PostgreSQL source/service starter |
 | `postgres-inspect` | Original PostgreSQL declaration/query inspection |
 | `postgres-workspace` | Original database metadata-to-merchant-package workspace |
+| `support-watch`, `support-console` | Retained incident operations and the original merchant case desk |
+| `assets`, `client`, `releases` | Original response-asset packaging, generated customer clients and release review |
+| `commerce`, `commerce-console`, `commerce-setup` | Original merchant/buyer session, browser workspace and configuration |
+| `merchant`, `delivery`, `merchant-desk` | Seller fulfillment journal, event delivery and order/file/access desk |
+| `checkout`, `paid-file-checkout`, `purchase`, `paid-file-purchase` | Original merchant enrollment, selected customer order and file retrieval |
+| `buyer-object`, `buyer-object-workspace` | Original resumable object acquisition and browser review |
+| `buyer-node`, `inbox` | Original generated-client customer application and SF88 selected-intent queue |
+| `mcp-native`, `mcp-stdio`, `mcp-client-config` | Original buyer MCP workspace, local protocol server and host registration |
+| `merchant-mcp`, `merchant-mcp-stdio`, `merchant-mcp-client-config` | Original merchant MCP operation and local host registration |
+| `native-signer`, `facilitator` | Original signer configuration and fee-sponsoring runtime |
+| `sqlite-init`, `sqlite-inspect` | Original SQLite source starter and declaration inspection |
+| `duckdb`, `duckdb-inspect`, `duckdb-prepare`, `duckdb-workbench` | Original DuckDB/Parquet source, retained packages and authoring workspace |
+| `s3` | Original selected object-store source inspection and configuration |
+| `cube-workspace`, `cube-onboard`, `cube-onboarding` | Original paid Cube report authoring and approved query packages |
+| `openapi-workspace` | Original API contract authoring and merchant lifecycle |
+| `graphql-onboarding`, `graphql-merchant`, `graphql-workspace` | Original schema/query packages and GraphQL merchant lifecycle |
+| `python-merchant` | Original Python application configuration, diagnostics and serving |
+| `merchant-readiness` | Original receiving-account review |
+| `upstream-operation`, `availability` | Original upstream operation tickets and route pause/resume controls |
+| `woo-seller`, `woo-buyer` | Original WooCommerce order and selected purchase handoffs |
+| `catalog-workspace`, `import-headers` | Original retained catalog review and operator HTTP-header import |
 
-Dataset, catalog, fleet, revenue, `buyer-inbox`, `buyer-runbook`, `deploy` and PostgreSQL
-commands are included when their original named CLI files exist in the selected
-commit. `status.commands` is the installed release's exact command map. `dataset`
+The portable names `pilot-ops`, `seller-check`, `catalog-operator` and `deploy`
+remain available when their original files exist. Portable `pilot` retains its
+SF82 compile/resume meaning; the maintained catalog's pilot-with-operations entry
+is available as `pilot-ops`. This distinction is also recorded in
+`commandCatalog.preservedMappings`. `dataset`
 retains its CSV inspection/compiler meaning; use `buyer-dataset` for acquisition
 and `dataset-delivery` for saved inbox pages. Other shipped modules remain
 importable by their original paths.
@@ -126,6 +165,58 @@ node /tmp/stellar-forge-home/forge.mjs run pilot-ops -- --help
 SF88 retains its original buyer settings, controlling-terminal approval, signer,
 budget accounting and response-file behavior. A release install or activation
 does not add approvals, repeat purchases or grant new authority.
+
+## Retained support, accounting and MCP operations
+
+The same installed launcher reaches the existing private workspaces. Start the
+original case desk with its state outside the selected release:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run support-console -- \
+  --cases-dir /tmp/stellar-forge-home/state/support-cases --port 0
+```
+
+Open the printed loopback URL. The original desk owns case import, capture,
+review and retained follow-up. Reopening the same `--cases-dir` retains its cases.
+For a merchant whose incident configuration is already prepared, initialize and
+run the original watcher in another terminal:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run support-watch -- init \
+  --state /tmp/stellar-forge-home/state/incidents \
+  --config /tmp/stellar-forge-home/config/incident-watch.json
+node /tmp/stellar-forge-home/forge.mjs run support-watch -- run \
+  --state /tmp/stellar-forge-home/state/incidents
+```
+
+The native `status`, `ack`, notification retry/cancel and case export commands
+retain their original incident IDs, revisions and lease behavior. Use the
+included [incident operations guide](../sf93-seller-support-bundle/INCIDENT_OPERATIONS.md)
+for the configuration and SF74 case import contract. These operations require the
+original Linux `flock`; the launcher forwards shutdown signals to the watcher.
+
+The installed accounting and recovery commands consume the same merchant sources.
+The complete [pricing-to-accounting workflow](#use-saved-pricing-in-merchant-accounting)
+below covers source import, retained reconciliation, review, comparison and recovery.
+
+To register the original buyer MCP server on the machine that will launch it:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run mcp-client-config -- \
+  --discovery http://127.0.0.1:3900 \
+  --state /tmp/stellar-forge-home/state/mcp \
+  --output /tmp/stellar-forge-home/config/mcp-host.json
+```
+
+Use the actual configured discovery origin. The original exporter writes a new
+private host-registration file with this machine's Node executable and the exact
+installed protocol entry point; it does not launch the host. Its original
+`--origin`, `--operator` and separate-file `--merge` options remain available.
+The registration points at a specific release, so export a new registration when
+deliberately switching that host to another installed version. Keep its retained
+state directory. Use `merchant-mcp-client-config` for the native merchant server
+and `mcp-native` for an existing SF88 workspace; their original help describes
+the distinct configuration contracts.
 
 ## Installed dataset and catalog workflow
 
@@ -423,14 +514,14 @@ existing HTTPS deployment; keep the private control and browser listeners local.
 
 ## Review merchant pricing and operating costs
 
-The installed pricing commands use the original SF97 workspace and analyzer.
-They read the merchant's actual seller configuration and operating capture; no
-additional npm dependency is required. Keep their saved workspace under the
-installation's private `state/` directory so release activation and rollback
-preserve the merchant's pricing decisions.
+The installed commands use the original SF97 workspace and analyzer, pricing
+importer and merchant accounting engine. Keep saved pricing, imported terms and
+accounting state in the installation's private `state/` directory so software
+activation and rollback retain the merchant's decisions. `forge.mjs status`
+reports the exact commands included in the selected source release.
 
-Start the workspace with the same seller configuration used by the original
-operations launcher:
+Use Node 22+ and the merchant's actual seller configuration and existing
+operations listener:
 
 ```sh
 node /tmp/stellar-forge-home/forge.mjs run revenue-workspace -- \
@@ -439,38 +530,137 @@ node /tmp/stellar-forge-home/forge.mjs run revenue-workspace -- \
   --ops-url http://127.0.0.1:8424 --port 8457
 ```
 
-Replace the configuration path and operations port with the original seller's
-actual values. Open the private browser URL printed by the workspace. For an
-existing operating export, replace `--ops-url` with
-`--snapshot /absolute/private/original-seller-traffic.json`. The optional
-`--native-outbox /absolute/private/native-outbox` reads that merchant's existing
-SF98 journal for the original native settlement companion.
+Open the private browser URL printed by the original workspace. Replace the
+configuration and operations port with that merchant's actual values. The parent
+of each private state directory must already exist; pricing state uses a local
+filesystem with atomic hard links and directory synchronization.
 
-The screen presents every configured payment option. Enter its USD quote and
-basis, target request volume, fulfillment and challenge costs, and fixed
-operating costs. The original analyzer calculates the preview; unspecified costs
-remain unknown. Save the review to retain its original seller configuration,
-capture, terms and reports. Reopen a saved version to inspect those inputs and
-download its terms or reports. Reopening the same private `--state` directory
-after a service restart retains the saved versions and their source identities.
+Choose the current session or retained history in the source panel. For live
+history, select the actual UTC interval and optional original route filter. The
+existing operations service supplies the retained history and effective range.
+For saved exports, replace `--ops-url` with `--snapshot /private/original-session.json`
+or `--history /private/original-history.json`; both file flags may be supplied to
+switch between those fixed exports. File selections retain their exported range.
+Add `--native-outbox /private/merchant/sf98-outbox` to include the original native
+settlement companion for that merchant.
 
-To reproduce a saved session report with the command-line analyzer, use the
-matching seller, terms and snapshot from that same saved version and a new output
-directory:
+Refresh the selected source, enter the merchant's quoted USD values, quote
+bases, known costs and monthly targets, and review every ordered payment option.
+Calculate with the original analyzer, then save. A saved version retains the
+exact seller, terms, original capture, report and optional native companion.
+Compare saved periods with their original coverage and source identities; reopen
+versions or reuse their assumptions for a new review. The monthly target applies
+once to its original service scope. Unknown costs remain unknown, and observed
+HTTP outcomes retain their original meaning.
+
+After restart, reopen the same `--state` directory. To reproduce a retained-period
+report, use the matched files from one saved version and a new output directory:
 
 ```sh
 node /tmp/stellar-forge-home/forge.mjs run revenue-report -- \
-  --config /absolute/private/saved-review/seller.json \
-  --terms /absolute/private/saved-review/terms.json \
-  --snapshot /absolute/private/saved-review/snapshot.json \
-  --output /absolute/private/new-review-report
+  --config /private/review/seller.json --terms /private/review/terms.json \
+  --history /private/review/history.json --output /private/new-pricing-report
 ```
 
-Both aliases are advertised only when their original entrypoint exists in the
-selected source release. `forge.mjs status` reports the exact installed command
-map. The complete [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
-and [revenue analyzer guide](../sf97-merchant-revenue-ops/README.md) are included
-with the source and describe the supported capture inputs and report fields.
+For a session review, replace `--history` with that version's `--snapshot` file.
+The included [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
+describes history enablement, range selection, source retention and comparisons.
+
+## Use saved pricing in merchant accounting
+
+Download **Report JSON** from the chosen saved pricing version, or select its
+private `versions/VERSION/report/report.json`. The original report supplies the
+normalized payment options and calculated route values; pricing `terms.json` is
+an input to that report and does not contain the complete accounting import.
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-pricing -- \
+  --report /tmp/stellar-forge-home/state/pricing/versions/VERSION/report/report.json \
+  --out /private/merchant/pricing-import-2026-10-11
+```
+
+Use a new output directory with an existing parent. The import retains the exact
+original report as `pricing-report.json`, produces validated `accounting-terms.json`
+and writes their identities and import summary to `manifest.json`. The directory
+uses mode 0700 and files use 0600. If the quote basis needs a shorter accounting
+reference, add `--reference "Approved merchant quote October 2026"`; the complete
+original basis remains in the retained pricing context. The
+[pricing import guide](../merchant-settlement-accounting/PRICING.md) documents the
+reference rules and the exact mapping.
+
+Every original option keeps its route, method, network, asset, recipient and
+atomic amount. The quote and per-fulfilled variable cost become accounting unit
+terms; unknown costs remain null. Shared fixed costs, challenge costs, targets
+and the pricing observation interval remain attached pricing context. The
+accounting event scope comes from the selected journals and verification inputs.
+
+Open a new accounting workspace using those imported terms and the merchant's
+actual original sources:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-workspace -- \
+  --workspace /tmp/stellar-forge-home/state/accounting \
+  --outbox /private/merchant/sf98-outbox --proof-dir /private/merchant/sf86-results \
+  --terms /private/merchant/pricing-import-2026-10-11/accounting-terms.json
+```
+
+For an existing workspace, open **Sources & imports**, select the generated
+`accounting-terms.json` under **Merchant accounting terms**, and choose
+**Import & select terms**. Then create a new capture from **Reconcile & review**.
+Earlier runs retain their own terms and sources, so the existing comparison
+shows which assumptions and settlement inputs changed. Search the ledger and
+exceptions, retain review notes, and export the original reports and source TAR.
+Reopen after restart with `--workspace` alone. The accounting workspace requires
+Linux `flock` and `tar` in addition to Node 22+.
+
+For a terminal review, the original accounting command consumes the same terms:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting -- \
+  --outbox /private/merchant/sf98-outbox --proof-dir /private/merchant/sf86-results \
+  --terms /private/merchant/pricing-import-2026-10-11/accounting-terms.json \
+  --out /private/merchant/new-accounting-review
+```
+
+The original outputs are `report.json`, `ledger.csv`, `options.csv`,
+`exceptions.csv`, `review.html` and `manifest.json`. The included
+[accounting workspace guide](../merchant-settlement-accounting/workspace/README.md)
+covers retained imports, captures, review, comparison, export and restart.
+
+### Include an original completed purchase
+
+The same accounting workspace can connect an existing recovered-settlement
+collection in **Sources & imports**, retain and review the original recovery
+request, run the original import, and download the retained response. For CLI
+operation, use the existing request configuration from the
+[recovery guide](../merchant-settlement-accounting/RECOVERY.md):
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-recovery -- review \
+  --config /private/purchase/recovery-request.json
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-recovery -- import \
+  --config /private/purchase/recovery-request.json \
+  --recovered-dir /private/merchant/recovered
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-recovery -- list \
+  --recovered-dir /private/merchant/recovered
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-recovery -- response \
+  --recovered-dir /private/merchant/recovered --id ACTUAL_RECOVERY_ID \
+  --out /private/purchase/reopened-response.json
+```
+
+Use the original approved request, outcome, matching merchant terms, known payer
+and optional saved response. Review checks those retained records. Import uses the existing native SDK and original verifier to read the
+completed transaction from its declared public RPC, then retains the verified
+entry and response. An identical retained import is reused. Use the recovery ID returned by import or list; `response` exports the saved
+body to a new private file. This workflow operates the completed purchase's records.
+
+Connect that collection in the workspace or add
+`--recovered-dir /private/merchant/recovered` to its initial launch. The original
+`merchant-accounting` command accepts the same optional input. Reports retain
+separate captured and recovered origins and time bases, and apply the
+existing verification and transaction matching rules across both. Pricing
+imports and recovery records keep their own source identities in the same
+merchant review.
 
 ## PostgreSQL merchant installation
 
@@ -490,8 +680,12 @@ node forge.mjs doctor
 
 Doctor reports PostgreSQL driver names, requested and installed versions separately
 from native payment packages, with `postgresDriversInstalled` indicating whether
-the source-pinned set matches. It does not connect to a database or start a payment
-operation. Standard library commands remain usable when optional drivers are absent.
+that source-pinned group matches. Other optional adapters do not affect this
+PostgreSQL result. The maintained doctor's `optionalFeatures` also reports each
+group's actual import availability. `doctor --feature postgres` returns a failing
+exit status if its original probe cannot resolve the required drivers. It does
+not connect to a database or start a payment operation. Standard library commands
+remain usable when optional drivers are absent.
 
 Then run the maintained setup against an existing private source configuration:
 
@@ -587,7 +781,7 @@ There is no automatic deletion of old releases or merchant data. The incoming
 bundle's manager can always operate an existing home using `--home`; this is also
 the path for future manager upgrades without rewriting a live installation.
 
-## Optional native SDK installation
+## Optional native SDK and adapter installation
 
 Challenge-only seller, compilation, review and local operations run without npm.
 The generated package declares the same exact x402 version that the committed
@@ -596,16 +790,35 @@ original SF30 `native-factory.mjs` declares. At the initial delivery this is
 This follows the [original pinned first-party package manifest](https://github.com/x402-foundation/x402/blob/7f2b2f1f77fa5317615735e3378a6fad41cccb4e/typescript/packages/mechanisms/stellar/package.json)
 and [SF04 dependency inventory](../sf04-protocol-baseline/BASELINE.md).
 
+The root package also contains the maintained catalog's original `nativePeers`
+and feature dependencies. Runtime package manifests supply exact production
+versions; development dependencies are excluded. Catalog peer ranges, including
+the original Stellar SDK range, retain their declared meaning. Conflicting
+declarations fail packaging with the affected original source path or package
+name. Current feature groups are reported by `doctor`; additional groups follow
+the selected catalog automatically.
+
 When a native runtime is needed, install packages in the **selected release
 directory** printed by `status`:
 
 ```sh
 npm install --ignore-scripts --omit=dev
 node forge.mjs doctor
+node forge.mjs doctor --feature postgres --feature s3
+node forge.mjs doctor --native
 ```
 
-The installer never runs npm itself. `doctor` reports exact installed versions;
-missing optional packages remain visible even if npm tolerated their absence.
+The installer never runs npm itself. `doctor` calls the original maintained
+`distribution/cli.mjs` export from the verified release. Its dependency probes,
+optional feature names, Node requirement and Python/POSIX availability are the
+same as the maintained distribution. The portable result retains its source
+release identity and existing exact-version inventory alongside those original
+probe results. `--native` and repeated `--feature NAME` requests propagate the
+original doctor's failing exit status when a requested capability is absent;
+plain `doctor` reports absent optional packages without requiring them.
+Dependency presence is an import-availability result, not proof that merchant
+connections or payments are configured. Missing packages remain visible even
+if npm tolerated their absence.
 Retain the generated `package-lock.json` with your deployment and reuse that
 lock for reproducible dependency installation. Dependencies and their separate
 licenses remain their upstream authors' work; no upstream tarballs are embedded
