@@ -154,3 +154,36 @@ Local mode uses valueless CPDEMO and unlocked demonstration accounts; public
 mode requires actual deployed contracts and wallet signatures, neither supplied
 by this source branch. These readouts do not claim any real deployment/payment.
 
+## Interaction rendering
+
+Changing role, actor or campaign reuses the confirmed campaign cards, payment
+timeline and selected campaign overview. Campaign/submission joins are indexed
+once per normalized API snapshot, and actor options are rebuilt when their
+identities or labels change. Each fresh snapshot invalidates the source-backed
+views. Action gates, wallet operations and creator forms continue to use current
+interaction state; receipt reconciliation triggers another render when it
+actually attempted a pending receipt.
+
+A paired Chromium 155 profile replayed the native recorder's nine local CPDEMO
+checkpoints, from campaign creation through the reserved reward claimed after
+closure. Both versions served the same 17 read-only responses and produced the
+same 18 visible views and seven preserved creator drafts/caret positions, with
+zero page errors or write requests. The recorded case contains one campaign
+and two submissions.
+
+| Measured work | Before | Updated |
+|---|---:|---:|
+| Script CPU, complete matched profile | 196.826 ms | 106.481 ms |
+| Full render calls | 108 | 92 |
+| Full render elapsed time, total | 472.5 ms | 213.1 ms |
+| Rendering during 40 alternating role changes | 163.5 ms | 40.7 ms |
+| Campaign card insertions / removals | 108 / 108 | 16 / 16 |
+| Timeline insertions / removals | 662 / 654 | 67 / 59 |
+
+The profile used a 1440 × 1000 headless browser, DevTools thread CPU metrics and
+elapsed timings around the original render functions. Both profiles temporarily
+used a 60-second background polling interval to compare the same explicit read
+sequence. The shipped refresh intervals remain 8 seconds normally and 3 seconds
+while operations are pending. These measurements cover that recorded journey;
+different campaign counts, browsers and devices can have different timings.
+
