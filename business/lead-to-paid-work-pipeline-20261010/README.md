@@ -1,82 +1,72 @@
-# Buyer → qualified prime → payable engineering workshare
+# Buyer → qualified partner → paid engineering workshare
 
-A small **actual Node.js 22** operator tool for converting publicly posted requests for proposals into tightly defined specialist work. It is an offline, read-only decision process, not a bidder account, outreach bot, procurement scraper or payment processor.
+The existing Node.js operator workflow connects buyer requirements, partner qualification, authorized contact, actual mailbox replies and collection records on one local board.
 
-## Why this exists
+The useful sequence is to identify a current buyer problem, select a plausible specialist or prime, qualify the missing requirements with that partner, agree an acceptance-based paid scope, deliver it, and reconcile actual invoices and receipts. Qualification conversations can run under an existing owner sales directive. A complete bid qualification packet or a separately approved price is not required merely to ask a prospective partner about fit.
 
-The reusable commercial motion is: (1) identify an active first-party buyer problem; (2) read the original terms, amendments, dates and exclusions; (3) identify an existing prime that can meet every mandatory qualification; (4) offer a separable deliverable with measurable acceptance and positive unit economics; (5) obtain owner approval before first contact; (6) preserve provider-backed acceptance, contract, invoice and paid-cash receipts. A human relationship owner owns every external communication. A compelling demo does not mean a qualified bidder, award or earned revenue.
+## Run the complete workflow
 
-Use the **same workflow** for vendor integration QA, accessibility remediation, source-data validation, CRM automation, compliance migration and agency web modernization. Do not recreate one software product for every public bid.
-
-## Run immediately, no dependencies or cloud CI
+Requires Node.js 22 or newer; no dependencies or hosted compute.
 
 ```bash
 node business/lead-to-paid-work-pipeline-20261010/pipeline.mjs \
-  business/lead-to-paid-work-pipeline-20261010/opportunities.json \
-  /tmp/lead-decision-board --now=2026-10-10T22:46:00Z
+  /private/opportunities.json /private/revenue-board \
+  --gmail-captures=/private/gmail-captures.json
 ```
 
-Open `/tmp/lead-decision-board/index.html` locally. `decisions.json` and `decision-board.md` have identical decision state. `workshare-sheet.md` is an additional **unsent, internal** prime-led acceptance/scope sheet; it deliberately withholds any fee not explicitly owner-approved. `--now` is optional and exists to make the same deadline assessment reproducible. No network call occurs, no account, API key or browser extension is needed, and no workflow is created.
+Open `/private/revenue-board/index.html`. The same command produces the original decision, workshare, reply and collection files plus the reusable `mailbox-state.json`, `reply-snapshot.json` and `mailbox-coverage.json`. Actual messages, addresses and provider links are private operator inputs and outputs; the public repository contains source only.
 
-Two current cases are included **as continuation examples for their existing owners**:
-
-* Atlanta Regional Commission [RFP804(v2), WordPress and Website Support](https://procurement.atlantaregional.org/opportunities/rfp804v2-wordpress-and-website-support/). Repost is open, original RFP804 cancelled, requires registration/application approval before proposal, and the issuer page lists October 28, 2026 at 5 p.m. The explicit time-zone ambiguity is left unresolved rather than inferred from GA registry conflicting metadata. Its original ARC commercial owner retains all outreach/qualification/cost decisions.
-* Oregon DEQ [S-34000-00018168](https://oregonbuys.gov/bso/external/bidDetail.sda?docId=S-34000-00018168&external=true&parentUrl=close). Original solicitation reviewed by original buyer owner; Oct 14, 2026 4 p.m. Pacific clarification cutoff, Oct 21 4 p.m. Pacific offer cutoff. Published Sourcemap traceability does **not** establish SOC 2 Type II/ISO27001 scope, offline/IoT, or 24-hour support. Existing OR-DEQ owner keeps all qualification and outreach.
-
-The inputs deliberately price neither case and authorize no contact. One sample has a confirmed time zone; the other must be resolved from the actual issuer amendment or procurement reply. This difference is a useful demonstration of the hard gate.
-
-## Contract for operators
-
-Each `opportunities[]` has a unique (buyer name, solicitation ID, revision). Do not conflate a cancelled request and a revised repost. Mandatory requirements each have a stable `id`. Partner evidence maps requirement IDs to `DOCUMENTED` plus a public HTTPS citation, or `SELF_REPORTED`/`UNKNOWN`, which do not satisfy a mandatory requirement. `DOCUMENTED` means the operator supplied a document pointer, **not that the tool verified the provider or inspected certification scope**. Review each source manually and replace out-of-date or ambiguous pointers.
-
-`workshare.milestones` must contain deliverables and objective acceptance. Set real `feeUsd`, `costUsd`, and a defensible finite `minimumMargin` in [0, 1) (25% default). `feeStatus: "OWNER_APPROVED_PROPOSAL"` must be explicitly set by the commercial owner after reviewing actual economics, **separately** from contact approval. All other fee statuses remain HOLD even with favorable numerical margins. Owner approval creates neither an offer nor a send. A positive model is **not** an invoice or customer. A named owner must explicitly set `communication.ownerApproved:true`, `doNotContact:false` and provide an approval receipt before even the `OWNER_APPROACH_CANDIDATE` state. That state is not permission for an automated send. The tool has no sending capability.
-
-Recorded workflow stages are strictly ordered: `SOURCED → BUYER_CONFIRMED → PRIME_CONFIRMED → PARTNER_REPLIED → SOW_SIGNED → INVOICE_SENT → PAYMENT_CONFIRMED`. Each step must reference a concrete HTTPS receipt and ISO timestamp with an explicit offset; ordering must be chronological. Only the accepted `PAYMENT_CONFIRMED` event contributes its recorded amount; earlier invalid or out-of-order events are ignored. Payment also needs a recorded transaction identifier and amount. These are **operator-entered receipts**, not live Stripe or bank verification; independently check the provider before claiming cash. No network changes, bid submission, invoice creation or customer contact is performed by this code.
-
-## Next real conversion move
-
-For each held case, the first owner should resolve missing prime qualifications and choose **one** bounded paid-work slice rather than accumulating prototypes. A qualifying prime can then validate contract authority, price and schedule. Only the relationship owner chooses a recipient, approves the exact approach and supplies a provider receipt. Once the first payable scope is agreed, use that accepted packet as the delivery baseline for the engineering seat. Do not contact Michael Clark or the paused external demo on this pipeline's behalf.
-
-### Example specialist offer structure (not sent or quoted)
-
-* **Discovery and acceptance design**: receive real client samples and incumbent-stack documentation; deliver a signed-off evidence/acceptance matrix.
-* **Contained implementation or audit**: resolve only the supplier's verified blockers, exercise actual provided schema or platform, and submit owner-reviewable artifacts.
-* **Transfer and payment milestone**: client/prime signs off reproducibility and handover, and pays against the named acceptance events.
-
-Use original buyer clauses and provider outputs for each client. Never represent this illustrative structure as awarded work or promised compensation. MIT.
-
-## Owner-approval and workshare-export follow-on (October 10)
-
-The original Linux implementation is hardened so an owner-entered *estimate* cannot accidentally release a prospect approach. The engine separately requires a nonnegative minimum margin below 100%, an explicitly `OWNER_APPROVED_PROPOSAL` fee, and explicit contact authorization. The additional `workshare-sheet.md` carries a customer-specific buyer-source pointer and objective payable acceptance milestones, but stays **internal/UNSENT**, with price withheld until approved. The program never sends or posts a quote. This reduces repeated boilerplate across buyer leads without assuming contracting authority.
-
-## Collection balances and installment receipts
-
-The same command now also writes `collections.json` and `collection-queue.csv`. See [COLLECTIONS.md](COLLECTIONS.md) for the explicit invoice/receipt input, partial payments, refunds, global duplicate quarantine, currency-separated integer totals and a synthetic runnable example. Use `evaluateAll` for batch totals; standalone `evaluate` is explicitly not duplicate-cleared. Actual payment records remain private operator inputs, never included in public source.
-
-
-## Optional outreach snapshot on the same board
-
-Add `--outreach-snapshot=/private/current-mailbox-snapshot.json` to run the existing collision checker in the same command. Map each opportunity to its exact intended contact using `communication.intentId` and `communication.to`; see [OUTREACH-BOARD.md](OUTREACH-BOARD.md). A snapshot HOLD can only reduce approach readiness. Without the option, existing commercial decisions are unchanged and the board shows NOT_EVALUATED. The command now writes seven outputs, including a preflight result or explicit not-evaluated record.
-
-## One-command conversion cockpit: buyer gates + replies + collections
-
-The original `reply-triage.mjs` now joins the **same** `pipeline.mjs` operator board through the optional `--reply-snapshot` argument. This closes a real commercial blind spot: an outbound already SENT, bounced recipient, declined contact or human prospect reply should not be represented as a fresh first-contact candidate on the sales decision board.
+For the next capture, keep the same case bindings and supply the retained state:
 
 ```bash
 node business/lead-to-paid-work-pipeline-20261010/pipeline.mjs \
-  /private/current-opportunities.json /private/current-revenue-cockpit \
-  --reply-snapshot=/private/original-gmail-receipts.json \
-  --outreach-snapshot=/private/original-contact-history.json
+  /private/opportunities.json /private/revenue-board-next \
+  --gmail-captures=/private/new-gmail-captures.json \
+  --previous-mailbox=/private/revenue-board/mailbox-state.json
 ```
 
-The reply snapshot uses the **original** `REPLY-TRIAGE.md` `cases[]` / `messages[]` schema. For each opportunity, explicitly set `communication.caseId` equal to one case's `id`; that case's `owner` and HTTPS `sourceUrl` must exactly match the opportunity owner and original buyer issuer URL. A case ID shared by two opportunities, an unmapped case, or mismatched issuer/owner is a review hold, not a guessed link. Unlike the independent reply queue, the decision board intentionally omits raw message bodies, email addresses, subjects, message IDs and private email receipt URLs.
+The importer reads native connected-Gmail search, full-message, thread and batch results. It preserves account/message identities, full automatic-response headers and exact RFC message references, enriches search rows with later full reads, retains explicit human annotations, and emits actual remaining read requests. It never infers interest from a SENT receipt or an automatic acknowledgement. See [NATIVE-CONVERSION.md](NATIVE-CONVERSION.md) for schemas and operator instructions.
 
-With the snapshot supplied, the **existing** reply classifier validates real provider message IDs/receipts, distinguishes human interest and decline from automatic replies and DSNs, and computes the next operator action. Any verified SENT first contact suppresses the board's `OWNER_APPROACH_CANDIDATE` action, even if delivery later bounced. A human decline remains a hold. The relationship owner can still investigate a new legitimate contact, negotiate an accepted scoped offer or record payment; the program never freezes the deal, sends an email or fabricates revenue. Unbound cases and mapping issues are written into the reply report for routing, not discarded.
+Existing `--reply-snapshot` and `--outreach-snapshot` inputs remain supported. Choose either native Gmail captures or an existing reply snapshot for one run. `--now=ISO` can reproduce an assessment. Omitting mailbox data explicitly means that replies were not evaluated.
 
-The single command now writes nine local artifacts. New `reply-queue.json` contains original provider **metadata and links**, so keep it private with the mailbox export; `reply-queue.md` is the original priority-ranked human action queue. The existing HTML, Markdown, workshare and `decisions.json` carry a reduced per-deal status. Without `--reply-snapshot`, the prior run remains valid and reply status is explicitly `NOT_EVALUATED`, which never means no messages exist. Existing cash reconciliation, shared first-contact CAS, real Gmail send ownership, grant evidence and partner claims are not replaced.
+## Contact authority and commercial readiness
 
-**Operator sequence:** retrieve actual up-to-date Gmail provider receipts with the authorized relationship owner; bind exact case/owner/issuer once; run the command locally; work human interest before speculative new leads; reconcile bounced aliases with original contacts; convert signed scope into accepted deliverables and provider-backed invoices. The original `reply-triage.mjs` can still run standalone. No hosted GitHub Actions, browser subscription, new background trigger or customer contact is needed for this analysis.
+Put original owner authorizations in top-level `communicationAuthority.grants[]`, then set each opportunity's `communication.action`:
 
-### Warm reply, separate from first-contact permission
+| Action | Readiness |
+| --- | --- |
+| `QUALIFY_PARTNER` | Current buyer source, applicable deadline, source-backed named partner, useful workshare purpose and applicable owner contact authority. Missing prime documentation and an unpriced scope become questions for the conversation. |
+| `PROPOSE_WORKSHARE` | Documented mandatory prime requirements, acceptance milestones, fee/cost/margin assessment and owner authority covering proposals. |
+| `FOLLOW_UP` / `REPLY_TO_PARTNER` | Authority can be recorded for these actions; the existing reply queue supplies the relevant original-thread action. First-introduction eligibility remains separate. |
 
-A verified SENT means another **initial** contact is not eligible, but it does not stop the existing relationship owner from replying to a customer. A real provider human message annotated `INTEREST` appears as **ACTIVE CUSTOMER REPLY** on the HTML, Markdown and workshare views, with the next action from the existing reply classifier. Other lanes distinguish human reply review, named-contact rerouting, delivery failure and declined contact. The machine-readable `engagementLane` appears in the reduced per-deal JSON, while `readyForOwnerApproach` remains the independent new-introduction gate. No messages are sent by generating this local report.
+A standing grant uses `issuedBy: "OWNER"`, `kind: "STANDING"`, the original instruction reference and covered actions. It may constrain recipient domains, exact recipients, opportunity IDs, channels or expiration. Existing per-contact `ownerApproved` and `approvalReceipt` fields retain their legacy meaning; they are no longer the only way to record authority.
+
+Explicit owner exclusions take precedence. Records explicitly attributed to an agent are advisory, not owner contact restrictions. Unattributed legacy `doNotContact: true` remains an exclusion until its origin is recorded; an explicit `restrictionSource: "AGENT"` identifies an agent-created hold. Existing recipient declines, previous SENT messages and provider delivery failures remain visible in the original reply/preflight workflow.
+
+For a proposed fee under standing proposal authority, use `workshare.feeStatus: "PROPOSED"`. The board records `OWNER_STANDING`; it does not represent that amount as personally approved by the owner. `OWNER_APPROVED_PROPOSAL` still means the specific price was approved. Numerical margins by themselves provide no authority. A quote is not accepted work or revenue.
+
+## Buyer and partner records
+
+The case key remains buyer name + solicitation ID + revision. Keep cancelled/reposted editions distinct. Buyer status is explicitly `OPEN`, `CLOSED`, `CANCELLED` or `UNKNOWN`; `sourceCheck` records the issuer review. Dated solicitations require a confirmed offset timestamp. A genuinely continuous opportunity can use `buyer.deadline: {kind: "ROLLING", confirmed: true, originalText: "..."}` when supported by the source.
+
+Mandatory requirements have stable IDs. Partner records map those IDs to `DOCUMENTED`, `SELF_REPORTED` or `UNKNOWN` with source URLs. `DOCUMENTED` is an operator-entered source pointer, not automatic verification of a certificate or procurement qualification. A qualification contact needs a first-party `partner.sourceUrl` or documentary evidence link; asking the partner to resolve gaps is part of the work.
+
+`communication.partnerName` optionally selects the intended existing partner, and `communication.to` holds the verified recipient list. Explicit `caseId` joins the original reply queue. The case's owner and issuer URL must match the opportunity. This prevents a reply for one buyer from silently being attached to another.
+
+## Replies and collection records
+
+A real human reply is worked in its original thread. Automatic acknowledgements stay automatic even when the subject looks conversational: the importer retains `Auto-Submitted` and delivery-status MIME metadata. A departed-contact reply can identify a replacement contact; an existing SENT to that replacement is retained and prevents a duplicate introduction.
+
+Only explicit reviewer annotations `INTEREST`, `DECLINE` or `NEUTRAL` classify the meaning of a human message. Exact account + provider ID scopes the annotation. Automatic text is never promoted to human interest. Search snippets cannot replace a fuller message already captured.
+
+The original stage order and collection reconciliation remain unchanged: `SOURCED → BUYER_CONFIRMED → PRIME_CONFIRMED → PARTNER_REPLIED → SOW_SIGNED → INVOICE_SENT → PAYMENT_CONFIRMED`. Every accepted stage event retains its timestamp and receipt. Invoice installments, refunds, duplicate transaction quarantine and currency-separated integer totals remain in [COLLECTIONS.md](COLLECTIONS.md). No amount is earned merely because it was proposed or sent.
+
+## Existing source and operator guides
+
+- [NATIVE-CONVERSION.md](NATIVE-CONVERSION.md): native mailbox ingestion, continuation, current case bindings and reusable owner authority.
+- [REPLY-TRIAGE.md](REPLY-TRIAGE.md): original standalone reply classifier and queue.
+- [OUTREACH-BOARD.md](OUTREACH-BOARD.md) and [OUTREACH-PREFLIGHT.md](OUTREACH-PREFLIGHT.md): existing mailbox collision checks.
+- [COLLECTIONS.md](COLLECTIONS.md): original invoice and payment reconciliation.
+
+The CLI prepares the current action and concrete workshare. Connected sending remains with the authorized operator and existing provider tools. No new per-contact approval is demanded when the original owner directive already covers the action.
+
