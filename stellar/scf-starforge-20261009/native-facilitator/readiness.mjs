@@ -12,7 +12,10 @@ const positive = x => Number.isSafeInteger(x) && x > 0;
 const BODY_LIMIT = 1024 * 1024;
 
 async function responseJson(response, signal) {
-  if (!response.ok) throw new FacilitatorError('RPC_HTTP_UNAVAILABLE',503);
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    throw new FacilitatorError('RPC_HTTP_UNAVAILABLE',503);
+  }
   const size = response.headers.get('content-length');
   if (size !== null && (!/^\d+$/.test(size) || Number(size) > BODY_LIMIT)) {
     await response.body?.cancel();
