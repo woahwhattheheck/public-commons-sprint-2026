@@ -48,7 +48,6 @@
     "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops",
     "stellar/scf-starforge-20261009/buyer-runbook",
     "stellar/scf-starforge-20261009/sf101-merchant-account-readiness",
-    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter",
     "stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant",
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge",
     "stellar-forge/mcp-paid-agent",
