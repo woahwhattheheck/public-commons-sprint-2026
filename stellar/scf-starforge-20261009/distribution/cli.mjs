@@ -89,6 +89,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce-setup                             Prepare shared operator budgets and merchant requests
   upstream-operation                         Issue, inspect and reconcile merchant operation tickets
   dataset-workspace                          Inspect, preview and operate the retained dataset
+  allium-explorer / allium-workspace          Acquire, review and operate retained Allium data products
   merchant-fleet / merchant-fleet-control     Host, prepare, activate and roll back a merchant fleet
   merchant-fleet-workspace                    Review fleet changes in the private operator browser
   fleet-release                              Stage, compare and operate original releases across a fleet
