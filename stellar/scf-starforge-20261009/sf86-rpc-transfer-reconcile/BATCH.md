@@ -118,13 +118,22 @@ a fresh `accounting/` view. That view uses the same selected proof set and the
 current original outbox and terms at the originally chosen paths. A source/path
 change requires a fresh explicit export/report request.
 
+To include completed native purchases retained by the original recovery
+importer, add `--recovered-dir /private/merchant/recovered` to `report` and
+repeat that same path when resuming. The original accounting engine loads
+the recovery store alongside SF98 events and the selected SF86 files. Recovered
+settlement and response counts remain visible with their source identity;
+duplicate transaction handling spans both kinds of merchant records. See the
+[completed-purchase recovery workflow](../merchant-settlement-accounting/RECOVERY.md)
+for original request/outcome/response import and response reuse.
+
 ## Application API
 
 `batch.mjs` exports `prepareBatch({planFile,directory})`,
 `inspectBatch({directory})`, `collectBatch({directory,retryIds,signal,onResult})`
 and `exportBatch({directory,output})`. `inspectBatchExport({directory,output})`
 reopens a retained proof export. `batch-report.mjs` supplies
-`reportBatch({directory,output,outboxDir,termsFile,resume})` through the original
+`reportBatch({directory,output,outboxDir,termsFile,recoveredDir,resume})` through the original
 accounting writer. `collectBatch` returns per-job status and
 network-separated verdicts; `onResult` runs after the immutable attempt has been
 published. `exportBatch` returns `proofDirectory` for the existing

@@ -46,7 +46,7 @@ export async function createSacAssetMap(input, { sdk } = {}) {
     check(object(row) && Object.hasOwn(NETWORKS, row.network), 'INVALID_SAC_ASSET_NETWORK');
     const native = row.classicAsset === 'native';
     if (!native) {
-      check(object(row.classicAsset) && /^[A-Z0-9]{1,12}$/.test(row.classicAsset.code ?? ''), 'INVALID_CLASSIC_ASSET');
+      check(object(row.classicAsset) && /^[A-Za-z0-9]{1,12}$/.test(row.classicAsset.code ?? ''), 'INVALID_CLASSIC_ASSET');
       validateGAddress(row.classicAsset.issuer);
     }
     let derived;
@@ -63,7 +63,7 @@ export async function createSacAssetMap(input, { sdk } = {}) {
   return Object.freeze({ get:(network, asset) => entries.get(keyFor(network, asset)), entries:() => [...entries.values()] });
 }
 
-function endpointFor(network, endpoints, environment) {
+export function resolveSacRpcEndpoint(network, endpoints, environment) {
   const selected = endpoints[network];
   let raw = NETWORKS[network].rpc;
   if (selected !== undefined) {
@@ -109,7 +109,7 @@ async function rpcRead(url, method, params, {fetchImpl, timeoutMs}) {
   } finally { clearTimeout(timer); controller.abort(); }
 }
 
-function decodeSacInstance({result}, asset, sdk) {
+export function decodeSacInstance({result}, asset, sdk) {
   check(Number.isSafeInteger(result.latestLedger) && result.latestLedger > 0 && Array.isArray(result.entries) &&
     result.entries.length <= 1, 'RPC_INVALID_LEDGER_ENTRIES');
   if (!result.entries.length) return {state:'SAC_INSTANCE_MISSING', latestLedger:result.latestLedger};
@@ -158,7 +158,7 @@ export async function createSacRecipientReviewer({assetMap, rpcEndpoints = {}, e
   async function review(input) {
     const terms = termsCopy(input), mapping = assets.get(terms.network,terms.asset);
     check(mapping, 'SAC_ASSET_MAPPING_REQUIRED');
-    const rpcUrl = endpointFor(terms.network,endpoints,environment), endpointId = sha256(rpcUrl);
+    const rpcUrl = resolveSacRpcEndpoint(terms.network,endpoints,environment), endpointId = sha256(rpcUrl);
     const network = await cached(`network|${endpointId}`, () => rpcRead(rpcUrl,'getNetwork',{},readOptions));
     check(network.value.result.passphrase === NETWORKS[terms.network].passphrase, 'RPC_NETWORK_MISMATCH');
     const [horizon, rpc] = await Promise.all([
@@ -200,3 +200,5 @@ export async function createSacRecipientReviewer({assetMap, rpcEndpoints = {}, e
   }
   return Object.freeze({review,validate,assets:assets.entries,clear:() => cache.clear()});
 }
+
+export { NETWORKS as SAC_NETWORKS };

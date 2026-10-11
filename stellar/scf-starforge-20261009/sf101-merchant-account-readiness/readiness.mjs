@@ -94,7 +94,7 @@ export function evaluateSnapshots({account, ledgerEnvelope, accountId, network, 
   nonnegativeSafe(feeOperations, 'feeOperations', 100_000);
   if (asset !== 'native') {
     requireObject(asset, 'asset');
-    if (!/^[A-Za-z0-9]{1,12}$/.test(asset.code) || asset.code !== asset.code.toUpperCase()) fail('INVALID_ASSET', 'Asset code must be uppercase 1..12 ASCII alphanumeric');
+    if (!/^[A-Za-z0-9]{1,12}$/.test(asset.code)) fail('INVALID_ASSET', 'Asset code must be 1..12 case-sensitive ASCII alphanumeric');
     validateGAddress(asset.issuer);
   }
   const requested = positiveAtomicText(inboundAmount, 'inboundAmount');

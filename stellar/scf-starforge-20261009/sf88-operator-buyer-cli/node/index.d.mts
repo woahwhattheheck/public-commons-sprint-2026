@@ -17,6 +17,8 @@ export interface BuyerOptions {
   timeoutMs?: number;
   cleanupGraceMs?: number;
   outputLimit?: number;
+  /** Separate original dataset report budget; 32 MiB default, 1–256 MiB allowed. */
+  datasetReportLimit?: number;
 }
 export interface NativeRequest {
   intentId: string;
@@ -89,6 +91,10 @@ export class Buyer {
     operatorProfile?: OperatorProfile | string; signal?: AbortSignal; ticketFile?: string; ticketHeader?: string;
   }): Promise<Operation>;
   list(): AsyncIterable<Operation>;
+  dataset(id: string): Dataset;
+  createDataset(options: DatasetOptions): Promise<Dataset>;
+  attachDataset(options: { id: string; directory: string }): Promise<Dataset>;
+  listDatasets(): AsyncIterable<Dataset>;
 }
 export class Operation {
   readonly intentId: string;
@@ -101,7 +107,7 @@ export class Operation {
   recover(): Promise<BuyerResult | null>;
   inspect(): Promise<OperationStatus>;
 }
-export class BuyerResult {
+export class BuyerResult extends VerifiedFile {
   readonly record: ResultRecord;
   readonly native: NativeSummary;
   readonly status: unknown;
@@ -109,6 +115,8 @@ export class BuyerResult {
   readonly ok: boolean;
   constructor(record: ResultRecord, responseFile: { destination: string; maxBytes: number; timeoutMs?: number });
   raiseForStatus(): this;
+}
+export abstract class VerifiedFile {
   verify(options?: { chunkSize?: number; signal?: AbortSignal }): Promise<{ bytes: number; sha256: string }>;
   /** Exhaust before committing side effects; final digest verification can throw. */
   chunks(options?: { chunkSize?: number; signal?: AbortSignal }): AsyncIterable<Uint8Array>;
@@ -117,4 +125,86 @@ export class BuyerResult {
   csvRows(options: { headers: true; maxFieldCharacters?: number; signal?: AbortSignal }): AsyncIterable<Record<string, string>>;
   csvRows(options?: { headers?: false; maxFieldCharacters?: number; signal?: AbortSignal }): AsyncIterable<string[]>;
   saveAs(destination: string, options?: { signal?: AbortSignal }): Promise<string>;
+}
+
+export type DatasetScalar = string | number | boolean | null;
+export type DatasetRow = Record<string, DatasetScalar>;
+export interface DatasetLimits {
+  maxPages: number;
+  /** Total allocation ceiling, decimal atomic units; this is not a reported charge. */
+  maxTotalAtomic: string;
+  maxRows?: number;
+  maxPageBytes?: number;
+}
+export type DatasetOptions = DatasetLimits & {
+  /** Stable application name, separate from the original config's native intent. */
+  id: string;
+  expectedSnapshot?: string | null;
+} & ({ config: string | JsonObject; operatorProfile?: OperatorProfile | string; workspaceDirectory?: never }
+  | { workspaceDirectory: string; config?: never; operatorProfile?: never });
+export interface DatasetReport extends JsonObject {
+  schema: 'stellar-forge.sf88.dataset-acquisition.v1';
+  directory: string;
+  status: 'READY' | 'RUNNING' | 'COMPLETE' | 'RECONCILIATION_REQUIRED' | 'PAGE_LIMIT_REACHED' | 'TOTAL_CAP_REACHED';
+  /** These fields are absent from the original RUNNING report. */
+  sessionId?: string;
+  configurationSha256?: string;
+  expectedSnapshot?: string | null;
+  snapshot?: string | null;
+  completedPages?: number;
+  acquiredRows?: number;
+  totalRows?: number | null;
+  capAllocatedAtomic?: string;
+  limits?: DatasetLimits;
+  pages?: JsonObject[];
+  interrupted?: boolean;
+  next?: string;
+}
+export interface DatasetCommand<T = DatasetReport> {
+  /** Original report, independent from the application process outcome. */
+  readonly native: T;
+  readonly process: { readonly exitCode: number | null; readonly exitSignal: string | null; readonly errorCode: string | null };
+}
+export type DatasetOutputName = 'dataset.jsonl' | 'dataset.csv' | 'review.html' | 'manifest.json';
+export interface DatasetOutput { path: string; bytes: number; sha256: string }
+export interface DatasetDeliveryReport extends JsonObject {
+  schema: 'stellar-forge.sf88.dataset-delivery.v1';
+  directory: string;
+  sourceDirectory: string;
+  sourceBindingSha256: string;
+  resumed: boolean;
+  appendedPages: number;
+  nativeStatus: JsonObject & { snapshot: string; rows: number; finalized: true };
+  outputs: Record<DatasetOutputName, DatasetOutput>;
+  paymentStatus: string;
+}
+export class Dataset {
+  readonly id: string;
+  /** Private application entry; the native session path is in its original report. */
+  readonly directory: string;
+  constructor(buyer: Buyer, id: string);
+  initialize(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
+  inspect(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
+  recover(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
+  run(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
+  exportManifest(destination: string, options?: { signal?: AbortSignal }): Promise<DatasetCommand<JsonObject>>;
+  /** Offline SF100 export. The same destination resumes its original verified archive. */
+  deliver(destination?: string, options?: { signal?: AbortSignal }): Promise<DatasetDelivery>;
+}
+export class DatasetFile extends VerifiedFile {
+  readonly metadata: DatasetOutput & { name: DatasetOutputName };
+  readonly directory: string;
+  constructor(metadata: DatasetOutput & { name: DatasetOutputName }, directory: string);
+}
+export class DatasetDelivery {
+  readonly report: DatasetDeliveryReport;
+  readonly manifest: JsonObject & {
+    dataset: { name: string; snapshot: string; rows: number; projectedFields: string[]; [key: string]: unknown };
+  };
+  constructor(report: DatasetDeliveryReport, manifest: JsonObject);
+  file(name: DatasetOutputName): DatasetFile;
+  /** Exhaust before committing side effects; final size/hash/row-count validation can throw. */
+  rows(options?: { signal?: AbortSignal; maxRowCharacters?: number }): AsyncIterable<DatasetRow>;
+  /** Verified in full before returning. JSON scalar types are preserved without coercion. */
+  readRows(options?: { limit?: number; maxRows?: number; signal?: AbortSignal }): Promise<DatasetRow[]>;
 }

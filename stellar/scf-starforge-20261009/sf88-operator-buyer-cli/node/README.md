@@ -124,6 +124,207 @@ intentId, url, method, body, headers, operatorProfile })` calls original
 `--prepare` and snapshots the resulting exact operation. These APIs do not replace
 the existing dataset/object multi-page acquisition sessions.
 
+Ordinary headers such as `{'Content-Type':'application/json',
+'accept-language':'en-US','x-region':'eu'}` are accepted by both `prepare` and
+`fromRequest`. Preparation writes a private headers file and passes it to the
+original runtime's `--headers-file`; generated requests pass through the same
+original native review before an operation is returned. There is no separate
+Node allowlist. The original runtime canonicalizes names and rejects duplicate,
+reserved or whitespace-changing values. This requires the matching current SF88
+runtime; the standalone Node package imports only its own files.
+
+For a merchant-issued POST, retain the exact body and ordinary headers and pass
+`ticketFile` with its optional `ticketHeader` to `prepare`, or import the
+merchant's prepared configuration with `fromConfig`. Review shows the ordinary
+values and private ticket fingerprint; the original ticket bearer stays in its
+private file. The immutable configuration and existing inbox preserve these
+values across restart. Authentication and payment headers stay with the native
+operator and signer; SF98 order headers retain their original URL-bound check.
+
+## Dataset acquisition inside a Node application
+
+The same `Buyer` now exposes the original SF88 dataset session and original SF100
+local delivery. A named acquisition can be created from a private original buyer
+configuration, or attached to the original operator workspace produced by the
+merchant's dataset publisher. It keeps that workspace's keys, shared ledger,
+selected snapshot, native query, per-page approval and total allocation limits.
+
+```js
+import { Buyer } from '@stellar-forge/native-buyer';
+// In the complete merchant distribution, import the same exports from:
+// '@tokenjunkielabs/starforge-merchant/buyer/node'.
+
+const buyer = new Buyer({
+  runtimeDirectory: '/srv/forge/sf88-operator-buyer-cli',
+  stateDirectory: '/srv/private/customer-purchases',
+});
+const dataset = await buyer.createDataset({
+  id: 'inventory-2026-10-11',
+  workspaceDirectory: '/srv/private/inventory-buyer',
+  maxPages: 20,
+  maxTotalAtomic: '20000',
+  maxRows: 100000,
+  maxPageBytes: 1048576,
+});
+console.log((await dataset.inspect()).native);
+
+// This is the only dataset method that can acquire new pages.
+const acquisition = await dataset.run();
+console.log(acquisition.native.status, acquisition.process);
+if (acquisition.native.status !== 'COMPLETE') {
+  // Display the original limits, stoppedPage and next guidance to the operator.
+  // A RECONCILIATION_REQUIRED page has already been attempted; do not create a
+  // replacement acquisition to repeat that purchase.
+  throw new Error('The original acquisition has not completed');
+}
+
+// This is an offline original SF100 export; it makes no buyer or signer calls.
+const delivery = await dataset.deliver();
+const rows = await delivery.readRows(); // fully verified before returning
+console.log(delivery.manifest.dataset, rows);
+await delivery.file('dataset.csv').saveAs('/srv/private/inventory.csv');
+```
+
+`id` is the stable application name; the original config's `operation.intentId`
+remains the native session identity. Reusing an application name gives
+`DATASET_ALREADY_EXISTS_USE_OPEN`. Use `buyer.dataset(id)` to reopen it. New
+acquisitions have an original session inside the named application directory;
+the private mapping never relocates or changes the original session files.
+
+For a standalone buyer configuration, replace `workspaceDirectory` with
+`config: '/srv/private/dataset-buyer.json'`, or pass that configuration as a JSON
+object. The original dataset engine requires a GET operation without a body or
+single-response capture path. Supply the actual seller query and original
+accepted terms. An optional original operator profile is applied only to this
+configuration source. A workspace always supplies its own original configuration
+and keys; application profiles do not override it.
+
+The `expectedSnapshot` option binds an explicitly selected native snapshot. When
+it is omitted, an existing `snapshot` URL parameter is preserved. New acquisitions
+use the original shared SF88/SF100 limits: 1–4,096 pages, 1–1,000,000 rows,
+1,024–2,097,152 bytes per page, and a positive decimal atomic-unit allocation
+ceiling. The original runtime validates these values before creating a native
+session; this SDK does not maintain a separate policy. Existing native sessions
+retain their original read/recovery compatibility. Total allocations and actual
+charges are separate values; the original ledger and evidence retain financial
+authority. The original SF100 exporter also limits combined CSV/JSONL output to
+256 MiB.
+
+### Reopen, resume and attach an existing acquisition
+
+```js
+const existing = buyer.dataset('inventory-2026-10-11');
+const state = await existing.recover();
+console.log(state.native); // original recovery: no HTTP, signing or purchase
+if (state.native.status === 'READY') {
+  // Explicit continuation: acquire only pages the original engine has not tried.
+  await existing.run();
+}
+const delivery = await existing.deliver(); // same default destination resumes
+console.log(delivery.report.resumed, delivery.report.appendedPages);
+
+// Adopt an acquisition made by the original CLI or publisher-to-buyer workflow.
+const adopted = await buyer.attachDataset({
+  id: 'existing-inventory',
+  directory: '/srv/private/original-acquisition',
+});
+console.log((await adopted.inspect()).native);
+for await (const item of buyer.listDatasets()) console.log(item.id);
+```
+
+`attachDataset` verifies and binds the original session at its existing absolute
+path. It does not clone the session, issue pages or replace its ledger. A running
+session must finish before attachment because the original status contract then
+returns only `RUNNING`, without its immutable identity. Recovery uses the original
+same-host lock policy; this adapter does not clear unknown/live locks or invent a
+new page controller. Do not move a native session after creation.
+
+`initialize()` is an offline continuation after a lost creation/attachment
+response. It checks the original source binding and reuses a complete original
+session. The application entry is staged with complete private metadata before
+its stable name is published; leftover `.dataset-stage-*` directories are private
+preparation remnants and are ignored by the acquisition list. If the original
+creation itself was interrupted before publishing a
+valid `session.json`, the native error and private files remain available; no
+purchase could have started through this initialization command. Run and recover
+never silently change the saved configuration, expected snapshot or limits.
+
+Pass `{signal}` to `run`, `inspect`, `recover`, `initialize`, `exportManifest`, or
+as the second argument of `deliver`. Dataset commands use the original Node
+SDK's native child, environment, timeout, output limit and cleanup grace.
+The original `emitPageSummaries:false` option suppresses repeated page stdout;
+the default 1 MiB stdout/stderr budget is separate from `datasetReportLimit`,
+which defaults to 32 MiB and accepts 1–256 MiB. A report exceeding that limit
+returns `DATASET_REPORT_LIMIT_EXCEEDED` after retaining the original session;
+reopen with a larger report limit to inspect the saved outcome. The native page
+and total acquisition limits still apply. A stop
+reaches the original acquisition's AbortSignal. Its current native page may need
+original reconciliation after interruption; a new `run()` never repeats a marked
+page. An application crash does not destroy the separate original session.
+
+Each completed command returns `{native, process}`. `native` is the original
+report; `process` contains `exitCode`, `exitSignal` and `errorCode`. A clean stop
+can return a useful partial original report alongside an abort error. If no
+complete result was published, the error identifies `commandDirectory`; its
+private native logs are retained. Successful commands retain the latest complete
+command receipt and remove their temporary logs. Native stdout can include
+per-page summaries, so it is not parsed as one artificial acquisition object.
+The separate atomic report contains the original API return value.
+
+### Consume exact typed data and exports
+
+`DatasetDelivery.report` is the unchanged native delivery result;
+`DatasetDelivery.manifest` is the verified original SF100 manifest. The existing
+source-page hashes, query signature, snapshot, row count and payment-status
+classification are retained. No purchase or settlement summary is manufactured
+for a local export.
+
+`readRows({limit, maxRows, signal})` verifies the complete JSONL output before
+returning an array. Its defaults are 8 MiB and 100,000 rows. `rows({signal})`
+streams larger datasets with a full preflight hash and a second hash while
+reading, preserving the original JSON string/number/boolean/null values. It also
+checks the original projected fields and row count. Strings representing exact
+large numbers remain strings; the SDK does not coerce dates or numbers. As with
+`BuyerResult.chunks`, exhaust a streaming iterator before committing external
+side effects, because a final concurrent-file-change check can still fail.
+
+Use `delivery.file('dataset.csv').csvRows({headers:true})` for the SDK's original
+CSV reader. `file()` also accepts `dataset.jsonl`, `review.html` and
+`manifest.json`; each file exposes `verify`, `chunks`, `bytes`, `json`, `csvRows`
+and exclusive `saveAs`. Select the method that matches that file's actual format.
+The shared `VerifiedFile` implementation backs both ordinary `BuyerResult` and
+`DatasetFile`; byte limits, no-follow reads, digest verification and atomic export
+have one implementation.
+
+`deliver('/absolute/data-room')` resumes the original data room at that path.
+Unrelated existing destinations are refused by the native exporter.
+`exportManifest('/absolute/new-manifest.json')` publishes the original acquisition
+manifest without a data room. Neither operation acquires pages.
+
+### Runnable installed dataset customer
+
+The existing `buyer-node` command includes the whole continuation. Use the same
+`--runtime`, `--state` and `--dataset` arguments across invocations:
+
+```sh
+starforge buyer-node dataset-init --runtime /srv/forge/sf88-operator-buyer-cli \
+  --state /srv/private/customer-purchases --dataset inventory-2026-10-11 \
+  --workspace /srv/private/inventory-buyer --max-pages 20 --max-total-atomic 20000
+starforge buyer-node dataset-run --runtime /srv/forge/sf88-operator-buyer-cli \
+  --state /srv/private/customer-purchases --dataset inventory-2026-10-11
+starforge buyer-node dataset-recover --runtime /srv/forge/sf88-operator-buyer-cli \
+  --state /srv/private/customer-purchases --dataset inventory-2026-10-11
+starforge buyer-node dataset-rows --runtime /srv/forge/sf88-operator-buyer-cli \
+  --state /srv/private/customer-purchases --dataset inventory-2026-10-11 \
+  --output /srv/private/inventory.jsonl
+```
+
+`dataset-status`, `dataset-list`, `dataset-attach --session ORIGINAL_SESSION` and
+`dataset-deliver --output DATA_ROOM` complete the same operator workflow. From a
+source checkout, substitute `node examples/customer.mjs` for `starforge buyer-node`.
+The original single-operation `review`, `execute`, `recover` and `list` commands
+remain available. There is no additional package, dependency or application server.
+
 ## Recovery, concurrency and cancellation
 
 ```js

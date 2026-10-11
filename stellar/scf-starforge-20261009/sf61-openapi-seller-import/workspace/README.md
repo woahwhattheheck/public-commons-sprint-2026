@@ -15,10 +15,15 @@ Use Node 22+ and the full source checkout. Create a private project directory
 outside the checkout, then launch:
 
 ~~~sh
+npm ci --prefix stellar-forge/payment-auto-catalog --ignore-scripts
 mkdir -m 700 /tmp/my-merchant-projects
 node stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs \
   --out-parent /tmp/my-merchant-projects --port 0
 ~~~
+
+The install supplies the pinned engine for API string patterns. Existing
+descriptions without patterns can run without it; pattern-bearing schemas
+require the engine and retain their original assertions.
 
 Open the complete loopback URL printed by the command. Its fragment contains
 the workspace's temporary access token. The interface uses exact local origin
@@ -37,10 +42,15 @@ reuses the SF82 description with explicitly nonpayable demonstration terms.
    network, asset identifier, payment recipient and timeout.
 3. Select operations, choose their declared backend servers, and enter positive
    prices in atomic units. The original payment compiler enforces its amount limit.
-4. Map backend authentication headers to **environment-variable names**.
-   Header API keys and HTTP bearer/basic are supported. Set the complete
-   credential header value in the environment before launching the workspace.
-   The browser never requests or saves credential values.
+4. Select a declared backend security alternative and map header API keys or
+   HTTP bearer/basic to **environment-variable names**. Set the complete header
+   value in the launch environment. For a declared OAuth `clientCredentials`
+   flow, open **OAuth client credentials**, review its resolved token endpoint
+   and required scopes, then enter client ID/secret environment references and
+   the provider's token authentication method. The original provider owns
+   renewal and cache credential identity. Follow the complete
+   [OAuth setup and saved-package guide](AUTHENTICATION.md). The browser accepts
+   credential references only.
 5. Enter a short public description and, where needed, a **public request example**
    containing `pathParams`, `query`, and a JSON `body`. These are reusable values
    advertised to buyers, so use demonstration values. The original schemas check
@@ -190,6 +200,11 @@ by the **active seller's original route selection and SF89 input schema** before
 the bound original handler issues it. Ordinary headers must match the eventual
 buyer request, including spelling of their values; surrounding whitespace is
 rejected because browser and HTTP header processing would trim it.
+The form lists the configured forwarded headers. Include the buyer's actual
+`accept-language`, `x-region` or other listed values in the request JSON before
+issuing its ticket. The merchant and original SF88 buyer share the same ordinary
+header validation; private ticket, authentication and payment headers retain
+their original separate assembly.
 
 **Create private buyer ticket file** stores the original five-field
 `stellar-forge.upstream-operation-ticket.v1` envelope, the exact JSON body and
@@ -208,6 +223,12 @@ operation does not silently invent another buyer intent. A browser download
 contains only the original ticket envelope. On Linux or macOS, run `chmod 600`
 on that download before importing it; when transferring hosts, move the matching
 body/headers/offer privately and prepare with the destination's actual paths.
+Pass the supplied ordinary JSON file as `--headers-file`, the exact body as
+`--body-file`, and the separate ticket as `--ticket-file`. The original buyer
+stores those header values in its prepared config, so later file changes do not
+alter the reviewed request or an existing inbox job. The same private review
+can also be imported by the original Node `Buyer.fromConfig` or Python
+`Buyer.from_config` customer application.
 
 Ticket bytes and key values never enter workspace status or DOM summaries.
 Issuance/download calls require the workspace token, exact origin and current

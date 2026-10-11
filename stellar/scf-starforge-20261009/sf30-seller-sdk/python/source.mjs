@@ -97,7 +97,7 @@ export async function createPythonSource(compiled, { env = process.env, expected
     if (slot.child) return Promise.reject(error('PYTHON_WORKER_STOPPING'));
     let child;
     try {
-      child = spawn(executable, ['-I', '-u', fileURLToPath(new URL('./worker.py', import.meta.url)), application], {
+      child = spawn(executable, ['-I', '-B', '-u', fileURLToPath(new URL('./worker.py', import.meta.url)), application], {
         env: selectedEnvironment, stdio: ['pipe', 'ignore', 'ignore', 'pipe'], windowsHide: true,
       });
     } catch { slot.failed = true; return Promise.reject(error('PYTHON_WORKER_FAILED')); }

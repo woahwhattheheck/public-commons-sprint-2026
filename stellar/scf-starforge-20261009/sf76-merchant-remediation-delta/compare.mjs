@@ -6,6 +6,7 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {combine as recomputeSF70} from '../sf70-merchant-intake/run.mjs';
 import {eligibleIntake as recomputeSF72Eligibility, assessPreflight} from '../sf72-post-only-preflight/preflight.mjs';
+import {supportsSellerMethod} from '../sf30-seller-sdk/http-methods.mjs';
 
 const SF70 = 'stellar-forge.merchant-intake.v1';
 const SF52 = 'stellar-forge.seller-visibility.v1';
@@ -31,7 +32,7 @@ function scopeOf(report) {
     if (typeof v!=='string'||v.length===0||v.length>4096) fail('Invalid scope '+k);
     result[k]=v;
   }
-  if (!['GET','POST','PUT','PATCH','DELETE'].includes(result.intendedRetryMethod))
+  if (!supportsSellerMethod(result.intendedRetryMethod))
     fail('Invalid original HTTP method');
   if (Object.hasOwn(report.scope,'browserCredentialed')) {
     if (typeof report.scope.browserCredentialed!=='boolean') fail('Invalid browser credential mode');

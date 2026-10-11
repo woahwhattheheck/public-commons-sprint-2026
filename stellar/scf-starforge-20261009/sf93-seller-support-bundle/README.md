@@ -1,43 +1,41 @@
-# SF93 · Seller runtime support handoff (existing SF30)
+# SF93 · Seller support and incident operations
 
-An actual **private, create-only support packet** from the seller and its existing loopback operations collector. This is not another seller implementation, a payment adapter, a traffic dashboard, or the separately existing SF70/74/77 merchant sales work-order pipeline. It converts the live SF30 operational state into a portable support handoff that the SF49 merchant-pilot owner can diagnose and discuss without reconstructing screenshots or inventing payment milestones.
+SF93 collects the original SF30 seller and operations data into a private four-file support packet. It also provides a continuous merchant incident workflow: local source registrations, original runtime conditions, durable acknowledgment/recovery, configured signed notification delivery, restart/retention and complete existing SF74 support-case export.
 
-## One operator journey
+[Incident operations](INCIDENT_OPERATIONS.md) covers the complete continuous workflow, configuration, webhook protocol and case handoff. `incident-cli.mjs --help` lists its operator commands. The original one-shot collector below remains available.
 
-Node 22+; use the *original* seller service and operations launcher, as merged. No dependencies or external jobs.
+## Capture a live support packet
+
+Use Node 22+ and the original seller/operations launcher:
 
 ```bash
 S=stellar/scf-starforge-20261009/sf30-seller-sdk
 node "$S/operations/launch.mjs" -- \
   --config "$S/examples/service.json" --port 8423
-# Original seller URL: http://127.0.0.1:8423
-# Existing separate operations URL: http://127.0.0.1:8424
 ```
 
-After using the original seller, capture the live local counters from **another terminal**:
+From another terminal, read the printed local origins and create a new output directory:
 
 ```bash
 node stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs \
   --seller http://127.0.0.1:8423 \
   --ops http://127.0.0.1:8424 \
-  --out /private/support-cases/merchant-20261011-01
+  --out /private/support-cases/merchant-01
 ```
 
-The bundle is a new directory and is never overwritten (0700 directory, 0600 files). Parent directory must already exist. Use a **new output directory** for subsequent captures. No background service, scheduler or network connection beyond these two local loopback listeners.
+The parent directory must exist. Output is create-only: 0700 directory, 0600 files. A subsequent capture uses another new output directory.
 
-## Delivered packet
+| File | Content |
+|---|---|
+| `bundle.json` | Original source-bound session, route/counter summaries, native minute buckets and bounded recent metadata |
+| `operator-brief.md` | Readable runtime outcomes and operational follow-up |
+| `metrics.prom` | Verbatim original SF30 metrics, including maintained SF98 outbox gauges when attached |
+| `manifest.json` | Output hashes/size and exact original four-response digest/byte/time records |
 
-* `bundle.json`: machine-readable traffic counts, session, last-hour buckets, bounded recent *metadata-only* outcomes, original public route identifiers and concise operational alerts. Amounts/payees and full offers are intentionally not copied.
-* `operator-brief.md`: readable request/402/5xx/disconnect summary, high-signal route priority and interpretation. Clear 2xx ≠ payment, 402 ≠ failure, distinct sessions ≠ buyer count.
-* `metrics.prom`: verbatim original SF30 Prometheus metrics fetched from the already existing listener, including the original arrival-to-finish-or-disconnect latency histogram. The collection time can differ from the JSON snapshot; never force counter equality across sequential reads.
-* `manifest.json`: original endpoint response hashes/byte counts/read timestamps plus output SHA-256 sizes, bound to original observer session UUID. The original full offer response is hashed but **not** persisted.
+The collector validates original schema, seller mode, route membership, counter conservation and known original metric names. Per-response bounds are two million bytes with five-second absolute deadlines. Snapshot and metrics are separate sequential reads and can legitimately contain different current counts.
 
-## Scope, privacy and runtime truth
+`readSupportBundle({seller, ops, signal})` returns the same original `{report, brief, files}` without writing to disk. `captureBundle({seller, ops, out, signal})` writes that packet through the existing create-only API. The watcher reuses this collector; its optional delivery read stays separate from the original packet's four-source digest contract.
 
-The program allows only canonical `http://127.0.0.1:PORT` origins without userinfo, paths or credentials and only issues four hardcoded GET requests: `/_seller/health`, `/_seller/offers`, `/api/snapshot`, `/metrics`. No merchant resource GET/POST, payment header, wallet, facilitator, signer, redirect, retry or automated acceptance. It accepts only expected SF30 schema, mode, route identity/number, bounded histories, aggregate conservation and metrics names, with 2 MiB per-endpoint limits and five-second timeouts. If multiple unrelated local processes expose plausible data or the seller restarts between reads, it can fail the route/mode cross-check; choose original launch pair, not random URLs.
+The bundle retains configured route identifiers/templates and metadata counters. It excludes full offers, request query/body/header values, customer addresses and wallet credentials. Merchant route labels and operational notes still belong in private custody. A 402 is an unpaid challenge; an HTTP success or webhook acceptance is not an independent on-chain payment receipt.
 
-The original observer exposes only configured route labels/templates, HTTP status, duration, sequence and counts. SF93 whitelists those fields, excluding arbitrary unexpected JSON fields. No caller URL, query, body, headers, cookies, token, customer IP, wallet key or raw offer content is included. The configured route labels themselves may reveal merchant operations; **the bundle is private and needs review before sharing**. On a multi-user host, loopback does not replace OS isolation.
-
-`observerErrors` and a detached observer are surfaced as warnings rather than silently representing complete history. An empty 402 count doesn't prove a payment succeeded; a 2xx HTTP write doesn't prove delivery, agreement, invoice, network settlement, merchant acceptance or cash. Use original native settlement evidence separately. Runtime logs are not synthesized. No GitHub Actions usage or hosted jobs.
-
-The core source interface is unchanged: `sf30-seller-sdk/serve.mjs`, `operations/server.mjs`, `operations/traffic.mjs`, `operations/launch.mjs` and `sf77-merchant-workorder` are imported conceptually by URL, not copied or modified here. Existing SF49 owners can attach an actual merchant support packet to the **private** relationship record, then use the separately authorized merchant-intake/SF77 work order for price and before/after repair proof. No outbound contact is performed by SF93.
+Open the packet in the existing SF74 Runtime stage, or use the incident export command to carry its exact baseline/follow-up bytes, existing workspace, incident identity and notes into a complete importable support case. Native delivery and accounting tools continue to handle their original payment evidence.

@@ -6,6 +6,11 @@ source, typed route bindings, local inspection and merchant launch. Payment
 challenges, native facilitator integration, draining, developer documentation and
 the operations console continue to come from the existing SF30 modules.
 
+To begin directly from your files in a local browser, use the [DuckDB merchant
+workbench](workbench/README.md). It inspects actual relation schemas, builds
+selected-column queries with typed filters, previews real results, and prepares,
+starts and reopens the original merchant packages.
+
 For merchant route planning, copied data packages, native preflight, original
 OpenAPI/client exports and repeatable guarded launch, use [Prepare a DuckDB
 merchant](PREPARE.md). The [plan schema](merchant-plan.schema.json) can be consumed
