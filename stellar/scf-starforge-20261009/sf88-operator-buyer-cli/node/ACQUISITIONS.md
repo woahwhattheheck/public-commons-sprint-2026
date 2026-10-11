@@ -227,12 +227,144 @@ unlock an unrelated owner, or relocate the acquisition. If publication succeeds
 but a later reopen fails, the result retains that publication and diagnostic.
 Recovery history is available in `state().native.recovery.history`.
 
+## Receive and deliver a remote paid-file order
+
+An SF101 file order is a `stellar-forge.sf101.purchase-handoff.v1` document.
+Use the paid-file methods for it; the original operation-ticket methods above
+retain their existing packet format. The
+[original receiving guide](../../buyer-runbook/PAID_FILES.md) defines the merchant
+order, local preparation, entitlement and resumable transfer.
+
+Declare the local claim environment names on the first workspace call, for
+example `paidFileClaimEnvs: ['SF101_CLAIM_TOKEN', 'REPORT_CLAIM_TOKEN']` in the
+constructor. The original workspace retains this list; omit it on reopening to
+reuse the saved selection. The default is `SF101_CLAIM_TOKEN`. Put the actual
+claim token in the selected variable of the native runtime's environment. Only
+its name enters the review and command descriptor. A received order does not
+choose the host's operator preset, signer, budget limits or available names.
+
+```js
+const order = (await acquisitions.receivePaidFile(
+  '/srv/customer/incoming/file-order.json'
+)).native;
+
+// Present order.handoff: exact merchant, order, payment, bytes and digest.
+// These one-purchase limits must also fit the receiver's own preset.
+const orderReview = (await acquisitions.reviewPaidFile(order.id, {
+  expectedRevision: order.review?.revision ?? 0,
+  totalAtomic: order.handoff.payment.amount,
+  dailyAtomic: order.handoff.payment.amount,
+  filename: 'purchased-report.bin',
+  claimEnv: 'SF101_CLAIM_TOKEN',
+})).native;
+
+const fileBuyer = (await acquisitions.preparePaidFile(order.id, {
+  reviewSha256: orderReview.review.reviewSha256,
+})).native;
+
+const fileDraft = (await acquisitions.save({
+  expectedRevision: 0,
+  manifest: {
+    schema: 'stellar-forge.buyer-runbook.v1',
+    id: 'customer-file-order',
+    title: 'Reviewed customer file',
+    operations: [{
+      id: 'file-order',
+      label: 'Purchase the reviewed file',
+      config: fileBuyer.configName,
+      saveAs: 'checkout-response.json',
+    }],
+  },
+})).native;
+
+// Present fileDraft.plan before selecting this immutable review.
+const fileRun = (await acquisitions.initialize(fileDraft.id, {
+  expectedRevision: fileDraft.revision,
+  reviewSha256: fileDraft.reviewSha256,
+})).native;
+```
+
+Receiving the same merchant origin/order reference reopens its original buyer
+identity; a changed promise for that identity is a conflict. Repeating
+`preparePaidFile` with the exact saved review resumes the original initializer
+and keeps its keys, policy and SQLite ledger. The review is fixed once setup
+starts. The ready configuration joins the same original configuration selector.
+
+Execute `fileRun.id` through the existing `execute` method with
+`fileRun.planSha256` and the native operator terminal. The checkout response,
+purchase attempt and accounting remain the acquisition's ordinary records.
+After the merchant grants the original order's entitlement, retrieve its product:
+
+```js
+const selected = (await acquisitions.inspect(fileRun.id)).native;
+const operation = selected.state.operations.find(row => row.id === 'file-order');
+if (!operation?.paidFile || operation.paidFile.error)
+  throw new Error('Select the original prepared paid-file operation');
+const transfer = {
+  only: operation.id,
+  configSha256: operation.config.sha256,
+  handoffSha256: operation.paidFile.handoffSha256,
+};
+const stopped = new AbortController();
+try {
+  const delivered = await acquisitions.retrievePaidFile(fileRun.id, {
+    ...transfer, signal: stopped.signal,
+  });
+  console.log(delivered.native.execution.result);
+} catch (error) {
+  if (!(error instanceof AcquisitionError)) throw error;
+  // Inspect the original transfer in error.result.native; it retains partial
+  // bytes and the native cancellation/failure state when available.
+  console.log(error.result);
+}
+```
+
+Call `stopped.abort()` from the customer's cancel action to pause. Reopen with
+`inspect`, select the same original hashes and call `retrievePaidFile` again
+to resume. A completed local file is checked and reused without HTTP. A transfer
+failure or pause does not replay a purchase. The original merchant enforces
+entitlement on a network retrieval, and native range/validator/digest checks
+govern publication. Use `resetPaidFile(fileRun.id, transfer)` only for the
+customer's explicit decision to discard its retained partial.
+
+```js
+await acquisitions.downloadPaidFile(
+  fileRun.id, 'file-order', '/srv/customer/exports/purchased-report.bin'
+);
+await acquisitions.exportPaidFile(order.id, {
+  destination: '/srv/customer/exports/original-file-order.json',
+});
+```
+
+`downloadPaidFile` copies the verified product from its original open descriptor
+into a new private file; it checks the complete size/digest again before
+create-only publication. `download` continues to export the checkout response.
+`exportPaidFile` retains the exact original merchant handoff. Existing targets
+are not replaced. Runbook inspection shows the promised file, delivery and
+partial-transfer state beside the original purchase.
+
+The existing whole-acquisition `backupReview` / `backup` / `verify` /
+`restore` commands include this received order, prepared operator and transfer
+artifacts under the original state root. They retain the same source paths,
+claim environment names, native intent, accounting and file destination.
+Restore does not execute, retrieve or reset anything automatically; supply the
+receiving host's claim environment when an unfinished delivery should continue.
+
+The executable command example supports `paid-file`, `receive-paid-file`,
+`review-paid-file`, `prepare-paid-file`, `retrieve-paid-file`,
+`reset-paid-file`, `download-paid-file` and `export-paid-file`.
+Its transfer parameters are `id`, `only`, `configSha256` and
+`handoffSha256`; product downloads use `id`, `operationId` and
+`destination`. The same command JSON works with the Python example.
+
 ## Method reference
 
 | Work | Methods |
 | --- | --- |
 | Open and select | `state`, `attachRun` |
 | Original request | `request`, `receiveRequest`, `reviewRequest`, `prepareRequest`, `exportRequest` |
+| Remote file order | `paidFile`, `receivePaidFile`, `reviewPaidFile`, `preparePaidFile`, `exportPaidFile` |
+| Entitled product | `retrievePaidFile`, `resetPaidFile`, `downloadPaidFile` |
 | Immutable acquisition | `draft`, `save`, `initialize`, `inspect` |
 | Original execution | `execute`, `recover`, `unlock` |
 | Original accounting | `finalize`, `bindAccounting` |
