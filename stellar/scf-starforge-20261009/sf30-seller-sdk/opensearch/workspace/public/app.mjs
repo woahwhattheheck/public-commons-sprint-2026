@@ -28,7 +28,7 @@ async function api(path, payload, retried = false) {
     state.token = session.token;
     return api(path, payload, true);
   }
-  if (!response.ok) { const error = new Error(data.message ?? data.error); error.code = data.error; error.status = response.status; throw error; }
+  if (!response.ok) { const error = new Error(data.message ?? data.error); error.code = data.error; error.status = response.status; error.requestRecorded = data.requestRecorded; throw error; }
   return data;
 }
 function view(name) {
@@ -151,12 +151,20 @@ async function transmitPending() {
   try {
     const result = await api('/api/' + (state.pending.kind === 'save-draft' ? 'drafts' : state.pending.kind), state.pending.payload);
     await acceptOperation(result); await refresh();
-  } catch (error) { notice(errorMessage(error) + ' The original request is retained for recovery.', true); view('operations'); }
+  } catch (error) {
+    if (error.requestRecorded === false) {
+      retainPending(null); view('draft');
+      notice(errorMessage(error) + ' The editor contents are retained; correct the draft and save again.', true);
+    } else { notice(errorMessage(error) + ' The original request is retained for recovery.', true); view('operations'); }
+  }
   finally { state.busy = false; buttons(); }
 }
 async function perform(kind, values) {
   if (state.pending) { view('operations'); return notice('Read or retry the existing saved request before creating another.', true); }
-  retainPending({ kind, payload: { ...values, requestId: crypto.randomUUID() } });
+  const payload = { ...values, requestId: crypto.randomUUID() };
+  if (new TextEncoder().encode(JSON.stringify(payload)).length > 1048576)
+    throw new Error('The saved request exceeds 1 MiB. Reduce the editor contents before sending.');
+  retainPending({ kind, payload });
   await transmitPending();
 }
 async function recover() {
@@ -256,8 +264,14 @@ async function compare() {
   const query = '?before=' + encodeURIComponent(before) + '&after=' + encodeURIComponent(after);
   const result = await api('/api/compare' + query);
   $('comparison').hidden = false;
-  $('comparison-summary').textContent = result.counts.added + ' added · ' + result.counts.removed + ' removed · ' +
-    result.counts.changed + ' changed · ' + result.counts.unchanged + ' unchanged. Identity uses the original [_index, _id] pair.';
+  $('comparison-summary').textContent = result.counts.added + ' entered this result set · ' +
+    result.counts.removed + ' left this result set · ' + result.counts.changed + ' changed content · ' +
+    result.counts.unchanged + ' unchanged content · ' + result.counts.rankingChanged + ' changed ranking. ' +
+    (result.scope.sameQueryInputAndProjection ? 'Same query, input and fields. ' : 'The query, input or fields differ. ') +
+    (result.scope.sameNativeCluster === false ? 'The native clusters differ. ' :
+      result.scope.sameNativeCluster === null ? 'Native cluster identity is unavailable for this comparison. ' : '') +
+    (result.scope.eitherTruncated ? 'One or both captures reached their limit. ' : '') +
+    'Identity uses [_index, _id]; PIT snapshot tie breakers are excluded from changes.';
   $('comparison-json').textContent = pretty(result);
   $('comparison-download').href = '/api/compare' + query + '&download=1'; $('comparison-download').hidden = false;
   notice('Compared the two retained result editions.');

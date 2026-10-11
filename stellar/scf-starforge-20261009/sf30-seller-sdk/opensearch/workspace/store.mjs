@@ -149,7 +149,9 @@ class WorkspaceStore {
       if (reserved.existing) return reserved.operation;
       const title = typeof request.title === 'string' ? request.title.trim() : '';
       if (!title || title.length > 120) throw new WorkspaceError('WORKSPACE_TITLE_REQUIRED', 'Use a title of 1–120 characters.');
-      identifier(request.queryName, 'query name');
+      if (typeof request.queryName !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(request.queryName) ||
+          ['__proto__', 'constructor', 'prototype'].includes(request.queryName))
+        throw new WorkspaceError('WORKSPACE_QUERY_NAME_INVALID', 'Use an original source query name: a letter or underscore, followed by up to 63 letters, digits or underscores.');
       const prior = request.draftId ? this.draft(request.draftId, request.expectedRevision) : null;
       if (prior && !Number.isInteger(request.expectedRevision))
         throw new WorkspaceError('WORKSPACE_REVISION_REQUIRED');
@@ -197,7 +199,7 @@ class WorkspaceStore {
         capturedAt: result.capturedAt ?? at, createdAt: at, sourceProfileSha256: this.profileHash,
         resultSha256: digest(resultJson), resultBytes: Buffer.byteLength(resultJson), hitCount: result.hits.length,
         total: result.total ?? null, truncated: Boolean(result.truncated), pages: result.pages,
-        numberEncoding: result.numberEncoding ?? null, ...clone(context) };
+        numberEncoding: result.numberEncoding ?? null, source: clone(result.source ?? null), ...clone(context) };
       this.db.prepare('INSERT INTO editions VALUES(?,?,?,?,?,?,?,?)').run(editionId, id, edition.draftId,
         edition.draftRevision, at, edition.resultSha256, resultJson, JSON.stringify(edition));
       return this.writeOperation({ ...operation, state: 'COMPLETE', updatedAt: at, result: { editionId, edition } });
@@ -256,23 +258,58 @@ function hitMap(edition) {
   }
   return rows;
 }
+function integerPaths(hit, accept) {
+  return (Array.isArray(hit.exactIntegerPaths) ? hit.exactIntegerPaths : []).filter(accept).sort();
+}
+function contentView(hit) {
+  return { source: hit._source, exactIntegerPaths: integerPaths(hit,
+    path => path === '/_source' || path.startsWith('/_source/')) };
+}
+function rankingView(edition, hit) {
+  const count = Array.isArray(edition.query?.sort) ? edition.query.sort.length : 0;
+  return { score: hit._score ?? null, sort: (hit.sort ?? []).slice(0, count),
+    exactIntegerPaths: integerPaths(hit, path => {
+      if (path === '/_score') return true;
+      const match = /^\/sort\/(\d+)(?:\/|$)/.exec(path);
+      return Boolean(match && Number(match[1]) < count);
+    }) };
+}
 export function compareEditions(before, after) {
-  const left = hitMap(before), right = hitMap(after), added = [], removed = [], changed = [];
+  const left = hitMap(before), right = hitMap(after), added = [], removed = [], changed = [], rankingChanged = [];
+  let matched = 0;
   for (const [key, hit] of right) {
-    if (!left.has(key)) added.push(hit);
-    else if (canonical(left.get(key)) !== canonical(hit))
-      changed.push({ identity: [hit._index, hit._id], before: left.get(key), after: hit });
+    if (!left.has(key)) { added.push(hit); continue; }
+    matched++;
+    const prior = left.get(key), identity = [hit._index, hit._id];
+    if (canonical(contentView(prior)) !== canonical(contentView(hit)))
+      changed.push({ identity, before: prior, after: hit });
+    if (canonical(rankingView(before, prior)) !== canonical(rankingView(after, hit)))
+      rankingChanged.push({ identity, before: rankingView(before, prior), after: rankingView(after, hit) });
   }
   for (const [key, hit] of left) if (!right.has(key)) removed.push(hit);
   const summary = edition => ({ id: edition.id, capturedAt: edition.capturedAt,
-    queryName: edition.queryName, draftRevision: edition.draftRevision, resultSha256: edition.resultSha256,
+    queryName: edition.queryName, query: edition.query, input: edition.input,
+    fields: edition.result.fields, draftRevision: edition.draftRevision, resultSha256: edition.resultSha256,
+    sourceProfileSha256: edition.sourceProfileSha256, source: edition.source ?? edition.result.source ?? null,
+    numberEncoding: edition.numberEncoding,
     hitCount: edition.hitCount, total: edition.total, truncated: edition.truncated });
+  const scope = edition => ({ query: edition.query, input: edition.input, fields: edition.result.fields });
   return { schema: 'stellar-forge.opensearch-comparison.v1', comparedAt: now(), identity: ['_index', '_id'],
+    semantics: { added: 'Entered the retained result set', removed: 'Left the retained result set',
+      changed: 'Projected source content or original source numeric type changed',
+      rankingChanged: 'Score or declared business sort changed',
+      ordering: 'PIT snapshot tie breakers are excluded from content and ranking changes' },
+    scope: { sameSourceProfile: before.sourceProfileSha256 === after.sourceProfileSha256,
+      sameNativeCluster: before.result.source?.clusterFingerprint && after.result.source?.clusterFingerprint ?
+        before.result.source.clusterFingerprint === after.result.source.clusterFingerprint : null,
+      sameQueryInputAndProjection: canonical(scope(before)) === canonical(scope(after)),
+      eitherTruncated: Boolean(before.truncated || after.truncated) },
     before: summary(before), after: summary(after),
     counts: { added: added.length, removed: removed.length, changed: changed.length,
-      unchanged: [...left.keys()].filter(key => right.has(key)).length - changed.length },
-    added, removed, changed };
+      rankingChanged: rankingChanged.length, unchanged: matched - changed.length },
+    added, removed, changed, rankingChanged };
 }
+
 function field(source, path) {
   if (source && Object.hasOwn(source, path)) return source[path];
   let value = source;
