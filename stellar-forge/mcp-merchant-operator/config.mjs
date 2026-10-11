@@ -8,6 +8,7 @@ import { readReleaseCatalogConfig } from '../../stellar/scf-starforge-20261009/s
 import { importOpenApi } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/importer.mjs';
 import { createSellerServiceConfig } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-config.mjs';
 import { preparePythonRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-python.mjs';
+import { prepareDuckdbRelease, selectDuckdbInterpreter } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-duckdb.mjs';
 import { readFleetReleasePlan } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/release-operator.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
@@ -61,8 +62,13 @@ export function pythonSourceView(python) {
   const { interpreter, ...metadata } = python;
   return { ...metadata, interpreter: { configured: true, selectionSha256: hash(interpreter) } };
 }
+export function duckdbSourceView(duckdb) {
+  if (!duckdb) return null;
+  const { interpreter, ...metadata } = duckdb;
+  return { ...metadata, interpreter: { configured: true, selectionSha256: hash(interpreter) } };
+}
 function sourceDefinition(source, base, alias) {
-  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'runtime']);
+  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 'runtime']);
   const runtime = structuredClone(source.runtime ?? {});
   exact(runtime, ['port', 'handlers', 'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
   for (const flag of ['allowLocalFacilitator', 'allowLoopbackUpstream'])
@@ -73,7 +79,15 @@ function sourceDefinition(source, base, alias) {
   const result = { alias, label: line(source.label ?? alias, 'Source label'), runtime };
   if (source.pythonRoot !== undefined && source.python === undefined)
     throw failure('CONFIGURATION_ERROR', 'A Python source root requires a Python merchant declaration.');
-  if (source.python !== undefined) {
+  if (source.duckdbPython !== undefined && source.duckdbPackage === undefined)
+    throw failure('CONFIGURATION_ERROR', 'A DuckDB interpreter selection requires a prepared DuckDB package.');
+  if (source.duckdbPackage !== undefined) {
+    if (['workspace', 'spec', 'selections', 'bindings', 'upstreams', 'python', 'pythonRoot'].some(key => source[key] !== undefined) ||
+        runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
+      throw failure('CONFIGURATION_ERROR', 'Choose a prepared DuckDB package or another source. The package owns its original query bindings.');
+    result.duckdbPackage = hostPath(source.duckdbPackage, base);
+    result.duckdbPython = selectDuckdbInterpreter(source.duckdbPython, base);
+  } else if (source.python !== undefined) {
     if (['workspace', 'spec', 'selections', 'bindings', 'upstreams'].some(key => source[key] !== undefined) ||
         runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
       throw failure('CONFIGURATION_ERROR', 'Choose a Python merchant declaration or an OpenAPI source. Python owns its application bindings.');
@@ -97,6 +111,18 @@ function sourceDefinition(source, base, alias) {
 }
 /** Inspect configured source through the ORIGINAL workspace and upstream readers. */
 export async function inspectMerchantSource(source) {
+  if (source.duckdbPackage) {
+    const { bundle, duckdb } = await prepareDuckdbRelease(source.duckdbPackage, { python: source.duckdbPython });
+    return { source: source.alias, label: source.label, sourceType: 'DUCKDB_PACKAGE',
+      mode: source.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
+      sourceDigests: { package: duckdb.packageManifestSha256, declaration: duckdb.sourceConfigSha256,
+        plan: duckdb.planSha256, dataset: duckdb.datasetSha256, execution: duckdb.executionSha256 },
+      inputPackage: { schema: bundle.schema, manifestSha256: duckdb.packageManifestSha256 },
+      application: { type: 'DUCKDB_PACKAGE', ...duckdbSourceView(duckdb) },
+      environment: [], credentialValuesChecked: false,
+      routes: bundle.service.routes.map(route => ({ method: route.offer.extensions.bazaar.info.input.method,
+        path: route.path, publicPath: route.path, resource: route.offer.resource, accepts: route.offer.accepts })) };
+  }
   if (source.python) {
     const prepared = await preparePythonRelease(source.python, { sourceRoot: source.pythonRoot });
     const { compiled, python } = prepared;
@@ -163,10 +189,10 @@ export async function readMerchantConfig(path) {
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, runtime = {}, catalog, fleetPlan }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, runtime = {}, catalog, fleetPlan }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
-  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, runtime }, process.cwd(), 'initial');
+  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, runtime }, process.cwd(), 'initial');
   if (source.pythonRoot) {
     const sourceRoot = await realpath(source.pythonRoot);
     const destination = join(await realpath(dirname(root)), basename(root));
@@ -188,7 +214,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(catalogConnection ? { catalogConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
-        ...(source.python ? { python: source.python, ...(source.pythonRoot ? { pythonRoot: source.pythonRoot } : {}) }
+        ...(source.duckdbPackage ? { duckdbPackage: source.duckdbPackage, duckdbPython: source.duckdbPython }
+          : source.python ? { python: source.python, ...(source.pythonRoot ? { pythonRoot: source.pythonRoot } : {}) }
           : source.workspace ? { workspace: source.workspace } : { spec: source.spec, selections: source.config,
           bindings: source.bindings, ...(source.upstreams ? { upstreams: source.upstreams } : {}) }) },
     } });
