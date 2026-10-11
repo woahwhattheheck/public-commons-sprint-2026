@@ -140,16 +140,33 @@ current state before reapplying the intended change.
 ## Exact files and bounded delivery
 
 `merchant_accounting_file` returns a file name, full byte count, full SHA256,
-base64 `data`, chunk offset, `bytesRead`, and `nextOffset`. Decode each chunk and
+`readId`, base64 `data`, chunk offset, `bytesRead`, and `nextOffset`. Decode each chunk and
 append its bytes in offset order. The first request defaults to 65,536 bytes and
 may request up to 196,608. Every later request must include the returned SHA256 as
-`expectedSha256`; continue until `nextOffset` is `null`. Verify the complete byte
+`expectedSha256`, together with the same `readId`; continue until `nextOffset` is `null`. Verify the complete byte
 count and hash before using the assembled file.
 
 For original reports, use `kind:"report"`, the completed `runId`, and one of
 `report.json`, `ledger.csv`, `options.csv`, `exceptions.csv`, `review.html` or
-`manifest.json`. Every read delegates to the original report-manifest or
-recovered-response verification. Chunking changes only transport framing.
+`manifest.json`. Opening a read delegates once to the original report-manifest or
+recovered-response verification. Continued chunks use that exact verified
+snapshot instead of rereading and hashing the whole source for every chunk.
+
+The provider retains at most four reads and 256,000,000 bytes of verified
+snapshots in total. Files up to 32 KiB stay in memory; larger files use private
+temporary descriptors unlinked immediately after materialization. Persistent
+snapshot memory is therefore at most 128 KiB, alongside a chunk buffer and the
+original verifier's temporary whole-file buffer. Whole-file materialization is
+serialized. The last chunk frees its snapshot; `merchant_accounting_file_release`
+abandons a selected read without changing its original file. Two minutes of idle
+time, workspace close, provider close and process exit also release snapshots.
+Status shows active read identities, expiry, storage type and the count of
+original file-reader invocations.
+
+After expiration or process restart, omit `readId` and open a new original read
+with the same `expectedSha256` and desired byte offset. The original file is
+verified again once before that resumed transfer. A changed file returns an
+explicit identity conflict.
 
 Exports with `includeSources:true` contain the actual captured private source
 files and any retained response bytes. Select that explicitly when a full
