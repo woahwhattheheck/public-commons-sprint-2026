@@ -3,6 +3,7 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generate, prepare, checkBundle } from './host.mjs';
+import { retainedRuntimeCheck } from './retained-release.mjs';
 
 const HELP = `node cli.mjs generate --plan PRIVATE_HOST.json --out NEW_PRIVATE_DIRECTORY
 node cli.mjs inspect --plan PRIVATE_HOST.json
@@ -10,8 +11,9 @@ node cli.mjs check --bundle PRIVATE_DIRECTORY
 node cli.mjs smoke --bundle PRIVATE_DIRECTORY [--public]
 node cli.mjs maintenance --help
 
-Generate Caddy/systemd for original API sellers or the original paid-file checkout,
-receiver and continuous SF98 delivery. The bundle includes exact operating and
+Generate Caddy/systemd for original API sellers, retained SF82 releases with signed
+discovery, or the original paid-file checkout/receiver and continuous SF98 delivery.
+The bundle includes exact operating and
 recovery commands. Generation reads the selected config and writes a new bundle;
 it does not install/reload services, read environment values or execute payments.`;
 
@@ -20,13 +22,24 @@ export async function smoke(bundle, { publicOrigin = false } = {}) {
   const checks = [
     ['seller readiness', `http://127.0.0.1:${p.sellerPort}/_seller/ready`, 200],
     ['original offers', `http://127.0.0.1:${p.sellerPort}/_seller/offers`, 200],
-    ['private operations', `http://127.0.0.1:${p.operationsPort}/api/snapshot`, 200],
+    ...(p.operationsPort ? [['private operations', `http://127.0.0.1:${p.operationsPort}/api/snapshot`, 200]] : []),
+    ...(p.discovery ? [
+      ['original discovery readiness', `http://127.0.0.1:${p.discoveryPort}/healthz`, 200],
+      ['original discovery resources', `http://127.0.0.1:${p.discoveryPort}/discovery/resources?limit=1`, 200],
+    ] : []),
     ...(p.receiverState ? [['receiver health', `http://127.0.0.1:${p.receiverPort}/health`, 200]] : []),
     ...(publicOrigin ? [
       ['public seller documentation', p.publicOrigin + '/_seller/openapi.json', 200],
       ['private health not exposed', p.publicOrigin + '/_seller/health', 404],
       ['private operations not exposed', p.publicOrigin + '/api/snapshot', 404],
       ['private delivery export not exposed', p.publicOrigin + '/delivery.json', 404],
+      ...(p.discovery ? [
+        ['public discovery resources', p.publicOrigin + '/discovery/resources?limit=1', 200],
+        ['public discovery search', p.publicOrigin + '/discovery/search?limit=1', 200],
+        ['public original offer export', p.discovery.sourceURL, 200],
+        ['private catalog health not exposed', p.publicOrigin + '/healthz', 404],
+        ['private catalog control not exposed', p.publicOrigin + '/v1/command', 404],
+      ] : []),
       ...(p.receiverState ? [['receiver health not exposed', p.publicOrigin + '/health', 404]] : []),
     ] : []),
   ];
@@ -37,6 +50,10 @@ export async function smoke(bundle, { publicOrigin = false } = {}) {
       return { name, expected, actual: response.status, passed: response.status === expected };
     } catch { return { name, expected, passed: false, error: 'HTTP_REQUEST_FAILED' }; }
   }));
+  if (p.release) {
+    try { results.push(await retainedRuntimeCheck(p)); }
+    catch { results.push({ name: 'original retained process and source', passed: false, error: 'RETAINED_PROCESS_UNAVAILABLE' }); }
+  }
   return { merchant: p.merchant, mode: p.mode, passed: results.every(x => x.passed), checks: results,
     paidRequestsExecuted: 0 };
 }
@@ -60,7 +77,8 @@ export async function main(args = process.argv.slice(2)) {
     const p = await prepare(values['--plan']);
     result = { merchant: p.merchant, kind: p.kind, mode: p.mode, origin: p.publicOrigin,
       target: p.target, services: p.services, routes: p.routes, stateRoot: p.stateRoot,
-      outbox: p.outbox, receiverState: p.receiverState, environmentValuesRead: false };
+      outbox: p.outbox, receiverState: p.receiverState,
+      ...(p.release ? { release: p.release, discovery: p.discovery } : {}), environmentValuesRead: false };
   } else if (command === 'check' && values['--bundle']) {
     const p = await checkBundle(values['--bundle']);
     result = { merchant: p.merchant, status: 'CONFIGURATION_AND_ENTRYPOINTS_MATCH', services: p.services.map(s => s.unit) };
