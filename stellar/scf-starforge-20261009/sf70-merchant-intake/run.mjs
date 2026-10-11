@@ -14,7 +14,7 @@ const HELP = [
   '  --origin https://buyer.example --network stellar:testnet --pay-to G... [--method GET|POST]',
   '  [--credentialed] [--out private.json]',
   'For local original HTTP fixtures only: --allow-loopback with literal http://127.0.0.1 URLs.',
-  'Performs two unpaid seller GETs, catalog GET pages, and one OPTIONS. Never signs or pays.'
+  'Performs original catalog GET pages; GET/OPTIONS browser checks only where GET is a relevant advertised operation. Never signs or pays.'
 ].join('\n');
 
 export function parseArgs(argv) {
@@ -61,9 +61,13 @@ export function parseArgs(argv) {
 export function combine({seller,browser,error,config,observedAt}) {
   const findings=[];
   const add=(severity,code,action)=>findings.push({severity,code,action});
-  if (seller.sellerDiscovery.state!=='UNPAID_402_BAZAAR_VISIBLE')
+  const nonGetOnly=seller.sellerDiscovery.state==='CATALOG_NON_GET_ONLY';
+  if (nonGetOnly)
+    add('UNKNOWN','NON_GET_OR_MCP_ONLY',
+      'Source catalog lists non-GET HTTP or MCP operations. An unpaid GET is not a valid checkout test of this route; original advertised operation needs its own authorized verification.');
+  else if (seller.sellerDiscovery.state!=='UNPAID_402_BAZAAR_VISIBLE')
     add('HIGH','SELLER_UNPAID_DISCOVERY',
-      'Verify the advertised unpaid seller operation returns a valid 402 PAYMENT-REQUIRED with Bazaar extension.');
+      'Verify the advertised unpaid GET operation returns a valid 402 PAYMENT-REQUIRED with Bazaar extension.');
   if (!seller.catalog.complete)
     add('UNKNOWN','CATALOG_NOT_EXHAUSTIVE',
       'Finish actual facilitator pagination or resolve the reported provider error before claiming listing absence.');
@@ -75,7 +79,9 @@ export function combine({seller,browser,error,config,observedAt}) {
   else if (seller.catalog.matchingEvidence.desiredPaymentRouteFound!==true)
     add('HIGH','CATALOG_PAIRED_TERMS',
       'Require network and recipient on the same accepted payment alternative.');
-  if (!browser) add('UNKNOWN','BROWSER_HTTP_UNAVAILABLE',
+  if (!browser && nonGetOnly) add('UNKNOWN','BROWSER_METHOD_UNASSESSED',
+    'SF68 GET/OPTIONS audit is not a checkout test for a confirmed non-GET/MCP-only catalog offer. Assess the actual authorized operation in a separate browser-aware integration.');
+  else if (!browser) add('UNKNOWN','BROWSER_HTTP_UNAVAILABLE',
     'Repeat the original unpaid browser-origin GET and OPTIONS; '+String(error||'request failed').slice(0,200));
   else if (browser.status!=='READABLE_402_AND_PREFLIGHT_READY')
     for (const f of browser.findings)
@@ -90,7 +96,7 @@ export function combine({seller,browser,error,config,observedAt}) {
     originals:{sellerCatalog:seller,browserReadiness:browser??null,browserError:error??null},
     safeguards:{walletCalls:0,paidRequests:0,settlementConfirmed:false,
       buyerAuthorizationConfirmed:false,sellerPermissionConfirmed:false,
-      description:'Unpaid read-only GET and OPTIONS observations only; not a completed paid checkout or customer acceptance.'}
+      description:'Catalog GET pages plus GET/OPTIONS only when the original offer supports GET; no paid request, customer acceptance or settlement.'}
   };
 }
 
@@ -100,10 +106,14 @@ export async function capture(config) {
   const seller=await diagnose({resourceUrl:config.resourceUrl,catalogUrl:config.catalogUrl,
     network:config.network,payTo:config.payTo,allowLoopback:config.allowLoopback});
   let browser=null,error=null;
-  try {
-    browser=await probe({resource:config.resourceUrl,origin:config.origin,
-      method:config.method,credentialed:config.credentialed});
-  } catch (e) { error=String(e?.message||e).slice(0,200); }
+  // The genuine method-aware SF52 catalog can establish a POST/MCP-only offer.
+  // Do not reintroduce a misleading unpaid GET or CORS diagnosis for that offer.
+  if (seller.sellerDiscovery.state!=='CATALOG_NON_GET_ONLY') {
+    try {
+      browser=await probe({resource:config.resourceUrl,origin:config.origin,
+        method:config.method,credentialed:config.credentialed});
+    } catch (e) { error=String(e?.message||e).slice(0,200); }
+  }
   return combine({seller,browser,error,config,observedAt});
 }
 
