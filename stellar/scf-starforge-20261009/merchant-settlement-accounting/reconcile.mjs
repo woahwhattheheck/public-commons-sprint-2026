@@ -5,6 +5,7 @@ import { constants } from 'node:fs';
 import { lstat, open, readdir, readFile, stat } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { openOutbox } from '../sf98-merchant-delivery/outbox.mjs';
+import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
 
 export const SCHEMA = 'stellar-forge.merchant-reconciliation.v1';
 const sha = x => createHash('sha256').update(x).digest('hex');
@@ -70,7 +71,7 @@ export function compileTerms(raw) {
     throw new Error('INVALID_MERCHANT_TERMS_SCHEMA');
   const terms=new Map();
   for (const r of raw.routes) {
-    if (!strictObject(r) || !routeId(r.routeId) || !['GET','POST','HEAD'].includes(r.method) ||
+    if (!strictObject(r) || !routeId(r.routeId) || !supportsSellerMethod(r.method) ||
         !knownNetwork(r.network) || !paymentDecimal(r.amountAtomic) ||
         !/^[CG][A-Z2-7]{55}$/.test(r.asset) || !/^G[A-Z2-7]{55}$/.test(r.payTo) ||
         typeof r.priceBasis!=='string' || !/^[A-Za-z0-9 _.:/-]{3,100}$/.test(r.priceBasis) ||
@@ -149,7 +150,7 @@ function eventCheck(e) {
   return strictObject(e) && e.schema==='stellar-forge.sf98.delivery-event.v1' &&
     hex64(e.id) && hex64(e.receiptFingerprint) &&
     (e.transactionFingerprint===null || e.transactionFingerprint===undefined || hex64(e.transactionFingerprint)) &&
-    routeId(e.routeId) && ['GET','POST','HEAD'].includes(e.method) &&
+    routeId(e.routeId) && supportsSellerMethod(e.method) &&
     knownNetwork(e.network) && paymentDecimal(e.amountAtomic) && hex64(e.assetDigest) &&
     (e.recipientDigest===null || e.recipientDigest===undefined || hex64(e.recipientDigest)) &&
     e.authority==='ORIGINAL_NATIVE_PROCESS_SETTLEMENT_SUCCESS' &&
