@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // MIT. Local-only interactive wrapper around the ORIGINAL SF70 merchant intake.
-// No paid requests, signing, merchant credentials, deployment, or data persistence.
+// Optional private case persistence; original diagnostics and workorders are unchanged.
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -10,6 +10,8 @@ import {parseArgs, capture} from '../sf70-merchant-intake/run.mjs';
 import {compare, validateIntake} from '../sf76-merchant-remediation-delta/compare.mjs';
 import {evaluate as postPreflight} from '../sf72-post-only-preflight/preflight.mjs';
 import {buildPacket, renderHtml, renderChecklist} from '../sf77-merchant-workorder/workorder.mjs';
+import {openCaseStore, inspectCaseWriter, recoverCaseWriter, CASE_STATUSES} from './case-store.mjs';
+import {MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 
 const ASSETS = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
@@ -17,6 +19,7 @@ const ASSETS = Object.freeze({
   '/terms-editor.mjs': ['terms-editor.mjs', 'text/javascript; charset=utf-8'],
   '/workspace-file.mjs': ['workspace-file.mjs', 'text/javascript; charset=utf-8'],
   '/workspace-files.mjs': ['workspace-files.mjs', 'text/javascript; charset=utf-8'],
+  '/case-desk.mjs': ['case-desk.mjs', 'text/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
 });
 const ROOT = new URL('.', import.meta.url);
@@ -125,7 +128,7 @@ function workorderFromSources(input) {
 }
 
 // Injection is only for the focused loopback HTTP-contract check, not for deployed usage.
-export function createConsoleServer({runCapture = capture, allowLoopback = false} = {}) {
+export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null} = {}) {
   let active = false;
   const server = createServer(async (req, res) => {
     for (const [key, value] of Object.entries(HEADERS)) res.setHeader(key, value);
@@ -139,7 +142,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
     }
     const route = (req.url || '').split('?')[0];
     if (req.method === 'GET' && route === '/health') {
-      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0}); return;
+      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore)}); return;
     }
     if (req.method === 'GET' && Object.hasOwn(ASSETS, route)) {
       try {
@@ -147,6 +150,48 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         const data = await readFile(new URL(filename, ROOT));
         res.writeHead(200, {'content-type': mime}); res.end(data);
       } catch { json(res, 500, {error: 'STATIC_ASSET_UNAVAILABLE'}); }
+      return;
+    }
+    if (route === '/api/cases' || route.startsWith('/api/cases/')) {
+      if ((req.headers.origin && req.headers.origin !== ownOrigin) ||
+          (req.headers['sec-fetch-site'] && !['same-origin','none'].includes(req.headers['sec-fetch-site'])) ||
+          (req.method !== 'GET' && req.headers.origin !== ownOrigin)) {
+        json(res, 403, {error:'ORIGIN_MISMATCH'}); return;
+      }
+      if (!caseStore) {
+        json(res, route === '/api/cases' && req.method === 'GET' ? 200 : 503,
+          {enabled:false, cases:[], statuses:CASE_STATUSES, error:'CASE_STORAGE_DISABLED'}); return;
+      }
+      try {
+        const url = new URL(req.url, ownOrigin);
+        if (route === '/api/cases' && req.method === 'GET') {
+          const query = Object.fromEntries(url.searchParams);
+          if (Object.keys(query).some(key=>!['q','status','dueOn','offset','limit'].includes(key)))
+            throw new TypeError('Unexpected case list filter');
+          for (const field of ['offset','limit']) if (field in query) query[field] = Number(query[field]);
+          json(res,200,{...await caseStore.list(query), statuses:CASE_STATUSES}); return;
+        }
+        if (route === '/api/cases' && req.method === 'POST') {
+          json(res,200,await caseStore.save(await boundedBody(req, MAX_WORKSPACE_BYTES * 2 + 100000))); return;
+        }
+        const match = /^\/api\/cases\/([a-f0-9-]+)(\/history)?$/.exec(route);
+        if (match && req.method === 'GET') {
+          if ([...url.searchParams.keys()].some(key=>!['revision','before','limit'].includes(key)))
+            throw new TypeError('Unexpected case version filter');
+          const result = match[2] ? await caseStore.history(match[1], {
+            before:url.searchParams.get('before'), limit:Number(url.searchParams.get('limit') || 20),
+          }) : await caseStore.read(match[1], url.searchParams.get('revision'));
+          json(res,200,result); return;
+        }
+        json(res,404,{error:'NOT_FOUND'});
+      } catch (error) {
+        const known = /^CASE_|^INVALID_/.test(error.code || '');
+        json(res, Number(error.status) || (error instanceof TypeError ? 422 : 503), {
+          error:known ? error.code : 'CASE_OPERATION_FAILED',
+          detail:known || error instanceof TypeError ? String(error.message).slice(0,240) : 'The case operation could not be completed. Your editor is unchanged.',
+          ...(error.currentRevision ? {currentRevision:error.currentRevision} : {}),
+        });
+      }
       return;
     }
     if (route === '/api/compare' && req.method === 'POST') {
@@ -219,9 +264,10 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
   return server;
 }
 
-export async function start({port = 0, allowLoopback = false, runCapture = capture} = {}) {
+export async function start({port = 0, allowLoopback = false, runCapture = capture, casesDir = null} = {}) {
   if (!Number.isSafeInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid port');
-  const server = createConsoleServer({allowLoopback, runCapture});
+  const caseStore = casesDir === null ? null : await openCaseStore(casesDir);
+  const server = createConsoleServer({allowLoopback, runCapture, caseStore});
   await new Promise((resolveListen, reject) => {
     server.once('error', reject);
     server.listen(port, '127.0.0.1', resolveListen);
@@ -230,12 +276,38 @@ export async function start({port = 0, allowLoopback = false, runCapture = captu
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const flags = new Set(process.argv.slice(2));
-  if (flags.size !== process.argv.slice(2).length || [...flags].some(f => f !== '--allow-loopback')) {
-    process.stderr.write('Usage: node server.mjs [--allow-loopback]  (localhost demo only)\n');
+  const args = process.argv.slice(2), options = {}, seen = new Set();
+  let writerAction = null;
+  try {
+    for (let index = 0; index < args.length; index++) {
+      const token = args[index], separator = token.indexOf('=');
+      const flag = separator < 0 ? token : token.slice(0,separator);
+      if (seen.has(flag)) throw new TypeError('Duplicate option: ' + flag);
+      seen.add(flag);
+      if (flag === '--allow-loopback' && separator < 0) { options.allowLoopback = true; continue; }
+      if (['--inspect-case-writer','--recover-case-writer'].includes(flag) && separator < 0) {
+        if (writerAction) throw new TypeError('Choose one case writer operation');
+        writerAction = flag; continue;
+      }
+      if (!['--port','--cases-dir'].includes(flag)) throw new TypeError('Unknown option: ' + flag);
+      const value = separator < 0 ? args[++index] : token.slice(separator + 1);
+      if (!value || value.startsWith('--')) throw new TypeError('Missing value for ' + flag);
+      if (flag === '--port' && !/^\d+$/.test(value)) throw new TypeError('Invalid port');
+      options[flag === '--port' ? 'port' : 'casesDir'] = flag === '--port' ? Number(value) : value;
+    }
+    if (writerAction) {
+      if (!options.casesDir || seen.has('--port') || seen.has('--allow-loopback'))
+        throw new TypeError('A case writer operation requires --cases-dir and does not start a server');
+      const action = writerAction === '--inspect-case-writer' ? inspectCaseWriter : recoverCaseWriter;
+      process.stdout.write(JSON.stringify(await action(options.casesDir), null, 2) + '\n');
+    } else {
+      const {url} = await start(options);
+      process.stdout.write('Open locally: '+url+'\n' +
+        (options.casesDir ? 'Merchant case desk enabled.\n' : 'Session mode. Use --cases-dir /absolute/private/directory to retain merchant cases.\n'));
+    }
+  } catch (error) {
+    process.stderr.write('SF74: ' + String(error.message) + '\nUsage: node server.mjs [--cases-dir /absolute/private/directory] [--port 8784] [--allow-loopback]\n' +
+      '       node server.mjs --cases-dir /absolute/private/directory --inspect-case-writer|--recover-case-writer\n');
     process.exitCode = 1;
-  } else start({allowLoopback: flags.has('--allow-loopback')}).then(({url}) =>
-    process.stdout.write('Open locally: '+url+'\n')).catch(e => {
-      process.stderr.write('SF74: '+String(e.message)+'\n'); process.exitCode=1;
-    });
+  }
 }
