@@ -56,6 +56,7 @@ The import path in the snippet assumes `application.mjs` is beside this module. 
 | `maxResponseBytes` | 1 MiB | Separate compressed-wire and decoded-content limits; integer 1–16 MiB. Keep within the outer seller's response limit. |
 | `maxInFlight` | `16` | Per-handler concurrent upstream requests; integer 1–256. Excess requests return 503 immediately, with no queue. |
 | `allowLocal` | `false` | Explicit development-only HTTP to loopback. It does not disable HTTPS certificate verification. |
+| `lookup` | Node resolver | Optional trusted Node-style DNS lookup callback. Passed to socket creation unchanged; can enforce the deployment's public-IP policy. |
 | `onResult` | Absent | Best-effort completion callback, with status, method, duration, byte count and safe error code only. |
 
 Unknown options and invalid static configuration throw during construction. An unavailable credential factory returns `503 UPSTREAM_CONFIGURATION_UNAVAILABLE` without making an upstream request.
@@ -89,6 +90,8 @@ There is exactly one upstream request per invocation. No automatic retry is atte
 
 Upstream configuration is trusted local code. A configured HTTPS host may intentionally be a private backend; this is **not** a public-DNS allowlist or a DNS-pinning transport for untrusted discovered URLs. Never build `baseUrl`, static credentials or path configuration directly from buyer input. Use the deployment's egress policy for network restrictions. Normal Node HTTPS certificate verification remains enabled.
 
+A declarative public-origin launcher can supply `lookup(hostname, options, callback)` from its existing resolver. The callback must honor Node's `options.all`: return an address/family array when true, otherwise the single address and family. Passing it directly to socket creation allows that resolver to return only addresses it has actually validated while retaining the original URL host for Host/TLS identity. This module does not itself resolve, re-resolve, or assert the callback's IP classification. The same total deadline covers a resolver that never completes; no TLS bypass or connection fallback is added.
+
 The module does not retain URLs, credentials or application bodies in its diagnostics. `snapshot()` counts started/completed/in-flight upstream requests, failures, timeouts and successful decoded response bytes; preflight/capacity/configuration rejections are excluded from those started-request counters. `onResult` runs after completion and cannot alter delivery, even if it throws. It is not a payment or revenue ledger. Successful upstream content is delivered as configured, **not secret-scanned**: the backend must not echo its own credentials or private internal fields.
 
 ## Execute the shipped check
@@ -97,4 +100,4 @@ The module does not retain URLs, credentials or application bodies in its diagno
 node stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-acceptance.mjs
 ```
 
-One real loopback HTTP run exercises four groups: path/query/header isolation and credential rotation; JSON POST/null, HEAD and gzip delivery; failed/redirected/malformed/partial/oversized responses without retries; deadline/concurrency recovery and content-free metrics. On Node 22.16.0 it completed 15 upstream requests with all four groups passing. No npm install, external API, GitHub Actions or payment is involved. This runner checks the application transport; it does not stand in for the existing native SDK integration or a real merchant settlement.
+One real loopback HTTP run exercises four groups: path/query/header isolation, credential rotation and trusted socket lookup; JSON POST/null, HEAD and gzip delivery; failed/redirected/malformed/partial/oversized responses without retries; deadline/concurrency recovery and content-free metrics. On Node 22.16.0 it completed 16 upstream requests with all four groups passing. No npm install, external API, GitHub Actions or payment is involved. This runner checks the application transport; it does not stand in for the existing native SDK integration or a real merchant settlement.
