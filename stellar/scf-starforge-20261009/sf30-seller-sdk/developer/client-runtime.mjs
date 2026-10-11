@@ -4,7 +4,7 @@ import { buildUnpaidRequest } from './request.mjs';
 const has = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const MAX_ATOMIC = '170141183460469231731687303715884105727';
-const requestKeys = new Set(['path', 'query', 'body']);
+const requestKeys = new Set(['path', 'query', 'body', 'multipart', 'omitBody']);
 const authorizationKeys = new Set(['intentId', 'maxAtomic', 'acceptIndex', 'paymentFlow', 'approve', 'sign', 'signal']);
 const clientJsonMethods = new Set(['POST', 'PUT', 'PATCH']);
 
@@ -93,7 +93,7 @@ export function createClientRuntime(originalSnapshot) {
     const operation = byId.get(operationId);
     if (!operation) throw new TypeError('Unknown seller operation: ' + String(operationId));
     if (!isRecord(inputs) || Object.keys(inputs).some(key => !requestKeys.has(key)))
-      throw new TypeError('Request inputs must contain only path, query and JSON body');
+      throw new TypeError('Request inputs use path, query and the declared JSON or multipart body');
     validateAuthorization(authorization);
     const path = inputs.path ?? {};
     if (!isRecord(path) || Object.keys(path).some(key => !operation.pathNames.includes(key)))
@@ -101,9 +101,13 @@ export function createClientRuntime(originalSnapshot) {
     if (operation.pathNames.some(name => !has(path, name)))
       throw new TypeError('Every declared path parameter needs an explicit value');
     const bodyMethod = clientJsonMethods.has(operation.method);
-    if (!bodyMethod && has(inputs, 'body'))
+    if (!bodyMethod && ['body','multipart','omitBody'].some(key=>has(inputs,key)))
       throw new TypeError('GET, HEAD and DELETE operations cannot contain a body');
-    if (bodyMethod && !has(inputs, 'body')) throw new TypeError('POST, PUT and PATCH require an explicit JSON body');
+    const form=operation.offer.extensions?.bazaar?.info?.input?.bodyType==='form-data';
+    if (has(inputs,'omitBody')&&typeof inputs.omitBody!=='boolean') throw new TypeError('omitBody must be an explicit boolean');
+    if (bodyMethod&&inputs.omitBody!==true&&!has(inputs,form?'multipart':'body')) throw new TypeError('Supply the declared request body or explicitly omit an optional body');
+    if (form&&has(inputs,'body')||!form&&has(inputs,'multipart')||inputs.omitBody===true&&(has(inputs,'body')||has(inputs,'multipart')))
+      throw new TypeError('Choose one declared body representation');
     const options = operation.offer.accepts;
     if (options.length > 1 && !has(authorization, 'acceptIndex'))
       throw new TypeError('Explicit acceptIndex required for a seller with multiple payment options');
@@ -111,11 +115,12 @@ export function createClientRuntime(originalSnapshot) {
     if (!Number.isSafeInteger(index) || index < 0 || index >= options.length)
       throw new TypeError('acceptIndex must select an original advertised payment option');
     const request = buildUnpaidRequest({
-      'x-seller-route': { id: operation.id, method: operation.method, path: operation.path },
+      'x-seller-route': { id: operation.id, method: operation.method, path: operation.path,maxRequestBytes:operation.maxRequestBytes },
       'x-x402-payment-required': operation.offer,
+      requestBody:{required:operation.bodyRequired??true},
       parameters: (operation.requiredQuery ?? []).map(name => ({ name, in: 'query', required: true })),
     }, { path, query: inputs.query ?? {},
-      ...(bodyMethod ? { body: encodeJsonBody(inputs.body) } : {}),
+      ...(bodyMethod ? inputs.omitBody===true?{omitBody:true}:form?{multipart:inputs.multipart}:{body:encodeJsonBody(inputs.body)} : {}),
     }, origin);
     const terms = options[index];
     const paymentFlow = authorization.paymentFlow ?? 'authorization';

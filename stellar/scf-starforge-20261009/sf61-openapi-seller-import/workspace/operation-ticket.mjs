@@ -14,6 +14,7 @@ import { loadOperationTicket } from '../../sf88-operator-buyer-cli/operation-tic
 import { normalizeOperationHeaders } from '../../sf88-operator-buyer-cli/request-headers.mjs';
 import { createOperationHandoff, OPERATION_HANDOFF_SCHEMA, OPERATION_HANDOFF_MAX_BYTES } from '../../sf88-operator-buyer-cli/operation-handoff.mjs';
 import { merchantTicketDirectory } from './operation-plan.mjs';
+import { requestBodyPin, writeRequestFile } from '../../sf88-operator-buyer-cli/request-body.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   [Object.prototype, null].includes(Object.getPrototypeOf(value));
@@ -28,22 +29,29 @@ export function createMerchantTicketIssuer({ service, upstreams, control }) {
   const descriptors = routes.filter(route => enabled.has(route.handler)).map(route => {
     const policy = upstreams.bindings[route.handler].idempotency;
     const input = route.offer.extensions.bazaar.info.input;
+    const schema=route.offer.extensions.bazaar.schema.properties.input, bodySchema=schema.properties.body;
+    const form=input.bodyType==='form-data';
+    const fileFields=Object.entries(bodySchema?.properties??{}).filter(([,value])=>value.format==='binary'||value.items?.format==='binary')
+      .map(([name,value])=>({name,multiple:value.type==='array',required:bodySchema.required?.includes(name)===true,description:value.description??''}));
     const url = new URL(route.offer.resource.url);
     for (const [name,value] of Object.entries(input.queryParams ?? {})) url.searchParams.set(name,String(value));
     return Object.freeze({ binding: route.handler, id: route.id, method: route.method,
       path: route.path, scope: policy.scope, requestHeader: policy.requestHeader ?? 'x-merchant-operation',
       forwardedHeaders:[...(upstreams.bindings[route.handler].requestHeaders ?? [])],
       maxTicketSeconds: policy.maxTicketSeconds ?? 86400,
+      bodyType:input.bodyType,bodyRequired:schema.required?.includes('body')===true,fileFields,
+      maxRequestBytes:upstreams.bindings[route.handler].maxRequestBytes??1048576,
       request: { method: route.method, url: url.href,
-        pathParams: structuredClone(input.pathParams ?? {}), headers: {'content-type':'application/json'}, body: structuredClone(input.body ?? {}) } });
+        pathParams: structuredClone(input.pathParams ?? {}), headers:form?{}:{'content-type':'application/json'},
+        body:form?Object.fromEntries(Object.entries(input.body??{}).filter(([key])=>!fileFields.some(file=>file.name===key))):structuredClone(input.body ?? {}) } });
   });
-  function issue(value) {
+  function issue(value,{preparedBody}={}) {
     if (!plain(value) || Object.keys(value).some(key => !['binding','request','id','subject','expiresAt'].includes(key)) ||
         !enabled.has(value.binding)) fail('Select an operation in the current merchant runtime');
     const input = value.request;
-    if (!plain(input) || Object.keys(input).some(key => !['method','url','pathParams','headers','body'].includes(key)) ||
-        input.method !== undefined && input.method !== 'POST' || !Object.hasOwn(input,'body'))
-      fail('Operation request uses POST, its public URL, ordinary headers and a JSON body');
+    if (!plain(input) || Object.keys(input).some(key => !['method','url','pathParams','headers','body','omitBody'].includes(key)) ||
+        input.method !== undefined && input.method !== 'POST' || input.omitBody!==undefined&&typeof input.omitBody!=='boolean' || input.omitBody===true&&Object.hasOwn(input,'body'))
+      fail('Operation request uses POST, its public URL, ordinary headers and a declared body');
     let url;
     try { url = new URL(input.url); } catch { fail('A complete public request URL is required'); }
     if (typeof input.url !== 'string' || url.href !== input.url || url.origin !== service.publicOrigin ||
@@ -68,15 +76,24 @@ export function createMerchantTicketIssuer({ service, upstreams, control }) {
         fail('Use only the ordinary request headers configured for this operation');
       headers[key] = item;
     }
-    if (headers['content-type'] !== undefined && headers['content-type'].split(';',1)[0].trim().toLowerCase() !== 'application/json')
-      fail('POST operation requests use application/json');
-    const context = { method:'POST',url,pathParams,query,headers,body:structuredClone(input.body) };
+    const bodyType=selected.route.offer.extensions.bazaar.info.input.bodyType;
+    let parsed;
+    if (input.omitBody===true) parsed={body:null,bodyPresent:false,bodyType};
+    else if (bodyType==='form-data') {
+      if (preparedBody?.bodyType!=='form-data'||!(preparedBody.rawBody instanceof Uint8Array)||preparedBody.multipart?.contentType!==headers['content-type']) fail('Select a retained multipart request before issuing its ticket');
+      parsed=preparedBody;
+    } else {
+      if (!Object.hasOwn(input,'body')) fail('Supply a JSON body or explicitly omit an optional body');
+      if (headers['content-type']!==undefined&&headers['content-type'].split(';',1)[0].trim().toLowerCase()!=='application/json') fail('JSON requests use application/json');
+      parsed={body:structuredClone(input.body),bodyPresent:true,bodyType};
+    }
+    const context = { method:'POST',url,pathParams,query,headers,...parsed };
     const decision = selected.route.admission(context);
     if (decision !== true) fail('Request violates the original input schema: ' +
       [decision?.body?.error,...(decision?.body?.issues ?? [])].filter(Boolean).join('; '));
     const result = control.issue(value.binding,context,{id:value.id,subject:value.subject,expiresAt:value.expiresAt});
     return { document:{schema:'stellar-forge.upstream-operation-ticket.v1',...result},
-      request:{method:'POST',url:url.href,pathParams:{...pathParams},headers:{...headers},body:context.body},
+      request:{method:'POST',url:url.href,pathParams:{...pathParams},headers:{...headers},...parsed},
       requestHeader:enabled.get(value.binding).requestHeader,
       offer:materializeSellerRequestOffer(selected.route,url,pathParams) };
   }
@@ -95,21 +112,21 @@ export async function saveMerchantTicket(project, runtimeId, issued) {
   const fileId = randomUUID()+'-'+digest(bytes);
   const filename = 'operation-'+runtimeId+'-'+fileId+'.json';
   const path = join(directory,filename), stem=path.slice(0,-5);
-  const bodyPath=stem+'.body.json', headersPath=stem+'.headers.json', offersPath=stem+'.offers.json', reviewPath=stem+'.review.json';
+  const bodyPath=request.bodyPresent===false?null:stem+(request.bodyType==='form-data'?'.body.multipart':'.body.json'), headersPath=stem+'.headers.json', offersPath=stem+'.offers.json', reviewPath=stem+'.review.json';
+  const body=bodyPath===null?undefined:request.bodyType==='form-data'?Buffer.from(request.rawBody):Buffer.from(JSON.stringify(request.body,null,2)+'\n');
   const headers=normalizeOperationHeaders(request.headers);
   const discovery={resources:[offer]}, raw=Buffer.from(JSON.stringify(discovery,null,2)+'\n');
   const intentId='merchant-'+document.operationKey;
   const {draft}=prepareReview(raw,{rowIndex:0,acceptIndex:0,intentId,url:request.url,
-    method:'POST',bodyFile:bodyPath,headers,ticketFile:path,ticketHeader:requestHeader});
+    method:'POST',...(body===undefined?{}:{bodyFile:bodyPath,...requestBodyPin(body)}),headers,ticketFile:path,ticketHeader:requestHeader});
   await writeTicket(path,document);
   // The maintained buyer performs its own exact envelope/private-file import.
   await loadOperationTicket(draft.operation,{requireCurrent:true});
-  await writeTicket(bodyPath,request.body);
+  if (body!==undefined) await writeRequestFile(bodyPath,body);
   await writeTicket(headersPath,headers);
   await writeTicket(offersPath,discovery);
   await writeTicket(reviewPath,draft);
-  const handoff=createOperationHandoff({draft,discoveryBytes:raw,ticketBytes:bytes,
-    bodyBytes:Buffer.from(JSON.stringify(request.body,null,2)+'\n')});
+  const handoff=createOperationHandoff({draft,discoveryBytes:raw,ticketBytes:bytes,bodyBytes:body});
   const handoffBytes=Buffer.from(JSON.stringify(handoff,null,2)+'\n');
   const handoffId=randomUUID()+'-'+digest(handoffBytes);
   const handoffFilename='operation-'+runtimeId+'-'+handoffId+'.handoff.json';
@@ -118,6 +135,7 @@ export async function saveMerchantTicket(project, runtimeId, issued) {
   return { fileId,filename,path,operationKey:document.operationKey,
     requestHash:document.requestHash,expiresAt:document.expiresAt,
     bodyPath,headersPath,offersPath,reviewPath,intentId,requestHeader,
+    bodyPresent:body!==undefined,...(body===undefined?{}:requestBodyPin(body)),multipart:request.multipart??null,
     handoffId,handoffFilename,handoffPath,handoffSha256:digest(handoffBytes),
     reviewCommand:['node',fileURLToPath(new URL('../../sf88-operator-buyer-cli/cli.mjs',import.meta.url)),
       '--review','--config',reviewPath].map(shell).join(' ') };

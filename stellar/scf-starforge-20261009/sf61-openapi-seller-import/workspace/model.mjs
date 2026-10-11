@@ -12,6 +12,8 @@ import { compileOpenApiResponseContract } from '../response-contracts.mjs';
 import { preparePublicOperation, createMerchantCases } from './requests.mjs';
 import { inspectBackendSecurity, inspectAuthenticationRequirements, prepareBackendAuthentication } from './authentication.mjs';
 import { merchantOperationPolicy, merchantValidationEnvironment, merchantOperationSummary } from './operation-plan.mjs';
+import { parseOpenApiSource } from '../source-document.mjs';
+import { openApiRequestBody, requestBodySummary } from '../request-body.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -28,11 +30,7 @@ const shell = s => "'" + String(s).replaceAll("'", "'\\''") + "'";
 export const PACKAGE_SCHEMA = 'stellar-forge.api-merchant-package.v1';
 
 function parse(text) {
-  if (typeof text !== 'string' || Buffer.byteLength(text) > LIMIT) fail('OpenAPI JSON must be at most 4 MiB');
-  const value = JSON.parse(text);
-  if (!plain(value) || !/^3\.[01]\.\d+$/.test(value.openapi) || !plain(value.paths))
-    fail('Load an OpenAPI 3.0 or 3.1 JSON document');
-  return value;
+  return parseOpenApiSource(text).document;
 }
 // Use the current original compiler's reference semantics for source inspection too.
 const reference = (spec, value) => createOpenApiResolver(spec).reference(value);
@@ -52,7 +50,10 @@ export function inspectOpenApi(specText) {
     for (const method of methods) if (plain(item[method])) {
       const op = item[method], servers = op.servers ?? item.servers ?? spec.servers ?? [];
       const security = op.security ?? spec.security ?? [];
+      let requestBody=null,bodyError=null;
+      try { requestBody=requestBodySummary(openApiRequestBody(op,createOpenApiResolver(spec))); } catch(e) { bodyError=e.message; }
       operations.push({ method:method.toUpperCase(), path, summary:op.summary ?? op.operationId ?? '',
+        requestBody,bodyError,
         supported:supportsSellerMethod(method.toUpperCase()),
         publicDescription:String(op.summary ?? op.description ?? '').replace(/[\s\u0000-\u001f\u007f]+/g, ' ').trim(),
         servers:Array.isArray(servers) ? servers.map((s,i) => ({index:i, url:s?.url ?? '', variables:Boolean(s?.variables)})) : [],
@@ -91,7 +92,7 @@ export function prepareMerchant(specText, plan) {
   const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','idempotency'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','idempotency'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
     if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
     if (seen.has(key)) fail('Duplicate selected operation: ' + key);
@@ -115,6 +116,7 @@ export function prepareMerchant(specText, plan) {
       materialized.add(row.path);
     }
     const publicOperation = preparePublicOperation(spec, item, op, row, method);
+    const requestBody=openApiRequestBody(publicOperation,createOpenApiResolver(spec));
     facade.paths[row.path][method.toLowerCase()] = {...publicOperation, servers:[{url:sellerServer.href}], security:[]};
     selections.push({method, path:row.path, serverIndex:0,
       ...(plan.serviceName ? {serviceName:plan.serviceName} : {}),
@@ -125,6 +127,8 @@ export function prepareMerchant(specText, plan) {
     upstreams.bindings[id] = {origin:backend.origin,
       path:backend.pathname.replace(/\/$/, '') + row.path.replace(/\{([^{}]+)\}/g, ':$1'), method,
       headerEnv:headers, responseMode:row.responseMode ?? 'json',
+      ...(requestBody?{bodyType:requestBody.bodyType}:{}),
+      ...(row.maxRequestBytes!==undefined?{maxRequestBytes:row.maxRequestBytes}:{}),
       ...(authentication.oauth2 ? {oauth2:authentication.oauth2} : {}),
       ...(row.timeoutMs !== undefined ? {timeoutMs:row.timeoutMs} : {}),
       ...(row.maxResponseBytes !== undefined ? {maxResponseBytes:row.maxResponseBytes} : {}),
@@ -134,6 +138,7 @@ export function prepareMerchant(specText, plan) {
       ...(idempotency ? {idempotency} : {}),
       ...(row.availability !== undefined ? {availability:structuredClone(row.availability)} : {})};
     transformations.push({method, path:row.path, originalServer:backend.href, publicServer:sellerServer.href,
+      requestBody:requestBodySummary(requestBody),
       publicDescription:publicOperation.description ?? null, requestExampleSupplied:row.requestExample !== undefined,
       backendAuthentication:authentication.authentication, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0});
   }
@@ -155,6 +160,7 @@ export function prepareMerchant(specText, plan) {
     routes.push({id:bindings[i].id, method:offer.method, path:offer.path, publicUrl:offer.seller.resource.url,
       publicPath:service.routes[i].path, upstream:binding.origin + binding.path, amountAtomic:selections[i].accepts[0].amount,
       network:plan.payment.network, query:binding.query,
+      requestBody:transformations[i].requestBody,maxRequestBytes:binding.maxRequestBytes??1048576,
       environment:[...new Set([...Object.values(binding.headerEnv),...(binding.oauth2?[binding.oauth2.clientIdEnv,binding.oauth2.clientSecretEnv]:[])])].sort(),
       backendAuthentication:transformations[i].backendAuthentication,oauth2:binding.oauth2??null,
       publicDescription:facade.paths[offer.path][offer.method.toLowerCase()].description ?? '',
@@ -198,12 +204,14 @@ export async function readPackage(parent, name) {
   if (!entry.isDirectory()) fail('Package must be a regular directory');
   const manifest = JSON.parse(await regular(join(folder,'merchant-package.json'), MANIFEST_LIMIT));
   if (manifest.schema !== PACKAGE_SCHEMA || !plain(manifest.files)) fail('Not an API merchant package');
-  for (const file of ['original-openapi.json','merchant-plan.json','facade-openapi.json','selections.json','route-bindings.json','upstreams.json']) {
+  const sourceFile=manifest.sourceFile??'original-openapi.json';
+  if (!['original-openapi.json','original-openapi.yaml'].includes(sourceFile)) fail('Invalid original source filename');
+  for (const file of [sourceFile,'merchant-plan.json','facade-openapi.json','selections.json','route-bindings.json','upstreams.json']) {
     if (sha(await regular(join(folder,file))) !== manifest.files[file]) fail('Saved package changed: ' + file + '. Save changes under a new name.');
   }
   if (own(manifest.files,'operator-cases.json') && sha(await regular(join(folder,'operator-cases.json'),65536)) !== manifest.files['operator-cases.json'])
     fail('Saved route cases changed. Save changes under a new package name.');
-  return {folder, name, manifest, specText:(await regular(join(folder,'original-openapi.json'))).toString('utf8'),
+  return {folder, name, manifest, specText:(await regular(join(folder,sourceFile))).toString('utf8'),
     plan:JSON.parse(await regular(join(folder,'merchant-plan.json')))};
 }
 
@@ -211,8 +219,9 @@ export async function readPackage(parent, name) {
 export async function savePackage({specText, plan, parent, name}) {
   const prepared = prepareMerchant(specText, plan), base = await privateParent(parent);
   const folder = join(base, packageName(name));
+  const sourceFile='original-openapi.'+parseOpenApiSource(specText).format;
   const files = {
-    'original-openapi.json':specText, 'merchant-plan.json':json(plan),
+    [sourceFile]:specText, 'merchant-plan.json':json(plan),
     'facade-openapi.json':json(prepared.facade), 'selections.json':json(prepared.selections),
     'route-bindings.json':json(prepared.bindings), 'upstreams.json':json(prepared.upstreams),
     'operator-cases.json':json(prepared.cases),
@@ -222,7 +231,7 @@ export async function savePackage({specText, plan, parent, name}) {
       fail('Prepared file exceeds the original compiler limit: ' + file + '. Select fewer routes.');
   }
   if (Buffer.byteLength(json(prepared.service))>1024*1024) fail('Compiled service exceeds the original 1 MiB limit. Select fewer routes.');
-  const manifest = {schema:PACKAGE_SCHEMA, id:randomUUID(), createdAt:new Date().toISOString(),
+  const manifest = {schema:PACKAGE_SCHEMA, id:randomUUID(), createdAt:new Date().toISOString(),sourceFile,
     files:Object.fromEntries(Object.entries(files).map(([file,content])=>[file,sha(content)])),
     transformations:prepared.transformations, preview:prepared.preview};
   const manifestBytes=json(manifest);
@@ -268,8 +277,13 @@ export async function savePackage({specText, plan, parent, name}) {
     'Same-host buyer initialization can consume that review directly. For another host, transfer the matching files privately, run chmod 600 on a downloaded ticket, and prepare the buyer with its actual local paths.',
     'Use the existing operations dashboard to list, inspect, audit or recover the same operation key. Ticket issuance does not mark an operation complete, authorize another payment, or reset its ledger.',
     'The original buyer workflow is documented in sf88-operator-buyer-cli/OPERATION_TICKETS.md. Native seller shutdown drains actual dispatch before closing the bound operation controllers.',
+    '', '## File input', '',
+    'Multipart routes preserve their original request media type and optional whole-body declaration. Required file/field properties apply when a body is present.',
+    'Select actual files in the running operation form. Retain and review the file names, media types, sizes, SHA-256 hashes and scalar form fields before issuing the original ticket.',
+    'The private operation-tickets directory retains the exact multipart bytes and boundary. Reopening that request checks its pinned bytes before issuing another ticket; it does not reread the original source file.',
+    'The original SF88 buyer review and inbox retain the same body bytes. Request limits apply across seller and buyer, with an explicit per-binding maximum of up to 16 MiB including framing.',
     '', '## Explicit facade adaptation', '',
-    'Original server URLs remain in original-openapi.json. Selected facade operations use your declared public seller server.',
+    'Original server URLs remain in the unchanged original OpenAPI source file identified by merchant-package.json. Selected facade operations use your declared public seller server.',
     'Supported backend security is satisfied by operator header environment references and removed only from the generated public facade.',
     'The original API description remains unchanged. No endpoint was probed during preparation.',
     '', '## Routes', '', ...prepared.preview.routes.map(r => '- ' + r.method + ' ' + r.publicUrl + ' -> ' + r.upstream + ' (' + r.amountAtomic + ' atomic units)'), ''
