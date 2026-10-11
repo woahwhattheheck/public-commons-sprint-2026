@@ -1,7 +1,17 @@
-FROM node:22-alpine
+FROM python:3.12-slim
+
 WORKDIR /app
-ENV NODE_ENV=production
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY main.py ./
+COPY prepare_dev.py evaluate_dev.py ./
 COPY src/ ./src/
-USER node
-EXPOSE 8787 8788
-CMD ["node", "src/run.mjs"]
+
+RUN useradd --create-home --uid 10001 solution
+USER solution
+
+ENTRYPOINT ["python", "/app/main.py"]
