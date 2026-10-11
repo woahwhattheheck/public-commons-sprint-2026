@@ -27,6 +27,13 @@ unknown assertion keywords fail closed rather than causing network or file
 resolution. Broader Draft 2020-12 schemas must use the pinned upstream Ajv
 validator before calling this adapter; unsupported schemas are soft-dropped.
 
+Local `$ref` targets and their adjacent assertions are both enforced, as required
+by [Draft 2020-12 Core section 8.2.3.1](https://json-schema.org/draft/2020-12/json-schema-core#section-8.2.3.1).
+A reference to a permissive schema cannot bypass an adjacent required field,
+enum, range, or object-property constraint. Cycles remain rejected. The OpenAPI
+3.0 importer resolves its Reference Objects before this validator is invoked,
+so its separate rule for ignored Reference Object siblings is unchanged.
+
 ## Trust boundary
 
 The adapter does not verify signatures, Soroban authorization, transaction

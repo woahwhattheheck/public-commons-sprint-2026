@@ -101,8 +101,13 @@ function validateNode(value, schema, root, path = '$', refs = new Set()) {
   if (schema.$ref !== undefined) {
     if (refs.has(schema.$ref)) return [`${path}:schema_reference_cycle`];
     const next = new Set(refs); next.add(schema.$ref);
-    try { return validateNode(value, resolvePointer(root, schema.$ref), root, path, next); }
+    try {
+      const errors = validateNode(value, resolvePointer(root, schema.$ref), root, path, next);
+      if (errors.length) return errors;
+    }
     catch (error) { return [`${path}:${error.message}`]; }
+    // Draft 2020-12 applies adjacent keywords as well as the referenced schema.
+    // Keep the reference stack local to its branch: a sibling can reuse it.
   }
   if (schema.const !== undefined && !equal(value, schema.const)) return [`${path}:const`];
   if (Array.isArray(schema.enum) && !schema.enum.some(item => equal(value, item))) return [`${path}:enum`];
