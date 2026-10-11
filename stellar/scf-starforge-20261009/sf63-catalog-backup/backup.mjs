@@ -141,15 +141,18 @@ export async function createSnapshot(sourceDirectory, backupDirectory, replay = 
   return verifySnapshot(target,replay);
 }
 
-export async function restoreSnapshot(backupDirectory, newDirectory, replay = replayWithOriginalModules) {
+export async function restoreSnapshot(backupDirectory, newDirectory, replay = replayWithOriginalModules, expectedHead = null) {
   const source = resolve(backupDirectory),target = resolve(newDirectory);
   if (source === target || source.startsWith(target + '/') || target.startsWith(source + '/')) fail('PATHS_MUST_BE_SEPARATE');
-  await verifySnapshot(source,replay);
+  if (expectedHead !== null && !HEX.test(expectedHead)) fail('RESTORE_EXPECTED_HEAD_INVALID');
+  const verified = await verifySnapshot(source,replay);
+  if (expectedHead !== null && verified.head !== expectedHead) fail('RESTORE_HEAD_MISMATCH');
   await regularDirectory(dirname(target));
   const bytes = await readBoundedNoFollow(join(source,JOURNAL_NAME));
   // Guard an updated backup between our first read and the second verification.
   const rechecked = await verifySnapshot(source,replay);
   if (rechecked.sha256 !== digest(bytes)) fail('BACKUP_CHANGED_DURING_RESTORE');
+  if (expectedHead !== null && rechecked.head !== expectedHead) fail('RESTORE_HEAD_MISMATCH');
   await mkdir(target,{mode:0o700});
   await writeExclusive(join(target,JOURNAL_NAME),bytes);
   await flushDir(target);
