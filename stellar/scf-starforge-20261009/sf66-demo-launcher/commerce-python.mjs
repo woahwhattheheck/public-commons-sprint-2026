@@ -7,6 +7,7 @@ import { isDeepStrictEqual as same } from 'node:util';
 import { absolute, readPrivateFile, parseJson } from '../sf103-native-buyer-signer/operator.mjs';
 import { compilePythonMerchant } from '../sf30-seller-sdk/python/config.mjs';
 import { createPythonSource } from '../sf30-seller-sdk/python/source.mjs';
+import { retainInitializationFile } from '../sf88-operator-buyer-cli/initialization.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const digest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
@@ -38,14 +39,12 @@ export async function preparePythonCommerce(configPath) {
 }
 
 /** Called only inside initializeCommerce's exclusively created private directory. */
-export async function savePythonCommerce(prepared, directory) {
+export async function savePythonCommerce(prepared, directory, { resume = false } = {}) {
   absolute(directory);
   const path = join(directory, 'python.json');
   const bytes = Buffer.from(JSON.stringify(prepared.declaration, null, 2) + '\n');
   need(bytes.length <= 1048576, 'COMMERCE_PYTHON_CONFIG_TOO_LARGE');
-  const file = await open(path, 'wx', 0o600);
-  try { await file.writeFile(bytes); await file.sync(); }
-  finally { await file.close(); }
+  await retainInitializationFile(path, bytes, { resume });
   return { python: path, pythonSha256: hash(bytes),
     pythonApplicationSha256: prepared.applicationSha256 };
 }
@@ -89,3 +88,4 @@ export async function openPythonCommerce(application, { native, environment = pr
   return { handlers, source, status: () => describePythonCommerce(application, source),
     close: () => source?.close() ?? Promise.resolve(null) };
 }
+
