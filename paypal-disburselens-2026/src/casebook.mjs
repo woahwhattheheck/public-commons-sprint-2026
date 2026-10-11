@@ -36,6 +36,18 @@ function sourceName(value){
     !/[\x00-\x1f\x7f]/.test(value);
 }
 
+/** Local annotation fields are independent of provider status and model scores. */
+export function reviewFields(value,previous={}){
+  if(!plain(value)||!plain(previous))fail('Invalid local review fields');
+  const owner=Object.hasOwn(value,'owner')?value.owner:previous.owner??'';
+  const note=Object.hasOwn(value,'note')?value.note:previous.note??'';
+  if(typeof owner!=='string'||owner.length>120||/[\x00-\x1f\x7f]/.test(owner))
+    fail('Review owner must be text up to 120 characters without control characters');
+  if(typeof note!=='string'||note.length>2000||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(note))
+    fail('Review note must be text up to 2000 characters');
+  return {owner,note};
+}
+
 function currentSnapshot({result,cases,version}){
   if(!plain(result)||!sourceName(result.source)||!EVIDENCE_HASH.test(result.evidenceHash??'')||
       !Array.isArray(result.items)||result.items.length>MAX_CASES||
@@ -55,6 +67,7 @@ function currentSnapshot({result,cases,version}){
       fail('Current review state does not match current evidence');
     }
     timestamp(record.changedAt,'current review timestamp');
+    reviewFields(record);
   }
   return ids;
 }
@@ -85,7 +98,7 @@ export function exportCasebook({result,cases,version,now=new Date().toISOString(
  * previous process. The server must apply nextCases synchronously after this call.
  */
 export function planCasebookRestore(casebook,{result,cases,version,expectedVersion,
-    now=new Date().toISOString()}){
+    now=new Date().toISOString(),legacyFixtureEvidenceHash}){
   const ids=currentSnapshot({result,cases,version});
   if(!validVersion(expectedVersion)||expectedVersion!==version){
     fail('Stale report version; refresh before restoring the casebook',409);
@@ -100,7 +113,12 @@ export function planCasebookRestore(casebook,{result,cases,version,expectedVersi
   }
   timestamp(casebook.exportedAt,'casebook export timestamp');
   timestamp(now,'restore timestamp');
-  if(casebook.source!==result.source||casebook.evidenceHash!==result.evidenceHash){
+  // The original UI called its fixed fictional fixture "fixture". Permit that
+  // one legacy label only when the server supplies the exact original fixture
+  // hash; arbitrary examples and genuine sandbox captures cannot use this path.
+  const legacyFixtureSource=casebook.source==='fixture'&&result.source==='fictional example'&&
+    EVIDENCE_HASH.test(legacyFixtureEvidenceHash??'')&&result.evidenceHash===legacyFixtureEvidenceHash;
+  if((casebook.source!==result.source&&!legacyFixtureSource)||casebook.evidenceHash!==result.evidenceHash){
     fail('Casebook source or evidence does not match the current batch',409);
   }
   if(casebook.cases.length!==ids.size){
@@ -127,12 +145,12 @@ export function planCasebookRestore(casebook,{result,cases,version,expectedVersi
     counts[to]++;
     if(from!==to){
       changes.push({caseId,from,to});
-      nextCases.set(caseId,{state:to,changedAt:now,evidenceHash:result.evidenceHash});
+      nextCases.set(caseId,{...current,state:to,changedAt:now,evidenceHash:result.evidenceHash});
     }else if(current){
       nextCases.set(caseId,structuredClone(current));
     }
   }
   return {nextCases,summary:{currentVersion:version,evidenceHash:result.evidenceHash,
     source:result.source,exportVersion:casebook.exportVersion,exportedAt:casebook.exportedAt,
-    counts,changes}};
+    legacyFixtureSource,casebookSource:casebook.source,annotationsPreserved:true,counts,changes}};
 }
