@@ -6,7 +6,7 @@ const pretty=value=>JSON.stringify(value,null,2);
 const key=row=>row.method+' '+row.path;
 const display=value=>value.absent?'(absent)':JSON.stringify(value.value);
 
-export function createRevisionDesk({container,api,act,notice,onSaved}) {
+export function createRevisionDesk({container,api,act,notice,onSaved,connections}) {
   let baseName=null,source='',review=null,controls=[],candidate=null,retainingCandidate=false,blocked=false;
   const title=make('h2','Review an API contract revision');
   const intro=make('p','Reopen a saved project, select the provider’s replacement description, then decide what happens to each existing route. New provider operations are available for an explicit remap.','muted');
@@ -44,6 +44,10 @@ export function createRevisionDesk({container,api,act,notice,onSaved}) {
     save.disabled=blocked||!review?.ready;
     stage.disabled=blocked||!candidate;
     loadDraft.disabled=blocked||!draftList.value;
+    for(const row of controls)if(row.oauth) {
+      row.oauth.alias.disabled=blocked||row.action.value==='drop'||connections.pending();
+      row.oauth.use.disabled=blocked||row.action.value==='drop'||!row.oauth.alias.value||connections.pending();
+    }
   }
   function invalidate() {
     if(review)review={...review,ready:false};
@@ -66,6 +70,40 @@ export function createRevisionDesk({container,api,act,notice,onSaved}) {
     });
   }
   const request=()=>({baseName,specText:source,decisions:selections(),additions:JSON.parse(additions.value)});
+  function refreshConnectionControl(row) {
+    if(!row.oauth)return;
+    let settings={};try{settings=JSON.parse(row.settings.value);}catch{}
+    const prior=row.oauth.alias.value||settings.oauthAlias||connections.selectedAlias();
+    row.oauth.alias.replaceChildren();
+    const empty=make('option','Choose a configured connection');empty.value='';row.oauth.alias.append(empty);
+    for(const value of connections.list()) {
+      const option=make('option',value.profile.label+' · '+value.alias+' · '+value.grant.state);
+      option.value=value.alias;row.oauth.alias.append(option);
+    }
+    if(connections.list().some(value=>value.alias===prior))row.oauth.alias.value=prior;
+    if(settings.oauthConnection) {
+      const current=connections.get(settings.oauthAlias);
+      const matches=current?.profileSha256===settings.oauthConnection.profileSha256&&
+        current?.grant?.id===settings.oauthConnection.grantId&&current?.grant?.state==='connected';
+      row.oauth.hint.textContent='Retained grant: '+settings.oauthConnection.grantId+'. '+
+        (matches?'Its current host grant matches; review still checks this replacement source and selected operation.':
+          'Select a current reviewed connection for this replacement before saving.');
+      row.oauth.hint.className=matches?'hint wrap':'oauth-warning wrap';
+    } else {
+      row.oauth.hint.textContent='Use this control when the replacement operation declares authorization-code OAuth. The original source and current reviewed grant are checked together.';
+      row.oauth.hint.className='hint';
+    }
+  }
+  function connectionSelection(row,route) {
+    let selected=route.from;
+    if(row.action.value==='remap') {
+      selected=review.operations.find(operation=>key(operation)===row.target.value);
+      if(!selected?.supported)throw new Error('Select an exact supported replacement operation for '+row.id);
+    }
+    const settings=JSON.parse(row.settings.value);
+    return {settings,selection:{method:selected.method,path:selected.path,
+      serverIndex:Number(settings.serverIndex??0),securityAlternative:Number(settings.securityAlternative??0)}};
+  }
   function differenceTable(label,difference) {
     const detail=make('details'),summary=make('summary',label+' — '+difference.count+' changes');detail.append(summary);
     if(!difference.count)return detail;
@@ -88,6 +126,8 @@ export function createRevisionDesk({container,api,act,notice,onSaved}) {
     overview.replaceChildren(make('p',review.routes.length+' existing routes · '+review.unchangedSelected+' with unchanged contracts and outputs · '+review.additions.length+' additions · '+review.unselectedOperations+' unselected provider operations.'),
       make('p',review.sourceChanged?'The source bytes changed. Inspect each selected route and retain its intended settings.':'The source bytes match the saved document. You can still review explicit settings or route selections.','hint'));
     if(review.compilationError)overview.append(make('p','Original compiler: '+review.compilationError,'error wrap'));
+    if(review.authorization&&!review.authorization.ready)
+      overview.append(make('p','Current provider authorization: '+review.authorization.message,'oauth-warning wrap'));
     if(review.pending.length)overview.append(make('p','Choose keep, remap or drop for '+review.pending.length+' routes.','hint'));
     else if(review.ready)overview.append(make('p','The complete candidate compiles with the existing merchant runtime.','small'));
     overview.append(differenceTable('Complete provider source',review.sourceChanges));
@@ -112,12 +152,36 @@ export function createRevisionDesk({container,api,act,notice,onSaved}) {
       settings.setAttribute('aria-label','Operation settings for '+route.routeId);
       settingsDetail.append(settingsSummary,make('p','All saved settings are included: authentication references, server choice, examples, cache, stream and durable-operation settings where configured. Edit this JSON for an explicit configuration change. The original source-refresh engine retains amountAtomic and route identity '+route.routeId+'.','hint'),settings);
       const selected=make('div',undefined,'fields');selected.append(actionLabel,target.wrap);
-      const update=()=>{target.wrap.hidden=action.value!=='remap';settingsDetail.hidden=action.value==='drop';};update();
+      const authorizationPanel=make('details',undefined,'oauth-revision');let oauth=null;
+      if(connections) {
+        authorizationPanel.append(make('summary','Provider authorization for the replacement'));
+        authorizationPanel.open=Boolean(route.settings.oauthConnection);
+        const alias=make('select');alias.setAttribute('aria-label','Revision provider connection for '+route.routeId);
+        const label=make('label','Reviewed provider connection');label.append(alias);
+        const use=button('Use reviewed grant for the replacement');
+        use.setAttribute('aria-label','Use revision grant for '+route.routeId);
+        const hint=make('p','','hint');oauth={alias,use,hint};
+        authorizationPanel.append(make('p','A changed source requires a connection profile registered for its exact bytes. Complete provider authorization in the connection section, then select that reviewed grant here. Existing non-OAuth settings stay retained.','hint'),label,use,hint);
+        alias.addEventListener('change',()=>available());
+        use.addEventListener('click',()=>act(async()=>{
+          const row=controls.find(value=>value.id===route.routeId);
+          const chosen=connectionSelection(row,route);
+          const bound=await connections.binding(alias.value,source,chosen.selection);
+          delete chosen.settings.oauth2;
+          chosen.settings.oauthAlias=bound.oauthAlias;chosen.settings.oauthProfile=bound.oauthProfile;
+          chosen.settings.oauthConnection=bound.oauthConnection;
+          settings.value=pretty(chosen.settings);refreshConnectionControl(row);invalidate();
+          notice('Reviewed replacement grant selected for '+route.routeId+'. Review the complete candidate before saving.');
+        }));
+      } else authorizationPanel.hidden=true;
+      const update=()=>{target.wrap.hidden=action.value!=='remap';settingsDetail.hidden=action.value==='drop';authorizationPanel.hidden=!connections||action.value==='drop';};update();
       action.addEventListener('change',()=>{update();invalidate();});
-      target.input.addEventListener('input',invalidate);settings.addEventListener('input',invalidate);
-      card.append(selected,settingsDetail,differenceTable('Contracts and generated bindings',route.changes),differenceTable('Explicit settings',route.settingChanges));
+      target.input.addEventListener('input',invalidate);settings.addEventListener('input',()=>{
+        const row=controls.find(value=>value.id===route.routeId);if(row)refreshConnectionControl(row);invalidate();
+      });
+      card.append(selected,settingsDetail,authorizationPanel,differenceTable('Contracts and generated bindings',route.changes),differenceTable('Explicit settings',route.settingChanges));
       for(const error of route.errors)card.append(make('p',error,'error wrap'));
-      controls.push({id:route.routeId,action,target:target.input,settings});routeList.append(card);
+      const control={id:route.routeId,action,target:target.input,settings,oauth};controls.push(control);refreshConnectionControl(control);routeList.append(card);
     }
     available();
   }
@@ -168,7 +232,16 @@ export function createRevisionDesk({container,api,act,notice,onSaved}) {
     notice('Saved candidate staged: '+stageName.input.value.trim());
   }));
   releasePanel.hidden=true;available();
-  return {refresh,available,selectPackage(name,value) {
+  return {refresh,available,connectionsChanged(changed=[]) {
+    let stale=false;
+    for(const row of controls) {
+      let settings={};try{settings=JSON.parse(row.settings.value);}catch{}
+      if(changed.includes(settings.oauthAlias))stale=true;
+      refreshConnectionControl(row);
+    }
+    if(candidate?.sourceRevision&&changed.some(alias=>review?.plan?.operations?.some(row=>row.oauthAlias===alias)))stale=true;
+    if(stale)invalidate();else available();
+  },selectPackage(name,value) {
     if(retainingCandidate)return;
     baseName=name;source='';review=null;controls=[];candidate=null;file.value='';additions.value='[]';
     sourceLabel.textContent='';overview.replaceChildren();routeList.replaceChildren();candidateView.replaceChildren();releasePanel.hidden=true;

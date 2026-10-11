@@ -110,7 +110,7 @@ export class ApiAccessClient {
     environment[this.claimEnv] = supplied;
     return new Promise((resolve, reject) => {
       const child = spawn(this.python, [client, action, '--base-url',this.baseUrl,
-        '--order',this.orderReference,'--claim-env',this.claimEnv,...args],
+        '--order='+this.orderReference,'--claim-env',this.claimEnv,...args],
       {env:environment, stdio:['ignore','pipe','pipe'], shell:false, windowsHide:true});
       const output = [], errors = [];
       let size = 0, errorSize = 0, interrupted = null, settled = false, forceTimer;
@@ -268,6 +268,10 @@ export class ApiAccessPurchase {
 }
 
 async function exactInput(path, bytes) {
+  if (await exists(path)) {
+    need(digest(await readBytes(path)) === digest(bytes), 'API_PURCHASE_PREPARATION_INPUT_CHANGED');
+    return;
+  }
   try { await writeBytes(path, bytes, {exclusive:true}); }
   catch (error) {
     if (error.code !== 'EEXIST') throw error;
