@@ -32,6 +32,7 @@ function friendly(error) {
   const code=error.code ?? error.message;
   const known={
     PRIVATE_SESSION_REQUIRED:'Reopen the private URL printed by this workspace process.',
+    GOLDRUSH_SCHEMA_RUNTIME_REQUIRED:'This installation is missing required schema validation support. Use the schema installation in the workspace guide, then reopen.',
     GOLDRUSH_RELEASE_CHANGED_REFRESH:'The provider release changed. Refresh and review its current terms before preparing.',
     INTENT_ALREADY_EXISTS_USE_RECOVER:'This request ID already exists. Select it in saved requests and recover its result.',
     GOLDRUSH_INTENT_REQUEST_CONFLICT:'This ID belongs to a different request. Clear the form to begin a new request.',
@@ -112,6 +113,7 @@ function setFormFromSnapshot(data) {
     $('page').value=String(snap.pagination.nextPage);
     $('page-size').value=String(snap.pagination.pageSize);
   } else $('no-spam').value=String(snap.query['no-spam'] ?? 'true');
+  $('payment-flow').value=data.job?.expect?.paymentFlow ?? '';
   if(data.job?.expect) {
     const match=(operationSpec()?.offer.accepts ?? []).findIndex(a=>['scheme','network','asset','payTo'].every(k=>a[k]===data.job.expect[k]));
     if(match>=0)$('accept').value=String(match);
