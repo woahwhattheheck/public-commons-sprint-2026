@@ -263,3 +263,7 @@ ranking result after rollback. It also exercised authenticated database
 selection, binary values, exact decimal text, missing projected fields, stream
 duplicate fields, pagination boundaries, and both native and encoded result
 size limits.
+
+## Saved authoring workspace
+
+The [Redis merchant workspace](workspace/README.md) combines named-product editing, complete saved revisions, live source previews, original customer packages and retained release controls. Use `starforge-merchant redis workspace create --directory NEW --source SOURCE --plan PLAN`, then `starforge-merchant redis workspace open --directory WORKSPACE`. The browser and CLI share the same private workspace; the host-selected connection and environment credential references carry through to the original merchant.

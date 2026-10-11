@@ -20,6 +20,7 @@ const HELP = `Redis / Valkey merchant (Node 22.16+)
              [--max-in-flight 64] [--drain-grace-ms 60000] [--availability-dir DIRECTORY]
   run        Alias for start.
   serve      --source source.json --config service.json [same launch options]
+  workspace  create|open|inspect|save|preview|prepare|stage|resume [workspace options]
 Credentials come from the source's passwordEnv or tokenEnv. init/describe/inspect/prepare/verify are offline.
 Seller documentation and operations use the original developer portal and local operator interface.`;
 
@@ -64,6 +65,7 @@ export async function initRedisWorkspace(directory, { transport = 'redis' } = {}
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'workspace') return (await import('./workspace/cli.mjs')).main(args.slice(1));
   if (!args.length || args.includes('--help')) { process.stdout.write(HELP + '\n'); return; }
   const command = args[0], options = new Map();
   const switches = ['--allow-local-facilitator', '--no-operations'];

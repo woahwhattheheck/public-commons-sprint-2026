@@ -152,6 +152,11 @@ try {
   const plan = JSON.parse(await readFile(new URL('./example-merchant-plan.json', import.meta.url)));
   plan.routes[1].parameterDescriptions = { region: 'Reviewed region' };
   await write(sourceFile, declaration); await write(planFile, plan);
+  const workspaceJourney = process.env.SF30_REDIS_JOURNEY_WORKSPACE === '1'
+    ? await (await import('./workspace/native-journey.mjs')).runRedisWorkspaceJourney({
+      sourceFile, planFile, root: join(work, 'authoring-workspace'),
+      runtime: { port: 0, allowLocalFacilitator: true, facilitator: 'http://127.0.0.1:' + facilitator.address().port },
+    }) : undefined;
   const firstPackage = await prepareRedisSeller({ sourceFile, planFile, directory: join(authoring, 'first') });
   const verifiedFirst = await verifyPreparedRedisSeller(firstPackage.directory);
   assert.deepEqual(firstPackage.requiredEnvironment, [envName]);
@@ -216,7 +221,7 @@ try {
     nativeStatus, nativeVerifies: verified, nativeSettlements: settled, facilitator: 'LOCAL_PROTOCOL_FIXTURE',
     journeys: [http ? 'native Upstash HTTPS, authentication and read-only Lua' : 'ACL and authenticated database selection', 'binary and exact scalar preservation', 'native rank and stream pagination',
       'original generated client and buyer response files', 'retained source after authoring removal', 'native child upgrade and rollback'],
-    deliveries };
+    deliveries, ...(workspaceJourney ? { workspace: workspaceJourney } : {}) };
   if (output) await write(output, result); console.log(JSON.stringify(result));
 } finally {
   await operator?.close(); await source?.close(); if (database?.isOpen) database.destroy();
