@@ -2,13 +2,13 @@
 """Local offline CLI: python cli.py IMAGE [--output DIR]."""
 import argparse
 import hashlib
-import html
 import json
 import math
 from pathlib import Path
 from engine import save_review
+from review_page import render_page as render_review_page
 
-EVIDENCE_FILES = ('report.json', 'overlay.png', 'index.html')
+EVIDENCE_FILES = ('report.json', 'overlay.png', 'index.html', 'review.js')
 MANIFEST_NAME = 'cli-run.json'
 MAX_INPUT_BYTES = 8_000_000  # Match engine.decode_image before allocating raw input bytes.
 
@@ -22,24 +22,12 @@ def _read_image_bounded(image: Path) -> bytes:
     return raw
 
 
-def render_page(report: dict) -> str:
-    decision = report['decision']
-    action = html.escape(decision['action'])
-    reasons = ', '.join(html.escape(r) for r in decision['reason_codes']) or 'No immediate capture issue'
-    count = report['candidate_count']
-    return f'''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OrchardCue operator review</title>
-<style>body{{font:16px system-ui;background:#10231b;color:#f3f5f1;margin:0;max-width:1000px;padding:24px;margin:auto}}
-section{{background:#1c362b;padding:20px;border-radius:16px;margin:20px 0}}
-img{{width:100%;height:auto;border-radius:12px}} a{{color:#b5f5c1}}
-header{{font-size:30px;font-weight:750}} p{{line-height:1.5}} b{{font-size:23px}}</style>
-<header>OrchardCue <small style="font-size:16px">/ operator review</small></header>
-<section><b>{action}</b><p>{count} red fruit-like candidates; {report['ambiguous_regions']} ambiguous red regions.</p>
-<p>Reason codes: {reasons}</p><p>These are image observations only. Operator confirmation is required before taking action.</p></section>
-<section><img src="overlay.png" alt="Annotated image with red candidates outlined and review status"></section>
-<section><h2>Evidence</h2><p>SHA256 input: <code>{html.escape(report['input_sha256'])}</code></p>
-<p><a href="report.json">Machine-readable evidence JSON</a> · <a href="overlay.png">Download overlay</a></p>
-<p>Generated on synthetic demonstration inputs unless separately field-verified. No crop-yield claim.</p></section></html>'''
+def render_page(report: dict, report_sha256: str | None = None) -> str:
+    """Keep the original callable while binding new pages to report-file bytes."""
+    if report_sha256 is None:
+        raw = (json.dumps(report, indent=2) + "\n").encode("utf-8")
+        report_sha256 = hashlib.sha256(raw).hexdigest()
+    return render_review_page(report, report_sha256)
 
 
 
@@ -58,7 +46,7 @@ def _existing_review(output: Path, image_sha: str, marker_mm: float, *, replace:
     if not existing:
         return None
     if len(existing) != len(artifacts):
-        raise ValueError('output has incomplete review evidence; choose a new --output or use --replace')
+        raise ValueError('output has incomplete or older review assets; choose a new --output or use --replace')
     try:
         manifest = json.loads((output / MANIFEST_NAME).read_text(encoding='utf-8'))
         if manifest['schema'] != 'orchardcue-cli-run/1':
@@ -92,7 +80,10 @@ def main():
         report = _existing_review(args.output, image_sha, args.marker_mm, replace=args.replace)
         if report is None:
             report = save_review(raw, args.output, marker_side_mm=args.marker_mm)
-            (args.output / 'index.html').write_text(render_page(report), encoding='utf-8')
+            script = Path(__file__).with_name('review.js').read_bytes()
+            (args.output / 'review.js').write_bytes(script)
+            report_sha256 = _digest(args.output / 'report.json')
+            (args.output / 'index.html').write_text(render_page(report, report_sha256), encoding='utf-8')
             manifest = {'schema': 'orchardcue-cli-run/1', 'input_sha256': image_sha,
                         'marker_side_mm': args.marker_mm,
                         'artifact_sha256': {name: _digest(args.output / name) for name in EVIDENCE_FILES}}

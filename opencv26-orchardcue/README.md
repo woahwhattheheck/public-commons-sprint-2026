@@ -18,6 +18,41 @@ python check_focused.py       # one small synthetic acceptance check; not a full
 
 **OpenCV 5:** current cloud fixture was run with OpenCV 4.13.0 + NumPy 2.3.5, NOT OpenCV 5. Before entering the official 2026 competition, run with a publicly available OpenCV 5 build (including aruco), collect exact version/build hashes and real image results. This demo does not claim the OpenCV 5 contest requirement is already met.
 
+## Review and retain candidate labels
+
+Open a newly generated `index.html` with its sibling `review.js`, `overlay.png`
+and `report.json`. The review desk retains the detector's original action,
+reason codes, measurements and limitations. Each candidate has a viewport of
+its source bounding box in the unchanged overlay, an operator label and an
+optional note. Labels are **Unreviewed**, **Visually fruit-like**, **Not visually
+fruit-like** or **Uncertain**; every candidate starts unreviewed. The local
+filter and 25-card pages help review a larger capture without changing it.
+
+Optional reviewer attribution and candidate notes stay in the browser. When
+browser storage is available, the page retains them under the exact SHA-256
+of `report.json`; otherwise it says to download before closing. **Download
+label JSON** creates a portable `orchardcue-operator-review/1` file containing
+that report hash, input-image hash, engine version and every candidate's label
+and note. Keep this file with the original review bundle. It is separate from
+the detector report and does not change the capture decision or measurements.
+
+Importing label JSON checks the full report identity and all candidate IDs,
+labels and bounded notes before replacing any current labels. A file for a
+different capture or analysis configuration is rejected; an invalid import
+leaves the current review intact. Unreviewed and uncertain candidates stay
+explicit. Labels describe an operator's visual assessment, not calibrated
+fruit detection, ripeness, yield, safety or a new authorization to act. Missed
+objects outside the detector's candidate list cannot be labeled by this desk.
+
+The CLI copies `review.js` into new output bundles and includes its hash in
+`cli-run.json` alongside the existing artifacts. Intact existing new-format
+bundles retain the original reuse behavior. Older three-file static bundles
+remain readable, but must use a new `--output` directory to create the desk,
+or the existing explicit `--replace` option to regenerate. No labels are
+silently migrated to another report. The HTML still shows the original
+capture and guidance with JavaScript unavailable; interactive labeling needs
+JavaScript and the copied local script. No network service is contacted.
+
 ## Red-candidate focus guard (offline, synthetic evidence)
 
 A globally sharp marker or background can conceal *locally blurred red candidates*.
@@ -42,11 +77,11 @@ or official OpenCV 5 / AWS performance. Real orchard validation is still require
   When the same ID 23 is detected twice, review must request a single-marker recapture rather than choosing a physical scale. Pixel-only candidate positions remain available.
 - `READY_FOR_OPERATOR_REVIEW`: quality gates pass and six synthetic red objects were localized; human still confirms.
 
-Every action includes `human_confirmation_required=true`. The static HTML shows the same provenance and annotated capture and provides the JSON, with **no browser-upload service and no silent network calls**.
+Every action includes `human_confirmation_required=true`. The local HTML shows the same provenance and annotated capture, provides the JSON, and keeps optional operator labels separate, with **no browser-upload service and no silent network calls**.
 
 ## Cloud integration boundary
 
-`aws_lambda.py` illustrates a deliberately narrow S3 ObjectCreated → Lambda → separate **review bucket** path, with single-event check, allowlisted source bucket, max 8 MiB image, PNG/JPEG-only key, SHA-deduplicated review prefix, and JSON+PNG outputs. Deployers must provision restricted AWS IAM, S3 notifications, a pinned OpenCV/NumPy Lambda layer or container, runtime limits, and cost alarms. It has **not** been deployed or exercised against real AWS; no hosted endpoint or paid API call is claimed. Provider-backed data/capture, evaluation metrics (false positives, miss rate, marker errors), OpenCV 5 build and ≤3-minute verified demo must precede any competition entry.
+`aws_lambda.py` illustrates a deliberately narrow S3 ObjectCreated → Lambda → separate **review bucket** path, with single-event check, allowlisted source bucket, max 8 MiB image, PNG/JPEG-only key, SHA-deduplicated review prefix, and JSON+PNG outputs. Deployers must provision restricted AWS IAM, S3 notifications, a pinned OpenCV/NumPy Lambda layer or container, runtime limits, and cost alarms. It has **not** been deployed or exercised against real AWS; no hosted endpoint or paid API call is claimed. Provider-backed data/capture, evaluation metrics (false positives, miss rate, marker errors), OpenCV 5 build and the currently required demonstration video of no more than five minutes must precede any competition entry.
 
 ### Conservative marker geometry scale gate
 
