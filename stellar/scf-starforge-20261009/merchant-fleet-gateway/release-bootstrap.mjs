@@ -315,7 +315,7 @@ export async function bootstrapFleet({ declarationFile, directory, planFile, sig
         if (retained.status !== 'STAGING') throw failure('FLEET_BOOTSTRAP_RELEASE_MISSING', row.key);
         await progress('release-staging', row, { releaseId: initial.releaseId });
           release = await stageRelease(row.store, { ...source, id: initial.releaseId, label: initial.label,
-            ...(source.sqlitePackage !== undefined ? { signal } : {}),
+            ...(source.sqlitePackage !== undefined || source.postgresPackage !== undefined ? { signal } : {}),
           runtime: { ...source.runtime, port: row.port } });
         await progress('release-staged', row, { releaseId: release.id, releaseDigest: release.digest });
         release = await inspectRelease(row.store, initial.releaseId);
