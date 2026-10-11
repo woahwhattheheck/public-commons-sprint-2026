@@ -1,6 +1,6 @@
 // MIT — One native SF88 subprocess, never a shell or replacement payment engine.
 import { spawn } from 'node:child_process';
-import { open, lstat, mkdtemp, rm } from 'node:fs/promises';
+import { open, lstat, mkdtemp, rm, realpath } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { absolute, privateDirectory, readBytes, parseJson, object, need, BuyerError, safeCode } from './store.mjs';
 
@@ -23,6 +23,9 @@ export class NativeRuntime {
     need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
     entryFile = absolute(entryFile);
     need((await lstat(entryFile)).isFile(), 'NATIVE_CLI_REQUIRED');
+    // ESM resolves parent directory links before evaluating a main-entry guard.
+    // Pass that same real filename in argv while keeping the regular-file check.
+    entryFile = await realpath(entryFile);
     directory = await privateDirectory(directory, { create: false });
     resultFile = resultFile === undefined ? join(directory, 'stdout.json') : absolute(resultFile);
     need(dirname(resultFile) === directory, 'NATIVE_RESULT_PATH_INVALID');

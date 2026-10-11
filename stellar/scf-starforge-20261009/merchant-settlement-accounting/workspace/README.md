@@ -2,6 +2,10 @@
 
 This local operator application keeps a merchant's reconciliations, imported original verification results, recovered original purchase outcomes, exception reviews, comparisons, and downloads together across restarts. It runs the existing `merchant-settlement-accounting/reconcile.mjs` engine and the existing CLI's report writer directly. The original SF98 journal reader, SF86 proof classifications, explicit recovered-settlement reader, multi-option identity, and exact monetary arithmetic remain the accounting source.
 
+## Xero journals
+
+Open **Xero journals** from the Accountant handoff panel to retain an organization and chart of accounts, explicitly value original payments and verified refunds, create balanced native drafts, reconcile returned journals, and apply the original accountant return. The [complete Xero workflow](XERO.md) includes the operator interface, existing distribution subcommand, retained source downloads and original-workspace recovery.
+
 ## Open on the merchant host
 
 Use Node 22 or later on Linux, with `flock` and `tar` available. The source checkout supplies all JavaScript modules; this workspace adds no package dependencies. The existing merchant outbox and SF86 result directory must be private directories with mode 0700. Select the original merchant accounting terms JSON described in [the accounting guide](../README.md).

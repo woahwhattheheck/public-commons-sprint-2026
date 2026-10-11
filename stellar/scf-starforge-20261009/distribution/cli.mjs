@@ -22,8 +22,10 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
+  mercury-feed                              Operate original Mercury events, paid feeds and joined recovery
   mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
   valyu-merchant                            Configure and operate the native research search merchant
   valyu-research                            Save queries, operate purchases, compare research and export editions
@@ -90,6 +92,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
   sheets-source                              Capture, inspect and prepare selected Google Sheets columns
   sheets-publisher                           Review and publish retained Sheet observations as datasets
+  ckan                                       Discover, capture and operate retained CKAN data merchants
+  ckan-publisher                             Review and publish complete DataStore editions and buyer handoffs
   mongodb                                    Inspect, author and operate fixed native BSON reports
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
   mongodb-publisher                          Publish complete reviewed BSON snapshots and retained refreshes
@@ -112,7 +116,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   sqlite-publisher                           Review and publish retained SQLite data products
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
-  dataset-publisher                          Publish CSV versions and prepare original buyer acquisition
+  dataset-publisher                          Publish retained CSV/workbook selections and prepare buyer acquisition
+  workbook                                   Inspect sources, review mappings and adopt complete workbook editions
+  workbook-customer                          Receive published workbooks through the original buyer and Analysis
+  workbook-receive                            Complete retained workbook receiving and full SQL export
   buyer-dataset                              Acquire, resume and deliver a complete selected dataset
   buyer-dataset-workspace                    Review and operate original datasets in the browser
   catalog-serve / catalog                     Host and operate live seller discovery
@@ -132,6 +139,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   fleet-release                              Stage, compare and operate original releases across a fleet
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
+  merchant-customer-statements               Retain customer statements with original payments and API usage
   merchant-accounting-pricing                Import a saved original pricing report as accounting terms
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace

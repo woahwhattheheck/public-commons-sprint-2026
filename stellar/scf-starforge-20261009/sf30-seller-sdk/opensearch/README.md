@@ -10,7 +10,7 @@ Use Node.js **22.16 or newer** with JSON.parse source-context support, and an ex
 
 OpenSearch 3.3 introduced the PIT-only `_shard_doc` sort. This source explicitly adds `_index` and `_shard_doc` after the merchant's business ordering. The tuple disambiguates documents across indices and shards. Startup checks the actual distribution and version.
 
-Supply an account with access to the declared indices, mappings, field capabilities, query validation, PIT creation, search and deletion of its own PITs. Keep customer-specific data access in the existing application's authorization and OpenSearch roles. A customer-selected filter is an input value; it is not an authenticated tenant identity.
+Supply an account with access to the declared indices, mappings, field capabilities, search, PIT creation, search and deletion of its own PITs. Keep customer-specific data access in the existing application's authorization and OpenSearch roles. A customer-selected filter is an input value; it is not an authenticated tenant identity.
 
 ## Prepare and start
 
@@ -43,7 +43,7 @@ node opensearch/start.mjs --directory /private/search-ready \
 
 Preparation is offline. It creates a private source/plan, the original `service.json` and bindings, public OpenAPI and the complete generated `client/`. Existing directories are never overwritten. An `INCOMPLETE` marker prevents starting interrupted preparation. Prepare a deliberate query/price revision in a new folder and switch it through the existing release process.
 
-`--inspect` reads the actual cluster version, field capabilities and stored-source projection mappings, then asks OpenSearch to validate every named query with its private probe. Normal startup performs this same preflight before opening the seller. Startup prints the original seller, docs and operations URLs. `--no-operations`, `--max-in-flight`, `--drain-grace-ms` and `--availability-dir` use the existing merchant lifecycle.
+`--inspect` reads the actual cluster version, field capabilities and stored-source projection mappings, then runs every named query's private probe as a native zero-row search. The probe checks successful shards and native timeout status using the same read permission as customer search. Normal startup performs this same preflight before opening the seller. Startup prints the original seller, docs and operations URLs. `--no-operations`, `--max-in-flight`, `--drain-grace-ms` and `--availability-dir` use the existing merchant lifecycle.
 
 With no facilitator, the service advertises the original HTTP 402 challenges. Supply the configured facilitator for the maintained verify → query → settle → delivery flow.
 

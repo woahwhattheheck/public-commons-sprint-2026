@@ -241,11 +241,18 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
         readFields(name, query, { timeoutMs: query.timeoutMs }),
         readProjection(name, query, { timeoutMs: query.timeoutMs }),
       ]);
+      // Validate through the same native read capability used for delivery.
+      // A zero-row probe compiles/executes the declared query without exposing
+      // documents or requiring OpenSearch's administrative validate privilege.
       const validation = await wire('POST', query.indices.map(encodeURIComponent).join(',') +
-        '/_validate/query?all_shards=true&explain=false', {
-          body: { query: bindQuery(query, query.probe) }, timeoutMs: query.timeoutMs, maxBytes: 65536,
+        '/_search?allow_partial_search_results=false&allow_no_indices=false&ignore_unavailable=false', {
+          body: { query: bindQuery(query, query.probe), size: 0, _source: false,
+            track_total_hits: 1, timeout: query.timeoutMs + 'ms' },
+          timeoutMs: query.timeoutMs, maxBytes: 65536,
         });
-      if (validation?.valid !== true) fail('OPENSEARCH_QUERY_PREFLIGHT_FAILED', name);
+      if (!record(validation) || validation.timed_out !== false || validation.terminated_early === true ||
+          !Array.isArray(validation.hits?.hits) || validation.hits.hits.length !== 0)
+        fail('OPENSEARCH_QUERY_PREFLIGHT_FAILED', name);
       completeShards(validation._shards, name);
     }
   } catch (issue) { await close(); throw issue; }
