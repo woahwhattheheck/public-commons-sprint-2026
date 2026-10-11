@@ -1,12 +1,12 @@
 // MIT — Purchased API customer workflow over original SF88 and SF101 products.
 import { spawn } from 'node:child_process';
-import { mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateHandoff } from '../checkout-config.mjs';
 import { VerifiedFile } from '../../sf88-operator-buyer-cli/node/result.mjs';
 import { absolute, intent, need, object, digest, now, exists, privateDirectory,
-  readBytes, readJson, parseJson, writeBytes, writeJson, syncDirectory,
+  readBytes, readJson, parseJson, jsonBytes, writeBytes, writeJson, syncDirectory,
   BuyerError, safeCode } from '../../sf88-operator-buyer-cli/node/store.mjs';
 
 const SCHEMA = 'stellar-forge.sf101.api-purchase-customer.v1';
@@ -40,13 +40,16 @@ function requestId(value) {
     'STABLE_REQUEST_ID_REQUIRED');
   return value;
 }
-function originalRequest(handoff, intentId) {
+function originalRequest(handoff, intentId, directory) {
   const payment = handoff.payment;
   const expect = {scheme:payment.scheme, network:payment.network, asset:payment.asset,
     payTo:payment.payTo, maxAtomic:payment.amount, maxTimeoutSeconds:payment.maxTimeoutSeconds};
   if (payment.extra?.paymentFlow !== undefined) expect.paymentFlow = payment.extra.paymentFlow;
   return {operation:{intentId:intent(intentId), url:handoff.purchaseUrl, method:'GET',
-    orderReference:handoff.orderReference, expect}, requestTimeoutMs:180000};
+    orderReference:handoff.orderReference, expect},
+    responseFile:{destination:join(directory,'purchase-response.bin'), maxBytes:16384,
+      timeoutMs:30000, expectedContentType:'application/json'},
+    requestTimeoutMs:180000};
 }
 function boundBuyer(buyer) {
   need(buyer && typeof buyer.fromWorkspace === 'function' && typeof buyer.inbox === 'function' &&
@@ -264,6 +267,18 @@ export class ApiAccessPurchase {
   }
 }
 
+async function exactInput(path, bytes) {
+  try { await writeBytes(path, bytes, {exclusive:true}); }
+  catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    need(digest(await readBytes(path)) === digest(bytes), 'API_PURCHASE_PREPARATION_INPUT_CHANGED');
+  }
+}
+const preparation = value => {
+  const {createdAt,...binding} = value;
+  return binding;
+};
+
 export async function createApiAccessPurchase({directory, buyer, workspaceDirectory,
   inboxDirectory, handoffFile, intentId, gatewayBaseUrl, claimEnv = 'SF101_CLAIM_TOKEN',
   python, environment, signal}) {
@@ -274,23 +289,41 @@ export async function createApiAccessPurchase({directory, buyer, workspaceDirect
   intentId = intent(intentId);
   const raw = await readBytes(absolute(handoffFile));
   const handoff = validateHandoff(parseJson(raw));
-  const configuration = originalRequest(handoff, intentId);
-  const metadata = {schema:SCHEMA, createdAt:now(), intentId,
+  const configuration = originalRequest(handoff, intentId, directory);
+  const configurationBytes = jsonBytes(configuration);
+  const proposed = {schema:SCHEMA, createdAt:now(), intentId,
     orderReference:handoff.orderReference, gatewayBaseUrl:origin(gatewayBaseUrl),
     claimEnv:claimName(claimEnv), workspaceDirectory, inboxDirectory, ...binding,
-    handoffSha256:digest(raw)};
+    handoffSha256:digest(raw), configurationSha256:digest(configurationBytes)};
   need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
-  try { await mkdir(directory, {mode:0o700}); }
-  catch (error) {
-    if (error.code === 'EEXIST') throw new BuyerError('API_PURCHASE_EXISTS_USE_OPEN', {directory});
-    throw error;
-  }
+  try {
+    await mkdir(directory, {mode:0o700});
+    await syncDirectory(dirname(directory));
+  } catch (error) { if (error.code !== 'EEXIST') throw error; }
   await privateDirectory(directory, {create:false});
-  await writeBytes(join(directory,'handoff.json'), raw, {exclusive:true});
-  await writeJson(join(directory,'purchase.json'), configuration, {exclusive:true});
-  metadata.configurationSha256 = digest(await readBytes(join(directory,'purchase.json')));
-  await writeJson(join(directory,'customer.json'), metadata, {exclusive:true});
-  await syncDirectory(directory);
+  const creationPath = join(directory,'creation.json'), manifestPath = join(directory,'customer.json');
+  let metadata = proposed;
+  if (!await exists(creationPath)) {
+    if (await exists(manifestPath)) {
+      const published = await readJson(manifestPath);
+      need(same(preparation(published), preparation(proposed)), 'API_PURCHASE_PREPARATION_INPUT_CHANGED');
+      metadata = published;
+    } else {
+      const known = new Set(['handoff.json','purchase.json','customer.json','creation.json']);
+      need((await readdir(directory)).every(name => known.has(name) ||
+        /^\.write-[a-f0-9-]{36}$/.test(name)), 'API_PURCHASE_PREPARATION_DIRECTORY_IN_USE');
+    }
+    try { await writeJson(creationPath, metadata, {exclusive:true}); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+  }
+  metadata = await readJson(creationPath);
+  need(typeof metadata.createdAt === 'string' && Number.isFinite(Date.parse(metadata.createdAt)) &&
+    same(preparation(metadata), preparation(proposed)), 'API_PURCHASE_PREPARATION_INPUT_CHANGED');
+  // The creation binding is published first. Repeating the same preparation can
+  // finish a missing prefix after storage interruption without changing inputs.
+  await exactInput(join(directory,'handoff.json'), raw);
+  await exactInput(join(directory,'purchase.json'), configurationBytes);
+  await exactInput(manifestPath, jsonBytes(metadata));
   const purchase = await openApiAccessPurchase({directory, buyer, python, environment});
   await purchase.initialize({signal});
   return purchase;
@@ -310,7 +343,7 @@ export async function openApiAccessPurchase({directory, buyer, python, environme
   const options = {...(python === undefined ? {} : {python}),
     ...(environment === undefined ? {} : {environment})};
   const purchase = new ApiAccessPurchase(directory, buyer, metadata, digest(raw), handoff, options);
-  const expected = originalRequest(handoff, metadata.intentId);
+  const expected = originalRequest(handoff, metadata.intentId, directory);
   need(same(await purchase._bound(), expected), 'API_PURCHASE_CONFIGURATION_MISMATCH');
   return purchase;
 }

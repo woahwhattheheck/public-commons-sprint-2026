@@ -18,6 +18,8 @@ Use the [SF88 operator workspace](../../sf88-operator-buyer-cli/node/WORKSPACE.m
 for the customer's signer, payer, terms and allocation. Keep the existing
 operator directory and its private keys together. The original workspace
 configuration remains the authority for payment approval, transport and ledger.
+This selected checkout declares its own JSON response capture, so a prior
+resource's response hash, size or stream pins are kept out of the new request.
 
 This application requires Node and Python 3.11 or later from the complete
 Stellar Forge distribution. Its Python executable is selected by
@@ -46,10 +48,13 @@ configuration. It imports that request through `Buyer.fromWorkspace` and
 enqueues it into the original Inbox. The native routing marker, attempt record,
 review and financial evidence remain in those existing products.
 
-The directory is created exclusively. Reopen the same directory after a
-reported preparation interruption. `review` resumes a completed original
-preparation and the identical inbox intake. An incomplete original native
-preparation reports its existing error and location through the original Buyer.
+The directory's original creation binding is published first. After a storage
+interruption, repeat the same `prepare` arguments: matching retained files are
+reused, missing files are completed, and changed inputs are rejected. The
+original creation timestamp is preserved. Once the customer manifest is
+complete, `review` resumes the original preparation and identical inbox intake.
+An incomplete original native preparation reports its existing state through
+the original Buyer.
 
 ## Review, purchase and reopen
 
