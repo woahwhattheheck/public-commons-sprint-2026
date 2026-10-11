@@ -171,6 +171,7 @@ final class Starforge_SF104_Admission {
     }
 
     static function page() {
+        if (class_exists('Starforge_SF104_Merchant_Console')) { Starforge_SF104_Merchant_Console::page(); return; }
         global $wpdb;
         if (!current_user_can('manage_woocommerce')) return;
         $rows = $wpdb->get_results('SELECT * FROM ' . self::table() . " WHERE state='RESERVED' ORDER BY reserved_at DESC LIMIT 100");
@@ -238,3 +239,4 @@ final class Starforge_SF104_Admission {
 }
 
 Starforge_SF104_Admission::boot();
+
