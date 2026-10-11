@@ -1,0 +1,43 @@
+{
+  "schema": "stellar-forge.duckdb-merchant-plan.v1",
+  "publicOrigin": "https://merchant.example",
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "amount": "10000",
+    "maxTimeoutSeconds": 60
+  },
+  "routes": [
+    {
+      "id": "catalog",
+      "path": "/catalog",
+      "method": "GET",
+      "query": "catalog",
+      "serviceName": "DuckDB catalog API",
+      "description": "Products in one region, with exact decimal values and an exclusive ID cursor.",
+      "tags": ["duckdb", "dataset", "example"],
+      "example": {"region": "north"},
+      "parameterDescriptions": {
+        "region": "Exact product region.",
+        "after_id": "Return IDs greater than this cursor. Omit it to use the merchant's configured starting position."
+      }
+    },
+    {
+      "id": "sales",
+      "path": "/sales",
+      "method": "POST",
+      "query": "regionalSales",
+      "serviceName": "Parquet regional sales API",
+      "description": "Aggregate the explicitly selected Parquet sales file for one region.",
+      "tags": ["parquet", "analytics", "example"],
+      "example": {"region": "north"},
+      "parameterDescriptions": {"region": "Exact sales region."},
+      "paymentOptions": [
+        {"scheme": "exact", "network": "stellar:testnet", "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT", "amount": "10000", "maxTimeoutSeconds": 60},
+        {"scheme": "exact", "network": "stellar:testnet", "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_ALTERNATIVE_RECIPIENT", "amount": "12000", "maxTimeoutSeconds": 90}
+      ]
+    }
+  ]
+}
