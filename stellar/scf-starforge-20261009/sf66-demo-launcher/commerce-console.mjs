@@ -110,6 +110,8 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
+    ['/request.mjs', 'request.mjs', 'text/javascript; charset=utf-8'],
+    ['/request.css', 'request.css', 'text/css; charset=utf-8'],
     ['/stream.mjs', 'stream.mjs', 'text/javascript; charset=utf-8'],
     ['/stream.css', 'stream.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, {
@@ -174,7 +176,8 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         acceptIndex: job.merchant.acceptIndex, originalTerms: job.merchant.originalTerms,
         quotedAtomic: job.merchant.originalTerms.amount,
         bodyPresent: job.bodySha256 !== null, bodyBytes: job.bodyBytes,
-        bodySha256: job.bodySha256, operatorId: job.operator.actor, serviceId: job.operator.service,
+        bodySha256: job.bodySha256, configSha256: job.configSha256,
+        operatorId: job.operator.actor, serviceId: job.operator.service,
         signerFilename: basename(job.dependencies.signer.path) } : null,
       review: review ? { id: review.id, at: review.at, original: review.original } : null,
       attempt, delivery: jobDelivery(job), stream: job?.stream ?? null, rpcRecovery: job?.rpcRecovery ?? null,
@@ -186,6 +189,8 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         result: retrievals.get(id).result ?? null, error: retrievals.get(id).error ?? null } : null,
       activeIntent: work?.intent ?? null,
       controls: { canReview: Boolean(job) && runningSession && !action,
+        canInspectRequest: Boolean(job) && runningSession && typeof session.requestInput === 'function',
+        canDownloadRequest: Boolean(job) && job.bodySha256 !== null && runningSession && typeof session.requestBytes === 'function',
         canProbeFacilitator: runningSession && !action && typeof session.probeReadiness === 'function' &&
           original.facilitator?.mode === 'NATIVE_X402_FACILITATOR',
         canExecute: Boolean(review) && runningSession && !action && !work && job.state === 'QUEUED' && original.seller.mode === 'NATIVE_X402',
@@ -269,12 +274,24 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         } finally { res.removeListener('close', abort); }
         return;
       }
-      if (req.method === 'GET' && ['/api/session', '/api/preview', '/api/delivery', '/api/product-preview', '/api/product-delivery'].includes(target.pathname)) {
+      if (req.method === 'GET' && ['/api/session', '/api/preview', '/api/delivery', '/api/product-preview', '/api/product-delivery', '/api/request-input', '/api/request-body'].includes(target.pathname)) {
         if ([...target.searchParams.keys()].some(key => key !== 'intent') || target.searchParams.getAll('intent').length > 1)
           throw problem('Only one exact intent selection is accepted.');
         const intent = target.searchParams.get('intent');
         if (target.pathname === '/api/session') return send(200, await snapshot(intent));
         const { job } = await current(intent);
+        if (target.pathname === '/api/request-input') {
+          if (typeof session.requestInput !== 'function') throw problem('This session has no request inspection.', 409);
+          return send(200, await session.requestInput(job.operation.intentId));
+        }
+        if (target.pathname === '/api/request-body') {
+          if (typeof session.requestBytes !== 'function') throw problem('This session has no retained request download.', 409);
+          const retained = await session.requestBytes(job.operation.intentId);
+          return reply(200, 'application/octet-stream', Buffer.from(retained.bytes), {
+            'content-disposition': 'attachment; filename="request-body.bin"',
+            'x-request-body-sha256': retained.sha256, 'x-request-config-sha256': retained.configSha256,
+          });
+        }
         const delivery = target.pathname.startsWith('/api/product-') ? job.paidFile?.delivery ?? { available: false } : jobDelivery(job);
         if (['/api/preview', '/api/product-preview'].includes(target.pathname)) return send(200, await preview(delivery));
         await download(delivery, res);
