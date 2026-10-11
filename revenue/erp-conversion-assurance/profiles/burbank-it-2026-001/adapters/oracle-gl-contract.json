@@ -1,0 +1,982 @@
+{
+  "schema": "tjl.oracle-ebs-gl-interface-contract.v1",
+  "product": "Oracle E-Business Suite",
+  "release": "12.2",
+  "table": "GL_INTERFACE",
+  "source": "https://docs.oracle.com/cd/E26401_01/doc.122/e48748/T312864T451269.htm",
+  "reviewedOn": "2026-10-11",
+  "columns": [
+    {
+      "name": "STATUS",
+      "type": "VARCHAR2",
+      "required": true,
+      "mustBeNull": false,
+      "maxLength": 50
+    },
+    {
+      "name": "LEDGER_ID",
+      "type": "NUMBER",
+      "required": true,
+      "mustBeNull": false,
+      "precision": 15
+    },
+    {
+      "name": "USER_JE_SOURCE_NAME",
+      "type": "VARCHAR2",
+      "required": true,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "USER_JE_CATEGORY_NAME",
+      "type": "VARCHAR2",
+      "required": true,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "ACCOUNTING_DATE",
+      "type": "DATE",
+      "required": true,
+      "mustBeNull": false
+    },
+    {
+      "name": "CURRENCY_CODE",
+      "type": "VARCHAR2",
+      "required": true,
+      "mustBeNull": false,
+      "maxLength": 15
+    },
+    {
+      "name": "DATE_CREATED",
+      "type": "DATE",
+      "required": true,
+      "mustBeNull": false
+    },
+    {
+      "name": "CREATED_BY",
+      "type": "NUMBER",
+      "required": true,
+      "mustBeNull": false,
+      "precision": 15
+    },
+    {
+      "name": "ACTUAL_FLAG",
+      "type": "VARCHAR2",
+      "required": true,
+      "mustBeNull": false,
+      "maxLength": 1
+    },
+    {
+      "name": "ENCUMBRANCE_TYPE_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "BUDGET_VERSION_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "CURRENCY_CONVERSION_DATE",
+      "type": "DATE",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "USER_CURRENCY_CONVERSION_TYPE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 30
+    },
+    {
+      "name": "CURRENCY_CONVERSION_RATE",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "SEGMENT1",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT2",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT3",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT4",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT5",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT6",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT7",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT8",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT9",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT10",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT11",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT12",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT13",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT14",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT15",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT16",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT17",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT18",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT19",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT20",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT21",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT22",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT23",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT24",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT25",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT26",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT27",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT28",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT29",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "SEGMENT30",
+      "type": "VARCHAR",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "ENTERED_DR",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "ENTERED_CR",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "ACCOUNTED_DR",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "ACCOUNTED_CR",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "TRANSACTION_DATE",
+      "type": "DATE",
+      "required": false,
+      "mustBeNull": true
+    },
+    {
+      "name": "REFERENCE1",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE2",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE3",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE4",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE5",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE6",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE7",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE8",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE9",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE10",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE11",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE12",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE13",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE14",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE15",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE16",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE17",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE18",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE19",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE20",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 100
+    },
+    {
+      "name": "REFERENCE21",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE22",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE23",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE24",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE25",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE26",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE27",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE28",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE29",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "REFERENCE30",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "GROUP_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false,
+      "precision": 15
+    },
+    {
+      "name": "JE_BATCH_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": true,
+      "precision": 15
+    },
+    {
+      "name": "PERIOD_NAME",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 15
+    },
+    {
+      "name": "JE_HEADER_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": true,
+      "precision": 15
+    },
+    {
+      "name": "JE_LINE_NUM",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": true,
+      "precision": 15
+    },
+    {
+      "name": "CHART_OF_ACCOUNTS_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": true,
+      "precision": 15
+    },
+    {
+      "name": "FUNCTIONAL_CURRENCY_CODE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 15
+    },
+    {
+      "name": "CODE_COMBINATION_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false,
+      "precision": 15
+    },
+    {
+      "name": "DATE_CREATED_IN_GL",
+      "type": "DATE",
+      "required": false,
+      "mustBeNull": true
+    },
+    {
+      "name": "WARNING_CODE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 4
+    },
+    {
+      "name": "STATUS_DESCRIPTION",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 240
+    },
+    {
+      "name": "DESCR_FLEX_ERROR_MESSAGE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 240
+    },
+    {
+      "name": "STAT_AMOUNT",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "REQUEST_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": true,
+      "precision": 15
+    },
+    {
+      "name": "SUBLEDGER_DOC_SEQUENCE_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": true
+    },
+    {
+      "name": "SUBLEDGER_DOC_SEQUENCE_VALUE",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": true
+    },
+    {
+      "name": "USSGL_TRANSACTION_CODE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 30
+    },
+    {
+      "name": "ATTRIBUTE1",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE2",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE3",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE4",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE5",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE6",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE7",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE8",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE9",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE10",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE11",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE12",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE13",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE14",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE15",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE16",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE17",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE18",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE19",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "ATTRIBUTE20",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "CONTEXT",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "CONTEXT2",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "CONTEXT3",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 150
+    },
+    {
+      "name": "INVOICE_DATE",
+      "type": "DATE",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "INVOICE_AMOUNT",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "INVOICE_IDENTIFIER",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 20
+    },
+    {
+      "name": "TAX_CODE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 15
+    },
+    {
+      "name": "JGZZ_RECON_REF",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 240
+    },
+    {
+      "name": "AVERAGE_JOURNAL_FLAG",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 1
+    },
+    {
+      "name": "ORIGINATING_BAL_SEG_VALUE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": false,
+      "maxLength": 25
+    },
+    {
+      "name": "GL_SL_LINK_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": true
+    },
+    {
+      "name": "GL_SL_LINK_TABLE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 30
+    },
+    {
+      "name": "REFERENCE_DATE",
+      "type": "DATE",
+      "required": false,
+      "mustBeNull": false
+    },
+    {
+      "name": "SET_OF_BOOKS_ID",
+      "type": "NUMBER",
+      "required": false,
+      "mustBeNull": false,
+      "precision": 15
+    },
+    {
+      "name": "BALANCING_SEGMENT_VALUE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 25
+    },
+    {
+      "name": "MANAGEMENT_SEGMENT_VALUE",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 25
+    },
+    {
+      "name": "FUNDS_RESERVED_FLAG",
+      "type": "VARCHAR2",
+      "required": false,
+      "mustBeNull": true,
+      "maxLength": 1
+    }
+  ],
+  "internalAliases": [
+    "DESC_FLEX_ERROR_MESSAGE"
+  ],
+  "sourceDiscrepancies": [
+    {
+      "column": "DESCR_FLEX_ERROR_MESSAGE",
+      "otherSpelling": "DESC_FLEX_ERROR_MESSAGE",
+      "sections": [
+        "GL_INTERFACE columns",
+        "Required NULL columns"
+      ],
+      "handling": "Both spellings are reserved for internal processing."
+    },
+    {
+      "column": "FUNDS_RESERVED_FLAG",
+      "sections": [
+        "Optional table note",
+        "Required NULL columns"
+      ],
+      "handling": "The preparation adapter leaves this internal field empty; use the actual tenant release contract for any different integration."
+    },
+    {
+      "column": "ORIGINATING_BAL_SEG_VALUE",
+      "otherSpelling": "ORIGINATING_BAL_SEG_VAL",
+      "sections": [
+        "GL_INTERFACE columns",
+        "Optional columns"
+      ],
+      "handling": "The adapter retains the column-table name."
+    }
+  ],
+  "nativeRequiredValues": {
+    "STATUS": [
+      "NEW"
+    ],
+    "ACTUAL_FLAG": [
+      "A",
+      "B",
+      "E"
+    ]
+  },
+  "accountSelection": {
+    "methods": [
+      "CODE_COMBINATION_ID",
+      "enabled SEGMENT columns"
+    ],
+    "whenBothProvided": "SEGMENT columns take precedence",
+    "enabledSegmentColumns": "Selected from the actual tenant chart; numbering may have gaps.",
+    "segmentRepresentation": "Exact text, including leading zeroes."
+  },
+  "tenantInputs": [
+    "ledger IDs and functional currencies",
+    "source/category names or configured Import Using Key values",
+    "enabled chart segments and approved account combinations",
+    "open fiscal/budget periods",
+    "currency codes and conversion types",
+    "encumbrance IDs and budget version IDs",
+    "import loader date format and database character-length semantics"
+  ],
+  "outputMeaning": "Adapter-prepared column CSV and retained row lineage for the selected tenant loading procedure. Preparation is distinct from loading GL_INTERFACE, completing Journal Import and posting the resulting journal."
+}

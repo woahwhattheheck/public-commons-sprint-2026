@@ -1,0 +1,30 @@
+{
+  "schema": "erp-burbank.public-source-acquisition.v1",
+  "purpose": "Public source locations and a reproducible local acquisition recipe. Contains no downloaded source bodies, worksheet rows, logs, credentials, or correspondence.",
+  "issuer": "City of Burbank",
+  "opportunity": "IT-2026-001 / original RFP IT-2026-01",
+  "officialPurchasingUrl": "https://www.burbankca.gov/web/financial-services/purchasing",
+  "officialPortalUrl": "https://vendors.planetbids.com/portal/14210/portal-home",
+  "publicDocumentIndexUrl": "https://craxy.ai/find-rfps/cmuzd85nn00gmzr09q8d4cq4c",
+  "previewRoute": "https://craxy.ai/api/public/rfps/cmuzd85nn00gmzr09q8d4cq4c/documents/{documentId}/preview?page={page}&sheet={sheet}",
+  "routeProvenance": "Read-only GET route declared by the public document preview client on the indexed opportunity page. Original XLSX download is a separate issuer-portal operation.",
+  "rfp": {
+    "filename": "20261007165252337 RFP IT-2026-01 ERP Software and Services.pdf",
+    "publicUrl": "https://media.governmentnavigator.com/media/bid/1791505728_RFP_IT-2026-01_ERP_Software_and_Services.pdf",
+    "reportedBytes": 974444,
+    "historicalOriginalSha256": "3d470f3fb2a35af04bcd4de0db75b1ee8ce37db7030f4b8e9bee9a2a8adbef15",
+    "engineeringPages": [5, 7, 8, 27, 28, 29, 30, 31, 36, 44, 55, 60, 61, 62, 63, 68, 69, 70, 71]
+  },
+  "workbooks": [
+    {"attachment": 5, "documentId": "cmuzdlwrx00kdzr096sw6owi4", "filename": "20261007165252850 Attachment 5 - Acceptance Requirements.xlsx", "reportedBytes": 181316, "sheets": ["Instructions", "Finance", "Budget", "Human Resources", "System"]},
+    {"attachment": 6, "documentId": "cmuzdlwqa00kbzr093ai9izsx", "filename": "20261007165253217 Attachment 6 - Interfaces.xlsx", "reportedBytes": 33019, "sheets": ["Instructions", "Interfaces"]},
+    {"attachment": 11, "documentId": "cmuzdlwnj00k9zr09iedfsb71", "filename": "20261007165253536 Attachment 11 - Staffing Level of Effort.xlsx", "reportedBytes": 41530, "sheets": ["Instructions", "Phases", "Offeror Staffing", "City Staffing"]},
+    {"attachment": 18, "documentId": "cmuzdlwj800k7zr090f3z77dq", "filename": "20261007165253869 Attachment 18 - Price Proposal.xlsx", "reportedBytes": 35185, "sheets": ["Instructions", "1-Summary", "2-Software", "3-Services", "4-Other Fees"]}
+  ],
+  "sourceNotes": [
+    "Public previews expose worksheet cell values, not original XLSX ZIP members, formulas, validation, styles, or native file bytes.",
+    "Read the current original issuer opportunity and amendments before an actual proposal submission.",
+    "The initial workbook response codes are Y, Y-WC, N, I and phases 1, 2, X. RFP page 60 instead names Y-ND; keep that source discrepancy visible.",
+    "The materializer preserves response cells and native numeric/blank placeholders exactly as returned. It does not complete a proposal or promise a vendor capability."
+  ]
+}
