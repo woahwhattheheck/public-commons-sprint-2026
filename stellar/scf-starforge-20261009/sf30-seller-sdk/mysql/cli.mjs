@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { describeMysqlFile, openMysqlSourceFile } from './config.mjs';
 import { inspectMysqlCatalog } from './catalog.mjs';
 import { prepareMysqlSeller, verifyPreparedMysqlSeller } from './prepare.mjs';
-import { startMysqlSeller } from './merchant.mjs';
+import { startMysqlSeller, createMysqlNativeFactory } from './merchant.mjs';
 
 const HELP = `MySQL/MariaDB merchant (Node 22.16+)
   init     --directory NEW_DIRECTORY
@@ -16,8 +16,10 @@ const HELP = `MySQL/MariaDB merchant (Node 22.16+)
   query    --source source.json --query NAME --input input.json [--output NEW_FILE]
   prepare  --source source.json --plan merchant-plan.json --directory NEW_DIRECTORY
   verify   --directory PREPARED_DIRECTORY
+  workspace --source source.json --state PRIVATE_DIRECTORY [--port 8439]
+           [--seller-port 0] [--operations-port 0] [--facilitator HTTPS_URL]
   run      --directory PREPARED_DIRECTORY [--port 8423] [--operations-port 8424]
-           [--facilitator HTTPS_URL] [--allow-local-facilitator] [--no-operations]
+           [--facilitator HTTPS_URL] [--allow-local-facilitator] [--no-operations] [--availability-dir PRIVATE_DIRECTORY]
   serve    --source source.json --config service.json [same run options]
 Private database credentials come from the source's passwordEnv. init/describe/prepare/verify are offline.`;
 
@@ -50,6 +52,7 @@ export async function initMysqlWorkspace(directory) {
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'workspace') return (await import('./workspace/server.mjs')).main(args.slice(1));
   if (!args.length || args.includes('--help')) { process.stdout.write(HELP + '\n'); return; }
   const command = args[0], options = new Map();
   for (let i = 1; i < args.length; i++) {
@@ -57,12 +60,12 @@ export async function main(args = process.argv.slice(2)) {
     if (options.has(flag)) throw new TypeError('MYSQL_DUPLICATE_OPTION');
     if (['--allow-local-facilitator', '--no-operations'].includes(flag)) { options.set(flag, true); continue; }
     if (!['--directory', '--source', '--config', '--plan', '--table', '--query', '--input', '--output',
-      '--port', '--operations-port', '--facilitator'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--'))
+      '--port', '--operations-port', '--facilitator', '--availability-dir'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--'))
       throw new TypeError(HELP);
     options.set(flag, args[++i]);
   }
   const required = (...keys) => { for (const key of keys) if (!options.has(key)) throw new TypeError('Missing ' + key); };
-  const launch = ['--port', '--operations-port', '--facilitator', '--allow-local-facilitator', '--no-operations'];
+  const launch = ['--port', '--operations-port', '--facilitator', '--allow-local-facilitator', '--no-operations', '--availability-dir'];
   const allowed = { init: ['--directory'], describe: ['--source'], catalog: ['--source', '--table'],
     preflight: ['--source'], query: ['--source', '--query', '--input', '--output'],
     prepare: ['--source', '--plan', '--directory'], verify: ['--directory'],
@@ -92,20 +95,14 @@ export async function main(args = process.argv.slice(2)) {
     } else required('--source', '--config');
     if (options.has('--no-operations') && options.has('--operations-port') || options.has('--allow-local-facilitator') && !options.has('--facilitator'))
       throw new TypeError('MYSQL_LAUNCH_OPTIONS_CONFLICT');
-    let nativeFactory = null;
-    if (options.has('--facilitator')) {
-      const url = new URL(options.get('--facilitator'));
-      const local = options.has('--allow-local-facilitator') && url.protocol === 'http:' && url.hostname === '127.0.0.1';
-      if ((!local && url.protocol !== 'https:') || url.username || url.password || url.search || url.hash)
-        throw new TypeError('MYSQL_FACILITATOR_URL_INVALID');
-      const [{ HTTPFacilitatorClient }, { createNativeSellerServer }] = await Promise.all([
-        import('@x402/core/server'), import('../native-factory.mjs')]);
-      nativeFactory = compiled => createNativeSellerServer(compiled, { facilitatorClient: new HTTPFacilitatorClient({ url: url.href.replace(/\/$/, '') }) });
-    }
+    const nativeFactory = await createMysqlNativeFactory({ facilitator: options.get('--facilitator'),
+      allowLocalFacilitator: options.has('--allow-local-facilitator') });
     const session = await startMysqlSeller({ sourceFile: database, configFile,
-      port: Number(options.get('--port') ?? 8423), operationsPort: options.has('--no-operations') ? null : Number(options.get('--operations-port') ?? 8424), nativeFactory });
+      port: Number(options.get('--port') ?? 8423), operationsPort: options.has('--no-operations') ? null : Number(options.get('--operations-port') ?? 8424), nativeFactory,
+      ...(options.has('--availability-dir') ? { availabilityDirectory: resolve(options.get('--availability-dir')) } : {}) });
     result = { url: session.url, mode: session.mode, docs: session.url + '/_seller/docs',
-      openapi: session.url + '/_seller/openapi.json', ...(session.operations ? { operations: session.operations.url } : {}),
+      openapi: session.url + '/_seller/openapi.json', ...(session.operations ? { operations: session.operations.url,
+        availability: session.operations.availabilityUrl, availabilityControl: session.operations.availabilityControlUrl } : {}),
       dataSource: 'MySQL/MariaDB approved named queries', database: session.source.inspect().serverVersion };
     for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
       session.close().then(() => { process.exitCode = 0; }, () => { process.exitCode = 1; });
