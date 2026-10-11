@@ -16,6 +16,20 @@ node stellar/scf-starforge-20261009/sf85-live-402-capture/capture.mjs \
 
 The example domain is **not** a real capture; replace both URL and approved origin with a real, independently authorized merchant route. The program makes exactly **one** HTTPS GET or HEAD, accepts only public IPv4 DNS answers, pins that address to its TLS-verified original hostname, refuses redirects and nondefault ports, sends no credentials, reads no response body, and never retries or follows a 3xx. No localhost, private-network IP, RFC test ranges or mixed public/internal DNS. IPv6-only merchants require a different approved capture path; this restricted collector fails closed. Recognized credential-bearing URL query fields are rejected *before DNS/network access or writing a capture*, including normalized variants such as `apiKey`, `client_secret`, `access_token`, `refresh-token`, `SESSION_ID`, `x-signature`, signed-URL parameters, and JWT-shaped query values; ordinary public selectors such as `?region=us` still work. This is a defensive filter, **not** an exhaustive credential detector: operators must still avoid all secrets, signed links and private bearer material in the URL path and every query value, including parameters with harmless-looking names.
 
+## Sandbox egress gateway (explicit operator approval only)
+
+Some managed Linux/Muse VMs return a special **198.18.0.0/15** synthetic gateway IP for a genuine public merchant hostname. Default capture **continues to reject it** (and all other nonpublic addresses), as the original run did. First check the VM's actual DNS answer for the *exact* approved merchant host. Only when that answer is **one** address in 198.18/15, the operator approves routing through that VM's egress gateway, and TLS can authenticate the original host, add the exact observed address:
+
+```sh
+node stellar/scf-starforge-20261009/sf85-live-402-capture/capture.mjs \
+  --url 'https://x402.albylabs.com/demo/quote' \
+  --allow-origin 'https://x402.albylabs.com' \
+  --allow-sandbox-gateway-ip '198.18.126.99' \
+  --out '/private/scf85/alby-gateway-capture.json'
+```
+
+`198.18.126.99` is the **example Muse VM's observed mapping** on 2026-10-11, not a universal setting or public merchant A record. The flag accepts only 198.18/15 and requires the sole actual DNS answer to match the supplied gateway exactly. The request remains ONE original HTTPS GET/HEAD with pinned lookup, original hostname SNI and certificate verification, exact origin, no redirect/body/payment/credentials. If the gateway cannot deliver valid TLS for the approved host, capture fails. IPv6-only merchants, arbitrary internal proxies, private IPs outside 198.18/15, mixed answers and any other DNS exception remain disallowed. The private JSON records the transport mode for evidence provenance. This is **not** proof of a successful merchant capture until the actual VM makes the request.
+
 The original source JSON is written with mode `0600`, exclusive create (will not overwrite previous evidence), including UTC capture time, exact URL/method/status and only original `PAYMENT-REQUIRED` / `WWW-Authenticate` header fields. All raw challenge payloads stay in the operator's private file, **not** committed to GitHub or pasted into Slack. Stdout is a shortened SF84 result: byte SHA-256, 402 classification, protocol status, counts, review notes. A non-402 response is recorded truthfully rather than masquerading as a paid merchant. An unavailable route or invalid/oversized challenge fails without creating a source file.
 
 For the complete existing diagnosis, run:
