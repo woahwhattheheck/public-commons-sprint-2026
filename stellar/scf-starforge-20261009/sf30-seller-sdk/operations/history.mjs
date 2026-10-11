@@ -210,11 +210,58 @@ function livePid(pid) {
   if (!Number.isSafeInteger(pid) || pid < 1) return true;
   try { process.kill(pid, 0); return true; } catch (error) { return error.code !== 'ESRCH'; }
 }
+function processStat(text) {
+  // comm is parenthesized and can itself contain spaces or ')'. Field 22 is
+  // starttime; keep its clock ticks as text rather than rounding a large integer.
+  const pid = Number(/^([1-9]\d*) \(/.exec(text)?.[1]);
+  const fields = text.slice(text.lastIndexOf(')') + 2).trim().split(/\s+/);
+  if (!Number.isSafeInteger(pid) || pid < 1 || fields[0]?.length !== 1 ||
+      !/^\d{1,20}$/.test(fields[19] ?? '')) throw new Error('Unrecognized Linux process identity');
+  return { pid, state: fields[0], startTicks: fields[19] };
+}
+async function linuxProcessIdentity() {
+  if (process.platform !== 'linux') return null;
+  try {
+    const [selfText, bootText, proc] = await Promise.all([
+      readFile('/proc/self/stat', 'utf8'), readFile('/proc/sys/kernel/random/boot_id', 'utf8'),
+      lstat('/proc', { bigint: true }),
+    ]);
+    const self = processStat(selfText), bootId = bootText.trim();
+    if (!/^[a-f0-9-]{36}$/.test(bootId) || !proc.isDirectory()) return null;
+    const addressable = processStat(await readFile(`/proc/${self.pid}/stat`, 'utf8'));
+    if (addressable.pid !== self.pid || addressable.startTicks !== self.startTicks) return null;
+    // A container can expose a parent procfs while process.pid is namespace-local.
+    // Read the PID from that procfs itself; never signal it as a runtime PID.
+    return { schema: 'linux-proc.v1', procPid: self.pid, startTicks: self.startTicks,
+      bootId, procDevice: String(proc.dev) };
+  } catch { return null; }
+}
+async function liveOwner(owner, current) {
+  if (owner.host !== current.host) return true;
+  if (!owner.processIdentity) return livePid(owner.pid); // Existing/non-Linux lock compatibility.
+  const old = owner.processIdentity, local = current.processIdentity;
+  if (!local || old.bootId !== local.bootId || old.procDevice !== local.procDevice) return true;
+  try {
+    const actual = processStat(await readFile(`/proc/${old.procPid}/stat`, 'utf8'));
+    if (actual.pid !== old.procPid) return true;
+    return actual.startTicks === old.startTicks && !['Z', 'X', 'x'].includes(actual.state);
+  } catch (error) {
+    // A denied or unfamiliar process read cannot establish that its writer died.
+    return !['ENOENT', 'ESRCH'].includes(error.code);
+  }
+}
 function lockOwner(bytes) {
   const owner = JSON.parse(bytes.toString('utf8'));
   if (owner?.schema !== 'stellar-forge.seller-usage-lock.v1' ||
       typeof owner.host !== 'string' || !/^[a-f0-9-]{36}$/.test(owner.token ?? '') ||
       !Number.isSafeInteger(owner.pid) || owner.pid < 1) fail('Unrecognized history lock', 'HISTORY_LOCK_INVALID');
+  const identity = owner.processIdentity;
+  if (identity != null && (identity.schema !== 'linux-proc.v1' ||
+      !Number.isSafeInteger(identity.procPid) || identity.procPid < 1 ||
+      typeof identity.startTicks !== 'string' || !/^\d{1,20}$/.test(identity.startTicks) ||
+      typeof identity.bootId !== 'string' || !/^[a-f0-9-]{36}$/.test(identity.bootId) ||
+      typeof identity.procDevice !== 'string' || !/^\d{1,20}$/.test(identity.procDevice)))
+    fail('Unrecognized history process identity', 'HISTORY_LOCK_INVALID');
   return owner;
 }
 async function publishLock(directory, path, owner) {
@@ -240,7 +287,7 @@ async function publishLock(directory, path, owner) {
 async function acquireLock(directory) {
   const path = join(directory, '.usage-writer.lock');
   const owner = { schema: 'stellar-forge.seller-usage-lock.v1', host: hostname(),
-    pid: process.pid, token: randomUUID() };
+    pid: process.pid, token: randomUUID(), processIdentity: await linuxProcessIdentity() };
   let recovered = false;
   for (let attempt = 0; attempt < 3; attempt++) {
     let fd;
@@ -263,7 +310,7 @@ async function acquireLock(directory) {
     try { previous = await privateFile(path, 4096); }
     catch (error) { if (error.code === 'ENOENT') continue; throw error; }
     const old = lockOwner(previous.bytes);
-    if (old.host !== owner.host || livePid(old.pid))
+    if (await liveOwner(old, owner))
       fail('Another live or nonlocal process owns this history directory', 'HISTORY_IN_USE');
     // An exclusive per-old-owner recovery marker serializes ordinary stale-lock recovery.
     const recoveryPath = join(directory, `.usage-reclaim-${old.token}.lock`);
@@ -274,7 +321,7 @@ async function acquireLock(directory) {
       await recovery?.close().catch(() => {});
       if (error.code !== 'EEXIST') throw error;
       const pending = await privateFile(recoveryPath, 4096), recoveryOwner = lockOwner(pending.bytes);
-      if (recoveryOwner.host !== owner.host || livePid(recoveryOwner.pid))
+      if (await liveOwner(recoveryOwner, owner))
         fail('History stale-writer recovery is already running', 'HISTORY_RECOVERY_IN_USE');
       const again = await privateFile(recoveryPath, 4096);
       if (again.info.ino === pending.info.ino && lockOwner(again.bytes).token === recoveryOwner.token)
@@ -284,7 +331,7 @@ async function acquireLock(directory) {
     try {
       const current = await privateFile(path, 4096), currentOwner = lockOwner(current.bytes);
       if (current.info.ino === previous.info.ino && currentOwner.token === old.token &&
-          currentOwner.host === owner.host && !livePid(currentOwner.pid)) {
+          !(await liveOwner(currentOwner, owner))) {
         await unlink(path); recovered = true;
       }
     } catch (error) { if (error.code !== 'ENOENT') throw error; }

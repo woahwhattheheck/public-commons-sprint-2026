@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ (false) && (true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -53,6 +54,7 @@ jobs:
           include-hidden-files: true
 
   deploy:
+    if: ${{ (false) && (true) }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

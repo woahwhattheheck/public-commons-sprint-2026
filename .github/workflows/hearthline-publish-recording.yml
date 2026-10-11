@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   publish:
-    if: github.repository == 'woahwhattheheck/public-commons-sprint-2026' && github.event.repository.private == false
+    if: ${{ (false) && (github.repository == 'woahwhattheheck/public-commons-sprint-2026' && github.event.repository.private == false) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
