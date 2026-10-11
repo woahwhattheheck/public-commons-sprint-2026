@@ -12,6 +12,13 @@ export const NETWORKS = Object.freeze(Object.fromEntries(Object.entries(
 export const DEFAULT_RPC = NETWORKS['stellar:testnet'].defaultRpc;
 export const TESTNET_RPC_ENDPOINTS = NETWORKS['stellar:testnet'].rpcEndpoints;
 export const TESTNET_PASSPHRASE = NETWORKS['stellar:testnet'].passphrase;
+export const PUBNET_PASSPHRASE = NETWORKS['stellar:pubnet'].passphrase;
+export const PUBNET_RPC_ENDPOINTS = NETWORKS['stellar:pubnet'].rpcEndpoints;
+// Read-only collection/accounting view of the same buyer/Python catalog.
+export const RPC_NETWORKS = Object.freeze(Object.fromEntries(Object.entries(NETWORKS)
+  .map(([network,profile])=>[network,Object.freeze({passphrase:profile.passphrase,
+    endpoints:profile.rpcEndpoints,defaultEndpoint:profile.defaultRpc,
+    verdict:profile.transferVerdict,source:profile.rpcSource})])));
 const I128MAX = (1n << 127n) - 1n;
 const TX = /^[0-9a-f]{64}$/;
 const INTENT = /^[A-Za-z0-9._:-]{1,160}$/;
@@ -31,12 +38,22 @@ export function networkProfile(network) {
 export function resolveRpcEndpoint(network, endpoint, {allowLocal = false} = {}) {
   const profile = networkProfile(network);
   const selected = endpoint ?? profile.defaultRpc;
-  if (allowLocal && typeof selected === 'string' && LOCAL_RPC.test(selected)) return selected;
+  if (allowLocal && typeof selected === 'string' && LOCAL_RPC.test(selected)) {
+    const port=Number(selected.slice(17,-1));
+    requireTruth(port>0&&port<=65535,'RPC_ENDPOINT_NOT_ALLOWED');
+    return selected;
+  }
   let url;
   try { url = new URL(selected); } catch { throw new ReconciliationError('RPC_ENDPOINT_NOT_ALLOWED'); }
   const known = profile.rpcEndpoints.find(candidate => new URL(candidate).href === url.href);
   requireTruth(known !== undefined, 'RPC_ENDPOINT_NOT_ALLOWED');
   return known;
+}
+
+/** Resolve a collection endpoint from the canonical network catalog. */
+export function rpcNetwork(network,endpoint) {
+  endpoint=resolveRpcEndpoint(network,endpoint,{allowLocal:true});
+  return {...RPC_NETWORKS[network],endpoint,live:!LOCAL_RPC.test(endpoint)};
 }
 
 // Exactly the Stellar StrKey version/checksum convention; not only a regex.
@@ -68,18 +85,29 @@ export function validStrKey(value, type) {
 }
 export function checkOriginalTerms(record, payer) {
   requireTruth(object(record), 'INVALID_SF81_RECORD');
-  const { intentId, requirement:q, receipt:r, operatorReservation:p } = record;
+  const {intentId, requirement:q, receipt:r, operatorReservation:p}=record;
   requireTruth(typeof intentId === 'string' && INTENT.test(intentId), 'INVALID_INTENT_ID');
   requireTruth(object(q) && object(r), 'MISSING_NATIVE_TERMS_OR_RECEIPT');
   requireTruth(object(p) && p.schema === 'stellar-forge.sf62.result.v1' &&
     p.outcome === 'FRESH_RESERVATION_APPROVED' && p.request_id === intentId,
   'NO_MATCHING_SF81_RESERVATION');
-  requireTruth(q.scheme === 'exact', 'NOT_AN_EXACT_PAYMENT');
-  networkProfile(q.network);
   requireTruth(p.network === q.network && p.asset === q.asset &&
     p.reserved_atomic_units === q.amount, 'RESERVED_TERMS_MISMATCH');
+  return checkNativeTerms(record,payer,{allowPending:true});
+}
+/** Inspect a completed original native receipt through the same transfer checks. */
+export function checkReportedTerms(record,payer) {
+  return checkNativeTerms(record,payer,{allowPending:false});
+}
+function checkNativeTerms(record,payer,{allowPending}) {
+  requireTruth(object(record), 'INVALID_NATIVE_RECEIPT_RECORD');
+  const {intentId, requirement:q, receipt:r}=record;
+  requireTruth(typeof intentId === 'string' && INTENT.test(intentId), 'INVALID_INTENT_ID');
+  requireTruth(object(q) && object(r), 'MISSING_NATIVE_TERMS_OR_RECEIPT');
+  requireTruth(q.scheme === 'exact', 'NOT_AN_EXACT_PAYMENT');
+  networkProfile(q.network);
   requireTruth(r.network === q.network && (r.success === true ||
-    (r.success === false && r.errorReason === 'settlement_pending')),
+    (allowPending && r.success === false && r.errorReason === 'settlement_pending')),
   'NO_ELIGIBLE_SELLER_TRANSACTION_CLAIM');
   requireTruth(validStrKey(payer,'G'), 'INVALID_TRUSTED_PAYER');
   requireTruth(r.payer === payer, 'RECEIPT_PAYER_MISMATCH');

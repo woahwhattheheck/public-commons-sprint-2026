@@ -2,9 +2,12 @@
 // MIT. Merchant configuration releases for the original SF82/SF30 service.
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { open } from 'node:fs/promises';
 import { initReleaseStore, stageRelease, readReleaseState, listReleases, inspectRelease,
   compareReleases, activateRelease, rollbackRelease, releaseStatus, runActiveRelease } from './releases.mjs';
 import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
+import { readReleaseCatalogConfig, readReleaseCatalogReview, releaseCatalogStatus,
+  reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
 
 const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 launcher
 
@@ -14,6 +17,8 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
            [--allow-loopback-upstream]
            [--facilitator HTTPS_URL] [--allow-local-facilitator]
   stage    --store DIR --id RELEASE --workspace SAVED_API_PACKAGE [runtime options above]
+  stage    --store DIR --id RELEASE --python PYTHON_MERCHANT.json [--python-root SOURCE_DIR]
+           [--label TEXT] [--port 8423] [--facilitator HTTPS_URL] [--allow-local-facilitator]
   list     --store DIR
   inspect  --store DIR --id RELEASE
   diff     --store DIR --to RELEASE [--from RELEASE]
@@ -22,8 +27,12 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
   status   --store DIR
   cache-status --store DIR
   cache-invalidate --store DIR --instance INSTANCE [--route ROUTE_ID | --all]
+  catalog-status --store DIR --catalog CONFIG_JSON --id RELEASE
+  catalog-review --store DIR --catalog CONFIG_JSON --id RELEASE --out NEW_REVIEW_JSON
+                 [--withdraw ROUTE_ID --reason TEXT]
+  catalog-apply --store DIR --catalog CONFIG_JSON --review REVIEW_JSON
   run      --store DIR [--expect GENERATION]
-  console  --store DIR [--port 8425]
+  console  --store DIR [--port 8425] [--catalog CONFIG_JSON]
 
 Run with: node release-cli.mjs COMMAND OPTIONS
 Stage compiles immutable original source and response snapshots. No server starts.
@@ -32,11 +41,14 @@ Run starts the original foreground seller; Ctrl-C stops this process's seller.
 Console opens a private loopback interface to compare, activate, start, stop and roll back.
 Application entry modules are pinned; their external dependencies remain operator-managed.`;
 const COMMANDS = {
-  init: ['store'], stage: ['store', 'id', 'workspace', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
+  init: ['store'], stage: ['store', 'id', 'workspace', 'python', 'python-root', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
   list: ['store'], inspect: ['store', 'id'], diff: ['store', 'from', 'to'],
   activate: ['store', 'id', 'expect', 'reason'], rollback: ['store', 'expect', 'to', 'reason'],
-  status: ['store'], run: ['store', 'expect'], console: ['store', 'port'],
+  status: ['store'], run: ['store', 'expect'], console: ['store', 'port', 'catalog'],
   'cache-status': ['store'], 'cache-invalidate': ['store', 'instance', 'route', 'all'],
+  'catalog-status': ['store', 'catalog', 'id'],
+  'catalog-review': ['store', 'catalog', 'id', 'out', 'withdraw', 'reason'],
+  'catalog-apply': ['store', 'catalog', 'review'],
 };
 function parse(args) {
   if (!args.length || args.includes('--help')) return null;
@@ -68,14 +80,14 @@ export async function main(args = process.argv.slice(2)) {
   switch (command) {
     case 'init': result = await initReleaseStore(root); break;
     case 'stage': {
-      for (const key of o.workspace ? ['id'] : ['id', 'spec', 'config', 'bindings'])
+      for (const key of o.workspace || o.python ? ['id'] : ['id', 'spec', 'config', 'bindings'])
         if (!o[key]) throw new Error('Stage requires --' + key);
       const runtime = {};
       for (const key of ['port', 'handlers', 'facilitator']) if (o[key] !== undefined) runtime[key] = o[key];
       if (o['allow-local-facilitator']) runtime.allowLocalFacilitator = true;
       if (o['allow-loopback-upstream']) runtime.allowLoopbackUpstream = true;
       result = await stageRelease(root, { id: o.id, label: o.label, workspace: o.workspace, spec: o.spec, config: o.config, bindings: o.bindings,
-        upstreams: o.upstreams, runtime }); break;
+        upstreams: o.upstreams, python: o.python, pythonRoot: o['python-root'], runtime }); break;
     }
     case 'list': result = { state: await readReleaseState(root), ...await listReleases(root) }; break;
     case 'inspect': result = await inspectRelease(root, o.id); break;
@@ -91,6 +103,28 @@ export async function main(args = process.argv.slice(2)) {
       if (!o.instance || Boolean(o.route) === Boolean(o.all)) throw new Error('Supply --instance and exactly one of --route ROUTE_ID or --all.');
       result = await invalidateReleaseCache(root, { instanceId: o.instance, routeId: o.route }); break;
     }
+    case 'catalog-status':
+    case 'catalog-review':
+    case 'catalog-apply': {
+      if (!o.catalog) throw new Error('Supply --catalog CONFIG_JSON.');
+      const config = await readReleaseCatalogConfig(o.catalog);
+      if (command === 'catalog-apply') {
+        if (!o.review) throw new Error('Supply --review REVIEW_JSON.');
+        result = await applyReleaseCatalog(root, { config, review: await readReleaseCatalogReview(o.review) });
+      } else {
+        if (!o.id) throw new Error('Supply --id RELEASE.');
+        if (command === 'catalog-status') result = await releaseCatalogStatus(root, { config, releaseId: o.id });
+        else {
+          if (!o.out) throw new Error('Supply --out NEW_REVIEW_JSON.');
+          result = await reviewReleaseCatalog(root, { config, releaseId: o.id,
+            action: o.withdraw ? 'withdraw' : 'publish', routeId: o.withdraw, reason: o.reason });
+          const file = await open(resolve(o.out), 'wx', 0o600);
+          try { await file.writeFile(JSON.stringify(result, null, 2) + '\n'); await file.sync(); }
+          finally { await file.close(); }
+        }
+      }
+      break;
+    }
     case 'run': {
       const session = await runActiveRelease(root, { expectedGeneration: o.expect });
       print({ runningRelease: session.release.id, listener: session.url, mode: session.mode,
@@ -104,7 +138,8 @@ export async function main(args = process.argv.slice(2)) {
     }
     case 'console': {
       const { startReleaseConsole } = await import('./release-console.mjs');
-      const session = await startReleaseConsole(root, { port: o.port ?? 8425 });
+      const session = await startReleaseConsole(root, { port: o.port ?? 8425,
+        ...(o.catalog ? { catalogConfig: await readReleaseCatalogConfig(o.catalog) } : {}) });
       print({ operatorConsole: session.operatorUrl, store: root, stop: 'Ctrl-C stops this console and its own seller.' });
       let stopping = false;
       const stop = () => {
@@ -120,4 +155,6 @@ export async function main(args = process.argv.slice(2)) {
   print(result); return result;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
-  main().catch(error => { process.stderr.write(JSON.stringify({ error: error.code ?? 'RELEASE_ERROR', message: error.message }) + '\n'); process.exitCode = 1; });
+  main().catch(error => { process.stderr.write(JSON.stringify({ error: error.code ?? 'RELEASE_ERROR', message: error.message,
+    ...(error.reviewId ? { reviewId: error.reviewId } : {}),
+    ...(typeof error.commandSent === 'boolean' ? { commandSent: error.commandSent } : {}) }) + '\n'); process.exitCode = 1; });

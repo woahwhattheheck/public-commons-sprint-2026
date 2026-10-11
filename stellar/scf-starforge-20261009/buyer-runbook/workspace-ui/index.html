@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Buyer runbooks · Stellar Forge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar"><a href="/" class="brand"><span class="mark">SF</span><span>Stellar Forge</span></a><span class="product">Buyer runbooks</span><span class="local">LOCAL OPERATOR</span></header>
+  <div class="layout">
+    <aside class="sidebar" aria-label="Runbook navigation">
+      <button id="new-draft" class="primary full">New acquisition plan</button>
+      <h2>Acquisitions</h2><nav id="run-list" aria-label="Saved acquisitions"></nav>
+      <h2>Drafts</h2><nav id="draft-list" aria-label="Saved draft plans"></nav>
+      <footer><span id="terminal-state"></span><button id="refresh" class="quiet full">Refresh local sources</button></footer>
+    </aside>
+    <main id="main" tabindex="-1">
+      <div id="notice" role="status" aria-live="polite" hidden></div>
+      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Arrange existing buyer configurations, review exact request ceilings, and follow each acquisition from terminal approval to saved files.</p><button id="welcome-new" class="primary">Create a plan</button><div id="source-summary" class="source-summary"></div></section>
+      <section id="draft-panel" hidden>
+        <div class="page-heading"><div><p class="eyebrow">ACQUISITION PLAN</p><h1 id="draft-heading">New plan</h1><p id="draft-version" class="muted">Choose the original buyer configurations to include.</p></div><span id="dirty-badge" class="badge">Unsaved</span></div>
+        <form id="draft-form">
+          <div class="fields two"><label>Plan ID<input name="plan-id" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" autocomplete="off"></label><label>Title<input name="plan-title" required maxlength="160" autocomplete="off"></label></div>
+          <div class="section-heading"><h2>Selected operations</h2><span id="operation-count" class="muted"></span></div>
+          <div id="operation-editor"></div>
+          <div class="toolbar"><button type="button" id="add-operation">Add configuration</button><button type="button" id="import-toggle" class="quiet">Import manifest</button></div>
+          <div id="import-panel" class="panel" hidden><label>Original runbook manifest<textarea id="manifest-input" rows="7" spellcheck="false" placeholder="Paste an original runbook manifest. Config paths must resolve inside the selected configuration directory."></textarea></label><button type="button" id="import-manifest">Use manifest in editor</button></div>
+          <div class="form-actions"><button type="submit" class="primary" id="save-draft">Save and review draft</button><button type="button" id="initialize-run" disabled>Initialize acquisition</button><span id="draft-save-status" class="muted"></span></div>
+        </form>
+        <section id="draft-review" hidden><div class="section-heading"><h2>Saved request review</h2><label class="revision-picker">Revision<select id="revision-picker"></select></label></div><div id="draft-review-content"></div></section>
+      </section>
+      <section id="run-panel" hidden>
+        <div class="page-heading"><div><p class="eyebrow">SAVED ACQUISITION</p><h1 id="run-title"></h1><p id="run-subtitle" class="muted"></p></div><span id="run-status" class="badge"></span></div>
+        <div id="run-metrics" class="metrics"></div>
+        <div class="run-toolbar panel"><div><strong id="execution-message"></strong><p id="execution-detail" class="muted"></p></div><div class="toolbar"><button id="execute-run" class="primary">Execute untouched operations</button><button id="cancel-run" hidden>Cancel current execution</button><button id="recover-run">Recover retained output</button></div></div>
+        <div id="lease-panel" class="panel" hidden><h2>Original execution owner</h2><p id="lease-description"></p><button id="unlock-run">Release this dead owner's lease</button></div>
+        <section><div class="section-heading"><h2>Atomic request ceilings</h2><span class="muted">Grouped by network and asset</span></div><div id="run-budgets"></div></section>
+        <section><div class="section-heading"><h2>Operations and resources</h2><div class="toolbar"><a id="download-json" class="button quiet">Download state</a><a id="download-report" class="button quiet">Download report</a></div></div><div id="run-operations"></div></section>
+        <details id="progress-panel" class="panel"><summary>Current execution events</summary><div id="progress-events"></div></details>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

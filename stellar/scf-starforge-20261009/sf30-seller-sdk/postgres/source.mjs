@@ -3,6 +3,7 @@ import { performance } from 'node:perf_hooks';
 import { bindPostgresParameters, compilePostgresQueries, describePostgresQueries,
   projectedStatement, QueryInputError } from './declaration.mjs';
 import { readPostgresResult, PostgresResultError } from './stream.mjs';
+import { datasetExtractionOptions, readPostgresDataset } from './publisher/stream.mjs';
 
 export class PostgresSourceError extends Error {
   constructor(code, query = undefined, sqlState = undefined) {
@@ -45,7 +46,11 @@ export async function createPostgresQuerySource({ connection, queries, maxConnec
   const pool = new Pool({ ...connection, max: maxConnections,
     connectionTimeoutMillis: connectTimeoutMs, idleTimeoutMillis: idleTimeoutMs,
     allowExitOnIdle: true, application_name: 'sf30-postgres-source',
-    statement_timeout: startupTimeoutMs, query_timeout: startupTimeoutMs + 1000,
+    // Startup and every queued/running job already own cancellation timers plus
+    // PostgreSQL statement/idle deadlines. pg-cursor does not use pg's ordinary
+    // query callback, so its additional client query timer would survive cursor
+    // completion and retain a closed operator process until that timer expires.
+    statement_timeout: startupTimeoutMs, query_timeout: 0,
     idle_in_transaction_session_timeout: startupTimeoutMs + 1000 });
   // A terminated idle backend must not crash the process or log its credentials.
   pool.on('error', () => { failures++; });
@@ -103,7 +108,9 @@ export async function createPostgresQuerySource({ connection, queries, maxConnec
         queryMode: 'extended' });
       if (job.done) return;
       const query = compiled[job.name];
-      const output = await readPostgresResult(client, query, { name: job.name, values: job.values, Cursor,
+      const reader = job.extraction ? readPostgresDataset : readPostgresResult;
+      const output = await reader(client, query, { name: job.name, values: job.values, Cursor,
+        ...(job.extraction ? { options: job.extraction, onRow: job.onRow } : {}),
         ensureActive() { if (job.done || closed) throw error(closed ? 'SOURCE_CLOSED' : 'QUERY_ABORTED', job.name); } });
       await client.query('COMMIT');
       if (job.done) return;
@@ -127,7 +134,7 @@ export async function createPostgresQuerySource({ connection, queries, maxConnec
       task.finally(() => running.delete(task));
     }
   }
-  function query(name, input, { signal } = {}) {
+  function submit(name, input, { signal, extraction = null, onRow } = {}) {
     try {
       if (closed) throw error('SOURCE_CLOSED');
       if (signal !== undefined && (typeof signal.addEventListener !== 'function' ||
@@ -136,14 +143,24 @@ export async function createPostgresQuerySource({ connection, queries, maxConnec
       const values = validate(name, input);
       if (jobs.size >= maxPending) throw error('SOURCE_BUSY');
       return new Promise((resolve, reject) => {
-        const duration = compiled[name].timeoutMs;
-        const job = { name, values, signal, resolve, reject, done: false, client: null,
+        const duration = extraction?.timeoutMs ?? compiled[name].timeoutMs;
+        const job = { name, values, signal, extraction, onRow, resolve, reject, done: false, client: null,
           deadline: performance.now() + duration };
         job.abort = () => cancel(job, 'QUERY_ABORTED');
         job.timer = setTimeout(() => cancel(job, 'QUERY_TIMEOUT'), duration);
         signal?.addEventListener('abort', job.abort, { once: true });
         jobs.add(job); queue.push(job); pump();
       });
+    } catch (issue) { return Promise.reject(issue); }
+  }
+  const query = (name, input, { signal } = {}) => submit(name, input, { signal });
+  // Local operator API only. Paid routes retain query() and their original page
+  // limits. Extraction shares this pool, queue, transaction and close lifecycle.
+  function exportDataset(name, input, { signal, onRow, ...options } = {}) {
+    try {
+      if (typeof onRow !== 'function') throw new TypeError('DATASET_EXTRACTION_WRITER_REQUIRED');
+      const extraction = datasetExtractionOptions(definition(name), options);
+      return submit(name, input, { signal, extraction, onRow });
     } catch (issue) { return Promise.reject(issue); }
   }
   function route(name, { input = 'query' } = {}) {
@@ -221,5 +238,5 @@ export async function createPostgresQuerySource({ connection, queries, maxConnec
     throw startupExpired ? error('SOURCE_START_TIMEOUT') :
       issue instanceof PostgresSourceError ? issue : error('SOURCE_START_FAILED', undefined, issue?.code);
   } finally { clearTimeout(startupTimer); }
-  return Object.freeze({ query, validate, route, describe, inspect, status, close });
+  return Object.freeze({ query, exportDataset, validate, route, describe, inspect, status, close });
 }

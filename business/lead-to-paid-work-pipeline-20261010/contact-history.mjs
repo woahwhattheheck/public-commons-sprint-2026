@@ -39,6 +39,11 @@ function requestPath(capture) {
 function unpack(result, path, operation, depth = 0) {
   must(result && typeof result === 'object' && depth < 12, 'Original provider result required');
   if (result.error_code === 'NOT_FOUND' && String(result.error_data?.status) === '404') return null;
+  // A native HTTP 404 may also carry the connector's generic INVALID_ARGUMENT
+  // wrapper. Honor only its exact Not Found envelope before rejecting errors.
+  const nativeNotFound = value => value?.status === 404 && value.ok === false &&
+    Object.hasOwn(value, 'data') && value.data?.message === 'Not Found';
+  if (nativeNotFound(result) || nativeNotFound(result.structuredContent)) return null;
   must(!result.isError && !result.error && !result.error_code, 'Registry provider read failed');
   if (result.structuredContent) return unpack(result.structuredContent, path, operation, depth + 1);
   if (typeof result.ok === 'boolean' && Number.isInteger(result.status) && Object.hasOwn(result, 'data')) {
@@ -54,7 +59,8 @@ function unpack(result, path, operation, depth = 0) {
     throw Error('Registry result has no readable provider data');
   }
   if (result.outcome) {
-    must(operation === 'first_contact.export' && result.outcome === 'CONTACT_EXPORT' && result.path === path, 'Use a completed canonical export, not a prepared write plan');
+    const identities = [result.claim_path,result.path].filter(value => value !== undefined);
+    must(operation === 'first_contact.export' && result.outcome === 'CONTACT_EXPORT' && identities.length && identities.every(value => value === path), 'Use a completed canonical export whose path matches the requested record');
     if (result.http_status === 404 && result.record === null) return null;
     must(result.http_status === 200 && result.record, 'Canonical export did not read a record');
     return unpack(result.record, path, operation, depth + 1);

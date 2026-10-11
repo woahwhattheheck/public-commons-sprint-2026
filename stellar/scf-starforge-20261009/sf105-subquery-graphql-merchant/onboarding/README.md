@@ -209,6 +209,14 @@ settlement and recovery. The generated client records CHALLENGE_ONLY for this
 offline package; its saved mode is not a live observation. Export again from the
 running seller's original developer endpoint for the actual deployed snapshot.
 
+## Schema changes and revised merchant packages
+
+Use [the revision workflow](REVISIONS.md) to compare a provider's new served
+schema with a retained original merchant package, inspect affected query
+products and exact revised native terms, then prepare a replacement with the
+same exporter. The new wrapper retains the complete previous package and its
+generated buyer files alongside the revised native merchant.
+
 ## Application API
 
 `onboarding/schema.mjs` exports `compileSchemaSource(input)`,

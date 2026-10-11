@@ -256,6 +256,8 @@ export function createUpstreamApplication(config,bindings,options={}) {
   const compiled = compileUpstreamBindings(bindings,options);
   validateUpstreamService(config,compiled);
   const originals = createUpstreamHandlers(bindings,options), handlers = {...originals};
+  const operationControl = createUpstreamOperationControl(compiled,originals,{
+    closeHandlers:closeOptions => closeUpstreamHandlers(originals,closeOptions)});
   const caches = new Map(Object.entries(originals).filter(([,handler]) => handler.cache).map(([name,handler]) => [name,handler.cache]));
   const service = structuredClone(config);
   let sequence = 0;
@@ -267,12 +269,12 @@ export function createUpstreamApplication(config,bindings,options={}) {
     handlers[name] = handler.admit;
     route.admit = name;
   }
-  return {config:service,handlers:Object.freeze(handlers),operationControl:createUpstreamOperationControl(compiled,originals),
+  return {config:service,handlers:Object.freeze(handlers),operationControl,
     invalidateCache:name => {
       if (name !== undefined && !caches.has(name)) bad('Unknown cached upstream binding');
       return Object.fromEntries([...caches].filter(([id]) => name === undefined || id === name).map(([id,cache]) => [id,cache.invalidate()]));
     },
-    close:options => closeUpstreamHandlers(originals,options),
+    close:options => operationControl.close(options),
     snapshot:() => ({
     schema:'stellar-forge.seller-upstream-availability.v1',capturedAt:new Date().toISOString(),
     bindings:Object.entries(compiled).map(([name,binding]) => ({name,method:binding.method,

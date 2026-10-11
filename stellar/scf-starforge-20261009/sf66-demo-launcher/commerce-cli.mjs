@@ -3,17 +3,19 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
-import { initializeCommerce, inspectCommerce, openCommerce, commerceErrorCode } from './commerce.mjs';
+import { initializeCommerce, inspectCommerce, openCommerce, probeCommerceReadiness,
+  completeCommerceShutdown, commerceErrorCode } from './commerce.mjs';
 
 const HELP = `Original SCF commerce session (Node 22+, full checkout)
 
   node commerce-cli.mjs init --plan /private/commerce-plan.json --directory /private/NEW-session
   node commerce-cli.mjs inspect --directory /private/session
+  node commerce-cli.mjs probe --directory /private/session
   node commerce-cli.mjs start --directory /private/session
   node commerce-cli.mjs start --directory /private/session --execute INTENT [--one-shot]
 
 The foreground console starts the original merchant and operations listeners.
-Commands: status | review INTENT | signer INTENT | execute INTENT |
+Commands: status | readiness | review INTENT | signer INTENT | execute INTENT |
           cancel INTENT | recover INTENT | retrieve INTENT | quit
 The original SF88/SF81 terminal owns payment approval. Reopening uses the same
 original inbox, stable intents, reservations, results and saved resource files.
@@ -74,6 +76,13 @@ export async function main(args = process.argv.slice(2)) {
     const opts = options(rest, ['--directory']);
     return print(stateView(await inspectCommerce(resolve(opts['--directory']))));
   }
+  if (command === 'probe') {
+    const opts = options(rest, ['--directory']);
+    const readiness = await probeCommerceReadiness(resolve(opts['--directory']));
+    print(readiness);
+    if (!readiness.ready) process.exitCode = 2;
+    return;
+  }
   if (command !== 'start') throw new Error(HELP);
   const opts = options(rest, ['--directory', '--execute', '--one-shot']);
   const session = await openCommerce(resolve(opts['--directory']));
@@ -81,7 +90,9 @@ export async function main(args = process.argv.slice(2)) {
   let closeResult, closing, reader, interrupted = false;
   const stop = () => closing ??= (async () => {
     stopped.abort(); reader?.close();
-    closeResult = await session.close();
+    closeResult = await completeCommerceShutdown(session, session.close(), {
+      onWaiting: native => print({ mode: 'WAITING_FOR_ACCEPTED_NATIVE_WORK', facilitator: native }),
+    });
   })();
   const interrupt = () => { interrupted = true; void stop().catch(() => {}); };
   process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
@@ -97,7 +108,7 @@ export async function main(args = process.argv.slice(2)) {
       if (!stopped.signal.aborted) await new Promise(done => stopped.signal.addEventListener('abort', done, { once: true }));
       return;
     }
-    process.stdout.write('Commands: status, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, quit\n');
+    process.stdout.write('Commands: status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, quit\n');
     while (!stopped.signal.aborted) {
       // Release this reader before the original Python approval opens /dev/tty.
       reader = createInterface({ input: process.stdin, output: process.stdout });
@@ -109,13 +120,14 @@ export async function main(args = process.argv.slice(2)) {
       if (words.length === 1 && words[0] === 'quit') break;
       try {
         if (words.length === 1 && words[0] === 'status') print(stateView(await session.status()));
+        else if (words.length === 1 && words[0] === 'readiness') print(await session.probeReadiness());
         else if (words.length === 2 && words[0] === 'review') print((await session.review(words[1])).original);
         else if (words.length === 2 && words[0] === 'signer') print((await session.checkSigner(words[1])).original);
         else if (words.length === 2 && words[0] === 'execute') printExecution(await session.execute(words[1]));
         else if (words.length === 2 && words[0] === 'cancel') print(await session.cancel(words[1]));
         else if (words.length === 2 && words[0] === 'recover') print(await session.recover(words[1]));
         else if (words.length === 2 && words[0] === 'retrieve') print(await session.retrieve(words[1]));
-        else if (words[0]) process.stdout.write('Use status, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, or quit.\n');
+        else if (words[0]) process.stdout.write('Use status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, or quit.\n');
       } catch (error) { print({ error: commerceErrorCode(error) }); }
     }
   } finally {
@@ -125,9 +137,10 @@ export async function main(args = process.argv.slice(2)) {
       directory: resolve(opts['--directory']), interrupted,
       drained: closeResult?.drained, shutdown: closeResult?.shutdown,
       ...(closeResult?.upstreams ? { upstreams: closeResult.upstreams } : {}),
+      ...(closeResult?.nativeCompletion ? { nativeCompletion: closeResult.nativeCompletion } : {}),
       ...(closeResult?.python ? { python: closeResult.python } : {}) });
     if (closeResult?.drained === false) {
-      // Preserve the original native facilitator CLI's forced-drain behavior.
+      // Shared signer ownership has completed before this legacy forced exit.
       process.exitCode = 2;
       setTimeout(() => process.exit(2), 20);
     }

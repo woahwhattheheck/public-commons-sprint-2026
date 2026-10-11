@@ -6,7 +6,8 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openWorkspaceStore, plain } from './store.mjs';
-import { inspectDraftSchema, reviewDraft, exportDraft, readExport, exportView, startDraftMerchant } from './merchant.mjs';
+import { inspectDraftSchema, reviewDraft, exportDraft, readExport, exportView, startDraftMerchant,
+  compareDraft, reviseDraft, readRevisionReport } from './merchant.mjs';
 
 const STATIC = new Map([['/', ['index.html', 'text/html']], ['/app.mjs', ['app.mjs', 'text/javascript']],
   ['/style.css', ['style.css', 'text/css']]]);
@@ -43,6 +44,11 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
     if (body.expectedRevision !== saved.revision) fail('The saved project changed. Reopen it before continuing.', 409);
     return saved;
   }
+  function savedExport(saved, id) {
+    const reference = saved.exports.find(value => value.id === id);
+    if (!reference) fail('Choose an export retained in this project.', 404);
+    return reference;
+  }
   async function mutate(operation) {
     if (busy) fail('A workspace operation is already in progress.', 409);
     busy = true;
@@ -78,6 +84,10 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
           return send(200, await publicDraft(await store.read(url.searchParams.get('id'), rev === null ? undefined : Number(rev))));
         }
         if (url.pathname === '/api/history') return send(200, await store.history(url.searchParams.get('id')));
+        if (url.pathname === '/api/evolution/report') {
+          const saved = await store.read(url.searchParams.get('id'));
+          return send(200, await readRevisionReport(savedExport(saved, url.searchParams.get('exportId'))));
+        }
         return send(404, { error: 'Not found.' });
       }
       if (req.method !== 'POST') return send(405, { error: 'Use GET or POST.' });
@@ -85,10 +95,17 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
       const body = await bodyOf(req);
       if (url.pathname === '/api/schema') return send(200, await inspectDraftSchema(body.schemaText));
       if (url.pathname === '/api/review') return send(200, await reviewDraft(body.input));
+      if (url.pathname === '/api/evolution/compare') {
+        const saved = await current(body);
+        return send(200, await compareDraft(body.input, savedExport(saved, body.baselineExportId)));
+      }
       if (url.pathname === '/api/save') return send(200, await publicDraft(await mutate(() => store.save(body))));
-      if (url.pathname === '/api/export') {
+      if (url.pathname === '/api/export' || url.pathname === '/api/evolution/prepare') {
         const result = await mutate(async () => {
-          const saved = await current(body), { record, reference } = await exportDraft(store, saved);
+          const saved = await current(body);
+          const { record, reference } = url.pathname === '/api/evolution/prepare'
+            ? await reviseDraft(store, saved, savedExport(saved, body.baselineExportId), body.comparisonDigest)
+            : await exportDraft(store, saved);
           const updated = await store.save({ id: saved.id, input: saved.input,
             expectedRevision: saved.revision, exportRecord: reference });
           return { project: await publicDraft(updated), exported: exportView(record) };

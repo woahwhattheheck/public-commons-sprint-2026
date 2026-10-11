@@ -6,11 +6,13 @@ import { lstat, open, readdir, readFile, stat } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { openOutbox } from '../sf98-merchant-delivery/outbox.mjs';
 import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
+import { RPC_NETWORKS, validStrKey } from '../sf86-rpc-transfer-reconcile/terms.mjs';
 
 export const SCHEMA = 'stellar-forge.merchant-reconciliation.v1';
+const RECOVERED = 'RECOVERED_ORIGINAL_SF31_OUTCOME';
 const sha = x => createHash('sha256').update(x).digest('hex');
 const hex64 = x => typeof x === 'string' && /^[a-f0-9]{64}$/.test(x);
-const paymentDecimal = x => typeof x === 'string' && /^[1-9][0-9]{0,38}$/.test(x);
+const paymentDecimal = x => typeof x === 'string' && /^[1-9][0-9]{0,38}$/.test(x)&&BigInt(x)<(1n<<127n);
 const routeId = x => typeof x === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(x);
 const knownNetwork = x => x === 'stellar:testnet' || x === 'stellar:pubnet';
 const routeKey = x => x.routeId+'\n'+x.method;
@@ -73,7 +75,7 @@ export function compileTerms(raw) {
   for (const r of raw.routes) {
     if (!strictObject(r) || !routeId(r.routeId) || !supportsSellerMethod(r.method) ||
         !knownNetwork(r.network) || !paymentDecimal(r.amountAtomic) ||
-        !/^[CG][A-Z2-7]{55}$/.test(r.asset) || !/^G[A-Z2-7]{55}$/.test(r.payTo) ||
+        !validStrKey(r.asset,'C') || !(validStrKey(r.payTo,'G')||validStrKey(r.payTo,'C')) ||
         typeof r.priceBasis!=='string' || !/^[A-Za-z0-9 _.:/-]{3,100}$/.test(r.priceBasis) ||
         r.unitPriceUsd===undefined || r.unitCostUsd===undefined)
       throw new Error('INVALID_MERCHANT_ROUTE_TERMS');
@@ -113,8 +115,8 @@ function resolveTerms(event,terms,{routes,byObservedTerms}) {
     candidateCount:candidates.length,reason:candidates.length?REASON.ambiguousTerms:REASON.mappingMismatch};
 }
 
-// Only the existing SF86's exact official testnet RPC verdict can count as an
-// independently matched transfer. Local loopback and generic receipt JSON never do.
+// Network and provider authority travel together; a transaction fingerprint on
+// another ledger cannot consume or invalidate this ledger's verification.
 export function indexOriginalVerifications(documents) {
   if (!Array.isArray(documents) || documents.length>2000) throw new Error('TOO_MANY_PROOF_FILES');
   const index=new Map();
@@ -127,9 +129,15 @@ export function indexOriginalVerifications(documents) {
     if (p.verdict==='NOT_RECONCILED' || p.verdict==='LOCAL_RPC_REPLAY_MATCHED') {
       ignored.push({fileDigest:doc.fileDigest,reason:p.verdict}); continue;
     }
-    if (p.verdict!=='CHAIN_TRANSFER_MATCHED_RPC_TESTNET' ||
-        p.source!=='official-stellar-testnet-rpc' || p.network!=='stellar:testnet' ||
-        p.reservation!=='UNCHANGED_VERIFY_SEPARATELY' || p.matchingTransfers!==1 ||
+    const profile=Object.hasOwn(RPC_NETWORKS,p.network)?RPC_NETWORKS[p.network]:null;
+    const pubnetAuthority=p.network!=='stellar:pubnet' || (profile?.endpoints.includes(p.rpcEndpoint) &&
+      p.networkPassphrase===profile.passphrase && hex64(p.networkResultSha256) &&
+      hex64(p.transactionResultSha256) && Array.isArray(p.eventPageSha256) &&
+      p.eventPageSha256.length>0 && p.eventPageSha256.every(hex64));
+    const originalReservation=p.reservation==='UNCHANGED_VERIFY_SEPARATELY';
+    const reportedReceipt=p.reservation==='ABSENT_NO_SF81_RECORD' && p.origin===RECOVERED;
+    if (!profile || p.verdict!==profile.verdict || p.source!==profile.source || !pubnetAuthority ||
+        !(originalReservation || reportedReceipt) || p.matchingTransfers!==1 ||
         p.sellerReport!=='REPORTED_SUCCESS' ||
         !hex64(p.transaction) || typeof p.intentId!=='string' || !p.intentId ||
         !Number.isSafeInteger(p.ledger) || p.ledger<=0 ||
@@ -138,7 +146,7 @@ export function indexOriginalVerifications(documents) {
         typeof p.recipient!=='string') {
       ignored.push({fileDigest:doc.fileDigest,reason:'INVALID_OFFICIAL_PROOF_FIELDS'}); continue;
     }
-    const fingerprint=sha(p.transaction);
+    const fingerprint=p.network+'\n'+sha(p.transaction);
     const proof={data:p,fileDigest:doc.fileDigest};
     const prior=index.get(fingerprint) || [];
     prior.push(proof);
@@ -180,7 +188,8 @@ const publicRow = (e,proof,resolution,delivery,classification,reason) => {
   optionId:optionId({...e,recipientDigest:e.recipientDigest ?? terms?.recipientDigest ?? null}),
   termsMatch:resolution.match,termsCandidateCount:resolution.candidateCount,
   merchantPriceBasis:terms?.priceBasis ?? null,
-  verificationScope:e.network==='stellar:testnet'?'OFFICIAL_TESTNET_ONLY':'PUBLIC_NETWORK_PENDING',
+  verificationScope:e.network==='stellar:testnet'?'OFFICIAL_TESTNET_ONLY':
+    classification==='OFFICIAL_TRANSFER_MATCHED'?'OFFICIAL_PUBNET_RPC':'PUBLIC_NETWORK_PENDING',
   };
 };
 const exceptionRow = (row,reason) => ({eventId:row.eventId,routeId:row.routeId,reason,
@@ -196,15 +205,16 @@ function summarizeOptions(results,terms) {
     merchantQuoteUsd:term?.price===null || !term?null:toUsd(term.price),
     merchantVariableCostUsd:term?.cost===null || !term?null:toUsd(term.cost),
     merchantPriceBasis:term?.priceBasis ?? null,
-    nativeSuccessEvents:0,officialTransferMatches:0,missingTransferEvidence:0,
+    nativeSuccessEvents:0,recoveredSettlements:0,officialTransferMatches:0,missingTransferEvidence:0,
     webhookAccepted:0,legacyRecipientEvents:0,unresolvedTermsEvents:0,
-    nativeAmount:0n,matchedAmount:0n,verifiedQuote:0n,withQuote:true});
+    nativeAmount:0n,recoveredAmount:0n,matchedAmount:0n,verifiedQuote:0n,withQuote:true});
   // Keep configured options visible even when they have no native events.
   for(const term of terms.values())groups.set(term.optionId,makeGroup(term,term));
   for(const row of results) {
     const identity={...row,recipientDigest:row.recipientDigest ?? row.termsRecipientDigest};
     const group=groups.get(row.optionId) ?? makeGroup(identity);
-    group.nativeSuccessEvents++;group.nativeAmount+=BigInt(row.amountAtomic);
+    if(row.origin===RECOVERED){group.recoveredSettlements++;group.recoveredAmount+=BigInt(row.amountAtomic);}
+    else {group.nativeSuccessEvents++;group.nativeAmount+=BigInt(row.amountAtomic);}
     if(!row.recipientDigest)group.legacyRecipientEvents++;
     if(!['EXACT_OPTION','LEGACY_UNIQUE_OPTION'].includes(row.termsMatch))group.unresolvedTermsEvents++;
     if(row.transfer==='OFFICIAL_TRANSFER_MATCHED') {
@@ -216,51 +226,87 @@ function summarizeOptions(results,terms) {
     groups.set(row.optionId,group);
   }
   return [...groups.values()].sort((a,b)=>routeKey(a).localeCompare(routeKey(b))||optionKey(a).localeCompare(optionKey(b)))
-    .map(({nativeAmount,matchedAmount,verifiedQuote,withQuote,...group})=>({...group,
-      nativeAmountAtomic:nativeAmount.toString(),officialMatchedAmountAtomic:matchedAmount.toString(),
+    .map(({nativeAmount,recoveredAmount,matchedAmount,verifiedQuote,withQuote,...group})=>({...group,
+      nativeAmountAtomic:nativeAmount.toString(),recoveredAmountAtomic:recoveredAmount.toString(),
+      officialMatchedAmountAtomic:matchedAmount.toString(),
       verifiedQuotedValueUsd:withQuote?toUsd(verifiedQuote):null}));
 }
 
-export function compileLedger(rows,termsRaw,proofDocs) {
+function recoveredRow(entry) {
+  const e=entry?.data,p=entry?.proof?.data;
+  if(!strictObject(e) || e.schema!=='stellar-forge.merchant-recovered-settlement.v1' ||
+    e.origin!==RECOVERED || !hex64(entry.fileDigest) || !hex64(entry.proof?.fileDigest) ||
+    !hex64(e.recoveryId) || !hex64(e.transaction) || !hex64(e.receiptFingerprint) ||
+    e.recoveryId!==sha(e.network+'\n'+e.transaction) || !routeId(e.routeId) ||
+    !supportsSellerMethod(e.method) || !knownNetwork(e.network) || !paymentDecimal(e.amountAtomic) ||
+    typeof e.asset!=='string' || typeof e.recipient!=='string' || typeof e.payer!=='string' ||
+    typeof e.importedAt!=='string' || Number.isNaN(Date.parse(e.importedAt)) ||
+    !strictObject(p) || p.origin!==RECOVERED || p.reservation!=='ABSENT_NO_SF81_RECORD' ||
+    p.transaction!==e.transaction || p.network!==e.network || p.intentId!==e.intentId ||
+    p.payer!==e.payer || p.asset!==e.asset || p.recipient!==e.recipient || p.atomicAmount!==e.amountAtomic)
+    throw new Error('RECOVERED_SOURCE_OR_PROOF_INVALID');
+  return {event:{schema:e.schema,id:e.recoveryId,at:e.importedAt,routeId:e.routeId,
+    method:e.method,network:e.network,amountAtomic:e.amountAtomic,assetDigest:sha(e.asset),
+    recipientDigest:sha(e.recipient),receiptFingerprint:e.receiptFingerprint,
+    transactionFingerprint:sha(e.transaction)},state:null,recovery:entry};
+}
+
+export function compileLedger(rows,termsRaw,proofDocs,{recoveredEntries=[]}={}) {
   if (!Array.isArray(rows) || rows.length>20_000) throw new Error('OUTBOX_SIZE_UNSUPPORTED');
+  if(!Array.isArray(recoveredEntries) || recoveredEntries.length>2000)
+    throw new Error('RECOVERED_SOURCE_SIZE_UNSUPPORTED');
   const terms=compileTerms(termsRaw);
   const termsIndex=indexTerms(terms);
-  const {index,ignored}=indexOriginalVerifications(proofDocs);
+  const recoveredRows=recoveredEntries.map(recoveredRow);
+  const documents=[...proofDocs],proofDigests=new Set(proofDocs.map(x=>x.fileDigest));
+  for(const row of recoveredRows)if(!proofDigests.has(row.recovery.proof.fileDigest)){
+    documents.push(row.recovery.proof);proofDigests.add(row.recovery.proof.fileDigest);
+  }
+  const {index,ignored}=indexOriginalVerifications(documents);
   const seen=new Set(), refCount=new Map(), results=[], exceptions=[];
-  for(const row of rows){
+  for(const row of [...rows.map(({event,state})=>({event,state})),...recoveredRows]){
     const e=row.event;
-    if (!eventCheck(e)) throw new Error('ORIGINAL_OUTBOX_EVENT_INVALID');
+    if (!row.recovery && !eventCheck(e)) throw new Error('ORIGINAL_OUTBOX_EVENT_INVALID');
     if(seen.has(e.id)) throw new Error('DUPLICATE_OUTBOX_EVENT_ID');
     seen.add(e.id);
     const resolution=resolveTerms(e,terms,termsIndex),term=resolution.term;
-    const proofs=e.network==='stellar:testnet' && e.transactionFingerprint?index.get(e.transactionFingerprint)||[]:[];
+    const proofs=e.transactionFingerprint?index.get(transactionKey(e))||[]:[];
     if (e.transactionFingerprint) refCount.set(transactionKey(e),
       (refCount.get(transactionKey(e))||0)+1);
-    let proof=null,reason=null,kind='NATIVE_SUCCESS_UNVERIFIED';
+    let proof=null,reason=null,kind=row.recovery?'RECOVERED_SUCCESS_UNVERIFIED':'NATIVE_SUCCESS_UNVERIFIED';
     if (resolution.reason) reason=resolution.reason;
-    else if (e.network==='stellar:pubnet') reason=REASON.publicNetwork;
     else if (!e.transactionFingerprint) reason=REASON.noTx;
-    else if (!proofs.length) reason=REASON.noProof;
+    else if (!proofs.length) reason=e.network==='stellar:pubnet'?REASON.publicNetwork:REASON.noProof;
     else if (proofs.length!==1) reason=REASON.conflict;
     else {
       const p=proofs[0].data;
       if (p.network!==e.network || p.atomicAmount!==e.amountAtomic ||
           p.asset!==term.asset || p.recipient!==term.payTo ||
           sha(p.asset)!==e.assetDigest ||
-          (e.recipientDigest && sha(p.recipient)!==e.recipientDigest)) reason=REASON.different;
+          (e.recipientDigest && sha(p.recipient)!==e.recipientDigest) ||
+          (row.recovery && (p.payer!==row.recovery.data.payer || p.intentId!==row.recovery.data.intentId)))
+        reason=REASON.different;
       else { proof=proofs[0]; kind='OFFICIAL_TRANSFER_MATCHED'; }
     }
-    const delivery=deliveryOf(row.state);
+    const delivery=row.recovery?(row.recovery.data.response?'RECOVERED_RESPONSE_SAVED':'RECOVERED_RESPONSE_NOT_RETAINED'):
+      deliveryOf(row.state);
     const result=publicRow(e,proof,resolution,delivery,kind,reason);
+    Object.assign(result,{origin:row.recovery?RECOVERED:'SF98_NATIVE_CAPTURE',
+      timeBasis:row.recovery?'RECOVERY_IMPORTED_AT':'NATIVE_SETTLEMENT_CAPTURED_AT',
+      recoveryId:row.recovery?.data.recoveryId ?? null,
+      recoveredEntryDigest:row.recovery?.fileDigest ?? null,
+      recoveredResponseSha256:row.recovery?.data.response?.sha256 ?? null,
+      recoveredResponseBytes:row.recovery?.data.response?.bytes ?? null});
     results.push(result);
     if(reason) exceptions.push(exceptionRow(result,reason));
     if(delivery==='DELIVERY_EXHAUSTED') exceptions.push(exceptionRow(result,'WEBHOOK_DELIVERY_EXHAUSTED'));
   }
-  // If a transfer fingerprint maps to >1 native event, do not count it twice.
+  // Existing transaction-reuse treatment applies across captured and recovered sources.
   for(const r of results) {
     if(r.transfer==='OFFICIAL_TRANSFER_MATCHED' && refCount.get(transactionKey(r))>1){
       r.transfer='REUSED_TRANSACTION_UNVERIFIED'; r.exception=REASON.conflict;
       r.verifiedQuotedValueUsd=null;r.ledger=null;r.matchingEventDigest=null;
+      if(r.network==='stellar:pubnet')r.verificationScope='PUBLIC_NETWORK_PENDING';
       exceptions.push(exceptionRow(r,REASON.conflict));
     }
   }
@@ -268,10 +314,10 @@ export function compileLedger(rows,termsRaw,proofDocs) {
   let totalQuote=0n,hasAllQuote=true;
   for(const r of results){
     const key=r.routeId+'\n'+r.method;
-    const x=byRoute.get(key)||{routeId:r.routeId,method:r.method,nativeSuccessEvents:0,
+    const x=byRoute.get(key)||{routeId:r.routeId,method:r.method,nativeSuccessEvents:0,recoveredSettlements:0,
       officialTransferMatches:0,webhookAccepted:0,missingTransferEvidence:0,
       verifiedQuotedValueMicro:0n,withQuote:true};
-    x.nativeSuccessEvents++;
+    if(r.origin===RECOVERED)x.recoveredSettlements++;else x.nativeSuccessEvents++;
     if(r.transfer==='OFFICIAL_TRANSFER_MATCHED'){
       x.officialTransferMatches++;
       if(r.verifiedQuotedValueUsd!==null) x.verifiedQuotedValueMicro+=money(r.verifiedQuotedValueUsd);
@@ -285,11 +331,12 @@ export function compileLedger(rows,termsRaw,proofDocs) {
       if(!x.withQuote)hasAllQuote=false;
       totalQuote+=x.verifiedQuotedValueMicro;
       return {routeId:x.routeId,method:x.method,nativeSuccessEvents:x.nativeSuccessEvents,
+        recoveredSettlements:x.recoveredSettlements,
         officialTransferMatches:x.officialTransferMatches,
         missingTransferEvidence:x.missingTransferEvidence,webhookAccepted:x.webhookAccepted,
         verifiedQuotedValueUsd:x.withQuote?toUsd(x.verifiedQuotedValueMicro):null};
     });
-  const used=new Set(results.filter(x=>x.transfer==='OFFICIAL_TRANSFER_MATCHED').map(x=>x.transactionFingerprint));
+  const used=new Set(results.filter(x=>x.transfer==='OFFICIAL_TRANSFER_MATCHED').map(transactionKey));
   const unmatched=[...index.entries()].filter(([digest])=>!used.has(digest));
   return {
     ledger:results.sort((a,b)=>a.at.localeCompare(b.at)||a.eventId.localeCompare(b.eventId)),
@@ -298,18 +345,20 @@ export function compileLedger(rows,termsRaw,proofDocs) {
     unmatchedOfficialProofCount:unmatched.reduce((n,[,arr])=>n+arr.length,0),
     routes:routeSummaries,
     options:summarizeOptions(results,terms),
-    totals:{nativeSuccessEvents:results.length,
+    totals:{nativeSuccessEvents:results.filter(x=>x.origin!==RECOVERED).length,
+      recoveredSettlements:results.filter(x=>x.origin===RECOVERED).length,
+      recoveredResponseFiles:results.filter(x=>x.recoveredResponseSha256!==null).length,
       officialTransferMatches:results.filter(x=>x.transfer==='OFFICIAL_TRANSFER_MATCHED').length,
       requiringReconciliation:results.filter(x=>x.transfer!=='OFFICIAL_TRANSFER_MATCHED').length,
       webhookAccepted:results.filter(x=>x.delivery==='WEBHOOK_ACCEPTED_NOT_FULFILLED').length,
       exhaustedDelivery:results.filter(x=>x.delivery==='DELIVERY_EXHAUSTED').length,
       verifiedQuotedValueUsd:hasAllQuote?toUsd(totalQuote):null,
-      publicNetworkPending:results.filter(x=>x.network==='stellar:pubnet').length,
+      publicNetworkPending:results.filter(x=>x.network==='stellar:pubnet'&&x.transfer!=='OFFICIAL_TRANSFER_MATCHED').length,
       ambiguousLegacyEvents:results.filter(x=>x.termsMatch==='AMBIGUOUS_LEGACY_OPTIONS').length,
       unresolvedTermsEvents:results.filter(x=>!['EXACT_OPTION','LEGACY_UNIQUE_OPTION'].includes(x.termsMatch)).length},
   };
 }
-export async function runOriginalAccounting({outboxDir,proofDir,termsFile}) {
+export async function runOriginalAccounting({outboxDir,proofDir,termsFile,recoveredDir}) {
   await safeDir(outboxDir);
   await safeDir(proofDir);
   const termsBytes=await readPlain(termsFile,200_000);
@@ -326,11 +375,15 @@ export async function runOriginalAccounting({outboxDir,proofDir,termsFile}) {
   // Reuse original SF98 journal reader and idempotency/conflicting-ID checks.
   const outbox=await openOutbox(outboxDir);
   const rows=await outbox.rows();
-  const ledger=compileLedger(rows,terms,docs);
+  const recovered=recoveredDir===undefined?{entries:[],hashes:[]}:
+    await (await import('./recovery.mjs')).readRecoveredSettlements(recoveredDir);
+  const ledger=compileLedger(rows,terms,docs,{recoveredEntries:recovered.entries});
   const hashes={termsSha256:sha(termsBytes),
     originalSf98EventsSha256:await hashOptional(join(outboxDir,'events.ndjson')),
     originalSf98DeliveriesSha256:await hashOptional(join(outboxDir,'deliveries.ndjson')),
-    originalSf86ProofSha256:docs.map(x=>x.fileDigest)};
+    originalSf86ProofSha256:docs.map(x=>x.fileDigest),
+    recoveredSettlementSha256:recovered.hashes,
+    recoveredSf86ProofSha256:recovered.entries.map(x=>x.proof.fileDigest)};
   return {schema:SCHEMA,createdAt:new Date().toISOString(),...ledger,hashes,
     accountingStatus:'INDEPENDENT_TRANSFER_RECONCILIATION_ONLY_NOT_RECOGNIZED_REVENUE',
     policy:'No fiat exchange rate, refunds, tax, invoice, client entitlement, bank receipt or merchant cash flow inferred.'};

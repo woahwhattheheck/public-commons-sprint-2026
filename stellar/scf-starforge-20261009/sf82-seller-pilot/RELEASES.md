@@ -3,7 +3,8 @@
 Prepare a changed API, inspect its exact payment and application changes, select
 it for the next start, and return to a retained version when needed. This is an
 extension of the original SF82 seller launcher. It uses the original SF61
-OpenAPI compiler and starts the original SF30 seller through `pilot.mjs`.
+OpenAPI compiler or SF30 Python merchant compiler and starts the original SF30
+seller through the source's original launcher.
 
 The release store keeps the OpenAPI-derived offers, service configuration and
 JSON response snapshots together. Selecting a release does not rewrite a
@@ -65,6 +66,13 @@ compares any two retained releases. It reports:
 - backend origin/path/query, credential environment references, response-contract
   digest, availability, durable-operation configuration, shared-result policy and
   source limits for upstream routes.
+
+OAuth API releases retain the original declared token endpoint, client environment
+references, scope and lifecycle settings. Staging and inspection use the original
+credential-reference reader with syntax-only values; they do not read merchant
+credentials or call the token endpoint. The original provider resolves current
+credentials when the retained release starts. Releases without OAuth retain their
+previous metadata shape.
 
 It does not print static customer response contents. Amounts remain their
 original atomic strings. The tool does not infer token decimals or convert
@@ -179,6 +187,75 @@ policy and current credentials. It does not restore prior cached data or secret
 values. Original payment terms and every request's native lifecycle remain in
 the seller.
 
+## Release a Python project
+
+Use the original SF30 `stellar-forge.python-merchant.v1` declaration to stage a
+Python merchant in the same release store:
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs stage \
+  --store /private/merchant-releases --id python-first \
+  --python /private/python-project/merchant.json \
+  --python-root /private/python-project --port 0 \
+  --facilitator https://YOUR_ACTUAL_FACILITATOR
+```
+
+Choose `--python` as the source selector. The declaration defines functions,
+typed inputs, JSON or byte output, native payment terms, worker concurrency,
+pending capacity, timeouts, lifecycle hooks and required environment names using
+the original [Python merchant format](../sf30-seller-sdk/python/README.md).
+Staging invokes its original compiler without importing the application,
+starting Python or making a network request.
+
+The release retains the exact declaration, a runtime declaration that points to
+the retained entry, and a private source snapshot. By default the snapshot
+contains only the entry module. With `--python-root`, it contains the selected
+project tree, including local helpers and assets. That directory must contain
+the entry; the release store must be outside it. Helpers beside the entry use the
+original worker's import path. Resolve adjacent assets from `__file__`, since the
+worker preserves its original working-directory behavior.
+
+The snapshot excludes `.git`, `.hg`, `.svn`, `.venv`, `venv`, `__pycache__`,
+`.pytest_cache`, `.mypy_cache`, `.ruff_cache` and `node_modules` directories, plus
+`.pyc` and `.pyo` files. It rejects symlinks and special files. At most 512 source
+files and 32 MiB are retained, with 8 MiB per asset and 2 MiB for the entry.
+Inspection verifies the complete retained set, including additions and removals,
+then recompiles the exact original offers and service configuration.
+
+Use the existing `diff`, `activate`, `run`, `status`, `rollback` and console
+commands for this release. Comparison reports entry/helper/asset changes through
+the source and execution digests and shows worker, environment-name, function
+contract, lifecycle and payment changes. A price-only change remains visible in
+the original payment comparison. Already staged releases continue to run after
+the original project is edited or removed.
+
+The selected Python executable and its installed third-party packages remain
+external to the snapshot. An absolute executable path is retained. A relative
+selector containing a path separator, such as `.venv/bin/python`, is anchored to
+the staging process's working directory, matching the original spawn semantics.
+A bare executable name such as `python3` is selected through the launch PATH.
+Keep an interpreter environment available for each retained version that needs
+it. Environment values are read afresh at launch and are never bundled.
+
+At startup the existing release child launches the original Python merchant with
+the retained application hash. The real seller's health and complete offer
+digest must match the release before it becomes ready. The original worker pool
+uses `-B` so helper imports do not add bytecode files to the source snapshot.
+Restart and rollback create a new pool and invoke the selected original startup
+and shutdown hooks. Closing drains the original seller first, then closes its
+workers. On POSIX hosts, a forced shutdown or failed seller leader terminates the
+specifically owned process group so its Python children cannot be left behind.
+The default manager deadline allows the seller's 60-second drain and the
+configured Python shutdown interval to finish.
+
+Without a facilitator, the original seller runs in `CHALLENGE_ONLY` mode and
+starts no Python workers. Native operation uses the installed official x402 SDK
+and the configured facilitator. No release command performs a buyer request.
+
+The same source is available through [merchant MCP](../../../stellar-forge/mcp-merchant-operator/README.md#use-an-existing-python-merchant)
+as a host-configured `python` alias with optional `pythonRoot`; all twelve tools
+and the original customer SDK export apply.
+
 ## Operate the running source cache
 
 For upstream routes with an explicit shared-read policy, the existing release
@@ -207,6 +284,15 @@ public seller. Startup reports readiness after the original seller and its
 required controls are ready; shutdown drains the original seller and closes its
 control transport. Process memory is discarded, while immutable configurations
 and the existing selection history remain.
+
+## Publish and retire catalog listings
+
+The existing console also connects a running retained release to its approved
+live catalog. Supply `console --catalog CONFIG_JSON` to review exact current
+offer differences, publish with the merchant's existing seller-proof key, and
+withdraw a selected listing. The original SF50/SF60/SF95 implementations retain
+signing, pinned admission, atomic publication and withdrawal. See the complete
+[merchant catalog workflow](./CATALOG.md) for configuration and CLI commands.
 
 ## Application code and native payment runtime
 
@@ -252,10 +338,13 @@ route, payment and runtime comparison as releases in one store.
 | Path | Content |
 | --- | --- |
 | `state.json` | Selected release, previous release, generation and selection history |
-| `releases/ID/manifest.json` | Original SF61 export manifest |
+| `releases/ID/manifest.json` | Original SF61 export manifest or Python source manifest |
 | `releases/ID/offers.json` | Original compiled seller offers |
 | `releases/ID/seller-service.json` | Original SF30 service configuration |
 | `releases/ID/responses/` | Original SF61 JSON response-file snapshots, when used |
+| `releases/ID/python/declaration.json` | Exact original Python merchant declaration, when used |
+| `releases/ID/python/merchant.json` | Original declaration with retained application and interpreter selection |
+| `releases/ID/python/source/` | Retained Python entry, helpers and assets |
 | `releases/ID/release.json` | Source/file digests, exact route summary and pinned runtime settings |
 | `releases/ID/pilot-runtime.json` | Original mutable pilot runtime options |
 | `releases/ID/runtime-readiness.json` | Original pilot's most recent startup observation |

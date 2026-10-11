@@ -3,10 +3,11 @@ import { createHash } from 'node:crypto';
 import { open, unlink } from 'node:fs/promises';
 import { abs, bytes, InputError, need, operation, preparedFrom, responseFile } from './config.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
+import { normalizeOperationHeaders, readOperationHeaders } from './request-headers.mjs';
 
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const required = ['--discovery','--row','--accept','--intent-id','--url','--method','--out'];
-const optional = ['--body-file','--content-type','--ticket-file','--ticket-header','--response-out'];
+const optional = ['--body-file','--content-type','--headers-file','--ticket-file','--ticket-header','--response-out'];
 function index(value) {
   need(typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value) &&
     Number.isSafeInteger(Number(value)), 'EXPLICIT_SELECTION_INDEX_REQUIRED');
@@ -120,10 +121,17 @@ export async function prepare(args) {
   const rowIndex = index(flags.get('--row')), acceptIndex = index(flags.get('--accept'));
   const destination = abs(flags.get('--out'), 'DRAFT_PATH_MUST_BE_ABSOLUTE');
   const raw = await bytes(flags.get('--discovery'), 1048576, 'INVALID_DISCOVERY_FILE');
+  let headers = flags.has('--headers-file') ? await readOperationHeaders(flags.get('--headers-file')) : {};
+  if (flags.has('--content-type')) {
+    const explicit = normalizeOperationHeaders({'Content-Type':flags.get('--content-type')});
+    need(headers['Content-Type'] === undefined || headers['Content-Type'] === explicit['Content-Type'],
+      'PREPARE_CONTENT_TYPE_HEADER_CONFLICT');
+    headers = {...headers,...explicit};
+  }
   const {draft, data, configSha256} = prepareReview(raw, {rowIndex,acceptIndex,
     intentId:flags.get('--intent-id'),url:flags.get('--url'),method:flags.get('--method'),
     ...(flags.has('--body-file') ? {bodyFile:flags.get('--body-file')} : {}),
-    ...(flags.has('--content-type') ? {headers:{'Content-Type':flags.get('--content-type')}} : {}),
+    ...(Object.keys(headers).length ? {headers} : {}),
     ...(flags.has('--ticket-file') ? {ticketFile:flags.get('--ticket-file')} : {}),
     ...(flags.has('--ticket-header') ? {ticketHeader:flags.get('--ticket-header')} : {}),
     ...(flags.has('--response-out') ? {responseOut:flags.get('--response-out')} : {})});
@@ -143,6 +151,7 @@ export async function prepare(args) {
     configSha256,
     sourceFileSha256:origin.discoveryFileSha256, rowIndex, acceptIndex,
     intentId:op.intentId, sellerUrl:op.url, method:op.method, acceptedTerms:op.expect,
+    requestHeaderNames:Object.keys(op.headers),
     operationTicket:operationTicketView(ticket),
     ...(draft.responseFile ? {responseFile:draft.responseFile} : {}),
     sourceStatus:'SAVED_UNVERIFIED_DISCOVERY',

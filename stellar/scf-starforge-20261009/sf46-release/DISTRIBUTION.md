@@ -92,12 +92,15 @@ Run `node forge.mjs status` to see the paths present in the selected release.
 | `merchant-fleet` | Original gateway with retained merchant rollout state |
 | `merchant-fleet-control` | Original fleet prepare, activate, status and rollback CLI |
 | `merchant-fleet-workspace` | Original private fleet workspace |
+| `fleet-release` | Original saved-workspace staging, release review and owned seller lifecycle |
+| `revenue-workspace` | Original private merchant pricing workspace and saved operational reports |
+| `revenue-report` | Original SF97 merchant revenue analyzer and optional native settlement companion |
 | `postgres` | Original PostgreSQL seller and operations launcher |
 | `postgres-init` | Original create-only PostgreSQL source/service starter |
 | `postgres-inspect` | Original PostgreSQL declaration/query inspection |
 | `postgres-workspace` | Original database metadata-to-merchant-package workspace |
 
-Dataset, catalog, fleet, `buyer-inbox`, `buyer-runbook`, `deploy` and PostgreSQL
+Dataset, catalog, fleet, revenue, `buyer-inbox`, `buyer-runbook`, `deploy` and PostgreSQL
 commands are included when their original named CLI files exist in the selected
 commit. `status.commands` is the installed release's exact command map. `dataset`
 retains its CSV inspection/compiler meaning; use `buyer-dataset` for acquisition
@@ -353,6 +356,121 @@ processes. Its prepare/activate/rollback checks the observed fleet revision;
 release selection and dataset generation activation keep their separate original
 meanings. The [native fleet guide](../merchant-fleet-gateway/README.md) supplies
 the actual manifest and control contract.
+
+### Manage original seller releases from the installed fleet
+
+The release operator composes the original SF82 release stores and durable
+gateway in one foreground session. It can stage a saved API workspace, compare
+the serving and replacement releases, start the selected replacement, move
+traffic after review, and retire the exact drained predecessor. Retained source
+links let it restart a stopped original seller before a later rollback.
+
+Prepare the independent stores and private plan with the
+[original release operator guide](../merchant-fleet-gateway/RELEASE_OPERATOR.md)
+and its [plan example](../merchant-fleet-gateway/examples/release-plan.json).
+Each merchant needs its actual public hostname, an active startup release and
+two to four distinct stores with fixed loopback ports. Ports and stores must be
+unique across the plan. Register the original saved API workspace packages that
+the operator may stage. Keep those packages, stores and private plan outside the
+installed software release.
+
+Open the complete browser session through the existing installed command:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-fleet-workspace -- \
+  --releases /tmp/stellar-forge-home/config/fleet-plan.json \
+  --release-state /tmp/stellar-forge-home/state/fleet-release --port 8402
+```
+
+Use the printed local URL on the operator host. This session owns both the
+original gateway and the seller processes it starts. The gateway directory
+defaults to the release operator's `gateway/` subdirectory; `--state` can select
+an existing separate private gateway directory. Keep the operator journal and
+gateway state in different directories, and use the same paths when reopening.
+
+1. Select the merchant and replacement slot. Inspect its retained release catalog
+   or stage a registered saved package with a new immutable release ID.
+2. Compare the actual serving and proposed routes, payment choices, atomic
+   amounts, application/request configuration and runtime changes.
+3. Start and prepare that reviewed original release, then separately review and
+   activate the gateway's exact candidate. Its revision and source checks bind
+   the confirmation to what was reviewed.
+4. Let already-admitted requests finish on their original seller. Retire the old
+   exact session when its port is neither serving, prepared nor draining.
+5. Review a linked retained revision and restore its releases. The operator
+   starts any stopped original seller at its fixed port before gateway rollback
+   creates the next revision.
+6. Stop normally and reopen the same plan and private directories. Export the
+   observed release mapping, status and retained history for the operating handoff.
+
+The [managed workspace guide](../merchant-fleet-gateway/workspace/README.md)
+describes the screen controls and concurrent-change recovery. An uncertain action
+is followed by a fresh status read and an explicit decision.
+
+For terminal operation, choose the included `fleet-release` entry instead of
+opening a second owner of the same stores:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run fleet-release -- start \
+  --plan /tmp/stellar-forge-home/config/fleet-plan.json \
+  --directory /tmp/stellar-forge-home/state/fleet-release
+```
+
+Its original stage, review, prepare, activate, retire and rollback commands are
+documented in the release operator guide. Both entry points reuse each seller's
+configured native payment runtime and environment. Gateway ingress can use the
+existing HTTPS deployment; keep the private control and browser listeners local.
+
+## Review merchant pricing and operating costs
+
+The installed pricing commands use the original SF97 workspace and analyzer.
+They read the merchant's actual seller configuration and operating capture; no
+additional npm dependency is required. Keep their saved workspace under the
+installation's private `state/` directory so release activation and rollback
+preserve the merchant's pricing decisions.
+
+Start the workspace with the same seller configuration used by the original
+operations launcher:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run revenue-workspace -- \
+  --config /tmp/stellar-forge-home/config/seller.json \
+  --state /tmp/stellar-forge-home/state/pricing \
+  --ops-url http://127.0.0.1:8424 --port 8457
+```
+
+Replace the configuration path and operations port with the original seller's
+actual values. Open the private browser URL printed by the workspace. For an
+existing operating export, replace `--ops-url` with
+`--snapshot /absolute/private/original-seller-traffic.json`. The optional
+`--native-outbox /absolute/private/native-outbox` reads that merchant's existing
+SF98 journal for the original native settlement companion.
+
+The screen presents every configured payment option. Enter its USD quote and
+basis, target request volume, fulfillment and challenge costs, and fixed
+operating costs. The original analyzer calculates the preview; unspecified costs
+remain unknown. Save the review to retain its original seller configuration,
+capture, terms and reports. Reopen a saved version to inspect those inputs and
+download its terms or reports. Reopening the same private `--state` directory
+after a service restart retains the saved versions and their source identities.
+
+To reproduce a saved session report with the command-line analyzer, use the
+matching seller, terms and snapshot from that same saved version and a new output
+directory:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run revenue-report -- \
+  --config /absolute/private/saved-review/seller.json \
+  --terms /absolute/private/saved-review/terms.json \
+  --snapshot /absolute/private/saved-review/snapshot.json \
+  --output /absolute/private/new-review-report
+```
+
+Both aliases are advertised only when their original entrypoint exists in the
+selected source release. `forge.mjs status` reports the exact installed command
+map. The complete [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
+and [revenue analyzer guide](../sf97-merchant-revenue-ops/README.md) are included
+with the source and describe the supported capture inputs and report fields.
 
 ## PostgreSQL merchant installation
 
