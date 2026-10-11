@@ -566,3 +566,23 @@ textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
 .sub-tx.sub-tx-link { color: var(--clay-deep); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
 a.sub-tx { color: var(--clay-deep); text-decoration: none; }
 a.sub-tx:hover { text-decoration: underline; }
+
+
+/* Sponsor accounting: source-backed money allocation and per-approval effects. */
+.meter .m-unfunded { background: repeating-linear-gradient(-45deg, var(--panel-2) 0 5px, var(--line-strong) 5px 7px); }
+.sponsor-ledger { margin-top: 16px; padding: 17px; border: 1px solid var(--line-strong); background: var(--panel-2); border-radius: var(--radius); }
+.sponsor-ledger-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; justify-content: space-between; margin-bottom: 12px; }
+.sponsor-ledger .sponsor-ledger-head h3 { margin: 0; font-size: 13px; font-weight: 700; color: var(--ink); letter-spacing: normal; text-transform: none; }
+.sponsor-ledger-status { font-size: 11px; font-weight: 600; border-radius: 999px; padding: 3px 8px; background: var(--sage-soft); color: var(--sage); }
+.sponsor-ledger-status.incomplete { color: var(--slate); background: var(--slate-soft); }
+.sponsor-ledger-status.mismatch { color: var(--rust); background: var(--rust-soft); }
+.sponsor-ledger-legend { display: grid; gap: 9px; grid-template-columns: repeat(auto-fit, minmax(158px,1fr)); }
+.sponsor-ledger-item { border: 1px solid var(--line); background: var(--panel); border-radius: var(--radius-sm); padding: 10px; min-width: 0; }
+.sponsor-ledger-label { display: block; color: var(--muted); font-size: 11px; letter-spacing: .015em; }
+.sponsor-ledger-amount { display: block; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; margin: 3px 0 5px; }
+.sponsor-ledger-item p { margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+.sponsor-ledger-equation { margin: 13px 0 7px; font-weight: 600; font-variant-numeric: tabular-nums; font-size: 12px; overflow-wrap: anywhere; }
+.sponsor-ledger-decision { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.55; }
+.sponsor-ledger-footnote { border-top: 1px solid var(--line); padding-top: 8px; margin: 11px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.reserve-preview { display: grid; gap: 7px; justify-items: start; flex: 1; min-width: 175px; }
+.reserve-preview-copy { margin: 0; color: var(--ink-2); font-size: 12px; line-height: 1.5; }
