@@ -4,6 +4,7 @@
  * Bazaar spec blob: 442708e76d5a129e0c1393471d8ed71e3604c94e
  * Facilitator extractor blob: 083013ee19544e182c2e3185d7853309c34b9d9c
  */
+import { compileSchemaPattern } from './schema-pattern.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const clone = value => structuredClone(value);
@@ -13,7 +14,7 @@ const SCHEMA_KEYS = new Set([
   'additionalProperties', 'items', 'const', 'enum', 'anyOf', 'allOf', 'oneOf',
   'minLength', 'maxLength', 'minimum', 'maximum', 'minItems', 'maxItems',
   'uniqueItems', 'title', 'description', 'default', 'examples',
-  'exclusiveMinimum', 'exclusiveMaximum',
+  'exclusiveMinimum', 'exclusiveMaximum', 'pattern', 'format', 'readOnly', 'writeOnly', 'deprecated', '$comment',
 ]);
 const TYPES = {
   object: plain,
@@ -60,8 +61,13 @@ function inspectSchema(schema, depth = 0, state = { nodes: 0 }) {
       return 'SCHEMA_REQUIRED_INVALID';
     if (key === 'enum' && (!Array.isArray(value) || value.length === 0))
       return 'SCHEMA_ENUM_INVALID';
-    if (['title', 'description'].includes(key) && typeof value !== 'string')
+    if (['title', 'description', 'format', '$comment'].includes(key) && typeof value !== 'string')
       return 'SCHEMA_' + key.toUpperCase() + '_INVALID';
+    if (['readOnly', 'writeOnly', 'deprecated'].includes(key) && typeof value !== 'boolean')
+      return 'SCHEMA_' + key.toUpperCase() + '_INVALID';
+    if (key === 'pattern') {
+      try { compileSchemaPattern(value); } catch (error) { return error.message; }
+    }
     if (key === 'examples' && !Array.isArray(value)) return 'SCHEMA_EXAMPLES_INVALID';
     if (['properties', '$defs', 'definitions'].includes(key)) {
       if (!plain(value)) return `SCHEMA_${key.toUpperCase()}_INVALID`;
@@ -124,6 +130,8 @@ function validateNode(value, schema, root, path = '$', refs = new Set()) {
   }
   if (schema.anyOf && !schema.anyOf.some(part => validateNode(value, part, root, path, refs).length === 0)) return [`${path}:anyOf`];
   if (schema.oneOf && schema.oneOf.filter(part => validateNode(value, part, root, path, refs).length === 0).length !== 1) return [`${path}:oneOf`];
+  if (typeof value === 'string' && schema.pattern !== undefined && !compileSchemaPattern(schema.pattern).test(value))
+    return [`${path}:pattern`];
   if (typeof value === 'string' &&
       (Number.isSafeInteger(schema.minLength) || Number.isSafeInteger(schema.maxLength))) {
     // JSON Schema counts Unicode code points, not UTF-16 code units or graphemes.
