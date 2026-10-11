@@ -45,7 +45,7 @@ RELATIONSHIPS = {
 REQUIRED_REFS = {
     "audit_area": ("engagement_id",), "sub_activity": ("area_id",),
     "observation": ("engagement_id",), "management_action": ("observation_id",),
-    "follow_up_review": ("action_id",), "risk": ("engagement_id",),
+    "follow_up_review": ("action_id",),
     "workpaper": ("engagement_id",), "advisory_memo": ("engagement_id",),
 }
 DATE_FIELDS = {
@@ -56,7 +56,7 @@ BOOL_FIELDS = {
     "report_inclusion","is_it_audit","is_michigan_medicine",
     "committee_review_flag","verification_completed",
 }
-LIST_FIELDS = {"unit_ids","recipient_unit_ids","record_ids","evidence_ids","evidence_refs","included_record_ids"}
+LIST_FIELDS = {"unit_ids","recipient_unit_ids","record_ids","evidence_ids","evidence_refs","completion_evidence_ids","included_record_ids"}
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 FIELD_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PATH_KEYS = {"custody_path", "local_path", "absolute_path"}
@@ -189,11 +189,22 @@ def _mapping_groups(mappings):
             if not isinstance(item, dict):
                 raise ExchangeError("invalid_mapping", "Each mapping must be an object")
             # A source_mapping Record is also accepted from an existing workspace.
+            envelope = item
             item = item.get("payload", item)
             kind = item.get("record_kind") or item.get("kind")
             if kind not in KINDS:
                 raise ExchangeError("invalid_mapping_kind", "Mappings require a supported record_kind")
-            groups.setdefault(kind, []).append(copy.deepcopy(item))
+            children = item.get("mappings", [item])
+            if not isinstance(children, list):
+                raise ExchangeError("invalid_mapping","Stored source_mapping.mappings must be an ordered list")
+            for child in children:
+                if not isinstance(child,dict):
+                    raise ExchangeError("invalid_mapping","Each stored field mapping must be an object")
+                rule=copy.deepcopy(child)
+                rule.setdefault("revision",envelope.get("revision",item.get("revision")))
+                if item.get("native_contract_reference"):
+                    rule.setdefault("native_contract_reference",copy.deepcopy(item["native_contract_reference"]))
+                groups.setdefault(kind, []).append(rule)
         return groups
     if isinstance(mappings, dict):
         if any(kind not in KINDS or not isinstance(items, list) for kind, items in mappings.items()):
@@ -288,7 +299,8 @@ def normalize_records(rows_by_kind, mappings=None, source_namespace=None):
                     row_failed = True
             if row_failed:
                 continue
-            raw_id = payload.pop("source_id", payload.pop("id", None))
+            raw_id = (payload.pop("record_source_id") if "record_source_id" in payload
+                      else payload.pop("source_id", payload.pop("id", None)))
             if isinstance(raw_id, bool) or not isinstance(raw_id, (str, int)) or not str(raw_id):
                 diagnostics.append(_diag("missing_source_id", "A stable source_id is required; row number is not used as an identity", kind=kind, row=row_number))
                 continue
@@ -319,11 +331,13 @@ def normalize_records(rows_by_kind, mappings=None, source_namespace=None):
                 target_kind = payload["record_type"]
                 if not re.fullmatch(re.escape(target_kind)+r"-[0-9a-f]{32}", value):
                     payload["record_id"] = stable_record_id(target_kind, namespace, value)
-            for list_field, target_kind in (("evidence_ids","evidence"), ("evidence_refs","evidence")):
+            for list_field, target_kind in (("evidence_ids","evidence"), ("evidence_refs","evidence"), ("completion_evidence_ids","evidence")):
                 if list_field in payload and isinstance(payload[list_field], list):
                     payload[list_field] = [v if isinstance(v, str) and re.fullmatch(re.escape(target_kind)+r"-[0-9a-f]{32}", v)
                                            else stable_record_id(target_kind, namespace, str(v))
                                            for v in payload[list_field]]
+            if kind == "questionnaire_response" and "catalog_sha256" not in payload and "catalog_sha" in payload:
+                payload["catalog_sha256"] = payload["catalog_sha"]
             if kind == "observation":
                 raw_priority = payload.get("priority_raw")
                 if "priority_normalized" not in payload:
@@ -424,7 +438,7 @@ def validate_records(records, *, external_ids=None):
         if kind == "questionnaire_response":
             if not isinstance(payload.get("question_id"),str) or not payload["question_id"]:
                 diagnostics.append(_diag("question_identity","Question response must preserve original issuer question_id",record_id=rid))
-            if not isinstance(payload.get("catalog_sha"),str) or not SHA_RE.fullmatch(payload["catalog_sha"]):
+            if not isinstance(payload.get("catalog_sha256",payload.get("catalog_sha")),str) or not SHA_RE.fullmatch(payload.get("catalog_sha256",payload.get("catalog_sha"))):
                 diagnostics.append(_diag("question_catalog_hash","Question response must pin its exact source catalog SHA256",record_id=rid))
         if kind == "review_decision":
             if payload.get("record_type") not in KINDS or not isinstance(payload.get("record_id"), str):
@@ -449,7 +463,7 @@ def validate_records(records, *, external_ids=None):
                 diagnostics.append(_diag("relationship_kind_mismatch", "Reference points to the wrong record kind", record_id=rid, field=field))
         if kind == "review_decision" and (not isinstance(p.get("record_id"), str) or (p["record_id"] not in index and p["record_id"] not in external_ids)):
             diagnostics.append(_diag("missing_review_target", "Reviewed record is absent", record_id=rid, field="record_id"))
-        for field, target_kind in (("evidence_ids","evidence"), ("evidence_refs","evidence")):
+        for field, target_kind in (("evidence_ids","evidence"), ("evidence_refs","evidence"), ("completion_evidence_ids","evidence")):
             if isinstance(p.get(field), list):
                 for target_id in p[field]:
                     if target_id not in index and target_id not in external_ids:
@@ -731,17 +745,21 @@ def read_handoff(data):
                 raise ExchangeError("projected_raw_values","Projected record contains raw source/custody fields")
         # The stored view is checked again against its declared audience. No
         # external role authorization is implied by accepting these bytes.
+        visible_engagements={r["id"] for r in snapshot["records"] if r["kind"]=="engagement"}
+        if not visible_engagements.issubset(set(projection.get("selected_engagement_ids",[]))):
+            raise ExchangeError("projection_selection","Snapshot includes an unselected engagement")
         try:
-            safe=project_snapshot(snapshot,audience=projection["audience"],
-                selected_engagement_ids=projection["selected_engagement_ids"],
-                review_reference=projection["review_reference"])
+            safe=(project_snapshot(snapshot,audience=projection["audience"],
+                selected_engagement_ids=sorted(visible_engagements),
+                review_reference=projection["review_reference"]) if visible_engagements else {"records":[]})
         except (ValueError,TypeError,KeyError) as exc:
             raise ExchangeError("projection_policy",str(exc)) from exc
         safe_by_id={r["id"]:r for r in safe["records"]}
         for record in snapshot["records"]:
             safe_record=safe_by_id.get(record["id"])
             if safe_record is None or canonical_json(safe_record["payload"])!=canonical_json(record["payload"]):
-                raise ExchangeError("projection_policy","Record content exceeds the declared audience projection")
+                raise ExchangeError("projection_policy","Record content exceeds the declared audience projection",
+                                    [_diag("audience_field_scope","Record fails its declared audience field/scope contract",record_id=record["id"])])
     blobs={}
     required={}
     if role=="auditor":
@@ -778,7 +796,7 @@ def inspect_archive(data):
             "projection_only":received["projection_only"],
             "source_ids":[s["id"] for s in received["snapshot"]["sources"]]}
 
-def plan_receipt(current_snapshot, received, *, prior_receipts=None):
+def plan_receipt(current_snapshot, received, *, prior_receipts=None, resolutions=None):
     """Return a whole-operation plan; this function does not claim an import.
 
     Same ZIP hash replays are explicit. Revisions can advance automatically only
@@ -850,11 +868,14 @@ def plan_receipt(current_snapshot, received, *, prior_receipts=None):
             base["source_imports"].append(copy.deepcopy(source))
         elif canonical_json(previous)!=canonical_json(source):
             base["conflicted"].append({"id":source["id"],"kind":"source",
-                "reason":"source_identity_conflict","current_sha256":previous["sha256"],"incoming_sha256":source["sha256"]})
+                "reason":"source_identity_conflict","current_sha256":sha256(canonical_json(previous)),"incoming_sha256":sha256(canonical_json(source)),
+                "current_blob_sha256":previous["sha256"],"incoming_blob_sha256":source["sha256"]})
     for record in incoming.get("revisions",[]):
         previous=local_history.get((record["id"],record["revision"])) or current.get(record["id"])
         if previous and previous["revision"]==record["revision"] and canonical_json(previous)!=canonical_json(record):
             base["conflicted"].append({"id":record["id"],"kind":record["kind"],"reason":"retained_history_conflict","revision":record["revision"]})
+    if resolutions:
+        _apply_receiving_resolutions(current_snapshot,received,base,resolutions)
     # A package can be valid by itself but conflict with retained local graph
     # relationships. Compose and validate the entire prospective graph now.
     if not base["conflicted"]:
@@ -867,11 +888,142 @@ def plan_receipt(current_snapshot, received, *, prior_receipts=None):
     base["status"]="conflicted" if base["conflicted"] else "ready"
     return base
 
+
+def _apply_receiving_resolutions(current_snapshot, received, plan, resolutions):
+    if not isinstance(resolutions,list):
+        raise ExchangeError("resolution_shape","Resolutions must be an explicit list")
+    current={r["id"]:r for r in current_snapshot["records"]}
+    incoming={r["id"]:r for r in received["snapshot"]["records"]}
+    current_sources={s["id"]:s for s in current_snapshot["sources"]}
+    incoming_sources={s["id"]:s for s in received["snapshot"]["sources"]}
+    conflict_keys={(c.get("kind"),c.get("id")) for c in plan["conflicted"] if c.get("id")}
+    used=set()
+    retained=[]
+    for raw in resolutions:
+        if not isinstance(raw,dict):
+            raise ExchangeError("resolution_shape","Each resolution must be an object")
+        resolution=copy.deepcopy(raw)
+        rid=resolution.get("id") or resolution.get("record_id")
+        kind=resolution.get("kind")
+        if kind is None and rid in incoming:
+            kind=incoming[rid]["kind"]
+        key=(kind,rid)
+        if key not in conflict_keys or key in used:
+            raise ExchangeError("resolution_target","Resolution must address one current conflict exactly once")
+        used.add(key)
+        previous=(current_sources if kind=="source" else current).get(rid)
+        candidate=(incoming_sources if kind=="source" else incoming).get(rid)
+        if previous is None or candidate is None:
+            raise ExchangeError("resolution_target","Both original sides of a conflict must exist")
+        expected_current=sha256(canonical_json(previous))
+        expected_incoming=sha256(canonical_json(candidate))
+        if (resolution.get("current_sha256")!=expected_current
+                or resolution.get("incoming_sha256")!=expected_incoming
+                or resolution.get("bundle_sha256")!=received["bundle_sha256"]):
+            raise ExchangeError("resolution_stale","Resolution must pin exact current, incoming and original bundle hashes")
+        for field in ("reason","reviewer_reference","reviewed_at"):
+            if not isinstance(resolution.get(field),str) or not resolution[field].strip():
+                raise ExchangeError("resolution_review","Resolution requires reason, reviewer_reference and reviewed_at")
+        try:
+            instant=dt.datetime.fromisoformat(resolution["reviewed_at"].replace("Z","+00:00"))
+            if instant.tzinfo is None:
+                raise ValueError("Timezone required")
+        except ValueError as exc:
+            raise ExchangeError("resolution_time","Resolution time must be an ISO timestamp with timezone") from exc
+        decision=resolution.get("decision")
+        if decision=="accept_incoming":
+            decision="accept_incoming_as_next"
+        if kind=="source":
+            if decision not in {"keep_local","retain_both"}:
+                raise ExchangeError("source_resolution","Immutable source IDs support keep_local or retain_both")
+            if decision=="retain_both":
+                source=copy.deepcopy(candidate)
+                source["original_source_id"]=source["id"]
+                source["receiving_bundle_sha256"]=received["bundle_sha256"]
+                source["id"]="source-"+sha256(canonical_json({
+                    "bundle_sha256":received["bundle_sha256"],"original_source_id":rid}))[:32]
+                existing=current_sources.get(source["id"])
+                if existing and canonical_json(existing)!=canonical_json(source):
+                    raise ExchangeError("source_variant_conflict","Retained source variant identity already differs")
+                if not existing:
+                    plan["source_imports"].append(source)
+                resolution["retained_source_id"]=source["id"]
+            else:
+                plan["omitted"].append({"id":rid,"kind":"source","reason":"reviewed_keep_local_source",
+                    "incoming_blob_sha256":candidate["sha256"]})
+        else:
+            if decision not in {"keep_local","accept_incoming_as_next"}:
+                raise ExchangeError("record_resolution","Record resolution is keep_local or accept_incoming_as_next")
+            plan["planned_imports"]=[item for item in plan["planned_imports"] if item["id"]!=rid]
+            if decision=="keep_local":
+                plan["reused"].append({"id":rid,"reason":"reviewed_keep_local",
+                                       "incoming_record_sha256":expected_incoming})
+            else:
+                if candidate.get("projection") and not previous.get("projection"):
+                    raise ExchangeError("projection_resolution","A partial projection cannot replace a fuller local record")
+                adopted=copy.deepcopy(candidate)
+                adopted["revision"]=previous["revision"]+1
+                adopted["created_at"]=previous.get("created_at")
+                adopted["updated_at"]=resolution["reviewed_at"]
+                adopted["receiving_lineage"]={
+                    "bundle_sha256":received["bundle_sha256"],
+                    "original_record_sha256":expected_incoming,
+                    "original_local_revision":candidate["revision"],
+                    "prior_local_sha256":expected_current,
+                    "resolution_reference":resolution.get("review_reference") or
+                        {"reviewer_reference":resolution["reviewer_reference"],
+                         "reviewed_at":resolution["reviewed_at"],"reason":resolution["reason"]}}
+                plan["planned_imports"].append({"id":rid,"kind":kind,
+                    "action":"accept_reviewed_incoming_as_next","record":adopted})
+        resolution["id"],resolution["kind"],resolution["decision"]=rid,kind,decision
+        resolution.pop("record_id",None)
+        retained.append(resolution)
+    plan["conflicted"]=[c for c in plan["conflicted"] if (c.get("kind"),c.get("id")) not in used]
+    plan["resolutions"]=retained
+
+def resolve_receipt(current_snapshot, received, plan_or_resolutions, resolutions=None, *,
+                    reviewer_reference=None, reviewed_at=None, prior_receipts=None):
+    """Preflight explicit choices, accepting either direct or host-reviewed form.
+
+    Direct form: (current, received, fully_pinned_resolutions).
+    Host form: (current, received, retained_plan, decisions,
+                reviewer_reference=actual_actor, reviewed_at=server_time).
+    """
+    if resolutions is None:
+        prepared=copy.deepcopy(plan_or_resolutions)
+    else:
+        retained_plan=plan_or_resolutions
+        fresh=plan_receipt(current_snapshot,received,prior_receipts=prior_receipts)
+        if not isinstance(retained_plan,dict) or canonical_json(retained_plan)!=canonical_json(fresh):
+            raise ExchangeError("receiving_plan_stale","Retained conflict plan differs from the current original operation")
+        if not isinstance(resolutions,list):
+            raise ExchangeError("resolution_shape","Resolutions must be a list")
+        prepared=[]
+        for item in resolutions:
+            if not isinstance(item,dict):
+                raise ExchangeError("resolution_shape","Each resolution must be an object")
+            item=copy.deepcopy(item)
+            item.setdefault("id",item.get("record_id"))
+            item.setdefault("decision",item.get("choice"))
+            item.pop("choice",None)
+            candidates={c.get("kind") for c in retained_plan["conflicted"] if c.get("id")==item["id"]}
+            if "kind" not in item:
+                if len(candidates)!=1:
+                    raise ExchangeError("resolution_kind","Select the exact conflicting record/source kind")
+                item["kind"]=next(iter(candidates))
+            item["bundle_sha256"]=received["bundle_sha256"]
+            if reviewer_reference is not None:
+                item["reviewer_reference"]=reviewer_reference
+            if reviewed_at is not None:
+                item["reviewed_at"]=reviewed_at
+            prepared.append(item)
+    return plan_receipt(current_snapshot,received,prior_receipts=prior_receipts,resolutions=prepared)
+
 def prepare_adoption(current_snapshot, received, plan):
     """Prepare one atomic host adoption; caller must commit before marking accepted."""
     if plan.get("status") not in {"ready","replayed"} or plan.get("bundle_sha256")!=received.get("bundle_sha256"):
         raise ExchangeError("unready_receipt","Only an exact ready receiving plan can be adopted")
-    fresh=plan_receipt(current_snapshot,received)
+    fresh=plan_receipt(current_snapshot,received,resolutions=plan.get("resolutions"))
     # A retained replay is a no-op. A fresh plan is compared to prevent a review
     # from being applied after current heads have changed.
     if plan["status"]=="replayed":
@@ -881,12 +1033,19 @@ def prepare_adoption(current_snapshot, received, plan):
     snapshot=copy.deepcopy(current_snapshot)
     heads={r["id"]:r for r in snapshot["records"]}
     history={(r["id"],r["revision"]):r for r in snapshot.get("revisions",[])}
+    projection_variants=[]
+    resolved_records={item["id"] for item in plan.get("resolutions",[]) if item.get("kind")!="source"}
     for item in plan["planned_imports"]:
         previous=heads.get(item["id"])
+        if previous and item["action"]=="expand_projection":
+            projection_variants.append(copy.deepcopy(previous))
+            history.pop((previous["id"],previous["revision"]),None)
         if previous and not previous.get("projection"):
             history[(previous["id"],previous["revision"])]=previous
         heads[item["id"]]=copy.deepcopy(item["record"])
     for record in received["snapshot"].get("revisions",[]):
+        if record["id"] in resolved_records:
+            continue
         key=(record["id"],record["revision"])
         if key in history and canonical_json(history[key])!=canonical_json(record):
             raise ExchangeError("history_conflict","Retained history differs; no adoption was produced")
@@ -900,7 +1059,8 @@ def prepare_adoption(current_snapshot, received, plan):
     receipt["imported"]=[]
     receipt["prepared_record_ids"]=[item["id"] for item in plan["planned_imports"]]
     receipt["prepared_source_ids"]=[item["id"] for item in plan["source_imports"]]
-    return {"snapshot":snapshot,"receipt":receipt,"blobs":received["blobs"]}
+    return {"snapshot":snapshot,"receipt":receipt,"blobs":received["blobs"],
+            "projection_variants":projection_variants}
 
 def _target_contract(contract):
     if not isinstance(contract,dict) or contract.get("format")!="commons-audit-target-contract/1":
@@ -921,7 +1081,7 @@ def _target_contract(contract):
         fields=table.get("fields")
         if not isinstance(fields,list) or not fields:
             raise ExchangeError("target_fields","Target fields must be an ordered nonempty array")
-        if not any(field.get("target_field")=="source_id" for field in fields if isinstance(field,dict)):
+        if not any(field.get("target_field") in {"source_id","record_source_id"} for field in fields if isinstance(field,dict)):
             raise ExchangeError("target_identity","Every target table must retain source_id for reconciliation")
         for field in fields:
             if (not isinstance(field,dict) or not isinstance(field.get("name"),str)
@@ -935,9 +1095,9 @@ def _target_contract(contract):
             raise ExchangeError("target_format","Declare header Boolean and CRLF/LF line ending")
     return contract
 
-def _target_value(record, field, index):
+def _target_value(record, field, index, record_identity_explicit=False):
     target=field["target_field"]
-    if target=="source_id":
+    if target=="record_source_id" or (target=="source_id" and not record_identity_explicit):
         value=record["source"]["id"]
     elif target=="source_namespace":
         value=record["source"]["namespace"]
@@ -996,7 +1156,8 @@ def export_native(projected_snapshot, contract):
             writer.writerow([field["name"] for field in table["fields"]])
         records=sorted((r for r in projected_snapshot["records"] if r["kind"]==table["kind"]),key=lambda r:r["id"])
         for record in records:
-            writer.writerow([_target_value(record,field,index) for field in table["fields"]])
+            writer.writerow([_target_value(record,field,index,
+                any(f["target_field"]=="record_source_id" for f in table["fields"])) for field in table["fields"]])
         data=stream.getvalue().encode(table.get("encoding","utf-8-sig"))
         files[table["file"]]=data
         entry=_manifest_entry(table["file"],data,"declared_native_table","text/csv")
@@ -1088,7 +1249,9 @@ def reconcile_native(projected_snapshot, normalized_return, contract):
     kinds={t["kind"] for t in contract["tables"]}
     expected={r["id"]:r for r in projected_snapshot["records"] if r["kind"] in kinds}
     actual={r["id"]:r for r in normalized_return["records"] if r["kind"] in kinds}
-    fields={t["kind"]:[f["target_field"] for f in t["fields"] if f["target_field"] not in {"source_id","source_namespace","source_revision"}]
+    fields={t["kind"]:[f["target_field"] for f in t["fields"]
+            if f["target_field"] not in {"record_source_id","source_namespace","source_revision"}
+            and not (f["target_field"]=="source_id" and not any(v["target_field"]=="record_source_id" for v in t["fields"]))]
             for t in contract["tables"]}
     changed,matched=[],0
     for rid in sorted(set(expected)&set(actual)):

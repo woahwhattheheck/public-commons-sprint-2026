@@ -16,6 +16,7 @@ ROLE_ALIASES = {
     "auditor": "auditor", "unit_leadership": "unit_leadership",
     "executive": "executive", "it_leadership": "it_leadership",
     "medicine_it": "medicine_it", "michigan_medicine_it": "medicine_it",
+    "medicine_it_leadership": "medicine_it", "advisory": "management_advisory",
     "board_regents": "board_regents", "regents": "board_regents",
     "faic": "faic", "management_advisory": "management_advisory",
 }
@@ -107,12 +108,20 @@ def project_snapshot(snapshot, *, audience, selected_engagement_ids, review_refe
             raise ValueError("Advisory requires selected_record_ids and recipient_unit_ids within authorized unit_ids")
         if not explicit.issubset(index):
             raise ValueError("Advisory selects an unknown record")
+    advisory_engagements = set()
+    if role == "management_advisory":
+        if any(index[rid]["kind"] != "advisory_memo" for rid in explicit):
+            raise ValueError("Advisory selection must name explicit advisory memo records")
+        advisory_engagements = {index[rid]["payload"].get("engagement_id") for rid in explicit
+            if recipient_units.issubset(set(index[rid]["payload"].get("recipient_unit_ids", [])))}
     allowed_engagements = set()
     reasons = {}
     for engagement_id in selected:
         p = index[engagement_id]["payload"]
         reason = None
-        if role == "unit_leadership" and not units.intersection(p.get("unit_ids", [])):
+        if role == "management_advisory" and engagement_id not in advisory_engagements:
+            reason = "outside_explicit_advisory_memo_scope"
+        elif units and role != "auditor" and role != "management_advisory" and not units.intersection(p.get("unit_ids", [])):
             reason = "engagement_outside_selected_units"
         elif role in {"it_leadership", "medicine_it"} and p.get("is_it_audit") is not True:
             reason = "engagement_not_explicit_it_audit"
@@ -136,19 +145,28 @@ def project_snapshot(snapshot, *, audience, selected_engagement_ids, review_refe
             include(record)
             continue
         if kind == "engagement":
+            if role == "management_advisory":
+                include(record, {"title": "Engagement reference", "unit_ids": []})
+                continue
             names = ("title", "organizational_scope", "audit_type", "scope_text",
                      "objectives", "issue_date", "normalized_stage", "report_summary",
                      "balanced_conclusion", "conclusion_summary", "context_summary",
                      "is_it_audit", "is_michigan_medicine")
             payload = _fields(p, names)
             payload["unit_ids"] = (sorted(units.intersection(p.get("unit_ids", [])))
-                                   if role in {"unit_leadership", "management_advisory"}
+                                   if units
                                    else copy.deepcopy(p.get("unit_ids", [])))
             include(record, payload)
         elif kind == "audit_area":
+            if role == "management_advisory":
+                reasons[rid] = "outside_explicit_advisory_memo_content"
+                continue
             include(record, _fields(p, ("engagement_id", "parent_area_id", "label",
                                         "objective", "source_order", "report_summary")))
         elif kind == "sub_activity":
+            if role == "management_advisory":
+                reasons[rid] = "outside_explicit_advisory_memo_content"
+                continue
             include(record, _fields(p, ("area_id", "label", "raw_result_symbol",
                                         "normalized_result", "report_summary")))
         elif kind == "observation":
@@ -162,6 +180,9 @@ def project_snapshot(snapshot, *, audience, selected_engagement_ids, review_refe
                          "owner_unit", "report_summary")
                 include(record, _fields(p, names))
             elif role in SUMMARY_ROLES:
+                if units and p.get("owner_unit") not in units:
+                    reasons[rid] = "observation_owner_unit_outside_scoped_summary"
+                    continue
                 if priority not in {"high", "medium"}:
                     reasons[rid] = ("low_excluded_from_senior_report" if priority == "low"
                                     else "unresolved_priority_requires_review")
@@ -170,7 +191,7 @@ def project_snapshot(snapshot, *, audience, selected_engagement_ids, review_refe
                     reasons[rid] = "explicitly_excluded_from_audit_report"
                     continue
                 payload = _fields(p, ("engagement_id", "sub_activity_id", "priority_normalized",
-                                      "report_inclusion"))
+                                      "report_inclusion", "owner_unit"))
                 payload["report_summary"] = p.get("report_summary") if _has_content(p.get("report_summary")) else None
                 payload["summary_status"] = "provided" if payload["report_summary"] else "missing_reviewed_summary"
                 include(record, payload)
@@ -305,6 +326,10 @@ def project_for_access(snapshot, *, audience, selected_engagement_ids=None):
     role=ROLE_ALIASES.get(audience.get("role") if isinstance(audience,dict) else None)
     if role is None:
         raise ValueError("Unsupported audience role")
+    if role=="auditor" and selected_engagement_ids is None:
+        result=copy.deepcopy(snapshot)
+        result["access_projection"]={"role":role,"reviewed_export":False}
+        return result
     engagements=[r["id"] for r in snapshot.get("records",[]) if r["kind"]=="engagement"]
     selected=engagements if selected_engagement_ids is None else selected_engagement_ids
     if not selected:
