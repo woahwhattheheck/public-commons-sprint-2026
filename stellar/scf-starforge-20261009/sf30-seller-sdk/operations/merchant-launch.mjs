@@ -17,11 +17,12 @@ const HELP = [
   ' [--handlers TRUSTED_LOCAL_MODULE.mjs | --upstreams BINDINGS.json]',
   ' [--port 8423] [--operations-port 8424] [--max-in-flight 64]',
   ' [--drain-grace-ms 60000] [--allow-loopback-upstream]',
+  ' [--history-dir /private/merchant/usage] [--history-days 90]',
   ' [--allow-local-facilitator] [--check]',
   'Explicit operator-run native x402, original SF98 outbox and local fulfillment view.',
 ].join('\n');
 const VALUE = new Set(['--config','--facilitator','--state','--handlers','--upstreams',
-  '--port','--operations-port','--max-in-flight','--drain-grace-ms']);
+  '--port','--operations-port','--max-in-flight','--drain-grace-ms','--history-dir','--history-days']);
 const SWITCH = new Set(['--check','--allow-loopback-upstream','--allow-local-facilitator']);
 const fail = m => { throw new TypeError(m); };
 
@@ -59,8 +60,16 @@ function cliOptions(args) {
   const directory=o.get('--state');
   if(!isAbsolute(directory)||resolve(directory)!==directory||directory==='/')
     fail('Absolute normalized private SF98 outbox directory required');
+  const historyDirectory=o.get('--history-dir');
+  if(o.has('--history-days') && historyDirectory===undefined)
+    fail('--history-days requires --history-dir');
+  if(historyDirectory!==undefined && (!isAbsolute(historyDirectory) ||
+     resolve(historyDirectory)!==historyDirectory || historyDirectory==='/' ||
+     historyDirectory===directory))
+    fail('Absolute normalized private history directory separate from the outbox required');
   return {
     configPath:resolve(o.get('--config')),stateDirectory:directory,
+    historyDirectory,historyRetentionDays:int('--history-days',90,1,365),
     handlersPath:o.has('--handlers')?o.get('--handlers'):null,
     upstreamPath:o.has('--upstreams')?resolve(o.get('--upstreams')):null,
     facilitator:url.href.replace(/\/$/,''),check:o.has('--check'),
@@ -111,6 +120,8 @@ export async function main(args=process.argv.slice(2)) {
       externalHandlerModule:!!o.handlersPath,
       privateStateNotOpened:true,
       facilitatorNotContacted:true,
+      usageHistoryEnabled:o.historyDirectory!==undefined,
+      historyRetentionDays:o.historyDirectory===undefined?null:o.historyRetentionDays,
     };
     process.stdout.write(JSON.stringify(info)+'\n');
     return info;
@@ -141,6 +152,7 @@ export async function main(args=process.argv.slice(2)) {
     });
     operations=await startSellerOperations(seller,{
       port:o.operationsPort,deliveryOutbox:outbox,
+      historyDirectory:o.historyDirectory,historyRetentionDays:o.historyRetentionDays,
     });
   } catch(e) {
     if(operations)await operations.close().catch(()=>{});
@@ -149,9 +161,13 @@ export async function main(args=process.argv.slice(2)) {
   }
   let closing;
   const close=()=>{
-    if(!closing)closing=Promise.allSettled([operations.close(),seller.close()]).then(results=>{
-      if(results.some(r=>r.status==='rejected'))throw Error('MERCHANT_SHUTDOWN_FAILED');
-    });
+    if(!closing)closing=(async()=>{
+      // Keep the original observer attached throughout native request drain.
+      let failed=false;
+      try {await seller.close();} catch {failed=true;}
+      try {await operations.close();} catch {failed=true;}
+      if(failed)throw Error('MERCHANT_SHUTDOWN_FAILED');
+    })();
     return closing;
   };
   for(const signal of ['SIGINT','SIGTERM'])
@@ -160,6 +176,7 @@ export async function main(args=process.argv.slice(2)) {
     nativeSeller:seller.url, mode:seller.mode,
     ready:seller.url+'/_seller/ready', offers:seller.url+'/_seller/offers',
     operator:operations.url,fulfillment:operations.url+'/fulfillment',
+    usageHistory:o.historyDirectory===undefined?null:operations.url+'/api/history',
     privateOriginalOutboxAttached:true,
     webhookDelivery:'OPERATOR_ONLY',
   })+'\n');
