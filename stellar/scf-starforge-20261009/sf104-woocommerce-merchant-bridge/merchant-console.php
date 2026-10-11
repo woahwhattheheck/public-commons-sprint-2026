@@ -267,9 +267,16 @@ final class Starforge_SF104_Merchant_Console {
         $closed = !in_array($order->get_status(), ['pending', 'on-hold'], true);
         $changed = $requires_snapshot && !$snapshot['valid'];
         if ($event && $event['state'] === 'RELEASED') {
-            $same = $order->is_paid() && strtolower((string) $order->get_transaction_id()) === (string) $event['tx_hash'];
-            $life = $same ? ['RELEASED', 'Woo release recorded', 'The original notice journal and Woo paid transaction agree.'] :
-                ['RELEASE_STATE_CHANGED', 'Released order needs review', 'The original journal says released, while the current Woo paid state or transaction differs.'];
+            $same_transaction = (string) $event['tx_hash'] !== '' &&
+                strtolower((string) $order->get_transaction_id()) === (string) $event['tx_hash'];
+            $fully_refunded = $same_transaction && $order->has_status('refunded') &&
+                count($order->get_refunds()) > 0 && $order->get_total_refunded() > 0 &&
+                $order->get_remaining_refund_amount() <= 0;
+            $same = $order->is_paid() && $same_transaction;
+            $life = $fully_refunded ?
+                ['REFUNDED', 'Woo order refunded', 'The original released payment transaction is retained, and native Woo refund credits cover this order in full.'] :
+                ($same ? ['RELEASED', 'Woo release recorded', 'The original notice journal and Woo paid transaction agree.'] :
+                ['RELEASE_STATE_CHANGED', 'Released order needs review', 'The original journal says released, while the current Woo paid state or transaction differs.']);
         } elseif ($changed) $life = ['ORDER_CHANGED', 'Saved order differs', $snapshot['error']];
         elseif ($event && $event['state'] === 'REVIEWING') $life = ['REVIEWING', 'Release in progress / recovery', 'Reconcile the recorded transaction before continuing the original release.'];
         elseif ($event) $life = ['NOTICE_RECEIVED', 'Settlement review required', 'An authenticated SF98 notice is retained. The merchant still verifies the original transfer before releasing this order.'];
