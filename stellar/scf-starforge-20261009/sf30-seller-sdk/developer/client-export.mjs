@@ -25,6 +25,7 @@ const types = { 'seller-client.mjs': 'text/javascript', 'seller-client.d.mts': '
   [CLIENT_EXPORT_MANIFEST]: 'application/json' };
 const USAGE = `Usage:
   node client-export.mjs --openapi SAVED_SELLER_OPENAPI.json --out NEW_DIRECTORY
+  node client-export.mjs python --help
   node client-export.mjs status --dir RETAINED_DIRECTORY
   node client-export.mjs adopt --dir RETAINED_DIRECTORY --expected-files-sha256 INSPECTED_DIGEST`;
 
@@ -138,7 +139,7 @@ export async function readSellerClientFile({ directory, exportId, file, expected
 }
 
 /** Read the complete original payload once. Missing legacy files are explicit. */
-export async function inspectSellerClientExport({ directory, exportId } = {}) {
+export async function inspectSellerClientExport({ directory, exportId, includeOffers = false } = {}) {
   try { directory = await directoryAt(directory); }
   catch (error) {
     if (error.code === 'ENOENT') return { schema: 'stellar-forge.seller-client-export-status.v1', state: 'NOT_FOUND', directory: resolve(directory) };
@@ -168,6 +169,7 @@ export async function inspectSellerClientExport({ directory, exportId } = {}) {
     throw fail('FILE_CHANGED', 'The retained source or files differ from their saved completion receipt.');
   return { schema: 'stellar-forge.seller-client-export-status.v1', state: retained ? 'COMPLETE' : 'LEGACY_FILES_RETAINED',
     directory, ...view, files, filesSha256: digest, manifestRetained: Boolean(retained),
+    ...(includeOffers ? { snapshot } : {}),
     ...(retained ? { manifest: retained.manifest, manifestFile: retained.manifestFile } : {}) };
 }
 
@@ -221,6 +223,7 @@ export async function exportSellerClient({ openapi, out, provenance: suppliedPro
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'python') return (await import('./python-client/export.mjs')).main(args.slice(1));
   if (args.length === 1 && args[0] === '--help') { process.stdout.write(USAGE + '\n'); return null; }
   const command = ['status', 'adopt'].includes(args[0]) ? args[0] : 'export';
   if (command !== 'export') args = args.slice(1);

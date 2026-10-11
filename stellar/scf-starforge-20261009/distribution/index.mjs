@@ -3,6 +3,8 @@ export { compileHttpSellerOffer, paymentRequiredResponse } from '../sf30-seller-
 export { compileSellerRoutes, createSellerResourceHandler } from '../sf30-seller-sdk/resource-server.mjs';
 export { readSellerConfig, startSellerService } from '../sf30-seller-sdk/serve.mjs';
 export { startSellerOperations } from '../sf30-seller-sdk/operations/server.mjs';
+export { compileSupplierAccounts } from '../sf30-seller-sdk/supplier-quota/config.mjs';
+export { createSupplierQuotaRegistry, attachSupplierQuota, SUPPLIER_QUOTA_SCHEMA } from '../sf30-seller-sdk/supplier-quota/application.mjs';
 export { startDuckdbWorkbench } from '../sf30-seller-sdk/duckdb/workbench/server.mjs';
 export { openDuckdbWorkbench } from '../sf30-seller-sdk/duckdb/workbench/model.mjs';
 export { X402BuyerClient, BuyerError } from '../sf31-buyer-client/buyer.mjs';
@@ -30,3 +32,5 @@ export { fleetControl } from '../merchant-fleet-gateway/control.mjs';
 export { startFleetWorkspace } from '../merchant-fleet-gateway/workspace/server.mjs';
 export { startDuckdbWorkspace } from '../sf30-seller-sdk/duckdb/workspace/server.mjs';
 export { createDuckdbWorkspace } from '../sf30-seller-sdk/duckdb/workspace/model.mjs';
+export { openS3MerchantWorkspace, validateS3MerchantDraft } from '../sf30-seller-sdk/s3/workspace/controller.mjs';
+export { startS3MerchantWorkspace } from '../sf30-seller-sdk/s3/workspace/server.mjs';

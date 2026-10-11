@@ -1,0 +1,12 @@
+{
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "path": "business/cskt-dewr-migration-20261011",
+  "baseCommit": "f0ef4c575111fd68f7b36f3f82d61d310b740006",
+  "originalMerge": "9e66ce5a090d0c2fb60d5af2730cfcea08562c6f",
+  "files": {
+    "README.md": "4c9d2ac3d271c3e63562666f28c6f76c0c845403",
+    "observed-public-content.json": "fff69563604f1b31f49710103e8706d8ff30332a",
+    "preflight-report.json": "7799ec5a3cdb2992265a5fb8adcc2261b4210b15",
+    "preflight.mjs": "79cf86d441feea0602caf6f3a7bafcd1b75f5947"
+  }
+}

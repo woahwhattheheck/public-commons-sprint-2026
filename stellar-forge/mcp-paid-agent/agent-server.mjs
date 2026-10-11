@@ -10,6 +10,8 @@ import { explainFailure } from '../../stellar/scf-starforge-20261009/sf33-failur
 import { describeDiscoveredResource } from './descriptor.mjs';
 import { requiredQueryKeys } from './query-requirements.mjs';
 import { historyPage } from './quote-history.mjs';
+import {paymentResponseSummary} from './payment-receipt.mjs';
+import {retainPaymentObservation} from './result-store.mjs';
 import { normalizeMcpPolicies, prepareMcpInvocation, connectRemoteMcp, extractMcpChallenge,
   requireMcpChallenge, requireMcpPayload, mcpResultContent } from './remote-mcp.mjs';
 
@@ -44,7 +46,8 @@ const statOf=q=>({quoteId:q.quoteId,status:q.status,resource:q.resource,requestU
   signedRequestDispatched:q.signedRequestDispatched===true,
   result:structuredClone(q.result??null),failure:q.failure??null,
   ...(q.status==='INDETERMINATE'?{recovery:explainFailure({stage:'settle',
-    response:{success:false,errorReason:'unexpected_settle_error',
+    response:{success:false,errorReason:q.result?.paymentResponse?.errorReason??'unexpected_settle_error',
+      ...(q.result?.paymentResponse?.errorMessage?{errorMessage:q.result.paymentResponse.errorMessage}:{}),
       transaction:q.result?.paymentResponse?.transaction??null,
       network:q.result?.paymentResponse?.network??null},traceId:q.quoteId})}:{})});
 const defaultFetch=(...args)=>fetch(...args);
@@ -63,6 +66,9 @@ const schemas={
     name:'bazaar_execute_approved',description:'Attempt the quoted call ONLY when operator approval callback authorizes it; default denies. Never retries a potentially settled signed request.',
     inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
   bazaar_status:{name:'bazaar_status',description:'Inspect the exact state of a prior quote; no network call.',inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
+  bazaar_reconcile_payment:{name:'bazaar_reconcile_payment',description:'Read the original transaction through the host-configured Stellar verifier and save its observation on this quote. No approval, signing, submission or purchase retry. Supply transaction only when an older result omitted its original hash.',
+    annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:true,openWorldHint:true},
+    inputSchema:{type:'object',properties:{quoteId:{type:'string'},transaction:{type:'string',pattern:'^[0-9a-fA-F]{64}$'}},required:['quoteId'],additionalProperties:false}},
   bazaar_history:{name:'bazaar_history',description:'List this operator workspace\'s quote history, including recovered interrupted operations. Read only; never resumes a payment.',annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},inputSchema:{type:'object',properties:{status:{type:'string'},limit:{type:'integer',minimum:1,maximum:100},cursor:{type:'string'}},additionalProperties:false}},
   bazaar_cancel:{name:'bazaar_cancel',description:'Cancel an unexecuted quote. Signed/unknown transactions require external reconciliation.',inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
   bazaar_results:{name:'bazaar_results',description:'List complete saved MCP results in this quote inbox. Returns file metadata without response bodies or provider calls.',
@@ -88,10 +94,10 @@ export class McpPaidToolBroker {
   #catalogUrl;#trustedOrigins;#approve;#sign;#fetch;#records=new Map();#quotes=new Map();
   #timeLimit;#quoteTTL;#maxRecords;#agentCommerce;
   #store;#scope;#closing=false;#storeClosed=false;#closePromise;#active=new Set();#shutdown=new AbortController();
-  #mcpPolicies;#remoteControllers=new Map();#results;
+  #mcpPolicies;#remoteControllers=new Map();#results;#reconcilePaymentAdapter;#reconciliations=new Map();
   constructor({discoveryUrl,allowedResourceOrigins=[],approve=()=>false,signPayment=null,
     fetchImpl=defaultFetch,timeoutMs=8000,quoteTTL=10*60*1000,maxRecords=500,
-    agentCommerce=null,quoteStore=null,remoteMcpPolicies=[],resultStore=null}={}){
+    agentCommerce=null,quoteStore=null,remoteMcpPolicies=[],resultStore=null,reconcilePayment=null}={}){
     if(!discoveryUrl)throw new TypeError('Explicit configured discoveryUrl required');
     this.#catalogUrl=new URL(discoveryUrl);
     if(!['https:','http:'].includes(this.#catalogUrl.protocol)||this.#catalogUrl.username||this.#catalogUrl.password||
@@ -100,10 +106,12 @@ export class McpPaidToolBroker {
     if(typeof approve!=='function'||typeof fetchImpl!=='function')throw new TypeError('Operator hooks required');
     if(signPayment!==null&&typeof signPayment!=='function')throw new TypeError('Invalid signer callback');
     if(agentCommerce!==null&&typeof agentCommerce!=='function')throw new TypeError('Invalid SF43 agent-commerce adapter');
+    if(reconcilePayment!==null&&typeof reconcilePayment!=='function')throw new TypeError('Invalid read-only reconciliation adapter');
     if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>300000)throw new TypeError('timeoutMs must be 1..300000');
     this.#approve=approve;this.#sign=signPayment;this.#fetch=fetchImpl;
     this.#timeLimit=timeoutMs;this.#quoteTTL=quoteTTL;this.#maxRecords=maxRecords;
     this.#agentCommerce=agentCommerce;
+    this.#reconcilePaymentAdapter=reconcilePayment;
     this.#mcpPolicies=normalizeMcpPolicies(remoteMcpPolicies);
     if(quoteStore!==null&&['load','save','close'].some(name=>typeof quoteStore[name]!=='function'))
       throw new TypeError('Quote store must provide load/save/close');
@@ -272,7 +280,64 @@ export class McpPaidToolBroker {
     if(!this.#results)fail('MCP_RESULT_STORAGE_NOT_CONFIGURED','Use a durable result workspace');
     if(['APPROVAL_PENDING','EXECUTING','CANCEL_REQUESTED'].includes(q.status))fail('MCP_RESULT_NOT_READY','The original operation is still active');
     const recovered=await this.#results.recover(q);this.#running();
-    Object.assign(q,recovered);this.#persist(q);return statOf(q);
+    retainPaymentObservation(recovered,q);
+    recovered.updatedAt=Date.now();
+    this.#store?.save(recovered);
+    Object.assign(q,recovered);return statOf(q);
+  }
+  async reconcilePayment({quoteId,transaction}={}){
+    this.#running();
+    const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
+    if(!this.#reconcilePaymentAdapter)fail('MCP_RECONCILE_NOT_CONFIGURED','Connect the host read-only Stellar reconciliation adapter');
+    if(!q.signedRequestDispatched||['APPROVAL_PENDING','EXECUTING','CANCEL_REQUESTED'].includes(q.status))
+      fail('MCP_RECONCILE_NOT_READY','Inspect an original completed or interrupted signed dispatch');
+    const reported=q.result?.paymentResponse?.transaction;
+    if(transaction!==undefined&&(typeof transaction!=='string'||!/^[0-9a-f]{64}$/i.test(transaction)))
+      fail('MCP_RECONCILE_TRANSACTION_INVALID','Use the original 64-character transaction hash');
+    const reportedHash=typeof reported==='string'&&/^[0-9a-f]{64}$/i.test(reported)?reported.toLowerCase():null;
+    if(reportedHash&&transaction!==undefined&&reportedHash!==transaction.toLowerCase())
+      fail('MCP_RECONCILE_TRANSACTION_MISMATCH','The supplied transaction differs from the retained receipt');
+    const selected=reportedHash??transaction?.toLowerCase();
+    if(!selected)fail('MCP_RECONCILE_TRANSACTION_REQUIRED','This older result omitted its transaction hash; supply the original transaction reference');
+    const existing=this.#reconciliations.get(quoteId);
+    if(existing){
+      if(existing.transaction!==selected)fail('MCP_RECONCILE_ACTIVE','A different transaction lookup for this quote is active');
+      return existing.operation;
+    }
+    const operation=Promise.resolve().then(async()=>{
+      this.#running();
+      const receipt=structuredClone(q.result?.paymentResponse??null);
+      const observation=await this.#reconcilePaymentAdapter(Object.freeze({quoteId,
+        accepted:structuredClone(q.accepted),paymentResponse:receipt,
+        ...(reportedHash?{}:{transaction:selected}),
+        signal:AbortSignal.any([this.#shutdown.signal,AbortSignal.timeout(Math.max(30000,this.#timeLimit))])}));
+      if(!plain(observation)||observation.schema!=='stellar-forge.sf86.payment-attempt.v1'||
+          observation.intentId!==quoteId||observation.transaction!==selected||
+          observation.network!==q.accepted.network||observation.asset!==q.accepted.asset||
+          observation.recipient!==q.accepted.payTo||observation.atomicAmount!==q.accepted.amount||
+          !['FAILED','NOT_FOUND','TRANSFER_MATCHED'].includes(observation.outcome)||
+          Buffer.byteLength(JSON.stringify(observation))>65536)
+        fail('MCP_RECONCILE_RESULT_MISMATCH','The observation does not match this original quote');
+      this.#running();
+      const report={...structuredClone(observation),checkedAt:new Date().toISOString()};
+      const currentHash=q.result?.paymentResponse?.transaction;
+      if(currentHash&&String(currentHash).toLowerCase()!==selected)
+        return {...statOf(q),transactionObservation:{...report,saved:false,
+          saveError:'MCP_RECONCILE_ORIGINAL_TRANSACTION_CHANGED'}};
+      const candidate={...structuredClone(q),updatedAt:Date.now(),
+        result:{...structuredClone(q.result??{}),reconciliation:report}};
+      // This observation is separate from the original result/status, signer
+      // reservation and authorization history. It cannot resume execution.
+      // A read-only observation cannot downgrade a confirmed payment when its
+      // local save fails. Return the usable observation without altering q.
+      try{this.#store?.save(candidate);}
+      catch(error){return {...statOf(q),transactionObservation:{...report,saved:false,
+        saveError:String(error?.code??'MCP_RECONCILE_SAVE_FAILED')}};}
+      Object.assign(q,candidate);return statOf(q);
+    });
+    this.#reconciliations.set(quoteId,{transaction:selected,operation});this.#active.add(operation);
+    try{return await operation;}
+    finally{this.#reconciliations.delete(quoteId);this.#active.delete(operation);}
   }
   cancel({quoteId}={}){
     const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
@@ -353,8 +418,7 @@ export class McpPaidToolBroker {
       let receipt=null;if(responseHeader){try{receipt=strictBytes(responseHeader);}catch{receipt=null;}}
       const content=second.ok?await readData(second):null;
       if(this.#closing||q.status!=='EXECUTING')return statOf(q);
-      q.result={httpStatus:second.status,paidAttempted:true,content,paymentResponse:receipt?{
-        success:receipt.success===true,network:receipt.network??null,transaction:receipt.transaction??null}:null};
+      q.result={httpStatus:second.status,paidAttempted:true,content,paymentResponse:paymentResponseSummary(receipt)};
       // A server success header without the quoted Stellar network and a
       // valid transaction hash is not even a coherent x402 settlement claim.
       const receiptMatchesQuote=receipt?.success===true&&
@@ -428,8 +492,7 @@ export class McpPaidToolBroker {
     const receipt=paidAttempted?result?._meta?.['x402/payment-response']:null;
     q.result={protocol:'mcp',...(paidAttempted?{paidAttempted:true}:{paid:false}),peer:remote.peer,
       content:mcpResultContent(result),...(capture?{responseFile:capture.reservation}:{}),
-      ...(paidAttempted?{paymentResponse:plain(receipt)?{success:receipt.success===true,
-        network:receipt.network??null,transaction:receipt.transaction??null,payer:receipt.payer??null}:null}:{})};
+      ...(paidAttempted?{paymentResponse:paymentResponseSummary(receipt)}:{})};
     // Retain any actual late result after cancellation without silently changing
     // the original uncertain payment state.
     if(q.status==='EXECUTING'){
@@ -483,6 +546,7 @@ export class McpPaidToolBroker {
       case 'bazaar_results':return this.results(args);
       case 'bazaar_read_result':return this.readResult(args);
       case 'bazaar_recover_result':return this.recoverResult(args);
+      case 'bazaar_reconcile_payment':return this.reconcilePayment(args);
       case 'sf43_discover_review_and_pay':{
         this.#running();
         if(!this.#agentCommerce)fail('AGENT_COMMERCE_UNAVAILABLE','SF43 requires an explicitly injected approved adapter');

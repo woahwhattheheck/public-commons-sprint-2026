@@ -357,7 +357,7 @@ function processStat(text) {
       !/^\d{1,20}$/.test(fields[19] ?? '')) throw new Error('Unrecognized Linux process identity');
   return { pid, state: fields[0], startTicks: fields[19] };
 }
-async function linuxProcessIdentity() {
+export async function linuxProcessIdentity() {
   if (process.platform !== 'linux') return null;
   try {
     const [selfText, bootText, proc] = await Promise.all([
@@ -374,7 +374,7 @@ async function linuxProcessIdentity() {
       bootId, procDevice: String(proc.dev) };
   } catch { return null; }
 }
-async function liveOwner(owner, current) {
+export async function liveOwner(owner, current) {
   if (owner.host !== current.host) return true;
   if (!owner.processIdentity) return livePid(owner.pid); // Existing/non-Linux lock compatibility.
   const old = owner.processIdentity, local = current.processIdentity;
@@ -477,6 +477,9 @@ async function acquireLock(directory) {
   }
   fail('History directory ownership changed during startup; retry startup', 'HISTORY_LOCK_RACE');
 }
+
+/** Reuse this lifetime for an already validated private directory; no usage session is created. */
+export { acquireLock as acquirePrivateDirectoryWriter };
 
 /** One writer, many saved sessions. Call only with snapshots from observeSellerTraffic(). */
 export async function createTrafficHistory({ directory, retentionDays = 90, now = Date.now } = {}) {

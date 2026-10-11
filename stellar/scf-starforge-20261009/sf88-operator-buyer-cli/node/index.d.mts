@@ -148,6 +148,8 @@ export class BuyerError extends Error {
   readonly destination?: string;
   readonly destinationPublished?: boolean;
   constructor(code: string, details?: Record<string, unknown>);
+  /** Public diagnostic fields; recovery handles remain directly accessible on the error. */
+  toJSON(): { name: string; code: string; exitCode?: number | null; destinationPublished?: boolean };
 }
 export class Buyer {
   readonly stateDirectory: string;
@@ -719,6 +721,8 @@ export interface AcquisitionWorkspaceSelection {
   configsDirectory?: string;
   /** Receiver-owned preset with original payer/signer and budget limits. */
   operatorSettings?: string;
+  /** Host-selected SF101 claim environment names (1–32); values stay in runtime environment. */
+  paidFileClaimEnvs?: readonly string[];
   /** Existing canonical parent outside selected source state; defaults to OS temp. */
   temporaryDirectory?: string;
   /** Separate native result budget, 1–256 MiB; default 32 MiB. */
@@ -800,12 +804,65 @@ export interface AcquisitionRequest extends JsonObject {
   prepared: AcquisitionReady | null;
   expired: boolean;
 }
+export interface AcquisitionPaidFileReview extends JsonObject {
+  id: string;
+  revision: number;
+  reviewSha256: string;
+  handoffSha256: string;
+  acceptedTerms: JsonObject;
+  totalAtomic: string;
+  dailyAtomic: string;
+  filename: string;
+  claimEnv: string;
+}
+export interface AcquisitionPaidFileReady extends JsonObject {
+  id: string;
+  intentId: string;
+  configName: string;
+  configPath: string;
+  configSha256: string;
+  operatorDirectory: string;
+  reviewRevision: number;
+  reviewSha256: string;
+  paidFile: JsonObject & {handoffSha256: string; destination: string; claimEnv: string};
+}
+export interface AcquisitionPaidFileOrder extends JsonObject {
+  id: string;
+  filename: string;
+  handoffSha256: string;
+  handoff: JsonObject;
+  review: AcquisitionPaidFileReview | null;
+  prepared: AcquisitionPaidFileReady | null;
+  preparing: boolean;
+  claimEnvs: Array<{name: string; available: boolean}>;
+}
+export interface AcquisitionPaidFileView extends JsonObject {
+  id: string;
+  orderReference: string;
+  purchaseUrl: string;
+  deliveryUrl: string;
+  file: JsonObject & {bytes: number; sha256: string};
+  destination: string;
+  handoffSha256: string;
+  configSha256: string;
+  delivery: JsonObject;
+  transfer: JsonObject;
+  claimEnv: string;
+  claimAvailable: boolean;
+}
+export interface AcquisitionPaidFileTransferOptions {
+  only: string;
+  configSha256: string;
+  handoffSha256: string;
+  signal?: AbortSignal;
+}
 export interface AcquisitionRunView extends JsonObject {
   id: string;
   planSha256: string;
   state: JsonObject & {
     plan: AcquisitionPlan;
-    operations: Array<JsonObject & {id: string; intentId: string; state: string}>;
+    operations: Array<JsonObject & {id: string; intentId: string; state: string;
+      paidFile?: AcquisitionPaidFileView | {error: string}}>;
     accounting: JsonObject;
     executionLock: JsonObject | null;
   } | null;
@@ -814,7 +871,7 @@ export interface AcquisitionRunView extends JsonObject {
   execution?: JsonObject & {
     executionId: string;
     status: string;
-    result?: JsonObject & {results: JsonObject[]};
+    result?: JsonObject & {results?: JsonObject[]};
     error?: string;
   };
 }
@@ -825,6 +882,8 @@ export interface AcquisitionWorkspaceState extends JsonObject {
   acquisitions: Array<{id: string; title: string; planId: string; imported: boolean}>;
   intake: JsonObject & {requests: Array<JsonObject & {id: string; prepared: AcquisitionReady | null}>};
   recovery: JsonObject & {history: JsonObject[]};
+  paidFiles: JsonObject & {requests: Array<JsonObject & {id: string; prepared: AcquisitionPaidFileReady | null}>;
+    claimEnvs: Array<{name: string; available: boolean}>};
   configurations: JsonObject[];
   terminalAvailable: boolean;
 }
@@ -872,6 +931,7 @@ export class AcquisitionWorkspace {
   readonly directory: string | null;
   readonly configsDirectory: string | null;
   readonly operatorSettings: string | null;
+  readonly paidFileClaimEnvs: readonly string[] | null;
   state(options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionWorkspaceState>>;
   attachRun(run: string, options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionWorkspaceState>>;
   request(id: string, options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionRequest>>;
@@ -880,6 +940,24 @@ export class AcquisitionWorkspace {
     acceptIndex: number; totalAtomic: string; dailyAtomic: string; signal?: AbortSignal;
   }): Promise<AcquisitionSuccess<AcquisitionRequest>>;
   prepareRequest(id: string, options: {reviewSha256: string; signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionReady>>;
+  paidFile(id: string, options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionPaidFileOrder>>;
+  receivePaidFile(file: string, options?: {filename?: string; signal?: AbortSignal}):
+    Promise<AcquisitionSuccess<AcquisitionPaidFileOrder>>;
+  reviewPaidFile(id: string, options: {
+    expectedRevision: number; totalAtomic: string; dailyAtomic: string;
+    filename: string; claimEnv: string; signal?: AbortSignal;
+  }): Promise<AcquisitionSuccess<AcquisitionPaidFileOrder>>;
+  preparePaidFile(id: string, options: {reviewSha256: string; signal?: AbortSignal}):
+    Promise<AcquisitionSuccess<AcquisitionPaidFileReady>>;
+  /** Pause by aborting the caller signal; resume selects the same exact original operation. */
+  retrievePaidFile(id: string, options: AcquisitionPaidFileTransferOptions):
+    Promise<AcquisitionSuccess<AcquisitionRunView>>;
+  resetPaidFile(id: string, options: AcquisitionPaidFileTransferOptions):
+    Promise<AcquisitionSuccess<AcquisitionRunView>>;
+  downloadPaidFile(id: string, operationId: string, destination: string, options?: {signal?: AbortSignal}):
+    Promise<AcquisitionSuccess<AcquisitionExport>>;
+  exportPaidFile(id: string, options: {destination: string; signal?: AbortSignal}):
+    Promise<AcquisitionSuccess<AcquisitionExport>>;
   draft(id: string, options?: {revision?: number; signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionDraft>>;
   save(options: {
     id?: string; expectedRevision?: number; manifest: AcquisitionManifest; signal?: AbortSignal;

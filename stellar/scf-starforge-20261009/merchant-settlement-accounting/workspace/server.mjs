@@ -12,6 +12,9 @@ import {AccountantWorkspace,handleAccountantRequest,ACCOUNTANT_REQUEST_BYTES} fr
 import {RECOVERY_COMMANDS,RECOVERY_HELP,recoveryMain} from './recovery-cli.mjs';
 import {openAccountingMaintenance} from './recovery-controller.mjs';
 import {BitwaveWorkspace,handleBitwaveRequest,BITWAVE_REQUEST_BYTES} from './bitwave-workspace.mjs';
+import {QboWorkspace,handleQboRequest,QBO_REQUEST_BYTES} from './qbo-workspace.mjs';
+import {handleAdjustmentRequest} from './adjustments-workspace.mjs';
+import {ADJUSTMENTS_HELP,adjustmentsMain} from './adjustments-cli.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
 const TYPES={'.json':'application/json; charset=utf-8','.csv':'text/csv; charset=utf-8','.html':'text/html; charset=utf-8','.tar':'application/x-tar'};
@@ -34,8 +37,9 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
   };
   const openRuntime=async()=>{
     const workspace=await openAccountingWorkspace(options),accountant=new AccountantWorkspace(workspace);
+    const qbo=new QboWorkspace(workspace,accountant);
     const bitwave=new BitwaveWorkspace(workspace,accountant,bitwaveClient?{client:bitwaveClient}:{});let collection;
-    try{collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();return {workspace,accountant,bitwave,collection};}
+    try{workspace.adjustments.configureTransport({httpsProxyEnv:rpcProxyEnv});collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();await qbo.recover();return {workspace,accountant,bitwave,qbo,collection};}
     catch(error){await closeRuntime({workspace,bitwave,collection}).catch(()=>{});throw error;}
   };
   const maintenance=await openAccountingMaintenance({directory:options.directory,stateRoot:recoveryStateRoot,backupRoot:recoveryBackupRoot,
@@ -57,8 +61,10 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
         '/pricing.mjs':['pricing.mjs','text/javascript; charset=utf-8'],'/pricing.html':['pricing.html','text/html; charset=utf-8'],'/pricing.css':['pricing.css','text/css; charset=utf-8'],
         '/periods.mjs':['periods.mjs','text/javascript; charset=utf-8'],'/periods.html':['periods.html','text/html; charset=utf-8'],'/periods.css':['periods.css','text/css; charset=utf-8'],
         '/accountant.mjs':['accountant.mjs','text/javascript; charset=utf-8'],'/accountant.html':['accountant.html','text/html; charset=utf-8'],'/accountant.css':['accountant.css','text/css; charset=utf-8'],
+        '/qbo.mjs':['qbo.mjs','text/javascript; charset=utf-8'],'/qbo.html':['qbo.html','text/html; charset=utf-8'],'/qbo.css':['qbo.css','text/css; charset=utf-8'],
         '/bitwave.mjs':['bitwave.mjs','text/javascript; charset=utf-8'],'/bitwave.html':['bitwave.html','text/html; charset=utf-8'],'/bitwave.css':['bitwave.css','text/css; charset=utf-8'],
-        '/recovery.mjs':['recovery.mjs','text/javascript; charset=utf-8'],'/recovery.html':['recovery.html','text/html; charset=utf-8'],'/recovery.css':['recovery.css','text/css; charset=utf-8']};
+        '/recovery.mjs':['recovery.mjs','text/javascript; charset=utf-8'],'/recovery.html':['recovery.html','text/html; charset=utf-8'],'/recovery.css':['recovery.css','text/css; charset=utf-8'],
+        '/adjustments.mjs':['adjustments.mjs','text/javascript; charset=utf-8'],'/adjustments.html':['adjustments.html','text/html; charset=utf-8'],'/adjustments.css':['adjustments.css','text/css; charset=utf-8']};
       if(request.method==='GET'&&assets[path]){const [name,type]=assets[path];send(response,200,await readFile(join(PUBLIC,name)),{type});return;}
       const maintenancePath=path==='/api/maintenance'||path.startsWith('/api/maintenance/');
       if(!maintenancePath)operation=maintenance.enter();
@@ -66,11 +72,15 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       if(request.method==='POST'){
         check(request.headers['x-workspace-request']==='1','WORKSPACE_REQUEST_REQUIRED','Use the operator workspace form.',403);
         check(!request.headers.origin||request.headers.origin==='http://'+request.headers.host,'INVALID_ORIGIN','Use this local workspace address.',403);
-        value=await body(request,path.startsWith('/api/bitwave/')?BITWAVE_REQUEST_BYTES:path.startsWith('/api/accountant/')?ACCOUNTANT_REQUEST_BYTES:path==='/api/collection/sources'?8_200_000:path==='/api/pricing/reviews'?PRICING_REQUEST_BYTES:600_000);
+        value=await body(request,path.startsWith('/api/qbo/')?QBO_REQUEST_BYTES:path.startsWith('/api/bitwave/')?BITWAVE_REQUEST_BYTES:path.startsWith('/api/accountant/')?ACCOUNTANT_REQUEST_BYTES:path==='/api/collection/sources'?8_200_000:path==='/api/pricing/reviews'?PRICING_REQUEST_BYTES:600_000);
       }
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
       if(maintenancePath){send(response,200,await maintenance.route({method:request.method,path,value}));return;}
-      const {workspace,accountant,bitwave,collection}=operation;
+      const {workspace,accountant,bitwave,qbo,collection}=operation;
+      const qboResult=await handleQboRequest(qbo,{method:request.method,path,query,value});
+      if(qboResult){if(qboResult.file)send(response,200,qboResult.file.bytes,{type:qboResult.file.type,name:qboResult.file.name});else send(response,200,qboResult.value);return;}
+      const adjustment=await handleAdjustmentRequest(workspace.adjustments,{method:request.method,path,query,value});
+      if(adjustment){if(adjustment.file)send(response,200,adjustment.file.bytes,{type:adjustment.file.type,name:adjustment.file.name});else send(response,200,adjustment.value);return;}
       const bitwaveResult=await handleBitwaveRequest(bitwave,{method:request.method,path,query,value});
       if(bitwaveResult){if(bitwaveResult.file)send(response,200,bitwaveResult.file.bytes,{type:bitwaveResult.file.type,name:bitwaveResult.file.name});else send(response,200,bitwaveResult.value);return;}
       const accountingHandoff=await handleAccountantRequest(accountant,{method:request.method,path,query,value});
@@ -124,7 +134,7 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
   const actual=server.address().port;hosts.add('127.0.0.1:'+actual);hosts.add('localhost:'+actual);
   let closing;
   return {get workspace(){return maintenance.runtime?.workspace;},get collection(){return maintenance.runtime?.collection;},
-    get accountant(){return maintenance.runtime?.accountant;},get bitwave(){return maintenance.runtime?.bitwave;},maintenance,server,url:'http://127.0.0.1:'+actual,
+    get accountant(){return maintenance.runtime?.accountant;},get bitwave(){return maintenance.runtime?.bitwave;},get qbo(){return maintenance.runtime?.qbo;},maintenance,server,url:'http://127.0.0.1:'+actual,
     close(){if(!closing)closing=(async()=>{
       const stopped=new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
       const results=await Promise.allSettled([stopped,maintenance.close()]);const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
@@ -153,7 +163,8 @@ Operating backup and recovery: backup | inspect-backup | verify-backup | restore
 Use a recovery subcommand with --help for the original encrypted workflow.
 `;
 export async function main(argv=process.argv.slice(2)){
-  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP);return;}
+  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP+'\n'+ADJUSTMENTS_HELP);return;}
+  if(argv[0]==='adjustments')return adjustmentsMain(argv.slice(1));
   if(RECOVERY_COMMANDS.has(argv[0])){
     const controller=new AbortController(),stop=()=>controller.abort();process.once('SIGINT',stop);process.once('SIGTERM',stop);
     try{return await recoveryMain(argv,{signal:controller.signal});}finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}

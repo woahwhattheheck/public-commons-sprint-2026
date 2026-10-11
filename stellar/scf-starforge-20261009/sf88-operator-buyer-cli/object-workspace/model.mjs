@@ -3,12 +3,17 @@ import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, readdir, realpath, unlink } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { config, execution } from '../config.mjs';
 import { selectObjectDescription } from '../object-description.mjs';
 import { createObjectSession, inspectObjectSession, runObjectSession,
   recoverObjectSession, assembleObjectSession, accountObjectSession } from '../object-session.mjs';
 import { renderObjectReport } from '../object-report.mjs';
 import { openObjectReceiving } from './intake.mjs';
+import { createObjectWorkspaceRecovery } from './recovery.mjs';
+import { analysisLauncher } from '../dataset-workspace/analysis.mjs';
+import { atomicJson } from '../../sf30-seller-sdk/postgres/publisher/files.mjs';
+import { acquireRunbookMetadataLease } from '../../buyer-runbook/runbook.mjs';
 
 const PROFILE = 'stellar-forge.sf88.object-workspace.v1';
 const SESSION = 'stellar-forge.sf88.object-session.v1';
@@ -111,15 +116,18 @@ const accountingIssue = entry => entry.viewStatus === 'SAVE_FAILED' ||
   !FINALIZED.has(entry.outcome) && !['NO_PAYMENT_REQUIRED', 'NOT_ATTEMPTED'].includes(entry.outcome);
 
 /** The profile contains trusted local references. Browser actions select IDs only. */
-export async function openObjectWorkspace({ stateDirectory, profilePath = null, operatorSettings } = {}) {
+export async function openObjectWorkspace({ stateDirectory, profilePath = null, operatorSettings, analysisPython = 'python3' } = {}) {
   const root = absolute(stateDirectory);
   await privateDirectory(root, true);
   const sessionsRoot = join(root, 'sessions'), outputsRoot = join(root, 'downloads'), inputsRoot = join(root, 'preparations');
   for (const path of [sessionsRoot, outputsRoot, inputsRoot]) await privateDirectory(path, true);
   const receiving = await openObjectReceiving({ directory: join(root, 'received'), operatorSettings });
-  let profiles = [];
+  const analysis = analysisLauncher({ python: analysisPython, directory: join(root, 'analysis'),
+    checkout: resolve(fileURLToPath(new URL('../../../../', import.meta.url))) });
+  let profiles = [], profileSha256 = null;
   if (profilePath !== null) {
-    const profile = json(await read(profilePath, 262144));
+    const rawProfile = await read(profilePath, 262144), profile = json(rawProfile);
+    profileSha256 = sha(rawProfile);
     need(object(profile) && profile.schema === PROFILE && Array.isArray(profile.products) &&
       profile.products.length <= 64 && Object.keys(profile).every(key => ['schema', 'products'].includes(key)),
     'OBJECT_WORKSPACE_PROFILE_INVALID');
@@ -141,7 +149,14 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
   }
   const index = new Map(), reports = new Map(), reviews = new Map(), dispatches = new Map(), finalizations = new Map();
   const finalizationIssues = new Map(), fileTransfers = new Map();
-  let active = null, mutation = null, closed = false, closePromise;
+  let active = null, mutation = null, closed = false, closePromise, lastRecovery = null;
+  const analysisReviews = new Map();
+  let lastAnalysis = null;
+  try {
+    lastAnalysis = json(await read(join(root, 'analysis-handoff.json'), 32768));
+    need(lastAnalysis.schema === 'stellar-forge.sf88.object-analysis-handoff.v1' &&
+      /^[a-f0-9-]{36}$/.test(lastAnalysis.id ?? ''), 'OBJECT_ANALYSIS_HANDOFF_INVALID');
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
   const sessionPath = id => join(sessionsRoot, slug(id));
   const allProfiles = async () => {
     const values = [...profiles, ...await receiving.products()], counts = new Map();
@@ -150,6 +165,8 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
       { ...value, error: 'OBJECT_WORKSPACE_PRODUCT_DUPLICATE' });
   };
   const chooseProfile = async id => (await allProfiles()).find(product => product.id === id) ?? fail('OBJECT_WORKSPACE_PRODUCT_NOT_FOUND', 404);
+  const recovery = createObjectWorkspaceRecovery({ directory: root, profilePath, profileSha256,
+    products: allProfiles, receiving });
   const assertOpen = () => need(!closed, 'OBJECT_WORKSPACE_CLOSED', 409);
   const assertIdle = () => { assertOpen(); need(!active && !mutation, 'OBJECT_WORKSPACE_BUSY', 409); };
   const retain = (id, report) => {
@@ -252,7 +269,9 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     assertIdle(); const review = reviews.get(reviewId);
     need(review && review.expires > Date.now(), 'OBJECT_WORKSPACE_REVIEW_EXPIRED', 409);
     mutation = { kind: 'CREATE', session: review.sessionName };
-    try { return await createReviewed(review); } finally { mutation = null; }
+    let release;
+    try { release = await acquireRunbookMetadataLease(root); return await createReviewed(review); }
+    finally { try { await release?.(); } finally { mutation = null; } }
   }
   async function createReviewed(review) {
     let temporary;
@@ -282,7 +301,9 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
   }
   async function receivingMutation(kind, action) {
     assertIdle(); mutation = { kind };
-    try { return await action(); } finally { mutation = null; }
+    let release;
+    try { release = await acquireRunbookMetadataLease(root); return await action(); }
+    finally { try { await release?.(); } finally { mutation = null; } }
   }
   async function createReceived(value) {
     return receivingMutation('CREATE_RECEIVED_OBJECT', async () => {
@@ -303,6 +324,135 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
       totals: work.totals, currentOffset: work.offset, phase: work.phase,
       verifiedBytes: work.verifiedBytes, streamedBytes: work.streamedBytes, totalBytes: work.totalBytes };
   }
+  function recoveryResult(result) {
+    return { status: result.status, bundle: result.bundle, recordSha256: result.recordSha256,
+      stateRoot: result.stateRoot, files: result.files, bytes: result.bytes, createdAt: result.createdAt,
+      operators: result.operators?.length ?? 0, sessions: result.application?.sessions.length ?? 0,
+      selectionRecord: result.selectionRecord, selectionRecordError: result.selectionRecordError,
+      leaseReleaseErrors: result.leaseReleaseErrors };
+  }
+  async function inspectRecovery(input) {
+    assertIdle(); mutation = { kind: 'REVIEW_BACKUP' };
+    try { return await withStoppedAnalysis(() => recovery.inspect(input)); } finally { mutation = null; }
+  }
+  async function snapshotRecovery(input, context = {}) {
+    assertIdle(); mutation = { kind: 'BACKUP' };
+    try { return await withStoppedAnalysis(() => recovery.snapshot(input, context)); } finally { mutation = null; }
+  }
+  async function withStoppedAnalysis(action) {
+    const release = await analysis.acquireSnapshotLease();
+    try { return await action(); } finally { await release(); }
+  }
+  function startRecovery({ kind, actionId, ...input } = {}) {
+    assertOpen(); need(['BACKUP', 'VERIFY_BACKUP'].includes(kind), 'OBJECT_RECOVERY_ACTION_REQUIRED');
+    need(typeof actionId === 'string' && /^[a-f0-9-]{36}$/.test(actionId), 'OBJECT_WORKSPACE_ACTION_ID_REQUIRED');
+    if (lastRecovery?.id === actionId) return lastRecovery;
+    assertIdle();
+    const controller = new AbortController(), work = { id: actionId, kind, session: null, controller,
+      startedAt: now(), stopping: false, events: [] };
+    active = work;
+    const retainProgress = (status, extra = {}) => { lastRecovery = { ...runView(work), state: status,
+      events: [...work.events], ...extra }; };
+    retainProgress('RUNNING');
+    const operation = kind === 'BACKUP' ? (input, context) =>
+      withStoppedAnalysis(() => recovery.snapshot(input, context)) : recovery.verify;
+    work.promise = operation(input, { signal: controller.signal, onProgress: event => {
+      work.events.push({ ...event, at: now() }); if (work.events.length > 64) work.events.shift();
+      work.progressAt = now(); work.phase = event.stage; retainProgress(work.stopping ? 'STOPPING' : 'RUNNING');
+    } }).then(result => retainProgress('COMPLETED', { result: recoveryResult(result), endedAt: now() }),
+      error => retainProgress(controller.signal.aborted ? 'STOPPED' : 'FAILED',
+        { error: workspaceError(error), endedAt: now() }))
+      .finally(() => { reports.clear(); if (active === work) active = null; });
+    return runView(work);
+  }
+  async function recoveryState() {
+    assertOpen(); return { directory: root, suggestedStateRoot: dirname(root),
+      active: active && ['BACKUP', 'VERIFY_BACKUP'].includes(active.kind) ? runView(active) : null,
+      last: lastRecovery, history: await recovery.history(), available: !active && !mutation,
+      analysisRunning: analysis.state().running };
+  }
+  function analysisState() {
+    assertOpen();
+    const last = lastAnalysis && { ...lastAnalysis,
+      ...(lastAnalysis.state === 'RUNNING' && active?.id !== lastAnalysis.id ? { state: 'INTERRUPTED' } : {}) };
+    return { ...analysis.state(), last,
+      active: active?.kind?.startsWith('ANALYSIS_') ? runView(active) : null,
+      available: !active && !mutation };
+  }
+  async function reviewAnalysis({ session, expectedRevision, name, format } = {}) {
+    assertIdle();
+    need(/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name ?? '') && ['json', 'csv'].includes(format),
+      'OBJECT_ANALYSIS_SOURCE_INVALID');
+    mutation = { kind: 'REVIEW_ANALYSIS', session };
+    try {
+      const report = await checked(session, expectedRevision), assembly = assemblyRecord(session, report);
+      need(report.status === 'COMPLETE' && assembly, 'OBJECT_WORKSPACE_ASSEMBLY_REQUIRED', 409);
+      const saved = await analysis.inspect(), prior = (saved.sources ?? []).find(source => source.name === name);
+      const review = { reviewId: randomUUID(), session, sessionId: report.sessionId,
+        expectedRevision, name, format, bytes: assembly.bytes, sha256: assembly.sha256,
+        filename: basename(assembly.destination), destination: assembly.destination,
+        snapshot: report.expectedSnapshot, configurationSha256: report.configurationSha256,
+        deliveryMode: report.deliveryMode ?? 'chunks', expectedSourceRevision: prior?.revision ?? 0,
+        workspaceId: saved.workspace_id, expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString() };
+      review.reviewSha256 = sha(JSON.stringify([review.sessionId, review.expectedRevision, review.name, review.format,
+        review.destination, review.bytes, review.sha256, review.expectedSourceRevision, review.workspaceId]));
+      for (const [id, value] of analysisReviews) if (Date.parse(value.expiresAt) <= Date.now()) analysisReviews.delete(id);
+      while (analysisReviews.size >= 64) analysisReviews.delete(analysisReviews.keys().next().value);
+      analysisReviews.set(review.reviewId, review);
+      const { destination, ...publicReview } = review; return publicReview;
+    } finally { mutation = null; }
+  }
+  function startAnalysis({ kind, actionId, reviewId } = {}) {
+    assertOpen(); need(['ATTACH', 'OPEN', 'STOP'].includes(kind), 'OBJECT_ANALYSIS_ACTION_REQUIRED');
+    need(typeof actionId === 'string' && /^[a-f0-9-]{36}$/.test(actionId), 'OBJECT_WORKSPACE_ACTION_ID_REQUIRED');
+    if (lastAnalysis?.id === actionId) return analysisState().last;
+    assertIdle();
+    const reviewed = kind === 'ATTACH' ? analysisReviews.get(reviewId) : null;
+    if (kind === 'ATTACH') need(reviewed && Date.parse(reviewed.expiresAt) > Date.now(), 'OBJECT_WORKSPACE_REVIEW_EXPIRED', 409);
+    const controller = new AbortController(), work = { id: actionId, kind: 'ANALYSIS_' + kind,
+      session: reviewed?.session ?? null, controller, startedAt: now(), stopping: false };
+    active = work;
+    const record = { schema: 'stellar-forge.sf88.object-analysis-handoff.v1', id: actionId,
+      kind, session: work.session, startedAt: work.startedAt, state: 'RUNNING',
+      ...(reviewed ? { sessionId: reviewed.sessionId, name: reviewed.name, format: reviewed.format,
+        bytes: reviewed.bytes, sha256: reviewed.sha256, filename: reviewed.filename,
+        snapshot: reviewed.snapshot, configurationSha256: reviewed.configurationSha256,
+        deliveryMode: reviewed.deliveryMode, expectedSourceRevision: reviewed.expectedSourceRevision } : {}) };
+    lastAnalysis = record;
+    work.promise = (async () => {
+      let release;
+      try {
+        release = await acquireRunbookMetadataLease(root);
+        await atomicJson(root, 'analysis-handoff.json', record);
+        if (controller.signal.aborted) throw Object.assign(new Error('DATASET_ANALYSIS_STOPPED'), { code: 'DATASET_ANALYSIS_STOPPED' });
+        let result;
+        if (kind === 'ATTACH') {
+          const report = await checked(reviewed.session, reviewed.expectedRevision);
+          const assembly = assemblyRecord(reviewed.session, report);
+          need(assembly && assembly.destination === reviewed.destination && assembly.bytes === reviewed.bytes &&
+            assembly.sha256 === reviewed.sha256, 'OBJECT_WORKSPACE_REVIEW_CHANGED', 409);
+          work.phase = 'REGISTERING_ORIGINAL_FILE';
+          result = await analysis.attachObject({ name: reviewed.name, session: sessionPath(reviewed.session),
+            destination: reviewed.destination, format: reviewed.format, expected_revision: reviewed.expectedSourceRevision,
+            workspaceId: reviewed.workspaceId }, { signal: controller.signal });
+          record.sourceRevision = result.registered.revision;
+        } else if (kind === 'OPEN') {
+          work.phase = 'OPENING_ANALYSIS'; result = await analysis.reopen({ signal: controller.signal });
+        } else { work.phase = 'STOPPING_ANALYSIS'; await analysis.stop(); result = {}; }
+        Object.assign(record, { state: 'COMPLETED', endedAt: now(), ...(result.workspaceId ? { workspaceId: result.workspaceId } : {}) });
+        await atomicJson(root, 'analysis-handoff.json', record);
+      } catch (error) {
+        Object.assign(record, { state: controller.signal.aborted ? 'STOPPED' : 'FAILED', error: workspaceError(error), endedAt: now() });
+        try { await atomicJson(root, 'analysis-handoff.json', record); }
+        catch (saveError) { record.saveError = workspaceError(saveError); }
+      } finally {
+        try { await release?.(); }
+        catch (error) { record.releaseError = workspaceError(error); }
+        if (active === work) active = null;
+      }
+    })();
+    return runView(work);
+  }
   async function readAccounting(session, offset = 0, limit = ACCOUNTING_PAGE) {
     slug(session); need(index.has(session), 'OBJECT_WORKSPACE_SESSION_NOT_FOUND', 404);
     const record = await accountObjectSession(sessionPath(session), { offset, limit });
@@ -315,7 +465,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     need(['all', 'QUEUED', 'VERIFIED', 'RECONCILIATION_REQUIRED'].includes(filter), 'OBJECT_WORKSPACE_FILTER_INVALID');
     need(typeof query === 'string' && query.length <= 160, 'OBJECT_WORKSPACE_QUERY_INVALID');
     const state = { sessions: [...index.values()].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || a.id.localeCompare(b.id)),
-      selected: null, section, active: runView(active), mutation, updatedAt: now() };
+      selected: null, section, active: runView(active), mutation, analysis: analysisState(), updatedAt: now() };
     if (!session) return state;
     if (section === 'accounting') {
       // This path never inspects or hashes a delivered object. The native
@@ -411,6 +561,8 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     if (!active && dispatches.get(session)?.id === runId) return dispatches.get(session);
     if (!active && finalizations.get(session)?.id === runId) return finalizations.get(session);
     if (!active && fileTransfers.get(session)?.id === runId) return fileTransfers.get(session);
+    if (!active && session === null && lastRecovery?.id === runId) return lastRecovery;
+    if (!active && lastAnalysis?.session === session && lastAnalysis?.id === runId) return lastAnalysis;
     need(active?.session === session && active.id === runId, 'OBJECT_WORKSPACE_RUN_CHANGED', 409);
     active.stopping = true; active.controller.abort(); return runView(active);
   }
@@ -621,17 +773,25 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     if (closePromise) return closePromise;
     closed = true;
     closePromise = (async () => {
+      const analysisClosed = analysis.close();
       while (active || mutation) {
         if (active) { active.stopping = true; active.controller.abort(); await active.promise; }
         else await new Promise(resolve => setTimeout(resolve, 20));
       }
-      reviews.clear();
+      await analysisClosed; reviews.clear(); analysisReviews.clear();
     })();
     return closePromise;
   }
   await scan();
   return { products, reviewSelection, create, view, refresh, run, stop, recover, assemble,
     finalize, openAccountingExport, exportReport, openDownload, close,
+    inspectRecovery, snapshotRecovery, startRecovery, recoveryState,
+    reviewAnalysis, startAnalysis, analysisState, waitForAnalysis: () => analysis.wait(),
+    inspectAnalysis: options => { assertIdle(); return analysis.inspect(options); },
+    waitForAnalysisAction: async id => {
+      if (active?.id === id && active.kind.startsWith('ANALYSIS_')) await active.promise;
+      return lastAnalysis?.id === id ? lastAnalysis : null;
+    },
     receivingState: () => { assertOpen(); return receiving.state(); },
     receivingOptions: (id, objectId) => { assertOpen(); return receiving.options(id, objectId); },
     receive: value => receivingMutation('RECEIVE_OBJECT', () => receiving.receive(value)),

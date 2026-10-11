@@ -40,7 +40,7 @@ of the selected asset. The example amounts are limits to replace, not a product
 price. Keep this preset mode `0600` outside the installation. It supports the
 same optional `signerProvider`, `rpc` and `httpsProxyEnv` as the original runbook;
 choose either `secretEnv` or `signerProvider`. Values are read on the host.
-The browser does not accept a signer module, credential, executable or private path.
+The receiving form does not accept a signer module, credential, executable or private path.
 
 ```sh
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs \
@@ -99,6 +99,89 @@ session name is not overwritten.
 
 The trusted product profile below remains useful for installations that already
 have reviewed native operator workspaces.
+
+## Back up and restore the complete buyer workspace
+
+**Backup and recovery** in the sidebar captures this same receiving and download
+application through original SF88 collection recovery and SF101 authenticated
+encryption. It retains merchant inputs, prepared products and native operator
+generations, committed SQLite journals, original object plans, inbox history,
+response parts and completed files. Empty whole files keep their zero-byte
+contents and one original request. Queued chunked downloads keep their untouched
+jobs; restoring state does not start them.
+
+Place the workspace, private preset, optional profile and all referenced native
+operators, tickets, evidence and completed files beneath one existing private
+state root. For example, use `/private/buyer-state/workspace` and
+`/private/buyer-state/operator.json`. Review lists the exact selected paths;
+unrelated siblings are not automatically included. Directories must be owned
+mode `0700`, files `0600`, without symbolic or hard links. The original engine
+permits 64 native operators, 9,500 filesystem entries, 2 GiB per file and less
+than 4 GiB total. This application reviews up to 512 original sessions. External
+Python, source CLI and signer-provider executables remain listed installation
+requirements.
+
+Set the separate backup passphrase in the launching terminal before opening the
+browser. Only its environment name enters the browser, never its value:
+
+```sh
+read -rsp 'Backup passphrase: ' SF88_BACKUP_PASSPHRASE
+export SF88_BACKUP_PASSPHRASE
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs --state /private/buyer-state/workspace --port 8438
+```
+
+1. Open **Backup and recovery**, enter the common state root, and choose
+   **Review backup contents**. Review the original sessions, whole/chunk plans,
+   native operators, merchant sources, selected paths, missing optional outputs
+   and runtime requirements. A changed startup profile or preset-path reference
+   requires reopening the workspace before review.
+2. Choose a new encrypted bundle directory outside that root, for example
+   `/private/backups/buyer-20261011`, with an existing private parent. Stop other
+   programs that write the selected state, acknowledge that condition, then
+   choose **Create encrypted backup**. The application holds original workspace
+   and intake metadata leases, each selected object-session lease and native
+   SQLite checkpoint holders. Original source comparisons remain active.
+3. Follow capture and encryption progress. **Stop recovery operation** cancels
+   this owned operation and drains its workers. The encrypted copy carries a
+   release for only its captured lease generations; live source ownership stays
+   held until the capture finishes.
+4. Keep the bundle path and record SHA-256 outside the captured root.
+   **Select this backup → Verify backup** authenticates the archive, original
+   session/configuration bindings and committed journals, including when source
+   state is absent. It uses the host's `/usr/bin/python3`; the CLI can also select
+   an explicit existing Python.
+
+The original journal-authentication keys are encrypted inside the bundle.
+Wallet environment values are excluded. Keep the bundle and its separate
+passphrase available to the intended restoring operator.
+
+### Restore and reopen
+
+Close the browser launcher and other writers. The existing `buyer-object
+backup-restore` command is printed for the selected backup. Its destination is
+the **original absolute state root**, which must be absent or an empty private
+directory. Preserve a populated root before deliberately making that location
+available. Restore does not merge into it or rewrite original paths.
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs backup-restore --bundle /private/backups/buyer-20261011 --expect ORIGINAL_RECORD_SHA256 --pass-env SF88_BACKUP_PASSPHRASE
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs --state /private/buyer-state/workspace --port 8438
+```
+
+Restore authenticates before publishing, then reopens the original operators,
+session plans, accounting pages and received-product identities. Its
+`reopened.urlCommand` includes the original profile when applicable. The browser
+prints a fresh private URL. Open **File delivery** to obtain saved bytes or
+continue only untouched jobs; open **Purchase records** for the original
+outcomes and receipts. Capture, verify and restore run no purchase, signature,
+payment or finalization.
+
+A published bundle remains complete if writing its local history later fails;
+`selectionRecordError` reports that separate condition. Restore likewise returns
+`reopenError`, `nativeReopenErrors`, `publicationSyncError` and `cleanupErrors`
+separately after publication. Preserve that result and resolve the named local
+issue instead of blindly repeating a completed operation. The CLI exits `2` for
+these post-publication conditions.
 
 ## Prepare the existing operator inputs
 
@@ -372,6 +455,89 @@ Closing only the browser leaves the
 host process running; reopen the printed URL to inspect it. An abrupt host or
 process interruption is handled by the original session recovery command.
 
+## Use a completed file in data analysis
+
+**Use in data analysis** connects a completed JSON or CSV download to the original
+Python analytical application. The source is the recorded assembly selected by
+this workspace. The browser supplies its session ID, chosen format and source
+name; it cannot substitute an arbitrary local file path.
+
+1. Open the completed download in **File delivery** and save its complete file.
+   Choose **Use in data analysis**, then enter a source name and the actual JSON
+   or CSV format.
+2. Choose **Review source handoff**. The review shows the original session,
+   configuration and snapshot binding, complete file length and SHA-256, target
+   analytical workspace and current source revision. An existing name therefore
+   has an explicit reviewed revision before it can change.
+3. Choose **Register source and open analysis**. The existing Python ObjectBuyer
+   reopens the original session and its recorded assembly. The original
+   AnalysisResponses registry retains that source and its revision in the same
+   DatasetDatabase used by the analytical application. Registration is sent
+   through its authenticated local `/api/object-source` route when it is open.
+4. Follow **Continue in analysis workspace**. In **Retained responses and files**,
+   inspect the registered source, select the JSON record collection when needed,
+   choose explicit field types, preview all mapped records and import the
+   reviewed projection. The existing Data, Query, Activity, Reports and full
+   query export surfaces continue from that imported version. The original
+   source and analytical projection keep their separate identities.
+5. **Stop analysis workspace** drains the owned Python application. **Open saved
+   analysis** reopens its existing database, queries, projections and exports;
+   this does not require the original downloaded file to remain available.
+   Registering or previewing that file again still requires its verified original
+   session and recorded assembly.
+
+The database is private and retained at `STATE/analysis`. `python3` is the default
+host executable; use `--analysis-python /absolute/python3` to select another
+installed Python. The complete matching native checkout supplies the Python
+modules directly, including the original ObjectBuyer and response-table reader.
+No package installation or additional Python service is performed by the UI.
+The original runtime and optional analytical features retain their documented
+dependencies and limits in [`../python/WORKSPACE.md`](../python/WORKSPACE.md).
+
+The latest handoff record remains at `STATE/analysis-handoff.json`. If the parent
+or HTTP reply is interrupted, reopen saved analysis or review and register the
+same file again. The original registry reuses an identical source identity;
+the buyer does not acquire or assemble the object as a registration fallback.
+**Stop current operation** stops the exact owned handoff. Original committed
+source revisions remain available even if a final browser reply was lost.
+
+The analysis process uses the shared original dataset-workspace launcher. Its
+private URL is supplied only through the authenticated Object Buyer UI or the
+owning terminal. `workspace.close()`, `Ctrl+C` and `SIGTERM` close owned analysis
+work along with other owned buyer work. On Linux the Python process group is
+also interrupted when its launcher exits abruptly. Reopening never signals an
+unrelated PID or takes over another live analysis writer.
+
+Stop analysis before reviewing or creating a workspace backup. The existing
+encrypted recovery captures the database inside the workspace and holds the
+original Python `analysis.lock` throughout the capture. A live native analysis
+writer prevents that capture until it is stopped. This composes with the existing
+session and original operator journal leases.
+
+The same customer flow is available from the original object command:
+
+```sh
+buyer-object analysis-review --state /absolute/private/download-workspace \
+  --session completed-events --name purchased_events --format csv
+
+# Use reviewSha256 from that exact review.
+buyer-object analysis-open --state /absolute/private/download-workspace \
+  --session completed-events --name purchased_events --format csv \
+  --review REVIEW_SHA256
+
+# Reopen analytical work without selecting a source or acquiring a file.
+buyer-object analysis-open --state /absolute/private/download-workspace
+
+buyer-object analysis-status --state /absolute/private/download-workspace
+```
+
+For these analysis commands, `--session` is the saved name inside `STATE/sessions`.
+The native download commands retain their original absolute `--session` paths.
+`analysis-open` stays in the foreground and prints the private analytical URL;
+keep that terminal open and use `Ctrl+C` to close its owned application. Without
+the installed alias, use `node .../sf88-operator-buyer-cli/object-cli.mjs` with the
+same arguments. No new acquisition or purchase is part of this handoff.
+
 ## Embedding and deployment
 
 ```js
@@ -381,6 +547,7 @@ const workspace = await startObjectWorkspace({
   stateDirectory: '/absolute/private/download-workspace',
   profilePath: '/absolute/private/object-products.json',
   operatorSettings: '/absolute/private/object-operator.json', // optional receiving preset
+  analysisPython: '/usr/bin/python3', // optional; defaults to python3 on the host
   port: 0,
 });
 console.log(workspace.url);
@@ -391,7 +558,9 @@ await workspace.close();
 The workspace has no additional third-party runtime dependency. Its package closure is the
 original SF88 object modules and their existing imports, `intake.mjs`, the
 original `buyer-runbook/handoff-intake.mjs` preset reader and `runbook.mjs`
-metadata lease, plus the three static files in `public/`. Native signing and transport use the existing original buyer
+metadata lease, shared `dataset-workspace/analysis.mjs`, the original Python
+analytical application and object reader, plus the three static files in `public/`.
+Native signing and transport use the existing original buyer
 dependencies. Distribution owners can expose `server.mjs` as a command and its
 `startObjectWorkspace` export without an additional wrapper or bundle.
 

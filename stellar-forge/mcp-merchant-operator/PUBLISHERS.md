@@ -1,6 +1,6 @@
 # Retained data publication through merchant MCP
 
-Operate the original PostgreSQL, SQLite, MySQL or Google Sheets publisher through the maintained merchant MCP service. The same saved plans, extraction runs, typed candidates, reviews, version writer, recurring policy and buyer files remain available after the MCP host restarts. The adapter uses the original publisher and scheduler instances under their existing workspace lease.
+Operate the original PostgreSQL, SQLite, MySQL, MongoDB, Google Sheets or SFTP publisher through the maintained merchant MCP service. The same saved plans, extraction runs, typed candidates, reviews, version writer, recurring policy and buyer files remain available after the MCP host restarts. The adapter uses the original publisher and scheduler instances under their existing workspace lease.
 
 ## Start from the public SQLite example
 
@@ -52,7 +52,7 @@ The producer's `service.json` contains explicitly unverified example payment ter
 
 ## Connect an existing publisher
 
-Use the original [PostgreSQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/README.md), [SQLite publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/README.md) [MySQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/README.md) or [Sheets publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/README.md) to create a private workspace bound to its approved source and dataset target. An empty newly created workspace is supported; the first MCP publication can initialize its absent target.
+Use the original [PostgreSQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/README.md), [SQLite publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/README.md), [MySQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/README.md), [MongoDB publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/publisher/README.md) or [Sheets publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/README.md) to create a private workspace bound to its approved source and dataset target. An empty newly created workspace is supported; the first MCP publication can initialize its absent target.
 
 For example, the maintained PostgreSQL entrypoint creates the original workspace and opens its browser:
 
@@ -63,7 +63,7 @@ starforge postgres-publisher serve \
   --state /private/inventory-dataset
 ```
 
-Use `sqlite-publisher`, `mysql-publisher` or `sheets-publisher` for the corresponding original source. Stop that publisher browser before opening the same workspace through MCP. Its original kernel lock gives one process ownership; the separate versioned dataset seller can continue serving customers.
+Use `sqlite-publisher`, `mysql-publisher`, `mongodb-publisher` or `sheets-publisher` for the corresponding original source. Stop that publisher browser before opening the same workspace through MCP. Its original kernel lock gives one process ownership; the separate versioned dataset seller can continue serving customers.
 
 Create a private publisher connection JSON file:
 
@@ -82,7 +82,7 @@ Create a private publisher connection JSON file:
 }
 ```
 
-`kind` is `postgres`, `sqlite`, `mysql` or `sheets` and must match the retained workspace. Paths resolve relative to this connection file. Up to 32 aliases can refer to distinct private workspaces. The optional `seller` and `resource` pair binds the existing seller's local address and exact public HTTPS resource for buyer preparation. It does not start that seller or a public proxy. Omit both while preparing a target whose seller has not yet been configured.
+`kind` is `postgres`, `sqlite`, `mysql`, `mongodb` or `sheets` and must match the retained workspace. Paths resolve relative to this connection file. Up to 32 aliases can refer to distinct private workspaces. The optional `seller` and `resource` pair binds the existing seller's local address and exact public HTTPS resource for buyer preparation. It does not start that seller or a public proxy. Omit both while preparing a target whose seller has not yet been configured.
 
 Create the original MCP host configuration without an unrelated API release:
 
@@ -105,7 +105,7 @@ starforge merchant-mcp-stdio --config /private/inventory-mcp/merchant-mcp.json
 
 The HTTP command reads its existing `MCP_ACCESS_TOKEN` environment variable; the stdio host owns its private loopback bearer. Provide source credential environment variables and private renewable connection references to that same host process. No source credential, connection file, executable module or arbitrary filesystem path is an MCP tool argument.
 
-Source-checkout users invoke `node stellar-forge/mcp-merchant-operator/serve.mjs` and `stdio.mjs` with the same arguments. The original whole merchant MCP and SF30 distribution selections include this adapter and its native publisher dependencies. PostgreSQL and MySQL workspaces use their existing `postgres` and `mysql` dependency groups; SQLite and Sheets use the original Node runtime.
+Source-checkout users invoke `node stellar-forge/mcp-merchant-operator/serve.mjs` and `stdio.mjs` with the same arguments. The original whole merchant MCP and SF30 distribution selections include this adapter and its native publisher dependencies. PostgreSQL, MySQL and MongoDB workspaces use their existing `postgres`, `mysql` and `mongodb` dependency groups; SQLite and Sheets use the original Node runtime.
 
 ## Google Sheets publications
 
@@ -214,7 +214,7 @@ Close the exact returned `instanceId`, then reopen the same alias after a host r
 
 Start with `merchant_publishers`, then call `merchant_publisher_open` with the declared alias. Opening acquires the original workspace lease and starts the original scheduler in its saved state, just as the native browser server does. An enabled saved policy resumes; a paused policy stays paused. Reopening an already-open alias returns the same process instance.
 
-Use `merchant_publisher_source` to inspect the exact source hash, approved query names, source projections and typed parameter definitions (including the original Sheets range and formula policy). Use `merchant_publisher_status` to inspect saved plans/runs and `merchant_publisher_target` for the actual current dataset contract, snapshot, revision and retained versions.
+Use `merchant_publisher_source` to inspect the exact source hash, approved query names, source projections and typed parameter definitions (including the original Sheets range and formula policy). MongoDB sources retain their actual collection, aggregation pipeline, referenced collections and declared read concern. Its reviewed dataset plan sets public column types and preserves large BSON integers and Decimal128 values through exact string projections. Missing public fields require an explicit pipeline projection; nullable columns reserve empty CSV cells for null. The same original extraction and recurring policy run beyond a live report’s response limit while preserving any authored pipeline limit. Use `merchant_publisher_status` to inspect saved plans/runs and `merchant_publisher_target` for the actual current dataset contract, snapshot, revision and retained versions.
 
 `merchant_publisher_plan_save` accepts the original plan. Select a query that exists in the inspected source; match its parameter names and intentionally select the columns to publish. This illustrative inventory plan uses exact text for large IDs and decimals:
 
@@ -315,3 +315,63 @@ The native controller keeps asynchronous extraction/refresh ownership after a to
 
 Directory paths and SQLite file locations stay in host configuration. MCP views preserve original hashes and source/operation identity while omitting those local paths. Public candidate rows and their native schema are returned unchanged. Original publisher storage, source, conflict and recovery codes remain actionable in errors.
 
+
+## Private SFTP file publications
+
+The [SFTP merchant](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/README.md)
+adds the original `openSftpPublisher` source driver. Configure a host key
+fingerprint and an authentication environment reference, inspect the remote
+folder and review an explicit CSV, JSON or NDJSON report. Its source declaration
+fixes the remote path, JSON record pointer, public scalar projections and permitted
+typed comparisons. The operator workspace can create a publication bound to just
+one saved report and complete merchant payment choices.
+
+The maintained `sftp` runtime group installs the pinned `ssh2@1.17.0` dependency.
+The merchant process needs Node 22.5 or later, the original Linux `flock` workspace
+lease and the original seller/buyer dependencies. The source adapter uses the
+Node SSH client; a merchant connecting to an existing SFTP server does not need
+a local SSH daemon.
+
+Prepare or reopen the native publication with `starforge sftp-publisher`, then
+close that browser before opening the same original workspace through MCP.
+In the existing publisher connection file, bind the retained directory:
+
+```json
+{
+  "schema": "stellar-forge.merchant-publisher-connection.v1",
+  "workspaces": {
+    "private_reports": {
+      "kind": "sftp",
+      "label": "Reviewed private SFTP reports",
+      "directory": "/private/reports/publication"
+    }
+  }
+}
+```
+
+The directory must contain its original
+`stellar-forge.sftp-publisher-workspace.v1` identity. Supply the declared key or
+password environment reference to the MCP host process. A key-file environment
+value is an absolute path to its private 0600 file.
+
+Use the same `merchant_publisher_open`, source inspection, plan, extraction,
+candidate, review, publication and buyer tools described above. Source inspection
+retains the selected path/format/pointers, declared types and parameters.
+Every extraction captures the complete remote file, verifies any reviewed
+`expectedSha256`, and retains its pinned host identity, before/after observations
+and full received-byte digest. A resumed transfer compares every retained prefix
+byte before continuing. Typed row projection consumes only that completed capture.
+
+Public extraction budgets cover every matching row, independently of buyer page
+limits. Integer columns require mathematically integral source tokens in the safe
+integer range; Text retains large numeric identifiers and exact decimal lexemes.
+Nullable and missing fields follow the explicitly reviewed source mapping.
+Omitted optional parameters omit their associated conditions.
+
+The native recurrence tools operate this same publisher and its original
+schedule. Each occurrence captures a fresh file edition and retains its own
+candidate and capture identity. A complete equal dataset uses the original
+unchanged-version behavior. Earlier versions stay with their original pinned
+buyers. Close and reopen the exact native instance; all plans, source bindings,
+transfers, published versions, schedule state and buyer handoffs stay in its
+original private directory.

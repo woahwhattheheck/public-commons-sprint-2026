@@ -31,6 +31,9 @@ from . import _analysis_ui
 from .datasets import DatasetAcquisition
 from .dataset_changes import DatasetChanges
 from .analysis_reports import AnalysisReports
+from .analysis_exports import AnalysisExports
+from .analysis_workbooks import AnalysisWorkbooks
+from ._analysis_export_http import send_export
 from .response_tables import AnalysisResponses
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
@@ -155,6 +158,10 @@ class AnalysisWorkspace:
             self.changes = DatasetChanges(self.database)
             self.reports = AnalysisReports(self.database, encode_cell=_cell, parse_parameters=_parameters, changes=self.changes)
             self.responses = AnalysisResponses(self.database, checkout=self.checkout, node=self.node, encode_cell=_cell)
+            self.exports = AnalysisExports(self.database, identity=self.identity, read_job=self._job, parse_parameters=_parameters)
+            self.exports.recover_completed()
+            self.workbooks = AnalysisWorkbooks(self.database, identity=self.identity, reports=self.reports)
+            self.workbooks.recover_completed()
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
         except BaseException:
             os.close(self._owner)
@@ -165,6 +172,8 @@ class AnalysisWorkspace:
             if self._closed:
                 return
             self._closed = True
+        self.exports.close()
+        self.workbooks.close()
         self._executor.shutdown(wait=True)
         os.close(self._owner)
 
@@ -173,7 +182,7 @@ class AnalysisWorkspace:
             raise StateError("ANALYSIS_ORIGINAL_RUNTIME_CHECKOUT_REQUIRED")
         return DatasetAcquisition(checkout=self.checkout, session=source["session"], node=self.node)
 
-    def register_source(self, name, session, *, room=None, expected_revision=0):
+    def register_source(self, name, session, *, room=None, expected_revision=0, expected_native=None):
         """Declare a native session locally; the browser never supplies paths."""
         name = _name(name)
         if type(expected_revision) is not int or expected_revision < 0:
@@ -189,6 +198,9 @@ class AnalysisWorkspace:
                       configuration_sha256=report["configurationSha256"], session_id=report["sessionId"],
                       native_status=report["status"], rows=report.get("acquiredRows"),
                       snapshot=report.get("snapshot"), registered_at=_now())
+        if expected_native is not None:
+            from .analysis_native import verify_dataset_source
+            verify_dataset_source(self, source, report, expected_native)
         with self.database._connection() as db:
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute("SELECT * FROM sf_analysis_sources WHERE name=?", (name,)).fetchone()
@@ -196,6 +208,8 @@ class AnalysisWorkspace:
                 old = parse(existing["record"].encode())
                 if all(old.get(key) == source[key] for key in ("session", "room", "session_sha256")):
                     db.commit()
+                    if expected_native is not None:
+                        return {**old, "native_delivery": source["native_delivery"]}
                     return old
             revision = existing["revision"] if existing else 0
             if revision != expected_revision:
@@ -230,8 +244,9 @@ class AnalysisWorkspace:
             jobs = [dict(row) for row in db.execute("SELECT sequence,id,kind,status,created_at,finished_at,error FROM sf_analysis_jobs ORDER BY sequence DESC LIMIT 30")]
             views = database._views(db)
             reports = AnalysisReports.state(db)
+            workbooks = AnalysisWorkbooks.state(db)
         return {"schema": _SCHEMA, "workspace_id": identity, "database": str(database.path),
-                "can_import": can_import, "sources": sources, "queries": queries, "views": views, "jobs": jobs, "reports": reports}
+                "can_import": can_import, "sources": sources, "queries": queries, "views": views, "jobs": jobs, "reports": reports, "workbooks": workbooks}
 
     def save_query(self, name, value, *, expected_revision):
         name, spec = _name(name), _query(value)
@@ -267,7 +282,7 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "backup", "compare", "change-export", "report", "report-export", "response-preview", "response-import"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "query-export", "workbook", "backup", "compare", "change-export", "report", "report-export", "response-preview", "response-import"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
@@ -280,6 +295,10 @@ class AnalysisWorkspace:
             if not isinstance(request.get("expected_views"), list):
                 raise StateError("ANALYSIS_REVIEWED_VIEWS_REQUIRED")
             spec["expected_views"] = request["expected_views"]
+        elif kind == "query-export":
+            spec.update(self.exports.prepare(request))
+        elif kind == "workbook":
+            spec.update(self.workbooks.prepare(request))
         elif kind == "report":
             spec.update(self.reports.prepare(request))
         elif kind == "report-export":
@@ -334,6 +353,12 @@ class AnalysisWorkspace:
 
     def _execute(self, job_id, kind, spec):
         try:
+            if kind == "workbook":
+                self.workbooks.run(job_id, spec)
+                return
+            if kind == "query-export":
+                self.exports.run(job_id, spec)
+                return
             if kind in {"response-preview", "response-import"}:
                 result = self.responses.execute(kind, spec)
             elif kind == "import":
@@ -412,6 +437,10 @@ class AnalysisWorkspace:
         elif job["kind"] == "report" and job["result"] is not None:
             with self.database._connection(readonly=True) as db:
                 job["result"] = self.reports._report(db, job_id)
+        elif job["kind"] == "query-export":
+            job["progress"] = self.exports.progress(job_id)
+        elif job["kind"] == "workbook":
+            job["progress"] = self.workbooks.progress(job_id)
         return job
 
     def job(self, job_id, *, offset=0, limit=100):
@@ -551,9 +580,49 @@ def serve(workspace, *, port=0):
                 raise StateError("ANALYSIS_QUERY_PARAMETERS_INVALID")
             get = lambda key, default=None: query.get(key, [default])[0]
             parts = url.path.strip("/").split("/")
+            if (self.command in {"GET", "HEAD"} and len(parts) == 4
+                    and parts[:2] == ["api", "workbook-runs"] and parts[3] == "file"):
+                if set(query) != {"name"}:
+                    raise StateError("ANALYSIS_WORKBOOK_FILE_REQUIRED")
+                with workspace.workbooks.download(parts[2], get("name")) as (stream, record):
+                    send_export(self, stream, record)
+                return
+            if (self.command in {"GET", "HEAD"} and len(parts) == 4
+                    and parts[:2] == ["api", "query-exports"] and parts[3] == "file"):
+                if set(query) != {"name"}:
+                    raise StateError("ANALYSIS_EXPORT_FILE_REQUIRED")
+                with workspace.exports.download(parts[2], get("name")) as (stream, record):
+                    send_export(self, stream, record)
+                return
             if self.command == "GET":
+                if url.path == "/api/workbook-sources":
+                    if set(query) - {"kind", "before", "limit"}:
+                        raise StateError("ANALYSIS_WORKBOOK_PAGE_INVALID")
+                    return self._reply(200, workspace.workbooks.sources(kind=get("kind", "query-export"),
+                        before=int(get("before")) if get("before") else None, limit=int(get("limit", "25"))))
+                if url.path == "/api/workbook-runs":
+                    if set(query) - {"before", "limit"}:
+                        raise StateError("ANALYSIS_WORKBOOK_PAGE_INVALID")
+                    return self._reply(200, workspace.workbooks.history(
+                        before=int(get("before")) if get("before") else None, limit=int(get("limit", "25"))))
+                if len(parts) == 3 and parts[:2] == ["api", "workbooks"]:
+                    if set(query) - {"revision"}:
+                        raise StateError("ANALYSIS_WORKBOOK_REVISION_REQUIRED")
+                    return self._reply(200, workspace.workbooks.definition(parts[2],
+                        revision=int(get("revision")) if get("revision") else None))
+                if len(parts) == 4 and parts[:2] == ["api", "workbooks"] and parts[3] == "preview":
+                    if set(query) - {"revision", "sheet", "limit"}:
+                        raise StateError("ANALYSIS_WORKBOOK_PREVIEW_PAGE_INVALID")
+                    return self._reply(200, workspace.workbooks.preview(parts[2],
+                        revision=int(get("revision")) if get("revision") else None,
+                        sheet=int(get("sheet", "0")), limit=int(get("limit", "20"))))
                 if url.path == "/api/state":
                     return self._reply(200, workspace.state())
+                if url.path == "/api/query-exports":
+                    if set(query) - {"before", "limit"}:
+                        raise StateError("ANALYSIS_EXPORT_PAGE_INVALID")
+                    return self._reply(200, workspace.exports.history(
+                        before=int(get("before")) if get("before") else None, limit=int(get("limit", "25"))))
                 if len(parts) == 3 and parts[:2] == ["api", "response-source"]:
                     return self._reply(200, workspace.responses.describe(parts[2], int(get("revision", "0")),
                         collection=get("collection"), sse_data=get("sse_data", "text")))
@@ -606,6 +675,21 @@ def serve(workspace, *, port=0):
                 body = parse(raw)
                 if not isinstance(body, dict):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
+                if url.path == "/api/native-dataset-source":
+                    from .analysis_native import attach_dataset
+                    return self._reply(200, attach_dataset(workspace, body))
+                if len(parts) == 4 and parts[:2] == ["api", "query-exports"] and parts[3] == "cancel":
+                    if body:
+                        raise StateError("ANALYSIS_EXPORT_CANCEL_FIELDS_INVALID")
+                    return self._reply(200, workspace.exports.cancel(parts[2]))
+                if url.path == "/api/object-source":
+                    return self._reply(200, workspace.responses.register(body.get("name"), "object",
+                        session=body.get("session"), destination=body.get("destination"),
+                        format=body.get("format", "json"), expected_revision=body.get("expected_revision", 0)))
+                if len(parts) == 3 and parts[:2] == ["api", "workbooks"]:
+                    return self._reply(200, workspace.workbooks.save(parts[2], body))
+                if len(parts) == 4 and parts[:2] == ["api", "workbook-runs"] and parts[3] == "cancel":
+                    return self._reply(200, workspace.workbooks.cancel(parts[2]))
                 if url.path == "/api/activate":
                     return self._reply(200, workspace.database.activate(body.get("name"), body.get("version_id"), expected_revision=body.get("expected_revision")))
                 if len(parts) == 4 and parts[:2] == ["api", "changes"] and parts[3] == "select":
@@ -657,11 +741,13 @@ def main():
     source.add_argument("--expected-revision", type=int, default=0)
     response = commands.add_parser("response", help="Register a retained native API response or original typed stream export")
     response.add_argument("--name", required=True)
-    response.add_argument("--input-kind", required=True, choices=["buyer", "sf31", "stream", "mcp"])
+    response.add_argument("--input-kind", required=True, choices=["buyer", "sf31", "stream", "mcp", "object"])
     response.add_argument("--config", help="Original SF88 configuration or SF31 response-file writer options")
     response.add_argument("--result", help="Original SF88 result record or SF31 response-file receipt")
     response.add_argument("--stream-export", help="Original Python StreamDelivery directory")
     response.add_argument("--manifest", help="Original native MCP result .meta.json file")
+    response.add_argument("--object-session", help="Existing COMPLETE native ObjectSession directory")
+    response.add_argument("--object-destination", help="Selected recorded object assembly; defaults to the latest recorded assembly")
     response.add_argument("--format", choices=["json", "csv"], default="json")
     response.add_argument("--expected-revision", type=int, default=0)
     commands.add_parser("status", help="Read saved sources, queries, views and work")
@@ -675,7 +761,8 @@ def main():
             print(_json(workspace.register_source(args.name, args.session, room=args.room, expected_revision=args.expected_revision)))
         elif args.command == "response":
             print(_json(workspace.responses.register(args.name, args.input_kind, config=args.config, result=args.result,
-                stream=args.stream_export, manifest=args.manifest, format=args.format, expected_revision=args.expected_revision)))
+                stream=args.stream_export, manifest=args.manifest, session=args.object_session, destination=args.object_destination,
+                format=args.format, expected_revision=args.expected_revision)))
         else:
             server, control, url = serve(workspace, port=args.port)
             print(_json({"status": "LISTENING", "address": url.split("#", 1)[0], "private_launch": str(control)}), flush=True)
