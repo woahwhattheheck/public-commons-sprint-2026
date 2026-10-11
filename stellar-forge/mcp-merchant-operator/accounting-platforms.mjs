@@ -4,6 +4,7 @@ import { XeroWorkspace } from '../../stellar/scf-starforge-20261009/merchant-set
 import { XeroHttpClient, XERO_ACCESS_TOKEN_ENV } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/xero-http.mjs';
 import { createXeroContext, compareXeroJournals, xeroCanonical, xeroId, xeroText } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/xero.mjs';
 import { QboWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/qbo-workspace.mjs';
+import { QboHttpClient, QBO_ACCESS_TOKEN_ENV } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-http.mjs';
 import { normalizeQboCompany } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-company.mjs';
 
 const fail = (code, message) => Object.assign(new Error(message), { code });
@@ -27,12 +28,17 @@ const sourcePlan = { ...base, ...source, ...companySource };
 const response = { ...selectedPlan, ...source, id: uuid, name, actor, createdAt: timestamp, realmId, expectedParentId: nullableId };
 const readOnly = { readOnly: true, idempotent: true };
 const view = values => ({ type: 'string', enum: values });
-const qboPlanViews = ['summary', 'rows', 'lines', 'responses', 'files', 'accounts'];
+const qboPlanViews = ['summary', 'rows', 'lines', 'responses', 'files', 'accounts', 'native-attempts'];
 const responseViews = ['summary', 'errors', 'issues', 'rows'];
 export const platformFileNames = ['plan.json', 'journal-entry.json', 'handoff.json', 'accountant.csv', 'accountant-return.json',
-  'review.html', 'response.json', 'result.json', 'returned.csv', 'return-request.json'];
+  'review.html', 'response.json', 'result.json', 'returned.csv', 'return-request.json', 'intent.json', 'request.json', 'receipt.json'];
 
 export const platformDefinitions = [
+  ['merchant_accounting_qbo_connection', 'Read the original configured QuickBooks company/environment and native credential availability. Returns environment-variable names without credential values; no provider request is sent.', { ...base }, ['workspace'], readOnly],
+  ['merchant_accounting_qbo_company_fetch', 'Fetch the original connected QuickBooks CompanyInfo, Preferences and complete paged native chart, including inactive accounts. Each invocation performs native reads; pin expectedCompanySha256 when comparing pages. Default output is compact; snapshot view returns the full original validated company and source documents for the operator to retain in the host-declared journal input.', { ...base, realmId, environment: view(['sandbox', 'production']), expectedCompanySha256: sha256, view: view(['summary', 'accounts', 'snapshot']), ...page }, ['workspace', 'realmId', 'environment'], readOnly],
+  ['merchant_accounting_qbo_post_preview', 'Preview native posting of the exact original reviewed journal to its configured QuickBooks company. Keep the original posting UUID/time, current accountant parent and revision. Returns the native request/plan digests and exact post command; no provider request is sent.', { ...selectedPlan, revision, id: uuid, actor, createdAt: timestamp, expectedParentId: nullableId }, ['workspace', 'planId', 'revision', 'id', 'actor', 'createdAt', 'expectedParentId'], readOnly],
+  ['merchant_accounting_qbo_post', 'Execute the explicitly reviewed original native posting using its exact UUID/time, native preview digest, current parent and workspace revision. The original controller retains the request and native attempts, searches for the exact journal, and links the original accountant return. Reconcile the retained nativePost before an uncertain reply is retried.', { ...selectedPlan, revision, id: uuid, actor, createdAt: timestamp, expectedParentId: nullableId, previewSha256: sha256 }, ['workspace', 'planId', 'revision', 'id', 'actor', 'createdAt', 'expectedParentId', 'previewSha256'], { idempotent: true }],
+  ['merchant_accounting_qbo_post_resume', 'Explicitly continue one retained original native posting. This may perform native query/read and the original allowed POST, so it is an execution action. Keep the selected posting UUID and preview digest; ordinary customer reconciliation reads nativePost without invoking this command. Native throttle and original company/request guards remain authoritative.', { ...selectedPlan, revision, id: uuid, actor, previewSha256: sha256 }, ['workspace', 'planId', 'revision', 'id', 'actor', 'previewSha256'], { idempotent: true }],
   ['merchant_accounting_qbo_status', 'Read the original QuickBooks workspace, retained journals and accountant handoffs. Page full native inventories before choosing a plan; no provider call is started.', { ...base, view: view(['summary', 'plans', 'handoffs']), ...page }, ['workspace'], readOnly],
   ['merchant_accounting_qbo_company_preview', 'Inspect an original host-declared CompanyInfo/Preferences/Account input through the native QuickBooks import. Retains exact source and company hashes in the response, with paged actual chart eligibility. No journal or accountant return is saved.', { ...base, ...source, view: view(['summary', 'accounts']), ...page }, ['workspace', 'source'], readOnly],
   ['merchant_accounting_qbo_handoff', 'Review one original frozen accountant handoff and its current parent before mapping a QuickBooks journal. Page actual payment rows and frozen adjustment context without rewriting its original values.', { ...base, handoffId: uuid, search: { type: 'string', maxLength: 500 }, ...page }, ['workspace', 'handoffId'], readOnly],
@@ -72,10 +78,16 @@ function handoffBrief(value) {
   const { revisions, ...record } = value;
   return { ...record, returnCount: revisions?.length ?? 0, latestReturn: revisions?.at(-1) ?? null };
 }
+function qboPostBrief(value) {
+  if (!value) return null;
+  const { files = [], attempts = [], ...operation } = value;
+  return { ...operation, fileCount: files.length, attemptCount: attempts.length, files,
+    attempts: attempts.slice(-5) };
+}
 function qboBrief(value) {
-  const { eventIds, responses, ...record } = value;
+  const { eventIds, responses, nativePost, ...record } = value;
   return { ...record, eventCount: eventIds?.length ?? 0, responseCount: responses?.length ?? 0,
-    responses: (responses ?? []).slice(-10) };
+    responses: (responses ?? []).slice(-10), nativePost: qboPostBrief(nativePost) };
 }
 function companyView(company, args = {}) {
   const { sourceDocuments, accounts, ...value } = company;
@@ -87,19 +99,22 @@ function planView(detail, args = {}) {
   const record = qboBrief(detail.record), responses = detail.responses ?? detail.record.responses ?? [];
   const files = [
     ...(detail.record.files ?? []).map(file => ({ ...file, planId: detail.record.id })),
-    ...responses.flatMap(response => (response.files ?? []).map(file => ({ ...file, planId: detail.record.id, responseId: response.id })))
+    ...responses.flatMap(response => (response.files ?? []).map(file => ({ ...file, planId: detail.record.id, responseId: response.id }))),
+    ...(detail.record.nativePost?.files ?? []).map(file => ({ ...file, planId: detail.record.id, nativePost: true })),
+    ...(detail.record.nativePost?.attempts ?? []).flatMap(attempt => (attempt.files ?? []).map(file =>
+      ({ ...file, planId: detail.record.id, nativePost: true, attemptId: attempt.id })))
   ];
   const result = { revision: detail.revision, expectedParentId: detail.expectedParentId, record,
     plan: { ...plan, rowCount: rows.length, journalEntry: { ...journalEntry, Line: undefined },
       lineCount: journalEntry.Line?.length ?? 0,
       companySnapshot: companySnapshot ? companyView(companySnapshot) : null },
-    counts: { rows: rows.length, lines: journalEntry.Line?.length ?? 0, responses: responses.length, files: files.length, accounts: companySnapshot?.accounts?.length ?? 0 } };
+    counts: { rows: rows.length, lines: journalEntry.Line?.length ?? 0, responses: responses.length, files: files.length, accounts: companySnapshot?.accounts?.length ?? 0, nativeAttempts: detail.record.nativePost?.attempts?.length ?? 0 } };
   const selected = args.view ?? 'summary';
-  if (selected !== 'summary') result.page = pageOf({ rows, lines: journalEntry.Line ?? [], responses, files, accounts: companySnapshot?.accounts ?? [] }[selected], args, selected);
+  if (selected !== 'summary') result.page = pageOf({ rows, lines: journalEntry.Line ?? [], responses, files, accounts: companySnapshot?.accounts ?? [], 'native-attempts': detail.record.nativePost?.attempts ?? [] }[selected], args, selected);
   return result;
 }
 function qboResult(value) {
-  return { ...value, ...(value.record ? { record: qboBrief(value.record) } : {}) };
+  return { ...value, ...(value.record ? { record: qboBrief(value.record) } : {}), ...(Object.hasOwn(value, 'nativePost') ? { nativePost: qboPostBrief(value.nativePost) } : {}) };
 }
 function inspectedView(value, args = {}) {
   const { rows = [], errors = [], issues = [], ...result } = value;
@@ -115,27 +130,44 @@ function exactObject(value, allowed, label) {
     throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Use the declared ' + label + ' fields.');
 }
 export function normalizePlatformConfig(raw) {
-  if (raw === undefined || raw === null) return { xero: null };
-  exactObject(raw, ['xero'], 'bookkeeping platform');
-  if (raw.xero === undefined || raw.xero === null) return { xero: null };
-  exactObject(raw.xero, ['tokenEnv', 'tenants'], 'native Xero configuration');
-  const tokenEnv = raw.xero.tokenEnv ?? XERO_ACCESS_TOKEN_ENV;
-  if (typeof tokenEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,127}$/.test(tokenEnv))
-    throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare the original Xero token environment-variable name.');
-  if (!plain(raw.xero.tenants) || Object.keys(raw.xero.tenants).length > 64)
-    throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare up to 64 native Xero tenant aliases.');
-  const tenants = Object.create(null), ids = new Set();
-  for (const [key, value] of Object.entries(raw.xero.tenants)) {
-    if (!new RegExp(alias.pattern).test(key)) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Use a valid native Xero tenant alias.');
-    const id = xeroId(value);
-    if (ids.has(id)) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare each native Xero tenant once.');
-    ids.add(id); tenants[key] = id;
+  if (raw === undefined || raw === null) return { qbo: null, xero: null };
+  exactObject(raw, ['qbo', 'xero'], 'bookkeeping platform');
+  let qbo = null, xero = null;
+  if (raw.qbo !== undefined && raw.qbo !== null) {
+    exactObject(raw.qbo, ['tokenEnv', 'realmId', 'environment', 'minorVersion'], 'native QuickBooks configuration');
+    const tokenEnv = raw.qbo.tokenEnv ?? QBO_ACCESS_TOKEN_ENV, realmId = raw.qbo.realmId,
+      environment = raw.qbo.environment ?? 'sandbox', minorVersion = raw.qbo.minorVersion ?? null;
+    if (typeof tokenEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,127}$/.test(tokenEnv) ||
+        typeof realmId !== 'string' || !/^[0-9]{1,64}$/.test(realmId) ||
+        !['sandbox', 'production'].includes(environment) ||
+        (minorVersion !== null && !/^[1-9][0-9]{0,3}$/.test(String(minorVersion))))
+      throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare the exact native QuickBooks company, environment and token variable, with its optional minor version.');
+    qbo = { tokenEnv, realmId, environment, minorVersion: minorVersion === null ? null : String(minorVersion) };
   }
-  return { xero: { tokenEnv, tenants } };
+  if (raw.xero !== undefined && raw.xero !== null) {
+    exactObject(raw.xero, ['tokenEnv', 'tenants'], 'native Xero configuration');
+    const tokenEnv = raw.xero.tokenEnv ?? XERO_ACCESS_TOKEN_ENV;
+    if (typeof tokenEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,127}$/.test(tokenEnv))
+      throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare the original Xero token environment-variable name.');
+    if (!plain(raw.xero.tenants) || Object.keys(raw.xero.tenants).length > 64)
+      throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare up to 64 native Xero tenant aliases.');
+    const tenants = Object.create(null), ids = new Set();
+    for (const [key, value] of Object.entries(raw.xero.tenants)) {
+      if (!new RegExp(alias.pattern).test(key)) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Use a valid native Xero tenant alias.');
+      const id = xeroId(value);
+      if (ids.has(id)) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare each native Xero tenant once.');
+      ids.add(id); tenants[key] = id;
+    }
+    xero = { tokenEnv, tenants };
+  }
+  return { qbo, xero };
 }
 export function platformSourceView(definition) {
-  return { quickbooks: 'ORIGINAL_WORKSPACE', xero: { nativeConfigured: Boolean(definition?.xero),
-    tenants: Object.entries(definition?.xero?.tenants ?? {}).map(([alias, tenantId]) => ({ alias, tenantId })) } };
+  return { quickbooks: 'ORIGINAL_WORKSPACE',
+    qbo: { nativeConfigured: Boolean(definition?.qbo), realmId: definition?.qbo?.realmId ?? null,
+      environment: definition?.qbo?.environment ?? null, minorVersion: definition?.qbo?.minorVersion ?? null },
+    xero: { nativeConfigured: Boolean(definition?.xero),
+      tenants: Object.entries(definition?.xero?.tenants ?? {}).map(([alias, tenantId]) => ({ alias, tenantId })) } };
 }
 function xeroState(value) {
   return { revision: value.revision, connection: value.connection, docs: value.docs,
@@ -228,16 +260,24 @@ function xeroReturnView(value, args = {}) {
 
 /** The caller supplies only the existing host-alias reader and owning accountant lifetime. */
 export class MerchantPlatforms {
-  constructor(workspace, accountant, { readSource, definition = { xero: null } }) {
+  constructor(workspace, accountant, { readSource, definition = { qbo: null, xero: null } }) {
     this.workspace = workspace;
     this.accountant = accountant;
     this.readSource = readSource;
-    this.qbo = new QboWorkspace(workspace, accountant);
+    this.qbo = new QboWorkspace(workspace, accountant, { client: new QboHttpClient(definition.qbo ?? { realmId: '', environment: 'sandbox', minorVersion: null }) });
     this.definition = definition;
     this.xero = new XeroWorkspace(workspace, accountant, { client: new XeroHttpClient({ tokenEnv: definition.xero?.tokenEnv ?? XERO_ACCESS_TOKEN_ENV }) });
   }
   async init() { await this.qbo.recover(); await this.xero.init(); }
-  close() { return this.xero.close(); }
+  async close() {
+    const outcomes = await Promise.allSettled([this.qbo.close(), this.xero.close()]);
+    const failed = outcomes.find(value => value.status === 'rejected');
+    if (failed) throw failed.reason;
+  }
+  qboConnection() {
+    if (!this.definition.qbo) throw fail('ACCOUNTING_QBO_CONNECTION_REQUIRED', 'Declare this original native QuickBooks company in the host workspace configuration.');
+    return this.qbo.connection();
+  }
   async input(args, key = 'source', shaKey = 'sourceSha256', { maximum = 33_554_432, json = true } = {}) {
     const bytes = await this.readSource(args[key], maximum), sha = hash(bytes);
     if (args[shaKey] !== undefined && args[shaKey] !== sha)
@@ -425,12 +465,48 @@ export class MerchantPlatforms {
     }
     if (args.kind !== 'qbo') throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Choose the original bookkeeping file kind.');
     if (!args.planId || !platformFileNames.includes(args.file))
-      throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'QuickBooks files require the original planId, optional responseId and retained filename.');
+      throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'QuickBooks files require the original planId and retained filename.');
+    if (args.nativePost === true) {
+      const names = args.attemptId ? ['response.json', 'receipt.json'] : ['intent.json', 'request.json'];
+      if (args.responseId || !names.includes(args.file))
+        throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Use nativePost:true with its original intent/request, or its attemptId and native response/receipt.');
+      return this.qbo.nativeFile(args.planId, args.file, args.attemptId);
+    }
+    if (args.attemptId !== undefined || args.nativePost !== undefined)
+      throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'An original native posting file requires nativePost:true.');
     return this.qbo.file(args.planId, args.file, args.responseId);
   }
   async call(operation, args) {
     if (operation.startsWith('merchant_accounting_xero_')) return this.xeroCall(operation, args);
     switch (operation) {
+      case 'merchant_accounting_qbo_connection':
+        return { ...this.qbo.connection(), configured: Boolean(this.definition.qbo) };
+      case 'merchant_accounting_qbo_company_fetch': {
+        this.qboConnection();
+        const result = await this.qbo.fetchCompany({ realmId: args.realmId, environment: args.environment });
+        if (args.expectedCompanySha256 !== undefined && args.expectedCompanySha256 !== result.company.integrity.sha256)
+          throw fail('ACCOUNTING_QBO_COMPANY_CHANGED', 'The native company/chart differs from the selected exact snapshot.');
+        return { ...result, company: args.view === 'snapshot' ? result.company : companyView(result.company, args),
+          companySha256: result.company.integrity.sha256, observation: 'FRESH_NATIVE_COMPANY_READ' };
+      }
+      case 'merchant_accounting_qbo_post_preview': {
+        this.qboConnection();
+        const result = await this.qbo.previewPost(args.planId, args), preview = result.preview;
+        return { ...result, binding: { planId: args.planId, postId: preview.id, planSha256: preview.planSha256,
+          requestSha256: preview.requestSha256, previewSha256: result.previewSha256 },
+          command: command('merchant_accounting_qbo_post', { workspace: args.workspace, planId: args.planId,
+            id: preview.id, actor: preview.actor, createdAt: preview.createdAt, expectedParentId: preview.expectedParentId,
+            revision: result.revision, previewSha256: result.previewSha256 }) };
+      }
+      case 'merchant_accounting_qbo_post':
+        this.qboConnection(); return qboResult(await this.qbo.post(args.planId, args));
+      case 'merchant_accounting_qbo_post_resume': {
+        this.qboConnection();
+        const prior = this.qbo.row(args.planId).nativePost;
+        if (!prior || prior.id !== args.id || prior.previewSha256 !== args.previewSha256)
+          throw fail('QBO_NATIVE_REQUEST_CHANGED', 'Choose the exact retained original native posting and preview.');
+        return qboResult(await this.qbo.resumePost(args.planId, args));
+      }
       case 'merchant_accounting_qbo_status': {
         const value = this.qbo.view(), plans = value.plans.map(qboBrief), handoffs = value.handoffs.map(handoffBrief);
         const selected = args.view ?? 'summary';

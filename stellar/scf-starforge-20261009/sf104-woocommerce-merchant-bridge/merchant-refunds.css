@@ -1,0 +1,12 @@
+/* MIT. Native Woo refund view: restrained, accessible merchant controls. */
+.sf104-refunds dd,.sf104-refund-review dd{overflow-wrap:anywhere}
+.sf104-refund-file{display:grid;gap:8px;max-width:700px;margin:16px 0;font-weight:600}
+.sf104-refund-file input{padding:12px;border:1px solid #b6b6b6;background:#fafafa;border-radius:3px;width:100%}
+.sf104-refund-review{margin-top:24px;padding:20px;border:1px solid #b6b6b6;border-left:4px solid #3e3e3e;background:#fafafa}
+.sf104-refund-review h4{font-size:18px;margin:0 0 16px}
+.sf104-refund-confirm{display:flex;gap:10px;align-items:flex-start;max-width:800px;margin:20px 0;line-height:1.6}
+.sf104-refund-confirm input{margin-top:5px;flex:0 0 auto}
+.sf104-refund-error{border-left-color:#444;background:#f1f1f1;font-weight:600}
+[data-refund-detail] code{overflow-wrap:anywhere}
+[data-refund-prepare] select,[data-refund-prepare] input{width:100%;max-width:100%;min-height:38px}
+@media(max-width:700px){.sf104-refund-review{padding:14px}.sf104-refund-file input{box-sizing:border-box}}
