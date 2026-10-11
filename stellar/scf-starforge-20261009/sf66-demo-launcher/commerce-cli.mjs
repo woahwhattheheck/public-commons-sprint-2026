@@ -14,7 +14,7 @@ const HELP = `Original SCF commerce session (Node 22+, full checkout)
 
 The foreground console starts the original merchant and operations listeners.
 Commands: status | review INTENT | signer INTENT | execute INTENT |
-          cancel INTENT | recover INTENT | quit
+          cancel INTENT | recover INTENT | retrieve INTENT | quit
 The original SF88/SF81 terminal owns payment approval. Reopening uses the same
 original inbox, stable intents, reservations, results and saved resource files.
 Without a TTY, start prints readiness and stays running until SIGINT/SIGTERM.
@@ -47,7 +47,7 @@ function stateView(value) {
     buyers: value.buyers.map(job => ({ intentId: job.operation.intentId, state: job.state,
       method: job.operation.method, url: job.operation.url, merchant: job.merchant ?? null,
       lastError: job.lastError, outcome: job.outcome, recovery: job.recovery,
-      evidencePath: job.evidencePath, responseDestination: job.responseDestination })),
+      evidencePath: job.evidencePath, responseDestination: job.responseDestination, paidFile: job.paidFile ?? null })),
   };
 }
 
@@ -85,7 +85,7 @@ export async function main(args = process.argv.slice(2)) {
       if (!stopped.signal.aborted) await new Promise(done => stopped.signal.addEventListener('abort', done, { once: true }));
       return;
     }
-    process.stdout.write('Commands: status, review ID, signer ID, execute ID, cancel ID, recover ID, quit\n');
+    process.stdout.write('Commands: status, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, quit\n');
     while (!stopped.signal.aborted) {
       // Release this reader before the original Python approval opens /dev/tty.
       reader = createInterface({ input: process.stdin, output: process.stdout });
@@ -102,7 +102,8 @@ export async function main(args = process.argv.slice(2)) {
         else if (words.length === 2 && words[0] === 'execute') printExecution(await session.execute(words[1]));
         else if (words.length === 2 && words[0] === 'cancel') print(await session.cancel(words[1]));
         else if (words.length === 2 && words[0] === 'recover') print(await session.recover(words[1]));
-        else if (words[0]) process.stdout.write('Use status, review ID, signer ID, execute ID, cancel ID, recover ID, or quit.\n');
+        else if (words.length === 2 && words[0] === 'retrieve') print(await session.retrieve(words[1]));
+        else if (words[0]) process.stdout.write('Use status, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, or quit.\n');
       } catch (error) { print({ error: commerceErrorCode(error) }); }
     }
   } finally {

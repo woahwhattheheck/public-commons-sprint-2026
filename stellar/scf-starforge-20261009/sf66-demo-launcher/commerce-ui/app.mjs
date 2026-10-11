@@ -7,7 +7,7 @@ if (/^[a-f0-9]{64}$/.test(supplied)) {
   history.replaceState(null, '', location.pathname);
 }
 const token = sessionStorage.getItem(tokenKey) ?? '';
-let view, selectedIntent = '', previewIdentity, pending = false, selectionLoading = false, lastRequest = 0, refreshTimer;
+let view, selectedIntent = '', previewIdentity, productIdentity, pending = false, selectionLoading = false, lastRequest = 0, refreshTimer;
 const selectionPath = path => path + (selectedIntent ? '?intent=' + encodeURIComponent(selectedIntent) : '');
 const readable = value => value === null || value === undefined ? '—' : String(value);
 const label = value => readable(value).replaceAll('_', ' ').toLowerCase().replace(/^\w/, letter => letter.toUpperCase());
@@ -50,6 +50,10 @@ function link(container, title, value) {
   container.append(element);
 }
 function render(next) {
+  // Only a successful matching selection may unlock the selected operation.
+  // An older preview/action callback or superseded refresh must not restore it.
+  if (selectionLoading && next.operation?.intentId !== selectedIntent) return;
+  selectionLoading = false;
   view = next;
   const { session, seller, operation: op, review, attempt, delivery, controls } = next;
   selectedIntent = op?.intentId ?? '';
@@ -124,6 +128,37 @@ function render(next) {
   ] : []);
   byId('preview').disabled = pending || !delivery?.available;
   byId('download').disabled = pending || !delivery?.available;
+  const purchase = next.purchase, retrieval = next.retrieval;
+  byId('product-panel').hidden = !purchase;
+  const currentProduct = selectedIntent + ':' + (purchase?.delivery?.sha256 ?? purchase?.delivery?.status ?? '');
+  if (productIdentity !== currentProduct) { byId('product-preview-area').hidden = true; productIdentity = currentProduct; }
+  text('product-state', retrieval?.state === 'RUNNING' ? 'Retrieving' : label(purchase?.delivery?.status ?? 'NOT_RETRIEVED'));
+  text('product-note', 'Retrieve uses the merchant’s existing entitlement and the configured private claim token. It does not execute another purchase. Matching local bytes recover without a network request.');
+  facts('product-facts', purchase ? [
+    ['Order', purchase.orderReference], ['Expected size', size(purchase.file.bytes)],
+    ['Expected SHA-256', purchase.file.sha256], ['Save location', purchase.destination],
+    ['Merchant delivery', purchase.deliveryUrl],
+  ] : []);
+  byId('product-retrieve').disabled = pending || !controls.canRetrieve;
+  text('product-retrieve', retrieval?.state === 'RUNNING' ? 'Retrieving…' :
+    purchase?.delivery?.status === 'LOCAL_FILE_REQUIRES_CHECK' || purchase?.delivery?.available ? 'Check and recover local file' : 'Retrieve entitled file');
+  byId('product-preview').disabled = pending || !purchase?.delivery?.available;
+  byId('product-download').disabled = pending || !purchase?.delivery?.available;
+  const retrievalMessages = { PRIVATE_CLAIM_TOKEN_REQUIRED: 'Configure the separately supplied claim token in the environment that starts this session, then retrieve again.',
+    ENTITLEMENT_NOT_AVAILABLE: 'The merchant has not returned this entitled file. Check its delivery notification and claim token, then explicitly retrieve again.',
+    DELIVERY_FINGERPRINT_MISMATCH: 'The returned bytes did not match the promised file. No completed file was published.' };
+  text('product-result', retrieval?.error ? retrievalMessages[retrieval.error] ?? label(retrieval.error) :
+    retrieval?.result ? label(retrieval.result.status) + ' · ' + retrieval.result.httpRequests + ' merchant requests' :
+    purchase?.delivery?.available ? 'The original file receipt is present. Preview and download check the current bytes against its hash.' :
+    'The immediate paid response above is separate from the promised product file.');
+  facts('product-binding', purchase ? [
+    ['Original intent', purchase.request.intentId], ['Inbox job', purchase.request.inboxJobId],
+    ['Frozen request SHA-256', purchase.request.configSha256], ['Attempt', purchase.request.attemptId ?? 'Not recorded'],
+    ['Original evidence', purchase.evidence.path], ['Evidence status', label(purchase.evidence.status)],
+    ['Evidence SHA-256', purchase.evidence.sha256], ['Handoff SHA-256', purchase.handoffSha256],
+    ['Original file receipt', purchase.delivery.receiptPath], ['Receipt observed', purchase.delivery.receiptObservedAt],
+  ] : []);
+  text('product-evidence-note', purchase?.evidence.binding ?? 'The frozen inbox request binds this handoff and order. Original buyer evidence and the local file receipt retain their separate recorded outcomes.');
   facts('seller-facts', [['Mode', label(seller.mode)], ['Listener', seller.listener],
     ['Routes', seller.routes?.length ?? 0], ['Started', time(session.startedAt)]]);
   const links = byId('seller-links'); links.replaceChildren();
@@ -160,7 +195,7 @@ async function refresh({ quiet = false } = {}) {
   } catch (error) { if (order === lastRequest) notice(error.message, true); }
   finally {
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.activeIntent ? 1500 : 6000);
+    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.activeIntent || view?.retrieval?.state === 'RUNNING' ? 1500 : 6000);
   }
 }
 async function action(name, body = {}) {
@@ -175,6 +210,7 @@ async function action(name, body = {}) {
     if (name === 'execute') notice('Operation started. Its progress and result will appear below.');
     if (name === 'cancel') notice('The queued request was cancelled and retained in the inbox.');
     if (name === 'recover') notice('The recorded result was recovered from the inbox.');
+    if (name === 'retrieve') notice('File retrieval started. Its result will appear in Purchased file.');
     if (name === 'stop') notice('The session has stopped. Saved results remain available.');
   } catch (error) { notice(error.message, true); }
   finally { pending = false; if (view) render(view); await refresh({ quiet: true }); }
@@ -184,37 +220,45 @@ byId('operation-select').addEventListener('change', async event => {
   if (pending) return;
   selectionLoading = true;
   selectedIntent = event.target.value; ++lastRequest;
-  for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download']) byId(id).disabled = true;
+  for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download', 'product-retrieve', 'product-preview', 'product-download']) byId(id).disabled = true;
   byId('preview-area').hidden = true;
-  try { await refresh(); } finally { selectionLoading = false; if (view) render(view); }
+  byId('product-preview-area').hidden = true;
+  await refresh();
 });
 byId('review').addEventListener('click', () => action('review'));
 byId('execute').addEventListener('click', () => action('execute', { reviewId: view?.review?.id }));
 byId('cancel').addEventListener('click', () => action('cancel'));
 byId('recover').addEventListener('click', () => action('recover'));
+byId('product-retrieve').addEventListener('click', () => action('retrieve', {
+  configSha256: view?.purchase?.request.configSha256, handoffSha256: view?.purchase?.handoffSha256,
+}));
 byId('stop').addEventListener('click', () => action('stop'));
-byId('preview').addEventListener('click', async () => {
-  byId('preview').disabled = true;
+async function previewFile(prefix, path) {
+  byId(prefix + 'preview').disabled = true;
   const intent = selectedIntent;
   try {
-    const result = await request(selectionPath('/api/preview'));
+    const result = await request(selectionPath(path));
     if (selectedIntent !== intent) return;
-    byId('preview-area').hidden = false;
-    text('preview-text', result.text);
-    text('preview-size', result.truncated ? 'First ' + size(result.bytes) + ' of ' + size(result.totalBytes) : size(result.totalBytes));
+    byId(prefix + 'preview-area').hidden = false;
+    text(prefix + 'preview-text', result.text);
+    text(prefix + 'preview-size', result.truncated ? 'First ' + size(result.bytes) + ' of ' + size(result.totalBytes) : size(result.totalBytes));
   } catch (error) { notice(error.message, true); }
   finally { if (view) render(view); }
-});
-byId('download').addEventListener('click', async () => {
-  byId('download').disabled = true;
-  const filename = view?.delivery?.name ?? 'response.bin';
+}
+async function downloadFile(prefix, path, delivery) {
+  byId(prefix + 'download').disabled = true;
+  const filename = delivery?.name ?? 'response.bin';
   try {
-    const response = await request(selectionPath('/api/delivery'), { raw: true });
+    const response = await request(selectionPath(path), { raw: true });
     const blob = await response.blob(), url = URL.createObjectURL(blob), anchor = document.createElement('a');
     anchor.href = url; anchor.download = filename; anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   } catch (error) { notice(error.message, true); }
   finally { if (view) render(view); }
-});
+}
+byId('preview').addEventListener('click', () => previewFile('', '/api/preview'));
+byId('download').addEventListener('click', () => downloadFile('', '/api/delivery', view?.delivery));
+byId('product-preview').addEventListener('click', () => previewFile('product-', '/api/product-preview'));
+byId('product-download').addEventListener('click', () => downloadFile('product-', '/api/product-delivery', view?.purchase?.delivery));
 if (token) await refresh();
 else notice('Open the complete local operator URL printed by the commerce console command.', true);

@@ -87,7 +87,8 @@ export async function prepareHandoff(compiled, {ref, output, file, claimEnv = 'S
 }
 
 export async function startCheckout(compiled, {port = 8423, operationsPort = 8424,
-  nativeFactory = null, env = process.env, maxInFlight = 64, drainGraceMs = 60000} = {}) {
+  nativeFactory = null, env = process.env, maxInFlight = 64, drainGraceMs = 60000,
+  historyDirectory, historyRetentionDays = 90} = {}) {
   let source, seller, operations, closing;
   const outbox = await openOutbox(compiled.outbox);
   const close = () => closing ??= (async () => {
@@ -119,7 +120,8 @@ export async function startCheckout(compiled, {port = 8423, operationsPort = 842
       nativeFactory:nativeFactory ? async routes => instrumentNativeSettlement(await nativeFactory(routes), {
         compiled:routes, outbox, onWriteFailure:() => process.stderr.write('SF101_NATIVE_OUTBOX_WRITE_FAILED\n'),
       }) : null});
-    operations = await startSellerOperations(seller, {port:operationsPort, deliveryOutbox:outbox});
+    operations = await startSellerOperations(seller, {port:operationsPort, deliveryOutbox:outbox,
+      historyDirectory, historyRetentionDays});
     return {seller, operations, source, outbox, close};
   } catch (error) { await close().catch(() => {}); throw error; }
 }

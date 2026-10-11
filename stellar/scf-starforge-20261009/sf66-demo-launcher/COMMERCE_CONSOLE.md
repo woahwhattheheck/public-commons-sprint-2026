@@ -10,6 +10,13 @@ commerce engine starts SF30, its native facilitator and operations, and invokes
 the original SF88 inbox, SF81 approval and configured signer. The browser uses
 those APIs and that inbox directly.
 
+For an SF101 paid-file order, [import its original merchant handoff in the
+commerce plan](./COMMERCE_PAID_FILES.md). The same workspace then shows a
+**Purchased file** panel with the exact order, promised bytes, original
+request/evidence association, explicit retrieval, verified preview/download
+and local receipt recovery. The immediate paid HTTP response remains in the
+original **Delivery** panel.
+
 ## Start the prepared session
 
 Complete the merchant, facilitator, operator and buyer setup in

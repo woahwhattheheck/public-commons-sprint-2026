@@ -12,6 +12,11 @@ SF103 native signer, SF81 terminal approval, SF36 reservations, SF31 HTTP and
 response saving, and SF82 outcome recording. The existing SF66 catalog/Atlas
 launcher remains available separately through `launch.mjs`.
 
+For the original SF101 paid-file merchant and customer handoffs, use
+[Purchased files in the commerce workspace](./COMMERCE_PAID_FILES.md). That
+plan adds `seller.checkoutConfig` and per-buyer `paidFile` inputs to this same
+session and inbox.
+
 ## 1. Use the existing merchant and operator configurations
 
 Use Node 22.16+ and Python 3.11+ on the operator's POSIX host. Install the same
@@ -140,6 +145,7 @@ The terminal accepts these commands; substitute an intent ID from readiness:
 | `execute ID` | One original inbox attempt through SF88/SF81 approval, SF36, signer and HTTP |
 | `cancel ID` | Original inbox cancellation before execution |
 | `recover ID` | Original inbox recovery from that intent's existing SF82 evidence |
+| `retrieve ID` | Original SF101 entitled-file retrieval or local receipt recovery for the selected handoff |
 | `quit` | Cancel the foreground buyer if needed, drain the merchant and close services |
 
 `execute` releases the command reader before the original approval helper opens
