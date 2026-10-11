@@ -58,7 +58,7 @@ export function createCustomerWorkbenchUI({api,token,refresh,notify}) {
       ' · '+draft.contract.offers.length+' offers · contract '+short(draft.contract.sha256);
     const config=draft.configuration;
     const values={...config.operator,...config.signer,dependencyRoot:config.dependencyRoot,
-      rpcUrl:config.rpcUrl??'',proxyEnv:config.transport?.proxyEnv??''};
+      rpcUrl:config.rpcUrl??'',proxyEnv:config.transport?.proxyEnv??'',proxyUrl:config.transport?.proxyUrl??''};
     for(const [name,value]of Object.entries(values)){const field=form.elements.namedItem(name);if(field)field.value=value;}
     const body=$('#cw-limits');body.replaceChildren();
     config.assetLimits.forEach((limit,index)=>{
@@ -77,6 +77,7 @@ export function createCustomerWorkbenchUI({api,token,refresh,notify}) {
     $('#cw-difference').open=Boolean(difference?.changed);
     $('#cw-fetch-form').elements.namedItem('origin').value=draft.contract.origin;
     $('#cw-fetch-form').elements.namedItem('proxyEnv').value=config.transport?.proxyEnv??'';
+    $('#cw-fetch-form').elements.namedItem('proxyUrl').value=config.transport?.proxyUrl??'';
     editStatus();locks();
   }
   function offerChanged({reset=false}={}) {
@@ -203,8 +204,9 @@ export function createCustomerWorkbenchUI({api,token,refresh,notify}) {
   });
   bind('#cw-fetch-form','submit',async event=>{
     const values=valuesFor(event.target),origin=values.origin;
-    const result=await api('/api/customer-workbench/fetch',{origin,...(values.proxyEnv?
-      {transport:{mode:'explicit-connect',origin,proxyEnv:values.proxyEnv}}:{})});
+    if(values.proxyEnv && values.proxyUrl)throw new Error('Choose one explicit proxy source.');
+    const result=await api('/api/customer-workbench/fetch',{origin,...(values.proxyEnv || values.proxyUrl?
+      {transport:{mode:'explicit-connect',origin,...(values.proxyEnv?{proxyEnv:values.proxyEnv}:{proxyUrl:values.proxyUrl})}}:{})});
     loadDraft(result.draft,result.revision,result.difference);
     notify('Current public merchant contract loaded for review.');
   });
@@ -230,7 +232,9 @@ export function createCustomerWorkbenchUI({api,token,refresh,notify}) {
         maxAtomic:values['maxAtomic-'+index],maxFeeStroops:values['maxFeeStroops-'+index]}))};
     delete configuration.rpcUrl;delete configuration.transport;
     if(values.rpcUrl)configuration.rpcUrl=values.rpcUrl;
-    if(values.proxyEnv)configuration.transport={mode:'explicit-connect',origin:draft.contract.origin,proxyEnv:values.proxyEnv};
+    if(values.proxyEnv && values.proxyUrl)throw new Error('Choose one explicit proxy source.');
+    if(values.proxyEnv || values.proxyUrl)configuration.transport={mode:'explicit-connect',origin:draft.contract.origin,
+      ...(values.proxyEnv?{proxyEnv:values.proxyEnv}:{proxyUrl:values.proxyUrl})};
     const profile={...copy(draft),configuration};
     const result=await api('/api/customer-workbench/configure',{profile,revision:editorRevision});
     editorRevision=result.revision;editorDirty=false;draft=profile;
