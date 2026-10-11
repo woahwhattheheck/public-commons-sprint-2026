@@ -105,7 +105,9 @@ function renderRequest(value){
   $('review-state').textContent=value.state.outcome??value.state.state;
   $('outcome-explanation').textContent=outcomeText(value);
   facts('review-facts',[['Native HTTP',value.state.providerStatus],['Candidates',value.candidates.length],
-    ['Decision revision',value.decision.revision],['Response SHA-256',value.responseSha256],['Response bytes',value.responseBytes]]);
+    ['Decision revision',value.decision.revision],['Response SHA-256',value.responseSha256],['Response bytes',value.responseBytes],
+    ...(value.merchantSelection ? [['Buyer merchant origin',value.merchantSelection.publicOrigin],
+      ['Buyer package',value.merchantSelection.packageIdentity??'Workspace terms'],['Buyer terms SHA-256',value.merchantSelection.termsSha256]] : [])]);
   empty($('candidate-list'));
   for(const candidate of value.candidates){
     const row=node('tr',null,'candidate'),choice=node('td'),radio=document.createElement('input');
@@ -156,7 +158,8 @@ async function refresh(){
     $('request-list').closest('section').hidden=true;
     const delivery=value.delivery;renderRequest({request:delivery.request,decision:delivery.decision,
       responseSha256:delivery.responseSha256,responseBytes:delivery.responseBytes,candidates:delivery.candidates,
-      semantics:delivery.semantics,state:{state:'COMPLETE',outcome:delivery.state,providerStatus:200}});
+      semantics:delivery.semantics,merchantSelection:delivery.provenance?.merchantSelection??null,
+      state:{state:'COMPLETE',outcome:delivery.state,providerStatus:200}});
     return;
   }
   const previous=state.workspace?.identity;state.workspace=value;
@@ -182,7 +185,9 @@ async function runQuery(imported=false){
     const observation=$('observation-file').files[0],response=$('response-file').files[0];
     if(!observation||!response)throw new Error('Choose both original files.');
     if(observation.size>262144||response.size>1048576)throw new Error('The selected source files exceed this product’s limits.');
-    value=await api('/api/import-response',{...args,observation:JSON.parse(await observation.text()),responseText:await response.text()});
+    const bytes=new Uint8Array(await response.arrayBuffer());let binary='';
+    for(let offset=0;offset<bytes.length;offset+=32768)binary+=String.fromCharCode(...bytes.subarray(offset,offset+32768));
+    value=await api('/api/import-response',{...args,observation:JSON.parse(await observation.text()),responseBase64:btoa(binary)});
   }else value=await api('/api/capture',args);
   await refresh();renderRequest(value);$('request-id').value=requestId();
   sessionStorage.setItem('geocode-selected:'+state.workspace.identity,value.request.id);
