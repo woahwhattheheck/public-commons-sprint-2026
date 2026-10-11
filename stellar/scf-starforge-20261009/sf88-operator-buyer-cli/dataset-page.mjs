@@ -1,6 +1,7 @@
 // MIT. Consumer of the original SF30 dataset-page.v1 response contract.
 import { createHash } from 'node:crypto';
 import { InputError, need } from './config.mjs';
+import { checkPage } from '../sf100-buyer-dataset-delivery/deliver.mjs';
 
 export const digest = value => createHash('sha256').update(value).digest('hex');
 export const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -13,13 +14,7 @@ const integer = (value, min, max) => Number.isSafeInteger(value) && value >= min
 const hex = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 const equal = (a, b) => canonical(a) === canonical(b);
 const fieldName = value => typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(value) && !['constructor','prototype','__proto__'].includes(value);
-function typed(value, column) {
-  if (value === null) return column.nullable;
-  if (column.type === 'string') return typeof value === 'string';
-  if (column.type === 'integer') return Number.isSafeInteger(value);
-  if (column.type === 'number') return typeof value === 'number' && Number.isFinite(value);
-  return typeof value === 'boolean';
-}
+const RANGE_OPS = ['gt','gte','lt','lte'];
 function filterValue(text, column) {
   if (text === '' && column.nullable) return null;
   if (column.type === 'string') return text;
@@ -41,37 +36,69 @@ export function decodeDatasetCursor(value) {
   return cursor;
 }
 
+/** Request syntax is checked offline; the original seller admits enabled capabilities. */
+export function validateDatasetQuery(url, {initial = false} = {}) {
+  let params;
+  try { params = new URL(url).searchParams; }
+  catch { throw new InputError('DATASET_QUERY_INVALID'); }
+  const names = [...params.keys()], rangeColumns = new Set(), bounds = new Set();
+  need(new Set(names).size === names.length, 'DATASET_QUERY_DUPLICATED');
+  need(!initial || !params.has('cursor'), 'DATASET_INITIAL_QUERY_INVALID');
+  need(names.length <= 32, 'DATASET_QUERY_PARAMETER_LIMIT');
+  let filters = 0;
+  for (const name of names) {
+    if (['fields','limit','cursor','sort'].includes(name)) continue;
+    const match = /^(where|gt|gte|lt|lte)_(.+)$/.exec(name);
+    need(match && fieldName(match[2]), 'DATASET_UNSUPPORTED_QUERY_CAPABILITY');
+    const [, op, column] = match;
+    if (op === 'where') filters++;
+    else {
+      rangeColumns.add(column);
+      const bound = column + ':' + (op.startsWith('g') ? 'lower' : 'upper');
+      need(!bounds.has(bound), 'DATASET_RANGE_BOUND_CONFLICT');
+      bounds.add(bound);
+    }
+  }
+  need(filters <= 8 && rangeColumns.size <= 8, 'DATASET_FILTER_LIMIT_EXCEEDED');
+  if (params.has('fields')) {
+    const fields = params.get('fields').split(',');
+    need(fields.length >= 1 && fields.length <= 64 && fields.every(fieldName) &&
+      new Set(fields).size === fields.length, 'DATASET_FIELDS_INVALID');
+  }
+  if (params.has('limit')) need(/^[1-9][0-9]{0,6}$/.test(params.get('limit')) &&
+    Number(params.get('limit')) <= 1000, 'DATASET_PAGE_LIMIT_INVALID');
+  if (params.has('sort')) {
+    const sort = params.get('sort');
+    need(fieldName(sort.startsWith('-') ? sort.slice(1) : sort), 'DATASET_SORT_INVALID');
+  }
+  if (params.has('cursor')) decodeDatasetCursor(params.get('cursor'));
+  return params;
+}
+
+/** Use the original exporter's query, row typing, capability limits and signature. */
+export function nativeDatasetContract(value) {
+  try { return checkPage(value); }
+  catch { throw new InputError('DATASET_PAGE_NATIVE_CONTRACT_INVALID'); }
+}
+
 /** Validate actual saved native pages before another independent buyer call. */
 export function inspectDatasetPage(bytes, {url, previous = null, expectedSnapshot = null, maxRows = 1000000} = {}) {
   let value;
   try { value = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes)); }
   catch { throw new InputError('DATASET_PAGE_JSON_INVALID'); }
-  need(object(value) && value.schema === 'stellar-forge.dataset-page.v1' && object(value.dataset) &&
-    Array.isArray(value.fields) && object(value.filters) && Array.isArray(value.rows) && object(value.page), 'DATASET_PAGE_SCHEMA_INVALID');
+  const contract = nativeDatasetContract(value);
   const d = value.dataset, p = value.page;
-  need(typeof d.name === 'string' && d.name.length >= 1 && d.name.length <= 128 &&
-    !/[\x00-\x1f\x7f]/.test(d.name) && hex(d.snapshot) && integer(d.rowCount, 0, 1000000) &&
-    Array.isArray(d.columns) && d.columns.length >= 1 && d.columns.length <= 64 &&
-    integer(d.defaultLimit, 1, 1000) && integer(d.maxLimit, d.defaultLimit, 1000) && d.order === 'csv-record-order', 'DATASET_DESCRIPTION_INVALID');
-  const columns = new Map();
-  for (const c of d.columns) {
-    need(object(c) && fieldName(c.name) && !columns.has(c.name) && ['string','integer','number','boolean'].includes(c.type) &&
-      typeof c.nullable === 'boolean' && typeof c.filterable === 'boolean', 'DATASET_COLUMNS_INVALID');
-    columns.set(c.name, c);
-  }
-  need(value.fields.length >= 1 && value.fields.length <= 64 && new Set(value.fields).size === value.fields.length &&
-    value.fields.every(key => columns.has(key)), 'DATASET_FIELDS_INVALID');
-  need(integer(p.limit, 1, d.maxLimit) && integer(p.total, 0, d.rowCount) && integer(p.returned, 0, p.limit) &&
-    p.returned === value.rows.length, 'DATASET_PAGE_COUNTS_INVALID');
+  need(d.name.length <= 128 && !/[\x00-\x1f\x7f]/.test(d.name) &&
+    integer(d.defaultLimit, 1, 1000) && integer(d.maxLimit, d.defaultLimit, 1000), 'DATASET_DESCRIPTION_INVALID');
+  const columns = new Map(d.columns.map(c => [c.name, c]));
+  need(p.limit <= d.maxLimit, 'DATASET_PAGE_COUNTS_INVALID');
   need(p.total <= maxRows, 'DATASET_ROW_CEILING_REACHED');
-  for (const row of value.rows) {
-    need(object(row) && equal(Object.keys(row).sort(), [...value.fields].sort()) &&
-      value.fields.every(key => typed(row[key], columns.get(key))), 'DATASET_ROW_SCHEMA_MISMATCH');
-  }
-  const params = new URL(url).searchParams;
+  const params = validateDatasetQuery(url);
   const names = [...params.keys()];
-  need(new Set(names).size === names.length, 'DATASET_QUERY_DUPLICATED');
-  const allowed = new Set(['fields','limit','cursor', ...d.columns.filter(c => c.filterable).map(c => 'where_' + c.name)]);
+  const allowed = new Set(['fields','limit','cursor',
+    ...d.columns.filter(c => c.filterable).map(c => 'where_' + c.name),
+    ...d.columns.filter(c => c.rangeFilterable).flatMap(c => RANGE_OPS.map(op => op + '_' + c.name)),
+    ...(d.columns.some(c => c.sortable) ? ['sort'] : [])]);
   need(names.every(key => allowed.has(key)), 'DATASET_QUERY_CONTRACT_MISMATCH');
   const requestedFields = params.has('fields') ? params.get('fields').split(',') : [...columns.keys()];
   const requestedLimit = params.has('limit') ? params.get('limit') : String(d.defaultLimit);
@@ -79,8 +106,24 @@ export function inspectDatasetPage(bytes, {url, previous = null, expectedSnapsho
   const selectedFilters = d.columns.filter(c => c.filterable && params.has('where_' + c.name)).map(c => c.name).sort()
     .map(name => [name, filterValue(params.get('where_' + name), columns.get(name))]);
   need(equal(value.filters, Object.fromEntries(selectedFilters)), 'DATASET_FILTER_MISMATCH');
-  // SF30's cursor hashes JSON field order and the sorted native filter tuples.
-  const querySha256 = digest(JSON.stringify({fields:value.fields, filters:selectedFilters}));
+  const ranges = d.columns.filter(c => c.rangeFilterable).map(c => c.name).sort().flatMap(name =>
+    RANGE_OPS.filter(op => params.has(op + '_' + name)).map(op => {
+      const selected = filterValue(params.get(op + '_' + name), columns.get(name));
+      need(selected !== null, 'DATASET_RANGE_NULL_BOUND');
+      return [name, op, selected];
+    }));
+  let sort = null;
+  if (params.has('sort')) {
+    const selected = params.get('sort'), descending = selected.startsWith('-');
+    const column = descending ? selected.slice(1) : selected;
+    need(columns.get(column)?.sortable === true, 'DATASET_SORT_NOT_ENABLED');
+    sort = {column, direction:descending ? 'desc' : 'asc', nulls:'last', ties:'csv-record-order'};
+  }
+  // Native equality hashes retain their original bytes; advanced queries add native tuples.
+  const query = {fields:value.fields, filters:selectedFilters,
+    ...(ranges.length || sort ? {ranges, sort} : {})};
+  need(equal(contract.query, query), 'DATASET_QUERY_CONTRACT_MISMATCH');
+  const querySha256 = contract.queryHash;
   const incoming = params.has('cursor') ? decodeDatasetCursor(params.get('cursor')) : null;
   const offset = incoming?.n ?? 0;
   if (incoming) need(incoming.s === d.snapshot && incoming.q === querySha256, 'DATASET_CURSOR_BINDING_MISMATCH');
@@ -98,6 +141,7 @@ export function inspectDatasetPage(bytes, {url, previous = null, expectedSnapsho
     previous.nextCursor === params.get('cursor'), 'DATASET_PAGE_CONTINUITY_MISMATCH');
   else need(offset === 0, 'DATASET_FIRST_PAGE_NOT_ZERO');
   return {snapshot:d.snapshot, datasetName:d.name, datasetSha256, querySha256, fields:value.fields,
-    filters:value.filters, total:p.total, returned:p.returned, offset, nextOffset,
+    filters:value.filters, ...(ranges.length || sort ? {ranges:contract.ranges, order:sort} : {}),
+    total:p.total, returned:p.returned, offset, nextOffset,
     nextCursor:p.nextCursor, sha256:digest(bytes), bytes:bytes.length};
 }
