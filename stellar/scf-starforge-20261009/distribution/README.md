@@ -114,9 +114,10 @@ Use the existing OpenAPI workspace on Linux with Node 22.16+ and util-linux
 workspace with an existing private parent for exported projects:
 
 ```sh
-install -d -m 700 /private/merchant-projects
+export STARFORGE_PRIVATE="$PWD/starforge-private"
+install -d -m 700 "$STARFORGE_PRIVATE" "$STARFORGE_PRIVATE/merchant-projects"
 npx --no-install starforge openapi-workspace \
-  --out-parent /private/merchant-projects --port 0
+  --out-parent "$STARFORGE_PRIVATE/merchant-projects" --port 0
 ```
 
 Open the printed local URL. Import the provider's original OpenAPI 3.0 or 3.1
@@ -132,11 +133,11 @@ explicit selection and binding files:
 
 ```sh
 npx --no-install starforge openapi \
-  --spec /private/provider-openapi.yaml \
-  --config /private/operation-selections.json \
-  --service-bindings /private/application-bindings.json \
-  --upstream-bindings /private/upstream-bindings.json \
-  --out /private/merchant-projects/prepared-api
+  --spec "$STARFORGE_PRIVATE/provider-openapi.yaml" \
+  --config "$STARFORGE_PRIVATE/operation-selections.json" \
+  --service-bindings "$STARFORGE_PRIVATE/application-bindings.json" \
+  --upstream-bindings "$STARFORGE_PRIVATE/upstream-bindings.json" \
+  --out "$STARFORGE_PRIVATE/merchant-projects/prepared-api"
 ```
 
 The output directory must be new. Use the original compiler's selection and
@@ -177,11 +178,11 @@ public payer, Python executable, total and daily atomic limits, and either its
 wallet environment-variable name or trusted signer-provider path.
 
 ```sh
-install -d -m 700 /private/acquisitions/buyer-configs
+install -d -m 700 "$STARFORGE_PRIVATE/acquisitions" "$STARFORGE_PRIVATE/acquisitions/buyer-configs"
 npx --no-install starforge buyer-runbook workspace \
-  --state /private/acquisitions/workspace \
-  --configs /private/acquisitions/buyer-configs \
-  --operator-settings /private/acquisitions/local-operator.json \
+  --state "$STARFORGE_PRIVATE/acquisitions/workspace" \
+  --configs "$STARFORGE_PRIVATE/acquisitions/buyer-configs" \
+  --operator-settings "$STARFORGE_PRIVATE/acquisitions/local-operator.json" \
   --port 0
 ```
 
@@ -199,10 +200,10 @@ For a terminal-only initial import, use the same packet with the original buyer:
 
 ```sh
 npx --no-install starforge buyer --import-operation \
-  --file /private/merchant-request.handoff.json \
-  --dir /private/acquisitions/imported-request --accept 0
+  --file "$STARFORGE_PRIVATE/merchant-request.handoff.json" \
+  --dir "$STARFORGE_PRIVATE/acquisitions/imported-request" --accept 0
 npx --no-install starforge buyer \
-  --review --config /private/acquisitions/imported-request/review.json
+  --review --config "$STARFORGE_PRIVATE/acquisitions/imported-request/review.json"
 ```
 
 Choose `--accept` from the actual discovery list before importing. The import
@@ -213,9 +214,10 @@ Stop the receiver and reopen it with the same original state path:
 
 ```sh
 npx --no-install starforge buyer-runbook workspace \
-  --state /private/acquisitions/workspace --port 0
+  --state "$STARFORGE_PRIVATE/acquisitions/workspace" --port 0
 ```
 
+Use the same absolute `STARFORGE_PRIVATE` value when opening a new terminal.
 Its selected configuration directory and local operator preset are retained.
 Keep the merchant and receiver's private files at their original paths outside
 `node_modules` when updating the toolkit. An identical packet reopens the same
