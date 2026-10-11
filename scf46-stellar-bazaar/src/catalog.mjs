@@ -3,10 +3,11 @@ import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 import { inspectResourceURL, inspectRouteTemplate } from '../../stellar-forge/route-identity/identity.mjs';
 import { rankBazaarEntries } from './ranking.mjs';
+import { sanitizeBazaarPricing, parseAtomicBudget, describeCatalogPricing } from './pricing.mjs';
 
 const plain = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const printable = (v) => typeof v === 'string' && v.length > 0 && v.length <= 32 && /^[\x20-\x7E]+$/.test(v);
-const ALLOWED = new Set(['type','payTo','network','scheme','extensions']);
+const ALLOWED = new Set(['type','payTo','network','scheme','asset','extensions']);
 // SF28 identity grammar also prevents pipe-delimited MCP catalog key aliasing.
 const MCP_TOOL_NAME = /^[A-Za-z0-9_.-]{1,128}$/;
 
@@ -59,7 +60,7 @@ function matches(row, filters) {
   // Network, scheme and recipient MUST match one actual offered payment option.
   // Matching each parameter against a different option fabricates an offer that
   // the seller never published (e.g. testnet from one, pubnet payTo from another).
-  const paymentKeys = ['payTo', 'network', 'scheme'].filter(k => Object.hasOwn(filters, k));
+  const paymentKeys = ['payTo', 'network', 'scheme', 'asset'].filter(k => Object.hasOwn(filters, k));
   if (paymentKeys.length && !row.accepts.some(option =>
     paymentKeys.every(k => option?.[k] === filters[k]))) return false;
   return true;
@@ -95,6 +96,11 @@ export function validateCatalogEntry(entry) {
   const id = keyOf(entry);
   const sanitized = structuredClone(entry);
   sanitized.resource = sanitizeResourceServiceMetadata(sanitized.resource);
+  // Proposed upstream optional pricing is catalog-only. Bad seller metadata
+  // cannot invalidate an otherwise usable offer or leak unbounded hints.
+  const pricing = sanitizeBazaarPricing(sanitized.extensions.bazaar.pricing);
+  if (pricing === null) delete sanitized.extensions.bazaar.pricing;
+  else sanitized.extensions.bazaar.pricing = pricing;
   const template = inspectRouteTemplate(sanitized.extensions.bazaar.routeTemplate);
   if (template.ok) sanitized.extensions.bazaar.routeTemplate = template.canonicalPath;
   else delete sanitized.extensions.bazaar.routeTemplate;
@@ -174,6 +180,32 @@ export class BazaarCatalog {
     const next = at+limit < ranked.length ? encode({v:this.#version,h:digest,at:at+limit}) : null;
     return { resources:page,partialResults:next !== null,pagination:{limit:page.length,cursor:next} };
   }
+  /**
+   * Opt-in buyer-facing discovery. Never silently drop metered routes whose
+   * authorization ceiling exceeds a buyer's expected per-call spend.
+   * Comparisons are per-network, per-asset atomic units, and are not
+   * authorizations or observations of settled amounts.
+   */
+  pricing(params = new URLSearchParams()) {
+    const rawBudget = params.get('budgetAtomic');
+    if (rawBudget !== null && (!params.get('network') || !params.get('asset')))
+      throw new RangeError('budgetAtomic requires network and asset filters');
+    const budget = rawBudget === null ? null : parseAtomicBudget(rawBudget);
+    const filters = filtersFrom(params);
+    const page = this.list(params);
+    return {
+      resources: page.resources.map(row => ({
+        ...row,
+        pricingView: {
+          offers: describeCatalogPricing(row, filters, budget),
+          budgetAtomic: rawBudget,
+          note: 'Seller-declared snapshot only. Fetch live 402 and obtain buyer approval before authorization.'
+        }
+      })),
+      pagination: page.pagination,
+      pricingViewVersion: 'stellar-bazaar-pricing-v1'
+    };
+  }
   get size() {return this.#entries.size;}
   get version() {return this.#version;}
 }
@@ -185,7 +217,8 @@ export function createDiscoveryServer(catalog) {
       const u = new URL(req.url,'http://localhost');
       if (req.method !== 'GET') {res.writeHead(405,{'content-type':'application/json'});res.end(JSON.stringify({error:'METHOD_NOT_ALLOWED',reason:'GET only'}));return;}
       const data = u.pathname === '/discovery/resources' ? catalog.list(u.searchParams)
-        : u.pathname === '/discovery/search' ? catalog.search(u.searchParams) : null;
+        : u.pathname === '/discovery/search' ? catalog.search(u.searchParams)
+        : u.pathname === '/discovery/pricing' ? catalog.pricing(u.searchParams) : null;
       if (!data) {res.writeHead(404,{'content-type':'application/json'});res.end(JSON.stringify({error:'NOT_FOUND',reason:'Unknown endpoint'}));return;}
       res.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});
       res.end(JSON.stringify(data));
