@@ -1,5 +1,5 @@
 // MIT. Capacity and shutdown controls for the original SF30 HTTP seller.
-// This observes Node response completion; it does not infer payment settlement.
+// Observe HTTP AND original dispatch lifetime; do not infer payment settlement.
 
 const LIMIT = 1024;
 const MAX_GRACE_MS = 300000;
@@ -26,8 +26,8 @@ function unavailable(req, res, code) {
 
 /**
  * Wrap only resource requests; health/docs/offers are outside the admission cap.
- * A request occupies capacity from dispatch until finish/disconnect, including
- * native verification, handler execution and settlement. No payment is retried.
+ * Retain a slot until BOTH the response terminates and original dispatch returns.
+ * A disconnected client must not hide pending verification/cancellation/settlement.
  */
 export function createSellerLifecycle(server, {
   maxInFlight = 64, drainGraceMs = 60000,
@@ -41,10 +41,11 @@ export function createSellerLifecycle(server, {
   let state = 'ACCEPTING';
   let active = 0, admitted = 0, completed = 0, disconnected = 0;
   let overloaded = 0, drainingRejected = 0, forced = false;
-  let closePromise;
+  let closePromise, closeProgress;
 
   function handle(req, res, run) {
     if (typeof run !== 'function') throw new TypeError('Resource handler required');
+    if (res.destroyed || res.writableEnded) return;
     if (state !== 'ACCEPTING') {
       drainingRejected++;
       return unavailable(req, res, 'SELLER_DRAINING');
@@ -55,23 +56,30 @@ export function createSellerLifecycle(server, {
     }
     active++;
     admitted++;
-    let settled = false;
+    let httpDone = false, executionDone = false, released = false;
+    function release() {
+      if (released || !httpDone || !executionDone) return;
+      released = true;
+      active--;
+      completed++;
+      if (state === 'DRAINING' && active === 0) server.closeIdleConnections?.();
+      closeProgress?.();
+    }
     function finish() { terminal(false); }
     function closeResponse() { terminal(!res.writableFinished); }
     function terminal(wasDisconnected) {
-      if (settled) return;
-      settled = true;
-      active--;
-      completed++;
+      if (httpDone) return;
+      httpDone = true;
       if (wasDisconnected) disconnected++;
-      if (state === 'DRAINING' && active === 0) server.closeIdleConnections?.();
       res.removeListener('finish', finish);
       res.removeListener('close', closeResponse);
+      release();
     }
     res.once('finish', finish);
     res.once('close', closeResponse);
-    // The original outer HTTP error handler owns exceptions and response status.
-    return run();
+    // Preserve the original outer HTTP exception handling. Rejection ends
+    // execution, while its eventual error response still owns HTTP completion.
+    return Promise.resolve().then(run).finally(() => { executionDone = true; release(); });
   }
 
   function snapshot() {
@@ -79,7 +87,7 @@ export function createSellerLifecycle(server, {
       state, accepting: state === 'ACCEPTING', maxInFlight, drainGraceMs,
       inFlight: active, admitted, completed, disconnected,
       capacityRejected: overloaded, drainingRejected, forcedClose: forced,
-      semantics: 'In-flight HTTP resource attempts, including challenge-only 402; not payment or revenue totals',
+      semantics: 'Resource attempts held until HTTP and dispatch finish, including challenge-only 402; not payment or revenue totals',
     };
   }
 
@@ -87,28 +95,32 @@ export function createSellerLifecycle(server, {
     if (closePromise) return closePromise;
     state = 'DRAINING';
     closePromise = new Promise((resolve, reject) => {
-      // Call close BEFORE the deadline. Node waits for active HTTP responses.
-      let finished = false;
-      let timer;
+      let finished = false, serverClosed = false, serverError, timer;
       const complete = error => {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
         state = 'CLOSED';
         if (error) reject(error);
-        else if (forced) reject(new Error('SELLER_DRAIN_DEADLINE_EXCEEDED'));
         else resolve(snapshot());
       };
+      closeProgress = () => {
+        if (serverError) complete(serverError);
+        else if (serverClosed && active === 0) complete();
+      };
       try {
-        server.close(complete);
+        server.close(error => { serverClosed = true; serverError = error; closeProgress(); });
         server.closeIdleConnections?.();
-        timer = setTimeout(() => {
+        if (!finished) timer = setTimeout(() => {
           if (finished) return;
           forced = true;
-          // Explicit operator-defined deadline. Never retry uncertain payments.
-          server.closeAllConnections();
+          // Socket closure is not proof that native work stopped. Surface a
+          // deadline failure even if all clients disconnected before draining.
+          try { server.closeAllConnections(); }
+          finally { complete(Object.assign(new Error('SELLER_DRAIN_DEADLINE_EXCEEDED'),
+            { code: 'SELLER_DRAIN_DEADLINE_EXCEEDED' })); }
         }, drainGraceMs);
-        timer.unref?.();
+        // Retain the timer even when only an unresolved native promise remains.
       } catch (error) { complete(error); }
     });
     return closePromise;
