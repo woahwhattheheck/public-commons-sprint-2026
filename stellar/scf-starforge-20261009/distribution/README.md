@@ -176,6 +176,8 @@ or automatically retry a request.
 | `starforge import-headers` | SF85 original operator HTTP header-file importer |
 | `starforge handoff` | SF96 captured challenge to original buyer review files |
 | `starforge support` | SF93 private seller and operations support export |
+| `starforge support-watch` | Original incident collection, acknowledgment, notification delivery and support-case handoff |
+| `starforge support-console` | Retained merchant cases, runtime follow-up and original native reconciliation |
 | `starforge client` | Export a standalone JavaScript client, TypeScript declarations and original OpenAPI |
 | `starforge releases` | Stage, compare, select, run and roll back seller configurations; local operator console |
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
@@ -1092,6 +1094,104 @@ included. Applications may import `startWorkspace` from
 `@tokenjunkielabs/starforge-merchant/merchant/revenue-workspace`; its `directory`
 option is the same private state passed to CLI `--state`. This workflow adds no
 npm dependency.
+
+## Operate merchant incidents and support cases
+
+The original incident watcher follows the running seller and operations listener,
+retains actionable incidents and measured recovery, and exports their original
+captures into the existing merchant case desk. It requires Node 22+, Linux with
+util-linux `flock`, and private local state supporting atomic rename and fsync.
+
+Copy the included `source/stellar/scf-starforge-20261009/` file
+`sf93-seller-support-bundle/examples/watch.json` from the installed package into
+your private operator directory. Set its merchant IDs, labels and exact local
+seller/operations addresses to those printed by your existing launchers. Make the
+configuration private (mode 0600). For notifications, supply the configured URL
+and signing-secret environment references to the watcher and operator commands;
+the secret needs at least 32 UTF-8 bytes. Set `notification` to `null` when only
+local incident operation is wanted.
+
+```sh
+npx --no-install starforge support-watch init \
+  --config /private/operator/watch.json --state /private/operator/incidents
+npx --no-install starforge support-watch run --state /private/operator/incidents
+```
+
+The state directory must be new and its parent must exist. Reopen that same
+directory on later runs. One watcher owns its kernel lease; SIGINT/SIGTERM ends
+its pending collection and finishes its state write. Keep the original seller
+and operations processes running under their existing lifecycle.
+
+In a second terminal, read the actual incident ID and revision, then acknowledge
+ownership while collection continues:
+
+```sh
+npx --no-install starforge support-watch status \
+  --state /private/operator/incidents --details
+npx --no-install starforge support-watch ack \
+  --state /private/operator/incidents --incident ACTUAL_INCIDENT_ID \
+  --revision ACTUAL_INCIDENT_REVISION --by 'Merchant operator' \
+  --note-file /private/operator/repair-note.txt
+```
+
+Acknowledgment retains ownership and notes; recovery follows subsequent usable
+observations. The original commands also provide `notify`, `retry`, `cancel`,
+`configure` and `prune`. Notifications retain event/body identity across retries
+and pin their selected destination. Use an explicit `notify` to select a changed
+destination for an incident. `INCIDENT_OPERATIONS.md` documents the exact signed
+hook protocol, attempt/revision inputs, retention and restart behavior.
+
+### Keep the original case and handoff
+
+Open the existing local case desk with durable storage:
+
+```sh
+npx --no-install starforge support-console \
+  --cases-dir /private/merchant-cases --port 8784
+```
+
+For a saved incident, select the existing private merchant workspace, an actual
+captured route ID and the current incident revision:
+
+```sh
+npx --no-install starforge support-watch export \
+  --state /private/operator/incidents --incident ACTUAL_INCIDENT_ID \
+  --revision ACTUAL_INCIDENT_REVISION \
+  --workspace /private/operator/merchant.merchant-workspace.json \
+  --route ACTUAL_ROUTE_ID --out /private/operator/incident-handoff
+```
+
+The destination must be new. In the desk's **Runtime** stage, choose **Open a
+complete support handoff**, open the exported `support-handoff.json`, then choose
+**Open handoff as new case** and **Save case**. Original baseline/follow-up files,
+incident identity, acknowledgment and session boundaries stay with that case.
+
+The original one-shot packet command remains available:
+
+```sh
+npx --no-install starforge support \
+  --seller http://127.0.0.1:8423 --ops http://127.0.0.1:8424 \
+  --out /private/operator/merchant-before
+```
+
+Use the actual running addresses and a new destination with an existing parent.
+Select all four packet files in **Runtime**, inspect them, choose the matching
+route and attach them to the case. Attach a later packet as **After / follow-up**,
+save the owner and next action, then reopen after restart or restore a saved
+version. The same desk accepts original `history.json` with its matching SF97
+`report.json` and optional original SF98 journals. **Prepare support handoff**
+exports a readable report and complete importable case. Included SF74 guides
+`RUNTIME_SUPPORT.md`, `CASE_DESK.md` and `WORKSPACES.md` cover collection, retained
+periods, native reconciliation, saved versions and private-directory recovery.
+
+The public module entries expose these unchanged original APIs:
+
+| Import subpath | Original interface |
+| --- | --- |
+| `./merchant/incidents` | `runIncidentWatch` with caller-owned cancellation and environment |
+| `./merchant/incidents/store` | `initializeIncidentStore` and `openIncidentStore` |
+| `./merchant/incidents/operator` | Status, acknowledgment, notification operations, configuration, pruning and `exportIncident` |
+| `./merchant/support-console` | `start` and `createConsoleServer` for the same case desk |
 
 ## Reconcile merchant settlements
 
