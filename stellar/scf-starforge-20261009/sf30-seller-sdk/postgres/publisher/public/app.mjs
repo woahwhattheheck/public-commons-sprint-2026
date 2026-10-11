@@ -86,7 +86,9 @@ function renderQuery(definition, saved) {
     const type = document.createElement('select'); type.dataset.role = 'type'; type.setAttribute('aria-label', name + ' type');
     for (const [value, label] of [['string', 'Text'], ['integer', 'Integer'], ['number', 'Float'], ['boolean', 'Boolean']])
       type.append(node('option', label, { value }));
-    const spec = saved?.dataset.columns[name]; type.value = typeof spec === 'string' ? spec : spec?.type ?? 'string';
+    const declared = definition.columnTypes?.find(column => column.name === name);
+    const spec = saved?.dataset.columns[name] ?? (!saved ? declared : undefined);
+    type.value = typeof spec === 'string' ? spec : spec?.type ?? 'string';
     const typeCell = node('td'); typeCell.append(type); row.append(typeCell);
     for (const role of ['nullable', 'filters', 'ranges', 'sorts']) {
       const cell = node('td'), box = document.createElement('input'); box.type = 'checkbox'; box.dataset.role = role;
@@ -182,12 +184,15 @@ function renderDetail(detail) {
   $('run-error').hidden = !saved.data.error; $('run-error').textContent = friendly[saved.data.error] ?? words(saved.data.error);
   clear($('run-summary'));
   if (candidate) {
+    const observationMetric = candidate.extraction.transaction ? ['Transaction', 'Read only'] :
+      ['Observation', candidate.extraction.observation?.kind === 'SINGLE_SPREADSHEET_RESPONSE' ? 'Single response' : 'Retained'];
     for (const [label, value] of [['Rows', candidate.dataset.rowCount.toLocaleString()], ['CSV MiB', (candidate.csvBytes / 1048576).toFixed(3)],
-      ['Dataset version', short(candidate.dataset.snapshot)], ['Transaction', 'Read only']]) {
+      ['Dataset version', short(candidate.dataset.snapshot)], observationMetric]) {
       const item = node('div', '', { class: 'metric' }); item.append(node('span', label), node('strong', value)); $('run-summary').append(item);
     }
     $('candidate-source').textContent = JSON.stringify({ sourceHash: candidate.sourceHash, queryHash: candidate.queryHash,
-      csvHash: candidate.csvHash, transaction: candidate.extraction.transaction, columnTypes: candidate.extraction.columnTypes }, null, 2);
+      csvHash: candidate.csvHash, transaction: candidate.extraction.transaction,
+      observation: candidate.extraction.observation, columnTypes: candidate.extraction.columnTypes }, null, 2);
   }
   $('source-details').hidden = !candidate; $('preview-form').hidden = !candidate; table(detail.preview);
   $('review-panel').hidden = !candidate; $('buyer-panel').hidden = !candidate || !state.snapshot?.buyer;
@@ -196,6 +201,7 @@ function renderDetail(detail) {
   if (saved.data.publication) $('review-status').textContent += ` Original target version ${short(saved.data.publication.snapshot)}, revision ${saved.data.publication.revision}.`;
   $('initialize-guide').hidden = !state.target?.initializable;
   $('buyer-prepare-form').hidden = !state.offer;
+  if (!state.offer) { clear($('buyer-terms')); clear($('buyer-option')); }
   buttons();
 }
 async function loadRun(force = false, query) {
@@ -275,13 +281,18 @@ $('publish').addEventListener('click', () => action(async () => {
   notice(result.state === 'PUBLISHED' ? 'The original dataset target now retains this published version.' : friendly[result.data.error] ?? words(result.data.error));
 }));
 $('buyer-offer-form').addEventListener('submit', event => { event.preventDefault(); action(async () => {
-  state.offer = await api('/api/buyer?id=' + encodeURIComponent(state.selected) + '&query=' + encodeURIComponent($('buyer-query').value));
+  const selected = state.selected, query = $('buyer-query').value;
+  const offer = await api('/api/buyer?id=' + encodeURIComponent(selected) + '&query=' + encodeURIComponent(query));
+  if (state.selected !== selected || $('buyer-query').value !== query) return;
+  state.offer = offer;
   clear($('buyer-option')); clear($('buyer-terms'));
   for (const [index, option] of state.offer.accepts.entries()) $('buyer-option').append(node('option', `${index + 1} · ${option.network} · ${option.amount} atomic`, { value: String(index) }));
   $('buyer-terms').append(node('p', state.offer.url, { class: 'mono' }), node('pre', JSON.stringify(state.offer.accepts, null, 2)));
   $('buyer-prepare-form').hidden = false;
 }); });
-$('buyer-query').addEventListener('input', () => { state.offer = null; $('buyer-prepare-form').hidden = true; });
+$('buyer-query').addEventListener('input', () => {
+  state.offer = null; $('buyer-prepare-form').hidden = true; clear($('buyer-terms')); clear($('buyer-option'));
+});
 $('buyer-prepare-form').addEventListener('submit', event => { event.preventDefault(); action(async () => {
   const prepared = await api('/api/buyer', { id: state.selected, query: $('buyer-query').value,
     intentId: $('buyer-intent').value, acceptIndex: Number($('buyer-option').value), offerSha256: state.offer.offerSha256 });
