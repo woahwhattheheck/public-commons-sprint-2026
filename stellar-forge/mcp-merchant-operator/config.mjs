@@ -1,11 +1,12 @@
 // MIT. Host configuration; MCP arguments never select files or executable modules.
-import { readFile, lstat, mkdir, open } from 'node:fs/promises';
-import { dirname, resolve, isAbsolute, join } from 'node:path';
+import { readFile, lstat, mkdir, open, realpath } from 'node:fs/promises';
+import { dirname, basename, resolve, isAbsolute, join, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { initReleaseStore, readReleaseState } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
 import { readReleaseWorkspace, inspectUpstreamConfiguration } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-upstreams.mjs';
 import { importOpenApi } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/importer.mjs';
 import { createSellerServiceConfig } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-config.mjs';
+import { preparePythonRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-python.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
 export const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -42,8 +43,13 @@ function hostPath(value, base) {
 }
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const parse = bytes => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+export function pythonSourceView(python) {
+  if (!python) return null;
+  const { interpreter, ...metadata } = python;
+  return { ...metadata, interpreter: { configured: true, selectionSha256: hash(interpreter) } };
+}
 function sourceDefinition(source, base, alias) {
-  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'runtime']);
+  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'runtime']);
   const runtime = structuredClone(source.runtime ?? {});
   exact(runtime, ['port', 'handlers', 'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
   for (const flag of ['allowLocalFacilitator', 'allowLoopbackUpstream'])
@@ -52,7 +58,15 @@ function sourceDefinition(source, base, alias) {
   if (runtime.port !== undefined && (!Number.isInteger(runtime.port) || runtime.port < 0 || runtime.port > 65535))
     throw failure('CONFIGURATION_ERROR', 'Seller port must be 0–65535.');
   const result = { alias, label: line(source.label ?? alias, 'Source label'), runtime };
-  if (source.workspace !== undefined) {
+  if (source.pythonRoot !== undefined && source.python === undefined)
+    throw failure('CONFIGURATION_ERROR', 'A Python source root requires a Python merchant declaration.');
+  if (source.python !== undefined) {
+    if (['workspace', 'spec', 'selections', 'bindings', 'upstreams'].some(key => source[key] !== undefined) ||
+        runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
+      throw failure('CONFIGURATION_ERROR', 'Choose a Python merchant declaration or an OpenAPI source. Python owns its application bindings.');
+    result.python = hostPath(source.python, base);
+    if (source.pythonRoot !== undefined) result.pythonRoot = hostPath(source.pythonRoot, base);
+  } else if (source.workspace !== undefined) {
     if (['spec', 'selections', 'bindings', 'upstreams'].some(key => source[key] !== undefined) || runtime.handlers !== undefined)
       throw failure('CONFIGURATION_ERROR', 'Choose a saved API workspace package or explicit source files.');
     result.workspace = hostPath(source.workspace, base);
@@ -70,6 +84,18 @@ function sourceDefinition(source, base, alias) {
 }
 /** Inspect configured source through the ORIGINAL workspace and upstream readers. */
 export async function inspectMerchantSource(source) {
+  if (source.python) {
+    const prepared = await preparePythonRelease(source.python, { sourceRoot: source.pythonRoot });
+    const { compiled, python } = prepared;
+    return { source: source.alias, label: source.label, sourceType: 'PYTHON_APPLICATION',
+      mode: source.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
+      sourceDigests: { declaration: python.configSha256, application: python.applicationSha256,
+        source: python.sourceSha256, execution: python.executionSha256 }, inputPackage: null,
+      application: { type: 'PYTHON_APPLICATION', ...pythonSourceView(python) },
+      environment: compiled.options.environment, credentialValuesChecked: false,
+      routes: compiled.service.routes.map(route => ({ method: compiled.functions[route.id].method,
+        path: route.path, publicPath: route.path, resource: route.offer.resource, accepts: route.offer.accepts })) };
+  }
   const workspace = source.workspace ? await readReleaseWorkspace(source.workspace) : null;
   const inputs = workspace?.inputs ?? source;
   const [spec, selections, bindings] = await Promise.all([inputs.spec, inputs.config, inputs.bindings].map(path => fileBytes(path)));
@@ -121,10 +147,17 @@ export async function readMerchantConfig(path) {
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, runtime = {} }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, runtime = {} }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
-  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, runtime }, process.cwd(), 'initial');
+  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, runtime }, process.cwd(), 'initial');
+  if (source.pythonRoot) {
+    const sourceRoot = await realpath(source.pythonRoot);
+    const destination = join(await realpath(dirname(root)), basename(root));
+    const within = relative(sourceRoot, destination);
+    if (!within || !isAbsolute(within) && within !== '..' && !within.startsWith('..' + sep))
+      throw failure('CONFIGURATION_ERROR', 'Keep the merchant operator directory outside its selected Python source root.');
+  }
   const preview = await inspectMerchantSource(source);
   await mkdir(root, { mode: 0o700 });
   await initReleaseStore(join(root, 'releases'));
@@ -133,7 +166,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   await writePrivate(path, { schema: CONFIG_SCHEMA, name,
     releaseStore: './releases', exportsDirectory: './customer-exports', sources: {
       initial: { label: source.label, runtime: source.runtime,
-        ...(source.workspace ? { workspace: source.workspace } : { spec: source.spec, selections: source.config,
+        ...(source.python ? { python: source.python, ...(source.pythonRoot ? { pythonRoot: source.pythonRoot } : {}) }
+          : source.workspace ? { workspace: source.workspace } : { spec: source.spec, selections: source.config,
           bindings: source.bindings, ...(source.upstreams ? { upstreams: source.upstreams } : {}) }) },
     } });
   await readMerchantConfig(path);
