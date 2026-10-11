@@ -8,6 +8,10 @@ For several prepared operations and restart recovery, use the [durable buyer
 inbox](QUEUE.md). It adds private request snapshots, a permanent attempt record,
 original-evidence recovery and an offline history report to this same buyer.
 
+For complete encrypted operator-state backup and original-path restoration, use
+[workspace recovery](RECOVERY.md). It retains the existing spend journal and keys,
+inboxes, evidence and request/output files through the original recovery engine.
+
 For a merchant POST with an issued operation capability, use [private operation
 tickets](OPERATION_TICKETS.md). The existing prepare command accepts the body
 and ticket as private files; workspace and inbox imports preserve the exact
