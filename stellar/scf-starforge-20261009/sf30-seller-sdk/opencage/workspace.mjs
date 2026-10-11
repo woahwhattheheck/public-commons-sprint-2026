@@ -151,7 +151,8 @@ export class GeocodeWorkspace {
       responseSha256:body?digest(body):null,responseBytes:body?.length??0,
       candidates:value.parsed?.candidates.map((candidate,index)=>({...structuredClone(candidate),index,
         selected:value.decision.current?.index===index}))??[],
-      semantics:value.parsed?.semantics??null,captureIdentity:value.capture?.manifest.identity??null,
+      semantics:value.parsed?.semantics??null,merchantSelection:value.state.observation?.merchantSelection??null,
+      captureIdentity:value.capture?.manifest.identity??null,
       files:value.capture?.manifest.files??[]};
   }
   async overview() {
@@ -213,24 +214,32 @@ export class GeocodeWorkspace {
   }
   adoptBuyer({id,productId,operation,packageId}) {
     return this._serial(async()=>{
-      let terms=this.configuration.terms;
+      let terms=this.configuration.terms,selectedPackage=null,packageManifest=null;
       if(packageId){
         const bundle=await inspectGeocodePackage(join(this.directory,'merchant-packages',identifier(packageId)));
         if(bundle.built.planSha256!==this.configuration.planSha256)fail('GEOCODE_PACKAGE_WORKSPACE_MISMATCH');
-        terms=bundle.built.terms;
+        terms=bundle.built.terms;selectedPackage={packageId,packageIdentity:bundle.manifest.identity};
+        packageManifest=await readBytes(join(bundle.directory,'manifest.json'),1048576);
       }
+      const merchantSelection={schema:'stellar-forge.opencage-buyer-merchant.v1',
+        ...(selectedPackage??{packageId:null,packageIdentity:null}),termsSha256:digest(jsonBytes(terms)),
+        publicOrigin:terms.publicOrigin,workspaceTermsSha256:this.configuration.termsSha256};
       const delivery=await GeocodeDelivery.fromOperation(operation,{plan:this.configuration.plan,productId,
         publicOrigin:terms.publicOrigin});
       const {request,directory}=await this._request(id,productId,delivery.request.query);
       if(await exists(join(directory,'capture','manifest.json'))) {
         const prior=await this._read(id);
-        if(prior.state.responseSha256!==delivery.responseSha256)fail('GEOCODE_CAPTURE_ALREADY_COMPLETED');
+        if(prior.state.responseSha256!==delivery.responseSha256 || prior.state.bodyOrigin!=='ORIGINAL_SF88_BUYER_RESULT' ||
+            !same(prior.state.observation.originalRequest,delivery.request) ||
+            !same(prior.state.observation.merchantSelection,merchantSelection))fail('GEOCODE_CAPTURE_ALREADY_COMPLETED');
         return this.get(id);
       }
+      const attachments=[...delivery.attachments,['merchant-selection.json',jsonBytes(merchantSelection)],
+        ['merchant-terms.json',jsonBytes(terms)],...(packageManifest?[['merchant-package-manifest.json',packageManifest]]:[])];
       return this._complete(directory,request,{status:200,headers:{'content-type':'application/json'},body:delivery.bytes()},
         {providerStatus:200,state:delivery.parsed.state,dispatched:true,bodyOrigin:'ORIGINAL_SF88_BUYER_RESULT',
-          provenance:delivery.provenance,originalRequest:delivery.request,semantics:delivery.parsed.semantics,finishedAt:now()},
-        [...delivery.attachments]);
+          provenance:delivery.provenance,originalRequest:delivery.request,merchantSelection,
+          semantics:delivery.parsed.semantics,finishedAt:now()},attachments);
     });
   }
   select({id,responseSha256,index,expectedRevision,note=''}) {
@@ -254,7 +263,9 @@ export class GeocodeWorkspace {
     if(!value.parsed || value.state.providerStatus!==200)fail('GEOCODE_RESULT_NOT_DELIVERABLE');
     return new GeocodeDelivery({bytes:value.capture.files.get('response.json'),request:value.request,
       provenance:{kind:value.state.bodyOrigin,captureIdentity:value.capture.manifest.identity,
-        captureManifestSha256:value.capture.manifestSha256},decision:value.decision,
+        captureManifestSha256:value.capture.manifestSha256,
+        ...(value.state.observation?.merchantSelection ? {merchantSelection:value.state.observation.merchantSelection,
+          originalBuyerRequest:value.state.observation.originalRequest} : {})},decision:value.decision,
       attachments:new Map([...value.capture.files].filter(([name])=>name!=='response.json'))});
   }
   export({id,responseSha256,expectedRevision}) {

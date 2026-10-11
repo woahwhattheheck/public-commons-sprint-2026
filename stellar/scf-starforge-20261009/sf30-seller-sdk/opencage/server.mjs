@@ -104,8 +104,10 @@ export async function createGeocodeServer({workspace=null,delivery=null,port=0}=
       case '/api/start': result=await workspace.start(input);break;
       case '/api/stop': result=await workspace.stop();break;
       case '/api/import-response': {
-        if(typeof input.responseText!=='string')fail('GEOCODE_RESPONSE_TEXT_REQUIRED');
-        const {responseText,...rest}=input;result=await workspace.importResponse({...rest,bytes:Buffer.from(responseText)});break;
+        if(typeof input.responseBase64!=='string')fail('GEOCODE_RESPONSE_BYTES_REQUIRED');
+        const {responseBase64,...rest}=input,bytes=Buffer.from(responseBase64,'base64');
+        if(bytes.toString('base64')!==responseBase64)fail('GEOCODE_RESPONSE_BASE64_INVALID');
+        result=await workspace.importResponse({...rest,bytes});break;
       }
       default: send(response,404,{error:'GEOCODE_ROUTE_UNKNOWN'});return;
     }

@@ -132,7 +132,7 @@ node sf30-seller-sdk/opencage/cli.mjs import-response \
   --response /absolute/native-response.json
 ```
 
-The browser offers the same import operation using two local files. Original imported observation bytes are retained with the resulting capture.
+The browser offers the same import operation using two local files. It transfers the response as bytes, preserving a UTF-8 byte-order mark and the exact recorded response hash. Original imported observation bytes are retained with the resulting capture.
 
 ## Customer delivery
 
@@ -229,7 +229,7 @@ node sf30-seller-sdk/opencage/cli.mjs adopt-buyer \
   --id customer-location --product reverse
 ```
 
-Use `--package-id` with `adopt-buyer` when its actual merchant origin belongs to a later prepared package. The original buyer request and result remain attached to the geocoding capture.
+Use `--package-id` with `adopt-buyer` when its actual merchant origin belongs to a later prepared package. The original buyer request and result remain attached to the geocoding capture. Adoption also retains the selected package identity, exact terms and their SHA-256, and the original buyer origin. Those selected merchant fields stay visible in the operator and exported delivery alongside the initial workspace request reference.
 
 An immutable HTTPS copy of a completed public result can also be consumed through the original Buyer response-file path. Pin its actual resource URL, response SHA, byte count and returned content type in the original buyer configuration. That customer retrieval retains its own HTTPS resource provenance alongside the original provider result.
 
