@@ -6,6 +6,8 @@ It does not sign, purchase, authorize, retry payments, create invoices, or move 
 
 ## Operator workflow
 
+For a complete accountant exchange, use [Accountant handoffs](accountant/README.md): label a completed original reconciliation or saved period close, retain a CSV and offline packet, preview returned bookkeeping references, and save matching changes with full revision history.
+
 For a retained browser workflow with source imports, paginated ledger and exception review, before/after comparisons, named operator notes, and original report downloads, use the [merchant settlement workspace](workspace/README.md). It runs this same accounting engine and report writer directly; the command below remains available for one create-only report.
 
 The workspace also connects the [original recovered-settlement source](RECOVERY.md), reviews and imports retained completed SF31 purchases, and preserves their original response downloads. Pass `--recovered-dir /private/merchant/recovered-settlements` to this CLI to include that explicit source in a report. Native and recovered counts, source identities, and time bases remain separate in the original output.

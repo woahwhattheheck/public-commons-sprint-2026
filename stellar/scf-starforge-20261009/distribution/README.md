@@ -1831,6 +1831,55 @@ existing verification and transaction matching rules across both. Pricing
 imports and recovery records keep their own source identities in the same
 merchant review.
 
+### Exchange a completed reconciliation with an accountant
+
+Open the same retained accounting workspace:
+
+```sh
+npx --no-install starforge merchant-accounting-workspace \
+  --workspace /private/merchant/accounting-workspace --port 0
+```
+
+Choose **Accountant handoffs**. Select a completed reconciliation or an original
+retained recorded-activity close, name the handoff, and supply the asset, atomic
+unit and account labels for its actual payment options. Save, then download the
+accountant CSV, offline review or complete handoff archive. The archive retains
+the original report and manifests, handoff identity, and any selected original
+close and frozen review notes.
+
+The accountant edits only `externalStatus`, `externalBookRef`,
+`externalAccountCode` and `externalNote`. Statuses are `UNREVIEWED`, `REVIEWED`,
+`BOOKED` and `EXCLUDED`; `BOOKED` requires the accountant's external book
+reference. Several events may share a reference for a batch entry. Keep the
+original event, payment option, network, asset, native amount, evidence and
+supplied labels intact. Numeric text beyond 15 digits is escaped for spreadsheet
+precision, and the original source remains attached to every row.
+
+Select the latest retained handoff version, upload the returned CSV and preview
+its exact matches, changes, conflicts and omitted events. Save the preview to
+retain the original returned bytes and complete results. Valid matching rows
+update the accountant's returned information; conflicting and omitted events
+retain their preceding assignments. A later partial return continues from that
+saved version. Reopen any earlier version or download the latest complete CSV,
+offline review and archive from the same workspace. The upload limit is 64 MiB.
+
+Applications use the maintained public import:
+
+```js
+import { createHandoff, importReturn, inspectHandoff, renderCsv, renderHtml }
+  from '@tokenjunkielabs/starforge-merchant/merchant/accountant';
+```
+
+These pure functions consume the original report bytes, original run/manifest
+hashes, optional saved close bytes and retained labels. `importReturn` accepts
+the previous immutable return as `parentRevision`; its result includes complete
+assignments and row-level outcomes. The existing workspace supplies persistence,
+preview/save and downloads. The included
+[accountant contract](../merchant-settlement-accounting/accountant/SCHEMA.md)
+defines the exact source and return schemas. Original verification, network,
+atomic asset units and quoted USD remain visible beside the accountant's
+reported external entry.
+
 ### Application imports
 
 `@tokenjunkielabs/starforge-merchant/merchant/revenue-workspace` exports the
