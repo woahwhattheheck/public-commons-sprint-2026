@@ -1,0 +1,125 @@
+{
+  "name": "Starforge — finish prepared intake",
+  "active": false,
+  "nodes": [
+    {
+      "id": "a931e42b-b786-4e1c-a279-6427db174284",
+      "name": "Start selected operation",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "03165557-4440-40b9-b207-b66ae29b8b44",
+      "name": "Select original intent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8f4108de-7adc-4761-9c2c-181246820de7",
+              "name": "intentId",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "346f6838-ae72-4e76-adc0-e82248313a38",
+      "name": "Enqueue original prepared intent",
+      "type": "n8n-nodes-starforge-buyer.starforgeBuyer",
+      "typeVersion": 1,
+      "position": [
+        480,
+        240
+      ],
+      "parameters": {
+        "operation": "enqueuePrepared",
+        "intentId": "={{ $json.intentId }}",
+        "options": {}
+      },
+      "credentials": {
+        "starforgeBuyerWorkspace": {
+          "name": "Original Starforge buyer workspace"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "ce08c9c0-c021-451c-8d37-a83f91e7450c",
+      "name": "Review original intent",
+      "type": "n8n-nodes-starforge-buyer.starforgeBuyer",
+      "typeVersion": 1,
+      "position": [
+        720,
+        240
+      ],
+      "parameters": {
+        "operation": "review",
+        "intentId": "={{ $json.intentId }}",
+        "options": {}
+      },
+      "credentials": {
+        "starforgeBuyerWorkspace": {
+          "name": "Original Starforge buyer workspace"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    }
+  ],
+  "connections": {
+    "Start selected operation": {
+      "main": [
+        [
+          {
+            "node": "Select original intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select original intent": {
+      "main": [
+        [
+          {
+            "node": "Enqueue original prepared intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enqueue original prepared intent": {
+      "main": [
+        [
+          {
+            "node": "Review original intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}
