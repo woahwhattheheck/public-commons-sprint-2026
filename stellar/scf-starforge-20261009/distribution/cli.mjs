@@ -16,8 +16,12 @@ const help = `Starforge merchant toolkit
   starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]
   starforge doctor [--native] [--feature NAME]
   starforge source
+  starforge runtime-profile --help
+  starforge runtime-install --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  runtime-profile                            Select exact dependencies for an original release
+  runtime-install                            Install, resume, run, upgrade and recover a customer runtime
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
