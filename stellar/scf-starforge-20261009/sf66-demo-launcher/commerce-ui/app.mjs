@@ -73,7 +73,7 @@ function operationsAddress(container, value) {
 function render(next) {
   // Only a successful matching selection may unlock the selected operation.
   // An older preview/action callback or superseded refresh must not restore it.
-  if (selectionLoading && next.operation?.intentId !== selectedIntent) return;
+  if (selectionLoading && next.session?.state !== 'OFFLINE' && next.operation?.intentId !== selectedIntent) return;
   selectionLoading = false;
   view = next;
   const { session, seller, operation: op, review, attempt, delivery, controls } = next;

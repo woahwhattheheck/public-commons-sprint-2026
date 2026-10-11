@@ -56,15 +56,16 @@ export function createCommerceRecoveryController(profile,{environment=process.en
   }
   async function history() {
     await privateDirectory(profile.backupDirectory);
-    const entries=[];
-    for(const name of (await readdir(profile.backupDirectory)).filter(x=>ID.test(x)).sort().slice(-200)) {
+    const entries=[],names=(await readdir(profile.backupDirectory)).filter(x=>ID.test(x));
+    need(names.length<=2000,'COMMERCE_RECOVERY_SELECTION_LIMIT');
+    for(const name of names) {
       try {
         const {value}=await selection(name);
         entries.push({...value,interrupted:value.status==='CAPTURING'&&job?.backupId!==name,
           active:job?.backupId===name&&job.running});
       } catch(error){entries.push({id:name,status:'UNAVAILABLE',error:errorCode(error)});}
     }
-    return entries.sort((a,b)=>(b.createdAt??'').localeCompare(a.createdAt??''));
+    return entries.sort((a,b)=>(b.createdAt??'').localeCompare(a.createdAt??'')).slice(0,200);
   }
   async function status() {
     const session=await state(),info=await present(profile.stateRoot);
