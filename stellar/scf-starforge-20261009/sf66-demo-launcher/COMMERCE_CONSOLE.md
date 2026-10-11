@@ -10,6 +10,10 @@ commerce engine starts SF30, its native facilitator and operations, and invokes
 the original SF88 inbox, SF81 approval and configured signer. The browser uses
 those APIs and that inbox directly.
 
+Use **Copy merchant operations URL** and open that address directly in a new
+tab. The original operations service accepts direct operator navigation; the
+workspace keeps its cross-origin API and referrer rules intact.
+
 For an SF101 paid-file order, [import its original merchant handoff in the
 commerce plan](./COMMERCE_PAID_FILES.md). The same workspace then shows a
 **Purchased file** panel with the exact order, promised bytes, original

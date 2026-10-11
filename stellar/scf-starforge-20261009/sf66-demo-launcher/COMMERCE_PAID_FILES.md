@@ -145,6 +145,20 @@ the SF101 sidecar supplies the file identity. These are displayed together
 without changing any of the original records or treating a downloaded file as
 independent chain settlement evidence.
 
+For a buyer backed by an existing SF88 workspace, its original accounting
+completion remains available for this same retained intent:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs finalize \
+  --root /private/merchant-session/inbox --intent ORIGINAL_INTENT \
+  --workspace /private/customer \
+  --outbox /private/merchant/outbox --merchant-route ORIGINAL_ROUTE_ID
+```
+
+Use the checkout's actual outbox and route. This delegates to the existing
+finalization/reconciliation implementation and its original transaction record;
+it does not execute another purchase or derive settlement from the product file.
+
 Stopping waits for the owned buyer/review/signer/retrieval work, drains the
 original seller and owned native facilitator, then closes the original
 operations service and Python source. The original receiver and webhook

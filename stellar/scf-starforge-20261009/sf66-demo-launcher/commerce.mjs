@@ -16,6 +16,8 @@ import { absolute, readPrivateFile, parseJson, inspectOperatorConfig } from '../
 import { readCheckout, compileCheckout } from '../sf101-merchant-receiver/checkout-config.mjs';
 import { startCheckout } from '../sf101-merchant-receiver/checkout.mjs';
 import { readPurchaseInput, freezePurchase, inspectCommercePurchase, retrieveCommercePurchase } from './commerce-purchase.mjs';
+import { preparePythonCommerce, savePythonCommerce, readPythonCommerce,
+  describePythonCommerce, openPythonCommerce } from './commerce-python.mjs';
 
 const PLAN = 'stellar-forge.commerce-plan.v1';
 const SESSION = 'stellar-forge.commerce-session.v1';
@@ -76,10 +78,11 @@ function plan(value) {
   fields(value, ['schema', 'seller', 'buyers', 'operationsPort'], 'COMMERCE_PLAN_INVALID');
   need(value.schema === PLAN && Array.isArray(value.buyers) && value.buyers.length >= 1 &&
     value.buyers.length <= 64, 'COMMERCE_PLAN_BUYERS_REQUIRED');
-  const seller = fields(value.seller, ['config', 'checkoutConfig', 'handlers', 'port', 'facilitator', 'facilitatorConfig'], 'COMMERCE_SELLER_INVALID');
-  need(Boolean(seller.config) !== Boolean(seller.checkoutConfig), 'COMMERCE_ONE_SELLER_CONFIGURATION_REQUIRED');
-  absolute(seller.checkoutConfig ?? seller.config);
-  need(!seller.checkoutConfig || seller.handlers === undefined, 'COMMERCE_CHECKOUT_USES_ORIGINAL_HANDLERS');
+  const seller = fields(value.seller, ['config', 'checkoutConfig', 'python', 'handlers', 'port', 'facilitator', 'facilitatorConfig'], 'COMMERCE_SELLER_INVALID');
+  need([seller.config, seller.checkoutConfig, seller.python].filter(Boolean).length === 1,
+    'COMMERCE_ONE_SELLER_CONFIGURATION_REQUIRED');
+  absolute(seller.checkoutConfig ?? seller.python ?? seller.config);
+  need(!(seller.checkoutConfig || seller.python) || seller.handlers === undefined, 'COMMERCE_APPLICATION_USES_ORIGINAL_HANDLERS');
   if (seller.handlers !== undefined) absolute(seller.handlers);
   if (seller.facilitatorConfig !== undefined) absolute(seller.facilitatorConfig);
   need(!seller.facilitatorConfig || seller.facilitator === undefined, 'COMMERCE_ONE_FACILITATOR_REQUIRED');
@@ -91,6 +94,7 @@ function plan(value) {
     return { ...item };
   });
   return { seller: { config: seller.config ?? null, checkoutConfig: seller.checkoutConfig ?? null, handlers: seller.handlers ?? null,
+    python: seller.python ?? null,
     port: port(seller.port, 8423), facilitator: facilitator(seller.facilitator),
     facilitatorConfig: seller.facilitatorConfig ?? null },
   buyers, operationsPort: port(value.operationsPort, 0) };
@@ -103,7 +107,8 @@ export async function initializeCommerce({ planFile, directory }) {
   const input = plan(parseJson(await readPrivateFile(planFile)));
   const checkoutRaw = input.seller.checkoutConfig ? await readPrivateFile(input.seller.checkoutConfig) : null;
   const checkout = checkoutRaw ? compileCheckout(parseJson(checkoutRaw)) : null;
-  const seller = checkout?.service ?? await readSellerConfig(input.seller.config);
+  const python = input.seller.python ? await preparePythonCommerce(input.seller.python) : null;
+  const seller = checkout?.service ?? python?.compiled.service ?? await readSellerConfig(input.seller.config);
   need(typeof seller.publicOrigin === 'string', 'COMMERCE_MERCHANT_PUBLIC_ORIGIN_REQUIRED');
   const handlers = input.seller.handlers ? await sourceFile(input.seller.handlers) : null;
   let facilitatorConfig;
@@ -140,6 +145,7 @@ export async function initializeCommerce({ planFile, directory }) {
   await mkdir(directory, { mode: 0o700 });
   try {
     await writeNew(join(directory, 'seller.json'), seller);
+    const pythonSnapshot = python ? await savePythonCommerce(python, directory) : {};
     const sellerBytes = await readPrivateFile(join(directory, 'seller.json'), 1048576);
     const queueRoot = join(directory, 'inbox');
     const facilitatorPath = facilitatorConfig ? join(directory, 'facilitator.json') : null;
@@ -159,6 +165,7 @@ export async function initializeCommerce({ planFile, directory }) {
     const session = { schema: SESSION, createdAt: new Date().toISOString(),
       directory, queueRoot, seller: { ...input.seller, config: join(directory, 'seller.json'),
         configSha256: sha(sellerBytes),
+        ...pythonSnapshot,
         checkoutConfig: checkoutPath,
         ...(checkoutPath ? { checkoutConfigSha256: sha(await readPrivateFile(checkoutPath)) } : {}),
         facilitatorConfig: facilitatorPath,
@@ -181,8 +188,13 @@ async function readSession(directory) {
   const saved = parseJson(await readPrivateFile(join(directory, 'session.json')));
   need(saved.schema === SESSION && saved.directory === directory && saved.queueRoot === join(directory, 'inbox') &&
     saved.seller?.config === join(directory, 'seller.json') && Array.isArray(saved.buyers), 'COMMERCE_SESSION_INVALID');
-  need(sha(await readPrivateFile(saved.seller.config, 1048576)) === saved.seller.configSha256,
+  const sellerBytes = await readPrivateFile(saved.seller.config, 1048576);
+  need(sha(sellerBytes) === saved.seller.configSha256,
     'COMMERCE_MERCHANT_CONFIG_CHANGED');
+  need(!(saved.seller.python && saved.seller.checkoutConfig) &&
+    (!(saved.seller.python || saved.seller.checkoutConfig) || !saved.seller.handlers),
+    'COMMERCE_ONE_MERCHANT_APPLICATION_REQUIRED');
+  const python = saved.seller.python ? await readPythonCommerce(saved.seller, directory, parseJson(sellerBytes)) : null;
   if (saved.seller.handlers) need((await sourceFile(saved.seller.handlers)).sha256 === saved.seller.handlersSha256,
     'COMMERCE_HANDLER_CHANGED');
   if (saved.seller.checkoutConfig) need(saved.seller.checkoutConfig === join(directory, 'checkout.json') &&
@@ -200,12 +212,13 @@ async function readSession(directory) {
       'COMMERCE_HANDOFF_PATH_CHANGED');
     await inspectCommercePurchase(entry, jobs.find(job => job.operation.intentId === entry.intentId));
   }
-  return { saved, queue, jobs };
+  return { saved, queue, jobs, python };
 }
 export async function inspectCommerce(directory) {
-  const { saved, jobs } = await readSession(directory);
+  const { saved, jobs, python } = await readSession(directory);
   return { schema: SESSION, state: 'SAVED_SESSION', directory,
     sellerConfig: saved.seller.config, sellerPort: saved.seller.port,
+    python: python ? describePythonCommerce(python) : null,
     facilitator: saved.seller.facilitator ?? { config: saved.seller.facilitatorConfig },
     buyers: await Promise.all(jobs.map(async job => ({ ...job,
       paidFile: await inspectCommercePurchase(saved.buyers.find(entry => entry.intentId === job.operation.intentId), job) }))) };
@@ -277,19 +290,19 @@ async function signerEnvironment(saved, job, environment) {
 
 /** Trusted embedding may supply an already configured original nativeFactory. */
 export async function openCommerce(directory, { nativeFactory, environment = process.env, purchaseFetch } = {}) {
-  const { saved, queue, jobs } = await readSession(directory);
+  const { saved, queue, jobs, python: pythonApplication } = await readSession(directory);
   need(nativeFactory === undefined || typeof nativeFactory === 'function', 'COMMERCE_NATIVE_FACTORY_INVALID');
   need(purchaseFetch === undefined || typeof purchaseFetch === 'function', 'COMMERCE_PURCHASE_TRANSPORT_INVALID');
   need(!nativeFactory || !saved.seller.facilitator && !saved.seller.facilitatorConfig, 'COMMERCE_ONE_FACILITATOR_REQUIRED');
   const config = await readSellerConfig(saved.seller.config);
-  const handlers = saved.seller.handlers ? await import(pathToFileURL(saved.seller.handlers).href) : {};
+  let handlers = saved.seller.handlers ? await import(pathToFileURL(saved.seller.handlers).href) : {};
   if (saved.seller.facilitator) {
     const endpoint = facilitator(saved.seller.facilitator);
     const { HTTPFacilitatorClient } = await import('@x402/core/server');
     const client = new HTTPFacilitatorClient({ url: endpoint.url });
     nativeFactory = compiled => createNativeSellerServer(compiled, { facilitatorClient: client });
   }
-  let seller, operations, checkoutSession, ownedFacilitator, closing, active;
+  let seller, operations, checkoutSession, ownedFacilitator, python, closing, active;
   let state = 'STARTING';
   const controller = new AbortController();
   const pending = new Set(), activeRetrievals = new Map();
@@ -311,14 +324,24 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       const native = await ownedFacilitator.drain();
       shutdown = { ...shutdown, facilitator: native, drained: shutdown?.drained !== false && native.drained };
     } catch (error) { failures.push(error); }
+    let pythonShutdown = null;
+    try { pythonShutdown = await (python ?? checkoutSession?.source)?.close() ?? null; }
+    catch (error) { failures.push(error); }
     const traffic = operations?.observer.snapshot() ?? null;
     try { await (checkoutSession ? checkoutSession.close() : operations?.close()); } catch (error) { failures.push(error); }
     state = 'STOPPED';
     need(failures.length === 0, 'COMMERCE_SHUTDOWN_INCOMPLETE');
-    return { state, shutdown, drained: shutdown?.drained !== false && shutdown?.forcedClose !== true,
+    return { state, shutdown, python: pythonShutdown,
+      drained: shutdown?.drained !== false && shutdown?.forcedClose !== true && pythonShutdown?.clean !== false,
       traffic, buyers: await queue.list() };
   })();
   try {
+    if (pythonApplication) {
+      python = await openPythonCommerce(pythonApplication, {
+        native: Boolean(nativeFactory || saved.seller.facilitatorConfig), environment,
+      });
+      handlers = python.handlers;
+    }
     if (saved.seller.checkoutConfig) {
       const checkout = await readCheckout(saved.seller.checkoutConfig);
       need(same(JSON.parse(JSON.stringify(checkout.service)), config), 'COMMERCE_CHECKOUT_OFFER_CHANGED');
@@ -358,7 +381,8 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     state = 'RUNNING';
     const status = async () => ({ schema: SESSION, state, directory,
       seller: { url: seller.url, publicOrigin: config.publicOrigin, mode: seller.mode,
-        health: seller.url + '/_seller/health', docs: seller.url + '/_seller/docs', lifecycle: seller.lifecycle.snapshot() },
+        health: seller.url + '/_seller/health', docs: seller.url + '/_seller/docs', lifecycle: seller.lifecycle.snapshot(),
+        ...(python ? { python: python.status() } : {}) },
       facilitator: (ownedFacilitator ?? seller.facilitator)?.status() ?? { mode: saved.seller.facilitator ? 'EXISTING_HTTP_FACILITATOR' :
         nativeFactory ? 'TRUSTED_NATIVE_EMBEDDING' : 'NOT_CONFIGURED' },
       operations: { url: operations.url, traffic: operations.observer.snapshot(),

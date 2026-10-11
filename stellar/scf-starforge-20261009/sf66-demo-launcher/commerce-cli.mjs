@@ -39,7 +39,8 @@ function options(args, allowed) {
 }
 function stateView(value) {
   return { schema: value.schema, state: value.state, directory: value.directory,
-    seller: value.seller ?? { configuration: value.sellerConfig, port: value.sellerPort },
+    seller: value.seller ?? { configuration: value.sellerConfig, port: value.sellerPort,
+      ...(value.python ? { python: value.python } : {}) },
     facilitator: value.facilitator,
     operations: value.operations ? { url: value.operations.url,
       sessionId: value.operations.traffic.sessionId,
@@ -111,7 +112,8 @@ export async function main(args = process.argv.slice(2)) {
     finally { process.off('SIGINT', interrupt); process.off('SIGTERM', interrupt); }
     print({ state: closeResult?.state ?? 'STOPPED', inboxRetained: true,
       directory: resolve(opts['--directory']), interrupted,
-      drained: closeResult?.drained, shutdown: closeResult?.shutdown });
+      drained: closeResult?.drained, shutdown: closeResult?.shutdown,
+      ...(closeResult?.python ? { python: closeResult.python } : {}) });
     if (closeResult?.drained === false) {
       // Preserve the original native facilitator CLI's forced-drain behavior.
       process.exitCode = 2;

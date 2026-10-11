@@ -17,6 +17,10 @@ For the original SF101 paid-file merchant and customer handoffs, use
 plan adds `seller.checkoutConfig` and per-buyer `paidFile` inputs to this same
 session and inbox.
 
+For an existing initialized Python application, use
+[Python applications in commerce](./PYTHON_COMMERCE.md). Choose its
+`seller.python` declaration as the session's single merchant source.
+
 ## 1. Use the existing merchant and operator configurations
 
 Use Node 22.16+ and Python 3.11+ on the operator's POSIX host. Install the same
