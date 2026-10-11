@@ -1,0 +1,2 @@
+# The official evaluator already supplies numpy and optax.
+# No additional runtime packages are required by this candidate.
