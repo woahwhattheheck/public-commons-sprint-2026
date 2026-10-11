@@ -71,6 +71,52 @@ test('local fragment refs work while cyclic or unsupported schemas fail closed',
   assert.equal(validateBazaarExtension(unsupported).reason, 'SCHEMA_KEYWORD_UNSUPPORTED:patternProperties');
 });
 
+test('Draft 2020-12 local refs also enforce adjacent assertions', () => {
+  const check = (value, adjacent, target = true) => validateBazaarExtension({
+    info: { input: value },
+    schema: { $schema: 'https://json-schema.org/draft/2020-12/schema',
+      type: 'object', $defs: { target },
+      properties: { input: { $ref: '#/$defs/target', ...adjacent } },
+      required: ['input'], additionalProperties: false },
+  });
+  for (const [value, adjacent, target] of [
+    ['x', { minLength: 2 }, { type: 'string' }],
+    [1, { exclusiveMinimum: 1 }, { type: 'integer' }],
+    ['1', { minimum: 0 }, { type: 'integer' }],
+    ['POST', { enum: ['GET'] }, { type: 'string' }],
+    [{}, { required: ['method'] }, { type: 'object' }],
+    [{ unexpected: true }, { additionalProperties: false }, { type: 'object' }],
+    [1, { allOf: [{ minimum: 2 }] }, true],
+    [1, {}, false],
+  ]) {
+    const result = check(value, adjacent, target);
+    assert.equal(result.ok, false, JSON.stringify({ value, adjacent, target }));
+    assert.equal(result.reason, 'INFO_SCHEMA_MISMATCH');
+  }
+  assert.deepEqual(check(2, { exclusiveMinimum: 1 }, { type: 'integer' }), { ok: true });
+  // A reference followed by the same reference in an independent sibling
+  // branch is not a cycle; both still constrain the same instance.
+  assert.deepEqual(check('GET', { allOf: [{ $ref: '#/$defs/target' }], enum: ['GET'] },
+    { type: 'string' }), { ok: true });
+});
+
+test('a permissive local ref cannot bypass the catalog input schema', () => {
+  const catalog = new PaymentAutoCatalog();
+  const candidate = payload();
+  const extension = candidate.extensions.bazaar;
+  extension.schema.$defs = { anyInput: true };
+  extension.schema.properties.input.$ref = '#/$defs/anyInput';
+  extension.info.input.method = 'POST'; // Sibling schema still declares GET.
+  const outcome = catalog.ingest({ paymentPayload: candidate, settlement: settlement(), sequence: 1 });
+  assert.equal(outcome.decision, 'soft_drop');
+  assert.equal(outcome.reason, 'INFO_SCHEMA_MISMATCH');
+  assert.equal(catalog.size, 0);
+  assert.equal(catalog.version, 0);
+  extension.info.input.method = 'GET';
+  assert.equal(catalog.ingest({ paymentPayload: candidate, settlement: settlement(), sequence: 1 }).decision, 'accepted');
+  assert.equal(catalog.size, 1);
+});
+
 
 test('untrusted assertion keyword shapes fail closed before catalog commit', () => {
   const malformed = [
