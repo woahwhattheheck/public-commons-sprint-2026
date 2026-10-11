@@ -39,6 +39,12 @@ For a walkthrough: **Load example**, **Validate configuration**, **Save new
 package**, **Start challenge preview**, **Check unpaid routes**, then open operations. The example
 reuses the SF82 description with explicitly nonpayable demonstration terms.
 
+## Continue an existing provider migration
+
+Choose **Migrations** from the workspace to open the complete [Blockworks migration application](../blockworks/README.md). It shares this private parent and the maintained source importer, merchant packages, release lifecycle and receiving workspace. Each migration retains its provider descriptions, customer request inventory, native acquisitions, explicit mapping decisions, full comparison results and source history.
+
+The migration guide includes source refresh into a new merchant package, release review and rollback, original receiving operations, and handover export/import. A received handover opens as a separate private workspace in this same complete application; it retains the original source and release identities.
+
 ## Configure a merchant
 
 1. Load the merchant's original OpenAPI 3.0 or 3.1 JSON or YAML description.
