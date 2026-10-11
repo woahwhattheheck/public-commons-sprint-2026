@@ -58,6 +58,16 @@ Uploaded sources support 4 MB per file and 2,000 retained sources. Collection in
 
 For a host with an explicitly configured HTTPS CONNECT proxy, start or reopen with `--rpc-proxy-env HTTPS_PROXY`. The existing public HTTPS transport reads that environment variable on the host. Enter the variable name at startup; the browser handles the retained records and public account identities.
 
+## Use a saved pricing decision
+
+Open **Pricing decisions** to upload an original saved SF97 pricing report.
+The existing converter retains every payment alternative, exact amount, unknown
+cost, original quote description, and observation source. Review and compare
+its accounting terms, select the approved choice, and capture a reconciliation
+that retains both original files. Earlier runs keep their own pricing sources.
+The [complete pricing workflow](PRICING.md) covers original downloads, selected
+terms, source-inclusive export, revision conflicts, and reopening.
+
 ## Recover an already completed purchase
 
 The original recovery module handles a completed SF31 purchase whose native request, outcome, and optional delivered response were retained outside SF98. Its input and source-binding format is documented in [the original recovery guide](../RECOVERY.md). It keeps that origin explicit and uses the original network-specific SF86 verifier.
@@ -107,6 +117,7 @@ Each completed run contains:
 | `sources/outbox/` | Captured native event and delivery journal bytes |
 | `sources/proofs/` | Included original verification result bytes |
 | `sources/terms.json` | The selected original merchant accounting terms |
+| `sources/pricing-report.json` | Original uploaded pricing report for the selected reviewed terms, when present |
 | `sources/recovered/` | Connected original recovery entries, proofs, source files, and any saved response bytes |
 | `input-manifest.json` | Captured file paths, SHA256 values, original filenames, and verification descriptions |
 | `report/` | The original six create-only accounting outputs |

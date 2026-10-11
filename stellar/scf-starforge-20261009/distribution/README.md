@@ -27,6 +27,22 @@ normally. This source-only installation omits optional packages. PostgreSQL
 drivers and native payment packages have their own setup below.
 Git and a Commons checkout are unnecessary on the merchant's machine.
 
+### Schema pattern support
+
+Merchant request schemas that use regular-expression constraints load the
+original `re2js` runtime. Its source manifest supplies the exact `2.8.6` version;
+the original lockfile is included beside that manifest. If the archive was
+installed with optional packages omitted, install this dependency in the same
+application directory and check the original schema feature before serving:
+
+```sh
+npm install --ignore-scripts --save-exact re2js@2.8.6
+npx --no-install starforge doctor --feature schema
+```
+
+The `schema` diagnostic checks local dependency resolution. Request matching
+continues through the maintained schema validator and pattern compiler.
+
 ## Start a merchant workspace
 
 ```sh
@@ -1535,6 +1551,41 @@ review, import, retained-entry and response APIs used by the CLI. The pricing
 and accounting join adds no package dependency; recovery uses the existing
 native SDK setup.
 
+### Recover a completed buyer purchase
+
+The original recovery command joins a completed SF31 purchase to this same
+merchant accounting workspace. Use the actual retained buyer outcome, original
+approved request, exact merchant terms, known payer and original saved response.
+The included [recovery guide](../merchant-settlement-accounting/RECOVERY.md)
+defines the private request file and canonical network/RPC selection.
+
+```sh
+npx --no-install starforge merchant-accounting-recovery review \
+  --config /private/purchase/recovery-request.json
+npx --no-install starforge merchant-accounting-recovery import \
+  --config /private/purchase/recovery-request.json \
+  --recovered-dir /private/merchant/recovered
+npx --no-install starforge merchant-accounting-recovery response \
+  --recovered-dir /private/merchant/recovered --id ACTUAL_RECOVERY_ID \
+  --out /private/purchase/reopened-response.json
+```
+
+Use the recovery ID returned by the original import and a new response output.
+An identical import reopens the retained entry without repeating its RPC reads.
+`list --recovered-dir /private/merchant/recovered` reopens the collection locally.
+The initial import uses the original Stellar observer and records its actual
+network-specific transfer result; it does not purchase the resource again.
+
+Connect that private collection in the existing accounting browser, or append
+`--recovered-dir /private/merchant/recovered` to its initial workspace command.
+Review the original request, retain import progress and capture a reconciliation.
+The workspace keeps native and recovered source counts and time bases separate,
+provides the exact saved response, compares retained payment-option totals and
+exports the same original reports with optional captured sources. Its ordinary
+`merchant-accounting` command accepts the same optional `--recovered-dir`.
+The public `./merchant/recovery` entry exposes the original importer, collection
+reader and saved-response export for applications embedding this workflow.
+
 ## Run an existing Python merchant
 
 The maintained Python merchant entrypoint is included alongside the buyer
@@ -1846,10 +1897,19 @@ explicit exclusions and regular-file checks still apply. This keeps the native
 MCP buyer's imported `mcp-buyer-acceptance.mjs` implementation in the archive
 without selecting acceptance runners from whole components.
 
-Static imports and re-exports are parsed with Node's native
+Static imports and re-exports in `.mjs` and `.js` sources are parsed with Node's native
 [`vm.SourceTextModule`](https://nodejs.org/api/vm.html#class-vmsourcetextmodule)
 in a separate parse-only process. It does not link or evaluate application code.
 Generated code examples in template strings therefore remain ordinary text.
+The builder follows those relative imports transitively and includes their
+permitted, tracked runtime files from the same immutable Git commit. Shared
+source helpers therefore travel with their original importing product. Every
+added file retains its exact Git bytes and mode in the source manifest and
+passes the same directory, filename, explicit-exclusion and size limits.
+Missing, excluded or non-regular dependencies still fail the build. Files are
+read only through the selected Git tree; imports never resolve from an operator
+workspace, untracked checkout state or a remote application URL. A partial Git
+clone may fetch a missing pinned source blob through its configured Git remote.
 Dynamic runtime families and browser assets are retained through the explicit
 component inventory; operator-selected application and signer modules remain
 external inputs. This parser adds no package dependency.

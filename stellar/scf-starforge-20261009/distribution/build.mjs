@@ -75,7 +75,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
   const sources = new Map();
   let totalBytes = 0;
-  for (const item of selected) {
+  const loadSource = item => {
     if (!['100644', '100755'].includes(item.mode) || item.type !== 'blob')
       throw new TypeError('Only regular source files may be packaged: ' + item.path);
     const bytes = git(['cat-file', 'blob', item.blob]);
@@ -83,16 +83,34 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     if (bytes.length > 2 * 1024 * 1024 || totalBytes > 32 * 1024 * 1024)
       throw new RangeError('Distribution source size exceeded');
     sources.set(item.path, bytes);
-  }
-  // Native parsing checks real static ESM imports and re-exports. The explicit
-  // component inventory retains dynamic runtime modules and browser assets.
-  // Operator-selected handler/signing modules remain external application inputs.
+    return bytes;
+  };
+  for (const item of selected) loadSource(item);
+  // Follow actual static ESM imports into the same immutable Git tree. A new
+  // shared runtime helper should travel with its importing product without a
+  // second hand-maintained list. The original file, mode and size guards apply
+  // to every dependency; explicit exclusions still reject required imports.
+  // Dynamic modules/assets remain in the component/support inventory, and
+  // operator-selected handlers/signers stay external application inputs.
   const missingModules = [];
-  for (const [path, requests] of staticModuleRequests(sources)) {
-    for (const request of requests.filter(value => value.startsWith('.'))) {
-      const target = posix.normalize(posix.join(posix.dirname(path), request));
-      if (!names.has(target)) missingModules.push(path + ' -> ' + target);
+  let frontier = sources;
+  while (frontier.size) {
+    const discovered = new Map();
+    for (const [path, requests] of staticModuleRequests(frontier)) {
+      for (const request of requests.filter(value => value.startsWith('.'))) {
+        const target = posix.normalize(posix.join(posix.dirname(path), request));
+        if (names.has(target)) continue;
+        const item = byPath.get(target);
+        if (!item || excluded.has(target) || !isRuntimeFile(target, explicitRuntime.has(target))) {
+          missingModules.push(path + ' -> ' + target);
+          continue;
+        }
+        discovered.set(target, loadSource(item));
+        names.add(target);
+        selected.push(item);
+      }
     }
+    frontier = discovered;
   }
   if (missingModules.length) throw new TypeError('Unpackaged relative modules:\n' + missingModules.join('\n'));
   // Runtime drivers follow the exact source commit, including new production

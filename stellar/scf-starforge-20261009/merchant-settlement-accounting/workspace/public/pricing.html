@@ -1,0 +1,40 @@
+<section class="panel">
+  <div class="panel-heading"><div><h2>Review a saved pricing decision</h2><p>Upload the original pricing report to retain its payment options, commercial assumptions, and source range with this accounting workspace.</p></div></div>
+  <form id="pricing-upload-form" class="padded pricing-upload">
+    <div class="pricing-upload-file"><label for="pricing-report-file">Original pricing report JSON · up to 64 MiB</label><input id="pricing-report-file" type="file" accept=".json,application/json" required><p id="pricing-file-status" class="hint">Use Report JSON from a saved merchant pricing version.</p></div>
+    <div><label for="pricing-name">Review name</label><input id="pricing-name" required maxlength="130" placeholder="October merchant pricing"></div>
+    <div><label for="pricing-reference">Accounting reference · optional</label><input id="pricing-reference" maxlength="100" placeholder="Approved merchant quote October 2026"><p class="hint">A short reference can accompany a longer original quote description.</p></div>
+    <div class="actions pricing-upload-action"><button type="submit" class="primary">Review and retain pricing</button><span class="hint">Review saves both files. Choose the reviewed terms below to use them.</span></div>
+  </form>
+</section>
+<section class="panel">
+  <div class="panel-heading"><div><h2>Retained pricing reviews</h2><p id="pricing-saved-selection">Accounting selection will appear after the workspace opens.</p></div></div>
+  <div class="pricing-review-layout">
+    <aside class="pricing-history" aria-label="Saved pricing reviews"><label for="pricing-history-search">Find a review</label><input id="pricing-history-search" type="search" placeholder="Name, merchant, or source"><div id="pricing-review-list"></div><button id="pricing-reviews-more" type="button" hidden>Show more reviews</button></aside>
+    <div class="pricing-review-main">
+      <div id="pricing-empty" class="empty">Saved pricing decisions and their original files will appear here.</div>
+      <div id="pricing-review-detail" hidden>
+        <div class="padded pricing-selected"><div><h3 id="pricing-review-title"></h3><p id="pricing-review-by" class="hint"></p></div><span id="pricing-selection-state" class="badge"></span></div>
+        <div id="pricing-metrics" class="metrics inset"></div>
+        <div class="padded pricing-source-summary"><dl id="pricing-source-values" class="record-values"></dl><div class="actions"><a id="pricing-report-download" class="button" download>Download original report</a><a id="pricing-terms-download" class="button" download>Download accounting terms</a><button id="pricing-select" data-write type="button" class="primary">Use these accounting terms</button></div></div>
+        <div class="filters"><label for="pricing-option-search">Find an option</label><input id="pricing-option-search" type="search" placeholder="Route, network, asset, or recipient"></div>
+        <div class="table-wrap"><table><caption class="sr-only">Every payment alternative retained by the original converter</caption><thead><tr><th>Original payment option</th><th>Atomic amount</th><th>Unit quote · USD</th><th>Unit variable cost · USD</th></tr></thead><tbody id="pricing-options"></tbody></table></div>
+        <div class="pagination"><span id="pricing-option-count"></span><div class="actions"><button id="pricing-option-previous" type="button">Previous</button><button id="pricing-option-next" type="button">Next</button></div></div>
+        <section id="pricing-option-detail" class="padded pricing-option-detail" aria-label="Selected pricing option"><p class="hint">Select an option to inspect its original terms and full quote description.</p></section>
+        <details class="padded history-detail pricing-provenance"><summary>Complete retained pricing context</summary><pre id="pricing-provenance"></pre></details>
+        <form id="pricing-run-form" class="padded pricing-run-form"><div><label for="pricing-run-name">Reconciliation name</label><input id="pricing-run-name" required maxlength="160" placeholder="Merchant review with approved pricing"><p id="pricing-run-hint" class="hint"></p></div><button id="pricing-run" type="submit">Reconcile with these terms</button></form>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="pricing-compare-panel" class="panel" hidden>
+  <div class="panel-heading"><div><h2>Compare the reviewed terms</h2><p>Inspect changes to the selected review against original source terms or a previously retained accounting choice.</p></div></div>
+  <form id="pricing-compare-form" class="padded pricing-compare-form"><div><label for="pricing-compare-baseline">Baseline terms</label><select id="pricing-compare-baseline"></select></div><button type="submit">Compare payment options</button></form>
+  <div id="pricing-comparison" hidden>
+    <div id="pricing-comparison-metrics" class="metrics inset"></div><p id="pricing-comparison-title" class="padded hint"></p>
+    <div class="filters"><label for="pricing-change-kind">Show</label><select id="pricing-change-kind"><option value="all">All options</option><option value="changed">Changed</option><option value="added">Added</option><option value="removed">Removed</option><option value="unchanged">Unchanged</option></select></div>
+    <div class="table-wrap"><table><caption class="sr-only">Exact original accounting option changes</caption><thead><tr><th>Payment option</th><th>Change</th><th>Baseline terms</th><th>Reviewed terms</th></tr></thead><tbody id="pricing-comparison-rows"></tbody></table></div>
+    <div class="pagination"><span id="pricing-change-count"></span><div class="actions"><button id="pricing-change-previous" type="button">Previous</button><button id="pricing-change-next" type="button">Next</button></div></div>
+    <details class="padded history-detail pricing-provenance"><summary>Compare original pricing sources and assumptions</summary><pre id="pricing-comparison-context"></pre></details>
+  </div>
+</section>

@@ -83,6 +83,26 @@ For a current selected route, native assignment uses the original SF97 complete 
 
 The existing SF93 incident operator can continue importing its unchanged four-file packets through `inspectRuntimeFiles` and `exportRuntimeHandoff`. Its incident ID, registered merchant ID, acknowledgment, status and timestamps belong in the original handoff metadata notes and next action. This case can then retain the incident packet beside a separately selected period or follow-up capture. Incident collection, acknowledgment, notifications and recovery remain with the original SF93 service; the case does not operate a second watcher.
 
+## Prepare a workorder from this case
+
+The **Prepare a merchant workorder** stage can use **Attached runtime case** directly. A runtime incident or retained period does not need a separate SF70 diagnosis. The same original SF77 builder owns the commercial terms and generates the workorder JSON, readable HTML and acceptance checklist.
+
+1. Attach and review the original runtime sources. The latest attached capture's saved merchant mapping must match the current case; an earlier baseline may retain its distinct mapping and comparison result. The original method, observed route and any recorded resource, catalog, buyer origin, network and recipient remain explicit. Optional unmapped fields stay unfilled; this path does not require an unrelated catalog or CORS diagnosis.
+2. Choose **Attached runtime case** as the workorder source. Both attached captures and their actual original comparison are included. A process packet or retained period is supported; overlaps, restarts, path changes and missing coverage keep their original interpretation.
+3. Enter the relationship owner's reference, merchant name, scope and exclusions, concrete deliverables, acceptance criteria and proposed delivery window. The existing commercial fields record the owner's proposal and its source record. Empty delivery fields remain empty; the builder does not invent a service, fee, acceptance or customer agreement.
+4. Choose **Create workorder**. Source-recorded HTTP/native conditions and coverage/scope context remain distinct. The original review, source file digests, exact observed route, current option/recipient identities and native event decisions stay with the packet. The original case mapping is an operator mapping, not an authenticated merchant identity.
+5. Download the readable workorder, JSON and checklist. Save the case to retain its source choice, original attachments and raw delivery/commercial draft fields. Reopening restores those inputs; creating the workorder again produces a newly dated packet from the same retained sources. Earlier case versions retain their own scope and terms. Changing sources, mapping or terms retires the previous on-screen result.
+6. Prepare the complete support handoff below when another operator needs the source case. It includes the saved workorder choice and draft terms as well as the original runtime files. The same original SF77 CLI can create the commercial packet from that complete handoff and an explicit owner terms JSON:
+
+```sh
+node stellar/scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs \
+  --handoff /private/merchant-case.merchant-support.json \
+  --terms /private/merchant-owner-terms.json \
+  --out /private/workorders/NEW-runtime-workorder
+```
+
+The original diagnostic source choice remains available and keeps its SF70/SF76 repair review. The workorder does not poll a merchant, operate an incident service, send an offer or alter payment state.
+
 ## Complete private handoff
 
 Choose **Prepare support handoff** from the current draft. It produces two explicit downloads:
@@ -104,6 +124,7 @@ All runtime endpoints require the same literal-loopback Host and exact local Ori
 | Review captures | `/api/runtime/review` | `supportText`, current case `inputs` |
 | Prepare transfer | `/api/runtime/export` | `workspaceText`, `supportText`, `metadata` |
 | Open transfer | `/api/runtime/import` | `handoffText` |
+| Build runtime workorder | `/api/workorder` | Original `supportText`, current case `inputs`, and `terms` as canonical base64 owner terms JSON; diagnostic source fields are omitted |
 
 `runtime-support.mjs` exports the file intake, codec, comparison and handoff functions for existing callers. `runtime-desk.mjs` mounts this stage inside the existing page. The original private case store accepts optional `supportText`; omission preserves the prior attachment for older clients, and explicit `null` removes it from the new version. Workspace and runtime objects publish completely before the existing atomic case-head update.
 

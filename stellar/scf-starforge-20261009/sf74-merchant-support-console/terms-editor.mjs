@@ -7,6 +7,13 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
       <label>Relationship owner <small>Person responsible for this merchant and the offer</small><input name="relationshipOwner" data-label="Relationship owner" required maxlength="200" autocomplete="off" placeholder="Owner name"></label>
       <label>Proposed delivery window <small>Optional; leave blank if no window has been agreed</small><input name="proposedWindow" data-label="Proposed delivery window" autocomplete="off" placeholder="Unscheduled"></label>
     </div>
+    <h3>Work to deliver</h3>
+    <p>Record the scope and criteria supplied by the owner. These entries describe the proposed work; they do not mark it complete.</p>
+    <div class="form-grid">
+      <label class="full">Scope and exclusions<small>The exact operation, source period and service boundary</small><textarea name="deliveryScope" data-label="Delivery scope" maxlength="8192" rows="3" placeholder="Work included and any agreed exclusions"></textarea></label>
+      <label class="full">Deliverables<small>What the merchant should receive</small><textarea name="deliverables" data-label="Deliverables" maxlength="8192" rows="3" placeholder="Concrete outputs and handoff items"></textarea></label>
+      <label class="full">Acceptance criteria<small>How the merchant and operator will review the result</small><textarea name="acceptanceCriteria" data-label="Acceptance criteria" maxlength="8192" rows="3" placeholder="Observable completion criteria and agreed review"></textarea></label>
+    </div>
     <h3>Existing seller permission</h3>
     <p>Select what is already recorded for this merchant. Preparing a work order does not obtain permission or send an offer.</p>
     <div class="form-grid">
@@ -24,6 +31,7 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
     <p data-terms-summary class="hint" aria-live="polite"></p>
     `;
   const fields=Object.fromEntries([...container.querySelectorAll('[name]')].map(el=>[el.name,el]));
+  const deliveryFields={deliveryScope:'scope',deliverables:'deliverables',acceptanceCriteria:'acceptanceCriteria'};
   function showFields(selector,visible) {
     for(const label of container.querySelectorAll(selector)) {
       label.hidden=!visible;
@@ -36,7 +44,7 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
     showFields('[data-consent-receipt]',consent);showFields('[data-approved-price]',approved);
     container.querySelector('[data-terms-summary]').textContent=approved
       ? 'The packet will include the owner-approved proposal. Seller acceptance stays open.'
-      : 'The packet will withhold price. You can still prepare an internal work order with the diagnosis.';
+      : 'The packet will withhold price. You can still prepare the workorder from its original sources.';
   }
   function read() {
     sync();
@@ -46,8 +54,10 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
     }
     const approved=fields.priceApproval.value==='OWNER_APPROVED_PROPOSAL';
     const confirmed=fields.consentStatus.value==='CONFIRMED';
+    const delivery=Object.fromEntries(Object.entries(deliveryFields).map(([name,key])=>[key,fields[name].value.trim()]));
     return {workOrderRef:fields.workOrderRef.value.trim(),sellerDisplayName:fields.sellerDisplayName.value.trim(),
       relationshipOwner:fields.relationshipOwner.value.trim(),proposedWindow:fields.proposedWindow.value.trim()||'UNSCHEDULED',
+      ...(Object.values(delivery).some(Boolean)?{delivery}:{}),
       merchantConsent:{status:fields.consentStatus.value,receiptUrl:confirmed?fields.consentReceipt.value.trim():null},
       commercial:{priceApproval:fields.priceApproval.value,feeUsd:approved?Number(fields.feeUsd.value):null,
         costUsd:approved?Number(fields.costUsd.value):null,approvalReceiptUrl:approved?fields.approvalReceipt.value.trim():null}};
@@ -56,6 +66,8 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
     const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
     if(!object(doc)||!object(doc.merchantConsent)||!object(doc.commercial))
       throw new Error('Choose a terms file with merchantConsent and commercial fields.');
+    if(doc.delivery!==undefined&&(!object(doc.delivery)||Object.keys(doc.delivery).some(key=>!Object.values(deliveryFields).includes(key))))
+      throw new Error('Invalid owner delivery terms.');
     if(!['NOT_RECORDED','CONFIRMED'].includes(doc.merchantConsent.status)||
         !['NOT_APPROVED','OWNER_APPROVED_PROPOSAL'].includes(doc.commercial.priceApproval))
       throw new Error('The terms file has an unknown permission or price approval status.');
@@ -73,7 +85,8 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
       relationshipOwner:string(doc.relationshipOwner,'relationship owner',200),proposedWindow:string(doc.proposedWindow,'delivery window'),
       consentStatus:doc.merchantConsent.status,consentReceipt:string(doc.merchantConsent.receiptUrl,'permission record URL'),
       priceApproval:doc.commercial.priceApproval,feeUsd:number(doc.commercial.feeUsd,'fee'),costUsd:number(doc.commercial.costUsd,'cost'),
-      approvalReceipt:string(doc.commercial.approvalReceiptUrl,'owner approval record URL')};
+      approvalReceipt:string(doc.commercial.approvalReceiptUrl,'owner approval record URL'),
+      ...Object.fromEntries(Object.entries(deliveryFields).map(([name,key])=>[name,string(doc.delivery?.[key],key,8192)]))};
   }
   function load(terms) {
     // Validate the complete shape before replacing fields; a failed import leaves current terms intact.
@@ -88,11 +101,13 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
   }
   function validateDraft(values) {
     if(!values||typeof values!=='object'||Array.isArray(values)||
-        Object.keys(values).length!==Object.keys(fields).length||
         Object.keys(values).some(name=>!Object.hasOwn(fields,name)))
       throw new Error('Unknown owner terms draft shape.');
+    // Earlier original cases have no delivery fields; their existing raw entries stay intact.
+    const normalized={...values};
+    for(const name of Object.keys(deliveryFields))if(!Object.hasOwn(normalized,name))normalized[name]='';
     for(const [name,field] of Object.entries(fields)) {
-      const value=values[name];
+      const value=normalized[name];
       if(typeof value!=='string'||value.length>8192||
           (field.maxLength>0&&value.length>field.maxLength))
         throw new Error('Invalid '+field.dataset.label+' draft.');
@@ -100,11 +115,11 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
       const probe=field.cloneNode(true);probe.value=value;
       if(probe.value!==value)throw new Error('Unrepresentable '+field.dataset.label+' draft.');
     }
-    return values;
+    return normalized;
   }
   function loadDraft(values) {
-    validateDraft(values);
-    for(const [name,value] of Object.entries(values))fields[name].value=value;
+    const normalized=validateDraft(values);
+    for(const [name,value] of Object.entries(normalized))fields[name].value=value;
     sync();onChange();
   }
   container.addEventListener('input',()=>{sync();onChange();});
