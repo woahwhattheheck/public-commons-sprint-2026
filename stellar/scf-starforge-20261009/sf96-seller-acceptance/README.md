@@ -24,9 +24,9 @@ node stellar/scf-starforge-20261009/sf96-seller-acceptance/audit.mjs \
 
 Open `/tmp/scf96-merchant-run-001/review.html` locally, review the actual challenge outcomes and fix flagged route/config differences. `PASS` means the *actual locally running original* seller's unpaid 402 advertisement matched its own original declared terms for that request. `NEEDS_INPUT` means no POST/dynamic request was issued and cannot be counted as success. `BLOCKED` means HTTP status/protocol/terms deviated or a probe failed. Full pass gives only `CHALLENGE_ONLY_ACCEPTANCE_COMPLETE`, not payable production acceptance. The CLI returns exit 1 for an incomplete technical run and exit 2 for acquisition/argument/export failure; the new private artifact is still written for an incomplete run.
 
-### POST and dynamic route cases
+### Explicit method and dynamic route cases
 
-The tool **does not** send POST automatically, even to a challenge-only seller. Provide an owner-reviewed operator case file for any POST or dynamic route. Only explicitly declared original route IDs, a matching fixed/template path and originally declared query-input names are allowed. A POST requires an explicit `allowPost:true` and JSON `body`; unknown routes/fields abort before probing. Example:
+The tool **does not** send POST, PUT, PATCH or DELETE automatically, even to a challenge-only seller. Provide an operator case for the intended operation and any dynamic route. Only explicitly declared original route IDs, a matching fixed/template path and originally declared query-input names are allowed. A POST retains its existing `allowPost:true` and JSON `body`. PUT/PATCH/DELETE require `allowMethod` equal to the exact declared method; PUT and PATCH also require JSON `body`, while DELETE rejects a body. A mismatched `allowMethod` or unknown case field aborts before probing. Example:
 
 ```json
 {
@@ -41,12 +41,21 @@ The tool **does not** send POST automatically, even to a challenge-only seller. 
     "items": {
       "path": "/api/items/ABC123",
       "query": {"language": "en"}
+    },
+    "update-item": {
+      "path": "/api/items/ABC123",
+      "allowMethod": "PATCH",
+      "body": {"quantity": 4}
+    },
+    "remove-item": {
+      "path": "/api/items/ABC123",
+      "allowMethod": "DELETE"
     }
   }
 }
 ```
 
-The example fields are **illustrative**. Real route IDs, allowed query names and JSON body requirements must come from your actual SF30 seller offers. Keep real customer identifiers/bodies private. Pass `--cases /absolute/cases.json`. Dynamic `:field` path values must remain one safe segment; the tool disallows moving a case to an undeclared path or origin. POST is attempted only while the original seller reports `CHALLENGE_ONLY`. No application handler or upstream receives the request in that original mode.
+The example fields are **illustrative**. Real route IDs, allowed query names and JSON body requirements must come from your actual SF30 seller offers. Keep real customer identifiers/bodies private. Pass `--cases /absolute/cases.json`. Dynamic `:field` path values must remain one safe segment; the tool disallows moving a case to an undeclared path or origin. These methods are attempted only while the original seller reports `CHALLENGE_ONLY`. No application handler or upstream receives the request in that original mode. Missing method selection or required body returns `NEEDS_INPUT` without sending that request.
 
 ### Include native traffic evidence from SF93
 

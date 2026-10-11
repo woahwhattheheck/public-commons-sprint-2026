@@ -8,6 +8,8 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { supportsSellerMethod, requiresJsonBody } from '../sf30-seller-sdk/http-methods.mjs';
+import { MAX_PAYMENT_OPTIONS } from '../sf30-seller-sdk/seller.mjs';
 
 const sha = b => createHash('sha256').update(b).digest('hex');
 const obj = x => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -58,10 +60,10 @@ function sourceRoutes(health, offers) {
   return health.routes.map((r,i) => {
     const offer=offers[i], method=offer?.extensions?.bazaar?.info?.input?.method;
     if (!obj(r) || !/^[A-Za-z0-9_-]{1,80}$/.test(r.id) || ids.has(r.id) ||
-        !['GET','HEAD','POST'].includes(r.method) || r.method !== method ||
+        !supportsSellerMethod(r.method) || r.method !== method ||
         r.url !== offer?.resource?.url || offer?.x402Version !== 2 ||
-        !Array.isArray(offer.accepts) || offer.accepts.length !== 1 ||
-        !obj(offer.extensions?.bazaar) || !obj(offer.accepts[0])) die('NONCANONICAL_OR_UNMATCHED_SELLER_OFFER');
+        !Array.isArray(offer.accepts) || offer.accepts.length < 1 || offer.accepts.length > MAX_PAYMENT_OPTIONS ||
+        !obj(offer.extensions?.bazaar) || offer.accepts.some(option => !obj(option))) die('NONCANONICAL_OR_UNMATCHED_SELLER_OFFER');
     ids.add(r.id);
     const u=new URL(r.url);
     if (u.protocol !== 'https:' && !(u.protocol === 'http:' && u.hostname === '127.0.0.1'))
@@ -82,9 +84,15 @@ export function planProbes(routes, cases={}) {
     const input=route.offer.extensions.bazaar.info.input;
     const c=cases[route.id];
     if (c !== undefined && !obj(c)) die('CASE_MUST_BE_OBJECT');
-    if (c && Object.keys(c).some(k=>!['path','query','body','allowPost'].includes(k))) die('UNKNOWN_CASE_FIELD');
+    if (c && Object.keys(c).some(k=>!['path','query','body','allowPost','allowMethod'].includes(k))) die('UNKNOWN_CASE_FIELD');
+    if (c && Object.hasOwn(c,'allowMethod') && c.allowMethod !== route.method) die('CASE_METHOD_MISMATCH');
     if (route.method === 'POST' && (!c?.allowPost || !Object.hasOwn(c,'body')))
       return {route,skip:'POST_REQUIRES_OPERATOR_CASE_AND_EXPLICIT_ALLOWPOST'};
+    if (['PUT','PATCH','DELETE'].includes(route.method) && c?.allowMethod !== route.method)
+      return {route,skip:route.method + '_REQUIRES_OPERATOR_CASE_AND_EXACT_ALLOWMETHOD'};
+    if (requiresJsonBody(route.method) && (!c || !Object.hasOwn(c,'body')))
+      return {route,skip:'JSON_BODY_REQUIRES_OPERATOR_CASE'};
+    if (!requiresJsonBody(route.method) && c && Object.hasOwn(c,'body')) die('CASE_BODY_NOT_SUPPORTED_FOR_METHOD');
     if (route.template && !c?.path) return {route,skip:'DYNAMIC_ROUTE_REQUIRES_OPERATOR_PATH'};
     const original = new URL(route.advertisedUrl);
     const path = c?.path ?? original.pathname;
@@ -102,9 +110,10 @@ export function planProbes(routes, cases={}) {
       target.searchParams.set(k,String(v));
     }
     if (target.pathname !== decoded || target.href.length > 2048) die('UNSAFE_FINAL_PROBE_TARGET');
-    if (route.method === 'POST' && input.bodyType !== 'json') die('ONLY_JSON_POST_SUPPORTED');
-    const body = route.method === 'POST' ? JSON.stringify(c.body) : undefined;
-    if (body && Buffer.byteLength(body) > 8192) die('POST_CASE_EXCEEDS_8K');
+    if (requiresJsonBody(route.method) && input.bodyType !== 'json') die('ONLY_JSON_BODY_SUPPORTED');
+    const body = requiresJsonBody(route.method) ? JSON.stringify(c.body) : undefined;
+    if (requiresJsonBody(route.method) && body === undefined) die('JSON_BODY_REQUIRED');
+    if (body && Buffer.byteLength(body) > 8192) die('JSON_CASE_EXCEEDS_8K');
     return {route, path: target.pathname + target.search, body};
   });
 }
@@ -117,7 +126,8 @@ function actualOffer(header) {
   try { parsed = JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(b)); }
   catch { die('PAYMENT_REQUIRED_HEADER_NOT_UTF8_JSON'); }
   if (parsed?.x402Version !== 2 || !obj(parsed.resource) ||
-      !Array.isArray(parsed.accepts) || parsed.accepts.length !== 1 ||
+      !Array.isArray(parsed.accepts) || parsed.accepts.length < 1 || parsed.accepts.length > MAX_PAYMENT_OPTIONS ||
+      parsed.accepts.some(option => !obj(option)) ||
       !obj(parsed.extensions?.bazaar)) die('PAYMENT_REQUIRED_NOT_V2_BAZAAR');
   return {parsed, digest:sha(b)};
 }
@@ -146,7 +156,7 @@ async function probe(base, planned) {
   try {
     const resp=await fetch(base+planned.path, {method:route.method,redirect:'manual',cache:'no-store',
       signal:AbortSignal.timeout(7000),
-      headers: route.method === 'POST' ? {'content-type':'application/json'} : {},
+      headers: requiresJsonBody(route.method) ? {'content-type':'application/json'} : {},
       body:planned.body});
     await resp.body?.cancel();
     const issues=[];
@@ -209,7 +219,7 @@ export async function run(options) {
     sourceDigests:{health:health.sha256,offers:offers.sha256},mode:health.value.mode,
     summary,decision:summary.blocked || summary.needsInput?'INCOMPLETE_OPERATOR_ACCEPTANCE':'CHALLENGE_ONLY_ACCEPTANCE_COMPLETE',
     routes:results,support,limitations:['No native paid execution','No external merchant or facilitator contacted','No buyer/payment/ledger proof','No successful application response claimed']};
-  const checklist=`# Original SF30 merchant route acceptance\n\nGenerated ${report.generatedAt}; decision **${report.decision}**.\n\n${results.map(x=>`- [ ] ${x.id} (${x.method}) · ${x.state}${x.issues.length ? ' · '+x.issues.join(', ') : ' · original v2 challenge and payment terms matched'}`).join('\n')}\n\nNext operator review: resolve reported route failures and missing POST/dynamic cases; rerun a NEW create-only package against the same original seller. When complete, separately review public HTTPS exposure, true customer API acceptance, authentic native settlement/receipts and contract terms with the merchant. This is neither a paid transaction nor grant approval.\n`;
+  const checklist=`# Original SF30 merchant route acceptance\n\nGenerated ${report.generatedAt}; decision **${report.decision}**.\n\n${results.map(x=>`- [ ] ${x.id} (${x.method}) · ${x.state}${x.issues.length ? ' · '+x.issues.join(', ') : ' · original v2 challenge and payment terms matched'}`).join('\n')}\n\nNext operator review: resolve reported route failures and missing method/dynamic cases; rerun a NEW create-only package against the same original seller. When complete, separately review public HTTPS exposure, true customer API acceptance, authentic native settlement/receipts and contract terms with the merchant. This is neither a paid transaction nor grant approval.\n`;
   const files={'audit.json':Buffer.from(JSON.stringify(report,null,2)+'\n'),'review.html':Buffer.from(reviewReport(report)),
     'acceptance.md':Buffer.from(checklist)};
   const manifest={schema:'scf.sf96.manifest.v1',sourceDigests:report.sourceDigests,
