@@ -25,7 +25,50 @@ Expand **Native model and calculations** to edit names/types, DAX measures, rela
 
 **Save & build native Power BI project** records the exact source digest and plan revision. Previous builds remain available when the plan changes.
 
-## 3. Open, refresh and retain actual outputs
+## 3. Operate on-premises Report Server
+
+SANDAG’s initial target is Power BI Report Server. Open **Report Server** in the operator and choose one of these inputs:
+
+- Original .rdl from Report Builder or an existing server.
+- Original .pbix saved with the Desktop version optimized for the receiving Report Server.
+- A native file registration JSON for a file that remains on the receiving machine.
+- A complete paginated family built from the selected reviewed migration plan.
+
+The family generator uses explicit CSV or SQL Server mappings. Choose source/model columns by table, or include all columns. CSV reports embed every selected source row through Microsoft’s XML provider. SQL reports retain the actual reviewed query or physical table/view and named parameters with Windows integrated security. The generated reports are tabular projections; record the implementation of original formatting, measures, access and interaction separately.
+
+For the public example, select the eleven baseline fields for OffenseCells:
+
+    {"OffenseCells":["source_record_id","year","jurisdiction_id","offense_id","group","value","value_state","raw_value","page","is_detail_leaf","is_regional_group_component"]}
+
+The supplied native family already contains that projection and all remaining table rows. Open the .rdl files in Report Builder, run the reports and retain their complete CSV output for comparison.
+
+### Prepare and execute a native job
+
+Select the native report and enter the actual REST base address ending in /api/v2.0, native report-service URL, exact /Folder/Report catalog path, parameters, source scope, receiving owner and native software builds. Download the complete job ZIP.
+
+Use [tools/report-server/GUIDE.md](tools/report-server/GUIDE.md) on the receiving Windows machine. The runner uses its signed-in Windows account and keeps authentication on that machine. Keep the same job and work directory through every operation.
+
+| Stage | Retained behavior |
+|---|---|
+| Inspect | Reads server settings and the selected catalog metadata. |
+| Capture | Retains the original catalog identity and full native content before a write. |
+| Publish | Checks the prepared source file’s complete hash and size, then creates or updates the selected native report. |
+| Reconcile | Reads the original target after an interrupted response before choosing a continuation. |
+| Export | Renders the explicit paginated report/parameter combinations to complete CSV files. PBIX reports use a native Desktop export or separately specified paginated reports. |
+| Rollback | Restores original native content or removes this job’s newly created item only after checking current native state. |
+| Package | Produces a complete result ZIP containing the original job identity, events, captures and retained recovery material. |
+
+Large native files are hashed and streamed by the Windows runner. Import their small Register manifest into the operator and supply the same original file to the receiving job. External large recovery files remain in the native work directory with their file identities retained in the result manifest.
+
+### Receive, compare and hand over
+
+Import the native result ZIP in **Report Server**. The operator checks the exact original job-byte hash and each embedded file’s complete size/hash. Every CSV marked as a native capture is imported as a full dataset, with its report path, parameters and source scope.
+
+Compare each agreed output against its original baseline in **Output comparison**. Corrections create linked records and preserve the baseline. Select native results, complete comparisons and support cases in the same Report Server view to build the full operating handoff.
+
+Back up and restore this workspace using section 7. Report, job, capture and recovery identities are retained with the rest of the workspace.
+
+## 3B. Open, refresh and retain cloud outputs
 
 Extract the native project into its final directory. Run prepare_project.py or OPEN_POWER_BI.ps1. Open the PBIP in Desktop, configure source credentials, refresh and exercise each page under the agreed report scope.
 
@@ -120,6 +163,6 @@ The CLI accepts the same actions:
     python BI_OPERATOR.py --workspace ./bi-workspace action source.import request.json
     python BI_OPERATOR.py --workspace ./bi-workspace state
 
-Each request is a JSON object. File imports use filename and complete base64 bytes. Business actions use exact record IDs/revisions. The action contract is defined in bi_operator/service.py and native deployment actions in bi_operator/providers.py.
+Each request is a JSON object. File imports use filename and complete base64 bytes. Business actions use exact record IDs/revisions. The action contract is defined in bi_operator/service.py. Report Server actions are in bi_operator/report_server.py and cloud deployment actions in bi_operator/providers.py. The Report Server actions are server.native.import, server.native.register, server.family.build, server.job.prepare, server.result.import and server.handoff.
 
 Use **Activity & versions** after a lost browser response. **Retry original request** reuses its operation. A host shutdown drains accepted work before closing the database. One process owns each workspace; separate workspaces run independently.

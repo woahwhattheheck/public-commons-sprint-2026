@@ -19,7 +19,7 @@ KINDS = {"Report": ".rdl", "PowerBIReport": ".pbix"}
 
 def file_input(request):
     data = base64.b64decode(request["base64"], validate=True)
-    filename = Path(str(request.get("filename", ""))).name
+    filename = basename(Path(str(request.get("filename", ""))).name)
     if not filename or len(data) > LIMIT:
         raise ValueError("Select a native file up to 64 MiB, or register its native manifest for external transfer.")
     return data, filename
@@ -27,8 +27,10 @@ def file_input(request):
 
 def basename(value):
     value = str(value)
-    if not value or value != PurePosixPath(value).name or "\\" in value or any(ord(c) < 32 for c in value):
-        raise ValueError("Use a portable native filename without a directory.")
+    if not value or value != PurePosixPath(value).name or any(ord(c) < 32 for c in value) or \
+            any(c in value for c in ('<', '>', ':', '"', '/', chr(92), '|', '?', '*')) or \
+            value.endswith((".", " ")) or re.match(r"(?i)^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)", value):
+        raise ValueError("Use a portable Windows native filename without a directory.")
     return value
 
 
@@ -150,7 +152,7 @@ class ReportServer:
     def build_family(self, request):
         plan = self.store.get("plan", request["plan_id"], request.get("plan_revision"))
         project, bindings = plan["payload"]["project"], plan["payload"]["bindings"]
-        files, reports = {}, []
+        files, reports, filenames = {}, [], set()
         column_selection = request.get("columns", {})
         if not isinstance(column_selection, dict):
             raise ValueError("Column selections must map each table to its exact source/model fields.")
@@ -158,7 +160,14 @@ class ReportServer:
             data, review = paginated.build_table(table, bindings.get(table["name"], {}), self.store,
                 columns=column_selection.get(table["name"]), title=project["name"] + " — " + table["name"],
                 description=plan["payload"].get("scope", ""))
-            filename = paginated.safe_name(table["name"], "Report") + ".rdl"
+            base_name = paginated.safe_name(table["name"], "Report")
+            if re.fullmatch(r"(?i)(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])", base_name):
+                base_name = "Report_" + base_name
+            filename, suffix = base_name + ".rdl", 2
+            while filename.casefold() in filenames:
+                filename = base_name + "_" + str(suffix) + ".rdl"
+                suffix += 1
+            filenames.add(filename.casefold())
             native = self.store.blob(data, filename, "application/xml")
             entity_id = self.service.operation_id[:60] + "-rdl-" + digest(table["name"].encode())[:16]
             try:
@@ -177,6 +186,12 @@ class ReportServer:
             files["reports/" + filename] = data
             files["reports/" + filename + ".json"] = json_bytes(review)
         files["original-plan.json"] = json_bytes(plan)
+        source_ref = plan["payload"]["source"]
+        source = self.store.get("source", source_ref["id"], source_ref["revision"])
+        source_file = source["payload"]["original"]
+        extension = Path(source_file["name"]).suffix.lower()
+        files["source/original-export" + (extension if extension in {".xml", ".json"} else ".bin")] = self.store.bytes(source_file["digest"])
+        files["source/original-source.json"] = json_bytes(source)
         files["OPEN_FIRST.md"] = (
             "# Native paginated report family\n\nOpen each reports/*.rdl in Microsoft Report Builder, or prepare a Report Server job in the operator. "
             "CSV bindings use Microsoft's embedded XML provider and retain every selected row and exact source text, including explicit null tokens. "
@@ -207,6 +222,7 @@ class ReportServer:
             parameters(item.get("parameters", {}))
         job = {"schema": "commons-bi-report-server-job/1", "job_id": self.service.operation_id,
             "label": str(request.get("label") or report["payload"]["label"])[:300],
+            "receiving_owner": str(request.get("owner", report["payload"].get("owner", "")))[:180],
             "native": {k: native[k] for k in ("file", "sha256", "bytes", "kind", "embedded")},
             "target": target, "parameters": parameters(request.get("parameters", {})), "paginated_exports": exports,
             "desktop_build": str(request.get("desktop_build") or report["payload"].get("desktop_build", ""))[:200],
@@ -222,8 +238,8 @@ class ReportServer:
         if native["embedded"]:
             files[native["file"]] = self.store.bytes(native["digest"])
         files["OPEN_FIRST.txt"] = (
-            "Open GUIDE.md. Use the current Windows account or an explicitly supplied PowerShell credential. "
-            "Run Inspect before Publish; Reconcile reads the original target after an interrupted response. "
+            "Open GUIDE.md. Use the current Windows account. "
+            "Inspect checks the server and catalog; Capture retains the original native content before Publish. Reconcile reads the original target after an interrupted response. "
             "The same work directory retains original native content, target identities and operation state for rollback. "
             + ("The exact native report is included.\n" if native["embedded"] else
                "This job registers an external original report; pass -NativeFile with that exact file on the receiving machine. Its size and SHA-256 are checked before execution.\n")
@@ -245,10 +261,16 @@ class ReportServer:
         manifest_names = set()
         for item in result["files"]:
             name = item.get("path")
-            if not isinstance(name, str) or name in manifest_names:
+            if (
+                not isinstance(name, str) or not name or name in manifest_names
+                or PurePosixPath(name).is_absolute()
+                or ".." in PurePosixPath(name).parts or chr(92) in name
+            ):
                 raise ValueError("The native result repeats or omits a file path.")
             manifest_names.add(name)
             if item.get("embedded", True) is False:
+                if not re.fullmatch(r"[a-f0-9]{64}", item.get("sha256", "")) or type(item.get("bytes")) is not int or item["bytes"] < 0:
+                    raise ValueError("An external original file needs its complete size and SHA-256: " + name)
                 attachments.append({**item, "retained_externally": True})
                 continue
             raw = files.get(name)
@@ -265,7 +287,9 @@ class ReportServer:
                     "scope": str(item.get("scope", job["payload"]["job"].get("scope", ""))),
                     "parameters": item.get("parameters", {}), "source_report": item.get("report_path"),
                     "server_job": self.service.reference(job), "native_result_state": result.get("state"),
-                    "imported": now(), "description": "Exact CSV returned by the native Report Server receiving operation."}
+                    "capture_kind": item.get("capture_kind"), "native_definition": item.get("native_definition"),
+                    "imported": now(), "description": ("Original paginated CSV returned by Report Server." if item.get("capture_kind") == "paginated_csv"
+                        else "Original CSV retained with the native receiving operation; its capture kind remains attached.")}
                 try:
                     record = self.store.get("dataset", entity_id)
                     if record["payload"]["file"]["digest"] != blob["digest"]:
@@ -283,6 +307,27 @@ class ReportServer:
         report = self.store.get("server_report", job["payload"]["report"]["id"], job["payload"]["report"]["revision"])
         files = {"native/ReportServer-job.zip": self.store.bytes(job["payload"]["package"]["digest"]),
             "records/job.json": json_bytes(job), "records/native-report.json": json_bytes(report)}
+        source_ref = report["payload"].get("source")
+        plan_ref = report["payload"].get("plan")
+        if plan_ref:
+            plan = self.store.get("plan", plan_ref["id"], plan_ref["revision"])
+            files["records/reviewed-plan.json"] = json_bytes(plan)
+            inputs = []
+            for index, (table, binding) in enumerate(sorted(plan["payload"]["bindings"].items()), 1):
+                if binding.get("kind") == "csv":
+                    name = "inputs/" + str(index).zfill(3) + "-" + paginated.safe_name(table, "Table") + ".csv"
+                    files[name] = self.store.bytes(binding["digest"])
+                    inputs.append({"table": table, "file": name, "sha256": binding["digest"], "null_token": binding.get("null_token")})
+            files["inputs/index.json"] = json_bytes(inputs)
+            source_ref = source_ref or plan["payload"].get("source")
+        if source_ref:
+            source = self.store.get("source", source_ref["id"], source_ref["revision"])
+            original = source["payload"]["original"]
+            extension = Path(original["name"]).suffix.lower()
+            files["source/original-export" + (extension if extension in {".xml", ".json"} else ".bin")] = self.store.bytes(original["digest"])
+            files["source/original-source.json"] = json_bytes(source)
+        if report["payload"].get("registration"):
+            files["native/original-registration.json"] = self.store.bytes(report["payload"]["registration"]["digest"])
         results = []
         for entity_id in request.get("result_ids", []):
             result = self.store.get("server_result", entity_id)
