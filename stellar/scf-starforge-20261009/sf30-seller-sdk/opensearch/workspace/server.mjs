@@ -8,7 +8,8 @@ import { createOpenSearchWorkspace } from './service.mjs';
 import { WorkspaceError } from './store.mjs';
 
 const ASSETS = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
-  ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
+  ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
+  ['/relevance.mjs', ['../relevance/public.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
 function send(res, status, value) {
   const body = JSON.stringify(value);
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(body),
@@ -40,7 +41,7 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
   if (!workspace || typeof workspace.state !== 'function') throw new TypeError('Original OpenSearch workspace required.');
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('Port must be 0–65535.');
   const assets = new Map(await Promise.all([...ASSETS].map(async ([route, [file, type]]) =>
-    [route, { type, body: await readFile(new URL('./public/' + file, import.meta.url)) }])));
+    [route, { type, body: await readFile(new URL(file.startsWith('../') ? file : './public/' + file, import.meta.url)) }])));
   const token = randomBytes(24).toString('hex');
   let origin, closing;
   const requests = new Set();
@@ -63,6 +64,30 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
         if (path === '/api/session') return send(res, 200, { token, workspaceId: workspace.store.id });
         if (path === '/api/state') return send(res, 200, workspace.state());
         const parts = path.split('/').filter(Boolean);
+        if (parts[0] === 'api' && parts[1] === 'relevance') {
+          if (parts[2] === 'sets' && parts.length === 4) {
+            const revision = url.searchParams.has('revision') ? Number(url.searchParams.get('revision')) : undefined;
+            return send(res, 200, workspace.relevance.set(decodeURIComponent(parts[3]), revision));
+          }
+          if (parts[2] === 'sets' && parts.length === 5 && parts[4] === 'set.json')
+            return download(res, workspace.relevance.export(decodeURIComponent(parts[3]), 'set.json'));
+          if (parts[2] === 'history' && parts.length === 4)
+            return send(res, 200, { revisions: workspace.relevance.history(decodeURIComponent(parts[3])) });
+          if (parts[2] === 'seed' && parts.length === 4)
+            return send(res, 200, workspace.relevance.seed(decodeURIComponent(parts[3]), {
+              caseId: url.searchParams.get('caseId') ?? 'case-1',
+              limit: url.searchParams.has('limit') ? Number(url.searchParams.get('limit')) : 100 }));
+          if (parts[2] === 'editions' && parts.length === 4)
+            return send(res, 200, workspace.relevance.edition(decodeURIComponent(parts[3])));
+          if (parts[2] === 'editions' && parts.length === 5 && parts[4] !== 'set.json')
+            return download(res, workspace.relevance.export(decodeURIComponent(parts[3]), parts[4]));
+          if (path === '/api/relevance/compare') {
+            const comparison = workspace.relevance.compare(url.searchParams.get('before'), url.searchParams.get('after'));
+            if (url.searchParams.get('download') === '1') return download(res, { type: 'application/json; charset=utf-8',
+              filename: 'opensearch-relevance-comparison.json', body: JSON.stringify(comparison, null, 2) + '\n' });
+            return send(res, 200, comparison);
+          }
+        }
         if (parts[0] === 'api' && parts[1] === 'drafts' && parts.length === 3)
           return send(res, 200, workspace.draft(decodeURIComponent(parts[2])));
         if (parts[0] === 'api' && parts[1] === 'history' && parts.length === 3)
@@ -84,16 +109,21 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
           return send(res, 200, comparison);
         }
       }
-      if (req.method === 'POST' && ['/api/drafts', '/api/validate', '/api/inspect', '/api/capture', '/api/prepare'].includes(path) && !url.search) {
+      if (req.method === 'POST' && ['/api/drafts', '/api/validate', '/api/inspect', '/api/capture', '/api/prepare',
+        '/api/relevance-save', '/api/relevance-run', '/api/relevance-promote', '/api/relevance/validate', '/api/relevance/normalize'].includes(path) && !url.search) {
         const supplied = req.headers['x-workspace-token'];
         if (req.headers.origin !== origin || typeof supplied !== 'string' || Buffer.byteLength(supplied) !== Buffer.byteLength(token) ||
           !timingSafeEqual(Buffer.from(supplied), Buffer.from(token)))
           return send(res, 403, { error: 'WORKSPACE_TOKEN_REQUIRED' });
         const input = await body(req);
-        if (path !== '/api/validate') operationId = input.requestId;
+        if (!['/api/validate', '/api/relevance/validate', '/api/relevance/normalize'].includes(path)) operationId = input.requestId;
         if (path === '/api/drafts') return send(res, 200, workspace.save(input));
         if (path === '/api/validate') return send(res, 200, workspace.validate(input.draftId, input.expectedRevision));
-        const result = await workspace.run(path.slice('/api/'.length), input);
+        if (path === '/api/relevance/normalize') return send(res, 200, workspace.relevance.normalize(input.set));
+        if (path === '/api/relevance-save') return send(res, 200, workspace.relevance.save(input));
+        if (path === '/api/relevance-promote') return send(res, 200, workspace.relevance.promote(input));
+        if (path === '/api/relevance/validate') return send(res, 200, workspace.relevance.validate(input.setId, input.expectedRevision));
+        const result = path === '/api/relevance-run' ? await workspace.relevance.run(input) : await workspace.run(path.slice('/api/'.length), input);
         return send(res, result.state === 'RUNNING' ? 202 : 200, result);
       }
       return send(res, 404, { error: 'WORKSPACE_ROUTE_NOT_FOUND' });
