@@ -18,7 +18,36 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs \
   --operations-port 9001 -- --config /path/to/seller.json --port 9000
 ```
 
-Every argument after `--` goes unchanged to existing `serve.mjs`, including `--handlers`, `--facilitator` and `--allow-local-facilitator`. This launcher does not sign, verify or settle payments; keep the existing SF30 native runtime setup. Without a facilitator it runs the original challenge-only service. Ctrl+C closes both listeners. Failed dashboard startup closes the seller rather than leaving a half-launched process.
+By default, every argument after `--` goes unchanged to existing `serve.mjs`, including `--handlers`, `--facilitator` and `--allow-local-facilitator`. Select `--upstream` before the separator to pass upstream-API options to its maintained launcher instead. This launcher does not sign, verify or settle payments; keep the existing SF30 native runtime setup. Without a facilitator it runs the original challenge-only service. Ctrl+C closes both listeners. Failed dashboard startup closes the seller rather than leaving a half-launched process.
+
+## Existing API and upstream bindings
+
+To wrap a merchant-owned API **and** observe that existing seller in one
+operator command, pass `--upstream` before the argument separator. All
+options after `--` go to the original upstream seller instead of the
+ordinary static-response seller:
+
+```sh
+S=stellar/scf-starforge-20261009/sf30-seller-sdk
+node "$S/operations/launch.mjs" --upstream --operations-port 0 -- \
+  --config "$S/examples/upstream-service.json" \
+  --upstreams "$S/examples/upstreams.json" \
+  --allow-loopback-upstream --port 0
+```
+
+Run the fictional backend in [UPSTREAM.md](../UPSTREAM.md) before this example.
+The launcher prints the same original seller URL, mode and offer/health metadata,
+then the independent operations URL and snapshot path. Requests to the original
+seller appear on the dashboard; challenge-only 402 responses do **not** call the
+upstream API. No extra payment or monitoring implementation is introduced.
+Ctrl+C stops both seller and dashboard. The fixed local backend is a separate
+process. For a real merchant API, replace both configs and follow the original
+facilitator/reverse-proxy instructions in UPSTREAM.md.
+
+The default launcher syntax (without `--upstream`) is unchanged. The new option
+selects only the maintained `upstream-serve.mjs` entrypoint; options after the
+separator, including `--allow-loopback-upstream` and `--facilitator`, belong
+to that entrypoint. Dashboard traffic metrics are not payment reconciliation.
 
 ## Integrate with the existing workspace
 
