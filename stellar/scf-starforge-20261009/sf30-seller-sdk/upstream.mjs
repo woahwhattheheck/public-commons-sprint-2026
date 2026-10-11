@@ -232,7 +232,7 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
   let closing;
   handlerRuntimes.set(handlers,options => closing ??= (async () => {
     const cacheControls = new Set(Object.values(handlers).map(handler => handler.cache).filter(Boolean));
-    try { await Promise.all([...cacheControls].map(control => control.close(options))); }
+    try { return await Promise.all([...cacheControls].map(control => control.close(options))); }
     finally {
       for (const provider of providers.values()) provider.close();
       await Promise.all([...new Set(Object.values(handlers).map(handler => handler.idempotency).filter(Boolean))]
