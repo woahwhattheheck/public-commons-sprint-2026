@@ -262,10 +262,12 @@ async function nativePackage(directory, dependency) {
   const data = await readJson(filename);
   need(data.name === dependency.name && data.version === dependency.version &&
     data.scripts?.install === 'prebuild-install || node-gyp rebuild --release' &&
-    !['preinstall', 'postinstall', 'prepare'].some(name => data.scripts?.[name]),
+    data.scripts?.['build-release'] === 'node-gyp rebuild --release' &&
+    !['preinstall', 'postinstall', 'prepare', 'prebuild-release', 'postbuild-release'].some(name => data.scripts?.[name]),
     'RUNTIME_NATIVE_INSTALL_SCRIPT_CHANGED',
     'The declared native package must retain its original supported install hook');
-  return { name: data.name, version: data.version, install: data.scripts.install };
+  return { name: data.name, version: data.version, install: data.scripts.install,
+    sourceScript: data.scripts['build-release'], directory: dirname(filename) };
 }
 function nativeEnvironment({ offline, headers }) {
   const env = { ...process.env, npm_config_update_notifier: 'false',
@@ -274,14 +276,10 @@ function nativeEnvironment({ offline, headers }) {
     npm_config_arch: process.arch, npm_config_platform: process.platform,
     npm_config_build_from_source: String(Boolean(headers)), npm_config_debug: 'false',
     npm_package_config_node_gyp_target: process.versions.node,
-    npm_package_config_node_gyp_arch: process.arch,
-    'prebuild-install_target': process.versions.node,
-    'prebuild-install_runtime': 'node', 'prebuild-install_arch': process.arch,
-    'prebuild-install_platform': process.platform, 'prebuild-install_path': '.',
-    'prebuild-install_buildFromSource': headers ? 'true' : '',
-    'prebuild-install_force': '', 'prebuild-install_help': '', 'prebuild-install_version': '' };
-  // The original prebuild downloader ignores npm's offline setting. Source
-  // mode skips that downloader; node-gyp receives the exact local headers.
+    npm_package_config_node_gyp_arch: process.arch };
+  // The original prebuild downloader ignores npm's offline setting. A local
+  // source build invokes the package's build-release command directly, with
+  // explicit node-gyp arguments, so downloader configuration cannot run it.
   delete env.npm_config_nodedir;
   delete env.npm_package_config_node_gyp_nodedir;
   delete env.npm_package_config_node_gyp_debug;
@@ -377,10 +375,14 @@ export async function installRuntime({ directory, offline = false, cache = null,
       state = { ...state, stage: 'NATIVE_PREPARATION', updatedAt: now(),
         nativePreparation: [...(state.nativePreparation ?? []).filter(item => item.name !== dependency.name), preparation] };
       await save(target, 'install-state.json', state, true);
-      const args = ['rebuild', dependency.name + '@' + dependency.version, '--global=false', '--location=project',
-        '--workspaces=false', '--prefix', target, '--ignore-scripts=false', '--foreground-scripts',
+      const args = [
+        ...(headers ? ['run', 'build-release'] : ['rebuild', dependency.name + '@' + dependency.version]),
+        '--global=false', '--location=project', '--workspaces=false', '--prefix',
+        headers ? original.directory : target, '--ignore-scripts=false', '--foreground-scripts',
         '--no-audit', '--no-fund', '--package-lock=false',
-        ...(offline ? ['--offline'] : []), ...(cache ? ['--cache', resolve(cache)] : [])];
+        ...(offline ? ['--offline'] : []), ...(cache ? ['--cache', resolve(cache)] : []),
+        ...(headers ? ['--', '--nodedir=' + headers.directory,
+          '--target=' + process.versions.node, '--arch=' + process.arch] : [])];
       const result = await runNpm(npm, args, { target, log, lease, env: nativeEnvironment({ offline, headers }) });
       if (result.code !== 0) {
         await save(target, 'install-state.json', { ...state, phase: 'FAILED', updatedAt: now(),
