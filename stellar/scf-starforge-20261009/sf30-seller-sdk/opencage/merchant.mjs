@@ -54,16 +54,23 @@ export async function runtimeBinding() {
   }
   return {schema:'stellar-forge.opencage-runtime-binding.v1',files};
 }
+function generatedCustomerFiles(built) {
+  return [
+    ['openapi.json',jsonBytes(built.openapi)],
+    ['sdk/seller-client.mjs',Buffer.from(built.client.javascript)],
+    ['sdk/seller-client.d.mts',Buffer.from(built.client.declarations)],
+    ['sdk/package.json',Buffer.from(built.client.packageJson)],
+    ['sdk/README.md',Buffer.from(built.client.readme)],
+    ['queries.json',jsonBytes(built.plan.products.map(product=>({productId:product.id,input:exampleQuery(product)})))],
+  ];
+}
 export async function packageGeocodeMerchant(directory,raw,terms) {
   const built=compileGeocodeSeller(raw,terms),runtime=await runtimeBinding();
   const entries=[
     ['plan.json',jsonBytes(built.plan)],['terms.json',jsonBytes(built.terms)],['spec.json',jsonBytes(built.spec)],
     ['selections.json',jsonBytes(built.selections)],['bindings.json',jsonBytes(built.bindings)],
     ['offers.json',jsonBytes(built.imported)],['seller-service.json',jsonBytes(built.seller)],
-    ['openapi.json',jsonBytes(built.openapi)],['runtime-binding.json',jsonBytes(runtime)],
-    ['sdk/client.mjs',built.client.javascript],['sdk/client.d.ts',built.client.declarations],
-    ['sdk/package.json',built.client.packageJson],['sdk/README.md',built.client.readme],
-    ['queries.json',jsonBytes(built.plan.products.map(product=>({productId:product.id,input:exampleQuery(product)})))],
+    ['runtime-binding.json',jsonBytes(runtime)],...generatedCustomerFiles(built),
     ['RUN.md',Buffer.from('# Geocoding merchant\n\nInstall the maintained Starforge source containing sf30-seller-sdk/opencage.\nUse its CLI: package-inspect --package THIS_DIRECTORY; stage --workspace PRIVATE_WORKSPACE --package THIS_DIRECTORY --release RELEASE_ID.\nThe package preserves every original payment option and the native source module hashes. Stage emits a private pinned handler entry for this installation and delegates to the original SF82 release store.\nThe named API key is read from the process environment at application dispatch.\n')],
   ];
   const identity=digest(jsonBytes(entries.map(([name,value])=>({name,sha256:digest(Buffer.from(value))}))));
@@ -78,6 +85,10 @@ export async function inspectGeocodePackage(directory) {
   for(const [name,value] of [['plan.json',built.plan],['terms.json',built.terms],['spec.json',built.spec],
       ['selections.json',built.selections],['bindings.json',built.bindings],['offers.json',built.imported],['seller-service.json',built.seller]]) {
     if(!bundle.files.has(name) || digest(bundle.files.get(name)) !== digest(jsonBytes(value))) fail('GEOCODE_PACKAGE_CONTRACT_CHANGED');
+  }
+  for(const [name,bytes] of generatedCustomerFiles(built)) {
+    if(!bundle.files.has(name) || digest(bundle.files.get(name)) !== digest(bytes))
+      fail('GEOCODE_PACKAGE_CUSTOMER_FILES_CHANGED');
   }
   const identity=digest(jsonBytes(bundle.manifest.files.map(file=>({name:file.name,sha256:file.sha256}))));
   if(identity !== bundle.manifest.identity || built.planSha256 !== bundle.manifest.planSha256 ||
