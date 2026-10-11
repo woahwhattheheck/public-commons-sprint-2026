@@ -84,17 +84,37 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
     ['buyer-inbox', 'sf88-operator-buyer-cli/queue-cli.mjs', 'Inspect the original inbox and execute one selected intent'],
     ['buyer-runbook', 'buyer-runbook/cli.mjs', 'Plan and resume an original multi-resource buying run'],
     ['deploy', 'sf99-merchant-deploy/cli.mjs', 'Generate the original HTTPS host deployment'],
+    ['postgres', 'sf30-seller-sdk/postgres/start.mjs', 'Run the original PostgreSQL merchant seller'],
+    ['postgres-init', 'sf30-seller-sdk/postgres/create-example.mjs', 'Create a PostgreSQL source and seller starter'],
+    ['postgres-inspect', 'sf30-seller-sdk/postgres/inspect.mjs', 'Inspect or preflight an original PostgreSQL source'],
+    ['postgres-workspace', 'sf30-seller-sdk/postgres/workspace/server.mjs', 'Build a merchant API from selected database fields'],
   ];
   for (const [name, path, summary] of optional) if (sourceBytes.has(BASE + path)) commands[name] = { path: BASE + path, summary };
   const launcher = sourceBytes.get(BASE + 'sf46-release/product.mjs');
   const core = sourceBytes.get(BASE + 'sf46-release/release-core.mjs');
   if (!launcher || !core) throw new Error('Commit the product release source before packaging');
   const nativePackages = Object.fromEntries(['@x402/core', '@x402/stellar', '@x402/extensions', '@x402/fetch'].map(name => [name, nativeVersion]));
+  const adapterPackages = Object.create(null), adapterPackageSources = {};
+  const postgresManifest = BASE + 'sf30-seller-sdk/postgres/package.json';
+  if (commands.postgres) {
+    const bytes = sourceBytes.get(postgresManifest);
+    if (!bytes) throw new Error('Original PostgreSQL dependency manifest missing');
+    const dependencies = JSON.parse(bytes).dependencies;
+    if (!dependencies?.pg) throw new Error('Original PostgreSQL production driver missing');
+    for (const [name, version] of Object.entries(dependencies)) {
+      if (!/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(name) ||
+          !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) || Object.hasOwn(nativePackages, name))
+        throw new Error('Invalid original PostgreSQL dependency');
+      adapterPackages[name] = version;
+    }
+    adapterPackageSources.postgres = postgresManifest;
+  }
   const additions = new Map([
     ['forge.mjs', launcher], ['release-core.mjs', core],
     ['package.json', Buffer.from(JSON.stringify({ name: 'stellar-forge-portable', version, private: true,
-      type: 'module', license: 'MIT', engines: { node: '>=22' }, optionalDependencies: nativePackages }, null, 2) + '\n')],
-    ['START_HERE.md', Buffer.from(`# Stellar Forge ${version}\n\nSource commit: ${commit}\n\nRun \`node forge.mjs help\` for the product commands.\n\nA cold start, installation, upgrade and rollback guide is included at\n\`${BASE}sf46-release/DISTRIBUTION.md\`.\n\nConfiguration and merchant data belong outside the release. All native command\narguments retain their original meanings and are resolved from your working directory.\nChallenge-only seller, compiler, review and local operations need Node 22+ only.\nOptional native payments use the original configured facilitator and signer.\nTo install the native SDK dependencies explicitly, run \`npm install --ignore-scripts --omit=dev\`\nin this release directory, then \`node forge.mjs doctor\`. Dependency installation\ndoes not configure a facilitator, supply a signer or authorize a payment.\n\nOriginal source and licenses are included. No tests or hosted CI entrypoints are run by this launcher.\n`)],
+      type: 'module', license: 'MIT', engines: { node: '>=22' },
+      optionalDependencies: { ...nativePackages, ...adapterPackages } }, null, 2) + '\n')],
+    ['START_HERE.md', Buffer.from(`# Stellar Forge ${version}\n\nSource commit: ${commit}\n\nRun \`node forge.mjs help\` for the product commands.\n\nA cold start, installation, upgrade and rollback guide is included at\n\`${BASE}sf46-release/DISTRIBUTION.md\`.\n\nConfiguration and merchant data belong outside the release. All native command\narguments retain their original meanings and are resolved from your working directory.\nChallenge-only seller, compiler, review and local operations need Node 22+ only.\nOptional native payments use the original configured facilitator and signer.\nTo install the optional native SDK and database drivers explicitly, run \`npm install --ignore-scripts --omit=dev\`\nin this release directory, then \`node forge.mjs doctor\`. Dependency installation\ndoes not configure a facilitator, supply a signer or authorize a payment.\n\nOriginal source and licenses are included. No tests or hosted CI entrypoints are run by this launcher.\n`)],
   ]);
   const files = [...entries.map(entry => ({ path: entry.path, mode: entry.mode, gitBlob: entry.oid,
     bytes: sourceBytes.get(entry.path).length, sha256: sha256(sourceBytes.get(entry.path)) })),
@@ -103,7 +123,8 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
   if (files.reduce((sum, item) => sum + item.bytes, 0) > MAX_BYTES) throw new Error('Release exceeds size limit');
   const body = { schema: RELEASE_SCHEMA, product: 'Stellar Forge', version,
     source: { repository: 'woahwhattheheck/public-commons-sprint-2026', commit },
-    runtime: { minimumNodeMajor: 22, nativePackages, nativePackageSource: BASE + 'sf30-seller-sdk/native-factory.mjs' },
+    runtime: { minimumNodeMajor: 22, nativePackages, nativePackageSource: BASE + 'sf30-seller-sdk/native-factory.mjs',
+      adapterPackages, adapterPackageSources },
     commands, files };
   const manifest = { ...body, digest: sha256(canonical(body)) };
   await mkdir(out, { mode: 0o755 });

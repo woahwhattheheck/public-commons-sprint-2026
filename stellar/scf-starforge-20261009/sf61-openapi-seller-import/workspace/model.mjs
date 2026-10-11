@@ -110,7 +110,7 @@ export function prepareMerchant(specText, plan) {
   const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxInFlight'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
     if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
     if (seen.has(key)) fail('Duplicate selected operation: ' + key);
@@ -143,7 +143,10 @@ export function prepareMerchant(specText, plan) {
       headerEnv:headers, responseMode:row.responseMode ?? 'json',
       ...(row.timeoutMs !== undefined ? {timeoutMs:row.timeoutMs} : {}),
       ...(row.maxResponseBytes !== undefined ? {maxResponseBytes:row.maxResponseBytes} : {}),
-      ...(row.maxInFlight !== undefined ? {maxInFlight:row.maxInFlight} : {})};
+      ...(row.maxInFlight !== undefined ? {maxInFlight:row.maxInFlight} : {}),
+      ...(row.requestHeaders !== undefined ? {requestHeaders:structuredClone(row.requestHeaders)} : {}),
+      ...(row.cache !== undefined ? {cache:structuredClone(row.cache)} : {}),
+      ...(row.availability !== undefined ? {availability:structuredClone(row.availability)} : {})};
     transformations.push({method, path:row.path, originalServer:backend.href, publicServer:sellerServer.href,
       publicDescription:publicOperation.description ?? null, requestExampleSupplied:row.requestExample !== undefined,
       backendAuthentication:auth, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0});
@@ -153,7 +156,10 @@ export function prepareMerchant(specText, plan) {
     const offer = imported.offers[i], binding = upstreams.bindings[bindings[i].id], row = plan.operations[i];
     // Existing v1 plans retain their original transport-only response policy.
     // The workspace explicitly selects declared validation for new JSON routes.
-    const validation = row.responseValidation ?? 'none';
+    if (row.enforceResponseContract !== undefined && typeof row.enforceResponseContract !== 'boolean') fail('Legacy response contract choice must be boolean');
+    const validation = row.responseValidation ?? (row.enforceResponseContract === true ? 'declared' : 'none');
+    if (row.responseValidation !== undefined && row.enforceResponseContract !== undefined &&
+        (validation === 'declared') !== row.enforceResponseContract) fail('Conflicting response validation choices');
     if (!['declared','none'].includes(validation)) fail('Response validation must be declared or none');
     if (validation === 'declared') {
       if (binding.responseMode !== 'json') fail('Declared response validation requires JSON response format');
@@ -164,13 +170,18 @@ export function prepareMerchant(specText, plan) {
       publicPath:service.routes[i].path, upstream:binding.origin + binding.path, amountAtomic:selections[i].accepts[0].amount,
       network:plan.payment.network, query:binding.query, environment:Object.values(binding.headerEnv),
       publicDescription:facade.paths[offer.path][offer.method.toLowerCase()].description ?? '',
-      responseValidation:validation, responseStatuses:Object.keys(binding.responseContract?.responses ?? {}), validateInput:true});
+      responseValidation:validation, responseStatuses:Object.keys(binding.responseContract?.responses ?? {}), validateInput:true, responseContract:Boolean(binding.responseContract), sharedRead:binding.cache?.shareAcrossBuyers === true});
   }
   const {cases, review} = createMerchantCases(imported, service, plan);
   // Validate environment REFERENCES only. The original launcher reads actual values.
   const compiled = compileUpstreamBindings(upstreams, {allowLoopback:plan.allowLoopbackUpstream === true,
     env:Object.fromEntries([...envNames].map(name => [name, 'SET_IN_LAUNCH_ENVIRONMENT']))});
   validateUpstreamService(service, compiled);
+  for (const route of routes) {
+    route.cache = compiled[route.id].cache;
+    route.availability = compiled[route.id].availability;
+    route.requestHeaders = [...compiled[route.id].requestHeaders];
+  }
   return {facade, selections, bindings, upstreams, imported, service, transformations, cases,
     preview:{title:titleOf(spec), sourceSha256:sha(specText), routes,
       routeChecks:review,
@@ -254,6 +265,9 @@ export async function savePackage({specText, plan, parent, name}) {
     ['node',join(sourceRoot,'sf96-seller-acceptance/audit.mjs'),'--seller','http://127.0.0.1:SELLER_PORT','--cases',join(folder,'operator-cases.json'),'--out',join(folder,'support','route-review-001')].map(shell).join(' '),
     '~~~', '', 'Request examples are public offer examples. Keep reusable demonstration values in them. Original request schemas validate inputs before native payment verification.',
     'Selected declared response contracts retain original successful status, media and JSON schema assertions. Bytes routes or an explicit none selection do not carry JSON response validation.',
+    'Optional shared read policies are retained in upstreams.json. Each delivery still uses the original native payment lifecycle.',
+    'The API workspace shows live cache counts and can invalidate a selected binding for the exact managed runtime.',
+    'Cached bodies stay in process memory. Restart starts empty; backend credentials and response policy are checked by the original transport.',
     '', '## Explicit facade adaptation', '',
     'Original server URLs remain in original-openapi.json. Selected facade operations use your declared public seller server.',
     'Supported backend security is satisfied by operator header environment references and removed only from the generated public facade.',

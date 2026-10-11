@@ -58,6 +58,7 @@ The import path in the snippet assumes `application.mjs` is beside this module. 
 | `allowLocal` | `false` | Explicit development-only HTTP to loopback. It does not disable HTTPS certificate verification. |
 | `lookup` | Node resolver | Optional trusted Node-style DNS lookup callback. Passed to socket creation unchanged; can enforce the deployment's public-IP policy. |
 | `onResult` | Absent | Best-effort completion callback, with status, method, duration, byte count and safe error code only. |
+| `cachePolicyMetadata` | `false` | For the original response-cache adapter: adds private `cacheMetadata` with `hasSetCookie` and `policyFieldsComplete` booleans to complete successful responses. Cookie values never leave the transport. Ordinary results retain their existing shape. |
 
 Unknown options and invalid static configuration throw during construction. An unavailable credential factory returns `503 UPSTREAM_CONFIGURATION_UNAVAILABLE` without making an upstream request.
 

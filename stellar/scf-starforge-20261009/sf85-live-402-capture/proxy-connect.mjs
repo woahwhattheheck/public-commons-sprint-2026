@@ -1,12 +1,12 @@
 /**
  * SF85 opt-in HTTPS over an explicitly approved HTTP CONNECT proxy.
  * No request path, merchant challenge headers or credentials reach the proxy in
- * plaintext. A single tunnel carries one original TLS-verified GET or HEAD.
+ * plaintext. A single tunnel carries one original TLS-verified HTTP request.
  * SPDX-License-Identifier: MIT
  */
 import { Agent as HttpsAgent } from 'node:https';
 import { request as httpRequest } from 'node:http';
-import { connect as tlsConnect } from 'node:tls';
+import { connect as tlsConnect, checkServerIdentity } from 'node:tls';
 
 function proxyError(code) {
   const error = new Error(code);
@@ -36,11 +36,14 @@ export function parseExplicitProxy(raw) {
  * Trusted VM overlay DNS (explicit 198.18/15 option upstream) requires the
  * original hostname:443, since the gateway's 198.18 address speaks plain HTTP
  * outside its forward-proxy CONNECT routing path.
+ * An explicitly trusted resolving proxy may also receive the original hostname
+ * without local DNS, via resolveAtProxy:true. Its caller must pin the origin.
  */
-export function oneShotConnectAgent({ target, proxy, pinnedIP, sandboxOverlay, signal },
+export function oneShotConnectAgent({ target, proxy, pinnedIP, sandboxOverlay, resolveAtProxy = false, signal },
                                     { openConnect = httpRequest, openTls = tlsConnect } = {}) {
-  if (!target || !proxy || !pinnedIP || !signal) throw proxyError('PROXY_CONFIG_INCOMPLETE');
-  const authority = (sandboxOverlay ? target.hostname : pinnedIP) + ':443';
+  if (!target || !proxy || (!resolveAtProxy && !pinnedIP) || !signal ||
+      typeof resolveAtProxy !== 'boolean') throw proxyError('PROXY_CONFIG_INCOMPLETE');
+  const authority = (sandboxOverlay || resolveAtProxy ? target.hostname : pinnedIP) + ':443';
   const agent = new HttpsAgent({ keepAlive: false, maxSockets: 1 });
   let pendingConnect;
   let tunnelSocket;
@@ -56,6 +59,9 @@ export function oneShotConnectAgent({ target, proxy, pinnedIP, sandboxOverlay, s
     if (!finished) {
       finished = true;
       signal.removeEventListener('abort', onAbort);
+      pendingConnect?.destroy();
+      tlsSocket?.destroy();
+      tunnelSocket?.destroy();
       agent.destroy();
     }
   };
@@ -87,6 +93,8 @@ export function oneShotConnectAgent({ target, proxy, pinnedIP, sandboxOverlay, s
           socket,
           servername: target.hostname,
           rejectUnauthorized: true,
+          checkServerIdentity,
+          minVersion: 'TLSv1.2',
           ALPNProtocols: ['http/1.1'],
         });
         tlsSocket.once('secureConnect', () => {

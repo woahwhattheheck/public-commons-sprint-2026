@@ -3,6 +3,11 @@
 import { createHash } from 'node:crypto';
 
 export const DEFAULT_RPC = 'https://soroban-testnet.stellar.org';
+// Public testnet providers listed by Stellar; selection is explicit and never
+// falls back to an arbitrary endpoint supplied by a seller or saved verdict.
+export const TESTNET_RPC_ENDPOINTS = Object.freeze([DEFAULT_RPC,
+  'https://soroban-rpc.testnet.stellar.gateway.fm']);
+export const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
 const I128MAX = (1n << 127n) - 1n;
 const TX = /^[0-9a-f]{64}$/;
 const INTENT = /^[A-Za-z0-9._:-]{1,160}$/;

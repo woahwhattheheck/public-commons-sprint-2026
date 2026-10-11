@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   record:
-    if: github.event.repository.private == false
+    if: ${{ (false) && (github.event.repository.private == false) }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

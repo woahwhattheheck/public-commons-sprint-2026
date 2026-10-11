@@ -52,6 +52,7 @@ function reservationMetadata(raw) {
   if (!isObject(raw)) return null;
   const r = {};
   for (const [from, to] of [['outcome', 'outcome'], ['request_id','requestId'],
+    ['request_sha256','requestSha256'], ['asset','asset'],
     ['network','network'], ['reserved_atomic_units','reservedAtomicUnits']]) {
     const v = raw[from];
     if (typeof v === 'string' && v.length <= 160) r[to] = v;

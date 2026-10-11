@@ -31,6 +31,12 @@ All outputs include source notes, test cases where applicable, and known limitat
 ## How to contribute
 See CONTRIBUTING.md. Prefer issues and PRs. This sprint ends ~26 Aug 2026; ongoing maintenance is community-driven.
 
+## Local delivery
+
+GitHub Actions jobs are disabled in source. Use the existing project commands in a
+local or cloud Linux runtime. The [local delivery guide](.github/HOSTED_COMPUTE.md)
+includes the original source export command, retained workflow recipes and policy.
+
 Generated as part of the Public Commons Sprint, August 2026.
 
 ## PermitPulse paid pilot

@@ -35,12 +35,30 @@ node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs \
   enqueue --root /private/buyer-inbox --config /private/merchant-request.json
 ```
 
+The operator workspace initializer already creates a complete `operator.json`.
+Pass that existing file directly to `enqueue`; no separate inbox configuration
+or extra operator copy is needed:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs \
+  enqueue --root /private/buyer-inbox --config /private/merchant-operator/operator.json
+```
+
 Enqueue validates the original execution configuration, snapshots its request
 body when present, and records file hashes. It pins the trusted signer entry
 file and the original policy file without copying their contents into the
 report. It loads no signer, obtains no approval, makes no merchant request,
 and reserves no budget. Environment variables and operator keys are never
 copied into a job.
+
+An operation with `ticketFile` also copies the merchant's private ticket into
+the job as `0600` `operation-ticket.json`. Its configured header, file hash,
+operation key, request hash and expiry are pinned alongside the body. The
+bearer remains in that private file; `show` and `list` expose only metadata.
+Deleting or replacing the source ticket after enqueue does not change the
+saved job. A different ticket under the same existing intent conflicts even
+when the source config path is unchanged. See [the ticket workflow](OPERATION_TICKETS.md)
+for preparation and merchant issuance.
 
 The original stable intent ID identifies the job. Reusing that ID cannot
 replace its stored request. Keep the original identity when recovering an
@@ -98,6 +116,47 @@ node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs \
   execute --root /private/buyer-inbox --intent merchant-forecast-001
 ```
 
+For a request prepared by the native operator workspace, explicitly select
+that existing workspace for this one intent:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs \
+  execute --root /private/buyer-inbox --intent merchant-forecast-001 \
+  --workspace /private/merchant-operator
+```
+
+Before creating an attempt marker, the inbox opens the original workspace and
+matches the saved request's operator identity, Python executable, policy and
+ledger paths, signer path, evidence directory and trusted payer. Its network,
+asset and recipient must match the workspace and generated signer; its atomic
+cap must fit both the current workspace cap and the original signer cap. A
+mismatched workspace, absent wallet environment variable, unavailable local SDK
+or invalid private operator key file leaves the job `QUEUED`, with its request
+and budget untouched. Correct the selected workspace and inspect
+the same intent; no attempt marker has been consumed by that refusal.
+
+The queue also checks the saved ticket's private file, exact hash and expiry
+before writing an attempt marker. Expired tickets remain available in review
+and history with `expired:true`, but cannot start a new attempt. Execution
+rechecks the pinned hash at its own entry before sending the merchant header.
+Selecting a workspace supplies its original operator keys and signer; its
+current template ticket does not replace or invalidate the queued ticket.
+
+After a successful match, the original workspace supplies its local SF36
+operator keys directly to the existing execution environment. Keys are never
+written to queue records or reports. The saved queued operation, body snapshot,
+signer, policy, ledger, evidence path and output destination stay authoritative;
+the workspace does not replace them with its current template operation. The
+generated native signer still reads the operator's configured testnet key only
+when SF81 has approved and reserved the actual fresh challenge.
+
+Omitting `--workspace` preserves execution using the operator's existing
+environment. `execute` does not enqueue, approve in advance, replay or run other
+intents. It does not make a previously attempted job executable again.
+The separate [financial-finalization command](FINALIZATION.md) uses that same
+workspace to complete original accounting without loading the wallet. Report
+exports can also take `--workspace` to display its copyable command.
+
 The queue checks the saved request and pinned operator files before invoking
 the buyer. A permanent local attempt marker is created before control passes
 to the original SF88 execution function. Concurrent processes cannot claim
@@ -154,10 +213,11 @@ recomputes the outcome through the original SF52 reducer instead of trusting
 totals saved in the evidence file. A later report shows recovered evidence alongside
 the original attempt; it does not rewrite an old HTTP result as a new call.
 
-The existing SF82 format records the stable intent and payment terms, but not
-the resource URL, HTTP method or response-file hash. Recovery reports this
-binding limit explicitly. It checks the terms available in that original
-format; it does not invent a stronger request or delivery binding.
+Current SF82 records retain the complete original approved request and its
+digest. The existing `recover` operation checks its original intent/term view;
+the [finalize command](FINALIZATION.md) additionally matches the retained URL,
+method, body identity and approval digest to this inbox and the original ledger.
+Older abbreviated evidence remains readable through its existing tools.
 
 When a download destination was configured, recovery reports
 `REQUIRES_ORIGINAL_DOWNLOAD_SUMMARY`. It does not inspect that file or claim
@@ -204,8 +264,10 @@ configurations, request bodies, evidence, output files, reports and inbox state
 remain in the operator's private directory.
 
 For embedded use, `openQueue(root)` exposes the same enqueue, list, show,
-single-intent run, cancellation and recovery operations as the command. The report is a pure
-function:
+single-intent run, cancellation and recovery operations as the command. Pass
+`queue.run(intentId, {signal, workspace:'/absolute/operator-workspace'})` to
+select an existing workspace explicitly, or omit `workspace` to retain the
+original environment-based execution. The report is a pure function:
 
 ```js
 import { renderQueueReport } from './queue-report.mjs';

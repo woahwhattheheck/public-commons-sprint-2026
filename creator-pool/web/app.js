@@ -2297,7 +2297,7 @@ function buildSubmissionForm(c) {
   const fTitle = fieldWrap("Work title", title, { hint: "up to 140 characters" });
   const fUrl = fieldWrap("Public work URL", url, { hint: "a live http(s) link the sponsor can access" });
   const fNotes = fieldWrap("Delivery notes", notes, { hint: "optional, up to 1000 characters" });
-  let key = creatorDraftKey(c, creatorField.sel.value);
+  const key = creatorDraftKey(c, creatorField.sel.value);
   let saveFailed = false;
   const value = () => creatorDraftShape({ title: title.value, workUrl: url.value, notes: notes.value });
   function fill(keyToRead) {
@@ -2350,10 +2350,9 @@ function buildSubmissionForm(c) {
   [title, url, notes].forEach((field) => field.addEventListener("input", changed));
   if (typeof creatorField.sel.addEventListener === "function") {
     creatorField.sel.addEventListener("change", () => {
-      key = creatorDraftKey(c, creatorField.sel.value);
-      saveFailed = false;
-      fill(key);
-      drawPreview();
+      // Both demo pickers share the actor used by draft restoration and claims.
+      ui.actorId = creatorField.sel.value;
+      renderAll();
     });
   }
   saveBtn.addEventListener("click", () => {

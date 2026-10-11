@@ -2,7 +2,7 @@
 // A session owns one generated synthetic match; frames are computed only from
 // events[0..count), so no future event can influence a frame.
 import {randomUUID} from 'node:crypto';
-import {makeSnapshot, TEAMS} from './engine.mjs';
+import {createReplayTimeline, validateFixture, TEAMS} from './engine.mjs';
 import {generateMatch, parseScenario, parseSeed, SCENARIOS} from './scenarios.mjs';
 
 export const SPEEDS = Object.freeze([1, 2, 4, 8]);
@@ -40,6 +40,9 @@ export function delayMs(gapSeconds, speed) {
 export function createSessionStore({maxSessions = 64, idleMs = 20 * 60 * 1000, now = () => Date.now()} = {}) {
   if (!Number.isInteger(maxSessions) || maxSessions < 1 || maxSessions > 1000) throw new TypeError('Invalid maxSessions');
   const sessions = new Map();
+  // Generated fixtures are immutable and may be shared by independent viewer sessions.
+  // Weak keys let expired/evicted scenarios release their bounded replay checkpoints.
+  const timelines = new WeakMap();
   const touch = (s) => { s.lastSeen = now(); sessions.delete(s.id); sessions.set(s.id, s); };
   const endStream = (s) => {
     const st = s.stream;
@@ -58,6 +61,18 @@ export function createSessionStore({maxSessions = 64, idleMs = 20 * 60 * 1000, n
   function create(scenario, seed) {
     scenario = parseScenario(scenario); seed = parseSeed(seed);
     const events = generateMatch(scenario, seed);
+    return register(scenario, seed, events);
+  }
+  // Restore retained source events before the MS15 timeline is initialized.
+  // Every reopened viewer gets a distinct session and immutable event array.
+  function restore({scenario, seed, events} = {}) {
+    scenario = parseScenario(scenario); seed = parseSeed(seed);
+    validateFixture(events);
+    const retained = Object.freeze(events.map(({id, second, type, team, player, zone}) =>
+      Object.freeze({id, second, type, team, player, zone})));
+    return register(scenario, seed, retained);
+  }
+  function register(scenario, seed, events) {
     while (sessions.size >= maxSessions) drop(sessions.keys().next().value);
     const s = {id: randomUUID(), scenario, seed, events, lastSeen: now(), stream: null};
     sessions.set(s.id, s);
@@ -79,12 +94,13 @@ export function createSessionStore({maxSessions = 64, idleMs = 20 * 60 * 1000, n
     const s = get(id);
     count = parseCount(count, s.events.length);
     view = parseView(view);
-    const prefix = s.events.slice(0, count);
-    const rivalTeam = TEAMS.find((t) => t !== view.team);
-    const out = {sessionId: s.id, count, total: s.events.length, event: count ? prefix[count - 1] : null,
-      ...makeSnapshot(prefix, view),
-      rival: {team: rivalTeam, stats: makeSnapshot(prefix, {...view, team: rivalTeam}).stats}};
-    if (includePrefix) out.events = prefix;
+    let timeline = timelines.get(s.events);
+    if (!timeline) { timeline = createReplayTimeline(s.events); timelines.set(s.events, timeline); }
+    const rivalTeam = TEAMS.find((t) => t !== view.team);
+    const out = {sessionId: s.id, count, total: s.events.length, event: count ? s.events[count - 1] : null,
+      ...timeline.snapshot(count, view),
+      rival: {team: rivalTeam, stats: timeline.stats(count, rivalTeam)}};
+    if (includePrefix) out.events = s.events.slice(0, count);
     return out;
   }
   // One live stream per session: a newer attach closes the older one.
@@ -103,6 +119,7 @@ export function createSessionStore({maxSessions = 64, idleMs = 20 * 60 * 1000, n
     const at = now();
     for (const [id, s] of sessions) if (!s.stream && at - s.lastSeen > idleMs) drop(id);
   }
-  return {create, get, describe: (id) => describe(get(id)), frame, attachStream, drop, sweep,
+  return {create, restore, get, describe: (id) => describe(get(id)), frame, attachStream, drop, sweep,
     size: () => sessions.size, streams: () => [...sessions.values()].filter((s) => s.stream).length};
 }
+
