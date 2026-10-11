@@ -2,6 +2,11 @@
 const $ = id => document.getElementById(id);
 const SESSION = 'SESSION', PERIOD = 'DURABLE_HISTORY';
 let current, draft, selected = 0, editRevision = null, dirty = false, busy = false, pendingSave = null, sourceDirty = false;
+// Keep explicit atomic strings and their saved source separate from USD edits.
+let repricingSource = null, repricingAmounts = new Map(), repricingPreview = null;
+let repricingDirty = false, repricingEditRevision = null, pendingRepricingSave = null;
+let repricingRoutePage = 0;
+const REPRICING_ROUTES_PER_PAGE = 8;
 const text = (tag,value,className) => { const node = document.createElement(tag); node.textContent = value; if (className) node.className = className; return node; };
 const money = value => value === null || value === undefined ? 'Unknown' : '$' + value;
 const shown = value => value === null || value === undefined ? '—' : String(value);
@@ -26,6 +31,7 @@ function controls() {
   const comparable = current.history.length > 1;
   lock($('compare-left'),!comparable); lock($('compare-right'),!comparable);
   lock($('compare'),!comparable || !$('compare-left').value || !$('compare-right').value || $('compare-left').value === $('compare-right').value);
+  repricingControls();
 }
 async function api(path,input) {
   const response = await fetch(path,{method:input === undefined ? 'GET' : 'POST',
@@ -33,7 +39,7 @@ async function api(path,input) {
     ...(input === undefined ? {} : {body:JSON.stringify(input)})});
   let value;
   try { value = await response.json(); } catch { throw new Error('Workspace response was interrupted. Retry the same action to recover its result.'); }
-  if (!response.ok) throw new Error(value.message || 'Workspace operation failed.');
+  if (!response.ok) throw Object.assign(new Error(value.message || 'Workspace operation failed.'),{code:value.code,status:response.status});
   return value;
 }
 const readState = (selection = current?.selection) => selection ? api('/api/source',{selection}) : api('/api/state');
@@ -246,13 +252,17 @@ function renderHistory() {
       $('review-name').value = item.label + ' revision';
       renderInputs(); markDirty(); notice('Saved assumptions loaded for the current operations selection. Review the payment choices, then save a new version.');
     }));
-    actions.append(report,reuse); row.append(description,actions); $('history').append(row);
+    const reprice = text('button','Prepare price change'); reprice.type = 'button';
+    reprice.addEventListener('click',() => run(async () => {
+      if (await loadRepricing(item.version)) $('repricing-panel').scrollIntoView({behavior:'smooth',block:'start'});
+    }));
+    actions.append(report,reuse,reprice); row.append(description,actions); $('history').append(row);
   });
   renderComparisonChoices();
 }
 function renderInputs() {
   $('merchant-name').value = draft.merchantName; $('fixed-cost').value = draft.sharedMonthlyFixedUsd ?? '';
-  renderSource(); renderRoutes(); renderEditor(); renderHistory();
+  renderSource(); renderRoutes(); renderEditor(); renderHistory(); renderRepricing();
 }
 const overviewMetrics = [['Monthly target gross','plannedMonthlyTargetGrossUsd'],['Monthly target variable cost','plannedMonthlyTargetVariableCostsUsd'],['Contribution after fixed cost','plannedMonthlyTargetContributionAfterFixedUsd']];
 function totals(report) {
@@ -344,6 +354,260 @@ function renderComparison(result) {
   ].map(([label,key])=> { const item = text('p',label); item.dataset.matches = String(result.compatibility[key]); item.append(text('strong',result.compatibility[key] ? 'Same' : 'Different')); return item; }));
   $('comparison-reports').replaceChildren(comparisonReport(result.left),comparisonReport(result.right));
 }
+const paymentAmount = option => option.atomicAmount ?? option.amount;
+const paymentKey = (routeId,index) => routeId+':'+index;
+function repricingEdits() {
+  return (repricingSource?.routes ?? []).flatMap(route => route.paymentOptions.flatMap((option,paymentIndex) => {
+    const expectedAmount = paymentAmount(option), amount = repricingAmounts.get(paymentKey(route.routeId,paymentIndex)) ?? expectedAmount;
+    return amount === expectedAmount ? [] : [{routeId:route.routeId,paymentIndex,expectedAmount,amount}];
+  }));
+}
+const repricingStale = () => Boolean(repricingSource?.sellerChanged);
+const repricingSelectionChanged = () => Boolean(repricingSource && $('repricing-source').value !== repricingSource.version);
+function repricingControls() {
+  lock($('repricing-source'),!current.history.length);
+  lock($('repricing-load'),!$('repricing-source').value);
+  const unavailable = repricingStale() || repricingSelectionChanged(), changed = repricingEdits().length;
+  lock($('repricing-reset'),!repricingSource || unavailable || !changed);
+  lock($('repricing-preview'),!repricingSource || unavailable || !changed);
+  lock($('repricing-save'),!repricingPreview || unavailable || !$('repricing-name').value.trim());
+  lock($('repricing-name'),!repricingSource || unavailable);
+  lock($('repricing-previous'),repricingRoutePage === 0);
+  lock($('repricing-next'),(repricingRoutePage+1)*REPRICING_ROUTES_PER_PAGE >= (repricingSource?.routes.length ?? 0));
+  document.querySelectorAll('.repricing-amount').forEach(input => lock(input,unavailable));
+}
+function repricingChoices() {
+  const selectedVersion = $('repricing-source').value;
+  $('repricing-source').replaceChildren(...current.history.map(item => {
+    const option = text('option',item.label+' · '+item.savedAt); option.value = item.version; return option;
+  }));
+  if (!current.history.length) {
+    const empty = text('option','Save a pricing review to prepare a price change'); empty.value = ''; $('repricing-source').append(empty);
+  }
+  if (repricingSource && !current.history.some(item=>item.version === repricingSource.version)) {
+    const retained = text('option',repricingSource.label+' · loaded review'); retained.value = repricingSource.version;
+    $('repricing-source').append(retained);
+  }
+  if ([...$('repricing-source').options].some(option=>option.value === selectedVersion)) $('repricing-source').value = selectedVersion;
+}
+function repricingSummary() {
+  const count = repricingEdits().length;
+  $('repricing-change-count').textContent = count ? count+' payment choice'+(count === 1 ? '' : 's')+' changed.' : 'No amounts changed.';
+}
+function invalidateRepricing() {
+  repricingPreview = null; pendingRepricingSave = null; repricingDirty = true;
+  $('repricing-review').hidden = true; $('repricing-state').textContent = 'Unsaved payment amounts';
+  repricingSummary(); controls();
+}
+function paymentIdentity(option) {
+  const details = document.createElement('details'); details.className = 'payment';
+  details.append(text('summary','Asset, recipient and extra terms'));
+  const values = document.createElement('dl');
+  for (const [label,value] of [['Asset',option.asset],['Recipient',option.payTo]])
+    values.append(text('dt',label),text('dd',value));
+  details.append(values);
+  if (Object.hasOwn(option,'extra')) details.append(text('pre',JSON.stringify(option.extra,null,2)));
+  return details;
+}
+function renderRepricingOptions() {
+  $('repricing-options').replaceChildren();
+  const start = repricingRoutePage*REPRICING_ROUTES_PER_PAGE;
+  const visible = repricingSource.routes.slice(start,start+REPRICING_ROUTES_PER_PAGE);
+  $('repricing-paging').hidden = repricingSource.routes.length <= REPRICING_ROUTES_PER_PAGE;
+  $('repricing-page-caption').textContent = (start+1)+'–'+(start+visible.length)+' of '+repricingSource.routes.length+' services';
+  for (const route of visible) {
+    const section = document.createElement('article'); section.className = 'repricing-route';
+    const header = document.createElement('div'); header.className = 'repricing-route-heading';
+    const name = document.createElement('div'); name.append(text('h3',route.routeId),text('p',route.method+' '+route.path));
+    header.append(name);
+    const commercial = repricingSource.commercial?.routes?.[route.routeId];
+    if (commercial) {
+      const quote = document.createElement('div'); quote.className = 'repricing-quote';
+      quote.append(text('div','Saved merchant valuation · '+money(commercial.unitPriceUsd)),text('p',commercial.priceBasis));
+      header.append(quote);
+    }
+    section.append(header);
+    route.paymentOptions.forEach((option,paymentIndex) => {
+      const currentAmount = paymentAmount(option), key = paymentKey(route.routeId,paymentIndex);
+      const row = document.createElement('div'); row.className = 'repricing-option';
+      const description = document.createElement('div');
+      description.append(text('div','Choice '+(paymentIndex+1)+' · '+option.network,'repricing-option-title'),
+        text('p',option.scheme+' · timeout '+option.maxTimeoutSeconds+'s','muted small'),paymentIdentity(option));
+      const original = document.createElement('div'); original.className = 'repricing-current';
+      original.append(text('span','Current atomic amount'),text('code',currentAmount));
+      const label = text('label','Proposed atomic amount'), input = document.createElement('input'), hint = text('small','Current amount retained.');
+      input.className = 'repricing-amount'; input.type = 'text'; input.inputMode = 'numeric';
+      input.dataset.routeId = route.routeId; input.dataset.paymentIndex = String(paymentIndex);
+      input.pattern = '[1-9][0-9]{0,38}'; input.maxLength = 39; input.required = true; input.autocomplete = 'off';
+      input.setAttribute('aria-label',route.routeId+', payment choice '+(paymentIndex+1)+', proposed atomic amount');
+      input.title = 'Use a positive whole-number atomic amount, up to 39 digits.';
+      input.value = repricingAmounts.get(key) ?? currentAmount;
+      function update() {
+        const changed = input.value !== currentAmount; row.dataset.changed = String(changed);
+        hint.textContent = changed ? 'Changed — review before saving.' : 'Current amount retained.';
+      }
+      input.addEventListener('input',() => { repricingAmounts.set(key,input.value); update(); invalidateRepricing(); });
+      update(); label.append(input,hint); row.append(description,original,label); section.append(row);
+    });
+    $('repricing-options').append(section);
+  }
+  repricingSummary();
+}
+function renderRepricingSource() {
+  if (!repricingSource) return;
+  const count = repricingSource.routes.reduce((sum,route)=>sum+route.paymentOptions.length,0);
+  $('repricing-source-facts').replaceChildren(...facts([['Saved pricing review',repricingSource.label],
+    ['Services',repricingSource.routes.length],['Payment choices',count]]).children);
+  $('repricing-source-hash').textContent = repricingSource.sellerSha256;
+  $('repricing-source-links').replaceChildren(reportLink(repricingSource.version,'report/review.html','Open saved commercial review'),
+    reportLink(repricingSource.version,'seller.json','Source seller configuration'),reportLink(repricingSource.version,'terms.json','Source merchant terms'));
+  const stale = repricingStale(), selectionChanged = repricingSelectionChanged();
+  $('repricing-source-status').dataset.error = String(stale);
+  $('repricing-source-status').textContent = stale
+    ? 'The seller configuration has changed since this review. Save a review of the current configuration, then load it here to prepare the new amounts.'
+    : selectionChanged
+      ? 'Choose Load payment choices to apply the selected review. The form currently contains '+repricingSource.label+'.'
+      : repricingSource.sourcePackageAvailable
+        ? 'Original authoring inputs are attached to this workspace. The price change can include updated source selections for the existing release workflow.'
+        : 'These amounts are tied to this saved seller configuration. The saved merchant USD valuations, costs and volume targets carry forward into the exported terms.';
+  if (stale && repricingPreview) { repricingPreview = null; $('repricing-review').hidden = true; }
+}
+function repricingFileLink(decision,name,label) {
+  const anchor = text('a',label);
+  anchor.href = '/repricing-files/'+encodeURIComponent(decision)+'/'+name.split('/').map(encodeURIComponent).join('/');
+  anchor.target = '_blank'; anchor.rel = 'noopener'; return anchor;
+}
+function repricingFiles(item) {
+  return Array.isArray(item.files) ? item.files.map(file => typeof file === 'string' ? file : file.file ?? file.name).filter(Boolean)
+    : Object.keys(item.files ?? {});
+}
+function renderRepricingHistory() {
+  const entries = current.repricing?.history ?? [];
+  $('repricing-history-count').textContent = entries.length+' recent versions';
+  $('repricing-history').replaceChildren();
+  if (!entries.length) $('repricing-history').append(text('p','Saved configurations will appear here with their original inputs and price changes.','repricing-empty'));
+  const labels = {'launch-seller.json':'Local launch configuration','seller.json':'Seller configuration','terms.json':'Merchant terms','source-seller.json':'Source seller configuration',
+    'source-terms.json':'Source merchant terms','pricing-report.json':'Source pricing report','decision.json':'Price change review','manifest.json':'Version manifest'};
+  for (const item of entries) {
+    const article = document.createElement('article'); article.className = 'history-item';
+    const description = document.createElement('div'), count = item.changedPaymentOptions ?? item.changes?.length ?? 0;
+    description.append(text('div',item.label,'history-title'),
+      text('div',item.savedAt+' · '+count+' payment choice'+(count === 1 ? '' : 's')+' changed','history-meta'),
+      text('div','Based on '+(item.sourceLabel ?? item.sourceVersion),'history-source'));
+    const available = new Set([...repricingFiles(item),'manifest.json']), primary = document.createElement('div');
+    primary.className = 'history-files';
+    for (const name of ['launch-seller.json','seller.json','terms.json','decision.json']) if (available.has(name)) {
+      const link = repricingFileLink(item.decision,name,labels[name]);
+      if (name === 'launch-seller.json' || (name === 'seller.json' && !available.has('launch-seller.json'))) link.className = 'button';
+      primary.append(link);
+    }
+    description.append(primary);
+    const retained = document.createElement('details'), files = document.createElement('div'); files.className = 'history-files';
+    retained.append(text('summary','Original inputs and complete package'));
+    for (const name of available) if (!['launch-seller.json','seller.json','terms.json','decision.json'].includes(name))
+      files.append(repricingFileLink(item.decision,name,labels[name] ?? name));
+    retained.append(files);
+    const hash = text('p','Prepared configuration SHA-256','muted small'); hash.append(text('code',item.proposedSellerSha256,'repricing-hash'));
+    retained.append(hash); description.append(retained); article.append(description);
+    if (item.release) {
+      const release = text('div','Release staged · '+item.release.id,'repricing-release-state');
+      release.append(text('p',item.release.label,'muted small')); description.append(release);
+    } else if (current.repricing?.releaseAvailable && item.reviewSha256 &&
+        (item.sourcePackageAvailable || [...available].some(name=>name.startsWith('source-package/')))) {
+      const actions = document.createElement('div'); actions.className = 'button-row';
+      const stage = text('button','Stage retained release'); stage.type = 'button';
+      stage.addEventListener('click',() => run(async () => {
+        const result = await api('/api/repricing/stage',{decision:item.decision,reviewSha256:item.reviewSha256});
+        item.release = result.release; renderRepricingHistory();
+        notice((result.recovered ? 'Retained release recovered · ' : 'Retained release staged · ')+result.release.id+'. Review and select it in the existing seller release console.');
+      }));
+      actions.append(stage); article.append(actions);
+    }
+    $('repricing-history').append(article);
+  }
+}
+function renderRepricing() {
+  repricingChoices();
+  if (pendingRepricingSave) {
+    const recovered = (current.repricing?.history ?? []).find(item => item.requestId === pendingRepricingSave.requestId &&
+      item.reviewSha256 === pendingRepricingSave.reviewSha256 && item.sourceVersion === pendingRepricingSave.version);
+    if (recovered) {
+      pendingRepricingSave = null; repricingPreview = null; repricingDirty = false;
+      repricingEditRevision = current.repricing.revision;
+      $('repricing-review').hidden = true; $('repricing-state').textContent = 'Recovered saved configuration · '+recovered.label;
+    }
+  }
+  if (repricingSource) repricingSource.sellerChanged = repricingSource.sellerSha256 !== current.seller.sha256;
+  renderRepricingSource(); renderRepricingHistory(); repricingControls();
+}
+async function loadRepricing(version) {
+  if (repricingDirty && !window.confirm('Replace the unsaved price change with the selected review’s original payment amounts?')) return false;
+  const source = await api('/api/repricing/source',{version});
+  repricingSource = source; repricingAmounts = new Map(); repricingPreview = null; pendingRepricingSave = null;
+  repricingDirty = false; repricingRoutePage = 0;
+  repricingEditRevision = Object.hasOwn(source,'repricingRevision') ? source.repricingRevision : current.repricing?.revision ?? null;
+  for (const route of source.routes) route.paymentOptions.forEach((option,index) => repricingAmounts.set(paymentKey(route.routeId,index),paymentAmount(option)));
+  $('repricing-source').value = version; $('repricing-editor').hidden = false; $('repricing-review').hidden = true;
+  $('repricing-name').value = (source.label+' price change').slice(0,100);
+  $('repricing-state').textContent = 'Loaded · '+source.label;
+  renderRepricingSource(); renderRepricingOptions(); controls();
+  notice(repricingStale() ? $('repricing-source-status').textContent : 'Saved payment choices loaded. Enter exact atomic amounts, then review the complete change.',repricingStale());
+  return true;
+}
+function repricingPayload() {
+  if (!repricingSource) throw new Error('Load a saved pricing review first.');
+  if (repricingStale()) throw new Error('Save and load a review of the current seller configuration before changing its amounts.');
+  if (repricingSelectionChanged()) throw new Error('Load the selected pricing review before preparing its amounts.');
+  const edits = repricingEdits();
+  if (!edits.length) throw new Error('Change at least one payment amount before reviewing.');
+  const invalid = edits.find(edit=>!/^[1-9][0-9]{0,38}$/.test(edit.amount));
+  if (invalid) {
+    repricingRoutePage = Math.floor(repricingSource.routes.findIndex(route=>route.routeId === invalid.routeId)/REPRICING_ROUTES_PER_PAGE);
+    renderRepricingOptions();
+    const input = [...document.querySelectorAll('.repricing-amount')].find(field=>field.dataset.routeId === invalid.routeId &&
+      Number(field.dataset.paymentIndex) === invalid.paymentIndex);
+    input.disabled = false; input.reportValidity();
+    throw new Error('Enter a positive whole-number atomic amount for '+invalid.routeId+', payment choice '+(invalid.paymentIndex+1)+'.');
+  }
+  return {version:repricingSource.version,sellerSha256:repricingSource.sellerSha256,edits};
+}
+function paymentTerms(option,title) {
+  const section = document.createElement('div'); section.append(text('h4',title));
+  const values = document.createElement('dl');
+  for (const [label,value] of [['Scheme',option.scheme],['Network',option.network],['Atomic amount',paymentAmount(option)],
+    ['Asset',option.asset],['Recipient',option.payTo],['Timeout',option.maxTimeoutSeconds+' seconds']])
+    values.append(text('dt',label),text('dd',value));
+  if (Object.hasOwn(option,'extra')) values.append(text('dt','Extra'),text('dd',JSON.stringify(option.extra,null,2)));
+  section.append(values); return section;
+}
+function renderRepricingTerms(change,expanded = false) {
+  const detail = document.createElement('details'); detail.className = 'repricing-terms';
+  detail.append(text('summary',change.routeId+' · choice '+(change.paymentIndex+1)+' · complete payment terms'));
+  let rendered = false;
+  const show = () => {
+    if (rendered) return;
+    rendered = true;
+    const pair = document.createElement('div'); pair.className = 'repricing-term-pair';
+    pair.append(paymentTerms(change.before,'Current payment terms'),paymentTerms(change.after,'Proposed payment terms'));
+    detail.append(pair);
+  };
+  detail.addEventListener('toggle',()=> { if (detail.open) show(); });
+  if (expanded) { show(); detail.open = true; }
+  $('repricing-review-terms').replaceChildren(detail);
+}
+function renderRepricingReview(result) {
+  repricingPreview = result; pendingRepricingSave = null; $('repricing-review').hidden = false;
+  $('repricing-state').textContent = 'Price change reviewed · ready to save';
+  $('repricing-review-count').textContent = result.changes.length+' payment choice'+(result.changes.length === 1 ? '' : 's');
+  $('repricing-change-table').replaceChildren(table(result.changes,[['Service',identity],
+    ['Choice',row=>row.paymentIndex+1],['Network',row=>row.before.network],
+    ['Current atomic amount',row=>text('code',paymentAmount(row.before))],
+    ['Proposed atomic amount',row=>text('code',paymentAmount(row.after))],
+    ['Payment terms',row=> { const button = text('button','Inspect terms','repricing-term-action'); button.type = 'button';
+      button.addEventListener('click',()=>renderRepricingTerms(row,true)); return button; }]]));
+  renderRepricingTerms(result.changes[0]);
+  $('repricing-proposed-hash').textContent = result.proposedSellerSha256;
+}
 function payload() {
   if (sourceDirty) throw new Error('Apply the source selection before calculating or saving.');
   if (!current.snapshot) throw new Error('Restore the selected operations source and refresh before calculating this review.');
@@ -407,7 +671,68 @@ $('comparison-form').addEventListener('submit',event => { event.preventDefault()
   if (!leftVersion || !rightVersion || leftVersion === rightVersion) throw new Error('Choose two different saved reviews.');
   const result = await api('/api/compare',{leftVersion,rightVersion}); renderComparison(result); notice('Original saved reports loaded side by side. Their values have not been recalculated.');
 }); });
-window.addEventListener('beforeunload',event => { if (dirty || sourceDirty) { event.preventDefault(); event.returnValue = ''; } });
+$('repricing-source').addEventListener('change',() => { renderRepricingSource(); controls(); });
+$('repricing-source-form').addEventListener('submit',event => { event.preventDefault(); run(async () => {
+  if (!$('repricing-source').value) throw new Error('Save a pricing review before preparing a price change.');
+  await loadRepricing($('repricing-source').value);
+}); });
+$('repricing-reset').addEventListener('click',() => {
+  if (!repricingSource) return;
+  for (const route of repricingSource.routes) route.paymentOptions.forEach((option,index) => repricingAmounts.set(paymentKey(route.routeId,index),paymentAmount(option)));
+  repricingPreview = null; pendingRepricingSave = null; repricingDirty = false; repricingRoutePage = 0;
+  $('repricing-review').hidden = true; $('repricing-state').textContent = 'Loaded · '+repricingSource.label;
+  renderRepricingOptions(); controls(); notice('The selected saved review’s original payment amounts have been restored.');
+});
+for (const [id,direction] of [['repricing-previous',-1],['repricing-next',1]]) $(id).addEventListener('click',() => {
+  repricingRoutePage += direction; renderRepricingOptions(); controls();
+});
+$('repricing-preview').addEventListener('click',() => run(async () => {
+  const input = repricingPayload();
+  repricingPreview = null; $('repricing-review').hidden = true; $('repricing-state').textContent = 'Reviewing payment amounts';
+  let result;
+  try { result = await api('/api/repricing/preview',input); }
+  catch (error) { $('repricing-state').textContent = 'Review needs attention · amounts retained'; throw error; }
+  renderRepricingReview(result); notice('Exact before and after payment terms prepared. Name the price change and save its complete configuration.');
+}));
+$('repricing-name').addEventListener('input',() => {
+  pendingRepricingSave = null; repricingDirty = true; controls();
+});
+$('repricing-save').addEventListener('click',() => run(async () => {
+  if (!repricingPreview) throw new Error('Review the exact payment changes before saving the configuration.');
+  const label = $('repricing-name').value.trim();
+  if (!label) throw new Error('Give this price change a name.');
+  pendingRepricingSave ??= {...repricingPayload(),expectedRevision:repricingEditRevision,
+    requestId:crypto.randomUUID(),label,reviewSha256:repricingPreview.reviewSha256};
+  let result;
+  try { result = await api('/api/repricing/save',pendingRepricingSave); }
+  catch (error) {
+    // Keep an interrupted request unchanged for an exact retry. A confirmed
+    // conflict reloads the chain position while retaining the entered amounts.
+    if (error.status === 409) {
+      pendingRepricingSave = null; repricingPreview = null; $('repricing-review').hidden = true;
+      try {
+        const latest = await api('/api/repricing/source',{version:repricingSource.version});
+        repricingSource.sellerChanged = latest.sellerChanged;
+        repricingEditRevision = latest.repricingRevision;
+        renderRepricingSource();
+        $('repricing-state').textContent = 'Workspace changed · review amounts again';
+      } catch { $('repricing-state').textContent = 'Refresh the workspace before reviewing again'; }
+    }
+    throw error;
+  }
+  repricingEditRevision = result.revision; repricingDirty = false; pendingRepricingSave = null; repricingPreview = null;
+  const {changes,...savedSummary} = result;
+  savedSummary.changedPaymentOptions = result.changedPaymentOptions ?? changes?.length ?? 0;
+  savedSummary.changedRoutes = result.changedRoutes ?? new Set((changes ?? []).map(change=>change.routeId)).size;
+  current.repricing = {...current.repricing,revision:result.revision,
+    history:[savedSummary,...(current.repricing?.history ?? []).filter(item=>item.decision !== result.decision)].slice(0,100)};
+  $('repricing-review').hidden = true; $('repricing-state').textContent = 'Saved · '+result.label;
+  renderRepricingHistory();
+  notice(result.recovered ? 'The prior configuration save completed. Its original package is available in Saved price changes.'
+    : 'Seller configuration saved. Download the prepared configuration and merchant terms from Saved price changes.');
+  $('repricing-history').scrollIntoView({behavior:'smooth',block:'nearest'});
+}));
+window.addEventListener('beforeunload',event => { if (dirty || sourceDirty || repricingDirty) { event.preventDefault(); event.returnValue = ''; } });
 async function initialize() {
   current = await api('/api/state'); draft = current.commercial; editRevision = current.revision; renderInputs();
   $('save-state').textContent = current.revision ? 'Loaded latest saved assumptions' : 'Unsaved review';

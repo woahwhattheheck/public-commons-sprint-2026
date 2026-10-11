@@ -22,6 +22,17 @@ wallet keys, handler paths, arbitrary file paths, target URLs or payment overrid
 as tool arguments. Owner-entered support terms may reference their existing
 consent and proposal records; those URLs are retained as text and never fetched.
 
+## Review pricing and retain seller changes
+
+Attach an original SF97 workspace with `init-pricing --dir NEW_HOST --pricing
+CONNECTION_JSON`, or add `--pricing` to ordinary initialization. The same MCP
+can capture native observations, save commercial pricing reviews, compare saved
+versions, review explicit atomic payment changes, and download the retained
+seller/source files. Original API packages stage directly into their existing
+SF82 release store, ready for the existing inspect/compare/activate workflow.
+See [PRICING.md](PRICING.md) for host aliases, exact revision and review hashes,
+capture paging, release-store selection and resumed file delivery.
+
 ## Operate a retained merchant fleet
 
 The same provider also exposes the original multi-store fleet lifecycle. Use

@@ -25,6 +25,8 @@ buyer keeps per-chunk approval in this launching terminal. Ctrl+C stops owned
 work, closes the private browser server and retains every original session.
 The original local operator preset also enables receiving public merchant object
 descriptions and offers, then creating a private buyer and reviewed download.
+Backup and recovery uses a separate SF88_BACKUP_PASSPHRASE environment variable
+set before launch. The browser receives its name only, never its value.
 `;
 
 async function input(req, allowed, maximum = 8192) {
@@ -113,6 +115,8 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
         return send(200, { products: await model.products() });
       if (req.method === 'GET' && url.pathname === '/api/receiving' && !url.search)
         return send(200, await model.receivingState());
+      if (req.method === 'GET' && url.pathname === '/api/recovery' && !url.search)
+        return send(200, await model.recoveryState());
       if (req.method === 'GET' && url.pathname === '/api/receiving/options') {
         const value = params(url, ['id', 'objectId']);
         return send(200, await model.receivingOptions(value.id, value.objectId));
@@ -137,11 +141,16 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
         '/api/receiving/receive': ['descriptionName', 'descriptionBase64', 'catalogName', 'catalogBase64'],
         '/api/receiving/review': ['id', 'objectId', 'rowIndex', 'acceptIndex', 'chunkBytes', 'sessionName', 'maxTotalAtomic', 'dailyAtomic'],
         '/api/receiving/create': ['reviewId'],
+        '/api/recovery/review': ['stateRoot'],
+        '/api/recovery/start': ['kind', 'actionId', 'stateRoot', 'output', 'expectedReviewSha256',
+          'passEnv', 'quiesced', 'bundle', 'expected'],
       };
       if (req.method !== 'POST' || url.search || !actions[url.pathname]) fail('OBJECT_WORKSPACE_ROUTE_NOT_FOUND', 404);
       if (req.headers.origin !== origin) fail('OBJECT_WORKSPACE_ORIGIN_REQUIRED', 403);
       const value = await input(req, actions[url.pathname],
         url.pathname === '/api/receiving/receive' ? OBJECT_RECEIVING_REQUEST_LIMIT : 8192);
+      if (url.pathname === '/api/recovery/review') return send(200, await model.inspectRecovery(value));
+      if (url.pathname === '/api/recovery/start') return send(202, model.startRecovery(value));
       if (url.pathname === '/api/receiving/receive') return send(201, await model.receive(value));
       if (url.pathname === '/api/receiving/review') return send(200, await model.reviewReceived(value));
       if (url.pathname === '/api/receiving/create') return send(201, await model.createReceived(value));

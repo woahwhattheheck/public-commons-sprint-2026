@@ -9,6 +9,7 @@ let section = sessionStorage.getItem('starforge-object-workspace-view') === 'acc
 let query = '', filter = 'all', generation = 0, pollTimer, queryTimer, confirmAction = null;
 let downloadWatchUntil = 0;
 let receiving = { sources: [], operator: null }, receivedChoices = [], receivedReview = null, receivingGeneration = 0;
+let recoveryState = null, backupReview = null;
 const readable = value => String(value ?? '').replace(/_/g, ' ').toLowerCase();
 const integer = value => value === null || value === undefined ? '—' : String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const bytes = value => {
@@ -44,6 +45,10 @@ const messages = {
   OBJECT_RECEIVING_SOURCE_CHANGED: 'The retained merchant files changed. Receive the original files again before preparing this object.',
   OBJECT_WHOLE_FILE_SIZE_FIXED: 'This merchant sells the complete file in one request. Its byte count is fixed by the original descriptor.',
   REQUEST_OPERATOR_PRESET_REQUIRED: 'Launch this workspace with its private --operator-settings preset to prepare a new buyer.',
+  OBJECT_RECOVERY_REVIEW_CHANGED: 'The selected backup contents changed. Review the current state before creating the backup.',
+  OBJECT_RECOVERY_DEPENDENCY_OUTSIDE_ROOT: 'Choose the common private state root that contains this workspace, its operator preset and every selected native buyer.',
+  OBJECT_RECOVERY_ORIGINAL_OPERATOR_REQUIRED: 'Workspace backup requires the original prepared buyer and its committed spending journal. Prepare the received product with your local preset first, or select its existing native operator.',
+  WORKSPACE_RECOVERY_TARGET_NOT_EMPTY: 'The original restore location contains files. Close its programs and preserve that existing directory before restoring to an absent or empty location.',
 };
 function notice(message = '', error = false) {
   $('notice').hidden = !message; $('notice').textContent = message; $('notice').classList.toggle('error', error);
@@ -85,6 +90,7 @@ async function load() {
   const current = ++generation, result = await request('/api/state' + selectedParams());
   if (current !== generation) return;
   state = result; render(); $('connection').textContent = 'Connected'; schedulePoll();
+  if (!$('recovery-panel').hidden) await loadRecovery();
 }
 function showError(error) { $('connection').textContent = 'Needs attention'; notice(errorMessage(error), true); }
 async function action(work) {
@@ -98,6 +104,7 @@ function selectSession(id) {
   selected = id; page = 0; query = ''; filter = 'all'; review = null;
   $('chunk-query').value = ''; $('chunk-filter').value = 'all'; $('setup').hidden = true;
   $('selection-review').hidden = true; load().catch(showError);
+  $('recovery-panel').hidden = true;
 }
 function renderSessions() {
   const list = $('session-list'); list.replaceChildren();
@@ -130,8 +137,8 @@ function explanation(row) {
 }
 function render() {
   renderSessions(); const row = state.selected;
-  $('empty').hidden = Boolean(row) || !$('setup').hidden;
-  $('session').hidden = !row || !$('setup').hidden;
+  $('empty').hidden = Boolean(row) || !$('setup').hidden || !$('recovery-panel').hidden;
+  $('session').hidden = !row || !$('setup').hidden || !$('recovery-panel').hidden;
   if (!row) { controls(); return; }
   $('session-id').textContent = 'SAVED DOWNLOAD / ' + row.id;
   $('session-title').textContent = row.name;
@@ -266,6 +273,12 @@ function controls() {
   $('receive-review').disabled = receivingBusy || !receiving.operator || !receivedChoices.some(choice =>
     !choice.error && choice.rowIndex + ':' + choice.acceptIndex === $('receive-offer').value);
   $('receive-create').disabled = receivingBusy || !receivedReview;
+  $('open-recovery').disabled = pending; $('close-recovery').disabled = pending;
+  $('backup-review').disabled = receivingBusy;
+  $('backup-create').disabled = receivingBusy || !backupReview || !$('backup-quiesced').checked;
+  $('backup-verify').disabled = receivingBusy;
+  $('recovery-stop').hidden = !recoveryState?.active;
+  $('recovery-stop').disabled = pending || recoveryState?.active?.state === 'STOPPING';
 }
 function productChanged() {
   review = null; $('selection-review').hidden = true;
@@ -283,6 +296,7 @@ function productChanged() {
 }
 async function newDownload() {
   await action(async () => {
+    $('recovery-panel').hidden = true;
     products = (await request('/api/products')).products;
     const select = $('product'); select.replaceChildren();
     for (const product of products) { const option = element('option',product.label + (product.error ? ' · setup required' : '')); option.value = product.id; select.append(option); }
@@ -292,6 +306,95 @@ async function newDownload() {
     $('receiving-panel').open = !products.some(product => !product.error);
   });
 }
+
+const shellQuote = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
+function selectedBackup(bundle, record) {
+  $('verify-bundle').value = bundle ?? ''; $('verify-record').value = record ?? '';
+  $('recovery-command').textContent = 'buyer-object backup-restore --bundle ' + shellQuote(bundle ?? '/absolute/backup') +
+    (record ? ' --expect ' + record : '') + ' --pass-env ' + shellQuote($('backup-pass-env').value);
+}
+async function loadRecovery() {
+  recoveryState = await request('/api/recovery');
+  if (!$('backup-root').value) $('backup-root').value = recoveryState.suggestedStateRoot;
+  const record = recoveryState.last, output = record?.result;
+  $('recovery-progress').hidden = !record;
+  if (record) {
+    const event = record.events.at(-1);
+    $('recovery-progress').textContent = (record.kind === 'BACKUP' ? 'Encrypted backup' : 'Backup verification') +
+      ': ' + readable(recoveryState.active?.state ?? record.state) + '. ' +
+      (output ? integer(output.sessions) + ' downloads, ' + integer(output.operators) + ' native buyers, ' +
+        integer(output.files) + ' files / ' + bytes(output.bytes) + '. Record ' + output.recordSha256 +
+        (output.selectionRecordError ? '. Bundle completed; history needs attention: ' + readable(output.selectionRecordError) : '') :
+        record.error ? errorMessage({code:record.error}) : event ? readable(event.stage) + '.' : 'Preparing original state.') +
+      (output?.leaseReleaseErrors?.length ? ' Source lease release needs attention; reopen the original session before another capture.' : '');
+    if (output && !$('verify-bundle').value) selectedBackup(output.bundle, output.recordSha256);
+  }
+  const history = $('recovery-history'); history.replaceChildren();
+  for (const row of recoveryState.history) {
+    const item = element('article', undefined, 'recovery-record');
+    item.append(element('strong',row.error ? 'History entry needs attention' : readable(row.kind) + ' · ' + new Date(row.observedAt).toLocaleString()));
+    item.append(element('p',row.error ? readable(row.error) : row.bundle));
+    if (!row.error) {
+      item.append(element('code',row.recordSha256));
+      item.append(element('p',integer(row.sessions) + ' downloads · ' + integer(row.operators) + ' native buyers · ' + bytes(row.bytes)));
+      const choose = element('button','Select this backup','small'); choose.disabled = pending || Boolean(state?.active);
+      choose.onclick = () => selectedBackup(row.bundle,row.recordSha256); item.append(choose);
+    }
+    history.append(item);
+  }
+  if (!recoveryState.history.length) history.append(element('p','No backup has been retained in this workspace yet.','intro'));
+  controls();
+}
+$('open-recovery').onclick = () => action(async () => {
+  $('setup').hidden = true; $('recovery-panel').hidden = false; await loadRecovery();
+});
+$('close-recovery').onclick = () => { $('recovery-panel').hidden = true; render(); };
+$('backup-root').oninput = () => { backupReview = null; $('backup-selection').hidden = true; controls(); };
+$('backup-quiesced').onchange = controls;
+$('backup-review-form').onsubmit = event => {
+  event.preventDefault(); action(async () => {
+    backupReview = null; $('backup-selection').hidden = true;
+    const review = await request('/api/recovery/review',{stateRoot:$('backup-root').value});
+    backupReview = review.profile;
+    details($('backup-selection-terms'),[['Workspace',backupReview.directory],['State root',backupReview.stateRoot],
+      ['Original downloads',integer(backupReview.sessions.length)],['Prepared buyers',integer(backupReview.operators.length)],
+      ['Received merchant sources',integer(backupReview.received.length)],['Review SHA-256',backupReview.reviewSha256]]);
+    details($('backup-selection-paths'),[['Selected paths',backupReview.selected.join('\n')],
+      ['Missing optional files',backupReview.missing.join('\n') || 'None'],
+      ['Existing runtime required on restore',backupReview.runtime.map(item=>item.path).join('\n')],
+      ['Wallet secrets','Environment values are not included in the bundle.']]);
+    const rows=$('backup-session-rows');rows.replaceChildren();
+    for(const session of backupReview.sessions) {
+      const row=element('tr');row.append(element('td',session.id),element('td',deliveryLabel(session)),
+        element('td',bytes(session.bytes)),element('td',integer(session.chunkCount)));rows.append(row);
+    }
+    if (!backupReview.sessions.length) { const row=element('tr'),cell=element('td','Prepared buyer and received sources; no download sessions yet.');cell.colSpan=4;row.append(cell);rows.append(row); }
+    $('backup-selection').hidden=false;
+    if (!$('backup-output').value) $('backup-output').value = backupReview.stateRoot.slice(0,backupReview.stateRoot.lastIndexOf('/')) +
+      '/object-backup-' + new Date().toISOString().replace(/[:.]/g,'-');
+    notice('The current original state is reviewed. Choose a new bundle destination to capture it.');
+  });
+};
+$('backup-form').onsubmit = event => {
+  event.preventDefault(); action(async () => {
+    if (!backupReview || !$('backup-quiesced').checked) throw new Error('OBJECT_RECOVERY_REVIEW_REQUIRED');
+    await request('/api/recovery/start',{kind:'BACKUP',actionId:crypto.randomUUID(),stateRoot:backupReview.stateRoot,
+      expectedReviewSha256:backupReview.reviewSha256,output:$('backup-output').value,
+      passEnv:$('backup-pass-env').value,quiesced:true});
+    await loadRecovery();
+  });
+};
+$('backup-verify-form').onsubmit = event => {
+  event.preventDefault(); action(async () => {
+    const bundle=$('verify-bundle').value,expected=$('verify-record').value;
+    selectedBackup(bundle,expected);
+    await request('/api/recovery/start',{kind:'VERIFY_BACKUP',actionId:crypto.randomUUID(),bundle,
+      ...(expected ? {expected} : {}),passEnv:$('backup-pass-env').value});await loadRecovery();
+  });
+};
+$('recovery-stop').onclick = () => action(async () => {
+  if(recoveryState?.active)await request('/api/stop',{session:null,runId:recoveryState.active.id});
+});
 function clearReceivedReview() {
   receivingGeneration++; receivedReview = null; $('received-review').hidden = true; controls();
 }
