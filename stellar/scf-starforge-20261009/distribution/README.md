@@ -114,6 +114,10 @@ or automatically retry a request.
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
 | `starforge pilot` | SF96 original SF82 seller pilot, dashboard and SF93 support composition |
 | `starforge buyer` | SF88 discovery, saved-source preparation, offline review and approved execution |
+| `starforge commerce` | Persistent native merchant, operations and selected buyer session |
+| `starforge inbox` | Original durable buyer requests, outcomes and recovery |
+| `starforge native-signer` | SF103 native buyer configuration, inspection and signer loading check |
+| `starforge facilitator` | Original native Stellar facilitator or self-facilitated seller |
 | `starforge capture` | SF85 original single HTTP 402 capture |
 | `starforge handoff` | SF96 captured challenge to original buyer review files |
 | `starforge support` | SF93 private seller and operations support export |
@@ -131,6 +135,21 @@ For example, review an existing original buyer configuration without signing:
 npx --no-install starforge buyer --review --config /absolute/private/operator.json
 npx --no-install starforge source
 ```
+
+To keep an existing configured merchant and its selected buyer requests in one
+foreground operator session, use the
+[commerce operator guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE.md):
+
+```sh
+npx --no-install starforge commerce init --plan /private/commerce-plan.json --directory /private/new-session
+npx --no-install starforge commerce start --directory /private/new-session
+```
+
+The same original native facilitator, seller, operations observer and buyer
+inbox run from the package. `review`, `signer`, `execute`, `cancel` and `recover`
+operate on explicit stable intent IDs. Terminal approval remains in the original
+SF88/SF81 workflow. `quit` drains the services; the next start reopens retained
+requests and results. No repository checkout is required on the operator host.
 
 `source` prints the exact source commit, original Git object and SHA-256 for each
 packaged file, component inventory, archive version and optional dependency
