@@ -3,7 +3,7 @@
 Operate the existing Starforge merchant release system from an MCP client. This
 interface takes a prepared merchant API through staging, exact price and route
 comparison, activation, original seller startup, customer SDK export, rollback
-and graceful shutdown. Twelve tools use the original SF82 release store, SF61
+and graceful shutdown. The tools use the original SF82 release store, SF61
 OpenAPI compiler, original SF30 Python merchant, SF30 seller and customer SDK exporter. The MCP endpoint reuses
 the same authenticated HTTP transport as the existing SF32 buyer bridge.
 
@@ -131,7 +131,7 @@ term is a configuration change: stage, compare and select a new release.
 
 ### Use an existing Python merchant
 
-The original SF30 Python declaration can use the same twelve release tools:
+The original SF30 Python declaration can use the same release workflow:
 
 ```sh
 node stellar-forge/mcp-merchant-operator/serve.mjs init \
@@ -221,6 +221,18 @@ workspace remains separate and uses its existing approval, budget and signer.
 | `merchant_rollback` | Select an exact retained release through original rollback history. |
 | `merchant_restart` | Drain the owned instance and start the selected version. |
 | `merchant_stop` | Gracefully drain only the instance owned by this MCP process. |
+| `merchant_discovery_status` | Compare a retained release with current signed catalog listings and reconcile the original history. |
+| `merchant_discovery_review` | Review publication of the running release or withdrawal of one listed route; no key access or signature. |
+| `merchant_discovery_apply` | Apply this host's exact latest review through the original signed catalog batch or withdrawal. |
+| `merchant_cache_status` | Inspect the current original per-route cache policy, occupancy and source counters. |
+| `merchant_cache_invalidate` | Invalidate one route or all caches on the exact seller instance owned by this MCP host. |
+
+For complete signed publication, updates, withdrawal and cache operation, follow
+the [merchant operating workflow](./OPERATIONS.md). Initialization accepts
+`--catalog CATALOG_CONNECTION_JSON`, or an existing host configuration can
+reference that private connection with `catalogConnection`. The original
+catalog directory and signing-key file stay on the host. These tools use both
+the existing HTTP provider and its existing stdio entrypoint.
 
 For example, call `merchant_sources` with `{"source":"initial"}`, then
 `merchant_stage` with `{"source":"initial","id":"release-1"}`. Inspect and

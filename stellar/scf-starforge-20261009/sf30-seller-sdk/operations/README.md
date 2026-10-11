@@ -1,6 +1,6 @@
 # SF30 seller operations
 
-A live, read-only operator surface for the **existing SF30 seller service**, with optional private aggregate history across restarts. See which API routes receive traffic, return payment challenges, fail or disconnect, compare observed UTC days and export a selected period without collecting customers or turning HTTP codes into revenue. Node 22+, no additional packages or hosted services.
+A live operator surface for the **existing SF30 seller service**, with read-only traffic/history and private controls for selected merchant recovery. See which API routes receive traffic, return payment challenges, fail or disconnect, compare observed UTC days and export a selected period without collecting customers or turning HTTP codes into revenue. Node 22+, no additional packages or hosted services.
 
 For a one-command original native seller with the same SF98 fulfillment journal and live local operations, see [merchant launch](MERCHANT_LAUNCH.md).
 
@@ -8,7 +8,9 @@ For durable merchant POST bindings, [merchant operation recovery](MERCHANT_OPERA
 adds stored-operation browse, detail and original ledger history to the same
 listener. Opt-in `--operation-controls` enables exact-generation reconciliation
 through the original bound handler and a private startup capability. Existing
-traffic, history, fulfillment and exports remain read-only.
+traffic, history and exports remain read-only. The original delivery journal has
+its own [fulfillment recovery](DELIVERY_OPERATIONS.md) control link, with exact
+event revisions and the original SF98 lease.
 
 Upstream-backed sessions also expose optional [backend availability and recovery](../UPSTREAM_AVAILABILITY.md)
 in this same console. The original `/api/snapshot` and JSON export include an
@@ -257,6 +259,7 @@ const operations = await startSellerOperations(seller, {
   port: 8424, deliveryOutbox: outbox
 });
 console.log(operations.url + '/fulfillment');
+console.log(operations.deliveryControlUrl); // private local recovery link
 ~~~
 
 See the real named imports, owned merchant handlers and existing facilitator
@@ -266,31 +269,37 @@ been changed; it does not configure a native SF98 recorder by itself.
 
 **Read endpoints** (all under existing strictly loopback GET/HEAD controls):
 
-* /api/delivery: bounded recent 24 events and aggregate original native
+* /api/delivery: recent 24 events and aggregate original native
   success journal, webhook accepted, pending, due retry, delayed retry and
   exhausted counts; unavailable without the actual outbox instance.
 * /delivery.json and /delivery.csv: operator-downloadable metadata exports.
   Full event IDs are deterministic hashes intended for explicit named SF98
-  requeue. No receipt payload, wallet, private order reference, buyer body,
+  requeue. The constrained original order reference supports local operator
+  lookup. No receipt payload, wallet, buyer body,
   payment header or credential leaves the journal.
 * /delivery.metrics: private Prometheus-compatible counters/gauges.
   Existing /metrics appends these only if an outbox is attached, otherwise
   stays the original HTTP-only output. Journal read errors leave original
   HTTP metrics available and expose a generic availability gauge.
+* /api/delivery/events: complete retained history with state/route filters and
+  cursor pages. /api/delivery/event?id=... returns one original event and its
+  current delivery revision. /api/delivery/control reports capability
+  availability without returning its private value.
 
 The **same original durable SF98 outbox.rows()** drives both the UI and export.
-A 7.5-second promise cache prevents browser refreshes and parallel Prometheus
-scrapes from repeatedly scanning potentially large private journal files.
-Only the most recent 24 events are passed to browser memory; aggregate counts
-cover all recorded journal entries. No new listener, wallet, signer, payment,
-automated drain, webhook request, or background delivery job is added.
+A 7.5-second promise cache serves parallel metrics/export reads. Explicit
+`/api/delivery` refreshes read current state so the summary follows a recovery
+immediately. The fulfillment browser loads25events per page from the complete
+journal; its summary retains24recent events. Aggregate counts cover every
+recorded entry. Its private recovery control uses the original delivery helper
+and lease; the existing worker sends the requeued notification.
 
 Interpretation: an SF98 event means the original native SDK reported a
 successful settlement with a supported receipt, not that this page
 independently verified Stellar. Webhook accepted means receiver HTTP 2xx,
 not that downstream merchant fulfillment necessarily completed. An exhausted
-event calls for operator investigation using the existing SF98 CLI, not a
-click-to-retry control. The original SF86 independent on-chain reconciliation
+event calls for receiver investigation and then an exact-event requeue through
+the private control link or original SF98 CLI. The original SF86 independent on-chain reconciliation
 remains separate. Challenge-only merchants show no native settled events
 unless separately instrumented as described above.
 

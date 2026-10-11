@@ -43,7 +43,21 @@ async function main(args) {
       '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json [--response-out /absolute/product] [--body-file /absolute/request.json] [--content-type application/json] [--headers-file /absolute/request.headers.json] [--ticket-file /absolute/merchant-ticket.json] [--ticket-header x-merchant-operation]\n');
     process.stdout.write('       node cli.mjs --init-workspace --config /absolute/review.json --dir /absolute/new-workspace --actor operator-id --service seller-id --payer G... --python /usr/bin/python3 [--secret-env STELLAR_SECRET | --signer-provider /absolute/wallet.mjs] [--rpc https://rpc.example] [--https-proxy http://proxy.example:8080 | --https-proxy-env HTTPS_PROXY] [--total-atomic 1000] [--daily-atomic 1000]\n' +
       '       node cli.mjs --review-workspace|--diagnose-workspace|--execute-workspace --dir /absolute/workspace\n');
+    process.stdout.write('       node cli.mjs --inspect-workspace-backup|--backup-workspace --dir /private/buyer/operator --state-root /private/buyer [--inbox /private/buyer/inbox] [--include /private/buyer/session] [--out /private/backups/selected --quiesced --pass-env SF88_BACKUP_PASSPHRASE]\n' +
+      '       node cli.mjs --verify-workspace-backup|--restore-workspace --bundle /private/backups/selected [--pass-env SF88_BACKUP_PASSPHRASE] [--python /usr/bin/python3] [--expect RECORD_SHA256]\n');
     return;
+  }
+  if (['--inspect-workspace-backup','--backup-workspace','--verify-workspace-backup','--restore-workspace'].includes(args[0])) {
+    const {workspaceRecoveryCommand} = await import('./workspace-recovery.mjs');
+    const controller = new AbortController();
+    const onInterrupt = () => { cancellationExitCode = 130; controller.abort(); };
+    const onTerminate = () => { cancellationExitCode = 143; controller.abort(); };
+    process.on('SIGINT',onInterrupt);process.on('SIGTERM',onTerminate);
+    try { return print(await workspaceRecoveryCommand(args[0],args.slice(1),{signal:controller.signal})); }
+    finally {
+      process.off('SIGINT',onInterrupt);process.off('SIGTERM',onTerminate);
+      if(cancellationExitCode!==undefined)process.exitCode=cancellationExitCode;
+    }
   }
   if (args[0] === '--prepare') {
     const { prepare } = await import('./prepare.mjs');

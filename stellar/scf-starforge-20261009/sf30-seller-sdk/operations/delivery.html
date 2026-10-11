@@ -2,42 +2,47 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fulfillment · Stellar Forge</title>
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/delivery.css">
 <script type="module" src="/delivery-panel.mjs"></script>
 </head><body>
 <header><div><span class="eyebrow">STELLAR FORGE / MERCHANT OPERATIONS</span>
-<h1>Postsettlement fulfillment</h1>
-<p>Delivery queue from the merchant's original native SF98 outbox, not from HTTP response counts.</p>
-</div><span class="badge">Local · Read only</span></header>
+<h1>Fulfillment</h1><p>Inspect delivery history, repair an exhausted notification, and follow its recovery.</p></div>
+<span class="badge" id="control-status">Local operator</span></header>
 <main>
-<section class="toolbar"><p id="fulfillment-status" role="status">Reading native journal…</p>
-<div><a href="/">Seller traffic ↗</a><a href="/delivery.json" download>Delivery JSON ↗</a>
-<a href="/delivery.csv" download>Recent CSV ↗</a><a href="/delivery.metrics">Metrics ↗</a></div></section>
-<section class="cards" aria-label="Native payment and delivery outcomes">
-<article><h2>Native success events</h2><strong id="fulfillment-native">—</strong>
-<p>Journaled by original native success adapter</p></article>
-<article><h2>Webhook accepted</h2><strong id="fulfillment-sent">—</strong>
-<p>Receiver HTTP 2xx is not completed fulfillment</p></article>
-<article><h2>Pending</h2><strong id="fulfillment-pending">—</strong>
-<p>Includes retries awaiting operator drain</p></article>
-<article><h2>Exhausted</h2><strong id="fulfillment-exhausted">—</strong>
-<p>Human merchant action required</p></article></section>
-<section class="panel">
-<div class="section-heading"><div><h2>Original settlement delivery queue</h2>
-<p>Last 24 durable native journal records. Never a transaction explorer or payment confirmation.</p>
-</div></div>
-<p id="fulfillment-exceptions" role="status">No delivery actions are available from this interface.</p>
-<div class="table-wrap" tabindex="0"><table><caption class="sr-only">Native settlement delivery states</caption>
-<thead><tr><th scope="col">Event fingerprint</th><th scope="col">Route</th>
-<th scope="col">State</th><th scope="col">Attempts</th><th scope="col">Next retry</th></tr></thead>
-<tbody id="fulfillment-events"></tbody></table></div>
-<p class="table-hint">Use the private JSON export for a complete hashed event ID before named manual requeue.</p>
+<nav aria-label="Operations"><a href="/">Seller traffic</a><a href="/merchant-operations">Merchant requests</a>
+<a href="/delivery.json" download>Queue summary JSON</a><a href="/delivery.metrics">Metrics</a></nav>
+<section class="status-line"><p id="fulfillment-status" role="status">Reading delivery journal…</p>
+<button id="refresh" type="button">Refresh</button></section>
+<section class="cards" aria-label="Payment and delivery outcomes">
+<article><h2>Recorded payments</h2><strong id="fulfillment-native">—</strong><p>Original native success events</p></article>
+<article><h2>Receiver accepted</h2><strong id="fulfillment-sent">—</strong><p>Delivery acknowledged with HTTP 2xx</p></article>
+<article><h2>Pending</h2><strong id="fulfillment-pending">—</strong><p>Waiting or eligible for another attempt</p></article>
+<article><h2>Needs attention</h2><strong id="fulfillment-exhausted">—</strong><p>Delivery attempts exhausted</p></article>
 </section>
-<section class="bottom"><article class="panel"><h2>How to interpret</h2>
-<p>Native success events are recorded only after the original SDK reports successful settlement with a supported receipt. The journal is not an independent ledger audit.</p>
-<p>Webhook accepted means the merchant receiver responded successfully; verify merchant fulfillment separately. Pending and exhausted records never send automatically here.</p></article>
-<article class="panel"><h2>Operating boundary</h2>
-<p>This page reads the same SF98 outbox instance supplied to the merchant's original seller. There is no signer, approval, retry, webhook sender or customer tracking.</p>
-<p>Use the original SF98 delivery CLI for an explicit, authorized drain or requeue. Local exports should remain private.</p></article></section>
-<footer><span>Stellar Forge · Seller operations</span><span>Loopback only · Native source · No wallet operations</span></footer>
+<section class="workspace" aria-label="Delivery workspace">
+<section class="panel queue"><div class="panel-heading"><div><h2>Delivery queue</h2>
+<p id="fulfillment-exceptions">Every retained event is available here.</p></div></div>
+<div class="filters"><label>State<select id="state-filter">
+<option value="attention">Needs attention</option><option value="all">All states</option>
+<option value="PENDING">Pending</option><option value="RETRY">Retry waiting</option>
+<option value="REQUEUE">Requeued</option><option value="DELIVERED">Receiver accepted</option>
+</select></label><label>Route<select id="route-filter"><option value="">All routes</option></select></label></div>
+<div class="table-wrap" tabindex="0"><table><caption class="sr-only">Original delivery events, newest first</caption>
+<thead><tr><th scope="col">Order / event</th><th scope="col">Route</th><th scope="col">State</th><th scope="col">Attempts</th></tr></thead>
+<tbody id="fulfillment-events"></tbody></table></div>
+<p id="empty-queue" class="empty" hidden>No events match these filters.</p>
+<div class="pagination"><span id="page-status">—</span><div><button id="previous-page" type="button" disabled>Previous</button>
+<button id="next-page" type="button" disabled>Next</button></div></div></section>
+<aside class="panel detail" aria-labelledby="detail-heading"><div class="panel-heading"><div>
+<h2 id="detail-heading">Event detail</h2><p id="detail-prompt">Select an event to inspect its current delivery state.</p></div></div>
+<div id="event-detail" hidden><span id="event-state" class="badge"></span>
+<h3 id="event-order"></h3><dl id="event-fields"></dl>
+<div class="recovery"><h3>Recover this delivery</h3><p id="recovery-guidance"></p>
+<button id="requeue" class="primary" type="button" disabled>Requeue notification</button>
+<p id="recovery-result" role="status" aria-live="polite"></p></div>
+<button id="export-event" type="button">Download event JSON</button></div></aside>
+</section>
+<section class="explanation"><h2>Following a recovery</h2><p>Repair the receiver or its configured credentials before requeuing. The same recorded event returns to the original delivery worker. This screen updates as the receiver accepts it; the merchant application determines when the purchased resource is fulfilled.</p>
+<p>The private control link enables recovery for this operator session. An event revision check prevents a stale screen from changing a delivery that has already moved on.</p></section>
+<footer><span>Stellar Forge · Merchant fulfillment</span><span>Local private operator session</span></footer>
 </main></body></html>

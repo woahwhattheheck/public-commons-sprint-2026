@@ -3,6 +3,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { closeSync, lstatSync, mkdirSync, openSync, realpathSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { isDeepStrictEqual as same } from 'node:util';
+import { validateMcpInvocation } from './remote-mcp.mjs';
 
 const STATES = new Set(['PREVIEWED', 'APPROVAL_PENDING', 'EXECUTING', 'CANCEL_REQUESTED',
   'CANCELLED', 'EXPIRED', 'FREE_SUCCESS', 'PROBE_REJECTED', 'CONFIRMED_BY_SERVER',
@@ -30,6 +32,7 @@ function file(path, create) {
 export function quoteSnapshot(quote) {
   const value = structuredClone({
     quoteId: quote.quoteId, resource: quote.resource, url: quote.url, method: quote.method,
+    ...(quote.invocation ? { invocation: quote.invocation } : {}),
     accepted: quote.accepted, fingerprint: quote.fingerprint, operatorScope: quote.operatorScope,
     createdAt: quote.createdAt, updatedAt: quote.updatedAt, expiresAt: quote.expiresAt,
     status: quote.status, phase: quote.phase ?? null, attempts: quote.attempts,
@@ -48,12 +51,19 @@ export function quoteSnapshot(quote) {
 
 function validate(value) {
   if (!plain(value) || typeof value.quoteId !== 'string' || !/^[a-f0-9-]{36}$/.test(value.quoteId) ||
-      !STATES.has(value.status) || !['GET', 'HEAD'].includes(value.method) || !plain(value.accepted) ||
+      !STATES.has(value.status) || !['GET', 'HEAD', 'tools/call'].includes(value.method) || !plain(value.accepted) ||
       typeof value.resource !== 'string' || typeof value.url !== 'string' ||
       !Number.isSafeInteger(value.createdAt) || !Number.isSafeInteger(value.updatedAt) ||
       !Number.isSafeInteger(value.expiresAt) || !Number.isSafeInteger(value.attempts) || value.attempts < 0 ||
       typeof value.signedRequestDispatched !== 'boolean' || typeof value.operatorScope !== 'string')
     throw error('QUOTE_STORAGE_INVALID', 'Invalid persisted quote record; preserve the original database.');
+  if (value.method === 'tools/call') {
+    validateMcpInvocation(value.invocation);
+    if (value.url !== value.invocation.endpoint)
+      throw error('QUOTE_STORAGE_IDENTITY', 'The remote MCP endpoint changed.');
+  } else if (value.invocation !== undefined) {
+    throw error('QUOTE_STORAGE_IDENTITY', 'An HTTP quote cannot acquire an MCP invocation.');
+  }
   return value;
 }
 
@@ -137,6 +147,7 @@ export class SqliteQuoteStore {
     if (previous) {
       const old = validate(JSON.parse(previous.payload));
       if (['resource', 'url', 'method', 'createdAt', 'operatorScope', 'expiresAt'].some(key => old[key] !== value[key]) ||
+          !same(old.invocation, value.invocation) ||
           JSON.stringify(old.accepted) !== JSON.stringify(value.accepted) || old.attempts > value.attempts ||
           (old.signedRequestDispatched && !value.signedRequestDispatched))
         throw error('QUOTE_STORAGE_IDENTITY', 'An existing quote cannot be rebound or reset.');

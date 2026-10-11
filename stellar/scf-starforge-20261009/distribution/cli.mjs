@@ -24,6 +24,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
   handoff     Captured challenge -> review    support     Private seller support case
+  support-watch                             Observe, acknowledge and export merchant incidents
+  support-console                           Retained merchant cases and runtime follow-up
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
   mcp-native                                Prepare and operate the original native buyer MCP workspace
@@ -43,7 +45,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   openapi-workspace                          Prepare and operate a merchant from its API contract
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
   duckdb-prepare                             Prepare, verify and reopen native data packages
-  duckdb-workbench                           Author and operate a data merchant in the browser
+  duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions

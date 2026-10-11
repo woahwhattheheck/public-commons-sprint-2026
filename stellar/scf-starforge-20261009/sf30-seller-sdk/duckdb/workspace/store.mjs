@@ -52,6 +52,22 @@ async function regularOrMissing(path) {
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
+/** Read the retained selection before the normal workspace acquires its ownership lock. */
+export async function readSavedWorkspaceSource(directory) {
+  const root = resolve(directory), filename = resolve(root, 'workspace.sqlite');
+  if (await realpath(root) !== root || !(await lstat(root)).isDirectory())
+    throw new WorkspaceError('PRIVATE_WORKSPACE_DIRECTORY_REQUIRED');
+  await regularOrMissing(filename);
+  let db;
+  try {
+    db = new DatabaseSync(filename, { readOnly: true });
+    const source = db.prepare('SELECT value FROM metadata WHERE key=?').get('sourceFile')?.value;
+    if (typeof source !== 'string' || !source || resolve(source) !== source || source.includes('\0'))
+      throw new WorkspaceError('SAVED_WORKSPACE_SOURCE_REQUIRED', 404);
+    return source;
+  } finally { db?.close(); }
+}
+
 /** A native SQLite lock is released by the OS after a crash, without PID guessing. */
 export async function openWorkspaceStore({ directory, sourceFile }) {
   const root = resolve(directory), canonicalSource = await realpath(resolve(sourceFile)).catch(error => {

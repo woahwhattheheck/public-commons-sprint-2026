@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SF98 Delivery Workspace</title>
+<style>
+:root{color-scheme:light;font-family:Inter,Arial,sans-serif;color:#202020;background:#f3f3f3;font-size:14px;line-height:1.45}
+*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button,a,input,select{outline-offset:3px}
+button{border:1px solid #aaa;background:#fff;color:#202020;padding:8px 12px;cursor:pointer;border-radius:3px}
+button:hover{background:#eee}button:disabled{opacity:.45;cursor:default}.primary{background:#252525;color:#fff;border-color:#252525}.primary:hover{background:#444}
+a{color:inherit;text-decoration:underline;text-underline-offset:3px}header{height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid #ccc;background:#fff;gap:20px}
+h1{font-size:20px;margin:0;font-weight:650}h2{font-size:21px;margin:0 0 8px}h3{font-size:15px;margin:0 0 12px}p{margin:0 0 14px}.muted{color:#646464}.small{font-size:12px}
+.brand{display:flex;align-items:center;gap:12px}.mark{border:1px solid #444;padding:6px;font-family:monospace;font-weight:bold}
+.shell{display:grid;grid-template-columns:184px minmax(0,1fr);min-height:calc(100vh - 76px)}
+nav{padding:24px 12px;border-right:1px solid #ccc;background:#f8f8f8}nav button{display:block;width:100%;text-align:left;margin-bottom:5px;border-color:transparent;background:transparent}
+nav button[aria-current="page"]{background:#e6e6e6;border-color:#ccc;font-weight:bold}
+main{padding:28px;max-width:1600px;width:100%}.page[hidden],*[hidden]{display:none!important}
+.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px}.heading p{margin:0}
+.panel{border:1px solid #ccc;background:#fff;padding:20px;margin-bottom:18px;border-radius:3px}
+.columns{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr);gap:18px}.profile-columns{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0}
+.metric{border:1px solid #ccc;background:#fff;padding:15px}.metric strong{display:block;font-size:27px;font-weight:500;margin-bottom:3px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.toolbar label{margin:0}.spacer{flex:1}
+label{display:block;margin-bottom:14px;font-size:13px}label span{display:block;font-weight:600;margin-bottom:5px}
+input,select{border:1px solid #aaa;border-radius:2px;background:#fff;padding:8px;min-width:0;max-width:100%;width:100%;color:inherit}
+input[type="checkbox"]{width:16px;height:16px;vertical-align:middle;margin:0 7px 0 0}.check{display:flex;align-items:center;font-weight:normal}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.full{grid-column:1/-1}.form-grid .small{display:block;margin-top:5px;font-weight:normal}
+fieldset{border:0;padding:0;margin:0;min-width:0}fieldset:disabled{opacity:.6}.profile-choice{display:block;width:100%;text-align:left;margin-bottom:8px;padding:12px}
+.profile-choice strong,.profile-choice span{display:block}.profile-choice[aria-current="true"]{border-color:#333;background:#eee}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;padding:11px 9px;border-bottom:1px solid #ddd}th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#646464;background:#f7f7f7}
+.table-wrap{overflow:auto;border:1px solid #ccc;border-radius:3px;background:#fff}td button.link{border:0;padding:0;background:transparent;text-decoration:underline;text-align:left}
+.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;overflow-wrap:anywhere}.tag{display:inline-block;border:1px solid #aaa;background:#f1f1f1;padding:2px 6px;border-radius:2px;font-size:11px;white-space:nowrap}
+.notice{padding:12px 14px;background:#e8e8e8;border-left:3px solid #444;margin-bottom:18px;overflow-wrap:anywhere}
+.error{background:#fff;border:1px solid #666;border-left:4px solid #222}.empty{padding:30px;text-align:center;color:#646464}
+.definition{display:grid;grid-template-columns:145px minmax(0,1fr);gap:9px 15px;margin:0}.definition dt{color:#646464}.definition dd{margin:0;overflow-wrap:anywhere}
+pre{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto;background:#f7f7f7;padding:14px;border:1px solid #ddd}
+.divider{height:1px;background:#ddd;margin:18px 0}.footer-line{display:flex;justify-content:space-between;align-items:center;margin:14px 0;gap:12px}
+#connection{font-size:12px}.status-line{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.receiver-select{min-width:0;flex:1}.filter-query{width:260px}.filter-state{width:160px}
+details{margin-top:18px}summary{cursor:pointer;font-size:13px}#workspace-paths{margin-top:28px;line-height:1.65}
+.top-note{margin-top:12px}.panel,.page,.columns>*,.profile-columns>*{min-width:0}.record-button{max-width:100%;overflow-wrap:anywhere}.selection-list{display:grid;gap:8px;margin-top:12px}.selection-row{display:flex;align-items:center;gap:10px;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px}.selection-row>div{min-width:0}.revision-tools{margin-bottom:16px}.revision-tools label{margin:0;min-width:150px}.revision-tools select{width:auto;min-width:140px}.inline-note{margin:12px 0}.notice button{margin-left:12px}.table-wrap table{min-width:650px}#events>.table-wrap th:first-child{width:60px}#maintenance>.table-wrap th:first-child{width:190px}#maintenance>.table-wrap td:first-child{min-width:190px}.event-order{display:block;margin-top:4px}.table-actions{white-space:nowrap}.table-actions button+button{margin-left:8px}.selection-row button{flex-shrink:0}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #222}#connection[aria-busy="true"]{font-style:italic}
+@media(max-width:950px){.columns,.profile-columns{grid-template-columns:1fr}.shell{grid-template-columns:150px minmax(0,1fr)}main{padding:20px}.metrics{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){header{height:auto;padding:16px;align-items:flex-start;flex-wrap:wrap}.shell{display:block}nav{display:flex;gap:5px;border-right:0;border-bottom:1px solid #ccc;padding:8px;overflow:auto}nav button{width:auto;white-space:nowrap;margin:0}main{padding:16px}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.heading{display:block}.heading .toolbar{margin-top:14px}.definition{grid-template-columns:100px minmax(0,1fr)}.filter-query,.filter-state{width:100%}.footer-line{align-items:flex-start;flex-wrap:wrap}.selection-row{align-items:flex-start}.toolbar{max-width:100%}.metrics{gap:8px}.metric{padding:12px}.metric strong{font-size:24px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="mark" aria-hidden="true">98</div><div><h1>Delivery Workspace</h1><div class="muted small">Stellar Forge · Merchant operations</div></div></div><div class="toolbar"><span id="state-revision" class="small muted"></span><span id="connection" aria-live="polite">Connecting…</span><button id="refresh">Refresh</button><a href="api/handoff" download>Export handoff</a></div></header>
+<div class="shell">
+<nav aria-label="Workspace">
+  <button data-page="overview" aria-current="page">Overview</button>
+  <button data-page="receivers">Receivers</button>
+  <button data-page="events">Event queue</button>
+  <button data-page="maintenance">Maintenance</button>
+</nav>
+<main>
+<div id="message" class="notice" role="status" hidden></div>
+<div id="persistence-warning" class="notice" role="status" hidden></div>
+<section id="overview" class="page">
+  <div class="heading"><div><h2>Delivery operations</h2><p class="muted">Control the original delivery worker and keep receiver changes explicit.</p></div></div>
+  <div id="onboarding" class="notice" hidden>Save a receiver profile to begin. Profiles retain its address, host, and signing secret environment name. <button id="onboarding-add">Add receiver</button></div>
+  <div class="metrics"><div class="metric"><strong id="metric-receipts">—</strong>Native events</div><div class="metric"><strong id="metric-pending">—</strong>Pending delivery</div><div class="metric"><strong id="metric-delivered">—</strong>Delivered</div><div class="metric"><strong id="metric-exhausted">—</strong>Needs repair</div></div>
+  <div class="columns">
+    <article class="panel"><h3>Owned worker</h3><div class="status-line"><span id="owned-status" class="tag">Loading</span><span id="desired-mode" class="muted small"></span></div>
+      <dl id="worker-details" class="definition"></dl>
+      <div class="divider"></div><label><span>Receiver revision for the next action</span><select class="receiver-select" id="worker-receiver"><option value="">Select a receiver</option></select></label>
+      <p id="receiver-readiness" class="muted small"></p>
+      <div class="toolbar"><button id="start-worker" class="primary">Run continuously</button><button id="pause-worker">Pause owned work</button><button id="drain-once">Drain one batch</button></div>
+      <p class="muted small top-note">A running worker retains its selected revision until you apply another receiver.</p>
+    </article>
+    <article class="panel"><h3>Original outbox owner</h3><dl id="native-details" class="definition"></dl><div class="divider"></div><h3>Restart handoff</h3><p class="muted">The workspace retains its selected receiver and run or pause intent. Interrupted maintenance remains available below.</p><p id="restart-summary"></p><button data-go="maintenance">Open maintenance</button></article>
+  </div>
+  <div id="workspace-paths" class="small muted mono"></div>
+</section>
+<section id="receivers" class="page" hidden>
+  <div class="heading"><div><h2>Receiver profiles</h2><p class="muted">Save a new revision when the receiver or its signing environment changes.</p></div><button id="new-receiver">New receiver</button></div>
+  <div class="profile-columns">
+    <aside><div id="profile-list"></div><p class="muted small">Selecting a profile opens its saved revision. Existing worker input remains pinned.</p></aside>
+    <article class="panel"><h3 id="profile-heading">New receiver</h3><p id="profile-identity" class="mono muted small"></p>
+      <div id="profile-history-tools" class="toolbar revision-tools" hidden><label><span>Saved revision</span><select id="profile-history"></select></label><button type="button" id="latest-profile" hidden>Open latest revision</button></div>
+      <p id="profile-edit-state" class="muted small" aria-live="polite">Enter the receiver used by this merchant.</p>
+      <form id="profile-form"><fieldset id="profile-fields"><div class="form-grid">
+        <label class="full"><span>Name</span><input name="name" maxlength="100" required placeholder="Merchant order receiver"></label>
+        <label class="full"><span>Public HTTPS receiver URL</span><input name="url" type="url" maxlength="2048" required placeholder="https://merchant.example/internal/x402-events"></label>
+        <label><span>Exact allowed hostname</span><input name="allowedHost" maxlength="253" required placeholder="merchant.example"></label>
+        <label><span>Secret environment name</span><input name="secretEnv" required maxlength="65" pattern="[A-Z][A-Z0-9_]{1,64}" placeholder="SF98_WEBHOOK_SECRET" autocomplete="off" spellcheck="false"><span class="small muted">Enter the variable name. Its value stays in the workspace process.</span></label>
+        <label><span>Events per batch</span><input name="limit" type="number" min="1" max="100" value="20" required></label>
+        <label><span>Concurrent requests</span><input name="concurrency" type="number" min="1" max="16" value="1" required></label>
+        <label><span>Poll interval · milliseconds</span><input name="pollMs" type="number" min="50" max="60000" value="5000" required></label>
+        <label><span>Request timeout · milliseconds</span><input name="timeoutMs" type="number" min="100" max="60000" value="7000" required></label>
+      </div></fieldset><div class="toolbar"><button id="save-profile" type="submit" class="primary">Save revision</button><button type="button" id="use-receiver" disabled>Use this revision</button><button type="button" id="discard-profile" disabled>Discard edits</button></div><p id="profile-env" class="small muted top-note"></p></form>
+    </article>
+  </div>
+</section>
+<section id="events" class="page" hidden>
+  <div class="heading"><div><h2>Event queue</h2><p class="muted">Inspect original event IDs, order references, and the latest native delivery state.</p></div><span id="event-count" class="muted small"></span></div>
+  <form id="event-search" class="toolbar panel">
+    <select id="event-filter" class="filter-state" aria-label="Delivery state"><option value="ALL">All events</option><option value="EXHAUSTED">Needs repair</option><option value="PENDING">Pending</option><option value="RETRY">Retry scheduled</option><option value="REQUEUE">Requeued</option><option value="DELIVERED">Delivered</option></select>
+    <input id="event-query" class="filter-query" maxlength="160" aria-label="Search event, order, or route" placeholder="Event ID, order reference, or route"><button type="submit">Search</button><span class="spacer"></span><button id="select-exhausted" type="button">Select exhausted on this page</button>
+  </form>
+  <div class="table-wrap"><table><thead><tr><th>Select</th><th>Event / order</th><th>Route</th><th>State</th><th>Attempt / HTTP</th><th>Next delivery</th></tr></thead><tbody id="event-rows"></tbody></table></div>
+  <div class="footer-line"><span id="selected-count">0 selected for repair</span><div class="toolbar"><button id="events-back">Previous</button><button id="events-next">Next</button></div></div>
+  <details id="selection-list-wrap" class="panel" hidden><summary>Review selected events</summary><div id="selection-list" class="selection-list"></div></details>
+  <article class="panel"><h3>Repair selected events</h3><p class="muted">Apply a reviewed receiver, pause the owned worker, and requeue the selected exhausted events through the original delivery lease.</p>
+    <label><span>Receiver revision</span><select id="repair-receiver" class="receiver-select"><option value="">Select a receiver</option></select></label>
+    <p id="repair-readiness" class="muted small"></p>
+    <div class="toolbar"><label class="check"><input id="repair-resume" type="checkbox">Run this receiver after repair</label><span class="spacer"></span><button id="clear-selection">Clear selection</button><button id="repair-selected" class="primary">Repair selected</button></div>
+  </article>
+  <article id="event-detail" class="panel" hidden><div class="heading"><div><h3>Event and order detail</h3><p id="event-observed" class="small muted"></p></div><div class="toolbar"><button id="refresh-event">Refresh event</button><button id="select-detail">Select for repair</button></div></div><dl id="event-details" class="definition"></dl><details><summary>Original event and delivery record</summary><pre id="event-raw"></pre></details></article>
+</section>
+<section id="maintenance" class="page" hidden>
+  <div class="heading"><div><h2>Maintenance handoff</h2><p class="muted">Continue selected-event repairs and inspect the original outcome of each batch.</p></div></div>
+  <div class="table-wrap"><table><thead><tr><th>Started</th><th>Operation</th><th>Receiver revision</th><th>State</th><th>Progress</th><th>Action</th></tr></thead><tbody id="job-rows"></tbody></table></div>
+  <article id="job-detail" class="panel" hidden><div class="heading"><h3>Maintenance detail</h3><button id="continue-job" hidden>Continue repair</button></div><dl id="job-details" class="definition"></dl><div class="table-wrap"><table><thead><tr><th>Event</th><th>Recorded outcome</th><th>Native state</th></tr></thead><tbody id="job-outcomes"></tbody></table></div><details><summary>Retained operation</summary><pre id="job-raw"></pre></details></article>
+</section>
+</main></div>
+<script type="module" src="workspace-app.mjs"></script>
+</body>
+</html>
