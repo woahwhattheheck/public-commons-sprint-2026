@@ -21,6 +21,9 @@ const integer = (value, min, max, code) => requireValue(Number.isSafeInteger(val
 const toolName = name => typeof name === 'string' && /^[A-Za-z0-9_.-]{1,128}$/.test(name);
 const toolError = code => ({isError:true, content:[{type:'text', text:code}]});
 const copy = value => structuredClone(value);
+// The buyer bounds the complete native transport to 2 MiB. Leave room for the
+// original x402 receipt plus SDK JSON-RPC/SSE framing before authorizing settlement.
+const MAX_HANDLER_RESULT_BYTES = 2 * 1024 * 1024 - 64 * 1024;
 
 function boundedJson(value, maximum, code) {
   let text;
@@ -67,7 +70,7 @@ export async function startNativePaidToolServer({facilitatorConfig, environment 
   integer(sessionIdleMs, 1000, 86400000, 'MCP_SESSION_IDLE_INVALID');
   integer(maxInFlight, 1, 32, 'MCP_CALL_LIMIT_INVALID');
   integer(maxRequestBytes, 1024, 2 * 1024 * 1024, 'MCP_REQUEST_LIMIT_INVALID');
-  integer(maxResultBytes, 1024, 2 * 1024 * 1024, 'MCP_RESULT_LIMIT_INVALID');
+  integer(maxResultBytes, 1024, MAX_HANDLER_RESULT_BYTES, 'MCP_RESULT_LIMIT_INVALID');
   requireValue(['127.0.0.1', '::1', '0.0.0.0', '::'].includes(host), 'MCP_BIND_ADDRESS_INVALID');
   requireValue(typeof path === 'string' && /^\/[A-Za-z0-9/_-]{1,128}$/.test(path) &&
     !['/health', '/discovery/search', '/discovery/resources'].includes(path), 'MCP_PATH_INVALID');
@@ -91,6 +94,7 @@ export async function startNativePaidToolServer({facilitatorConfig, environment 
       typeof tool.description === 'string' && tool.description.length > 0 && tool.description.length <= 4096 &&
       typeof tool.handler === 'function' && plain(tool.inputSchema) && tool.inputSchema.type === 'object',
       'MCP_TOOL_INVALID');
+    requireValue(tool.admit === undefined || typeof tool.admit === 'function', 'MCP_TOOL_ADMISSION_INVALID');
     requireValue(Array.isArray(tool.accepts) && tool.accepts.length > 0 && tool.accepts.length <= 32,
       'MCP_TOOL_ACCEPTS_REQUIRED');
     const inputSchema = boundedJson(tool.inputSchema, 65536, 'MCP_SCHEMA_TOO_LARGE');
@@ -99,7 +103,7 @@ export async function startNativePaidToolServer({facilitatorConfig, environment 
     requireValue(example === undefined || validate(example).valid, 'MCP_EXAMPLE_SCHEMA_MISMATCH');
     const descriptor = {name:tool.name, description:tool.description, inputSchema,
       ...(tool.annotations === undefined ? {} : {annotations:boundedJson(tool.annotations, 4096, 'MCP_ANNOTATIONS_INVALID')})};
-    entries.set(tool.name, {descriptor, validate, handler:tool.handler, example,
+    entries.set(tool.name, {descriptor, validate, handler:tool.handler, admit:tool.admit, example,
       accepts:tool.accepts.map(terms => validateTerms(terms, policy)),
       resource:{url:`mcp://tool/${tool.name}`, description:tool.description, mimeType:'application/json'}});
   }
@@ -183,13 +187,27 @@ export async function startNativePaidToolServer({facilitatorConfig, environment 
         record.activeCalls++;
         record.touched = Date.now();
         // Reserve before yielding: two concurrent requests cannot both take the last slot.
-        const work = Promise.resolve().then(() => entry.wrap(async handlerArgs => {
-          counters.handlerCalls++;
-          const result = await entry.handler(copy(handlerArgs), {toolName:entry.descriptor.name, signal:extra.signal});
-          const checked = CallToolResultSchema.safeParse(result);
-          if (!checked.success) return toolError('MCP_HANDLER_RESULT_INVALID');
-          return boundedJson(checked.data, maxResultBytes, 'MCP_HANDLER_RESULT_TOO_LARGE');
-        })(args, extra));
+        const work = Promise.resolve().then(async () => {
+          const context = {toolName:entry.descriptor.name, signal:extra.signal};
+          if (entry.admit) {
+            const admission = await entry.admit(copy(args), context);
+            if (admission !== true) {
+              counters.refused++;
+              const checked = CallToolResultSchema.safeParse(admission);
+              return checked.success && checked.data.isError === true
+                ? boundedJson(checked.data, maxResultBytes, 'MCP_ADMISSION_RESULT_TOO_LARGE')
+                : toolError('MCP_ADMISSION_RESULT_INVALID');
+            }
+          }
+          if (extra.signal.aborted) return toolError('MCP_CALL_CANCELLED_BEFORE_PAYMENT');
+          return entry.wrap(async handlerArgs => {
+            counters.handlerCalls++;
+            const result = await entry.handler(copy(handlerArgs), context);
+            const checked = CallToolResultSchema.safeParse(result);
+            if (!checked.success) return toolError('MCP_HANDLER_RESULT_INVALID');
+            return boundedJson(checked.data, maxResultBytes, 'MCP_HANDLER_RESULT_TOO_LARGE');
+          })(args, extra);
+        });
         activeCalls.add(work);
         try {
           const result = await work;

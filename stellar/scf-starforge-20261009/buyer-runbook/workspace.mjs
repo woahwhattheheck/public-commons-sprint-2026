@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {randomBytes, timingSafeEqual} from 'node:crypto';
 import {pipeline} from 'node:stream/promises';
 import {openRunbookWorkspace, fault} from './workspace-model.mjs';
+import {OPERATION_HANDOFF_MAX_BYTES} from '../sf88-operator-buyer-cli/operation-handoff.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 const messages = {
@@ -25,6 +26,9 @@ const messages = {
   REQUEST_ALREADY_PREPARED:'This request already has a local buyer configuration. Open the prepared request to continue.',
   REQUEST_BUDGET_OUTSIDE_OPERATOR_LIMITS:'The daily budget must cover this request and fit within both the total budget and the local operator limits.',
   REQUEST_OPERATOR_SETUP_CHANGED:'The retained buyer configuration or operator keys need local attention before this operation can start.',
+  RUNBOOK_ACCOUNTING_WORKSPACE_REQUIRED:'Select the existing SF88 operator workspace for this operation. Requests received here reuse their retained original operator automatically.',
+  RUNBOOK_ACCOUNTING_ORIGINAL_WORKSPACE_REQUIRED:'That workspace has a different original payer, ledger, transport or payment terms. Select this request’s original operator workspace.',
+  RUNBOOK_ACCOUNTING_ORIGINAL_ATTEMPT_REQUIRED:'This operation needs its original recorded buyer attempt before accounting can finish.',
   OPERATION_TICKET_EXPIRED:'This merchant operation ticket has expired. Request a current operation from the merchant.',
 };
 
@@ -35,6 +39,7 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
     ['/', 'index.html','text/html; charset=utf-8'],
     ['/app.mjs','app.mjs','text/javascript; charset=utf-8'],
     ['/intake.mjs','intake.mjs','text/javascript; charset=utf-8'],
+    ['/accounting.mjs','accounting.mjs','text/javascript; charset=utf-8'],
     ['/style.css','style.css','text/css; charset=utf-8'],
   ].map(async ([path,name,type]) => [path,{type,bytes:await readFile(new URL('workspace-ui/' + name,import.meta.url))}])));
   let hosts = new Set(), origins = new Set(), closing = false;
@@ -101,6 +106,12 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
           return reply(200,match[2] === 'json' ? 'application/json' : 'text/html',result.bytes,
             {'content-disposition':`attachment; filename="${result.name.replace(/[^a-zA-Z0-9_.-]/g,'_')}"`});
         }
+        match = new RegExp('^/files/' + key + '/accounting\\.csv$').exec(url.pathname);
+        if(match){
+          const result=await model.export(match[1],'csv');
+          return reply(200,'text/csv; charset=utf-8',result.bytes,
+            {'content-disposition':`attachment; filename="${result.name.replace(/[^a-zA-Z0-9_.-]/g,'_')}"`});
+        }
         match = new RegExp('^/files/' + key + '/resources/([A-Za-z0-9][A-Za-z0-9_-]{0,63})$').exec(url.pathname);
         if (match) {
           const result = await model.download(match[1],match[2]);
@@ -114,15 +125,16 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
         throw fault('NOT_FOUND',404);
       }
       if (req.method !== 'POST') return reply(405,'text/plain','Use GET or POST.',{allow:'GET, HEAD, POST'});
-      const input = await body(url.pathname === '/api/requests/upload' ? 6 * 1024 * 1024 : 1024 * 1024);
+      const input = await body(url.pathname === '/api/requests/upload' ? 4*Math.ceil(OPERATION_HANDOFF_MAX_BYTES/3)+1024 : 1024 * 1024);
       if (url.pathname === '/api/requests/upload') return json(200,await model.receiveRequest(input));
       if (url.pathname === '/api/requests/review') return json(200,await model.reviewRequest(input));
       if (url.pathname === '/api/requests/prepare') return json(200,await model.prepareRequest(input));
       if (url.pathname === '/api/drafts/save') return json(200,await model.save(input));
       if (url.pathname === '/api/drafts/initialize') return json(200,await model.initialize(input));
-      const actions = {'/api/runs/execute':'execute','/api/runs/cancel':'cancel','/api/runs/recover':'recover','/api/runs/unlock':'unlock'};
+      const actions = {'/api/runs/execute':'execute','/api/runs/cancel':'cancel','/api/runs/recover':'recover',
+        '/api/runs/unlock':'unlock','/api/runs/finalize':'finalize','/api/runs/accounting-workspace':'bindAccounting'};
       const action = actions[url.pathname];
-      if (action) return json(action === 'execute' ? 202 : 200,await model[action](input));
+      if (action) return json(['execute','finalize'].includes(action) ? 202 : 200,await model[action](input));
       throw fault('NOT_FOUND',404);
     })().catch(error => {
       if (res.headersSent) { if (!res.writableEnded) res.destroy(); return; }

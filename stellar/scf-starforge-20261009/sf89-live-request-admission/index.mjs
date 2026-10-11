@@ -97,7 +97,8 @@ export function createLiveRequestAdmission(offer) {
       return rejected('LIVE_PATH_PARAMETERS_REJECTED');
     }
     if (bodySchema) {
-      input.body = context.body === undefined ? null : context.body;
+      const absent=context.bodyPresent===false||context.bodyPresent===undefined&&context.body===undefined;
+      if (!absent || schemaInput.required?.includes('body')) input.body = context.body === undefined ? null : context.body;
     } else if (context.body !== undefined && context.body !== null) {
       return rejected('LIVE_BODY_NOT_DECLARED');
     }

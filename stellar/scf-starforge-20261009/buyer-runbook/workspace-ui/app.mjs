@@ -1,5 +1,6 @@
 // MIT. Browser presentation; the original server-side buyer owns execution.
 import {createHandoffIntakeUI} from './intake.mjs';
+import {createRunbookAccountingUI} from './accounting.mjs';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const formatTime = value => value ? new Date(value).toLocaleString() : '—';
@@ -8,6 +9,7 @@ let state, token, draft = null, rows = [], currentRun = null, view = 'welcome', 
 let navigation = 0, editorVersion = 0, sourceRefresh = 0;
 const resourcePreviews = new Map();
 const previewToOpen = new Set();
+const accountingUI=createRunbookAccountingUI({current:()=>currentRun,action,notice});
 const intakeUI = createHandoffIntakeUI({request,notice,refreshState,
   openPanel(){navigation++;show('requests');},
   async onPrepared(prepared,item){
@@ -165,6 +167,7 @@ async function openRun(id) {
   currentRun = result; show('run'); renderRun();
 }
 function renderRun() {
+  const restoreAccountingFocus=accountingUI.preserveFocus();
   const {id, state:run, active, terminalAvailable} = currentRun;
   const running = Boolean(active && !active.finishedAt), lock = run.executionLock;
   const rows = run.operations, untouched = rows.filter(row => row.state === 'UNATTEMPTED');
@@ -176,10 +179,12 @@ function renderRun() {
   $('#run-status').textContent = running ? readable(active.status) : lock ? 'Execution owner present' : untouched.length ? 'Ready' : 'Results retained';
   $('#run-metrics').innerHTML = [[rows.length,'Selected operations'],[untouched.length,'Untouched'],[saved.length,'Resources saved'],[attention.length,'Need attention']]
     .map(([value,label]) => `<div class="metric"><strong>${value}</strong><span>${label}</span></div>`).join('');
-  $('#execution-message').textContent = running ? active.cancelRequested ? 'Cancellation requested' : 'Original buyer execution is active' : terminalAvailable ? 'Continue through the operator terminal' : 'Operator terminal required';
-  $('#execution-detail').textContent = running ? 'Progress and results update here while the original buyer finishes its current operation.' : terminalAvailable ? 'Each untouched operation receives its original live-term review and terminal approval.' : 'Start this workspace in a controlling terminal to execute these saved requests.';
+  const accountingActive=running&&active.kind==='ACCOUNTING';
+  $('#execution-message').textContent = running ? active.cancelRequested ? 'Cancellation requested' : accountingActive?'Original accounting is active':'Original buyer execution is active' : terminalAvailable ? 'Continue through the operator terminal' : 'Operator terminal required for new purchases';
+  $('#execution-detail').textContent = running ? accountingActive?'Existing attempts are reconciled with their original operator ledgers. Each completed receipt is retained.':'Progress and results update here while the original buyer finishes its current operation.' : terminalAvailable ? 'Each untouched operation receives its original live-term review and terminal approval.' : 'Accounting and resource inspection remain available here. Start this workspace in a controlling terminal to execute new purchases.';
   $('#execute-run').disabled = running || Boolean(lock) || !terminalAvailable || !untouched.length;
   $('#cancel-run').hidden = !running;
+  $('#cancel-run').textContent=accountingActive?'Cancel accounting refresh':'Cancel current execution';
   $('#cancel-run').disabled = Boolean(active?.cancelRequested);
   $('#recover-run').disabled = running || Boolean(lock);
   $('#lease-panel').hidden = !lock;
@@ -188,6 +193,7 @@ function renderRun() {
     $('#unlock-run').disabled = lock.ownerRunning !== false;
   }
   $('#run-budgets').innerHTML = budgetTable(run.plan);
+  accountingUI.summary(run,running||Boolean(lock));
   $('#download-json').href = `/files/${id}/report.json`;
   $('#download-report').href = `/files/${id}/report.html`;
   const opened = new Set([...$('#run-operations').querySelectorAll('details[open]')].map(element => element.dataset.detail));
@@ -204,9 +210,11 @@ function renderRun() {
       <dl class="detail-grid"><div><dt>Original buyer status</dt><dd>${escape(summary?.status ?? summary?.error?.code ?? row.lastError?.code ?? 'Awaiting execution')}</dd></div><div><dt>Saved resource</dt><dd>${escape(resource?.status ?? 'Awaiting original response')}${resource?.bytes !== undefined ? ' · ' + escape(resource.bytes) + ' bytes' : ''}</dd></div><div><dt>Input snapshot</dt><dd>${escape(readable(row.integrity))}${row.integrityError ? ' · ' + escape(row.integrityError) : ''}</dd></div><div><dt>Original evidence</dt><dd><code>${escape(summary?.evidencePath ?? row.evidenceDirectory)}</code></dd></div></dl>
       <div class="result-actions">${available ? `<button data-preview="${escape(row.id)}">Preview resource</button><a class="button" href="/files/${id}/resources/${escape(row.id)}">Download ${escape(row.downloadName)}</a>` : ''}${only ? `<button data-only="${escape(row.id)}">Execute this operation</button>` : ''}</div>
       ${preview ? `<details data-detail="${escape(row.id)}-resource" ${previewOpen ? 'open' : ''}><summary>${escape(preview.name)} · ${preview.bytes} bytes${preview.truncated ? ' · first 64 KiB shown' : ''}</summary>${preview.text === null ? '<p class="muted">Download this binary resource to open it in its original format.</p>' : `<pre>${escape(preview.text)}</pre>`}</details>` : ''}
+      ${accountingUI.operation(row,{runId:id,disabled:running||Boolean(lock),opened})}
       <details data-detail="${escape(row.id)}-terms" ${opened.has(row.id + '-terms') ? 'open' : ''}><summary>Exact request and snapshot</summary>${terms(row)}</details>
       ${row.result || row.lastError ? `<details data-detail="${escape(row.id)}-result" ${opened.has(row.id + '-result') ? 'open' : ''}><summary>Original retained result</summary><pre>${escape(JSON.stringify(row.result ?? row.lastError,null,2))}</pre></details>` : ''}</article>`;
   }).join('');
+  restoreAccountingFocus();
   $('#progress-events').innerHTML = active?.events?.length ? active.events.map(event => `<div class="event"><span>${escape(new Date(event.at).toLocaleTimeString())}</span><code>${escape(event.id)} · ${escape(readable(event.status))}${event.code ? ' · ' + escape(event.code) : ''}</code></div>`).join('') : '<p class="muted">Execution events appear here while this workspace owns a run.</p>';
 }
 async function action(path, extra = {}) {
@@ -282,7 +290,7 @@ $('#initialize-run').addEventListener('click',handle(async () => {
 }));
 $('#revision-picker').addEventListener('change',handle(event => openDraft(draft.id,Number(event.target.value))));
 $('#execute-run').addEventListener('click',handle(async () => { await action('execute'); notice('The original buyer is running. Continue its approval in the operator terminal.'); }));
-$('#cancel-run').addEventListener('click',handle(async () => { await action('cancel',{executionId:currentRun.active.executionId}); notice('Cancellation requested for this execution. Waiting for the original buyer to finish cleanup.'); }));
+$('#cancel-run').addEventListener('click',handle(async () => { await action('cancel',{executionId:currentRun.active.executionId}); notice('Cancellation requested. Waiting for the current original operation to finish cleanup.'); }));
 $('#recover-run').addEventListener('click',handle(async () => { await action('recover'); notice('Retained original output inspected for recovery.'); }));
 $('#unlock-run').addEventListener('click',handle(async () => { await action('unlock',{ownerPid:currentRun.state.executionLock.pid}); notice('The selected dead owner lease has been released.'); }));
 $('#run-operations').addEventListener('click',handle(async event => {

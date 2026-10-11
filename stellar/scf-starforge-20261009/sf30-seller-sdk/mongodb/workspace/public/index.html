@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MongoDB merchant workspace · Stellar Forge</title>
+  <link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="top"><div><span class="eyebrow">Stellar Forge / data products</span><h1>MongoDB merchant workspace</h1></div><div class="session"><strong id="draft-status">Opening workspace…</strong><span id="revision-label"></span></div></header>
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <nav aria-label="Workspace"><button class="active" data-tab="source">Data source</button><button data-tab="reports">Named reports</button><button data-tab="merchant">Merchant routes</button><button data-tab="review">Review and run</button><button data-tab="packages">Seller packages</button></nav>
+      <div class="sidebar-heading"><h2>Saved revisions</h2><button id="refresh-history" class="small">Refresh</button></div>
+      <div id="history-list" class="history-list"></div><button id="more-history" class="small" hidden>Older revisions</button>
+      <div class="sidebar-note"><strong id="database-label"></strong><span id="workspace-label"></span></div>
+    </aside>
+    <main>
+      <section id="source-panel" class="panel">
+        <div class="section-heading"><div><span class="eyebrow">01 / retained connection profile</span><h2>Inspect the source</h2><p>Choose the database and approved collections, then inspect their actual BSON field types.</p></div><button id="inspect-source">Inspect saved source</button></div>
+        <div class="card form-grid">
+          <label>Database<input id="database" autocomplete="off"></label>
+          <label>URI environment name<input id="uri-env" autocomplete="off" spellcheck="false"></label>
+          <label>TLS policy<select id="tls"><option value="required">Verified TLS</option><option value="local-plaintext">Local plaintext connection</option></select></label>
+          <label>Retained CA file<input id="ca-file" readonly spellcheck="false" placeholder="System certificate trust"></label>
+          <p class="help full">The connection URI is read by the local process from its environment. Save changes before inspecting or running a report.</p>
+        </div>
+        <div class="card"><div class="section-heading compact"><div><h3>Collection catalogue</h3><p id="catalog-description">Inspect the saved source to load a native database catalogue.</p></div><label class="compact-field">Sample per collection<select id="sample-size"><option>50</option><option selected>200</option><option>500</option></select></label></div><div id="catalog"></div></div>
+        <details class="card"><summary>Complete source declaration</summary><p class="help">Import a reviewed connection profile, fixed aggregation pipelines and parameter declarations.</p><textarea id="source-json" class="code" rows="18" spellcheck="false" aria-label="Complete source JSON"></textarea><div class="actions"><button id="apply-source-json">Apply source JSON</button><button id="reset-source-json">Reset editor</button></div></details>
+      </section>
+      <section id="reports-panel" class="panel" hidden>
+        <div class="section-heading"><div><span class="eyebrow">02 / fixed aggregations</span><h2>Define named reports</h2><p>Publish explicit columns and bind buyer inputs as typed values in a fixed pipeline.</p></div><button id="add-query">Add report</button></div>
+        <div class="editor-layout"><div class="card selector"><h3>Reports</h3><div id="query-list"></div></div><div id="query-editor" class="card">
+          <div class="section-heading compact"><h3 id="query-title"></h3><div class="actions"><button id="duplicate-query" class="small">Duplicate</button><button id="remove-query" class="small">Remove</button></div></div>
+          <div class="form-grid"><label>Collection<input id="query-collection" list="collections" spellcheck="false"></label><label>Read concern<select id="query-concern"><option value="snapshot">Snapshot</option><option value="majority">Majority</option><option value="local">Local</option></select></label><label>Row limit<input id="query-rows" type="number" min="1"></label><label>Response limit, bytes<input id="query-bytes" type="number" min="1"></label><label>Execution timeout, ms<input id="query-timeout" type="number" min="1"></label></div>
+          <label class="spaced">Public output columns, one per line<textarea id="query-columns" rows="3" spellcheck="false"></textarea></label>
+          <label class="spaced">Fixed aggregation pipeline<textarea id="query-pipeline" class="code" rows="12" spellcheck="false"></textarea></label>
+          <p class="help">Reference a declared input as <code>$$sf30_parameterName</code>. Use canonical Extended JSON for BSON constants. A snapshot read requires a replica set or sharded server.</p>
+          <div class="section-heading compact"><h3>Typed inputs</h3><button id="add-parameter" class="small">Add input</button></div><div id="parameter-list"></div>
+          <details class="spaced"><summary>Complete report declaration</summary><textarea id="query-json" class="code" rows="14" spellcheck="false" aria-label="Complete report JSON"></textarea><button id="apply-query-json">Apply report JSON</button></details>
+        </div></div><datalist id="collections"></datalist>
+      </section>
+      <section id="merchant-panel" class="panel" hidden>
+        <div class="section-heading"><div><span class="eyebrow">03 / original seller contract</span><h2>Set routes and payment choices</h2><p>Keep complete payment choices, explicit public examples and descriptions with each product.</p></div><button id="add-route">Add route</button></div>
+        <div class="card"><label>Public HTTPS origin<input id="public-origin" type="url" placeholder="https://data.example.com" spellcheck="false"></label><div class="section-heading compact spaced"><h3>Default payment choices</h3><button id="add-default-payment" class="small">Add choice</button></div><div id="default-payments"></div></div>
+        <div class="editor-layout"><div class="card selector"><h3>Routes</h3><div id="route-list"></div></div><div id="route-editor" class="card">
+          <div class="section-heading compact"><h3 id="route-title"></h3><button id="remove-route" class="small">Remove route</button></div>
+          <div class="form-grid"><label>HTTP method<select id="route-method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option></select></label><label>Fixed path<input id="route-path" spellcheck="false"></label><label>Named report<select id="route-query"></select></label><label>Service name<input id="route-service" maxlength="32"></label><label class="full">Description<textarea id="route-description" rows="2"></textarea></label><label class="full">Tags, comma separated<input id="route-tags"></label></div>
+          <label class="spaced">Public example inputs, JSON<textarea id="route-example" class="code" rows="5" spellcheck="false"></textarea></label><label class="spaced">Input descriptions, JSON<textarea id="route-descriptions" class="code" rows="4" spellcheck="false"></textarea></label>
+          <label class="check spaced"><input id="override-payment" type="checkbox">Use route-specific payment choices</label><div id="route-payment-section" hidden><div id="route-payments"></div><button id="add-route-payment" class="small">Add route choice</button></div>
+        </div></div>
+        <details class="card"><summary>Complete merchant plan</summary><textarea id="plan-json" class="code" rows="18" spellcheck="false" aria-label="Complete merchant plan JSON"></textarea><div class="actions"><button id="apply-plan-json">Apply merchant JSON</button><button id="reset-plan-json">Reset editor</button></div></details>
+      </section>
+      <section id="review-panel" class="panel" hidden>
+        <div class="section-heading"><div><span class="eyebrow">04 / native execution</span><h2>Review and run</h2><p>Review the compiled public contract, then run a saved report against the configured MongoDB database.</p></div><button id="review-current">Review current draft</button></div>
+        <div id="review-content" class="card empty">Compile the current draft to review its routes and complete payment choices.</div>
+        <div class="card"><h3>Run a saved report</h3><div class="form-grid"><label>Report<select id="run-query"></select></label><label>Saved revision<input id="run-revision" readonly></label><label class="full">Exact input values, JSON<textarea id="run-input" class="code" rows="4" spellcheck="false"></textarea></label></div><div class="actions"><button id="run-report">Run report</button><button id="download-result" hidden>Download native result</button></div><div id="run-result" class="spaced"></div></div>
+      </section>
+      <section id="packages-panel" class="panel" hidden>
+        <div class="section-heading"><div><span class="eyebrow">05 / seller and buyer handoff</span><h2>Prepare the merchant package</h2><p>Export the saved source, original seller contract, OpenAPI and generated client together.</p></div><button id="prepare-package">Prepare saved revision</button></div>
+        <div id="package-list" class="card empty">Prepared packages will appear here.</div>
+        <div id="package-content" hidden></div>
+        <div id="seller-card" class="card" hidden><h3>Local merchant</h3><p id="seller-status">Start this package with the connection environment of this workspace.</p><div class="actions"><button id="start-seller">Start local seller</button><button id="stop-seller" hidden>Stop seller</button><a id="seller-operations" hidden target="_blank" rel="noreferrer">Open seller operations</a></div></div>
+        <div id="buyer-card" class="card" hidden><h3>Prepare a buyer request</h3><p class="help">Uses the selected package's running seller to read its current offer and payment choices.</p><div class="form-grid"><label>Route<select id="buyer-route"></select></label><label>Payment choice<input id="buyer-choice" type="number" min="0" value="0"></label><label>Intent identifier<input id="buyer-intent" spellcheck="false"></label><label class="full">Exact buyer inputs, JSON<textarea id="buyer-input" class="code" rows="4" spellcheck="false"></textarea></label></div><div class="actions"><button id="prepare-buyer">Prepare request</button><button id="download-buyer" hidden>Download buyer review</button></div><div id="buyer-result" class="spaced"></div></div>
+        <details class="card"><summary>Operator commands</summary><pre id="operator-commands"></pre></details>
+      </section>
+    </main>
+  </div>
+  <footer><span id="footer-status">Retained native workspace</span><div class="actions"><button id="reload-saved">Reload saved</button><button id="restore-local" hidden>Restore tab draft</button><button id="save-revision" class="primary">Save revision</button></div></footer>
+</body>
+</html>

@@ -1,8 +1,10 @@
 // MIT — Node application access to the original SF88 acquisition and SF100 outputs.
 import { mkdtemp, readdir, rm, rename } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { VerifiedFile } from './result.mjs';
+import { accountingOptions, runAccounting, recoverAccounting, accountingPages,
+  exportAccounting } from './session-accounting.mjs';
 import { absolute, privateDirectory, digest, now, intent, object, need, BuyerError,
   readJson, writeJson, exists, jsonBytes, syncDirectory } from './store.mjs';
 
@@ -66,6 +68,64 @@ export class Dataset {
   recover(options) { return this._command('recover', {}, options); }
   /** Only this method can acquire new pages. Completed/marked pages are never replayed. */
   run(options) { return this._command('run', {}, options); }
+  async _accountingIdentity({allowUnbound = false} = {}) {
+    const metadata = await this._metadata();
+    const definition = await readJson(join(metadata.sessionDirectory, 'session.json'), 262144);
+    const bindingPath = join(this.directory, 'binding.json');
+    const bound = await exists(bindingPath);
+    need(bound || allowUnbound && metadata.source.kind === 'attached', 'DATASET_INITIALIZE_OR_ATTACH_REQUIRED');
+    const binding = bound ? await readJson(bindingPath) : {
+      schema:'stellar-forge.node-dataset-binding.v1', id:this.id,
+      sessionDirectory:metadata.sessionDirectory, sessionId:definition.config?.operation?.intentId,
+      configurationSha256:definition.configurationSha256, limits:definition.limits,
+      expectedSnapshot:definition.expectedSnapshot, workspaceDirectory:definition.workspaceDirectory ?? null};
+    const {canonical, digest:sourceDigest} = await import(pathToFileURL(
+      join(this.buyer.runtime.directory, 'dataset-page.mjs')).href);
+    // Bind the original definition without opening a page response or delivery.
+    // The native accounting entrypoint still validates each original attempt.
+    need(binding.schema === 'stellar-forge.node-dataset-binding.v1' && binding.id === this.id &&
+      binding.sessionDirectory === metadata.sessionDirectory &&
+      definition.schema === 'stellar-forge.sf88.dataset-session.v1' &&
+      definition.directory === binding.sessionDirectory &&
+      definition.config?.operation?.intentId === binding.sessionId &&
+      sourceDigest(canonical(definition.config)) === binding.configurationSha256 &&
+      definition.configurationSha256 === binding.configurationSha256 &&
+      definition.expectedSnapshot === binding.expectedSnapshot &&
+      canonical(definition.limits) === canonical(binding.limits) &&
+      (definition.workspaceDirectory ?? null) === binding.workspaceDirectory,
+    'DATASET_APPLICATION_BINDING_CHANGED');
+    return {kind:'dataset', id:this.id, entryDirectory:this.directory,
+      sessionDirectory:metadata.sessionDirectory, sessionId:binding.sessionId,
+      configurationSha256:binding.configurationSha256, workspace:binding.workspaceDirectory};
+  }
+  async _accounting(action, input, {initialize = false} = {}) {
+    const options = accountingOptions(input, action === 'finalize');
+    const identity = await this._accountingIdentity({allowUnbound:initialize});
+    return runAccounting(this, identity, action, options, {outputFile:'native.json',
+      invoke:async ({directory, signal, resultFile}) => {
+        const {signal:unused, ...request} = options;
+        const requestPath = join(directory, 'request.json');
+        await writeJson(requestPath, {...request, reportLimit:this.buyer.datasetReportLimit,
+          initializeAccounting:initialize}, {exclusive:true});
+        return this.buyer.runtime.run([this.buyer.runtime.directory, this.directory, action, requestPath, resultFile],
+          {directory, signal, entryFile:WORKER, resultFile, resultLimit:this.buyer.datasetReportLimit});
+      }});
+  }
+  /** Original page views, available independently of delivered dataset bytes. */
+  accounting(options) { return this._accounting('accounting', options); }
+  /** Attach an original financial account even after delivered pages were removed. */
+  async initializeAccounting(options) {
+    need((await this._metadata()).source.kind === 'attached', 'DATASET_ACCOUNTING_ATTACHMENT_REQUIRED');
+    return this._accounting('accounting', options, {initialize:true});
+  }
+  /** Continue existing reservations through the original SF36/SF86 finalizer. */
+  finalize(options) { return this._accounting('finalize', options); }
+  accountingPages(options) { return accountingPages(this, options); }
+  finalizeAll(options) { return accountingPages(this, options, true); }
+  async recoverAccounting(options) {
+    return recoverAccounting(this, await this._accountingIdentity(), options);
+  }
+  exportAccounting(destination, options) { return exportAccounting(this, destination, options); }
   async exportManifest(destination, options) {
     return this._command('manifest', {destination:absolute(destination)}, options);
   }
@@ -81,7 +141,9 @@ export class Dataset {
 export async function createDataset(buyer, options, attached = false) {
   need(object(options), 'DATASET_OPTIONS_REQUIRED');
   const {id, config, workspaceDirectory, directory, operatorProfile,
-    maxPages, maxTotalAtomic, maxRows = 1000000, maxPageBytes = 1048576, expectedSnapshot = null} = options;
+    maxPages, maxTotalAtomic, maxRows = 1000000, maxPageBytes = 1048576, expectedSnapshot = null,
+    accountingOnly = false} = options;
+  need(typeof accountingOnly === 'boolean' && (attached || !accountingOnly), 'DATASET_ACCOUNTING_ATTACHMENT_REQUIRED');
   const dataset = new Dataset(buyer, id);
   await buyer.ready();
   await privateDirectory(join(buyer.stateDirectory, 'datasets'));
@@ -116,7 +178,8 @@ export async function createDataset(buyer, options, attached = false) {
     throw error;
   }
   await syncDirectory(parent);
-  await dataset.initialize();
+  if (accountingOnly) await dataset.initializeAccounting();
+  else await dataset.initialize();
   return dataset;
 }
 

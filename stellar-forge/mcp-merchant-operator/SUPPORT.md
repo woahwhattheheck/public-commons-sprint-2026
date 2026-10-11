@@ -203,6 +203,9 @@ case used for owner terms, workorder and private handoff.
 | `merchant_case_workorder` | Generate the original workorder from an exact saved revision and its selected sources. |
 | `merchant_case_export` | Publish the original workspace, support handoff and readable review; optionally include the workorder documents. |
 | `merchant_support_export_status` | Verify a retained export's completion manifest and original file hashes. |
+| `merchant_support_export_manifest` | Inspect the retained completion manifest, its own exact digest, and this operator's read sessions. |
+| `merchant_support_export_file` | Retrieve an original file with its manifest digest, file digest and byte offset. |
+| `merchant_support_export_file_release` | Release only this operator's temporary read snapshot. |
 
 ### Open the actual retained source
 
@@ -321,6 +324,141 @@ The original SF77 CLI can also consume `merchant-support.json` with
 `owner-terms.json`. This MCP join introduces no new handoff or contract format.
 Use the existing private business delivery workflow to provide the completed
 files to the intended recipient.
+
+## Retrieve and reopen the private handoff
+
+The same MCP service now returns the actual retained export bytes. The client
+saves the original file names, case/workspace/support content, workorder documents
+and completion manifest. It does not rerun an observer, seller, workorder or
+export. Files from the original two-file diagnostic export, four-file runtime
+export and their workorder additions use the same manifest format.
+
+From the complete source checkout or a cumulative package containing this source,
+start the existing merchant MCP listener with its usual host configuration and
+bearer environment. On the receiving Linux machine, supply that endpoint's bearer
+through `MCP_ACCESS_TOKEN` or an existing variable named with `--token-env`. Use the
+original loopback listener, an operator-established SSH tunnel, or the host's
+existing HTTPS endpoint. Tokens never appear in command arguments, progress,
+download checkpoints or exported files. The client refuses redirects, URL
+credentials and bearer transport over non-loopback HTTP.
+
+```sh
+starforge merchant-mcp download-support \
+  --url http://127.0.0.1:3211 \
+  --export-id recovered-incident \
+  --out /private/received/recovered-incident
+```
+
+The source equivalent begins with
+`node stellar-forge/mcp-merchant-operator/serve.mjs download-support` and takes
+the same options. The output's parent directory must already exist. The command
+creates its private output directory with mode `0700` and files with mode `0600`.
+An existing output is accepted only as this same download; unrelated files and a
+different endpoint/export/manifest are rejected without replacing them. Its
+`download-state` directory retains the original manifest, per-file byte/hash
+checkpoints and a Linux kernel lease. Install `flock` from util-linux on the
+receiver, as used by the original merchant state stores. The lease prevents two
+clients from writing the same output and is released automatically on process
+exit, including an unexpected termination.
+
+Each chunk is checked against the original export ID, manifest SHA-256, filename,
+complete file SHA-256, byte count and offset. The default chunk is 196,608 bytes;
+`--chunk-bytes` can select a smaller positive value for an existing constrained
+transport. Progress is a JSON line on stderr. The final JSON on stdout reports
+`COMPLETE`, the original case identity, exact manifest digest and completed file
+counts. `support-export.json` appears at the output root only after all original
+files have been checked and published there. The files remain directly usable by
+the existing console and private business delivery workflow.
+
+### Continue after a lost connection or process exit
+
+Run the **same command with the same output directory**. Completed files are
+rehash-checked locally and retained. A partial file resumes from its saved byte
+offset after the durable prefix is verified. An uncheckpointed suffix left by a
+killed write is discarded within that owned partial file; the verified prefix
+is preserved. A changed completed or checkpointed file is reported instead of
+being overwritten. Disk-full and connection errors leave the original partial
+state available for the next invocation after the host issue is corrected.
+
+Read IDs identify the server process's temporary snapshots. If the server restarted
+or the read expired, the client opens the same original file at its saved offset
+with both original digests. It cannot combine chunks from another manifest or
+silently select a newer case revision. A graceful interruption releases its
+current read; an abrupt client exit leaves that snapshot to the original idle
+expiry. Closing the server releases its owned snapshots while retaining the
+export. The client never shuts down the server or another operator's watcher.
+
+### Reopen through the existing case desk
+
+To save the downloaded source into a local original SF74 case directory, add
+`--cases-dir /private/merchant/cases` to the download command. The private case
+directory must already exist. For an already completed download, the same
+continuation works offline:
+
+```sh
+starforge merchant-mcp reopen-support \
+  --dir /private/received/recovered-incident \
+  --cases-dir /private/merchant/cases
+
+starforge support-console --cases-dir /private/merchant/cases
+```
+
+Reopening verifies the saved files, invokes the original SF74 handoff importer
+and saves through its original case writer. Diagnostic-only exports reuse their
+original workspace and case metadata. A new local case UUID is recorded before
+the save, so an interrupted reply resumes the same import. Subsequent invocations
+reopen that local case and preserve later browser/MCP edits. The result identifies
+both the original exported case and the local case/revision; it does not overwrite
+an existing case using the remote UUID. One download retains one local case-directory
+binding, while the original files remain portable through the normal console
+import. Original case writer recovery remains in [CASE_DESK.md](../../stellar/scf-starforge-20261009/sf74-merchant-support-console/CASE_DESK.md).
+
+Open the returned case in the existing console to continue its source comparison,
+follow-up, recorded fees, acceptance text and workorder. Reopening changes neither
+the retained observation times nor the commercial approval state. No MCP server,
+merchant endpoint, observer, payment adapter or notification receiver is contacted
+by `reopen-support`.
+
+### Use the retained-file tools from an existing MCP client
+
+Call `merchant_support_export_manifest` with `exportId`. `MANIFEST_RETAINED`
+means that the original completion manifest exists and parses; it does not reread
+all payloads. The response's `manifestFile` gives the exact original manifest
+name, bytes and SHA-256. The existing `merchant_support_export_status` remains
+the explicit full-file verification operation and returns its unchanged
+`COMPLETE`, `NOT_FOUND` or `INCOMPLETE_OR_OTHER_EXPORT` meanings.
+
+Retrieve `support-export.json` or a filename present in that original manifest:
+
+```json
+{
+  "exportId":"recovered-incident",
+  "file":"merchant-support.json",
+  "expectedManifestSha256":"<manifestFile.sha256>",
+  "expectedSha256":"<that original file's sha256>",
+  "offset":0,
+  "limit":65536
+}
+```
+
+The result contains `readId`, `file`, `offset`, `bytesRead`, `nextOffset`,
+`encoding:"base64"` and `data`, plus the pinned export/manifest identity. Continue
+with that same `readId`, both digests and `nextOffset`. `nextOffset:null` completes
+and releases the snapshot. A resumed offset or read ID requires `expectedSha256`.
+After `SUPPORT_READ_NOT_FOUND`, omit the old read ID and retain the original
+digests/offset. `merchant_support_export_file_release` takes the `exportId` and
+`readId` when the client deliberately abandons a read.
+
+Support and accounting share the original accounting reader implementation; each
+native owner retains its own lifecycle. Each owner permits four concurrent
+verified snapshots totaling 256,000,000 bytes, retains up to 32 KiB in memory per
+small file, and uses an immediately unlinked private descriptor for larger files.
+Later chunks reuse the snapshot without rereading the entire source. Original
+files stay in their existing export/workspace, and unfinished snapshots expire
+after 120 seconds idle. Support's manifest view reports original loader counts
+and active snapshot metadata without host paths. Accounting's tool names,
+selectors, result fields, original-read counts and workspace-close behavior
+remain unchanged.
 
 ## Concurrent edits, interruption and private state
 

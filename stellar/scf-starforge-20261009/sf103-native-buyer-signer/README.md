@@ -120,8 +120,11 @@ metadata and extensions in the native complete envelope.
 
 The native core client registers only the configured concrete Stellar network,
 selects only that exact offer, and receives the original atomic cap through its
-native spend controls. Unsupported `upto`, unsponsored exact requirements and
-non-authorization payment flows are refused before native payment construction.
+native spend controls. Payment selection defaults to `authorization`. A merchant's
+upfront offer requires the operator to select `expect.paymentFlow:'upfront'` in
+the same approved operation; the full accepted requirement must still match.
+Unsupported `upto`, unsponsored exact requirements and unknown or differently
+selected payment flows are refused before native payment construction.
 One adapter instance makes at most one payment-creation attempt, including when
 the SDK fails. Persistent operation deduplication remains with original SF36.
 

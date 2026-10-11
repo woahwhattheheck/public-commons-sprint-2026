@@ -1,6 +1,6 @@
 // MIT. Private SF36 worker adapter: original SF86 observer and SF98 outbox only.
 import {createHash} from 'node:crypto';
-import {createOfficialEventDecoder} from '../sf43-agent-commerce/verify.mjs';
+import {checkStellarTransaction, createOfficialEventDecoder} from '../sf43-agent-commerce/verify.mjs';
 import {reconcileRpc} from '../sf86-rpc-transfer-reconcile/verify.mjs';
 import {resolveRpcEndpoint} from '../sf86-rpc-transfer-reconcile/terms.mjs';
 import {originalRecordFromEvidence} from '../sf86-rpc-transfer-reconcile/cli.mjs';
@@ -16,9 +16,25 @@ try {
     chunks.push(chunk);
   }
   const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  const record=input.source?.schema==='scf82.checkout-evidence.v1'?
+  const record=input.action==='observe-manual'?null:input.source?.schema==='scf82.checkout-evidence.v1'?
     originalRecordFromEvidence(input.source):input.source;
-  if(input.action==='observe') {
+  if(input.action==='observe-manual') {
+    const rpcEndpoint=resolveRpcEndpoint(input.expected?.network,input.rpcEndpoint);
+    const transport=input.rpcProxyUrl===undefined?null:createPublicHttpsFetch({trustedProxy:{
+      mode:'explicit-connect',origin:new URL(rpcEndpoint).origin,proxyUrl:input.rpcProxyUrl,
+    }});
+    // SF43 names its verifier input `receipt`. Here the candidate is explicitly
+    // operator-selected; it is never stored as an original SF81 seller receipt.
+    // Only SF43's actual network, SUCCESS transaction and SEP-41 event match
+    // can become the privileged worker's verified facts.
+    const proof=await checkStellarTransaction({
+      receipt:{success:true,network:input.expected.network,transaction:input.transaction,payer:input.expected.payer},
+      expected:input.expected,rpcEndpoint,decodeContractEvent:await createOfficialEventDecoder(),
+      ...(transport===null?{}:{fetchImpl:(url,init)=>transport(url,{...init,redirect:'manual'})}),
+    });
+    console.log(JSON.stringify({schema:'stellar-forge.sf36.manual-observation.v1',
+      origin:'OPERATOR_SELECTED_TRANSACTION_ORIGINAL_SF43',rpcEndpoint,proof}));
+  } else if(input.action==='observe') {
     // Provider selection is restricted to the approved network's public list;
     // decoder and fetch remain fixed original production dependencies.
     // Saved verdicts and loopback replay cannot reach the privileged worker.

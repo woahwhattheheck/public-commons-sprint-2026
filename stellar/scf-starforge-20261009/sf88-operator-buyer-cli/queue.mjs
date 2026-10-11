@@ -10,6 +10,7 @@ import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
 import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, operationTicketView, requireCurrentOperationTicket } from './operation-ticket.mjs';
+import { readRequestBody, MAX_REQUEST_BODY_BYTES } from './request-body.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.buyer-inbox.v1';
 const HASH = /^[a-f0-9]{64}$/;
@@ -135,7 +136,7 @@ async function readRequest(root, intentId) {
   need(op.intentId === intentId && JSON.stringify(op) === JSON.stringify(request.operation), 'INBOX_OPERATION_CHANGED');
   if (request.bodySha256 !== null) {
     need(op.bodyFile === join(directory, 'request-body.bin'), 'INBOX_BODY_PATH_CHANGED');
-    const body = await readFile(op.bodyFile, 1048576);
+    const body = await readFile(op.bodyFile, MAX_REQUEST_BODY_BYTES);
     need(body.length === request.bodyBytes && sha(body) === request.bodySha256, 'INBOX_BODY_CHANGED');
   } else need(op.bodyFile === undefined, 'INBOX_BODY_CHANGED');
   let ticket = null;
@@ -211,7 +212,7 @@ export async function openQueue(path) {
       const id = jobKey(op.intentId), destination = join(root, 'jobs', id);
       await privateDirectory(cfg.evidenceDir);
       const evidencePath = join(cfg.evidenceDir, id + '.json');
-      const body = op.bodyFile === undefined ? null : await readFile(op.bodyFile, 1048576);
+      const body = op.bodyFile === undefined ? null : await readRequestBody(op);
       const bodySha256 = body === null ? null : sha(body);
       const ticket = await loadOperationTicket(op, {requireCurrent:true});
       const dependencies = {

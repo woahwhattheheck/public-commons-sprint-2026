@@ -10,6 +10,7 @@ function portNumber(port) {
 }
 export async function startStellarRpcMerchant({ plan, env = process.env, port = 8423,
   operationsPort = 8424, nativeFactory = null, allowLoopbackUpstream = false, lookup,
+  navigationOrigin = null,
   availabilityDirectory, historyDirectory, historyRetentionDays = 90, deliveryOutbox,
   maxInFlight = 64, drainGraceMs = 60000, handlerTimeoutMs, requestTimeoutMs } = {}) {
   portNumber(port);
@@ -36,7 +37,7 @@ export async function startStellarRpcMerchant({ plan, env = process.env, port = 
       ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }) });
     seller.upstreamSnapshot = application.snapshot;
     if (operationsPort !== null) operations = await startSellerOperations(seller, {
-      port: operationsPort, historyDirectory, historyRetentionDays, deliveryOutbox,
+      port: operationsPort, historyDirectory, historyRetentionDays, deliveryOutbox, navigationOrigin,
     });
   } catch (cause) {
     if (seller) await seller.close().catch(() => {});

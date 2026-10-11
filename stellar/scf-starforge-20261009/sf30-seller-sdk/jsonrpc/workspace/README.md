@@ -178,6 +178,15 @@ executable paths or the private workspace root.
 
 ## Embed and retain
 
+For deployment and release management, take the prepared directory shown by
+the selected package action into the existing
+[RPC release lifecycle](../../../sf82-seller-pilot/JSONRPC_RELEASES.md):
+`starforge releases stage --store PRIVATE_STORE --id RELEASE --jsonrpc-package PREPARED_DIRECTORY`.
+The release keeps all ten original files and runs the same merchant through its
+existing process owner. Its console and MCP tools provide version comparison,
+activation, rollback, original operations and availability controls. Stop the
+workspace's owned merchant before starting the release on the same public ingress.
+
 `startRpcWorkspace` in `server.mjs` accepts the same directory, creation/import
 and host settings and returns `{ origin, url, model, close }`. The model in
 `model.mjs` exposes the saved plan, review, comparison, preparation, diagnosis,

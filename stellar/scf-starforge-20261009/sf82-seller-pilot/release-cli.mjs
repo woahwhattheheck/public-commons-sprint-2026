@@ -22,6 +22,10 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
            [--label TEXT] [--port 8423] [--facilitator HTTPS_URL] [--allow-local-facilitator]
   stage    --store DIR --id RELEASE --duckdb-package PREPARED_DIRECTORY [--duckdb-python EXECUTABLE]
   stage    --store DIR --id RELEASE --s3-package CONFIGURED_DIRECTORY
+  stage    --store DIR --id RELEASE --mysql-package PREPARED_DIRECTORY
+  stage    --store DIR --id RELEASE --jsonrpc-package PREPARED_RPC_DIRECTORY [--allow-loopback-upstream]
+  stage    --store DIR --id RELEASE --sqlite-package ORIGINAL_WORKBENCH_EXPORT
+           [--sqlite-snapshot-max-bytes BYTES] [--sqlite-snapshot-timeout-ms MILLISECONDS]
            [--label TEXT] [--port 8423] [--facilitator HTTPS_URL] [--allow-local-facilitator]
   list     --store DIR
   inspect  --store DIR --id RELEASE
@@ -52,7 +56,7 @@ Catalog-init creates a private identity, source-derived seller policy and existi
 Catalog-run owns the original catalog writer and optional original browser until Ctrl-C.
 Application entry modules are pinned; their external dependencies remain operator-managed.`;
 const COMMANDS = {
-  init: ['store'], stage: ['store', 'id', 'workspace', 'python', 'python-root', 'duckdb-package', 'duckdb-python', 's3-package', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
+  init: ['store'], stage: ['store', 'id', 'workspace', 'python', 'python-root', 'duckdb-package', 'duckdb-python', 's3-package', 'mysql-package', 'jsonrpc-package', 'sqlite-package', 'sqlite-snapshot-max-bytes', 'sqlite-snapshot-timeout-ms', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
   list: ['store'], inspect: ['store', 'id'], diff: ['store', 'from', 'to'],
   activate: ['store', 'id', 'expect', 'reason'], rollback: ['store', 'expect', 'to', 'reason'],
   status: ['store'], run: ['store', 'expect'], console: ['store', 'port', 'catalog', 'discovery-setup'],
@@ -77,7 +81,7 @@ function parse(args) {
     options[name] = rest[++i];
   }
   if (!options.store) throw new Error('Supply --store DIRECTORY.');
-  for (const name of ['port', 'workspace-port', 'expect']) {
+  for (const name of ['port', 'workspace-port', 'expect', 'sqlite-snapshot-max-bytes', 'sqlite-snapshot-timeout-ms']) {
     if (options[name] !== undefined) {
       if (!/^\d+$/.test(options[name]) || !Number.isSafeInteger(Number(options[name]))) throw new Error('--' + name + ' must be a nonnegative integer.');
       options[name] = Number(options[name]);
@@ -94,7 +98,7 @@ export async function main(args = process.argv.slice(2)) {
   switch (command) {
     case 'init': result = await initReleaseStore(root); break;
     case 'stage': {
-      for (const key of o.workspace || o.python || o['duckdb-package'] || o['s3-package'] ? ['id'] : ['id', 'spec', 'config', 'bindings'])
+      for (const key of o.workspace || o.python || o['duckdb-package'] || o['s3-package'] || o['mysql-package'] || o['jsonrpc-package'] || o['sqlite-package'] ? ['id'] : ['id', 'spec', 'config', 'bindings'])
         if (!o[key]) throw new Error('Stage requires --' + key);
       const runtime = {};
       for (const key of ['port', 'handlers', 'facilitator']) if (o[key] !== undefined) runtime[key] = o[key];
@@ -102,7 +106,9 @@ export async function main(args = process.argv.slice(2)) {
       if (o['allow-loopback-upstream']) runtime.allowLoopbackUpstream = true;
       result = await stageRelease(root, { id: o.id, label: o.label, workspace: o.workspace, spec: o.spec, config: o.config, bindings: o.bindings,
         upstreams: o.upstreams, python: o.python, pythonRoot: o['python-root'],
-        duckdbPackage: o['duckdb-package'], duckdbPython: o['duckdb-python'], s3Package: o['s3-package'], runtime }); break;
+        duckdbPackage: o['duckdb-package'], duckdbPython: o['duckdb-python'], s3Package: o['s3-package'], mysqlPackage: o['mysql-package'], jsonrpcPackage: o['jsonrpc-package'],
+        sqlitePackage: o['sqlite-package'], sqliteSnapshotMaxBytes: o['sqlite-snapshot-max-bytes'],
+        sqliteSnapshotTimeoutMs: o['sqlite-snapshot-timeout-ms'], runtime }); break;
     }
     case 'list': result = { state: await readReleaseState(root), ...await listReleases(root) }; break;
     case 'inspect': result = await inspectRelease(root, o.id); break;
@@ -168,7 +174,7 @@ export async function main(args = process.argv.slice(2)) {
     case 'run': {
       const session = await runActiveRelease(root, { expectedGeneration: o.expect });
       print({ runningRelease: session.release.id, listener: session.url, mode: session.mode,
-        instanceId: session.observation.instanceId, stop: 'Ctrl-C' });
+        instanceId: session.observation.instanceId, ...(session.operations ? { operations: session.operations } : {}), stop: 'Ctrl-C' });
       let closing = false;
       const stop = () => { if (!closing) { closing = true; session.close().catch(error => { process.stderr.write(error.message + '\n'); process.exitCode = 1; }); } };
       process.once('SIGINT', stop); process.once('SIGTERM', stop);

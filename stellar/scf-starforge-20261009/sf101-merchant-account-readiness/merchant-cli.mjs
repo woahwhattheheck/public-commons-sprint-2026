@@ -12,6 +12,9 @@ const HELP = `Usage: node merchant-cli.mjs --config SELLER_JSON --out NEW_PRIVAT
   [--https-proxy-env ENV_NAME] [--timeout-ms 12000] [--fee-operations 0]
   [--previous PREVIOUS_REVIEW_DIRECTORY] [--from-capture RETAINED_REVIEW_DIRECTORY]
 
+Saved operator desk: merchant-readiness workspace --directory /absolute/private/desk
+  [--port 8408] [--base-path /merchant/receiving]
+
 Reviews every original SF30 option using native token reads and the original SAC
 receiving evaluator. Existing exact asset maps are accepted; other SAC identities
 are resolved from their deployed metadata and verified with the native SDK.
@@ -93,6 +96,10 @@ export async function readMerchantBundle(directory, name) {
 }
 
 export async function run(argv = process.argv.slice(2)) {
+  if (argv[0] === 'workspace') {
+    const {main} = await import('./workspace/server.mjs');
+    await main(argv.slice(1)); return 0;
+  }
   if (argv.length === 0 || argv.includes('--help')) { console.log(HELP); return 0; }
   const values = new Map(), allowed = new Set(['--config','--asset-map','--out','--rpc-map',
     '--https-proxy-env','--timeout-ms','--fee-operations','--origin','--previous','--from-capture']);
@@ -128,11 +135,12 @@ export async function run(argv = process.argv.slice(2)) {
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
-  try { process.exitCode = await run(); }
-  catch (error) {
+  // Finish this module before the workspace imports its original bundle helpers.
+  // Awaiting the dynamic workspace import here would form a top-level-await cycle.
+  run().then(code => { process.exitCode = code; }, error => {
     // Provider URLs and bodies may contain credentials. Emit stable codes only.
     const code = error.code ?? error.message;
     console.error(JSON.stringify({error:typeof code === 'string' && /^[A-Z0-9_]{1,100}$/.test(code) ? code : 'MERCHANT_READINESS_FAILED'}));
     process.exitCode = 3;
-  }
+  });
 }

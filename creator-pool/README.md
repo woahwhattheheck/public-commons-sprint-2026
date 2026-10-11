@@ -159,8 +159,11 @@ by this source branch. These readouts do not claim any real deployment/payment.
 Changing role, actor or campaign reuses the confirmed campaign cards, payment
 timeline and selected campaign overview. Campaign/submission joins are indexed
 once per normalized API snapshot, and actor options are rebuilt when their
-identities or labels change. Each fresh snapshot invalidates the source-backed
-views. Action gates, wallet operations and creator forms continue to use current
+identities or labels change. Each changed complete API response invalidates the
+source-backed views. An identical fresh response retains them and advances the
+last successful observation time. The comparison includes metadata and pending
+operations: a block hash alone cannot identify the whole response. Action gates,
+wallet operations and creator forms continue to use current
 interaction state; receipt reconciliation triggers another render when it
 actually attempted a pending receipt.
 
@@ -186,4 +189,96 @@ used a 60-second background polling interval to compare the same explicit read
 sequence. The shipped refresh intervals remain 8 seconds normally and 3 seconds
 while operations are pending. These measurements cover that recorded journey;
 different campaign counts, browsers and devices can have different timings.
+
+## Campaign portfolio
+
+The original workspace supports a portfolio of campaigns through its existing
+`npm run demo` launcher or public-mode server. The campaign list starts with six
+cards per page; every campaign remains available through search, filters and
+paging. Search matches title, creative brief, campaign ID (including `#32`) and
+sponsor address. Status filters distinguish open, deadline-passed and closed
+campaigns using the current contract response. Sort by newest, deadline, title,
+reward or available funds; monetary comparisons use the original atomic integer
+amounts, including values larger than JavaScript's safe integer range. Unknown
+amounts sort last. Ties keep the original response order.
+
+| View | Work queues | Original controls reached |
+|---|---|---|
+| Sponsor | All campaigns; sponsored by me; work to review; pools to fund; deadline passed | Funding, original submission review and campaign closure |
+| Creator | All campaigns; open for work; my submissions; awaiting selection; rewards to claim | Existing work form, submitted work and creator claim |
+
+Queues count campaigns, while the card shortcuts show relevant submission or
+claim counts. Sponsor queues follow the original sponsor gate. Creator queues
+match the selected local actor or connected public wallet to its original
+submissions. A closed campaign remains in its creator's rewards queue while an
+approved reservation is claimable. Funding and deadline filters do not erase
+approved rewards, and selecting a role never grants wallet authority.
+
+Use a shortcut to open the selected campaign at the relevant existing control.
+It only navigates: the user still reviews work, confirms a closure or selects a
+claim through the original operation and wallet flows. A work-review queue may
+include an underfunded campaign; its submission remains inspectable and the
+existing balance checks explain why approval cannot yet reserve a reward.
+Open-for-work browsing does not imply that a pool is funded.
+
+Filtering and paging leave the selected campaign and its live form open. If its
+card is outside the current result page, a visible notice offers **Show selected
+campaign**, which clears the filters and locates that card without submitting
+anything. Search changes do not rebuild the open form. Existing creator draft
+storage, actor separation and the explicit save/discard controls are retained.
+
+The browser remembers search, queue, status, sorting, page size and page for the
+API endpoint, mode, chain, pool, role and actor/wallet. A different creator gets
+its own preferences; a public wallet connection cannot inherit another wallet's
+work filter. Missing or unavailable browser storage leaves controls usable for
+the current tab and displays a storage notice. No preference is a transaction,
+an authorization record or a copy of the campaign ledger.
+
+The existing 8-second idle / 3-second pending refresh schedule is unchanged.
+Every refresh still reaches the original API, whose current-head check and
+same-block metadata reconciliation remain active. Complete-response reuse and
+bounded visible cards reduce browser work without skipping source observations.
+
+### Retained native operating run
+
+The portfolio was operated against the original snapshot engine and a resumed
+copy of its retained local chain: block 48,
+`0xcb6eb9994a70d4f8863be2de244aa7406a7f5bc28ab6aad90b2a2b06ae80f9b3`,
+32 campaigns, two submissions and 40 events. All 32 campaigns were reached
+once across six pages. Sponsor preferences survived reload; creator preferences
+and saved drafts remained separate for Creator A and Creator B; filtering left
+the same live form intact. The existing nine recorder checkpoints also retained
+all 18 original detail/control views and seven draft/caret checks, with 17 reads,
+no writes and no page errors.
+
+On existing campaign 29, the browser used the original controls to fund 250
+CPDEMO, submit work as Creator A, review and reserve 100, close after advancing
+the local chain past its actual contract deadline, and claim the reserved 100
+after closure. The five API operations ended with 100 paid, 150 refunded and
+zero reserved or available on that campaign. Navigation shortcuts sent no
+operations. Final native state was block 55, 32 campaigns, three submissions
+and 45 events. The 390-pixel viewport had a 390-pixel document width and no page
+errors. These are local contract operations with the original non-monetary
+CPDEMO asset.
+
+A separate paired measurement used the same original native block-48 API,
+20 explicit fresh reads and 40 role changes in each version. Both versions made
+21 actual API reads including boot; their complete source responses matched.
+
+| Measured work on 32 campaigns | Previous PR998 UI | Portfolio UI |
+|---|---:|---:|
+| Visible campaign cards per initial page | 32 | 6 |
+| Campaign card insertions / removals after boot | 640 / 640 | 0 / 0 |
+| Campaign-list render elapsed time, total | 97.6 ms | 15.6 ms |
+| Whole-page script CPU in the sampled interaction | 38.214 ms | 44.937 ms |
+
+The measured campaign-list rendering work fell by about 84%. The whole-page
+CPU measurement includes the added work queues and preference controls and
+rose by 6.723 ms in this short sample. Measurements used Chromium 155 at
+1440 × 1000, original API calls and the same temporary 60-second profile poll
+interval; the shipped polling schedule remains unchanged. Role-specific queue
+nodes and a bounded set of current-snapshot identity models are reused when
+switching views. The real operating journey and its native ledger were retained
+separately from the source; no benchmark server or substitute data store is part
+of the application.
 

@@ -7,6 +7,7 @@ import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
 import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { execution, bytes, need } from './config.mjs';
+import { readRequestBody } from './request-body.mjs';
 import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
   requireCurrentOperationTicket } from './operation-ticket.mjs';
 
@@ -17,6 +18,7 @@ const codeOf = (error, fallback) => {
 const fileFailure = error => ({ status:'FAILED',
   code:codeOf(error, 'RESPONSE_FILE_FAILED'), bytes:error?.bytes ?? 0,
   partialPath:error?.partialPath ?? null, cleanupWarnings:error?.cleanupWarnings ?? [],
+  ...(error?.stream ? {stream:error.stream, partialSha256:error.partialSha256 ?? null} : {}),
 });
 const reservationOf = value => {
   if (!value || typeof value !== 'object') return null;
@@ -30,7 +32,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   operationTicketSha256, evidenceRpcEndpoint } = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof emitSummary === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
-  const { op, owner, download:responseFile, transport } = execution(cfg);
+  const { op, owner, download:responseFile, transport, requestTimeoutMs } = execution(cfg);
   const rpcEndpoint = selectStellarEvidenceEndpoint(op.expect.network,evidenceRpcEndpoint);
   // Keep RPC and merchant origin pins separate while using the same explicitly
   // selected egress proxy. No wallet or merchant headers enter read-only RPC.
@@ -45,8 +47,8 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     (directory.mode & 0o077) === 0), 'PRIVATE_EVIDENCE_DIRECTORY_REQUIRED');
   const signerFile = await stat(cfg.signerModule);
   need(signerFile.isFile(), 'SIGNER_MODULE_MUST_EXIST');
-  const body = op.bodyFile === undefined ? undefined :
-    Uint8Array.from(await bytes(op.bodyFile, 1048576, 'REQUEST_BODY_INVALID'));
+  const retainedBody=await readRequestBody(op);
+  const body=retainedBody===undefined?undefined:Uint8Array.from(retainedBody);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
   await checkOperatorTerminal(op.intentId);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
@@ -61,7 +63,9 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     need(typeof sign === 'function', 'TRUSTED_SIGN_FUNCTION_REQUIRED');
     const buyer = new OperatorApprovedBuyer({
       operator: { ...owner, environment },
-      ...(transport === null ? {} : {fetchImpl:createPublicHttpsFetch({trustedProxy:transport})})
+      ...((transport === null && requestTimeoutMs === 30000) ? {} : {fetchImpl:createPublicHttpsFetch({
+        trustedProxy:transport, timeoutMs:requestTimeoutMs,
+      })})
     });
     need(!signal?.aborted, 'OPERATOR_ABORTED');
     const recordingBuyer = {
@@ -148,6 +152,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   const summary = {
     mode:'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT',
     intentId:op.intentId,
+    requestTimeoutMs,
     status:result?.status ?? null,
     httpStatus:result?.response?.status ?? null,
     sellerReportedSettlement:result?.settlement ?? null,

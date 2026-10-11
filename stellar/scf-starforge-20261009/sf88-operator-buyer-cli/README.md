@@ -182,7 +182,7 @@ The evidence directory must already exist with POSIX permissions 0700. Original 
 }
 ~~~
 
-The trusted signer module exports an async sign({intent,challenge,accepted}) function. The native workspace generates this module using the official SDK adapter; an existing externally managed signer can supply the same interface. The shared [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) also connects an existing configured buyer to an account or trusted provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB).
+The trusted signer module exports an async sign({intent,challenge,accepted}) function. The native workspace generates this module using the official SDK adapter; an existing externally managed signer can supply the same interface. The shared [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) also connects an existing configured buyer to an account or trusted provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 16 MiB, subject to the seller's smaller configured limit). `--prepare --body-file` pins its length and SHA-256 before review; changed pinned bytes are rejected before execution or inbox staging. Use `--form-file` with `--form-out` to create a private multipart body once from local fields and files. The boundary and selected bytes are retained through unsigned and paid attempts. See the [merchant file input workflow](../sf61-openapi-seller-import/workspace/FILE_INPUT.md) for the manifest format and exact handoff.
 
 ### Ordinary request headers
 
@@ -391,6 +391,16 @@ type; `FAILED` includes the local error and any retained nonempty `partialPath`;
 `NOT_STARTED` means no returned response was handed to the writer. A successful
 save does not prove settlement. An unsuccessful save does not undo a payment.
 
+For finite SSE or NDJSON, add `"stream":{"format":"sse"}` or
+`"stream":{"format":"ndjson"}` to the same `responseFile` configuration.
+Optional `maxRecordBytes` and `maxRecords` bound framing and output counts.
+Native stream transfers may use `timeoutMs` up to 300000. The existing review
+shows these exact selected options before execution; the resulting file report
+includes stream completion and the last complete record boundary. An interrupted
+report also includes the retained bytes' digest for verified local recovery.
+See the [original stream writer](../sf31-buyer-client/STREAMING.md) and
+[Node application workflow](node/STREAMS.md).
+
 Exit code `2` retains the original buyer/evidence error priority. Exit code `3`
 indicates a file-save or file-cleanup problem when the buyer/evidence adapter did
 not return an error. An evidence-recording failure still reports any returned
@@ -398,6 +408,30 @@ buyer status and available local-file outcome. Keep those results and reconcile
 the original operation; neither error code authorizes another purchase.
 
 ## Interruptions and local cleanup
+
+### Merchant HTTP deadline
+
+Set top-level `"requestTimeoutMs":120000` in the original operator configuration
+when a reviewed merchant operation needs a longer HTTP exchange. Allowed values
+are integers from 1 to 300000 milliseconds. Offline review and the retained native
+attempt summary show the effective value. A workspace retains the setting in its
+same `operator.json`, and initialization and diagnostics also expose it.
+
+The deadline includes DNS, TLS, waiting for headers and consuming the response
+body. It applies to each original merchant request through the existing public
+HTTPS transport, including an explicitly configured proxy. Ordinary requests
+default to 30000 milliseconds. When finite `responseFile.stream` capture is
+selected and the request deadline is omitted, the capture's selected timeout is
+also used for the HTTP exchange. An explicit request value takes precedence.
+
+`responseFile.timeoutMs` separately limits the writer after the response returns.
+Allow time for provider generation and delivery in the request deadline; the
+earlier applicable deadline ends a transfer. The existing signer/RPC deadlines
+and Node subprocess deadline retain their own meanings. In Node, pass
+`{requestTimeoutMs:120000}` to `fromConfig`, `fromRequest`, `prepare`, `call`, or
+handoff import, or retain it in the existing operator profile.
+
+### Cancellation
 
 SIGINT/SIGTERM now request cancellation through the original buyer and response writer. The command awaits local cleanup before exiting 130/143. A failed evidence pipeline also cancels an incomplete download immediately; an already published output remains saved. A rejected non-2xx response body is closed when the writer cannot consume it. These paths never make an additional buyer call.
 

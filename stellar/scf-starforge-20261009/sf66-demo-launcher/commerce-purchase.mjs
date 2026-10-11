@@ -6,7 +6,7 @@ import { basename, dirname } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { readPrivateFile, parseJson } from '../sf103-native-buyer-signer/operator.mjs';
 import { validateHandoff, privatePath } from '../sf101-merchant-receiver/checkout-config.mjs';
-import { retrieveFile } from '../sf101-merchant-receiver/purchase.mjs';
+import { retrieveFile, inspectFileTransfer, resetFileTransfer } from '../sf101-merchant-receiver/purchase.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const need = (ok, code) => { if (!ok) throw Object.assign(new Error(code), { code }); };
@@ -111,7 +111,24 @@ async function localDelivery(source, handoff) {
     receiptPath, receiptObservedAt: receipt.observedAt, source: receipt.source };
 }
 
-/** Status reads original inbox/evidence/receipt sources; it never retrieves or pays. */
+async function transferView(source, handoff, delivery) {
+  if (process.platform !== 'linux') return null;
+  const statePath = source.destination + '.sf101-transfer.json';
+  // Leave orders that have never retrieved a file without a transfer record.
+  try { await lstat(statePath); }
+  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  try {
+    const original = await inspectFileTransfer({ handoff, destination: source.destination });
+    return { ...original, canReset: delivery.status === 'NOT_RETRIEVED' && original.retainedBytes > 0 &&
+      ['INTERRUPTED', 'REJECTED'].includes(original.status) };
+  } catch (error) {
+    return { status: error.code === 'FILE_TRANSFER_ACTIVE' ? 'ACTIVE' : 'UNAVAILABLE',
+      error: code(error), statePath, expectedBytes: handoff.file.bytes,
+      resumable: false, canReset: false };
+  }
+}
+
+/** Local status composes the original transfer recovery, inbox and receipt APIs. */
 export async function inspectCommercePurchase(entry, job) {
   const original = await originalPurchase(entry, job);
   if (!original) return null;
@@ -119,11 +136,14 @@ export async function inspectCommercePurchase(entry, job) {
   let delivery, evidence;
   try { delivery = await localDelivery(source, handoff); }
   catch (error) { delivery = { available: false, status: code(error) }; }
+  let transfer;
+  try { transfer = await transferView(source, handoff, delivery); }
+  catch (error) { transfer = { status: 'UNAVAILABLE', error: code(error), resumable: false, canReset: false }; }
   try { evidence = await evidenceView(job); }
   catch (error) { evidence = { status: code(error), path: job.evidencePath }; }
   return { orderReference: handoff.orderReference, purchaseUrl: handoff.purchaseUrl,
     deliveryUrl: handoff.deliveryUrl, file: handoff.file, handoffSha256: source.handoffSha256,
-    destination: source.destination, delivery,
+    destination: source.destination, delivery, transfer,
     request: { intentId: job.operation.intentId, configSha256: job.configSha256,
       inboxJobId: job.id, attemptId: job.attempt?.id ?? null, state: job.state },
     evidence, automaticPaymentRetry: false };
@@ -135,4 +155,11 @@ export async function retrieveCommercePurchase(entry, job, { environment, signal
   need(original, 'COMMERCE_PAID_FILE_NOT_CONFIGURED');
   return retrieveFile({ handoff: original.handoff, destination: original.source.destination,
     token: environment?.[original.source.claimEnv], signal, fetchImpl });
+}
+
+/** Clear only this handoff's original retained partial; a later retrieve starts it. */
+export async function resetCommercePurchase(entry, job) {
+  const original = await originalPurchase(entry, job);
+  need(original, 'COMMERCE_PAID_FILE_NOT_CONFIGURED');
+  return resetFileTransfer({ handoff: original.handoff, destination: original.source.destination });
 }

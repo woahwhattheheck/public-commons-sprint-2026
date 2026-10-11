@@ -20,6 +20,9 @@ from urllib.parse import urlsplit
 
 SCHEMA="stellar-spend-governor/v1"
 MAX_AMOUNT=2**63-1
+# Same native request ceiling as sf31-buyer-client/request-body.mjs.
+# The governor binds length and digest; it does not load request bodies.
+MAX_REQUEST_BODY_BYTES=16*1024*1024
 ID_PATTERN=re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
 NETWORKS={"stellar:testnet", "stellar:pubnet"}
 CURRENCY_FIELDS=("max_single", "max_total", "max_per_utc_day", "max_per_actor_utc_day", "max_per_service_utc_day")
@@ -118,7 +121,7 @@ def validate_request(obj:dict[str,Any])->dict[str,Any]:
     if not isinstance(r['method'],str) or r['method'] not in HTTP_METHODS:
         raise Denied('method must be an uppercase supported HTTP verb')
     present=r['body_present'];size=r['body_bytes']
-    if type(present) is not bool or type(size) is not int or not (0<=size<=1_048_576):
+    if type(present) is not bool or type(size) is not int or not (0<=size<=MAX_REQUEST_BODY_BYTES):
         raise Denied('body presence/byte length invalid')
     if (not present) and size!=0:
         raise Denied('body absent but byte length is nonzero')
@@ -275,11 +278,23 @@ class Governor:
         """
         r=validate_request(request)
         digest=hashlib.sha256(canonical(r)).hexdigest()
+        return self.reservation_by_digest(r['request_id'],digest)
+
+    def reservation_by_digest(self,request_id:str,request_digest:str)->dict:
+        """Authenticate a retained original reservation ID/digest without a preimage.
+
+        This read does not establish omitted purchase terms or transaction
+        association. A trusted recovery caller must separately bind its frozen
+        operator inputs and independently verify the selected transfer.
+        """
+        if not isinstance(request_id,str) or not ID_PATTERN.fullmatch(request_id) or \
+                not isinstance(request_digest,str) or not re.fullmatch('[0-9a-f]{64}',request_digest):
+            raise Denied('invalid original reservation identity')
         self.db.execute('BEGIN')
         try:
-            row=self._audit().get(r['request_id'])
+            row=self._audit().get(request_id)
             if row is None:raise Denied('unknown reserved payment')
-            if not hmac.compare_digest(row['request_digest'],digest):
+            if not hmac.compare_digest(row['request_digest'],request_digest):
                 raise Denied('approved request differs from original reservation')
             self.db.execute('COMMIT')
             return row.copy()

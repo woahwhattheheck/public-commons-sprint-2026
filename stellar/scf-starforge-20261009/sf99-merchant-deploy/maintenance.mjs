@@ -86,10 +86,11 @@ async function begin(plan, host, { id, command, destination, sourceRoot }) {
 }
 
 async function leaseOutbox(directory) {
-  if (!await exists(directory)) return null;
+  if (!directory || !await exists(directory)) return null;
   return await acquireDeliveryLease(directory, { purpose: 'drain' });
 }
 async function requiredOutboxLease(p) {
+  if (p.kind === 'release') return null; // Original SF82 has no SF98 outbox writer.
   const lease = await leaseOutbox(p.outbox);
   need(lease || !p.delivery && p.mode === 'challenge', 'Original native/delivery outbox is missing: ' + p.outbox);
   return lease;

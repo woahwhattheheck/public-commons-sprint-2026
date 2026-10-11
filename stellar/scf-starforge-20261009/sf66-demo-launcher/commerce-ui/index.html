@@ -38,6 +38,17 @@
           <p id="execution-note" class="help">Execution uses the configured buyer. Its payment approval appears in the terminal that started this workspace.</p>
           <div class="action-row"><button id="execute" class="primary-button" type="button" disabled>Execute operation</button><button id="cancel" type="button" disabled>Cancel queued request</button><button id="recover" type="button" hidden disabled>Recover recorded result</button></div>
           <div id="outcome" class="outcome" hidden><dl id="outcome-facts" class="facts"></dl><p id="outcome-message" class="help"></p></div>
+          <div id="rpc-recovery" class="outcome" hidden>
+            <h3>Recover this RPC result</h3>
+            <p id="rpc-recovery-note" class="help"></p>
+            <dl id="rpc-recovery-facts" class="facts"></dl>
+            <div id="rpc-transaction-entry" class="links">
+              <label for="rpc-transaction">Existing Stellar transaction hash</label>
+              <input id="rpc-transaction" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="64" pattern="[a-f0-9]{64}" aria-describedby="rpc-recovery-note">
+            </div>
+            <div class="action-row"><button id="rpc-verify" type="button" disabled>Verify existing payment</button><button id="rpc-read" type="button" disabled>Recover paid read</button></div>
+            <p id="rpc-recovery-result" class="help" role="status" aria-live="polite"></p>
+          </div>
         </section>
 
         <section class="panel" aria-labelledby="delivery-heading">
@@ -54,6 +65,7 @@
           <dl id="product-facts" class="facts"></dl>
           <div class="action-row"><button id="product-retrieve" class="primary-button" type="button" disabled>Retrieve entitled file</button><button id="product-preview" type="button" disabled>Preview file</button><button id="product-download" type="button" disabled>Download file</button></div>
           <p id="product-result" class="help" role="status" aria-live="polite"></p>
+          <details id="product-transfer-panel" hidden><summary>Download progress and recovery</summary><dl id="product-transfer-facts" class="facts compact"></dl><p id="product-transfer-note" class="help"></p><button id="product-reset-transfer" type="button" disabled>Discard retained download</button></details>
           <div id="product-preview-area" hidden><div class="preview-heading"><strong>File preview</strong><span id="product-preview-size" class="muted"></span></div><pre id="product-preview-text" tabindex="0"></pre></div>
           <details><summary>Original request, evidence and file association</summary><dl id="product-binding" class="facts compact"></dl><p id="product-evidence-note" class="help"></p></details>
         </section>

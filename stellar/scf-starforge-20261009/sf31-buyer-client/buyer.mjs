@@ -1,5 +1,6 @@
 // MIT License. SF31 non-custodial x402 v2 buyer transport. No embedded keys or signing.
 import { randomUUID, createHash } from 'node:crypto';
+import { MAX_REQUEST_BODY_BYTES } from './request-body.mjs';
 import { isDeepStrictEqual } from 'node:util';
 import { isIP } from 'node:net';
 
@@ -59,7 +60,7 @@ function canonicalChallenge(challenge, requested) {
       !Number.isInteger(pay.maxTimeoutSeconds) || pay.maxTimeoutSeconds<1 ||
       pay.maxTimeoutSeconds>86400 || (pay.extra!==undefined && !object(pay.extra)))
       throw new BuyerError('BAD_PAYMENT_REQUIREMENTS');
-    if (pay.extra?.paymentFlow && pay.extra.paymentFlow !== 'authorization')
+    if (pay.extra?.paymentFlow !== undefined && !['authorization','upfront'].includes(pay.extra.paymentFlow))
       throw new BuyerError('UNSUPPORTED_PAYMENT_FLOW');
   }
   return challenge;
@@ -70,6 +71,8 @@ function choose(challenge, expectation){
   if(!object(expectation) || !expectation.network || !expectation.asset || !expectation.payTo || !expectation.maxAtomic)
     throw new BuyerError('EXPLICIT_TERMS_REQUIRED');
   if (!amount(expectation.maxAtomic))throw new BuyerError('BAD_SPEND_LIMIT');
+  const expectedFlow = expectation.paymentFlow === undefined ? 'authorization' : expectation.paymentFlow;
+  if (!['authorization','upfront'].includes(expectedFlow))throw new BuyerError('UNSUPPORTED_PAYMENT_FLOW');
   if (expectation.maxTimeoutSeconds!==undefined &&
       (!Number.isInteger(expectation.maxTimeoutSeconds) || expectation.maxTimeoutSeconds<1 ||
        expectation.maxTimeoutSeconds>86400))
@@ -79,7 +82,7 @@ function choose(challenge, expectation){
     BigInt(x.amount)<=BigInt(expectation.maxAtomic) &&
     (expectation.maxTimeoutSeconds===undefined ||
       x.maxTimeoutSeconds<=expectation.maxTimeoutSeconds) &&
-    (!expectation.paymentFlow || (x.extra?.paymentFlow??'authorization')===expectation.paymentFlow));
+    (x.extra?.paymentFlow??'authorization')===expectedFlow);
   if (!matches.length)throw new BuyerError('PAYMENT_TERMS_NOT_AUTHORIZED');
   // Require a unique offered requirement. No invisible selection across nonidentical extras.
   if (matches.length!==1)throw new BuyerError('AMBIGUOUS_PAYMENT_TERMS');
@@ -101,8 +104,8 @@ function immutableTerms(value){
 }
 function prepareBody(body){
   if(body==null)return undefined;
-  if(typeof body==='string' && Buffer.byteLength(body)<=1_048_576)return body;
-  if(body instanceof Uint8Array && body.byteLength<=1_048_576)return Uint8Array.from(body);
+  if(typeof body==='string' && Buffer.byteLength(body)<=MAX_REQUEST_BODY_BYTES)return body;
+  if(body instanceof Uint8Array && body.byteLength<=MAX_REQUEST_BODY_BYTES)return Uint8Array.from(body);
   throw new BuyerError('NONREPLAYABLE_BODY');
 }
 // Catalog responses are untrusted network input. Apply the limit to bytes actually

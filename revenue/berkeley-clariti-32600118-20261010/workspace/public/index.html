@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="workspace-token" content="__SESSION_TOKEN__">
+  <title>Permitting cutover workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to workspace</a>
+  <header class="topbar">
+    <div><p class="eyebrow">Migration operations</p><h1>Permitting cutover</h1><p id="cohort-label">Retained exports, case review and operational acceptance</p></div>
+    <div class="header-controls"><label>Reviewer <input id="reviewer" autocomplete="name" placeholder="Name or team" maxlength="200"></label><button id="refresh" type="button">Refresh</button><a class="button" href="/api/backup" download>Backup workspace</a><span id="revision" class="muted"></span></div>
+  </header>
+  <nav aria-label="Workspace sections">
+    <button type="button" data-view="inputs">Inputs &amp; mapping</button>
+    <button type="button" data-view="review">Runs &amp; case review</button>
+    <button type="button" data-view="acceptance">Acceptance &amp; handoff</button>
+    <button type="button" data-view="setup">Project setup</button>
+  </nav>
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+  <main id="main" tabindex="-1"><p class="loading">Opening the retained workspace…</p></main>
+  <footer>Original exports and run decisions remain available after corrections. Keep the workspace backup with the project handoff.</footer>
+</body>
+</html>
+

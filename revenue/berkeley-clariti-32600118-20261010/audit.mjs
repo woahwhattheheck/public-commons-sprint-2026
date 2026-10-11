@@ -46,6 +46,15 @@ const normalizeReviews = (v, label) => {
   }
   return Object.fromEntries(entries.sort(([a], [b]) => a.localeCompare(b)));
 };
+const normalizeReviewDates = (v, label) => {
+  const values = normalizeReviews(v, label);
+  for (const [department, value] of Object.entries(values)) {
+    if (!/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2}))?$/.test(value) ||
+        Number.isNaN(Date.parse(value)) || new Date(`${value.slice(0, 10)}T00:00:00Z`).toISOString().slice(0, 10) !== value.slice(0, 10))
+      invalid(`${label} ${department}: expected ISO date or timestamp with offset`);
+  }
+  return values;
+};
 const normalize = (data, label) => {
   if (!PLAIN(data) || !Array.isArray(data.records) || data.records.length > 500000)
     invalid(`${label}: expected records array (max 500000)`);
@@ -61,12 +70,14 @@ const normalize = (data, label) => {
     const status = requireString(r.status, `${loc} status`);
     const links = normalizeSet(r.relatedIds ?? [], `${loc} relatedIds`);
     const reviews = normalizeReviews(r.reviewStates ?? {}, `${loc} reviewStates`);
+    const reviewAssignments = normalizeReviews(r.reviewAssignments ?? {}, `${loc} reviewAssignments`);
+    const reviewDueAt = normalizeReviewDates(r.reviewDueAt ?? {}, `${loc} reviewDueAt`);
     if (!Number.isSafeInteger(r.attachments) || r.attachments < 0 || r.attachments > 100000)
       invalid(`${loc}: attachments must be an explicit nonnegative count`);
     if (r.paymentMinor !== undefined && (typeof r.paymentMinor !== 'string' ||
       !/^(0|[1-9][0-9]{0,18})$/.test(r.paymentMinor)))
       invalid(`${loc}: paymentMinor must be nonnegative integer minor-units as text`);
-    records.set(r.id, { type: r.type, department: dep, status, links, reviews,
+    records.set(r.id, { type: r.type, department: dep, status, links, reviews, reviewAssignments, reviewDueAt,
       attachments: r.attachments, paymentMinor: r.paymentMinor ?? null });
   }
   return {cohort, records};
@@ -77,18 +88,22 @@ const normalize = (data, label) => {
  * IDs, names, addresses, evidence rows or payment values. It is not a score,
  * proof of compliance or an authorization to accept a vendor deliverable.
  */
-export function auditSnapshots(before, after, { maxExamples = 12 } = {}) {
+function buildAudit(before, after, { maxExamples = 12 } = {}, includeDetails = false) {
   if (!Number.isInteger(maxExamples) || maxExamples < 0 || maxExamples > 100)
     invalid('maxExamples must be an integer between 0 and 100');
   const source = normalize(before, 'source'), target = normalize(after, 'target');
   if (source.cohort !== target.cohort) invalid('source and target cohort identifiers differ');
   const issues = Object.fromEntries([...ERROR_CODES].map(k => [k, 0]));
-  const examples = [];
+  const withReviewMetadata = records => [...records.values()].some(r => Object.keys(r.reviewAssignments).length || Object.keys(r.reviewDueAt).length);
+  const hasReviewMetadata = withReviewMetadata(source.records) || withReviewMetadata(target.records);
+  if (hasReviewMetadata) Object.assign(issues, {REVIEW_ASSIGNMENTS_CHANGED: 0, REVIEW_DUE_CHANGED: 0});
+  const examples = [], findings = [];
   // Ephemeral HMAC key prevents guessing likely case IDs from public hashes.
   const privacyKey = randomBytes(32);
   const recordTag = id => createHmac('sha256', privacyKey).update(`${source.cohort}\u0000${id}`).digest('hex').slice(0, 16);
-  const add = (code, id) => {
+  const add = (code, id, details = {}) => {
     issues[code]++;
+    if (includeDetails) findings.push({code, caseId:id, source:source.records.get(id) ?? null, target:target.records.get(id) ?? null, details});
     if (examples.length < maxExamples) examples.push({code, recordHash:recordTag(id)});
   };
   for (const [id, row] of source.records) {
@@ -99,12 +114,14 @@ export function auditSnapshots(before, after, { maxExamples = 12 } = {}) {
     if (row.status !== dst.status) add('STATUS_CHANGED', id);
     if (!compareObjects(row.links, dst.links)) add('LINKS_CHANGED', id);
     if (!compareObjects(row.reviews, dst.reviews)) add('REVIEWS_CHANGED', id);
+    if (!compareObjects(row.reviewAssignments, dst.reviewAssignments)) add('REVIEW_ASSIGNMENTS_CHANGED', id);
+    if (!compareObjects(row.reviewDueAt, dst.reviewDueAt)) add('REVIEW_DUE_CHANGED', id);
     if (row.attachments !== dst.attachments) add('ATTACHMENTS_CHANGED', id);
     if (row.paymentMinor !== dst.paymentMinor) add('PAYMENT_MINOR_CHANGED', id);
   }
   for (const [id, row] of target.records) {
     if (!source.records.has(id)) add('UNEXPECTED_TARGET', id);
-    for (const link of row.links) if (!target.records.has(link)) add('ORPHAN_TARGET_LINK', id);
+    for (const link of row.links) if (!target.records.has(link)) add('ORPHAN_TARGET_LINK', id, {relatedId:link});
   }
   const totalFindings = Object.values(issues).reduce((a,b) => a+b, 0);
   return {
@@ -115,8 +132,19 @@ export function auditSnapshots(before, after, { maxExamples = 12 } = {}) {
     issues,
     examples,
     examplesTruncated: totalFindings > examples.length,
+    ...(includeDetails ? {findings} : {}),
     limitations: 'Same-cohort normalized snapshots only; human reviewers must check source data completeness, transformations, permissions, business rules, dynamic changes and actual system acceptance.',
   };
+}
+
+/** Original aggregate export; identifiers and field values remain private. */
+export function auditSnapshots(before, after, options) {
+  return buildAudit(before, after, options, false);
+}
+
+/** Private operator result. Persist only in the authorized review workspace. */
+export function auditDetailedSnapshots(before, after, options) {
+  return buildAudit(before, after, options, true);
 }
 
 export async function auditFiles(sourcePath, targetPath, options) {

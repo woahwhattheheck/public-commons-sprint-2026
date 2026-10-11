@@ -5,6 +5,11 @@ interface takes a prepared merchant API through staging, exact price and route
 comparison, activation, original seller startup, customer SDK export, rollback
 and graceful shutdown. The same operator opens retained merchant incidents and
 support cases, records owner delivery terms, and exports the original workorder.
+`merchant-mcp download-support` retrieves those exact retained files through the
+same authenticated MCP endpoint and resumes an interrupted download. The original
+completion manifest is saved last; `reopen-support` opens its complete inputs in
+the existing SF74 case store offline. See [SUPPORT.md](SUPPORT.md#retrieve-and-reopen-the-private-handoff)
+for the client commands and recovery workflow.
 The tools use the original SF82 release store, SF61
 OpenAPI compiler, original SF30 Python merchant, SF30 seller and customer SDK exporter. The MCP endpoint reuses
 the same authenticated HTTP transport as the existing SF32 buyer bridge.
@@ -30,6 +35,15 @@ host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
 initialization can include the same fleet with `--fleet-plan`.
 
 ## Prepare a merchant
+
+For a prepared Stellar RPC product, initialize with
+`--jsonrpc-package /private/rpc/prepared-v1`. The same provider retains all ten
+original package files, compares the declared methods, prices, data network and
+limits, and starts the original merchant with private operations and persistent
+availability/history. `merchant_operations` returns those original operator
+links for the current owned instance. See
+[RPC releases](../../stellar/scf-starforge-20261009/sf82-seller-pilot/JSONRPC_RELEASES.md)
+for the complete package, release, buyer and restart workflow.
 
 For an existing S3 file product, initialize with
 `--s3-package /private/packages/products-v1`. The same provider then retains,
@@ -202,6 +216,24 @@ Python workers.
 The [Python release guide](../../stellar/scf-starforge-20261009/sf82-seller-pilot/RELEASES.md#release-a-python-project)
 also describes direct terminal operation and the retained project layout.
 
+## Prepare a MySQL merchant
+
+Initialize this same provider with a package from the original MySQL CLI or browser:
+
+```sh
+starforge merchant-mcp init --dir /srv/merchant/operator \
+  --mysql-package /srv/merchant/packages/current --seller-port 8423 \
+  --facilitator https://facilitator.example
+```
+
+The fixed host alias uses `mysqlPackage` with the existing runtime selections.
+`merchant_sources` returns exact source identities, approved columns and parameters,
+payment terms and required environment names. The existing stage, compare,
+activate, owned start/restart/stop, client export and rollback tools operate the
+retained original merchant. Database credentials are resolved when the native seller
+starts; queries continue to read current rows after a configuration rollback.
+See the [complete MySQL release workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/MYSQL_RELEASES.md).
+
 ## Connect an MCP client
 
 Provide the existing operator bearer token through `MCP_ACCESS_TOKEN`, or select
@@ -353,3 +385,19 @@ Original integration sources:
 The same provider operates the original merchant accounting workspace, completed-receipt recovery, reconciliation tables, named exception reviews, comparison and exact retained response/report/TAR retrieval. Configure host-selected source aliases with `init-accounting --dir NEW_DIRECTORY --accounting ACCOUNTING_JSON`, attach `--accounting` to an existing source initializer, or add the optional accounting configuration to an existing private merchant host. The original workspace owns revisions, source capture, verification, reports and its lease; no new payment is required to recover a completed purchase.
 
 See [ACCOUNTING.md](ACCOUNTING.md) for the complete installed and subprocess workflow, asynchronous job status, original source selection, SHA-pinned file chunks and durable reopening. Existing release, Python, DuckDB, discovery and fleet operations use the same provider.
+
+## Prepare merchant receiving accounts
+
+The same MCP operator can manage the original receiving workspace before or
+after a seller is deployed. Configure host-selected seller sources and captured
+review imports, then prepare saved payment choices, start native reviews, inspect
+account requirements, replay captures, compare results and publish complete
+private exports. Caller-retained profile and review IDs preserve work across
+lost replies. The original receiving browser and MCP reopen the same store.
+
+Use `merchant-mcp init-receiving --dir NEW_DIRECTORY --receiving CONNECTION_JSON`,
+or add `--receiving` to an ordinary merchant initializer. Receiving work opens
+explicitly with `merchant_receiving_open`; `merchant_receiving_close` drains the
+original controller and releases its lease for browser or CLI use.
+[Receiving setup and complete workflows](./RECEIVING.md) document all thirteen
+tools, host configuration, replay, comparison, export and browser handoff.

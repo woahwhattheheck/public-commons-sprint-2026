@@ -231,8 +231,13 @@ function inputType(operation) {
     '{ ' + [...new Set(operation.requiredQuery)].map(name => `readonly ${quote(name)}: QueryValue;`).join(' ') + ' }',
   ], '&', 'QueryParameters');
   fields.push(`readonly query${queryRequired ? '' : '?'}: ${queryType};`);
-  fields.push(['POST', 'PUT', 'PATCH'].includes(operation.method) ? `readonly body: ${schemaType(body, state)};` : 'readonly body?: never;');
-  return '{ ' + fields.join(' ') + ' }';
+  const common='{ '+fields.join(' ')+' }';
+  if (!['POST','PUT','PATCH'].includes(operation.method)) return common+' & { readonly body?: never; readonly multipart?: never; readonly omitBody?: never; }';
+  const form=operation.offer?.extensions?.bazaar?.info?.input?.bodyType==='form-data';
+  const present=form?'readonly multipart: { readonly body: Uint8Array; readonly contentType: string }; readonly body?: never;':
+    `readonly body: ${schemaType(body,state)}; readonly multipart?: never;`;
+  const absent=operation.bodyRequired===false?' | { readonly omitBody: true; readonly body?: never; readonly multipart?: never; }':'';
+  return common+' & ({ '+present+' readonly omitBody?: false; }'+absent+')';
 }
 
 const contracts = `export type JsonPrimitive = string | number | boolean | null;
@@ -291,6 +296,8 @@ export interface RequestAuthorization {
   readonly intentId: string;
   /** Explicit original option index; required when an operation has several options. */
   readonly acceptIndex?: number;
+  /** Defaults to authorization. Upfront must be explicitly permitted. */
+  readonly paymentFlow?: 'authorization' | 'upfront';
   readonly approve?: (intent: BuyerIntent) => boolean | PromiseLike<boolean>;
   readonly sign?: (request: SigningRequest) => SignedPayment | PromiseLike<SignedPayment>;
   readonly signal?: AbortSignal;
@@ -299,7 +306,7 @@ export interface BuyerRequest {
   readonly url: string;
   readonly method: 'GET' | 'HEAD' | 'DELETE' | 'POST' | 'PUT' | 'PATCH';
   readonly headers: Readonly<Record<string, string>>;
-  readonly body?: string;
+  readonly body?: string | Uint8Array;
   readonly expect: {
     readonly scheme: string;
     readonly network: string;
@@ -307,7 +314,7 @@ export interface BuyerRequest {
     readonly payTo: string;
     readonly maxAtomic: string;
     readonly maxTimeoutSeconds: number;
-    readonly paymentFlow?: string;
+    readonly paymentFlow?: 'authorization' | 'upfront';
   };
   readonly intentId: string;
   readonly approve?: RequestAuthorization['approve'];
