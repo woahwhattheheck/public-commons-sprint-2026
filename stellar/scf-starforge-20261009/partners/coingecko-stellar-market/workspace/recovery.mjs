@@ -16,6 +16,15 @@ function runtimeSources(){
   const productFiles=["common.mjs","exact-json.mjs","contracts.mjs","market.mjs","provider.mjs","cli.mjs","workspace/store.mjs","workspace/capture.mjs","workspace/model.mjs","workspace/jobs.mjs","workspace/native-worker.mjs","workspace/recovery.mjs","workspace/server.mjs","README.md","collection.example.json","runtime-dependencies.json","workspace/public/index.html","workspace/public/app.mjs","workspace/public/style.css"];
   productFiles.push(...["workspace/acceptance/collect-provider-sources.mjs","workspace/acceptance/sources.example.json","workspace/acceptance/launch-native.py","workspace/acceptance/native-environment.mjs","workspace/acceptance/native.example.json","workspace/acceptance/README.md","workspace/acceptance/run-browser.mjs"]);
   for(const name of productFiles)add(join(featureRoot,name));
+  // The original SF30 portal loads its assets from a runtime filename table.
+  // Preserve every original asset explicitly; module-import traversal cannot
+  // discover the table's concatenated paths.
+  for(const name of ['index.html','browser.mjs','request.mjs','style.css']){
+    const path=resolve(featureRoot,'../../sf30-seller-sdk/developer',name);
+    need(existsSync(path)&&statSync(path).isFile(),'ORIGINAL_RUNTIME_SOURCE_MISSING',
+      'The original SF30 developer portal asset is missing: '+name);
+    add(path);
+  }
   // SF88's original Python ledger initializer resolves this directory at runtime.
   add(resolve(featureRoot,'../../sf36-spend-governor/governor.py'));
   // Preserve the original provider-operated in-process facilitator option as well.
