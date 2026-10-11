@@ -7,6 +7,7 @@
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mcpAgentCommerceTool } from '../../stellar/scf-starforge-20261009/sf43-agent-commerce/mcp-buyer-acceptance.mjs';
 import { explainFailure } from '../../stellar/scf-starforge-20261009/sf33-failure-contract/contract.mjs';
+import { describeDiscoveredResource } from './descriptor.mjs';
 
 export const MCP_VERSION='2025-11-25';
 const plain = x => x!==null && typeof x==='object' && !Array.isArray(x);
@@ -41,8 +42,12 @@ const statOf=q=>({quoteId:q.quoteId,status:q.status,resource:q.resource,method:q
 const defaultFetch=(...args)=>fetch(...args);
 const schemas={
   bazaar_search:{
-    name:'bazaar_search',description:'Search the configured Bazaar discovery server. Read only. Does not charge.',
+    name:'bazaar_search',description:'Search the configured Bazaar discovery server. Read only. Does not charge. Use bazaar_describe with a returned handle to inspect declared inputs before preview.',
     inputSchema:{type:'object',properties:{query:{type:'string',minLength:1,maxLength:1024},cursor:{type:'string'},limit:{type:'integer',minimum:1,maximum:100},network:{type:'string'},scheme:{type:'string'},asset:{type:'string'},maxAmount:{type:'string'}},required:['query'],additionalProperties:false}},
+  bazaar_describe:{
+    name:'bazaar_describe',description:'Inspect the cached original input examples, schema, output declaration and full payment alternatives for a discovered handle. No network request, quote, approval or payment.',
+    annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},
+    inputSchema:{type:'object',properties:{handle:{type:'string'}},required:['handle'],additionalProperties:false}},
   bazaar_preview:{
     name:'bazaar_preview',description:'Validate one discovered HTTP tool and request; return price/recipient/approval quote. Makes no provider request.',
     inputSchema:{type:'object',properties:{handle:{type:'string'},acceptIndex:{type:'integer',minimum:0},input:{type:'object'}},required:['handle'],additionalProperties:false}},
@@ -101,10 +106,14 @@ export class McpPaidToolBroker {
       u.searchParams.set(k,String(v));
     }
     const body=await this.#get(u);
+    const observedAt=Date.now();
     const listed=[];
     for(const row of body.resources.slice(0,100)){
       const input=row?.extensions?.bazaar?.info?.input;
-      const url=row?.resource?.url;
+      // Native facilitators use a URL string; the original local catalog uses
+      // a resource object. Keep the original shape in observation metadata.
+      const resource=typeof row?.resource==='string'?{url:row.resource}:row?.resource;
+      const url=resource?.url;
       if(typeof url!=='string'||!plain(input)||!['http','mcp'].includes(input.type)||!Array.isArray(row.accepts)||!row.accepts.length)continue;
       let origin;try{origin=resourceOrigin(url);}catch{continue;}
       const eligible=row.accepts.filter(a=>{
@@ -119,16 +128,24 @@ export class McpPaidToolBroker {
         return true;
       });
       if(!eligible.length)continue;
-      const info={resource:row.resource,input,accepts:eligible,origin,
+      const bazaar=structuredClone(row.extensions.bazaar);
+      const info={resource:structuredClone(resource),input:bazaar.info.input,bazaar,accepts:eligible,origin,
+        source:{url:u.href,observedAt:new Date(observedAt).toISOString(),resource:structuredClone(row.resource)},
         fingerprint:hash([url,input,eligible]),type:input.type};
-      const handle=randomUUID();this.#records.set(handle,{...info,createdAt:Date.now()});
+      const handle=randomUUID();this.#records.set(handle,{...info,createdAt:observedAt});
       // A caller-visible search result must not alias the private discovered URL.
-      listed.push({handle,resource:structuredClone(row.resource),resourceType:input.type,
+      listed.push({handle,resource:structuredClone(resource),resourceType:input.type,
         method:input.method??null,toolName:input.toolName??null,
         accepts:eligible.map(sanitizedPrice),allowedOrigin:this.#trustedOrigins.has(origin)});
     }
     while(this.#records.size>this.#maxRecords)this.#records.delete(this.#records.keys().next().value);
     return {resources:listed,partialResults:body.partialResults??false,pagination:body.pagination??null};
+  }
+  describe({handle}={}){
+    const row=this.#records.get(handle);
+    if(!row||Date.now()-row.createdAt>this.#quoteTTL)fail('RESOURCE_STALE','Search this resource again');
+    return describeDiscoveredResource(row,{handle,allowedOrigin:this.#trustedOrigins.has(row.origin),
+      expiresAt:row.createdAt+this.#quoteTTL});
   }
   preview({handle,acceptIndex=0,input={}}={}){
     const row=this.#records.get(handle);
@@ -242,6 +259,7 @@ export class McpPaidToolBroker {
   async call(name,args={}){
     switch(name){
       case 'bazaar_search':return this.search(args);
+      case 'bazaar_describe':return this.describe(args);
       case 'bazaar_preview':return this.preview(args);
       case 'bazaar_execute_approved':return this.execute(args);
       case 'bazaar_status':return this.status(args);
@@ -301,7 +319,7 @@ export function createMcpHttpHandler(broker,{bearerToken,allowedClientOrigins=[]
     if(id===null && rpc.method!=='notifications/initialized')return send(400,jsonErr(-32600,'Request ID required'));
     if(rpc.method==='initialize')return send(200,rpcReply(id,{protocolVersion:MCP_VERSION,
       capabilities:{tools:{listChanged:false}},serverInfo:{name:'stellar-bazaar-paid-bridge',version:'0.1.0'},
-      instructions:'Search and preview are read-only. Calls need out-of-band operator approval and an external x402 signer.'}));
+      instructions:'Search, describe and preview are read-only. Describe a search handle to inspect declared inputs before preview. Calls need out-of-band operator approval and an external x402 signer.'}));
     if(rpc.method==='ping')return send(200,rpcReply(id,{}));
     if(rpc.method==='tools/list')return send(200,rpcReply(id,{tools:TOOLS}));
     if(rpc.method!=='tools/call')return send(200,jsonErr(-32601,'Method not found',id));
