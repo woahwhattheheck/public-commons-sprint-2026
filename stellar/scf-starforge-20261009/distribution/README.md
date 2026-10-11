@@ -4647,3 +4647,40 @@ npx --no-install starforge weather-operations serve \
 ```
 
 The [complete original product guide](../partners/open-meteo-operations/README.md) includes merchant compilation, receiving-operator initialization, controlling-terminal execution, provider mode/attribution, exact weather semantics and full recovery commands. Installed imports are `./partners/open-meteo` plus `/application`, `/workspace`, `/server`, `/analysis`, and `/reports`. The new component adds no dependency group; it retains the maintained native SDK/Python implementations and built-in Node SQLite. Evaluation data and commercial provider configuration remain explicit choices.
+
+
+## Research federal awards and prepare implementation workshares
+
+The USAspending application retains the original search query and all returned
+pages, enriches selected awards with original detail responses, saves immutable
+editions and keeps operator research and workshare decisions alongside them.
+Its merchant uses the original saved-dataset service; the receiving application
+adopts the original customer delivery and can reopen the same research project.
+
+~~~sh
+starforge usaspending-research help
+starforge usaspending-dossier help
+~~~
+
+The award operator keeps obligations, exercised options, potential options and
+outlays as separate exact decimal fields. Recipient, parent company and parent
+award identities remain distinct. Coverage identifies the complete original
+capture, selected edition and received query view.
+
+The dossier bridge receives an existing AwardWorkspace edition or its complete
+export. It retains all original source and native delivery bytes, supports cited
+findings and complete HTML/Markdown/portable reports, and recovers the exact first
+source packet from a reopened project. A retry resumes the same source identity
+and completed components.
+
+Public modules are available at
+@tokenjunkielabs/starforge-merchant/research/usaspending (AwardWorkspace),
+/research/usaspending/merchant,
+/research/usaspending/source-import,
+/research/usaspending/server and
+/buyer/usaspending/dossier. The award and dossier stores are the original
+applications' stores.
+
+See the [award research operating guide](../sf30-seller-sdk/usaspending/README.md)
+and [complete dossier receiving guide](../sf30-seller-sdk/usaspending/DOSSIER.md)
+for configuration, original acquisition, operator use and portable handover.
