@@ -330,7 +330,8 @@
     "huwise": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
     "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs",
     "usaspending-research": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/cli.mjs",
-    "usaspending-dossier": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier-cli.mjs"
+    "usaspending-dossier": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier-cli.mjs",
+    "merchant-accounting-platforms": "stellar-forge/mcp-merchant-operator/accounting-platform-cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -725,7 +726,9 @@
     "./research/usaspending/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/merchant.mjs",
     "./research/usaspending/source-import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/source-import.mjs",
     "./research/usaspending/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/server.mjs",
-    "./buyer/usaspending/dossier": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier.mjs"
+    "./buyer/usaspending/dossier": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier.mjs",
+    "./merchant/accounting-platforms": "./source/stellar-forge/mcp-merchant-operator/accounting-platform-client.mjs",
+    "./merchant/accounting-platforms/operations": "./source/stellar-forge/mcp-merchant-operator/accounting-platform-cli.mjs"
   },
   "nativePeers": {
     "@x402/core": {
