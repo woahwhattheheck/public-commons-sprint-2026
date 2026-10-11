@@ -46,26 +46,44 @@ node examples/customer.mjs object-finalize --runtime SF88_DIR --state PRIVATE_DI
   Optional: --offset 0 --limit 100 --outbox MERCHANT_OUTBOX --merchant-route ROUTE_ID
 node examples/customer.mjs object-list --runtime SF88_DIR --state PRIVATE_DIR
 
+Dataset and object accounting use the same commands below. Replace KIND with
+dataset or object, and --KIND with --dataset or --object:
+node examples/customer.mjs KIND-accounting --runtime SF88_DIR --state PRIVATE_DIR --KIND NAME [--offset 0 --limit 100]
+node examples/customer.mjs KIND-accounting-attach --runtime SF88_DIR --state PRIVATE_DIR --KIND NAME --session EXISTING_SESSION
+node examples/customer.mjs KIND-accounting-reopen --runtime SF88_DIR --state PRIVATE_DIR --KIND NAME
+node examples/customer.mjs KIND-accounting-all --runtime SF88_DIR --state PRIVATE_DIR --KIND NAME [--limit 100]
+node examples/customer.mjs KIND-finalize-all --runtime SF88_DIR --state PRIVATE_DIR --KIND NAME [--workspace BUYER_DIR]
+  Optional: --offset NEXT_RANGE --limit 100 --outbox MERCHANT_OUTBOX --merchant-route ROUTE_ID
+node examples/customer.mjs KIND-accounting-recover --runtime SF88_DIR --state PRIVATE_DIR --KIND NAME [--command-id ID]
+node examples/customer.mjs KIND-accounting-export --runtime SF88_DIR --state PRIVATE_DIR --KIND NAME --output NEW_JSONL
+KIND-finalize handles one range. KIND-finalize-all visits the remaining ranges;
+each output line is the unchanged original native report and its process result.
+Ctrl-C stops before another range starts. accounting-recover reads local command
+files only. Accounting export streams all original VIEW ranges to a new file.
+
 review performs original offline validation; execute invokes the original approval
 and buyer exactly once. recover/list never purchase. Supply only a trusted local
 generated client module. Original signer secrets stay in the process environment.
 Only dataset-run can acquire new pages. It resumes the same native acquisition;
 completed/marked pages are never replayed. Dataset delivery and row consumption
 are offline. Inspect the original report independently of its process exit status.
-Only object-run/object-download acquire chunks. object-finalize explicitly invokes
+Only object-run/object-download acquire chunks. All finalize commands explicitly invoke
 original financial continuation and can read providers/update the existing ledger.
 Other object modes are offline and preserve the original session and receipts.
 `;
 const allowed = new Set(['runtime', 'state', 'profile', 'client', 'operation', 'inputs', 'intent', 'max-atomic', 'accept', 'output',
   'dataset','config','workspace','session','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot',
   'object','description','object-id','bytes','chunk-bytes','sha256','content-type','chunk-offset','chunk-limit','copy','format',
-  'offset','limit','outbox','merchant-route']);
+  'offset','limit','outbox','merchant-route','command-id']);
+const accountingActions = ['accounting','accounting-all','accounting-attach','accounting-reopen',
+  'finalize','finalize-all','accounting-recover','accounting-export'];
+const accountingModes = ['dataset','object'].flatMap(kind => accountingActions.map(action => kind + '-' + action));
 async function main([mode, ...args]) {
   if (!mode || mode === '--help') { console.log(usage.trim()); return; }
   if (!['review', 'execute', 'recover', 'list', 'dataset-init','dataset-attach','dataset-run',
     'dataset-status','dataset-recover','dataset-deliver','dataset-rows','dataset-list',
     'object-init','object-attach','object-reopen','object-status','object-run','object-recover','object-download',
-    'object-assemble','object-verify','object-copy','object-report','object-list','object-accounting','object-finalize'].includes(mode)) throw new Error('MODE_INVALID');
+    'object-assemble','object-verify','object-copy','object-report','object-list',...accountingModes].includes(mode)) throw new Error('MODE_INVALID');
   const flags = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index]?.slice(2), value = args[index + 1];
@@ -80,6 +98,44 @@ async function main([mode, ...args]) {
   const stop = () => controller.abort();
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
   try {
+    if (accountingModes.includes(mode)) {
+      const kind = mode.startsWith('dataset-') ? 'dataset' : 'object';
+      const id = required(kind), action = mode.slice(kind.length + 1);
+      let target = buyer[kind](id);
+      const integer = (name, minimum) => {
+        const value = required(name);
+        if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < minimum)
+          throw new Error('ACCOUNTING_INTEGER_REQUIRED');
+        return Number(value);
+      };
+      const options = {signal:controller.signal,
+        ...(flags.workspace ? {workspaceDirectory:resolve(flags.workspace)} : {}),
+        ...(flags.offset !== undefined ? {offset:integer('offset',0)} : {}),
+        ...(flags.limit !== undefined ? {limit:integer('limit',1)} : {}),
+        ...(flags.outbox ? {outboxDirectory:resolve(flags.outbox)} : {}),
+        ...(flags['merchant-route'] ? {merchantRoute:flags['merchant-route']} : {})};
+      const print = (result, multiline = false) => {
+        console.log(JSON.stringify({id, ...result.record, process:result.process,
+          commandId:result.commandId, commandDirectory:result.commandDirectory, viewStatus:result.viewStatus}, null, multiline ? 2 : undefined));
+        if (result.process.errorCode || result.process.exitCode !== 0 || result.native.interrupted) process.exitCode = 2;
+      };
+      if (action === 'accounting-attach') {
+        target = await buyer[kind === 'dataset' ? 'attachDataset' : 'attachObject'](
+          {id, directory:resolve(required('session')), accountingOnly:true});
+        print(target.lastAccounting, true);
+      } else if (action === 'accounting-reopen') print(await target.initializeAccounting(options), true);
+      else if (action === 'accounting-recover') {
+        const recovered = await target.recoverAccounting(flags['command-id'] ? {commandId:flags['command-id']} : {});
+        console.log(JSON.stringify({id, recovery:recovered}, null, 2));
+        if (recovered && recovered.status !== 'RECORDED') process.exitCode = 2;
+      } else if (action === 'accounting-export') {
+        console.log(JSON.stringify({id, ...await target.exportAccounting(resolve(required('output')), options)}, null, 2));
+      } else if (action === 'accounting-all' || action === 'finalize-all') {
+        for await (const result of target[action === 'finalize-all' ? 'finalizeAll' : 'accountingPages'](options)) print(result);
+      } else print(await target[action](options), true);
+      if (controller.signal.aborted) process.exitCode = 130;
+      return;
+    }
     if (mode.startsWith('object-')) {
       if (mode === 'object-list') {
         for await (const acquisition of buyer.listObjects())
@@ -118,16 +174,6 @@ async function main([mode, ...args]) {
       else if (mode === 'object-status') result = await acquisition.inspect(options);
       else if (mode === 'object-run') result = await acquisition.run(options);
       else if (mode === 'object-recover') result = await acquisition.recover(options);
-      else if (mode === 'object-accounting' || mode === 'object-finalize') {
-        const accountingOptions = {signal:controller.signal,
-          ...(flags.workspace ? {workspaceDirectory:resolve(flags.workspace)} : {}),
-          ...(flags.offset !== undefined ? {offset:integer('offset',0)} : {}),
-          ...(flags.limit !== undefined ? {limit:integer('limit')} : {})};
-        result = mode === 'object-accounting' ? await acquisition.accounting(accountingOptions)
-          : await acquisition.finalize({...accountingOptions,
-            ...(flags.outbox ? {outboxDirectory:resolve(flags.outbox)} : {}),
-            ...(flags['merchant-route'] ? {merchantRoute:flags['merchant-route']} : {})});
-      }
       else if (mode === 'object-report') result = await acquisition.exportReport(resolve(required('output')),
         {...options, format:flags.format ?? 'html'});
       else {
@@ -216,6 +262,10 @@ main(process.argv.slice(2)).catch(error => {
   const code = error?.code ?? error?.message;
   console.error(JSON.stringify({ error: typeof code === 'string' && /^[A-Z0-9_]{1,120}$/.test(code) ? code : 'CUSTOMER_APPLICATION_FAILED',
     retry: 'NO_AUTOMATIC_RETRY', ...(error.acquisition ? {object:error.acquisition.id} : {}),
+    ...(error.dataset ? {dataset:error.dataset.id} : {}),
+    ...(error.commandId ? {commandId:error.commandId, commandDirectory:error.commandDirectory} : {}),
+    ...(error.partialPath ? {partialPath:error.partialPath, destination:error.destination,
+      destinationPublished:error.destinationPublished, nextOffset:error.nextOffset} : {}),
     ...(error.progress ? {native:error.progress.native, process:error.progress.process} : {}) }));
   process.exitCode = 1;
 });

@@ -5,11 +5,42 @@ The maintained developer front door for the original Stellar x402 merchant toolk
 ## Merchant workflow
 
 1. Add up to 64 JSON resources, each with a unique route, description, tags and exact atomic price. Choose files or paste their original UTF-8 JSON. The resource text is preserved in the export, including whitespace, CRLF and number lexemes.
-2. Configure the shared network, asset, public recipient, default price and timeout. Resource overrides remain exact decimal strings.
-3. Review every route and generated file. Download an ordinary ZIP containing the original seller.json, workspace.json, data files, editable starter-input.json and full launch instructions.
+2. Configure workspace defaults or complete independent terms for each resource. Add, remove, copy and reorder 1–16 payment choices; each retains its network, asset, recipient, exact atomic amount, timeout and optional extra JSON. Amounts remain decimal strings.
+3. Review every ordered choice and generated file. Download an ordinary ZIP containing the original seller.json, workspace.json, data files, editable starter-input.json and full launch instructions.
 4. Install the original local toolkit archive and run starforge against that workspace. Its original developer explorer, OpenAPI and operations dashboard provide the running product interface.
 
-Saved drafts use this browser's IndexedDB only when the operator chooses Save. Each save compares the expected revision in one transaction. A stale tab can reopen the newer version or save its current work under a new draft ID. Draft JSON import/export makes work portable; imported seller configurations retain supported original metadata. Unsupported runtime handlers, compiled offers, differing shared rails and multiple payment choices are left to the native workflows rather than silently transformed.
+Saved drafts use this browser's IndexedDB only when the operator chooses Save. Each save compares the expected revision in one transaction. A stale tab can reopen the newer version or save its current work under a new draft ID. Draft JSON import/export makes work portable. Imported seller configurations retain their original ordered payment choices, independent route terms and supported metadata. Runtime handlers, compiled offers and other resource types continue in their native workflows.
+
+### Complete route payment terms
+
+An imported route starts with independent terms. Changing the workspace defaults
+does not rewrite an imported asset, recipient, network, price or timeout. Clear
+“Use workspace defaults” on a new route to create independent choices; selecting
+defaults again retains its previous edited list in the draft. Copying a list
+from another resource replaces only payment terms. Add, remove and reorder
+controls preserve merchant order, with an undo for the last list change before
+further field edits.
+
+The native declaration keeps its original `payment` or `paymentOptions` form.
+Adding a second choice uses `paymentOptions`; a retained one-choice array stays
+an array. Original legacy singleton fields stay visible and can be removed
+explicitly when converting to the stricter native option array. Imported route
+metadata remains attached when an operator renames its resource ID.
+
+Every choice uses the original exact scheme and needs a distinct network,
+asset and recipient tuple. A different amount or timeout alone does not define
+another choice. Extra metadata remains an ordinary JSON object within the
+original 8 KiB, depth and complexity limits. Incomplete extra JSON is retained
+in saved/exported drafts for editing; complete workspace export requires valid
+terms. The original seller compiler remains authoritative for live offers,
+header limits and native payment operation. The front door neither ranks
+payment choices nor combines atomic amounts across assets.
+
+The review table displays every ordered choice with full identifiers, exact
+amount, timeout and expandable extra JSON. Its generated README includes the
+complete per-route terms and original install, launch, offer-inspection and
+native-facilitator commands. The original offer decoder, fourteen workflow
+recipes and WooCommerce setup remain available in the same front door.
 
 The page also retains the original x402 offer inspector and request walkthrough. Offer text is not saved. No workspace content is transmitted by this static application.
 
@@ -79,6 +110,7 @@ original authenticated publisher and unchanged owner-private project.
 
 - dist/onboarding.mjs: pure original-config generator, supported imports, validation and deterministic ZIP writer.
 - dist/setup.mjs: resource editing, imports, field review, downloads and native launch handoff.
+- dist/payment-editor.mjs: ordered per-route choice editing, independent/default terms, copy/reorder, original-field review and editable extra JSON.
 - dist/drafts.mjs: IndexedDB records and atomic optimistic revision checks.
 - dist/app.mjs: original offer inspector/walkthrough and component index.
 - dist/recipes.mjs: 14 maintained workflows with copyable and downloadable commands, source guides and expected behavior.
@@ -94,7 +126,35 @@ No build or package installation is needed for the static source. The original s
 
 The October 11 integration used the unchanged native SF30 configuration reader and seller for two generated resources. Both returned native HTTP 402 challenges, health/OpenAPI returned HTTP 200, exact maximum prices were accepted, and exported UTF-8/CRLF/large-number source data remained byte-exact through ZIP extraction. Supported imported metadata and one-choice payment options were preserved. The native distribution workspace launcher was source-reviewed for the exact generated descriptor/config binding. These retained results should be reused; the existing offer decoder checks did not need rerunning.
 
-The original dataset interface retains its earlier source/syntax and native-generator verification scope; its IndexedDB interaction is not covered by the Woo addition. The dedicated Woo browser/native package journey is described above. Publication continues through the original Site owner's native project.
+The subsequent payment-choice integration imported a sixteen-choice route and
+an independent original singleton, revised their ordered terms and metadata,
+exported and extracted the full ZIP, then installed the accepted source archive
+`0.1.0-source.gdc551b9afa1e` offline. The original workspace launcher served both
+native HTTP 402 offers with choices identical to its authoritative compiler;
+the explorer, OpenAPI and operations dashboard returned HTTP 200. The sixteen
+choices covered explicit testnet/pubnet terms and exact maximum signed-i128
+amounts. UTF-8 BOM, CRLF, Unicode and large-number source lexemes remained
+byte-exact. Original singleton fields, identifier whitespace, renamed-route
+metadata and portable draft reopening survived. The original default draft
+also remained compatible; duplicate rails were rejected and unfinished extra
+JSON remained editable. No new payment was made.
+
+The actual local source-level Chromium continuation then reversed all sixteen
+choices through the editor, reopened unfinished extra JSON from IndexedDB,
+preserved a stale tab's edits as a separate draft, and exercised addition,
+removal, copy, undo and independent/default term restoration. Its review had
+seventeen choice rows. The browser-downloaded ZIP's seller configuration was
+exactly the configuration already accepted by the original installed runtime;
+both selected data files matched the accepted bytes. Portable draft reopening
+also retained the revised choice order and JSON. Desktop and 390px mobile
+layouts had no page errors or horizontal overflow, and the browser made no
+requests outside its local source server. The native runtime check was reused.
+
+The managed Site preview separately failed to mount `/proc`; its supervisor
+was confirmed stopped and its infrastructure was left intact. The completed
+local source/browser journey does not assert a new hosted version. Native
+Site publication continues through the same original owner's project. The
+earlier Woo browser/native package journey above retains its accepted scope.
 
 Existing Sites project: appgprj_6acba66ca7a08191897b5a8c22611397. Static output is dist/. Continue the same project with the Sites source workflow, preserve its current owner-private audience, and apply the completed patch over the exact original source commit 845eafe472f15a04b0ada64fcba4a078008897fc. The existing Site account owns deployment; no replacement Site is needed.
 
@@ -105,3 +165,44 @@ Original front-door source was recovered from the complete owner-authorized Octo
 Maintained native source: https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/stellar/scf-starforge-20261009
 
 The workflow selector composes ASTRA26B1’s eight-path onboarding contribution with current seller, buyer, persistent MCP, merchant release, commerce and DuckDB source. The recovered donor archive was 47,089 bytes, SHA-256 e5558da845cb73fce8547dc3714ef6c14ee9c2aee5d83efcd5dfdd4e5ff39393. Source identities and the reviewed primary guide blobs are retained in dist/recipes.mjs.
+
+## Fleet setup workbench
+
+Open `/fleet.html` to prepare the first retained multi-merchant fleet. The
+workbench edits two to thirty-two merchants, two to four fixed slots per
+merchant, public hosts, current/later source aliases, initial releases and the
+original gateway limits. Registered sources use the original API workspace,
+Python application, DuckDB/Parquet, S3 or Stellar RPC package selectors.
+
+Review shows the exact sequential slot ports and retained store layout before
+export. Drafts can be downloaded while incomplete and reopened as portable JSON;
+the original native bootstrap declaration can also be imported. The launch ZIP
+contains the editable draft, `fleet-setup.json`, machine-readable native command
+arguments and complete host/recovery instructions. It reuses the maintained
+`zipWorkspace` writer.
+
+The packet invokes the original `fleet-release setup` command. The terminal,
+managed browser and MCP handoffs all refer to the same retained directory and
+published plan. The original host APIs inspect source packages, stage immutable
+releases, select the initial slots and retain interruption recovery. The MCP
+handoff uses `init-fleet --fleet-directory` and the original client-registration
+command. Later stage/review/activation, drain and rollback remain available in
+the original operator.
+
+`dist/fleet-onboarding.mjs` owns the portable declaration and command generation.
+`dist/fleet-setup.mjs` owns editing, import, review and downloads; `fleet.html` and
+`fleet.css` share the original grayscale site controls. The workbench runs from
+static files with the existing site. Source paths and merchant configuration
+remain in the downloaded packet and original merchant host.
+
+The fleet workbench acceptance used the actual browser to import three original
+source declarations, edit their settings, follow a collapsed-limit validation
+link, download/reopen the draft and export the launch ZIP. At 390px, document
+width stayed 390px with zero browser errors. The unchanged exported command
+arrays ran through the original distribution CLI and created six 0700 release
+stores. The managed workspace served exact DuckDB decimal/Unicode values,
+Python output and all three pinned S3 objects, including a 1,843,229-byte archive
+across three HTTP 206 ranges with its expected hash. Eight native x402 requests
+used the original SDK and a local facilitator fixture. Setup resume and the
+exported MCP initialization/host registration reopened the same retained fleet
+after the original S3 package moved. All owned child processes closed.

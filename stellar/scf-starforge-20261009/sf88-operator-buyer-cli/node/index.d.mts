@@ -126,6 +126,13 @@ export class BuyerError extends Error {
   readonly code: string;
   readonly operation?: Operation;
   readonly exitCode?: number | null;
+  readonly dataset?: Dataset;
+  readonly acquisition?: ObjectAcquisition;
+  readonly commandId?: string;
+  readonly commandDirectory?: string;
+  readonly partialPath?: string;
+  readonly destination?: string;
+  readonly destinationPublished?: boolean;
   constructor(code: string, details?: Record<string, unknown>);
 }
 export class Buyer {
@@ -152,11 +159,11 @@ export class Buyer {
   list(): AsyncIterable<Operation>;
   dataset(id: string): Dataset;
   createDataset(options: DatasetOptions): Promise<Dataset>;
-  attachDataset(options: { id: string; directory: string }): Promise<Dataset>;
+  attachDataset(options: { id: string; directory: string; accountingOnly?: boolean }): Promise<Dataset>;
   listDatasets(): AsyncIterable<Dataset>;
   object(id: string): ObjectAcquisition;
   createObject(options: ObjectOptions): Promise<ObjectAcquisition>;
-  attachObject(options: { id: string; directory: string }): Promise<ObjectAcquisition>;
+  attachObject(options: { id: string; directory: string; accountingOnly?: boolean }): Promise<ObjectAcquisition>;
   listObjects(): AsyncIterable<ObjectAcquisition>;
 }
 export class Operation {
@@ -249,11 +256,22 @@ export class Dataset {
   readonly id: string;
   /** Private application entry; the native session path is in its original report. */
   readonly directory: string;
+  readonly lastAccounting?: DatasetAccountingCommand;
   constructor(buyer: Buyer, id: string);
   initialize(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
   inspect(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
   recover(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
   run(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
+  /** Original page financial views; no product file, key or provider is needed. */
+  accounting(options?: SessionAccountingOptions): Promise<DatasetAccountingCommand>;
+  initializeAccounting(options?: SessionAccountingOptions): Promise<DatasetAccountingCommand>;
+  finalize(options?: SessionFinalizationOptions): Promise<DatasetAccountingCommand>;
+  accountingPages(options?: SessionAccountingOptions): AsyncIterable<DatasetAccountingCommand>;
+  /** Explicitly visit each remaining original range; break/abort starts no next range. */
+  finalizeAll(options?: SessionFinalizationOptions): AsyncIterable<DatasetAccountingCommand>;
+  /** Local native-output recovery; no process or provider request is started. */
+  recoverAccounting(options?: {commandId?: string}): Promise<AccountingRecovery<DatasetAccountingCommand> | null>;
+  exportAccounting(destination: string, options?: Omit<SessionAccountingOptions, 'offset'>): Promise<AccountingExport>;
   exportManifest(destination: string, options?: { signal?: AbortSignal }): Promise<DatasetCommand<JsonObject>>;
   /** Offline SF100 export. The same destination resumes its original verified archive. */
   deliver(destination?: string, options?: { signal?: AbortSignal }): Promise<DatasetDelivery>;
@@ -353,8 +371,13 @@ export class ObjectAcquisition {
   run(options?: ObjectCommandOptions): Promise<ObjectReport>;
   recover(options?: ObjectCommandOptions): Promise<ObjectReport>;
   accounting(options?: ObjectAccountingOptions): Promise<ObjectAccountingCommand>;
+  initializeAccounting(options?: ObjectAccountingOptions): Promise<ObjectAccountingCommand>;
   /** Explicit native reservation continuation; can query providers and update the original ledger. */
   finalize(options?: ObjectAccountingOptions & {outboxDirectory?: string; merchantRoute?: string}): Promise<ObjectAccountingCommand>;
+  accountingPages(options?: ObjectAccountingOptions): AsyncIterable<ObjectAccountingCommand>;
+  finalizeAll(options?: SessionFinalizationOptions): AsyncIterable<ObjectAccountingCommand>;
+  recoverAccounting(options?: {commandId?: string}): Promise<AccountingRecovery<ObjectAccountingCommand> | null>;
+  exportAccounting(destination: string, options?: Omit<ObjectAccountingOptions, 'offset'>): Promise<AccountingExport>;
   /** May acquire new chunks, then assembles or reopens this exact destination. */
   download(destination: string, options?: ObjectCommandOptions): Promise<ObjectDelivery>;
   assemble(destination: string, options?: ObjectCommandOptions): Promise<ObjectDelivery>;
@@ -373,25 +396,80 @@ export class ObjectDownloadError extends BuyerError {
   readonly progress: ObjectReport;
   constructor(code: string, acquisition: ObjectAcquisition, progress: ObjectReport);
 }
-export interface ObjectAccountingOptions {
+export interface SessionAccountingOptions {
   workspaceDirectory?: string;
   offset?: number;
   /** Native accounting entries, 1–250; default 100. */
   limit?: number;
   signal?: AbortSignal;
 }
-export interface ObjectAccountingReport extends JsonObject {
-  schema: 'stellar-forge.sf88.session-accounting.v1'; kind: 'object';
+export interface SessionFinalizationOptions extends SessionAccountingOptions {
+  /** Supplied together; passed to the original financial continuation. */
+  outboxDirectory?: string;
+  merchantRoute?: string;
+}
+export interface ObjectAccountingOptions extends SessionAccountingOptions {}
+export interface SessionAccountingEntry extends JsonObject {
+  /** Original index: dataset pages begin at1, object chunks at0. */
+  index: number;
+  intentId?: string | null;
+  outcome: string;
+  actualAtomicUnits?: string | null;
+  receipt?: string | null;
+  requestSha256?: string | null;
+  completedAt?: string | null;
+  code?: string;
+  lastFinalized?: {completedAt: string; outcome: string; actualAtomicUnits: string; receipt: string} | null;
+}
+export interface SessionAccountingReport<K extends 'dataset' | 'object' = 'dataset' | 'object'> extends JsonObject {
+  schema: 'stellar-forge.sf88.session-accounting.v1'; kind: K;
   directory: string; sessionId: string; configurationSha256: string;
   workspace: string | null; mode: 'VIEW' | 'FINALIZE'; observedAt: string;
   terms: NativeRequest['expect'];
   range: {offset: number; limit: number; total: number; nextOffset: number | null};
-  entries: Array<JsonObject & {index: number; intentId: string; outcome: string}>;
+  entries: SessionAccountingEntry[];
   interrupted: boolean; recordAuthority: string;
 }
-export interface ObjectAccountingCommand {
-  readonly native: ObjectAccountingReport;
+export interface ObjectAccountingReport extends SessionAccountingReport<'object'> {}
+export interface DatasetAccountingReport extends SessionAccountingReport<'dataset'> {}
+export interface SessionAccountingCommand<R extends SessionAccountingReport = SessionAccountingReport> {
+  readonly native: R;
   readonly process: ObjectReport['process'];
+  readonly record: JsonObject;
+  readonly commandId: string;
+  readonly commandDirectory: string;
+  readonly startedAt: string;
+  readonly viewStatus: 'SAVED' | 'SAVE_FAILED' | 'RECOVERED_NATIVE_OUTPUT';
+  readonly recovered?: boolean;
+}
+export interface ObjectAccountingCommand extends SessionAccountingCommand<ObjectAccountingReport> {
   readonly record: {readonly mode: 'ORIGINAL_PYTHON_OBJECT'; readonly action: 'accounting' | 'finalize';
     readonly report: ObjectAccountingReport};
+}
+export interface DatasetAccountingCommand extends SessionAccountingCommand<DatasetAccountingReport> {
+  readonly record: {readonly schema: 'stellar-forge.node-dataset-command.v1'; readonly id: string;
+    readonly command: 'accounting' | 'finalize'; readonly result: DatasetAccountingReport};
+}
+export interface AccountingRecovery<C extends SessionAccountingCommand = SessionAccountingCommand> {
+  readonly commandId: string;
+  readonly commandDirectory: string;
+  readonly action: 'accounting' | 'finalize';
+  readonly startedAt: string;
+  readonly status: 'RECORDED' | 'OUTPUT_RECOVERED' | 'NO_COMPLETE_OUTPUT';
+  readonly process: ObjectReport['process'];
+  readonly result: C | null;
+  /** Most recent complete range, also retained when a later command has no complete output. */
+  readonly lastComplete: C | null;
+}
+export interface AccountingExport {
+  readonly path: string;
+  readonly bytes: number;
+  readonly sha256: string;
+  readonly ranges: number;
+  readonly entries: number;
+  readonly kind: 'dataset' | 'object';
+  readonly sessionId: string;
+  readonly configurationSha256: string;
+  readonly format: 'jsonl';
+  readonly scope: 'COMPLETE_ORIGINAL_ACCOUNTING_VIEW';
 }

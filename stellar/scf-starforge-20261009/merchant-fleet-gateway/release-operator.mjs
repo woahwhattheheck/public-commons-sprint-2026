@@ -40,14 +40,14 @@ function pathValue(value, base) {
 }
 /** Share original source selectors and path rules with retained fleet setup. */
 export function normalizeFleetPackageSource(source, base) {
-  keys(source, ['workspace', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 'runtime']);
-  const selected = ['workspace', 'python', 'duckdbPackage'].filter(key => source[key] !== undefined);
+  keys(source, ['workspace', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage', 'runtime']);
+  const selected = ['workspace', 'python', 'duckdbPackage', 's3Package', 'jsonrpcPackage'].filter(key => source[key] !== undefined);
   if (selected.length !== 1 || source.pythonRoot !== undefined && selected[0] !== 'python' ||
       source.duckdbPython !== undefined && selected[0] !== 'duckdbPackage')
     throw fail('FLEET_RELEASE_PACKAGE_SOURCE_REQUIRED', 400);
   const runtime = source.runtime ?? {};
   keys(runtime, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
-  if (selected[0] !== 'workspace' && runtime.allowLoopbackUpstream)
+  if (!['workspace', 'jsonrpcPackage'].includes(selected[0]) && runtime.allowLoopbackUpstream)
     throw fail('FLEET_RELEASE_PACKAGE_BINDINGS_OWNED', 400);
   const value = { [selected[0]]: pathValue(source[selected[0]], base) };
   if (source.pythonRoot !== undefined) value.pythonRoot = pathValue(source.pythonRoot, base);
@@ -57,7 +57,7 @@ export function normalizeFleetPackageSource(source, base) {
 /** Public aliases retain source type while all configured paths stay with the host. */
 export function describeFleetPackages(packages) {
   return Object.entries(packages).map(([name, source]) => ({ name,
-    kind: source.duckdbPackage !== undefined ? 'DUCKDB_PACKAGE' :
+    kind: source.jsonrpcPackage !== undefined ? 'JSONRPC_MERCHANT_PACKAGE' : source.s3Package !== undefined ? 'S3_OBJECT_PACKAGE' : source.duckdbPackage !== undefined ? 'DUCKDB_PACKAGE' :
       source.python !== undefined ? 'PYTHON_APPLICATION' : 'OPENAPI_WORKSPACE' }));
 }
 function privateDirectory(path) {

@@ -1,5 +1,7 @@
 # SF101 · Stellar merchant account receiving and reserve preflight
 
+For a private browser workspace with saved seller configurations, native receiving reviews, exact account actions, capture replay, comparison and complete export/import, open the [Merchant receiving desk](RECEIVING_DESK.md): `starforge merchant-readiness workspace --directory /private/merchant/receiving-desk --port 8408`.
+
 For the complete original SF30 seller configuration and deployed StellarAssetContract receiving workflow, use [Merchant receiving setup](MERCHANT_READINESS.md). It connects this original account evaluator to exact contract derivation, native contract-instance reads, all configured payment choices and the original SF16 validator. The classic-only command below remains available.
 
 **Node 22+ · MIT · read-only official Horizon · no secrets, dependencies, wallet use, hosted Actions, or automated transactions.**

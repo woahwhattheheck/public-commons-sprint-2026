@@ -2,6 +2,8 @@
 import { mkdtemp, readdir, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { VerifiedFile } from './result.mjs';
+import { accountingOptions, runAccounting, recoverAccounting, accountingPages,
+  exportAccounting } from './session-accounting.mjs';
 import { absolute, privateDirectory, digest, now, intent, object, need, BuyerError,
   jsonBytes, readBytes, readJson, writeBytes, writeJson, exists, syncDirectory } from './store.mjs';
 
@@ -67,8 +69,7 @@ export class ObjectAcquisition {
     }
     return value;
   }
-  async _verifyBinding(meta) {
-    const saved = await readJson(join(this.directory, 'binding.json'));
+  async _verifyBinding(meta, {allowUnbound = false} = {}) {
     // This is only the application's identity join. The original command validates
     // the full session, configs, queue outcomes, ranges and bytes before acting.
     const native = await readJson(join(meta.sessionDirectory, 'session.json'), 131072);
@@ -76,6 +77,12 @@ export class ObjectAcquisition {
       'OBJECT_APPLICATION_SESSION_CHANGED');
     const current = binding({...native, schema:REPORT, sourceIntentId:native.config.operation.intentId,
       sourceUrl:native.config.operation.url});
+    const bindingPath = join(this.directory, 'binding.json');
+    if (!await exists(bindingPath)) {
+      need(allowUnbound && meta.source.kind === 'attached', 'OBJECT_INITIALIZE_OR_ATTACH_REQUIRED');
+      return current;
+    }
+    const saved = await readJson(bindingPath);
     need(equal(saved, current), 'OBJECT_APPLICATION_SESSION_CHANGED');
     return saved;
   }
@@ -91,26 +98,13 @@ export class ObjectAcquisition {
     const run = await this.buyer.runtime.run([action, '--session', meta.sessionDirectory,
       '--chunk-offset', String(chunkOffset), '--chunk-limit', String(chunkLimit), ...args],
     {directory, signal, entryFile:join(this.buyer.runtime.directory, 'python', 'object-bridge.mjs')});
-    const financial = ['accounting','finalize'].includes(action);
     if (run.output?.mode !== 'ORIGINAL_PYTHON_OBJECT' || run.output.action !== action ||
-      run.output.report?.schema !== (financial ? 'stellar-forge.sf88.session-accounting.v1' : REPORT) ||
+      run.output.report?.schema !== REPORT ||
       run.output.report.directory !== meta.sessionDirectory) {
       throw new BuyerError(run.errorCode ?? 'OBJECT_NATIVE_RESULT_UNAVAILABLE',
         {acquisition:this, exitCode:run.exitCode, commandDirectory:directory});
     }
     const process = {exitCode:run.exitCode, exitSignal:run.exitSignal, errorCode:run.errorCode};
-    if (financial) {
-      const report = run.output.report;
-      need(previous && report.kind === 'object' && report.sessionId === previous.sessionId &&
-        report.configurationSha256 === previous.configurationSha256 && object(report.range) &&
-        Array.isArray(report.entries), 'OBJECT_ACCOUNTING_BINDING_CHANGED');
-      const record = freeze(clone(run.output));
-      const result = freeze({native:record.report, record, process});
-      await writeJson(join(this.directory, 'last-accounting.json'), {completedAt:now(), ...result});
-      if (run.exitCode === 0 && !run.errorCode) await rm(directory, {recursive:true, force:true});
-      this.lastAccounting = result;
-      return result;
-    }
     const result = new ObjectReport(run.output, process);
     const current = binding(result.native);
     if (meta.inputs['config.json']) need(current.configurationSha256 === meta.inputs['config.json'],
@@ -168,20 +162,50 @@ export class ObjectAcquisition {
   inspect(options) { return this._command('inspect', [], options); }
   run(options) { return this._command('run', [], options); }
   recover(options) { return this._command('recover', [], options); }
-  _accounting(action, {workspaceDirectory, offset = 0, limit = 100, signal,
-    outboxDirectory, merchantRoute} = {}) {
-    need(Number.isSafeInteger(offset) && offset >= 0 && Number.isSafeInteger(limit) &&
-      limit >= 1 && limit <= 250, 'OBJECT_ACCOUNTING_RANGE_INVALID');
-    const args = ['--offset',String(offset),'--limit',String(limit)];
-    if (workspaceDirectory !== undefined) args.push('--workspace',absolute(workspaceDirectory));
-    if (outboxDirectory !== undefined) args.push('--outbox',absolute(outboxDirectory));
-    if (merchantRoute !== undefined) args.push('--merchant-route',merchantRoute);
-    return this._command(action,args,{signal});
+  async _accountingIdentity({allowUnbound = false} = {}) {
+    const meta = await this._metadata(), saved = await this._verifyBinding(meta, {allowUnbound});
+    return {kind:'object', id:this.id, entryDirectory:this.directory,
+      sessionDirectory:meta.sessionDirectory, sessionId:saved.sessionId,
+      configurationSha256:saved.configurationSha256, workspace:saved.workspace};
+  }
+  async _accounting(action, input, {initialize = false} = {}) {
+    const options = accountingOptions(input, action === 'finalize');
+    const identity = await this._accountingIdentity({allowUnbound:initialize});
+    const args = [action, '--session', identity.sessionDirectory,
+      '--offset',String(options.offset),'--limit',String(options.limit)];
+    if (options.workspaceDirectory !== null) args.push('--workspace',options.workspaceDirectory);
+    if (options.outboxDirectory !== null) args.push('--outbox',options.outboxDirectory);
+    if (options.merchantRoute !== null) args.push('--merchant-route',options.merchantRoute);
+    const resultLimit = Math.min(this.buyer.runtime.outputLimit, 268435456);
+    return runAccounting(this, identity, action, options, {outputFile:'stdout.json', resultLimit,
+      invoke:({directory, signal}) => this.buyer.runtime.run(args,
+        {directory, signal, resultLimit, entryFile:join(this.buyer.runtime.directory, 'python', 'object-bridge.mjs')})});
   }
   /** Read the original per-chunk reservation/finalization views, without product reads. */
   accounting(options) { return this._accounting('accounting',options); }
+  /** Bind an original account after product bytes are no longer on this host. */
+  async initializeAccounting(options) {
+    const meta = await this._metadata();
+    need(meta.source.kind === 'attached', 'OBJECT_ACCOUNTING_ATTACHMENT_REQUIRED');
+    const proposed = await this._verifyBinding(meta, {allowUnbound:true});
+    const result = await this._accounting('accounting', options, {initialize:true});
+    need(equal(proposed, await this._verifyBinding(meta, {allowUnbound:true})), 'OBJECT_APPLICATION_SESSION_CHANGED');
+    const path = join(this.directory, 'binding.json');
+    try { await writeJson(path, proposed, {exclusive:true}); }
+    catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      need(equal(proposed, await readJson(path)), 'OBJECT_APPLICATION_SESSION_CHANGED');
+    }
+    return result;
+  }
   /** Explicit original SF36/SF86 continuation; never obtains another object chunk. */
   finalize(options) { return this._accounting('finalize',options); }
+  accountingPages(options) { return accountingPages(this, options); }
+  finalizeAll(options) { return accountingPages(this, options, true); }
+  async recoverAccounting(options) {
+    return recoverAccounting(this, await this._accountingIdentity(), options);
+  }
+  exportAccounting(destination, options) { return exportAccounting(this, destination, options); }
   async _delivery(action, destination, options) {
     const result = await this._command(action, destination === undefined ? [] : ['--out', absolute(destination)], options);
     if (!result.record.delivery) throw new ObjectDownloadError(result.process.errorCode ?? 'OBJECT_DOWNLOAD_INCOMPLETE', this, result);
@@ -210,7 +234,9 @@ export class ObjectAcquisition {
 export async function createObject(buyer, options, attached = false) {
   need(object(options), 'OBJECT_OPTIONS_REQUIRED');
   const {id, directory, config, workspaceDirectory, operatorProfile, descriptionFile,
-    objectId, maxTotalAtomic, bytes, chunkBytes, expectedSnapshot, expectedSha256, expectedContentType} = options;
+    objectId, maxTotalAtomic, bytes, chunkBytes, expectedSnapshot, expectedSha256, expectedContentType,
+    accountingOnly = false} = options;
+  need(typeof accountingOnly === 'boolean' && (attached || !accountingOnly), 'OBJECT_ACCOUNTING_ATTACHMENT_REQUIRED');
   const acquisition = new ObjectAcquisition(buyer, id);
   const meta = {schema:SCHEMA, id:acquisition.id, entryDirectory:acquisition.directory,
     sessionDirectory:attached ? absolute(directory) : join(acquisition.directory, 'session'),
@@ -262,7 +288,7 @@ export async function createObject(buyer, options, attached = false) {
     throw error;
   }
   await syncDirectory(parent);
-  const result = await acquisition.initialize();
+  const result = await (accountingOnly ? acquisition.initializeAccounting() : acquisition.initialize());
   if (result.process.exitCode !== 0 || result.process.errorCode)
     throw new BuyerError(result.process.errorCode ?? 'OBJECT_INITIALIZATION_INCOMPLETE', {acquisition, progress:result});
   return acquisition;

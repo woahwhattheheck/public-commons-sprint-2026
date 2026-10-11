@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Merchant receiving desk · Stellar Forge</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to receiving review</a>
+  <aside class="sidebar" aria-label="Saved configurations">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">SF</span><div><strong>STELLAR FORGE</strong><span>Merchant receiving desk</span></div></div>
+    <div class="sidebar-actions"><button id="new-profile" class="primary" type="button">Add configuration</button><button id="import-review" type="button">Import a saved review</button><input id="import-file" type="file" accept=".json,application/json" hidden></div>
+    <div class="sidebar-label"><h2>Configurations</h2><span id="profile-count">0</span></div>
+    <nav id="profiles" class="profile-list" aria-label="Choose configuration"></nav>
+    <button id="more-profiles" class="subtle" type="button" hidden>Load earlier configurations</button>
+    <div class="sidebar-footer"><span class="status-dot" aria-hidden="true"></span><span>Private operator workspace<br><small>Exact seller terms · native network reads</small></span></div>
+  </aside>
+  <main id="main" tabindex="-1">
+    <header class="topbar"><div><p class="eyebrow">Merchant operations</p><h1 id="page-title">Receiving desk</h1></div><div class="topbar-status"><span id="workspace-status" role="status">Connecting…</span><button id="refresh" type="button" class="compact">Refresh</button></div></header>
+    <div id="message" class="notice" role="status" hidden></div>
+    <section id="setup" class="panel setup-panel" aria-labelledby="setup-title">
+      <div class="section-heading"><div><p class="eyebrow">Configuration</p><h2 id="setup-title">Load the seller’s payment choices</h2></div><button id="close-setup" type="button" class="compact" hidden>Close</button></div>
+      <p class="intro">Use the same seller JSON as the running merchant. The desk retains the original file and reviews every accepted amount, token, network and receiving address.</p>
+      <form id="profile-form">
+        <div class="form-grid">
+          <label class="wide">Configuration name<input id="profile-label" name="label" maxlength="120" required placeholder="Example: weekly research reports" autocomplete="off"></label>
+          <label>Seller configuration<input id="seller-file" name="seller" type="file" accept=".json,application/json" required><small>Original seller-service JSON · up to 1 MiB</small></label>
+          <label>Public origin, when absent from the file<input id="origin" name="origin" type="url" placeholder="https://merchant.example" autocomplete="off"><small>Use the same public origin as the running seller.</small></label>
+        </div>
+        <details id="advanced-inputs"><summary>Asset mapping and network options</summary><div class="form-grid details-grid">
+          <label>Classic asset map<input id="assets-file" name="assets" type="file" accept=".json,application/json"><small>Optional original code-and-issuer mapping JSON.</small></label>
+          <label>RPC endpoint map<input id="rpc-file" name="rpc" type="file" accept=".json,application/json"><small>Optional original network-to-RPC JSON.</small></label>
+          <label>Proxy environment variable<input id="proxy-env" name="proxyEnv" pattern="[A-Za-z_][A-Za-z0-9_]{0,127}" placeholder="HTTPS_PROXY" autocomplete="off"><small>Name of an environment variable on this operator process.</small></label>
+          <div class="form-grid"><label>Read timeout (ms)<input id="timeout-ms" type="number" min="1000" max="30000" step="1" value="12000" required></label><label>Fee operations<input id="fee-operations" type="number" min="0" max="100000" step="1" value="0" required></label></div>
+        </div></details>
+        <div id="file-preview" class="file-preview" hidden><strong id="file-preview-name"></strong><pre id="file-preview-content"></pre></div>
+        <div class="form-footer"><p>Saved configurations are immutable. Add a new configuration when the seller’s terms change.</p><button id="save-profile" type="submit" class="primary">Save configuration</button></div>
+      </form>
+    </section>
+    <div id="profile-workspace" hidden>
+      <section class="panel profile-panel" aria-labelledby="profile-title">
+        <div class="section-heading"><div><p class="eyebrow">Selected configuration</p><h2 id="profile-title"></h2></div><span id="profile-created" class="muted"></span></div>
+        <div id="profile-facts" class="profile-facts"></div>
+        <details id="configured-terms"><summary id="plan-summary">Configured payment choices</summary><div class="table-wrap"><table><thead><tr><th scope="col">Resource</th><th scope="col">Network</th><th scope="col">Token / recipient</th><th scope="col" class="numeric">Atomic amount</th></tr></thead><tbody id="plan-rows"></tbody></table></div></details>
+        <div class="review-controls">
+          <div><label for="previous-review">Compare with an earlier review</label><select id="previous-review"><option value="">No comparison</option></select></div>
+          <div><label for="capture-review">Captured observation to replay</label><select id="capture-review"><option value="">Select a completed review</option></select></div>
+          <div class="review-buttons"><button id="run-replay" type="button" disabled>Replay capture</button><button id="run-live" class="primary" type="button">Run live review</button></div>
+        </div>
+      </section>
+      <section id="review-panel" class="panel review-panel" aria-labelledby="review-title" hidden>
+        <div class="section-heading"><div><p id="review-mode" class="eyebrow">Receiving review</p><h2 id="review-title">Review</h2><p id="review-time" class="muted"></p></div><div class="heading-actions"><button id="cancel-review" type="button" hidden>Cancel review</button><button id="export-review" type="button" hidden>Export complete review</button></div></div>
+        <div id="review-progress" class="review-progress" role="status" hidden></div>
+        <div id="report-summary" class="metrics" hidden></div>
+        <div id="report-observation" class="observation" hidden></div>
+        <div id="report-options" hidden>
+          <div class="table-heading"><h3>Every receiving choice</h3><span id="option-count" class="muted"></span></div>
+          <div class="table-wrap"><table class="option-table"><thead><tr><th scope="col">Resource / option</th><th scope="col">Receiving state</th><th scope="col">Token / amount</th><th scope="col">Receiving address</th><th scope="col">Review</th></tr></thead><tbody id="option-rows"></tbody></table></div>
+          <div id="option-detail" class="option-detail" aria-labelledby="option-title"></div>
+        </div>
+        <section id="comparison-panel" class="comparison-panel" aria-labelledby="comparison-title" hidden><div class="table-heading"><h3 id="comparison-title">Changes from the earlier review</h3><span id="comparison-summary" class="muted"></span></div><p id="comparison-time" class="muted"></p><div class="table-wrap"><table><thead><tr><th scope="col">Resource / option</th><th scope="col">Change</th><th scope="col">Before → after</th><th scope="col">Receiving actions</th></tr></thead><tbody id="comparison-rows"></tbody></table></div></section>
+      </section>
+      <section class="panel history-panel" aria-labelledby="history-title"><div class="section-heading"><div><p class="eyebrow">Saved work</p><h2 id="history-title">Review history</h2></div><button id="compare-selected" type="button" disabled>Compare selected reviews</button></div><p class="muted">Open any saved review, or select two to inspect their exact payment choices and receiving actions.</p><div class="table-wrap"><table><thead><tr><th scope="col">Compare</th><th scope="col">Observed / started</th><th scope="col">Source</th><th scope="col">State</th><th scope="col">Receiving summary</th><th scope="col">Open</th></tr></thead><tbody id="history-rows"></tbody></table></div><p id="history-empty" class="empty">Run a receiving review to save the native observations and recommended actions here.</p><button id="more-reviews" class="subtle" type="button" hidden>Load earlier reviews</button></section>
+    </div>
+    <footer class="main-footer">Stellar Forge / SF101 <span>Receiving reviews use the original seller compiler, Stellar SDK and retained observation format.</span></footer>
+  </main>
+</body>
+</html>
