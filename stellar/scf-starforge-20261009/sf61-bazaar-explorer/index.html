@@ -12,21 +12,19 @@
   <div class="shell">
     <header class="masthead">
       <a class="wordmark" href="/" aria-label="Bazaar Atlas home">
-        <span class="glyph" aria-hidden="true">✳</span>
         <span>BAZAAR <strong>ATLAS</strong></span>
       </a>
-      <span class="build-mark">STELLAR / X402 / READ ONLY</span>
+      <nav class="build-mark" aria-label="Workspace"><a href="#explore-title">Catalog</a><a href="#buyer-review">Buyer review</a></nav>
     </header>
 
     <main>
       <section class="hero" aria-labelledby="page-title">
-        <div class="eyebrow"><span class="pulse" aria-hidden="true"></span> A SOURCE-CONNECTED CATALOG EXPLORER</div>
-        <h1 id="page-title">Discover the endpoint.<br><em>Inspect the terms.</em></h1>
-        <p class="hero-copy">Explore Stellar-compatible x402 Bazaar listings, the HTTP and MCP interfaces they declare, and their individual payment options. No wallet connection, signing, settlement, or automatic purchase.</p>
+        <div class="eyebrow">STELLAR / X402</div>
+        <h1 id="page-title">Service catalog</h1>
+        <p class="hero-copy">Browse provider listings, inspect individual payment terms and prepare a request for the existing buyer terminal.</p>
         <div class="source-banner" role="status">
-          <span class="source-dot" aria-hidden="true"></span>
           <div class="source-text"><span class="caption">CATALOG SOURCE</span><strong id="source-kind">Connecting to local service…</strong><span id="source-origin">Read-only provider discovery</span></div>
-          <span class="no-pay">NO PAYMENT PATH</span>
+          <span class="no-pay">DISCOVERY &amp; REVIEW</span>
         </div>
       </section>
 
@@ -36,7 +34,7 @@
             <span class="caption">01 / EXPLORE</span>
             <h2 id="explore-title">Resource discovery</h2>
           </div>
-          <p class="workspace-note">Reads native GET /discovery/resources and GET /discovery/search. Original provider pages are not rewritten into new listings.</p>
+          <p class="workspace-note">Search and pagination use the selected provider's catalog. Each displayed page keeps its original query.</p>
         </div>
 
         <form id="query-form" class="filters">
@@ -73,7 +71,7 @@
             <input id="payto" maxlength="256" spellcheck="false" autocomplete="off" placeholder="Original recipient string">
           </div>
           <div class="actions">
-            <button class="primary" type="submit">Explore catalog <span aria-hidden="true">↗</span></button>
+            <button class="primary" type="submit">Explore catalog</button>
             <button class="secondary" type="button" id="clear">Reset</button>
           </div>
         </form>
@@ -85,7 +83,7 @@
         <div class="inventory-header">
           <div>
             <span class="caption">02 / SOURCE RESULTS</span>
-            <h2 id="results-title">Discovered listings <span id="count" aria-live="polite"></span></h2>
+            <h2 id="results-title" tabindex="-1">Discovered listings <span id="count" aria-live="polite"></span></h2>
           </div>
           <div class="inventory-actions">
             <button class="secondary small" id="export" type="button" disabled>Export observed page ↓</button>
@@ -100,10 +98,44 @@
           <button class="secondary" id="next" type="button" disabled>Next →</button>
         </div>
       </section>
+      <section id="buyer-review" class="workspace buyer-review" aria-labelledby="buyer-review-heading">
+        <div class="workspace-head">
+          <div><span class="caption">03 / BUYER REVIEW</span><h2 id="buyer-review-heading">Prepare the request</h2></div>
+          <p class="workspace-note">Preparation stays on this machine. Execution uses the existing terminal buyer and its current quote approval.</p>
+        </div>
+        <p id="review-empty" class="muted">Choose <strong>Review this offer</strong> beside one exact Stellar HTTP option in the catalog.</p>
+        <div id="review-workspace" hidden>
+          <div class="review-heading"><h3 id="review-title"></h3><button id="review-clear" type="button" class="secondary small">Clear selection</button></div>
+          <p id="review-observed" class="muted"></p>
+          <p id="review-source" class="source-url"></p>
+          <p id="review-source-status" class="status" role="status"></p>
+          <dl id="review-terms" class="review-terms"></dl>
+          <form id="review-form" class="review-form">
+            <div class="field"><label for="review-intent">Stable operation ID</label><input id="review-intent" required maxlength="128" autocomplete="off" spellcheck="false" placeholder="weather-lagos-001"><small>Keep this ID for the same intended operation and any reconciliation.</small></div>
+            <div class="field"><label for="review-method">HTTP method</label><select id="review-method" required><option value="">Choose a method</option><option>GET</option><option>HEAD</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select><small id="review-method-note"></small></div>
+            <div class="field full"><label for="review-url">Concrete request URL</label><input id="review-url" type="url" required maxlength="8192" autocomplete="off" spellcheck="false"><small>Keep the advertised origin and path. Supply your own required query values.</small></div>
+            <div class="field full"><label for="review-body">Request body file <span>(optional)</span></label><input id="review-body" maxlength="4096" autocomplete="off" spellcheck="false" placeholder="/private/requests/input.json"><small>Absolute path on the trusted operator host, for a body-bearing method. Preparation does not read the file.</small></div>
+            <div class="field"><label for="review-content-type">Content-Type header <span>(optional)</span></label><input id="review-content-type" maxlength="256" autocomplete="off" spellcheck="false" placeholder="application/json"></div>
+            <div class="field"><label for="review-accept">Accept header <span>(optional)</span></label><input id="review-accept" maxlength="256" autocomplete="off" spellcheck="false" placeholder="application/json"></div>
+            <div class="review-actions full"><button id="review-prepare" type="submit" class="primary" disabled>Prepare buyer review</button><button id="review-source-download" type="button" class="secondary" disabled>Save selected source JSON</button></div>
+          </form>
+          <p id="review-status" class="status" role="status" aria-live="polite">Select an offer in the catalog to begin.</p>
+          <details><summary>Original listing and request schema</summary><pre id="review-native"></pre></details>
+          <div id="review-output" class="review-output" hidden>
+            <h3>Configuration ready for terminal review</h3>
+            <p>Save both JSON files in your private operator workspace. The configuration records the source file digest and exact selected listing. A saved advertisement remains review context; the terminal buyer obtains a current seller quote before approval.</p>
+            <button id="review-download" type="button" class="primary" disabled>Download buyer configuration</button>
+            <pre id="review-digests" class="digests"></pre>
+            <details><summary>Review the generated configuration</summary><pre id="review-config"></pre></details>
+            <p>Review the saved configuration in the existing buyer CLI, then add your trusted operator and signer settings there:</p>
+            <pre class="command">node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs --review --config /absolute/path/to/saved-review.json</pre>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer class="footer">
-      <div class="footer-main"><span class="glyph" aria-hidden="true">✳</span> <strong>Bazaar Atlas</strong> <span>SF61 · Open-source operator surface</span></div>
+      <div class="footer-main"><strong>Bazaar Atlas</strong><span>Stellar service discovery</span></div>
       <p>The catalog describes possible offers; it does not authenticate sellers, prove payment, or establish endorsement. Amounts are unconverted atomic units, never USD. No displayed URL is automatically opened or fetched by your browser.</p>
       <p>Built upon the original Commons Bazaar catalog and native x402 discovery wire. Offline demo mode uses an explicitly nonpayable SF44 fixture.</p>
     </footer>

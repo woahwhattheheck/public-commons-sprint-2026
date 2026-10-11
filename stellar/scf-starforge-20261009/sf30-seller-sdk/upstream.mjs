@@ -8,6 +8,7 @@ import { createUpstreamHandler } from './upstream-handler.mjs';
 import { compileAvailabilityPolicy, protectUpstream } from './upstream-readiness.mjs';
 import { compileResponseContract } from './response-contract.mjs';
 import { compileUpstreamIdempotency, configuredUpstreamIdempotency } from './upstream-idempotency-config.mjs';
+import { supportsSellerMethod } from './http-methods.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
 const OWN = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
@@ -106,7 +107,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       credentials[key] = value;
     }
     const method = raw.method ?? 'GET', responseMode = raw.responseMode ?? 'json';
-    if (!['GET','HEAD','POST'].includes(method) || !['json','bytes'].includes(responseMode)) bad('Invalid upstream method or responseMode');
+    if (!supportsSellerMethod(method) || !['json','bytes'].includes(responseMode)) bad('Invalid upstream method or responseMode');
     if (OWN(raw,'responseContract') && responseMode !== 'json') bad('Response contracts require JSON responseMode');
     const responseContract = OWN(raw,'responseContract') ? compileResponseContract(raw.responseContract,{method}).contract : undefined;
     const maxResponseBytes = integer(raw.maxResponseBytes,1_048_576,1_048_576,'maxResponseBytes');

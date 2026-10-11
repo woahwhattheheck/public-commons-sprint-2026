@@ -5,12 +5,12 @@ import { request as httpsRequest } from 'node:https';
 import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
 import { compileResponseContract } from './response-contract.mjs';
 import { canonicalOperationJSON, operationRequestHash } from './upstream-idempotency.mjs';
+import { supportsSellerMethod, requiresJsonBody } from './http-methods.mjs';
 
 // Private per-invocation metadata. Never serialized into a response or retained in
 // operation state; lets availability distinguish a real backend call from replay.
 export const UPSTREAM_ATTEMPT = Symbol('sf30.upstream.attempt');
 
-const METHODS = new Set(['GET', 'HEAD', 'POST']);
 const HOP = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
   'te', 'trailer', 'transfer-encoding', 'upgrade', 'content-length', 'host', 'expect']);
 const CREDENTIAL = new Set(['authorization', 'cookie', 'set-cookie', 'x-api-key', 'api-key', 'apikey']);
@@ -124,7 +124,7 @@ export function createUpstreamHandler(options = {}) {
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
     maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency } = options;
-  if (!METHODS.has(method) || !['json', 'bytes'].includes(responseType) || typeof allowLocal !== 'boolean' ||
+  if (!supportsSellerMethod(method) || !['json', 'bytes'].includes(responseType) || typeof allowLocal !== 'boolean' ||
       onResult !== undefined && typeof onResult !== 'function' ||
       lookup !== undefined && typeof lookup !== 'function') throw new TypeError('Invalid upstream options');
   integer(timeoutMs, 1, 120000, 'timeoutMs');
@@ -175,7 +175,7 @@ export function createUpstreamHandler(options = {}) {
       validateHeaderValue(key, value); outgoing[key] = value;
     }
     let body;
-    if (method === 'POST') {
+    if (requiresJsonBody(method)) {
       const encoded = idempotency ? canonicalOperationJSON(context.body) : JSON.stringify(context.body);
       if (encoded === undefined) throw new TypeError('Replayable JSON body required');
       body = Buffer.from(encoded);
@@ -198,7 +198,7 @@ export function createUpstreamHandler(options = {}) {
         done = true; clearTimeout(timer);
         signal?.removeEventListener('abort', aborted);
         // Stop both compressed and decoded streams immediately on any limit,
-        // timeout or error. No drain, retry, redirect or uncertain POST replay.
+        // timeout or error. No drain, retry, redirect or uncertain request replay.
         decoded?.destroy(); response?.destroy(); request?.destroy();
         resolve({response:result,outcome,error:result.body?.error});
       }

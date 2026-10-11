@@ -1,5 +1,7 @@
 # SF30 seller operations
 
+For a one-command original native seller with the SAME SF98 fulfillment journal and live local operations, see [merchant launch](MERCHANT_LAUNCH.md). The ordinary challenge-only launcher below remains unchanged.
+
 Upstream-backed sessions also expose optional [backend availability and recovery](../UPSTREAM_AVAILABILITY.md)
 in this same console. The original `/api/snapshot` and JSON export include an
 `upstreams` object; read-only `/api/upstreams` serves it separately. Binding names,

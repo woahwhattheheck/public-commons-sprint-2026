@@ -45,7 +45,7 @@ The import path in the snippet assumes `application.mjs` is beside this module. 
 | --- | --- | --- |
 | `baseUrl` | Required | Trusted, operator-configured HTTPS base URL; a path prefix is preserved. No user info, query or fragment. |
 | `path` | Required | Fixed upstream path, optionally whole `:name` segments from native `pathParams`. It cannot be supplied as a buyer URL. |
-| `method` | `GET` | Exactly `GET`, `HEAD` or JSON `POST`; must equal the incoming operation. |
+| `method` | `GET` | Exactly `GET`, `HEAD`, `DELETE` or JSON `POST`, `PUT`, `PATCH`; must equal the incoming operation. |
 | `query` | `[]` | Allowed input names, or an input-to-upstream-name object. Unknown names return 400; repeated values and their order survive. |
 | `headers` | `{}` | Trusted server headers or a **synchronous**, no-argument function returning them. The function can read rotated environment credentials. |
 | `requestHeaders` | `[]` | Explicit noncredential request headers to forward. Server headers take precedence. |
@@ -63,7 +63,7 @@ Unknown options and invalid static configuration throw during construction. An u
 
 For example, base `https://api.example/v2`, path `/records/:id`, and native `pathParams.id = 'Clé 1'` produce `/v2/records/Cl%C3%A9%201`. Slashes, percent escapes, controls and dot traversal in parameter values are rejected. Dynamic public routes still need the existing [OpenAPI importer](../sf61-openapi-seller-import/README.md) and its imported offer/path schema; this handler does not relax those contracts.
 
-POST forwards the parsed JSON value, including explicit `null`, by serializing it once. This preserves JSON meaning, **not the original incoming whitespace/member formatting or raw-body signature**. Multipart, arbitrary request streams, range responses and WebSockets are not supported.
+POST, PUT and PATCH forward the parsed JSON value, including explicit `null`, by serializing it once. This preserves JSON meaning, **not the original incoming whitespace/member formatting or raw-body signature**. GET, HEAD and DELETE have no request body. Multipart, arbitrary request streams, range responses and WebSockets are not supported.
 
 ## Delivery and failure semantics
 
@@ -82,9 +82,9 @@ Successful JSON and binary responses are buffered; gzip, deflate and Brotli are 
 | Invalid media type/JSON, unsupported encoding, partial or oversized body | 502; no partial successful content |
 | Network/TLS failure | 502 `UPSTREAM_UNAVAILABLE` |
 
-There is exactly one upstream request per invocation. No automatic retry is attempted, including after a timed-out POST. A fresh connection is used each time, trading connection-pool efficiency for a simple per-operation lifetime. Timeout and error paths destroy the request and body streams.
+There is exactly one upstream request per invocation. No automatic retry is attempted, including after a timed-out PUT, PATCH, DELETE or POST. A fresh connection is used each time, trading connection-pool efficiency for a simple per-operation lifetime. Timeout and error paths destroy the request and body streams.
 
-**Do not use settlement failure as a transaction rollback for a mutating backend.** A POST can complete an upstream side effect before settlement or delivery fails; the handler cannot undo it. Prefer read-only or naturally idempotent computations for the first merchant integration, and retain the backend's own explicit business-idempotency design for mutations. The original SDK determines cancellation/settlement behavior; this module neither promises refunds nor changes an already executed backend operation.
+**Do not use settlement failure as a transaction rollback for a mutating backend.** POST, PUT, PATCH or DELETE can complete an upstream side effect before settlement or delivery fails; the handler cannot undo it. Retain the backend's own explicit business-idempotency design and reconciliation for mutations. The original SDK determines cancellation/settlement behavior; this module neither promises refunds nor changes an already executed backend operation.
 
 ## Operator trust and diagnostics
 

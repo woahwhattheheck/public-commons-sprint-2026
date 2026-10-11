@@ -4,6 +4,7 @@ import { readFile, writeFile, lstat, rename, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { resolve, join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import { prepareUpstreamSnapshot, verifyUpstreamSnapshot } from './upstream-state.mjs';
 
 const USAGE = `SF82: compile, run and resume an existing OpenAPI seller.
 First run: node pilot.mjs --spec OPENAPI_JSON --config SELECTIONS_JSON \\
@@ -11,22 +12,27 @@ First run: node pilot.mjs --spec OPENAPI_JSON --config SELECTIONS_JSON \\
 Restart:   node pilot.mjs --resume DIRECTORY [runtime overrides]
 Status:    node pilot.mjs --status DIRECTORY
 
-Runtime options: --handlers TRUSTED_ESM --port 8423 --facilitator HTTPS_URL
+Runtime options: --handlers TRUSTED_ESM | --upstreams BINDINGS_JSON
+                 --allow-loopback-upstream | --disallow-loopback-upstream
+                 --port 8423 --facilitator HTTPS_URL
                  --allow-local-facilitator --challenge-only
 
 Resume uses the saved runtime options; supplied options override them.
 --challenge-only removes a saved facilitator. Port 0 chooses a new free port.
 Ctrl-C stops the service. Status checks the current local listener.
+Upstream JSON is saved privately; resume uses that exact snapshot and fresh env credentials.
 Compiled source files are never overwritten. Trusted handlers remain your app.
 The original SF30 listener binds to 127.0.0.1; deploy with your HTTPS proxy.`;
 const VALUES = new Set(['--spec', '--config', '--bindings', '--out', '--resume',
-  '--status', '--handlers', '--facilitator', '--port']);
-const FLAGS = new Set(['--allow-local-facilitator', '--challenge-only']);
+  '--status', '--handlers', '--upstreams', '--facilitator', '--port']);
+const FLAGS = new Set(['--allow-local-facilitator', '--challenge-only',
+  '--allow-loopback-upstream', '--disallow-loopback-upstream']);
 const INPUTS = ['--spec', '--config', '--bindings', '--out'];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const shellQuote = text => "'" + text.replaceAll("'", "'\\''") + "'";
 const entry = fileURLToPath(import.meta.url);
 const command = (flag, out) => `node ${shellQuote(entry)} ${flag} ${shellQuote(out)}`;
+const runtimeFailure = (error, out) => new Error(`${error.message}\nCompiled seller preserved. Correct the runtime option and resume:\n${command('--resume', out)}${error.code === 'EADDRINUSE' ? ' --port 0' : ''}`, { cause: error });
 
 function optionsFrom(args) {
   if (args.length === 1 && args[0] === '--help') return null;
@@ -44,6 +50,10 @@ function optionsFrom(args) {
   if (opts.has('--status') && opts.size !== 1) throw new TypeError('Status takes only DIRECTORY\n' + USAGE);
   if (opts.has('--challenge-only') && (opts.has('--facilitator') || opts.has('--allow-local-facilitator')))
     throw new TypeError('Choose --challenge-only or a facilitator');
+  if (opts.has('--handlers') && opts.has('--upstreams'))
+    throw new TypeError('Choose --handlers or --upstreams for this seller');
+  if (opts.has('--allow-loopback-upstream') && opts.has('--disallow-loopback-upstream'))
+    throw new TypeError('Choose whether this seller allows a loopback upstream');
   if (opts.has('--port') && (!/^\d{1,5}$/.test(opts.get('--port')) || Number(opts.get('--port')) > 65535))
     throw new TypeError('--port must be 0–65535; use --port 0 for a free local port');
   return opts;
@@ -103,12 +113,21 @@ async function runtimeOptions(opts, out, source) {
   const runtime = { port: '8423', ...(saved?.options ?? {}) };
   for (const key of ['port', 'handlers', 'facilitator']) if (opts.has('--' + key))
     runtime[key] = key === 'handlers' ? resolve(opts.get('--' + key)) : opts.get('--' + key);
+  if (opts.has('--handlers')) { delete runtime.upstreams; delete runtime.allowLoopbackUpstream; }
+  if (opts.has('--upstreams')) delete runtime.handlers;
+  if (opts.has('--allow-loopback-upstream')) runtime.allowLoopbackUpstream = true;
+  if (opts.has('--disallow-loopback-upstream')) runtime.allowLoopbackUpstream = false;
   if (opts.has('--allow-local-facilitator')) runtime.allowLocalFacilitator = true;
   if (opts.has('--challenge-only')) { delete runtime.facilitator; delete runtime.allowLocalFacilitator; }
   if (!/^\d{1,5}$/.test(runtime.port) || Number(runtime.port) > 65535 ||
       runtime.handlers !== undefined && (typeof runtime.handlers !== 'string' || resolve(runtime.handlers) !== runtime.handlers) ||
-      runtime.allowLocalFacilitator !== undefined && typeof runtime.allowLocalFacilitator !== 'boolean')
+      runtime.allowLocalFacilitator !== undefined && typeof runtime.allowLocalFacilitator !== 'boolean' ||
+      runtime.allowLoopbackUpstream !== undefined && typeof runtime.allowLoopbackUpstream !== 'boolean')
     throw new TypeError('Invalid saved runtime settings; supply a valid --port or --handlers override');
+  if (!opts.has('--upstreams') && !runtime.upstreams && runtime.allowLoopbackUpstream !== undefined)
+    throw new TypeError('Upstream loopback options require --upstreams or a saved upstream seller');
+  if (runtime.handlers && runtime.upstreams)
+    throw new TypeError('Saved settings select both handlers and upstreams; select one explicitly');
   if (runtime.allowLocalFacilitator && !runtime.facilitator) throw new TypeError('--allow-local-facilitator requires --facilitator');
   if (runtime.facilitator !== undefined) {
     const url = new URL(runtime.facilitator);
@@ -120,6 +139,13 @@ async function runtimeOptions(opts, out, source) {
     const previous = await optionalJson(join(out, 'runtime-readiness.json'), 64 * 1024);
     if (previous?.runtimeMode === 'NATIVE_X402')
       throw new Error('This older pilot has no saved facilitator. Supply --facilitator URL or explicitly --challenge-only.');
+  }
+  if (opts.has('--upstreams') || runtime.upstreams) {
+    const { readSellerConfig } = await import('../sf30-seller-sdk/serve.mjs');
+    runtime.upstreams = await prepareUpstreamSnapshot({ out,
+      input: opts.has('--upstreams') ? resolve(opts.get('--upstreams')) : undefined,
+      saved: runtime.upstreams, config: await readSellerConfig(join(out, 'seller-service.json')),
+      allowLoopback: runtime.allowLoopbackUpstream === true });
   }
   return runtime;
 }
@@ -145,6 +171,7 @@ async function status(out, source) {
       throw new Error('Last runtime observation belongs to another compiled seller');
     result.lastObservedAt = receipt.observedAt;
     try {
+      if (receipt.runtime?.upstreams) await verifyUpstreamSnapshot(out, receipt.runtime.upstreams);
       const health = await readListener(receipt.listener, source, receipt.runtimeMode);
       Object.assign(result, { state: 'RUNNING', mode: health.mode, listener: receipt.listener,
         health: receipt.listener + '/_seller/health', offers: receipt.listener + '/_seller/offers',
@@ -177,16 +204,22 @@ export async function launch(args = process.argv.slice(2), deps = {}) {
   // exported artifacts to the original compiler manifest, including on resume.
   const source = await compiledSource(out);
   if (opts.has('--status')) return status(out, source);
-  const runtime = await runtimeOptions(opts, out, source);
+  let runtime;
+  try { runtime = await runtimeOptions(opts, out, source); }
+  catch (error) { throw runtimeFailure(error, out); }
   await writeRuntime(out, 'pilot-runtime.json', { schema: 'stellar-forge.seller-pilot-runtime.v1',
     source: identity(source), options: runtime });
   const serveArgs = ['--config', join(out, 'seller-service.json'), '--port', runtime.port];
   if (runtime.handlers) serveArgs.push('--handlers', runtime.handlers);
+  if (runtime.upstreams) serveArgs.push('--upstreams', join(out, runtime.upstreams.file));
+  if (runtime.allowLoopbackUpstream) serveArgs.push('--allow-loopback-upstream');
   if (runtime.facilitator) serveArgs.push('--facilitator', runtime.facilitator);
   if (runtime.allowLocalFacilitator) serveArgs.push('--allow-local-facilitator');
   let session;
   try {
-    const serve = deps.serve ?? (await import('../sf30-seller-sdk/serve.mjs')).main;
+    const serve = runtime.upstreams
+      ? deps.upstreamServe ?? (await import('../sf30-seller-sdk/upstream-serve.mjs')).main
+      : deps.serve ?? (await import('../sf30-seller-sdk/serve.mjs')).main;
     session = await serve(serveArgs);
     if (!session || typeof session.url !== 'string' || typeof session.close !== 'function')
       throw new TypeError('Original seller runtime returned no live session');
@@ -204,8 +237,7 @@ export async function launch(args = process.argv.slice(2), deps = {}) {
     return session;
   } catch (error) {
     try { await session?.close?.(); } catch {}
-    const correction = error.code === 'EADDRINUSE' ? ' --port 0' : '';
-    throw new Error(`${error.message}\nCompiled seller preserved. Correct the runtime option and resume:\n${command('--resume', out)}${correction}`, { cause: error });
+    throw runtimeFailure(error, out);
   }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)

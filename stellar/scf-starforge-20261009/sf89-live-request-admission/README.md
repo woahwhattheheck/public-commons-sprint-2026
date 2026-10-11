@@ -70,7 +70,7 @@ This **single focused check** runs the **actual SF61 OpenAPI 3.1 weather importe
 
 ## Supported and intentionally unsupported
 
-- Supported: exactly the original SF61/SF30 imported GET, HEAD and JSON POST, whole-segment **string** path parameters, scalar query values, JSON body objects, declared Draft 2020-12 validation and strict source-instance parity.
+- Supported: exactly the original SF61/SF30 imported GET, HEAD, DELETE and JSON POST/PUT/PATCH, whole-segment **string** path parameters, scalar query values, JSON body objects, declared Draft 2020-12 validation and strict source-instance parity. The original service binding can set `validateInput:true` to attach this admission directly, including alongside an existing application `admit` callback.
 - Uses existing SF25 schema keyword coverage. This is **not** a new general JSON Schema runtime or a substitute for merchant authentication.
 - Unsupported: custom/OpenAPI array query serialization, undocumented headers and cookies, coerced unknown properties, path numbers and upto payment execution. A merchant must supply its own trusted admission for these.
 - Existing SF30 callback timeout, client-abort, decision-status, content size, no-redirect and native fail-closed behavior are unchanged.

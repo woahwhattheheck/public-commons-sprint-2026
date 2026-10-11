@@ -2,9 +2,7 @@
 // MIT — SF88 operator command: source-native review, discovery and handoff.
 import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
-import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
-import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
-import { config, catalog, operation, responseFile, bytes, need } from './config.mjs';
+import { config, operation, responseFile, bytes, need } from './config.mjs';
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
 const sha256 = data => createHash('sha256').update(data).digest('hex');
@@ -31,18 +29,8 @@ async function review(c) {
   });
 }
 async function discover(c) {
-  const input = catalog(c.catalog);
-  // Exact managed-cloud overlay approval is scoped to this unsigned catalog GET.
-  // It never reaches the original SF81 signer or SF82 --execute transport.
-  const {sandboxGatewayIPv4=null, ...originalCatalog} = input;
-  const result = await new X402BuyerClient({
-    fetchImpl:createPublicHttpsFetch({sandboxGatewayIPv4})
-  }).discover(originalCatalog);
-  print({
-    mode:'ORIGINAL_UNSIGNED_CATALOG', source:result.source,
-    sourceEnvelope:result.sourceEnvelope,
-    pagination:result.pagination, originalListings:result.resources
-  });
+  const { discoverCatalog } = await import('./discovery.mjs');
+  print(await discoverCatalog(c.catalog));
 }
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
