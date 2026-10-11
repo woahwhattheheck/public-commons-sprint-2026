@@ -126,3 +126,11 @@ These routes use the existing loopback, Host, Origin and capability checks. Outp
 applications.mjs composes original runtime inspection, managed adoption/release selection and managed-run. application-command.mjs supplies the optional environment, original URL capture and terminal input. application-terminal.py is only a PTY for that managed child. public/applications.mjs adds the presentation.
 
 Optional managed-run fields are applicationId, terminal, terminalPython, environmentFile and environmentSha256. Existing ordinary commands preserve their original behavior. Keep these additive files and this guide inside the maintained distribution's existing runtime-workspace subtree; there is no separate package producer.
+
+### GoldRush and selected Python environments
+
+Choose GoldRush wallet research after initializing the original `goldrush workbench`. Applications pins `workbench.json`, its original release, buyer state, inbox, workspace or profile, and any selected observation manifest. It accepts only the original `GOLDRUSH_WORKBENCH_READY` announcement for that same state directory. The existing buyer owns acquisition and terminal approval.
+
+The Object Buyer analysis Python path remains the selected executable, including a virtual environment's `bin/python` symlink. Review records the link, resolved executable and any `pyvenv.cfg`; it does not substitute the base interpreter and discard that environment.
+
+The terminal records both the child PID used by its parent and the procfs PID when `/proc` was mounted in an ancestor namespace. The retained, unreaped `pty.fork` child and its original process group govern shutdown; loss of a procfs observation does not leave exception cleanup waiting indefinitely after a single TERM.

@@ -50,14 +50,50 @@ def read(path, maximum=65536):
     finally:
         os.close(descriptor)
 
+_process_paths = {}
+
 def process_identity(pid):
+    """Resolve this process or its own child through the mounted procfs namespace."""
     try:
-        text = Path("/proc/" + str(pid) + "/stat").read_text()
-        fields = text[text.rfind(")") + 2:].split()
-        return {"processStart": fields[19], "state": fields[0],
-                "parent": int(fields[1]), "group": int(fields[2]), "session": int(fields[3])}
-    except (OSError, ValueError, IndexError):
-        return None
+        own_text = Path("/proc/self/stat").read_text()
+        own_proc_pid = int(own_text.split(" ", 1)[0])
+        own_status = Path("/proc/self/status").read_text()
+        own_ids = next(line.split()[1:] for line in own_status.splitlines()
+                       if line.startswith("NSpid:"))
+        depth = len(own_ids) - 1
+        if pid == os.getpid():
+            candidates = [own_proc_pid]
+        elif own_proc_pid == os.getpid():
+            candidates = [pid]
+        else:
+            candidates = [_process_paths[pid]] if pid in _process_paths else []
+            children = Path("/proc/self/task/" + str(own_proc_pid) + "/children").read_text().split()
+            candidates.extend(int(value) for value in children if int(value) not in candidates)
+        for proc_pid in candidates:
+            base = Path("/proc/" + str(proc_pid))
+            try:
+                status = base.joinpath("status").read_text()
+                ids = next(line.split()[1:] for line in status.splitlines() if line.startswith("NSpid:"))
+                if len(ids) <= depth or int(ids[depth]) != pid:
+                    continue
+                text = base.joinpath("stat").read_text()
+                fields = text[text.rfind(")") + 2:].split()
+                if pid != os.getpid() and int(fields[1]) != own_proc_pid:
+                    continue
+                # Kernel APIs below use this parent's PID namespace. The procfs
+                # fields above may refer to the namespace which mounted /proc.
+                group, session = os.getpgid(pid), os.getsid(pid)
+                _process_paths[pid] = proc_pid
+                return {"processStart": fields[19], "state": fields[0],
+                        "parent": os.getppid() if pid == os.getpid() else os.getpid(),
+                        "group": group, "session": session, "procPid": proc_pid,
+                        "procGroup": int(fields[2]), "procSession": int(fields[3]),
+                        "pidNamespace": os.readlink("/proc/self/ns/pid")}
+            except (OSError, ValueError, IndexError, StopIteration):
+                continue
+    except (OSError, ValueError, IndexError, StopIteration):
+        pass
+    return None
 
 def identity(pid):
     observed = process_identity(pid)
@@ -134,9 +170,18 @@ def main(directory):
             # This is still our own unreaped child, so a delayed first /proc
             # observation cannot accidentally adopt a recycled process.
             original_start = observed["processStart"]
-        if not observed or observed["processStart"] != original_start:
+        if observed and observed["processStart"] != original_start:
             return None
-        if observed["group"] != pid or observed["session"] != pid:
+        # We have not reaped this pty.fork child. Even if procfs is temporarily
+        # unavailable, its PID cannot be reused. Child/session APIs still let
+        # exception cleanup stop only this original process group.
+        try:
+            group, session = os.getpgid(pid), os.getsid(pid)
+        except ProcessLookupError:
+            return False
+        if reaped_status is not None:
+            return False
+        if group != pid or session != pid:
             # pty.fork's child may still be establishing its own session.
             # Never signal the parent's group; retry on the next loop.
             return None
@@ -233,6 +278,8 @@ def main(directory):
             "startedAt": now(), "operationId": root.name,
             "bridge": {"pid": os.getpid(), "processStart": identity(os.getpid())},
             "original": {"pid": pid, "processStart": original_start, "group": pid, "session": pid,
+                         "procPid": original["procPid"], "procGroup": original["procGroup"],
+                         "procSession": original["procSession"], "pidNamespace": original["pidNamespace"],
                          "executable": executable, "args": argv, "cwd": launch["cwd"]},
             "terminal": os.ttyname(master), "inputMode": "explicit-operator",
         })
