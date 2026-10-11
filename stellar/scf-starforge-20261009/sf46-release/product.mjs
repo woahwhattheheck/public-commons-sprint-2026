@@ -3,7 +3,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, readdir, lstat, rm, rename, mkdtemp, unlink } from 'node:fs/promises';
 import { join, dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { constants as osConstants } from 'node:os';
 import { HOME_SCHEMA, MANIFEST, UPDATE_CLAIMS, sha256, verifyRelease, plainDirectory, boundedFile, putFile,
   atomicFile, atomicJson, jsonFile, validateId, withHomeLock } from './release-core.mjs';
@@ -16,7 +16,7 @@ const HELP = `Stellar Forge | portable product
   node forge.mjs activate RELEASE_ID [--home DIRECTORY]
   node forge.mjs rollback [--home DIRECTORY]
   node forge.mjs verify [BUNDLE] [--expect DIGEST]
-  node forge.mjs doctor [--home DIRECTORY]
+  node forge.mjs doctor [--home DIRECTORY] [--native] [--feature NAME]...
   node forge.mjs run COMMAND [--home DIRECTORY] -- ORIGINAL_ARGUMENTS
 
 The first install becomes active. Later installs are staged unless --activate
@@ -35,11 +35,16 @@ function flags(args, allowed) {
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
     if (!arg.startsWith('--')) { result.positional.push(arg); continue; }
-    if (!allowed.includes(arg) || result[arg] !== undefined) throw new Error(HELP);
-    if (arg === '--activate') result[arg] = true;
+    if (!allowed.includes(arg) || result[arg] !== undefined && arg !== '--feature') throw new Error(HELP);
+    if (arg === '--activate' || arg === '--native') result[arg] = true;
     else {
       if (!args[index + 1] || args[index + 1].startsWith('--')) throw new Error(HELP);
-      result[arg] = args[++index];
+      const value = args[++index];
+      if (arg === '--feature') {
+        result[arg] ??= [];
+        if (result[arg].includes(value)) throw new Error(HELP);
+        result[arg].push(value);
+      } else result[arg] = value;
     }
   }
   return result;
@@ -184,11 +189,32 @@ export async function status(input = HERE) {
   return { product: 'Stellar Forge', activeReleaseId: release.id, releaseDirectory: release.root,
     digest: release.manifest.digest, sourceCommit: release.manifest.source.commit,
     files: release.files.length, bytes: release.totalBytes, commands: release.manifest.commands,
+    ...(release.manifest.commandCatalog ? { commandCatalog: release.manifest.commandCatalog } : {}),
     ...(release.home ? { home: release.home, config: join(release.home, 'config'), state: join(release.home, 'state'),
       previousReleaseId: release.active.previousReleaseId, releases } : {}) };
 }
-export async function doctor(input = HERE) {
+function nodeReady(runtime) {
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  const requiredMajor = runtime.minimumNodeMajor ?? 22, requiredMinor = runtime.minimumNodeMinor ?? 0;
+  return major > requiredMajor || major === requiredMajor && minor >= requiredMinor;
+}
+export async function doctor(input = HERE, { requireNative = false, requiredFeatures = [] } = {}) {
   const release = await selected(input);
+  let maintained = null, exitCode = 0;
+  const doctorPath = release.manifest.runtime.doctorPath;
+  if (doctorPath) {
+    if (!release.files.some(file => file.path === doctorPath) || !doctorPath.endsWith('.mjs'))
+      throw new Error('The original dependency doctor is not in the verified release');
+    const original = await import(pathToFileURL(join(release.root, doctorPath)).href);
+    if (typeof original.doctor !== 'function') throw new Error('Original dependency doctor export missing');
+    const previousExitCode = process.exitCode;
+    try {
+      maintained = await original.doctor({ requireNative, requiredFeatures });
+      exitCode = process.exitCode || 0;
+    } finally { process.exitCode = previousExitCode; }
+  } else if (requiredFeatures.length) {
+    throw new Error('This older release has no maintained optional-feature doctor; select a current release');
+  }
   async function inspectPackages(declarations) {
     const result = [];
     for (const [name, expected] of Object.entries(declarations ?? {})) {
@@ -202,16 +228,27 @@ export async function doctor(input = HERE) {
   }
   const packages = await inspectPackages(release.manifest.runtime.nativePackages);
   const adapterPackages = await inspectPackages(release.manifest.runtime.adapterPackages);
-  return { node: process.version, nodeReady: Number(process.versions.node.split('.')[0]) >= 22,
+  const nativeSdkInstalled = packages.every(pkg => pkg.state === 'MATCH');
+  const postgresNames = Object.keys(release.manifest.runtime.featurePeers?.postgres ??
+    release.manifest.runtime.adapterPackages ?? {});
+  if (!maintained && (!nodeReady(release.manifest.runtime) || requireNative && !nativeSdkInstalled)) exitCode = 1;
+  return { node: process.version, nodeReady: maintained?.localSellerReady ?? nodeReady(release.manifest.runtime),
     releaseId: release.id, sourceVerified: true, standardLibraryCommands: 'AVAILABLE', nativePackages: packages,
-    nativeSdkInstalled: packages.every(pkg => pkg.state === 'MATCH'),
-    adapterPackages, postgresDriversInstalled: adapterPackages.some(pkg => pkg.name === 'pg') &&
-      adapterPackages.every(pkg => pkg.state === 'MATCH'),
+    nativeSdkInstalled, adapterPackages,
+    postgresDriversInstalled: postgresNames.length > 0 && postgresNames.every(name =>
+      adapterPackages.some(pkg => pkg.name === name && pkg.state === 'MATCH')),
+    ...(maintained ? { dependencyDoctor: { path: doctorPath, sourceCommit: release.manifest.source.commit },
+      nativeDependenciesPresent: maintained.nativeDependenciesPresent,
+      nativeDependencies: maintained.nativeDependencies, optionalFeatures: maintained.optionalFeatures,
+      operatorPython: maintained.operatorPython, operatorPlatform: maintained.operatorPlatform,
+      nativeRuntimeConfigured: maintained.nativeRuntimeConfigured } : {}),
+    exitCode,
     note: 'SDK presence does not configure or authorize facilitator, signer, network or merchant operations.' };
 }
 export async function runNative(name, args, input = HERE) {
-  if (Number(process.versions.node.split('.')[0]) < 22) throw new Error('Stellar Forge requires Node 22 or newer');
   const release = await selected(input), command = release.manifest.commands[name];
+  if (!nodeReady(release.manifest.runtime)) throw new Error('Selected release requires Node ' +
+    release.manifest.runtime.minimumNodeMajor + '.' + (release.manifest.runtime.minimumNodeMinor ?? 0) + ' or newer');
   if (!command) throw new Error('Unknown native command: ' + name + '. Use status to list commands.');
   return new Promise((accept, reject) => {
     const child = spawn(process.execPath, [join(release.root, command.path), ...args], { stdio: 'inherit', shell: false });
@@ -234,7 +271,7 @@ export async function main(args = process.argv.slice(2)) {
     return runNative(options.positional[0], rest.slice(separator + 1), options['--home'] ?? HERE);
   }
   const allowed = { install: ['--home', '--expect', '--activate'], activate: ['--home'],
-    rollback: ['--home'], status: ['--home'], doctor: ['--home'], verify: ['--expect'] };
+    rollback: ['--home'], status: ['--home'], doctor: ['--home', '--native', '--feature'], verify: ['--expect'] };
   if (!allowed[command]) throw new Error(HELP);
   const options = flags(rest, allowed[command]);
   const home = options['--home'] ?? HERE;
@@ -244,13 +281,14 @@ export async function main(args = process.argv.slice(2)) {
   else if (command === 'activate' && options.positional.length === 1) result = await activate(home, options.positional[0]);
   else if (command === 'rollback' && !options.positional.length) result = await rollback(home);
   else if (command === 'status' && !options.positional.length) result = await status(home);
-  else if (command === 'doctor' && !options.positional.length) result = await doctor(home);
+  else if (command === 'doctor' && !options.positional.length) result = await doctor(home,
+    { requireNative: options['--native'] ?? false, requiredFeatures: options['--feature'] ?? [] });
   else if (command === 'verify' && options.positional.length <= 1) {
     const release = await verifyRelease(options.positional[0] ?? HERE, options['--expect']);
     result = { id: release.id, digest: release.manifest.digest, files: release.files.length, bytes: release.totalBytes };
   } else throw new Error(HELP);
   console.log(JSON.stringify(result, null, 2));
-  return 0;
+  return command === 'doctor' ? result.exitCode : 0;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
   main().then(code => { process.exitCode = code; }).catch(error => { console.error(error.message); process.exitCode = 1; });

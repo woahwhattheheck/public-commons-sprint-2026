@@ -15,7 +15,7 @@ state, credentials and unrelated projects are never read into the release.
 
 ## Build once from a committed checkout
 
-Use Node 22 or newer and Git. Run from the repository root:
+Use Node 22.16 or newer and Git. Run from the repository root:
 
 ```sh
 node stellar/scf-starforge-20261009/sf46-release/distribution.mjs pack \
@@ -27,6 +27,15 @@ an exact 40-character commit ID; its default is `HEAD`. Commit the distribution
 source before building. A release prints its source commit, file count, digest,
 versioned installation ID and available commands. The same commit and version
 produce the same release digest. Source files retain their original bytes.
+
+The command catalog is the original
+`stellar/scf-starforge-20261009/distribution/distribution.json` at that same
+commit. Every declared command must be present in the source bundle. Production
+dependency groups come from its `runtimePackageManifests`, reading only each
+original manifest's `dependencies`. The release records the catalog hash, each
+runtime manifest path and hash, and the exact source commit. New maintained
+commands and dependency groups therefore arrive together with their source;
+there is no separate SF46 list to update for each new product component.
 
 The resulting directory is relocatable. It needs neither the original checkout
 nor Git at runtime. Archive that complete directory with an ordinary ZIP/tar
@@ -65,7 +74,10 @@ use absolute paths in service configurations and shared runbooks.
 
 ## Native commands in one installation
 
-Run `node forge.mjs status` to see the paths present in the selected release.
+Run `node forge.mjs status` to see the complete paths present in the selected
+release. `status.commandCatalog` identifies the original catalog and the small
+set of retained portable mappings. The table below describes the operating
+families; `status.commands` is the exact installed map.
 
 | Command after `run` | Existing original entry point |
 | --- | --- |
@@ -103,10 +115,33 @@ Run `node forge.mjs status` to see the paths present in the selected release.
 | `postgres-init` | Original create-only PostgreSQL source/service starter |
 | `postgres-inspect` | Original PostgreSQL declaration/query inspection |
 | `postgres-workspace` | Original database metadata-to-merchant-package workspace |
+| `support-watch`, `support-console` | Retained incident operations and the original merchant case desk |
+| `assets`, `client`, `releases` | Original response-asset packaging, generated customer clients and release review |
+| `commerce`, `commerce-console`, `commerce-setup` | Original merchant/buyer session, browser workspace and configuration |
+| `merchant`, `delivery`, `merchant-desk` | Seller fulfillment journal, event delivery and order/file/access desk |
+| `checkout`, `paid-file-checkout`, `purchase`, `paid-file-purchase` | Original merchant enrollment, selected customer order and file retrieval |
+| `buyer-object`, `buyer-object-workspace` | Original resumable object acquisition and browser review |
+| `buyer-node`, `inbox` | Original generated-client customer application and SF88 selected-intent queue |
+| `mcp-native`, `mcp-stdio`, `mcp-client-config` | Original buyer MCP workspace, local protocol server and host registration |
+| `merchant-mcp`, `merchant-mcp-stdio`, `merchant-mcp-client-config` | Original merchant MCP operation and local host registration |
+| `native-signer`, `facilitator` | Original signer configuration and fee-sponsoring runtime |
+| `sqlite-init`, `sqlite-inspect` | Original SQLite source starter and declaration inspection |
+| `duckdb`, `duckdb-inspect`, `duckdb-prepare`, `duckdb-workbench` | Original DuckDB/Parquet source, retained packages and authoring workspace |
+| `s3` | Original selected object-store source inspection and configuration |
+| `cube-workspace`, `cube-onboard`, `cube-onboarding` | Original paid Cube report authoring and approved query packages |
+| `openapi-workspace` | Original API contract authoring and merchant lifecycle |
+| `graphql-onboarding`, `graphql-merchant`, `graphql-workspace` | Original schema/query packages and GraphQL merchant lifecycle |
+| `python-merchant` | Original Python application configuration, diagnostics and serving |
+| `merchant-readiness` | Original receiving-account review |
+| `upstream-operation`, `availability` | Original upstream operation tickets and route pause/resume controls |
+| `woo-seller`, `woo-buyer` | Original WooCommerce order and selected purchase handoffs |
+| `catalog-workspace`, `import-headers` | Original retained catalog review and operator HTTP-header import |
 
-Dataset, catalog, fleet, revenue, accounting, `buyer-inbox`, `buyer-runbook`, `deploy` and PostgreSQL
-commands are included when their original named CLI files exist in the selected
-commit. `status.commands` is the installed release's exact command map. `dataset`
+The portable names `pilot-ops`, `seller-check`, `catalog-operator` and `deploy`
+remain available when their original files exist. Portable `pilot` retains its
+SF82 compile/resume meaning; the maintained catalog's pilot-with-operations entry
+is available as `pilot-ops`. This distinction is also recorded in
+`commandCatalog.preservedMappings`. `dataset`
 retains its CSV inspection/compiler meaning; use `buyer-dataset` for acquisition
 and `dataset-delivery` for saved inbox pages. Other shipped modules remain
 importable by their original paths.
@@ -130,6 +165,58 @@ node /tmp/stellar-forge-home/forge.mjs run pilot-ops -- --help
 SF88 retains its original buyer settings, controlling-terminal approval, signer,
 budget accounting and response-file behavior. A release install or activation
 does not add approvals, repeat purchases or grant new authority.
+
+## Retained support, accounting and MCP operations
+
+The same installed launcher reaches the existing private workspaces. Start the
+original case desk with its state outside the selected release:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run support-console -- \
+  --cases-dir /tmp/stellar-forge-home/state/support-cases --port 0
+```
+
+Open the printed loopback URL. The original desk owns case import, capture,
+review and retained follow-up. Reopening the same `--cases-dir` retains its cases.
+For a merchant whose incident configuration is already prepared, initialize and
+run the original watcher in another terminal:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run support-watch -- init \
+  --state /tmp/stellar-forge-home/state/incidents \
+  --config /tmp/stellar-forge-home/config/incident-watch.json
+node /tmp/stellar-forge-home/forge.mjs run support-watch -- run \
+  --state /tmp/stellar-forge-home/state/incidents
+```
+
+The native `status`, `ack`, notification retry/cancel and case export commands
+retain their original incident IDs, revisions and lease behavior. Use the
+included [incident operations guide](../sf93-seller-support-bundle/INCIDENT_OPERATIONS.md)
+for the configuration and SF74 case import contract. These operations require the
+original Linux `flock`; the launcher forwards shutdown signals to the watcher.
+
+The installed accounting and recovery commands consume the same merchant sources.
+The complete [pricing-to-accounting workflow](#use-saved-pricing-in-merchant-accounting)
+below covers source import, retained reconciliation, review, comparison and recovery.
+
+To register the original buyer MCP server on the machine that will launch it:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run mcp-client-config -- \
+  --discovery http://127.0.0.1:3900 \
+  --state /tmp/stellar-forge-home/state/mcp \
+  --output /tmp/stellar-forge-home/config/mcp-host.json
+```
+
+Use the actual configured discovery origin. The original exporter writes a new
+private host-registration file with this machine's Node executable and the exact
+installed protocol entry point; it does not launch the host. Its original
+`--origin`, `--operator` and separate-file `--merge` options remain available.
+The registration points at a specific release, so export a new registration when
+deliberately switching that host to another installed version. Keep its retained
+state directory. Use `merchant-mcp-client-config` for the native merchant server
+and `mcp-native` for an existing SF88 workspace; their original help describes
+the distinct configuration contracts.
 
 ## Installed dataset and catalog workflow
 
@@ -593,8 +680,12 @@ node forge.mjs doctor
 
 Doctor reports PostgreSQL driver names, requested and installed versions separately
 from native payment packages, with `postgresDriversInstalled` indicating whether
-the source-pinned set matches. It does not connect to a database or start a payment
-operation. Standard library commands remain usable when optional drivers are absent.
+that source-pinned group matches. Other optional adapters do not affect this
+PostgreSQL result. The maintained doctor's `optionalFeatures` also reports each
+group's actual import availability. `doctor --feature postgres` returns a failing
+exit status if its original probe cannot resolve the required drivers. It does
+not connect to a database or start a payment operation. Standard library commands
+remain usable when optional drivers are absent.
 
 Then run the maintained setup against an existing private source configuration:
 
@@ -690,7 +781,7 @@ There is no automatic deletion of old releases or merchant data. The incoming
 bundle's manager can always operate an existing home using `--home`; this is also
 the path for future manager upgrades without rewriting a live installation.
 
-## Optional native SDK installation
+## Optional native SDK and adapter installation
 
 Challenge-only seller, compilation, review and local operations run without npm.
 The generated package declares the same exact x402 version that the committed
@@ -699,16 +790,35 @@ original SF30 `native-factory.mjs` declares. At the initial delivery this is
 This follows the [original pinned first-party package manifest](https://github.com/x402-foundation/x402/blob/7f2b2f1f77fa5317615735e3378a6fad41cccb4e/typescript/packages/mechanisms/stellar/package.json)
 and [SF04 dependency inventory](../sf04-protocol-baseline/BASELINE.md).
 
+The root package also contains the maintained catalog's original `nativePeers`
+and feature dependencies. Runtime package manifests supply exact production
+versions; development dependencies are excluded. Catalog peer ranges, including
+the original Stellar SDK range, retain their declared meaning. Conflicting
+declarations fail packaging with the affected original source path or package
+name. Current feature groups are reported by `doctor`; additional groups follow
+the selected catalog automatically.
+
 When a native runtime is needed, install packages in the **selected release
 directory** printed by `status`:
 
 ```sh
 npm install --ignore-scripts --omit=dev
 node forge.mjs doctor
+node forge.mjs doctor --feature postgres --feature s3
+node forge.mjs doctor --native
 ```
 
-The installer never runs npm itself. `doctor` reports exact installed versions;
-missing optional packages remain visible even if npm tolerated their absence.
+The installer never runs npm itself. `doctor` calls the original maintained
+`distribution/cli.mjs` export from the verified release. Its dependency probes,
+optional feature names, Node requirement and Python/POSIX availability are the
+same as the maintained distribution. The portable result retains its source
+release identity and existing exact-version inventory alongside those original
+probe results. `--native` and repeated `--feature NAME` requests propagate the
+original doctor's failing exit status when a requested capability is absent;
+plain `doctor` reports absent optional packages without requiring them.
+Dependency presence is an import-availability result, not proof that merchant
+connections or payments are configured. Missing packages remain visible even
+if npm tolerated their absence.
 Retain the generated `package-lock.json` with your deployment and reuse that
 lock for reproducible dependency installation. Dependencies and their separate
 licenses remain their upstream authors' work; no upstream tarballs are embedded

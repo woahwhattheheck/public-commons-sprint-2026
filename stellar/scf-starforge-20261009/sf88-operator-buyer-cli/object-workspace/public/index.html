@@ -49,6 +49,8 @@
       </section>
       <section id="session" hidden>
         <div class="session-header"><div><p class="eyebrow" id="session-id"></p><h2 id="session-title"></h2><p id="session-source" class="source-url"></p></div><span id="session-status" class="badge"></span></div>
+        <nav class="workspace-tabs" aria-label="Download views"><button id="delivery-tab" aria-current="page">File delivery</button><button id="accounting-tab">Purchase records</button></nav>
+        <div id="delivery-view">
         <div class="metrics">
           <div><span>Verified parts</span><strong id="parts-value">—</strong></div>
           <div><span>Delivered bytes</span><strong id="bytes-value">—</strong></div>
@@ -79,6 +81,29 @@
           <div class="pagination"><span id="page-label"></span><div><button id="previous" class="small">Previous</button><button id="next" class="small">Next</button></div></div>
         </section>
         <div class="exports"><span>Keep an original record</span><button id="export-html" class="quiet">Download HTML report</button><button id="export-json" class="quiet">Download JSON</button></div>
+        </div>
+        <div id="accounting-view" hidden>
+          <section class="panel accounting-panel">
+            <div class="section-heading"><div><p class="eyebrow">ORIGINAL PURCHASES</p><h3>Finalize and retain receipts</h3></div><span id="accounting-observed" class="muted"></span></div>
+            <p class="intro">Read the saved financial records for this download. Finalization checks the original reservations and records their outcome in the original spending ledger.</p>
+            <dl id="accounting-terms" class="detail-grid"></dl>
+            <p id="accounting-explanation" class="note"></p>
+            <div class="actions"><button id="accounting-finalize" class="primary">Finalize original purchases</button><button id="accounting-stop">Stop operation</button><button id="accounting-refresh">Refresh saved records</button><button id="accounting-export">Download all purchase records</button></div>
+            <div id="accounting-progress" class="accounting-progress" role="status" aria-live="polite" hidden></div>
+          </section>
+          <section class="panel accounting-panel">
+            <div class="section-heading"><h3>Purchase history by part</h3><span class="muted">CURRENT PAGE</span></div>
+            <div class="metrics accounting-metrics">
+              <div><span>Recorded actual amount</span><strong id="accounting-actual">—</strong><small>Atomic units, shown parts only</small></div>
+              <div><span>Finalized</span><strong id="accounting-finalized">—</strong><small>Original ledger receipts</small></div>
+              <div><span>No payment required</span><strong id="accounting-unpaid">—</strong><small>Original unsigned responses</small></div>
+              <div><span>Needs attention</span><strong id="accounting-attention">—</strong><small>Unattempted parts shown separately</small></div>
+            </div>
+            <p class="accounting-caption">Each row retains its original request and current result. An earlier finalized receipt stays visible if a later check needs attention. Delivery completion and attempt allocations are available in File delivery.</p>
+            <div class="table-scroll"><table><thead><tr><th>Part / original request</th><th>Financial status</th><th>Actual atomic units</th><th>Receipt / detail</th></tr></thead><tbody id="accounting-rows"></tbody></table></div>
+            <div class="pagination"><span id="accounting-page-label"></span><div><button id="accounting-previous" class="small">Previous</button><button id="accounting-next" class="small">Next</button></div></div>
+          </section>
+        </div>
       </section>
     </div>
   </main>

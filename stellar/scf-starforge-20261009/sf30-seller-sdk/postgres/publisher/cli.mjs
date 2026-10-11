@@ -42,11 +42,11 @@ const ALL = ['--workspace', '--source', '--state', '--port', '--create', '--quer
   '--plan', '--run', '--reviewer', '--note', '--expect', '--expect-revision', '--initialize', '--review',
   '--seller', '--resource', '--intent', '--option', '--offer-sha',
   '--limit', '--plans-offset', '--runs-offset', '--history-offset', '--revision', '--request'];
-function parse(argv) {
+function parse(argv, help = HELP) {
   const [command, ...args] = argv, options = {};
   if (!['serve', 'init', 'source', 'template', 'save', 'extract', 'status', 'inspect', 'review', 'publish', 'recover', 'buyer',
     'schedule', 'schedule-save', 'schedule-enable', 'schedule-pause', 'schedule-run', 'schedule-continue'].includes(command))
-    throw fault('COMMAND_REQUIRED', HELP);
+    throw fault('COMMAND_REQUIRED', help);
   for (let index = 0; index < args.length; index++) {
     const key = args[index];
     if (!ALL.includes(key) || Object.hasOwn(options, key)) throw fault('INVALID_OPTION', key);
@@ -85,10 +85,12 @@ async function scheduleCommand(publisher, command, options) {
   } finally { try { await schedule?.close(); } finally { await publisher.close(); } }
 }
 
-export async function main(argv = process.argv.slice(2)) {
-  if (argv.length === 1 && argv[0] === '--help') { process.stdout.write(HELP + '\n'); return; }
-  const { command, options } = parse(argv);
-  const publisher = await openPostgresPublisher({ directory: resolve(options['--workspace']),
+export async function main(argv = process.argv.slice(2), { openPublisher = openPostgresPublisher,
+  sourceName = 'PostgreSQL', defaultPort = 8442 } = {}) {
+  const help = HELP.replaceAll('PostgreSQL', sourceName).replaceAll('8442', String(defaultPort));
+  if (argv.length === 1 && argv[0] === '--help') { process.stdout.write(help + '\n'); return; }
+  const { command, options } = parse(argv, help);
+  const publisher = await openPublisher({ directory: resolve(options['--workspace']),
     create: command === 'init' || options['--create'] === true,
     sourceFile: options['--source'] ? resolve(options['--source']) : undefined,
     targetDirectory: options['--state'] ? resolve(options['--state']) : undefined,
@@ -96,7 +98,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (command.startsWith('schedule')) return scheduleCommand(publisher, command, options);
   if (command === 'serve') {
     try {
-      const service = await startPostgresPublisherServer({ publisher, port: number(options['--port'], 8442) });
+      const service = await startPostgresPublisherServer({ publisher, port: number(options['--port'], defaultPort) });
       print({ url: service.url, workspace: publisher.directory, source: publisher.settings.sourceFile,
         target: publisher.settings.targetDirectory });
       for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => service.close().catch(() => { process.exitCode = 1; }));
