@@ -9,7 +9,7 @@ import { lockImage, buildImage, imageStatus, exportImage, importImage } from '..
 import { inspectRuntimeInstall } from '../runtime-install.mjs';
 import { verifyRuntimeSource } from '../runtime-profile.mjs';
 import { plain, need, now, digest, canonical, json, recordId, operationId, absolute,
-  privateDirectory, makePrivate, regular, readJSON, saveJSON, operationLease, workerAlive } from './storage.mjs';
+  privateDirectory, makePrivate, regular, readJSON, saveJSON, operationLease, operationRunning, workerAlive } from './storage.mjs';
 
 export const IMAGE_WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.images.v1';
 export const IMAGE_TRANSFER_MAX_BYTES = 16 * 1024 * 1024 * 1024;
@@ -399,7 +399,8 @@ async function imageBusy(root, key, id) {
     const request = await readJSON(join(root, 'operations', name, 'request.json'), true);
     if (!request || ![request.imageId, request.transferId].includes(key)) continue;
     const state = await readJSON(join(root, 'operations', name, 'state.json'), true);
-    need(!(state?.phase === 'QUEUED' || state?.phase === 'RUNNING' && await workerAlive(state)),
+    need(!(state?.phase === 'QUEUED' || state?.phase === 'RUNNING' && (await workerAlive(state) ||
+      await operationRunning(join(root, 'operations', name, 'worker.lock')))),
       'RUNTIME_IMAGE_OPERATION_RUNNING', 'Open the existing image operation and its retained worker log', 409);
   }
 }
