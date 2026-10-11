@@ -41,3 +41,20 @@ test('schema / source attribution rejects a mismatched capture; GET skipped rema
   assert.equal(skipped.observed.classification,'GET_NOT_PERFORMED_BY_SF52');
   assert.equal(skipped.observed.sellerOriginGetObserved,false);
 });
+
+test('SF56 native raw-page envelope is accepted only for a complete original-source snapshot',()=>{
+  const provider='https://vellar-facilitator-testnet-production.up.railway.app';
+  const payTo='G'+'A'.repeat(55),asset='C'+'A'.repeat(55);
+  const native={x402Version:2,type:'http',resource:seller,
+    accepts:[{network:'stellar:testnet',scheme:'exact',asset,amount:'100',payTo}],
+    extensions:{bazaar:{info:{input:{type:'http',method:'GET'}}}}};
+  const sf52={...report('NOT_HTTP_402',400),desiredPayTo:payTo,
+    catalog:{endpoint:provider+'/discovery/resources',complete:true}};
+  const raw=(total)=>({source:provider,capturedAt:'2026-10-11T06:00:00Z',
+    pages:[{offset:0,body:JSON.stringify({items:[native],pagination:{offset:0,limit:100,total}})}]});
+  const ready=reconcile(sf52,raw(1));
+  assert.equal(ready.original.captureFormat,'SF56_NATIVE_RAW_PAGE_BODIES');
+  assert.equal(ready.sourceCatalog.rowsWithPairedNetworkAndPayTo,1);
+  assert.equal(ready.interpretation.checkoutFailureProven,false);
+  assert.throws(()=>reconcile(sf52,raw(2)),/Incomplete original provider snapshot/);
+});

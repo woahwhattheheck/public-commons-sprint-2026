@@ -4,6 +4,7 @@ import {readFile, writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {normalizeSf56Capture} from './sf56_capture.mjs';
 
 const SCHEMA = 'stellar-forge.unpaid-get-evidence.v1';
 const SOURCE_SCHEMA = 'stellar-forge.seller-visibility.v1';
@@ -75,10 +76,14 @@ function selectedOffer(row, report) {
 
 export function reconcile(reportInput, captureInput, {reportSha256 = null, captureSha256 = null} = {}) {
   const report = requireReport(reportInput);
-  const rows = captureRows(captureInput, report.catalog.endpoint);
+  const native = captureInput?.source !== undefined ? normalizeSf56Capture(captureInput, report) : null;
+  const rows = captureRows(native ? native.envelope : captureInput, report.catalog.endpoint);
   const target = resourceKey(report.seller);
-  const matches = rows.filter(row => object(row) && resourceKey(row.resource) === target);
-  const eligible = matches.filter(row => selectedOffer(row, report));
+  const rawRows = native ? native.rawRows : rows;
+  const matches = rawRows.filter(row => object(row) && resourceKey(row.resource) === target);
+  // Raw Vellar listings quarantined by the original SF56 inspector cannot be offers.
+  const eligible = rows.filter(row => object(row) && resourceKey(row.resource) === target)
+    .filter(row => selectedOffer(row, report));
   const sourceMethods = [...new Set(eligible.map(row => row.extensions?.bazaar?.info?.input)
     .filter(object).filter(input => input.type === 'http').map(input => input.method)
     .filter(m => typeof m === 'string').map(m => m.toUpperCase()))].sort();
@@ -102,7 +107,9 @@ export function reconcile(reportInput, captureInput, {reportSha256 = null, captu
   else if (httpStatus === 402) finding = 'GET_HTTP_402_CHALLENGE_NOT_VERIFIED';
   else if (httpStatus === 200) finding = 'GET_HTTP_200_NO_UNPAID_CHALLENGE';
   else finding = 'GET_OTHER_OR_UNOBSERVED';
+  const acceptedMatches = rows.filter(row => object(row) && resourceKey(row.resource) === target);
   const dataAlignment = matches.length === 0 ? 'NO_MATCH_IN_SUPPLIED_SNAPSHOT' :
+    native && acceptedMatches.length === 0 ? 'MATCH_QUARANTINED_BY_SF56_SOURCE_RULES' :
     eligible.length === 0 ? 'NO_MATCHING_PAYMENT_OPTION_IN_SNAPSHOT' :
     'MATCHING_RESOURCE_AND_SINGLE_PAYMENT_OPTION';
   return {
@@ -111,12 +118,19 @@ export function reconcile(reportInput, captureInput, {reportSha256 = null, captu
       seller: report.seller, catalogUrl: report.catalog.endpoint,
       reportCatalogComplete: report.catalog.complete,
       reportVerdict: report.verdict ?? null,
-      captureObservedAt: typeof captureInput.observedAt === 'string' ? captureInput.observedAt : null,
-      captureCompletenessAttested: captureInput.complete === true},
+      captureObservedAt: native ? native.audit.capturedAt :
+        (typeof captureInput.observedAt === 'string' ? captureInput.observedAt : null),
+      captureCompletenessAttested: native ? true : captureInput.complete === true,
+      captureFormat: native?.audit.captureFormat ?? 'SF71_OPERATOR_ENVELOPE',
+      originalPageSha256: native?.audit.originalPageSha256 ?? [],
+      originalSourceTrust: native?.audit.sourceTrust ?? 'SUPPLIED_ENVELOPE_ONLY'},
     observed: {sourceChallengeState: state, httpStatus: Number.isSafeInteger(httpStatus) ? httpStatus : null,
       classification: finding, sellerOriginGetObserved: state !== 'CATALOG_NON_GET_ONLY' &&
       state !== 'FETCH_ERROR' && Number.isSafeInteger(httpStatus)},
     sourceCatalog: {matchedUrlRows: matches.length, rowsWithPairedNetworkAndPayTo: eligible.length,
+      nativeQuarantinedRows: native?.audit.quarantinedRows ?? null,
+      nativeDuplicateResourceRows: native?.audit.duplicateResourceRows ?? null,
+      nativeInspectorApplied: !!native,
       methods: sourceMethods, getOperationRows: getRows.length,
       dataAlignment, queryExampleKeys: exampleQueryKeys,
       exampleKeysAbsentFromProbeUrl},
