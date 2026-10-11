@@ -58,6 +58,7 @@
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
     "stellar-forge/payment-auto-catalog/schema-pattern.mjs",
     "stellar-forge/payment-auto-catalog/package.json",
+    "stellar-forge/payment-auto-catalog/package-lock.json",
     "stellar/scf-starforge-20261009/partners/getblock-stellar/product.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs",
