@@ -15,6 +15,12 @@ saved quote history, checkpoints before side effects, restart recovery,
 an operator-module launcher and private JSON/CSV/HTML inspection. It uses Node's
 built-in SQLite on Node 22.13+ or 24; memory-only embedding remains available.
 
+The [native buyer workspace](NATIVE_WORKSPACE.md) connects the already registered
+SF43 tool to the original SF88 workspace and inbox. Operators can prepare and
+approve an HTTP purchase, retain the original returned file, read it through MCP,
+and inspect or recover the same stable intent after restart. It reuses the native
+Stellar signer and existing spending ledger.
+
 - Search: source-backed discovery GET and version-independent ephemeral resource handles.
 - Describe: original input examples/schema, output declaration and complete eligible
   payment alternatives from the cached handle, with no network request.

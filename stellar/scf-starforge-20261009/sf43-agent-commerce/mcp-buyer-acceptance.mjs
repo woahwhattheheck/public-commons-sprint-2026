@@ -88,8 +88,22 @@ export async function executeDiscoveredHttpPayment({
 // owns streamable HTTP initialize/tools/list/tools/call JSON-RPC and consent state.
 export const mcpAgentCommerceTool = Object.freeze({
   name:'sf43_discover_review_and_pay',
-  description:'Search a real Stellar x402 Bazaar for an HTTP API; use exact current price/recipient/asset and external consent and wallet signer, then inspect independent testnet proof. No blind purchase.',
+  description:'Use an independently approved native Stellar buyer for a discovered HTTP API. With the native SF88 workspace, supply a stable intentId and prepare or execute the exact request; status, history, cancel, recover and read use its original durable inbox and saved output. The legacy callback retains its original search/request interface. A tool call cannot replace terminal approval.',
   inputSchema:{type:'object',additionalProperties:false,
-    properties:{search:{type:'string'},targetResourceURL:{type:'string'},targetMethod:{type:'string',enum:['GET','POST','HEAD','PUT','PATCH','DELETE']},maxAtomic:{type:'string',pattern:'^[1-9][0-9]*$'}},
-    required:['search','targetResourceURL','maxAtomic']}
+    properties:{
+      action:{type:'string',enum:['prepare','execute','status','history','cancel','recover','read'],description:'Native workspace action; omitted means execute. Non-native operator callbacks may support only the original execute arguments.'},
+      intentId:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,128}$',description:'Required by the native workspace. Keep this same ID to inspect or recover an existing operation.'},
+      search:{type:'string',minLength:1,maxLength:256},targetResourceURL:{type:'string'},
+      targetMethod:{type:'string',enum:['GET','POST','HEAD','PUT','PATCH','DELETE']},
+      maxAtomic:{type:'string',pattern:'^[1-9][0-9]*$'},
+      acceptIndex:{type:'integer',minimum:0,description:'Optional exact original option index when the selected listing has several compatible alternatives.'},
+      body:{type:'string',maxLength:1048576,description:'Explicit UTF-8 request body for the operator-configured non-GET/HEAD route; no file path or signer settings are accepted.'},
+      byteOffset:{type:'integer',minimum:0},maxBytes:{type:'integer',minimum:1,maximum:65536},
+      limit:{type:'integer',minimum:1,maximum:100},cursor:{type:'string'}
+    },
+    anyOf:[
+      {required:['search','targetResourceURL','maxAtomic'],properties:{action:{enum:['prepare','execute']}}},
+      {required:['action','intentId'],properties:{action:{enum:['execute','status','cancel','recover','read']}}},
+      {required:['action'],properties:{action:{const:'history'}}}
+    ]}
 });
