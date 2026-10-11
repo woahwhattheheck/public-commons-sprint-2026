@@ -1,3 +1,4 @@
+import { initImageWorkspace } from './image.mjs';
 // MIT. Industrial operator presentation; original runtime records remain authoritative.
 const $ = id => document.getElementById(id);
 const make = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
@@ -121,8 +122,14 @@ function renderOperations() {
     article.append(title, make('p', (job.createdAt ? new Date(job.createdAt).toLocaleString() + ' · ' : '') + job.id, 'muted'));
     if (job.targetDirectory) article.append(make('p', job.targetDirectory));
     if (job.error) article.append(make('p', job.error.code + ': ' + job.error.message));
-    if (job.displayPhase === 'INTERRUPTED') article.append(make('p', 'The workspace worker ended. Open its retained runtime and resume installation or recover into a new directory.', 'note'));
+    if (job.displayPhase === 'INTERRUPTED') article.append(make('p', job.imageId || job.transferId
+      ? 'The workspace worker ended. Open its image context or transfer and review the retained native result before continuing.'
+      : 'The workspace worker ended. Open its retained runtime and resume installation or recover into a new directory.', 'note'));
     const actions = make('div', undefined, 'actions');
+    if (job.imageId || job.transferId) {
+      const open = make('button', 'Open image'); open.type = 'button';
+      open.addEventListener('click', () => images.choose({ imageId: job.imageId, transferId: job.transferId }).catch(error)); actions.append(open);
+    }
     if (job.runtimeId || job.targetId) {
       const open = make('button', 'Open runtime'); open.type = 'button';
       open.addEventListener('click', () => chooseRuntime(job.targetId ?? job.runtimeId)); actions.append(open);
@@ -152,7 +159,7 @@ async function refresh({ quiet = false } = {}) {
         if (saved?.selectedId && value.runtimes.some(item => item.id === saved.selectedId)) {
           selectedId = saved.selectedId; value = await api(query('/api/state', { runtimeId: selectedId }));
         }
-        if (['runtime', 'profile', 'operations', 'deployment'].includes(saved?.view)) view = saved.view;
+        if (['runtime', 'profile', 'operations', 'deployment', 'images'].includes(saved?.view)) view = saved.view;
         logSelection = saved?.logSelection ?? null;
       } catch {}
     }
@@ -178,7 +185,7 @@ async function refresh({ quiet = false } = {}) {
       $('archive-select').value = match.id;
     }
     if ($('archive-select').value && (!selectedArchive || previousArchive !== $('archive-select').value)) await loadCatalog();
-    renderRuntime(); renderOperations(); switchView(view);
+    renderRuntime(); renderOperations(); switchView(view); await images.render();
     let pending;
     try { pending = JSON.parse(sessionStorage.getItem(pendingKey()) ?? 'null'); } catch { sessionStorage.removeItem(pendingKey()); }
     if (pending && value.operations.some(job => job.id === pending.requestId)) sessionStorage.removeItem(pendingKey());
@@ -257,6 +264,8 @@ async function openLog(value) {
   $('log-detail').textContent = result.offset ? 'Showing the final ' + (result.totalBytes - result.offset) + ' of ' + result.totalBytes + ' bytes.' : result.totalBytes + ' retained bytes.';
   $('log-text').textContent = result.text || '(The selected log is empty.)'; switchView('operations'); prefs();
 }
+const images = initImageWorkspace({ root: $('image-workspace'), api, operation, refresh, openLog, message, error,
+  switchView, getState: () => state, getToken: () => token, getView: () => view });
 $('refresh').addEventListener('click', () => refresh());
 $('attach-form').addEventListener('submit', async event => {
   event.preventDefault();
@@ -336,6 +345,7 @@ window.addEventListener('hashchange', () => {
   if (!location.hash) return;
   token = location.hash.slice(1); sessionStorage.setItem(tokenKey, token);
   history.replaceState(null, '', location.pathname);
+  images.reset();
   initial = true; state = undefined; selectedId = null; selectedArchive = null;
   profileReview = null; handoff = null; logSelection = null; view = 'runtime';
   $('handoff').hidden = true; $('comparison').hidden = true; $('profile-review').hidden = true;
