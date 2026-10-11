@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>QuickBooks journal handoff · Merchant workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/qbo.css">
+  <script type="module" src="/qbo.mjs"></script>
+</head>
+<body>
+<a class="skip" href="#qbo-main">Skip to QuickBooks journal handoff</a>
+<header class="topbar"><strong>STELLAR FORGE <span>/</span> MERCHANT OPERATIONS</strong><a href="/">Merchant workspace</a></header>
+<div class="layout qbo-layout">
+  <aside class="sidebar" aria-label="Operator and saved journal plans">
+    <label for="qbo-operator">Operator / reviewer</label>
+    <input id="qbo-operator" maxlength="1000" autocomplete="name" placeholder="Your name or reference">
+    <p class="hint">Saved with each journal plan, received response and accountant return.</p>
+    <button id="qbo-refresh" type="button">Refresh saved state</button>
+    <label class="side-title" for="qbo-plan-search">Saved journal plans</label>
+    <input id="qbo-plan-search" type="search" placeholder="Name, company or source">
+    <div id="qbo-plan-list" class="run-list"></div>
+    <button id="qbo-plan-more" type="button" hidden>Show more plans</button>
+    <div id="qbo-state-version" class="sidebar-foot"></div>
+  </aside>
+  <main id="qbo-main" tabindex="-1">
+    <div class="heading">
+      <div><div class="eyebrow">Accountant handoff · QuickBooks Online</div><h1>QuickBooks journal handoff</h1><p>Review a journal from a retained settlement handoff, then bring the saved QuickBooks result back to its original accounting records.</p></div>
+      <span class="badge">Retained merchant workspace</span>
+    </div>
+    <div id="qbo-message" class="message" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+    <section id="qbo-retry-panel" class="conflict" hidden>
+      <div><strong>The submitted operation needs a response</strong><p id="qbo-retry-message"></p></div>
+      <div class="actions"><button id="qbo-retry" class="primary" type="button">Read or retry the same operation</button><button id="qbo-dismiss-retry" type="button">Keep form; dismiss retry</button></div>
+    </section>
+    <details id="qbo-prepare-panel" class="panel qbo-prepare-panel" open>
+      <summary><span>Prepare a journal plan</span><span class="hint">Choose the source and company, then map the accounts.</span></summary>
+      <details class="padded qbo-divider qbo-company-loader">
+        <summary>Load company setup from saved QuickBooks exports</summary>
+        <p class="hint qbo-spaced">Use the CompanyInfo, Preferences and Account JSON exports from the same QuickBooks company. The setup provides its home currency and available account IDs. Each file can be up to 8 MiB.</p>
+        <form id="qbo-company-form" class="qbo-form-grid qbo-spaced">
+          <div><label for="qbo-company-realm">Company / realm ID for these exports</label><input id="qbo-company-realm" required inputmode="numeric" autocomplete="off" placeholder="QuickBooks company ID"></div>
+          <div><label for="qbo-company-info-file">CompanyInfo JSON</label><input id="qbo-company-info-file" type="file" accept=".json,application/json" required></div>
+          <div><label for="qbo-company-preferences-file">Preferences JSON</label><input id="qbo-company-preferences-file" type="file" accept=".json,application/json" required></div>
+          <div><label for="qbo-company-accounts-file">Account JSON</label><input id="qbo-company-accounts-file" type="file" accept=".json,application/json" required></div>
+          <div class="qbo-wide actions"><button id="qbo-company-load" type="submit">Load company setup</button><button id="qbo-company-manual" type="button">Use manual company fields</button></div>
+        </form>
+        <div id="qbo-company-source-status" class="hint qbo-spaced" aria-live="polite">Company and account fields are entered manually.</div>
+        <datalist id="qbo-account-options"></datalist>
+      </details>
+      <form id="qbo-create-form">
+        <div class="padded qbo-form-grid">
+          <div><label for="qbo-handoff">Original accountant handoff</label><select id="qbo-handoff" required></select></div>
+          <div><label for="qbo-accountant-revision">Current accountant version</label><input id="qbo-accountant-revision" readonly value="Choose a handoff"><p class="hint">The preview freezes the current saved version.</p></div>
+          <div id="qbo-source-description" class="qbo-wide qbo-source-description" aria-live="polite"></div>
+          <div class="qbo-wide"><label for="qbo-name">Journal plan name</label><input id="qbo-name" required maxlength="160" placeholder="October settlement · QuickBooks journal"></div>
+          <div><label for="qbo-realm">QuickBooks company ID</label><input id="qbo-realm" required inputmode="numeric" autocomplete="off" placeholder="Company / realm ID"><p class="hint">The company that will receive this journal.</p></div>
+          <div><label for="qbo-company-name">Company name</label><input id="qbo-company-name" required maxlength="160" placeholder="Name used in QuickBooks"></div>
+          <div><label for="qbo-currency">Company home currency</label><select id="qbo-currency" required><option value="">Choose the company currency</option><option value="USD">USD · US dollar</option><option value="CAD">CAD · Canadian dollar</option><option value="EUR">EUR · Euro</option><option value="GBP">GBP · Pound sterling</option><option value="AUD">AUD · Australian dollar</option><option value="NZD">NZD · New Zealand dollar</option></select><p class="hint">Use the company’s configured accounting currency.</p></div>
+          <div><label for="qbo-environment">QuickBooks environment</label><select id="qbo-environment" required><option value="sandbox" selected>Sandbox company</option><option value="production">Production company</option></select><p class="hint">Production plans use public-network events with an official transfer match.</p></div>
+          <div><label for="qbo-date">Journal date</label><input id="qbo-date" required type="date"></div>
+          <div><label for="qbo-doc-number">Document number</label><input id="qbo-doc-number" maxlength="21" autocomplete="off" placeholder="Optional journal reference"></div>
+          
+        </div>
+        <div class="panel-heading qbo-section-heading"><div><h3>Select source events and map their journal lines</h3><p>Enter the amount in company home currency and the debit and credit accounts for each selected original event.</p></div></div>
+        <div id="qbo-mapping-help" class="padded hint" aria-live="polite">Choose an original accountant handoff to load its events.</div>
+        <details class="padded qbo-divider"><summary>Fill blank account fields across selected events</summary><div class="qbo-form-grid qbo-spaced"><div><label for="qbo-default-debit-id">Debit account ID</label><input id="qbo-default-debit-id" list="qbo-account-options" maxlength="100" placeholder="QuickBooks account ID"></div><div><label for="qbo-default-debit-name">Debit account name</label><input id="qbo-default-debit-name" maxlength="160" placeholder="For example, settlement clearing"></div><div><label for="qbo-default-credit-id">Credit account ID</label><input id="qbo-default-credit-id" list="qbo-account-options" maxlength="100" placeholder="QuickBooks account ID"></div><div><label for="qbo-default-credit-name">Credit account name</label><input id="qbo-default-credit-name" maxlength="160" placeholder="For example, merchant revenue"></div></div><div class="actions qbo-spaced"><button id="qbo-fill-accounts" type="button">Fill blank account fields</button><span class="hint">Existing row values and all amounts stay as entered.</span></div></details>
+        <div class="filters"><label for="qbo-draft-search">Find source events</label><input id="qbo-draft-search" type="search" placeholder="Event, option, network or original reference"><button id="qbo-draft-select-page" type="button">Select this page</button><button id="qbo-draft-clear" type="button">Clear selection</button></div>
+        <div class="table-wrap"><table class="qbo-mapping-table">
+          <caption class="sr-only">Journal mapping for each original payment option</caption>
+          <thead id="qbo-mapping-head"><tr><th scope="col">Select</th><th scope="col">Original event</th><th scope="col">Home-currency amount</th><th scope="col">Debit account</th><th scope="col">Credit account</th><th scope="col">Journal description</th></tr></thead><tbody id="qbo-mappings"></tbody>
+        </table></div>
+        <div class="pagination"><span id="qbo-draft-page"></span><div class="actions"><button id="qbo-draft-previous" type="button">Previous</button><button id="qbo-draft-next" type="button">Next</button></div></div>
+        <div class="padded actions"><button id="qbo-create" class="primary" type="submit">Preview journal plan</button><a href="/">Open accountant handoffs</a></div>
+      </form>
+    </details>
+    <section id="qbo-plan-preview-panel" class="panel" hidden>
+      <div class="panel-heading"><div><h2>Review the proposed journal</h2><p id="qbo-plan-preview-description"></p></div><span class="badge">Unsaved preview</span></div>
+      <div id="qbo-plan-preview-metrics" class="metrics inset"></div>
+      <div id="qbo-plan-preview-issues" class="padded qbo-issues" hidden></div>
+      <details class="padded"><summary>Proposed QuickBooks request</summary><pre id="qbo-plan-preview-json" class="qbo-json" tabindex="0"></pre></details>
+      <div class="padded actions"><button id="qbo-retain-plan" class="primary" type="button">Retain this journal plan</button><button id="qbo-clear-plan-preview" type="button">Continue editing</button></div>
+    </section>
+    <section id="qbo-empty" class="panel empty"><h2>Continue a retained settlement handoff</h2><p>Select its source and account mapping above, or reopen a saved journal plan from the left.</p></section>
+    <div id="qbo-selected" hidden>
+      <section class="panel">
+        <div class="panel-heading"><div><h2 id="qbo-title"></h2><p id="qbo-subtitle"></p></div><span id="qbo-plan-status" class="badge"></span></div>
+        <div id="qbo-metrics" class="metrics inset"></div>
+        <div id="qbo-company-summary" class="padded qbo-company-summary"></div>
+        <details class="padded qbo-divider"><summary>Source, company and saved plan identity</summary><dl id="qbo-lineage" class="record-values"></dl></details>
+      </section>
+      <nav class="table-tabs qbo-tabs" aria-label="QuickBooks handoff workflow">
+        <button type="button" class="active" data-qbo-view="journal" aria-current="page">Journal review</button>
+        <button type="button" data-qbo-view="response">QuickBooks response</button>
+        <button type="button" data-qbo-view="return">Accountant return</button>
+        <button type="button" data-qbo-view="history">Saved history</button>
+      </nav>
+      <section id="qbo-view-journal" class="qbo-view">
+        <section class="panel"><div class="panel-heading"><div><h2>Review the retained journal</h2><p id="qbo-journal-description"></p></div><span id="qbo-balance-status" class="badge"></span></div>
+          <div id="qbo-plan-issues" class="padded qbo-issues" hidden></div>
+          <form id="qbo-line-filter" class="filters"><label for="qbo-line-search">Find a journal line</label><input id="qbo-line-search" type="search" placeholder="Account, source row, amount or description"><button type="submit">Apply filter</button></form>
+          <div class="record-layout qbo-record-layout">
+            <div class="records">
+              <div class="table-wrap"><table><caption class="sr-only">Retained QuickBooks journal lines</caption><thead><tr><th scope="col">Line / original event</th><th scope="col">Account</th><th scope="col" class="qbo-numeric">Debit</th><th scope="col" class="qbo-numeric">Credit</th></tr></thead><tbody id="qbo-lines"></tbody></table></div>
+              <div class="pagination"><span id="qbo-line-page"></span><div class="actions"><button id="qbo-line-previous" type="button">Previous</button><button id="qbo-line-next" type="button">Next</button></div></div>
+            </div>
+            <section id="qbo-line-detail" class="record-detail" tabindex="-1" aria-label="Journal line and original source"><p class="hint">Select a line to inspect its exact source, account and valuation.</p></section>
+          </div>
+          <div class="padded qbo-divider"><h3>Approve and export the reviewed request</h3><p id="qbo-review-status" class="hint qbo-spaced"></p><form id="qbo-review-form" class="qbo-review-form"><label for="qbo-review-note">Review note</label><textarea id="qbo-review-note" rows="2" maxlength="2000" required placeholder="Accounts, source events and home-currency amounts reviewed"></textarea><div class="actions qbo-spaced"><button id="qbo-review" class="primary" type="submit">Approve retained journal</button></div></form><p class="hint">Use the retained request with the existing QuickBooks integration for this company. The saved QuickBooks response can be imported in the next step.</p><div id="qbo-request-downloads" class="actions qbo-spaced"></div></div>
+          <details id="qbo-cancel-panel" class="padded qbo-divider">
+            <summary>Cancel an unused journal plan</summary>
+            <p id="qbo-cancel-status" class="hint qbo-spaced">Cancel this retained plan when it will not be used. Its source events become available for a new journal plan.</p>
+            <form id="qbo-cancel-form" class="qbo-review-form">
+              <label for="qbo-cancel-note">Cancellation note</label><textarea id="qbo-cancel-note" rows="2" maxlength="2000" required placeholder="Why this journal plan is being retired"></textarea>
+              <label class="qbo-check qbo-spaced" for="qbo-cancel-unused"><input id="qbo-cancel-unused" type="checkbox" required><span>I confirm this journal has not been entered or sent to QuickBooks and will not be used.</span></label>
+              <button id="qbo-cancel" class="qbo-spaced" type="submit">Cancel this unused plan</button>
+            </form>
+          </details>
+          <details class="padded qbo-divider"><summary>QuickBooks journal request</summary><pre id="qbo-request-json" class="qbo-json" tabindex="0"></pre></details>
+        </section>
+      </section>
+      <section id="qbo-view-response" class="qbo-view" hidden>
+        <section class="panel">
+          <div class="panel-heading"><div><h2>Retain the saved QuickBooks response</h2><p>Choose the JSON response from this company's saved JournalEntry. Review its amounts, accounts and source links against the retained request.</p></div></div>
+          <form id="qbo-response-form" class="padded qbo-form-grid">
+            <div><label for="qbo-response-file">JournalEntry or Fault response · up to 8 MiB</label><input id="qbo-response-file" type="file" accept=".json,application/json" required><p id="qbo-file-status" class="hint">Choose the complete received JSON file.</p></div>
+            <div><label for="qbo-response-name">Received response name</label><input id="qbo-response-name" maxlength="160" required placeholder="QuickBooks journal · saved response"></div>
+            <div class="actions"><button id="qbo-import" class="primary" type="submit">Preview response and accountant return</button></div>
+          </form>
+          <div class="padded qbo-divider"><label for="qbo-response-select">Retained response</label><select id="qbo-response-select"></select><p id="qbo-response-description" class="hint"></p></div>
+        </section>
+        <section id="qbo-comparison-panel" class="panel" hidden>
+          <div class="panel-heading"><div><h2>Match to the original journal</h2><p id="qbo-comparison-description"></p></div><span id="qbo-comparison-status" class="badge"></span></div>
+          <div id="qbo-comparison-metrics" class="metrics inset"></div>
+          <div id="qbo-comparison-issues" class="padded qbo-issues" hidden></div>
+          <div class="table-wrap"><table><caption class="sr-only">Saved journal lines compared with the retained request</caption><thead><tr><th scope="col">Original line</th><th scope="col">Match result</th><th scope="col">Expected</th><th scope="col">Received</th></tr></thead><tbody id="qbo-comparison-rows"></tbody></table></div>
+          <div class="pagination"><span id="qbo-comparison-page"></span><div class="actions"><button id="qbo-comparison-previous" type="button">Previous</button><button id="qbo-comparison-next" type="button">Next</button></div></div>
+          <div id="qbo-response-downloads" class="padded actions"></div><div id="qbo-response-recovery" class="padded qbo-divider" hidden><h3>Complete the retained accountant return</h3><p id="qbo-response-recovery-status" class="hint qbo-spaced"></p><button id="qbo-response-resume" class="primary qbo-spaced" type="button">Resume this saved response</button></div>
+          <details class="padded qbo-divider"><summary>Retained response and comparison</summary><pre id="qbo-response-json" class="qbo-json" tabindex="0"></pre></details>
+          <div class="padded qbo-divider"><h3>Continue to the accountant return</h3><p id="qbo-return-eligibility" class="hint"></p></div>
+        </section>
+      </section>
+      <section id="qbo-view-return" class="qbo-view" hidden>
+        <section id="qbo-return-empty" class="panel empty"><h2>Preview a saved QuickBooks response</h2><p>The preview compares the journal to its retained request and shows the bookkeeping changes for the current accountant handoff.</p><button type="button" data-qbo-open="response">Choose a QuickBooks response</button></section>
+        <section id="qbo-preview-panel" class="panel" hidden>
+          <div class="panel-heading"><div><h2>Accountant return preview</h2><p id="qbo-preview-description"></p></div><span class="badge">Original accountant matcher</span></div>
+          <div id="qbo-preview-metrics" class="metrics inset"></div>
+          <div id="qbo-preview-issues" class="padded qbo-issues" hidden></div>
+          <div class="table-wrap"><table><caption class="sr-only">Source events matched by the received QuickBooks journal</caption><thead><tr><th scope="col">Original event</th><th scope="col">Home-currency amount</th><th scope="col">Debit account</th><th scope="col">Credit account</th></tr></thead><tbody id="qbo-preview-rows"></tbody></table></div>
+          <div class="pagination"><span id="qbo-preview-page"></span><div class="actions"><button id="qbo-preview-previous" type="button">Previous</button><button id="qbo-preview-next" type="button">Next</button></div></div>
+          <div class="padded actions"><button id="qbo-apply" class="primary" type="button">Retain response and save accountant return</button><a id="qbo-preview-download" class="button" download hidden>Download exact return CSV</a><button id="qbo-clear-preview" type="button">Clear preview</button></div>
+        </section>
+        <section class="panel">
+          <div class="panel-heading"><div><h2>Original accountant handoff</h2><p id="qbo-accountant-current"></p></div></div>
+          <div id="qbo-accountant-metrics" class="metrics inset"></div>
+          <div id="qbo-accountant-downloads" class="padded actions"></div>
+          <div class="table-wrap"><table><caption class="sr-only">Saved accountant return versions</caption><thead><tr><th scope="col">Return</th><th scope="col">Operator</th><th scope="col">Saved</th><th scope="col">Reviewed / booked</th></tr></thead><tbody id="qbo-accountant-history"></tbody></table></div>
+        </section>
+      </section>
+      <section id="qbo-view-history" class="qbo-view" hidden>
+        <section class="panel"><div class="panel-heading"><div><h2>Retained response and return history</h2><p>Reopen a response to inspect its comparison or continue the original accountant handoff.</p></div></div>
+          <div class="table-wrap"><table><caption class="sr-only">Retained QuickBooks responses</caption><thead><tr><th scope="col">Response / journal</th><th scope="col">Comparison</th><th scope="col">Operator / saved</th><th scope="col">Open</th></tr></thead><tbody id="qbo-response-history"></tbody></table></div>
+        </section>
+        <section class="panel"><div class="panel-heading"><div><h2>Saved plan files</h2><p>The original request and source-linked plan remain available when this workspace is reopened.</p></div></div><div id="qbo-files" class="padded"></div></section>
+      </section>
+    </div>
+  </main>
+</div>
+</body>
+</html>

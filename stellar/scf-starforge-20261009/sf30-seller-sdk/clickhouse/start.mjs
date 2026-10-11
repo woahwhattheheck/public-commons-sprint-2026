@@ -2,6 +2,7 @@
 // MIT. Original SF30 seller/operations lifecycle; no new payment implementation.
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { readSellerConfig } from '../serve.mjs';
 import { validateAvailabilityDirectory } from '../availability/store.mjs';
 import { startPostgresMerchant } from '../postgres/merchant.mjs';
@@ -16,8 +17,8 @@ const HELP = `Usage: node clickhouse/start.mjs --directory PREPARED_DIRECTORY [-
        [--availability-dir PRIVATE_ABSOLUTE_DIRECTORY]
 --inspect performs the actual source/schema preflight and closes without opening a seller.
 Without --facilitator, the original seller returns HTTP 402 and performs no paid query.`;
-export async function main(args = process.argv.slice(2)) {
-  if (args.length === 1 && args[0] === '--help') { console.log(HELP); return; }
+export async function main(args = process.argv.slice(2), { env = process.env, stdout = process.stdout, navigationOrigin = null, expectedColumnTypes } = {}) {
+  if (args.length === 1 && args[0] === '--help') { stdout.write(HELP + '\n'); return; }
   const options = new Map();
   for (let i = 0; i < args.length; i++) {
     const name = args[i];
@@ -46,9 +47,12 @@ export async function main(args = process.argv.slice(2)) {
       facilitatorClient: new HTTPFacilitatorClient({ url: url.href.replace(/\/$/, '') }),
     });
   }
-  const { source, config: declaration } = await openClickHouseSourceFile(resolve(directory, 'source.json'));
+  const { source, config: declaration } = await openClickHouseSourceFile(resolve(directory, 'source.json'), { env });
+  if (expectedColumnTypes !== undefined && !isDeepStrictEqual(source.inspect().columnTypes, expectedColumnTypes)) {
+    await source.close(); throw Object.assign(new Error('CLICKHOUSE_SCHEMA_CHANGED_REVIEW_AGAIN'), { code: 'CLICKHOUSE_SCHEMA_CHANGED_REVIEW_AGAIN' });
+  }
   if (options.has('--inspect')) {
-    try { const inspection = source.inspect(); console.log(JSON.stringify(inspection, null, 2)); return inspection; }
+    try { const inspection = source.inspect(); stdout.write(JSON.stringify(inspection, null, 2) + '\n'); return inspection; }
     finally { await source.close(); }
   }
   let session;
@@ -57,13 +61,14 @@ export async function main(args = process.argv.slice(2)) {
       port: Number(options.get('--port') ?? 8423),
       operationsPort: options.has('--no-operations') ? null : Number(options.get('--operations-port') ?? 8424),
       maxInFlight: Number(options.get('--max-in-flight') ?? 64), drainGraceMs: Number(options.get('--drain-grace-ms') ?? 60000),
-      availabilityDirectory: options.has('--availability-dir') ? validateAvailabilityDirectory(options.get('--availability-dir')) : undefined });
+      availabilityDirectory: options.has('--availability-dir') ? validateAvailabilityDirectory(options.get('--availability-dir')) : undefined,
+      navigationOrigin });
   } catch (issue) { await source.close(); throw issue; }
-  console.log(JSON.stringify({ url: session.url, mode: session.mode, dataSource: 'ClickHouse named queries',
+  stdout.write(JSON.stringify({ url: session.url, mode: session.mode, dataSource: 'ClickHouse named queries',
     docs: session.url + '/_seller/docs', openapi: session.url + '/_seller/openapi.json',
     health: session.url + '/_seller/health', ready: session.url + '/_seller/ready',
     ...(session.operations ? { operations: session.operations.url, availability: session.operations.availabilityUrl,
-      availabilityControl: session.operations.availabilityControlUrl } : {}) }));
+      availabilityControl: session.operations.availabilityControlUrl } : {}) }) + '\n');
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
     session.close().then(() => { process.exitCode = 0; }, () => { process.exitCode = 1; });
   });
