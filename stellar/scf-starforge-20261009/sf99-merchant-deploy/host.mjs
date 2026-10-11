@@ -55,6 +55,9 @@ export const shellWord = value => "'" + String(value).replaceAll("'", "'\\''") +
 // systemd expands environment variables in arguments, not the executable token.
 const commandLine = args => args.map((value, index) => unitWord(value, index > 0)).join(' ');
 const regex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Caddy quoted tokens preserve backslashes except escaped quotes. JSON string
+// quoting would double the regex escapes and change exact dotted path matches.
+const caddyToken = value => '"' + value.replaceAll('"', '\\"') + '"';
 const routePattern = binding => '^' + binding.segments.map(segment => segment.startsWith(':') ? '[^/]+' : regex(segment)).join('/') + '$';
 
 export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
@@ -201,12 +204,12 @@ const DOC_PATHS = ['/_seller/offers','/_seller/docs','/_seller/docs/','/_seller/
   '/_seller/developer/browser.mjs','/_seller/developer/request.mjs','/_seller/developer/style.css',
   '/_seller/client/seller-client.mjs','/_seller/client/seller-client.d.mts','/_seller/client/README.md','/_seller/client/package.json'];
 export function caddyfile(p) {
-  const blocks = p.routes.map((r, i) => `  @route${i} {\n    method ${r.method}\n    path_regexp route${i} ${JSON.stringify(r.pattern)}\n  }\n  handle @route${i} {\n    reverse_proxy 127.0.0.1:${p.sellerPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
+  const blocks = p.routes.map((r, i) => `  @route${i} {\n    method ${r.method}\n    path_regexp route${i} ${caddyToken(r.pattern)}\n  }\n  handle @route${i} {\n    reverse_proxy 127.0.0.1:${p.sellerPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
   blocks.push(`  @documentation {\n    method GET HEAD\n    path ${DOC_PATHS.join(' ')}\n  }\n  handle @documentation {\n    reverse_proxy 127.0.0.1:${p.sellerPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
   if (p.discovery) {
     blocks.push(`  @discovery {\n    method GET\n    path ${p.discovery.paths.join(' ')}\n  }\n  handle @discovery {\n    reverse_proxy 127.0.0.1:${p.discoveryPort} {\n      header_up Host 127.0.0.1:${p.discoveryPort}\n      header_up -Origin\n      header_up -Sec-Fetch-Site\n      header_up -Authorization\n      header_up -Cookie\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
     if (p.discovery.sourceMatchPath !== '/_seller/offers') blocks.push(
-      `  @offerExport {\n    method GET\n    path_regexp offerExport ${JSON.stringify('^' + regex(p.discovery.sourceMatchPath) + '$')}\n  }\n  handle @offerExport {\n    rewrite * /_seller/offers\n    reverse_proxy 127.0.0.1:${p.sellerPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
+      `  @offerExport {\n    method GET\n    path_regexp offerExport ${caddyToken('^' + regex(p.discovery.sourceMatchPath) + '$')}\n  }\n  handle @offerExport {\n    rewrite * /_seller/offers\n    reverse_proxy 127.0.0.1:${p.sellerPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
   }
   if (p.receiverState) blocks.push(
     `  @settledEvent {\n    method POST\n    path /internal/x402-events\n  }\n  handle @settledEvent {\n    rewrite * /sf98/events\n    reverse_proxy 127.0.0.1:${p.receiverPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`,
