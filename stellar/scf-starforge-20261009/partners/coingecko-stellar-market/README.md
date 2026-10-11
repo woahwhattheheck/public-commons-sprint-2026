@@ -180,6 +180,10 @@ Run `cli.mjs --help` for the full command list. The same retained model supports
 
 API writes carry `actor`, `opId`, and the expected project `revision`; mutable item changes also carry `version`. An exact repeated operation returns its retained result. Reusing an operation ID with a different body returns a conflict. Collection and source lists support search and pagination up to 100 records per page, with exact total counts. A background job's current progress is retained without appending a full copy of the job for every transient update; its original source and attempt history remain intact.
 
+## Portable native operating journey
+
+The complete [native acceptance package](workspace/acceptance/README.md) acquires or reuses the five original unsigned vendor sources, prepares the existing SF88 profile without a payment, and opens the same SF30/facilitator/operator product on a configured host. Its retained browser continuation performs one explicit Stellar testnet purchase, source comparison, reopen and separate-project restore. Original account assignment and signing environment remain with their current runtime owner. The helper and browser use configurable paths and travel with the complete source handover.
+
 ## Original references
 
 - [CoinGecko x402 integration](https://docs.coingecko.com/ai-integration/x402)
