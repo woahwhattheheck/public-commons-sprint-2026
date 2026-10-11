@@ -20,6 +20,7 @@ const help = `Starforge merchant toolkit
   starforge runtime-profile --help
   starforge runtime-install --help
   starforge runtime-workspace --help
+  starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
@@ -39,12 +40,15 @@ Native commands (arguments pass unchanged to the maintained implementation):
   runtime-profile                            Select exact dependencies for an original release
   runtime-install                            Install, resume, run, upgrade and recover a customer runtime
   runtime-workspace                          Review, install and recover runtimes in a private browser workspace
+  runtime-transfer                           Transfer exact source, profile and public package cache offline
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
   chainstack-stellar  Install, observe and operate the original Chainstack merchant and buyer handoff
   chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
+  jobs                                      Prepare and operate durable paid application jobs
+  jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
@@ -67,6 +71,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-recovery-remote                  Upload, list, retrieve and restore retained off-host snapshots
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
+  buyer-expenses                            Allocate native buyer expenses and issue accountant periods
   routescan-merchant  Configure, preview and operate the original Routescan gas-data merchant
   routescan-workspace Operate its saved project through the original local workspace
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
@@ -105,6 +110,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
+  oauth-connection                           Authorize, review, renew and disconnect an existing provider grant
   openapi postman                            Review collections, retain source and create merchant packages
   openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source

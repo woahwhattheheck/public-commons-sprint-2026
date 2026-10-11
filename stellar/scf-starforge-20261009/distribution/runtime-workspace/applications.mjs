@@ -52,6 +52,12 @@ export const APPLICATION_CATALOG = Object.freeze([
     description: 'Inspect the original database source, review its paid query contract and prepare the original merchant release.',
     fields: [field('sourceFile', 'Original PostgreSQL source', 'path', true), field('outputDirectory', 'Private merchant output directory', 'path', true),
       field('releaseStore', 'Existing release store'), ...common] },
+  { id: 'object-buyer', command: 'object-workspace', requiredSource: 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs',
+    title: 'Object buyer workspace', terminal: true,
+    description: 'Reopen original object sessions, received products, verified downloads and analysis. Every new acquisition retains its original explicit terminal approval.',
+    fields: [field('stateDirectory', 'Original private object buyer state', 'path', true), field('profileFile', 'Original product profile'),
+      field('operatorSettings', 'Original operator settings file'), field('analysisPython', 'Analysis Python executable'),
+      field('terminalPython', 'Terminal Python executable', 'path', false, 'Defaults to /usr/bin/python3; the original managed worker supplies the terminal.'), ...common] },
   { id: 'commerce', command: 'commerce-console', title: 'Commerce session', terminal: true,
     description: 'Reopen an initialized original commerce session. Its buyer approval remains in the connected original terminal.',
     fields: [field('directory', 'Initialized commerce session', 'path', true), field('finalityNode', 'Finality Node executable'),
@@ -154,14 +160,33 @@ async function applicationCommand(type, settings) {
     await path('sourceFile', 'file'); await path('outputDirectory', 'directory', true, true);
     await path('releaseStore', 'directory', false, true);
     option('--source', settings.sourceFile); option('--output', settings.outputDirectory); option('--release-store', settings.releaseStore);
+  } else if (type.id === 'object-buyer') {
+    await path('stateDirectory', 'directory', false, true);
+    await path('profileFile', 'file'); await path('operatorSettings', 'file');
+    const savedSettings = join(settings.stateDirectory, 'received', 'operator-settings.json');
+    const original = await readJSON(savedSettings, true);
+    if (original) {
+      need(typeof original.path === 'string' && (!settings.operatorSettings || settings.operatorSettings === original.path),
+        'APPLICATION_OBJECT_OPERATOR_CHANGED', 'Reopen this object workspace with its original operator settings path');
+      absolute(original.path); inputs.push(await inputPath(savedSettings, 'file'));
+    }
+    let analysisPython;
+    if (settings.analysisPython) {
+      analysisPython = await realpath(settings.analysisPython);
+      inputs.push(await inputPath(analysisPython, 'file')); await access(analysisPython, constants.X_OK);
+    }
+    option('--state', settings.stateDirectory); option('--profile', settings.profileFile);
+    option('--operator-settings', settings.operatorSettings); option('--analysis-python', analysisPython);
   } else if (type.id === 'commerce') {
     await path('directory', 'directory', false, true); await path('recoveryConfig', 'file');
     const finalityNode = settings.finalityNode ? await realpath(settings.finalityNode) : null;
     if (finalityNode) { inputs.push(await inputPath(finalityNode, 'file')); await access(finalityNode, constants.X_OK); }
-    terminalPython = await realpath(settings.terminalPython ?? '/usr/bin/python3');
-    inputs.push(await inputPath(terminalPython, 'file')); await access(terminalPython, constants.X_OK);
     args.push('start'); option('--directory', settings.directory);
     option('--finality-node', finalityNode ?? undefined); option('--recovery-config', settings.recoveryConfig);
+  }
+  if (type.terminal) {
+    terminalPython = await realpath(settings.terminalPython ?? '/usr/bin/python3');
+    inputs.push(await inputPath(terminalPython, 'file')); await access(terminalPython, constants.X_OK);
   }
   option('--port', settings.port);
   if (settings.environmentFile) inputs.push(await inputPath(settings.environmentFile, 'file'));

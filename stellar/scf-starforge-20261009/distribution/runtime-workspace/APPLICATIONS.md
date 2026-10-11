@@ -11,10 +11,11 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
+| Object buyer workspace | object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
 | Commerce session | commerce-console start | An initialized SF66 session, original buyer/delivery/recovery and terminal approval |
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
 
-A selected runtime must actually contain the command. XML additionally requires its original XML forwarding source, because older runtimes contain dataset without that subcommand. The chosen original profile supplies the dependencies required by the application. Applications installs no replacement engine or new npm dependency.
+A selected runtime must actually contain the command. XML and Object Buyer additionally require their original forwarding/server source; an older package cannot acquire these capabilities by selecting a label. The chosen original profile supplies the dependencies required by the application. Applications installs no replacement engine or new npm dependency.
 
 ## Save and start
 
@@ -36,6 +37,14 @@ For a new PostgreSQL or Sheets publisher, select **Initialize a new publisher** 
 Once its workspace.json exists with the reviewed source and target, a later launch reopens without --create. The original database, plans, candidates, review/publication history and schedules remain in that workspace. An incomplete or different directory is retained and reports the original error; Applications does not recreate or erase it.
 
 Source configurations can retain their existing environment references and renewable credential files. Applications does not add provider credentials to source packages or replace the original OAuth/database connection manager.
+
+## Object buyer receiving and reopening
+
+Select the existing private object state. An optional original product profile supplies products for new reviews; existing sessions reopen their retained configuration without that profile. Applications pins a selected profile file for launch, while the original buyer rereads and pins the actual product descriptor and operator files for each new purchase review.
+
+The first operator settings file creates the original received/operator-settings.json path reference. A later start can omit that setting and reuse the saved path. Selecting a different path for the same state is rejected; the original prepared product files and their buyer workspace remain unchanged. The optional Analysis Python executable is resolved and reviewed before launch.
+
+The original Object Buyer URL opens its receiving, acquisition, accounting, downloads and analysis controls. Its per-chunk or whole-purchase approval stays in the connected original terminal. Retained customer acquisitions are never replayed by opening this application.
 
 ## Environment
 
