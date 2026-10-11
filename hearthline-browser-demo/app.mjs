@@ -1,7 +1,10 @@
+import { createWorkboard } from './workboard-ui.mjs';
+
 const $ = id => document.getElementById(id);
 let session, protocol, nextId = 1, mission, lastExecution, busy = false, connected = false, needsRefresh = false;
 let missions = [];
 const rememberedMissionKey = 'hearthline.open-mission';
+const workboardUI = createWorkboard({ tool, run, event, verdict });
 const evidence = { schema: 'hearthline.browser-demonstration/v1', startedAt: new Date().toISOString(), environment: { runtime: 'real local MCP over HTTP', weather: 'synthetic fixture', externalEffects: false, alexaDevice: false, languageModel: false }, events: [] };
 
 function event(label, details = {}) {
@@ -35,6 +38,8 @@ function updateControls() {
   $('replay').disabled = unavailable || needsRefresh || !lastExecution;
   $('restart').disabled = busy;
   $('export').disabled = unavailable;
+  $('download-workspace').disabled = unavailable;
+  workboardUI.setBusy(unavailable);
 }
 function renderHistory() {
   const previous = $('mission-picker').value;
@@ -46,7 +51,7 @@ function renderHistory() {
   }
   if (missions.some(item => item.id === (mission?.id ?? previous))) $('mission-picker').value = mission?.id ?? previous;
   $('history-empty').hidden = missions.length > 0;
-  $('history-count').textContent = `${missions.length} saved mission${missions.length === 1 ? '' : 's'}`;
+  $('workspace-missions').textContent = missions.length;
   updateControls();
 }
 function renderActionDetails() {
@@ -99,6 +104,8 @@ async function status() {
   $('generation').textContent = `${value.generation} / PID ${value.pid}`;
   $('outbox').textContent = `${value.localOutboxItems} item${value.localOutboxItems === 1 ? '' : 's'}`;
   $('receipts').textContent = value.receipts;
+  $('workspace-storage').textContent = value.persistent ? 'Saved on this computer' : 'Temporary session';
+  $('workspace-missions').textContent = value.missions;
   return value;
 }
 async function rpc(method, params = {}, { notification = false, initialize = false } = {}) {
@@ -160,6 +167,7 @@ async function openMission(id) {
   const result = await tool('hearthline_get_mission', { missionId: id });
   if (result.mission?.id !== id) throw new Error('The server did not return the requested mission.');
   await restoreLastExecution();
+  await workboardUI.open(mission.id);
   needsRefresh = false; render();
   event('Saved mission opened without changing any action', { missionId: mission.id });
   verdict('Saved plan reopened. Review the selected action; existing approvals and completed results are retained.');
@@ -174,9 +182,9 @@ async function refreshMissions({ resume = false } = {}) {
     else if (mission) { mission = null; lastExecution = null; needsRefresh = false; $('actions').replaceChildren(); $('mission-context').textContent = ''; render(); }
   }
   renderHistory();
+  if (!mission) await workboardUI.open(null);
 }
-function bind(id, action) {
-  $(id).addEventListener('click', async () => {
+async function run(action) {
     if (busy) return;
     busy = true; updateControls();
     try { await action(); }
@@ -192,13 +200,13 @@ function bind(id, action) {
       verdict(`Stopped: ${error.message}${needsRefresh ? ' Refresh saved missions before another action.' : ' Current saved state is shown.'}`);
     }
     finally { busy = false; updateControls(); }
-  });
 }
+function bind(id, action) { $(id).addEventListener('click', () => void run(action)); }
 bind('refresh-missions', () => refreshMissions());
 bind('open-mission', () => openMission($('mission-picker').value));
 bind('prepare', async () => {
-  await tool('hearthline_seed_inventory', { items: { flashlight: 1, water: 1, battery_pack: 0, first_aid_kit: 1 } });
   await tool('hearthline_prepare_storm', { title: 'Get the household storm-ready', latitude: 38.2, longitude: -85.7, household: { people: 2, pets: 1 } });
+  await workboardUI.open(mission.id);
   lastExecution = null; needsRefresh = false; $('receipt').textContent = 'No execution for this mission yet.'; render();
   event('Mission created; local actions await approval', { missionId: mission.id, planHash: mission.planHash });
   verdict('Plan prepared. Nothing purchased or sent. Each local action requires an explicit approval.'); await status();
@@ -246,11 +254,19 @@ bind('replay', async () => {
   verdict('PASS: same receipt after restart. No new outbox item, no duplicate effect.');
 });
 bind('export', async () => {
-  const packet = { ...evidence, exportedAt: new Date().toISOString(), runtime: await status(), mission, lastExecution };
+  const packet = { ...evidence, exportedAt: new Date().toISOString(), runtime: await status(), mission, lastExecution, ...workboardUI.snapshot() };
   const link = document.createElement('a'), url = URL.createObjectURL(new Blob([JSON.stringify(packet, null, 2) + '\n'], { type: 'application/json' }));
   link.href = url; link.download = 'hearthline-browser-evidence.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-window.hearthlineDemo = { evidence, snapshot: () => ({ mission, lastExecution }) };
+bind('download-workspace', async () => {
+  const response = await fetch('/demo/workspace.json');
+  if (!response.ok) throw new Error('Saved workspace download failed');
+  const blob = await response.blob(), url = URL.createObjectURL(blob), link = document.createElement('a');
+  link.href = url; link.download = 'hearthline-workspace.json'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  verdict('Saved workspace downloaded. It contains your retained missions, tasks, notes and stock.');
+});
+window.hearthlineDemo = { evidence, snapshot: () => ({ mission, lastExecution, ...workboardUI.snapshot() }) };
 busy = true; updateControls();
 connect().catch(error => { connected = false; $('connection').textContent = 'Connection failed'; event('Connection failed', { error: error.message }); verdict(error.message); })
   .finally(() => { busy = false; updateControls(); });
