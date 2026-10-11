@@ -129,6 +129,36 @@ synchronous server-owned header factory for integrations needing live rotation.
 Compiled binding objects contain credential values and must not be serialized
 or logged. The launcher prints counts and its local service URLs only.
 
+## Run the existing API with live operations
+
+The original operations dashboard works with this upstream-backed seller too. Instead of
+starting `upstream-serve.mjs` directly, select its maintained entrypoint with
+`--upstream` on the existing operations launcher. From the repository root,
+after starting the fictional backend described above:
+
+```sh
+S=stellar/scf-starforge-20261009/sf30-seller-sdk
+node "$S/operations/launch.mjs" --upstream --operations-port 0 -- \
+  --config "$S/examples/upstream-service.json" \
+  --upstreams "$S/examples/upstreams.json" \
+  --allow-loopback-upstream --port 0
+```
+
+Startup prints **both** actual loopback listener URLs, the original seller health
+and offers URLs, and an operations snapshot URL. Open the operations URL and
+call the seller's `/dataset?region=north` route to inspect original 402 traffic.
+The upstream dataset is not released in challenge-only mode, so the example
+does not execute the backend handler or send payment. On shutdown, both seller
+and operations listeners close. `--operations-port` belongs *before* `--`;
+seller/upstream flags belong after it. With no `--upstream`, the launcher
+continues to call the unchanged static/handler `serve.mjs`.
+
+Merchant deployments use the same flags and original `--facilitator` configuration
+as above. The operations server binds only to `127.0.0.1`, must not be exposed
+through the public seller reverse proxy, and exports request-outcome metadata
+only, not private backend credentials or payment evidence. For routing/export
+details, see [operations/README.md](./operations/README.md).
+
 ## Enable the existing payment runtime
 
 Replace the example's asset, recipient, network and atomic-unit amount with
