@@ -131,7 +131,11 @@ Reference expansion is finite, and recursive references require manual integrati
 
 The importer supports OpenAPI 3.0 and 3.1 within the actual SF25 schema vocabulary.
 Unknown assertion keywords cause an explicit SF25 rejection rather than silently
-losing constraints. Additional
+losing constraints. OpenAPI 3.1 `discriminator` is a serialization annotation:
+the shared schema resolver checks its shape and removes the hint from compiled
+JSON Schema while retaining all composition and field assertions. Original
+documents keep the annotation. See the [OAS discriminator definition](https://spec.openapis.org/oas/v3.1.1.html#discriminator-object).
+Additional
 authentication, header/cookie parameters, server variables, custom serialization,
 optional request bodies, bodies on GET/HEAD/DELETE, multipart/text bodies and
 semantic OpenAPI 3.1 `$ref` siblings require manual integration. Operation `security: []` and
@@ -146,8 +150,11 @@ The output passes original SF25 schema/example acceptance, including required
 fields and supported value constraints. This does not validate a real wallet,
 seller identity or payment, and is not a complete OpenAPI document validator.
 SF31's shipped 32,768-character payment header limit is checked on each result.
-The service adapter extends the existing SF30 runtime; the original SF30 metadata
-compiler is unchanged; SF25 validation is shared through its pure schema module.
+The service adapter extends the existing SF30 runtime. Its discovery transport
+allows 40 JSON levels, including the payment envelope, so supported nested
+composition fits without removing constraints. The 60,000-byte and 2,000-node
+discovery limits and SF25's 16 schema levels/512 schema nodes still apply.
+SF25 validation is shared through its pure schema module.
 
 ## OpenAPI 3.0 compatibility
 

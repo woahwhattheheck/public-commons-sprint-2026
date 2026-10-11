@@ -49,3 +49,24 @@ export function adaptOpenApi30Schema(schema) {
   }
   return converted;
 }
+
+/** OAS 3.1 discriminator is a serialization hint, not a JSON Schema assertion.
+ * Keep every composition and assertion; remove only this OpenAPI annotation.
+ * https://spec.openapis.org/oas/v3.1.1.html#discriminator-object
+ * As with the 3.0 adapter, callers own traversal and never visit example data.
+ */
+export function adaptOpenApi31Schema(schema) {
+  const converted = structuredClone(schema);
+  if (!own(schema, 'discriminator')) return converted;
+  const hint = schema.discriminator;
+  if (!hint || typeof hint !== 'object' || Array.isArray(hint) ||
+      typeof hint.propertyName !== 'string' || !hint.propertyName ||
+      Object.keys(hint).some(key => !['propertyName', 'mapping'].includes(key) && !key.startsWith('x-')) ||
+      !['oneOf', 'anyOf', 'allOf'].some(key => Array.isArray(schema[key]) && schema[key].length))
+    throw new TypeError('OpenAPI discriminator requires a propertyName and composition');
+  if (own(hint, 'mapping') && (!hint.mapping || typeof hint.mapping !== 'object' || Array.isArray(hint.mapping) ||
+      Object.values(hint.mapping).some(value => typeof value !== 'string')))
+    throw new TypeError('OpenAPI discriminator mapping must contain string references');
+  delete converted.discriminator;
+  return converted;
+}
