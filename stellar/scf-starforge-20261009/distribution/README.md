@@ -2202,6 +2202,23 @@ excluded from the fixed customer archive. Restart the same workspace command to
 reopen saved revisions, reviews and prepared merchants; restarting does not
 automatically launch a seller.
 
+The same screen's **Publish and roll back retained releases** stages the selected
+prepared folder into the existing merchant release system. Open its original
+release console to compare query/price changes, select a generation, start or
+drain/restart the seller, and roll back to the previous retained version. The
+workspace keeps the reviewed native column types with that release and downloads
+the original customer files from the retained copy after the former input folder
+moves. Database data remains live. **Close controls and drain seller** preserves
+release selection/history while closing the owned original processes.
+
+The installed `starforge releases stage --clickhouse-package PREPARED_DIRECTORY`
+and `starforge merchant-mcp init --clickhouse-package PREPARED_DIRECTORY` select
+the same original adapter. Full console, CLI, existing MCP, customer-export and
+recovery instructions are included at
+`source/stellar/scf-starforge-20261009/sf82-seller-pilot/CLICKHOUSE_RELEASES.md`.
+This uses the existing `releases`, `merchant-mcp` and `clickhouse-workspace`
+commands; it adds no archive family or payment protocol.
+
 The existing native facilitator is selected with `--facilitator HTTPS_URL` and the
 same payment dependencies described below. The default serves the original
 402 challenges. The workspace needs the standard Linux flock and tar utilities;
