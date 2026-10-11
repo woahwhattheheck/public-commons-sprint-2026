@@ -87,7 +87,7 @@ export function resolveBuyerProxy(value, environment = process.env) {
     fail('BUYER_PROXY_ENVIRONMENT_REQUIRED');
   return Object.freeze(parseExplicitProxy(raw));
 }
-function requestData(init) {
+function requestData(init, paymentAuthorization = false) {
   const allowed = new Set(['method', 'headers', 'body', 'redirect', 'signal']);
   if (Object.keys(init).some(key => !allowed.has(key)) ||
       (init.redirect !== undefined && init.redirect !== 'manual')) fail('UNSUPPORTED_FETCH_OPTION');
@@ -103,9 +103,11 @@ function requestData(init) {
   // A caller may supply PAYMENT-SIGNATURE only via SF31's approved retry;
   // transport/framing/routing headers can never override the pinned connection.
   for (const name of headers.keys()) {
-    if (/^(host|connection|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|authorization|cookie|accept-encoding)$/i.test(name))
+    if (/^(host|connection|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|accept-encoding)$/i.test(name))
       fail('FORBIDDEN_TRANSPORT_HEADER');
   }
+  if (headers.has('authorization') && !(paymentAuthorization && /^Payment [A-Za-z0-9_-]{1,65528}$/.test(headers.get('authorization'))))
+    fail('FORBIDDEN_TRANSPORT_HEADER');
   headers.set('accept-encoding', 'identity');
   if (body !== undefined) headers.set('content-length', String(body.length));
   if (init.signal !== undefined && !(init.signal instanceof AbortSignal)) fail('BAD_ABORT_SIGNAL');
@@ -129,9 +131,9 @@ function abortable(promise, signal) {
  */
 export function createPublicHttpsFetch({
   timeoutMs=30_000, lookup=systemLookup, requestImpl=httpsRequest,
-  sandboxGatewayIPv4=null, trustedProxy=null
+  sandboxGatewayIPv4=null, trustedProxy=null, paymentAuthorization=false
 }={}) {
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000 ||
+  if (typeof paymentAuthorization !== 'boolean' || !Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000 ||
       typeof lookup !== 'function' || typeof requestImpl !== 'function' ||
       (sandboxGatewayIPv4 !== null && !isManagedOverlayAddress(sandboxGatewayIPv4)) ||
       (sandboxGatewayIPv4 !== null && trustedProxy !== null))
@@ -141,7 +143,7 @@ export function createPublicHttpsFetch({
   return async function publicHttpsFetch(input, init={}) {
     const url = checkedURL(input);
     if (profile !== null && url.origin !== profile.origin) fail('BUYER_TRANSPORT_ORIGIN_MISMATCH');
-    const {method, headers, body} = requestData(init);
+    const {method, headers, body} = requestData(init, paymentAuthorization);
     const controller = new AbortController();
     const {signal} = controller;
     const stop = () => controller.abort(init.signal.reason);

@@ -3,7 +3,7 @@
 
 const { join, isAbsolute } = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { realpath } = require('node:fs/promises');
+const { realpath, mkdtemp, rm } = require('node:fs/promises');
 
 const SCHEMA = 'stellar-forge.n8n-buyer.v1';
 const MAX_ITEM_BYTES = 64 * 1024 * 1024;
@@ -157,6 +157,29 @@ function readOptions(params, signal) {
   };
 }
 
+async function prepareHandoff(native, file, accept, options) {
+  const { buyer, paths } = native;
+  if (!paths.workspaceDirectory) {
+    need(paths.operatorProfile, 'ORIGINAL_OPERATOR_PROFILE_REQUIRED');
+    return buyer.fromOperationHandoff(file, { accept, ...options });
+  }
+  need(typeof buyer.fromWorkspace === 'function', 'ORIGINAL_WORKSPACE_BUYER_RUNTIME_REQUIRED');
+  await buyer.ready();
+  const temporary = await mkdtemp(join(paths.stateDirectory, '.n8n-operation-import-'));
+  try {
+    const imported = await buyer.runtime.checked(['--import-operation', '--file', file,
+      '--dir', join(temporary, 'request'), '--accept', String(accept)], {
+      stateDirectory: paths.stateDirectory, mode: 'OFFLINE_OPERATION_IMPORTED',
+      signal: options.signal,
+    });
+    // The native workspace bridge supplies the original operator and evidence
+    // directory. The SDK retains validated body/ticket bytes before cleanup.
+    return await buyer.fromWorkspace(paths.workspaceDirectory, {
+      configuration: imported.configPath, ...options,
+    });
+  } finally { await rm(temporary, { recursive: true, force: true }); }
+}
+
 async function consumeResponse(native, intentId, params) {
   const { inbox, signal } = native;
   const response = await inbox.response(intentId, { signal });
@@ -263,13 +286,12 @@ async function executeOperation(credentials, operation, params = {}, context = {
       if (operation === 'inspectHandoff') return { json: {
         schema: SCHEMA, operation, intentId: inspected.intentId, packet: inspected,
       } };
-      need(paths.operatorProfile, 'ORIGINAL_OPERATOR_PROFILE_REQUIRED');
       // Existing intent is intentionally not imported again. The native error
       // retains that intent; enqueuePrepared completes an interrupted prior intake.
       let prepared;
       try {
-        prepared = await buyer.fromOperationHandoff(saved.path, {
-          accept: selected, signal,
+        prepared = await prepareHandoff(native, saved.path, selected, {
+          signal,
           ...(params.responseMaxBytes === undefined ? {} : {
             responseFile: {
               maxBytes: integer(params.responseMaxBytes, 0, 1073741824, 'RESPONSE_CAPTURE_LIMIT_INVALID'),

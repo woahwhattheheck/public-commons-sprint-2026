@@ -1,0 +1,111 @@
+{
+  "version": "tjl.workshare.quote.v1",
+  "offer_id": "cskt-dewr-orca-migration-20261011",
+  "prepared_at": "2026-10-11",
+  "currency": "USD",
+  "state": "PREPARED",
+  "proposed_total_cents": 840000,
+  "delivery_business_days": 10,
+  "cohort": {
+    "source_sites": 1,
+    "destination_sites": 1,
+    "destination_platform": "WordPress",
+    "max_source_pages": 40,
+    "max_media_document_records": 400,
+    "max_gis_app_references": 4,
+    "review_correction_cycles": 2
+  },
+  "observed_public_cohort": {
+    "pages": 33,
+    "posts": 0,
+    "media_unique": 353,
+    "media_header": 359,
+    "media_types": {
+      "pdf": 130,
+      "docx": 3,
+      "zip": 2,
+      "images": 201,
+      "videos": 17
+    },
+    "gis": {
+      "accessible_storymaps": 3,
+      "legacy_mapseries": 1
+    }
+  },
+  "fees": [
+    {
+      "id": "source",
+      "label": "Source intake, inventory and kickoff decisions",
+      "amount_cents": 120000
+    },
+    {
+      "id": "mapping",
+      "label": "Content model, migration dispositions and route mapping",
+      "amount_cents": 160000
+    },
+    {
+      "id": "wordpress",
+      "label": "Native WordPress release, retained target state and recovery",
+      "amount_cents": 220000
+    },
+    {
+      "id": "gis",
+      "label": "GIS integration and accessible content presentation",
+      "amount_cents": 150000
+    },
+    {
+      "id": "handover",
+      "label": "Two correction cycles, operator acceptance, training and handover",
+      "amount_cents": 190000
+    }
+  ],
+  "milestones": [
+    {
+      "label": "Kickoff",
+      "amount_cents": 420000
+    },
+    {
+      "label": "Accepted delivery and handover",
+      "amount_cents": 420000
+    }
+  ],
+  "warranty": {
+    "calendar_days": 30,
+    "starts": "technical handover",
+    "critical_initial_response_business_days": 1,
+    "routine_initial_response_business_days": 2
+  },
+  "optional_support": {
+    "monthly_cents": 60000,
+    "included_engineering_hours": 4,
+    "additional_hour_cents": 15000,
+    "unused_hours_roll_over": false
+  },
+  "options": {
+    "substantive_content_hour_cents": 15000,
+    "document_accessibility_hour_cents": 15000,
+    "requires_approved_inventory_and_written_ceiling": true,
+    "new_gis_or_media_production": "separate fixed quote"
+  },
+  "schedule": {
+    "start": "Agreed source, access, design interfaces and reviewers available",
+    "review_turnaround_business_days": 1,
+    "rfp_proposals_due": "2026-10-29T16:30:00-06:00",
+    "rfp_expected_project_kickoff": "2027-01"
+  },
+  "sources": [
+    {
+      "url": "https://csktwatercompact.com/wp-content/uploads/2026/10/DEWR_Website_RFP_Final.pdf",
+      "sha256": "114afc69be5ecbf9083e29d8023160090a0ec7b2c8b7edf78428e7155fb206e5",
+      "bytes": 631004,
+      "pages": 17
+    },
+    {
+      "url": "https://csktwatercompact.com/documents-and-links/"
+    },
+    {
+      "url": "https://www.orcadesigngroup.com/case-study/sk-technologies-inc/"
+    }
+  ]
+}
+
