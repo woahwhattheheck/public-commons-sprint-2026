@@ -12,7 +12,8 @@ import {isDeepStrictEqual} from 'node:util';
 const SCHEMA = 'stellar-forge.frontdoor-woo-packet.v1';
 const SOURCE = 'stellar/scf-starforge-20261009';
 const WOO = 'sf104-woocommerce-merchant-bridge';
-const PLUGIN = ['starforge-sf98-woo.php','checkout-gateway.php','checkout-admission.php'];
+const PLUGIN = ['starforge-sf98-woo.php','checkout-gateway.php','checkout-admission.php',
+  'merchant-console.php','merchant-console.js','merchant-console.css','OPERATIONS.md'];
 const ENTRIES = {seller:WOO + '/seller.mjs', buyer:WOO + '/buyer.mjs',
   operator:'sf88-operator-buyer-cli/cli.mjs', queue:'sf88-operator-buyer-cli/queue-cli.mjs',
   worker:'sf98-merchant-delivery/worker.mjs', status:'sf98-merchant-delivery/deliver.mjs'};
@@ -30,7 +31,7 @@ node merchant.mjs buyer --toolkit /absolute/checkout-or-installed-package -- ins
 node merchant.mjs operator --toolkit /absolute/checkout-or-installed-package -- --review --config /private/review.json
 node merchant.mjs queue --toolkit /absolute/checkout-or-installed-package -- show --root /private/inbox --intent EXACT_INTENT
 
-plugin copies the original PHP files for an initial WordPress installation.
+plugin copies the original PHP, browser assets and operating guide for WordPress.
 prepare is offline and creates a NEW private directory plus the original plugin
 folder. inspect reuses it. preflight sends an unsigned {} to the shop and creates
 no order. serve / deliver run original foreground services with the existing
@@ -145,7 +146,7 @@ export async function main(args = process.argv.slice(2)) {
   if (action === 'plugin') {
     need(forwarded.length === 0, 'plugin does not accept forwarded arguments.');
     await publishDirectory(options[3],staging => originalPlugin(base,join(staging,'starforge-sf98-woo')));
-    console.log(JSON.stringify({status:'WOO_ORIGINAL_PLUGIN_PREPARED',pluginDirectory:join(options[3],'starforge-sf98-woo'),files:3,networkRequests:0}));
+    console.log(JSON.stringify({status:'WOO_ORIGINAL_PLUGIN_PREPARED',pluginDirectory:join(options[3],'starforge-sf98-woo'),files:PLUGIN.length,networkRequests:0}));
     return;
   }
   if (['buyer','operator','queue'].includes(action)) {
