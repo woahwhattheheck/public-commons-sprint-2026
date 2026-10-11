@@ -31,6 +31,9 @@ const HELP = `Starforge merchant MCP
        [--name NAME] [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
        [--catalog CATALOG_CONNECTION_JSON] [--support SUPPORT_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   serve --config MERCHANT_MCP.json [--port PORT] [--token-env ENVIRONMENT_NAME]
+  download-support --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
+       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--cases-dir PRIVATE_CASES]
+  reopen-support --dir DOWNLOADED_DIRECTORY --cases-dir PRIVATE_CASES
 
 Every init source form also accepts --accounting ACCOUNTING_JSON to attach the
 original accounting workspaces and host-selected source aliases. See ACCOUNTING.md.
@@ -41,6 +44,8 @@ optional comma-separated allowlist. The listener binds only to 127.0.0.1.
 Every ordinary init form also accepts --receiving RECEIVING_CONNECTION_JSON.
 Open receiving work explicitly with merchant_receiving_open. RECEIVING.md
 describes saved profiles, live reviews, captured replay and private exports.
+Download resumes its original verified files on another invocation. Reopen uses
+the original SF74 case store offline. See SUPPORT.md for private handoff recovery.
 `;
 function pairs(args, allowed, switches = []) {
   const values = new Map();
@@ -100,6 +105,31 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
+  if (command === 'download-support' || command === 'reopen-support') {
+    const { downloadSupportExport, reopenDownloadedSupportExport } = await import('./support-download.mjs');
+    if (command === 'reopen-support') {
+      const options = pairs(rest, ['--dir', '--cases-dir']);
+      if (!options.has('--dir') || !options.has('--cases-dir')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --cases-dir.');
+      const result = await reopenDownloadedSupportExport({ directory: options.get('--dir'), casesDirectory: options.get('--cases-dir') });
+      process.stdout.write(JSON.stringify(result) + '\n'); return result;
+    }
+    const options = pairs(rest, ['--url', '--export-id', '--out', '--token-env', '--chunk-bytes', '--cases-dir']);
+    for (const key of ['--url', '--export-id', '--out']) if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
+    const rawChunk = options.get('--chunk-bytes');
+    if (rawChunk !== undefined && !/^[1-9][0-9]{0,5}$/.test(rawChunk)) throw failure('CONFIGURATION_ERROR', 'Use a whole chunk byte count from 1 to 196608.');
+    const controller = new AbortController();
+    const stop = () => controller.abort(failure('SUPPORT_DOWNLOAD_INTERRUPTED', 'Download interrupted. Run the same command to continue its saved original files.'));
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    try {
+      const result = await downloadSupportExport({ url: options.get('--url'), exportId: options.get('--export-id'),
+        directory: options.get('--out'), tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', signal: controller.signal,
+        ...(rawChunk === undefined ? {} : { chunkSize: Number(rawChunk) }),
+        onProgress: progress => process.stderr.write(JSON.stringify(progress) + '\n') });
+      controller.signal.throwIfAborted();
+      if (options.has('--cases-dir')) result.localCase = (await reopenDownloadedSupportExport({ directory: options.get('--out'), casesDirectory: options.get('--cases-dir') })).case;
+      process.stdout.write(JSON.stringify(result) + '\n'); return result;
+    } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
+  }
   if (command === 'init-accounting') {
     const options = pairs(rest, ['--dir', '--accounting', '--name']);
     if (!options.has('--dir') || !options.has('--accounting')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --accounting.');
@@ -137,7 +167,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-accounting, init-receiving or serve.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-accounting, init-receiving, serve, download-support or reopen-support.');
   const options = pairs(rest, ['--config', '--port', '--token-env']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),
