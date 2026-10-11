@@ -62,10 +62,11 @@
     <div id="comparison-output" hidden><h3 id="comparison-outcome"></h3><p id="comparison-summary"></p><div id="comparison-scope" class="scope"></div><div id="comparison-changes"></div><p id="comparison-boundaries" class="hint"></p><button id="download-comparison" type="button" class="secondary" disabled>Save comparison</button><details class="source-details"><summary>Comparison source details</summary><pre id="raw-comparison" tabindex="0"></pre></details></div>
   </section>
   <section id="workorder" class="card" aria-labelledby="workorder-heading">
-    <div class="section-heading"><div><p class="eyebrow">03 · Handoff</p><h2 id="workorder-heading">Prepare an internal workorder</h2><p>Add the relationship owner's terms to your selected before capture. An after capture includes the repair review automatically.</p></div><span class="stage-hint">Nothing is sent</span></div>
+    <div class="section-heading"><div><p class="eyebrow">03 · Handoff</p><h2 id="workorder-heading">Prepare a merchant workorder</h2><p>Choose the actual diagnosis or attached runtime case, then add the owner's scope, deliverables, acceptance criteria and commercial terms.</p></div><span class="stage-hint">Local draft</span></div>
     <p id="workorder-sources" class="selection-summary">Select a before capture in Review changes to get started.</p>
     <form id="workorder-form">
-      <label class="approval"><input id="workorder-baseline-only" type="checkbox"><span>Use only the before diagnosis for this workorder.<small>Leave unchecked to include the selected after capture and any paired browser checks.</small></span></label>
+      <label>Workorder source<select id="workorder-source"><option value="diagnostic">Selected diagnostic captures</option><option value="runtime">Attached runtime case</option></select></label>
+      <label id="workorder-baseline-control" class="approval"><input id="workorder-baseline-only" type="checkbox"><span>Use only the before diagnosis for this workorder.<small>Leave unchecked to include the selected after capture and any paired browser checks.</small></span></label>
       <div id="terms-editor"></div>
       <details class="source-details"><summary>Reuse saved owner terms</summary><label>Existing owner terms JSON<small>Optional · maximum 2 MB</small><input id="terms-file" type="file" accept=".json,application/json"></label><p id="terms-file-status" class="hint" role="status" aria-live="polite">Optional: open existing terms to fill the form.</p><button id="download-terms" type="button" class="secondary">Save terms JSON</button></details>
       <button id="workorder-run" type="submit" disabled>Create workorder</button>

@@ -49,6 +49,8 @@ The complete `.merchant-support.json` transfer includes the current workspace, r
 
 A retained period attaches the original `history.json` and the matching SF97 `report.json`, with an optional coherent SF98 journal pair. It uses the same case version publication, stale-save protection, historical reopening and private handoff. The case list indicates how many attached captures are retained periods; the original detailed day/session/variant counters stay in the runtime source object. See [support across restarts](RUNTIME_SUPPORT.md#support-a-merchant-across-restarts) for method/path selection, source binding and independent before/after period comparison.
 
+The saved workspace also retains **Workorder source** and raw owner-entered scope, deliverables and acceptance criteria. Select **Attached runtime case** to prepare the original SF77 workorder from an incident packet or retained period without creating an unrelated diagnosis. Old cases open in their original diagnostic mode and missing new delivery fields open empty. Generated workorder documents are downloaded separately; reopening any saved version restores the exact source and terms inputs for a newly dated export. Complete support handoffs carry the same workorder choice and drafts to another operator.
+
 ### Recover a stopped local writer
 
 A save briefly owns an exclusive writer record. If that process stops abruptly, later saves retain their drafts and report `CASE_STORE_BUSY`. Inspect the recorded process from the same host and PID namespace:
