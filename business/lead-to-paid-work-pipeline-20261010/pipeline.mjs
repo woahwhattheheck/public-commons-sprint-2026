@@ -5,6 +5,8 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { receiptTime, exactUsdMinor, reconcileCollections, collectionQueueCsv } from './collections.mjs';
 import { applyOutreachReview } from './outreach-board.mjs';
+import { applyReplyReview } from './reply-review.mjs';
+import { markdown as replyMarkdown } from './reply-triage.mjs';
 
 const TYPES = new Set(['OPEN','CANCELLED','CLOSED','UNKNOWN']);
 const PROOF = new Set(['DOCUMENTED','SELF_REPORTED','UNKNOWN']);
@@ -135,7 +137,8 @@ export function evaluateAll(opportunities, now = new Date(), options = {}) {
     if (collection.reviewRequired) decision.nextActions.unshift('Review quarantined collection receipts in collections.json; no automatic collection or contact');
   });
   const outreach = applyOutreachReview(opportunities, decisions, options.outreachSnapshot, now);
-  return { decisions, collections, outreach };
+  const reply = applyReplyReview(opportunities, decisions, options.replySnapshot, now);
+  return { decisions, collections, outreach, reply };
 }
 
 export function renderMarkdown(rs,now){
@@ -145,6 +148,7 @@ export function renderMarkdown(rs,now){
     out+=`**Owner:** ${r.owner} · **Stage:** ${r.stage} · **Decision:** ${r.readyForOwnerApproach?'OWNER_APPROACH_CANDIDATE':'HOLD'} · **Recorded net USD:** ${money(r.recordedNetUsd)} (${r.cashReconciliation})\n\n`;
     if (r.collections) out+=`**Collections:** ${r.collections.invoices.map(x=>`${x.invoiceId}: ${x.state}, ${x.outstandingMinor ?? 'unknown'} ${x.currency} minor units outstanding${x.overdue?' (overdue)':''}`).join('; ')||'No valid invoice recorded'}. Review required: ${r.collections.reviewRequired}.\n\n`;
     if (r.outreachPreflight) out+=`**Outreach snapshot:** ${r.outreachPreflight.decision}; ${r.outreachPreflight.reasons.join('; ')||'no collision observed in supplied snapshot; this is not send authorization'}.\n\n`;
+    if (r.replyTriage) out+=`**Reply status:** ${r.replyTriage.status}; ${r.replyTriage.sentCount??0} verified SENT, ${r.replyTriage.humanReplyCount??0} human, ${r.replyTriage.bounceCount??0} bounce. ${r.replyTriage.nextAction||'Provider reply snapshot not supplied or case not mapped'}.\n\n`;
     out+=`Source: ${r.buyer.sourceUrl}\n\nDeadline: ${r.buyer.deadlineText} (${r.deadlineState}). Source review: ${r.sourceReview}.\n\n`;
     out+=`Proposed specialist slice: ${r.workshare.summary||'UNDEFINED'}; fee ${money(r.workshare.feeUsd)}, delivery cost ${money(r.workshare.costUsd)}, margin ${r.workshare.margin===null?'UNKNOWN':(100*r.workshare.margin).toFixed(1)+'%'}; ${r.workshare.feeStatus}.\n\n`;
     out+=`Prime fit: ${r.partners.map(p=>`${p.name} ${p.documented}/${p.required} documented requirements`).join('; ')||'UNASSIGNED'}\n\n`;
@@ -167,6 +171,7 @@ export function renderWorkshareSheet(rs,now){
     out+=r.workshare.milestones.length ? r.workshare.milestones.map((m,i)=>`${i+1}. Deliverable: ${m.deliverable}\n   Acceptance: ${m.acceptance}`).join('\n')+'\n' : 'No signed-off deliverables or acceptance yet.\n';
     out+=`\n**Externally usable fee:** ${r.workshare.feeApproved && r.workshare.feeUsd !== null ? money(r.workshare.feeUsd)+' (internal approval recorded; offer remains UNSENT)' : 'WITHHELD: OWNER HAS NOT APPROVED PRICE'}.\n\n`;
     out+=`**Partner fit:** ${r.partners.map(p=>`${p.name}: ${p.documented}/${p.required} mandatory clauses documented, ${p.eligibleToConsider?'potential candidate':'not qualified on provided records'}`).join('; ')||'No candidates assessed'}.\n\n`;
+    if (r.replyTriage) out+=`**Provider reply lane:** ${r.replyTriage.status}; ${r.replyTriage.nextAction||'Supply actual provider data and bind caseId before further contact'}.\n\n`;
     out+=`**Blocking items:** ${r.blockers.length?r.blockers.join('; '):'None in these supplied records; separate sender/recipient review is still required'}.\n\n`;
     out+='**Human next action:** '+(r.nextActions[0]||'Owner review real source, counterpart and commercial conditions')+'; independently confirm original buyer and partner permissions before any communication.\n';
   }
@@ -178,16 +183,17 @@ export function renderHtml(rs,now){
     const collectionRows=(r.collections?.invoices||[]).map(x=>`<tr><td>${safe(x.invoiceId)}</td><td>${safe(x.currency)}</td><td>${safe(x.netMinor)}</td><td>${safe(x.outstandingMinor??'Unknown')}</td><td>${safe(x.state)}${x.overdue?' · overdue':''}</td></tr>`).join('');
     const collectionView=r.collections?`<h3>Recorded collections</h3><p>Workflow stage is separate from invoice settlement. Integer minor units per stated currency; no currency conversion. ${r.collections.reviewRequired?'Review required: see collections.json for rejected or conflicting receipts.':'Receipts remain operator supplied; independently verify with the provider.'}</p><table><tr><th>Invoice</th><th>Currency</th><th>Net received</th><th>Outstanding</th><th>State</th></tr>${collectionRows||'<tr><td colspan="5">No valid invoice recorded</td></tr>'}</table>`:'';
     const outreachView=r.outreachPreflight?`<h3>Outreach snapshot</h3><p>${safe(r.outreachPreflight.decision)}: ${safe(r.outreachPreflight.reasons.join('; ')||'No collision observed in supplied snapshot. Separate live checks, reservation and owner authorization still apply.')}</p>`:'';
+    const replyView=r.replyTriage?`<h3>Provider reply lane</h3><p><strong>${safe(r.replyTriage.status)}</strong> · ${safe(r.replyTriage.sentCount??0)} verified SENT · ${safe(r.replyTriage.humanReplyCount??0)} human · ${safe(r.replyTriage.bounceCount??0)} bounce.</p><p>${safe(r.replyTriage.nextAction||'No mapped provider reply data. Use the relationship owner and actual mailbox receipts.')}</p>`:'';
     const issues=r.blockers.map(s=>`<li>${safe(s)}</li>`).join('');
     const partnerRows=r.partners.map(p=>`<tr><td>${safe(p.name)}</td><td>${p.documented}/${p.required}</td><td>${p.eligibleToConsider?'DOCUMENTED':'HOLD'}</td><td>${safe(p.gaps.map(g=>g.requirementId).join(', '))}</td></tr>`).join('');
-    return `<section><div class="top"><h2>${safe(r.buyer.name)}</h2><span class="status">${r.readyForOwnerApproach?'OWNER REVIEW':'HOLD'}</span></div><p>${safe(r.buyer.id)} · ${safe(r.buyer.revision)} · ${safe(r.owner)} · Workflow: ${safe(r.stage)}</p><p>Cash basis: ${safe(r.cashReconciliation)}; operator-recorded, not provider-verified.</p><p><a href="${safe(r.buyer.sourceUrl)}">First-party source</a> · ${safe(r.deadlineState)}</p><div class="metrics"><div><label>Documented prime</label><strong>${safe(r.selectedPrime||'Not qualified')}</strong></div><div><label>Price</label><strong>${safe(money(r.workshare.feeUsd))}</strong></div><div><label>Recorded net USD</label><strong>${safe(money(r.recordedNetUsd))}</strong></div></div>${collectionView}${outreachView}<h3>Mandatory prime requirements</h3><table><tr><th>Candidate</th><th>Documented</th><th>Gate</th><th>Missing</th></tr>${partnerRows}</table><h3>Blocking gates</h3><ul>${issues||'<li>None recorded; release remains with owner</li>'}</ul><h3>Next actions</h3><ol>${r.nextActions.map(s=>`<li>${safe(s)}</li>`).join('')}</ol></section>`;
+    return `<section><div class="top"><h2>${safe(r.buyer.name)}</h2><span class="status">${r.readyForOwnerApproach?'OWNER REVIEW':'HOLD'}</span></div><p>${safe(r.buyer.id)} · ${safe(r.buyer.revision)} · ${safe(r.owner)} · Workflow: ${safe(r.stage)}</p><p>Cash basis: ${safe(r.cashReconciliation)}; operator-recorded, not provider-verified.</p><p><a href="${safe(r.buyer.sourceUrl)}">First-party source</a> · ${safe(r.deadlineState)}</p><div class="metrics"><div><label>Documented prime</label><strong>${safe(r.selectedPrime||'Not qualified')}</strong></div><div><label>Price</label><strong>${safe(money(r.workshare.feeUsd))}</strong></div><div><label>Recorded net USD</label><strong>${safe(money(r.recordedNetUsd))}</strong></div></div>${collectionView}${outreachView}${replyView}<h3>Mandatory prime requirements</h3><table><tr><th>Candidate</th><th>Documented</th><th>Gate</th><th>Missing</th></tr>${partnerRows}</table><h3>Blocking gates</h3><ul>${issues||'<li>None recorded; release remains with owner</li>'}</ul><h3>Next actions</h3><ol>${r.nextActions.map(s=>`<li>${safe(s)}</li>`).join('')}</ol></section>`;
   }).join('');
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Buyer-to-prime operator board</title><style>:root{font-family:system-ui,-apple-system,sans-serif;color:#19263c;background:#f4f6fa}body{max-width:1090px;margin:38px auto;padding:0 18px}h1{font-size:2rem}p{line-height:1.5;color:#44536a}section{background:#fff;padding:28px;border-radius:16px;box-shadow:0 8px 30px #15254112;margin:20px 0}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.top h2{margin:0}.status{font-weight:700;color:#763600;background:#ffefd7;padding:8px 12px;border-radius:9px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:22px 0}.metrics div{padding:16px;background:#f1f5fa;border-radius:10px}label{display:block;font-size:.8rem;color:#637085;margin-bottom:8px}strong{display:block;font-size:1.1rem;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;text-align:left}td,th{border-bottom:1px solid #dce2eb;padding:10px 6px;overflow-wrap:anywhere}th{color:#4b5a71}li{line-height:1.5;margin:7px 0}a{color:#075fba}.disclaimer{padding:16px;border-left:4px solid #59708a}</style><main><h1>Buyer → prime → paid work</h1><p class="disclaimer">Offline operator decision board, generated ${safe(now.toISOString())}. Documentation status is declared by inputs, not validated by this program. Nothing is submitted, contacted, purchased or paid.</p>${blocks}</main></html>`;
 }
 
 async function main(){
   const args=process.argv.slice(2);
-  if(args.includes('--help')||args.length===0){console.log('Usage: node pipeline.mjs <opportunities.json> <output-dir> [--now=ISO] [--outreach-snapshot=path.json]');return;}
+  if(args.includes('--help')||args.length===0){console.log('Usage: node pipeline.mjs <opportunities.json> <output-dir> [--now=ISO] [--outreach-snapshot=path.json] [--reply-snapshot=path.json]');return;}
   insist(args.length>=2,'Provide input and output directory');
   const raw=JSON.parse(await readFile(args[0],'utf8'));
   insist(Array.isArray(raw.opportunities) && raw.opportunities.length>0,'opportunities[] required');
@@ -196,7 +202,9 @@ async function main(){
   insist(!Number.isNaN(now.getTime()),'Invalid --now');
   const snapshotArg=args.find(x=>x.startsWith('--outreach-snapshot='));
   const outreachSnapshot=snapshotArg?JSON.parse(await readFile(snapshotArg.slice('--outreach-snapshot='.length),'utf8')):undefined;
-  const { decisions: rs, collections, outreach } = evaluateAll(raw.opportunities,now,{outreachSnapshot});
+  const replyArg=args.find(x=>x.startsWith('--reply-snapshot='));
+  const replySnapshot=replyArg?JSON.parse(await readFile(replyArg.slice('--reply-snapshot='.length),'utf8')):undefined;
+  const { decisions: rs, collections, outreach, reply } = evaluateAll(raw.opportunities,now,{outreachSnapshot,replySnapshot});
   const out=path.resolve(args[1]);
   await mkdir(out,{recursive:true});
   await writeFile(path.join(out,'decisions.json'),JSON.stringify({generatedAt:now.toISOString(),opportunities:rs},null,2)+'\n');
@@ -206,6 +214,8 @@ async function main(){
   await writeFile(path.join(out,'collections.json'),JSON.stringify(collections,null,2)+'\n');
   await writeFile(path.join(out,'collection-queue.csv'),collectionQueueCsv(collections));
   await writeFile(path.join(out,'outreach-preflight.json'),JSON.stringify(outreach??{generatedAt:now.toISOString(),decision:'NOT_EVALUATED',reason:'NO_MAILBOX_SNAPSHOT_SUPPLIED'},null,2)+'\n');
-  console.log(JSON.stringify({generatedAt:now.toISOString(),fileCount:7,opportunities:rs.length,hold:rs.filter(r=>!r.readyForOwnerApproach).length,ownerReview:rs.filter(r=>r.readyForOwnerApproach).length,recordedCash:(collections.currencies.find(c=>c.currency==='USD')?.netMinor??0)/100,recordedByCurrency:collections.currencies,collectionReviewItems:collections.issues.length,outputDir:out},null,2));
+  await writeFile(path.join(out,'reply-queue.json'),JSON.stringify(reply??{generatedAt:now.toISOString(),status:'NOT_EVALUATED',reason:'NO_PROVIDER_REPLY_SNAPSHOT_SUPPLIED'},null,2)+'\n');
+  await writeFile(path.join(out,'reply-queue.md'),reply?replyMarkdown(reply):'# Reply status\n\nNot evaluated: no provider reply snapshot supplied. This is not evidence that no email was sent.\n');
+  console.log(JSON.stringify({generatedAt:now.toISOString(),fileCount:9,opportunities:rs.length,hold:rs.filter(r=>!r.readyForOwnerApproach).length,ownerReview:rs.filter(r=>r.readyForOwnerApproach).length,recordedCash:(collections.currencies.find(c=>c.currency==='USD')?.netMinor??0)/100,recordedByCurrency:collections.currencies,collectionReviewItems:collections.issues.length,replyInterestCases:reply?.totals?.interestCases??null,replyMappingIssues:reply?.boardJoin?.issues.length??null,outputDir:out},null,2));
 }
 if(process.argv[1] && import.meta.url===new URL(`file://${path.resolve(process.argv[1])}`).href){main().catch(e=>{console.error(e.message);process.exitCode=1;});}

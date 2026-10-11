@@ -57,3 +57,22 @@ The same command now also writes `collections.json` and `collection-queue.csv`. 
 ## Optional outreach snapshot on the same board
 
 Add `--outreach-snapshot=/private/current-mailbox-snapshot.json` to run the existing collision checker in the same command. Map each opportunity to its exact intended contact using `communication.intentId` and `communication.to`; see [OUTREACH-BOARD.md](OUTREACH-BOARD.md). A snapshot HOLD can only reduce approach readiness. Without the option, existing commercial decisions are unchanged and the board shows NOT_EVALUATED. The command now writes seven outputs, including a preflight result or explicit not-evaluated record.
+
+## One-command conversion cockpit: buyer gates + replies + collections
+
+The original `reply-triage.mjs` now joins the **same** `pipeline.mjs` operator board through the optional `--reply-snapshot` argument. This closes a real commercial blind spot: an outbound already SENT, bounced recipient, declined contact or human prospect reply should not be represented as a fresh first-contact candidate on the sales decision board.
+
+```bash
+node business/lead-to-paid-work-pipeline-20261010/pipeline.mjs \
+  /private/current-opportunities.json /private/current-revenue-cockpit \
+  --reply-snapshot=/private/original-gmail-receipts.json \
+  --outreach-snapshot=/private/original-contact-history.json
+```
+
+The reply snapshot uses the **original** `REPLY-TRIAGE.md` `cases[]` / `messages[]` schema. For each opportunity, explicitly set `communication.caseId` equal to one case's `id`; that case's `owner` and HTTPS `sourceUrl` must exactly match the opportunity owner and original buyer issuer URL. A case ID shared by two opportunities, an unmapped case, or mismatched issuer/owner is a review hold, not a guessed link. Unlike the independent reply queue, the decision board intentionally omits raw message bodies, email addresses, subjects, message IDs and private email receipt URLs.
+
+With the snapshot supplied, the **existing** reply classifier validates real provider message IDs/receipts, distinguishes human interest and decline from automatic replies and DSNs, and computes the next operator action. Any verified SENT first contact suppresses the board's `OWNER_APPROACH_CANDIDATE` action, even if delivery later bounced. A human decline remains a hold. The relationship owner can still investigate a new legitimate contact, negotiate an accepted scoped offer or record payment; the program never freezes the deal, sends an email or fabricates revenue. Unbound cases and mapping issues are written into the reply report for routing, not discarded.
+
+The single command now writes nine local artifacts. New `reply-queue.json` contains original provider **metadata and links**, so keep it private with the mailbox export; `reply-queue.md` is the original priority-ranked human action queue. The existing HTML, Markdown, workshare and `decisions.json` carry a reduced per-deal status. Without `--reply-snapshot`, the prior run remains valid and reply status is explicitly `NOT_EVALUATED`, which never means no messages exist. Existing cash reconciliation, shared first-contact CAS, real Gmail send ownership, grant evidence and partner claims are not replaced.
+
+**Operator sequence:** retrieve actual up-to-date Gmail provider receipts with the authorized relationship owner; bind exact case/owner/issuer once; run the command locally; work human interest before speculative new leads; reconcile bounced aliases with original contacts; convert signed scope into accepted deliverables and provider-backed invoices. The original `reply-triage.mjs` can still run standalone. No hosted GitHub Actions, browser subscription, new background trigger or customer contact is needed for this analysis.
