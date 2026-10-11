@@ -64,3 +64,11 @@ Focused first-party loopback regression: `node --test test/discovery-prefix.test
 `discover({ origin, limit, offset })` accepts a nonnegative safe-integer `offset` for requesting a later Bazaar page. The default `offset: 0` is omitted to preserve existing URLs; positive values are encoded after `limit`. Invalid offsets fail with `BAD_DISCOVERY_OFFSET` before any fetch. The client returns the provider's actual `pagination` unchanged and does not infer totals or auto-fetch subsequent pages. Caller-authorized deployment prefixes remain governed by the separately merged prefix handling.
 
 Focused offline regression: `node --test test/discovery-offset.test.mjs`.
+
+### Native facilitator discovery envelopes (SCF SF31 / current Vellar)
+
+The read-only buyer `discover()` now consumes **either** the project's existing `{resources, pagination}` or the native `{items, pagination}` envelope observed in Vellar's original public `GET /discovery/resources` response and already consumed by SF70. The API consistently returns `resources` for either input and adds `sourceEnvelope: 'resources' | 'items'` so operators can distinguish which provider contract was actually observed. Native `items` must contain JSON objects; both keys present, neither present, nonarray items or missing-object pagination are rejected instead of silently choosing a provider.
+
+**Every listed object, accepted payment alternative, HTTP/MCP input declaration and pagination field is preserved unchanged.** An operator inspecting a native listing must account for `row.resource` being either a URL string or `{url:...}`, and must read the declared HTTP method from that specific provider row. The example above illustrates the project's own catalog shape; it is **not** a blanket rule for native third-party listings. Discovery never probes seller routes, synthesizes a 402, authorizes payment, calls the signer or treats testnet advertisements as settled transactions. Actual provider availability is still determined by the original current HTTPS source, chosen network and filters.
+
+Focused native Node check: `node --test test/native-items-discovery.test.mjs`. For a live 1:1 comparison, the existing Muse native SF31/SF70 runner should reuse its original provider GET snapshot (including body/hash and network scope) rather than replacing it with a hand-authored directory.
