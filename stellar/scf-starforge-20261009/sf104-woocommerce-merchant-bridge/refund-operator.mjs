@@ -51,7 +51,8 @@ export function wooMoney(value, decimals, {positive = false} = {}) {
 }
 
 function originalIdentity(event) {
-  return {...adjustmentEventIdentity(event), orderReferenceDigest:event.orderReferenceDigest ?? null};
+  return {...adjustmentEventIdentity(event), routeId:event.routeId ?? null, method:event.method ?? null,
+    orderReferenceDigest:event.orderReferenceDigest ?? null};
 }
 
 /** Select exactly one verified adjustment from the unmodified accounting export. */
@@ -97,7 +98,8 @@ export function bindRefundAdjustment(value, id, snapshot, config, order) {
   need(payment.state === 'RELEASED' && HASH.test(payment.eventId) && HASH.test(payment.transactionHash) &&
     object(binding) && binding.approved === 'YES' && object(transfer), 'WOO_RELEASED_NATIVE_PAYMENT_REQUIRED');
   need(original.eventId === payment.eventId && record.eventId === payment.eventId &&
-    original.orderReferenceDigest === digest(order) &&
+    original.routeId === binding.routeId && original.method === binding.method &&
+    snapshot.order.transactionHash === payment.transactionHash && original.orderReferenceDigest === digest(order) &&
     original.transactionFingerprint === digest(payment.transactionHash),
     'WOO_REFUND_ORIGINAL_PAYMENT_MISMATCH');
   const identity = originalIdentity(original), profile = networkProfile(binding.network);
