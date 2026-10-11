@@ -4,7 +4,6 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { initReleaseStore, stageRelease, readReleaseState, listReleases, inspectRelease,
   compareReleases, activateRelease, rollbackRelease, releaseStatus, runActiveRelease } from './releases.mjs';
-import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 
 const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 launcher
 
@@ -20,8 +19,6 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
   activate --store DIR --id RELEASE --expect GENERATION [--reason TEXT]
   rollback --store DIR --expect GENERATION [--to RELEASE] [--reason TEXT]
   status   --store DIR
-  cache-status --store DIR
-  cache-invalidate --store DIR --instance INSTANCE [--route ROUTE_ID | --all]
   run      --store DIR [--expect GENERATION]
   console  --store DIR [--port 8425]
 
@@ -36,7 +33,6 @@ const COMMANDS = {
   list: ['store'], inspect: ['store', 'id'], diff: ['store', 'from', 'to'],
   activate: ['store', 'id', 'expect', 'reason'], rollback: ['store', 'expect', 'to', 'reason'],
   status: ['store'], run: ['store', 'expect'], console: ['store', 'port'],
-  'cache-status': ['store'], 'cache-invalidate': ['store', 'instance', 'route', 'all'],
 };
 function parse(args) {
   if (!args.length || args.includes('--help')) return null;
@@ -46,7 +42,7 @@ function parse(args) {
   for (let i = 0; i < rest.length; i++) {
     const name = rest[i].startsWith('--') ? rest[i].slice(2) : '';
     if (!allowed.includes(name) || Object.hasOwn(options, name)) throw new Error('Unknown or duplicate option: ' + rest[i]);
-    if (['allow-local-facilitator', 'allow-loopback-upstream', 'all'].includes(name)) { options[name] = true; continue; }
+    if (['allow-local-facilitator', 'allow-loopback-upstream'].includes(name)) { options[name] = true; continue; }
     if (!rest[i + 1] || rest[i + 1].startsWith('--')) throw new Error('Missing value for ' + rest[i]);
     options[name] = rest[++i];
   }
@@ -86,11 +82,6 @@ export async function main(args = process.argv.slice(2)) {
     case 'activate': result = await activateRelease(root, o.id, { expectedGeneration: o.expect, reason: o.reason }); break;
     case 'rollback': result = await rollbackRelease(root, { to: o.to, expectedGeneration: o.expect, reason: o.reason }); break;
     case 'status': result = await releaseStatus(root); break;
-    case 'cache-status': result = await releaseCacheStatus(root); break;
-    case 'cache-invalidate': {
-      if (!o.instance || Boolean(o.route) === Boolean(o.all)) throw new Error('Supply --instance and exactly one of --route ROUTE_ID or --all.');
-      result = await invalidateReleaseCache(root, { instanceId: o.instance, routeId: o.route }); break;
-    }
     case 'run': {
       const session = await runActiveRelease(root, { expectedGeneration: o.expect });
       print({ runningRelease: session.release.id, listener: session.url, mode: session.mode,

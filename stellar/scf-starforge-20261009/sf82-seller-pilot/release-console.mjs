@@ -5,7 +5,6 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { resolve } from 'node:path';
 import { readReleaseState, compareReleases, activateRelease, rollbackRelease,
   releaseStatus, runActiveRelease } from './releases.mjs';
-import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 function failure(message, status = 400) { return Object.assign(new Error(message), { status }); }
@@ -58,13 +57,12 @@ export async function startReleaseConsole(root, { port = 8425 } = {}) {
       const supplied = Buffer.from(req.headers['x-release-token'] ?? '');
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes)) throw failure('Reopen the operator URL printed by the console command.', 401);
       if (req.method === 'GET' && target.pathname === '/api/status' && !target.search) { send(200, await status()); return; }
-      if (req.method === 'GET' && target.pathname === '/api/cache' && !target.search) { send(200, await releaseCacheStatus(root)); return; }
       if (req.method === 'GET' && target.pathname === '/api/diff') {
         if ([...target.searchParams.keys()].some(k => !['from', 'to'].includes(k))) throw failure('Unknown comparison parameter.');
         const state = await readReleaseState(root);
         send(200, { generation: state.generation, ...await compareReleases(root, target.searchParams.get('from') ?? state.active, target.searchParams.get('to')) }); return;
       }
-      if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate'].includes(target.pathname) || target.search)
+      if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
       if (!req.headers.origin || !origins.has(req.headers.origin)) throw failure('Same-origin operator action required.', 403);
       if (busy || stopping) throw failure('An operator action is already running. Refresh when it completes.', 409);
@@ -75,12 +73,7 @@ export async function startReleaseConsole(root, { port = 8425 } = {}) {
       actionDone = new Promise(done => { finishAction = done; });
       try {
         lastError = null;
-        if (target.pathname === '/api/cache/invalidate') {
-          if (!managed || input.instanceId !== managed.observation.instanceId)
-            throw failure('This console does not own that running seller cache. Refresh.', 409);
-          const invalidated = await invalidateReleaseCache(root, { instanceId: input.instanceId, routeId: input.routeId });
-          busy = false; send(200, { ...await releaseCacheStatus(root), invalidatedRoutes: invalidated.invalidatedRoutes }); return;
-        } else if (target.pathname === '/api/activate') {
+        if (target.pathname === '/api/activate') {
           await activateRelease(root, input.id, { expectedGeneration: input.expectedGeneration, reason: input.reason });
         } else if (target.pathname === '/api/rollback') {
           await rollbackRelease(root, { to: input.to, expectedGeneration: input.expectedGeneration, reason: input.reason });
