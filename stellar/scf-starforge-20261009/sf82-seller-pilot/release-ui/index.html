@@ -47,6 +47,24 @@
         <div class="actions"><button id="facilitator-stage" class="primary">Stage reviewed release</button><button id="facilitator-download">Download review</button></div>
       </section>
     </section>
+    <section class="client-operations" aria-labelledby="client-title">
+      <div class="section-heading"><div><h2 id="client-title">Customer SDK handover</h2><p id="client-owner">Loading the retained customer exports.</p></div><button id="client-refresh">Refresh clients</button></div>
+      <p>Create a client from this console's running seller, or reopen an existing handover. Saved clients remain available after the seller stops.</p>
+      <div class="fields"><div><label for="client-export-id">Customer export ID</label><input id="client-export-id" maxlength="64" pattern="[a-z0-9][a-z0-9_-]{0,63}" placeholder="customer-release-v1" autocomplete="off" spellcheck="false"></div></div>
+      <div class="actions"><button id="client-generate">Generate from running seller</button><button id="client-inspect">Inspect retained client</button></div>
+      <p id="client-notice" role="status" aria-live="polite"></p>
+      <div class="table-scroll"><table><thead><tr><th>Export</th><th>Saved origin / runtime</th><th>Completion</th><th>Files</th><th>Review</th></tr></thead><tbody id="client-list"></tbody></table></div>
+      <div class="actions"><button id="client-first">First page</button><button id="client-next">Next page</button></div>
+      <section id="client-review" hidden>
+        <h3 id="client-review-title">Retained customer client</h3>
+        <dl id="client-identity" class="discovery-fields"></dl>
+        <p id="client-review-description"></p>
+        <div id="client-offers"></div>
+        <div class="table-scroll"><table><thead><tr><th>Original file</th><th>Bytes</th><th>SHA-256</th><th>Download</th></tr></thead><tbody id="client-files"></tbody></table></div>
+        <div class="actions"><button id="client-adopt">Adopt these retained files</button><button id="client-package">Download complete client</button><button id="client-download-stop">Stop download</button></div>
+        <p id="client-download-progress" role="status" aria-live="polite"></p>
+      </section>
+    </section>
     <section class="cache-operations" aria-labelledby="cache-title">
       <div class="section-heading"><div><h2 id="cache-title">Running source cache</h2><p id="cache-state">Start a release with a shared read policy to inspect its source cache.</p></div><div class="actions"><button id="cache-refresh">Refresh cache</button><button id="cache-invalidate-all">Invalidate all cached routes</button></div></div>
       <div class="table-scroll"><table><thead><tr><th>Route / binding</th><th>Sharing policy</th><th>Source activity</th><th>Action</th></tr></thead><tbody id="cache-routes"></tbody></table></div>
