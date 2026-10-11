@@ -55,6 +55,18 @@ stores and sessions own these operations. See [FLEET.md](FLEET.md) for the full
 host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
 initialization can include the same fleet with `--fleet-plan`.
 
+## Operate a Tenderly simulation merchant
+
+Use `init-tenderly-workspaces --dir NEW_OPERATOR_DIRECTORY --connection CONNECTION.json`
+to bind an existing private Tenderly workspace, or a new empty private directory.
+The same MCP opens its original browser, reviews and saves merchant profiles,
+prepares the product, issues original customer request tickets, and starts or
+drains the seller. Saved provider simulations can be retrieved, reviewed and
+applied to the original merchant operation through its current generation.
+Full plan, request, merchant response and provider response files use the shared
+SHA256-pinned resumable reader. See [TENDERLY-WORKSPACE.md](TENDERLY-WORKSPACE.md)
+for the complete setup, 26 tools, customer handoff, histories and recovery flow.
+
 ## Prepare a merchant
 
 For a prepared Stellar RPC product, initialize with

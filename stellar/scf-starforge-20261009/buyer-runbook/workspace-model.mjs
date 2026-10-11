@@ -429,6 +429,10 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
   }
   return {directory, state:list, draft:latestDraft, run:getRun, export:exportRun, download, previewResource,
     request:requestIntake.get, requestAttachment:requestIntake.attachment,
+    client:requestIntake.clients.get,clientAttachment:requestIntake.clients.attachment,
+    receiveClient:input=>mutate(()=>requestIntake.clients.receive(input)),
+    uploadClientFile:input=>mutate(()=>requestIntake.clients.upload(input)),
+    composeClientRequest:input=>mutate(()=>requestIntake.clients.compose(input)),
     receiveRequest:input => mutate(() => requestIntake.receive(input)),
     reviewRequest:input => mutate(() => requestIntake.review(input)),
     prepareRequest:input => mutate(() => requestIntake.provision(input)),

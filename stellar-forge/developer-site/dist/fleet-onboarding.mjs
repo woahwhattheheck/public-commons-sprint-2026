@@ -4,7 +4,7 @@ export const FLEET_BOOTSTRAP_SCHEMA = 'stellar-forge.fleet-bootstrap.v1';
 export const SOURCE_LABELS = Object.freeze({ workspace: 'API workspace', python: 'Python application',
   duckdbPackage: 'DuckDB / Parquet', s3Package: 'S3 objects', jsonrpcPackage: 'Stellar RPC',
   sqlitePackage: 'SQLite snapshot', mysqlPackage: 'MySQL / MariaDB',
-  postgresPackage: 'PostgreSQL' });
+  postgresPackage: 'PostgreSQL', clickhousePackage: 'ClickHouse' });
 const SOURCE_KEYS = Object.keys(SOURCE_LABELS);
 const GUIDE = 'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/merchant-fleet-gateway/';
 const NAME = /^[a-z][a-z0-9-]{0,39}$/;
@@ -23,6 +23,12 @@ const text = (value, max) => typeof value === 'string' && value.length <= max &&
   !/[\u0000-\u001f\u007f]/.test(value) && new TextDecoder().decode(new TextEncoder().encode(value)) === value;
 const path = value => text(value, 4096) && value.trim().length > 0;
 export const validPostgresInputManifest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+export function validClickHouseColumnTypes(value) {
+  return object(value) && Object.keys(value).length > 0 && Object.entries(value).every(([query, columns]) =>
+    text(query, 4096) && query.length > 0 && Array.isArray(columns) && columns.length > 0 && columns.every(column =>
+      object(column) && Object.keys(column).every(key => ['name', 'type'].includes(key)) &&
+      text(column.name, 4096) && column.name.length > 0 && text(column.type, 2048) && column.type.length > 0));
+}
 const absolute = value => path(value) && value.startsWith('/') && value !== '/' &&
   !value.endsWith('/') && !value.split('/').slice(1).some(part => !part || part === '.' || part === '..');
 export class FleetSetupError extends Error {
@@ -43,7 +49,7 @@ function draftShape(input) {
     if (!Array.isArray(tenant.sources) || tenant.sources.length > 32)
       throw new FleetSetupError([{ field, message: 'Each merchant supports at most 32 registered sources.' }]);
     keys(tenant.limits ?? {}, Object.keys(LIMIT_RANGES), field + '.limits');
-    tenant.sources.forEach((source, n) => keys(source, ['name', 'kind', 'path', 'pythonRoot', 'duckdbPython', ...Object.keys(SQLITE_SNAPSHOT_OPTIONS), 'postgresInputManifestSha256',
+    tenant.sources.forEach((source, n) => keys(source, ['name', 'kind', 'path', 'pythonRoot', 'duckdbPython', ...Object.keys(SQLITE_SNAPSHOT_OPTIONS), 'postgresInputManifestSha256', 'clickhouseColumnTypes',
       'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream'], field + '.sources.' + n));
   });
 }
@@ -111,6 +117,11 @@ export function validateFleetDraft(input) {
         if (source.kind !== 'postgresPackage' || !validPostgresInputManifest(source.postgresInputManifestSha256))
           add(at + '.postgresInputManifestSha256', `${display}: import the original PostgreSQL source definition with its reviewed package manifest.`);
         else native.postgresInputManifestSha256 = source.postgresInputManifestSha256;
+      }
+      if (source.clickhouseColumnTypes !== undefined) {
+        if (source.kind !== 'clickhousePackage' || !validClickHouseColumnTypes(source.clickhouseColumnTypes))
+          add(at + '.clickhouseColumnTypes', `${display}: import the original ClickHouse source definition with its ordered reviewed columns.`);
+        else native.clickhouseColumnTypes = structuredClone(source.clickhouseColumnTypes);
       }
       for (const [key, kind] of [['pythonRoot', 'python'], ['duckdbPython', 'duckdbPackage']]) {
         if (source[key] !== undefined && source[key] !== '') {
@@ -180,14 +191,14 @@ export function validateFleetDraft(input) {
 }
 function nativeSourceToDraft(name, native) {
   keys(native, [...SOURCE_KEYS, 'pythonRoot', 'duckdbPython', ...Object.keys(SQLITE_SNAPSHOT_OPTIONS),
-    'postgresInputManifestSha256', 'runtime'], 'package ' + name);
+    'postgresInputManifestSha256', 'clickhouseColumnTypes', 'runtime'], 'package ' + name);
   keys(native.runtime ?? {}, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream'], 'runtime');
   const selected = SOURCE_KEYS.filter(key => Object.hasOwn(native, key));
   if (selected.length !== 1) throw new FleetSetupError([{ field: 'sources', message: 'Each registered package must select one source type.' }]);
   const source = { ...newFleetSource(name, selected[0]), path: native[selected[0]],
     ...(native.pythonRoot !== undefined ? { pythonRoot: native.pythonRoot } : {}),
     ...(native.duckdbPython !== undefined ? { duckdbPython: native.duckdbPython } : {}), ...native.runtime };
-  for (const key of [...Object.keys(SQLITE_SNAPSHOT_OPTIONS), 'postgresInputManifestSha256'])
+  for (const key of [...Object.keys(SQLITE_SNAPSHOT_OPTIONS), 'postgresInputManifestSha256', 'clickhouseColumnTypes'])
     if (native[key] !== undefined) source[key] = structuredClone(native[key]);
   return source;
 }
@@ -203,6 +214,9 @@ export function importFleetSource(contents, name = 'current') {
   if (source.postgresInputManifestSha256 !== undefined &&
       (source.kind !== 'postgresPackage' || !validPostgresInputManifest(source.postgresInputManifestSha256)))
     throw new FleetSetupError([{ field: 'sources', message: 'The PostgreSQL source definition needs the original reviewed package manifest hash.' }]);
+  if (source.clickhouseColumnTypes !== undefined &&
+      (source.kind !== 'clickhousePackage' || !validClickHouseColumnTypes(source.clickhouseColumnTypes)))
+    throw new FleetSetupError([{ field: 'sources', message: 'The ClickHouse source definition needs the original ordered column review.' }]);
   return source;
 }
 function importNative(input) {
@@ -253,9 +267,10 @@ function guide(input, result, commands) {
   return `# Merchant fleet launch\n\n` +
     `Prepare ${input.tenants.length} merchants with ${result.assignments.length} original release stores.\n\n` +
     `## Prepare the host\n\nUse the current complete Stellar Forge toolkit on Linux with Node.js 22.16 or later and the native flock utility. Follow its [distribution instructions](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/distribution/README.md). The commands below use the installed starforge executable; when installed in a local npm application, invoke it as npx --no-install starforge. Install the native requirements for the selected source types.\n\n` +
-    `Prepare sources through the original API workspace, Python, DuckDB/Parquet, S3, Stellar RPC, SQLite, MySQL or PostgreSQL authoring commands. Each source must declare its merchant's public HTTPS origin. Keep payment and provider credentials in the original host environment. For Python, provide the application description and its source root; interpreter and input paths use the original package rules. RPC packages retain their separate data and payment network selections.\n\n` +
+    `Prepare sources through the original API workspace, Python, DuckDB/Parquet, S3, Stellar RPC, SQLite, MySQL, PostgreSQL or ClickHouse authoring commands. Each source must declare its merchant's public HTTPS origin. Keep payment and provider credentials in the original host environment. For Python, provide the application description and its source root; interpreter and input paths use the original package rules. RPC packages retain their separate data and payment network selections.\n\n` +
     `SQLite sources use the original six-file workbench export and its referenced database. Staging captures a committed snapshot, including committed WAL changes, into each immutable release. Optional sqliteSnapshotMaxBytes (4096–1099511627776; default 1073741824) and sqliteSnapshotTimeoutMs (100–3600000; default 120000) belong to that package alias. They are separate from gateway request limits. The original snapshot worker requires Node's node:sqlite support. MySQL sources use the original prepared package and installed mysql2 dependency; the running release resolves its passwordEnv and other connection references from the host environment and reads the live database.\n\n` +
     `PostgreSQL sources use the original configured or prepared package. In the original PostgreSQL workspace or Seller releases, review it and choose Download fleet source. Import that JSON into the intended source card to retain its canonical host path and postgresInputManifestSha256. Staging rechecks that manifest and copies the original query, binding, connection policy and selected CA through the native release adapter. Runtime credentials resolve from the host environment. PostgreSQL rollback restores the retained merchant configuration while database contents remain live.\n\n` +
+    `ClickHouse sources retain the original prepared directory. Import its original source JSON in the intended source card to preserve clickhouseColumnTypes, the ordered native output-schema review. The original stage verifies that review against the package and every start checks the live database. Endpoint and login values use the environment variables named by the source on the merchant host. ClickHouse rollback restores the retained query, terms and client while the database remains live.\n\n` +
     `Extract this packet and run the commands from its folder. Relative source paths resolve from fleet-setup.json. Keep that declaration at the same location for setup recovery. Review the absolute fleet and MCP paths for your host.\n\n` +
     `## Prepare the retained stores\n\n${command('setup')}\n\n` +
     `Repeat this same command to resume interrupted setup. It retains staging and initial activation progress in bootstrap.json, validates the original source packages, then publishes fleet-plan.json. Each merchant starts in the first declared slot. A completed setup preserves later release selections. Setup and fleet shutdown forward cancellation to a pending native SQLite snapshot or PostgreSQL package capture; committed releases remain available and an uncommitted capture can be retried with the same command or release ID after reopening.\n\n` +
