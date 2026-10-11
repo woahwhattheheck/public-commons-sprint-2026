@@ -35,7 +35,7 @@ export async function smoke(bundle, { publicOrigin = false } = {}) {
       ['private delivery export not exposed', p.publicOrigin + '/delivery.json', 404],
       ...(p.discovery ? [
         ['public discovery resources', p.publicOrigin + '/discovery/resources?limit=1', 200],
-        ['public discovery search', p.publicOrigin + '/discovery/search?limit=1', 200],
+        ['public discovery search', p.publicOrigin + '/discovery/search?query=merchant&limit=1', 200],
         ['public original offer export', p.discovery.sourceURL, 200],
         ['private catalog health not exposed', p.publicOrigin + '/healthz', 404],
         ['private catalog control not exposed', p.publicOrigin + '/v1/command', 404],
