@@ -98,6 +98,10 @@ export class Buyer {
   createDataset(options: DatasetOptions): Promise<Dataset>;
   attachDataset(options: { id: string; directory: string }): Promise<Dataset>;
   listDatasets(): AsyncIterable<Dataset>;
+  object(id: string): ObjectAcquisition;
+  createObject(options: ObjectOptions): Promise<ObjectAcquisition>;
+  attachObject(options: { id: string; directory: string }): Promise<ObjectAcquisition>;
+  listObjects(): AsyncIterable<ObjectAcquisition>;
 }
 export class Operation {
   readonly intentId: string;
@@ -210,4 +214,124 @@ export class DatasetDelivery {
   rows(options?: { signal?: AbortSignal; maxRowCharacters?: number }): AsyncIterable<DatasetRow>;
   /** Verified in full before returning. JSON scalar types are preserved without coercion. */
   readRows(options?: { limit?: number; maxRows?: number; signal?: AbortSignal }): Promise<DatasetRow[]>;
+}
+
+export type ObjectOptions = {
+  /** Stable customer name, separate from the original native session UUID. */
+  id: string;
+  /** Exact whole-download allocation ceiling in decimal atomic units. */
+  maxTotalAtomic: string;
+} & ({config: string | JsonObject; operatorProfile?: OperatorProfile | string; workspaceDirectory?: string}
+  | {workspaceDirectory: string; config?: never; operatorProfile?: never})
+  & ({descriptionFile: string; objectId: string; chunkBytes?: number;
+    bytes?: never; expectedSnapshot?: never; expectedSha256?: never; expectedContentType?: never}
+  | {descriptionFile?: never; objectId?: never; bytes: number; chunkBytes: number;
+    expectedSnapshot: string; expectedSha256?: string | null; expectedContentType?: string | null});
+export interface ObjectCommandOptions {
+  signal?: AbortSignal;
+  /** Report paging, independent of the next native chunk to acquire. */
+  chunkOffset?: number;
+  /** 1–250; default 50. Full report export includes every original chunk. */
+  chunkLimit?: number;
+}
+export interface ObjectChunk extends JsonObject {
+  index: number; offset: number; length: number; intentId: string; state: string;
+  capAllocatedAtomic: string; attemptId: string | null; originalOutcome: JsonObject | null;
+  sha256: string | null; contentType: string | null;
+}
+export interface ObjectAssembly extends JsonObject {
+  schema: 'stellar-forge.sf88.object-assembly.v1';
+  sessionId: string; configurationSha256: string; snapshot: string;
+  chunkCount: number; chunkManifestSha256: string; destination: string;
+  bytes: number; sha256: string; createdAt: string;
+  status: 'SAVED' | 'RECORDED'; fileRevalidated: boolean;
+  receiptStatus?: 'NOT_RECORDED'; receiptError?: string;
+}
+export interface ObjectNativeReport extends JsonObject {
+  schema: 'stellar-forge.sf88.object-acquisition.v1';
+  directory: string; sessionId: string; sourceIntentId: string; configurationSha256: string;
+  createdAt: string; inspectedAt: string; sourceUrl: string; workspace: string | null;
+  status: 'READY' | 'RUNNING' | 'COMPLETE' | 'INTERRUPTED' | 'RECONCILIATION_REQUIRED';
+  bytes: number; chunkBytes: number; chunkCount: number; expectedSnapshot: string;
+  expectedSha256: string | null; expectedContentType: string | null;
+  completeChunks: number; attemptedChunks: number; downloadedBytes: number;
+  capAllocatedAtomic: string; objectSha256: string | null; assembly: ObjectAssembly | null;
+  limits: {maxAtomic: string; maxTotalAtomic: string; plannedMaxAtomic: string};
+  selection: {schema: string; descriptionSha256: string; objectId: string; filename: string; path: string} | null;
+  nextChunk: JsonObject | null;
+}
+export interface ObjectCommandRecord {
+  /** Original released JavaScript bridge; using it does not require Python. */
+  mode: 'ORIGINAL_PYTHON_OBJECT'; action: string; report: ObjectNativeReport;
+  chunkPage: {offset: number; limit: number; total: number; items: ObjectChunk[]; nextOffset: number | null};
+  assemblyPage: {offset: number; total: number; items: ObjectAssembly[]};
+  delivery?: {status: string; file: {path: string; bytes: number; sha256: string};
+    assembly: ObjectAssembly; sessionId: string; snapshot: string; fileRevalidated: boolean};
+  output?: {path: string; format: 'html' | 'json'; scope: 'COMPLETE_ORIGINAL_OBJECT_REPORT'};
+}
+export class ObjectReport {
+  readonly record: ObjectCommandRecord;
+  readonly process: {readonly exitCode: number | null; readonly exitSignal: string | null; readonly errorCode: string | null};
+  readonly native: ObjectNativeReport;
+  readonly status: ObjectNativeReport['status'];
+  readonly chunks: readonly ObjectChunk[];
+  readonly chunkPage: ObjectCommandRecord['chunkPage'];
+  readonly assemblyPage: ObjectCommandRecord['assemblyPage'];
+  constructor(record: ObjectCommandRecord, process: ObjectReport['process']);
+}
+export class ObjectAcquisition {
+  readonly id: string;
+  /** Private named app entry. Native report.directory is the original session path. */
+  readonly directory: string;
+  readonly lastReport?: ObjectReport;
+  readonly lastAccounting?: ObjectAccountingCommand;
+  constructor(buyer: Buyer, id: string);
+  /** Offline prepare/attach, or resume initialization after a lost complete response. */
+  initialize(options?: ObjectCommandOptions): Promise<ObjectReport>;
+  inspect(options?: ObjectCommandOptions): Promise<ObjectReport>;
+  /** Invokes the original acquisition for untouched chunks only. */
+  run(options?: ObjectCommandOptions): Promise<ObjectReport>;
+  recover(options?: ObjectCommandOptions): Promise<ObjectReport>;
+  accounting(options?: ObjectAccountingOptions): Promise<ObjectAccountingCommand>;
+  /** Explicit native reservation continuation; can query providers and update the original ledger. */
+  finalize(options?: ObjectAccountingOptions & {outboxDirectory?: string; merchantRoute?: string}): Promise<ObjectAccountingCommand>;
+  /** May acquire new chunks, then assembles or reopens this exact destination. */
+  download(destination: string, options?: ObjectCommandOptions): Promise<ObjectDelivery>;
+  assemble(destination: string, options?: ObjectCommandOptions): Promise<ObjectDelivery>;
+  delivery(destination?: string, options?: ObjectCommandOptions): Promise<ObjectDelivery>;
+  exportReport(destination: string, options?: ObjectCommandOptions & {format?: 'html' | 'json'}): Promise<ObjectReport>;
+}
+export class ObjectDelivery extends VerifiedFile {
+  readonly report: ObjectReport;
+  readonly path: string;
+  readonly assembly: ObjectAssembly;
+  readonly receiptRecorded: boolean;
+  constructor(report: ObjectReport);
+}
+export class ObjectDownloadError extends BuyerError {
+  readonly acquisition: ObjectAcquisition;
+  readonly progress: ObjectReport;
+  constructor(code: string, acquisition: ObjectAcquisition, progress: ObjectReport);
+}
+export interface ObjectAccountingOptions {
+  workspaceDirectory?: string;
+  offset?: number;
+  /** Native accounting entries, 1–250; default 100. */
+  limit?: number;
+  signal?: AbortSignal;
+}
+export interface ObjectAccountingReport extends JsonObject {
+  schema: 'stellar-forge.sf88.session-accounting.v1'; kind: 'object';
+  directory: string; sessionId: string; configurationSha256: string;
+  workspace: string | null; mode: 'VIEW' | 'FINALIZE'; observedAt: string;
+  terms: NativeRequest['expect'];
+  range: {offset: number; limit: number; total: number; nextOffset: number | null};
+  entries: Array<JsonObject & {index: number; intentId: string; outcome: string}>;
+  interrupted: boolean; recordAuthority: string;
+}
+export interface ObjectAccountingCommand {
+  readonly native: ObjectAccountingReport;
+  readonly process: ObjectReport['process'];
+  readonly record: {readonly mode: 'ORIGINAL_PYTHON_OBJECT'; readonly action: 'accounting' | 'finalize';
+    readonly report: ObjectAccountingReport};
 }
