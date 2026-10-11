@@ -92,12 +92,14 @@ Run `node forge.mjs status` to see the paths present in the selected release.
 | `merchant-fleet` | Original gateway with retained merchant rollout state |
 | `merchant-fleet-control` | Original fleet prepare, activate, status and rollback CLI |
 | `merchant-fleet-workspace` | Original private fleet workspace |
+| `revenue-workspace` | Original private merchant pricing workspace and saved operational reports |
+| `revenue-report` | Original SF97 merchant revenue analyzer and optional native settlement companion |
 | `postgres` | Original PostgreSQL seller and operations launcher |
 | `postgres-init` | Original create-only PostgreSQL source/service starter |
 | `postgres-inspect` | Original PostgreSQL declaration/query inspection |
 | `postgres-workspace` | Original database metadata-to-merchant-package workspace |
 
-Dataset, catalog, fleet, `buyer-inbox`, `buyer-runbook`, `deploy` and PostgreSQL
+Dataset, catalog, fleet, revenue, `buyer-inbox`, `buyer-runbook`, `deploy` and PostgreSQL
 commands are included when their original named CLI files exist in the selected
 commit. `status.commands` is the installed release's exact command map. `dataset`
 retains its CSV inspection/compiler meaning; use `buyer-dataset` for acquisition
@@ -353,6 +355,57 @@ processes. Its prepare/activate/rollback checks the observed fleet revision;
 release selection and dataset generation activation keep their separate original
 meanings. The [native fleet guide](../merchant-fleet-gateway/README.md) supplies
 the actual manifest and control contract.
+
+## Review merchant pricing and operating costs
+
+The installed pricing commands use the original SF97 workspace and analyzer.
+They read the merchant's actual seller configuration and operating capture; no
+additional npm dependency is required. Keep their saved workspace under the
+installation's private `state/` directory so release activation and rollback
+preserve the merchant's pricing decisions.
+
+Start the workspace with the same seller configuration used by the original
+operations launcher:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run revenue-workspace -- \
+  --config /tmp/stellar-forge-home/config/seller.json \
+  --state /tmp/stellar-forge-home/state/pricing \
+  --ops-url http://127.0.0.1:8424 --port 8457
+```
+
+Replace the configuration path and operations port with the original seller's
+actual values. Open the private browser URL printed by the workspace. For an
+existing operating export, replace `--ops-url` with
+`--snapshot /absolute/private/original-seller-traffic.json`. The optional
+`--native-outbox /absolute/private/native-outbox` reads that merchant's existing
+SF98 journal for the original native settlement companion.
+
+The screen presents every configured payment option. Enter its USD quote and
+basis, target request volume, fulfillment and challenge costs, and fixed
+operating costs. The original analyzer calculates the preview; unspecified costs
+remain unknown. Save the review to retain its original seller configuration,
+capture, terms and reports. Reopen a saved version to inspect those inputs and
+download its terms or reports. Reopening the same private `--state` directory
+after a service restart retains the saved versions and their source identities.
+
+To reproduce a saved session report with the command-line analyzer, use the
+matching seller, terms and snapshot from that same saved version and a new output
+directory:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run revenue-report -- \
+  --config /absolute/private/saved-review/seller.json \
+  --terms /absolute/private/saved-review/terms.json \
+  --snapshot /absolute/private/saved-review/snapshot.json \
+  --output /absolute/private/new-review-report
+```
+
+Both aliases are advertised only when their original entrypoint exists in the
+selected source release. `forge.mjs status` reports the exact installed command
+map. The complete [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
+and [revenue analyzer guide](../sf97-merchant-revenue-ops/README.md) are included
+with the source and describe the supported capture inputs and report fields.
 
 ## PostgreSQL merchant installation
 
