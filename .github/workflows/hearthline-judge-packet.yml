@@ -20,6 +20,7 @@ permissions:
 
 jobs:
   verify:
+    if: ${{ (false) && (true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

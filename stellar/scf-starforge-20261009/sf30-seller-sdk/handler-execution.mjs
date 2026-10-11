@@ -1,4 +1,4 @@
-// MIT. Application lifetime only; native verification/settlement are never raced.
+// MIT. Application lifetime and native cancellation latch; optional enclosing request signal.
 import { addAbortListener } from 'node:events';
 import { performance } from 'node:perf_hooks';
 
@@ -9,21 +9,31 @@ export function validateHandlerTimeout(timeoutMs) {
 }
 
 /** One incoming request, one application attempt, one native terminal decision. */
-export function createHandlerExecution(req, res, { timeoutMs = 30000 } = {}) {
+export function createHandlerExecution(req, res, { timeoutMs = 30000, signal } = {}) {
   validateHandlerTimeout(timeoutMs);
+  if (signal !== undefined && !(signal instanceof AbortSignal))
+    throw new TypeError('Parent request signal must be an AbortSignal');
   const controller = new AbortController();
   let phase = 'idle', interruption = null, timer, deadline = null, cancellation, operation;
-  const stop = reason => {
+  const stop = (reason, cause) => {
     if (controller.signal.aborted || phase === 'disposed') return;
     interruption = reason;
-    controller.abort(Object.assign(new Error(reason), {
+    controller.abort(cause ?? Object.assign(new Error(reason), {
       name: reason === 'handler_timeout' ? 'TimeoutError' : 'AbortError',
       code: reason === 'handler_timeout' ? 'APPLICATION_TIMEOUT' : 'CLIENT_DISCONNECTED',
     }));
   };
   const disconnected = () => stop('client_disconnected');
-  req.once('aborted', disconnected);
-  res.once('close', disconnected);
+  let parentListener;
+  if (signal) {
+    const parentStopped = () => stop(signal.reason?.code === 'REQUEST_DEADLINE_EXCEEDED' ?
+      'request_deadline' : 'client_disconnected', signal.reason);
+    parentListener = addAbortListener(signal, parentStopped);
+    if (signal.aborted) parentStopped();
+  } else {
+    req.once('aborted', disconnected);
+    res.once('close', disconnected);
+  }
   const check = () => {
     if (req.aborted || res.destroyed || res.writableEnded) disconnected();
     if (deadline !== null && performance.now() >= deadline &&
@@ -83,6 +93,7 @@ export function createHandlerExecution(req, res, { timeoutMs = 30000 } = {}) {
     settled() { return operation ? operation.then(() => {}, () => {}) : Promise.resolve(); },
     dispose() {
       clearTimeout(timer);
+      parentListener?.[Symbol.dispose]();
       req.removeListener('aborted', disconnected);
       res.removeListener('close', disconnected);
       phase = 'disposed';

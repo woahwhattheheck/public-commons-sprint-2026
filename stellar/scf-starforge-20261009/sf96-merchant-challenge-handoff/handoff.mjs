@@ -9,12 +9,15 @@ import { lstat, mkdir, open, readFile, stat } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectBytes } from '../sf84-mpp-market-intake/inspect.mjs';
+import { parseHeaderTrace } from '../sf85-live-402-capture/header-trace.mjs';
 import { operation } from '../sf88-operator-buyer-cli/config.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const plain = value => value && typeof value === 'object' && !Array.isArray(value);
 const canonical = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const files = ['original-capture.json', 'buyer-review.json', 'selection.json', 'review.txt'];
+const headersFile = 'original-response.headers';
+const importedSource = 'operator-exported-http-response-headers';
 const MAX = 262144;
 const I128 = 170141183460469231731687303715884105727n;
 
@@ -45,10 +48,27 @@ function originalCapture(bytes) {
   try { capture = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes)); }
   catch { throw new HandoffError('ORIGINAL_CAPTURE_JSON_INVALID'); }
   check(plain(capture) && capture.schema === 'scf.sf85.capture.v1', 'SF85_ORIGINAL_CAPTURE_REQUIRED');
+  const imported = capture.captureSource === importedSource;
+  const keys = ['schema','collectedAtUtc','url','method','status','headers'];
+  if (imported) keys.push('captureSource','importedAtUtc','sourceHeaderSha256',
+    'sourceHeaderBytes','discardedPreludeBlocks','requestMethodSource');
   check(Object.keys(capture).sort().join(',') ===
-    ['schema','collectedAtUtc','url','method','status','headers'].sort().join(','), 'SF85_CAPTURE_SHAPE_INVALID');
-  check(typeof capture.collectedAtUtc === 'string' && Number.isFinite(Date.parse(capture.collectedAtUtc)),
-    'SF85_CAPTURE_TIME_INVALID');
+    keys.sort().join(','), 'SF85_CAPTURE_SHAPE_INVALID');
+  if (imported) {
+    check(capture.collectedAtUtc === null && capture.requestMethodSource === 'operator-declared',
+      'SF85_IMPORTED_PROVENANCE_INVALID');
+    check(typeof capture.importedAtUtc === 'string' && Number.isFinite(Date.parse(capture.importedAtUtc)) &&
+      new Date(capture.importedAtUtc).toISOString() === capture.importedAtUtc,
+      'SF85_IMPORT_TIME_INVALID');
+    check(typeof capture.sourceHeaderSha256 === 'string' && /^[0-9a-f]{64}$/.test(capture.sourceHeaderSha256) &&
+      Number.isSafeInteger(capture.sourceHeaderBytes) && capture.sourceHeaderBytes > 0 &&
+      capture.sourceHeaderBytes <= 65536 && Number.isSafeInteger(capture.discardedPreludeBlocks) &&
+      capture.discardedPreludeBlocks >= 0 && capture.discardedPreludeBlocks <= 3,
+      'SF85_IMPORTED_HEADER_METADATA_INVALID');
+  } else {
+    check(typeof capture.collectedAtUtc === 'string' && Number.isFinite(Date.parse(capture.collectedAtUtc)),
+      'SF85_CAPTURE_TIME_INVALID');
+  }
   check(['GET', 'HEAD'].includes(capture.method) && capture.status === 402,
     'UNPAID_402_GET_OR_HEAD_REQUIRED');
   check(Array.isArray(capture.headers) && capture.headers.every(p =>
@@ -56,6 +76,29 @@ function originalCapture(bytes) {
     typeof p[1] === 'string' && ['payment-required','www-authenticate'].includes(p[0].toLowerCase())),
   'UNEXPECTED_SOURCE_HEADERS');
   return capture;
+}
+function sourceHeaders(capture, bytes) {
+  if (capture.captureSource !== importedSource) {
+    check(bytes === undefined, 'DIRECT_CAPTURE_DOES_NOT_ACCEPT_IMPORTED_HEADERS');
+    return undefined;
+  }
+  check(Buffer.isBuffer(bytes) || bytes instanceof Uint8Array, 'IMPORTED_ORIGINAL_HEADERS_REQUIRED');
+  let trace;
+  try { trace = parseHeaderTrace(bytes); }
+  catch { throw new HandoffError('IMPORTED_ORIGINAL_HEADERS_INVALID'); }
+  check(trace.sourceHeaderSha256 === capture.sourceHeaderSha256 &&
+    trace.sourceHeaderBytes === capture.sourceHeaderBytes &&
+    trace.discardedPreludeBlocks === capture.discardedPreludeBlocks &&
+    trace.status === capture.status && sha(canonical(trace.headers)) === sha(canonical(capture.headers)),
+    'IMPORTED_HEADERS_CAPTURE_MISMATCH');
+  return {
+    method:importedSource,
+    importedAtUtc:capture.importedAtUtc,
+    requestMethodSource:capture.requestMethodSource,
+    sourceHeaderSha256:trace.sourceHeaderSha256,
+    sourceHeaderBytes:trace.sourceHeaderBytes,
+    discardedPreludeBlocks:trace.discardedPreludeBlocks,
+  };
 }
 function urlMatch(captured, advertised) {
   let source, offer;
@@ -86,8 +129,9 @@ function parseOffer(capture, offer, selected) {
 }
 
 /** Build a deterministic reviewed offer from the genuine SF84 parser result. */
-export function derive(bytes, { index, intentId, maxAtomic }) {
+export function derive(bytes, { index, intentId, maxAtomic, originalHeaders }) {
   const capture = originalCapture(bytes);
+  const acquisition = sourceHeaders(capture, originalHeaders);
   check(Number.isSafeInteger(index) && index >= 0, 'EXPLICIT_OFFER_INDEX_REQUIRED');
   const report = inspectBytes(bytes);
   check(['x402-v2-402','multi-protocol-402'].includes(report.classification) &&
@@ -127,6 +171,7 @@ export function derive(bytes, { index, intentId, maxAtomic }) {
     offerIndex:index, intentId, quotedAtomic:selected.amount, maxAtomic,
     network:selected.network, asset:selected.asset, recipient:selected.payTo,
   };
+  if (acquisition) selection.sourceAcquisition = acquisition;
   return {config, selection};
 }
 function instructions(config, selection) {
@@ -138,6 +183,14 @@ function instructions(config, selection) {
     `HTTP method: ${config.operation.method}`,
     `Original capture (SHA-256): ${selection.originalCaptureSha256}`,
     `Raw x402 challenge (SHA-256): ${selection.originalChallengeSha256}`,
+    ...(selection.sourceAcquisition ? [
+      'Acquisition: operator-exported original HTTP response headers',
+      'Original HTTP capture time: unknown; import time is recorded separately',
+      `Imported at UTC: ${selection.sourceAcquisition.importedAtUtc}`,
+      `Original header file (SHA-256): ${selection.sourceAcquisition.sourceHeaderSha256}`,
+      `Original header file bytes: ${selection.sourceAcquisition.sourceHeaderBytes}`,
+      'URL and request method: operator-declared; response headers do not authenticate them',
+    ] : []),
     `Selected offer index: ${selection.offerIndex}`,
     `Selected offer (SHA-256): ${selection.originalOfferSha256}`,
     `Exact Stellar rail: ${selection.network}`,
@@ -167,9 +220,10 @@ async function exclusive(path, bytes) {
   try { await h.writeFile(bytes); await h.sync(); }
   finally { await h.close(); }
 }
-export async function create({ capturePath, outDir, index, intentId, maxAtomic }) {
+export async function create({ capturePath, outDir, index, intentId, maxAtomic, headersPath }) {
   const raw = await fileBytes(capturePath);
-  const { config, selection } = derive(raw, {index, intentId, maxAtomic});
+  const originalHeaders = headersPath === undefined ? undefined : await fileBytes(headersPath,65536);
+  const { config, selection } = derive(raw, {index, intentId, maxAtomic, originalHeaders});
   const draft = canonical(config);
   check(draft.byteLength <= 65536, 'SF88_CONFIG_TOO_LARGE');
   const dest = absolute(outDir, 'BUNDLE_DIR_MUST_BE_ABSOLUTE');
@@ -181,16 +235,19 @@ export async function create({ capturePath, outDir, index, intentId, maxAtomic }
     'selection.json':canonical(selection),
     'review.txt':Buffer.from(instructions(config,selection)),
   };
-  for (const file of files) await exclusive(join(dest,file), entries[file]);
+  if (originalHeaders) entries[headersFile] = originalHeaders;
+  const bundleFiles = Object.keys(entries);
+  for (const file of bundleFiles) await exclusive(join(dest,file), entries[file]);
   const manifest = {
     schema:'scf.sf96.handoff-bundle.v1',
     createdAtUtc:new Date().toISOString(),
-    files:Object.fromEntries(files.map(f => [f, {sha256:sha(entries[f]), bytes:entries[f].length}])),
+    files:Object.fromEntries(bundleFiles.map(f => [f, {sha256:sha(entries[f]), bytes:entries[f].length}])),
   };
   await exclusive(join(dest,'manifest.json'),canonical(manifest));
   return {bundle:dest, configPath:join(dest,'buyer-review.json'),
     originalCaptureSha256:selection.originalCaptureSha256, selectedOfferSha256:selection.originalOfferSha256,
     selectedIndex:index, quotedAtomic:selection.quotedAtomic, maxAtomic,
+    ...(selection.sourceAcquisition ? {sourceHeaderSha256:selection.sourceAcquisition.sourceHeaderSha256} : {}),
     next:'Run SF96 --verify and original SF88 --review before any separately authorized operation'};
 }
 export async function verify(dir) {
@@ -198,11 +255,13 @@ export async function verify(dir) {
   let manifest;
   try { manifest = JSON.parse((await fileBytes(join(root,'manifest.json'),65536)).toString('utf8')); }
   catch { throw new HandoffError('BUNDLE_MANIFEST_INVALID'); }
-  check(plain(manifest) && manifest.schema === 'scf.sf96.handoff-bundle.v1' &&
-    plain(manifest.files) && Object.keys(manifest.files).sort().join(',') === files.slice().sort().join(','),
+  check(plain(manifest) && manifest.schema === 'scf.sf96.handoff-bundle.v1' && plain(manifest.files),
   'BUNDLE_MANIFEST_SHAPE_INVALID');
+  const bundleFiles = Object.hasOwn(manifest.files,headersFile) ? [...files,headersFile] : files;
+  check(Object.keys(manifest.files).sort().join(',') === bundleFiles.slice().sort().join(','),
+    'BUNDLE_MANIFEST_SHAPE_INVALID');
   const records = {};
-  for (const file of files) {
+  for (const file of bundleFiles) {
     const content = await fileBytes(join(root,file),file === 'original-capture.json' ? MAX : 65536);
     check(manifest.files[file]?.bytes === content.length && manifest.files[file]?.sha256 === sha(content),
       'BUNDLE_FILE_HASH_MISMATCH');
@@ -217,6 +276,7 @@ export async function verify(dir) {
   'BUNDLE_SELECTION_INVALID');
   const expected = derive(records['original-capture.json'], {
     index:selection.offerIndex, intentId:selection.intentId, maxAtomic:selection.maxAtomic,
+    originalHeaders:records[headersFile],
   });
   check(sha(canonical(expected.selection)) === sha(records['selection.json']) &&
     sha(canonical(expected.config)) === sha(records['buyer-review.json']) &&
@@ -226,21 +286,24 @@ export async function verify(dir) {
     sourceSha256:expected.selection.originalCaptureSha256,
     selectedOfferSha256:expected.selection.originalOfferSha256,
     intentId:expected.selection.intentId, quotedAtomic:expected.selection.quotedAtomic,
+    ...(expected.selection.sourceAcquisition ? {sourceAcquisition:expected.selection.sourceAcquisition} : {}),
     maxAtomic:expected.selection.maxAtomic, outcome:'OFFLINE_ONLY_NOT_A_PAYMENT'};
 }
 function parse(args) {
   if (args.length === 2 && args[0] === '--verify') return {verify:args[1]};
   const keys = ['--capture','--out','--offer-index','--intent-id','--max-atomic'];
-  check(args.length === 10, 'REQUIRE_CAPTURE_OUT_OFFER_INDEX_INTENT_AND_MAX_ATOMIC');
+  check(args.length === 10 || args.length === 12, 'REQUIRE_CAPTURE_OUT_OFFER_INDEX_INTENT_AND_MAX_ATOMIC');
   const f = new Map();
   for (let i = 0;i<args.length;i+=2) {
-    check(keys.includes(args[i]) && !f.has(args[i]), 'UNEXPECTED_OR_DUPLICATE_FLAG');
+    check((keys.includes(args[i]) || args[i] === '--headers-file') && !f.has(args[i]),
+      'UNEXPECTED_OR_DUPLICATE_FLAG');
     f.set(args[i],args[i+1]);
   }
   check(keys.every(k=>f.has(k)), 'MISSING_REQUIRED_FLAG');
   check(/^(0|[1-9][0-9]*)$/.test(f.get('--offer-index')) &&
     Number.isSafeInteger(Number(f.get('--offer-index'))), 'EXPLICIT_OFFER_INDEX_REQUIRED');
   return {capturePath:f.get('--capture'), outDir:f.get('--out'),
+    headersPath:f.get('--headers-file'),
     index:Number(f.get('--offer-index')), intentId:f.get('--intent-id'),
     maxAtomic:f.get('--max-atomic')};
 }

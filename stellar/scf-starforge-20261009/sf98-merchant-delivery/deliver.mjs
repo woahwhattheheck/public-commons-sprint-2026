@@ -86,6 +86,9 @@ export async function sendSignedWebhook({ event, url, allowedHost, secret, signa
     }
     throw error;
   }
+  if (event.recipientDigest != null &&
+      (typeof event.recipientDigest !== 'string' || !/^[a-f0-9]{64}$/.test(event.recipientDigest)))
+    throw new Error('INVALID_SELECTED_RECIPIENT_DIGEST');
   // Minimal message: no payment header, transaction hash, signer, wallet, buyer request or response body.
   const payload = JSON.stringify({
     schema: 'stellar-forge.sf98.webhook.v1',
@@ -93,6 +96,7 @@ export async function sendSignedWebhook({ event, url, allowedHost, secret, signa
     routeId: event.routeId, method: event.method,
     network: event.network, amountAtomic: event.amountAtomic,
     assetDigest: event.assetDigest, orderReference: event.orderReference,
+    ...(event.recipientDigest == null ? {} : { recipientDigest: event.recipientDigest }),
     settlement: 'ORIGINAL_NATIVE_SUCCESS',
   });
   const timestamp = String(Math.floor(clock() / 1000));

@@ -16,20 +16,33 @@ page was approved.
 Use Node 22+ and the same Python, official signer module, private policy, shared
 SF36 ledger, and operator environment already used for the original SF88 buyer.
 Start from a working SF88 configuration. Its operation must be a GET to the
-original dataset endpoint, with the desired fields, equality filters and page
-limit in the URL. The first URL must not contain a cursor.
+original dataset endpoint, with the desired fields, filters, sort and page limit
+in the URL. The first URL must not contain a cursor. Use the current original
+SF100 exporter that exports checkPage and appendMany (PR #885 or later).
 
 For example, the URL below describes a selection; replace the hostname and query
 with the actual merchant dataset before running:
 
     https://merchant.example/data?fields=id,region,value&where_region=east&limit=100
 
-This acquisition path supports native field projection, equality filters and
-page limits. The current SF30 seller also offers range filters and sorting;
-those use a different query digest that the reviewed SF100 exporter does not
-yet consume. Initialization rejects sort, range and other unsupported query
-keys before creating an attempt or reaching payment approval. Native datasets
-that advertise those capabilities remain usable with equality queries here.
+The acquisition supports the original SF30 field projection, equality and range
+filters, single-column sorting and page limits. For a merchant that enables
+range filtering and sorting on value, an advanced selection is:
+
+    https://merchant.example/data?fields=id,region,value&where_region=east&gte_value=100&lt_value=500&sort=-value&limit=100
+
+Range operators are gt_, gte_, lt_ and lte_ followed by the declared column name.
+Select at most one lower and one upper bound per column. A sort has one declared
+column name, optionally prefixed by - for descending order. The original seller
+retains CSV order among equal values and places nulls last. Only capabilities
+enabled in the merchant's original dataset configuration are accepted. The
+seller's existing admission function checks its actual schema before payment.
+
+Initialization rejects malformed fields, repeated or unknown parameters,
+conflicting range bounds, invalid sort names and invalid page limits before
+creating an attempt. Saved pages are checked with the original SF100 checkPage
+function and matched to the exact requested typed query. Equality-only sessions
+retain their original query digests and remain resumable after this update.
 
 Keep captureBody false or absent. Omit responseFile: the session creates a
 separate destination for every page. Keep the same original SF36 ledger across
@@ -82,8 +95,8 @@ checkout evidence are private, create-only files.
 Completed responses must match the original SF30 dataset-page.v1 contract:
 
 - The dataset name, full column description, snapshot, selected fields and
-  typed filter values remain identical across pages.
-- The request's fields, filters and limit must match the response.
+  typed equality/range filters and selected order remain identical across pages.
+- The request's fields, filters, sort and limit must match the response.
 - Native cursor version, snapshot, query digest and offset must match exactly.
   Cursor offsets must be contiguous; the final cursor must be null.
 - The number and types of returned cells, page counts and total rows must agree.
@@ -158,21 +171,38 @@ original SF100 delivery tool:
       --session /private/purchases/east-region \
       --out /private/deliveries/east-region
 
-This calls the existing SF100 init, append and finalize commands using the
-original saved page, native intent, evidence file and exact preceding cursor.
+This calls the existing SF100 init and finalize commands and the original
+appendMany function using each saved page, native intent, evidence file and
+exact preceding cursor. One small child-process adapter passes the remaining
+ordered inputs to appendMany in one batch; it implements no archive or exporter.
+The native function scans the existing prefix once, accepts each next page and
+scans the completed archive once. It avoids launching a process and rescanning
+the growing archive separately for every page. CSV/JSONL finalization uses the
+original exporter's streaming writer.
 SF100 creates dataset.csv, typed dataset.jsonl, review.html and its source
 manifest. No merchant request or payment occurs during delivery. Its existing
 limits of 4,096 pages, 2 MiB per input page and 256 MiB of combined CSV/JSONL
-output still apply. The native exporter accepts at most eight filter fields.
+output and 256 MiB of private page archives still apply. The original capability
+limits also apply: at most eight equality, range and sort columns respectively,
+within the source's 32-parameter advertised capability budget. The batch adapter
+accepts up to 16 MiB of input paths, intents and cursors, without copying page
+contents into its input envelope.
 The bridge uses the original SF100 executable at its existing repository path
 and records its actual Git blob fingerprint. Compatible updates by its owner
 still have to satisfy the native archive, status, manifest and output contracts.
 The delivery report retains both the initial and current exporter fingerprints.
 
-If local delivery is interrupted, repeat the same deliver command. A private
-source binding and the original archive prefix must match this exact
-acquisition before any pages can be reused. A different purchase cannot be
-appended to that output directory.
+If local delivery is interrupted after a complete native archive record,
+repeat the same deliver command. A private source binding and the complete
+original archive prefix must match this exact acquisition before any pages
+can be reused. A different purchase cannot be appended to that output directory.
+
+The native appendMany function creates each archive record directly. A process
+killed during that write can leave an incomplete final JSON record. In that
+case, the next delivery attempt reports a JSON/archive error and retains the
+directory. Use a fresh output directory to rebuild from the already acquired
+page files without another merchant request. No partial record is silently
+discarded or treated as a completed page.
 
 If a process dies during native finalization and leaves incomplete export
 files, delivery reports DATASET_DELIVERY_PARTIAL_NATIVE_EXPORT and retains
@@ -212,3 +242,11 @@ resume, completed-file recovery, uncertain-attempt refusal, cap exhaustion and
 source cursor continuity. The HTTP resource is free, so no wallet,
 Stellar signature, network settlement or live merchant payment is represented
 by the exercise.
+
+The original SF100 owner's merged PR #885 also includes the source-native
+range/sort and legacy-page workflow in test/dataset-delivery.test.mjs. That run
+already used the original CSV loader, SF81/SF31 response path, SF82 records and
+SF100 export. This acquisition extension reuses its exact checkPage and
+appendMany implementation. Its request mapping and batch process boundary were
+reviewed against those current native contracts; that prior run is not a claim
+that a new paid acquisition or this new boundary has been executed.

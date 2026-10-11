@@ -5,9 +5,9 @@ import { constants as FS } from 'node:fs';
 import { chmod, lstat, mkdir, open, realpath, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DurableCatalogTransaction } from './journal.mjs';
+import { DurableCatalogTransaction, MAX_BATCH_OPERATIONS } from './journal.mjs';
 import { serveDiscovery } from './service.mjs';
-import { admitPinnedSeller } from '../sf73-pinned-seller-admission/admit.mjs';
+import { admitPinnedSeller, verifyPinnedSellerAdmission } from '../sf73-pinned-seller-admission/admit.mjs';
 import { prepareWithdrawal, applyWithdrawal } from '../sf95-signed-seller-withdrawal/withdrawal.mjs';
 
 export const POLICY_SCHEMA = 'stellar-forge.catalog-operator-policy/v1';
@@ -15,8 +15,11 @@ export const CONTROL_SCHEMA = 'stellar-forge.catalog-operator-command/v1';
 export const SOCKET_NAME = '.catalog-operator.sock';
 export const CONTROL_DESCRIPTOR_NAME = '.catalog-control.json';
 export const CONTROL_DESCRIPTOR_SCHEMA = 'stellar-forge.catalog-control/v1';
-const MAX_COMMAND = 512 * 1024;
-const MAX_RESPONSE = 4 * 1024 * 1024;
+export const SIGNED_BATCH_SCHEMA = 'stellar-forge.catalog-signed-batch/v1';
+export const SIGNED_BATCH_PLAN_SCHEMA = 'stellar-forge.catalog-signed-batch-plan/v1';
+const MAX_COMMAND = 8 * 1024 * 1024;
+const MAX_RESPONSE = 32 * 1024 * 1024;
+const MAX_QUEUED_BYTES = 32 * 1024 * 1024;
 const id = value => typeof value === 'string' && /^[A-Za-z0-9_.:-]{1,128}$/.test(value);
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = code => { throw new Error(code); };
@@ -179,7 +182,7 @@ export async function openCatalogOperator({ directory, policyFile, port = 0, cre
   try { await lstat(descriptorPath); fail('CONTROL_DESCRIPTOR_ALREADY_EXISTS'); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   const catalog = await DurableCatalogTransaction.open(target);
-  let discovery, control, closePromise, closing = false, inFlight = 0;
+  let discovery, control, closePromise, closing = false, inFlight = 0, reservedBytes = 0;
   let controlOrigin, descriptorIdentity;
   const controlSecret = controlTransport === 'loopback' ? randomBytes(32) : null;
   const connections = new Set();
@@ -252,6 +255,48 @@ export async function openCatalogOperator({ directory, policyFile, port = 0, cre
         sourceURL: input.sourceURL, observedAt: input.observedAt, proofs: input.proofs,
         authority: selected.authority, pinnedPublicKey: selected.pinnedPublicKey });
     }
+    if (command.operation === 'preview-batch' || command.operation === 'apply-batch') {
+      const apply = command.operation === 'apply-batch';
+      fields(input, apply ? ['batch','expectedHead','expectedPlan','expectedBatch','expectedPolicy'] : ['batch']);
+      fields(input.batch, ['schema','admissions']);
+      if (input.batch.schema !== SIGNED_BATCH_SCHEMA || !Array.isArray(input.batch.admissions) ||
+          !input.batch.admissions.length || input.batch.admissions.length > MAX_BATCH_OPERATIONS)
+        fail('SIGNED_BATCH_SCHEMA_INVALID');
+      const batchSha256 = sha(JSON.stringify(input.batch));
+      if (apply && (input.expectedBatch !== batchSha256 || input.expectedPolicy !== policy.sourceSha256))
+        fail('SIGNED_BATCH_SOURCE_OR_POLICY_CHANGED');
+      if (apply && (typeof input.expectedHead !== 'string' || !/^[a-f0-9]{64}$/.test(input.expectedHead) ||
+          typeof input.expectedPlan !== 'string' || !/^[a-f0-9]{64}$/.test(input.expectedPlan)))
+        fail('SIGNED_BATCH_REVIEW_REQUIRED');
+      const now = Date.now();
+      let expiresAt = Infinity, verifiedPaymentOptions = 0;
+      const operations = input.batch.admissions.map((row,index)=>{
+        try {
+          fields(row, ['sellerId','sequence','sourceURL','observedAt','sourceBase64','proofs']);
+          const selected = sellerPolicy(row.sellerId);
+          if (typeof row.sourceBase64 !== 'string' || row.sourceBase64.length > 87384)
+            fail('ORIGINAL_SOURCE_BYTES_REQUIRED');
+          const sourceBytes = Buffer.from(row.sourceBase64,'base64');
+          if (sourceBytes.toString('base64') !== row.sourceBase64) fail('SOURCE_BASE64_NOT_CANONICAL');
+          const prepared = verifyPinnedSellerAdmission({...row, sourceBytes,
+            authority:selected.authority,pinnedPublicKey:selected.pinnedPublicKey,now});
+          expiresAt = Math.min(expiresAt,prepared.verification.expiresAt);
+          verifiedPaymentOptions += prepared.verification.verifiedPaymentOptions;
+          return prepared.operation;
+        } catch(error) {
+          const code = /^[A-Z0-9_]{1,70}$/.test(error?.message ?? '') ? error.message : 'SELLER_PROOF_REJECTED';
+          fail(`SIGNED_BATCH_ITEM_${index}_${code}`);
+        }
+      });
+      if (!apply) return {schema:SIGNED_BATCH_PLAN_SCHEMA,batchSha256,
+        policySha256:policy.sourceSha256,expiresAt:new Date(expiresAt).toISOString(),
+        verifiedPaymentOptions,review:await catalog.previewBatch(operations)};
+      // Proofs are freshly checked above on EVERY apply, not trusted from a saved review.
+      const result = await catalog.commitBatch(operations,{expectedHead:input.expectedHead,expectedPlan:input.expectedPlan});
+      return {schema:'stellar-forge.catalog-signed-batch-receipt/v1',decision:result.decision,
+        head:result.head,operations:result.operationsAfter,changes:result.applied,replays:result.replayed,
+        batchSha256,policySha256:policy.sourceSha256,verifiedPaymentOptions,paymentCalls:0,signaturesIssued:0};
+    }
     if (command.operation === 'prepare-withdrawal') {
       fields(input, ['sellerId', 'catalogKey', 'sourceURL', 'reason']);
       const selected = sellerPolicy(input.sellerId);
@@ -300,10 +345,12 @@ export async function openCatalogOperator({ directory, policyFile, port = 0, cre
           Number(req.headers['content-length']) > MAX_COMMAND) {
         return send(res, 413, { ok: false, error: 'BOUNDED_JSON_COMMAND_REQUIRED' });
       }
-      if (inFlight >= 16) return send(res, 429, { ok: false, error: 'LOCAL_COMMAND_CAPACITY' });
-      inFlight++;
+      const commandBytes = Number(req.headers['content-length']);
+      if (inFlight >= 16 || reservedBytes + commandBytes > MAX_QUEUED_BYTES)
+        return send(res, 429, { ok: false, error: 'LOCAL_COMMAND_CAPACITY' });
+      inFlight++; reservedBytes += commandBytes;
       let released = false;
-      const release = () => { if (!released) { released = true; inFlight--; } };
+      const release = () => { if (!released) { released = true; inFlight--; reservedBytes -= commandBytes; } };
       const chunks = [];
       let size = 0, complete = false;
       req.on('error', release);
