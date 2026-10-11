@@ -2,7 +2,7 @@
 
 The Publisher section takes a completed Socrata edition through original dataset publication, SF82 release operations, and an SF88 customer acquisition. Its source package retains the exact exported CSV, dataset configuration, source provenance and original merchant terms. It adds the original optional snapshot parameter to the generated versioned seller.
 
-The original dataset service owns its version directory and private refresh socket. Its request wrapper pins a snapshot through admission, payment and response delivery. SF82 owns seller startup, process lifetime, release selection and shutdown. SF88 owns customer approvals, spending, individual page attempts and recovery; SF100 produces the completed data room.
+The original dataset service owns its version directory and private refresh controller. Its loopback listener uses the existing private descriptor, bearer token and exact Host validation. Its request wrapper pins a snapshot through admission, payment and response delivery. SF82 owns seller startup, process lifetime, release selection and shutdown. SF88 owns customer approvals, spending, individual page attempts and recovery; SF100 produces the completed data room.
 
 ## Open the maintained operator
 

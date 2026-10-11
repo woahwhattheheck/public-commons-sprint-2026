@@ -217,7 +217,7 @@
               <label>Release ID<input id="pub-release-id" required maxlength="64" pattern="[a-z0-9][a-z0-9._-]*" autocomplete="off" spellcheck="false" placeholder="hpd-queens-01"></label>
               <label>Release label<input id="pub-release-label" required autocomplete="off" placeholder="Queens housing dataset"></label>
               <label>Local listening port<input id="pub-release-port" type="number" min="0" max="65535" value="0" required><span class="help">0 lets the operating system select an available port.</span></label>
-              <label>Facilitator URL<input id="pub-facilitator" type="url" autocomplete="off" spellcheck="false" placeholder="Optional configured facilitator"></label>
+              <label>Facilitator URL<input id="pub-facilitator" type="url" autocomplete="off" spellcheck="false" placeholder="Configured facilitator URL"><span class="help">Configure a facilitator for native payments. Leave empty to inspect payment challenges.</span></label>
               <label class="checkbox-label span-2"><input id="pub-local-facilitator" type="checkbox">Allow a local facilitator for this configured runtime</label>
             </div>
             <div class="actions"><button type="submit" id="pub-stage" class="primary" data-write>Stage seller release</button></div>

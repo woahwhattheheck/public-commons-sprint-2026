@@ -356,7 +356,7 @@ Published versions remain individually selectable. **Activate this version** use
 
 ### Stage and run the seller
 
-Choose the retained draft, give its release an ID and label, and stage its original seller package. Port `0` asks the operating system for an available local port. A facilitator URL is optional when the original runtime already supplies its configured facilitator. A local HTTP facilitator requires the explicit local-facilitator runtime option.
+Choose the retained draft, give its release an ID and label, and stage its original seller package. Port `0` asks the operating system for an available local port. A configured facilitator URL enables the original native payment handling. Leave it empty to serve payment challenges. A local HTTP facilitator requires the explicit local-facilitator runtime option.
 
 **Activate release** selects the retained release with the displayed generation. **Start selected seller** owns its original process in this running operator. The interface shows the actual listener, selected release and observed running release. Changing the selection preserves the current process until it is stopped and started again. **Roll back release selection** delegates the original retained release history and generation check.
 

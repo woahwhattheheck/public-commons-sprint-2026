@@ -231,9 +231,14 @@ export function createPublisherPanel({getState, perform, download, handle, notic
     const area = $('pub-sessions'); area.replaceChildren();
     for (const session of pub()?.sessions || []) {
       const card = node('article', undefined, 'publisher-card'), heading = node('div', undefined, 'panel-heading');
-      heading.append(node('strong', session.id, 'mono'), node('span', session.error ? 'Needs attention' : 'Retained session', 'badge'));
+      const report = session.report || {};
+      heading.append(node('strong', session.id, 'mono'), node('span', session.error ? 'Needs attention' : report.status || 'Retained session', 'badge'));
       card.append(heading, facts([['Snapshot', session.binding?.snapshot], ['Buyer workspace', session.binding?.workspaceDirectory],
-        ['Maximum pages', session.binding?.maxPages], ['Payment limit, atomic units', session.binding?.maxTotalAtomic]]));
+        ['Completed pages', count(report.completedPages)], ['Acquired rows', count(report.acquiredRows)],
+        ['Rows in selection', count(report.totalRows)], ['Maximum pages', session.binding?.maxPages],
+        ['Payment limit, atomic units', session.binding?.maxTotalAtomic],
+        ['Allocated payment cap, atomic units', report.capAllocatedAtomic]]));
+      if (report.next) card.append(node('p', report.next, 'help'));
       if (session.error) card.append(node('p', session.error.message, 'error-detail'));
       const operations = node('div', undefined, 'actions');
       for (const [action,label] of [['run','Run acquisition'],['recover','Recover same acquisition'],['account','Finalize account records'],['export','Export customer delivery']])
@@ -260,8 +265,9 @@ export function createPublisherPanel({getState, perform, download, handle, notic
   }
   function controls(value = locked) {
     locked = value;
+    const unavailable = locked || Boolean(pub()?.running);
     const connected = Boolean(pub()?.target?.connected), selected = selectedDraft();
-    const gate = (id, ready) => { $(id).disabled = locked || !ready; };
+    const gate = (id, ready) => { $(id).disabled = unavailable || !ready; };
     gate('pub-open', true);
     gate('pub-prepare', Boolean($('pub-export').value));
     gate('pub-preview', Boolean($('pub-preview-target').value) &&
@@ -282,17 +288,17 @@ export function createPublisherPanel({getState, perform, download, handle, notic
     gate('pub-session', Boolean($('pub-buyer-id').value));
     gate('pub-download-buyer', Boolean($('pub-buyer-id').value));
     document.querySelectorAll('[data-pub-activate-snapshot]').forEach(control => {
-      control.disabled = locked || !connected || control.dataset.currentVersion === 'true';
+      control.disabled = unavailable || !connected || control.dataset.currentVersion === 'true';
     });
     document.querySelectorAll('[data-pub-activate-release]').forEach(control => {
-      control.disabled = locked || control.dataset.currentRelease === 'true';
+      control.disabled = unavailable || control.dataset.currentRelease === 'true';
     });
     document.querySelectorAll('#section-publisher button').forEach(control => {
-      if (Object.keys(control.dataset).some(key => key.startsWith('pubDownload'))) control.disabled = locked;
+      if (Object.keys(control.dataset).some(key => key.startsWith('pubDownload'))) control.disabled = unavailable;
     });
     document.querySelectorAll('#section-publisher [data-write]').forEach(control => {
       if (control.dataset.pubSessionRun || control.dataset.pubSessionRecover || control.dataset.pubSessionAccount || control.dataset.pubSessionExport || control.dataset.pubInspectRelease)
-        control.disabled = locked;
+        control.disabled = unavailable;
     });
   }
   function render(value) {
@@ -302,7 +308,8 @@ export function createPublisherPanel({getState, perform, download, handle, notic
     $('pub-state-summary').replaceChildren(model ? facts([
       ['Publisher directory', model.directory], ['Dataset connection', target?.connected ? 'Running seller connected' : target?.initialized ? 'Retained dataset, seller stopped' : 'No dataset prepared'],
       ['Current snapshot', target?.versions?.current], ['Dataset revision', target?.versions?.revision],
-      ['Retained drafts', drafts().length], ['Customer acquisitions', model.sessions?.length || 0]
+      ['Retained drafts', drafts().length], ['Customer acquisitions', model.sessions?.length || 0],
+      ['Active operation', model.running?.action || (model.running ? 'Running' : 'Idle')]
     ]) : node('p', 'Open the publisher to inspect its retained versions, releases and customer sessions.', 'muted'));
     $('pub-state-details').textContent = model ? json(model) : 'Open the publisher.';
     renderExport(); renderVersions(); renderDrafts(); renderReleases(); renderBuyers(); renderPreview(); renderBuyerReview();
