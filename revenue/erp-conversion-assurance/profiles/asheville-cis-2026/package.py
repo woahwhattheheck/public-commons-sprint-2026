@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """MIT. Export one consistent private project, every source version and exact original asset."""
-import csv, hashlib, io, json, os, sqlite3, sys, zipfile
+import csv, hashlib, io, json, os, pathlib, sqlite3, sys, zipfile
 def main():
-    database, project, revision, output = sys.argv[1:]
+    database, project, revision, output, comparisons = sys.argv[1:]
     db=sqlite3.connect('file:'+database+'?mode=ro',uri=True);db.row_factory=sqlite3.Row;db.execute('BEGIN')
     current=db.execute('SELECT * FROM projects WHERE id=?',(project,)).fetchone()
     if not current or current['revision']!=int(revision): raise ValueError('The project changed before this snapshot; refresh it.')
@@ -17,8 +17,11 @@ def main():
             write('active-datasets.json',dict(db.execute('SELECT kind,dataset FROM active WHERE project=?',(project,))))
             write('history.json',[{**json.loads(r['body']),'hmac':r['hmac']} for r in db.execute('SELECT body,hmac FROM events WHERE project=? ORDER BY revision',(project,))])
             assets=[dict(r) for r in db.execute('SELECT a.sha AS sha256,a.name,a.kind,b.size AS bytes,a.created FROM assets a JOIN blobs b ON a.sha=b.sha WHERE a.project=? ORDER BY a.created',(project,))]
+            included=set(a['sha256'] for a in assets if a['kind']!='frozen_handoff')
+            for asset in assets:asset['bodyIncluded']=asset['sha256'] in included
             write('original-sources.json',assets)
-            for digest in sorted(set(a['sha256'] for a in assets)):
+            write('prior-handoffs.json',[a for a in assets if a['kind']=='frozen_handoff'])
+            for digest in sorted(included):
                 row=db.execute('SELECT bytes,size FROM blobs WHERE sha=?',(digest,)).fetchone();data=bytes(row['bytes'])
                 if len(data)!=row['size'] or hashlib.sha256(data).hexdigest()!=digest:raise ValueError('Original asset hash changed: '+digest)
                 write('sources/'+digest+'.data',data)
@@ -35,10 +38,14 @@ def main():
                 data=bytes(db.execute('SELECT bytes FROM blobs WHERE sha=?',(op['sha'],)).fetchone()[0]);write('operations/'+op['id']+'.json',data)
             ledger=[json.loads(r['body']) for r in db.execute('SELECT body FROM ledger WHERE project=? ORDER BY id',(project,))]
             write('migration-ledger.json',ledger);write('accepted-bill-baselines.json',[dict(r) for r in db.execute('SELECT * FROM bill_baselines WHERE project=? ORDER BY bill_id',(project,))])
-            write('READ_ME.txt',b'Private utility migration handoff. Original sources are stored once under sources/<sha256>.data; original-sources.json preserves every name and purpose. Datasets retain original intake and correction versions. Operations and the migration ledger are local operator records, not vendor import acceptance or production posting. Reopen the encrypted workspace backup to continue editing; this ZIP is a frozen, portable project handoff.\n')
+            native=pathlib.Path(comparisons)
+            for item in sorted(native.iterdir()):
+                if item.is_symlink() or not item.is_file():raise ValueError('Comparison snapshots must be regular files.')
+                write('native-comparisons/'+item.name,item.read_bytes())
+            write('READ_ME.txt',b'Private utility migration handoff. Original sources are stored once under sources/<sha256>.data; original-sources.json preserves every name and purpose. Datasets retain original intake and correction versions. Completed native comparison replays and reviews are in native-comparisons. Prior generated handoff ZIPs are referenced in prior-handoffs.json; their bodies are not recursively nested in this snapshot. The full encrypted backup preserves those earlier handoffs for editable continuation. Operations and the migration ledger are local operator records, not vendor import acceptance or production posting. Reopen the encrypted workspace backup to continue editing; this ZIP is a frozen, portable project handoff.\n')
             archive.writestr('MANIFEST.json',(json.dumps(manifest,indent=2)+'\n').encode())
         handle.flush();os.fsync(handle.fileno())
-    db.close();print(json.dumps({'files':len(manifest['files']),'sourceAssets':len(set(a['sha256'] for a in assets)),'datasets':sum(1 for f in manifest['files'] if f['file'].endswith('/metadata.json')),'revision':int(revision)}))
+    db.close();print(json.dumps({'files':len(manifest['files']),'sourceAssets':len(included),'previousHandoffs':sum(a['kind']=='frozen_handoff' for a in assets),'comparisonArchives':sum(f['file'].startswith('native-comparisons/') and f['file'].endswith('.tar.gz') for f in manifest['files']),'datasets':sum(1 for f in manifest['files'] if f['file'].endswith('/metadata.json')),'revision':int(revision)}))
 if __name__=='__main__':
     try:main()
     except Exception as error:print(str(error),file=sys.stderr);sys.exit(1)
