@@ -173,6 +173,38 @@ function render(next) {
     ['Original file receipt', purchase.delivery.receiptPath], ['Receipt observed', purchase.delivery.receiptObservedAt],
   ] : []);
   text('product-evidence-note', purchase?.evidence.binding ?? 'The frozen inbox request binds this handoff and order. Original buyer evidence and the local file receipt retain their separate recorded outcomes.');
+  const facilitator = next.facilitator, readiness = facilitator?.readiness;
+  const readinessNotes = {
+    NOT_PROBED: 'Check the configured network, node health and latest ledger before starting work.',
+    READY: 'The configured network, node health and recent ledger satisfy this service’s readiness settings.',
+    STALE: 'The recorded check has expired. Check payment service to refresh it.',
+    NETWORK_MISMATCH: 'The node reports a different Stellar network. Correct the configured RPC address.',
+    UNHEALTHY: 'The configured node reports an unhealthy state. Restore its service before continuing.',
+    STALE_LEDGER: 'The reported ledger is too old or ahead of this host’s clock. Check node synchronization and host time.',
+    INVALID_RESPONSE: 'The configured node returned an invalid RPC response. Check its endpoint and compatibility.',
+    UNAVAILABLE: 'The configured RPC could not complete the check. Check its connection and availability.',
+    DRAINING: 'This payment service is draining its accepted work.',
+  };
+  const serviceLabels = { EXISTING_HTTP_FACILITATOR: 'External', TRUSTED_NATIVE_EMBEDDING: 'Host managed',
+    NATIVE_X402_FACILITATOR: 'Not checked', NOT_CONFIGURED: 'Not configured' };
+  const nativeStopped = session.state === 'STOPPED' && facilitator?.mode === 'NATIVE_X402_FACILITATOR';
+  text('facilitator-state', nativeStopped ? 'Stopped' : readiness ? label(readiness.state) : serviceLabels[facilitator?.mode] ?? 'Not configured');
+  text('facilitator-note', nativeStopped ? 'This session’s payment service has stopped. Its last network observation remains below.' :
+    readiness ? readinessNotes[readiness.state] ?? 'The current payment-service observation is shown below.' :
+    facilitator?.mode === 'EXISTING_HTTP_FACILITATOR' ? 'This session uses its separately operated payment service.' :
+    facilitator?.mode === 'TRUSTED_NATIVE_EMBEDDING' ? 'The host application operates this payment service.' :
+    'Choose an embedded native facilitator in the retained commerce setup to use this network check.');
+  facts('facilitator-facts', [
+    ['Network', facilitator?.network], ['RPC', readiness?.rpcOrigin],
+    ['Last node check', readiness?.health ? 'Healthy' : readiness?.checks?.getHealth ? label(readiness.checks.getHealth) : undefined],
+    ['Latest ledger', readiness?.ledger?.sequence],
+    ['Ledger closed', readiness?.ledger?.closeTime ? time(Number(readiness.ledger.closeTime) * 1000) : undefined],
+    ['Observed', readiness?.checkedAt ? time(readiness.checkedAt) : undefined],
+    ['Active verifications', facilitator?.activeVerify], ['Active settlements', facilitator?.activeSettle],
+    ['Signer ownership', facilitator?.ownership?.mode === 'HOST_SIGNER_LEASES' ?
+      facilitator.ownership.state === 'HELD' ? 'Held on this host' : label(facilitator.ownership.state) : facilitator?.ownership ? 'Process local' : undefined],
+  ]);
+  byId('facilitator').disabled = pending || selectionLoading || !controls.canProbeFacilitator;
   facts('seller-facts', [['Mode', label(seller.mode)], ['Listener', seller.listener],
     ['Routes', seller.routes?.length ?? 0], ['Started', time(session.startedAt)]]);
   const links = byId('seller-links'); links.replaceChildren();
@@ -191,6 +223,10 @@ function render(next) {
   if (!seller.routes?.length) { const row = document.createElement('li'); row.textContent = 'No routes reported'; routes.append(row); }
   byId('stop').disabled = pending || !controls.canStop;
   text('stop-note', session.shutdownError ? 'Shutdown reported ' + session.shutdownError + '. The recorded drain status remains available.' :
+    session.state === 'STOPPING' ? facilitator?.ownership?.mode === 'HOST_SIGNER_LEASES' ?
+      'The session is draining. Signer ownership remains held while accepted payment work finishes.' :
+      'The session is draining its accepted merchant and buyer work.' :
+    session.state === 'STOPPED' && session.shutdown?.nativeCompletion ? 'Accepted payment work finished and signer ownership was released. The grace-period timeout remains recorded.' :
     session.state === 'STOPPED' ? 'The session has stopped. Saved results remain available in this workspace.' :
     'Stop and drain this workspace’s seller and buyer session. This interrupts its active buyer. Saved operation results remain available.');
 }
@@ -209,7 +245,7 @@ async function refresh({ quiet = false } = {}) {
   } catch (error) { if (order === lastRequest) notice(error.message, true); }
   finally {
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.activeIntent || view?.retrieval?.state === 'RUNNING' ? 1500 : 6000);
+    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.activeIntent || view?.retrieval?.state === 'RUNNING' || view?.session?.state === 'STOPPING' ? 1500 : 6000);
   }
 }
 async function action(name, body = {}) {
@@ -217,6 +253,7 @@ async function action(name, body = {}) {
   pending = true; if (view) render(view); notice(null);
   if (name === 'stop') notice('Stopping the active buyer and draining the merchant session…');
   if (name === 'review') notice('Reading the prepared buyer request…');
+  if (name === 'facilitator') notice('Checking the configured network, node health and latest ledger…');
   ++lastRequest;
   try {
     const next = await request('/api/' + name, { method: 'POST', body: { intent: selectedIntent, ...body } }); render(next);
@@ -225,7 +262,8 @@ async function action(name, body = {}) {
     if (name === 'cancel') notice('The queued request was cancelled and retained in the inbox.');
     if (name === 'recover') notice('The recorded result was recovered from the inbox.');
     if (name === 'retrieve') notice('File retrieval started. Its result will appear in Purchased file.');
-    if (name === 'stop') notice('The session has stopped. Saved results remain available.');
+    if (name === 'facilitator') notice('Payment-service observation refreshed.');
+    if (name === 'stop') notice(next.session.state === 'STOPPED' ? 'The session has stopped. Saved results remain available.' : 'The session is draining. Its progress remains visible below.');
   } catch (error) { notice(error.message, true); }
   finally { pending = false; if (view) render(view); await refresh({ quiet: true }); }
 }
@@ -234,12 +272,13 @@ byId('operation-select').addEventListener('change', async event => {
   if (pending) return;
   selectionLoading = true;
   selectedIntent = event.target.value; ++lastRequest;
-  for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download', 'product-retrieve', 'product-preview', 'product-download']) byId(id).disabled = true;
+  for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download', 'product-retrieve', 'product-preview', 'product-download', 'facilitator']) byId(id).disabled = true;
   byId('preview-area').hidden = true;
   byId('product-preview-area').hidden = true;
   await refresh();
 });
 byId('review').addEventListener('click', () => action('review'));
+byId('facilitator').addEventListener('click', () => action('facilitator'));
 byId('execute').addEventListener('click', () => action('execute', { reviewId: view?.review?.id }));
 byId('cancel').addEventListener('click', () => action('cancel'));
 byId('recover').addEventListener('click', () => action('recover'));

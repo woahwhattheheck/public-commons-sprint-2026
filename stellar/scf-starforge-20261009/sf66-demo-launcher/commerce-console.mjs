@@ -6,7 +6,7 @@ import { basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
-import { openCommerce, commerceErrorCode } from './commerce.mjs';
+import { openCommerce, completeCommerceShutdown, commerceErrorCode } from './commerce.mjs';
 
 const HOST = '127.0.0.1';
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
@@ -132,13 +132,21 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
     } : null;
     const runningSession = original.state === 'RUNNING' && !stopping;
     return {
-      session: { id: original.operations.traffic.sessionId, state: original.state,
+      session: { id: original.operations.traffic.sessionId, state: stopping ? 'STOPPING' : original.state,
         startedAt: original.operations.traffic.startedAt, directory: original.directory,
         shutdown, shutdownError },
       seller: { publicOrigin: original.seller.publicOrigin, listener: original.seller.url,
         mode: original.seller.mode, developerUrl: original.seller.docs,
         operationsUrl: original.operations.url,
         routes: session.seller.compiled.routes.map(route => ({ id: route.id, method: route.method, path: route.path })) },
+      facilitator: { mode: original.facilitator?.mode ?? 'NOT_CONFIGURED',
+        network: original.facilitator?.network ?? null, state: original.facilitator?.state ?? null,
+        readiness: original.facilitator?.readiness ?? null,
+        activeVerify: original.facilitator?.activeVerify ?? 0, activeSettle: original.facilitator?.activeSettle ?? 0,
+        ownership: original.facilitator?.ownership ? {
+          mode: original.facilitator.ownership.mode, state: original.facilitator.ownership.state,
+          accounts: original.facilitator.ownership.accounts,
+        } : null },
       operations: original.buyers.map(row => ({ intentId: row.operation.intentId,
         method: row.operation.method, url: row.operation.url, state: row.state,
         active: work?.intent === row.operation.intentId })),
@@ -155,6 +163,8 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         result: retrievals.get(id).result ?? null, error: retrievals.get(id).error ?? null } : null,
       activeIntent: work?.intent ?? null,
       controls: { canReview: Boolean(job) && runningSession && !action,
+        canProbeFacilitator: runningSession && !action && typeof session.probeReadiness === 'function' &&
+          original.facilitator?.mode === 'NATIVE_X402_FACILITATOR',
         canExecute: Boolean(review) && runningSession && !action && !work && job.state === 'QUEUED' && original.seller.mode === 'NATIVE_X402',
         canCancel: runningSession && !action && !running && job?.state === 'QUEUED',
         canRecover: runningSession && !action && !work && ['RUNNING_OR_INTERRUPTED', 'REVIEW_REQUIRED'].includes(job?.state),
@@ -168,7 +178,11 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
     if (stopPromise) return stopPromise;
     stopping = true; reviews.clear();
     stopPromise = (async () => {
-      try { shutdown = await session.close(); return shutdown; }
+      try {
+        const closing = session.close().then(result => { shutdown = result; return result; });
+        shutdown = await completeCommerceShutdown(session, closing);
+        return shutdown;
+      }
       catch (error) { shutdownError = commerceErrorCode(error); throw error; }
       finally { if (work) await work.promise; stopping = false; }
     })();
@@ -216,7 +230,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         } finally { await handle.close(); }
         return;
       }
-      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve'].includes(target.pathname))
+      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve', '/api/facilitator'].includes(target.pathname))
         throw problem('Unknown commerce workspace action.', 404);
       if (!origins.has(req.headers.origin)) throw problem('Same-origin operator action required.', 403);
       const value = await input(req);
@@ -224,11 +238,19 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         target.pathname === '/api/retrieve' ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
       if (Object.keys(value).some(key => !allowed.includes(key))) throw problem('Unknown operator action field.');
       if (target.pathname === '/api/stop') {
-        await stopSession(); return send(200, await snapshot(value.intent));
+        void stopSession().catch(() => {});
+        return send(202, await snapshot(value.intent));
       }
       if (stopping || stopPromise) throw problem('This commerce session is stopping or has stopped.', 409);
       if (action) throw problem('An operator action is already running.', 409);
       action = target.pathname;
+      if (target.pathname === '/api/facilitator') {
+        try {
+          if (typeof session.probeReadiness !== 'function') throw problem('This session has no embedded native facilitator.', 409);
+          await session.probeReadiness();
+        } finally { action = null; }
+        return send(200, await snapshot(value.intent));
+      }
       try {
         const { original, job } = await current(value.intent), intent = job.operation.intentId;
         if (original.state !== 'RUNNING') throw problem('The commerce session is not running.', 409);
@@ -322,7 +344,8 @@ export async function main(args = process.argv.slice(2)) {
   const session = await openCommerce(resolve(opts['--directory']));
   let consoleSession, ending;
   const stop = () => ending ??= (async () => {
-    const result = await (consoleSession ? consoleSession.close() : session.close());
+    const result = await completeCommerceShutdown(session,
+      consoleSession ? consoleSession.close() : session.close());
     if (result?.drained === false) { process.exitCode = 2; setTimeout(() => process.exit(2), 20); }
     return result;
   })();
