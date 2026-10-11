@@ -122,6 +122,14 @@ export function selectServiceRoute(routes, rawPath, method) {
   const matching = routes.filter(r => r.binding.dynamic
     ? r.path === selectedPath : asciiFold(r.path) === asciiFold(selectedPath));
   const route = matching.find(r => r.method === method);
+  // Native static matching is case-insensitive, but a case-varied concrete
+  // endpoint must not replace the price of a dynamic value with that spelling.
+  // Preserve the original NATIVE_ROUTE_CASE_COLLISION rule before payment.
+  if (route && !route.binding.dynamic && route.path !== rawPath &&
+      routes.some(other => other.binding.dynamic && other.method === method &&
+        match(other.binding, rawPath) !== null)) {
+    throw Object.assign(new TypeError('NATIVE_ROUTE_CASE_COLLISION'), { status: 400 });
+  }
   if (route?.binding.dynamic) {
     const decoded = decodeURIComponent(rawPath);
     const nativeRoute = routes.find(r => r.method === method && r.binding.nativePattern.test(decoded));
