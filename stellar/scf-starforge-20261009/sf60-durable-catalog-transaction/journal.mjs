@@ -9,6 +9,7 @@ import { join, resolve } from 'node:path';
 import { BazaarCatalog, validateCatalogEntry } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 import { CatalogTrustBoundary, verifyAuditTrail } from '../../../stellar-forge/catalog-trust/catalog-trust.mjs';
 import { LifecycleCatalog } from '../../../stellar-forge/catalog-lifecycle/lifecycle.mjs';
+import { buildRevisionSnapshot } from './revision-snapshot.mjs';
 
 export const JOURNAL_SCHEMA = 'stellar-forge.catalog-transactions/v1';
 const ZERO = '0'.repeat(64);
@@ -163,7 +164,7 @@ function normalizeBatch(requests) {
 function brief(state,key) {
   const meta = state.byCatalog.get(key);
   if (!meta) return null;
-  const last = state.lifecycle.history(meta.lifecycleId).at(-1);
+  const last = state.lifecycle.revision(meta.lifecycleId, meta.sequence);
   return {sellerId:meta.sellerId,sequence:meta.sequence,state:meta.retired?'retired':'active',
     resourceURL:last.record.resourceURL,accepts:clone(last.record.accepts),
     contentDigest:last.record.contentDigest};
@@ -331,6 +332,12 @@ export class DurableCatalogTransaction {
   search(params) {this.#assert();return this.#state.catalog.search(params);}
   history(id) {this.#assert();return this.#state.lifecycle.history(id);}
   lookupCatalogKey(key) {this.#assert();return clone(this.#state.byCatalog.get(key)??null);}
+  inspectRevisions(input) {
+    this.#assert();
+    return buildRevisionSnapshot(input, { head: this.#head, count: this.#operations.length,
+      lookup: key => this.lookupCatalogKey(key),
+      revision: (id, sequence) => this.#state.lifecycle.revision(id, sequence) });
+  }
   get head() {this.#assert();return this.#head;}
   get count() {this.#assert();return this.#operations.length;}
   async close() {

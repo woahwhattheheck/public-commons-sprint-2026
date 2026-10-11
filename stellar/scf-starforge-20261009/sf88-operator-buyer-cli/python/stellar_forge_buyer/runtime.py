@@ -10,6 +10,7 @@ import shutil
 import signal
 import subprocess
 import time
+import threading
 
 from .errors import NativeError, StateError
 from .storage import parse
@@ -22,6 +23,7 @@ APPLICATIONS = {
     "consumer": CLI.parent / "python" / "consumer-bridge.mjs",
     "dataset": DATASET_BRIDGE,
     "object": CLI.parent / "python" / "object-bridge.mjs",
+    "acquisitions": CLI.parent.parent / "buyer-runbook" / "customer-bridge.mjs",
 }
 
 
@@ -46,7 +48,11 @@ class Runtime:
         self.timeout = timeout
         self.output_limit = output_limit
 
-    def run(self, arguments, *, logs: Path | None = None, started=None, target="buyer") -> Run:
+    def run(self, arguments, *, logs: Path | None = None, started=None, target="buyer", cancel_event=None) -> Run:
+        if cancel_event is not None and not isinstance(cancel_event, threading.Event):
+            raise StateError("NATIVE_CANCEL_EVENT_INVALID")
+        if cancel_event is not None and cancel_event.is_set():
+            raise StateError("NATIVE_CANCELLED_BEFORE_START")
         if target != "buyer" and target not in APPLICATIONS:
             raise StateError("ORIGINAL_RUNTIME_TARGET_INVALID")
         entry = self.cli if target == "buyer" else self.checkout / APPLICATIONS[target]
@@ -81,6 +87,8 @@ class Runtime:
             while selector.get_map() or process.poll() is None:
                 try:
                     now = time.monotonic()
+                    if cancel_event is not None and cancel_event.is_set() and interruption is None:
+                        interruption = "NATIVE_CANCELLED"
                     if now >= deadline and interruption is None:
                         interruption = "NATIVE_TIMEOUT"
                     if interruption and kill_at is None:

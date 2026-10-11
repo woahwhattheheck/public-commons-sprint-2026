@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { NativeRuntime } from './runtime.mjs';
 import { WorkspaceRecovery } from './workspace-recovery.mjs';
+import {AcquisitionWorkspace} from './acquisitions.mjs';
 import { readWorkspace, checkWorkspace, workspaceCommand } from './workspace.mjs';
 import { BuyerResult } from './result.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
@@ -43,6 +44,7 @@ export class Buyer {
   inspectOperationHandoff(file, options) { return inspectOperationHandoff(this, file, options); }
 
   workspaceRecovery() { return WorkspaceRecovery.fromBuyer(this); }
+  acquisitions(options) { return AcquisitionWorkspace.fromBuyer(this, options); }
 
   async ready() { await privateDirectory(this.stateDirectory); return this; }
   operation(intentId) { return new Operation(this, intent(intentId)); }

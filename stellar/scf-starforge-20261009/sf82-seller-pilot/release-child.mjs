@@ -9,7 +9,10 @@ let started = false;
 process.once('disconnect', () => { if (!started) process.exit(0); });
 process.once('message', async message => {
   if (message?.type !== 'sf82-start' || message.instanceId !== instanceId) process.exit(1);
-  started = true; process.disconnect();
+  started = true;
+  // Node may still be flushing messages buffered before this listener was
+  // attached. Let that dispatch finish before clearing the IPC channel.
+  setImmediate(() => { if (process.connected) process.disconnect(); });
   let session, control;
   try {
     const { launch } = await import(pathToFileURL(pilot).href);
