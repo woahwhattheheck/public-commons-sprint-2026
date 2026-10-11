@@ -4,6 +4,12 @@ Sell approved query results from an existing PostgreSQL database through the ori
 
 This integration includes a pooled database source, startup schema preflight, input admission, an operator inspection CLI, a create-only workspace generator and a launcher that starts the **existing seller and existing operations console**. It does not require a merchant to write a handler module. PostgreSQL SQL and connection settings stay in the merchant's private configuration; they never enter the public offer or data response.
 
+For immutable multi-page data, the [retained dataset publisher](publisher/README.md)
+extracts an approved query in one transaction, retains the original typed CSV
+candidate, records an operator review and publishes through the existing dataset
+version store. Its local browser includes saved plans, restart recovery and the
+original buyer handoff. Ordinary paid query pages retain their existing behavior.
+
 ## Install and create a merchant workspace
 
 Use Node 22.16 or newer. From the repository root, install the source's pinned production driver:
