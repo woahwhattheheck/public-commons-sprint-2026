@@ -10,9 +10,22 @@
     <section class="overview" aria-label="Deployment status">
       <div><span class="label">Selected release</span><strong id="selected">—</strong><span id="generation">Loading</span></div>
       <div><span class="label">Running release</span><strong id="running">—</strong><span id="runtime">Checking local seller</span></div>
-      <div><span class="label">Listener</span><strong id="listener">—</strong><span id="mode">—</span><a id="operations-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Open merchant operations</a><a id="availability-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Manage product availability</a><a id="customer-docs" target="_blank" rel="noopener" hidden>Open customer API</a><a id="customer-openapi" target="_blank" rel="noopener" hidden>Open live OpenAPI</a></div>
+      <div><span class="label">Listener</span><strong id="listener">—</strong><span id="mode">—</span><a id="operations-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Open merchant operations</a><a id="availability-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Manage product availability</a><a id="explorer-link" target="_blank" rel="noopener" hidden>Open API explorer and customer SDK</a><a id="customer-openapi" target="_blank" rel="noopener" hidden>Open live OpenAPI</a></div>
     </section>
     <div id="notice" role="status" aria-live="polite"></div>
+    <details class="postgres-staging">
+      <summary>Stage a PostgreSQL merchant package</summary>
+      <p>Use the private directory exported by PostgreSQL merchant setup or its original prepare command. The source must already declare its public HTTPS origin.</p>
+      <form id="postgres-stage-form">
+        <label for="postgres-package">Prepared package directory</label><input id="postgres-package" maxlength="4096" required autocomplete="off" spellcheck="false" placeholder="/private/merchant-packages/catalog-v1">
+        <div class="fields"><div><label for="postgres-id">New release ID</label><input id="postgres-id" required pattern="[a-z0-9][a-z0-9_-]{0,63}" maxlength="64" placeholder="postgres-v1"></div><div><label for="postgres-label">Release label (optional)</label><input id="postgres-label" maxlength="240"></div></div>
+        <div class="fields"><div><label for="postgres-port">Seller port (0 chooses a free port)</label><input id="postgres-port" type="number" min="0" max="65535" value="8423" required></div><div><label for="postgres-facilitator">Facilitator URL (optional)</label><input id="postgres-facilitator" type="url" placeholder="https://facilitator.example" autocomplete="off" spellcheck="false"></div></div>
+        <label class="check-label"><input id="postgres-local-facilitator" type="checkbox">Enable the specified loopback HTTP facilitator</label>
+        <p class="section-note">Without a facilitator this release serves payment challenges. The database stays live; staging and rollback retain configuration. Database credential values stay in the host environment.</p>
+        <div class="actions"><button id="postgres-review" type="submit">Review package</button><button id="postgres-stage" type="button" disabled>Stage reviewed package</button></div>
+      </form>
+      <section id="postgres-package-review" hidden><h3>Prepared PostgreSQL package</h3><p id="postgres-package-origin"></p><div id="postgres-package-contract"></div></section>
+    </details>
     <div class="workspace">
       <aside><h2>Prepared releases</h2><p>Compare route, price and application changes before selecting a release.</p><div id="release-list"></div><p class="help">Prepare a new release with the stage command. Inputs stay on this machine.</p><code id="stage-command"></code></aside>
       <section class="review">

@@ -1,0 +1,1180 @@
+{
+  "schema": "munibilling-native-file-contracts/v1",
+  "captured_on": "2026-10-11",
+  "contract_kind": "Published configurable import/export field dictionary; not a tenant-specific import template or provider API.",
+  "type_policy": "Field names and SQL types retain the provider spelling. Nullability, required fields, enum values, relationships and date serialization are unspecified unless separately stated. Preserve decimal values and external account identifiers as text during transfer.",
+  "native_source_notes": [
+    "The Customer and Bills native HTML each end their published table in a partial type-only row; these unresolved fields are excluded rather than assigned a name.",
+    "The customer overview declares account_number but its captured detailed table does not provide that field type.",
+    "Payments publishes both rate_mulitiplier and rate_multiplier; retain both distinct native spellings.",
+    "Payments start_reading/end_reading/consumption types are decimal(16,2), whereas meter readings use decimal(16,6).",
+    "Bills flat_fee is published as tinyint(1); do not substitute a monetary amount type."
+  ],
+  "exclude_from_operational_presets": [
+    "encrypted_password",
+    "reset_password_token",
+    "unlock_token",
+    "confirmation_token",
+    "authentication_token",
+    "current_sign_in_ip",
+    "last_sign_in_ip"
+  ],
+  "overview_only_fields": [
+    {
+      "dictionary": "customer",
+      "name": "account_number",
+      "sql_type": null,
+      "source_url": "https://jiramb.atlassian.net/wiki/spaces/MKC/pages/1044480071",
+      "source_section": "Integration & Tracking Identifiers"
+    }
+  ],
+  "dictionaries": [
+    {
+      "name": "customer",
+      "source_url": "https://jiramb.atlassian.net/wiki/spaces/MKC/pages/1044480071",
+      "capture_kind": "native_public_html_table",
+      "http_status": 200,
+      "html_sha256": "ab20c1500cfa68a9c799c5bb9ab4c537cd59630aa3b2c3e9313a81cb211a7e7f",
+      "table_capture_sha256": "ebd086ea0170d901e072320b2650c62639cffc29a91d4007cfe50c9158fcf404",
+      "fields": [
+        {
+          "name": "id",
+          "sql_type": "int"
+        },
+        {
+          "name": "last_name",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "first_name",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "bill_address_different",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "note",
+          "sql_type": "text"
+        },
+        {
+          "name": "last_open_meter_reading",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "last_end_meter_reading",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "last_open_meter_reading_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "last_end_meter_reading_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "balance_current",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "net_due",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "gross_due",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "due_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "close_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "establish_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "is_balance_posted",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "bill_end_meter_reading",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "is_bill_posted",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "last_bill_amount",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "last_start_consumption",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "last_end_consumption",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "old_open_meter_reading",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "old_end_meter_reading",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "old_open_meter_reading_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "old_end_meter_reading_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "is_meter_changed",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "old_consumption",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "old_meter_days",
+          "sql_type": "int"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "parcel_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "payment_notes",
+          "sql_type": "text"
+        },
+        {
+          "name": "billing_phone",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "service_phone",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "cell_phone",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "work_phone",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "legacy_customer_id",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "penalty_waived",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "address_line1",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "address_line2",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "city",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "americanstate_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "zipcode",
+          "sql_type": "varchar(10)"
+        },
+        {
+          "name": "email",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "deliver_bill_email",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "deliver_bill_mail",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "discount_due",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "discount_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "initialized_balance",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "initialized_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "encrypted_password",
+          "sql_type": "varchar(128)"
+        },
+        {
+          "name": "reset_password_token",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "reset_password_sent_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "remember_created_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "sign_in_count",
+          "sql_type": "int"
+        },
+        {
+          "name": "current_sign_in_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "last_sign_in_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "current_sign_in_ip",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "last_sign_in_ip",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "failed_attempts",
+          "sql_type": "int"
+        },
+        {
+          "name": "unlock_token",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "locked_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "accepted_license_version",
+          "sql_type": "int"
+        },
+        {
+          "name": "company_id",
+          "sql_type": "int"
+        }
+      ],
+      "incomplete_published_rows": [
+        [
+          "varchar(255)"
+        ]
+      ]
+    },
+    {
+      "name": "bills",
+      "source_url": "https://jiramb.atlassian.net/wiki/spaces/MKC/pages/1045037074",
+      "capture_kind": "native_public_html_table",
+      "http_status": 200,
+      "html_sha256": "ba998513a14590dd20994d3e733bc0a46d35e3fee19f5e8831432c919cdc77eb",
+      "table_capture_sha256": "2b648d96273b6ec7dcc05343c7151a68f280870f9455f6dc6c344f25557faebe",
+      "fields": [
+        {
+          "name": "id",
+          "sql_type": "int"
+        },
+        {
+          "name": "customer_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "start_reading_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "start_reading",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "end_reading_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "end_reading",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "bill_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "amount",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "consumption",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "penalty_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "penalty_amount",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "discount_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "discount_amount",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "printed",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "posted_customer",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "posted_accounting",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "print_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "posted_accounting_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "posted_account_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "billing_type_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "note",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "actual_reading",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "base_charge",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "extra_charge",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "extra_charge_description",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "extra_charge_account_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "can_charge_penalty",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "multiline",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "first_reading_old_meter",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "last_reading_old_meter",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "first_reading_old_meter_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "last_reading_old_meter_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "meter_change",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "old_consumption",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "rate_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "usage_charge",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "posted_customer_date",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "open_balance",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "printed_third_party",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "print_request_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "discount_applied",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "penalty_applied",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "meter_b",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "is_adjustment",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "aged_days",
+          "sql_type": "int"
+        },
+        {
+          "name": "post_batch_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "title",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "allow_bulk_editing",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "flat_fee",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "parcel_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "accounts_receivable_account_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "cash_account_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "entered_user_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "from_balance_import",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "due_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "late_charge_process_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "late_charge_stage_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "returned_payment",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "estimated_start_reading",
+          "sql_type": "tinyint(1)"
+        }
+      ],
+      "incomplete_published_rows": [
+        [
+          "tinyint(1)"
+        ]
+      ]
+    },
+    {
+      "name": "payments",
+      "source_url": "https://jiramb.atlassian.net/wiki/spaces/MKC/pages/1045037057",
+      "capture_kind": "native_public_html_table",
+      "http_status": 200,
+      "html_sha256": "13c5b10f87b83c69b9fed30bc3a445d4bc40a16b9e5b961ad06c620884862db0",
+      "table_capture_sha256": "666608fa673c76efa3dd06baba4a08944c845eabf8e0cb140121c0bf2a809d05",
+      "fields": [
+        {
+          "name": "id",
+          "sql_type": "int"
+        },
+        {
+          "name": "customer_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "payment_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "amount",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "payment_type_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "reference",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "note",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "posted_customer",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "posted_customer_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "entered_user_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "posted_accounting",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "posted_accounting_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "discount_amount",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "billing_type_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "bill_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "payment_link_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "revo_payment_response_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "is_adjustment",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "is_deposit",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "is_applied_deposit",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "create_stamp",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "payment_post_batch_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "is_write_off",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "parcel_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "stripe_charge_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "remote_charge_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "from_balance_import",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "applied_billing_type_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "parcel_owner_payment_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "returned_payment",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "invoice_apply_date",
+          "sql_type": "date"
+        },
+        {
+          "name": "is_deferred",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "company_period_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "invoice_number",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "initial_billing_type_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "invoice_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "billing_transaction_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "billing_job_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "old_payment_type_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "legacy_post_billing_job_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "rate_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "is_tax",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "applied_invoice_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "payor",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "reference_2",
+          "sql_type": "varchar(255)"
+        },
+        {
+          "name": "rate_tier_profile_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "is_journal_entry_candidate",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "debit_account_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "posted_accounting_billing_job_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "is_override_billing_type_allow_mingling",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "voids_bill_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "is_deposit_interest",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "is_discount",
+          "sql_type": "tinyint(1)"
+        },
+        {
+          "name": "tax_worksheet_id",
+          "sql_type": "int"
+        },
+        {
+          "name": "end_reading",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "start_reading",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "consumption",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "usage_charge",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "extra_charge",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "rate_mulitiplier",
+          "sql_type": "decimal(16,6)"
+        },
+        {
+          "name": "tax_amount",
+          "sql_type": "decimal(16,2)"
+        },
+        {
+          "name": "start_reading_date",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "end_reading_date",
+          "sql_type": "datetime"
+        },
+        {
+          "name": "rate_multiplier",
+          "sql_type": "decimal(16,6)"
+        }
+      ],
+      "incomplete_published_rows": []
+    },
+    {
+      "name": "backflow_devices",
+      "source_url": "https://jiramb.atlassian.net/wiki/spaces/MKC/pages/1044906096/Backflow%2BDevices%2BFile%2BFormat%2BData%2BDictionary",
+      "source_reference": "turn137view1",
+      "capture_kind": "public_source_web_read",
+      "fields": [
+        {
+          "name": "id",
+          "sql_type": "int",
+          "source_line": 218
+        },
+        {
+          "name": "parcel_id",
+          "sql_type": "int",
+          "source_line": 219
+        },
+        {
+          "name": "meter_id",
+          "sql_type": "int",
+          "source_line": 220
+        },
+        {
+          "name": "name",
+          "sql_type": "varchar(255)",
+          "source_line": 221
+        },
+        {
+          "name": "active",
+          "sql_type": "tinyint(1)",
+          "source_line": 222
+        },
+        {
+          "name": "serial_number",
+          "sql_type": "varchar(255)",
+          "source_line": 223
+        },
+        {
+          "name": "manufacturer_model_id",
+          "sql_type": "int",
+          "source_line": 224
+        },
+        {
+          "name": "backflow_type_id",
+          "sql_type": "int",
+          "source_line": 225
+        },
+        {
+          "name": "test_date_next",
+          "sql_type": "date",
+          "source_line": 226
+        },
+        {
+          "name": "created_at",
+          "sql_type": "datetime",
+          "source_line": 227
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "datetime",
+          "source_line": 228
+        },
+        {
+          "name": "install_date",
+          "sql_type": "date",
+          "source_line": 229
+        },
+        {
+          "name": "followup_date",
+          "sql_type": "date",
+          "source_line": 230
+        },
+        {
+          "name": "certificate_date",
+          "sql_type": "date",
+          "source_line": 231
+        },
+        {
+          "name": "notice_date",
+          "sql_type": "date",
+          "source_line": 232
+        }
+      ]
+    },
+    {
+      "name": "meter_readings",
+      "source_url": "https://jiramb.atlassian.net/wiki/spaces/MKC/pages/1045037091/Meter%2BReadings%2BFile%2BFormat%2BData%2BDictionary",
+      "source_reference": "turn137view3",
+      "capture_kind": "public_source_web_read",
+      "fields": [
+        {
+          "name": "id",
+          "sql_type": "int",
+          "source_line": 224
+        },
+        {
+          "name": "meter_id",
+          "sql_type": "int",
+          "source_line": 225
+        },
+        {
+          "name": "is_high_flow",
+          "sql_type": "tinyint(1)",
+          "source_line": 226
+        },
+        {
+          "name": "start_reading",
+          "sql_type": "decimal(16,6)",
+          "source_line": 227
+        },
+        {
+          "name": "end_reading",
+          "sql_type": "decimal(16,6)",
+          "source_line": 228
+        },
+        {
+          "name": "start_reading_date",
+          "sql_type": "datetime",
+          "source_line": 229
+        },
+        {
+          "name": "end_reading_date",
+          "sql_type": "datetime",
+          "source_line": 230
+        },
+        {
+          "name": "days",
+          "sql_type": "int",
+          "source_line": 231
+        },
+        {
+          "name": "consumption",
+          "sql_type": "decimal(16,6)",
+          "source_line": 232
+        },
+        {
+          "name": "created_at",
+          "sql_type": "datetime",
+          "source_line": 233
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "datetime",
+          "source_line": 234
+        },
+        {
+          "name": "meter_reading_status_id",
+          "sql_type": "int",
+          "source_line": 235
+        },
+        {
+          "name": "note",
+          "sql_type": "varchar(255)",
+          "source_line": 236
+        },
+        {
+          "name": "meter_auto_read_type_id",
+          "sql_type": "int",
+          "source_line": 237
+        },
+        {
+          "name": "register_id",
+          "sql_type": "varchar(255)",
+          "source_line": 238
+        },
+        {
+          "name": "company_id",
+          "sql_type": "int",
+          "source_line": 239
+        },
+        {
+          "name": "raw_account_number",
+          "sql_type": "varchar(255)",
+          "source_line": 240
+        },
+        {
+          "name": "raw_name",
+          "sql_type": "varchar(255)",
+          "source_line": 241
+        },
+        {
+          "name": "raw_address",
+          "sql_type": "varchar(255)",
+          "source_line": 242
+        },
+        {
+          "name": "warning_no_consumption",
+          "sql_type": "tinyint(1)",
+          "source_line": 243
+        },
+        {
+          "name": "warning_no_meter",
+          "sql_type": "tinyint(1)",
+          "source_line": 244
+        },
+        {
+          "name": "warning_reading_variance",
+          "sql_type": "tinyint(1)",
+          "source_line": 245
+        },
+        {
+          "name": "warning_no_customer",
+          "sql_type": "tinyint(1)",
+          "source_line": 246
+        },
+        {
+          "name": "customer_id",
+          "sql_type": "int",
+          "source_line": 247
+        },
+        {
+          "name": "meter_read",
+          "sql_type": "tinyint(1)",
+          "source_line": 248
+        },
+        {
+          "name": "estimated_reading",
+          "sql_type": "tinyint(1)",
+          "source_line": 249
+        },
+        {
+          "name": "warning_missing_end_date",
+          "sql_type": "tinyint(1)",
+          "source_line": 250
+        },
+        {
+          "name": "allow_delete",
+          "sql_type": "tinyint(1)",
+          "source_line": 251
+        },
+        {
+          "name": "report_consumption",
+          "sql_type": "tinyint(1)",
+          "source_line": 252
+        },
+        {
+          "name": "entered_user_id",
+          "sql_type": "int",
+          "source_line": 253
+        },
+        {
+          "name": "raw_entered_user",
+          "sql_type": "varchar(255)",
+          "source_line": 254
+        },
+        {
+          "name": "meter_reading_code_id",
+          "sql_type": "int",
+          "source_line": 255
+        },
+        {
+          "name": "meter_reading_link_id",
+          "sql_type": "int",
+          "source_line": 256
+        },
+        {
+          "name": "warning_bad_register_id",
+          "sql_type": "tinyint(1)",
+          "source_line": 257
+        },
+        {
+          "name": "updated_user_id",
+          "sql_type": "int",
+          "source_line": 258
+        },
+        {
+          "name": "transfer_to_new_customer",
+          "sql_type": "tinyint(1)",
+          "source_line": 259
+        },
+        {
+          "name": "processed_for_reporting",
+          "sql_type": "tinyint(1)",
+          "source_line": 260
+        },
+        {
+          "name": "use_for_billing",
+          "sql_type": "tinyint(1)",
+          "source_line": 261
+        },
+        {
+          "name": "consumption_adjustment",
+          "sql_type": "decimal(16,6)",
+          "source_line": 262
+        },
+        {
+          "name": "consumption_adjustment_note",
+          "sql_type": "varchar(255)",
+          "source_line": 263
+        },
+        {
+          "name": "meter_reading_detail_id",
+          "sql_type": "int",
+          "source_line": 264
+        },
+        {
+          "name": "is_imported",
+          "sql_type": "tinyint(1)",
+          "source_line": 265
+        },
+        {
+          "name": "period_count",
+          "sql_type": "int",
+          "source_line": 266
+        },
+        {
+          "name": "company_billing_period_id",
+          "sql_type": "int",
+          "source_line": 267
+        },
+        {
+          "name": "comment_template_id",
+          "sql_type": "int",
+          "source_line": 268
+        },
+        {
+          "name": "updated_by",
+          "sql_type": "varchar(255)",
+          "source_line": 269
+        }
+      ]
+    }
+  ],
+  "import_matching": {
+    "source_url": "https://jiramb.atlassian.net/wiki/spaces/MKC/pages/1072791842/File%2BFormats%2B-%2BFile%2BTypes%2Band%2BRecord%2BMatching",
+    "options": [
+      "Account Number",
+      "Account Number and Meter Number (Itron Only)",
+      "Auxiliary Account Number",
+      "Customer Account Number and Meter Number",
+      "Customer ID",
+      "Legacy Customer ID",
+      "Meter Number",
+      "Meter Number and Register Number",
+      "Register Number",
+      "Split Account Number XXXXXX-XXX"
+    ],
+    "operator_selection_required": true,
+    "notes": "Account Number identifies an active parcel/service location. Customer ID is the system-generated customer key; Legacy Customer ID maps the prior system. Select the configured native match mode; do not interchange these identities."
+  },
+  "import_format_selection": {
+    "source_url": "https://jiramb.atlassian.net/wiki/spaces/MKC/pages/1073381377/File%2BFormat%2B-%2BFile%2BFormats%2Band%2BData%2BSpecifications",
+    "notes": "A native File Format selects file type, fields, delimiter/quoting and matching. The published Load Customer Updates workflow specifically selects Customer export as its File Type."
+  }
+}

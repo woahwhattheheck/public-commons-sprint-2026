@@ -19,10 +19,12 @@ const help = `Starforge merchant toolkit
   starforge installation                     Inspect, install, stage and select a maintained package
   starforge runtime-profile --help
   starforge runtime-install --help
+  starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
   runtime-profile                            Select exact dependencies for an original release
   runtime-install                            Install, resume, run, upgrade and recover a customer runtime
+  runtime-workspace                          Review, install and recover runtimes in a private browser workspace
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
@@ -119,6 +121,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
+  grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
   woo-operator                              Review original Stellar transfers and complete selected Woo orders
 
 Optional feature groups: ${[...new Set([
