@@ -37,6 +37,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-mcp-stdio / merchant-mcp-client-config  Run and register original merchant MCP tools locally
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
+  merchant-host                             Install, observe and recover the original Linux merchant group
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   dataset-delivery Export a saved buyer dataset

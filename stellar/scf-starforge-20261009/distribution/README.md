@@ -331,6 +331,7 @@ or automatically retry a request.
 | `starforge support-console` | Retained merchant cases, runtime follow-up and original native reconciliation |
 | `starforge client` | Export a standalone JavaScript client, TypeScript declarations and original OpenAPI |
 | `starforge releases` | Stage, compare, select, run and roll back seller configurations; local operator console |
+| `starforge merchant-host` | Generate original Caddy/systemd merchant services, inspect installed operation and run encrypted maintenance/cutover |
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
 | `starforge buyer-node` | Review, execute and recover a generated-client purchase through the original Node buyer |
 | `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
@@ -1258,6 +1259,116 @@ approval and reconnect contracts are included in
 `source/stellar-forge/mcp-merchant-operator/STDIO.md`. The complete merchant
 component includes its child host, which redirects application output and
 direct compiler stdout writes to stderr while keeping stdout for MCP messages.
+
+## Install and recover a merchant host
+
+The installed `merchant-host` command runs the original SF99 deployment and
+maintenance implementation. It supports the existing API seller, order-bound
+paid-file checkout/receiver/delivery group, and the retained seller with its
+existing signed discovery identity. Keep the selected toolkit installation
+immutable, with merchant state and secrets outside it. Generate this bundle on
+the intended Linux host: its runtime and source paths refer to that installation.
+
+Use the host's existing unprivileged merchant account, Node 22+, systemd, Caddy 2
+and util-linux `flock`. Python 3.11+ is also required by the paid-file profile and
+Python application releases. Native operation uses the original SDK dependencies
+and the merchant's actual facilitator and payment terms. The host generator
+does not install those system tools, provision credentials or execute payments.
+
+For a retained merchant, stage and activate its actual fixed seller port through
+`starforge releases`. Keep that store and the already prepared discovery setup
+as separate private directories under the same state root. Inspect the active
+generation and original public identity:
+
+```sh
+npx --no-install starforge releases status --store /private/merchant/state/releases
+npx --no-install starforge releases catalog-inspect \
+  --store /private/merchant/state/releases --setup /private/merchant/state/discovery
+```
+
+Save a private host plan using that exact generation and existing service
+account. This example assumes the retained release already selects native
+operation; use `challenge` when that original runtime is challenge-only:
+
+```json
+{
+  "schema": "stellar-forge.merchant-host.v1",
+  "merchant": "report-merchant",
+  "serviceUser": "stellar-merchant",
+  "kind": "release",
+  "mode": "native",
+  "privateRoot": "/private/merchant/state",
+  "release": {
+    "store": "/private/merchant/state/releases",
+    "expectedGeneration": 1
+  },
+  "discovery": { "setup": "/private/merchant/state/discovery" },
+  "environmentFile": "/private/merchant/config/service.env",
+  "ports": { "discovery": 8473 }
+}
+```
+
+The seller port, application, facilitator and lifecycle come from the retained
+release. Omit `discovery` and `ports.discovery` to install a retained seller
+alone. The original [host guide](../sf99-merchant-deploy/README.md) gives the API
+and paid-file plans and the supported retained-source settings.
+
+```sh
+npx --no-install starforge merchant-host inspect --plan /private/merchant/host.json
+npx --no-install starforge merchant-host generate \
+  --plan /private/merchant/host.json --out /private/deployments/report-001
+npx --no-install starforge merchant-host check --bundle /private/deployments/report-001
+```
+
+Read the generated `RUNBOOK.md`. It contains the exact account ownership,
+root-owned service-readable bundle permissions, original unit installation,
+existing Caddy import and reload, and component readiness commands. Stop a
+foreground console/MCP owner before starting the installed original service
+group. Configure the merchant's real DNS and HTTPS ingress using that runbook.
+After installing and starting its declared group, inspect local and public
+operation through the same command:
+
+```sh
+npx --no-install starforge merchant-host smoke --bundle /private/deployments/report-001
+npx --no-install starforge merchant-host smoke --bundle /private/deployments/report-001 --public
+```
+
+The retained profile checks original process/source identity and exposes only
+the original merchant route/method pairs, public documentation, discovery reads
+and exact offer export. Its generated runbook also gives original publication,
+withdrawal and private cache commands. Restart reopens the same signing key and
+catalog journal; an unchanged listing requires no new publication.
+
+The same original command carries encrypted backup and restored-state cutover:
+
+```sh
+npx --no-install starforge merchant-host maintenance template
+npx --no-install starforge merchant-host maintenance inspect --plan /private/merchant/maintenance.json
+npx --no-install starforge merchant-host maintenance backup \
+  --plan /private/merchant/maintenance.json --id before-upgrade
+npx --no-install starforge merchant-host maintenance migrate \
+  --plan /private/merchant/maintenance.json --id move-stores \
+  --destination /private/restored/report-001
+```
+
+Fill the original template with the actually installed bundle, imported Caddy
+fragment, declared writer units and private operation root. Provision its named
+passphrase through the private operator environment. Follow the included
+[maintenance guide](../sf99-merchant-deploy/MAINTENANCE.md) for retained
+`status`, `resume`, precommit `rollback`, external-writer templates and the
+returned next-generation plan. Migration pauses this merchant, drains its
+original components, verifies the encrypted snapshot and resumes the restored
+state while preserving other merchants on the shared proxy. The retained
+profile rebases the store/setup selections and preserves release, key and
+journal bytes. The existing API profile owns absolute upstream-idempotency
+path rebasing. Credentials keep their separate original recovery procedure.
+
+Applications that operate this same host workflow can import `prepare`,
+`generate` and `checkBundle` from `@tokenjunkielabs/starforge-merchant/merchant/host`,
+and `runMaintenance` from
+`@tokenjunkielabs/starforge-merchant/merchant/host-maintenance`.
+These are the original implementations used by the installed command and do
+not create another supervisor or recovery engine.
 
 ## Operate several merchants
 
