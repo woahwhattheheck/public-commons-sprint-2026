@@ -33,16 +33,16 @@
       <p id="mode-caption" class="data-note">Synthetic demo uses invented titles and values, never Qloo data. Live requires a server-side QLOO_API_KEY.</p>
     </section>
     <section id="response" class="response" aria-live="polite" aria-atomic="false" hidden>
-      <div class="section-heading"><div><span class="eyebrow">02 / EVIDENCE REPORT</span><h2>What changed when we filtered?</h2></div><span id="report-mode" class="report-mode"></span></div>
+      <div class="section-heading"><div><span id="response-stage" class="eyebrow">02 / EVIDENCE REPORT</span><h2 id="response-title">What changed when we filtered?</h2></div><span id="report-mode" class="report-mode"></span></div>
       <div id="status-line" class="status-line" role="status"></div>
       <div id="metrics" class="metric-grid"></div>
       <div class="report-layout">
         <article class="insight-panel"><span class="eyebrow">INTERPRETATION / LIMITED</span><h3>Agent brief</h3><p id="summary"></p><div id="notes"></div><div class="reference"><strong>Evidence contract:</strong> <span id="evidence"></span></div></article>
-        <article class="trace-panel"><span class="eyebrow">AGENT TRACE / FOUR STEPS</span><h3>Audit trail</h3><ol id="trace"></ol></article>
+        <article class="trace-panel"><span class="eyebrow">EVIDENCE / STEP BY STEP</span><h3>Audit trail</h3><ol id="trace"></ol></article>
       </div>
-      <div class="segment-head"><span class="eyebrow">03 / RETRIEVED ENTITIES</span><p>Columns are three separate Qloo retrievals. Rankings are not demand, fairness, or conversion scores.</p></div>
+      <div id="segment-heading" class="segment-head"><span class="eyebrow">03 / RETRIEVED ENTITIES</span><p>Columns are three separate Qloo retrievals. Rankings are not demand, fairness, or conversion scores.</p></div>
       <div id="segments" class="segments"></div>
-      <div class="actions-panel"><span class="eyebrow">NEXT ACTIONS</span><ul id="actions"></ul></div>
+      <div id="actions-panel" class="actions-panel"><span class="eyebrow">NEXT ACTIONS</span><ul id="actions"></ul></div>
     </section>
     <footer class="footer"><span>SignalGuard // source-driven product lab</span><span>NO CLAIM OF PRIZE, DEPLOYMENT, OR LIVE API VALIDATION</span></footer>
   </main>
