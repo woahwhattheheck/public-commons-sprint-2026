@@ -160,6 +160,51 @@ by the original buyer/SDK. Do not wrap a CloudSync file in an invented REST
 `status/payload` response. The complete request, including all comparison source
 text, must fit the selected input limit.
 
+Keep these distinct byte identities with the handoff:
+
+| Identity | Bytes it describes |
+| --- | --- |
+| `original.sha256` | The acquired Parquet file |
+| `decoder.originalRowsSha256` | The original decoded JSON file before lexical compaction |
+| `rowsSha256` | The exact UTF-8 text embedded in that source's `rowsBody` |
+| Input file SHA-256 | The complete prepared research JSON file, including its formatting and trailing newline |
+| Native review `bodySha256` | The original buyer's complete serialized HTTP request body |
+
+The customer helpers parse the outer input object before the original buyer/SDK
+serializes the HTTP body. Node preserves the supplied outer key order; Python
+uses sorted keys. Trailing file whitespace is absent from both request bodies.
+Their native body hashes can therefore differ from the input-file hash and from
+each other while every embedded source string remains exact. Compare each hash
+with its own recorded bytes. The page envelope's `bodySha256` separately identifies
+the raw provider response text.
+
+### Observed CloudSync source
+
+The [first-party CloudSync sample page](https://docs.amberdata.io/cloudsync/cloudsync-market)
+publishes the original GDAX BTC/USD files for 15 February 2026. The completed
+research run used the selected UTC window from 00:00 on that date to 00:00 on
+16 February, with the minute file as the main source and hour/day files as
+comparisons:
+
+| Original interval | Observed rows | Timestamp coverage | Observed volume, BTC |
+| --- | ---: | --- | ---: |
+| Minutes | 1,440 | Complete | 5935.03093559 |
+| Hours | 24 | Complete | 5965.51322769 |
+| Days | 1 | Complete | 5965.51322769 |
+
+All three sources agree on open 69786.96, high 70941.65, low 68020 and close 68792
+USD. The saved source extension reports the observed close-minus-open change as
+-994.96 USD and high-minus-low range as 2921.65 USD. The minute volume is
+30.48229210 BTC lower than either comparison; full timestamp coverage does not
+establish agreement between separately published intervals. The source does not
+establish the reason for this difference. Each interval keeps its actual total,
+original file/decoder identity, NULL counts and derived-value counts.
+
+These supplied files produce `pageChainComplete: null` and complete interval
+coverage. Their Decimal output comes from the retained decoder tokens. The
+original saved-source preview, versioned release and rollback retain the same
+source records; the example does not depend on another provider acquisition.
+
 ## Understand research completeness
 
 | State | Meaning and useful operator action |
@@ -208,6 +253,60 @@ source/decoder/summary result and an actual payable provider request are separat
 visible operations; retain their original status instead of inferring one from
 the other. Product licenses, API entitlement, hosting and provider usage remain
 the parties' selected commercial arrangement.
+
+## Prepare and reopen a retained research request
+
+Keep the selected release's `product.json`, original generated SDK and original
+saved discovery together. For offline preparation, create a new private profile
+JSON file containing `{}`. This lets the original buyer retain and review the
+request before an operator or signer is configured. The prepared operation has
+no delivered response yet.
+
+Use the complete input created by `source-input.py`, including its original
+comparison sources. Select the amount cap and accepted alternative from the
+actual offer. Node uses the generated SDK's named operation:
+
+```sh
+node "$AMBERDATA_EXAMPLE/customer.mjs" prepare \
+  --source-root "$AMBERDATA_SOURCE_DIR" --state /private/amberdata-node \
+  --profile /private/offline-profile.json \
+  --client /private/customer/seller-client.mjs \
+  --product /private/customer/product.json \
+  --operation ohlcv_summary --intent amberdata-research-001 \
+  --max-atomic "$REVIEWED_RESEARCH_MAX_ATOMIC" --accept "$REVIEWED_ACCEPT_INDEX" \
+  --input /private/provider/compared.research-input.json
+
+node "$AMBERDATA_EXAMPLE/customer.mjs" inspect \
+  --source-root "$AMBERDATA_SOURCE_DIR" --state /private/amberdata-node \
+  --intent amberdata-research-001
+```
+
+For Python, the saved discovery can be the supported `{"resources": [...]}`
+envelope containing the original offer rows without changing their contents or
+order. Select the zero-based row for `ohlcv_summary` and its actual accepted
+alternative. Put the global source and state options before the command:
+
+```sh
+python3 "$AMBERDATA_EXAMPLE/customer.py" \
+  --source-root "$AMBERDATA_SOURCE_DIR" --state /private/amberdata-python \
+  prepare --discovery /private/customer/native-discovery.json \
+  --row "$REVIEWED_SUMMARY_ROW" --accept "$REVIEWED_ACCEPT_INDEX" \
+  --profile /private/offline-profile.json --product /private/customer/product.json \
+  --operation ohlcv_summary --intent amberdata-python-research-001 \
+  --input /private/provider/compared.research-input.json
+
+python3 "$AMBERDATA_EXAMPLE/customer.py" \
+  --source-root "$AMBERDATA_SOURCE_DIR" --state /private/amberdata-python \
+  inspect --intent amberdata-python-research-001
+```
+
+`prepare` already returns the original native review. A later `inspect` process
+reopens the same `PREPARED` record, including its selected body and payment terms.
+Keep that state directory and intent ID; preparing a replacement is unnecessary.
+Before execution, configure the original buyer's actual operator, signer and
+budget, then review the same retained operation. Calling `recover` before any
+execution returns `ORIGINAL_RESULT_NOT_RECORDED` with CLI exit 2, because there is
+no native response to recover; `inspect` is the appropriate preparation read.
 
 ## Reopen and continue the original operation
 

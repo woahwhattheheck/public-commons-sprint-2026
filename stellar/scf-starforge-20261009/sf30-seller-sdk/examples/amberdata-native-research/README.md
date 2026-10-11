@@ -117,6 +117,13 @@ differences, null counts and derived-value counts remain separate. Use
 `source-input.py` to prepare these inputs from the actual retained source files;
 the exact commands and schema are in [OPERATIONS.md](OPERATIONS.md).
 
+The original GDAX BTC/USD CloudSync files for 15 February 2026 have complete
+minute, hour and day timestamp coverage, while their observed minute-volume sum
+is 30.48229210 BTC below the hourly and daily sums. The research result retains
+each interval's own values and makes that difference visible. The
+[retained-source example](OPERATIONS.md#observed-cloudsync-source) explains the
+actual output and its limits.
+
 ## Preview, release and run
 
 Use the original workspace's Preview view or its original CLI command. Supply the
@@ -182,6 +189,14 @@ to the actual offered alternative. `prepare` displays the original native review
 performs local reads of the same intent. A saved native response remains available
 even if later interpretation or payment-evidence collection needs attention.
 
+For offline preparation, pass a new private profile JSON file containing `{}`.
+Both customer examples can prepare and review the retained request with that
+profile, then `inspect` can reopen its `PREPARED` state in a fresh process. Keep
+the same state directory and intent ID. An operator and signer are configured
+through the original buyer before execution; an offline prepared record has no
+delivered response yet. [Customer preparation](OPERATIONS.md#prepare-and-reopen-a-retained-research-request)
+shows the complete retained-data command flow.
+
 When a page contains an available merchant continuation, prepare the next
 deliberate request using `--after /private/customer/ohlcv-page-0.json`, another
 stable intent, and the same product/client/profile. This option takes the token
@@ -217,6 +232,11 @@ original saved discovery response containing the selected merchant resource,
 plus its zero-based row and accepted alternative. The native preparer verifies
 the fixed origin/path/method and copies the offered amount, asset, network and
 recipient. It also preserves the original listing and discovery digest.
+
+The native preparer accepts a saved `{"resources": [...]}` envelope containing
+the original offer rows. Preserve those rows and their order, and select the
+actual operation with its zero-based `--row` and `--accept` indexes. The generated
+Node SDK supplies its own operation and accepted-offer selection.
 
 ```sh
 python3 "$AMBERDATA_EXAMPLE/customer.py" \
@@ -270,6 +290,7 @@ limits, recovery and accepted-release responsibilities.
 - [Amberdata spot exchange/instrument information](https://docs.amberdata.io/http/market/spot-exchanges-information.md)
 - [Amberdata spot OHLCV endpoint](https://docs.amberdata.io/http/market/spot-ohlcv.md)
 - [Amberdata OHLCV data dictionary](https://docs.amberdata.io/data-dictionary/market/ohlcv.md)
+- [Amberdata CloudSync market data and original sample files](https://docs.amberdata.io/cloudsync/cloudsync-market)
 - [Amberdata delivery methods](https://www.amberdata.io/delivery)
 - [Original upstream implementation and operating contract](../../UPSTREAM.md)
 - [Original Node buyer](../../../sf88-operator-buyer-cli/node/README.md)

@@ -293,10 +293,12 @@ def summary_result(plan, merged, sources, duplicates, source_kind, page_count, c
     if candidate < end:
         missing = (end - candidate + step - 1) // step
         gaps.append({'startDate': iso(candidate), 'endDate': iso(candidate + missing * step), 'missingCandles': missing})
+    values = list(merged.values())
     with localcontext() as context:
         context.prec = 100
         volume = sum((values['volume'] for values in merged.values()), Decimal(0))
-    values = list(merged.values())
+        price_change = merged[timestamps[-1]]['close'] - merged[timestamps[0]]['open'] if timestamps else None
+        price_range = max(value['high'] for value in values) - min(value['low'] for value in values) if values else None
     return {
         'schema': SUMMARY_SCHEMA, 'selectionSha256': selected,
         'sourceKind': source_kind,
@@ -311,7 +313,9 @@ def summary_result(plan, merged, sources, duplicates, source_kind, page_count, c
         'close': decimal_string(merged[timestamps[-1]]['close']) if timestamps else None,
         'high': decimal_string(max(v['high'] for v in values)) if values else None,
         'low': decimal_string(min(v['low'] for v in values)) if values else None,
-        'volume': decimal_string(volume), 'gaps': gaps, 'sources': sources,
+        'volume': decimal_string(volume), 'priceChange': decimal_string(price_change),
+        'priceRange': decimal_string(price_range), 'priceUnit': plan['units']['quote'],
+        'gaps': gaps, 'sources': sources,
         'numericRepresentation': 'binary64-roundtrip-json' if source_kind == 'cloudsync-parquet' else 'provider-json-decimal',
         'interpretation': 'Observed source candles only; decimal values retain the explicitly selected quote and volume units.',
     }
