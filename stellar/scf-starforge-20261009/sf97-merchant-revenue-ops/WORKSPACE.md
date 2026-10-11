@@ -5,14 +5,16 @@ operator opens the current SF30 seller configuration and its original session or
 retained usage history, enters commercial assumptions, reviews every offered
 payment choice, and saves a complete version of the existing report. A later
 session can reopen the report, compare saved periods, download usable merchant
-terms, or reuse the assumptions in another review.
+terms, reuse the assumptions, or prepare exact atomic price changes from a saved
+review and carry them into the seller's existing release workflow.
 
 The workspace calls the same `merchantTerms`, `analyze`, and `createReport`
 functions as the maintained SF97 CLI. Payment normalization, ordered option
 binding, decimal validation, BigInt money calculations, traffic validation and
-native reconciliation stay in the original implementation. This adds an operator
-interface and private saved versions; it does not change seller prices or start
-a payment, seller, webhook worker or external request.
+native reconciliation stay in the original implementation. Saved pricing reviews
+and prepared seller configurations have independent private version histories.
+The original seller launcher and release console handle deployment and runtime
+selection.
 
 ## Start with an existing merchant
 
@@ -239,16 +241,144 @@ source hashes, monthly targets, fixed costs and challenge costs are retained.
 The accounting run uses its selected native journals and verification sources;
 the pricing assumptions provide its unit valuations.
 
+## Prepare a seller price change
+
+**Prepare price change** on a saved review opens that review's original seller
+configuration. The same action is available through the **Prepare seller price
+change** section below the comparison. This connects a commercial review to a
+usable seller configuration without editing its JSON by hand.
+
+1. Select the saved pricing review and **Load payment choices**. The workspace
+   shows its source configuration identity, original report, merchant valuation
+   and every ordered payment choice on every service.
+2. Enter the desired **Proposed atomic amount** for each choice being changed.
+   Amounts are positive whole-number strings in that asset's smallest unit.
+   Keep the current amount for alternatives whose price should stay the same.
+   The original SF30 normalizer enforces its signed Soroban i128 limit.
+3. Select **Review price change**. Inspect the current and proposed amounts
+   together. Use **Inspect terms** on any row, or expand the first choice's
+   **Complete payment terms**, for the scheme, network, asset, recipient, timeout
+   and extra metadata on both sides.
+4. Give the change a name and **Save configuration**. The complete original
+   seller shape is retained, with just the selected payment amounts changed.
+   A private decision version holds that configuration, its source review and
+   the exact before/after terms.
+5. Use **Saved price changes** to download the prepared files or stage a retained
+   release when the original source package and release store are attached.
+
+The browser sends each edit as a route ID, ordered payment index, expected current
+amount and explicit proposed amount. Those identities are checked again against
+the saved configuration. The review hash binds the preview to the save. If the
+configured seller file changes, create a pricing review of its new configuration
+and use that review for the next price change. Earlier decision downloads remain
+available.
+
+The USD values displayed beside a route are the saved merchant assumptions.
+Atomic inputs are independent strings; the operator explicitly chooses each
+asset's price. The exported merchant terms bind the new complete option set
+through the original `merchantTerms` function while carrying forward the saved
+USD valuation, quote basis, costs and monthly volume target. Revise those
+commercial assumptions in a new review when the merchant's agreement changes.
+
+Changing an amount clears the old preview and requires a new review. Switching
+the selected source keeps the current form until **Load payment choices** is
+used. Refreshing operations retains unsaved amount entries. An interrupted save
+can be retried with the same request; a competing save refreshes the decision
+history position and keeps the entered amounts available for review. A refresh
+also recognizes a completed interrupted save by its original request ID.
+
+The editor displays eight services per page and retains amount entries across
+pages. All entered changes are validated together; an invalid amount returns
+to its service page. The change table uses the workspace's existing row paging,
+and full payment terms are expanded for the selected choice.
+
+### Configuration package
+
+| Download | Use |
+| --- | --- |
+| `seller.json` | Complete original seller configuration with the reviewed amounts. Relative data references retain their original form. |
+| `launch-seller.json` | Configuration for this operator host, resolving the original static response references against the source configuration directory. |
+| `terms.json` | Original SF97 merchant terms rebound to all new ordered payment options, with the saved explicit commercial assumptions. |
+| `decision.json` | Reviewed before/after terms and source identities for this price change. |
+| `source-seller.json` | Exact original seller bytes from the saved pricing review. |
+| `source-terms.json` | Exact original merchant terms from that review. |
+| `pricing-report.json` | Exact original commercial report that informed the change. |
+| `manifest.json` | Retained decision identity, file sizes and SHA-256 values. |
+| `source-manifest.json`, `source-plan.json` | Exact original API package manifest and merchant plan when a source package is attached. |
+| `source-package/…` | Updated original authoring package when one was attached at workspace launch. |
+
+For an existing service with a static response, run the local launch configuration
+through the maintained seller launcher:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs \
+  --config /private/merchant/prepared-price-change/launch-seller.json \
+  --port 8423
+```
+
+Use the merchant's existing facilitator and handler arguments when they are part
+of that deployment. An absolute handler module path keeps the same application
+binding when the exported configuration lives in a different folder. Local
+launch references continue to use the source host's existing data files; use the
+complete original authoring package when moving the merchant to another host.
+
+After deploying the prepared seller, point the pricing workspace at its current
+configuration and operations source. Its next commercial review will include
+the deployed option amounts. The retained `pricing-report.json` continues to
+describe the original commercial decision and observation period; subsequent
+native settlement reconciliation uses the original merchant accounting workflow
+with the appropriate deployed terms and journals.
+
+### Prepare a retained seller release
+
+Attach the original saved API merchant package and an existing SF82 release
+store to the workspace:
+
+```sh
+node stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/cli.mjs \
+  --config /private/merchant/api-package/compiled/seller-service.json \
+  --state /private/merchant/pricing-workspace \
+  --ops-url http://127.0.0.1:8424 \
+  --source-package /private/merchant/api-package \
+  --release-store /private/merchant/releases \
+  --release-runtime /private/merchant/release-runtime.json \
+  --port 8457
+```
+
+The runtime JSON contains the existing release runtime options, for example the
+merchant's chosen port and facilitator URL. The source package supplies its
+original application bindings. Keep those settings in the private operator
+configuration used for this merchant.
+
+The source adapter carries exact payment edits into the original authoring
+selections and saves the package through its maintained compiler. A saved
+decision with that package offers **Stage retained release**. The action uses
+the original SF82 staging implementation and returns the retained release ID.
+Repeating a completed stage action recovers the same release.
+
+Open the merchant's existing [seller release console](../sf82-seller-pilot/RELEASES.md)
+to compare the staged configuration, select it and restart the original seller
+using the console's established controls. The same console retains the previous
+release for rollback.
+
 ## Saved-state and restart behavior
 
-The private directory contains `versions/`, `successors/`, and `pending/`.
-Each committed version contains exact original `seller.json` and either
+Pricing reviews use `versions/` and `successors/` in the private state directory.
+Each committed review contains exact original `seller.json` and either
 `snapshot.json` or `history.json` bytes, generated `terms.json`, original `report/`
 outputs, and `manifest.json` with SHA-256 and byte counts. The manifest retains
 source selection and compact coverage metadata; detailed original counters remain
 in the source and report. Downloading saved files verifies their committed bytes
 and refuses changed paths or contents. Existing version-one session reviews remain
 readable and can be compared or reused alongside new period reviews.
+
+Seller price changes use the independent `decisions/` and
+`decision-successors/` history. A price decision binds its source review, exact
+edited configuration, merchant terms and complete optional source package in one
+immutable manifest. Staged release receipts are retained separately under
+`staged-releases/`, preserving the original decision bytes. The browser reopens
+the most recent one hundred price decisions and displays any retained release
+ID after restart. Both workflows use `pending/` for uncommitted writes.
 
 A new review is completely written and flushed before publication. Its manifest
 is atomically linked as the previous revision's sole create-only successor.
@@ -281,7 +411,8 @@ telemetry, external fonts or libraries are used.
   `liveSnapshot(url)` and `createReport(argv)`. The original CLI `main(argv)`
   retains its JSON status output and also returns that result.
 - Embedding: `startWorkspace({config, directory, snapshot, history, opsUrl,
-  nativeOutbox, port})` returns `{url, server, model, close}`. Select exactly one
+  nativeOutbox, sourcePackage, releaseStore, releaseRuntime, port})` returns
+  `{url, server, model, close}`. Select exactly one
   live `opsUrl`, or one or both original `snapshot` and `history` file paths.
 - `model.state(selection)` selects the original source per call. Selection is
   `{kind:'SESSION'|'DURABLE_HISTORY', from:null|string, to:null|string,
@@ -293,6 +424,19 @@ telemetry, external fonts or libraries are used.
 - The HTTP interface provides `POST /api/source` and `POST /api/compare` under
   the existing per-process workspace header and local-origin controls. Original
   preview, save, download and assumption-reuse endpoints retain their contracts.
+- Repricing source: `POST /api/repricing/source` with `{version}` returns the
+  saved review's original ordered choices, commercial inputs, source hash and
+  current decision-history revision.
+- Repricing preview: `POST /api/repricing/preview` takes
+  `{version,sellerSha256,edits:[{routeId,paymentIndex,expectedAmount,amount}]}`.
+  Indices are zero-based; atomic amounts remain strings. The response includes
+  exact changes, the prepared seller hash and a `reviewSha256` binding.
+- Repricing save adds `{requestId,label,expectedRevision,reviewSha256}` to those
+  same preview inputs. Its revision belongs to the independent price-change
+  history. Workspace state exposes that history as `repricing.history`.
+- Decision files are available under `/repricing-files/DECISION/FILE`.
+  `POST /api/repricing/stage` with `{decision,reviewSha256}` stages a retained
+  source package when the existing release store and runtime are configured.
 
 Original SF74 support and merchant commercial owners can consume the unchanged
 report and terms schemas. The workspace is an additive native merchant adoption

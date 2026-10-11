@@ -55,10 +55,11 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
         const asset = assets.get(url.pathname);
         if (asset) return reply(200,asset.type,asset.bytes);
         if (url.pathname === '/api/state') return json(200,{...await model.state(),token});
-        const match = /^\/files\/([a-f0-9-]{36})\/(.+)$/.exec(url.pathname);
+        const match = /^\/(files|repricing-files)\/([a-f0-9-]{36})\/(.+)$/.exec(url.pathname);
         if (match) {
-          const name = decodeURIComponent(match[2]);
-          const bytes = await model.download(match[1],name), last = name.split('/').at(-1);
+          const name = decodeURIComponent(match[3]);
+          const bytes = await (match[1] === 'repricing-files' ? model.downloadRepricing(match[2],name)
+            : model.download(match[2],name)), last = name.split('/').at(-1);
           const html = name.endsWith('.html');
           const type = html ? 'text/html; charset=utf-8' : name.endsWith('.json')
             ? 'application/json; charset=utf-8' : name.endsWith('.csv') ? 'text/csv; charset=utf-8' : 'application/octet-stream';
@@ -74,6 +75,10 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
       if (url.pathname === '/api/save') return json(200,await model.save(input));
       if (url.pathname === '/api/load-version') return json(200,await model.loadVersion(input.version));
       if (url.pathname === '/api/compare') return json(200,await model.compare(input));
+      if (url.pathname === '/api/repricing/source') return json(200,await model.repricingSource(input.version));
+      if (url.pathname === '/api/repricing/preview') return json(200,await model.previewRepricing(input));
+      if (url.pathname === '/api/repricing/save') return json(200,await model.saveRepricing(input));
+      if (url.pathname === '/api/repricing/stage') return json(200,await model.stageRepricing(input));
       throw fault('NOT_FOUND','Workspace operation not found.',404);
     })().catch(error => json(error.status ?? (error instanceof TypeError || error instanceof RangeError ? 422 : 500),
       {code:error.code ?? 'WORKSPACE_OPERATION_FAILED',

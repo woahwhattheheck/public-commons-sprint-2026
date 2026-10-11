@@ -59,7 +59,7 @@ function parameterDescription(spec, supplied, isQuery) {
   if (spec.nullable) parts.push(isQuery ? 'HTTP query strings cannot transmit SQL null; an omitted field can use a configured null default.' : 'JSON null is accepted subject to the configured enum.');
   return parts.join(' ');
 }
-function parameterSchema(spec, supplied, isQuery) {
+function parameterSchema(spec, supplied, isQuery, bindParameters = bindPostgresParameters) {
   // SF25's native-supported schema subset has no pattern keyword and cannot
   // compare exact decimal strings. Keep those constraints in source admission
   // and describe them exactly; never round them into JSON numbers.
@@ -84,7 +84,7 @@ function parameterSchema(spec, supplied, isQuery) {
   if (spec.enum && !['decimal', 'number'].includes(spec.type)) {
     const accepted = [];
     for (const value of spec.enum) {
-      const parsed = bindPostgresParameters({ parameters: { [spec.name]: spec }, parameterOrder: [spec.name] }, { [spec.name]: value })[0];
+      const parsed = bindParameters({ parameters: { [spec.name]: spec }, parameterOrder: [spec.name] }, { [spec.name]: value })[0];
       if (parsed === null) { if (!isQuery) accepted.push(null); }
       else if (isQuery) accepted.push(String(parsed));
       else if (spec.type === 'integer') {
@@ -104,10 +104,20 @@ function parameterSchema(spec, supplied, isQuery) {
 /** Compile approved private queries plus explicit PUBLIC merchant metadata.
  * No environment reads, SQL execution, network requests or payment calls. */
 export function compilePostgresMerchantPlan(queries, plan) {
+  return compileQueryMerchantPlan(compilePostgresQueries(queries), plan);
+}
+
+/** Compile already validated source declarations through the original public
+ * seller contract. The source owns declaration validation and scalar binding;
+ * this compiler owns the public HTTP, payment, example and route semantics. */
+export function compileQueryMerchantPlan(compiled, plan, {
+  schema = PLAN, handlerPrefix = 'postgresQuery', admitPrefix = 'postgresAdmit',
+  bindParameters = bindPostgresParameters,
+} = {}) {
   fields(plan, ['schema', 'publicOrigin', 'payment', 'paymentOptions', 'routes'], 'Merchant plan');
-  if (plan.schema !== PLAN || !Array.isArray(plan.routes) || !plan.routes.length || plan.routes.length > 64)
-    throw new TypeError('Expected postgres-merchant-plan.v1 with 1–64 routes');
-  const publicOrigin = origin(plan.publicOrigin), compiled = compilePostgresQueries(queries);
+  if (plan.schema !== schema || !Array.isArray(plan.routes) || !plan.routes.length || plan.routes.length > 64)
+    throw new TypeError(`Expected ${schema.replace(/^stellar-forge\./, '')} with 1–64 routes`);
+  const publicOrigin = origin(plan.publicOrigin);
   const inheritedPayment = paymentFields(plan), ids = new Set(), bindings = Object.create(null);
   const routes = plan.routes.map((route, index) => {
     fields(route, ['id', 'path', 'method', 'query', 'serviceName', 'description', 'tags', 'example',
@@ -128,14 +138,14 @@ export function compilePostgresMerchantPlan(queries, plan) {
     if (!record(route.example)) throw new TypeError('Supply an explicit public example object for each route');
     // Validate before publication; missing required fields and invalid defaults,
     // enums, bounds and unsafe numeric examples use the SAME source binder.
-    bindPostgresParameters(spec, route.example);
+    bindParameters(spec, route.example);
     if (isQuery && Object.values(route.example).some(value => value === null))
       throw new TypeError('Query examples cannot transmit null; omit a defaulted field or choose POST');
     const example = Object.fromEntries(Object.entries(route.example).map(([name, value]) =>
       [name, isQuery ? String(value) : structuredClone(value)]));
     // Converting a safe numeric example to its actual HTTP text must also retain
     // the source contract. Never rely on an unexecuted JavaScript sample.
-    bindPostgresParameters(spec, example);
+    bindParameters(spec, example);
     if (isQuery) {
       const request = new URL(publicOrigin + route.path);
       for (const [name, value] of Object.entries(example)) request.searchParams.set(name, value);
@@ -152,13 +162,13 @@ export function compilePostgresMerchantPlan(queries, plan) {
     const key = isQuery ? 'queryParams' : 'body';
     input[key] = example;
     inputSchema.properties[key] = { type: 'object', properties: Object.fromEntries(parameters.map(parameter =>
-      [parameter.name, parameterSchema(parameter, descriptions[parameter.name], isQuery)])),
+      [parameter.name, parameterSchema(parameter, descriptions[parameter.name], isQuery, bindParameters)])),
     required: parameters.filter(parameter => !own(parameter, 'default')).map(parameter => parameter.name),
     additionalProperties: false };
     if (!inputSchema.required.includes(key)) inputSchema.required.push(key);
     ids.add(route.id);
     bindings[route.id] = { query: route.query, input: isQuery ? 'query' : 'body' };
-    return { id: route.id, path: route.path, handler: `postgresQuery${index}`, admit: `postgresAdmit${index}`,
+    return { id: route.id, path: route.path, handler: `${handlerPrefix}${index}`, admit: `${admitPrefix}${index}`,
       validateInput: true, offer };
   });
   // Reuse original imported-offer, route collision, Bazaar schema, public-host,

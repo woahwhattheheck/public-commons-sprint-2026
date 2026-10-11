@@ -16,8 +16,12 @@ const help = `Starforge merchant toolkit
   starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]
   starforge doctor [--native] [--feature NAME]
   starforge source
+  starforge runtime-profile --help
+  starforge runtime-install --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  runtime-profile                            Select exact dependencies for an original release
+  runtime-install                            Install, resume, run, upgrade and recover a customer runtime
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
@@ -57,6 +61,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   sheets-publisher                           Review and publish retained Sheet observations as datasets
   mongodb                                    Inspect, author and operate fixed native BSON reports
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
+  redis                                      Inspect, prepare and operate Redis/Valkey read products
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
@@ -84,6 +89,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce-setup                             Prepare shared operator budgets and merchant requests
   upstream-operation                         Issue, inspect and reconcile merchant operation tickets
   dataset-workspace                          Inspect, preview and operate the retained dataset
+  allium-explorer / allium-workspace          Acquire, review and operate retained Allium data products
   merchant-fleet / merchant-fleet-control     Host, prepare, activate and roll back a merchant fleet
   merchant-fleet-workspace                    Review fleet changes in the private operator browser
   fleet-release                              Stage, compare and operate original releases across a fleet
@@ -91,6 +97,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
   merchant-accounting-pricing                Import a saved original pricing report as accounting terms
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
+  merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases
