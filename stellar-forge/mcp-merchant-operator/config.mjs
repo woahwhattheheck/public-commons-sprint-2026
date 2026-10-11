@@ -24,6 +24,7 @@ import { readSheetsWorkspaceConfiguration } from './sheets-workspace.mjs';
 import { readTenderlyWorkspaceConfiguration } from './tenderly-workspace.mjs';
 import { normalizeAccountingConfig, readAccountingConfig } from './accounting.mjs';
 import { readPricingConfiguration } from './pricing.mjs';
+import { readWooCommerceConfiguration } from './woocommerce.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
 export const SUPPORT_CONFIG_SCHEMA = 'stellar-forge.merchant-support-connection.v1';
@@ -357,7 +358,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'sheetsWorkspaceConnection', 'tenderlyWorkspaceConnection', 'pricingConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'sheetsWorkspaceConnection', 'tenderlyWorkspaceConnection', 'pricingConnection', 'woocommerceConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -380,7 +381,9 @@ export async function readMerchantConfig(path) {
     publishers: raw.publisherConnection === undefined ? null
       : await readPublisherConfiguration(hostPath(raw.publisherConnection, base)),
     pricing: raw.pricingConnection === undefined ? null
-      : await readPricingConfiguration(hostPath(raw.pricingConnection, base)) };
+      : await readPricingConfiguration(hostPath(raw.pricingConnection, base)),
+    woocommerce: raw.woocommerceConnection === undefined ? null
+      : await readWooCommerceConfiguration(hostPath(raw.woocommerceConnection, base)) };
   await readReleaseState(config.releaseStore);
   config.s3Workspaces = raw.s3WorkspaceConnection === undefined ? null
     : await readS3WorkspaceConfiguration(hostPath(raw.s3WorkspaceConnection, base), { releaseStore: config.releaseStore });
@@ -391,10 +394,10 @@ export async function readMerchantConfig(path) {
   config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
   config.accounting = normalizeAccountingConfig(raw.accounting, base);
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
-  if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces || config.sheetsWorkspaces || config.tenderlyWorkspaces) await privateSupportDirectory(config.exportsDirectory);
+  if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces || config.sheetsWorkspaces || config.tenderlyWorkspaces || config.woocommerce) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, pricing, releaseStore }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, pricing, woocommerce, releaseStore }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
   const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime }, process.cwd(), 'initial');
@@ -421,6 +424,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   if (pythonWorkspaceConnection) await readPythonWorkspaceConfiguration(pythonWorkspaceConnection);
   const pricingConnection = pricing === undefined ? undefined : hostPath(pricing, process.cwd());
   if (pricingConnection) await readPricingConfiguration(pricingConnection);
+  const woocommerceConnection = woocommerce === undefined ? undefined : hostPath(woocommerce, process.cwd());
+  if (woocommerceConnection) await readWooCommerceConfiguration(woocommerceConnection);
   const existingReleaseStore = releaseStore === undefined ? undefined : hostPath(releaseStore, process.cwd());
   if (existingReleaseStore) await readReleaseState(existingReleaseStore);
   await mkdir(root, { mode: 0o700 });
@@ -436,6 +441,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(receivingConnection ? { receivingConnection } : {}),
     ...(pythonWorkspaceConnection ? { pythonWorkspaceConnection } : {}),
     ...(pricingConnection ? { pricingConnection } : {}),
+    ...(woocommerceConnection ? { woocommerceConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
         ...(source.clickhousePackage ? { clickhousePackage: source.clickhousePackage,
@@ -453,7 +459,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     } });
   await readMerchantConfig(path);
   return { schema: CONFIG_SCHEMA, configuration: path, sourceAlias: 'initial', state: 'INITIALIZED',
-    catalogConfigured: Boolean(catalogConnection), facilitatorsConfigured: Boolean(facilitatorConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection), pricingConfigured: Boolean(pricingConnection),
+    catalogConfigured: Boolean(catalogConnection), facilitatorsConfigured: Boolean(facilitatorConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection), pricingConfigured: Boolean(pricingConnection), woocommerceConfigured: Boolean(woocommerceConnection),
     sourceType: preview.sourceType, sourceDigests: preview.sourceDigests, inputPackage: preview.inputPackage,
     environment: preview.environment, credentialValuesChecked: false };
 }
@@ -617,4 +623,20 @@ export async function initializeTenderlyWorkspaceMerchant({ directory, connectio
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', tenderlyWorkspacesConfigured: true,
     workspaces: Object.entries(selection.workspaces).map(([workspace, entry]) => ({ workspace, label: entry.label })),
     authoring: 'OPENED_BY_MERCHANT_TENDERLY_OPEN' };
+}
+
+/** Attach existing Woo stores to the original provider without a separate seller. */
+export async function initializeWooCommerceMerchant({ directory, connection, name = 'Starforge Woo merchant' }) {
+  const root = resolve(directory), woocommerceConnection = hostPath(connection, process.cwd());
+  const configured = await readWooCommerceConfiguration(woocommerceConnection);
+  name = line(name, 'Merchant name');
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, woocommerceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED',
+    woocommerceStores: Object.keys(configured.stores), credentials: 'RESOLVED_BY_EXPLICIT_NATIVE_OPERATION' };
 }

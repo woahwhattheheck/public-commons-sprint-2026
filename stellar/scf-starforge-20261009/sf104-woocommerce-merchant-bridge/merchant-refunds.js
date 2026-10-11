@@ -138,7 +138,7 @@
         '<div data-refund-detail></div></section><section class="sf104-panel"><h3>Current Woo refunds</h3>' + (woo ?
           '<div class="sf104-table-scroll"><table class="sf104-data-table"><thead><tr><th>Refund</th><th>Woo amount</th><th>Native adjustment</th><th>Reason</th></tr></thead><tbody>' +
           woo + '</tbody></table></div>' : '<p>This order has no Woo refund records.</p>') +
-        '<button type="button" class="sf104-button" data-refund-export>Download order refund handoff</button></section>';
+        '<button type="button" class="sf104-button" data-refund-export>Download current order refund snapshot</button></section>';
       if (lastReview) showReview(lastReview);
     }
     function showReview(id) {

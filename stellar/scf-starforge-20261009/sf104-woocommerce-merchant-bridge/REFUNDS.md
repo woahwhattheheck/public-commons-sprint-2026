@@ -107,6 +107,109 @@ The operation retains the exact `adjustments.json` bytes, canonical `adjustment-
 
 Exit code 0 indicates a successful command. Apply succeeds with `APPLIED`; prepare succeeds with `PREPARED` or an already applied matching refund. Exit code 2 reports an incomplete live mutation/recovery for inspection. Exit code 1 reports an input, configuration, source-binding, or transport error.
 
+## Receive a support handoff on another operator machine
+
+A receiving operator can continue the same refund from the complete private export. The receiver retains the original adjustment UUID, Woo order, store URL, accounting export bytes, native return proof, reviewed currency allocation and outcome history. Its first live step is the existing recovery GET against that store.
+
+### Send the complete original operation
+
+Run the export command above against the selected original adjustment. Its result includes `manifestSha256`, the SHA-256 of the exact saved `manifest.json`. Keep that value with the private handover.
+
+Transfer the entire export directory to the receiving machine, preserving each filename and byte. The manifest lists the original accounting export, canonical adjustment request, initial order snapshot, sealed input, server reviews and saved prepare/apply/recovery attempts. Use the complete export produced by the CLI or the MCP file reader. The WordPress order-view download provides a current order snapshot.
+
+When receiving through MCP, use the original `merchant_woo_export`/`merchant_woo_export_status` result and retrieve each manifest member with `merchant_woo_file`. Keep the returned original manifest hash. Place `manifest.json` and every listed file directly in one private directory; the receiver checks its complete file set.
+
+### Configure the receiving workspace
+
+Use the existing operator configuration format from [NATIVE_REVIEW.md](NATIVE_REVIEW.md). Set `siteUrl` to the same store URL, including any WordPress installation prefix. Set `workspace` to the receiving operator's private state directory. Preserve the merchant's original outbox configuration for its existing payment-review workflow.
+
+For example:
+
+```json
+{
+  "schema": "stellar-forge.sf104.merchant-operator.v1",
+  "siteUrl": "https://shop.example",
+  "usernameEnv": "WOO_MANAGER_USER",
+  "applicationPasswordEnv": "WOO_MANAGER_APPLICATION_PASSWORD",
+  "outbox": "/private/original-merchant-outbox",
+  "workspace": "/private/receiving-woo-operator",
+  "timeoutMs": 15000
+}
+```
+
+Replace the example store and paths with that merchant's actual configuration. Keep the transfer directory and operator workspace private to the current operating-system user. New receiving directories are mode 0700 and newly copied files are mode 0600. Credential values remain in the configured environment variables and are resolved when a live store operation is selected.
+
+### Review, receive, and reopen
+
+Replace `SHA256_FROM_EXPORT` below with the 64-character digest returned with the original export. First inspect the delivered operation:
+
+```sh
+starforge woo-refund receive \
+  --config /private/receiving-woo-operator.json \
+  --from /private/refund-handoff \
+  --manifest-sha256 SHA256_FROM_EXPORT \
+  --check
+```
+
+The `REVIEWED` result identifies the original store and order, adjustment UUID, original payment and return transactions, native atomic amount, Woo amount and currency, saved operation status, review/attempt counts, file count and byte total. The original refund engine validates the received source and history in a private staging directory.
+
+Receive that same reviewed file set:
+
+```sh
+starforge woo-refund receive \
+  --config /private/receiving-woo-operator.json \
+  --from /private/refund-handoff \
+  --manifest-sha256 SHA256_FROM_EXPORT
+
+starforge woo-refund read \
+  --config /private/receiving-woo-operator.json \
+  --adjustment 11111111-2222-4333-8444-555555555555
+
+starforge woo-refund history \
+  --config /private/receiving-woo-operator.json
+```
+
+Use the original adjustment UUID returned by receive in the read command. `RECEIVED` names the installed original operation and the saved receipt directory. `operationStatus` is the status in the delivered history. The ordinary read command reopens its complete input, reviews and outcomes through the existing operator.
+
+Receiving validates the exact manifest pin, schema, canonical member names, sizes and SHA-256 values. It requires regular single-link files and checks all existing target members before copying new records. The original `input.json` is installed last, after its complete source and history. The saved receipt and original manifest live under:
+
+```text
+<workspace>/refund-handoffs/<adjustment-UUID>/<manifest-SHA256>/
+```
+
+If a local copy or its response is interrupted, repeat the same receive command with the same manifest hash and directory. Matching copied records are reused. A completed receive reopens its original receipt. Receiving into a workspace with later local recovery records preserves those records; a conflicting version of a named original record requires reconciling that workspace's history. A separate private receiving workspace can open an earlier complete handoff for support review.
+
+The receiver processes up to 2,048 files and 256 MiB in one complete handoff, with the original 32 MiB accounting-export and 4 MiB per-state-file limits. A file-set or size failure identifies the incomplete or oversized handoff before installing its original input. Keep the complete original export when resolving that result.
+
+### Continue the same live order recovery
+
+With the store's existing manager credentials available in the configured environment variables, read the actual order into the received operation:
+
+```sh
+starforge woo-refund recover \
+  --config /private/receiving-woo-operator.json \
+  --adjustment 11111111-2222-4333-8444-555555555555
+```
+
+This is the original independent GET recovery. Its new observation joins the retained history under the same adjustment UUID. Review the actual current mapping, native refund child, remaining amount and order status. The result table above explains the original PREPARED/APPLIED/reconciliation outcomes and the corresponding explicit next operation.
+
+For a later support handover, export this received operation to a new private directory. The new manifest includes its additional recovery observations, while the original accounting source, payment and return identities remain the same. Each completed handover retains its own exact manifest hash.
+
+SDK customers can use the same operation with their existing loaded operator configuration:
+
+```js
+import {receiveRefund} from
+  '@tokenjunkielabs/starforge-merchant/merchant/woocommerce/refund-handoff';
+import {inspectRefund, recoverRefund} from
+  '@tokenjunkielabs/starforge-merchant/merchant/woocommerce/refunds';
+
+const delivered = await receiveRefund(config, receivedDirectory, {
+  expectedManifestSha256: originalManifestSha256,
+});
+const saved = await inspectRefund(config, delivered.adjustmentId);
+const current = await recoverRefund(config, delivered.adjustmentId);
+```
+
 ## Install the complete plugin
 
 The portable Woo plugin contains these 14 files:

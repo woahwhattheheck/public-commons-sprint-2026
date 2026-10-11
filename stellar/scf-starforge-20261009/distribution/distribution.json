@@ -169,6 +169,7 @@
     "operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs",
     "jobs": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/cli.mjs",
     "jobs-buyer": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/buyer.mjs",
+    "job-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/cli.mjs",
     "dataset": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs",
     "assets": "stellar/scf-starforge-20261009/sf30-seller-sdk/asset-cli.mjs",
     "openapi": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/cli.mjs",
@@ -238,6 +239,8 @@
     "paid-file-purchase": "stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs",
     "api-pass": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/cli.mjs",
     "api-pass-client": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/customer.mjs",
+    "api-purchase": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/purchase-cli.mjs",
+    "api-application": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-application/cli.mjs",
     "buyer-node": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/customer.mjs",
     "commerce-setup": "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-setup.mjs",
     "upstream-operation": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-operation.mjs",
@@ -320,9 +323,7 @@
     "buyer-expenses": "stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/cli.mjs",
     "weather-operations": "stellar/scf-starforge-20261009/partners/open-meteo-operations/cli.mjs",
     "merchant-fleet-host": "stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-cli.mjs",
-    "woo-refund": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator-cli.mjs",
-    "api-purchase": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/purchase-cli.mjs",
-    "api-application": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-application/cli.mjs"
+    "woo-refund": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator-cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -383,6 +384,11 @@
       "import": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/response-file.mjs"
     },
     "./buyer/jobs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/buyer.mjs",
+    "./buyer/job-workspace": {
+      "types": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/index.mjs"
+    },
+    "./buyer/job-workspace/server": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/server.mjs",
     "./operator": "./source/stellar/scf-starforge-20261009/sf81-buyer-operator-bridge/bridge.mjs",
     "./support": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs",
     "./merchant/incidents": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/watch.mjs",
@@ -477,6 +483,9 @@
     "./merchant/checkout": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
     "./buyer/purchase": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs",
     "./merchant/checkout/config": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout-config.mjs",
+    "./buyer/api-access": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/purchase.mjs",
+    "./merchant/api-application": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-application/worker.mjs",
+    "./merchant/api-application/config": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-application/configuration.mjs",
     "./buyer/object": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-session.mjs",
     "./buyer/object-description": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-description.mjs",
     "./merchant/mcp": "./source/stellar-forge/mcp-merchant-operator/operator.mjs",
@@ -686,9 +695,7 @@
     "./merchant/fleet/host": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy.mjs",
     "./merchant/fleet/host-runtime": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-runtime.mjs",
     "./merchant/woocommerce/refunds": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator.mjs",
-    "./buyer/api-access": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/purchase.mjs",
-    "./merchant/api-application": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-application/worker.mjs",
-    "./merchant/api-application/config": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-application/configuration.mjs"
+    "./merchant/woocommerce/refund-handoff": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-handoff.mjs"
   },
   "nativePeers": {
     "@x402/core": {

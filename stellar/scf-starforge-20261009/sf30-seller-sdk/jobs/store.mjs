@@ -191,6 +191,27 @@ export async function openJobStore(directory, source) {
         await save(next); return structuredClone(next);
       });
     },
+    async renewClaim(id, expectedRevision, claimTokenHash, why) {
+      return serial(async () => {
+        const previous = rows.get(id);
+        if (!previous) fail('JOB_NOT_FOUND', 404);
+        if (expectedRevision !== previous.revision) fail('JOB_REVISION_CHANGED', 409);
+        if (previous.state !== 'PREPARED' || previous.submittedAt !== null || previous.settlement !== null)
+          fail('JOB_CLAIM_RENEWAL_NOT_AVAILABLE', 409);
+        if (!HASH.test(claimTokenHash ?? '') || typeof why !== 'string' || !why.trim() ||
+            why.length > 500 || /[\x00-\x1f\x7f]/.test(why)) fail('JOB_CLAIM_RENEWAL_INVALID', 400);
+        if (claimTokenHash === previous.claimTokenHash) fail('JOB_CLAIM_UNCHANGED', 409);
+        // Claim replacement is its own narrow operation. General record updates
+        // retain the original immutable identity check, including the claim hash.
+        const next = structuredClone(previous), at = new Date().toISOString();
+        next.claimTokenHash = claimTokenHash;
+        next.history = [...next.history.slice(-511), { at, action: 'claim-renewed', state: 'PREPARED',
+          previousRevision: previous.revision, revision: previous.revision + 1, reason: why }];
+        next.revision = previous.revision + 1; next.updatedAt = at;
+        if (!Number.isSafeInteger(next.revision)) fail('JOB_REVISION_EXHAUSTED');
+        await save(next); return structuredClone(next);
+      });
+    },
     async writeResult(body) {
       return serial(async () => {
         if (!Buffer.isBuffer(body) || body.length > 67108864) fail('JOB_RESULT_TOO_LARGE', 413);
