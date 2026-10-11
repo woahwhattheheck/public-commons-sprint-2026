@@ -4,6 +4,12 @@ Hearthline is a self-hosted Model Context Protocol server built for agentic hous
 
 The server implements **MCP 2025-11-25 Streamable HTTP** directly on Node.js 20+ with no runtime dependencies. A built-in MCP App (`ui://hearthline/mission-dashboard.html`) renders mission state in compatible hosts.
 
+## Household workboard
+
+Five native tools keep assignments, due dates, notes, completion and counted stock in the same durable household store. A restock can record a count and task completion together. Expected task and inventory revisions keep an older client from replacing a newer edit; completed work and approved shopping quantities remain independently available.
+
+The [household browser workspace](../hearthline-browser-demo/README.md) exposes this complete workflow, reopens the same file across full host restarts and downloads the saved workspace. Its current recorder exercises the real MCP service and browser, including a second-client conflict and returning to an earlier mission.
+
 ## Why this is not a basic API wrapper
 
 A single Hearthline mission crosses multiple boundaries:
@@ -24,7 +30,6 @@ See [`docs/AUTHORITY.md`](docs/AUTHORITY.md) for the durable approval/operation 
 ## Run
 
 ```bash
-npm test
 npm run demo
 npm start
 ```
@@ -47,6 +52,11 @@ Terminate TLS at a trusted reverse proxy. Do not expose a plaintext MCP endpoint
 
 | Tool | Purpose | External effect |
 |---|---|---|
+| `hearthline_get_inventory` | read counted stock and its current revision | none |
+| `hearthline_get_workboard` | recover assignments, due dates, notes, completion and current supply gaps | none |
+| `hearthline_add_task` | add household work with an optional stable task ID | local state only |
+| `hearthline_update_task` | save task changes and optional restock atomically against expected revisions | local state only |
+| `hearthline_update_inventory` | save changed counts against the expected inventory revision | local state only |
 | `hearthline_seed_inventory` | set demo household stock counts | local state only |
 | `hearthline_prepare_storm` | NWS alerts + inventory reconciliation + mission creation | NWS read + local state |
 | `hearthline_get_mission` | read current mission generation | none |

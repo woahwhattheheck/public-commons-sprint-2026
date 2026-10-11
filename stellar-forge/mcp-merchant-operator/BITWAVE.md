@@ -155,6 +155,16 @@ and original request batches. Native row identity combines this plan's ID with
 the original accountant row ID. All original protected fields remain exact;
 the original return engine owns the editable accounting fields.
 
+An adjusted handoff also freezes its source snapshot hash, exact refund and
+cancellation amounts, refund status/count and native transfer/decision dates.
+These appear in the same `schema` and row views as protected string columns.
+A closed-period handoff keeps the original close's adjustment snapshot after
+later refunds. Legacy plans retain their original column set. Select a native
+table with the plan's complete schema; Bitwave requires a new data source when
+the schema changes, and this workspace refuses a known retained table with
+different columns. The existing [operator workflow](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/BITWAVE_WORKFLOW.md#carry-the-selected-adjustment-snapshot)
+explains source selection and dates.
+
 Inspect `merchant_accounting_bitwave_plan` and page `view:"schema"` or
 `view:"batches"`; use `merchant_accounting_bitwave_rows` for the full source rows.
 Default page size is 25, maximum 200. Follow `total`, `offset` and `limit` to
@@ -263,6 +273,12 @@ that name, or use `file:"bitwave-handoff.tar"` for the complete current plan.
 The archive includes original plan/source files, native requests and responses,
 captures/comparisons, return intents and every accepted original accountant
 return packet. Its file manifest carries the exact included byte hashes.
+
+For an adjusted source, `adjustments.json`, `adjustments.csv` and
+`adjustments.html` are retained plan files available through this same chunked
+reader. The complete archive also carries these exact frozen companions inside
+every saved accountant return. Their source hash stays bound to the selected
+handoff, including when later merchant adjustments have been recorded.
 
 The first read returns `readId`, `file.bytes`, `file.sha256`, `data` and
 `nextOffset`. Decode `data` as base64. For each following chunk, keep the same

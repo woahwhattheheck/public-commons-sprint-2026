@@ -124,10 +124,13 @@ def approved_record(source):
     return record, request, request_sha
 
 
-def run_adapter(node: str, payload: dict):
+def run_adapter(node: str, payload: dict, *, use_system_ca=False):
     # The operator config chooses an executable, not a shell or arbitrary module.
     # SF36 keys and unrelated credentials never enter the Node observer process.
-    result = subprocess.run([node, str(ADAPTER)], input=canonical(payload),
+    if type(use_system_ca) is not bool:
+        raise Denied('INVALID_OBSERVER_SYSTEM_CA_OPTION')
+    arguments = [node, *(['--use-system-ca'] if use_system_ca else []), str(ADAPTER)]
+    result = subprocess.run(arguments, input=canonical(payload),
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
         env={'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8'}, timeout=420, check=False)
     if len(result.stdout) > MAX_SOURCE:
@@ -161,7 +164,7 @@ def verified_facts(proof, request, request_sha, transaction, payer):
 
 
 def finalize_source(governor, source, payer, *, node, rpc_endpoint=None,
-                    expected_request_sha=None, rpc_proxy_url=None):
+                    expected_request_sha=None, rpc_proxy_url=None, use_system_ca=False):
     record, request, request_sha = approved_record(source)
     profile = NETWORKS[request['network']]
     rpc_endpoint = rpc_endpoint or profile['defaultRpc']
@@ -186,7 +189,8 @@ def finalize_source(governor, source, payer, *, node, rpc_endpoint=None,
             'chainObservation': 'ORIGINAL_AUDITED_FINALIZATION_REUSED'}
     proof = run_adapter(node, {'action': 'observe', 'source': source, 'payer': payer,
                               'rpcEndpoint': rpc_endpoint,
-                              **({'rpcProxyUrl': rpc_proxy_url} if rpc_proxy_url is not None else {})})
+                              **({'rpcProxyUrl': rpc_proxy_url} if rpc_proxy_url is not None else {})},
+                        use_system_ca=use_system_ca)
     facts = verified_facts(proof, request, request_sha, receipt['transaction'], payer)
     # Audit again after network IO, before issuing authority. Original reconcile
     # then takes its own immediate transaction and rechecks journal/projection.
@@ -232,6 +236,8 @@ def main(argv=None):
     parser.add_argument('--policy', type=Path, required=True)
     parser.add_argument('--payer', required=True, help='Actual account from trusted signer configuration')
     parser.add_argument('--node', default=shutil.which('node'))
+    parser.add_argument('--node-use-system-ca', action='store_true',
+                        help='Explicitly use the installed system CA store in the isolated Node observer')
     parser.add_argument('--rpc-endpoint', choices=RPC_ENDPOINTS,
                         help='Public RPC for the original approved network; defaults per record')
     parser.add_argument('--rpc-proxy-env', help='Explicit environment variable containing a credential-free HTTP CONNECT proxy URL')
@@ -305,16 +311,17 @@ def main(argv=None):
                             result = finalize_manual(governor, path, source, args.payer, node=args.node,
                                 ledger=args.ledger, policy=args.policy, rpc_endpoint=args.rpc_endpoint,
                                 expected_request_sha=args.expected_request_sha, rpc_proxy_url=rpc_proxy_url,
-                                verify_only=args.verify_only)
+                                verify_only=args.verify_only, use_system_ca=args.node_use_system_ca)
                         else:
                             result = finalize_source(governor, source, args.payer, node=args.node,
                                 rpc_endpoint=args.rpc_endpoint, expected_request_sha=args.expected_request_sha,
-                                rpc_proxy_url=rpc_proxy_url)
+                                rpc_proxy_url=rpc_proxy_url, use_system_ca=args.node_use_system_ca)
                         result['merchant'] = {'status': 'NOT_CONFIGURED'}
                         if args.outbox:
                             try:
                                 result['merchant'] = run_adapter(args.node, {'action': 'merchant',
-                                    'source': source, 'outbox': str(args.outbox), 'route': args.merchant_route})
+                                    'source': source, 'outbox': str(args.outbox), 'route': args.merchant_route},
+                                    use_system_ca=args.node_use_system_ca)
                             except (Denied, OSError, ValueError, subprocess.TimeoutExpired):
                                 result['merchant'] = {'status': 'ORIGINAL_MERCHANT_JOURNAL_READ_FAILED'}
                     except (Denied, OSError, ValueError, TypeError, KeyError, subprocess.TimeoutExpired) as error:

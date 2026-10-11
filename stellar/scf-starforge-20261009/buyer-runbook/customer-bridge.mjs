@@ -69,11 +69,17 @@ async function publishBytes(path, bytes) {
     await file.close().catch(cleanup); await unlink(temporary).catch(cleanup);
   }
 }
-async function saveDownload(model, p) {
-  const resource = await model.download(p.id, p.operationId);
+async function saveDownload(model, p, paidFile = false) {
+  const resource = await (paidFile ? model.downloadPaidFile(p.id, p.operationId) : model.download(p.id, p.operationId));
   let file, temporary, publishedResult = null;
   try {
     const parent = await destinationParent(p.destination);
+    // The original paid-file engine returns its verified open descriptor. Keep
+    // the same descriptor and pin it again across this create-only export.
+    const initial = await resource.file.stat();
+    const identity = resource.identity ?? Object.fromEntries(
+      ['dev','ino','size','mtimeMs','ctimeMs'].map(name => [name, initial[name]]));
+    need(initial.isFile(), 'RESOURCE_BYTES_CHANGED');
     temporary = join(parent, '.acquisition-' + randomUUID());
     file = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
     const hash = createHash('sha256'), chunk = Buffer.alloc(65536); let offset = 0;
@@ -86,7 +92,7 @@ async function saveDownload(model, p) {
     }
     const current = await resource.file.stat();
     need(offset === resource.bytes && hash.digest('hex') === resource.sha256 &&
-      Object.entries(resource.identity).every(([name, value]) => current[name] === value),
+      Object.entries(identity).every(([name, value]) => current[name] === value),
     'RESOURCE_BYTES_CHANGED');
     await file.sync(); await file.close(); file = null;
     need(!controller.signal.aborted, 'ACQUISITION_CANCELLED_BEFORE_PUBLICATION');
@@ -94,7 +100,7 @@ async function saveDownload(model, p) {
     let publicationSyncError = null;
     try {await sync(parent);} catch (error) {publicationSyncError = codeOf(error);}
     publishedResult = {destination:p.destination, name:resource.name, bytes:resource.bytes,
-      sha256:resource.sha256, contentType:resource.contentType, published:true, publicationSyncError, cleanupErrors:[]};
+      sha256:resource.sha256, contentType:resource.contentType ?? null, published:true, publicationSyncError, cleanupErrors:[]};
     return publishedResult;
   } finally {
     const cleanup = error => {if (publishedResult) publishedResult.cleanupErrors.push(codeOf(error));};
@@ -115,7 +121,11 @@ async function execute(model, command, p) {
     need(HASH.test(p.expectedPlanSha256 ?? '') &&
       runbookPlanDigest(before.state.plan) === p.expectedPlanSha256, 'MATCHING_ACQUISITION_REVIEW_REQUIRED');
   need(!controller.signal.aborted, 'OPERATION_ABORTED_BEFORE_START');
-  const started = await model[command]({id:p.id, ...(p.only === undefined ? {} : {only:p.only})});
+  const paidFile = ['retrieve-paid-file','reset-paid-file'].includes(command);
+  const method = command === 'retrieve-paid-file' ? 'retrievePaidFile' :
+    command === 'reset-paid-file' ? 'resetPaidFile' : command;
+  const started = await model[method]({id:p.id, ...(p.only === undefined ? {} : {only:p.only}),
+    ...(paidFile ? {configSha256:p.configSha256, handoffSha256:p.handoffSha256} : {})});
   const cancel = () => {model.cancel({id:p.id, executionId:started.executionId}).catch(() => {});};
   controller.signal.addEventListener('abort', cancel, {once:true});
   if (controller.signal.aborted) cancel();
@@ -143,6 +153,12 @@ async function main([inputFile, resultFile, ...extra]) {
   const p = input.parameters ?? {}, command = input.command;
   const options = {
     state:[], attach:['run'], request:['id'], receive:['file','filename'],
+    'paid-file':['id'], 'receive-paid-file':['file','filename'],
+    'review-paid-file':['id','expectedRevision','totalAtomic','dailyAtomic','filename','claimEnv'],
+    'prepare-paid-file':['id','reviewSha256'], 'export-paid-file':['id','destination'],
+    'retrieve-paid-file':['id','only','configSha256','handoffSha256'],
+    'reset-paid-file':['id','only','configSha256','handoffSha256'],
+    'download-paid-file':['id','operationId','destination'],
     'review-request':['id','acceptIndex','totalAtomic','dailyAtomic'], 'prepare-request':['id','reviewSha256'],
     draft:['id','revision'], save:['id','expectedRevision','manifest'],
     initialize:['id','expectedRevision','reviewSha256'], inspect:['id'],
@@ -161,7 +177,7 @@ async function main([inputFile, resultFile, ...extra]) {
     if (command === 'verify' || command === 'restore') {
       native = await (command === 'verify' ? verifyRunbookRecovery : restoreRunbookRecovery)(p, {signal:controller.signal});
     } else {
-      fields(input.workspace, ['directory','configsDirectory','operatorSettings']);
+      fields(input.workspace, ['directory','configsDirectory','operatorSettings','paidFileClaimEnvs']);
       canonical(input.workspace.directory);
       model = await openRunbookWorkspace({...input.workspace,
         ...(command === 'attach' ? {runs:[canonical(p.run)]} : {})});
@@ -171,18 +187,26 @@ async function main([inputFile, resultFile, ...extra]) {
       else if (command === 'receive') {
         const bytes = await read(p.file, OPERATION_HANDOFF_MAX_BYTES);
         native = await model.receiveRequest({filename:p.filename ?? basename(p.file), base64:bytes.toString('base64')});
-      } else if (command === 'review-request') native = await model.reviewRequest(p);
+      } else if (command === 'paid-file') native = await model.paidFile(p.id);
+      else if (command === 'receive-paid-file') {
+        const bytes = await read(p.file, 131072);
+        native = await model.receivePaidFile({filename:p.filename ?? basename(p.file), base64:bytes.toString('base64')});
+      } else if (command === 'review-paid-file') native = await model.reviewPaidFile(p);
+      else if (command === 'prepare-paid-file') native = await model.preparePaidFile(p);
+      else if (command === 'review-request') native = await model.reviewRequest(p);
       else if (command === 'prepare-request') native = await model.prepareRequest(p);
       else if (command === 'draft') native = await model.draft(p.id, p.revision);
       else if (command === 'save') native = await model.save(p);
       else if (command === 'initialize') native = runView(await model.initialize(p));
       else if (command === 'inspect') native = runView(await model.run(p.id));
-      else if (command === 'execute' || command === 'finalize') native = await execute(model, command, p);
+      else if (['execute','finalize','retrieve-paid-file','reset-paid-file'].includes(command))
+        native = await execute(model, command, p);
       else if (command === 'recover') native = runView(await model.recover(p));
       else if (command === 'unlock') native = runView(await model.unlock(p));
       else if (command === 'bind-accounting') native = runView(await model.bindAccounting(p));
       else if (command === 'preview') native = await model.previewResource(p.id, p.operationId);
-      else if (command === 'download') native = await saveDownload(model, p);
+      else if (command === 'download' || command === 'download-paid-file')
+        native = await saveDownload(model, p, command === 'download-paid-file');
       else if (command === 'export') {
         const output = await model.export(p.id, p.format);
         native = {...await publishBytes(p.destination, output.bytes), name:output.name, format:p.format};
@@ -190,6 +214,9 @@ async function main([inputFile, resultFile, ...extra]) {
         need(['body','handoff'].includes(p.kind), 'ACQUISITION_REQUEST_ATTACHMENT_REQUIRED');
         const output = await model.requestAttachment(p.id, p.kind);
         native = {...await publishBytes(p.destination, output.bytes), name:output.name, kind:p.kind};
+      } else if (command === 'export-paid-file') {
+        const output = await model.paidFileAttachment(p.id);
+        native = {...await publishBytes(p.destination, output.bytes), name:output.name, kind:'paid-file-handoff'};
       } else if (command === 'backup-review') native = await model.inspectRecovery(p);
       else if (command === 'backup') native = await model.snapshotRecovery(p, {signal:controller.signal});
     }
@@ -199,7 +226,7 @@ async function main([inputFile, resultFile, ...extra]) {
     error = codeOf(problem); process.exitCode = signalExit ?? 1;
     // Preserve current original state when a native action already changed it.
     // This is inspection only; no retry, unlock or payment is introduced.
-    if (model && p.id && ['execute','finalize','recover','initialize','bind-accounting'].includes(command))
+    if (model && p.id && ['execute','finalize','recover','initialize','bind-accounting','retrieve-paid-file','reset-paid-file'].includes(command))
       try {native = runView(await model.run(p.id));} catch {}
   } finally {
     try {await model?.close();}

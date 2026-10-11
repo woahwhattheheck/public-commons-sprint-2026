@@ -300,7 +300,7 @@ function renderRequest(){
     await mutate('/api/editions/'+encodeURIComponent(state.editionId)+'/acquire',{reviewSha256:review.reviewSha256},{label:'Acquiring the reviewed native forecast…',native:true});
     state.tab='plan';await refresh();
   },{primary:true,mutate:true}));
-  if(['ACQUIRING','INTERRUPTED','FAILED'].includes(edition.state))toolbar.append(button('Recover existing edition',async()=>{
+  if(['ACQUIRING','RETRYING','INTERRUPTED','FAILED'].includes(edition.state))toolbar.append(button('Recover existing edition',async()=>{
     await mutate('/api/editions/'+encodeURIComponent(state.editionId)+'/recover',{}, {label:'Recovering the existing forecast edition…',native:true});await refresh();
   },{mutate:true}));
   if(complete)toolbar.append(button('Open returned work plan',()=>{state.tab='plan';render();},{primary:true}));
@@ -311,6 +311,7 @@ function renderRequest(){
 function renderResourceRetry(edition){
   const resource=edition.resources?.tile;
   const retained=state.retryReview?.editionId===edition.id?state.retryReview.review:null;
+  if(edition.state==='RETRYING')return element('p',{class:'small'},'A reviewed map retry is in progress. Recover this edition to read its saved outcome.');
   if(resource?.state!=='FAILED')return null;
   const section=element('section',{class:'form-section'},element('h3',{},'Retry a failed map request'));
   const failure=resource?.providerError?.message||resource?.error||'The map request did not return an available image.';
