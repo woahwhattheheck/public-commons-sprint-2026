@@ -7,6 +7,10 @@ Soroban simulation, authorization verification, fee signing and settlement.
 This directory supplies configuration, merchant policy, service admission and
 shutdown; it does not replace that payment implementation.
 
+For the complete host operating workflow, see [RPC readiness and shared signer
+ownership](OPERATIONS.md): review and probe the configured RPC, start the same
+service with private account ownership, inspect `/readyz`, then drain and restart.
+
 ## Install and configure
 
 Use Node 22+ and install these pinned packages from the repository root so the
@@ -69,9 +73,11 @@ node stellar/scf-starforge-20261009/native-facilitator/cli.mjs --check --config 
 
 Review prints the RPC origin, public accounts, configured environment names and
 limits. Check reads the named signing variables and uses the real SDK. Neither
-command requests chain data or submits a transaction. A successful configuration
-check establishes loaded-account and protocol compatibility; `/healthz` reports
-chain readiness separately as `NOT_PROBED`.
+command requests chain data or submits a transaction with the original defaults.
+The optional `operations.requireReady` policy adds the documented read-only RPC
+probe to native construction. A successful configuration check establishes
+loaded-account and protocol compatibility. Use `--probe` or `/readyz` for the
+configured RPC's actual network, health and latest-ledger observation.
 
 ## Run the native backend
 
@@ -134,8 +140,10 @@ Settlement admission is one operation at a time, with no automatic retry or
 payment queue. This avoids concurrently constructing transactions with the same
 source account sequence. The composed seller also admits one resource operation
 at a time through the original SF30 lifecycle, before executing an application.
-Use distinct configured fee accounts for independently running facilitator
-processes; an in-process limit cannot serialize other processes using those keys.
+Use the shared ownership directory in [OPERATIONS.md](OPERATIONS.md) for native
+facilitators on the same host. Overlapping configured signing accounts then have
+one active process per network, including a fee-bump account. Distinct fee accounts
+allow independent services; assign separate accounts to separate hosts.
 Standalone HTTP callers receive `FACILITATOR_BUSY` at capacity. They should
 reconcile their original operation before deciding to retry settlement.
 
@@ -169,3 +177,4 @@ and the merchant's original transaction reconciliation workflow.
 Native API references: [x402 facilitator](https://github.com/x402-foundation/x402/blob/main/typescript/packages/core/src/facilitator/x402Facilitator.ts),
 [exact Stellar facilitator](https://github.com/x402-foundation/x402/blob/main/typescript/packages/mechanisms/stellar/src/exact/facilitator/scheme.ts),
 and [Stellar signer](https://github.com/x402-foundation/x402/blob/main/typescript/packages/mechanisms/stellar/src/signer.ts).
+
