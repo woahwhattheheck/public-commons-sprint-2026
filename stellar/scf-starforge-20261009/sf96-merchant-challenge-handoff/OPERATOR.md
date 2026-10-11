@@ -57,7 +57,9 @@ capture can be used directly; do not recapture merely to repeat this step.
 If the operator already has the genuine response headers from another approved
 runtime, use the original [SF85 header importer](../sf85-live-402-capture/HEADER_IMPORT.md)
 and supply its output to preparation. The workflow accepts that source's exact
-shape and preserves its header digest, import time and operator-declared method.
+shape. Supply the same original response header file with `--headers-file`;
+the original handoff parses it through SF85, checks it against the capture and
+retains its exact bytes. It preserves the header digest, import time and operator-declared method.
 Its unknown response capture time stays null throughout the handoff and report.
 It does not turn the import into a TLS-observed response.
 
@@ -81,6 +83,12 @@ cover the actual selected quote and fit the original SF36 budget constraints.
 The default total and daily caps equal that ceiling. The existing
 `--total-atomic` and `--daily-atomic` options can set explicit larger limits.
 
+For an imported capture, add
+`--headers-file /absolute/private-pilots/provider-response.headers` to the same
+preparation command. Direct captures use their original command without that
+option. A missing or mismatched imported header file is rejected before any
+workspace or inbox is created.
+
 An already verified SF96 handoff can be imported instead. Its original intent,
 option and ceiling stay fixed:
 
@@ -92,7 +100,10 @@ node stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli
   --payer YOUR_TESTNET_G_ADDRESS --python /usr/bin/python3
 ```
 
-Preparation preserves the exact original capture in `handoff/`, calls the
+Preparation preserves the exact original capture and, for imports, its original
+response header file in `handoff/`. Importing an existing verified handoff carries
+those retained headers automatically; its selection and header source cannot be
+overridden. Preparation calls the
 original SF88 workspace initializer in `operator/`, then enqueues its generated
 configuration in the original `inbox/`. No operator settings come from the
 merchant response. The small `pilot.json` contains source hashes and pointers;
@@ -105,10 +116,12 @@ the data. Defaults are 64 MiB and 30 seconds, configurable with
 `--max-response-bytes` and `--response-timeout-ms`. The existing writer preserves
 completed output and reports a private partial path when appropriate.
 
-The original workspace's `--secret-env`, `--signer-provider` and `--rpc` options
+The original workspace's `--secret-env`, `--signer-provider`, `--rpc` and `--https-proxy` options
 are forwarded unchanged. A wallet provider is a trusted operator module, never a
 file chosen by a seller. The source workspace validates these options and owns
 the signer. Only use options present in the current merged workspace version.
+An explicit HTTPS proxy comes from the trusted operator; the original workspace
+binds it to this merchant origin and the original queue validates that binding.
 
 ## 3. Review, then execute from the trusted terminal
 
