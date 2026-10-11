@@ -97,6 +97,8 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
     ['merchant-fleet', 'merchant-fleet-gateway/cli.mjs', 'Run the original merchant gateway with retained rollout state'],
     ['merchant-fleet-control', 'merchant-fleet-gateway/control.mjs', 'Prepare, activate, inspect or roll back native merchant configuration'],
     ['merchant-fleet-workspace', 'merchant-fleet-gateway/workspace/server.mjs', 'Inspect and manage the original retained merchant fleet'],
+    ['revenue-workspace', 'sf97-merchant-revenue-ops/workspace/cli.mjs', 'Review merchant pricing and save original operational reports'],
+    ['revenue-report', 'sf97-merchant-revenue-ops/analyze.mjs', 'Create the original merchant revenue and native settlement report'],
     ['deploy', 'sf99-merchant-deploy/cli.mjs', 'Generate the original HTTPS host deployment'],
     ['postgres', 'sf30-seller-sdk/postgres/start.mjs', 'Run the original PostgreSQL merchant seller'],
     ['postgres-init', 'sf30-seller-sdk/postgres/create-example.mjs', 'Create a PostgreSQL source and seller starter'],
