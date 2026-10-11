@@ -274,6 +274,8 @@
     "./seller/sheets": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/source.mjs",
     "./seller/sheets/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/capture.mjs",
     "./seller/sheets/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/model.mjs",
+    "./seller/sheets/auth": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/oauth.mjs",
+    "./seller/sheets/auth/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/server.mjs",
     "./seller/mongodb": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/merchant.mjs",
     "./seller/mongodb/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/source.mjs",
     "./seller/mongodb/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/prepare.mjs",
