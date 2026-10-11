@@ -13,6 +13,7 @@ import { prepareS3Release } from '../../stellar/scf-starforge-20261009/sf82-sell
 import { prepareJsonrpcRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-jsonrpc.mjs';
 import { prepareSqliteRelease, sqliteSnapshotOptions } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-sqlite.mjs';
 import { readFleetReleasePlan } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/release-operator.mjs';
+import { readReceivingConfiguration } from './receiving.mjs';
 import { normalizeAccountingConfig, readAccountingConfig } from './accounting.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
@@ -256,7 +257,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -269,15 +270,17 @@ export async function readMerchantConfig(path) {
     catalog: raw.catalogConnection === undefined ? null
       : await readReleaseCatalogConfig(hostPath(raw.catalogConnection, base)),
     support: raw.supportConnection === undefined ? null
-      : await readSupportConfiguration(hostPath(raw.supportConnection, base)) };
+      : await readSupportConfiguration(hostPath(raw.supportConnection, base)),
+    receiving: raw.receivingConnection === undefined ? null
+      : await readReceivingConfiguration(hostPath(raw.receivingConnection, base)) };
   await readReleaseState(config.releaseStore);
   config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
   config.accounting = normalizeAccountingConfig(raw.accounting, base);
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
-  if (config.support) await privateSupportDirectory(config.exportsDirectory);
+  if (config.support || config.receiving) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime = {}, catalog, fleetPlan, accounting, support }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime = {}, catalog, fleetPlan, accounting, support, receiving }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
   const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime }, process.cwd(), 'initial');
@@ -296,6 +299,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   const accountingConfig = accounting === undefined ? null : await readAccountingConfig(accounting);
   const supportConnection = support === undefined ? undefined : hostPath(support, process.cwd());
   if (supportConnection) await readSupportConfiguration(supportConnection);
+  const receivingConnection = receiving === undefined ? undefined : hostPath(receiving, process.cwd());
+  if (receivingConnection) await readReceivingConfiguration(receivingConnection);
   await mkdir(root, { mode: 0o700 });
   await initReleaseStore(join(root, 'releases'));
   await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
@@ -305,6 +310,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(catalogConnection ? { catalogConnection } : {}),
     ...(accountingConfig ? { accounting: accountingConfig } : {}),
     ...(supportConnection ? { supportConnection } : {}),
+    ...(receivingConnection ? { receivingConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
         ...(source.sqlitePackage ? { sqlitePackage: source.sqlitePackage, sqliteSnapshotMaxBytes: source.sqliteSnapshotMaxBytes,
@@ -318,7 +324,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     } });
   await readMerchantConfig(path);
   return { schema: CONFIG_SCHEMA, configuration: path, sourceAlias: 'initial', state: 'INITIALIZED',
-    catalogConfigured: Boolean(catalogConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection),
+    catalogConfigured: Boolean(catalogConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection),
     sourceType: preview.sourceType, sourceDigests: preview.sourceDigests, inputPackage: preview.inputPackage,
     environment: preview.environment, credentialValuesChecked: false };
 }
@@ -359,4 +365,19 @@ export async function initializeAccountingMerchant({ directory, accounting, name
   await readMerchantConfig(configuration);
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED',
     accountingWorkspaces: Object.keys(accountingConfig.workspaces), accounting: 'OPENED_ONLY_BY_EXPLICIT_TOOL' };
+}
+
+/** Open the same provider for retained receiving work before a seller is deployed. */
+export async function initializeReceivingMerchant({ directory, receiving, name = 'Starforge receiving' }) {
+  const root = resolve(directory), receivingConnection = hostPath(receiving, process.cwd());
+  name = line(name, 'Merchant name');
+  await readReceivingConfiguration(receivingConnection);
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, receivingConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', receivingConfigured: true };
 }

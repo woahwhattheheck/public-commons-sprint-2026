@@ -362,3 +362,19 @@ Original integration sources:
 The same provider operates the original merchant accounting workspace, completed-receipt recovery, reconciliation tables, named exception reviews, comparison and exact retained response/report/TAR retrieval. Configure host-selected source aliases with `init-accounting --dir NEW_DIRECTORY --accounting ACCOUNTING_JSON`, attach `--accounting` to an existing source initializer, or add the optional accounting configuration to an existing private merchant host. The original workspace owns revisions, source capture, verification, reports and its lease; no new payment is required to recover a completed purchase.
 
 See [ACCOUNTING.md](ACCOUNTING.md) for the complete installed and subprocess workflow, asynchronous job status, original source selection, SHA-pinned file chunks and durable reopening. Existing release, Python, DuckDB, discovery and fleet operations use the same provider.
+
+## Prepare merchant receiving accounts
+
+The same MCP operator can manage the original receiving workspace before or
+after a seller is deployed. Configure host-selected seller sources and captured
+review imports, then prepare saved payment choices, start native reviews, inspect
+account requirements, replay captures, compare results and publish complete
+private exports. Caller-retained profile and review IDs preserve work across
+lost replies. The original receiving browser and MCP reopen the same store.
+
+Use `merchant-mcp init-receiving --dir NEW_DIRECTORY --receiving CONNECTION_JSON`,
+or add `--receiving` to an ordinary merchant initializer. Receiving work opens
+explicitly with `merchant_receiving_open`; `merchant_receiving_close` drains the
+original controller and releases its lease for browser or CLI use.
+[Receiving setup and complete workflows](./RECEIVING.md) document all thirteen
+tools, host configuration, replay, comparison, export and browser handoff.
