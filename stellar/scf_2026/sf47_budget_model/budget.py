@@ -60,6 +60,15 @@ def model(data):
         lag = whole_day(m, "review_and_payment_lag_days", 0, 90)
         if submit <= prior_submit:
             raise ValueError("milestone submission days must be strictly increasing")
+        # This conservative cash-flow model releases tranches in sequence.
+        # Later reviews cannot fund a milestone before its predecessor was paid.
+        # Reject early-submission scenarios rather than displaying impossible
+        # tranche receipt order or a misleading peak prefunding gap.
+        if submit < payment_days[-1]:
+            raise ValueError(
+                f"tranche {m['tranche']}: submission day {submit} precedes "
+                f"previous modeled payment day {payment_days[-1]}"
+            )
         if submit - payment_days[-1] > 90:
             raise ValueError(f"tranche {m['tranche']} is >90 days after last modeled payment")
         if not str(m.get("measurable_proof", "")).strip() or not str(m.get("deliverable", "")).strip():
