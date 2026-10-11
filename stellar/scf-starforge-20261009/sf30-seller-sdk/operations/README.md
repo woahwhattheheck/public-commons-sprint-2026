@@ -64,6 +64,15 @@ await existingSellerSession.close();
 
 `existingSellerSession` is the original `{server, compiled, mode, ...}`. All new source is in `operations/`; no modifications to seller compilation, admission, routing or payment code are needed. `observeSellerTraffic(session)` from `traffic.mjs` also provides `snapshot()` and `detach()` without a browser listener.
 
+## Seller capacity and readiness
+
+This launcher passes `--max-in-flight` and `--drain-grace-ms` after its
+`--` separator directly to the ORIGINAL static or upstream seller. Use
+`GET /_seller/health` for the bounded request counters and
+`GET /_seller/ready` for accepting versus draining state; both remain on
+the original seller loopback listener. The existing operator dashboard still
+reports HTTP traffic only, not successful payment settlement.
+
 ## Use
 
 **Demand:** the first card and 60-minute chart show HTTP attempts, including retries. Route attribution uses the original SF30 compiled selector, including dynamic paths and static precedence, retaining only configured route IDs/templates. Search to isolate a route.
