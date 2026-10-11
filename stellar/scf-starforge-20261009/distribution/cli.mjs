@@ -16,6 +16,7 @@ const help = `Starforge merchant toolkit
   starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]
   starforge doctor [--native] [--feature NAME]
   starforge source
+  starforge installation                     Inspect, install, stage and select a maintained package
   starforge runtime-profile --help
   starforge runtime-install --help
 

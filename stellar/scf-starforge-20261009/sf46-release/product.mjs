@@ -123,8 +123,12 @@ async function selectUnlocked(home, id) {
   await atomicJson(join(home, 'active.json'), state);
   return { ...state, changed: true };
 }
-export async function install(bundleInput, homeInput, { expected, activate = false } = {}) {
+export async function install(bundleInput, homeInput, { expected, activate = false, prepareInstalledRelease } = {}) {
+  if (prepareInstalledRelease !== undefined && typeof prepareInstalledRelease !== 'function')
+    throw new TypeError('prepareInstalledRelease must be a function');
   const bundle = await verifyRelease(bundleInput, expected), home = resolve(homeInput);
+  if (Object.hasOwn(bundle.manifest.origin ?? {}, 'runtimeInstallation') && !prepareInstalledRelease)
+    throw new Error('Use starforge installation adopt-runtime to attach this release to its retained runtime');
   if (home === bundle.root || home.startsWith(bundle.root + '/')) throw new Error('Installation must be outside its release bundle');
   await mkdir(home, { recursive: true, mode: 0o700 });
   return withHomeLock(home, async lockedHome => {
@@ -144,6 +148,15 @@ export async function install(bundleInput, homeInput, { expected, activate = fal
         await rename(stage, target);
         state = 'INSTALLED';
       } catch (error) { await rm(stage, { recursive: true, force: true }); throw error; }
+    }
+    // A runtime-aware caller prepares the installed dependency attachment under
+    // this same lock. Selection only follows successful preparation, including
+    // on the first install. Reusing an installed release repeats this idempotent
+    // preparation so an interrupted attachment can finish before activation.
+    if (prepareInstalledRelease) {
+      await prepareInstalledRelease({ home: lockedHome, releaseDirectory: target,
+        releaseId: bundle.id, digest: bundle.manifest.digest });
+      await verifyRelease(target, bundle.manifest.digest);
     }
     const previous = await activeInfo(lockedHome);
     const selection = activate || !previous ? await selectUnlocked(lockedHome, bundle.id) : previous;
