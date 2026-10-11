@@ -26,7 +26,8 @@ Use the same checkpoint file and thread to resume a paused or interrupted graph.
 `;
 
 function argumentsFor(argv) {
-  const [command = 'help', ...rest] = argv;
+  const [requested = 'help', ...rest] = argv;
+  const command = ['--help', '-h'].includes(requested) ? 'help' : requested;
   const allowed = new Set(['runtime', 'state', 'intent', 'checkpoints', 'thread', 'action',
     'read-format', 'pause-after', 'tool', 'out', 'offset', 'limit-records', 'limit-bytes',
     'allow-partial', 'tool-call-id']);
