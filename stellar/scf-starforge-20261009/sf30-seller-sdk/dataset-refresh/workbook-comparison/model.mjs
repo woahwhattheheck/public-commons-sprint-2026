@@ -255,9 +255,16 @@ export async function openWorkbookEditions({drafts,sources,python,parserSource,p
       if(offset>=total)return {rows,offset,limit,kind,total,nextOffset};
       // Offset counts rows in the selected view. Physical/union ordinals stay
       // in each row for provenance and never leak into the pagination cursor.
-      stream=file.createReadStream({autoClose:false,start:0});
+      const index=kind==='all'?comparison.rowOffsets.map(x=>({...x,logical:x.ordinal})):
+        comparison.pageOffsets?.[kind]??[];
+      const anchor=[...index].reverse().find(x=>x.logical<=offset)??{logical:0,ordinal:0,offset:0};
+      if(!Number.isSafeInteger(anchor.logical)||anchor.logical<0||anchor.logical>offset||
+        !Number.isSafeInteger(anchor.ordinal)||anchor.ordinal<0||anchor.ordinal>=comparison.rows||
+        !Number.isSafeInteger(anchor.offset)||anchor.offset<0||anchor.offset>=comparison.rowBytes)
+        throw fault('WORKBOOK_COMPARISON_CHANGED','The retained row-page index is inconsistent.',409);
+      stream=file.createReadStream({autoClose:false,start:anchor.offset});
       lines=createInterface({input:stream,crlfDelay:Infinity});
-      let ordinal=0,selected=0;
+      let ordinal=anchor.ordinal,selected=anchor.logical;
       for await(const line of lines){
         const row=JSON.parse(line);
         if(row.ordinal!==ordinal++)throw fault('WORKBOOK_COMPARISON_CHANGED','The retained row index is inconsistent.',409);
