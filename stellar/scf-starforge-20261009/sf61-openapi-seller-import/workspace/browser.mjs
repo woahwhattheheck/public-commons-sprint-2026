@@ -1,3 +1,4 @@
+import { createAuthenticationPanel, appendAuthenticationReview, renderCredentialRuntime } from './authentication-browser.mjs';
 import { createOperationSettings, createOperationPanel } from './operation-panel.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
@@ -70,7 +71,7 @@ function drawRoutes(saved=[]) {
       const headers=make('label','Header → environment variable references'),headerInput=make('textarea');
       headerInput.value=JSON.stringify(previous?.headerEnv??{},null,2);headerInput.spellcheck=false;headers.className='wide';headers.append(headerInput);
       headers.append(make('span','Example: {"authorization":"MY_API_AUTH"}. Set the complete header value in that environment variable before launch.','hint'));
-      const alternatives=op.security.length?op.security.map((names,i)=>[i,names.length?names.join(' + '):'No additional backend authentication']):[[0,'No additional backend authentication']];
+      const alternatives=(op.authentication??[]).map(value=>[value.index,(value.names.length?value.names.join(' + '):'No additional backend authentication')+(value.supported?'':' (setup unavailable)')]);
       const security=selectField('Backend security alternative',alternatives,previous?.securityAlternative??0);
       const mode=selectField('Response format',[['json','JSON'],['bytes','Bytes']],previous?.responseMode??'json');
       const validation=selectField('Response validation',[['declared','Match declared OpenAPI response'],['none','Transport limits only']],previous?previous.responseValidation??(previous.enforceResponseContract===true?'declared':'none'):'declared');
@@ -92,6 +93,8 @@ function drawRoutes(saved=[]) {
       fields.append(headers,security.container,mode.container,validation.container,timeout.container,size.container,capacity.container,
         request,forwarded.container,guard.container,failureThreshold.container,resetAfter.container,maxResetAfter.container);
       advanced.append(summary,fields);settings.append(advanced);card.append(settings);
+      const authentication=createAuthenticationPanel({operation:op,definitions:inspection.backendSecurity??[],previous,
+        server:server.input,security:security.input,make,field,selectField});settings.append(authentication.element);
       let cache=null;
       if(['GET','HEAD'].includes(op.method)) {
         const section=make('details'),cacheFields=make('div',undefined,'fields');
@@ -116,6 +119,7 @@ function drawRoutes(saved=[]) {
         controls.forEach(c=>{c.disabled=!check.checked;});
         validation.input.disabled=!check.checked||mode.input.value!=='json';
         guardControls.forEach(c=>{c.disabled=!check.checked||!guard.input.checked;});
+        authentication.toggle(check.checked);
         operation?.setEnabled(check.checked);
         if(cache){cache.enabled.disabled=!check.checked;Object.values(cache.values).forEach(c=>{c.disabled=!check.checked||!cache.enabled.checked;});}
       };
@@ -124,7 +128,7 @@ function drawRoutes(saved=[]) {
       cache?.enabled.addEventListener('change',toggle);toggle();
       routeFields.push({op,previous,check,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
         mode:mode.input,timeout:timeout.input,size:size.input,capacity:capacity.input,forwarded:forwarded.input,
-        guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,operation});
+        guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,authentication,operation});
     }
     $('routes').append(card);
   }
@@ -138,6 +142,7 @@ function planFromForm() {
       ...(r.previous?.id?{id:r.previous.id}:{}),serverIndex:Number(r.server.value),amountAtomic:r.amount.value.trim(),headerEnv:JSON.parse(r.headers.value),
       publicDescription:r.description.value.trim(),responseValidation:r.validation.value,
       ...(r.request.value.trim()?{requestExample:JSON.parse(r.request.value)}:{}),
+      ...r.authentication.toPlan(),
       ...(r.operation?.read()?{idempotency:r.operation.read()}:{}),
       securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),maxResponseBytes:Number(r.size.value),maxInFlight:Number(r.capacity.value),
       requestHeaders:r.forwarded.value.split(',').map(v=>v.trim().toLowerCase()).filter(Boolean),
@@ -178,11 +183,13 @@ function preview(value) {
   if(value.routeChecks){const ready=value.routeChecks.filter(r=>r.state==='READY').length;
     $('review').append(make('p',ready+' / '+value.routeChecks.length+' route examples ready for an unpaid check.','small'));
     for(const route of value.routeChecks.filter(r=>r.state!=='READY'))$('review').append(make('p',route.method+' '+route.id+': add a public request example with its path, query and JSON body values.','hint'));}
+  appendAuthenticationReview($('review'),value.routes,{make});
 }
 function saved(name) {
   selectedPackage=name;$('run-label').textContent='Saved package: '+name;available();
 }
 function runtime(value) {
+  renderCredentialRuntime($('credential-runtime'),value.credentials,{make});
   operationPanel.render(value);
   $('runtime').replaceChildren();$('cache-runtime').replaceChildren();$('stop').disabled=value.state!=='RUNNING';
   $('check-routes').disabled=value.state!=='RUNNING'||value.mode!=='CHALLENGE_ONLY';

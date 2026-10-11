@@ -144,6 +144,7 @@ The terminal accepts these commands; substitute an intent ID from readiness:
 | Command | Behavior |
 | --- | --- |
 | `status` | Current original merchant counters, selected requests and retained outcomes |
+| `readiness` | Refresh the embedded native facilitator's configured RPC network, health and latest ledger |
 | `review ID` | Original SF88 offline review of the inbox's exact request snapshot |
 | `signer ID` | Original SF103 SDK/provider loading check, without signing or payment |
 | `execute ID` | One original inbox attempt through SF88/SF81 approval, SF36, signer and HTTP |
@@ -174,6 +175,48 @@ node stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs start \
 The original terminal approval still applies. Without a TTY and without
 `--one-shot`, the launcher prints readiness and stays running until SIGINT or
 SIGTERM; it does not read commands from a pipe as payment instructions.
+
+## Operate the native payment service
+
+Set the optional `operations` section in the original facilitator configuration
+before creating the commerce setup or session. A shared local
+`ownershipDirectory` coordinates its primary and fee-bump signing accounts with
+other processes on the same host. `requireReady:true` makes recent network,
+health and ledger observations part of new native payment admission. Keep all
+cooperating processes under the same operating-system user and ownership
+directory. Configuration and recovery details are in the original
+[facilitator operating guide](../native-facilitator/OPERATIONS.md).
+
+Review the saved session's configured RPC before opening its merchant or signers:
+
+```sh
+node stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs probe \
+  --directory /private/merchant-session
+```
+
+This validates the retained session and reads the exact configured RPC through
+the original readiness module. It exits `0` for ready, `2` for an unsuitable or
+unavailable observation, and `1` for an invalid saved setup. It can run while
+another process owns the session's signer accounts. Separately operated HTTP
+facilitators continue to use their own operating interface.
+
+In the running terminal, use `readiness`. In the existing commerce browser,
+choose **Check payment service**. Both refresh the same embedded native
+facilitator observation. The browser shows its network, RPC origin, latest
+ledger, observation time, active native calls and local signer ownership.
+The observation expires under the configured freshness settings. Viewing or
+refreshing it preserves every prepared buyer request and its review.
+
+Browser **Stop session** acknowledges the stop immediately and keeps showing
+drain progress. If the grace period expires with accepted native work pending,
+the terminal and browser keep the owning process and signer descriptors alive
+until that work completes. The original timeout remains recorded and the
+terminal exits with code `2`; the final `nativeCompletion` records the later
+native drain and ownership release. The same ownership completion applies when
+original service cleanup rejects or browser startup fails after its commerce
+session has opened. Reconcile the original buyer and
+chain outcome through the existing inbox before restarting an interrupted
+operation.
 
 ## Reopen and hand off
 
@@ -218,7 +261,12 @@ See the [distribution guide](../distribution/README.md) for installation.
 Trusted host code can import `initializeCommerce`, `inspectCommerce` and
 `openCommerce` from `@tokenjunkielabs/starforge-merchant/commerce`.
 `openCommerce(directory)` returns `status`, `review`, `checkSigner`, `execute`,
-`cancel`, `recover` and `close`, together with the original seller/operations
+`cancel`, `recover`, `probeReadiness`, `waitForIdle` and `close`, together with the original seller/operations
 objects. An existing host may supply its original `nativeFactory` and process
 `environment`; the factory is an embedding argument, never a request or plan
-field. Always await `close()` and keep its original shutdown result.
+field. `probeCommerceReadiness(directory)` provides the separate key-free
+saved-session probe. When the embedding controls process exit, use
+`await completeCommerceShutdown(session, session.close())` and keep its
+original shutdown result. The shared finalizer waits for accepted native work
+only when a timed-out drain still holds shared signer ownership. Direct
+`waitForIdle()` is available after starting the session's drain.

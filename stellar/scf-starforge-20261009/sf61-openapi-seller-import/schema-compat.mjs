@@ -27,7 +27,18 @@ export function adaptOpenApi30Schema(schema) {
     throw new TypeError('OpenAPI 3.0 type must be one non-null type');
   if (own(schema, 'nullable') && typeof schema.nullable !== 'boolean')
     throw new TypeError('OpenAPI 3.0 nullable must be boolean');
+  for (const name of ['readOnly', 'writeOnly', 'deprecated'])
+    if (own(schema, name) && typeof schema[name] !== 'boolean')
+      throw new TypeError('OpenAPI 3.0 ' + name + ' must be boolean');
+  if (schema.readOnly === true && schema.writeOnly === true)
+    throw new TypeError('OpenAPI 3.0 property cannot be both readOnly and writeOnly');
   const converted = structuredClone(schema);
+  // OAS 3.0 uses the ECMA-262 5.1 pattern dialect. Escaping non-syntax
+  // punctuation (for example \! in PayPal's published schema) is an identity
+  // escape there, but invalid in a Unicode pattern. Preserve its literal value.
+  if (typeof converted.pattern === 'string')
+    converted.pattern = converted.pattern.replace(/\\([\s\S])/g, (escape, character) =>
+      /[A-Za-z0-9^$\\.*+?()[\]{}|/\-]/.test(character) ? escape : character);
   // OAS 3.0.4: nullable changes only an explicitly declared type on THIS node.
   // enum and composition retain their restrictions, even when null is in type.
   if (schema.nullable === true && own(schema, 'type'))
@@ -69,4 +80,19 @@ export function adaptOpenApi31Schema(schema) {
     throw new TypeError('OpenAPI discriminator mapping must contain string references');
   delete converted.discriminator;
   return converted;
+}
+
+/** OAS 3.0 scopes a required readOnly property to responses and a required
+ * writeOnly property to requests. Keep properties and annotations intact;
+ * these annotations do not themselves forbid a supplied value. Call only
+ * after resolving/traversing property schemas, never on example payloads.
+ */
+export function applyOpenApiDirection(schema, direction) {
+  if (!['request', 'response'].includes(direction))
+    throw new TypeError('OpenAPI schema direction must be request or response');
+  if (Array.isArray(schema.required) && schema.properties) {
+    const annotation = direction === 'request' ? 'readOnly' : 'writeOnly';
+    schema.required = schema.required.filter(name => schema.properties[name]?.[annotation] !== true);
+  }
+  return schema;
 }

@@ -10,6 +10,7 @@ import { compileUpstreamBindings, validateUpstreamService } from '../../sf30-sel
 import { supportsSellerMethod } from '../../sf30-seller-sdk/http-methods.mjs';
 import { compileOpenApiResponseContract } from '../response-contracts.mjs';
 import { preparePublicOperation, createMerchantCases } from './requests.mjs';
+import { inspectBackendSecurity, inspectAuthenticationRequirements, prepareBackendAuthentication } from './authentication.mjs';
 import { merchantOperationPolicy, merchantValidationEnvironment, merchantOperationSummary } from './operation-plan.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
@@ -42,31 +43,9 @@ function operationAt(spec, method, path) {
   if (!plain(op)) fail('Selected operation is absent: ' + method + ' ' + path);
   return { item, op, servers: op.servers ?? item.servers ?? spec.servers };
 }
-function authFor(spec, op, headers, choice = 0) {
-  const requirements = op.security ?? spec.security ?? [];
-  if (!Array.isArray(requirements) || requirements.some(v => !plain(v))) fail('Invalid OpenAPI security requirements');
-  if (!requirements.length) return [];
-  if (!Number.isSafeInteger(choice) || choice < 0 || !requirements[choice]) fail('Choose a declared security alternative');
-  const mapped = new Map(Object.entries(headers).map(([k,v]) => [k.toLowerCase(), v])), usedHeaders = new Set();
-  return Object.keys(requirements[choice]).map(name => {
-    if (!Array.isArray(requirements[choice][name]) || requirements[choice][name].length)
-      fail('Header authentication schemes require an empty scope list');
-    const scheme = reference(spec, spec.components?.securitySchemes?.[name]);
-    let header;
-    if (scheme.type === 'apiKey' && scheme.in === 'header') header = scheme.name;
-    else if (scheme.type === 'http' && ['bearer','basic'].includes(String(scheme.scheme).toLowerCase())) header = 'authorization';
-    else fail('Security scheme ' + name + ' needs trusted handler integration; use header API keys or HTTP bearer/basic here');
-    if (typeof header !== 'string' || !mapped.has(header.toLowerCase()))
-      fail('Map the ' + header + ' header to an environment variable for security scheme ' + name);
-    if (usedHeaders.has(header.toLowerCase())) fail('Security alternatives sharing one credential header require a trusted handler');
-    usedHeaders.add(header.toLowerCase());
-    return { scheme: name, type: scheme.type, header: header.toLowerCase(), environment: mapped.get(header.toLowerCase()) };
-  });
-}
-
 /** Inspection reads no network or environment and never imports document code. */
 export function inspectOpenApi(specText) {
-  const spec = parse(specText), operations = [];
+  const spec = parse(specText), operations = [], backendSecurity = inspectBackendSecurity(spec);
   for (const [path, raw] of Object.entries(spec.paths)) {
     let item;
     try { item = reference(spec, raw); } catch (e) { operations.push({ path, error:e.message, supported:false }); continue; }
@@ -78,11 +57,12 @@ export function inspectOpenApi(specText) {
         publicDescription:String(op.summary ?? op.description ?? '').replace(/[\s\u0000-\u001f\u007f]+/g, ' ').trim(),
         servers:Array.isArray(servers) ? servers.map((s,i) => ({index:i, url:s?.url ?? '', variables:Boolean(s?.variables)})) : [],
         security:Array.isArray(security) ? security.map(s => plain(s) ? Object.keys(s) : []) : [],
+        authentication:inspectAuthenticationRequirements(spec,op,backendSecurity),
         error:supportsSellerMethod(method.toUpperCase()) ? null : 'This HTTP method is not supported by the original seller' });
     }
   }
   if (operations.length > 2000) fail('Workspace supports at most 2,000 described operations');
-  return {title:titleOf(spec), version:spec.openapi, sourceSha256:sha(specText), operations};
+  return {title:titleOf(spec), version:spec.openapi, sourceSha256:sha(specText), operations, backendSecurity};
 }
 function exactKeys(value, allowed, label) {
   if (!plain(value) || Object.keys(value).some(k => !allowed.includes(k))) fail('Unexpected ' + label + ' fields');
@@ -111,7 +91,7 @@ export function prepareMerchant(specText, plan) {
   const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','idempotency'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','idempotency'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
     if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
     if (seen.has(key)) fail('Duplicate selected operation: ' + key);
@@ -126,9 +106,10 @@ export function prepareMerchant(specText, plan) {
       if (typeof name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) fail(key + ': use environment names, never credential values');
       envNames.add(name);
     }
-    let auth;
-    try { auth = authFor(spec, op, headers, row.securityAlternative ?? 0); }
+    let authentication;
+    try { authentication = prepareBackendAuthentication(spec,op,row,backend,{allowLoopback:plan.allowLoopbackUpstream===true}); }
     catch(e) { fail(key + ': ' + e.message); }
+    for (const name of authentication.environment) envNames.add(name);
     if (!materialized.has(row.path)) {
       facade.paths[row.path] = structuredClone(item);
       materialized.add(row.path);
@@ -144,6 +125,7 @@ export function prepareMerchant(specText, plan) {
     upstreams.bindings[id] = {origin:backend.origin,
       path:backend.pathname.replace(/\/$/, '') + row.path.replace(/\{([^{}]+)\}/g, ':$1'), method,
       headerEnv:headers, responseMode:row.responseMode ?? 'json',
+      ...(authentication.oauth2 ? {oauth2:authentication.oauth2} : {}),
       ...(row.timeoutMs !== undefined ? {timeoutMs:row.timeoutMs} : {}),
       ...(row.maxResponseBytes !== undefined ? {maxResponseBytes:row.maxResponseBytes} : {}),
       ...(row.maxInFlight !== undefined ? {maxInFlight:row.maxInFlight} : {}),
@@ -153,7 +135,7 @@ export function prepareMerchant(specText, plan) {
       ...(row.availability !== undefined ? {availability:structuredClone(row.availability)} : {})};
     transformations.push({method, path:row.path, originalServer:backend.href, publicServer:sellerServer.href,
       publicDescription:publicOperation.description ?? null, requestExampleSupplied:row.requestExample !== undefined,
-      backendAuthentication:auth, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0});
+      backendAuthentication:authentication.authentication, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0});
   }
   const imported = importOpenApi(facade, selections), service = createSellerServiceConfig(imported, bindings);
   for (let i=0; i<imported.offers.length; i++) {
@@ -172,7 +154,9 @@ export function prepareMerchant(specText, plan) {
     binding.query = Object.keys(offer.seller.extensions.bazaar.schema.properties.input.properties.queryParams?.properties ?? {});
     routes.push({id:bindings[i].id, method:offer.method, path:offer.path, publicUrl:offer.seller.resource.url,
       publicPath:service.routes[i].path, upstream:binding.origin + binding.path, amountAtomic:selections[i].accepts[0].amount,
-      network:plan.payment.network, query:binding.query, environment:Object.values(binding.headerEnv),
+      network:plan.payment.network, query:binding.query,
+      environment:[...new Set([...Object.values(binding.headerEnv),...(binding.oauth2?[binding.oauth2.clientIdEnv,binding.oauth2.clientSecretEnv]:[])])].sort(),
+      backendAuthentication:transformations[i].backendAuthentication,oauth2:binding.oauth2??null,
       publicDescription:facade.paths[offer.path][offer.method.toLowerCase()].description ?? '',
       responseValidation:validation, responseStatuses:Object.keys(binding.responseContract?.responses ?? {}), validateInput:true, responseContract:Boolean(binding.responseContract), sharedRead:binding.cache?.shareAcrossBuyers === true});
   }

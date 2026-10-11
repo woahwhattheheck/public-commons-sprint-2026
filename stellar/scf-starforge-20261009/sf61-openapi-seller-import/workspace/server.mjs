@@ -12,7 +12,7 @@ import { readSellerConfig } from '../../sf30-seller-sdk/serve.mjs';
 import { readUpstreamBindings } from '../../sf30-seller-sdk/upstream.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/style.css','style.css']]);
+const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/style.css','style.css']]);
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
@@ -37,8 +37,15 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
     return rows.filter(row=>row.cachePolicy).map(row=>({binding:row.name,method:row.method,routes:row.routes,
       policy:row.cachePolicy,activity:row.cache,source:{started:row.started,inFlight:row.inFlight},availability:row.availability ?? null}));
   };
+  const credentialView = () => {
+    const rows = active?.session.session?.upstreamSnapshot?.().bindings ?? [];
+    return rows.filter(row=>row.oauth2).map(row=>({binding:row.name,method:row.method,routes:row.routes,
+      oauth2:Object.fromEntries(['state','hasToken','expiresInMs','refreshInMs','retryInMs','waiters',
+        'tokenRequests','cacheHits','renewals','failures','cancellations','rotations','invalidations','lastError']
+        .filter(key=>Object.hasOwn(row.oauth2,key)).map(key=>[key,row.oauth2[key]]))}));
+  };
   const view = () => active ? {name:active.name, mode:active.session.mode, seller:active.session.seller,
-    operations:active.session.operationsDashboard, state:'RUNNING',runtimeId:active.runtimeId,caches:cacheView(),
+    operations:active.session.operationsDashboard, state:'RUNNING',runtimeId:active.runtimeId,caches:cacheView(),credentials:credentialView(),
     operationBindings:active.tickets.bindings,
     ...(active.tickets.bindings.length ? {operationConsole:active.session.operations.operationControlUrl ?? active.session.operations.merchantOperationsUrl} : {}),
     ...(active.acceptance?{acceptance:active.acceptance}:{})} : {state:'STOPPED'};

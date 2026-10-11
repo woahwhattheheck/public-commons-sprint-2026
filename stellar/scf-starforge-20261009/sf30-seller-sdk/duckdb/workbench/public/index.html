@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DuckDB merchant workbench · Stellar Forge</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header>
+  <div><p class="eyebrow">STELLAR FORGE / DATA OPERATIONS</p><h1>DuckDB merchant workbench</h1></div>
+  <div class="header-actions"><span id="save-state">Opening workspace</span><button id="reload">Reload saved draft</button><button id="save" class="primary">Save draft</button></div>
+</header>
+<div id="notice" role="status" aria-live="polite"></div>
+<main>
+  <aside>
+    <section><h2>Data source</h2><p id="source" class="muted"></p><button id="refresh">Inspect metadata</button>
+      <p id="catalog-status" class="muted">Load the selected database and Parquet schemas.</p>
+      <label>Find a relation<input id="relation-search" type="search" placeholder="Table, view or file name"></label>
+      <div id="relations" class="stack"></div><button id="more" hidden>Load more relations</button>
+    </section>
+    <section><div class="section-heading"><h2>Merchant queries</h2><button id="new-query">New query</button></div>
+      <div id="queries" class="stack"></div><p id="query-empty" class="muted">Select a relation to create the first query.</p>
+    </section>
+    <section><h2>Operator session</h2><p id="runtime-label" class="muted">Seller stopped</p><div id="runtime-links" class="stack"></div><button id="stop" hidden>Stop seller</button></section>
+  </aside>
+  <div class="content">
+    <section id="query-editor">
+      <p class="eyebrow">01 / DEFINE THE DATA PRODUCT</p><h2 id="relation-title">Select a table, view or Parquet file</h2>
+      <p id="relation-description" class="muted">Choose the fields buyers can receive and the values they can filter.</p>
+      <div class="field-grid">
+        <label>Query name<input id="query-name" maxlength="48" placeholder="regional_products"></label>
+        <label>Public route<input id="route-path" placeholder="/regional-products"></label>
+        <label>HTTP method<select id="route-method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option></select></label>
+        <label>Service name<input id="service-name" maxlength="32" placeholder="Product analytics"></label>
+      </div>
+      <label>Description (required for the public API)<textarea id="route-description" rows="2" maxlength="2048" required placeholder="Describe the data this query returns."></textarea></label>
+      <h3>Public columns <span id="column-count" class="muted"></span></h3><div id="columns" class="columns"><p class="muted">Relation metadata will appear here.</p></div>
+      <div class="split">
+        <div><div class="section-heading"><h3>Filters</h3><button id="add-filter">Add filter</button></div><p class="muted">Omitted filters leave the query unrestricted.</p><div id="filters" class="stack"></div></div>
+        <div><div class="section-heading"><h3>Result order</h3><button id="add-order">Add column</button></div><p class="muted">Include a unique key to make page boundaries consistent.</p><div id="order" class="stack"></div></div>
+      </div>
+      <div class="field-grid limits">
+        <label>Maximum rows<input id="max-rows" type="number" min="1" max="1000" value="100"></label>
+        <label>Maximum response bytes<input id="max-bytes" type="number" min="1024" max="917504" value="524288"></label>
+        <label>Query timeout, ms<input id="timeout" type="number" min="50" max="30000" value="5000"></label>
+      </div>
+      <div class="actions"><button id="keep-query" class="primary">Keep query in draft</button><button id="remove-query" hidden>Remove query</button></div>
+    </section>
+    <section>
+      <p class="eyebrow">02 / INSPECT AN ACTUAL RESULT</p><h2>Private query preview</h2>
+      <p class="muted">Run the selected query locally. Preview rows stay in this view; the public API example uses an empty result structure.</p>
+      <div id="preview-inputs" class="field-grid"></div><button id="preview">Run query preview</button>
+      <p id="preview-summary" class="muted"></p><div id="preview-result" class="table-scroll"></div>
+    </section>
+    <section>
+      <p class="eyebrow">03 / SET THE MERCHANT TERMS</p><h2>Native Stellar offer</h2>
+      <label>Public HTTPS origin<input id="public-origin" type="url" placeholder="https://data.your-company.example"></label>
+      <div id="payments" class="stack"></div><button id="add-payment">Add accepted payment option</button>
+      <div class="actions"><button id="review">Review merchant package</button></div>
+      <div id="review-summary"></div><details><summary>Generated source and API</summary><pre id="review-source">Review the draft to see the generated native plan.</pre></details>
+      <div id="review-downloads" class="actions"></div>
+    </section>
+    <section>
+      <p class="eyebrow">04 / SAVE AND OPERATE</p><h2>Merchant packages</h2>
+      <p class="muted">Each package retains its approved data, native query configuration, payment terms and generated client. Use a new name for each version.</p>
+      <div class="inline-form"><label>New package name<input id="package-name" maxlength="64" placeholder="merchant-v1"></label><button id="prepare" class="primary">Prepare saved draft</button></div>
+      <div id="packages" class="stack"></div>
+      <p class="muted" id="native-mode"></p>
+    </section>
+  </div>
+</main>
+<footer><span id="workspace-path"></span><span>Private operator workspace · Native DuckDB and SF30 seller</span></footer>
+<script type="module" src="/app.mjs"></script>
+</body></html>

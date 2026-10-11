@@ -4,7 +4,7 @@ Operate the existing Starforge merchant release system from an MCP client. This
 interface takes a prepared merchant API through staging, exact price and route
 comparison, activation, original seller startup, customer SDK export, rollback
 and graceful shutdown. Twelve tools use the original SF82 release store, SF61
-OpenAPI compiler, SF30 seller and customer SDK exporter. The MCP endpoint reuses
+OpenAPI compiler, original SF30 Python merchant, SF30 seller and customer SDK exporter. The MCP endpoint reuses
 the same authenticated HTTP transport as the existing SF32 buyer bridge.
 
 The seller runs on the operator's Linux or POSIX host. This starts the configured
@@ -128,6 +128,58 @@ For credential rotation, replace the value through the host's deployment
 mechanism, stop the owned seller, and relaunch MCP with the updated environment.
 Start the same selected release. A new origin, path, header mapping or payment
 term is a configuration change: stage, compare and select a new release.
+
+### Use an existing Python merchant
+
+The original SF30 Python declaration can use the same twelve release tools:
+
+```sh
+node stellar-forge/mcp-merchant-operator/serve.mjs init \
+  --dir /private/python-merchant-operator \
+  --python /private/python-project/merchant.json \
+  --python-root /private/python-project \
+  --name "Python merchant" --seller-port 0 \
+  --facilitator https://YOUR_ACTUAL_FACILITATOR
+```
+
+The host configuration records `python` and optional `pythonRoot` under the
+`initial` alias. These select the original `stellar-forge.python-merchant.v1`
+declaration and the local source directory to retain. Choose Python as the whole
+source selection. Each declaration keeps its original function input contracts,
+output formats, atomic payment amounts, environment names and worker settings.
+
+`merchant_sources` compiles the declaration and hashes the selected source without
+importing Python or starting workers. It shows the retained file count, entry,
+source and execution digests, worker limits, lifecycle hooks and public routes.
+The interpreter is represented by its selection digest in MCP responses; its
+host path stays in private configuration. Only environment names are exposed.
+
+`merchant_stage` captures a private copy of the source. With `pythonRoot`, that
+includes local helpers and assets using their relative directory structure.
+Without it, only the declared entry module is copied. Place the operator directory
+outside the source root. Version-control directories, virtual environments,
+dependency caches and Python bytecode caches are excluded. Source symlinks and
+special files are rejected. The retained source is limited to 512 files and
+32 MiB, with an 8 MiB limit per asset and 2 MiB for the entry module.
+
+Activate, start, export the customer SDK, change versions and roll back with the
+same workflow below. Comparisons show payment changes and Python source, worker,
+function or lifecycle changes. Once staged, a release uses its retained project
+even if the input project changes or is removed. Helpers beside the entry import
+normally; load adjacent assets relative to `__file__`. Python starts with bytecode
+writes disabled to keep the retained source unchanged.
+
+The interpreter and its installed packages remain on the host. A pathful relative
+interpreter selector is anchored to the staging process's working directory;
+a bare selector such as `python3` uses the launch environment's PATH. Provide
+declared environment values through the existing host service. Restart and
+rollback open a fresh original worker pool with that environment and the selected
+lifecycle hooks. The original seller drains accepted requests before its worker
+pool closes. A release with no facilitator remains challenge-only and starts no
+Python workers.
+
+The [Python release guide](../../stellar/scf-starforge-20261009/sf82-seller-pilot/RELEASES.md#release-a-python-project)
+also describes direct terminal operation and the retained project layout.
 
 ## Connect an MCP client
 

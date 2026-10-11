@@ -174,7 +174,31 @@ The evidence directory must already exist with POSIX permissions 0700. Original 
 }
 ~~~
 
-The trusted signer module exports an async sign({intent,challenge,accepted}) function. The native workspace generates this module using the official SDK adapter; an existing externally managed signer can supply the same interface. The shared [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) also connects an existing configured buyer to an account or trusted provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB). Only Content-Type and Accept request headers are configurable.
+The trusted signer module exports an async sign({intent,challenge,accepted}) function. The native workspace generates this module using the official SDK adapter; an existing externally managed signer can supply the same interface. The shared [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) also connects an existing configured buyer to an account or trusted provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB).
+
+### Ordinary request headers
+
+`operation.headers` carries `Content-Type`, `Accept` and ordinary API values such
+as `accept-language` or `x-region`. Native review displays the exact values sent
+by the original SF31 request. Names are case insensitive: known existing fields
+retain `Content-Type`, `Accept` and `X-SF98-Order-ID`; other names are lowercase.
+Duplicate names, surrounding value whitespace and invalid HTTP characters are
+refused before review or execution. The aggregate ordinary header limit is 8 KiB.
+
+For saved-offer preparation, use `--headers-file /private/request.headers.json`.
+This is a same-owner private regular JSON file at a canonical absolute path,
+up to 16 KiB, containing an object of header names and string values. The CLI
+copies validated values into the prepared config; later edits to the header
+file cannot change that config, its saved workspace or an already queued job.
+`--content-type` still works and may accompany the file when both values agree.
+
+Authentication/API keys, cookies, HTTP framing, forwarded/proxy/security and
+payment headers are handled by their original components and cannot be supplied
+here. The merchant ticket belongs in `ticketFile`, and its selected header cannot
+collide with an ordinary header. SF98's saved `X-SF98-Order-ID` remains checked
+against `orderReference` and the exact `sf98_order` URL. See
+[the complete POST ticket handoff](OPERATION_TICKETS.md) for language/region
+requests, private files, original workspace and durable inbox commands.
 
 Review makes no external calls. Discover returns original source catalog listings but cannot authorize payment. Execute emits a brief status and the original SF52 aggregate report plus local SF82 evidence file path. Seller-reported settlement, observed HTTP delivery, and independently verified transfer remain distinct and retain the approved network. Publication does not execute the buyer or start a hosted workflow.
 

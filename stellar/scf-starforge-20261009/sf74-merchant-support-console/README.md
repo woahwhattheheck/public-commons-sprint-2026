@@ -1,6 +1,6 @@
 # Merchant workspace
 
-Keep a merchant case queue, diagnose each route, inspect its runtime and delivery outcomes, review repairs, and prepare internal workorders in one local workspace. The same original captures move through each stage. The optional case desk retains multiple merchant drafts, follow-up ownership and dates, original runtime support files, search, work status and saved versions across restarts.
+Keep a merchant case queue, diagnose each route, inspect its runtime and delivery outcomes, review repairs, and prepare internal workorders in one local workspace. The same original captures move through each stage. The optional case desk retains multiple merchant drafts, follow-up ownership and dates, original runtime support files or usage periods, search, work status and saved versions across restarts.
 
 ## Open the workspace
 
@@ -11,6 +11,8 @@ node stellar/scf-starforge-20261009/sf74-merchant-support-console/server.mjs
 ```
 
 For a durable merchant queue, add `--cases-dir "$HOME/.local/share/stellar-forge/merchant-cases" --port 8784`. Open the printed `http://127.0.0.1:<port>/` address. No package installation, account, database or hosted service is required. Nothing is probed on page load. [Case desk operations](CASE_DESK.md) covers the complete save, reopen, follow-up, concurrent-tab and version-recovery flow.
+
+The [runtime support flow](RUNTIME_SUPPORT.md) accepts an original SF93 process packet or the original SF30 `history.json` plus matching SF97 `report.json`. It retains exact sources, method/path variants, saved session coverage and optional native journal reconciliation through case save/reopen and complete private handoff. HEAD is available alongside the other five original seller methods; the maintained diagnostic still performs only its existing unpaid GET/OPTIONS work when original catalog evidence supports GET.
 
 ## Diagnose → review → prepare
 

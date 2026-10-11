@@ -2,12 +2,22 @@
 import { request } from 'node:http';
 import { createHash } from 'node:crypto';
 import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
+import { deliveryPrometheus, summarizeOutbox } from '../sf30-seller-sdk/operations/delivery-view.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const MAX_BYTES = 2_000_000;
 const MAX_ROUTES = 103;
+// Read the maintained collector's actual names; do not duplicate its counters.
+const DELIVERY_GAUGES = new Set(deliveryPrometheus(summarizeOutbox([])).split('\n')
+  .filter(line => line && !line.startsWith('#')).map(line => line.split(' ')[0]));
+function originalMetric(line) {
+  if (!line || line.startsWith('#')) return true;
+  if (/^sf30_http_(requests_total|active_requests|responses_total|aborted_total|request_duration_seconds_(bucket|sum|count))\{[^\r\n]*\} (\d+|\d+\.\d+|\d+e[+-]?\d+)$/i.test(line)) return true;
+  const match = /^([a-z0-9_]+) (\d+)$/.exec(line);
+  return Boolean(match && DELIVERY_GAUGES.has(match[1]) && Number.isSafeInteger(Number(match[2])));
+}
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const object = o => o !== null && typeof o === 'object' && !Array.isArray(o);
@@ -17,7 +27,7 @@ const invalid = reason => { throw new Error('SF93_SOURCE_INVALID: ' + reason); }
 const text = value => String(value).replaceAll('|', '\\|').replace(/[\r\n\t]/g, ' ').replace(/[<>]/g, '');
 const tableCell = value => text(value ?? 'n/a');
 
-function loopbackOrigin(input, field) {
+export function loopbackOrigin(input, field) {
   let url;
   try { url = new URL(input); } catch { throw new TypeError(`${field} must be an explicit loopback HTTP origin`); }
   if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port ||
@@ -29,13 +39,13 @@ function loopbackOrigin(input, field) {
   return url.origin;
 }
 
-async function readLocal(origin, path, contentType) {
+export async function readLocal(origin, path, contentType, {signal} = {}) {
   const address = new URL(path, origin);
   const bytes = await new Promise((done, fail) => {
-    const req = request(address, { method: 'GET', agent: false, timeout: 5000,
+    const req = request(address, { method: 'GET', agent: false, signal, timeout: 5000,
       headers: { accept: contentType, 'accept-encoding': 'identity' } }, res => {
       if (res.statusCode !== 200 || !String(res.headers['content-type'] ?? '').startsWith(contentType)) {
-        res.resume(); fail(new Error(`SF93_ENDPOINT: ${path} returned HTTP ${res.statusCode} or unexpected type`)); return;
+        req.destroy(); fail(new Error(`SF93_ENDPOINT: ${path} returned HTTP ${res.statusCode} or unexpected type`)); return;
       }
       const chunks = []; let total = 0;
       res.on('data', b => {
@@ -47,6 +57,8 @@ async function readLocal(origin, path, contentType) {
       res.once('error', fail);
       res.once('aborted', () => fail(new Error(`SF93_ENDPOINT: ${path} aborted`)));
     });
+    const deadline = setTimeout(() => req.destroy(new Error(`SF93_TIMEOUT: ${path}`)), 5000);
+    req.once('close', () => clearTimeout(deadline));
     req.once('timeout', () => req.destroy(new Error(`SF93_TIMEOUT: ${path}`)));
     req.once('error', fail);
     req.end();
@@ -100,7 +112,7 @@ export function compileBundle({ sellerHealth, sellerOffers, opsSnapshot, metrics
   }
   if (typeof metrics !== 'string' || metrics.length > MAX_BYTES ||
       !metrics.includes('# TYPE sf30_http_requests_total counter') ||
-      metrics.split('\n').some(line => line && !line.startsWith('#') && !/^sf30_http_(requests_total|active_requests|responses_total|aborted_total|request_duration_seconds_(bucket|sum|count))\{[^\r\n]*\} (\d+|\d+\.\d+|\d+e[+-]?\d+)$/i.test(line))) {
+      metrics.split('\n').some(line => !originalMetric(line))) {
     invalid('original metrics format');
   }
   const keyOf = row => `${row.id}\u0000${row.method}`;
@@ -170,11 +182,9 @@ export function compileBundle({ sellerHealth, sellerOffers, opsSnapshot, metrics
   return { report, brief };
 }
 
-export async function captureBundle({seller,ops,out}) {
+export async function readSupportBundle({seller,ops,signal}) {
   const sellerOrigin = loopbackOrigin(seller,'--seller');
   const opsOrigin = loopbackOrigin(ops,'--ops');
-  const folder = resolve(out);
-  if (!out || folder === '/' || folder === process.cwd()) throw new TypeError('--out must be a new private directory');
   const receipts = {};
   // Merchant metadata and operator evidence are fetched read-only; NO paid route or checkout request.
   for (const [name,origin,path,type] of [
@@ -182,7 +192,7 @@ export async function captureBundle({seller,ops,out}) {
     ['sellerOffers',sellerOrigin,'/_seller/offers','application/json'],
     ['opsSnapshot',opsOrigin,'/api/snapshot','application/json'],
     ['metrics',opsOrigin,'/metrics','text/plain']]) {
-    receipts[name] = await readLocal(origin,path,type);
+    receipts[name] = await readLocal(origin,path,type,{signal});
   }
   const generatedAt = new Date().toISOString();
   const {report,brief} = compileBundle({
@@ -200,6 +210,15 @@ export async function captureBundle({seller,ops,out}) {
   const entries = Object.fromEntries(Object.entries(files).map(([name,bytes])=>[name,{sha256:sha256(bytes),bytes:bytes.length}]));
   files['manifest.json'] = Buffer.from(JSON.stringify({schema:'stellar-forge.seller-support-manifest.v1',
     sessionId:report.observation.sessionId,generatedAt,files:entries,sourceDigests:report.sourceDigests},null,2)+'\n');
+  for (const [name,bytes] of Object.entries(files))
+    if (bytes.length > MAX_BYTES) throw new Error(`SF93_SIZE: ${name} exceeds ${MAX_BYTES} bytes`);
+  return {report,brief,files};
+}
+
+export async function captureBundle({seller,ops,out,signal}) {
+  const folder = resolve(out ?? '');
+  if (!out || folder === '/' || folder === process.cwd()) throw new TypeError('--out must be a new private directory');
+  const {report,files} = await readSupportBundle({seller,ops,signal});
   await mkdir(folder,{mode:0o700}); // Create-only. A prior directory is never overwritten.
   for (const [name,bytes] of Object.entries(files)) await writeFile(resolve(folder,name),bytes,{flag:'wx',mode:0o600});
   return {out:folder,sessionId:report.observation.sessionId,files:Object.keys(files),alerts:report.alerts,

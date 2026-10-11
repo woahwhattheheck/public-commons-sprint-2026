@@ -39,6 +39,11 @@ function requestPath(capture) {
 function unpack(result, path, operation, depth = 0) {
   must(result && typeof result === 'object' && depth < 12, 'Original provider result required');
   if (result.error_code === 'NOT_FOUND' && String(result.error_data?.status) === '404') return null;
+  // A native HTTP 404 may also carry the connector's generic INVALID_ARGUMENT
+  // wrapper. Honor only its exact Not Found envelope before rejecting errors.
+  const nativeNotFound = value => value?.status === 404 && value.ok === false &&
+    Object.hasOwn(value, 'data') && value.data?.message === 'Not Found';
+  if (nativeNotFound(result) || nativeNotFound(result.structuredContent)) return null;
   must(!result.isError && !result.error && !result.error_code, 'Registry provider read failed');
   if (result.structuredContent) return unpack(result.structuredContent, path, operation, depth + 1);
   if (typeof result.ok === 'boolean' && Number.isInteger(result.status) && Object.hasOwn(result, 'data')) {

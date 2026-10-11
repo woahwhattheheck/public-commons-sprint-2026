@@ -92,6 +92,7 @@ Run `node forge.mjs status` to see the paths present in the selected release.
 | `merchant-fleet` | Original gateway with retained merchant rollout state |
 | `merchant-fleet-control` | Original fleet prepare, activate, status and rollback CLI |
 | `merchant-fleet-workspace` | Original private fleet workspace |
+| `fleet-release` | Original saved-workspace staging, release review and owned seller lifecycle |
 | `revenue-workspace` | Original private merchant pricing workspace and saved operational reports |
 | `revenue-report` | Original SF97 merchant revenue analyzer and optional native settlement companion |
 | `postgres` | Original PostgreSQL seller and operations launcher |
@@ -355,6 +356,70 @@ processes. Its prepare/activate/rollback checks the observed fleet revision;
 release selection and dataset generation activation keep their separate original
 meanings. The [native fleet guide](../merchant-fleet-gateway/README.md) supplies
 the actual manifest and control contract.
+
+### Manage original seller releases from the installed fleet
+
+The release operator composes the original SF82 release stores and durable
+gateway in one foreground session. It can stage a saved API workspace, compare
+the serving and replacement releases, start the selected replacement, move
+traffic after review, and retire the exact drained predecessor. Retained source
+links let it restart a stopped original seller before a later rollback.
+
+Prepare the independent stores and private plan with the
+[original release operator guide](../merchant-fleet-gateway/RELEASE_OPERATOR.md)
+and its [plan example](../merchant-fleet-gateway/examples/release-plan.json).
+Each merchant needs its actual public hostname, an active startup release and
+two to four distinct stores with fixed loopback ports. Ports and stores must be
+unique across the plan. Register the original saved API workspace packages that
+the operator may stage. Keep those packages, stores and private plan outside the
+installed software release.
+
+Open the complete browser session through the existing installed command:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-fleet-workspace -- \
+  --releases /tmp/stellar-forge-home/config/fleet-plan.json \
+  --release-state /tmp/stellar-forge-home/state/fleet-release --port 8402
+```
+
+Use the printed local URL on the operator host. This session owns both the
+original gateway and the seller processes it starts. The gateway directory
+defaults to the release operator's `gateway/` subdirectory; `--state` can select
+an existing separate private gateway directory. Keep the operator journal and
+gateway state in different directories, and use the same paths when reopening.
+
+1. Select the merchant and replacement slot. Inspect its retained release catalog
+   or stage a registered saved package with a new immutable release ID.
+2. Compare the actual serving and proposed routes, payment choices, atomic
+   amounts, application/request configuration and runtime changes.
+3. Start and prepare that reviewed original release, then separately review and
+   activate the gateway's exact candidate. Its revision and source checks bind
+   the confirmation to what was reviewed.
+4. Let already-admitted requests finish on their original seller. Retire the old
+   exact session when its port is neither serving, prepared nor draining.
+5. Review a linked retained revision and restore its releases. The operator
+   starts any stopped original seller at its fixed port before gateway rollback
+   creates the next revision.
+6. Stop normally and reopen the same plan and private directories. Export the
+   observed release mapping, status and retained history for the operating handoff.
+
+The [managed workspace guide](../merchant-fleet-gateway/workspace/README.md)
+describes the screen controls and concurrent-change recovery. An uncertain action
+is followed by a fresh status read and an explicit decision.
+
+For terminal operation, choose the included `fleet-release` entry instead of
+opening a second owner of the same stores:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run fleet-release -- start \
+  --plan /tmp/stellar-forge-home/config/fleet-plan.json \
+  --directory /tmp/stellar-forge-home/state/fleet-release
+```
+
+Its original stage, review, prepare, activate, retire and rollback commands are
+documented in the release operator guide. Both entry points reuse each seller's
+configured native payment runtime and environment. Gateway ingress can use the
+existing HTTPS deployment; keep the private control and browser listeners local.
 
 ## Review merchant pricing and operating costs
 
