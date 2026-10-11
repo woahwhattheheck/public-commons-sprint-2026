@@ -6,6 +6,7 @@ const L = {
     club: 'Your club', mode: 'Mode', language: 'Language', story: 'The story so far', numbers: 'Numbers', moments: 'Key moments', feed: 'Live feed',
     aiTitle: 'Optional AI commentary (Microsoft Foundry)', aiAsk: 'Ask for commentary', aiOff: 'Not configured', aiFail: 'Commentary unavailable; match captions keep working.',
     opusTitle: 'AI match insight (optional)', opusAsk: 'Explain this moment', opusOff: 'Not configured', opusWait: 'Writing insight…', opusSlow: 'Still writing — the match stays fully usable.', opusFail: 'Insight unavailable right now; match captions keep working.', opusBusy: 'Insight is busy; try again in a little while.', opusAt: n => `Event ${n}`,
+    share: 'Copy match link', shareCopied: 'Link copied. It opens this moment paused.', shareManual: 'Select and copy the link below.', shareHelp: 'Reopens this synthetic match at the selected event. The recipient needs access to this app.', shareLocal: 'Local address: the link opens only where this app is running.', badLink: 'This match link is invalid or no longer supported. A fresh match is ready.', clampedLink: 'The saved event is beyond this version of the match; showing its final event.',
     play: '▶ Play', pause: '❚❚ Pause', step: 'Next event', restart: 'Restart', ready: 'READY', live: 'LIVE', paused: 'PAUSED', ft: 'FULL TIME',
     reconnecting: 'Reconnecting…', expiredSession: 'This match expired. Press Kick off for a new one.', loading: 'Setting up match…', badSeed: 'Seed must be 1–999999.',
     shots: n => n + (n === 1 ? ' shot' : ' shots'), counterpress: 'Counterpress', waiting: 'Waiting for the next counterpress moment…', start: 'Press Play to stream the match event by event.',
@@ -27,6 +28,7 @@ const L = {
     club: 'Tu club', mode: 'Modo', language: 'Idioma', story: 'La historia hasta ahora', numbers: 'Números', moments: 'Momentos clave', feed: 'En directo',
     aiTitle: 'Comentario IA opcional (Microsoft Foundry)', aiAsk: 'Pedir comentario', aiOff: 'No configurado', aiFail: 'Comentario no disponible; los textos del partido siguen activos.',
     opusTitle: 'Análisis IA del momento (opcional)', opusAsk: 'Explicar este momento', opusOff: 'No configurado', opusWait: 'Escribiendo análisis…', opusSlow: 'Sigue escribiendo; el partido sigue disponible.', opusFail: 'Análisis no disponible ahora; los textos del partido siguen activos.', opusBusy: 'Análisis ocupado; inténtalo de nuevo en un rato.', opusAt: n => `Jugada ${n}`,
+    share: 'Copiar enlace del partido', shareCopied: 'Enlace copiado. Abre esta jugada en pausa.', shareManual: 'Selecciona y copia el enlace de abajo.', shareHelp: 'Abre este partido sintético en la jugada elegida. El destinatario necesita acceso a esta aplicación.', shareLocal: 'Dirección local: el enlace solo abre donde se ejecuta esta aplicación.', badLink: 'Este enlace no es válido o ya no es compatible. Hay un partido nuevo listo.', clampedLink: 'La jugada guardada supera esta versión del partido; se muestra la última.',
     play: '▶ Reproducir', pause: '❚❚ Pausa', step: 'Siguiente jugada', restart: 'Reiniciar', ready: 'LISTO', live: 'EN DIRECTO', paused: 'PAUSA', ft: 'FINAL',
     reconnecting: 'Reconectando…', expiredSession: 'Este partido caducó. Pulsa Saque inicial para otro.', loading: 'Preparando partido…', badSeed: 'La semilla debe ser 1–999999.',
     shots: n => n + (n === 1 ? ' tiro' : ' tiros'), counterpress: 'Contrapresión', waiting: 'Esperando el próximo momento de contrapresión…', start: 'Pulsa Reproducir para seguir el partido jugada a jugada.',
@@ -43,13 +45,66 @@ const L = {
       rateLine: (s, r, p) => `Tasa de recuperación ${p}% (${s}/${r} ventanas resueltas).`, unclearLine: n => `${n} ventana(s) cortada(s) por otra pérdida: resultado desconocido, no cuenta como fallo.`,
       zoneLine: z => `Contrapresiones exitosas sobre todo en: ${z}.`, pressLine: x => `${x} acciones de presión por contrapresión.`, rivalLine: (t, p) => `${t}: tasa de recuperación ${p}.`}}
 };
-const S = {session: null, events: [], cursor: 0, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null};
+const S = {session: null, events: [], cursor: 0, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, linkTimer: null};
 const t = () => L[el('locale').value] || L.en;
 const view = () => ({team: el('team').value, audience: el('audience').value, locale: el('locale').value});
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 const notice = msg => { el('notice').textContent = msg || ''; };
 const sideOf = (team, zone) => zone === 'middle' ? 'M' : ((zone === 'attacking') === (team === 'Harbor FC') ? 'R' : 'L');
 const CENTER = {L: 175, M: 525, R: 875};
+
+// A watch link describes a synthetic match, never a live session or provider.
+const MatchLink = {
+  keys: ['watch', 'scenario', 'seed', 'event', 'team', 'audience', 'locale'],
+  read(hash, scenarios) {
+    const q = new URLSearchParams(hash.replace(/^#/, ''));
+    if (!q.has('watch')) return null;
+    const invalid = () => { throw new Error('invalid_match_link'); };
+    if (this.keys.some(k => q.getAll(k).length !== 1) || [...q.keys()].some(k => !this.keys.includes(k)) || q.get('watch') !== '1') invalid();
+    const scenario = q.get('scenario'), seed = q.get('seed'), count = q.get('event');
+    if (!scenarios.includes(scenario) || !/^[1-9][0-9]{0,5}$/.test(seed) || !/^(0|[1-9][0-9]{0,6})$/.test(count)) invalid();
+    const team = q.get('team'), audience = q.get('audience'), locale = q.get('locale');
+    if (!['Harbor FC', 'Metro Rovers'].includes(team) || !['casual', 'analyst'].includes(audience) || !['en', 'es'].includes(locale)) invalid();
+    return {scenario, seed: Number(seed), count: Number(count), team, audience, locale};
+  },
+  url(match, count, settings, href) {
+    const url = new URL(href);
+    url.username = ''; url.password = ''; url.search = '';
+    url.hash = new URLSearchParams({watch: '1', scenario: match.scenario, seed: String(match.seed), event: String(count), team: settings.team, audience: settings.audience, locale: settings.locale}).toString();
+    return url.href;
+  }
+};
+function currentMatchLink() {
+  if (!S.session || !S.match || !S.frame || S.frame.sessionId !== S.session.id || S.frame.count !== S.cursor) return null;
+  return MatchLink.url(S.match, S.cursor, {team: S.frame.team, audience: S.frame.audience, locale: S.frame.locale}, location.href);
+}
+function syncMatchLink(immediate = false) {
+  if (immediate && S.linkTimer) { clearTimeout(S.linkTimer); S.linkTimer = null; }
+  const write = () => {
+    S.linkTimer = null;
+    const url = currentMatchLink();
+    if (!url) return;
+    try { if (location.href !== url) history.replaceState(null, '', url); } catch { /* Copy remains usable when history writes are restricted. */ }
+  };
+  if (immediate || !S.playing) write();
+  else if (!S.linkTimer) S.linkTimer = setTimeout(write, 1000);
+}
+async function copyMatchLink() {
+  const url = currentMatchLink();
+  if (!url) return;
+  const field = el('matchLink'), result = el('shareStatus');
+  field.value = url;
+  // Keep a native text field available even when clipboard access is denied.
+  field.hidden = false;
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard_unavailable');
+    await navigator.clipboard.writeText(url);
+    result.textContent = t().shareCopied;
+  } catch {
+    result.textContent = t().shareManual;
+    field.focus(); field.select();
+  }
+}
 
 async function api(url, method = 'GET', body) {
   const r = await fetch(url, body === undefined ? {method} : {method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
@@ -177,6 +232,7 @@ function ui() {
   const T = t(), s = S.session;
   el('play').textContent = S.playing ? T.pause : T.play;
   el('play').setAttribute('aria-pressed', String(S.playing));
+  el('share').disabled = !currentMatchLink();
   el('play').disabled = !s; el('restart').disabled = !s; el('scrub').disabled = !s;
   el('step').disabled = !s || S.cursor >= s.total;
   const st = S.playing ? 'live' : s && S.cursor >= s.total ? 'ft' : S.cursor > 0 ? 'paused' : 'ready';
@@ -191,12 +247,14 @@ function apply(f) {
   el('progress').textContent = t().progress(f.count, f.total);
   drawPitch(f); drawCue(f); drawStats(f); drawMoments(f); drawFeed(); drawStrip(f);
   el('insight').replaceChildren(...insights(f).map(x => node('li', '', x)));
+  syncMatchLink();
   ui();
 }
 function applyI18n() {
   const T = t();
   document.documentElement.lang = el('locale').value;
   for (const n of document.querySelectorAll('[data-i18n]')) { const v = T[n.dataset.i18n]; if (typeof v === 'string') n.textContent = v; }
+  el('shareHelp').textContent = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) ? T.shareLocal : T.shareHelp;
   el('step').textContent = T.step; el('restart').textContent = T.restart;
   el('foundry').textContent = S.foundry ? T.aiAsk : T.aiOff;
   el('opus').textContent = S.opus ? T.opusAsk : T.opusOff;
@@ -207,6 +265,7 @@ function stopStream() {
   ++S.conn;
   if (S.es) { S.es.close(); S.es = null; }
   S.playing = false;
+  syncMatchLink(true);
   ui();
 }
 function play() {
@@ -253,23 +312,25 @@ async function refreshView() {
   await seek(S.cursor);
   if (resume && !S.playing) play();
 }
-async function newMatch() {
-  const seed = Number(el('seed').value);
+async function newMatch({count = 0} = {}) {
+  const seed = Number(el('seed').value), scenario = el('scenario').value;
   if (!Number.isInteger(seed) || seed < 1 || seed > 999999) { notice(t().badSeed); return; }
   stopStream();
   const token = ++S.starting; ++S.req;
   notice(t().loading);
   const old = S.session;
   try {
-    const s = await api('/api/sessions', 'POST', {scenario: el('scenario').value, seed});
+    const s = await api('/api/sessions', 'POST', {scenario, seed});
     if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(s.id), {method: 'DELETE'}).catch(() => {}); return; }
     if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
-    S.session = s; S.events = []; S.cursor = 0; S.frame = null;
+    S.session = s; S.match = {scenario, seed}; S.events = []; S.cursor = 0; S.frame = null;
+    el('matchLink').hidden = true; el('shareStatus').textContent = '';
     el('scrub').max = String(s.total);
     el('blurb').textContent = s.blurb;
     el('foundryResult').textContent = '';
     notice('');
-    await seek(0);
+    await seek(Math.min(count, s.total));
+    if (count > s.total) notice(t().clampedLink);
   } catch (e) { if (token === S.starting) notice(e.message); }
 }
 
@@ -277,10 +338,17 @@ async function boot() {
   const b = await api('/api/bootstrap');
   for (const sc of b.scenarios) { const o = node('option', '', sc.label); o.value = sc.id; el('scenario').append(o); }
   el('scenario').value = b.defaultScenario;
+  let linked = null, invalidLink = false;
+  try { linked = MatchLink.read(location.hash, b.scenarios.map(sc => sc.id)); } catch { invalidLink = true; }
+  if (linked) {
+    el('scenario').value = linked.scenario; el('seed').value = String(linked.seed);
+    for (const id of ['team', 'audience', 'locale']) el(id).value = linked[id];
+  }
   S.foundry = !!b.foundryConfigured;
   el('foundry').disabled = !S.foundry;
   S.opus = !!b.opusConfigured;
   el('opus').disabled = !S.opus;
+  el('share').addEventListener('click', copyMatchLink);
   el('kickoff').addEventListener('click', newMatch);
   el('scenario').addEventListener('change', newMatch);
   el('seed').addEventListener('keydown', e => { if (e.key === 'Enter') newMatch(); });
@@ -326,8 +394,15 @@ async function boot() {
     if (e.key === ' ' || e.key === 'k') { e.preventDefault(); el('play').click(); }
     else if (e.key === 'ArrowRight') el('step').click();
   });
-  addEventListener('pagehide', () => { if (S.session) fetch('/api/sessions/' + encodeURIComponent(S.session.id), {method: 'DELETE', keepalive: true}).catch(() => {}); });
+  addEventListener('pagehide', () => { syncMatchLink(true); if (S.session) fetch('/api/sessions/' + encodeURIComponent(S.session.id), {method: 'DELETE', keepalive: true}).catch(() => {}); });
+  addEventListener('pageshow', e => {
+    if (!e.persisted || !S.match) return;
+    el('scenario').value = S.match.scenario; el('seed').value = String(S.match.seed);
+    void newMatch({count: S.cursor}); // pagehide deleted the old session; rebuild the saved view.
+  });
   applyI18n();
-  await newMatch();
+  await newMatch({count: linked?.count || 0});
+  if (invalidLink) notice(t().badLink);
 }
 boot().catch(e => { el('cueText').textContent = 'Could not load the match: ' + String(e.message).slice(0, 80); });
+
