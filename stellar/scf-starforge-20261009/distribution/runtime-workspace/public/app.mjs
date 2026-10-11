@@ -1,3 +1,5 @@
+import { initImageWorkspace, imageOperationRecovery } from './image.mjs';
+import { createManagedWorkspaceView } from './managed.mjs';
 // MIT. Industrial operator presentation; original runtime records remain authoritative.
 const $ = id => document.getElementById(id);
 const make = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
@@ -14,7 +16,7 @@ async function api(path, value) {
     headers: { 'x-runtime-workspace-token': token, ...(value === undefined ? {} : { 'content-type': 'application/json' }) },
     ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
   const result = await response.json();
-  if (!response.ok) throw Object.assign(new Error(result.message ?? result.error), { code: result.error });
+  if (!response.ok) throw Object.assign(new Error(result.message ?? result.error), { code: result.error, status: response.status });
   return result;
 }
 const query = (path, values) => path + '?' + new URLSearchParams(Object.entries(values).filter(([,v]) => v));
@@ -27,6 +29,7 @@ function switchView(name) {
   document.querySelectorAll('[data-pane]').forEach(node => { node.hidden = node.dataset.pane !== name; });
   document.querySelectorAll('[data-view]').forEach(node => { if (node.dataset.view === name) node.setAttribute('aria-current', 'page'); else node.removeAttribute('aria-current'); });
   prefs();
+  if (name === 'managed') managed.refresh().catch(error);
 }
 document.querySelectorAll('[data-view]').forEach(node => node.addEventListener('click', () => switchView(node.dataset.view)));
 function facts(container, rows) {
@@ -119,10 +122,30 @@ function renderOperations() {
     article.dataset.operationId = job.id;
     title.append(make('h3', job.operation.charAt(0).toUpperCase() + job.operation.slice(1)), make('span', job.displayPhase, 'status'));
     article.append(title, make('p', (job.createdAt ? new Date(job.createdAt).toLocaleString() + ' · ' : '') + job.id, 'muted'));
-    if (job.targetDirectory) article.append(make('p', job.targetDirectory));
+    for (const [label, path] of [['Runtime output', job.targetDirectory], ['Image context', job.contextDirectory],
+      ['Image transfer', job.transferDirectory], ['Container output', job.containerDirectory]])
+      if (path) article.append(make('p', label + ': ' + path));
     if (job.error) article.append(make('p', job.error.code + ': ' + job.error.message));
-    if (job.displayPhase === 'INTERRUPTED') article.append(make('p', 'The workspace worker ended. Open its retained runtime and resume installation or recover into a new directory.', 'note'));
+    if (job.displayPhase === 'INTERRUPTED' && !job.homeId) article.append(make('p', job.imageId || job.transferId
+      ? imageOperationRecovery(job)
+      : 'The workspace worker ended. Open its retained runtime and resume installation or recover into a new directory.', 'note'));
     const actions = make('div', undefined, 'actions');
+    if (job.homeId) {
+      const home = make('button', 'Open managed home'); home.type = 'button';
+      home.addEventListener('click', () => managed.choose(job.homeId).catch(error)); actions.append(home);
+      if (['FAILED', 'QUEUED'].includes(job.phase) || job.displayPhase === 'INTERRUPTED') {
+        const recover = make('button', 'Recover managed operation'); recover.type = 'button';
+        recover.addEventListener('click', () => api('/api/managed/recover', { operationId: job.id }).then(() => refresh()).catch(error)); actions.append(recover);
+      }
+      if (job.operation === 'managed-run' && job.phase === 'RUNNING') {
+        const stop = make('button', 'Stop original command'); stop.type = 'button';
+        stop.addEventListener('click', () => api('/api/managed/stop', { operationId: job.id }).then(() => refresh()).catch(error)); actions.append(stop);
+      }
+    }
+    if (job.imageId || job.transferId) {
+      const open = make('button', 'Open image'); open.type = 'button';
+      open.addEventListener('click', () => images.choose({ imageId: job.imageId, transferId: job.transferId }).catch(error)); actions.append(open);
+    }
     if (job.runtimeId || job.targetId) {
       const open = make('button', 'Open runtime'); open.type = 'button';
       open.addEventListener('click', () => chooseRuntime(job.targetId ?? job.runtimeId)); actions.append(open);
@@ -141,7 +164,7 @@ function renderOperations() {
 async function refresh({ quiet = false } = {}) {
   if (loading) { refreshAgain = true; return; }
   loading = true;
-  const requestedId = selectedId, requestedToken = token;
+  const requestedId = selectedId, requestedToken = token, requestedView = view;
   try {
     let value = await api(query('/api/state', { runtimeId: selectedId }));
     if (selectedId !== requestedId || token !== requestedToken) { refreshAgain = true; return; }
@@ -152,7 +175,7 @@ async function refresh({ quiet = false } = {}) {
         if (saved?.selectedId && value.runtimes.some(item => item.id === saved.selectedId)) {
           selectedId = saved.selectedId; value = await api(query('/api/state', { runtimeId: selectedId }));
         }
-        if (['runtime', 'profile', 'operations', 'deployment'].includes(saved?.view)) view = saved.view;
+        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images'].includes(saved?.view) && view === requestedView) view = saved.view;
         logSelection = saved?.logSelection ?? null;
       } catch {}
     }
@@ -178,7 +201,7 @@ async function refresh({ quiet = false } = {}) {
       $('archive-select').value = match.id;
     }
     if ($('archive-select').value && (!selectedArchive || previousArchive !== $('archive-select').value)) await loadCatalog();
-    renderRuntime(); renderOperations(); switchView(view);
+    renderRuntime(); renderOperations(); switchView(view); await images.render();
     let pending;
     try { pending = JSON.parse(sessionStorage.getItem(pendingKey()) ?? 'null'); } catch { sessionStorage.removeItem(pendingKey()); }
     if (pending && value.operations.some(job => job.id === pending.requestId)) sessionStorage.removeItem(pendingKey());
@@ -241,11 +264,25 @@ async function reviewProfile() {
 }
 async function operation(value) {
   message('');
+  if (sessionStorage.getItem(pendingKey()))
+    throw new Error('Recover the retained request shown in the sidebar before creating another operation.');
   const input = { requestId: crypto.randomUUID(), ...value };
   sessionStorage.setItem(pendingKey(), JSON.stringify(input));
-  const result = await api('/api/operation', input);
+  let result;
+  try { result = await api('/api/operation', input); }
+  catch (value) {
+    if (value.status) {
+      try {
+        const current = await api('/api/state');
+        if (!current.operations.some(job => job.id === input.requestId)) sessionStorage.removeItem(pendingKey());
+      } catch {}
+    }
+    $('retry-request').hidden = !sessionStorage.getItem(pendingKey());
+    throw value;
+  }
   sessionStorage.removeItem(pendingKey());
   if (result.runtimeId) selectedId = result.runtimeId;
+  if (result.homeId) await managed.choose(result.homeId);
   switchView('operations'); await refresh();
   message('Operation retained. Progress and the original result appear below.');
   return result;
@@ -257,6 +294,8 @@ async function openLog(value) {
   $('log-detail').textContent = result.offset ? 'Showing the final ' + (result.totalBytes - result.offset) + ' of ' + result.totalBytes + ' bytes.' : result.totalBytes + ' retained bytes.';
   $('log-text').textContent = result.text || '(The selected log is empty.)'; switchView('operations'); prefs();
 }
+const images = initImageWorkspace({ root: $('image-workspace'), api, operation, refresh, openLog, message, error,
+  switchView, getState: () => state, getToken: () => token, getView: () => view });
 $('refresh').addEventListener('click', () => refresh());
 $('attach-form').addEventListener('submit', async event => {
   event.preventDefault();
@@ -332,10 +371,14 @@ $('download-handoff').addEventListener('click', () => {
   const link = make('a'); link.href = url; link.download = 'starforge-runtime-handoff.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 $('copy-handoff').addEventListener('click', () => handoff && navigator.clipboard.writeText(JSON.stringify(handoff, null, 2)).then(() => message('Deployment handoff copied.')).catch(error));
+const managed = createManagedWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
+  openLog, switchView, message, error });
 window.addEventListener('hashchange', () => {
   if (!location.hash) return;
   token = location.hash.slice(1); sessionStorage.setItem(tokenKey, token);
   history.replaceState(null, '', location.pathname);
+  images.reset();
+  managed.reset();
   initial = true; state = undefined; selectedId = null; selectedArchive = null;
   profileReview = null; handoff = null; logSelection = null; view = 'runtime';
   $('handoff').hidden = true; $('comparison').hidden = true; $('profile-review').hidden = true;
