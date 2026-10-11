@@ -486,7 +486,7 @@ function starforge_sf104_register_blocks($registry) {
             function is_active() { return ($this->settings['enabled'] ?? 'no') === 'yes' && Starforge_SF98_Woo::secret() !== null; }
             function get_payment_method_script_handles() {
                 $handle = 'sf104-checkout-blocks';
-                wp_register_script($handle, false, ['wc-blocks-registry', 'wc-settings', 'wp-element'], '0.3.0', true);
+                wp_register_script($handle, false, ['wc-blocks-registry', 'wc-settings', 'wp-element'], '0.4.0', true);
                 wp_add_inline_script($handle, <<<'JS'
 (function () {
 const settings = window.wc.wcSettings.getSetting('sf104_native_data', {});
@@ -532,3 +532,4 @@ JS
 
 require_once __DIR__ . '/checkout-admission.php';
 Starforge_SF104_Checkout::boot();
+

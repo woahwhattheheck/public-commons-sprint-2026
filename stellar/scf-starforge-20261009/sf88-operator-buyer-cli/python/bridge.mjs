@@ -7,12 +7,12 @@ import { lstat, open, realpath } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { config, operation, need } from '../config.mjs';
 import { MAX_REQUEST_BODY_BYTES } from '../request-body.mjs';
-import { openWorkspace } from '../workspace.mjs';
-import { workspaceEnvironment } from '../queue.mjs';
-import { loadOperationTicket, requireOperationTicketFingerprint } from '../operation-ticket.mjs';
+import { workspaceConfiguration, workspaceExecution } from '../queue.mjs';
+import { checkOperatorTerminal } from '../../sf81-buyer-operator-bridge/bridge.mjs';
+import { loadOperationTicket, requireOperationTicketFingerprint, requireCurrentOperationTicket } from '../operation-ticket.mjs';
 
 const modes = {
-  'workspace-read':['--dir'],
+  'workspace-read':['--dir','--config'],
   'workspace-check':['--dir','--config','--ticket-sha'],
   'execute-workspace':['--dir','--config','--ticket-sha'],
   'config-check':['--config','--ticket-sha'],
@@ -84,11 +84,13 @@ export async function main(args = process.argv.slice(2)) {
     options.set(args[index], args[index+1]);
   }
   need(allowed.every(key => ['--claim-env','--ticket-sha','--outbox','--merchant-route',
-    '--timeout-ms','--resume'].includes(key) || options.has(key)), 'APPLICATION_OPTION_REQUIRED');
+    '--timeout-ms','--resume'].includes(key) || (action === 'workspace-read' && key === '--config') ||
+    options.has(key)), 'APPLICATION_OPTION_REQUIRED');
   if (action === 'workspace-read') {
-    const workspace = await openWorkspace(['--dir', options.get('--dir')]);
-    return print({mode:'ORIGINAL_PYTHON_WORKSPACE', directory:workspace.manifest.directory,
-      configuration:workspace.config, keyCustody:'ORIGINAL_NODE_WORKSPACE'});
+    const workspace = await workspaceConfiguration(options.get('--dir'), {
+      configuration:options.has('--config') ? await config(options.get('--config')) : undefined,
+    });
+    return print({mode:'ORIGINAL_PYTHON_WORKSPACE', ...workspace, keyCustody:'ORIGINAL_NODE_WORKSPACE'});
   }
   if (['workspace-check','execute-workspace','config-check','execute-config'].includes(action)) {
     const cfg = await config(options.get('--config'));
@@ -99,17 +101,21 @@ export async function main(args = process.argv.slice(2)) {
     const ticket = await loadOperationTicket(operation(cfg.operation), {requireCurrent:true});
     requireOperationTicketFingerprint(ticket, fingerprint);
     // The EXACT shared original inbox binding and native signer preflight.
-    const environment = options.has('--dir') ? await workspaceEnvironment(cfg, options.get('--dir')) : process.env;
-    if (action.endsWith('-check')) return print({mode:action === 'workspace-check'
-      ? 'ORIGINAL_PYTHON_WORKSPACE_READY' : 'ORIGINAL_PYTHON_CONFIG_READY',
-      intentId:cfg.operation.intentId, keyCustody:options.has('--dir')
-        ? 'ORIGINAL_NODE_WORKSPACE' : 'ORIGINAL_PROCESS_ENVIRONMENT'});
+    const nativeOptions = options.has('--dir') ? await workspaceExecution(cfg, options.get('--dir')) : {};
+    if (action.endsWith('-check')) {
+      await checkOperatorTerminal(cfg.operation.intentId);
+      requireCurrentOperationTicket(ticket);
+      return print({mode:action === 'workspace-check'
+        ? 'ORIGINAL_PYTHON_WORKSPACE_READY' : 'ORIGINAL_PYTHON_CONFIG_READY',
+        intentId:cfg.operation.intentId, keyCustody:options.has('--dir')
+          ? 'ORIGINAL_NODE_WORKSPACE' : 'ORIGINAL_PROCESS_ENVIRONMENT'});
+    }
     const {execute} = await import('../execute.mjs');
     const controller = new AbortController();
     const interrupt = () => { process.exitCode=130; controller.abort(); };
     const terminate = () => { process.exitCode=143; controller.abort(); };
     process.once('SIGINT', interrupt); process.once('SIGTERM', terminate);
-    try { return await execute(cfg, {environment, signal:controller.signal, operationTicketSha256:fingerprint}); }
+    try { return await execute(cfg, {...nativeOptions, signal:controller.signal, operationTicketSha256:fingerprint}); }
     finally { process.off('SIGINT', interrupt); process.off('SIGTERM', terminate); }
   }
   if (action === 'finalize-operation') {

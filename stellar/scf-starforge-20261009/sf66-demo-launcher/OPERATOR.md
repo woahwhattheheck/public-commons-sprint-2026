@@ -318,3 +318,12 @@ Do not generate a new intent to retry an uncertain payment. Reconcile the
 original request against its existing reservation and recorded transaction.
 To change merchant terms or request content, prepare a deliberate new setup
 while retaining the previous ledger and evidence for that reconciliation.
+
+## Operating-state backup and recovery
+
+Use the same commerce console to pause and drain its original runtime, review all
+retained sessions and operator journals, and create an encrypted backup through
+the existing recovery engine. Recovery mode starts with the original source
+state absent and restores the same intents, attempts and saved response files.
+See [COMMERCE_RECOVERY.md](COMMERCE_RECOVERY.md) for the host configuration,
+browser workflow, original-path restore and CLI commands.

@@ -48,9 +48,11 @@ export class BuyerAgent {
     const { meta } = await this.operation._bound();
     const binding = { schema: BINDING_SCHEMA, intentId: this.operation.intentId,
       operationDirectory: this.operation.directory, configSha256: meta.configSha256,
-      bodySha256: meta.bodySha256, ticketSha256: meta.ticketSha256 ?? null };
+      bodySha256: meta.bodySha256, ticketSha256: meta.ticketSha256 ?? null,
+      nativeWorkspace: meta.nativeWorkspace ?? null };
     if (expected !== undefined && expected !== null)
-      need(bindingKeys.every(key => expected[key] === binding[key]), 'AGENT_OPERATION_BINDING_MISMATCH');
+      need(bindingKeys.every(key => expected[key] === binding[key]) &&
+        (expected.nativeWorkspace ?? null) === binding.nativeWorkspace, 'AGENT_OPERATION_BINDING_MISMATCH');
     return Object.freeze(binding);
   }
 
@@ -70,7 +72,8 @@ export class BuyerAgent {
       throw error;
     }
     need(review.intentId === current.intentId && review.configSha256 === current.configSha256 &&
-      review.bodySha256 === current.bodySha256 && (review.ticketSha256 ?? null) === current.ticketSha256,
+      review.bodySha256 === current.bodySha256 && (review.ticketSha256 ?? null) === current.ticketSha256 &&
+      (review.nativeWorkspace ?? null) === current.nativeWorkspace,
     'MATCHING_REVIEW_REQUIRED');
     return review;
   }
@@ -93,7 +96,7 @@ export class BuyerAgent {
     let result;
     try { result = await this.operation.execute({ review: selectedReview, signal }); }
     catch (error) {
-      if (error.code === 'ATTEMPT_ALREADY_RECORDED_USE_RECOVER')
+      if (['ATTEMPT_ALREADY_RECORDED_USE_RECOVER', 'OPERATION_DELEGATED_USE_INBOX'].includes(error.code))
         return this.recover({ binding: previous.binding });
       throw error;
     }
