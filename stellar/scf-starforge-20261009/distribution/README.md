@@ -90,6 +90,89 @@ assets are included under
 `source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/`;
 the README there covers the complete preparation and operator lifecycle.
 
+## Sell selected Stellar RPC reads
+
+The installed `jsonrpc` command prepares fixed, priced Stellar read operations
+through the original SF30 seller, SF61 compiler, SF88 buyer and operations desk.
+Each selected method becomes a `POST /stellar/METHOD` product. The merchant
+chooses the methods, provider, data network and payment terms in one saved plan:
+
+```sh
+install -d -m 700 /private/stellar-rpc
+npx --no-install starforge jsonrpc template > /private/stellar-rpc/plan.json
+```
+
+Replace the template's merchant origin, asset, recipient and every atomic price.
+Review `dataNetwork` and `payment.network` separately. Keep only the intended
+methods; the included original guide defines the supported transaction, event,
+ledger and metadata contracts. `endpointEnv` names the private variable holding
+the provider's complete HTTPS URL, including any API key in its path. Supply
+that value through the service's existing private environment. The plan stores
+the variable name. Header credentials and OAuth use the original upstream
+declarations described in the included guide.
+
+```sh
+npx --no-install starforge jsonrpc inspect --plan /private/stellar-rpc/plan.json
+npx --no-install starforge jsonrpc prepare --plan /private/stellar-rpc/plan.json \
+  --out /private/stellar-rpc/prepared-v1
+npx --no-install starforge jsonrpc diagnose \
+  --plan /private/stellar-rpc/prepared-v1/plan.json
+```
+
+Inspection and preparation are offline. The new private package retains the
+reviewed plan, original offers, OpenAPI, compiled seller and `RUN.md` commands.
+Diagnosis reads the selected provider's network and health once each. Use its
+current ledger window and actual transaction hashes or returned cursors for
+history requests. Start with the existing native dependencies and facilitator:
+
+```sh
+npx --no-install starforge jsonrpc serve \
+  --plan /private/stellar-rpc/prepared-v1/plan.json \
+  --facilitator https://facilitator.merchant.example \
+  --port 8423 --operations-port 8424 \
+  --availability-dir /private/stellar-rpc/availability \
+  --history-dir /private/stellar-rpc/history --state /private/stellar-rpc/delivery
+```
+
+The original seller verifies the data network before opening its local
+listeners. Keep the existing merchant HTTPS ingress and private operations
+listener. Original payment handling, bounded upstream transport, delivery
+outbox, usage history and graceful shutdown remain one runtime. Retain the same
+plan origin and separate state directories across restart; restart after a
+provider credential rotation so the new connection is selected.
+
+Save the actual method parameters as a private JSON object. For the template's
+`getLatestLedger` product, that object is `{}`. Prepare the original buyer review:
+
+```sh
+npx --no-install starforge jsonrpc buyer \
+  --package /private/stellar-rpc/prepared-v1 --method getLatestLedger \
+  --body-file /private/stellar-rpc/request.json --intent-id rpc-ledger-001 \
+  --out /private/stellar-rpc/buyer-review.json
+npx --no-install starforge buyer --review --config /private/stellar-rpc/buyer-review.json
+```
+
+Continue through that buyer's original native workspace and approval workflow.
+The successful response preserves the provider JSON-RPC envelope and exact
+bytes, including large integers; method data is under `result`. Preserve the
+same buyer intent when recovering its original delivery. A new page or purchase
+uses a deliberately new intent.
+
+Put startup's private `availabilityControl` URL in `SELLER_AVAILABILITY_URL`.
+The existing `starforge availability status --url-env SELLER_AVAILABILITY_URL`
+shows route IDs and the current revision. Its `pause` and `resume` commands take
+the reviewed `--revision` and explicit `--route`; the private browser desk offers
+the same controls. New requests for a paused product stop before payment, while
+already admitted work drains. Saved pauses survive restart on Linux with the
+original `flock` ownership.
+
+The installed `sf30-seller-sdk/jsonrpc/README.md` contains the full method,
+provider, request, recovery and embedding guide. `./seller/jsonrpc` exports
+`startStellarRpcMerchant`; `./seller/jsonrpc/application` exports
+`createStellarRpcApplication` for existing trusted hosts. The whole SF30/SF61/SF88
+source and original `partners/getblock-stellar/product.mjs` request helper ship
+together. This product uses the existing upstream and native dependencies.
+
 ## Cube report workspace
 
 Open the browser workspace on the merchant's retained Cube member catalog:
@@ -151,6 +234,7 @@ or automatically retry a request.
 | --- | --- |
 | `starforge seller` | SF30 JSON or application seller |
 | `starforge upstream` | SF30 existing-API seller |
+| `starforge jsonrpc` | Prepare, diagnose, sell and operate selected Stellar RPC reads with original buyer review |
 | `starforge upstream-operation` | Issue, inspect and reconcile an original merchant operation ticket |
 | `starforge operations` | SF30 seller plus live operations dashboard |
 | `starforge dataset` | SF30 dataset API compilation |
