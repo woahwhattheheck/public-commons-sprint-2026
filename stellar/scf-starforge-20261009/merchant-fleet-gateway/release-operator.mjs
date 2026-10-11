@@ -13,6 +13,7 @@ import { fleetControl } from './control.mjs';
 import { acquireStateLease } from './state-lease.mjs';
 import { openRolloutState } from './rollout-state.mjs';
 import { describeFleetOperations, readFleetOperations, validateFleetNavigationOrigin } from './release-operations.mjs';
+import { createFleetClientDesk } from './release-clients.mjs';
 
 const SCHEMA = 'stellar-forge.fleet-release-plan.v1';
 const JOURNAL = 'stellar-forge.fleet-release-links.v1';
@@ -204,7 +205,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
   if (directory === stateDirectory) throw fail('FLEET_RELEASE_SEPARATE_STATE_REQUIRED', 400);
   const lease = await acquireStateLease(directory), journalPath = join(directory, 'links.json');
   const manifestPath = join(directory, 'prepared-fleet.json');
-  let journal, gateway, operation = null, stagingController, closing = false, closed = false, closingPromise;
+  let journal, gateway, operation = null, stagingController, closing = false, closed = false, closingPromise, clientClosePromise;
   const owned = new Map(), reviews = new Map(), tenants = new Map(plan.tenants.map(row => [row.id, row]));
   function locate(tenantId, slotName) {
     const tenant = tenants.get(tenantId), slot = tenant?.slots[slotName];
@@ -387,13 +388,20 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
         packageSources: describeFleetPackages(tenant.packages), limits: tenant.limits });
     }
     return { schema: 'stellar-forge.fleet-release-status.v1', closing, closed, busy: operation?.action ?? null,
-      relationship, native, tenants: view, pending: journal.pending ? {
+      relationship, native, tenants: view, clientExports: clients.summary, pending: journal.pending ? {
         phase: journal.pending.phase, baseRevision: journal.pending.baseRevision,
         candidateId: journal.pending.candidateId ?? null, targetRevision: journal.pending.targetRevision ?? null,
       } : null, retained: journal.revisions.map(row => ({ revision: row.revision, digest: row.digest,
         releases: row.mapping.map(item => ({ tenant: item.tenant, slot: item.slot, releaseId: item.releaseId,
           digest: item.releaseDigest, port: item.port })) })) };
   }
+  const clients = createFleetClientDesk({ directory, planDigest: plan.digest,
+    locate: (tenant, slot) => { assertOpen(); return locate(tenant, slot); },
+    getManaged(tenant, slot) {
+      if (closing || closed) return null;
+      lease.assertHeld(); const runtime = owned.get(slotKey(tenant, slot));
+      return runtime && !runtime.ended ? runtime.session : null;
+    } });
   const api = {
     planDigest: plan.digest, stateDirectory, gatewayStateDirectory: stateDirectory, get publicURL() { return gateway?.publicURL; }, status,
     operations(input) {
@@ -407,6 +415,15 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       return { tenant, slot, generation: selected.generation, selectedReleaseId: selected.active,
         releases: catalog.releases.map(shortRelease), errors: catalog.errors.map(row => ({ id: row.id, error: 'ORIGINAL_RELEASE_UNREADABLE' })) };
     },
+    clientList(input) { assertOpen(); return clients.list(input); },
+    clientInspect(input) { assertOpen(); return clients.inspect(input); },
+    clientGenerate(input) { return exclusive('client-generate', () => clients.generate(input)); },
+    clientAdopt(input) { return exclusive('client-adopt', () => clients.adopt(input)); },
+    clientManifest(input) { assertOpen(); return clients.manifest(input); },
+    clientFile(input) { assertOpen(); return clients.file(input); },
+    clientFileRelease(input) { assertOpen(); return clients.releaseFile(input); },
+    downloadClient(input) { assertOpen(); return clients.download(input); },
+    sendClientDownload(req, res, input) { assertOpen(); return clients.sendDownload(req, res, input); },
     stage(input) { return exclusive('stage', async () => {
       keys(input, ['tenant', 'slot', 'package', 'releaseId']);
       const { tenant, slot } = locate(input.tenant, input.slot), source = tenant.packages[input.package];
@@ -531,10 +548,15 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       if (!stagingController || stagingController.signal.aborted) return false;
       stagingController.abort(fail('FLEET_RELEASE_STAGE_CANCELLED')); return true;
     },
+    cancelClientTransfers() {
+      if (clientClosePromise) return false;
+      clientClosePromise = clients.close(); clientClosePromise.catch(() => {}); return true;
+    },
     close() {
       if (closingPromise) return closingPromise;
       closing = true;
       api.cancelStaging();
+      api.cancelClientTransfers();
       closingPromise = (async () => {
         await operation?.promise.catch(() => {});
         const errors = [];
@@ -546,6 +568,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
         await drained;
         const results = await Promise.allSettled([...owned.values()].map(row => row.session.close()));
         errors.push(...results.filter(row => row.status === 'rejected').map(row => row.reason));
+        try { await clientClosePromise; } catch (error) { errors.push(error); }
         try { await lease.close(); } catch (error) { errors.push(error); }
         closed = true;
         if (errors.length) throw Object.assign(fail('FLEET_RELEASE_SHUTDOWN_INCOMPLETE', 500),

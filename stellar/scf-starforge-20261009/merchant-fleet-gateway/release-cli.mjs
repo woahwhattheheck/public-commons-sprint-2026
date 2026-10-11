@@ -9,6 +9,12 @@ import { bootstrapFleet, readFleetBootstrapStatus } from './release-bootstrap.mj
 const COMMANDS = `status
 catalog TENANT SLOT
 operations TENANT SLOT INSTANCE_ID
+client-list TENANT SLOT [AFTER [LIMIT]]
+client-inspect TENANT SLOT EXPORT_ID
+client-generate TENANT SLOT INSTANCE_ID EXPORT_ID
+client-adopt TENANT SLOT EXPORT_ID FILES_SHA256
+client-manifest TENANT SLOT EXPORT_ID
+client-download TENANT SLOT EXPORT_ID MANIFEST_SHA256 DESTINATION
 stage TENANT SLOT PACKAGE RELEASE
 review TENANT SLOT RELEASE
 prepare REVIEW_ID
@@ -36,14 +42,32 @@ function revision(value) {
   return Number(value);
 }
 export async function dispatchFleetCommand(operator, line) {
-  const words = line.trim().split(/\s+/), [action, ...args] = words;
+  const words = line.trim().split(/\s+/), action = words[0]; let args = words.slice(1);
+  const download = /^client-download\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.+)$/.exec(line.trim());
+  if (download) {
+    const destination = download[5];
+    args = [...download.slice(1, 5), destination.startsWith('"') ? JSON.parse(destination) : destination];
+  }
   const required = { status: 0, catalog: 2, operations: 3, stage: 4, review: 3, prepare: 1,
-    activate: 2, 'review-rollback': 1, rollback: 1, retire: 4, help: 0 };
-  if (!(action in required) || args.length !== required[action]) throw new TypeError(COMMANDS);
+    activate: 2, 'review-rollback': 1, rollback: 1, retire: 4, help: 0,
+    'client-list': [2, 3, 4], 'client-inspect': 3, 'client-generate': 4, 'client-adopt': 4,
+    'client-manifest': 3, 'client-download': 5 };
+  const count = required[action];
+  if (!Object.hasOwn(required, action) || (Array.isArray(count) ? !count.includes(args.length) : args.length !== count))
+    throw new TypeError(COMMANDS);
   if (action === 'help') return { commands: COMMANDS };
   if (action === 'status') return operator.status();
   if (action === 'catalog') return operator.catalog({ tenant: args[0], slot: args[1] });
   if (action === 'operations') return operator.operations({ tenant: args[0], slot: args[1], instanceId: args[2] });
+  const scope = { tenant: args[0], slot: args[1] };
+  if (action === 'client-list') return operator.clientList({ ...scope,
+    ...(args[2] ? { after: args[2] } : {}), ...(args[3] ? { limit: revision(args[3]) } : {}) });
+  if (action === 'client-inspect') return operator.clientInspect({ ...scope, exportId: args[2] });
+  if (action === 'client-generate') return operator.clientGenerate({ ...scope, instanceId: args[2], id: args[3] });
+  if (action === 'client-adopt') return operator.clientAdopt({ ...scope, exportId: args[2], expectedFilesSha256: args[3] });
+  if (action === 'client-manifest') return operator.clientManifest({ ...scope, exportId: args[2] });
+  if (action === 'client-download') return operator.downloadClient({ ...scope, exportId: args[2],
+    expectedManifestSha256: args[3], directory: args[4] });
   if (action === 'stage') return operator.stage({ tenant: args[0], slot: args[1], package: args[2], releaseId: args[3] });
   if (action === 'review') return operator.review({ tenant: args[0], slot: args[1], releaseId: args[2] });
   if (action === 'prepare') return operator.prepare({ reviewId: args[0] });

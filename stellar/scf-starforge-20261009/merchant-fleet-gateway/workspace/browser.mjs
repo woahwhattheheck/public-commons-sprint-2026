@@ -1,4 +1,5 @@
 // MIT. Original control state is authoritative; review never silently rebases.
+import { bindFleetClientControls } from './clients.mjs';
 const $ = id => document.getElementById(id);
 let session, manifests = [], status = null, capturedAt = null, reviewed = null;
 let working = false, loading = false, connected = false, confirmAction = null, timer, outcomeUnknown = false;
@@ -82,14 +83,15 @@ function identity(merchant) {
     box.append(node('p', 'Public route details exceed this status view. Inspect the original seller’s private /_seller/offers endpoint on port ' + merchant.upstreamPort + '.', 'small'));
   return box;
 }
-async function api(path, payload) {
+async function api(path, payload, { raw = false, signal } = {}) {
   let response;
   try {
-    response = await fetch('/api/' + path, { method: payload ? 'POST' : 'GET', cache: 'no-store',
+    response = await fetch('/api/' + path, { method: payload ? 'POST' : 'GET', cache: 'no-store', signal,
       headers: { ...(session ? { 'x-fleet-workspace': session } : {}),
         ...(payload ? { 'content-type': 'application/json' } : {}) },
       ...(payload ? { body: JSON.stringify(payload) } : {}) });
   } catch { throw new Error('WORKSPACE_CONNECTION_LOST'); }
+  if (raw && response.ok) return response;
   let value;
   try { value = await response.json(); } catch { throw new Error('WORKSPACE_RESPONSE_UNAVAILABLE'); }
   if (!response.ok) throw new Error(value.error ?? 'FLEET_CONTROL_REJECTED');
@@ -279,6 +281,8 @@ async function loadOperations(tenant, slot, instanceId) {
 }
 function operationsCell(tenant, slot) {
   const cell = node('div', undefined, 'release-tools');
+  const handover = node('button', 'Customer SDKs'); handover.type = 'button'; handover.disabled = !ready();
+  handover.addEventListener('click', () => clientDesk.open(tenant.id, slot.name)); cell.append(handover);
   if (!currentDeskSlot(tenant.id, slot.name, slot.instanceId)) { cell.append(node('span', '—')); return cell; }
   const key = deskKey(tenant.id, slot), links = operationDesks.get(key);
   if (!links) {
@@ -299,6 +303,7 @@ function operationsCell(tenant, slot) {
 }
 function renderReleases() {
   if (!releases?.tenants) return;
+  clientDesk.update();
   const liveDesks = new Set(releases.tenants.flatMap(tenant => tenant.slots
     .filter(slot => currentDeskSlot(tenant.id, slot.name, slot.instanceId)).map(slot => deskKey(tenant.id, slot))));
   for (const key of operationDesks.keys()) if (!liveDesks.has(key)) operationDesks.delete(key);
@@ -473,9 +478,12 @@ $('export').addEventListener('click', () => {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 function schedule() { timer = setTimeout(async () => { if (!document.hidden) await refresh(); schedule(); }, 4000); }
 window.addEventListener('pagehide', () => {
+  void clientDesk.close();
   clearTimeout(timer); operationDesks.clear(); loadingDesks.clear();
   $('release-processes').querySelectorAll('.release-tool-link').forEach(link => link.remove());
 });
+const clientDesk = bindFleetClientControls({ request: api, getReleases: () => releases,
+  isBusy: () => !ready(), setBusy(value) { working = value; render(); } });
 try {
   const initial = await api('session'); session = initial.session; manifests = initial.manifests; managed = initial.managed === true;
   $('managed-releases').hidden = !managed; $('managed-processes').hidden = !managed;
@@ -483,5 +491,5 @@ try {
   $('manifest').replaceChildren(...manifests.map(name => { const option = node('option', name); option.value = name; return option; }));
   $('manifest-note').textContent = manifests.length ? 'Manifest paths and the gateway capability stay in the local operator process.' :
     'No manifests are registered. Status, existing candidate review and rollback remain available. Start this workspace with --manifest NAME=FILE to prepare a new configuration.';
-  await refresh(); if (managed && connected) await loadCatalog(); schedule();
+  await refresh(); if (managed && connected) { await loadCatalog(); await clientDesk.refresh(); } schedule();
 } catch { connected = false; notify('The local workspace could not start. Reload after its original process is available.', true); render(); }
