@@ -47,6 +47,50 @@ Review makes no external calls. Discover returns original source catalog listing
 
 Source lineage: SF31 buyer, SF81 one operator-approved operation, SF82 independent evidence, SF36 existing budget journal.
 
+## Managed-cloud HTTPS gateway for unsigned catalog discovery
+
+Some managed Linux runtimes resolve genuine public catalog hosts through a reserved
+`198.18.0.0/15` HTTPS egress overlay. The default original SF31 public-address
+transport refuses that DNS answer before any request (`NONPUBLIC_DNS_ANSWER`).
+This is not evidence of an empty Vellar/Periplo catalog or a failed payment.
+
+**Operator opt-in for `--discover` only:** use the CURRENT OS resolver from the
+trusted runner (`node:dns/promises.lookup(host, {all:true, verbatim:true})`) on
+the actual public HTTPS catalog hostname. If and only if it returns exactly
+one IPv4 address and the operator knows this is that runner's 198.18/15 gateway,
+add `sandboxGatewayIPv4` under the original `catalog` object. For example:
+
+```json
+{
+  "catalog": {
+    "origin": "https://vellar-facilitator-testnet-production.up.railway.app",
+    "limit": 20,
+    "sandboxGatewayIPv4": "198.18.126.99"
+  }
+}
+```
+
+**The numeric address is illustrative from an earlier VM, not a universal or
+permanent gateway.** Do not reuse it unless that host's *fresh* OS DNS gives
+the same sole address on the particular managed machine. A changed address,
+mixed DNS answers, arbitrary private IP, direct IP-literal URL, bad origin,
+URL credentials, redirects, or TLS identity mismatch all fail closed.
+The transport pins the exact original DNS address and verifies original
+hostname/port443/certificate/SNI. Its default DNS rules do not change.
+
+Only the original unsigned `--discover` path passes this opt-in. `--review`
+and `--prepare` have no network or signer. `--execute` continues to use the
+unchanged original SF81/SF31 public-only signed/payment transport: the catalog
+gateway cannot be used to authorize, sign, settle, retry or bypass spend
+approval. Never enable this mode to defeat actual private-resource DNS.
+
+Local source check, no network or wallet:
+`node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/test/catalog-gateway.test.mjs`.
+For live merchant acceptance, run the original real catalog URL through
+`--discover` on the managed operator runner and record its actual returned
+HTTP response/classification, source and original listing count. A catalog
+listing is still not a customer or a payment.
+
 ## Prepare a review config from saved discovery
 
 Start with a catalog-only config containing the `catalog` property shown above;
