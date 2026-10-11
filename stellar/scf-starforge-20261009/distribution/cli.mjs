@@ -71,6 +71,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   dataset-refresh                            Publish and select retained dataset versions
   dataset-publisher                          Publish CSV versions and prepare original buyer acquisition
   buyer-dataset                              Acquire, resume and deliver a complete selected dataset
+  buyer-dataset-workspace                    Review and operate original datasets in the browser
   catalog-serve / catalog                     Host and operate live seller discovery
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   catalog-workspace                          Review signed declarations and retained catalog operations
