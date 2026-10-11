@@ -5,6 +5,7 @@ if (/^[a-f0-9]{64}$/.test(token)) {
   sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', location.pathname);
 } else token = sessionStorage.getItem(tokenKey) ?? '';
 let state = null, products = [], review = null, selected = null, page = 0, pending = false;
+let section = sessionStorage.getItem('starforge-object-workspace-view') === 'accounting' ? 'accounting' : 'delivery';
 let query = '', filter = 'all', generation = 0, pollTimer, queryTimer, confirmAction = null;
 const readable = value => String(value ?? '').replace(/_/g, ' ').toLowerCase();
 const integer = value => value === null || value === undefined ? '—' : String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -23,6 +24,8 @@ const messages = {
   OBJECT_WORKSPACE_SAVED_FILE_CHANGED: 'The assembled file no longer matches its recorded bytes. Inspect the original saved results before downloading it.',
   OBJECT_WORKSPACE_CAPABILITY_REQUIRED: 'Open the complete workspace URL printed by the running command.',
   OBJECT_WORKSPACE_RUN_CHANGED: 'That run has ended or changed. The current run was left unchanged.',
+  OBJECT_WORKSPACE_ACCOUNTING_WORKSPACE_REQUIRED: 'This download has no saved native operator workspace. Its existing receipts remain readable; use the original accounting command with the matching workspace to finalize earlier attempts.',
+  OBJECT_WORKSPACE_SESSION_CHANGED: 'The saved session identity changed. Reopen the workspace with the intended original session.',
 };
 function notice(message = '', error = false) {
   $('notice').hidden = !message; $('notice').textContent = message; $('notice').classList.toggle('error', error);
@@ -49,6 +52,7 @@ function details(target, values) {
 function selectedParams() {
   const params = new URLSearchParams();
   if (selected) params.set('session', selected);
+  if (section === 'accounting') params.set('section', section);
   if (page) params.set('page', String(page));
   if (filter !== 'all') params.set('filter', filter);
   if (query) params.set('query', query);
@@ -89,6 +93,7 @@ function renderSessions() {
   if (!state.sessions.length) list.append(element('p', 'No saved downloads yet.', 'list-empty'));
 }
 function explanation(row) {
+  if (state.active?.session === row.id && state.active.kind !== 'DOWNLOAD') return 'An operation is running on the original purchase records. Open Purchase records to follow it or stop it.';
   if (row.status === 'RUNNING') return 'Downloading through the original buyer. Review each paid request in the terminal. The page updates from completed parts.';
   if (row.status === 'STOPPING') return 'Stopping the active request and retaining its original result. Wait for the run to finish before recovery.';
   if (row.lastRun?.state === 'SETUP_REQUIRED') return 'The original buyer needs its operator setup: ' + readable(row.lastRun.error) + '. Repair that setup, refresh, and deliberately continue.';
@@ -108,6 +113,11 @@ function render() {
   $('session-title').textContent = row.name;
   $('session-source').textContent = row.sourceUrl;
   $('session-status').textContent = readable(row.status).toUpperCase();
+  $('delivery-view').hidden = section !== 'delivery'; $('accounting-view').hidden = section !== 'accounting';
+  for (const name of ['delivery','accounting']) {
+    $(name + '-tab').setAttribute('aria-current',section === name ? 'page' : 'false');
+  }
+  if (section === 'accounting') { renderAccounting(row); controls(); return; }
   $('parts-value').textContent = integer(row.completeChunks) + ' / ' + integer(row.chunkCount);
   $('bytes-value').textContent = bytes(row.downloadedBytes) + ' / ' + bytes(row.bytes);
   $('cap-value').textContent = integer(row.limits.maxTotalAtomic);
@@ -138,6 +148,62 @@ function render() {
   $('page-label').textContent = integer(row.pagination.total) + ' parts · Page ' + (row.pagination.page + 1) + ' of ' + row.pagination.pages;
   page = row.pagination.page; controls();
 }
+function renderAccounting(row) {
+  const record = row.accounting, counts = row.totals;
+  $('accounting-observed').textContent = 'Read ' + new Date(record.observedAt).toLocaleTimeString();
+  details($('accounting-terms'),[['Network',record.terms.network],['Asset',record.terms.asset],
+    ['Recipient',record.terms.payTo],['Original parts',integer(record.range.total)],
+    ['Operator workspace',record.workspace ? 'Saved with this original session' : 'Not bound to this session']]);
+  $('accounting-explanation').textContent = record.workspace ?
+    'Finalization covers every original part. It can check network finality for earlier approved reservations and retain their receipts. It does not create a download request or another payment. Reading these saved views requires no signing keys or network.' :
+    'Saved receipts remain available without a signer, network connection or delivered file. This session has no saved operator workspace; the original accounting command can finalize it with an explicitly selected matching workspace.';
+  $('accounting-actual').textContent = integer(counts.actualAtomicUnits);
+  $('accounting-finalized').textContent = integer(counts.finalized);
+  $('accounting-unpaid').textContent = integer(counts.unpaid);
+  $('accounting-attention').textContent = integer(counts.attention);
+  const running = state.active?.session === row.id && state.active.kind !== 'DOWNLOAD' ? state.active : null;
+  const activity = running ?? row.lastFinalization;
+  $('accounting-progress').hidden = !activity;
+  if (activity) {
+    const label = activity.kind === 'EXPORT' ? 'Exporting saved records' : 'Original finalization';
+    const totals = activity.totals;
+    $('accounting-progress').textContent = label + ': ' + readable(activity.state) + ' · ' +
+      integer(activity.processedChunks ?? 0) + ' of ' + integer(activity.chunkCount) + ' parts reviewed.' +
+      (totals ? ' ' + integer(totals.finalized) + ' finalized; ' + integer(totals.unpaid) + ' no payment required; ' +
+        integer(totals.unattempted) + ' unattempted; ' + integer(totals.attention) + ' need attention.' : '') +
+      (activity.error ? ' ' + readable(activity.error) + '. Original saved receipts remain available below.' : '');
+  }
+  const rows = $('accounting-rows'); rows.replaceChildren();
+  for (const entry of record.entries) {
+    const tr = element('tr'), part = element('td',String(entry.index + 1));
+    part.append(element('small',entry.intentId)); tr.append(part);
+    const status = element('td',readable(entry.outcome));
+    if (entry.viewStatus === 'SAVE_FAILED') status.append(element('small','Result returned; local receipt view needs saving.'));
+    if (entry.code || entry.reason) status.append(element('small',readable(entry.code ?? entry.reason)));
+    const check = row.lastCheckIssues.find(value => value.index === entry.index);
+    if (check) status.append(element('small','Last browser check: ' + readable(check.code ?? check.outcome)));
+    tr.append(status,element('td',integer(entry.actualAtomicUnits)));
+    const receipt = element('td');
+    receipt.append(element('code',entry.receipt ?? (entry.outcome === 'NOT_ATTEMPTED' ? 'No original attempt' :
+      entry.outcome === 'NO_PAYMENT_REQUIRED' ? 'No ledger finalization asserted' : 'No current finalized receipt')));
+    if (entry.lastFinalized && !entry.receipt) {
+      receipt.append(element('p','Earlier finalized receipt · ' + integer(entry.lastFinalized.actualAtomicUnits) + ' atomic units','prior-receipt'));
+      receipt.append(element('code',entry.lastFinalized.receipt));
+    }
+    const disclosure = element('details'), fields = element('dl',undefined,'detail-grid');
+    disclosure.append(element('summary','Record details'));
+    details(fields,[['Original intent',entry.intentId],['Current result',entry.outcome],
+      ['Recorded at',entry.completedAt],['Approved request SHA-256',entry.requestSha256],
+      ['Original saved view',entry.viewPath ?? entry.evidencePath],['View status',entry.viewStatus],
+      ['Last browser check',check?.observedAt],
+      ['Earlier receipt at',entry.lastFinalized?.completedAt]]);
+    disclosure.append(fields); receipt.append(disclosure); tr.append(receipt); rows.append(tr);
+  }
+  if (!record.entries.length) { const tr=element('tr'),td=element('td','No original parts in this range.','no-rows');td.colSpan=4;tr.append(td);rows.append(tr); }
+  $('accounting-page-label').textContent = integer(record.range.total) + ' original parts · Page ' +
+    (row.pagination.page + 1) + ' of ' + row.pagination.pages + ' · ' + integer(counts.unattempted) + ' unattempted here';
+  page = row.pagination.page;
+}
 function controls() {
   const row = state?.selected;
   for (const id of ['run','stop','recover','assemble','download','refresh']) $(id).disabled = pending || !row?.controls[id];
@@ -147,6 +213,12 @@ function controls() {
   $('create-session').disabled = pending || !review;
   $('refresh-list').disabled = pending;
   for (const id of ['export-html','export-json']) $(id).disabled = pending || !row || Boolean(state?.active || state?.mutation);
+  for (const name of ['delivery','accounting']) $(name + '-tab').disabled = pending;
+  const financial = row?.section === 'accounting';
+  for (const [id,key] of [['accounting-finalize','finalize'],['accounting-stop','stop'],['accounting-refresh','refresh'],['accounting-export','export']])
+    $(id).disabled = pending || !financial || !row.controls[key];
+  $('accounting-previous').disabled = pending || !financial || row.pagination.page === 0;
+  $('accounting-next').disabled = pending || !financial || row.pagination.page + 1 >= row.pagination.pages;
 }
 function productChanged() {
   review = null; $('selection-review').hidden = true;
@@ -200,7 +272,7 @@ $('setup-form').onsubmit = event => {
 };
 $('create-session').onclick = () => action(async () => {
   const created = await request('/api/create',{reviewId:review.reviewId});
-  selected = created.session; page = 0; query = ''; filter = 'all'; $('chunk-query').value = ''; $('chunk-filter').value = 'all';
+  selected = created.session; section = 'delivery'; page = 0; query = ''; filter = 'all'; $('chunk-query').value = ''; $('chunk-filter').value = 'all';
   $('setup').hidden = true; review = null; $('selection-review').hidden = true;
   notice(created.recoveredCreate ? 'Reopened the same saved download plan.' : 'The reviewed download plan is saved.');
 });
@@ -215,9 +287,10 @@ $('run').onclick = () => {
   async()=>{await request('/api/run',{session,expectedRevision,actionId});});
 };
 $('stop').onclick = () => { const run = state.active; if(run) action(async()=>{await request('/api/stop',{session:run.session,runId:run.id});}); };
+$('accounting-stop').onclick = $('stop').onclick;
 $('recover').onclick = () => { const row = state.selected; action(async()=>{await request('/api/recover',{session:row.id,expectedRevision:row.revision});notice('Original saved results recovered.');}); };
 $('refresh').onclick = () => action(async()=>{await request('/api/refresh',{session:selected});notice('Current saved parts and original outcomes verified.');});
-$('refresh-list').onclick = () => action(async()=>{await request('/api/refresh',{session:selected});});
+$('refresh-list').onclick = () => action(async()=>{await request('/api/refresh',{session:selected,section});});
 $('assemble').onclick = () => {
   const row = state.selected;
   confirm({title:'Assemble the complete file?',copy:'This reads the original verified parts and saves their byte sequence to a new private file.',
@@ -237,6 +310,28 @@ async function exportFile(kind) {
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 $('export-html').onclick = () => action(()=>exportFile('html')); $('export-json').onclick = () => action(()=>exportFile('json'));
+for (const name of ['delivery','accounting']) $(name + '-tab').onclick = () => {
+  section=name; page=0; sessionStorage.setItem('starforge-object-workspace-view',name); load().catch(showError);
+};
+$('accounting-refresh').onclick = () => action(async()=>{
+  await request('/api/refresh',{session:selected,section:'accounting'}); notice('Original purchase records refreshed.');
+});
+$('accounting-finalize').onclick = () => {
+  const row=state.selected,session=selected,expectedRevision=row.revision,actionId=crypto.randomUUID();
+  confirm({title:'Finalize the original purchases?',
+    copy:'Review all earlier attempts in this saved download and complete their original reservation records.',
+    fields:[['File',row.name],['Original parts',integer(row.accounting.range.total)],
+      ['Network',row.accounting.terms.network],['Asset',row.accounting.terms.asset],['Recipient',row.accounting.terms.payTo]],
+    note:'This uses the saved native workspace and original ledger. It can observe network finality for an earlier transaction; it does not run the buyer or sign another payment. You can stop the operation and keep every completed receipt.',
+    button:'Finalize original records'},async()=>{await request('/api/finalize',{session,expectedRevision,actionId});});
+};
+$('accounting-export').onclick = () => action(async()=>{
+  const result=await request('/api/accounting-export-ticket',{session:selected});
+  const link=element('a');link.href=result.url;link.download=selected+'.accounting.jsonl';
+  document.body.append(link);link.click();link.remove();
+});
+$('accounting-previous').onclick = () => {if(page){page--;load().catch(showError);}};
+$('accounting-next').onclick = () => {page++;load().catch(showError);};
 $('previous').onclick = () => {if(page){page--;load().catch(showError);}};
 $('next').onclick = () => {page++;load().catch(showError);};
 $('chunk-filter').onchange = () => {filter = $('chunk-filter').value;page = 0;load().catch(showError);};
