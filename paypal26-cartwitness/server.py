@@ -49,6 +49,9 @@ CATALOG = [
 ]
 CATALOG_BY_SKU = {p["sku"]: p for p in CATALOG}
 SESSIONS = {}
+# Keep checkout locks outside resettable state. A reset must not replace the
+# lock while another request is waiting on that same buyer's checkout.
+SESSION_LOCKS = {}
 LOCK = threading.RLock()
 
 
@@ -251,6 +254,9 @@ def session_for(handler):
             SESSIONS[sid] = {"csrf": secrets.token_urlsafe(30), "phase": "idle",
                              "audit": [], "generation": secrets.token_urlsafe(16),
                              "revision": 0}
+        if sid not in SESSION_LOCKS:
+            SESSION_LOCKS[sid] = threading.RLock()
+        handler.session_lock = SESSION_LOCKS[sid]
     handler.session_id = sid
     return SESSIONS[sid]
 
@@ -319,7 +325,7 @@ class Handler(BaseHTTPRequestHandler):
         if path not in ("/api/state", "/api/return", "/api/cancel"):
             return self.json_out(404, {"error": "Not found."})
         state = session_for(self)
-        with LOCK:
+        with self.session_lock:
             if path == "/api/state":
                 return self.json_out(200, summarize(state))
             if path == "/api/cancel":
@@ -368,7 +374,11 @@ class Handler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin", "")
         if origin not in (ORIGIN, f"http://localhost:{PORT}"):
             return self.json_out(403, {"error": "Same-origin browser request required."})
-        if not hmac.compare_digest(self.headers.get("X-CSRF", ""), state["csrf"]):
+        # Reset clears and repopulates the dict under this same lock; do not
+        # inspect its CSRF field in the middle of that transition.
+        with self.session_lock:
+            valid_csrf = hmac.compare_digest(self.headers.get("X-CSRF", ""), state["csrf"])
+        if not valid_csrf:
             return self.json_out(403, {"error": "Session CSRF token missing."})
         if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
             return self.json_out(415, {"error": "JSON required."})
@@ -379,7 +389,7 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload, dict):
                 raise ServiceError(400, "JSON object required.")
-            with LOCK:
+            with self.session_lock:
                 result = self.action(route, payload, state)
             return self.json_out(200, result)
         except ServiceError as exc:
@@ -489,3 +499,4 @@ if __name__ == "__main__":
         print("For an explicitly labelled offline walkthrough: DEMO_FIXTURE=1 python3 server.py")
     print(f"CartWitness local-only: {ORIGIN} | sandbox configured={PAYPAL_READY} | model configured={AI_READY}")
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
+
