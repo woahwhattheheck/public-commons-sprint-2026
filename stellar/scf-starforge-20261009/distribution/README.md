@@ -3556,6 +3556,79 @@ work offline. The `./merchant/woocommerce` export exposes the same application
 functions. All nine plugin files, the CLI and their original dependencies ship
 from the selected package source.
 
+## Operate a Tenderly simulation merchant
+
+The complete Tenderly partner product includes provider configuration, the
+retained operation application, its industrial operator workspace, and the
+original Node and Python customer adapters. Its selected EVM network and
+seven public transaction fields remain bound to the merchant's plan.
+
+Use `starforge tenderly --help` for the original preparation and merchant
+lifecycle, `starforge tenderly-workspace --help` for the operator browser, and
+`starforge tenderly-customer --help` for customer selection, import, review,
+execution, status, recovery, export and analysis. Customer recovery opens the
+existing attempt and its saved file. The same customer can deliver its result
+directly to the analysis workspace:
+
+```sh
+starforge tenderly-customer analyze \
+  --runtime /absolute/installed/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --state /private/customer/purchases --intent EXISTING_INTENT \
+  --workspace /private/customer/tenderly-analysis --label 'Reviewed simulation'
+```
+
+Use the actual installed SF88 directory and retained customer intent. The whole
+`source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/`
+directory includes the original operator, preparation and customer guides,
+browser assets, and `customer/python/stellar_forge_tenderly` package.
+
+Stable application entries are `./partners/tenderly`, `/application`,
+`/preparation`, `/customer`, `/workspace` and `/workspace/server`, each under
+`@tokenjunkielabs/starforge-merchant`. They expose the maintained product,
+application, buyer preparation, native customer and operator workspace.
+
+## Analyze a completed Tenderly simulation
+
+Use the customer analysis workspace to receive the original merchant or buyer
+delivery, inspect execution records, compare retained results and save a review:
+
+```sh
+npx --no-install starforge tenderly-analysis serve \
+  --workspace /private/customer/tenderly-analysis --port 8468
+```
+
+Open the printed private loopback URL. Receive the portable `response.json`
+with its `simulation-request.json` and original `buyer-result.json`. The
+workspace verifies the supplied delivery metadata, retains the exact files and
+shows observed context, calls, state changes, assets and logs. Choose another
+capture to compare the recorded execution, then save notes and download its
+readable review. Each row links to the original provider JSON.
+
+The same command provides `receive`, `list`, `inspect`, `compare`, `review`
+and `export`. An export contains original inputs, analysis, four CSV tables,
+an HTML review and a manifest; an interrupted export resumes in the same
+directory. Keep this private workspace outside the installation.
+
+Applications can pass the existing customer result directly:
+
+```js
+import { receiveBuyerResult } from
+  '@tokenjunkielabs/starforge-merchant/buyer/tenderly-analysis';
+
+const capture = await receiveBuyerResult(customerResult.original, {
+  workspace: '/private/customer/tenderly-analysis',
+  request: customerResult.analysisRequest(),
+  label: 'Reviewed transaction',
+});
+```
+
+The adjacent `buyer/tenderly-analysis/server` entry exposes
+`startAnalysisWorkspace`; `buyer/tenderly-analysis/records` exposes the
+record analysis, comparison and CSV functions. These entries use the original
+Node buyer SDK and Node 22.16+, with no additional runtime package. The complete
+receiving and portable-file guide is included at
+`source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/README.md`.
+
 ## Embed in an application
 
 ### Add a merchant to an existing Node or Express application
