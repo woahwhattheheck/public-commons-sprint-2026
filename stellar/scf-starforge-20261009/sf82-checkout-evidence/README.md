@@ -79,6 +79,38 @@ be interpreted as safe to retry: recover SF36 and original chain history. An
 existing partial file is also never overwritten. No cleanup automatically
 releases reserved capacity.
 
+### Reconcile the saved operation later
+
+New evidence files also contain `reconciliation`. When the actual returned buyer
+result satisfies the existing `sf81ReconciliationRecord()` helper, its status is
+`AVAILABLE` and `record` retains that helper's original approved reservation,
+accepted terms and seller receipt. This snapshot is taken before the independent
+RPC lookup. It adds no HTTP body, signed payment header, wallet key or operator
+transcript. `AVAILABLE` means the original record was saved; it does not mean
+that SF86 has verified the payer, transaction or transfer.
+
+Use the existing [SF86 CLI](../sf86-rpc-transfer-reconcile/README.md) to retry only
+the read-only reconciliation, supplying the actual payer independently:
+
+```sh
+node stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/cli.mjs \
+  --sf82-evidence /private/stellar-evidence/ORIGINAL_INTENT_SHA256.json \
+  --payer YOUR_ACTUAL_TRUSTED_G_ADDRESS
+```
+
+SF86 consumes the saved original record and retains its existing checks and
+testnet-only scope. It does not repeat the purchase, overwrite this evidence file
+or change the SF36 reservation. Keep the original operation and this later result
+together when completing the existing ledger reconciliation.
+
+Free requests, thrown buyer errors and results missing the required original
+receipt/reservation save `reconciliation.status:UNAVAILABLE`. Older files lack
+this field. Neither can be reconstructed from the smaller observation and
+reservation summary: SF86 reports `SF82_ORIGINAL_RECONCILIATION_RECORD_UNAVAILABLE`
+before loading the decoder or calling RPC. Use an independently retained original
+SF81 record through SF86's existing `--sf81-result` option if one actually exists;
+an unavailable record is not permission to purchase again.
+
 For `captureBody:true` the adapter reads a cloned **successful paid HTTP** body
 through an 8-MiB maximum bound (default 1 MiB), computes only SHA-256, and
 uses `bodyCaptureTimeoutMs` (default 15,000; integer 1–60,000 milliseconds) to

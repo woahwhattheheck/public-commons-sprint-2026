@@ -5,6 +5,7 @@ import { open, stat } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { checkStellarTestnetTransaction, createOfficialEventDecoder } from '../sf43-agent-commerce/verify.mjs';
 import { captureBuyerResult, captureBuyerError, aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
+import { sf81ReconciliationRecord } from '../sf82-chain-transfer-reconcile/record.mjs';
 
 const tag = /^[A-Za-z0-9._:-]{1,128}$/; // Original SF52 observation identity limit.
 const payer = /^[GC][A-Z2-7]{55}$/;
@@ -109,6 +110,13 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
   let result = null, error = null;
   try { result = await buyer.call(call); }
   catch (e) { error = e; }
+  // Retain the original approved record while it is still available. The
+  // smaller SF52 observation/reservation summary cannot reconstruct this later.
+  let reconciliation = {status:'UNAVAILABLE', reason:'NO_ELIGIBLE_ORIGINAL_SF81_RESULT'};
+  if (!error) {
+    try { reconciliation = {status:'AVAILABLE', record:sf81ReconciliationRecord(result)}; }
+    catch { /* Free, unsupported or incomplete outcomes retain no invented record. */ }
+  }
   // The error adapter conservatively marks errors with UNKNOWN paymentSent as
   // potentially signed, not an unapproved, safely repeatable operation.
   const observedError = error && typeof error.paymentSent !== 'boolean' ?
@@ -152,7 +160,7 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
   const envelope = {
     schema:'scf82.checkout-evidence.v1', intentId:call.intentId, observedAt,
     operatorReservation:reservationMetadata(result?.operatorReservation ?? error?.operatorReservation),
-    observation, report, bodyCapture,
+    observation, report, bodyCapture, reconciliation,
     notes:'Independent testnet proof is credited only by original SF43. No seller receipt, HTTP response, or local simulator equals a payment, customer, grant or revenue claim.',
   };
   // Create-only terminal evidence. Never overwrite/release reservations after
