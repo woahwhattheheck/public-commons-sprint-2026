@@ -254,6 +254,45 @@ state directory off the public reverse proxy and out of source control. The
 stored CSV includes its source columns, while the original loader exposes only
 the operator-declared columns in paid responses.
 
+## Inspect and activate versions in the existing workspace
+
+Attach the original SF30 query workspace to this running service:
+
+~~~sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-workspace.mjs \
+  --state /srv/dataset-state
+~~~
+
+Its existing grayscale query builder now includes current/retained versions,
+cache occupancy and active readers. It previews the original typed native page,
+preserves cursor bytes, and can activate a selected stored generation with the
+displayed current snapshot and revision. File-backed `--dataset` mode remains
+available. The [workspace guide](../DATASET_API.md#attach-the-workspace-to-live-dataset-versions)
+covers selection, rollback, public request recipes and optional catalog status.
+
+The workspace uses the same authenticated private control service, never a
+second version writer. Its browser capability is independent of the control
+descriptor; the descriptor token stays in the local process. Public seller
+routes do not expose schema previews or activation.
+
+For existing internal operator consumers, `datasetControl` retains its original
+status/change calls and adds these read actions:
+
+| Call | Result |
+| --- | --- |
+| `datasetControl(directory, 'schema')` | Current native `dataset` description, detached `versions` status, and actual compiled dataset `resources` with `id`, `resource` and `snapshotSelection` |
+| `datasetControl(directory, 'preview', { query })` | The unchanged native `stellar-forge.dataset-page.v1` body, using the URL query string and original admission/handler |
+| `datasetControl(directory, 'preview', { query }, { signal })` | The same read, with optional caller cancellation propagated to its private request |
+
+Both are private: GET `/schema` and POST `/preview` use the existing control
+transport, bearer authorization and origin rejection. Preview uses the same
+`versions.wrapRequest` completion and resident-cache pins as the public seller;
+a disconnected caller cannot free a generation before its handler completes.
+Its response reader accepts up to 1 MiB so an original page up to the native
+900 KiB ceiling is delivered intact. Other control responses keep the original
+256 KiB limit. No new dataset parameter or payment behavior is inferred from a
+private preview; public recipes check the actual compiled route's opt-in selector.
+
 ## Embed in another original seller launcher
 
 ```js

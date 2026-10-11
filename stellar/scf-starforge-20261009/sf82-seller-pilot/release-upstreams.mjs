@@ -75,6 +75,8 @@ function inspectBytes(bytes, service, allowLoopback) {
   }
   return { bindings, environment: [...references].sort(), credentialValuesChecked: false };
 }
+// Let configured operator interfaces display this same original review before
+// staging. This pure reader neither resolves credentials nor creates snapshots.
 export { inspectBytes as inspectUpstreamConfiguration };
 export async function inspectReleaseUpstreams(directory, snapshot, service, { allowLoopback = false } = {}) {
   const retained = upstreamReleaseSnapshot(snapshot), bytes = await bytesAt(join(directory, retained.file));

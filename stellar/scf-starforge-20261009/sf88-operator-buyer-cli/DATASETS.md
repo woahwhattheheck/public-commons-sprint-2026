@@ -65,9 +65,36 @@ before signing.
 
 Optional max-rows defaults to 1,000,000. The max-page-bytes flag defaults to 1 MiB
 and is applied by the original streaming response writer. If the actual dataset
-snapshot is already known, the snapshot flag pins its exact 64-character SHA-256.
+snapshot is already known, the snapshot flag validates its exact 64-character SHA-256.
 Otherwise the first completed native page pins the snapshot for the rest of
 the session.
+
+For the original versioned seller, put its advertised `snapshot=SHA256` selector
+in the first request URL to choose a retained generation **before** the first
+page is bought. Initialization takes that same SHA as the expected snapshot;
+a conflicting `--snapshot` is refused before creating the session. Later pages
+retain the selector and must agree with the native cursor's snapshot. The
+selector is consumed by the original version store and does not alter SF100's
+existing semantic query or cursor signatures. The standalone `--snapshot` flag
+without a URL selector continues to validate returned pages; it cannot select
+a server generation by itself.
+
+The merchant's [publishing workspace](../sf30-seller-sdk/dataset-refresh/WORKSPACE.md)
+can produce this URL and the original `prepareReview()` config from its actual
+running offer. Review that config and initialize the original private buyer
+workspace with its normal payer, signer, Python and budget options. To use its
+stored operator keys, replace `--config` at acquisition initialization with:
+
+    --workspace /private/dataset-buyer
+
+Choose exactly one config source. This attaches the original workspace, keeps
+its SF36 ledger shared, and records its exact configuration identity in the
+session. Each new page reopens that workspace through its original API and
+refuses changed configuration before creating an attempt marker. Actual
+execution loads operator keys only through `openWorkspace(..., {execute:true})`
+and passes that original environment into SF88. Status, recovery, completed
+acquisition reuse and SF100 delivery remain offline and do not require keys.
+The workspace and the acquisition session are separate private directories.
 
 Initialization is offline. It copies only the original configuration and public
 quote/path settings into a private directory. It neither imports the signer nor

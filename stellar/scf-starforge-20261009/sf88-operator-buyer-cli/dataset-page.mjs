@@ -47,7 +47,7 @@ export function validateDatasetQuery(url, {initial = false} = {}) {
   need(names.length <= 32, 'DATASET_QUERY_PARAMETER_LIMIT');
   let filters = 0;
   for (const name of names) {
-    if (['fields','limit','cursor','sort'].includes(name)) continue;
+    if (['fields','limit','cursor','sort','snapshot'].includes(name)) continue;
     const match = /^(where|gt|gte|lt|lte)_(.+)$/.exec(name);
     need(match && fieldName(match[2]), 'DATASET_UNSUPPORTED_QUERY_CAPABILITY');
     const [, op, column] = match;
@@ -71,7 +71,11 @@ export function validateDatasetQuery(url, {initial = false} = {}) {
     const sort = params.get('sort');
     need(fieldName(sort.startsWith('-') ? sort.slice(1) : sort), 'DATASET_SORT_INVALID');
   }
-  if (params.has('cursor')) decodeDatasetCursor(params.get('cursor'));
+  if (params.has('snapshot')) need(hex(params.get('snapshot')), 'DATASET_EXPECTED_SNAPSHOT_INVALID');
+  if (params.has('cursor')) {
+    const cursor = decodeDatasetCursor(params.get('cursor'));
+    need(!params.has('snapshot') || cursor.s === params.get('snapshot'), 'DATASET_CURSOR_BINDING_MISMATCH');
+  }
   return params;
 }
 
@@ -95,11 +99,14 @@ export function inspectDatasetPage(bytes, {url, previous = null, expectedSnapsho
   need(p.total <= maxRows, 'DATASET_ROW_CEILING_REACHED');
   const params = validateDatasetQuery(url);
   const names = [...params.keys()];
-  const allowed = new Set(['fields','limit','cursor',
+  const allowed = new Set(['fields','limit','cursor','snapshot',
     ...d.columns.filter(c => c.filterable).map(c => 'where_' + c.name),
     ...d.columns.filter(c => c.rangeFilterable).flatMap(c => RANGE_OPS.map(op => op + '_' + c.name)),
     ...(d.columns.some(c => c.sortable) ? ['sort'] : [])]);
   need(names.every(key => allowed.has(key)), 'DATASET_QUERY_CONTRACT_MISMATCH');
+  // The original version store consumes this selector before the CSV parser.
+  // It binds the returned generation, but is not part of the native query hash.
+  if (params.has('snapshot')) need(params.get('snapshot') === d.snapshot, 'DATASET_SNAPSHOT_MISMATCH');
   const requestedFields = params.has('fields') ? params.get('fields').split(',') : [...columns.keys()];
   const requestedLimit = params.has('limit') ? params.get('limit') : String(d.defaultLimit);
   need(/^[1-9][0-9]{0,6}$/.test(requestedLimit) && Number(requestedLimit) === p.limit && equal(requestedFields, value.fields), 'DATASET_QUERY_CONTRACT_MISMATCH');

@@ -12,7 +12,32 @@ Unknown JSON body fields, raw caller GraphQL text, arbitrary URLs, undeclared va
 
 The operator-approved JSON is in [examples/approved-queries.json](./examples/approved-queries.json). It declares two *separate* Stellar indexed-data products: payments and credits. Each has its own static query and bounded first parameter (1–100) and fixed data root. Replace the example origin https://indexer.example with the actual merchant-controlled SubQuery GraphQL origin; keep its fixed path correct. For client-specific changes, version the operator-approved query locally rather than accepting buyer GraphQL. The static backend Authorization header is supplied by the deployment environment named in authorizationEnv, not copied from a buyer header; the environment value must be the full intended Authorization value, never logged or checked in.
 
+## Local browser workspace
+
+The [GraphQL merchant workspace](./workspace/README.md) opens a complete saved
+operator project: inspect the actual served schema, edit approved operations and
+merchant terms, review through the original onboarding compiler, export its
+private application and generated buyer clients, then start or stop the original
+seller. It retains draft history and matching packages across workspace restarts.
+
+On Linux with Node 22+, util-linux `flock`, and the
+[original dependencies](./onboarding/README.md#install), run from this component:
+
+```sh
+node workspace/server.mjs --workspace /private/graphql-merchants --port 0
+```
+
+Open the complete private local URL printed by the launcher. Its
+[operator guide](./workspace/README.md#complete-an-operator-project) covers schema,
+queries, terms, export and managed runtime.
+
 ## Seller configuration, using the existing SF30 schema
+
+The [merchant onboarding workflow](./onboarding/README.md) now captures or imports
+the actual served schema, validates fixed operations and native variables, and
+generates the original seller configuration together with a private launchable
+package and the existing JavaScript/TypeScript buyer client. Use it to prepare
+the two files consumed by the launcher below.
 
 Supply the merchant's original **seller-service.v1** JSON externally. The standard fields are documented in [original SF30 upstream example](../sf30-seller-sdk/examples/upstream-service.json) and [original seller README](../sf30-seller-sdk/README.md). Use **two named fixed JSON POST routes** with the following exact one-to-one bindings:
 

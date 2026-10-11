@@ -97,7 +97,10 @@ function validateDefinition(value, directory) {
   execution(value.config);
   need(op.method === 'GET' && op.bodyFile === undefined && value.config.responseFile === undefined &&
     (value.config.captureBody === undefined || value.config.captureBody === false), 'DATASET_GET_CONFIG_REQUIRED');
-  validateDatasetQuery(op.url, {initial:true});
+  const query = validateDatasetQuery(op.url, {initial:true});
+  if (value.workspaceDirectory !== undefined)
+    need(typeof value.workspaceDirectory === 'string' && isAbsolute(value.workspaceDirectory) &&
+      resolve(value.workspaceDirectory) === value.workspaceDirectory, 'DATASET_ABSOLUTE_WORKSPACE_REQUIRED');
   const l = value.limits;
   need(atomic(op.expect.maxAtomic) && atomic(l.maxTotalAtomic) &&
     BigInt(l.maxTotalAtomic) >= BigInt(op.expect.maxAtomic) &&
@@ -105,14 +108,20 @@ function validateDefinition(value, directory) {
     isCount(l.maxPageBytes, 1024, 16777216), 'DATASET_LIMITS_INVALID');
   need(value.expectedSnapshot === null || typeof value.expectedSnapshot === 'string' &&
     /^[a-f0-9]{64}$/.test(value.expectedSnapshot), 'DATASET_EXPECTED_SNAPSHOT_INVALID');
+  need(!query.has('snapshot') || value.expectedSnapshot === query.get('snapshot'), 'DATASET_SNAPSHOT_SELECTION_CONFLICT');
   return value;
 }
-export async function createDatasetSession({directory, configPath, maxPages, maxTotalAtomic,
+export async function createDatasetSession({directory, configPath, workspaceDirectory, maxPages, maxTotalAtomic,
   maxRows = 1000000, maxPageBytes = 1048576, expectedSnapshot = null} = {}) {
   need(typeof directory === 'string' && isAbsolute(directory) && directory === resolve(directory), 'DATASET_ABSOLUTE_SESSION_REQUIRED');
-  const source = await config(configPath);
+  need((configPath !== undefined) !== (workspaceDirectory !== undefined), 'DATASET_ONE_CONFIG_SOURCE_REQUIRED');
+  const source = workspaceDirectory === undefined ? await config(configPath)
+    : (await (await import('./workspace.mjs')).openWorkspace(['--dir', workspaceDirectory])).config;
+  const selected = validateDatasetQuery(source.operation?.url, {initial:true}).get('snapshot');
+  if (selected && expectedSnapshot === null) expectedSnapshot = selected;
   const definition = validateDefinition({schema:VERSION, directory, createdAt:new Date().toISOString(),
     configurationSha256:digest(canonical(source)), config:source, expectedSnapshot,
+    ...(workspaceDirectory === undefined ? {} : {workspaceDirectory}),
     limits:{maxPages,maxTotalAtomic,maxRows,maxPageBytes}}, directory);
   // A session has its own response/evidence directory; the original SF36 ledger stays shared.
   const parent = await realpath(dirname(directory));
@@ -143,6 +152,8 @@ function pageConfig(definition, index, cursor, allocated) {
 function baseReport(definition) {
   return {schema:'stellar-forge.sf88.dataset-acquisition.v1', directory:definition.directory,
     configurationSha256:definition.configurationSha256, sessionId:definition.config.operation.intentId,
+    ...(definition.workspaceDirectory === undefined ? {} : {workspaceDirectory:definition.workspaceDirectory}),
+    expectedSnapshot:definition.expectedSnapshot,
     status:'READY', limits:definition.limits, capAllocatedAtomic:'0', completedPages:0,
     acquiredRows:0, totalRows:null, snapshot:null, pages:[],
     paymentAccounting:'Page caps are allocations, not charges. Original SF36 reservations and original SF82 chain observations remain authoritative.'};
@@ -260,15 +271,16 @@ export async function inspectDatasetSession(directory) {
   }
   try { return await inspectUnlocked(directory); } finally { await release(); }
 }
-async function originalPreflight(cfg) {
+async function originalPreflight(cfg, environment) {
   execution(cfg);
   const info = await stat(cfg.signerModule);
   need(info.isFile(), 'SIGNER_MODULE_MUST_EXIST');
   // Constructor-only original approval validation: no ledger mutation, signer or HTTP call.
-  createOperatorApproval({...cfg.operator, environment:process.env});
+  createOperatorApproval({...cfg.operator, environment});
 }
 /** Trusted host seam: CLI always supplies the original SF88 execute function. */
-export async function runDatasetSession(directory, {signal, executePage = execute, onPage = () => {}} = {}) {
+export async function runDatasetSession(directory, {signal, executePage = execute, onPage = () => {},
+  environment = process.env} = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof executePage === 'function' && typeof onPage === 'function', 'DATASET_EXECUTOR_INVALID');
   const release = await lock(directory);
@@ -279,7 +291,16 @@ export async function runDatasetSession(directory, {signal, executePage = execut
       const index = report.completedPages + 1;
       const previous = report.pages.at(-1);
       const cfg = pageConfig(definition, index, previous?.nextCursor ?? null, BigInt(report.capAllocatedAtomic));
-      if (executePage === execute) await originalPreflight(cfg);
+      let operatorEnvironment = environment;
+      if (definition.workspaceDirectory !== undefined) {
+        const {openWorkspace} = await import('./workspace.mjs');
+        const workspace = await openWorkspace(['--dir', definition.workspaceDirectory],
+          {execute:executePage === execute, environment});
+        need(digest(canonical(workspace.config)) === definition.configurationSha256,
+          'DATASET_WORKSPACE_CHANGED_REVIEW_REQUIRED');
+        if (executePage === execute) operatorEnvironment = workspace.operatorEnvironment;
+      }
+      if (executePage === execute) await originalPreflight(cfg, operatorEnvironment);
       const dir = join(directory, 'pages', indexName(index));
       try { await mkdir(dir, {mode:0o700}); } catch (e) { if (e.code !== 'EEXIST') throw e; }
       await privateDirectory(dir);
@@ -292,7 +313,7 @@ export async function runDatasetSession(directory, {signal, executePage = execut
         index, intentId:cfg.operation.intentId, configurationSha256:digest(canonical(cfg)),
         capAtomic:cfg.operation.expect.maxAtomic, startedAt:new Date().toISOString()});
       try {
-        const summary = await executePage(cfg, {signal});
+        const summary = await executePage(cfg, {signal, environment:operatorEnvironment});
         await createJson(join(dir, 'result.json'), {schema:'stellar-forge.sf88.dataset-attempt-result.v1', summary});
       } catch (error) {
         await createJson(join(dir, 'failure.json'), {code:safeCode(error), at:new Date().toISOString()});

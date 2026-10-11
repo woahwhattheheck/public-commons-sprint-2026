@@ -86,7 +86,7 @@ export function compileSubQueryMerchant(input) {
   }
   return { input, operations };
 }
-function variablesFrom(body, op) {
+export function bindSubQueryVariables(body, op) {
   if (body === null || body === undefined) body = {};
   keys(body, ['variables'], 'buyer request body');
   const supplied = body.variables ?? {};
@@ -125,7 +125,7 @@ export function createSubQueryMerchantHandlers(config, { env = process.env, allo
           context.url.search || context.pathParams && Object.keys(context.pathParams).length) {
         FAIL('Only fixed-path POST with JSON variables is supported');
       }
-      return variablesFrom(context.body, op);
+      return bindSubQueryVariables(context.body, op);
     };
     handlers[op.admission] = context => {
       try { check(context); return true; }

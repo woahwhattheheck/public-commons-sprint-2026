@@ -10,6 +10,7 @@ const help = [
   '',
   'init --session /private/session --config /private/buyer.json --max-pages 20 --max-total-atomic 20000',
   '     [--max-rows 1000000] [--max-page-bytes 1048576] [--snapshot ORIGINAL_SHA256]',
+  '     Use --workspace /private/existing-buyer instead of --config to attach its original operator keys.',
   'status --session /private/session',
   'run --session /private/session',
   'recover --session /private/session',
@@ -24,7 +25,7 @@ function parse(args) {
   const command = args.shift();
   need(['init','status','run','recover','export','deliver'].includes(command), 'DATASET_COMMAND_REQUIRED');
   const allowed = command === 'init'
-    ? new Set(['session','config','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot'])
+    ? new Set(['session','config','workspace','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot'])
     : new Set(['export','deliver'].includes(command) ? ['session','out'] : ['session']);
   const flags = {};
   need(args.length % 2 === 0, 'DATASET_FLAG_VALUE_REQUIRED');
@@ -49,7 +50,8 @@ export async function main(args = process.argv.slice(2)) {
   const {command, flags:f} = parse([...args]);
   let report;
   if (command === 'init') report = await createDatasetSession({
-    directory:f.session, configPath:f.config, maxPages:number(f['max-pages'],true),
+    directory:f.session, configPath:f.config, workspaceDirectory:f.workspace,
+    maxPages:number(f['max-pages'],true),
     maxTotalAtomic:f['max-total-atomic'], maxRows:number(f['max-rows']),
     maxPageBytes:number(f['max-page-bytes']), expectedSnapshot:f.snapshot ?? null,
   });
