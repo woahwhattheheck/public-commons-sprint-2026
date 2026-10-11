@@ -3303,6 +3303,48 @@ worker and Woo merchant review remain the fulfillment flow. The full source
 guide includes those commands, retained order generations and recovery.
 `./seller/woocommerce` and `./buyer/woocommerce` expose the same original APIs.
 
+## Analyze a completed Tenderly simulation
+
+Use the customer analysis workspace to receive the original merchant or buyer
+delivery, inspect execution records, compare retained results and save a review:
+
+```sh
+npx --no-install starforge tenderly-analysis serve \
+  --workspace /private/customer/tenderly-analysis --port 8468
+```
+
+Open the printed private loopback URL. Receive the portable `response.json`
+with its `simulation-request.json` and original `buyer-result.json`. The
+workspace verifies the supplied delivery metadata, retains the exact files and
+shows observed context, calls, state changes, assets and logs. Choose another
+capture to compare the recorded execution, then save notes and download its
+readable review. Each row links to the original provider JSON.
+
+The same command provides `receive`, `list`, `inspect`, `compare`, `review`
+and `export`. An export contains original inputs, analysis, four CSV tables,
+an HTML review and a manifest; an interrupted export resumes in the same
+directory. Keep this private workspace outside the installation.
+
+Applications can pass the existing customer result directly:
+
+```js
+import { receiveBuyerResult } from
+  '@tokenjunkielabs/starforge-merchant/buyer/tenderly-analysis';
+
+const capture = await receiveBuyerResult(customerResult.original, {
+  workspace: '/private/customer/tenderly-analysis',
+  request: customerResult.analysisRequest(),
+  label: 'Reviewed transaction',
+});
+```
+
+The adjacent `buyer/tenderly-analysis/server` entry exposes
+`startAnalysisWorkspace`; `buyer/tenderly-analysis/records` exposes the
+record analysis, comparison and CSV functions. These entries use the original
+Node buyer SDK and Node 22.16+, with no additional runtime package. The complete
+receiving and portable-file guide is included at
+`source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/README.md`.
+
 ## Embed in an application
 
 ### Add a merchant to an existing Node or Express application

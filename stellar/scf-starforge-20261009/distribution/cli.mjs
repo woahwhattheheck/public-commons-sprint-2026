@@ -41,9 +41,11 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-host                             Install, observe and recover the original Linux merchant group
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
+  tenderly-analysis                          Receive, compare and review completed Tenderly simulations
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
+  delivery-destinations                      Route original events to independently operated receivers
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source

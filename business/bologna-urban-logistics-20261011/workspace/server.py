@@ -6,9 +6,10 @@ import json
 import mimetypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
-from model import apply_action, backup_workspace, export_workspace, initialize, load_state, restore_workspace
+from model import apply_action, backup_workspace, download_workspace, export_workspace, initialize, load_state, restore_workspace
+from delivery import public_delivery
 
 HERE = Path(__file__).resolve().parent
 PUBLIC = HERE / "public"
@@ -20,11 +21,14 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         print(f"{self.log_date_time_string()} {fmt % args}")
 
-    def send_bytes(self, status: int, data: bytes, content_type: str):
+    def send_bytes(self, status: int, data: bytes, content_type: str, filename=None):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        if filename:
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
         self.end_headers()
         self.wfile.write(data)
 
@@ -35,15 +39,23 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         try:
             if path == "/api/state":
-                return self.send_json(200, load_state(self.server.state_root))
+                state = load_state(self.server.state_root)
+                state["delivery"] = public_delivery(state)
+                return self.send_json(200, state)
+            if path == "/api/export":
+                query = parse_qs(urlparse(self.path).query)
+                data, content_type, filename = download_workspace(self.server.state_root, query.get("format", ["zip"])[0], query.get("publication", [None])[0])
+                return self.send_bytes(200, data, content_type, filename)
             if path == "/api/health":
                 state = load_state(self.server.state_root)
                 return self.send_json(200, {"ok": True, "revision": state["revision"]})
             name = "index.html" if path == "/" else path.removeprefix("/")
-            if name not in {"index.html", "app.js", "style.css"}:
+            if name not in {"index.html", "app.js", "style.css", "delivery.js"}:
                 return self.send_json(404, {"error": "NOT_FOUND"})
             data = (PUBLIC / name).read_bytes()
             return self.send_bytes(200, data, mimetypes.guess_type(name)[0] or "application/octet-stream")
+        except ValueError as error:
+            return self.send_json(400, {"error": "INVALID_REQUEST", "message": str(error)})
         except Exception as error:
             return self.send_json(500, {"error": type(error).__name__, "message": str(error)})
 
@@ -56,6 +68,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("JSON body must be 2–1000000 bytes")
             payload = json.loads(self.rfile.read(length))
             state, result = apply_action(self.server.state_root, payload)
+            state["delivery"] = public_delivery(state)
             return self.send_json(200, {"state": state, "result": result})
         except RuntimeError as error:
             return self.send_json(409, {"error": "STALE_REVISION", "message": str(error)})
@@ -79,6 +92,15 @@ def parser():
     export = commands.add_parser("export")
     export.add_argument("--state", required=True, type=Path)
     export.add_argument("--out", required=True, type=Path)
+    export.add_argument("--publication", help="Export this exact retained publication ID")
+    action = commands.add_parser("action", help="Apply a revision-guarded JSON action from a file")
+    action.add_argument("--state", required=True, type=Path)
+    action.add_argument("--input", required=True, type=Path)
+    download = commands.add_parser("download", help="Write a complete delivery ZIP or printable report")
+    download.add_argument("--state", required=True, type=Path)
+    download.add_argument("--format", choices=("zip", "report", "framework", "learning", "factsheet", "cesf", "survey"), default="zip")
+    download.add_argument("--publication")
+    download.add_argument("--out", required=True, type=Path)
     backup = commands.add_parser("backup")
     backup.add_argument("--state", required=True, type=Path)
     backup.add_argument("--out", required=True, type=Path)
@@ -98,7 +120,15 @@ def main():
     elif args.command == "inspect":
         print(json.dumps(load_state(args.state), ensure_ascii=False, indent=2))
     elif args.command == "export":
-        print(json.dumps(export_workspace(args.state, args.out), ensure_ascii=False, indent=2))
+        print(json.dumps(export_workspace(args.state, args.out, args.publication), ensure_ascii=False, indent=2))
+    elif args.command == "action":
+        state, result = apply_action(args.state, json.loads(args.input.read_text(encoding="utf-8")))
+        print(json.dumps({"revision": state["revision"], "result": result}, ensure_ascii=False))
+    elif args.command == "download":
+        from model import sha256, write_atomic
+        data, content_type, filename = download_workspace(args.state, args.format, args.publication)
+        write_atomic(args.out, data)
+        print(json.dumps({"path": str(args.out), "bytes": len(data), "sha256": sha256(data), "type": content_type}))
     elif args.command == "backup":
         print(json.dumps(backup_workspace(args.state, args.out), ensure_ascii=False, indent=2))
     elif args.command == "restore":
@@ -120,3 +150,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

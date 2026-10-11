@@ -12,7 +12,10 @@ software installation.
 
 ## Open the workspace
 
-From the matching source checkout:
+The installed toolkit exposes `starforge tenderly-analysis` and the
+`@tokenjunkielabs/starforge-merchant/buyer/tenderly-analysis` library entry.
+The server and pure record functions have adjacent `/server` and `/records`
+exports. From the matching source checkout:
 
 ```sh
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/cli.mjs \
