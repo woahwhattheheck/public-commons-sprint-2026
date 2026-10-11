@@ -171,6 +171,12 @@ export function makeServer() {
           'X-Content-Type-Options':'nosniff'});
         return res.end(code);
       }
+      if (req.method === 'GET' && url.pathname === '/style.css') {
+        const css = await readFile(new URL('../web/style.css',import.meta.url));
+        res.writeHead(200,{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-store',
+          'X-Content-Type-Options':'nosniff'});
+        return res.end(css);
+      }
       if (req.method === 'GET' && url.pathname === '/api/list') {
         const mode = validateMode(url.searchParams.get('mode'));
         return response(res,200,{mode,...await listing(mode)});
