@@ -23,6 +23,15 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/cli.mjs publisher serv
   --source /private/mysql-release/source.json --state /private/catalog-dataset
 ```
 
+For a retained native paid MCP product, use the [MySQL MCP preparation workflow](../../../../stellar-forge/mcp-paid-agent/MYSQL_PACKAGES.md). It reviews the original prepared queries and explicit native tool terms, captures a portable private launch package, runs the original paid data server, and gives customers the existing buyer/result handoff:
+
+```bash
+starforge mcp-data mysql review --package /private/mysql-release --plan /private/mysql-mcp-plan.json
+starforge mcp-data mysql prepare --package /private/mysql-release --plan /private/mysql-mcp-plan.json \
+  --directory /private/mysql-mcp
+starforge mcp-data mysql run --directory /private/mysql-mcp
+```
+
 ## Install and create a workspace
 
 Use Node 22.16 or later. From the repository root:
