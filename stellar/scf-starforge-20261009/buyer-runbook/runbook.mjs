@@ -7,6 +7,7 @@ import { hostname } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as readNativeConfig, execution, bytes, need } from '../sf88-operator-buyer-cli/config.mjs';
+import {MAX_REQUEST_BODY_BYTES,readRequestBody} from '../sf88-operator-buyer-cli/request-body.mjs';
 
 export const MANIFEST_SCHEMA = 'stellar-forge.buyer-runbook.v1';
 const PLAN_SCHEMA = 'stellar-forge.buyer-runbook-plan.v1';
@@ -155,7 +156,7 @@ async function prepareRunbook({ manifest, output }) {
     }
     let body = null;
     if (op.bodyFile !== undefined) {
-      const sourceBody = await bytes(op.bodyFile, 1048576, 'BODY_FILE_INVALID');
+      const sourceBody = await readRequestBody(op);
       totalBodyBytes += sourceBody.length;
       need(totalBodyBytes <= 64 * 1048576, 'BODY_SNAPSHOT_BUDGET_EXCEEDED');
       const name = entry.id + '.bin';
@@ -245,7 +246,7 @@ async function readInitialization(snapshot, directory, expectedSha256) {
     if (op.body) {
       const body = 'bodies/' + op.id + '.bin';
       need(op.body.path === body, 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
-      const bytes = await readRegular(join(snapshot, body));
+      const bytes = await readRegular(join(snapshot, body), MAX_REQUEST_BODY_BYTES);
       need(bytes.length === op.body.bytes && sha256(bytes) === op.body.sha256, 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
       writes.push([body, bytes]);
     }
@@ -332,7 +333,7 @@ async function nativeInput(plan, op) {
     JSON.stringify(parsed.download) === JSON.stringify(op.responseFile), 'FROZEN_PLAN_MISMATCH');
   if (op.body) {
     need(parsed.op.bodyFile === join(plan.directory, 'bodies', op.id + '.bin'), 'FROZEN_BODY_PATH_CHANGED');
-    const rawBody = await readRegular(parsed.op.bodyFile, 1048576);
+    const rawBody = await readRegular(parsed.op.bodyFile, MAX_REQUEST_BODY_BYTES);
     need(sha256(rawBody) === op.body.sha256 && rawBody.length === op.body.bytes, 'FROZEN_BODY_CHANGED');
   } else need(parsed.op.bodyFile === undefined, 'FROZEN_BODY_CHANGED');
   return cfg;
@@ -482,7 +483,7 @@ async function capture(stream, handle, maxBytes) {
   return {bytes:captured, truncated, ...(captureError ? {captureError} : {})};
 }
 
-async function nativeAttempt(plan, op, signal) {
+async function nativeAttempt(plan, op, signal, environment = process.env) {
   const dir = plan.directory;
   const started = { schema:'stellar-forge.buyer-runbook-started.v1', id:op.id, intentId:op.intentId,
     at:now(), configSha256:op.config.sha256, nativeCliSha256:sha256(await readRegular(nativeCli)),
@@ -496,7 +497,7 @@ async function nativeAttempt(plan, op, signal) {
     await syncDir(join(dir, 'attempts'));
     need(!signal?.aborted, 'RUNBOOK_INTERRUPTED_BEFORE_LAUNCH');
     child = spawn(process.execPath, [nativeCli, '--execute', '--config', configPath(dir, op.id)], {
-      shell:false, detached:false, stdio:['inherit','pipe','pipe'], env:process.env,
+      shell:false, detached:false, stdio:['inherit','pipe','pipe'], env:environment,
     });
     const completion = new Promise(resolveExit => {
       child.once('error', error => { launchError = codeOf(error, 'NATIVE_BUYER_START_FAILED'); });
@@ -532,8 +533,10 @@ async function nativeAttempt(plan, op, signal) {
 }
 
 /** Run every untouched, explicit operation once. Original /dev/tty approval is inherited. */
-export async function executeRunbook(directory, {only, signal, onProgress = () => {}} = {}) {
+export async function executeRunbook(directory, {only, signal, onProgress = () => {},
+  environmentForOperation} = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
+  need(environmentForOperation===undefined||typeof environmentForOperation==='function','INVALID_OPERATOR_ENVIRONMENT_RESOLVER');
   const plan = await readPlan(directory);
   need(only === undefined || plan.operations.some(op => op.id === only), 'UNKNOWN_JOB_ID');
   const release = await acquireExecutionLease(plan.directory), results = [];
@@ -555,8 +558,12 @@ export async function executeRunbook(directory, {only, signal, onProgress = () =
           try { await lstat(cfg.responseFile.destination); need(false, 'RESPONSE_DESTINATION_ALREADY_EXISTS'); }
           catch (error) { if (error.code !== 'ENOENT') throw error; }
         }
+        // Trusted host integration only. Resolve native operator keys before
+        // recording an attempt, so missing local setup remains recoverable.
+        const environment=environmentForOperation===undefined?process.env:await environmentForOperation(op);
+        need(object(environment),'INVALID_OPERATOR_ENVIRONMENT');
         onProgress({id:op.id, status:'STARTING_ORIGINAL_SF88'});
-        const result = await nativeAttempt(plan, op, signal);
+        const result = await nativeAttempt(plan, op, signal, environment);
         results.push({id:op.id, status:result.state, exitCode:result.exitCode});
         onProgress({id:op.id, status:result.state, exitCode:result.exitCode});
       } catch (error) {

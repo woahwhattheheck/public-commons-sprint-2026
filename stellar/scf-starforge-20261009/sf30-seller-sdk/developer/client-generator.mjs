@@ -143,6 +143,12 @@ Input declarations project advertised Bazaar metadata; numeric ranges, patterns
 and the application's complete business constraints remain with the seller.
 Response types remain the existing buyer's types, never inferred from examples.
 
+Payment flow defaults to authorization. For an original offer that explicitly
+advertises upfront payment, add \`paymentFlow: 'upfront'\` to the authorization
+object. The runtime requires that choice to match the selected saved offer and
+passes it to the original buyer's fresh-offer review. Upfront settlement can
+precede application generation and can remain charged after a delivery failure.
+
 ## Use your existing buyer
 
 \`\`\`js
@@ -167,6 +173,19 @@ It delegates once and returns the original result or error unchanged. Retain the
 original approval, spend governor and receipt/reconciliation integration used
 by your application. A failed download or unknown payment result does not
 authorize another purchase or a new operation ID.
+
+## Streamed event and record resources
+
+An operation whose saved \`offer.resource.mimeType\` is \`text/event-stream\`
+or \`application/x-ndjson\` retains that media type in the request and original
+OpenAPI. Its Bazaar output example describes a record. Configure the existing
+Node buyer's \`responseFile.stream\` to select \`sse\` or \`ndjson\`, record limits
+and retained output. A wrapper may delegate
+\`call: request => buyer.call(request, { responseFile: { stream: { format: 'sse' } } })\`
+while preserving that buyer's already configured private output path and limits.
+The buyer owns incremental record parsing, payment receipts, complete or partial
+bytes and final outcome. This generated module retains its single delegation;
+it never reconnects or purchases another stream automatically.
 
 Only the saved seller origin is used. A local generated client retains its actual
 loopback origin and port; configure the original SF31 buyer's allowLocal option

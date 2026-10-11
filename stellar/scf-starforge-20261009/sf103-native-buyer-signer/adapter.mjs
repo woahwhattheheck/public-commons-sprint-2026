@@ -55,6 +55,7 @@ export function validateSigningRequest(input, expected) {
   const { intent, challenge, accepted } = input ?? {};
   const { operation, body } = expected;
   const terms = operation.expect;
+  const expectedFlow = terms.paymentFlow === undefined ? 'authorization' : terms.paymentFlow;
   requireValue(object(intent) && object(challenge) && object(accepted), 'NATIVE_SIGNER_INPUT_INVALID');
   requireValue(challenge.x402Version === 2 && object(challenge.resource) &&
     Array.isArray(challenge.accepts) && challenge.accepts.length >= 1 && challenge.accepts.length <= 32,
@@ -70,8 +71,9 @@ export function validateSigningRequest(input, expected) {
   'NATIVE_PAYMENT_TERMS_MISMATCH');
   requireValue(Number.isInteger(accepted.maxTimeoutSeconds) && accepted.maxTimeoutSeconds >= 1 &&
     accepted.maxTimeoutSeconds <= (terms.maxTimeoutSeconds ?? 86400), 'NATIVE_TIMEOUT_MISMATCH');
-  requireValue(accepted.extra?.areFeesSponsored === true &&
-    (accepted.extra?.paymentFlow ?? 'authorization') === 'authorization',
+  requireValue(['authorization','upfront'].includes(expectedFlow) &&
+    accepted.extra?.areFeesSponsored === true &&
+    (accepted.extra?.paymentFlow === undefined ? 'authorization' : accepted.extra.paymentFlow) === expectedFlow,
   'NATIVE_AUTHORIZATION_SPONSORSHIP_REQUIRED');
   requireValue(['scheme', 'network', 'asset', 'payTo', 'amount', 'maxTimeoutSeconds']
     .every(key => intent[key] === accepted[key]) && intent.maxAtomic === terms.maxAtomic &&

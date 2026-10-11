@@ -296,6 +296,8 @@ export interface RequestAuthorization {
   readonly intentId: string;
   /** Explicit original option index; required when an operation has several options. */
   readonly acceptIndex?: number;
+  /** Defaults to authorization. Upfront must be explicitly permitted. */
+  readonly paymentFlow?: 'authorization' | 'upfront';
   readonly approve?: (intent: BuyerIntent) => boolean | PromiseLike<boolean>;
   readonly sign?: (request: SigningRequest) => SignedPayment | PromiseLike<SignedPayment>;
   readonly signal?: AbortSignal;
@@ -312,7 +314,7 @@ export interface BuyerRequest {
     readonly payTo: string;
     readonly maxAtomic: string;
     readonly maxTimeoutSeconds: number;
-    readonly paymentFlow?: string;
+    readonly paymentFlow?: 'authorization' | 'upfront';
   };
   readonly intentId: string;
   readonly approve?: RequestAuthorization['approve'];

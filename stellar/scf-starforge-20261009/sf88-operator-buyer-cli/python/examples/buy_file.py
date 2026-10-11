@@ -8,18 +8,20 @@ import argparse
 import json
 import sys
 
-from stellar_forge_buyer import Buyer, BuyerError
+from stellar_forge_buyer import Buyer, BuyerError, DeliveryError
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["prepare", "review", "purchase", "download", "consume", "finalize", "history"])
+    parser.add_argument("action", choices=["prepare", "review", "purchase", "download", "transfer", "reset-transfer", "consume", "finalize", "history"])
     parser.add_argument("--checkout", required=True)
     parser.add_argument("--state", required=True)
     parser.add_argument("--intent", required=True)
     parser.add_argument("--workspace")
     parser.add_argument("--handoff")
     parser.add_argument("--out")
+    parser.add_argument("--timeout-ms", type=int, default=30000)
+    parser.add_argument("--resume", action=argparse.BooleanOptionalAction, default=None)
     args = parser.parse_args()
     buyer = Buyer(checkout=args.checkout, state_dir=args.state)
     if args.action == "prepare":
@@ -37,8 +39,12 @@ def main():
             print(json.dumps(result.record, indent=2))
             return 0 if result.ok else 2
     elif args.action == "download":
-        delivery = operation.retrieve_file(destination=args.out)
+        delivery = operation.retrieve_file(destination=args.out, timeout_ms=args.timeout_ms, resume=args.resume)
         print(json.dumps(delivery.record, indent=2))
+    elif args.action == "transfer":
+        print(json.dumps(operation.inspect_file_transfer(destination=args.out).record, indent=2))
+    elif args.action == "reset-transfer":
+        print(json.dumps(operation.reset_file_transfer(destination=args.out).record, indent=2))
     elif args.action == "finalize":
         accounting = operation.finalize()
         print(json.dumps(accounting.record, indent=2))
@@ -67,6 +73,10 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except BuyerError as error:
-        print(json.dumps({"error": error.code, "operationDirectory":
-            str(error.operation.directory) if error.operation else None}), file=sys.stderr)
+        result = {"error": error.code, "operationDirectory":
+            str(error.operation.directory) if error.operation else None}
+        if isinstance(error, DeliveryError):
+            result.update(retainedBytes=error.retained_bytes, resumable=error.resumable,
+                partialPath=error.partial_path, transferState=error.transfer_state_path)
+        print(json.dumps(result), file=sys.stderr)
         raise SystemExit(1)

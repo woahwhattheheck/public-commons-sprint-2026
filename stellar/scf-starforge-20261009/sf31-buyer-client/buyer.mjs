@@ -60,7 +60,7 @@ function canonicalChallenge(challenge, requested) {
       !Number.isInteger(pay.maxTimeoutSeconds) || pay.maxTimeoutSeconds<1 ||
       pay.maxTimeoutSeconds>86400 || (pay.extra!==undefined && !object(pay.extra)))
       throw new BuyerError('BAD_PAYMENT_REQUIREMENTS');
-    if (pay.extra?.paymentFlow && pay.extra.paymentFlow !== 'authorization')
+    if (pay.extra?.paymentFlow !== undefined && !['authorization','upfront'].includes(pay.extra.paymentFlow))
       throw new BuyerError('UNSUPPORTED_PAYMENT_FLOW');
   }
   return challenge;
@@ -71,6 +71,8 @@ function choose(challenge, expectation){
   if(!object(expectation) || !expectation.network || !expectation.asset || !expectation.payTo || !expectation.maxAtomic)
     throw new BuyerError('EXPLICIT_TERMS_REQUIRED');
   if (!amount(expectation.maxAtomic))throw new BuyerError('BAD_SPEND_LIMIT');
+  const expectedFlow = expectation.paymentFlow === undefined ? 'authorization' : expectation.paymentFlow;
+  if (!['authorization','upfront'].includes(expectedFlow))throw new BuyerError('UNSUPPORTED_PAYMENT_FLOW');
   if (expectation.maxTimeoutSeconds!==undefined &&
       (!Number.isInteger(expectation.maxTimeoutSeconds) || expectation.maxTimeoutSeconds<1 ||
        expectation.maxTimeoutSeconds>86400))
@@ -80,7 +82,7 @@ function choose(challenge, expectation){
     BigInt(x.amount)<=BigInt(expectation.maxAtomic) &&
     (expectation.maxTimeoutSeconds===undefined ||
       x.maxTimeoutSeconds<=expectation.maxTimeoutSeconds) &&
-    (!expectation.paymentFlow || (x.extra?.paymentFlow??'authorization')===expectation.paymentFlow));
+    (x.extra?.paymentFlow??'authorization')===expectedFlow);
   if (!matches.length)throw new BuyerError('PAYMENT_TERMS_NOT_AUTHORIZED');
   // Require a unique offered requirement. No invisible selection across nonidentical extras.
   if (matches.length!==1)throw new BuyerError('AMBIGUOUS_PAYMENT_TERMS');

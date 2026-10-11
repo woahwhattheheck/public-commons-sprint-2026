@@ -1,0 +1,147 @@
+{
+  "schema": "stellar-forge.mongodb-source.v1",
+  "connection": {
+    "uriEnv": "MONGODB_URI",
+    "database": "merchant",
+    "tls": "required"
+  },
+  "maxConnections": 4,
+  "maxPending": 32,
+  "queries": {
+    "hpd_projects": {
+      "collection": "hpd_production",
+      "pipeline": [
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                {
+                  "$gte": [
+                    "$all_counted_units",
+                    "$$sf30_minimumUnits"
+                  ]
+                },
+                {
+                  "$eq": [
+                    "$reporting_construction_type",
+                    "$$sf30_constructionType"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$sort": {
+            "project_id": 1,
+            "building_id": 1,
+            "_id": 1
+          }
+        }
+      ],
+      "parameters": {
+        "minimumUnits": {
+          "type": "integer",
+          "minimum": "0",
+          "default": "20"
+        },
+        "constructionType": {
+          "type": "string",
+          "enum": [
+            "Preservation",
+            "New Construction"
+          ],
+          "default": "Preservation"
+        }
+      },
+      "columns": [
+        "_id",
+        "source_row_id",
+        "source_hash_prefix64",
+        "project_id",
+        "building_id",
+        "bbl",
+        "project_name",
+        "reporting_construction_type",
+        "all_counted_units",
+        "project_start_date",
+        "latitude_internal",
+        "dataset_updated_at",
+        "original_row_sha256"
+      ],
+      "readConcern": "snapshot",
+      "maxRows": 100,
+      "maxBytes": 524288,
+      "timeoutMs": 5000
+    },
+    "hpd_totals": {
+      "collection": "hpd_production",
+      "pipeline": [
+        {
+          "$match": {
+            "$expr": {
+              "$gte": [
+                "$all_counted_units",
+                "$$sf30_minimumUnits"
+              ]
+            }
+          }
+        },
+        {
+          "$group": {
+            "_id": "$reporting_construction_type",
+            "production_events": {
+              "$sum": 1
+            },
+            "counted_unit_events": {
+              "$sum": "$all_counted_units"
+            },
+            "bbls": {
+              "$addToSet": "$bbl"
+            }
+          }
+        },
+        {
+          "$project": {
+            "_id": 0,
+            "construction_type": "$_id",
+            "production_events": 1,
+            "counted_unit_events": 1,
+            "distinct_bbls": {
+              "$size": {
+                "$setDifference": [
+                  "$bbls",
+                  [
+                    null
+                  ]
+                ]
+              }
+            }
+          }
+        },
+        {
+          "$sort": {
+            "construction_type": 1
+          }
+        }
+      ],
+      "parameters": {
+        "minimumUnits": {
+          "type": "integer",
+          "minimum": "0",
+          "default": "0"
+        }
+      },
+      "columns": [
+        "construction_type",
+        "production_events",
+        "counted_unit_events",
+        "distinct_bbls"
+      ],
+      "readConcern": "snapshot",
+      "maxRows": 20,
+      "maxBytes": 262144,
+      "timeoutMs": 5000
+    }
+  }
+}
