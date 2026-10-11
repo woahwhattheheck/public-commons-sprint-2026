@@ -38,6 +38,10 @@ async function act(work) {
 function field(label,value,type='text') {
   const container=make('label',label),input=make('input');input.type=type;input.value=value??'';container.append(input);return {container,input};
 }
+function checkField(label,value) {
+  const container=make('label',undefined,'check wide'),input=make('input');
+  input.type='checkbox';input.checked=value===true;container.append(input,make('span',label));return {container,input};
+}
 function selectField(label,values,value) {
   const container=make('label',label),input=make('select');
   for(const [key,text] of values){const o=make('option',text);o.value=String(key);input.append(o);}
@@ -68,12 +72,47 @@ function drawRoutes(saved=[]) {
       const timeout=field('Backend timeout, milliseconds',previous?.timeoutMs??10000,'number');
       const size=field('Maximum response bytes',previous?.maxResponseBytes??1048576,'number');
       const capacity=field('Concurrent backend requests',previous?.maxInFlight??16,'number');
-      fields.append(headers,security.container,mode.container,timeout.container,size.container,capacity.container);
+      const forwarded=field('Forward ordinary request headers',previous?.requestHeaders?.join(', ')??'');
+      forwarded.input.placeholder='accept-language, x-region';
+      forwarded.container.append(make('span','Comma-separated names. Credentials and payment headers cannot be forwarded. Shared reads vary on every forwarded header.','hint'));
+      const contract=checkField('Validate the declared JSON response schema',previous?.enforceResponseContract);
+      const guard=checkField('Pause paid admission after repeated backend failures',previous?.availability!==undefined);
+      const failureThreshold=field('Failures before pausing',previous?.availability?.failureThreshold??3,'number');
+      const resetAfter=field('Initial recovery wait, milliseconds',previous?.availability?.resetAfterMs??30000,'number');
+      const maxResetAfter=field('Maximum recovery wait, milliseconds',previous?.availability?.maxResetAfterMs??300000,'number');
+      fields.append(headers,security.container,mode.container,timeout.container,size.container,capacity.container,
+        forwarded.container,contract.container,guard.container,failureThreshold.container,resetAfter.container,maxResetAfter.container);
       advanced.append(summary,fields);settings.append(advanced);card.append(settings);
-      const controls=[server.input,amount.input,headerInput,security.input,mode.input,timeout.input,size.input,capacity.input];
-      const toggle=()=>{controls.forEach(c=>{c.disabled=!check.checked;});};
-      check.addEventListener('change',toggle);toggle();
-      routeFields.push({op,previous,check,server:server.input,amount:amount.input,headers:headerInput,security:security.input,mode:mode.input,timeout:timeout.input,size:size.input,capacity:capacity.input});
+      let cache=null;
+      if(['GET','HEAD'].includes(op.method)) {
+        const section=make('details'),cacheFields=make('div',undefined,'fields');
+        const enabled=checkField('Share this read-only result across buyers with the same request',previous?.cache?.shareAcrossBuyers);
+        const definitions=[['ttlMs','Maximum freshness, milliseconds',1000],['maxEntries','Maximum retained responses',256],
+          ['maxBytes','Total cache bytes',16777216],['maxEntryBytes','Largest retained response, bytes',1048576],
+          ['maxWaiters','Maximum waiting buyers',128],['sourceTimeoutMs','Shared source timeout, milliseconds',11000]];
+        cache={enabled:enabled.input,values:{}};cacheFields.append(enabled.container);
+        for(const [name,label,fallback] of definitions) {
+          const option=field(label,previous?.cache?.[name]??fallback,'number');option.input.min='1';
+          cache.values[name]=option.input;cacheFields.append(option.container);
+        }
+        section.append(make('summary','Shared read results'),
+          make('p','Enable only when this API result may be reused by different buyers. Native payment remains per delivery. Origin privacy and freshness rules can shorten or prevent reuse.','hint'),cacheFields);
+        settings.append(section);
+      }
+      const controls=[server.input,amount.input,headerInput,security.input,mode.input,timeout.input,size.input,capacity.input,forwarded.input,guard.input];
+      const guardControls=[failureThreshold.input,resetAfter.input,maxResetAfter.input];
+      const toggle=()=>{
+        controls.forEach(c=>{c.disabled=!check.checked;});
+        contract.input.disabled=!check.checked||mode.input.value!=='json';
+        guardControls.forEach(c=>{c.disabled=!check.checked||!guard.input.checked;});
+        if(cache){cache.enabled.disabled=!check.checked;Object.values(cache.values).forEach(c=>{c.disabled=!check.checked||!cache.enabled.checked;});}
+      };
+      check.addEventListener('change',toggle);guard.input.addEventListener('change',toggle);
+      mode.input.addEventListener('change',()=>{if(mode.input.value!=='json')contract.input.checked=false;toggle();});
+      cache?.enabled.addEventListener('change',toggle);toggle();
+      routeFields.push({op,previous,check,server:server.input,amount:amount.input,headers:headerInput,security:security.input,
+        mode:mode.input,timeout:timeout.input,size:size.input,capacity:capacity.input,forwarded:forwarded.input,contract:contract.input,
+        guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache});
     }
     $('routes').append(card);
   }
@@ -85,7 +124,11 @@ function planFromForm() {
     allowLoopbackUpstream:$('allow-loopback').checked,
     operations:routeFields.filter(r=>r.check.checked).map(r=>({method:r.op.method,path:r.op.path,
       ...(r.previous?.id?{id:r.previous.id}:{}),serverIndex:Number(r.server.value),amountAtomic:r.amount.value.trim(),headerEnv:JSON.parse(r.headers.value),
-      securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),maxResponseBytes:Number(r.size.value),maxInFlight:Number(r.capacity.value)}))};
+      securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),maxResponseBytes:Number(r.size.value),maxInFlight:Number(r.capacity.value),
+      requestHeaders:r.forwarded.value.split(',').map(v=>v.trim().toLowerCase()).filter(Boolean),enforceResponseContract:r.contract.checked,
+      ...(r.guard.checked?{availability:{failureThreshold:Number(r.failureThreshold.value),resetAfterMs:Number(r.resetAfter.value),maxResetAfterMs:Number(r.maxResetAfter.value)}}:{}),
+      ...(r.cache?.enabled.checked?{cache:{shareAcrossBuyers:true,...Object.fromEntries(Object.entries(r.cache.values).map(([name,input])=>[name,Number(input.value)])),
+        ...(r.previous?.cache?.maxSourceInFlight!==undefined?{maxSourceInFlight:r.previous.cache.maxSourceInFlight}:{})}}:{})}))};
 }
 function fillPlan(plan) {
   $('seller-server').value=plan?.sellerServer??'';
@@ -105,11 +148,13 @@ async function loadSource(text,plan) {
 }
 function preview(value) {
   const table=make('table'),thead=make('thead'),head=make('tr');
-  for(const title of ['Route','Public seller','Backend target','Atomic price'])head.append(make('th',title));
+  for(const title of ['Route','Public seller','Backend target','Atomic price','Read policy'])head.append(make('th',title));
   thead.append(head);table.append(thead);const rows=make('tbody');
   for(const route of value.routes) {
     const row=make('tr');
-    for(const text of [route.method+' '+route.path,route.publicUrl,route.upstream,route.amountAtomic+' / '+route.network])row.append(make('td',text));
+    const cache=route.cache?`Shared for at most ${route.cache.ttlMs} ms · ${route.cache.maxEntries} entries · ${route.cache.maxBytes} bytes`:'Fresh backend request';
+    for(const text of [route.method+' '+route.path,route.publicUrl,route.upstream,route.amountAtomic+' / '+route.network,
+      cache+(route.responseContract?' · Declared JSON schema enforced':'')])row.append(make('td',text));
     rows.append(row);
   }
   table.append(rows);const wrap=make('div',undefined,'table-wrap');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Selected route terms');wrap.append(table);
@@ -120,7 +165,7 @@ function saved(name) {
   selectedPackage=name;$('run-label').textContent='Saved package: '+name;available();
 }
 function runtime(value) {
-  $('runtime').replaceChildren();$('stop').disabled=value.state!=='RUNNING';
+  $('runtime').replaceChildren();$('cache-runtime').replaceChildren();$('stop').disabled=value.state!=='RUNNING';
   if(value.state!=='RUNNING'){$('runtime').append(make('p','No seller is managed by this workspace.','small'));return;}
   const mode=value.mode==='CHALLENGE_ONLY'?'Challenge preview':value.mode==='NATIVE_X402'?'Native seller':'Seller running';
   $('runtime').append(make('p',value.name+' · '+mode));
@@ -129,6 +174,28 @@ function runtime(value) {
     if(parsed.protocol==='http:'&&parsed.hostname==='127.0.0.1') {
       const link=make('a',text);link.href=url;link.target='_blank';link.rel='noopener';link.referrerPolicy='origin';$('runtime').append(link);
     }
+  }
+  if(value.caches?.length) {
+    const table=make('table'),head=make('tr'),body=make('tbody');
+    for(const text of ['Shared read','Current cache','Source reads','Backend state','Action'])head.append(make('th',text));
+    const thead=make('thead');thead.append(head);table.append(thead,body);
+    for(const entry of value.caches) {
+      const stats=entry.activity?.cache??{},row=make('tr');
+      const label=entry.routes?.map(route=>route.path).join(', ')||entry.binding;
+      const state={CLOSED:'Available',OPEN:'Paused',RECOVERY_IN_FLIGHT:'Checking backend',RECOVERY_READY:'Recovery ready'}[entry.availability?.state]??'No automatic pause';
+      for(const text of [entry.method+' '+label,
+        `${stats.entries??0} entries · ${stats.bytes??0} bytes · ${stats.hits??0} hits · ${stats.coalesced??0} shared requests`,
+        `${entry.source?.started??0} total · ${entry.source?.inFlight??0} active`,state])row.append(make('td',text));
+      const action=make('td'),button=make('button','Invalidate');button.type='button';button.disabled=busy;
+      button.setAttribute('aria-label','Invalidate '+label);
+      button.addEventListener('click',()=>act(async()=>{
+        runtime(await api('cache/invalidate',{runtimeId:value.runtimeId,binding:entry.binding}));
+        notice('Cache invalidated for '+entry.binding+'. New reads use a new generation; already admitted requests finish normally.');
+      }));action.append(button);row.append(action);body.append(row);
+    }
+    const wrap=make('div',undefined,'table-wrap');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Live upstream caches');wrap.append(table);
+    $('cache-runtime').append(make('h3','Shared read operations'),wrap,
+      make('p','Cache counts describe the current generation. Source totals span this runtime. Invalidation keeps backend availability and native payments unchanged. Restart starts with an empty cache.','hint'));
   }
 }
 async function refresh() {
