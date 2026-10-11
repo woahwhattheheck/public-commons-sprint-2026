@@ -25,6 +25,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
+  mercury-feed                              Operate original Mercury events, paid feeds and joined recovery
   mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
   valyu-merchant                            Configure and operate the native research search merchant
   valyu-research                            Save queries, operate purchases, compare research and export editions
