@@ -17,6 +17,7 @@ const codeOf = (error, fallback) => {
 const fileFailure = error => ({ status:'FAILED',
   code:codeOf(error, 'RESPONSE_FILE_FAILED'), bytes:error?.bytes ?? 0,
   partialPath:error?.partialPath ?? null, cleanupWarnings:error?.cleanupWarnings ?? [],
+  ...(error?.stream ? {stream:error.stream, partialSha256:error.partialSha256 ?? null} : {}),
 });
 const reservationOf = value => {
   if (!value || typeof value !== 'object') return null;
@@ -30,7 +31,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   operationTicketSha256, evidenceRpcEndpoint } = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof emitSummary === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
-  const { op, owner, download:responseFile, transport } = execution(cfg);
+  const { op, owner, download:responseFile, transport, requestTimeoutMs } = execution(cfg);
   const rpcEndpoint = selectStellarEvidenceEndpoint(op.expect.network,evidenceRpcEndpoint);
   // Keep RPC and merchant origin pins separate while using the same explicitly
   // selected egress proxy. No wallet or merchant headers enter read-only RPC.
@@ -61,7 +62,9 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     need(typeof sign === 'function', 'TRUSTED_SIGN_FUNCTION_REQUIRED');
     const buyer = new OperatorApprovedBuyer({
       operator: { ...owner, environment },
-      ...(transport === null ? {} : {fetchImpl:createPublicHttpsFetch({trustedProxy:transport})})
+      ...((transport === null && requestTimeoutMs === 30000) ? {} : {fetchImpl:createPublicHttpsFetch({
+        trustedProxy:transport, timeoutMs:requestTimeoutMs,
+      })})
     });
     need(!signal?.aborted, 'OPERATOR_ABORTED');
     const recordingBuyer = {
@@ -148,6 +151,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   const summary = {
     mode:'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT',
     intentId:op.intentId,
+    requestTimeoutMs,
     status:result?.status ?? null,
     httpStatus:result?.response?.status ?? null,
     sellerReportedSettlement:result?.settlement ?? null,

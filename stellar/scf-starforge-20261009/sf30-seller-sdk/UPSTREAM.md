@@ -10,6 +10,12 @@ An API owner supplies two small files: its ordinary seller configuration and
 its upstream bindings. Existing OpenAPI-derived `offer` routes work too; the
 launcher does not replace their descriptions, schemas or payment terms.
 
+For an existing event or record source, the [streaming workflow](STREAMING.md)
+uses these same bindings with `responseMode: "sse"` or `"ndjson"`. It includes
+a real finite telemetry backend, explicit payment-flow examples, byte/time
+limits, original credential reuse and producer cancellation. The original
+operations listener retains backend capacity through the source's completion.
+
 The optional `responseContract` binding connects an operation's original
 OpenAPI success status, JSON media type and result schema to the actual backend
 delivery path. A mismatch returns a sanitized failure before the seller's native

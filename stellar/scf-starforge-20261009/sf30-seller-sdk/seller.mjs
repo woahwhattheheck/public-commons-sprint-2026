@@ -196,6 +196,10 @@ export function compileHttpSellerOffer(input, { allowLocalhost = false } = {}) {
   obj(input);
   const method = String(input.method ?? '').toUpperCase();
   if (!METHODS.has(method)) throw new TypeError('Unsupported HTTP method');
+  const responseFormat = input.responseFormat === undefined ? 'json' : input.responseFormat;
+  if (!['json','sse','ndjson'].includes(responseFormat) || method === 'HEAD' && responseFormat !== 'json')
+    throw new TypeError('responseFormat must be json, sse or ndjson; HEAD has no stream body');
+  const responseMimeType = {json:'application/json',sse:'text/event-stream',ndjson:'application/x-ndjson'}[responseFormat];
   const url = resourceUrl(input.url, allowLocalhost);
   const metadata = serviceMetadata(input);
   const accepts = normalizeSellerPaymentOptions(input);
@@ -226,7 +230,7 @@ export function compileHttpSellerOffer(input, { allowLocalhost = false } = {}) {
   const offer = {
     x402Version: 2, error: 'Payment required',
     resource: { url, description: requiredString(input.description, 'description', 2048),
-      mimeType: 'application/json', ...metadata },
+      mimeType: responseMimeType, ...metadata },
     accepts, extensions: { bazaar: extension },
   };
   if (Buffer.byteLength(JSON.stringify(schema)) > 32768) throw new TypeError('Schema too large');
