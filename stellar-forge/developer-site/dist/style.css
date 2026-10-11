@@ -347,3 +347,55 @@ td code { font-size: 11px; overflow-wrap: anywhere; }
   .draft-row-actions { flex-direction: column; gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Ordered native payment choices in the existing dataset workspace. */
+.payment-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 20px; }
+.payment-mode { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; font-size: 12px; }
+.payment-mode input { width: 16px; height: 16px; accent-color: #333; }
+.payment-grid { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 24px; margin: 22px 0; }
+.payment-sidebar { border-right: 1px solid var(--line); padding-right: 20px; min-width: 0; }
+.payment-sidebar > .hint, .payment-bottom .hint { font-size: 11px; line-height: 1.6; color: var(--muted); }
+.payment-list { display: flex; flex-direction: column; gap: 6px; max-height: 430px; overflow: auto; margin: 12px 0; }
+.payment-choice { display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: #fff; padding: 10px; min-width: 0; }
+.payment-choice[aria-pressed="true"] { background: #eee; border-color: #777; }
+.payment-choice strong, .payment-choice code, .payment-choice small { display: block; overflow-wrap: anywhere; }
+.payment-choice strong { font-size: 11px; margin-bottom: 6px; }
+.payment-choice code { font: 11px/1.6 var(--mono); margin-bottom: 5px; }
+.payment-choice small { font: 10px/1.5 var(--mono); color: var(--muted); max-height: 30px; overflow: hidden; }
+.payment-detail { min-width: 0; }
+.payment-toolbar, .payment-bottom { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.payment-toolbar strong { font-size: 14px; font-weight: 500; }
+.payment-toolbar > div { display: flex; flex-wrap: wrap; gap: 16px; }
+.payment-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.payment-fields legend { padding: 0 0 12px; }
+.payment-fields:disabled input, .payment-fields:disabled select, .payment-fields:disabled textarea { color: #555; background: #f0f0f0; }
+.payment-fields .payment-extra { min-height: 130px; }
+.payment-copy { display: flex; gap: 14px; flex-wrap: wrap; align-items: end; padding-top: 18px; border-top: 1px solid var(--line); margin-top: 16px; }
+.payment-copy .field { flex: 1 1 220px; }
+.payment-copy .button { margin-bottom: 1px; }
+.payment-bottom { margin: 18px 0 0; }
+.payment-original-fields { padding: 13px; margin: 14px 0; background: #f3f3f3; border: 1px solid var(--line); }
+.payment-original-fields h4 { font-size: 12px; margin: 0 0 8px; }
+.payment-original-fields > div { display: flex; gap: 12px; justify-content: space-between; align-items: start; margin: 8px 0; }
+.payment-original-fields code { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; font-size: 11px; }
+.payment-original-fields button { flex-shrink: 0; }
+.workspace-defaults { margin-top: 24px; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.workspace-defaults summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.workspace-defaults .pane-intro { margin-top: 14px; }
+.payment-review-table { min-width: 850px; width: 100%; }
+.payment-review-table td { vertical-align: top; max-width: 245px; }
+.payment-review-table td > code, .payment-review-table td > strong, .payment-review-table td > small { display: block; overflow-wrap: anywhere; white-space: normal; margin-bottom: 5px; }
+.payment-review-table td > small { font-size: 10px; color: var(--muted); }
+.payment-review-table details { font-size: 11px; }
+.payment-review-table summary { cursor: pointer; }
+.payment-review-table pre { max-width: 240px; max-height: 180px; overflow: auto; font-size: 10px; background: #f3f3f3; padding: 8px; }
+@media (max-width: 720px) {
+  .payment-heading { grid-template-columns: 1fr; gap: 12px; }
+  .payment-mode { padding-bottom: 0; }
+  .payment-grid { grid-template-columns: 1fr; gap: 18px; }
+  .payment-sidebar { border-right: 0; border-bottom: 1px solid var(--line); padding: 0 0 16px; }
+  .payment-list { flex-direction: row; max-height: none; }
+  .payment-choice { flex: 0 0 165px; }
+  .payment-copy { align-items: stretch; }
+  .payment-copy .button { text-align: left; }
+}
