@@ -118,7 +118,7 @@ When the retained profile, lock and dependency imports still match, resume conti
 
 ### Offline source preparation
 
-The prebuild downloader used by better-sqlite3 does not implement npm's offline mode. For an offline native build, the installer explicitly skips the downloader and gives node-gyp verified local Node headers. A header prefix must contain `include/node/node_version.h`, `config.gypi`, `common.gypi`, `node.h` and `node_api.h`. The version and module ABI must match the Node executable running this installation.
+The prebuild downloader used by better-sqlite3 does not implement npm's offline mode. For an offline native build, the installer invokes the package's original `build-release` command directly and gives node-gyp verified local Node headers as explicit arguments. It validates that source command and its lifecycle hooks along with the package identity. The prebuild downloader is not invoked, so its configuration cannot override offline source preparation. A header prefix must contain `include/node/node_version.h`, `config.gypi`, `common.gypi`, `node.h` and `node_api.h`. The version and module ABI must match the Node executable running this installation.
 
 ```sh
 starforge runtime-install resume \
