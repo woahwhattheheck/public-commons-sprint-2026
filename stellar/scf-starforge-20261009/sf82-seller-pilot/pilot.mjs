@@ -1,122 +1,212 @@
 #!/usr/bin/env node
-// MIT. One operator command, using the ORIGINAL SF61 importer and SF30 seller service.
-// No new payment middleware, application, HTTP router, or facilitator is implemented.
-import { readFile, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+// MIT. Operate the ORIGINAL SF61 compiler and SF30 server; no payment middleware.
+import { readFile, writeFile, lstat, rename, unlink } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
 import { resolve, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 
-const USAGE = `SF82: import an existing OpenAPI seller and launch its native SF30 HTTP service.
-Usage: node pilot.mjs --spec OPENAPI_JSON --config SELECTIONS_JSON \\
-  --bindings ROUTE_BINDINGS_JSON --out NEW_DIRECTORY \\
-  [--handlers TRUSTED_ESM] [--facilitator HTTPS_URL] [--port 8423]
-  [--allow-local-facilitator]
+const USAGE = `SF82: compile, run and resume an existing OpenAPI seller.
+First run: node pilot.mjs --spec OPENAPI_JSON --config SELECTIONS_JSON \\
+  --bindings ROUTE_BINDINGS_JSON --out NEW_DIRECTORY [runtime options]
+Restart:   node pilot.mjs --resume DIRECTORY [runtime overrides]
+Status:    node pilot.mjs --status DIRECTORY
 
-The directory must not exist. Without --facilitator, the real HTTP service
-advertises 402 challenges only. --handlers is your trusted existing application.
-The service listens on 127.0.0.1; deploy with your own HTTPS reverse proxy.
-The SF61 original compiler, SF30 original server, payment gates and checks run
-unchanged. No wallet, checkout, settlement or registration is created here.`;
+Runtime options: --handlers TRUSTED_ESM --port 8423 --facilitator HTTPS_URL
+                 --allow-local-facilitator --challenge-only
 
-const VALUE_OPTIONS = new Set(['--spec', '--config', '--bindings', '--out',
-  '--handlers', '--facilitator', '--port']);
-const REQUIRED = ['--spec', '--config', '--bindings', '--out'];
+Resume uses the saved runtime options; supplied options override them.
+--challenge-only removes a saved facilitator. Port 0 chooses a new free port.
+Ctrl-C stops the service. Status checks the current local listener.
+Compiled source files are never overwritten. Trusted handlers remain your app.
+The original SF30 listener binds to 127.0.0.1; deploy with your HTTPS proxy.`;
+const VALUES = new Set(['--spec', '--config', '--bindings', '--out', '--resume',
+  '--status', '--handlers', '--facilitator', '--port']);
+const FLAGS = new Set(['--allow-local-facilitator', '--challenge-only']);
+const INPUTS = ['--spec', '--config', '--bindings', '--out'];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const shellQuote = text => "'" + text.replaceAll("'", "'\\''") + "'";
+const entry = fileURLToPath(import.meta.url);
+const command = (flag, out) => `node ${shellQuote(entry)} ${flag} ${shellQuote(out)}`;
+
 function optionsFrom(args) {
   if (args.length === 1 && args[0] === '--help') return null;
-  const opt = new Map();
+  const opts = new Map();
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
-    if (opt.has(flag)) throw new TypeError(`Duplicate ${flag}\n${USAGE}`);
-    if (flag === '--allow-local-facilitator') { opt.set(flag, true); continue; }
-    if (!VALUE_OPTIONS.has(flag) || !args[i + 1] || args[i + 1].startsWith('--'))
-      throw new TypeError(USAGE);
-    opt.set(flag, args[++i]);
+    if (opts.has(flag)) throw new TypeError(`Duplicate ${flag}\n${USAGE}`);
+    if (FLAGS.has(flag)) { opts.set(flag, true); continue; }
+    if (!VALUES.has(flag) || !args[i + 1] || args[i + 1].startsWith('--')) throw new TypeError(USAGE);
+    opts.set(flag, args[++i]);
   }
-  if (!REQUIRED.every(flag => opt.has(flag)) ||
-      (opt.has('--allow-local-facilitator') && !opt.has('--facilitator')))
-    throw new TypeError(USAGE);
-  return opt;
+  const saved = opts.has('--resume') || opts.has('--status');
+  if (saved ? INPUTS.some(k => opts.has(k)) || opts.has('--resume') && opts.has('--status') :
+      !INPUTS.every(k => opts.has(k))) throw new TypeError(USAGE);
+  if (opts.has('--status') && opts.size !== 1) throw new TypeError('Status takes only DIRECTORY\n' + USAGE);
+  if (opts.has('--challenge-only') && (opts.has('--facilitator') || opts.has('--allow-local-facilitator')))
+    throw new TypeError('Choose --challenge-only or a facilitator');
+  if (opts.has('--port') && (!/^\d{1,5}$/.test(opts.get('--port')) || Number(opts.get('--port')) > 65535))
+    throw new TypeError('--port must be 0–65535; use --port 0 for a free local port');
+  return opts;
+}
+async function readJson(path, limit) {
+  const info = await lstat(path);
+  if (!info.isFile() || info.size > limit) throw new TypeError(`Expected a regular JSON file up to ${limit} bytes: ${path}`);
+  const bytes = await readFile(path);
+  if (bytes.length > limit) throw new RangeError(`File grew beyond its limit: ${path}`);
+  return { bytes, value: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) };
+}
+async function optionalJson(path, limit) {
+  try { return (await readJson(path, limit)).value; }
+  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+}
+async function writeRuntime(out, name, value) {
+  const target = join(out, name), temp = join(out, `.${name}.${randomUUID()}.tmp`);
+  try {
+    await writeFile(temp, JSON.stringify(value, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+    await rename(temp, target);
+  } finally { await unlink(temp).catch(() => {}); }
 }
 function offersDigest(offers) {
-  if (!Array.isArray(offers) || offers.length === 0) throw new TypeError('No seller offers');
-  const normalized = offers.map(offer => {
-    if (!offer || !offer.resource || typeof offer.resource.url !== 'string' ||
+  if (!Array.isArray(offers) || !offers.length) throw new TypeError('No seller offers');
+  return hash(Buffer.from(offers.map(offer => {
+    if (typeof offer?.resource?.url !== 'string' ||
         typeof offer?.extensions?.bazaar?.info?.input?.method !== 'string')
       throw new TypeError('Invalid original seller offer');
     return JSON.stringify(offer);
-  }).sort();
-  return hash(Buffer.from(normalized.join('\n')));
+  }).sort().join('\n')));
+}
+async function compiledSource(out) {
+  const [manifest, offers, service] = await Promise.all([
+    readJson(join(out, 'manifest.json'), 64 * 1024),
+    readJson(join(out, 'offers.json'), 4 * 1024 * 1024),
+    readJson(join(out, 'seller-service.json'), 1024 * 1024),
+  ]);
+  if (manifest.value?.schema !== 'stellar.open-api-seller-manifest.v1' ||
+      offers.value?.schema !== 'stellar.open-api-seller-import.v1' ||
+      hash(offers.bytes) !== manifest.value.offersSha256 ||
+      hash(service.bytes) !== manifest.value.serviceConfigSha256)
+    throw new Error('Compiled seller differs from manifest.json. Restore the original files or compile changed inputs into a new --out directory.');
+  const digest = offersDigest(offers.value.offers?.map(o => o.seller));
+  return { manifest: manifest.value, offers: offers.value.offers, digest };
+}
+function identity(source) {
+  return { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256 };
+}
+function sameSource(saved, source) {
+  return saved?.offersSha256 === source.manifest.offersSha256 &&
+    saved?.serviceConfigSha256 === source.manifest.serviceConfigSha256;
+}
+async function runtimeOptions(opts, out, source) {
+  const saved = await optionalJson(join(out, 'pilot-runtime.json'), 16 * 1024);
+  if (saved && (saved.schema !== 'stellar-forge.seller-pilot-runtime.v1' || !sameSource(saved.source, source)))
+    throw new Error('Saved runtime settings belong to a different compiled seller');
+  const runtime = { port: '8423', ...(saved?.options ?? {}) };
+  for (const key of ['port', 'handlers', 'facilitator']) if (opts.has('--' + key))
+    runtime[key] = key === 'handlers' ? resolve(opts.get('--' + key)) : opts.get('--' + key);
+  if (opts.has('--allow-local-facilitator')) runtime.allowLocalFacilitator = true;
+  if (opts.has('--challenge-only')) { delete runtime.facilitator; delete runtime.allowLocalFacilitator; }
+  if (!/^\d{1,5}$/.test(runtime.port) || Number(runtime.port) > 65535 ||
+      runtime.handlers !== undefined && (typeof runtime.handlers !== 'string' || resolve(runtime.handlers) !== runtime.handlers) ||
+      runtime.allowLocalFacilitator !== undefined && typeof runtime.allowLocalFacilitator !== 'boolean')
+    throw new TypeError('Invalid saved runtime settings; supply a valid --port or --handlers override');
+  if (runtime.allowLocalFacilitator && !runtime.facilitator) throw new TypeError('--allow-local-facilitator requires --facilitator');
+  if (runtime.facilitator !== undefined) {
+    const url = new URL(runtime.facilitator);
+    const local = runtime.allowLocalFacilitator === true && url.protocol === 'http:' && url.hostname === '127.0.0.1';
+    if ((!local && url.protocol !== 'https:') || url.username || url.password || url.search || url.hash)
+      throw new TypeError('Facilitator requires a credential-free HTTPS URL; local HTTP needs --allow-local-facilitator');
+  }
+  if (opts.has('--resume') && !saved && !opts.has('--facilitator') && !opts.has('--challenge-only')) {
+    const previous = await optionalJson(join(out, 'runtime-readiness.json'), 64 * 1024);
+    if (previous?.runtimeMode === 'NATIVE_X402')
+      throw new Error('This older pilot has no saved facilitator. Supply --facilitator URL or explicitly --challenge-only.');
+  }
+  return runtime;
+}
+async function readListener(url, source, mode) {
+  if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(url)) throw new TypeError('Original seller runtime did not report a loopback-only listener');
+  const [healthResponse, offersResponse] = await Promise.all([
+    fetch(url + '/_seller/health', { signal: AbortSignal.timeout(4000), redirect: 'error' }),
+    fetch(url + '/_seller/offers', { signal: AbortSignal.timeout(4000), redirect: 'error' }),
+  ]);
+  if (!healthResponse.ok || !offersResponse.ok) throw new Error('Native seller readback failed');
+  const [health, offers] = await Promise.all([healthResponse.json(), offersResponse.json()]);
+  if (health?.schema !== 'stellar-forge.seller-service.v1' || health.mode !== mode ||
+      !Array.isArray(health.routes) || health.routes.length !== source.offers.length || offersDigest(offers) !== source.digest)
+    throw new Error('Compiled source / running original offers diverged');
+  return health;
+}
+async function status(out, source) {
+  const receipt = await optionalJson(join(out, 'runtime-readiness.json'), 64 * 1024);
+  const result = { state: 'NOT_STARTED', output: out, resume: command('--resume', out) };
+  if (receipt) {
+    if (receipt.originalOffersSha256 !== source.manifest.offersSha256 ||
+        receipt.originalServiceConfigSha256 !== source.manifest.serviceConfigSha256)
+      throw new Error('Last runtime observation belongs to another compiled seller');
+    result.lastObservedAt = receipt.observedAt;
+    try {
+      const health = await readListener(receipt.listener, source, receipt.runtimeMode);
+      Object.assign(result, { state: 'RUNNING', mode: health.mode, listener: receipt.listener,
+        health: receipt.listener + '/_seller/health', offers: receipt.listener + '/_seller/offers',
+        lastSuccessfulRuntime: receipt.runtime, routes: health.routes });
+    } catch (error) {
+      result.state = 'UNAVAILABLE'; result.message = 'Last listener is unreachable or no longer matches this seller. Stop any old process before resuming.';
+      result.reason = error.message;
+    }
+  }
+  process.stdout.write(JSON.stringify(result) + '\n');
+  return result;
 }
 
-/** Compile and launch unchanged original modules, then read back their real listener. */
+/** First compile or resume a saved seller, always using original SF30 serving. */
 export async function launch(args = process.argv.slice(2), deps = {}) {
   const opts = optionsFrom(args);
   if (!opts) { process.stdout.write(USAGE + '\n'); return null; }
-  const out = resolve(opts.get('--out'));
-  const srcArgs = ['--spec', resolve(opts.get('--spec')),
-    '--config', resolve(opts.get('--config')), '--service-bindings', resolve(opts.get('--bindings')),
-    '--out', out];
-  // Injection is for command integration in other operator applications;
-  // the normal executable always imports the source modules themselves.
-  const compile = deps.compile ?? (await import('../sf61-openapi-seller-import/cli.mjs')).run;
-  const serve = deps.serve ?? (await import('../sf30-seller-sdk/serve.mjs')).main;
-  // Exact SF61 validation and original atomic-no-clobber export.
-  const manifest = await compile(srcArgs);
-  if (!manifest || typeof manifest.offersSha256 !== 'string' ||
-      typeof manifest.serviceConfigSha256 !== 'string')
-    throw new TypeError('Original seller importer returned no complete service manifest');
-  const serveArgs = ['--config', join(out, 'seller-service.json')];
-  if (opts.has('--port')) serveArgs.push('--port', opts.get('--port'));
-  if (opts.has('--handlers')) serveArgs.push('--handlers', resolve(opts.get('--handlers')));
-  if (opts.has('--facilitator')) serveArgs.push('--facilitator', opts.get('--facilitator'));
-  if (opts.has('--allow-local-facilitator')) serveArgs.push('--allow-local-facilitator');
-
-  const session = await serve(serveArgs);
+  const out = resolve(opts.get('--resume') ?? opts.get('--status') ?? opts.get('--out'));
+  if (!opts.has('--resume') && !opts.has('--status')) {
+    const compile = deps.compile ?? (await import('../sf61-openapi-seller-import/cli.mjs')).run;
+    try {
+      await compile(['--spec', resolve(opts.get('--spec')), '--config', resolve(opts.get('--config')),
+        '--service-bindings', resolve(opts.get('--bindings')), '--out', out]);
+    } catch (error) {
+      if (error.code === 'EEXIST') throw new Error(`Output already exists. To use its compiled seller:\n${command('--resume', out)}\nFor changed source inputs, choose a new --out directory.`, { cause: error });
+      throw error;
+    }
+  }
+  // Before trusted handlers are imported or a socket is opened, bind both
+  // exported artifacts to the original compiler manifest, including on resume.
+  const source = await compiledSource(out);
+  if (opts.has('--status')) return status(out, source);
+  const runtime = await runtimeOptions(opts, out, source);
+  await writeRuntime(out, 'pilot-runtime.json', { schema: 'stellar-forge.seller-pilot-runtime.v1',
+    source: identity(source), options: runtime });
+  const serveArgs = ['--config', join(out, 'seller-service.json'), '--port', runtime.port];
+  if (runtime.handlers) serveArgs.push('--handlers', runtime.handlers);
+  if (runtime.facilitator) serveArgs.push('--facilitator', runtime.facilitator);
+  if (runtime.allowLocalFacilitator) serveArgs.push('--allow-local-facilitator');
+  let session;
   try {
+    const serve = deps.serve ?? (await import('../sf30-seller-sdk/serve.mjs')).main;
+    session = await serve(serveArgs);
     if (!session || typeof session.url !== 'string' || typeof session.close !== 'function')
       throw new TypeError('Original seller runtime returned no live session');
-    if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(session.url))
-      throw new TypeError('Original seller runtime did not report loopback-only listener');
-    const [healthResponse, offersResponse] = await Promise.all([
-      fetch(session.url + '/_seller/health', { signal: AbortSignal.timeout(4000) }),
-      fetch(session.url + '/_seller/offers', { signal: AbortSignal.timeout(4000) }),
-    ]);
-    if (!healthResponse.ok || !offersResponse.ok) throw new Error('Native seller readback failed');
-    const [health, servedOffers, originalBytes] = await Promise.all([
-      healthResponse.json(), offersResponse.json(), readFile(join(out, 'offers.json')),
-    ]);
-    const originalOffers = JSON.parse(originalBytes.toString('utf8'));
-    if (hash(originalBytes) !== manifest.offersSha256 ||
-        !Array.isArray(originalOffers.offers) ||
-        health?.schema !== 'stellar-forge.seller-service.v1' ||
-        health?.mode !== (opts.has('--facilitator') ? 'NATIVE_X402' : 'CHALLENGE_ONLY') ||
-        !Array.isArray(health.routes) || health.routes.length !== originalOffers.offers.length ||
-        offersDigest(originalOffers.offers.map(o => o.seller)) !== offersDigest(servedOffers))
-      throw new Error('Compiled source / running original offers diverged');
-
-    // This file is an operational readback, not payment, customer, chain, or grant proof.
-    const receipt = {
-      schema: 'stellar-forge.seller-pilot-readiness.v1',
-      observedAt: new Date().toISOString(),
-      originalOffersSha256: manifest.offersSha256,
-      originalServiceConfigSha256: manifest.serviceConfigSha256,
-      nativeOfferDigestSha256: offersDigest(servedOffers),
-      runtimeMode: health.mode, routeCount: health.routes.length,
-      listener: session.url, healthEndpoint: session.url + '/_seller/health',
-      offersEndpoint: session.url + '/_seller/offers',
-      paidRequestsSent: 0, settlementVerified: false, buyerAdoptionVerified: false,
-    };
-    await writeFile(join(out, 'runtime-readiness.json'), JSON.stringify(receipt, null, 2) + '\n',
-      { flag: 'wx', mode: 0o600 });
-    process.stdout.write(JSON.stringify({ pilotReady: true, ...receipt, output: out }) + '\n');
+    const health = await readListener(session.url, source, runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY');
+    const receipt = { schema: 'stellar-forge.seller-pilot-readiness.v1', observedAt: new Date().toISOString(),
+      originalOffersSha256: source.manifest.offersSha256,
+      originalServiceConfigSha256: source.manifest.serviceConfigSha256,
+      nativeOfferDigestSha256: source.digest, runtimeMode: health.mode, runtime, routeCount: health.routes.length,
+      listener: session.url, healthEndpoint: session.url + '/_seller/health', offersEndpoint: session.url + '/_seller/offers',
+      paidRequestsSent: 0, settlementVerified: false, buyerAdoptionVerified: false };
+    await writeRuntime(out, 'runtime-readiness.json', receipt);
+    process.stdout.write(JSON.stringify({ pilotReady: true, ...receipt, output: out, runtime,
+      routes: health.routes, resume: command('--resume', out), status: command('--status', out), stop: 'Ctrl-C' }) + '\n');
+    process.stderr.write(`Seller running (${health.mode}): ${session.url}\nHealth: ${receipt.healthEndpoint}\nOffers: ${receipt.offersEndpoint}\nStop: Ctrl-C\nRestart: ${command('--resume', out)}\nStatus: ${command('--status', out)}\n`);
     return session;
   } catch (error) {
-    await session?.close?.().catch(() => {});
-    throw error;
+    try { await session?.close?.(); } catch {}
+    const correction = error.code === 'EADDRINUSE' ? ' --port 0' : '';
+    throw new Error(`${error.message}\nCompiled seller preserved. Correct the runtime option and resume:\n${command('--resume', out)}${correction}`, { cause: error });
   }
 }
-
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
   launch().catch(error => { process.stderr.write(String(error?.message ?? error) + '\n'); process.exitCode = 1; });
-}
