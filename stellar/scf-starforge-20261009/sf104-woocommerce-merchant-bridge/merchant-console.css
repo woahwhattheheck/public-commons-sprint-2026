@@ -16,7 +16,7 @@
 .sf104 input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:16px;height:16px;min-width:16px;margin:2px 0 0;box-shadow:none;border-radius:0;accent-color:#383838;vertical-align:top}
 .sf104 input[type=checkbox]:checked:before,.sf104 input[type=checkbox]:indeterminate:before{display:none}
 .sf104 input:not([type=checkbox]):not([type=hidden]),.sf104 select,.sf104 textarea{width:100%;max-width:none;border:1px solid #b4b4b4;border-radius:3px;background:#fff;color:var(--sf-ink);padding:8px 10px;min-height:38px;box-shadow:none;margin:0}
-.sf104 select{padding-right:28px}
+.sf104 select{padding-right:28px;background-repeat:no-repeat;background-position:right 8px center;background-size:16px 16px}
 .sf104 textarea{resize:vertical;min-height:88px;line-height:1.5}
 .sf104 input[readonly]{background:#f2f2f2;color:#595959}
 .sf104 label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;min-width:0}

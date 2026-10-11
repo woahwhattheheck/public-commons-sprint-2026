@@ -59,7 +59,8 @@
     "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot",
     "stellar/scf_2026/sf47_budget_model",
     "stellar/scf-starforge-20261009/mpp-charge",
-    "stellar/mercury-event-operations"
+    "stellar/mercury-event-operations",
+    "stellar/scf-starforge-20261009/partners/open-meteo-operations"
   ],
   "browserAssets": [
     {
@@ -140,7 +141,12 @@
     "stellar/scf-starforge-20261009/sf46-release/release-core.mjs",
     "stellar/scf-starforge-20261009/sf46-release/command-catalog.mjs",
     "stellar/scf-starforge-20261009/sf46-release/runtime-package.mjs",
-    "stellar/scf-starforge-20261009/sf46-release/MANAGED_PACKAGE.md"
+    "stellar/scf-starforge-20261009/sf46-release/MANAGED_PACKAGE.md",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.js",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.css",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-networks.json",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/REFUNDS.md"
   ],
   "commands": {
     "installation": "stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
@@ -193,6 +199,8 @@
     "mysql-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/workspace/server.mjs",
     "mysql-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/cli.mjs",
     "sheets-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/cli.mjs",
+    "sheetbest-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/cli.mjs",
+    "sheetbest-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/publisher/cli.mjs",
     "sheets-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/cli.mjs",
     "mongodb": "stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/cli.mjs",
     "mongodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/workspace/server.mjs",
@@ -307,6 +315,9 @@
     "ckan-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/cli.mjs",
     "mercury-feed": "stellar/mercury-event-operations/starforge-feed/cli.mjs",
     "buyer-expenses": "stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/cli.mjs",
+    "weather-operations": "stellar/scf-starforge-20261009/partners/open-meteo-operations/cli.mjs",
+    "merchant-fleet-host": "stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-cli.mjs",
+    "woo-refund": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator-cli.mjs",
     "socrata": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/cli.mjs",
     "socrata-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs"
   },
@@ -407,6 +418,10 @@
     "./seller/mysql/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/workspace/server.mjs",
     "./seller/mysql/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/model.mjs",
     "./seller/sheets": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/source.mjs",
+    "./seller/sheetbest": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/source.mjs",
+    "./seller/sheetbest/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/capture.mjs",
+    "./seller/sheetbest/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/declaration.mjs",
+    "./seller/sheetbest/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/publisher/model.mjs",
     "./seller/sheets/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/capture.mjs",
     "./seller/sheets/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/model.mjs",
     "./seller/sheets/auth": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/oauth.mjs",
@@ -647,6 +662,16 @@
       "types": "./source/stellar/scf-starforge-20261009/mpp-charge/customer/index.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/mpp-charge/customer/index.mjs"
     },
+    "./merchant/qbo/http": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-http.mjs",
+    "./partners/open-meteo": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/contract.mjs",
+    "./partners/open-meteo/application": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/application.mjs",
+    "./partners/open-meteo/workspace": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/workspace.mjs",
+    "./partners/open-meteo/server": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/server.mjs",
+    "./partners/open-meteo/analysis": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/analysis.mjs",
+    "./partners/open-meteo/reports": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/exports.mjs",
+    "./merchant/fleet/host": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy.mjs",
+    "./merchant/fleet/host-runtime": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-runtime.mjs",
+    "./merchant/woocommerce/refunds": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator.mjs",
     "./seller/socrata/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/source.mjs",
     "./seller/socrata/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/workspace.mjs",
     "./seller/socrata/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/server.mjs",

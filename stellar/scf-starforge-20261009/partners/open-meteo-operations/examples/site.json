@@ -1,0 +1,11 @@
+{
+  "expectedRevision": 0,
+  "site": {
+    "name": "New York field operations",
+    "latitude": 40.7128,
+    "longitude": -74.006,
+    "timezone": "America/New_York",
+    "cellSelection": "land",
+    "notes": "Retain requested site separately from selected model grid."
+  }
+}
