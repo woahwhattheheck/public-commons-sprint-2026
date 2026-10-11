@@ -1,0 +1,6 @@
+interface:
+  display_name: "Account Chad"
+  short_description: "Manage accounts, payouts, and submission readiness"
+  default_prompt: "Use $account-chad to finish the authorized account, payment-readiness, and submission operations for this task."
+policy:
+  allow_implicit_invocation: true
