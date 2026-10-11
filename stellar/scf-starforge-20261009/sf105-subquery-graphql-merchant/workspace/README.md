@@ -72,6 +72,55 @@ purchases with its existing authorization and recovery behavior. A successful
 offline review and HTTP 402 show the setup path; actual indexed-data delivery
 and Stellar settlement use the configured original runtime.
 
+## Revise a merchant as its schema and products change
+
+The **Schema and merchant revisions** panel uses the original
+[`onboarding/revisions.mjs`](../onboarding/revisions.mjs) comparison and preparation
+API. It accepts the actual new served schema, including query or merchant-term
+changes in the same draft. It does not modify the provider's schema.
+
+1. Open the saved project and choose a previous merchant export. Exports from
+   earlier draft contents remain valid baselines, including an earlier revised
+   merchant. The workspace verifies its saved record and exact package files;
+   the original bundle reader verifies the schema, queries, plan and generated
+   service binding.
+2. Edit or load the new schema and proposed query/plan files. **Compare current
+   draft** works before saving. The original report identifies each existing
+   query's validity and selected schema contract under the new schema, changes
+   to approved queries and variables, and added or removed operations. It also
+   shows the exact previous/candidate route, request schema, public example,
+   ordered payment choices and endpoint. Global breaking and dangerous schema
+   changes remain visible even when the selected products still compile.
+3. Correct any candidate error and compare again. An invalid candidate can
+   still be saved as unfinished work. Its report remains inspectable; complete
+   route/payment comparison and revised preparation need a valid original
+   compiler result. Changes to the draft or selected baseline clear the prior
+   comparison. Saving the exact compared contents preserves it.
+4. **Prepare revised package** after saving. The server binds this operation to
+   the current project revision, selected retained export and exact comparison.
+   It calls the original `prepareSubQueryRevision`, retaining its unchanged
+   `merchant/`, exact `previous/` package, frozen `candidate/` inputs, and
+   `revision/review.json`, `review.html`, `manifest.json` and `RUN.md`. The
+   revision report is checked against the report reviewed in the browser before
+   the new export is attached to the project. Previous packages stay intact.
+5. Use the new export's launch command, **Copy buyer client path**, and **Buyer
+   and operator files** for the original generated client, service, queries and
+   review. The updated route IDs, inputs and payment terms feed the same native
+   buyer and seller implementations. After runtime configuration changes, use
+   the original live seller's client export for its current runtime snapshot.
+6. Select the revised export and start the same original seller. If a merchant
+   is already running, stop it first; revision preparation does not replace a
+   running process. Reopen the project after a workspace restart to start the
+   same retained export. **Open saved change report** reads and verifies the
+   stored original report, including its baseline, even after further edits.
+   For a subsequent revision, select the latest revised export as its baseline.
+
+The revised package includes both original launchable merchant versions and
+their buyer files. Use its `revision/RUN.md` to run the prior version when the
+provider still serves the necessary schema. In the workspace, opening the prior
+project revision and saving it as a new current revision makes a matching older
+export selectable again. This preserves intervening history and exports.
+
 ## Saved work and recovery
 
 Drafts live below `projects/PROJECT/` with immutable numbered versions and an
@@ -89,6 +138,14 @@ the workspace checks the retained export record and the original exported file
 bytes; changes require a fresh export. An unavailable export does not prevent
 opening or editing its source draft.
 
+Revised exports live under `packages/PROJECT-rREVISION-ID/revised/`. Their
+retained workspace record also binds every original revision-wrapper file,
+including the previous merchant and change report. Those bytes are verified
+before a saved report is opened, an export is used as a baseline, or its
+merchant is started. Each successive revision copies the prior merchant package,
+not all earlier wrappers, so historical lineage does not recursively duplicate
+the complete workspace.
+
 The workspace requires private regular directories (`0700`) and writes private
 files (`0600`) on Unix. Input limits match the canonical exporter: schema and
 queries each up to 1 MiB; plan up to 256 KiB. The workspace owns one local writer
@@ -103,7 +160,19 @@ the original create-only exporter behavior.
 
 `startWorkspace({workspace, port:0, noSignals:true})` from `server.mjs` returns
 `{url, origin, token, directory, close}`. The private API supports schema
-inspection, current-draft review, project save/load/history, export, and managed
+inspection, current-draft review, project save/load/history, export, evolution and managed
 merchant start/stop/status. The web page and API call the same maintained
 compiler and original native runtime. No separate GraphQL parser, payment
 implementation, scheduler or project database is introduced.
+
+The same authenticated local API exposes:
+
+| Endpoint | Input / result |
+| --- | --- |
+| `POST /api/evolution/compare` | Current project `id`, `expectedRevision`, retained `baselineExportId`, and editable `input`; returns original `review`, exact `comparisonDigest`, candidate `inputDigest`, baseline identity and valid candidate merchant review. |
+| `POST /api/evolution/prepare` | Current project `id`, `expectedRevision`, `baselineExportId` and previously returned `comparisonDigest`; prepares the saved candidate and returns the updated project and complete original export. |
+| `GET /api/evolution/report?id=PROJECT&exportId=EXPORT` | Verifies the retained package and returns its original saved review and baseline identity. |
+
+Export identifiers resolve only within the named project. These endpoints accept
+no caller-provided package directory. A comparison that no longer matches the
+current draft or baseline returns a conflict and requires a fresh comparison.

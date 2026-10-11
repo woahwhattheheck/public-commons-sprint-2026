@@ -55,6 +55,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
+  merchant-readiness                         Review every configured Stellar receiving account
 
 Optional feature groups: postgres, s3.
 
