@@ -8,6 +8,7 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mcpAgentCommerceTool } from '../../stellar/scf-starforge-20261009/sf43-agent-commerce/mcp-buyer-acceptance.mjs';
 import { explainFailure } from '../../stellar/scf-starforge-20261009/sf33-failure-contract/contract.mjs';
 import { describeDiscoveredResource } from './descriptor.mjs';
+import { requiredQueryKeys } from './query-requirements.mjs';
 
 export const MCP_VERSION='2025-11-25';
 const plain = x => x!==null && typeof x==='object' && !Array.isArray(x);
@@ -169,6 +170,11 @@ export class McpPaidToolBroker {
       if(!maxText(k,100)||!maxText(v,1024))fail('INVALID_PARAMS','Invalid query value');
       u.searchParams.set(k,v);
     }
+    // Enforce only direct required-query presence, on the concrete request.
+    // Fixed query values already in the discovered URL count. Examples and
+    // schema defaults never become request values; no full schema validation.
+    const missing=requiredQueryKeys(row.bazaar.schema).filter(key=>!u.searchParams.has(key));
+    if(missing.length)fail('INPUT_REQUIRED','Supply required query inputs: '+JSON.stringify(missing)+'. Inspect bazaar_describe for the original declaration.');
     const accepted=row.accepts[acceptIndex];
     if(!['exact','upto'].includes(accepted?.scheme)||!['stellar:testnet','stellar:pubnet'].includes(accepted?.network)||
       !/^(0|[1-9]\d*)$/.test(accepted?.amount??'')||
@@ -341,3 +347,4 @@ export function createMcpHttpHandler(broker,{bearerToken,allowedClientOrigins=[]
     }
   };
 }
+
