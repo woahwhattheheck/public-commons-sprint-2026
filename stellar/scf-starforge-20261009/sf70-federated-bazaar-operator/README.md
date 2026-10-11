@@ -68,3 +68,9 @@ node --test stellar/scf-starforge-20261009/sf70-federated-bazaar-operator/test/r
 ```
 
 These checks cover concurrent native capture, manual freshness, an incomplete provider, an upstream throw, completed-capture expiry and network-scope independence. They assert coordination semantics, not live provider counts or payment success. For current original provider totals, use new genuine native GET data; the prior Muse 27+2 receipt is a timestamped observation rather than a permanent fixture.
+
+## SF73: live federated lexical/fuzzy service discovery
+
+The federated operator now ranks original Vellar/Periplo observations with the **existing SCF-23 BM25F-style ranker**, rather than requiring a full literal substring. Multiword needs and ordinary typos rank the metadata within the currently selected provider and declared-operation filters; an empty query retains the original source order. The adapter returns the exact unmodified original listing objects: provider, method, source row, URL, every declared indivisible payment tuple, and original source coverage remain intact. It never merges or deduplicates offers across providers.
+
+The original ranker is served only as a whitelisted static module under the existing loopback-only CSP. No vector service, new provider GET/POST, merchant probe, wallet, CI or payment is introduced. SF71 live offer delta, SF72 source-bound merchant handoff, and later original-source refresh coordination remain unchanged. For a current operator read, use the live two-provider page, record provider/row coverage, search two user-intent phrases and a typo, and confirm full original payment-option preservation. Do not infer seller consent or paid success from relevance.

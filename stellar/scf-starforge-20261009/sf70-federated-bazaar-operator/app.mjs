@@ -1,4 +1,5 @@
 import { compareSnapshots } from './offer-delta.mjs';
+import { rankFederatedListings } from './federated-query.mjs';
 // MIT. Browser uses DOM textContent exclusively for external native provider data.
 const $ = id => document.getElementById(id);
 const results = $('results');
@@ -176,15 +177,14 @@ function renderDelta() {
 
 function renderListings() {
   if (!state.data) return;
-  const q=$('query').value.trim().toLocaleLowerCase();
+  const q=$('query').value.trim();
   const source=$('provider').value;
   const operation=$('operation').value;
-  const visible=state.data.listings.filter(row =>
-    (!source || row.source===source) &&
-    (!operation || operationKey(row)===operation) &&
-    (!q || [row.label,row.url,row.description,row.kind,row.method,row.toolName,row.routeTemplate]
-      .some(x=>String(x??'').toLocaleLowerCase().includes(q))));
-  $('matches').textContent=visible.length+' of '+state.data.listings.length+' native source rows match filters; separate provider observations are not merged.';
+  const scoped=state.data.listings.filter(row => !operation || operationKey(row)===operation);
+  const visible=rankFederatedListings(scoped,q,source);
+  $('matches').textContent=visible.length+' of '+state.data.listings.length+
+    ' native provider rows '+(q?'ranked by lexical/fuzzy relevance':'in native order')+
+    '; original source identity and payment terms remain separate.';
   results.replaceChildren();
   if (!visible.length) {
     results.append(elem('p','empty','No observed rows match this filter. This does not imply a seller is absent from all Bazaar providers.'));

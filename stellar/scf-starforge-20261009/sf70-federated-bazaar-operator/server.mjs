@@ -23,6 +23,8 @@ const STATIC = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/app.mjs': ['app.mjs', 'text/javascript; charset=utf-8'],
   '/offer-delta.mjs': ['offer-delta.mjs', 'text/javascript; charset=utf-8'],
+  '/federated-query.mjs': ['federated-query.mjs', 'text/javascript; charset=utf-8'],
+  '/ranking.mjs': ['../../../scf46-stellar-bazaar/src/ranking.mjs', 'text/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
 });
 const HEADERS = Object.freeze({
