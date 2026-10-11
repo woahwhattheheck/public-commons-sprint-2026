@@ -85,13 +85,26 @@ function upload(value, side, maximum) {
 }
 
 export async function startConversionWorkspace({ directory, profile = SCAP_PROFILE, port = 8470,
-  service: suppliedService, ...limits } = {}) {
+  service: suppliedService, extension = null, ...limits } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) fail('PORT_INVALID', 'Port must be an integer from 0 to 65535.');
   const service = suppliedService ?? await openReconciliationService({ directory, ...limits });
-  const model = createConversionWorkspace({ service, profile });
+  if (extension !== null && (typeof extension !== 'object' || Array.isArray(extension)))
+    fail('EXTENSION_INVALID', 'Use a trusted local profile extension.');
+  const model = createConversionWorkspace({ service, profile, extension });
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map(await Promise.all([...files].map(async ([path, [name, type]]) =>
     [path, { bytes: await readFile(new URL(name, import.meta.url)), type }])));
+  for (const asset of extension?.assets ?? []) {
+    if (!asset || typeof asset.path !== 'string' || !/^\/[A-Za-z0-9_.\/-]+$/.test(asset.path) ||
+      asset.path.includes('..') || asset.path.includes('//') || asset.path.startsWith('/api/') ||
+      asset.path === '/health' || assets.has(asset.path) ||
+      !['text/javascript; charset=utf-8', 'text/css; charset=utf-8', 'application/json; charset=utf-8'].includes(asset.type))
+      fail('EXTENSION_INVALID', 'The profile extension has an invalid or conflicting asset.');
+    assets.set(asset.path, { bytes: await readFile(asset.file), type: asset.type });
+  }
+  const extensionInfo = extension?.browserModule ? { id: extension.id, browserModule: extension.browserModule } : null;
+  if (extensionInfo && (!assets.has(extensionInfo.browserModule) || typeof extensionInfo.id !== 'string'))
+    fail('EXTENSION_INVALID', 'The profile extension must name its explicit browser module.');
   const maximumRequest = Math.ceil(model.configuration.maxInputBytes / 3) * 8 + 1024 * 1024;
   let origin, hostnames, closing;
 
@@ -117,7 +130,7 @@ export async function startConversionWorkspace({ directory, profile = SCAP_PROFI
       if (!['GET', 'POST'].includes(req.method)) { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { error: 'METHOD_NOT_ALLOWED', message: 'Use the supported workspace operation.' }); }
       if (req.method === 'POST' && url.search) fail('QUERY_REJECTED', 'Submit changes in the request body.');
 
-      if (req.method === 'GET' && url.pathname === '/api/bootstrap') return send(res, 200, { profile: model.profile, configuration: model.configuration });
+      if (req.method === 'GET' && url.pathname === '/api/bootstrap') return send(res, 200, { profile: model.profile, configuration: model.configuration, ...(extensionInfo ? { extension: extensionInfo } : {}) });
       if (req.method === 'GET' && url.pathname === '/api/jobs') return send(res, 200, await model.listJobs({ limit: Number(url.searchParams.get('limit') ?? 25), after: url.searchParams.get('after') ?? '' }));
       if (req.method === 'GET' && url.pathname === '/api/bundles') return send(res, 200, await model.listBundles({ limit: Number(url.searchParams.get('limit') ?? 25), after: url.searchParams.get('after') ?? '' }));
       let match = /^\/api\/bundles\/([a-f0-9]{64})$/.exec(url.pathname);
@@ -159,6 +172,7 @@ export async function startConversionWorkspace({ directory, profile = SCAP_PROFI
         const body = await readJson(req, 32 * 1024);
         return send(res, 200, await model.review(body));
       }
+      if (extension?.handleRequest && await extension.handleRequest({ req, res, url, model, service, readJson, send })) return;
       return send(res, 404, { error: 'NOT_FOUND', message: 'The workspace endpoint was not found.' });
     } catch (error) {
       if (res.headersSent) { if (!res.writableEnded) res.destroy(); return; }
