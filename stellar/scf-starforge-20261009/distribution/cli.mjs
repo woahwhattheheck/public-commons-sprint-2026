@@ -22,6 +22,7 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
   valyu-merchant                            Configure and operate the native research search merchant
   valyu-research                            Save queries, operate purchases, compare research and export editions
   sftp                                      Inspect, capture and resume pinned private report files
