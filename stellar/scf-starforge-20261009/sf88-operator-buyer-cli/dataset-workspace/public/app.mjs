@@ -9,7 +9,7 @@ const draft = { name: '', choice: 0, query: 'limit=100', maxPages: 8, maxRows: 1
 const display = value => value === null ? 'null' : typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—');
 const count = value => value === null || value === undefined ? '—' : Number(value).toLocaleString();
 const size = value => value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KiB` : `${(value / 1048576).toFixed(2)} MiB`;
-const statusText = value => String(value ?? 'UNKNOWN').replaceAll('_', ' ');
+const statusText = value => value === 'NEEDS_INSPECTION' ? 'Open to view' : String(value ?? 'UNKNOWN').replaceAll('_', ' ');
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs)) {
@@ -63,14 +63,19 @@ async function refresh({ inspect = false } = {}) {
   saved = await api('/api/state');
   $('#connection').textContent = saved.active ? 'Customer operation running' : 'Local workspace open';
   if (selectedId && saved.sessions.some(item => item.id === selectedId) && (inspect || !receiving))
-    selected = await api('/api/session?id=' + encodeURIComponent(selectedId));
+    inspectedSelection(await api('/api/session?id=' + encodeURIComponent(selectedId)));
   if (saved.persistenceError) notice(saved.persistenceError.message, true);
+}
+function inspectedSelection(value) {
+  selected = value;
+  const listed = saved.sessions.find(item => item.id === value.id);
+  if (listed) listed.status = value.status;
 }
 async function chooseSession(id) {
   selectedId = id; receiving = false; selected = null; preview = purchases = handoff = null; page = 0;
   sessionStorage.setItem('dataset-selected', id); alias = id.replaceAll('-', '_').slice(0, 48);
   const current = ++epoch, result = await api('/api/session?id=' + encodeURIComponent(id));
-  if (current === epoch && selectedId === id) selected = result;
+  if (current === epoch && selectedId === id) inspectedSelection(result);
 }
 function field(label, key, { type = 'text', help = '', span = false, min, max, step } = {}) {
   const input = el(type === 'textarea' ? 'textarea' : 'input', { ...(type === 'textarea' ? { rows: 3 } : { type }),
@@ -209,7 +214,7 @@ function delivered() {
   const files = Object.entries(selected.delivery.files);
   const output = card(text('h3', 'Original delivered files'), text('p', 'Downloads use the retained SF100 file bytes. The purchase outcome is preserved separately.', 'help'),
     el('div', { class: 'file-list' }, files.map(([name, value]) => el('div', { class: 'file' }, text('strong', name), text('p', size(value.bytes)),
-      text('code', value.sha256), button('Download', () => download(name))))));
+      el('details', {}, text('summary', 'SHA-256'), text('code', value.sha256)), button('Download', () => download(name))))));
   output.append(el('div', { class: 'toolbar spaced' }, button('Download acquisition manifest', async () => {
     const response = await fetchWorkspace('/api/manifest?session=' + encodeURIComponent(selectedId));
     const url = URL.createObjectURL(await response.blob());
@@ -268,8 +273,10 @@ function renderSession() {
   if (!selected) { $('#main').replaceChildren(text('p', 'Reading the selected original acquisition…', 'empty')); return; }
   const heading = el('div', { class: 'heading' }, el('div', {}, text('h2', selected.label), text('p', selected.sessionId, 'muted break')),
     el('div', { class: 'toolbar' }, badge(saved.active?.session === selectedId ? 'RUNNING' : selected.status), button('Refresh', async () => { await refresh({ inspect: true }); })));
+  const paymentState = selected.delivery?.paymentStatus;
+  const paymentLabel = !paymentState || paymentState === 'NOT_INFERRED_FROM_SOURCE_HTTP_OR_LOCAL_HASHES' ? 'See Purchases' : paymentState;
   const metrics = el('div', { class: 'metrics' }, [['Retained pages', count(selected.completedPages)], ['Acquired rows', count(selected.acquiredRows)],
-    ['Data room', selected.delivery ? 'Available' : 'Not finalized'], ['Purchase status', selected.delivery?.paymentStatus ?? 'See records']]
+    ['Data room', selected.delivery ? 'Available' : 'Not finalized'], ['Purchase status', paymentLabel]]
     .map(([label, value]) => el('div', { class: 'metric' }, text('strong', statusText(value)), text('span', label))));
   const tabs = el('nav', { class: 'tabs', 'aria-label': 'Acquisition sections' }, [['progress', 'Progress'], ['data', 'Data & analysis'], ['purchases', 'Purchases'], ['history', 'History']]
     .map(([key, label]) => button(label, async () => { tab = key; if (key === 'data' && selected.delivery && !preview) await loadPreview(); if (key === 'purchases' && !purchases && !saved.active) await loadPurchases(); }, { class: key === tab ? 'selected' : '', 'aria-pressed': String(key === tab) })));
