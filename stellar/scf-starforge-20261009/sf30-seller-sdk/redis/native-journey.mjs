@@ -107,7 +107,8 @@ try {
   const declaration = JSON.parse(await readFile(new URL('./example-source.json', import.meta.url)));
   declaration.connection = http ? { transport: 'upstash-rest', endpoint, tokenEnv: envName }
     : { host: '127.0.0.1', port, database: 2, username: 'merchant', passwordEnv: envName, tls: 'local-plaintext' };
-  if (http) for (const query of Object.values(declaration.queries)) query.key = key(query.key);
+  if (http) for (const query of Object.values(declaration.queries))
+    query.key = typeof query.key === 'string' ? key(query.key) : { ...query.key, prefix: key(query.key.prefix) };
   declaration.queries.catalog.fields.missing = 'missing_field';
   declaration.queries.leaderboard.maxRows = 2; declaration.queries.leaderboard.parameters.offset.maximum = '2';
   declaration.queries.events.maxRows = 2;
@@ -152,7 +153,9 @@ try {
   plan.routes[1].parameterDescriptions = { region: 'Reviewed region' };
   await write(sourceFile, declaration); await write(planFile, plan);
   const firstPackage = await prepareRedisSeller({ sourceFile, planFile, directory: join(authoring, 'first') });
-  await verifyPreparedRedisSeller(firstPackage.directory);
+  const verifiedFirst = await verifyPreparedRedisSeller(firstPackage.directory);
+  assert.deepEqual(firstPackage.requiredEnvironment, [envName]);
+  assert.deepEqual(verifiedFirst.requiredEnvironment, [envName]);
   const root = join(work, 'releases'); await initReleaseStore(root);
   const runtime = { port: 0, allowLocalFacilitator: true, facilitator: `http://127.0.0.1:${facilitator.address().port}` };
   await stageRelease(root, { id: 'first', redisPackage: firstPackage.directory, runtime });
@@ -164,6 +167,7 @@ try {
   assert.ok(comparison.runtimeChanges.some(change => change.field === 'redis'));
   await rm(authoring, { recursive: true });
   const retained = await inspectRelease(root, 'first'); assert.equal(retained.redis.queries.leaderboard.maxRows, 2);
+  assert.deepEqual(retained.redis.credentialReferences, [envName]);
   const clientDirectory = join(root, 'releases', 'first', 'redis', 'package', 'client');
   assert.equal((await inspectSellerClientExport({ directory: clientDirectory })).state, 'COMPLETE');
   const generated = await import(pathToFileURL(join(clientDirectory, 'seller-client.mjs')));

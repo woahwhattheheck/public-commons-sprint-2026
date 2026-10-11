@@ -15,6 +15,8 @@ const normalized = value => Array.isArray(value) ? value.map(normalized) : value
   ? Object.fromEntries(Object.keys(value).sort().map(key => [key, normalized(value[key])])) : value;
 const stable = value => JSON.stringify(normalized(value));
 const SOURCE_SEMANTICS = 'live-named-read-commands';
+const requiredEnvironmentOf = connection => connection.transport === 'upstash-rest'
+  ? [connection.tokenEnv] : connection.passwordEnv ? [connection.passwordEnv] : [];
 
 async function readLimited(path, maximum = 262144) {
   const handle = await open(path, 'r');
@@ -94,7 +96,7 @@ export async function prepareRedisSeller({ sourceFile, planFile, directory } = {
     const manifest = { schema: 'stellar-forge.redis-prepared.v1', createdAt: new Date().toISOString(), files,
       routes: service.routes.map(route => ({ id: route.id, method: route.offer.extensions.bazaar.info.input.method,
         url: route.offer.resource.url, paymentOptions: route.offer.accepts.length })),
-      requiredEnvironment: source.connection.passwordEnv ? [source.connection.passwordEnv] : [],
+      requiredEnvironment: requiredEnvironmentOf(source.connection),
       sourceSemantics: SOURCE_SEMANTICS, client: 'original-sf30' };
     const bytes = encode(manifest), handle = await open(resolve(target, 'manifest.json'), 'wx', 0o600);
     try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
@@ -138,7 +140,7 @@ export async function verifyPreparedRedisSeller(directory) {
     throw new TypeError('REDIS_PREPARED_CA_CHANGED');
   const routes = service.routes.map(route => ({ id: route.id, method: route.offer.extensions.bazaar.info.input.method,
     url: route.offer.resource.url, paymentOptions: route.offer.accepts.length }));
-  const requiredEnvironment = declaration.config.connection.passwordEnv ? [declaration.config.connection.passwordEnv] : [];
+  const requiredEnvironment = requiredEnvironmentOf(declaration.config.connection);
   if (manifest.sourceSemantics !== SOURCE_SEMANTICS || manifest.client !== 'original-sf30' ||
       stable(manifest.routes) !== stable(routes) || stable(manifest.requiredEnvironment) !== stable(requiredEnvironment))
     throw new TypeError('REDIS_PREPARED_MANIFEST_CONTRACT_CHANGED');
