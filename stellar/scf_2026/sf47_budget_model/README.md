@@ -69,3 +69,16 @@ Architecture, original research and product decomposition **must be finished bef
 **SF47-B4:** Financial operations to reconcile committed expenses, actual invoices and successful funding receipts with a **separate ledger**; model output is not an accounting record.
 
 **Status:** code, JSON exemplar and source-linked operator guide are deliverables. Actual staff budget, award, eligibility, user demand, XLM exchange values and transfer receipts remain unknown. No grant application or payment initiated.
+
+## SF10 provisional $70k / 19-week founder scenario
+
+[**sf10_70000_candidate.json**](./sf10_70000_candidate.json) records the **existing** SCF founder SF10 editorial baseline, copied from its completed original internal author handoff. It is an `ILLUSTRATIVE_UNSENT` input for this calculator, **not** a selected award ask, approved labor rate, vendor quote, application or grant acceptance. It models fourteen future-only budget entries: $18,000 MVP + $23,000 testnet + $29,000 mainnet, totaling $70,000 (700 hypothetical engineer hours at $95/hour plus $3,500 of assumed future service costs). Submit days: 35, 77, 133. Original source and owner decisions remain in [the internal SF10 Canvas](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C82MLR4UV).
+
+Run the existing code **offline**, without changing accounts, submissions or hosted workflows:
+
+```bash
+python3 stellar/scf_2026/sf47_budget_model/budget.py \
+  stellar/scf_2026/sf47_budget_model/sf10_70000_candidate.json
+```
+
+The three review/payment lag assumptions are currently 14 days. Tranche receipt days in this **hypothetical** scenario are 0, 49, 91, 147. A 30-day sensitivity (by changing all three lag fields in a local copy) moves them to 0, 65, 107, 163. A 60-day sensitivity on these same submit days is rejected because tranche 2 is submitted on day 77 before tranche 1 would be paid on day 95. Do not turn a rejected timeline into a claimed financing requirement. The founder still has to validate actual future staffing/quotes, applicant eligibility and financeability before any application choice.
