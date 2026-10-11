@@ -1,0 +1,30 @@
+{
+  "schema": "commons.facility-watch-input.v1",
+  "description": "Illustrative facility coordinates near three Northern California city centers. These labels are sample sites, not actual customers or claims about an operating facility.",
+  "facilities": [
+    {
+      "id": "sample-napa",
+      "name": "Sample Napa site",
+      "latitude": 38.2975,
+      "longitude": -122.2869,
+      "radiusKm": 100,
+      "minimumMagnitude": 4
+    },
+    {
+      "id": "sample-san-francisco",
+      "name": "Sample San Francisco site",
+      "latitude": 37.7749,
+      "longitude": -122.4194,
+      "radiusKm": 100,
+      "minimumMagnitude": 4
+    },
+    {
+      "id": "sample-sacramento",
+      "name": "Sample Sacramento site",
+      "latitude": 38.5816,
+      "longitude": -121.4944,
+      "radiusKm": 100,
+      "minimumMagnitude": 4
+    }
+  ]
+}

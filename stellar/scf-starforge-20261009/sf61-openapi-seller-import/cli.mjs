@@ -9,6 +9,7 @@ const sha = data => createHash('sha256').update(data).digest('hex');
 
 export async function run(args = process.argv.slice(2), {report = true} = {}) {
   if (args[0] === 'postman') return (await import('./postman/cli.mjs')).runPostmanCLI(args.slice(1));
+  if (args[0] === 'weather') return (await import('./openweather/cli.mjs')).main(args.slice(1));
   if (args[0] === 'refresh') return (await import('./refresh-cli.mjs')).run(args.slice(1));
   if (args[0] === 'source')
     return (await import('./source-bundle-cli.mjs')).runSourceBundleCLI(args.slice(1));

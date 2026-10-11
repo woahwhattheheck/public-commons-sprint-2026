@@ -72,6 +72,8 @@ Plan fields:
 | `packages.NAME.sqliteSnapshotMaxBytes` | Optional SQLite capture ceiling, 4096–1099511627776 bytes; default 1073741824 |
 | `packages.NAME.sqliteSnapshotTimeoutMs` | Optional SQLite capture deadline, 100–3600000 milliseconds; default 120000 |
 | `packages.NAME.mysqlPackage` | Original prepared MySQL or MariaDB package with its named queries and environment references |
+| `packages.NAME.postgresPackage` | Original configured, prepared or workspace-exported PostgreSQL merchant directory |
+| `packages.NAME.postgresInputManifestSha256` | Optional exact 64-character lowercase manifest hash from the original PostgreSQL review |
 | `packages.NAME.runtime` | Original facilitator/local-upstream runtime choices for future staging |
 | `limits` | Original gateway admission, body, response and timeout limits for this merchant |
 
@@ -81,12 +83,44 @@ and package names plus an original release ID. They never supply a path, handler
 module, executable, port override, credential or PID.
 
 Each package chooses exactly one of `workspace`, `python`, `duckdbPackage`,
-`s3Package`, `jsonrpcPackage`, `sqlitePackage`, or `mysqlPackage`.
+`s3Package`, `jsonrpcPackage`, `sqlitePackage`, `mysqlPackage`, or `postgresPackage`.
 `pythonRoot` belongs to `python`; `duckdbPython` belongs to `duckdbPackage`.
 Both SQLite snapshot limits belong to `sqlitePackage`, at the package level.
+`postgresInputManifestSha256` belongs only to `postgresPackage`; its original
+stage compares the reviewed manifest before retaining the package.
 The native packages supply their original application bindings.
 Use `allowLoopbackUpstream` for an API workspace or Stellar RPC package with explicitly declared local upstreams.
 Existing workspace-only plans retain their normalized fields and plan digest.
+
+### Bring a reviewed PostgreSQL merchant into the fleet
+
+The original PostgreSQL workspace and Seller releases console both provide
+**Download fleet source** after their native package review. The download carries
+`postgresPackage`, `postgresInputManifestSha256` and the selected facilitator
+settings. Its canonical host path comes from the native preparation result,
+including when the console was given a relative path. The fixed seller port is
+omitted because each fleet slot already owns its port.
+
+Import that JSON into the intended source card at `/fleet.html`. The card keeps
+its existing alias such as `current` or `next` and shows the original reviewed
+manifest. Choose the exact package host, complete the remaining merchants and
+export the normal launch packet. Its original setup, managed workspace and MCP
+commands all use the same retained fleet directory and plan.
+
+Every new stage compares the package with the selected manifest before capture.
+If the package changed, review it in the original authoring workspace or console
+and import the new source into a new registered alias. Keep existing aliases for
+already selected releases. The original adapter retains the named queries,
+bindings, connection policy, selected CA and exact payment alternatives. Provide
+the source's configured PostgreSQL environment references on the merchant host.
+
+Use the existing fleet stage, compare, prepare, activate, drain, retire and
+rollback actions. Original query and execution changes remain available in the
+comparison, alongside exact payment changes. Closing the managed workspace,
+fleet CLI or fleet MCP cancels an in-progress native package capture before it
+waits for the owning operation. Already committed release IDs remain in their
+original stores. Reopening and rollback use those retained files even after the
+authoring package moves; they continue reading the live database.
 
 ### Operate Python and DuckDB merchants together
 
@@ -132,7 +166,7 @@ For the existing merchant MCP provider, configure this same fleet plan through
 `merchant_fleet_plan` and live fleet status include `packageSources` with each
 alias and source kind; the existing `packages` alias list stays compatible.
 `merchant_fleet_stage` accepts the same tenant, slot, package and release ID for
-all seven source types. The host plan owns their source paths, interpreter choices,
+all registered native source types. The host plan owns their source paths, interpreter choices,
 fixed ports and runtime settings throughout the lifecycle.
 
 ### SQLite snapshots and live MySQL sources
