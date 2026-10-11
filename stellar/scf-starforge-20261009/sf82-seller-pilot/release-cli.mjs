@@ -45,13 +45,15 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
                  [--withdraw ROUTE_ID --reason TEXT]
   catalog-apply --store DIR --catalog CONFIG_JSON --review REVIEW_JSON
   run      --store DIR [--expect GENERATION]
-  console  --store DIR [--port 8425] [--discovery-setup DIRECTORY | --catalog CONFIG_JSON]
+  console  --store DIR [--port 8425] [--client-exports PRIVATE_DIRECTORY]
+           [--discovery-setup DIRECTORY | --catalog CONFIG_JSON]
 
 Run with: node release-cli.mjs COMMAND OPTIONS
 Stage compiles immutable original source and response snapshots. No server starts.
 Activate selects the next run. A running seller keeps its existing release until stopped.
 Run starts the original foreground seller; Ctrl-C stops this process's seller.
 Console opens a private loopback interface to compare, activate, start, stop and roll back.
+Customer handover retains DIR.clients by default; --client-exports reuses an existing customer root.
 Its discovery controls create/reopen DIR.discovery by default, or the host's --discovery-setup directory.
 Catalog-init creates a private identity, source-derived seller policy and existing release connection.
 Catalog-run owns the original catalog writer and optional original browser until Ctrl-C.
@@ -60,7 +62,7 @@ const COMMANDS = {
   init: ['store'], stage: ['store', 'id', 'workspace', 'python', 'python-root', 'duckdb-package', 'duckdb-python', 's3-package', 'mysql-package', 'redis-package', 'jsonrpc-package', 'sqlite-package', 'sqlite-snapshot-max-bytes', 'sqlite-snapshot-timeout-ms', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
   list: ['store'], inspect: ['store', 'id'], diff: ['store', 'from', 'to'],
   activate: ['store', 'id', 'expect', 'reason'], rollback: ['store', 'expect', 'to', 'reason'],
-  status: ['store'], run: ['store', 'expect'], console: ['store', 'port', 'catalog', 'discovery-setup'],
+  status: ['store'], run: ['store', 'expect'], console: ['store', 'port', 'catalog', 'discovery-setup', 'client-exports'],
   'cache-status': ['store'], 'cache-invalidate': ['store', 'instance', 'route', 'all'],
   'catalog-init': ['store', 'id', 'setup', 'seller', 'source-url'],
   'catalog-inspect': ['store', 'setup'],
@@ -187,6 +189,7 @@ export async function main(args = process.argv.slice(2)) {
       const { startReleaseConsole } = await import('./release-console.mjs');
       const session = await startReleaseConsole(root, { port: o.port ?? 8425,
         ...(o['discovery-setup'] ? { discoverySetup: o['discovery-setup'] } : {}),
+        ...(o['client-exports'] ? { clientExportsDirectory: o['client-exports'] } : {}),
         ...(o.catalog ? { catalogConfig: await readReleaseCatalogConfig(o.catalog) } : {}) });
       print({ operatorConsole: session.operatorUrl, store: root, stop: 'Ctrl-C stops this console and its own seller and discovery writer.' });
       let stopping = false;
