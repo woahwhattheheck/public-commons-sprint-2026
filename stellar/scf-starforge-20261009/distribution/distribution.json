@@ -125,6 +125,10 @@
     "./seller/asset-bundles": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/asset-cli.mjs",
     "./seller/http": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/resource-server.mjs",
     "./seller/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/native-factory.mjs",
+    "./seller/embedded": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.mjs"
+    },
     "./seller/operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/operations/server.mjs",
     "./buyer": {
       "types": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/buyer.d.ts",
