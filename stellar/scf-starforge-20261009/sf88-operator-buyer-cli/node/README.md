@@ -31,6 +31,14 @@ Select `responseFile.stream` before review, then consume verified records with
 `operation.recover()`. The [streaming application guide](STREAMS.md) covers both
 completed responses and retained complete records from an interrupted transfer.
 
+The complete [customer inbox workflow](INBOX.md) joins merchant packet or
+generated-client intake to the original private SF88 queue. Review several
+saved requests, execute one selected intent through native terminal approval,
+cancel an unattempted job, recover after interruption, consume its verified
+file or stream, and finalize/export the original history. A transferred Node
+operation stays bound to that one inbox. The same `buyer-node` command exposes
+the entire `inbox-*` workflow, with complete private handover and reopening.
+
 ## Install and runtime
 
 Node 22 or later is required. There are no npm dependencies or install scripts.
