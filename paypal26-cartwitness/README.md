@@ -35,6 +35,21 @@ Use PayPal's **personal sandbox buyer** during approval. The local server must r
 
 This verifies the original amount, approved-state and completed-capture predicates with synthetic provider responses. It does not establish a real PayPal transaction or official hackathon acceptance. No broad suite.
 
+## Independent buyer sessions
+
+A slow model or PayPal response holds only the requesting buyer's session lock.
+Other buyers can read their state and plan their purchases while that request is
+pending. Requests for the same buyer remain serialized through provider calls,
+including duplicate orders, capture, cancellation and reset. Reset preserves the
+session's lock as well as its existing generation and consent rules. Sessions and
+their locks remain in memory for the server process lifetime.
+
+    python3 -m unittest discover -s tests -p test_session_isolation.py
+
+This focused handler check pauses a controlled provider substitute to exercise
+cross-session progress and same-session serialization. It makes no model or PayPal
+requests and is not provider performance or payment evidence.
+
 ## Competition readiness
 
 Official rules: https://paypalaihackathon.devpost.com/rules (November 12, 2026 at noon PST). A functional judge demo with real configured model and PayPal sandbox account, an original open-source GitHub repo (root MIT license inherited from the containing repository), complete setup instructions, a **public YouTube demo under three minutes**, and the authenticated entrant's Devpost submission are required. This source alone does not constitute a submission, eligibility approval or awarded prize.
@@ -44,3 +59,4 @@ Potential prize fit: Best Use of Agentic Commerce and Best Use of PayPal + AI. N
 ## Source and provenance
 
 All example catalogue items, prices, product names, buyer requests and fixture events are synthetic. Keep source changes, entrant ownership and official competition credit with the original owner. MIT license at repository root.
+
