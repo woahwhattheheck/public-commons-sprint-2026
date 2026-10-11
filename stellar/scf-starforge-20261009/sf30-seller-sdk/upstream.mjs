@@ -15,6 +15,7 @@ import { compileUpstreamCache, createConfiguredCachedUpstream } from './response
 import { compileUpstreamStreamPolicy } from './upstream-stream.mjs';
 import { compileSupplierAccounts } from './supplier-quota/config.mjs';
 import { createSupplierQuotaRegistry, attachSupplierQuota } from './supplier-quota/application.mjs';
+import { compileUpstreamTransports, upstreamTransportReferences, createUpstreamTransports } from './upstream-transports.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
 const OWN = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
@@ -22,7 +23,7 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
 const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2','stream','supplierAccount']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2','stream','supplierAccount','transport']);
 const bad = text => { throw new TypeError(text); };
 const handlerRuntimes = new WeakMap();
 const handlerSupplierQuotas = new WeakMap();
@@ -99,6 +100,7 @@ export function upstreamCredentialReferences(config) {
     if (typeof value !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) bad('Invalid credential environment reference');
     references.add(value);
   };
+  for (const reference of upstreamTransportReferences(config)) add(reference);
   for (const binding of Object.values(config.bindings)) {
     if (!plain(binding)) bad('Invalid upstream binding');
     if (binding.headerEnv !== undefined) {
@@ -120,9 +122,10 @@ export function upstreamCredentialReferences(config) {
 /** Trusted operator data; static headers are captured once, OAuth stores references. */
 export function compileUpstreamBindings(config,{allowLoopback=false,env=process.env}={}) {
   if (typeof allowLoopback !== 'boolean' || !plain(config) || config.schema !== SCHEMA || !plain(config.bindings) ||
-      Object.keys(config).some(k => !['schema','bindings','supplierAccounts'].includes(k)) ||
+      Object.keys(config).some(k => !['schema','bindings','supplierAccounts','transports'].includes(k)) ||
       Object.keys(config.bindings).length < 1 || Object.keys(config.bindings).length > 64 || env === null || typeof env !== 'object' || Array.isArray(env)) bad('Expected seller-upstreams.v1 with 1–64 bindings');
   compileSupplierAccounts(config.supplierAccounts, config.bindings);
+  const transports = compileUpstreamTransports(config.transports,config.bindings);
   const compiled = Object.create(null);
   const operationDirectories = new Set(), admissionNames = new Set();
   for (const [name,raw] of Object.entries(config.bindings)) {
@@ -144,6 +147,10 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     }
     const oauth2 = raw.oauth2 === undefined ? undefined : compileOAuthClientCredentials(raw.oauth2,{allowLoopback,env});
     if (oauth2 && OWN(credentials,'authorization')) bad('OAuth cannot be combined with an authorization headerEnv');
+    const transport = raw.transport === undefined ? undefined : transports[raw.transport];
+    if (transport?.mode === 'environment-proxy' && (url.protocol !== 'https:' ||
+        oauth2 && new URL(oauth2.tokenEndpoint).protocol !== 'https:'))
+      bad('Proxy profiles require HTTPS upstream and OAuth token origins');
     const method = raw.method ?? 'GET', responseMode = raw.responseMode ?? 'json';
     if (!supportsSellerMethod(method) || !['json','bytes','sse','ndjson'].includes(responseMode)) bad('Invalid upstream method or responseMode');
     const bodyType=raw.bodyType??'json';
@@ -168,6 +175,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       requestHeaders:Object.freeze(requestHeaders),responseHeaders:Object.freeze(responseHeaders),
       credentials:Object.freeze(credentials),responseMode,...(idempotency ? {idempotency} : {}),
       ...(raw.supplierAccount === undefined ? {} : {supplierAccount:raw.supplierAccount}),
+      ...(transport ? {transport} : {}),
       ...(stream ? {stream} : {}),
       ...(oauth2 ? {oauth2} : {}),
       ...(responseContract === undefined ? {} : {responseContract}),
@@ -232,10 +240,14 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
   if (typeof lookup !== 'function') bad('lookup must be a function');
   const compiled = compileUpstreamBindings(config,{allowLoopback,env});
   const handlers = Object.create(null), providers = new Map();
-  const supplierQuotas = createSupplierQuotaRegistry(config);
+  const transports = createUpstreamTransports(compiled,{env});
+  let supplierQuotas;
+  try {
+  supplierQuotas = createSupplierQuotaRegistry(config);
   for (const [name,binding] of Object.entries(compiled)) {
-    const key = binding.oauth2 ? JSON.stringify(binding.oauth2) : null;
-    if (key && !providers.has(key)) providers.set(key,createOAuthClientCredentials(binding.oauth2,{allowLoopback,env,lookup}));
+    const agent = transports.agentFor(binding.transport?.profile);
+    const key = binding.oauth2 ? JSON.stringify({oauth2:binding.oauth2,transport:binding.transport ?? null}) : null;
+    if (key && !providers.has(key)) providers.set(key,createOAuthClientCredentials(binding.oauth2,{allowLoopback,env,lookup,...(agent ? {agent} : {})}));
     const provider = key ? providers.get(key) : undefined;
     const supplierQuota = binding.supplierAccount ? supplierQuotas.controller(binding.supplierAccount) : undefined;
     const options = {...(supplierQuota ? {supplierQuota} : {}),...(provider ? {credentialProvider:provider} : {}),baseUrl:binding.origin,path:binding.path,method:binding.method,
@@ -246,7 +258,7 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
       ...(binding.responseContract === undefined ? {} : {responseContract:binding.responseContract}),
       timeoutMs:binding.timeoutMs,maxResponseBytes:binding.maxResponseBytes,maxInFlight:binding.maxInFlight,
       ...(binding.idempotency ? {idempotency:configuredUpstreamIdempotency(binding.idempotency)} : {}),
-      allowLocal:binding.local,...(binding.local ? {} : {lookup:publicLookup(binding,lookup)})};
+      allowLocal:binding.local,...(agent ? {agent} : binding.local ? {} : {lookup:publicLookup(binding,lookup)})};
     if (binding.cache) handlers[name] = createConfiguredCachedUpstream(options,binding.cache,binding.availability);
     else {
       const handler = createUpstreamHandler(options);
@@ -255,11 +267,23 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
     }
     if (supplierQuota) handlers[name] = attachSupplierQuota(handlers[name], supplierQuota,
       {preflight:!binding.cache && !binding.idempotency});
+    handlers[name] = transports.retain(handlers[name],binding.transport);
     if (binding.idempotency) handlers[binding.idempotency.admission] = handlers[name].admit;
+  }
+  } catch(error) {
+    transports.destroy();
+    for (const provider of providers.values()) provider.close();
+    const cleanup = new Set(Object.values(handlers).flatMap(handler => [handler.cache,handler.idempotency]).filter(Boolean));
+    for (const control of cleanup) Promise.resolve().then(() => control.close()).catch(() => {});
+    Promise.resolve().then(() => supplierQuotas?.close()).catch(() => {});
+    throw error;
   }
   let closing;
   handlerSupplierQuotas.set(handlers,supplierQuotas);
   handlerRuntimes.set(handlers,options => closing ??= (async () => {
+    // Finish original buffered requests and stream completions before closing
+    // the credentials, supplier ledger or selected transport that they own.
+    await transports.drain();
     const cacheControls = new Set(Object.values(handlers).map(handler => handler.cache).filter(Boolean));
     try { return await Promise.all([...cacheControls].map(control => control.close(options))); }
     finally {
@@ -267,7 +291,7 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
         for (const provider of providers.values()) provider.close();
         await Promise.all([...new Set(Object.values(handlers).map(handler => handler.idempotency).filter(Boolean))]
           .map(control => control.close()));
-      } finally { await supplierQuotas.close(); }
+      } finally { try { await supplierQuotas.close(); } finally { transports.destroy(); } }
     }
   })());
   return Object.freeze(handlers);
