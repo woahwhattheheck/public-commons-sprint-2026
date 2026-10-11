@@ -57,6 +57,21 @@ and uses the original offer compiler plus handler/method/path checks without lis
 resolving DNS, invoking an upstream or initializing a facilitator. It does not
 prove backend availability, account ownership or payable asset validity.
 
+## Seller-side concurrency and shutdown
+
+The existing `upstream-serve.mjs` accepts `--max-in-flight 64` and
+`--drain-grace-ms 60000` just like the static seller. This independent
+seller cap covers the entire original request/verification/handler/settlement
+path, whereas each binding's existing `maxInFlight` bounds that specific
+merchant backend only. When the seller is saturated it returns an immediate
+503 with Retry-After before payment processing; the backend is not invoked.
+`/_seller/health` shows the live counters, and `/_seller/ready` reports
+whether new work is accepted. During SIGTERM, existing responses drain for
+at most the operator-set grace, with forced connection closure and nonzero exit
+if the deadline is exceeded. A terminated or uncertain settlement is never
+retried by the wrapper. Keep merchant operations idempotent and reconcile
+original receipts before retrying any paid operation.
+
 ## Configure a merchant backend
 
 Keep the normal `stellar-forge.seller-service.v1` route. Replace its static
