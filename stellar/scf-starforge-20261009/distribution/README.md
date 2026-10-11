@@ -885,6 +885,84 @@ the host's private operator listener. The existing outbox API stays at
 expose the original worker and shared same-event recovery functions. Follow the
 included workspace guide for mounting, allowed origins and lifecycle ownership.
 
+## Deliver paid SSE and NDJSON streams
+
+The existing seller, upstream and operations commands support finite streamed
+responses. The original native payment flow determines when generation starts:
+authorization completes and validates the source before settlement; an explicitly
+offered and buyer-approved `upfront` flow settles before live generation. The
+same request owns the source, deadlines, backpressure, cancellation and cleanup.
+
+Embedded Node applications can return the original response descriptor through
+the installed public import:
+
+```js
+import { streamingResponse } from '@tokenjunkielabs/starforge-merchant/seller/streaming';
+
+export async function events(context) {
+  return streamingResponse({
+    format: 'sse',
+    body: generateApplicationEvents(context.signal),
+    maxBytes: 33554432,
+    maxDurationMs: 120000,
+    idleTimeoutMs: 30000,
+  });
+}
+```
+
+`generateApplicationEvents` is the application's async byte iterable and must
+stop its source when the original signal is aborted. It emits complete UTF-8 SSE
+records; NDJSON applications select `format: 'ndjson'`. Existing embedded hosts
+also receive `streamingResponse` from `seller/embedded`. The included
+`sf30-seller-sdk/STREAMING.md` defines the complete descriptor, source-close hook,
+payment-flow selection, limits and operator lifecycle.
+
+### Operate an Exa Answer customer deployment
+
+The installed source includes a fixed Exa Answer product and its independent
+buyer. Start from the supplied merchant configuration in your application:
+
+```sh
+SF_STREAM_SOURCE="$PWD/node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009"
+EXA_ANSWER_HOME=/absolute/private/research-merchant
+install -d -m 700 "$EXA_ANSWER_HOME"
+cp "$SF_STREAM_SOURCE/sf30-seller-sdk/examples/exa-answer-service.json" "$EXA_ANSWER_HOME/service.json"
+cp "$SF_STREAM_SOURCE/sf30-seller-sdk/examples/exa-answer-upstreams.json" "$EXA_ANSWER_HOME/upstreams.json"
+```
+
+Set the merchant's actual HTTPS origin, Stellar network, asset, recipient and
+fixed atomic price in `service.json`. Configure the existing native dependencies
+and facilitator, and supply `EXA_API_KEY` through the merchant's private server
+environment. Its existing Exa account retains normal API usage billing.
+`EXA_FACILITATOR_URL` names the selected native facilitator. Then launch the
+original seller and operations workspace:
+
+```sh
+EXA_ANSWER_UPSTREAMS="$EXA_ANSWER_HOME/upstreams.json" \
+npx --no-install starforge operations \
+  --operations-port 8424 --history-dir "$EXA_ANSWER_HOME/history" -- \
+  --config "$EXA_ANSWER_HOME/service.json" \
+  --handlers "$SF_STREAM_SOURCE/sf30-seller-sdk/examples/exa-answer-handlers.mjs" \
+  --facilitator "$EXA_FACILITATOR_URL" --port 8423 \
+  --max-in-flight 16 --drain-grace-ms 180000
+```
+
+The merchant admits only the defined query input before native payment and
+creates the fixed private `/answer` request with the source model, streaming and
+text policy. The included `sf30-seller-sdk/EXA_ANSWER.md` covers configuration,
+deployment, customer acceptance, source billing and delivery recovery.
+
+The public `@tokenjunkielabs/starforge-merchant/buyer/node` import supplies the
+same `Buyer` and `BuyerResult` APIs. Select a reviewed `requestTimeoutMs` and
+`responseFile.stream` in the original operation; the Node client retains the
+capture inside its private operation directory. `result.events()` or
+`result.ndjson()` verifies and reads that saved output. After interruption,
+recover the same intent and explicitly select the complete-record prefix with
+`allowPartial`; its original payment and delivery state remain available.
+The included `sf88-operator-buyer-cli/node/STREAMS.md` explains these operations,
+and `node/examples/exa-answer.mjs` provides review, execution, answer/citation
+consumption and reopening in one runnable customer workflow.
+
 ## Give customers a usable client
 
 Save the running seller's OpenAPI document using its printed listener address,
