@@ -103,7 +103,7 @@ delivery.
 
 The **Backend OAuth lifecycle** table in the existing runtime section shows
 each binding's original provider state, renewal and expiry countdown, waiting
-requests, token requests, renewals and failures. Challenge preview leaves the
+requests, token requests, successful token exchanges and failures. Challenge preview leaves the
 provider empty. Identical provider configurations share a lifecycle, so the
 same counters may appear on several routes. The view reports no token contents,
 credential values or credential fingerprints.
