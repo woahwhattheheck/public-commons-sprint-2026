@@ -5,19 +5,22 @@ import { selectServiceRoute } from '../route-path.mjs';
 const LIMITS = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 15000, Infinity];
 const OUTCOMES = ['success', 'challenge', 'clientError', 'serverError', 'other', 'disconnected'];
 const MINUTE = 60000;
+const METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'CONNECT', 'TRACE']);
 const empty = () => ({ started: 0, completed: 0, responses: 0, inFlight: 0,
   success: 0, challenge: 0, clientError: 0, serverError: 0, other: 0,
   disconnected: 0, durationTotalMs: 0, durationMaxMs: 0,
-  histogram: LIMITS.map(() => 0) });
-function complete(row, outcome, duration) {
+  histogram: LIMITS.map(() => 0), statuses: Object.create(null) });
+function complete(row, outcome, duration, status) {
   row.completed++; row[outcome]++;
-  if (outcome !== 'disconnected') row.responses++;
+  if (outcome !== 'disconnected') {
+    row.responses++; row.statuses[status] = (row.statuses[status] ?? 0) + 1;
+  }
   row.durationTotalMs += duration;
   row.durationMaxMs = Math.max(row.durationMaxMs, duration);
   row.histogram[LIMITS.findIndex(limit => duration <= limit)]++;
 }
 function view(row) {
-  const { durationTotalMs, histogram, ...rest } = row;
+  const { durationTotalMs, histogram, statuses, ...rest } = row;
   const target = Math.ceil(row.completed * 0.95);
   let sum = 0, bound = null;
   if (target) for (let i = 0; i < histogram.length; i++) {
@@ -26,16 +29,24 @@ function view(row) {
   }
   return { ...rest, durationMaxMs: Math.round(rest.durationMaxMs * 100) / 100,
     durationMeanMs: row.completed ? Math.round(durationTotalMs / row.completed * 100) / 100 : null,
-    latencyP95UpperBoundMs: bound,
+    latencyP95UpperBoundMs: bound, statuses: { ...statuses },
+    // Preserve the existing finish-or-disconnect latency population. JSON bins
+    // are noncumulative; the Prometheus adapter accumulates them explicitly.
+    durationHistogram: { count: row.completed, sumMs: durationTotalMs,
+      buckets: histogram.map((count, i) => ({
+        upperBoundMs: Number.isFinite(LIMITS[i]) ? LIMITS[i] : null, count })) },
     httpSuccessPercent: row.responses ? Math.round(row.success / row.responses * 10000) / 100 : null };
 }
 
 /** Observe a running startSellerService() result. Never reads bodies or payment headers. */
-export function observeSellerTraffic(session, { now = Date.now, monotonic = () => performance.now() } = {}) {
+export function observeSellerTraffic(session, { now = Date.now, monotonic = () => performance.now(),
+  recentLimit = 160 } = {}) {
   if (!session?.server || !Array.isArray(session.compiled?.routes) ||
       session.compiled.routes.length < 1 || session.compiled.routes.length > 100 ||
       typeof session.server.prependListener !== 'function' || typeof now !== 'function' ||
       typeof monotonic !== 'function') throw new TypeError('Running SF30 seller session required');
+  if (!Number.isInteger(recentLimit) || recentLimit < 0 || recentLimit > 2000)
+    throw new RangeError('recentLimit must be 0–2000');
   const routes = session.compiled.routes;
   const stats = new Map();
   for (const route of routes) {
@@ -53,6 +64,8 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
   const totals = empty(), buckets = new Map();
   const startedAt = new Date(now()).toISOString(), sessionId = randomUUID();
   let attached = true, observerErrors = 0, ignoredMetadata = 0;
+  const recent = Array(recentLimit);
+  let sequence = 0, recentCount = 0, recentNext = 0;
   // Clamp wall-clock regressions for the rolling ring, not request latency.
   let latestMinute = Math.floor(now() / MINUTE);
   function minute() {
@@ -81,6 +94,7 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
       if (!row) { observerErrors++; return; }
       for (const item of [row, totals]) { item.started++; item.inFlight++; }
       minute().started++;
+      const requestId = ++sequence, method = METHODS.has(req.method) ? req.method : 'OTHER';
       let done = false;
       function terminal(disconnected) {
         if (done) return;
@@ -92,8 +106,15 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
           const outcome = disconnected ? 'disconnected' : code === 402 ? 'challenge' :
             code >= 200 && code < 300 ? 'success' : code >= 400 && code < 500 ? 'clientError' :
             code >= 500 && code < 600 ? 'serverError' : 'other';
-          for (const item of [row, totals]) { item.inFlight--; complete(item, outcome, duration); }
-          complete(minute(), outcome, duration);
+          for (const item of [row, totals]) { item.inFlight--; complete(item, outcome, duration, code); }
+          complete(minute(), outcome, duration, code);
+          if (recentLimit) {
+            recent[recentNext] = { requestId, at: new Date(now()).toISOString(), routeId: id,
+              method, outcome, status: disconnected && !res.headersSent ? null : code,
+              durationMs: Math.round(duration * 100) / 100 };
+            recentNext = (recentNext + 1) % recentLimit;
+            recentCount = Math.min(recentLimit, recentCount + 1);
+          }
         } catch { observerErrors++; }
       }
       const finish = () => terminal(false);
@@ -118,6 +139,8 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
         mode: ['NATIVE_X402', 'CHALLENGE_ONLY'].includes(session.mode) ? session.mode : 'UNKNOWN',
         observerErrors, ignoredMetadata, totals: view(totals),
         routes: [...stats.values()].map(view),
+        recentLimit, recent: Array.from({ length: recentCount }, (_, i) =>
+          ({ ...recent[(recentNext - 1 - i + recentLimit) % recentLimit] })),
         minutes: Array.from({ length: 60 }, (_, i) => {
           const key = latestMinute - 59 + i;
           // In-flight applies to the session; a completion bucket may have started earlier.
@@ -129,7 +152,7 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
           latency: 'Arrival to response finish/disconnect, including cancelled responses',
           p95: 'Upper bound of fixed histogram bin, not an exact percentile',
           persistence: 'Process memory only; restart begins a new session',
-          retention: 'Cumulative per-route totals and 60 one-minute aggregate buckets; no request records' } };
+          retention: 'Cumulative route totals, 60 minute buckets, and a bounded ring of metadata-only outcomes; no request contents' } };
     },
   };
 }
@@ -145,4 +168,40 @@ export function trafficCsv(snapshot) {
   };
   return [fields, ...snapshot.routes.map(route => fields.map(field => route[field]))]
     .map(row => row.map(cell).join(',')).join('\r\n') + '\r\n';
+}
+
+/** Classic Prometheus text from the SAME observer snapshot, not another collector. */
+export function trafficPrometheus(snapshot) {
+  if (snapshot?.schema !== 'stellar-forge.seller-traffic.v1' || !Array.isArray(snapshot.routes))
+    throw new TypeError('Original seller traffic snapshot required');
+  const escape = value => String(value).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/"/g, '\\"');
+  const output = [
+    '# HELP sf30_http_requests_total HTTP attempts, not buyers or payments.',
+    '# TYPE sf30_http_requests_total counter',
+    '# HELP sf30_http_active_requests Observed in-flight HTTP requests.',
+    '# TYPE sf30_http_active_requests gauge',
+    '# HELP sf30_http_responses_total Finished HTTP responses, not settlement receipts.',
+    '# TYPE sf30_http_responses_total counter',
+    '# HELP sf30_http_aborted_total Requests disconnected before response finish.',
+    '# TYPE sf30_http_aborted_total counter',
+    '# HELP sf30_http_request_duration_seconds Arrival to finish or disconnect; includes cancelled requests.',
+    '# TYPE sf30_http_request_duration_seconds histogram',
+  ];
+  for (const row of snapshot.routes) {
+    const tags = `route_id="${escape(row.id)}",method="${escape(row.method)}"`;
+    output.push(`sf30_http_requests_total{${tags}} ${row.started}`,
+      `sf30_http_active_requests{${tags}} ${row.inFlight}`,
+      `sf30_http_aborted_total{${tags}} ${row.disconnected}`);
+    for (const [code, count] of Object.entries(row.statuses))
+      output.push(`sf30_http_responses_total{${tags},status="${code}"} ${count}`);
+    let cumulative = 0;
+    for (const bin of row.durationHistogram.buckets) {
+      cumulative += bin.count;
+      const upper = bin.upperBoundMs === null ? '+Inf' : bin.upperBoundMs / 1000;
+      output.push(`sf30_http_request_duration_seconds_bucket{${tags},le="${upper}"} ${cumulative}`);
+    }
+    output.push(`sf30_http_request_duration_seconds_sum{${tags}} ${row.durationHistogram.sumMs / 1000}`,
+      `sf30_http_request_duration_seconds_count{${tags}} ${row.durationHistogram.count}`);
+  }
+  return output.join('\n') + '\n';
 }

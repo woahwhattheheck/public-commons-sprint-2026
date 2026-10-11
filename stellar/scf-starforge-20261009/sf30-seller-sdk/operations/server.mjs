@@ -1,19 +1,20 @@
 // MIT. Read-only operator listener; separate from the advertised seller origin.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { observeSellerTraffic, trafficCsv } from './traffic.mjs';
+import { observeSellerTraffic, trafficCsv, trafficPrometheus } from './traffic.mjs';
 
 const HOST = '127.0.0.1';
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 
-export async function startSellerOperations(session, { port = 8424 } = {}) {
+export async function startSellerOperations(session, { port = 8424, recentLimit = 160 } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('operations port must be 0–65535');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/console.mjs', 'console.mjs', 'text/javascript; charset=utf-8'],
+    ['/recent.mjs', 'recent.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL(file, import.meta.url)) }])));
-  const observer = observeSellerTraffic(session);
+  const observer = observeSellerTraffic(session, { recentLimit });
   let allowedHosts = new Set(), allowedOrigins = new Set();
   const server = createServer((req, res) => {
     const reply = (code, type, data, extra = {}) => {
@@ -38,6 +39,8 @@ export async function startSellerOperations(session, { port = 8424 } = {}) {
       }
       if (req.url === '/export.csv') return reply(200, 'text/csv; charset=utf-8', trafficCsv(observer.snapshot()),
         { 'content-disposition': 'attachment; filename="seller-traffic.csv"' });
+      if (req.url === '/metrics') return reply(200, 'text/plain; version=0.0.4; charset=utf-8',
+        trafficPrometheus(observer.snapshot()));
       const asset = assets.get(req.url);
       if (asset) return reply(200, asset.type, asset.bytes);
       return reply(404, 'text/plain', 'Not found');
