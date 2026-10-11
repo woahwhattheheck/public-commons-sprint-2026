@@ -193,6 +193,8 @@ function runtimeOptions(value = {}) {
   }
   return result;
 }
+export { runtimeOptions as normalizeReleaseRuntime };
+
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
   const manifest = JSON.parse(manifestBytes);
