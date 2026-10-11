@@ -197,7 +197,8 @@ function htmlReport(review) {
     '<dt>Source response</dt><dd>' + esc(fmt(edition.resource?.status)) + ' · ' + esc(fmt(edition.resource?.bytes)) + ' bytes</dd>' +
     '<dt>Source extent</dt><dd>' + esc(fmt(edition.sourceExtent)) + '</dd><dt>Availability</dt><dd>' + esc(edition.rawAvailability) + '</dd>' +
     '<dt>Report values</dt><dd>' + esc(label(edition.reportValues)) + '</dd><dt>Usage</dt><dd>' + esc(edition.usage?.mode) + '</dd>' +
-    '<dt>Raw retention ends</dt><dd>' + esc(fmt(edition.rawExpiresAt)) + '</dd><dt>Captured source intervals</dt><dd>' + esc(fmt(edition.resource?.returnedIntervals)) + '</dd><dt>Available source rows</dt><dd>' + esc(edition.intervalCount) +
+    '<dt>Raw retention ends</dt><dd>' + esc(fmt(edition.rawExpiresAt)) + '</dd><dt>Captured source intervals</dt><dd>' + esc(fmt(edition.resource?.returnedIntervals)) +
+    '</dd><dt>Available source rows</dt><dd>' + esc(edition.intervalCount) +
     '; retained decision identities: ' + esc(edition.retainedDecisionIntervals) + '</dd></dl></details>').join('');
   const notes = review.issues.length ? '<ul>' + review.issues.map(item => '<li data-search-row><strong>' + esc(item.code) + '</strong> — ' + esc(item.message) +
     (item.editionId ? ' (' + source(item.editionId) + ')' : '') + '</li>').join('') + '</ul>' : '<p class="muted">No additional source notes.</p>';
