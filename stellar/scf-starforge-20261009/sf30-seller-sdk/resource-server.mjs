@@ -2,6 +2,7 @@
 // This adapter implements no payment scheme, signature verifier or chain client.
 import { compileHttpSellerOffer, paymentRequiredResponse } from './seller.mjs';
 import { validateHeaderName, validateHeaderValue } from 'node:http';
+import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/auto-catalog.mjs';
 
 const METHODS = new Set(['GET', 'HEAD', 'POST']);
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -10,6 +11,43 @@ const hopHeaders = new Set(['connection', 'keep-alive', 'proxy-authenticate',
 const paymentHeaders = new Set(['payment-required', 'payment-response', 'payment-signature',
   'x-payment', 'x-payment-response', 'extension-responses', 'settlement-overrides', 'x402-settlement-overrides']);
 const fault = (message, status = 400) => Object.assign(new Error(message), { status });
+
+/** Validate an original compiled offer without reducing its input schema. */
+function importedOffer(raw, allowLocalhost) {
+  if (!plain(raw) || raw.x402Version !== 2 || !plain(raw.resource) ||
+      !Array.isArray(raw.accepts) || raw.accepts.length !== 1 ||
+      !plain(raw.extensions) || Object.keys(raw.extensions).some(key => key !== 'bazaar')) {
+    throw new TypeError('Imported service offer requires x402 v2, one exact payment and Bazaar only');
+  }
+  const offer = structuredClone(raw), bazaar = offer.extensions.bazaar;
+  const input = bazaar?.info?.input;
+  if (input?.type !== 'http' || !METHODS.has(input.method) ||
+      bazaar.routeTemplate !== undefined || input.pathParams !== undefined ||
+      (input.method === 'POST' && input.bodyType !== 'json')) {
+    throw new TypeError('Imported service offer requires fixed GET, HEAD or JSON POST');
+  }
+  const checked = compileHttpSellerOffer({
+    url: offer.resource.url, method: input.method,
+    description: offer.resource.description ?? 'Imported API resource',
+    serviceName: offer.resource.serviceName, tags: offer.resource.tags,
+    payment: offer.accepts[0],
+    ...(input.method === 'POST' ? { bodyType: 'json', body: input.body } : {}),
+  }, { allowLocalhost });
+  const terms = checked.accepts[0], original = offer.accepts[0];
+  if (checked.resource.url !== offer.resource.url ||
+      Object.keys(original).length !== Object.keys(terms).length ||
+      Object.entries(terms).some(([key, value]) => original[key] !== value)) {
+    throw new TypeError('Imported offer contains noncanonical URL or unsupported payment terms');
+  }
+  if (offer.resource.mimeType !== undefined &&
+      (typeof offer.resource.mimeType !== 'string' || !offer.resource.mimeType || /[\x00-\x1f\x7f]/.test(offer.resource.mimeType))) {
+    throw new TypeError('Invalid imported resource mimeType');
+  }
+  const result = validateBazaarExtension(bazaar);
+  if (!result.ok) throw new TypeError('Imported Bazaar metadata rejected: ' + JSON.stringify(result));
+  paymentRequiredResponse(offer); // Enforce the original buyer/header interoperability limit.
+  return offer;
+}
 
 function freeze(value) {
   if (value && typeof value === 'object') {
@@ -25,15 +63,18 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
     throw new TypeError('One to 100 seller route definitions required');
   }
   const nativeRoutes = Object.create(null), ids = new Set(), origins = new Set();
-  const routes = definitions.map(({ id, definition, handler } = {}) => {
+  const routes = definitions.map(({ id, definition, offer: originalOffer, handler } = {}) => {
     if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(id) || ids.has(id)) {
       throw new TypeError('Unique printable route id required');
     }
-    if (!plain(definition) || typeof handler !== 'function') throw new TypeError('Route definition and handler required');
-    if (definition.routeTemplate !== undefined) throw new TypeError('Seller service supports fixed paths only');
-    const offer = compileHttpSellerOffer(definition, { allowLocalhost });
+    if ((definition === undefined) === (originalOffer === undefined) || typeof handler !== 'function')
+      throw new TypeError('Choose one route definition or compiled offer, plus a handler');
+    if (definition !== undefined && (!plain(definition) || definition.routeTemplate !== undefined))
+      throw new TypeError('Seller service requires a fixed-path definition');
+    const offer = originalOffer === undefined ? compileHttpSellerOffer(definition, { allowLocalhost }) :
+      importedOffer(originalOffer, allowLocalhost);
     const method = offer.extensions.bazaar.info.input.method;
-    if (!METHODS.has(method) || (method === 'POST' && (definition.bodyType ?? 'json') !== 'json')) {
+    if (!METHODS.has(method) || (method === 'POST' && offer.extensions.bazaar.info.input.bodyType !== 'json')) {
       throw new TypeError('Seller service supports GET, HEAD and JSON POST only');
     }
     const url = new URL(offer.resource.url), path = url.pathname;
@@ -224,3 +265,4 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
     }
   };
 }
+
