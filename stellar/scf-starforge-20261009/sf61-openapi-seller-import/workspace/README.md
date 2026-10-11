@@ -190,6 +190,11 @@ by the **active seller's original route selection and SF89 input schema** before
 the bound original handler issues it. Ordinary headers must match the eventual
 buyer request, including spelling of their values; surrounding whitespace is
 rejected because browser and HTTP header processing would trim it.
+The form lists the configured forwarded headers. Include the buyer's actual
+`accept-language`, `x-region` or other listed values in the request JSON before
+issuing its ticket. The merchant and original SF88 buyer share the same ordinary
+header validation; private ticket, authentication and payment headers retain
+their original separate assembly.
 
 **Create private buyer ticket file** stores the original five-field
 `stellar-forge.upstream-operation-ticket.v1` envelope, the exact JSON body and
@@ -208,6 +213,12 @@ operation does not silently invent another buyer intent. A browser download
 contains only the original ticket envelope. On Linux or macOS, run `chmod 600`
 on that download before importing it; when transferring hosts, move the matching
 body/headers/offer privately and prepare with the destination's actual paths.
+Pass the supplied ordinary JSON file as `--headers-file`, the exact body as
+`--body-file`, and the separate ticket as `--ticket-file`. The original buyer
+stores those header values in its prepared config, so later file changes do not
+alter the reviewed request or an existing inbox job. The same private review
+can also be imported by the original Node `Buyer.fromConfig` or Python
+`Buyer.from_config` customer application.
 
 Ticket bytes and key values never enter workspace status or DOM summaries.
 Issuance/download calls require the workspace token, exact origin and current

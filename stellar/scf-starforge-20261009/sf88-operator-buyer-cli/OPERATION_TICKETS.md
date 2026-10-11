@@ -21,12 +21,26 @@ canonical absolute path, with no symlinks. It uses the original
 
 From the complete checkout root, select the merchant's actual saved POST offer:
 
+If the merchant forwards ordinary values such as language or region, use its
+matching private headers file. For example, a request issued with these values
+uses this exact JSON object in `/private/order-request-headers.json`:
+
+```json
+{"Content-Type":"application/json","Accept":"application/json","accept-language":"en-US","x-region":"eu"}
+```
+
+Keep that file `0600` at a canonical absolute path. The header values must be
+those used by the issuer; choose the merchant's configured names and actual
+values. The SF61 merchant workspace supplies this file beside its ticket, body,
+concrete offer and already prepared review config.
+
 ```sh
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs --prepare \
   --discovery /private/merchant-offers.json --row 0 --accept 0 \
   --intent-id merchant-order-17 --url https://merchant.example/orders \
   --method POST --body-file /private/order-request-body.json \
-  --content-type application/json --ticket-file /private/order-ticket.json \
+  --headers-file /private/order-request-headers.json \
+  --ticket-file /private/order-ticket.json \
   --out /private/order-review.json
 
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs \
@@ -38,6 +52,11 @@ HTTP body alone, not the merchant issuer's larger request-description envelope.
 The source URL, query order, body and any merchant-forwarded ordinary headers
 must match the issued request. The merchant computes the original request hash,
 including its private backend mapping, and checks it during admission.
+`--headers-file` copies ordinary values into the prepared operation. It does not
+contain the ticket bearer. Duplicate header names, whitespace that the native
+transport would trim, and reserved fields are rejected before creating the review
+file. The existing `--content-type application/json` shortcut remains available;
+if also supplied with a headers file, their content types must agree.
 
 The default ticket header is `x-merchant-operation`. If the merchant configured
 another header, supply `--ticket-header` with that exact lowercase name. HTTP,

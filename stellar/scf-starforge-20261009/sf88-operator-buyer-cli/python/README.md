@@ -381,7 +381,13 @@ An operator profile contains only the following original execution settings:
 }
 ```
 
-Optional `trustedPayer` and `bodyCaptureTimeoutMs` are passed through. For POST/PUT/PATCH data APIs, supply exact `body=b'{"region":"west"}'` bytes and `headers={"Content-Type":"application/json"}` to `prepare` or `configure`. Request bytes are copied privately and bound into the offline review; body size and permitted methods/headers are validated by original SF88. Calling `configure` after a review invalidates that review whenever the configuration or body changes.
+Optional `trustedPayer` and `bodyCaptureTimeoutMs` are passed through. For POST/PUT/PATCH data APIs, supply exact `body=b'{"region":"west"}'` bytes and ordinary `headers={"Content-Type":"application/json", "accept-language":"en-US", "x-region":"west"}` to `prepare` or `configure`. Preparation saves a private headers file and sends it through the matching original SF88 `--headers-file` command. Native review canonicalizes names, retains exact values and rejects duplicate, reserved or whitespace-changing fields. Request bytes and headers stay in the private reviewed configuration. Calling `configure` after a review invalidates that review whenever the configuration or body changes.
+
+For an issued merchant POST, `from_config` accepts the merchant workspace's
+prepared review with its original `ticketFile`, exact body and headers. The
+original ticket reader and request assembly remain responsible for the bearer;
+ordinary request headers never carry it in the Python review. Original SF98
+order references and authentication/payment header handling are retained.
 
 ## Restart and consume a completed purchase
 

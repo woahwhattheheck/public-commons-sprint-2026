@@ -1,5 +1,4 @@
 // MIT. Issue through the exact active original handler and its original request rules.
-import { validateHeaderName, validateHeaderValue } from 'node:http';
 import { constants } from 'node:fs';
 import { open, realpath } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
@@ -12,6 +11,7 @@ import { writeTicket } from '../../sf30-seller-sdk/upstream-operation.mjs';
 import { materializeSellerRequestOffer } from '../../sf30-seller-sdk/resource-server.mjs';
 import { prepareReview } from '../../sf88-operator-buyer-cli/prepare.mjs';
 import { loadOperationTicket } from '../../sf88-operator-buyer-cli/operation-ticket.mjs';
+import { normalizeOperationHeaders } from '../../sf88-operator-buyer-cli/request-headers.mjs';
 import { merchantTicketDirectory } from './operation-plan.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
@@ -31,6 +31,7 @@ export function createMerchantTicketIssuer({ service, upstreams, control }) {
     for (const [name,value] of Object.entries(input.queryParams ?? {})) url.searchParams.set(name,String(value));
     return Object.freeze({ binding: route.handler, id: route.id, method: route.method,
       path: route.path, scope: policy.scope, requestHeader: policy.requestHeader ?? 'x-merchant-operation',
+      forwardedHeaders:[...(upstreams.bindings[route.handler].requestHeaders ?? [])],
       maxTicketSeconds: policy.maxTicketSeconds ?? 86400,
       request: { method: route.method, url: url.href,
         pathParams: structuredClone(input.pathParams ?? {}), headers: {'content-type':'application/json'}, body: structuredClone(input.body ?? {}) } });
@@ -59,14 +60,11 @@ export function createMerchantTicketIssuer({ service, upstreams, control }) {
       else query[key] = Array.isArray(query[key]) ? [...query[key],item] : [query[key],item];
     }
     const binding = upstreams.bindings[value.binding], allowed = new Set(['content-type','accept',...(binding.requestHeaders ?? []).map(name=>name.toLowerCase())]);
-    if (!plain(input.headers ?? {})) fail('Ordinary request headers must be an object');
     const headers = Object.create(null);
-    for (const [name,item] of Object.entries(input.headers ?? {})) {
+    for (const [name,item] of Object.entries(normalizeOperationHeaders(input.headers ?? {}))) {
       const key = name.toLowerCase();
-      if (!allowed.has(key) || Object.hasOwn(headers,key) || typeof item !== 'string' || item.length > 8192)
+      if (!allowed.has(key))
         fail('Use only the ordinary request headers configured for this operation');
-      validateHeaderName(name); validateHeaderValue(name,item);
-      if (new Headers([[key,item]]).get(key)!==item) fail('Ordinary header values must not contain surrounding whitespace');
       headers[key] = item;
     }
     if (headers['content-type'] !== undefined && headers['content-type'].split(';',1)[0].trim().toLowerCase() !== 'application/json')
@@ -97,8 +95,7 @@ export async function saveMerchantTicket(project, runtimeId, issued) {
   const filename = 'operation-'+runtimeId+'-'+fileId+'.json';
   const path = join(directory,filename), stem=path.slice(0,-5);
   const bodyPath=stem+'.body.json', headersPath=stem+'.headers.json', offersPath=stem+'.offers.json', reviewPath=stem+'.review.json';
-  const headers=Object.fromEntries(Object.entries(request.headers).map(([name,value])=>[
-    name==='content-type'?'Content-Type':name==='accept'?'Accept':name,value]));
+  const headers=normalizeOperationHeaders(request.headers);
   const discovery={resources:[offer]}, raw=Buffer.from(JSON.stringify(discovery,null,2)+'\n');
   const intentId='merchant-'+document.operationKey;
   const {draft}=prepareReview(raw,{rowIndex:0,acceptIndex:0,intentId,url:request.url,

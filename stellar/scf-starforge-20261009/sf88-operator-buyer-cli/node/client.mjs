@@ -10,18 +10,6 @@ import { absolute, privateDirectory, digest, now, intent, object, need, BuyerErr
 const SCHEMA = 'stellar-forge.node-buyer.v1';
 const NATIVE_RESULT = 'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT';
 const copy = value => parseJson(jsonBytes(value));
-function nativeHeaders(headers) {
-  if (headers === undefined) return undefined;
-  need(object(headers), 'GENERATED_HEADERS_INVALID');
-  const names = new Map([['accept', 'Accept'], ['content-type', 'Content-Type'], ['x-sf98-order-id', 'X-SF98-Order-ID']]);
-  const result = {};
-  for (const [key, value] of Object.entries(headers)) {
-    const canonical = names.get(key.toLowerCase());
-    need(canonical !== undefined && !(canonical in result), 'GENERATED_HEADER_UNSUPPORTED_OR_DUPLICATE');
-    result[canonical] = value;
-  }
-  return result;
-}
 const profileKeys = new Set(['operator', 'signerModule', 'trustedPayer', 'bodyCaptureTimeoutMs', 'buyerTransport']);
 
 export class Buyer {
@@ -127,7 +115,9 @@ export class Buyer {
     const operation = {};
     for (const key of ['intentId', 'url', 'method', 'expect', 'headers', 'orderReference', 'ticketFile', 'ticketHeader'])
       if (request[key] !== undefined) operation[key] = request[key];
-    if (operation.headers !== undefined) operation.headers = nativeHeaders(operation.headers);
+    // The installed original runtime validates and canonicalizes ordinary
+    // headers during _create's mandatory native review. Keep this standalone
+    // package independent of files outside its own published directory.
     return this._create({ operation }, { ...options, body: request.body });
   }
 
@@ -163,14 +153,16 @@ export class Buyer {
     try {
       const source = join(directory, 'catalog.json'), output = join(directory, 'config.json');
       await writeBytes(source, await readBytes(absolute(discoveryFile), 1048576), { exclusive: true });
+      const headersFile = join(directory, 'request.headers.json');
+      if (headers !== undefined) await writeJson(headersFile, headers, { exclusive: true });
       await this.runtime.checked(['--prepare', '--discovery', source, '--row', String(row),
         '--accept', String(accept), '--intent-id', intentId, '--url', url,
         '--method', method, '--out', output,
+        ...(headers === undefined ? [] : ['--headers-file', headersFile]),
         ...(ticketFile === undefined ? [] : ['--ticket-file', absolute(ticketFile)]),
         ...(ticketHeader === undefined ? [] : ['--ticket-header', ticketHeader])],
       { stateDirectory: this.stateDirectory, mode: 'OFFLINE_CONFIG_PREPARED', signal });
       const config = await readJson(output);
-      if (headers !== undefined) config.operation.headers = headers;
       return await this._create(config, { body, operatorProfile });
     } finally { await rm(directory, { recursive: true, force: true }); }
   }
