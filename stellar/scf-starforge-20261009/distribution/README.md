@@ -43,6 +43,25 @@ npx --no-install starforge doctor --feature schema
 The `schema` diagnostic checks local dependency resolution. Request matching
 continues through the maintained schema validator and pattern compiler.
 
+### OpenAPI YAML source support
+
+The original OpenAPI importer accepts JSON and YAML documents. Its included
+`sf61-openapi-seller-import/package.json` and lockfile pin `yaml` to `2.9.1`;
+the maintained archive declares that dependency in its `openapi` feature.
+If optional packages were omitted, install it in the same application directory:
+
+```sh
+npm install --ignore-scripts --save-exact yaml@2.9.1
+npx --no-install starforge doctor --feature openapi
+```
+
+The diagnostic resolves the dependency from the original parser's installed
+source directory. JSON input does not need the YAML engine. YAML import uses
+the original YAML 1.2 core parser with unique keys and bounded aliases, and
+retains the exact source bytes and their SHA-256 in the prepared merchant.
+The existing schema feature above supplies regular-expression matching when
+the selected contract requires it.
+
 ## Start a merchant workspace
 
 ```sh
@@ -88,23 +107,122 @@ The bundled upstream example points to an operator-owned loopback backend at
 port 8425. No backend is invented or started for it. Use the original upstream
 configuration and flags for your own HTTPS service.
 
-## Prepare an existing API in the browser
+## Prepare an existing API and hand a request to its buyer
 
-The original OpenAPI workspace can also prepare the merchant's native API
-configuration. Start it with an existing private parent for exported projects:
+Use the existing OpenAPI workspace on Linux with Node 22.16+ and util-linux
+`flock`. Install the YAML feature above for a YAML source, then start the
+workspace with an existing private parent for exported projects:
 
 ```sh
-mkdir -m 700 /private/merchant-projects
+export STARFORGE_PRIVATE="$PWD/starforge-private"
+install -d -m 700 "$STARFORGE_PRIVATE" "$STARFORGE_PRIVATE/merchant-projects"
 npx --no-install starforge openapi-workspace \
-  --out-parent /private/merchant-projects --port 0
+  --out-parent "$STARFORGE_PRIVATE/merchant-projects" --port 0
 ```
 
-Open the printed local URL and use the existing API contract, explicit operation
-selections and original application bindings. The workspace uses the maintained
-importer, seller lifecycle and request review modules. Its files and browser
-assets are included under
-`source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/`;
-the README there covers the complete preparation and operator lifecycle.
+Open the printed local URL. Import the provider's original OpenAPI 3.0 or 3.1
+document, select its actual operation and server, and review the original
+request and response contract. Set the merchant's public resource URL, method,
+network, asset, recipient and atomic price. Configure the existing application
+or upstream binding; private backend authentication stays in the selected
+environment references. Save the merchant project and use its existing managed
+seller controls to start, check, stop and reopen it.
+
+The terminal importer accepts the same original JSON or YAML source and
+explicit selection and binding files:
+
+```sh
+npx --no-install starforge openapi \
+  --spec "$STARFORGE_PRIVATE/provider-openapi.yaml" \
+  --config "$STARFORGE_PRIVATE/operation-selections.json" \
+  --service-bindings "$STARFORGE_PRIVATE/application-bindings.json" \
+  --upstream-bindings "$STARFORGE_PRIVATE/upstream-bindings.json" \
+  --out "$STARFORGE_PRIVATE/merchant-projects/prepared-api"
+```
+
+The output directory must be new. Use the original compiler's selection and
+binding formats described in the included
+`sf61-openapi-seller-import/README.md`; omit an optional bindings flag when that
+binding is not used. Both paths retain the source digest, selected payment
+terms and supported response contracts in the original merchant package.
+
+### Retain a file request and issue its original ticket
+
+For a source-declared multipart operation, select the local files and typed
+fields in the merchant workspace. Review the exact body length, digest and
+ordinary request headers before issuing its durable operation ticket. The
+selected body includes the original multipart boundary and framing. The native
+request ceiling is 16 MiB including framing, with the merchant binding's
+configured cap applied as well. If the source permits the entire body to be
+absent, that remains a distinct request with no body attachment.
+
+Enter the actual merchant operation ID, customer and expiry, then use
+**Download complete buyer request**. The private packet carries the original
+discovery, exact body and ordinary headers, operation ticket and request
+identity. Keep the packet private when handing it to the buyer. Reopening the
+saved merchant retains those same bytes; selecting different files creates a
+different request that needs its own review and ticket.
+
+The included
+`sf61-openapi-seller-import/workspace/FILE_INPUT.md` defines the supported
+multipart manifest and standalone body-preparation commands. The workspace
+keeps the existing seller and original buyer protocol throughout this flow.
+
+### Receive, review and reopen the acquisition
+
+Create an existing private directory for the receiver's source configurations.
+Declare its actual operator in a private `0600` JSON file using the
+`stellar-forge.buyer-runbook-operator.v1` format from the included
+`buyer-runbook/WORKSPACE.md`. That preset records the receiver's actor, service,
+public payer, Python executable, total and daily atomic limits, and either its
+wallet environment-variable name or trusted signer-provider path.
+
+```sh
+install -d -m 700 "$STARFORGE_PRIVATE/acquisitions" "$STARFORGE_PRIVATE/acquisitions/buyer-configs"
+npx --no-install starforge buyer-runbook workspace \
+  --state "$STARFORGE_PRIVATE/acquisitions/workspace" \
+  --configs "$STARFORGE_PRIVATE/acquisitions/buyer-configs" \
+  --operator-settings "$STARFORGE_PRIVATE/acquisitions/local-operator.json" \
+  --port 0
+```
+
+Choose **Receive merchant request** and open the original complete packet.
+Review the body, headers, ticket expiry and actual discovery payment options;
+choose the recipient, asset, network and atomic spending limits for this
+request. **Save request review** and **Prepare local buyer** use the original
+handoff importer and native operator initializer, including the Python spending
+ledger. **Add to acquisition plan**, **Save and review draft**, and
+**Initialize acquisition** retain the exact source configuration and body.
+This preparation creates the local buying workspace. Execution uses its
+existing native wallet, live terms, operator approval and payment lifecycle.
+
+For a terminal-only initial import, use the same packet with the original buyer:
+
+```sh
+npx --no-install starforge buyer --import-operation \
+  --file "$STARFORGE_PRIVATE/merchant-request.handoff.json" \
+  --dir "$STARFORGE_PRIVATE/acquisitions/imported-request" --accept 0
+npx --no-install starforge buyer \
+  --review --config "$STARFORGE_PRIVATE/acquisitions/imported-request/review.json"
+```
+
+Choose `--accept` from the actual discovery list before importing. The import
+directory must be new; use its emitted review configuration and the original
+buyer workspace setup for subsequent native operation.
+
+Stop the receiver and reopen it with the same original state path:
+
+```sh
+npx --no-install starforge buyer-runbook workspace \
+  --state "$STARFORGE_PRIVATE/acquisitions/workspace" --port 0
+```
+
+Use the same absolute `STARFORGE_PRIVATE` value when opening a new terminal.
+Its selected configuration directory and local operator preset are retained.
+Keep the merchant and receiver's private files at their original paths outside
+`node_modules` when updating the toolkit. An identical packet reopens the same
+retained request; the saved acquisition preserves its initialized snapshots,
+ledger and original operation identity.
 
 ## Sell selected Stellar RPC reads
 
