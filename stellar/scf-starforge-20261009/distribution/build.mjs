@@ -110,7 +110,10 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
           Object.hasOwn(runtimeDependencies, name) && runtimeDependencies[name] !== version)
         throw new TypeError('Conflicting or unpinned runtime dependency in ' + path);
       runtimeDependencies[name] = version;
-      featurePeers[group][name] = { version, probe: name };
+      // Preserve a real exported entry selected for this feature; dependency
+      // versions still come from the original component's pinned manifest.
+      const probe = spec.featurePeers?.[group]?.[name]?.probe ?? name;
+      featurePeers[group][name] = { version, probe };
     }
     runtimePackageSources[group] = path;
   }
