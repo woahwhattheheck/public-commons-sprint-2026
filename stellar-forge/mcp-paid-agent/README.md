@@ -94,6 +94,12 @@ The advertised schema helps construct the request; describing it is not schema
 validation, seller authentication, payment approval or settlement verification.
 The original preview, approval, signing and recovery behavior remains in place.
 
+Preview and status keep `resource` as the original catalog URL for source
+traceability. `requestUrl` is the concrete normalized URL after the chosen query
+values; review it before approval. Both the payment challenge and signer payload
+must bind to that exact `requestUrl`, including its query, as the existing SF30
+seller does. Describing metadata does not construct or approve a request.
+
 ## Focused check
 
 `node --test stellar-forge/mcp-paid-agent/agent-server.test.mjs`
