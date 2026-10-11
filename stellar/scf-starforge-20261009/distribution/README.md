@@ -2657,6 +2657,35 @@ For a session review, replace `--history` with that version's `--snapshot` file.
 The included [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
 describes history enablement, range selection, source retention and comparisons.
 
+### Turn a saved pricing review into a merchant price change
+
+In **Saved reviews**, choose **Prepare price change**, enter the explicit atomic
+amounts for the selected payment choices, and review every before-and-after term.
+Save a named decision to retain the new seller configuration, a local launch
+configuration with original file paths resolved, rebound merchant terms and the
+complete original pricing inputs. USD quotes and cost assumptions keep their
+entered values. Saved decisions reopen in the same pricing workspace.
+
+For an existing API merchant package, start the same command with
+`--source-package /private/merchant/original-api-package`. The decision then
+includes a complete updated package produced by the original compiler. Add
+`--release-store /private/merchant/releases` and, when configured,
+`--release-runtime /private/merchant/release-runtime.json` to **Stage retained
+release** from the saved decision. The original release console reviews,
+selects and starts that retained version. A repeated stage recovers its original
+release ID. The [pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md) covers
+the full source, export, staging and recovery workflow. Applications use
+`./merchant/revenue-model`, `./merchant/repricing` and
+`./merchant/repricing-source` for these same implementations.
+
+The original merchant MCP operator exposes this same workflow through its
+`merchant_pricing_*` tools. A host-declared pricing connection selects saved
+sources and release stores; `merchant-mcp init-pricing` connects an agent to the
+existing workspace. See the included
+[merchant pricing MCP guide](../../../stellar-forge/mcp-merchant-operator/PRICING.md)
+for commercial reviews, explicit amount decisions, retained downloads and
+release activation through the original operator.
+
 ## Operate merchant incidents and support cases
 
 The original incident watcher follows the running seller and operations listener,
