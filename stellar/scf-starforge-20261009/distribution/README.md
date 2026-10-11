@@ -794,6 +794,7 @@ or automatically retry a request.
 | `starforge buyer-object-workspace` | Select and review original file acquisitions, operate retained parts and download the assembled file |
 | `starforge merchant-fleet` / `merchant-fleet-control` | Serve multiple merchants and prepare, activate or roll back their routing |
 | `starforge merchant-fleet-workspace` | Review serving and proposed fleet configurations in a private browser |
+| `starforge merchant-fleet-host` | Generate, run, check and recover the original managed fleet as one Linux service |
 | `starforge fleet-release` | Stage and operate original seller releases with managed fleet rollout, draining and rollback |
 | `starforge revenue-workspace` / `revenue-report` | Review pricing, original merchant traffic and the existing native journal |
 | `starforge merchant-accounting` / `merchant-accounting-workspace` | Reconcile original settlement records, retain ledgers and review imports, comparisons and exceptions |
@@ -2184,6 +2185,43 @@ when necessary. Restart reopens the same plan, stores and retained selection.
 The terminal and browser both own the original lifecycle, so run one of them
 for that deployment. The `./merchant/fleet/releases` subpath exposes the same
 `openFleetReleaseOperator` API.
+
+### Install the managed fleet as a Linux service
+
+Use `starforge merchant-fleet-host` to keep the same release operator, owned
+seller sessions, gateway and private workspace running under one dedicated
+Linux account. First prepare the original fleet plan and separate release
+stores as described above. Create its host declaration using the included
+[complete deployment guide](../merchant-fleet-gateway/DEPLOYMENT.md): it names
+that plan, the private state root, the non-root service identity, the existing
+Node executable and the private workspace port.
+
+```sh
+npx --no-install starforge merchant-fleet-host inspect \
+  --declaration /private/fleet/host.json
+npx --no-install starforge merchant-fleet-host generate \
+  --declaration /private/fleet/host.json --out /private/fleet-host-001
+npx --no-install starforge merchant-fleet-host check --bundle /private/fleet-host-001
+```
+
+The generated `RUNBOOK.md` gives the exact service installation, Caddy ingress,
+SSH workspace access, graceful shutdown and recovery commands for those paths.
+Its systemd unit runs the original runtime directly. Optional Compose uses the
+explicit immutable image in the declaration and mounts the same source, state
+and private inputs. After starting the selected service, run:
+
+```sh
+npx --no-install starforge merchant-fleet-host health --bundle /private/fleet-host-001
+```
+
+Health reads the original private workspace and checks its selected plan,
+merchant authorities and owned running release slots. Use that same workspace
+for staging, source/terms review, activation, drain and rollback. Reopening
+retains the original plan and stores; encrypted recovery follows the generated
+named-root plan and the original absolute paths. The package exports
+`./merchant/fleet/host` and `./merchant/fleet/host-runtime` for native embedding.
+
+
 
 ### Pause selected merchant routes
 

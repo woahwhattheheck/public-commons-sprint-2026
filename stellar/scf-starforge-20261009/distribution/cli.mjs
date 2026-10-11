@@ -142,6 +142,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   allium-explorer / allium-workspace          Acquire, review and operate retained Allium data products
   merchant-fleet / merchant-fleet-control     Host, prepare, activate and roll back a merchant fleet
   merchant-fleet-workspace                    Review fleet changes in the private operator browser
+  merchant-fleet-host                         Install, run and recover the managed multi-merchant Linux service
   fleet-release                              Stage, compare and operate original releases across a fleet
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
