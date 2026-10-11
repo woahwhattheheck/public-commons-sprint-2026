@@ -1,4 +1,5 @@
 // MIT. Private operator controls for the original native delivery journal.
+import {createIncidentPanel} from './delivery-incidents-panel.mjs';
 const $ = id => document.getElementById(id);
 const fragment = new URLSearchParams(location.hash.slice(1));
 const candidateToken = fragment.get('control');
@@ -16,6 +17,18 @@ const errors = {
   DELIVERY_CONTROL_REQUIRED:'Open the private fulfillment control link printed by the merchant launcher to enable recovery.',
   DELIVERY_EVENT_NOT_FOUND:'This event is no longer present in the attached journal.',
   DELIVERY_OUTBOX_UNAVAILABLE:'The merchant delivery journal is not attached.',
+  DELIVERY_RECEIVER_PROFILE_REQUIRED:'Open the receiver workspace, save the merchant’s receiver profile, and apply it to the owned worker before recovering this notification.',
+  DELIVERY_RECEIVER_SECRET_UNAVAILABLE:'The pinned receiver’s signing environment is unavailable. Repair its configuration in the receiver workspace before recovery.',
+  DELIVERY_RECOVERY_INTERRUPTED:'The recovery was interrupted. Open the receiver workspace’s retained maintenance operation to continue it.',
+  DELIVERY_INCIDENT_MERCHANT_MISMATCH:'The monitor registration must match this seller and operations address. Update the original monitor registration to reconnect these incidents.',
+  DELIVERY_INCIDENT_UNAVAILABLE:'The original incident monitor is unavailable. Check its configured private state directory.',
+  DELIVERY_INCIDENT_STATE_CHANGED:'This incident changed. Its latest state has been refreshed; review it before acknowledging.',
+  DELIVERY_INCIDENT_NOT_OPEN:'This incident is already acknowledged or closed. Its latest state has been refreshed.',
+  DELIVERY_INCIDENT_OPERATOR_REQUIRED:'Enter the operator’s name, up to 160 UTF-8 bytes on one line.',
+  DELIVERY_INCIDENT_NOTE_INVALID:'Use notes of up to 2,000 UTF-8 bytes without control characters.',
+  DELIVERY_INCIDENT_NOT_FOUND:'This incident is no longer present for the registered merchant.',
+  DELIVERY_INCIDENT_CURSOR_CHANGED:'Retained incident history changed. Returning to its first page.',
+  DELIVERY_INCIDENT_BUSY:'The original incident store is busy. Refresh and retry the acknowledgment.',
 };
 async function request(path,options) {
   const response = await fetch(path,{cache:'no-store',...options});
@@ -26,9 +39,9 @@ async function request(path,options) {
   return data;
 }
 function selectionHash() {
-  const hash = new URLSearchParams();
+  const hash = new URLSearchParams(location.hash.slice(1));
   if (token) hash.set('control',token);
-  if (selectedId) hash.set('event',selectedId);
+  if (selectedId) hash.set('event',selectedId);else hash.delete('event');
   history.replaceState(null,'',location.pathname+(hash.size ? '#'+hash : ''));
 }
 function showSummary(data) {
@@ -100,6 +113,8 @@ async function selectEvent(id) {
 }
 async function refresh() {
   if(refreshing){refreshAgain=true;return;} refreshing=true; $('refresh').disabled=true;
+  // Incident availability cannot hide the merchant's original event queue.
+  incidentPanel.refresh();
   const selectedGeneration=generation;
   const query=new URLSearchParams({state:$('state-filter').value,limit:'25'});
   if(cursors[pageNumber])query.set('cursor',cursors[pageNumber]);
@@ -110,6 +125,7 @@ async function refresh() {
       selectedId ? request('/api/delivery/event?id='+selectedId) : null]);
     if(selectedGeneration!==generation)return;
     control=nextControl;showSummary(summary);showPage(nextPage);
+    $('receiver-workspace-link').hidden=!control.receiverWorkspace;
     $('control-status').textContent=control.controlsEnabled && token ? 'Private controls enabled' : 'Read only';
     if(nextDetail)showDetail(nextDetail);
   } catch(error) { $('fulfillment-status').textContent=error.message; }
@@ -124,10 +140,14 @@ async function recover() {
   try {
     await request('/api/delivery/requeue',{method:'POST',headers:{'content-type':'application/json','x-delivery-control':token},body:JSON.stringify(command)});
     recoveryId=command.id;
-    $('recovery-result').textContent='Notification requeued. Waiting for the original delivery worker and receiver.';
-  } catch(error) { $('recovery-result').textContent=error.message; }
+    if(selectedId===command.id)$('recovery-result').textContent='Notification requeued. Waiting for the original delivery worker and receiver.';
+  } catch(error) { if(selectedId===command.id)$('recovery-result').textContent=error.message; }
   finally { recovering=false; await refresh(); if(detail)showDetail(detail); }
 }
+const incidentPanel=createIncidentPanel({token,request,onQueue:state=>{
+  $('state-filter').value=state;$('route-filter').value='';cursors=[null];pageNumber=0;generation++;refresh();
+  document.querySelector('.workspace').scrollIntoView({behavior:'smooth',block:'start'});
+}});
 for(const id of ['state-filter','route-filter'])$(id).addEventListener('change',()=>{
   cursors=[null];pageNumber=0;generation++;refresh();
 });
