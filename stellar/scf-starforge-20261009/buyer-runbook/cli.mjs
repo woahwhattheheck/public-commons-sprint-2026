@@ -17,7 +17,7 @@ inside the runbook. execute invokes the original buyer serially with its origina
 controlling-terminal approval. Only previously untouched jobs are executed.
 recover imports complete retained original output and never starts a buyer.
 status rewrites only derived status.json/report.html, not plans or attempts.
-unlock removes an exact dead local process lock; it preserves every attempt.
+unlock releases an exact dead local process lease; it preserves every attempt.
 `;
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 function options(args, names) {

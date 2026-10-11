@@ -1,6 +1,6 @@
 // MIT. A durable local job composition around the original SF88 buyer command.
 import { constants } from 'node:fs';
-import { mkdir, open, readFile, stat, lstat, realpath, rename, unlink } from 'node:fs/promises';
+import { mkdir, open, readFile, stat, lstat, realpath, rename, unlink, link, readdir } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { hostname } from 'node:os';
@@ -47,6 +47,15 @@ async function replaceFile(path, data) {
   await createFile(tmp, data);
   try { await rename(tmp, path); await syncDir(dirname(path)); }
   catch (error) { await unlink(tmp).catch(() => {}); throw error; }
+}
+async function publishFile(path, data) {
+  const tmp = path + '.' + randomUUID() + '.tmp';
+  try {
+    await createFile(tmp, data);
+    // A complete create-only record is visible in one filesystem operation.
+    await link(tmp, path);
+    await syncDir(dirname(path));
+  } finally { await unlink(tmp).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
 }
 async function readRegular(path, max = 1048576) {
   const info = await lstat(path);
@@ -230,6 +239,8 @@ async function parseSummary(path, id) {
 }
 async function processToken(pid) {
   try {
+    const self = await readFile('/proc/self/stat', 'utf8');
+    if (Number(self.slice(0, self.indexOf(' '))) !== process.pid) return null;
     const [processStat, boot] = await Promise.all([
       readFile(`/proc/${pid}/stat`, 'utf8'), readFile('/proc/sys/kernel/random/boot_id', 'utf8')]);
     return boot.trim() + ':' + processStat.slice(processStat.lastIndexOf(')') + 2).split(' ')[19];
@@ -244,22 +255,78 @@ async function alive(pid, token) {
   try { process.kill(pid, 0); return true; }
   catch (error) { return error.code !== 'ESRCH'; }
 }
-async function lock(directory) {
-  const path = join(directory, '.execution-lock.json');
-  const record = { schema:'stellar-forge.buyer-runbook-lock.v1', token:randomUUID(), pid:process.pid,
-    processToken:await processToken(process.pid), host:hostname(), startedAt:now() };
-  try { await createFile(path, serialized(record)); }
+const LEASE_SCHEMA = 'stellar-forge.buyer-runbook-lock.v2';
+const RELEASE_SCHEMA = 'stellar-forge.buyer-runbook-lock-release.v1';
+const INDEX_SCHEMA = 'stellar-forge.buyer-runbook-lock-index.v2';
+const leaseRoot = directory => join(directory, '.execution-leases');
+const markerPath = (directory, record) => join(leaseRoot(directory), record.generation + '-' + record.token + '.released.json');
+function validateLease(value, generation) {
+  need(object(value) && value.schema === (generation === '0' ? 'stellar-forge.buyer-runbook-lock.v1' : LEASE_SCHEMA) &&
+    (generation === '0' || value.generation === generation) && Number.isSafeInteger(value.pid) && value.pid > 0 &&
+    typeof value.host === 'string' && value.host.length > 0 && typeof value.startedAt === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value.token ?? '') &&
+    (value.processToken === null || typeof value.processToken === 'string'), 'INVALID_EXECUTION_LEASE');
+  return {...value, generation};
+}
+async function latestLease(directory) {
+  let names = [];
+  try { await privateDirectory(leaseRoot(directory)); names = await readdir(leaseRoot(directory)); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const generations = names.filter(name => /^[1-9][0-9]{0,99}\.json$/.test(name)).map(name => name.slice(0, -5));
+  if (generations.length) {
+    const generation = generations.reduce((a, b) => BigInt(a) > BigInt(b) ? a : b);
+    return validateLease(await readJson(join(leaseRoot(directory), generation + '.json')), generation);
+  }
+  const legacy = await optionalJson(join(directory, '.execution-lock.json'));
+  if (!legacy || legacy.schema === INDEX_SCHEMA) return null;
+  return validateLease(legacy, '0');
+}
+async function wasReleased(directory, record) {
+  const value = await optionalJson(markerPath(directory, record));
+  if (!value) return false;
+  need(value.schema === RELEASE_SCHEMA && value.generation === record.generation && value.token === record.token,
+    'INVALID_EXECUTION_LEASE_RELEASE');
+  return true;
+}
+async function prepareLeases(directory) {
+  const root = leaseRoot(directory);
+  await mkdir(root, {recursive:true, mode:0o700}); await privateDirectory(root);
+  need(await realpath(root) === root, 'LEASE_DIRECTORY_MUST_BE_CANONICAL');
+  const index = join(directory, '.execution-lock.json');
+  if (!await optionalJson(index)) {
+    try { await publishFile(index, serialized({schema:INDEX_SCHEMA, createdAt:now()})); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+  }
+}
+async function releaseLease(directory, record, reason) {
+  const marker = {schema:RELEASE_SCHEMA, generation:record.generation, token:record.token, releasedAt:now(), reason};
+  try { await publishFile(markerPath(directory, record), serialized(marker)); return false; }
+  catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    need(await wasReleased(directory, record), 'INVALID_EXECUTION_LEASE_RELEASE');
+    return true;
+  }
+}
+/** Internal local exclusion primitive shared by execution and recovery. */
+export async function acquireExecutionLease(directory) {
+  await prepareLeases(directory);
+  const previous = await latestLease(directory);
+  need(!previous || await wasReleased(directory, previous), 'RUNBOOK_EXECUTION_LOCK_EXISTS');
+  const generation = previous ? String(BigInt(previous.generation) + 1n) : '1';
+  need(generation.length <= 100, 'EXECUTION_LEASE_GENERATION_LIMIT');
+  const record = {schema:LEASE_SCHEMA, generation, token:randomUUID(), pid:process.pid,
+    processToken:await processToken(process.pid), host:hostname(), startedAt:now()};
+  try { await publishFile(join(leaseRoot(directory), generation + '.json'), serialized(record)); }
   catch (error) { if (error.code === 'EEXIST') need(false, 'RUNBOOK_EXECUTION_LOCK_EXISTS'); throw error; }
-  return async () => {
-    const current = await optionalJson(path);
-    if (current?.token === record.token) { await unlink(path); await syncDir(directory); }
-  };
+  // Generations and release markers are never reused or removed. Contenders for
+  // the same next generation meet one create-exclusive publication; a delayed
+  // release of an older generation cannot affect its successor.
+  return () => releaseLease(directory, record, 'OPERATION_FINISHED');
 }
 
-/** Remove only an explicitly selected, local dead owner's execution lock. */
+/** Release only an explicitly selected, local dead owner's immutable lease. */
 export async function unlockRunbook(directory, ownerPid) {
-  const plan = await readPlan(directory), path = join(plan.directory, '.execution-lock.json');
-  const record = await optionalJson(path);
+  const plan = await readPlan(directory), record = await latestLease(plan.directory);
   need(record && record.pid === ownerPid && record.host === hostname(), 'LOCK_OWNER_NOT_MATCHED');
   need(!await alive(record.pid, record.processToken), 'LOCK_OWNER_IS_STILL_RUNNING');
   for (const op of plan.operations) {
@@ -267,9 +334,9 @@ export async function unlockRunbook(directory, ownerPid) {
     const result = await finalRecord(plan.directory, op);
     if (!result && child?.host === hostname()) need(!await alive(child.pid, child.processToken), 'NATIVE_BUYER_IS_STILL_RUNNING');
   }
-  // All attempts retain their create-only started record after lock recovery.
-  await unlink(path); await syncDir(plan.directory);
-  return {status:'STALE_LOCK_REMOVED', ownerPid, attemptsPreserved:true};
+  await prepareLeases(plan.directory);
+  const alreadyReleased = await releaseLease(plan.directory, record, 'DEAD_OWNER_RECOVERY');
+  return {status:'STALE_LOCK_RELEASED', ownerPid, generation:record.generation, alreadyReleased, attemptsPreserved:true};
 }
 
 async function capture(stream, handle, maxBytes) {
@@ -343,7 +410,7 @@ export async function executeRunbook(directory, {only, signal, onProgress = () =
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   const plan = await readPlan(directory);
   need(only === undefined || plan.operations.some(op => op.id === only), 'UNKNOWN_JOB_ID');
-  const release = await lock(plan.directory), results = [];
+  const release = await acquireExecutionLease(plan.directory), results = [];
   try {
     for (const op of plan.operations) {
       if (only !== undefined && op.id !== only) continue;
@@ -380,7 +447,7 @@ export async function executeRunbook(directory, {only, signal, onProgress = () =
 
 /** Recover an original complete SF88 stdout result; never execute or retry. */
 export async function recoverRunbook(directory) {
-  const plan = await readPlan(directory), release = await lock(plan.directory), recovered = [];
+  const plan = await readPlan(directory), release = await acquireExecutionLease(plan.directory), recovered = [];
   try {
     for (const op of plan.operations) {
       const started = await recordAt(startedPath(plan.directory, op.id));
@@ -404,7 +471,8 @@ export async function recoverRunbook(directory) {
 /** Current state is reconstructed from immutable attempts, never HTTP guesses. */
 export async function inspectRunbook(directory) {
   const plan = await readPlan(directory), rows = [];
-  const executionLock = await optionalJson(join(plan.directory, '.execution-lock.json'));
+  const lease = await latestLease(plan.directory);
+  const executionLock = lease && !await wasReleased(plan.directory, lease) ? lease : null;
   for (const op of plan.operations) {
     const started = await recordAt(startedPath(plan.directory, op.id));
     const result = await finalRecord(plan.directory, op);
@@ -416,7 +484,7 @@ export async function inspectRunbook(directory) {
       integrity, integrityError, started, result, lastError:result ? null : lastError });
   }
   return {schema:'stellar-forge.buyer-runbook-status.v1', inspectedAt:now(), plan,
-    executionLock:executionLock ? {pid:executionLock.pid, host:executionLock.host, startedAt:executionLock.startedAt,
+    executionLock:executionLock ? {pid:executionLock.pid, generation:executionLock.generation, host:executionLock.host, startedAt:executionLock.startedAt,
       ownerRunning:executionLock.host === hostname() ? await alive(executionLock.pid, executionLock.processToken) : null} : null,
     operations:rows};
 }
