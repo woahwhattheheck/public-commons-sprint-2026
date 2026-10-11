@@ -97,6 +97,7 @@
   "commands": {
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
+    "jsonrpc": "stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/cli.mjs",
     "operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs",
     "dataset": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs",
     "assets": "stellar/scf-starforge-20261009/sf30-seller-sdk/asset-cli.mjs",
@@ -181,6 +182,8 @@
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
     "./seller": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
+    "./seller/jsonrpc": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/merchant.mjs",
+    "./seller/jsonrpc/application": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/application.mjs",
     "./seller/compiler": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/seller.mjs",
     "./seller/assets": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-asset.mjs",
     "./seller/asset-bundles": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/asset-cli.mjs",

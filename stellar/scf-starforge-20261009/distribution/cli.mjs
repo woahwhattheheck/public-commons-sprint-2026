@@ -19,6 +19,7 @@ const help = `Starforge merchant toolkit
 
 Native commands (arguments pass unchanged to the maintained implementation):
   seller      JSON/application seller         upstream    Existing API seller
+  jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   operations  Seller + live dashboard         dataset     Dataset API compiler
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
