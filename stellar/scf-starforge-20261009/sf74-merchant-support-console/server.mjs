@@ -32,9 +32,11 @@ function json(res, code, data) {
 }
 function argsFromForm(input, allowLoopback) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError('Expected one merchant intake object');
-  const allowed = new Set(['resource', 'catalog', 'origin', 'network', 'payTo', 'method', 'permission']);
+  const allowed = new Set(['resource', 'catalog', 'origin', 'network', 'payTo', 'method', 'permission', 'credentialed']);
   if (Object.keys(input).some(k => !allowed.has(k))) throw new TypeError('Unexpected intake field');
   if (input.permission !== true) throw new TypeError('Operator must confirm authorization for the named resource and facilitator');
+  if (input.credentialed !== undefined && typeof input.credentialed !== 'boolean')
+    throw new TypeError('credentialed must be a boolean');
   const opts = [
     ['--resource', 'resource'], ['--catalog', 'catalog'], ['--origin', 'origin'],
     ['--network', 'network'], ['--pay-to', 'payTo'], ['--method', 'method'],
@@ -47,6 +49,7 @@ function argsFromForm(input, allowLoopback) {
     argv.push(flag, v);
   }
   if (allowLoopback) argv.push('--allow-loopback');
+  if (input.credentialed === true) argv.push('--credentialed');
   // Keep the exact canonical SF70 endpoint, network, address, method and origin validation.
   return parseArgs(argv);
 }

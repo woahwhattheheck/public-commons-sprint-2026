@@ -20,6 +20,7 @@
         <label class="full">Seller public payTo recipient <small>Provided by the seller; never paste secret keys</small><input required name="payTo" type="text" maxlength="256" placeholder="Stellar public recipient address" autocomplete="off" spellcheck="false"></label>
         <label>Intended buyer operation <small>Unpaid GET/CORS checks are method-aware, not paid retry</small><select name="method"><option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="PATCH">PATCH</option><option value="DELETE">DELETE</option></select></label>
       </div>
+      <label class="approval"><input type="checkbox" id="credentialed"><span>The buyer requires credentialed browser requests, such as cookies. Apply the original stricter CORS rules; the diagnostic sends no browser credentials.</span></label>
       <label class="approval"><input type="checkbox" id="permission" required><span>I am authorized to assess these seller/facilitator public endpoints. I understand the tool does not purchase, sign, settle, or validate seller consent automatically.</span></label>
       <div class="actions"><button id="run" type="submit">Run original merchant diagnosis</button><span class="hint">No network probes until you choose Run.</span></div>
     </form>

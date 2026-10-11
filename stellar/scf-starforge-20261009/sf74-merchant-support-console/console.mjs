@@ -50,6 +50,9 @@ function show(report) {
     line(row, 'b', '', label);
     line(row, 'span', '', String(scope[field] || 'Not returned'));
   }
+  const credentialRow = line($('scope'), 'div', 'scope-row', '');
+  line(credentialRow, 'b', '', 'Browser credentials');
+  line(credentialRow, 'span', '', scope.browserCredentialed === true ? 'Required' : scope.browserCredentialed === false ? 'Not required' : 'Unknown');
   const safe = report.safeguards || {};
   $('safeguards').textContent = `Original report: ${safe.paidRequests ?? '?'} paid request(s), ${safe.walletCalls ?? '?'} wallet call(s), settlement confirmed ${safe.settlementConfirmed === true ? 'yes' : 'no'}. This is an unpaid merchant diagnosis.`;
 }
@@ -70,6 +73,7 @@ form.addEventListener('submit', async event => {
     resource: fields.resource, catalog: fields.catalog, origin: fields.origin,
     network: fields.network, payTo: fields.payTo, method: fields.method,
     permission: $('permission').checked,
+    credentialed: $('credentialed').checked,
   };
   try {
     const response = await fetch('/api/intake', {
@@ -145,6 +149,7 @@ function showComparison(report) {
   $('comparison-scope').replaceChildren();
   for (const [label, value] of [
     ['Seller resource', report.scope.resource], ['Operation', report.scope.intendedRetryMethod],
+    ['Browser credentials', report.scope.browserCredentialed === true ? 'Required' : report.scope.browserCredentialed === false ? 'Not required' : 'Unknown'],
     ['Before capture', report.source.before.observedAt], ['After capture', report.source.after.observedAt],
     ['Before file SHA-256', report.source.before.sha256], ['After file SHA-256', report.source.after.sha256],
   ]) {
@@ -156,10 +161,11 @@ function showComparison(report) {
   for (const [key, label] of [
     ['notReobservedWithCompleteAfterCatalog', 'No longer observed · after catalog complete'],
     ['notReobservedButAfterCatalogIncomplete', 'Not reobserved · after coverage incomplete'],
+    ['notReobservedButCredentialModeUnknown', 'Not reobserved · browser credential mode unknown'],
     ['newlyObserved', 'New findings'], ['stillObserved', 'Still observed'],
     ['severityChanged', 'Changed severity'],
   ]) {
-    const findings = report.changes[key];
+    const findings = report.changes[key] || [];
     line(changes, 'h3', '', label + ' (' + findings.length + ')');
     const list = line(changes, 'ul', 'findings', '');
     if (!findings.length) line(list, 'li', '', 'None reported.');
