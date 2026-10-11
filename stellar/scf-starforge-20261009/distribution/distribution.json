@@ -142,6 +142,8 @@
     "chainstack-stellar": "stellar/scf-starforge-20261009/partners/chainstack-stellar/cli.mjs",
     "chainstack-buyer": "stellar/scf-starforge-20261009/partners/chainstack-stellar/installed-buyer.mjs",
     "operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs",
+    "jobs": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/cli.mjs",
+    "jobs-buyer": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/buyer.mjs",
     "dataset": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs",
     "assets": "stellar/scf-starforge-20261009/sf30-seller-sdk/asset-cli.mjs",
     "openapi": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/cli.mjs",
@@ -264,7 +266,11 @@
     "provider-operator": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli.mjs",
     "provider-workspace": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/cli.mjs",
     "merchant-recovery": "stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs",
-    "merchant-recovery-remote": "stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-cli.mjs"
+    "merchant-recovery-remote": "stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-cli.mjs",
+    "tomorrow": "stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/cli.mjs",
+    "sftp": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/cli.mjs",
+    "sftp-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/publisher/cli.mjs",
+    "sftp-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/server.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -289,6 +295,10 @@
     "./seller/http": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/resource-server.mjs",
     "./seller/streaming": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stream-response.mjs",
     "./seller/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/native-factory.mjs",
+    "./seller/jobs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/model.mjs",
+    "./seller/jobs/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/merchant.mjs",
+    "./seller/jobs/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/customer.mjs",
+    "./seller/jobs/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/workspace/server.mjs",
     "./seller/embedded": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.mjs"
@@ -303,6 +313,7 @@
       "types": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/response-file.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/response-file.mjs"
     },
+    "./buyer/jobs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/buyer.mjs",
     "./operator": "./source/stellar/scf-starforge-20261009/sf81-buyer-operator-bridge/bridge.mjs",
     "./support": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs",
     "./merchant/incidents": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/watch.mjs",
@@ -512,7 +523,27 @@
     "./buyer/provider-workspace/recovery": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/archive.mjs",
     "./merchant/state-recovery": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs",
     "./merchant/remote-recovery": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/remote.mjs",
-    "./merchant/remote-recovery/s3": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-s3.mjs"
+    "./merchant/remote-recovery/s3": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-s3.mjs",
+    "./seller/tomorrow": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/workspace.mjs",
+    "./seller/tomorrow/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/server.mjs",
+    "./seller/tomorrow/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/source.mjs",
+    "./seller/tomorrow/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/merchant.mjs",
+    "./seller/tomorrow/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/customer.mjs",
+    "./seller/tomorrow/austin": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/austin-intake.mjs",
+    "./seller/tomorrow/operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/operations-analysis.mjs",
+    "./seller/tomorrow/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/operations-report.mjs",
+    "./seller/sftp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/source.mjs",
+    "./seller/sftp/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/config.mjs",
+    "./seller/sftp/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/publisher/model.mjs",
+    "./seller/sftp/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/server.mjs",
+    "./seller/sftp/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/model.mjs",
+    "./seller/openapi/postman": {
+      "types": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/collection.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/collection.mjs"
+    },
+    "./seller/openapi/merchant": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/model.mjs",
+    "./seller/openapi/source": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/source-document.mjs",
+    "./seller/linkup-search": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/linkup-search.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -567,6 +598,12 @@
         "probe": "better-sqlite3",
         "native": "sqlite"
       }
+    },
+    "sftp": {
+      "ssh2": {
+        "version": "1.17.0",
+        "probe": "ssh2"
+      }
     }
   },
   "runtimePackageManifests": {
@@ -579,6 +616,7 @@
     "s3": "stellar/scf-starforge-20261009/sf30-seller-sdk/s3/package.json",
     "graphql": "stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/package.json",
     "mcp": "stellar-forge/mcp-paid-agent/package.json",
-    "node-agents": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/agents/runtime-package.json"
+    "node-agents": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/agents/runtime-package.json",
+    "sftp": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/package.json"
   }
 }
