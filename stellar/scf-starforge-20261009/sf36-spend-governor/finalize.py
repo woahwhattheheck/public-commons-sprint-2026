@@ -31,6 +31,8 @@ SCHEMA = 'stellar-forge.sf36.finalization.v1'
 HASH = re.compile(r'^[0-9a-f]{64}$')
 ADAPTER = Path(__file__).with_name('observe.mjs')
 MAX_SOURCE = 4_000_000
+DEFAULT_RPC = 'https://soroban-testnet.stellar.org'
+TESTNET_RPC_ENDPOINTS = (DEFAULT_RPC, 'https://soroban-rpc.testnet.stellar.gateway.fm')
 
 
 def unique_object(pairs):
@@ -153,8 +155,13 @@ def verified_facts(proof, request, request_sha, transaction, payer):
         'eventId': proof['matchingEventId']}
 
 
-def finalize_source(governor, source, payer, *, node):
+def finalize_source(governor, source, payer, *, node, rpc_endpoint=DEFAULT_RPC,
+                    expected_request_sha=None):
     record, request, request_sha = approved_record(source)
+    if rpc_endpoint not in TESTNET_RPC_ENDPOINTS:
+        raise Denied('RPC_ENDPOINT_NOT_ALLOWED')
+    if expected_request_sha is not None and not hmac.compare_digest(request_sha, expected_request_sha):
+        raise Denied('SELECTED_INBOX_REQUEST_DIGEST_MISMATCH')
     row = governor.reservation(request)
     receipt = record['receipt']
     if receipt.get('payer') != payer:
@@ -167,9 +174,11 @@ def finalize_source(governor, source, payer, *, node):
             raise Denied('EXISTING_FINALITY_CONFLICT')
         return {'schema': SCHEMA, 'outcome': 'IDEMPOTENT_FINALIZED',
             'request_id': request['request_id'], 'actual': row['actual'],
+            'request_sha256': request_sha,
             'receipt_ref': receipt_ref, 'proof_sha256': row['proof_sha256'],
             'chainObservation': 'ORIGINAL_AUDITED_FINALIZATION_REUSED'}
-    proof = run_adapter(node, {'action': 'observe', 'source': source, 'payer': payer})
+    proof = run_adapter(node, {'action': 'observe', 'source': source, 'payer': payer,
+                              'rpcEndpoint': rpc_endpoint})
     facts = verified_facts(proof, request, request_sha, receipt['transaction'], payer)
     # Audit again after network IO, before issuing authority. Original reconcile
     # then takes its own immediate transaction and rechecks journal/projection.
@@ -179,6 +188,7 @@ def finalize_source(governor, source, payer, *, node):
         request['max_amount'], receipt_ref, proof_sha)
     result = governor.reconcile(attestation)
     return {'schema': SCHEMA, **result, 'receipt_ref': receipt_ref,
+        'request_sha256': request_sha,
         'proof_sha256': proof_sha, 'verifiedFacts': facts,
         'chainObservation': 'FRESH_ORIGINAL_SF86_RPC'}
 
@@ -212,6 +222,8 @@ def main(argv=None):
     parser.add_argument('--policy', type=Path, required=True)
     parser.add_argument('--payer', required=True, help='Actual account from trusted signer configuration')
     parser.add_argument('--node', default=shutil.which('node'))
+    parser.add_argument('--rpc-endpoint', default=DEFAULT_RPC, choices=TESTNET_RPC_ENDPOINTS)
+    parser.add_argument('--expected-request-sha', help='Selected inbox approval digest, when called from SF88')
     parser.add_argument('--reports', type=Path, required=True, help='Separate existing private output directory')
     parser.add_argument('--outbox', type=Path, help='Existing original merchant SF98 private outbox')
     parser.add_argument('--merchant-route', help='Independently selected original seller route ID')
@@ -223,6 +235,9 @@ def main(argv=None):
             raise Denied('TRUSTED_ABSOLUTE_NODE_EXECUTABLE_REQUIRED')
         if not re.fullmatch(r'G[A-Z2-7]{55}', args.payer):
             raise Denied('TRUSTED_CLASSIC_PAYER_REQUIRED')
+        if args.expected_request_sha is not None and (not args.record or
+                not HASH.fullmatch(args.expected_request_sha)):
+            raise Denied('EXPECTED_DIGEST_REQUIRES_ONE_ORIGINAL_RECORD')
         if args.watch_seconds and args.watch_seconds < 30:
             raise Denied('WATCH_INTERVAL_MUST_BE_AT_LEAST_30_SECONDS')
         check_ledger_path(args.ledger)
@@ -260,7 +275,8 @@ def main(argv=None):
                         break
                     try:
                         source = read_source(path)
-                        result = finalize_source(governor, source, args.payer, node=args.node)
+                        result = finalize_source(governor, source, args.payer, node=args.node,
+                            rpc_endpoint=args.rpc_endpoint, expected_request_sha=args.expected_request_sha)
                         result['merchant'] = {'status': 'NOT_CONFIGURED'}
                         if args.outbox:
                             try:

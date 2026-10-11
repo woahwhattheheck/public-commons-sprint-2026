@@ -18,7 +18,8 @@ const today = () => { const now=new Date(); return `${now.getFullYear()}-${Strin
 const defaults = () => ({merchant:'',owner:'',status:'new',followUpOn:'',nextAction:'',notes:''});
 const emptyState = () => ({name:'Merchant case',inputs:{resource:'',catalog:'',origin:'',network:'stellar:testnet',payTo:'',method:'GET',credentialed:false},sources:{},termsText:'',baselineOnly:false});
 
-export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{}}) {
+export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
+  readSupport=()=>null,prepareSupport=async()=>null,applySupport=()=>{},onDraftChange=()=>{}}) {
   const abort = new AbortController();
   let enabled=false, busy=false, dirty=false, active=null, candidateId=crypto.randomUUID();
   let generation=0, identity=0, applying=false, listSequence=0, offset=0, nextOffset=null;
@@ -110,7 +111,7 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{}})
   }
   function changed({user=false} = {}) {
     if((applying&&!user)||destroyed)return;
-    generation++;dirty=true;controls();
+    generation++;dirty=true;controls();onDraftChange();
   }
   function metadata() {return {merchant:merchant.value,owner:owner.value,status:workStatus.value,
     followUpOn:followUpOn.value,nextAction:nextAction.value,notes:notes.value};}
@@ -143,6 +144,7 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{}})
         const main=add(row,'td');
         button(main,entry.name,()=>transition(()=>openCase(entry.id),'open '+entry.name),'case-link');
         add(main,'small',entry.inputs.resource||entry.metadata.merchant||'Route not yet entered');
+        if(entry.runtimeSupport)add(main,'small',entry.runtimeSupport.captures+' runtime capture(s) · '+entry.runtimeSupport.nativeCaptures+' native reconciliation(s)');
         add(row,'td',entry.metadata.owner||'Unassigned');
         add(row,'td',STATUS[entry.metadata.status]||entry.metadata.status);
         const day=add(row,'td',entry.metadata.followUpOn||'—');
@@ -177,9 +179,11 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{}})
     try{
       const item=await api('/api/cases/'+encodeURIComponent(id)+(rev?'?revision='+encodeURIComponent(rev):''));
       const workspace=await parseWorkspace(item.workspaceText);
+      const runtimeReview=await prepareSupport(item.supportText??null,workspace.inputs);
       if(destroyed||epoch!==generation)throw new Error('The draft changed while this case was opening. Open it again when ready.');
       applying=true;
       await applyState(workspace,{canReplace:()=>epoch===generation});
+      applySupport(item.supportText??null,runtimeReview);
       identity++;active={...item,revision:item.currentRevision};candidateId=id;lastAttempt=null;
       name.value=workspace.name;onNameChange(workspace.name);setMetadata(item.metadata);
       dirty=Boolean(rev&&rev!==item.currentRevision);generation++;
@@ -195,6 +199,7 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{}})
       const workspace=await parseWorkspace(await serializeWorkspace(emptyState()));
       if(epoch!==generation)throw new Error('The current draft changed. Start the new case again when ready.');
       applying=true;await applyState(workspace,{canReplace:()=>epoch===generation});
+      applySupport(null,null);
       identity++;active=null;candidateId=crypto.randomUUID();lastAttempt=null;
       name.value=workspace.name;onNameChange(workspace.name);setMetadata(defaults());
       dirty=false;generation++;history.hidden=true;conflict.hidden=true;
@@ -211,6 +216,7 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{}})
     try{
       const payload=lastAttempt&&lastAttempt.stamp===stamp&&lastAttempt.token===token ? lastAttempt.payload : {
         id,expectedRevision:active?.revision||null,metadata:meta,
+        supportText:readSupport(),
         workspaceText:await serializeWorkspace({...await readState(),name:caseName}),
       };
       lastAttempt={payload,stamp,token};
@@ -234,15 +240,17 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{}})
     identity++;active=null;candidateId=crypto.randomUUID();lastAttempt=null;dirty=true;generation++;
     conflict.hidden=true;history.hidden=true;await save();
   }
-  async function importWorkspace(state) {
+  async function importWorkspace(state,{supportText=null,metadata:importedMetadata=null}={}) {
     return transition(async()=>{
       if(busy)return false;
       busy=true;controls();const epoch=generation;
       try{
+        const runtimeReview=await prepareSupport(supportText,state.inputs);
         applying=true;
         await applyState(state,{canReplace:()=>epoch===generation});
+        applySupport(supportText,runtimeReview);
         identity++;active=null;candidateId=crypto.randomUUID();lastAttempt=null;
-        name.value=state.name;onNameChange(state.name);setMetadata(defaults());
+        name.value=state.name;onNameChange(state.name);setMetadata(importedMetadata??defaults());
         dirty=true;generation++;history.hidden=true;conflict.hidden=true;
         say('Workspace file imported as a new case draft. Add follow-up details and save it to the case desk.');
         return true;
@@ -274,6 +282,13 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{}})
   return {
     changed,
     importWorkspace,
+    async exportSnapshot(){
+      if(busy)throw new Error('Finish the current case operation before preparing a handoff.');
+      const caseName=name.value,meta=metadata(),epoch=generation;
+      const workspaceText=await serializeWorkspace({...await readState(),name:caseName});
+      if(epoch!==generation)throw new Error('The case draft changed while preparing the handoff. Prepare it again.');
+      return {workspaceText,metadata:meta};
+    },
     rename(value){name.value=value;changed();},
     detach(value='Merchant case'){
       identity++;active=null;candidateId=crypto.randomUUID();lastAttempt=null;name.value=value;
