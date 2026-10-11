@@ -189,7 +189,9 @@ export function fleetCompose(p, bundle) {
   const runtime = join(p.sourceRoot, COMPONENT, 'deploy-runtime.mjs');
   const service = {
     image: p.container.image, pull_policy: 'never', user: p.serviceUid + ':' + p.serviceGid,
-    network_mode: 'host', init: true, read_only: true, restart: 'on-failure',
+    // Original SF82 ownership records retain the host hostname and process IDs.
+    network_mode: 'host', pid: 'host', uts: 'host', userns_mode: 'host',
+    read_only: true, restart: 'on-failure',
     working_dir: p.sourceRoot, entrypoint: [p.container.node, runtime], command: ['run', '--bundle', bundle],
     environment: { PYTHONDONTWRITEBYTECODE: '1' },
     volumes: [...mounts.values()], tmpfs: ['/tmp:rw,nosuid,nodev,mode=1777,size=67108864'],
@@ -238,7 +240,9 @@ export function fleetDeploymentRunbook(p, bundle) {
     `The selected cached runtime image is ${p.container.image}; its Node executable is ${q(p.container.node)}. ` +
     `It must include Linux flock and all original provider interpreters/libraries at their retained paths. ` +
     `The selected source and extra read-only inputs are bound at the same absolute paths. One container owns the complete fleet; ` +
-    `Linux host networking preserves all original loopback listeners.\n\n` +
+    `Use Linux Docker Engine with Compose 2.15.1 or later. Host network, PID, UTS and user namespaces preserve ` +
+    `the original loopback listeners, hostname/PID lease identities and numeric state ownership across container replacement. ` +
+    `The signal-owning Node runtime runs directly under the declared non-root UID/GID.\n\n` +
     '```sh\n' + `docker compose -f ${q(join(bundle, 'compose.json'))} config --quiet\n` +
     `docker compose -f ${q(join(bundle, 'compose.json'))} up -d --pull never --wait --wait-timeout 180\n` +
     `docker compose -f ${q(join(bundle, 'compose.json'))} ps\n` +

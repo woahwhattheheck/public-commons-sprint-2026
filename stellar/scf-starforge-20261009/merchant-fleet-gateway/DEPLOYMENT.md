@@ -177,11 +177,18 @@ locations. The generated Compose installation uses that cached image with
 bindings, and the original writable state root. The existing image preparation
 workflow can supply this runtime without a separate fleet package builder.
 
-Linux host networking keeps the gateway, workspace and all seller slots in the
-same loopback namespace. The service retains the original in-process release
-ownership; it is not replicated per slot. Compose provides init, signal forwarding,
-a derived stop grace period, and a health command against the running original
-workspace. Its private temporary filesystem is limited to 64 MiB, and local logs
+Use Linux Docker Engine with Docker Compose 2.15.1 or later. The service shares
+the host network, PID, UTS and user namespaces. Original SF82 release ownership
+records bind the hostname and live process IDs; preserving those identities lets
+the original lock recovery work across container replacement. Numeric UID/GID
+and retained file ownership also stay aligned when the daemon enables remapping.
+The process still runs as the declared non-root user with all capabilities dropped.
+
+The gateway, workspace and seller slots retain their original loopback addresses.
+The signal-owning Node runtime runs directly, closes its owned native sessions,
+and reaps its direct children; the Linux host retains orphan reaping. Compose
+provides the derived stop grace period and a health command against the running
+original workspace. Its private temporary filesystem is limited to 64 MiB, and local logs
 rotate at 10 MiB with three files. Dollar signs in declaration paths are escaped
 once for Compose interpolation; values are not passed through a shell.
 
@@ -232,5 +239,6 @@ existing release operator and includes that original digest in its status reply.
 Underlying runtime contracts: [Docker Compose services](https://docs.docker.com/reference/compose-file/services/),
 [Compose interpolation](https://docs.docker.com/reference/compose-file/interpolation/),
 [Linux host networking](https://docs.docker.com/engine/network/drivers/host/),
+[host namespace and user-remapping compatibility](https://docs.docker.com/engine/security/userns-remap/#user-namespace-known-limitations),
 [Node environment loading](https://nodejs.org/docs/latest-v24.x/api/process.html#processloadenvfilepath),
 and [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).
