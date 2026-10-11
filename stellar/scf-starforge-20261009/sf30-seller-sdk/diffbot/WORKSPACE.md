@@ -226,7 +226,7 @@ The workbench checks original hashes and portable credential fields. Inspection 
 
 Native limits remain 512 files, 32 MiB total and the original per-file limits. Each function's serialized result is capped at 1,048,576 bytes, including embedded customer files and reports. Select a complete customer partition that fits. Records are never silently clipped.
 
-The default declaration is marked `LOCAL_PREVIEW_UNCONFIGURED` and carries a placeholder origin/payment tuple. It supports local retained-source processing without a signer, payment or provider call. Deployment uses an explicit `--plan PLAN.json` with `label`, `publicOrigin` and the original `payment` tuple, followed by original merchant release review. The placeholder is not a configured offer.
+The default declaration is marked `LOCAL_PREVIEW_UNCONFIGURED` and carries a placeholder origin/payment tuple. It supports local retained-source processing without a signer, payment or provider call. Deployment uses an explicit `--plan PLAN.json` with `label`, `publicOrigin` and the original `payment` tuple, followed by original merchant release review. The full `label` remains the native workspace title. The optional `serviceName` must contain 1–32 printable ASCII characters under the original seller contract; when omitted in an explicit plan, the label must satisfy that rule. The default preview plan supplies `Diffbot retained dataset` as its short service name and retains the complete source title as the label. The placeholder is not a configured offer.
 
 ## 6. Inspect, review and build through native APIs
 

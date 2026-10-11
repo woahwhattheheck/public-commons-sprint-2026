@@ -90,14 +90,17 @@ function required(flags, key) {
 }
 function object(value) {return value !== null && typeof value === 'object' && !Array.isArray(value);}
 function localPreviewPlan(label) {
-  return {label, publicOrigin: 'https://diffbot-workspace.example',
+  return {label, serviceName: 'Diffbot retained dataset', publicOrigin: 'https://diffbot-workspace.example',
     payment: {scheme: 'exact', network: 'stellar:testnet', asset: 'UNVERIFIED_DEMO_ASSET',
       payTo: 'UNVERIFIED_DEMO_RECIPIENT', maxTimeoutSeconds: 60, amount: '10000'}};
 }
 function declaration(plan) {
-  if (!object(plan) || Object.keys(plan).some(key => !['label', 'publicOrigin', 'payment'].includes(key))
+  if (!object(plan) || Object.keys(plan).some(key => !['label', 'serviceName', 'publicOrigin', 'payment'].includes(key))
       || typeof plan.label !== 'string' || !plan.label.trim() || !plan.publicOrigin || !object(plan.payment))
     throw new Error('Plan requires label, publicOrigin and the original payment tuple.');
+  const serviceName = plan.serviceName ?? plan.label;
+  if (typeof serviceName !== 'string' || !serviceName.trim() || !/^[\x20-\x7e]{1,32}$/.test(serviceName))
+    throw new Error('The original public service name requires 1–32 printable ASCII characters. Supply plan.serviceName as a short name; plan.label keeps the complete workspace title.');
   const inputSchema = {type: 'object', properties: {
     editionId: {type: 'string', minLength: 1, maxLength: 160},
   }, additionalProperties: false};
@@ -105,7 +108,7 @@ function declaration(plan) {
     inputSchema, example: {}, timeoutMs: 30000, maxInputBytes: 65536,
     maxOutputBytes: MiB, output: {format: 'json'}});
   return {schema: 'stellar-forge.python-merchant.v1', application: 'application.py',
-    publicOrigin: plan.publicOrigin, serviceName: plan.label, tags: ['diffbot', 'retained-data', 'python'],
+    publicOrigin: plan.publicOrigin, serviceName, tags: ['diffbot', 'retained-data', 'python'],
     workerCount: 1, maxPending: 2, startupTimeoutMs: 10000, shutdownTimeoutMs: 10000,
     functions: {
       inspect_dataset: fn('/diffbot-dataset/inspect', 'Inspect retained Extract/Bulk source editions, exact identities, coverage, comparison and operator reviews.'),
