@@ -1,10 +1,11 @@
-// MIT. SF61: same-origin, loopback-only, GET-only viewer for original x402 v2 Bazaar discovery.
+// MIT. SF61: loopback discovery and offline review using original SF88 preparation.
 // The original SF44 fixture is the ONLY default source. Real providers require explicit CLI opt-in.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { startLocalDevelopmentCatalog } from '../sf44-developer-onramp/onboard.mjs';
+import { prepareReview } from '../sf88-operator-buyer-cli/prepare.mjs';
 
 const HOST = '127.0.0.1';
 const MAX_PAGE_BYTES = 16 * 1024 * 1024;
@@ -21,6 +22,25 @@ const HEADERS = Object.freeze({
   'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
 });
 const FILTERS = new Set(['network', 'type', 'scheme', 'payTo', 'extensions']);
+
+async function reviewRequest(req) {
+  const max = 2 * 1024 * 1024;
+  if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(req.headers['content-type'] ?? ''))
+    throw new TypeError('JSON_REQUIRED');
+  if (req.headers['content-encoding'] || Number(req.headers['content-length']) > max)
+    throw new RangeError('REVIEW_INPUT_TOO_LARGE');
+  const chunks = []; let length = 0;
+  for await (const chunk of req) {
+    length += chunk.length;
+    if (length > max) throw new RangeError('REVIEW_INPUT_TOO_LARGE');
+    chunks.push(chunk);
+  }
+  const body = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));
+  if (!body || typeof body !== 'object' || Array.isArray(body) ||
+      Object.keys(body).some(key => !['discovery','selection'].includes(key)) ||
+      typeof body.discovery !== 'string') throw new TypeError('INVALID_REVIEW_INPUT');
+  return prepareReview(Buffer.from(body.discovery,'utf8'),body.selection);
+}
 
 function normalizeUpstream(address) {
   const url = new URL(address);
@@ -164,9 +184,26 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
         // query args, redirects or arbitrary URLs choose the remote target.
         if (req.socket.localAddress !== HOST || req.socket.remoteAddress !== HOST ||
             req.headers.host !== expectedHost) return reply(403, { error: 'LOCAL_ORIGIN_ONLY' });
-        if (req.method !== 'GET') return reply(405, { error: 'GET_ONLY' });
         if (!req.url || req.url.length > 4096) return reply(400, { error: 'BAD_URL' });
         const request = new URL(req.url, 'http://127.0.0.1');
+        if (request.pathname === '/api/prepare-review' && request.search === '') {
+          if (req.method !== 'POST') return reply(405,{error:'POST_ONLY'});
+          if (req.headers.origin !== 'http://' + expectedHost ||
+              req.headers['sec-fetch-site'] && req.headers['sec-fetch-site'] !== 'same-origin')
+            return reply(403,{error:'LOCAL_ORIGIN_ONLY'});
+          try {
+            const prepared = await reviewRequest(req);
+            return reply(200,{mode:'OFFLINE_REVIEW_PREPARED',
+              config:prepared.draft, configText:prepared.data.toString('utf8'),
+              configSha256:prepared.configSha256,
+              sourceFileSha256:prepared.draft.preparedFrom.discoveryFileSha256,
+              paidRequestsEnabled:false, executionReady:false});
+          } catch (error) {
+            return reply(400,{error:error.code ?? 'INVALID_REVIEW_INPUT',
+              reason:String(error.message).slice(0,180)});
+          }
+        }
+        if (req.method !== 'GET') return reply(405, { error: 'GET_ONLY' });
         if (request.pathname === '/api/source' && request.search === '')
           return reply(200, { mode: source, origin: fixture ? 'original SF44 fixture' : upstreamOrigin,
             paidRequestsEnabled: false, autoPaymentEnabled: false });
@@ -188,6 +225,7 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
             const rows = rowsOf(parsed);
             return reply(200, {
               mode: source, view: target.view, observedAt: new Date().toISOString(),
+              sourceUrl:target.upstreamUrl.href,
               resources: rows, pagination: parsed?.pagination ?? {},
               partialResults: parsed?.partialResults === true,
               x402Version: parsed?.x402Version ?? null,
@@ -207,6 +245,8 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
         else if (!res.writableEnded) res.end();
       }
     });
+    server.requestTimeout = 10000;
+    server.headersTimeout = 10000;
     await new Promise((resolve, reject) => {
       server.once('error', reject);
       server.listen(port, HOST, resolve);

@@ -1,0 +1,69 @@
+{
+  "schema": "stellar-forge.merchant-distribution.v1",
+  "name": "@tokenjunkielabs/starforge-merchant",
+  "version": "0.1.0",
+  "components": [
+    "stellar/scf-starforge-20261009/distribution",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk",
+    "stellar/scf-starforge-20261009/sf30-seller-discovery",
+    "stellar/scf-starforge-20261009/sf31-buyer-client",
+    "stellar/scf-starforge-20261009/sf36-spend-governor",
+    "stellar/scf-starforge-20261009/sf43-agent-commerce",
+    "stellar/scf-starforge-20261009/sf52-buyer-outcomes",
+    "stellar/scf-starforge-20261009/sf54-buyer-governor-intent",
+    "stellar/scf-starforge-20261009/sf59-operator-reservation-gate",
+    "stellar/scf-starforge-20261009/sf61-openapi-seller-import",
+    "stellar/scf-starforge-20261009/sf62-human-approval-cli",
+    "stellar/scf-starforge-20261009/sf81-buyer-operator-bridge",
+    "stellar/scf-starforge-20261009/sf82-chain-transfer-reconcile",
+    "stellar/scf-starforge-20261009/sf82-checkout-evidence",
+    "stellar/scf-starforge-20261009/sf82-seller-pilot",
+    "stellar/scf-starforge-20261009/sf84-mpp-market-intake",
+    "stellar/scf-starforge-20261009/sf85-live-402-capture",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli",
+    "stellar/scf-starforge-20261009/sf89-live-request-admission",
+    "stellar/scf-starforge-20261009/sf93-seller-support-bundle",
+    "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff",
+    "stellar/scf-starforge-20261009/sf96-seller-pilot-ops"
+  ],
+  "supportFiles": ["stellar-forge/payment-auto-catalog/schema-validation.mjs"],
+  "commands": {
+    "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
+    "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
+    "operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs",
+    "dataset": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs",
+    "openapi": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/cli.mjs",
+    "pilot": "stellar/scf-starforge-20261009/sf96-seller-pilot-ops/pilot-ops.mjs",
+    "buyer": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs",
+    "capture": "stellar/scf-starforge-20261009/sf85-live-402-capture/capture.mjs",
+    "handoff": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/handoff.mjs",
+    "support": "stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs"
+  },
+  "exports": {
+    ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
+    "./seller": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
+    "./seller/compiler": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/seller.mjs",
+    "./seller/http": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/resource-server.mjs",
+    "./seller/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/native-factory.mjs",
+    "./seller/operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/operations/server.mjs",
+    "./buyer": {
+      "types": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/buyer.d.ts",
+      "import": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/buyer.mjs"
+    },
+    "./buyer/public": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/public-buyer.mjs",
+    "./buyer/response-file": {
+      "types": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/response-file.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/response-file.mjs"
+    },
+    "./operator": "./source/stellar/scf-starforge-20261009/sf81-buyer-operator-bridge/bridge.mjs",
+    "./support": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs",
+    "./package.json": "./package.json",
+    "./manifest.json": "./manifest.json"
+  },
+  "nativePeers": {
+    "@x402/core": {"version": "2.28.0", "probe": "@x402/core/server"},
+    "@x402/stellar": {"version": "2.28.0", "probe": "@x402/stellar/exact/server"},
+    "@x402/extensions": {"version": "2.28.0", "probe": "@x402/extensions/bazaar"},
+    "@stellar/stellar-sdk": {"version": "^16.3.0", "probe": "@stellar/stellar-sdk"}
+  }
+}
