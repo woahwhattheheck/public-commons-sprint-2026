@@ -1,0 +1,18 @@
+{
+  "schema": "stellar-forge.bitquery-merchant.v1",
+  "publicOrigin": "https://provider-controlled.example",
+  "paymentOptions": [{
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "asset": "REPLACE_WITH_APPROVED_STELLAR_ASSET",
+    "amount": "REPLACE_WITH_ATOMIC_AMOUNT",
+    "payTo": "REPLACE_WITH_APPROVED_RECIPIENT",
+    "maxTimeoutSeconds": 60
+  }],
+  "products": [
+    {"id": "stellar-ledgers", "dataset": "ledger_activity", "kind": "query", "path": "/stellar/ledgers"},
+    {"id": "stellar-payments", "dataset": "payment_flows", "kind": "query", "path": "/stellar/payments"},
+    {"id": "stellar-balances", "dataset": "balance_changes", "kind": "query", "path": "/stellar/balances"},
+    {"id": "stellar-payments-csv", "dataset": "payment_flows", "kind": "download", "path": "/stellar/payments.csv"}
+  ]
+}
