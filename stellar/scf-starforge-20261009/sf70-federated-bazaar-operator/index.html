@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Stellar Forge · Federated Bazaar Operator</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">STELLAR FORGE / SCF SF70 / PUBLIC-ORIGIN READ ONLY</div>
+    <h1>One desk. Two native Bazaa﻿rs.</h1>
+    <p>Browse independently published Stellar x402 resource advertisements from Vellar and Periplo side by side. Each price, asset and recipient stays attached to its original source and offer.</p>
+    <div class="warning">Discovery does not authorize purchases. This page does not contact merchants or verify payments, chain finality, seller ownership, or equivalent offerings.</div>
+  </header>
+  <main>
+    <div id="status" class="status" role="status" aria-live="polite">Connecting to both public facilitators…</div>
+    <section class="summary" aria-label="Capture summary">
+      <div class="stat"><strong id="row-count">—</strong><span>Observed provider rows</span></div>
+      <div class="stat"><strong id="source-count">—</strong><span>Complete sources</span></div>
+      <div class="stat"><strong id="time">—</strong><span>Capture time (local)</span></div>
+    </section>
+    <section id="sources" class="sources" aria-label="Native source coverage"></section>
+    <form id="filters" class="toolbar">
+      <label>Search observations<input id="query" type="search" autocomplete="off" placeholder="Name, seller URL, description…"></label>
+      <label>Provider<select id="provider"><option value="">Both source catalogs</option><option value="vellar">Vellar only</option><option value="periplo">Periplo only</option></select></label>
+      <button id="refresh" type="button">Refresh genuine GETs</button>
+    </form>
+    <p id="matches" class="match" aria-live="polite"></p>
+    <section id="results" class="cards" aria-label="Source-backed resource advertisements"></section>
+  </main>
+  <footer>Every source retains its own GET status, coverage, and payment option tuple. No wallet, signing, payments, analytics, or remote assets.</footer>
+</body>
+</html>
