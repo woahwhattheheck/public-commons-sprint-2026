@@ -93,7 +93,11 @@ publisher, fleet and customer-file tools remain available in that same provider.
 ## Review and complete an order
 
 1. Call `merchant_woo_stores` and select the original store and receipt alias.
-   Call `merchant_woo_order` with its decimal string order ID. Inspect the
+   `merchant_woo_store_status` returns its actual manager identity, native journal
+   counts, currency, storage mode and setup readiness. `merchant_woo_queue` opens
+   the original checkout, bound, notices or attempts queue with native state
+   filters and page counts. Select an actual order ID from those rows, then call
+   `merchant_woo_order` with its decimal string order ID. Inspect the
    current order identity, native event, binding and revision.
 2. Call `merchant_woo_review_source` with the store and receipt alias. It
    returns the exact original file's `recordSha256`, trusted payer and native
@@ -236,6 +240,8 @@ temporary readers.
 | Tool | Inputs beyond the store alias |
 |---|---|
 | `merchant_woo_stores` | Optional store. |
+| `merchant_woo_store_status` | Store alias. |
+| `merchant_woo_queue` | Optional native scope, page, limit, state, sort and exact order ID. |
 | `merchant_woo_order` | Decimal string order. |
 | `merchant_woo_review_source` | Declared receipt source. |
 | `merchant_woo_review` | Source, review ID, order, expected record SHA256. |
@@ -254,7 +260,12 @@ temporary readers.
 | `merchant_woo_file` | Export selectors, file, manifest SHA256; optional read ID, file SHA256, byte offset and chunk limit. |
 | `merchant_woo_file_release` | Original file read ID. |
 
-Paged lists return `total`, `nextOffset` and `snapshotSha256`.
+The live native queue returns its actual `total`, `pages`, `page` and `nextPage`.
+Pages start at 1; repeat scope/state/sort/limit when continuing. An exact order-ID
+lookup uses page 1. Each page retains its native observation time; a changing
+store can change its queue between requests.
+
+Retained row lists return `total`, `nextOffset` and `snapshotSha256`.
 The default page has 25 rows and the maximum is 100. Repeat
 `expectedSnapshotSha256` with later offsets; if original rows changed, the
 tool returns `WOO_MCP_PAGE_CHANGED` so the caller can reopen the first page.

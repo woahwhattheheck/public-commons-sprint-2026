@@ -34,6 +34,14 @@ const read = { readOnly: true, idempotent: true };
 const definitions = [
   ['merchant_woo_stores', 'List configured Woo stores, native receipt aliases, accounting export roots and this connection file-read state. Resolves no credential values and makes no network request.',
     base, [], read],
+  ['merchant_woo_store_status', 'Inspect the original installed Woo console, current manager identity, native journal counts, currency, storage mode and merchant setup readiness through the same store client.',
+    base, ['store'], { ...read, openWorld: true }],
+  ['merchant_woo_queue', 'Read one page of the actual existing Woo checkout, bound-order, native-notice or attempt queue. Select an original order ID from its returned rows before native review. Native state filters, totals and page counts come from the installed console.',
+    { ...base, scope: { type: 'string', enum: ['checkout', 'bound', 'notices', 'attempts'] },
+      page: { type: 'integer', minimum: 1, maximum: 1000000 }, limit: page.limit,
+      state: { type: 'string', pattern: '^[A-Za-z0-9_-]{0,64}$' },
+      sort: { type: 'string', enum: ['oldest', 'newest'] }, orderId },
+    ['store'], { ...read, openWorld: true }],
   ['merchant_woo_order', 'Read the selected original Woo order through its configured manager Application Password. Returns its current identity, revision, native notice, release and order state.',
     { ...base, order: orderId }, ['store', 'order'], { ...read, openWorld: true }],
   ['merchant_woo_review_source', 'Inspect a host-declared original native receipt and trusted payer. Retain recordSha256 before reviewing a selected Woo order.',
@@ -264,6 +272,11 @@ export class MerchantWooCommerce {
     const store = this.#store(args.store), config = store.operator;
     if (await exists(config.workspace)) await realDirectory(config.workspace);
     switch (name) {
+      case 'merchant_woo_store_status': return createMerchantClient(config).consoleStatus();
+      case 'merchant_woo_queue': {
+        const { store: _store, ...selection } = args;
+        return createMerchantClient(config).orders(selection);
+      }
       case 'merchant_woo_order': return createMerchantClient(config).inspect(args.order);
       case 'merchant_woo_review_source': {
         const source = this.#source(store, args.source), bytes = await readBytes(source.file, MAX_RECORD);
