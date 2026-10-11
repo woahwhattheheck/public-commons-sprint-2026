@@ -23,4 +23,8 @@ check('non-402 does not invent payment',()=>{let r=inspectCapture({status:200,he
 check('lossless source byte hash changes with layout',()=>{let a=Buffer.from(JSON.stringify({status:402,headers:{'payment-required':x}}));let b=Buffer.from(JSON.stringify({status:402,headers:{'payment-required':x}},null,2));assert.notEqual(inspectBytes(a).capturedSha256,inspectBytes(b).capturedSha256);});
 check('trailing comma in MPP quote does not pass',()=>{let r=run({'www-authenticate':mpp()+','});assert.equal(r.mpp.error,'MPP_TRAILING_COMMA');});
 check('non-MPP WWW-Authenticate not invented',()=>{let r=run({'www-authenticate':'Basic realm="a"'});assert.equal(r.classification,'unrecognized-402');});
+check('coalesced Basic plus Payment',()=>{const r=run({'www-authenticate':['Basic realm="legacy"',mpp()].join(', ')});assert.equal(r.classification,'mpp-402');assert.equal(r.mpp.headerCount,1);});
+check('coalesced Charge and Session',()=>{const r=run({'www-authenticate':[mpp('charge','one'),mpp('session','two')].join(', ')});assert.equal(r.mpp.status,'parsed');assert.equal(r.mpp.headerCount,2);assert.equal(r.mpp.challenges[1].intent,'session');});
+check('coalesced duplicate ID stays ambiguous',()=>{const r=run({'www-authenticate':[mpp(),mpp('session')].join(', ')});assert.equal(r.mpp.error,'MPP_DUPLICATE_CHALLENGE_ID');});
+check('quoted comma remains in Payment parameter',()=>{const r=run({'www-authenticate':mpp().replace('pilot.example','pilot,example')});assert.equal(r.classification,'mpp-402');assert.equal(r.mpp.headerCount,1);});
 console.log(`SF84 original source acceptance: ${n}/${n} focused scenarios PASS`);
