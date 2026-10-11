@@ -64,6 +64,13 @@ node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs \
 
 The source must be an SF85-shaped, actual 402 GET or HEAD capture; a non-402, missing/duplicate/ambiguous x402 challenge or malformed MPP companion is refused. The selected option must be native `exact` on `stellar:testnet` or `stellar:pubnet`, with source-provided asset, recipient, integer amount and timeout. The captured merchant URL must match the advertised HTTPS resource origin and path (and any declared query). A payment flow other than supported `authorization` is rejected; nothing is silently coerced. Source classification cannot prove merchant identity, customer consent or onchain settlement.
 
+The original [SF85 header importer](../sf85-live-402-capture/HEADER_IMPORT.md)
+is also supported. Its exact exported-header source shape, original header
+digest/byte count, import time and operator-declared method are retained.
+`collectedAtUtc:null` remains unknown; import time never becomes response time.
+The original HTTPS capture and previously created handoff bundles retain their
+existing representation and verification behavior.
+
 ## Transition to an authorized paid pilot
 
 The generated **review** config is unsigned. The [operator workflow](OPERATOR.md)
