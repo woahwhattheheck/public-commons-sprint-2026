@@ -95,6 +95,7 @@ export function nativeEvent(compiled, args, settled, at = date()) {
     schema: SCHEMA, id, at, routeId: route.id, method: context.method,
     network: payment.network, amountAtomic: String(payment.amount),
     assetDigest: hash(String(payment.asset)),
+    recipientDigest: hash(String(payment.payTo)),
     receiptFingerprint: receipt.receiptHash,
     transactionFingerprint: receipt.transactionHash,
     orderReference: reference,
@@ -119,6 +120,7 @@ export async function openOutbox(directory) {
       if (event?.schema !== SCHEMA || !okId(event.id) ||
           !/^[A-Za-z0-9_-]{1,80}$/.test(event.routeId) ||
           !['GET', 'HEAD', 'POST'].includes(event.method) ||
+          (event.recipientDigest !== undefined && event.recipientDigest !== null && !okId(event.recipientDigest)) ||
           typeof event.receiptFingerprint !== 'string') throw new TypeError('Invalid native settlement event');
       // Native HTTP requests can settle simultaneously. Keep one append in flight,
       // with a stable dedup set updated only after durable journal fsync.
