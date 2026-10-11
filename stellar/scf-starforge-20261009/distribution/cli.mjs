@@ -22,6 +22,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   operations  Seller + live dashboard         dataset     Dataset API compiler
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
+  import-headers  Import original operator HTTP headers
   handoff     Captured challenge -> review    support     Private seller support case
   commerce    Merchant + buyer session        inbox       Durable selected requests
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend

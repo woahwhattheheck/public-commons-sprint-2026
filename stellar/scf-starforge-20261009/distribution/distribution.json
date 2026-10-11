@@ -28,7 +28,8 @@
     "stellar/scf-starforge-20261009/sf98-merchant-delivery",
     "stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery",
     "stellar/scf-starforge-20261009/sf103-native-buyer-signer",
-    "stellar/scf-starforge-20261009/native-facilitator"
+    "stellar/scf-starforge-20261009/native-facilitator",
+    "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -45,6 +46,7 @@
     "pilot": "stellar/scf-starforge-20261009/sf96-seller-pilot-ops/pilot-ops.mjs",
     "buyer": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs",
     "capture": "stellar/scf-starforge-20261009/sf85-live-402-capture/capture.mjs",
+    "import-headers": "stellar/scf-starforge-20261009/sf85-live-402-capture/import-headers.mjs",
     "handoff": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/handoff.mjs",
     "support": "stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs",
     "client": "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs",

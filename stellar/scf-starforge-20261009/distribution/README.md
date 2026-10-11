@@ -121,6 +121,7 @@ or automatically retry a request.
 | `starforge native-signer` | SF103 native buyer configuration, inspection and signer loading check |
 | `starforge facilitator` | Original native Stellar facilitator or self-facilitated seller |
 | `starforge capture` | SF85 original single HTTP 402 capture |
+| `starforge import-headers` | SF85 original operator HTTP header-file importer |
 | `starforge handoff` | SF96 captured challenge to original buyer review files |
 | `starforge support` | SF93 private seller and operations support export |
 | `starforge client` | Export a standalone JavaScript client, TypeScript declarations and original OpenAPI |
@@ -137,6 +138,13 @@ For example, review an existing original buyer configuration without signing:
 npx --no-install starforge buyer --review --config /absolute/private/operator.json
 npx --no-install starforge source
 ```
+
+For an original SF85 imported capture, `starforge handoff` also requires
+`--headers-file /absolute/private/original.headers`. It retains that file and
+verifies the same response through the original SF85 parser. The resulting
+bundle goes directly to `starforge buyer --review`; import time remains separate
+from the unknown HTTP capture time. See the original
+[SF96 operator-header journey](../sf96-merchant-challenge-handoff/README.md).
 
 To keep an existing configured merchant and its selected buyer requests in one
 foreground operator session, use the
