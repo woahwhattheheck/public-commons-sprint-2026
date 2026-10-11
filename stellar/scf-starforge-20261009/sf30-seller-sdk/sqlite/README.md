@@ -67,13 +67,38 @@ In native-payment mode, the original `admit` stage rejects invalid input with 42
 
 ## Runtime and ownership
 
-One persistent child process owns the read-only SQLite connection. It receives only the source declaration and typed values, inherits **no environment variables**, does not load extensions, and sends only selected results or safe error codes. SQLite opens read-only with `query_only`, untrusted-schema functions disabled and a short lock wait. A SELECT wrapper enforces projection/row limits; SQLite parses it. Declaration lint catches missing/extra placeholders and unsupported parameter forms. SQL is **trusted operator configuration, not a tenant SQL sandbox**: review query plans, joins, functions, indexes and parameter bounds before exposure.
+A configurable pool of persistent child processes each owns an independent read-only SQLite connection. Each receives only the source declaration and typed values, inherits **no environment variables**, does not load extensions, and sends only selected results or safe error codes. SQLite opens read-only with `query_only`, untrusted-schema functions disabled and a short lock wait. A SELECT wrapper enforces projection/row limits; SQLite parses it. Declaration lint catches missing/extra placeholders and unsupported parameter forms. SQL is **trusted operator configuration, not a tenant SQL sandbox**: review query plans, joins, functions, indexes and parameter bounds before exposure.
 
-Synchronous SQLite work cannot block the seller's event loop. The parent enforces a wall-time deadline and kills an active worker on timeout/abort; queued requests or later requests start a fresh worker. The cancelled request is never replayed. A full queue is rejected; default capacity is 32 active+queued requests (configurable 1–256). Timeouts include queue wait, so queued work cannot hang indefinitely. SQLite's native allocations are not an OS memory quota; result limits and a 128-MiB V8 heap limit are not a claim of total process-memory isolation. Use ordinary deployment resource limits for large/untrusted datasets.
+Synchronous SQLite work cannot block the seller's event loop. Jobs enter one FIFO queue; already-warm idle workers receive the oldest jobs first. With multiple workers, completion order may differ from dispatch order. The parent enforces a total wall-time deadline and kills **only the active job's worker** on timeout/abort. A queued cancellation removes only that job; healthy workers keep running. A cancelled or failed active query is never replayed. Replacement waits for the previous process's `close` event, so cancellation bursts cannot exceed the configured process count.
 
-The public API is `createSqliteQuerySource({database, queries, maxPending, startupTimeoutMs})`, returning `query`, `validate`, `route`, `describe` and `close`. `query(name,input,{signal})` supports AbortSignal. A direct query/CLI inspection is a privileged local operator operation, not an HTTP payment bypass. Idle worker IPC does not keep the parent alive; parent exit closes the worker. No timers periodically query the database, no writes/telemetry and no new scheduled task are installed.
+The default remains **one worker**. Set `workerCount` explicitly in the existing private source JSON to enable concurrent reads; no new launcher or server is needed. Both `openSqliteQueryFile` and the existing handler module pass it through:
 
-`inspect.mjs --describe` prints parameter/output contracts without SQL or paths. Add `--output NEW_FILE` to write a create-only 0600 local result. The source JSON, database and local result files stay operator-private; don't publish them with the sample code or put private values in public offer examples.
+```json
+{
+  "schema": "stellar-forge.sqlite-source.v1",
+  "database": "catalog.sqlite",
+  "workerCount": 2,
+  "maxPending": 32,
+  "startupTimeoutMs": 5000,
+  "queries": {
+    "lookup": {
+      "sql": "SELECT id, title FROM products WHERE id = $id",
+      "parameters": {"id": {"type": "integer", "minimum": "1"}},
+      "columns": ["id", "title"]
+    }
+  }
+}
+```
+
+`workerCount` accepts integers 1–8 and warms every requested worker before returning the source. `maxPending` stays a **global active-plus-queued limit**, default 32, configurable 1–256; it is not multiplied by worker count. `startupTimeoutMs` is per worker, default 5000, configurable 100–30000. Query deadlines include queue wait and restart. More workers consume more CPU, independent SQLite caches and connections: choose a count against the host's actual CPU/memory budget and merchant query mix, not a presumed universal throughput gain. The per-process 128-MiB V8 heap limit does not bound SQLite native allocations or total memory. Use deployment resource limits for large datasets.
+
+All initial workers must open the database and prepare the approved queries successfully. Later, a failing replacement disables just its slot for the current queued work; healthy slots continue. When all slots fail to start, waiting jobs fail promptly. A later explicit query can retry a failed slot after the underlying problem is repaired. No periodic restart loop or idle database polling is installed. Each read uses its own statement snapshot; the pool adds neither cross-query transactions nor multi-page snapshot pinning. Restart the source after schema or database-file replacement.
+
+The public API is `createSqliteQuerySource({database, queries, maxPending, startupTimeoutMs, workerCount})`, returning `query`, `validate`, `route`, `describe`, `stats` and `close`. Existing query/result/admission contracts are unchanged. `query(name,input,{signal})` supports AbortSignal. `await source.close()` is idempotent, rejects active and queued jobs with `SOURCE_CLOSED`, and waits for all starting, running and retiring processes to close. Idle worker IPC does not keep the parent alive; parent exit closes the workers. A direct query/CLI inspection is a privileged local operator operation, not an HTTP payment bypass.
+
+`source.stats()` returns a frozen, local aggregate snapshot with schema `stellar-forge.sqlite-pool.v1`: configured workers/capacity, live/ready/starting/retiring/unavailable workers, running/queued/pending requests, accepted/succeeded/failed/timedOut/aborted/overloaded counts, worker starts/restarts, process and queue high-water marks, and cumulative queue/execution milliseconds. Counters are lifetime-local and reset when the source is reopened. Queue/execution totals count completed jobs, not in-flight time. A retiring process remains in `processes` until it actually closes. Failed startup may reduce ready capacity temporarily. No SQL, database path, PID, caller values or remote telemetry is included.
+
+`inspect.mjs --describe` prints parameter/output contracts without SQL or paths. `--stats` alone prints pool state; adding it to `--query … --input …` or `--describe` wraps output as `{result, pool}`. Without `--stats`, existing output is unchanged. The CLI opens a **fresh local source**, not the running merchant process; use its `source.stats()` API in an embedding application for that process's live counters. Add `--output NEW_FILE` to write a create-only 0600 local result. The source JSON, database and local result files stay operator-private; don't publish them with the sample code or put private values in public offer examples.
 
 ## Focused native exercise
 
@@ -82,5 +107,13 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/acceptance.mjs
 ```
 
 One actual temporary SQLite lifecycle checks a 100,001-row indexed database, source projection, Unicode/64-bit values, typed handler/admission, parameter injection as literal text, overload, oversize, timeout/abort, responsive parent, worker restart, close and unchanged database bytes. No test framework or hosted CI. It does not simulate payment or establish a live settlement. Original seller/native integration uses the existing runtime and operator demonstration, not a replacement protocol.
+
+Run the single parallel lifecycle exercise for the pool:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/pool-acceptance.mjs
+```
+
+It runs native SQLite over a 100,001-row temporary database: simultaneous long and indexed queries, default-serial comparison, per-slot timeout/abort, FIFO queue cancellation, global overload, startup failure/repair, cancellation storms with strict process-count ceiling, and complete shutdown without modifying the source database. Its timing output measures this local workload, not production traffic or payments. The original `acceptance.mjs` continues to cover the default one-worker contract.
 
 Runtime references: [Node 22 SQLite API](https://nodejs.org/download/release/v22.16.0/docs/api/sqlite.html), [Node child process API](https://nodejs.org/download/release/v22.16.0/docs/api/child_process.html). Existing source contract: `../resource-server.mjs`, `../admission.mjs`, `../serve.mjs`, `../DEVELOPER.md`, `../operations/README.md`.
