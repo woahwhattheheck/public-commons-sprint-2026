@@ -87,6 +87,9 @@ function runWorker(python,args,operatorEnvironment,signal,rpcProxyUrl) {
   });
 }
 
+// The missing-receipt branch shares this fixed worker and isolated key pipe.
+export {runWorker as runOriginalFinalityWorker};
+
 /** Trusted host core for an existing original attempt. Callers retain their own
  * immutable attempt/config/body record; SF36 remains the only ledger authority.
  * A native session caller may supply its validated sourceEvidenceDirectory;
