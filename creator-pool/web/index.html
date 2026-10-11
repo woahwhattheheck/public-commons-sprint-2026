@@ -85,7 +85,35 @@
           New campaign
         </button>
       </div>
+      <div class="portfolio-controls" id="portfolioControls">
+        <label class="portfolio-search" for="campaignSearch">Find a campaign
+          <input id="campaignSearch" type="search" maxlength="200" placeholder="Title, brief, campaign ID or sponsor" autocomplete="off">
+        </label>
+        <div id="campaignQueues" class="portfolio-queues" role="group" aria-label="Campaign work queues"></div>
+        <div class="portfolio-filters">
+          <label for="campaignStatus">Status
+            <select id="campaignStatus"><option value="all">Any status</option><option value="open">Open</option><option value="deadline">Deadline passed</option><option value="closed">Closed</option></select>
+          </label>
+          <label for="campaignSort">Sort
+            <select id="campaignSort"><option value="source">Newest first</option><option value="deadline">Deadline first</option><option value="reward">Highest reward</option><option value="available">Most available funds</option><option value="title">Title</option></select>
+          </label>
+          <label for="campaignPageSize">Per page
+            <select id="campaignPageSize"><option value="6">6</option><option value="12">12</option><option value="24">24</option></select>
+          </label>
+        </div>
+        <p id="campaignQueueNote" class="portfolio-note"></p>
+        <div class="portfolio-result-line">
+          <p id="campaignResults" role="status" aria-live="polite" aria-atomic="true"></p>
+          <button type="button" id="campaignReset" class="btn ghost small">Clear filters</button>
+        </div>
+        <p id="campaignSelectedNotice" class="portfolio-selected" hidden></p>
+      </div>
       <div id="campaignList" class="campaign-list"></div>
+      <nav class="portfolio-pages" aria-label="Campaign pages">
+        <button type="button" id="campaignPrevious" class="btn secondary small">Previous</button>
+        <span id="campaignPageLabel"></span>
+        <button type="button" id="campaignNext" class="btn secondary small">Next</button>
+      </nav>
     </section>
 
     <section class="col col-detail" aria-label="Campaign details">

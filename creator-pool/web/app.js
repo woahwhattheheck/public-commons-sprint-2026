@@ -1576,7 +1576,153 @@ function campaignTitle(c) {
   return c.title || (c.metadataMatches === false ? "Details unavailable" : "Untitled campaign");
 }
 
-const campaignListView = { state: null, role: null, selected: null, cards: new Map() };
+const PORTFOLIO_QUEUES = {
+  sponsor: [["all", "All campaigns"], ["sponsored", "Sponsored by me"], ["review", "Work to review"], ["fund", "Pools to fund"], ["deadline", "Deadline passed"]],
+  creator: [["all", "All campaigns"], ["open", "Open for work"], ["mine", "My submissions"], ["waiting", "Awaiting selection"], ["claim", "Rewards to claim"]],
+};
+const portfolioDefaults = () => ({ query: "", queue: "all", status: "all", sort: "source", pageSize: 6, page: 1 });
+const portfolio = { scope: null, preferences: portfolioDefaults(), storageUnavailable: false, modelState: null, models: new Map() };
+
+function portfolioScope() {
+  const s = ui.state;
+  if (!s.chainId || !s.contracts.pool) return null;
+  const endpoint = new URL(Api.base || "/", location.href);
+  const who = isLocalDemo() ? (ui.role === "sponsor" ? "demo:sponsor" : "demo:" + ui.actorId)
+    : "wallet:" + (Wallet.address || "unconnected").toLowerCase();
+  return ["creator-pool:portfolio:v1", endpoint.origin + endpoint.pathname,
+    s.mode, s.chainId, s.contracts.pool.toLowerCase(), ui.role, who].map(encodeURIComponent).join(":");
+}
+function loadPortfolio() {
+  const scope = portfolioScope();
+  if (scope === portfolio.scope) return portfolio.preferences;
+  portfolio.scope = scope;
+  portfolio.preferences = portfolioDefaults();
+  portfolio.storageUnavailable = false;
+  if (scope) try {
+    const saved = JSON.parse(localStorage.getItem(scope));
+    if (saved?.version === 1 && saved.preferences && typeof saved.preferences === "object") {
+      const p = saved.preferences, safe = portfolio.preferences;
+      if (typeof p.query === "string") safe.query = p.query.slice(0, 200);
+      if (PORTFOLIO_QUEUES[ui.role].some(([key]) => key === p.queue)) safe.queue = p.queue;
+      if (["all", "open", "deadline", "closed"].includes(p.status)) safe.status = p.status;
+      if (["source", "deadline", "reward", "available", "title"].includes(p.sort)) safe.sort = p.sort;
+      if ([6, 12, 24].includes(p.pageSize)) safe.pageSize = p.pageSize;
+      if (Number.isSafeInteger(p.page) && p.page > 0) safe.page = p.page;
+    }
+  } catch { portfolio.storageUnavailable = true; }
+  return portfolio.preferences;
+}
+function savePortfolio() {
+  if (!portfolio.scope) return;
+  try {
+    localStorage.setItem(portfolio.scope, JSON.stringify({ version: 1, preferences: portfolio.preferences }));
+    portfolio.storageUnavailable = false;
+  } catch { portfolio.storageUnavailable = true; }
+}
+function changePortfolio(values) {
+  loadPortfolio();
+  Object.assign(portfolio.preferences, values);
+  savePortfolio();
+  renderCampaignList(); // Filtering never rebuilds the open form or review drawer.
+}
+function portfolioContext() {
+  return JSON.stringify([ui.role, ui.actorId, Wallet.address, Wallet.chainIdDec, Wallet.available()]);
+}
+function portfolioModel() {
+  const context = portfolioContext();
+  if (portfolio.modelState !== ui.state) { portfolio.models.clear(); portfolio.modelState = ui.state; }
+  if (portfolio.models.has(context)) return portfolio.models.get(context);
+  const counts = Object.fromEntries(PORTFOLIO_QUEUES[ui.role].map(([key]) => [key, 0]));
+  const rows = ui.state.campaigns.map((c, order) => {
+    const subs = campaignSubmissions(c.id), actions = [], queues = new Set(["all"]);
+    const status = c.closed ? "closed" : c.status === "deadline_passed" ? "deadline"
+      : c.status === "open" || !c.status ? "open" : "other";
+    if (ui.role === "sponsor" && sponsorGate(c).ok) {
+      queues.add("sponsored");
+      const waiting = !c.closed ? subs.filter(s => s.status === "submitted") : [];
+      if (waiting.length) {
+        queues.add("review");
+        const first = waiting.find(s => !sponsorSelectionEligibility(c, s).error) || waiting[0];
+        actions.push({ kind: "review", label: `Review work · ${waiting.length}`, focus: `approve-review:${first.id}`, submission: first.id });
+      }
+      const remaining = c.unfundedAtomic !== null ? c.unfundedAtomic
+        : c.budgetAtomic !== null && c.fundedAtomic !== null ? (BigInt(c.budgetAtomic) - BigInt(c.fundedAtomic)).toString() : null;
+      if (status === "open" && c.fundedAtomic !== null && decimalsKnown() && remaining !== null && BigInt(remaining) > 0n) {
+        queues.add("fund");
+        actions.push({ kind: "fund", label: "View funding", focus: `fund:${c.id}` });
+      }
+      if (status === "deadline") {
+        queues.add("deadline");
+        actions.push({ kind: "close", label: "Review closure", focus: `close-start:${c.id}` });
+      }
+    } else if (ui.role === "creator") {
+      const mine = subs.filter(submissionIsMine);
+      if (mine.length) queues.add("mine");
+      if (!c.closed && mine.some(s => s.status === "submitted")) queues.add("waiting");
+      const claimable = mine.filter(s => /^approved$|reserved/.test(s.status.toLowerCase()) &&
+        !/claimed|paid|settled/.test(s.status.toLowerCase()) && (s.claimable === undefined || Boolean(s.claimable)) && creatorGate(s).ok);
+      if (claimable.length) {
+        queues.add("claim");
+        actions.push({ kind: "claim", label: `View reward claims · ${claimable.length}`, focus: `claim:${claimable[0].id}`, submission: claimable[0].id });
+      }
+      if (status === "open") {
+        queues.add("open");
+        actions.push({ kind: "submit", label: "Open submission form", field: "title" });
+      }
+      if (mine.length && !claimable.length) actions.push({ kind: "mine", label: "View my work", submission: mine[0].id });
+    }
+    for (const key of queues) if (key in counts) counts[key]++;
+    return { c, order, status, queues, actions,
+      search: ["#" + c.id, c.title, c.brief, c.sponsor].filter(Boolean).join(" ").normalize("NFC").toLowerCase() };
+  });
+  const model = { rows, counts, context };
+  if (portfolio.models.size >= 8) portfolio.models.delete(portfolio.models.keys().next().value);
+  portfolio.models.set(context, model);
+  return model;
+}
+function portfolioRows(model, p) {
+  const query = p.query.trim().normalize("NFC").toLowerCase();
+  if (!query && p.queue === "all" && p.status === "all" && p.sort === "source") return model.rows;
+  const rows = model.rows.filter(r => r.queues.has(p.queue) && (p.status === "all" || r.status === p.status) && (!query || r.search.includes(query)));
+  if (p.sort === "source") return rows;
+  const compareAmount = (a, b, key) => {
+    if (a.c[key] === null || b.c[key] === null) return a.c[key] === b.c[key] ? 0 : a.c[key] === null ? 1 : -1;
+    const x = BigInt(a.c[key]), y = BigInt(b.c[key]);
+    return x === y ? 0 : x > y ? -1 : 1;
+  };
+  rows.sort((a, b) => {
+    let result = 0;
+    if (p.sort === "deadline") result = (Date.parse(a.c.deadline) || Infinity) - (Date.parse(b.c.deadline) || Infinity);
+    else if (p.sort === "reward") result = compareAmount(a, b, "rewardAtomic");
+    else if (p.sort === "available") result = compareAmount(a, b, "availableAtomic");
+    else if (p.sort === "title") result = campaignTitle(a.c).localeCompare(campaignTitle(b.c));
+    return result || a.order - b.order;
+  });
+  return rows;
+}
+function openPortfolioCampaign(id, action) {
+  // Only navigation. Existing controls still own review, signing and sending.
+  ui.selectedCampaignId = id;
+  renderAll();
+  const panel = $("#detailPanel");
+  let target = action?.focus ? Array.from(panel.querySelectorAll("[data-focus-key]")).find(n => n.dataset.focusKey === action.focus && !n.disabled) : null;
+  if (!target && action?.field) target = Array.from(panel.querySelectorAll("[name]")).find(n => n.name === action.field && !n.disabled);
+  if (!target && action?.submission) target = Array.from(panel.querySelectorAll("[data-submission-id]")).find(n => n.dataset.submissionId === action.submission);
+  target ||= panel.querySelector("h2") || panel;
+  if (!target.matches("button,input,textarea,select,a[href]")) target.tabIndex = -1;
+  target.focus({ preventScroll: true });
+  target.scrollIntoView({ block: "nearest" });
+}
+function revealPortfolioSelection() {
+  const p = loadPortfolio();
+  p.query = ""; p.queue = "all"; p.status = "all";
+  const rows = portfolioRows(portfolioModel(), p);
+  p.page = Math.max(1, Math.floor(rows.findIndex(r => r.c.id === ui.selectedCampaignId) / p.pageSize) + 1);
+  savePortfolio(); renderCampaignList();
+  campaignListView.cards.get(ui.selectedCampaignId)?.[0]?.focus({ preventScroll: true });
+}
+
+const campaignListView = { state: null, selected: null, cards: new Map(), rows: new Map(), visible: null, queuesRole: null, queueViews: new Map() };
 function updateCampaignSelection() {
   if (campaignListView.selected === ui.selectedCampaignId) return;
   for (const id of [campaignListView.selected, ui.selectedCampaignId]) {
@@ -1589,39 +1735,14 @@ function updateCampaignSelection() {
   campaignListView.selected = ui.selectedCampaignId;
 }
 
-function renderCampaignList() {
-  const list = $("#campaignList"), s = ui.state;
-  // Role/actor/detail changes do not change populated campaign cards. Keep
-  // their nodes and keyboard position; a new API snapshot rebuilds the view.
-  if (campaignListView.state === s &&
-      (s.campaigns.length || campaignListView.role === ui.role)) {
-    updateCampaignSelection();
-    return;
-  }
-  list.replaceChildren();
-  campaignListView.role = ui.role;
-  campaignListView.selected = ui.selectedCampaignId;
-  campaignListView.cards.clear();
-  if (!s.campaigns.length) {
-    const empty = h("div", { class: "empty-state" },
-      svgDeco('<svg viewBox="0 0 56 56" width="46" height="46"><circle cx="28" cy="28" r="22" fill="none" stroke="currentColor" stroke-width="2.4" opacity=".45"/><path d="M28 18v20M19 24.5c0-2.5 4-4.5 9-4.5s9 2 9 4.5-3.5 4.1-9 5-9 2-9 5 4 4.5 9 4.5 9-2 9-4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>'),
-      h("h3", { text: "No campaigns yet" }),
-      h("p", { text: ui.role === "creator"
-        ? "The sponsor hasn't opened any campaigns. When a funded campaign exists it will appear here for submissions."
-        : "Create a campaign, fund its pool on the declared network, then share it with creators." }),
-      ui.role === "sponsor" ? h("button", { type: "button", class: "btn primary", onClick: openNewCampaign }, "Create the first campaign") : null);
-    list.append(empty);
-    campaignListView.state = s;
-    return;
-  }
-  for (const c of s.campaigns) {
-    const subs = campaignSubmissions(c.id);
+function campaignCard(c) {
+  const subs = campaignSubmissions(c.id);
     const approved = subs.filter((x) => /approved|reserved|claimed|paid/i.test(x.status)).length;
     const card = h("button", {
       type: "button",
       class: `campaign-card${c.id === ui.selectedCampaignId ? " selected" : ""}`,
       "data-campaign-id": c.id,
-      onClick: () => { ui.selectedCampaignId = c.id; renderAll(); },
+      onClick: () => openPortfolioCampaign(c.id),
       "aria-pressed": c.id === ui.selectedCampaignId ? "true" : "false",
     },
       h("div", { class: "cc-top" },
@@ -1639,11 +1760,102 @@ function renderCampaignList() {
       h("div", { class: "cc-foot" },
         h("span", { class: "cc-subs", text: `${subs.length} submission${subs.length === 1 ? "" : "s"}${approved ? ` · ${approved} approved` : ""}` }),
         h("span", { class: "muted small", text: "View →" })));
-    if (!campaignListView.cards.has(c.id)) campaignListView.cards.set(c.id, []);
-    campaignListView.cards.get(c.id).push(card);
-    list.append(card);
-  }
-  campaignListView.state = s;
+  return card;
+}
+
+function renderCampaignList() {
+  const list = $("#campaignList"), s = ui.state;
+  if (!s) return;
+  const active = list.contains(document.activeElement) ? document.activeElement : null;
+  const focus = active ? { campaign: active.dataset.campaignId, id: active.dataset.portfolioId, action: active.dataset.portfolioAction } : null;
+  const p = loadPortfolio(), model = portfolioModel(), matches = portfolioRows(model, p);
+  const pages = Math.max(1, Math.ceil(matches.length / p.pageSize));
+  if (p.page > pages) { p.page = pages; savePortfolio(); }
+  const visible = matches.slice((p.page - 1) * p.pageSize, p.page * p.pageSize);
+  const setText = (el, text) => { if (el.textContent !== text) el.textContent = text; };
+  for (const [id, value] of [["campaignSearch", p.query], ["campaignStatus", p.status], ["campaignSort", p.sort], ["campaignPageSize", String(p.pageSize)]]) {
+    const control = document.getElementById(id);
+    if (control.value !== value) control.value = value;
+  }
+  const queues = $("#campaignQueues");
+  if (campaignListView.queuesRole !== ui.role) {
+    if (!campaignListView.queueViews.has(ui.role)) campaignListView.queueViews.set(ui.role, PORTFOLIO_QUEUES[ui.role].map(([key, label]) => h("button", {
+      type: "button", class: "portfolio-queue", "data-queue": key,
+      onClick: () => changePortfolio({ queue: key, page: 1 }),
+    }, h("span", { text: label }), h("b"))));
+    queues.replaceChildren(...campaignListView.queueViews.get(ui.role));
+    campaignListView.queuesRole = ui.role;
+  }
+  for (const button of queues.children) {
+    const pressed = String(button.dataset.queue === p.queue);
+    if (button.getAttribute("aria-pressed") !== pressed) button.setAttribute("aria-pressed", pressed);
+    setText(button.querySelector("b"), String(model.counts[button.dataset.queue]));
+  }
+  let note = isPublicMode() && !Wallet.address
+    ? "Connect your wallet to see your campaigns, submissions and rewards. You can browse every campaign now."
+    : ui.role === "sponsor"
+    ? "Queues count campaigns. Review work before selection; approved rewards remain claimable after closure."
+    : "Queues count campaigns for the selected creator. Open campaigns may still need sponsor funding.";
+  if (portfolio.storageUnavailable) note += " Browser storage is unavailable; these filters last for this tab only.";
+  setText($("#campaignQueueNote"), note);
+  setText($("#campaignResults"), matches.length
+    ? `${(p.page - 1) * p.pageSize + 1}–${Math.min(p.page * p.pageSize, matches.length)} of ${matches.length} campaigns${matches.length !== s.campaigns.length ? ` · ${s.campaigns.length} total` : ""}`
+    : `0 matching campaigns · ${s.campaigns.length} total`);
+  $("#campaignReset").disabled = !p.query && p.queue === "all" && p.status === "all";
+  $("#campaignPrevious").disabled = p.page <= 1;
+  $("#campaignNext").disabled = p.page >= pages;
+  setText($("#campaignPageLabel"), `Page ${p.page} of ${pages}`);
+  const selected = getCampaign(ui.selectedCampaignId), outside = selected && !visible.some(r => r.c.id === selected.id);
+  const notice = $("#campaignSelectedNotice");
+  notice.hidden = !outside;
+  if (outside) {
+    const label = `Selected: ${campaignTitle(selected)} (#${selected.id}). Its details stay open outside this page.`;
+    if (notice.dataset.label !== label) {
+      notice.replaceChildren(h("span", { text: label }), h("br"), h("button", { type: "button", class: "btn secondary small", onClick: revealPortfolioSelection }, "Show selected campaign"));
+      notice.dataset.label = label;
+    }
+  }
+  if (campaignListView.state !== s) {
+    campaignListView.state = s; campaignListView.cards.clear(); campaignListView.rows.clear(); campaignListView.visible = null;
+  }
+  const nodes = visible.map(row => {
+    const c = row.c;
+    let rendered = campaignListView.rows.get(c.id);
+    if (!rendered) {
+      const card = campaignCard(c), actions = h("div", { class: "portfolio-actions", "aria-label": `Campaign ${c.id} shortcuts` });
+      rendered = { node: h("div", { class: "portfolio-row" }, card, actions), actions, context: null };
+      campaignListView.cards.set(c.id, [card]); campaignListView.rows.set(c.id, rendered);
+    }
+    if (rendered.context !== model.context) {
+      rendered.actions.replaceChildren(...row.actions.map(action => h("button", {
+        type: "button", class: "btn secondary small", "data-portfolio-id": c.id, "data-portfolio-action": action.kind,
+        onClick: () => openPortfolioCampaign(c.id, action),
+      }, action.label)));
+      rendered.actions.hidden = !row.actions.length;
+      rendered.context = model.context;
+    }
+    return rendered.node;
+  });
+  const key = JSON.stringify([visible.map(r => r.c.id), !s.campaigns.length ? ui.role : ""]);
+  if (campaignListView.visible !== key) {
+    if (nodes.length) list.replaceChildren(...nodes);
+    else if (s.campaigns.length) list.replaceChildren(h("div", { class: "portfolio-empty", text: "No campaigns match these filters. Clear filters or choose another queue." }));
+    else {
+      const empty = h("div", { class: "empty-card" }, h("h3", { text: "No campaigns yet" }), h("p", { text: ui.role === "sponsor" ? "Create a campaign to start funding creator work." : "A sponsor needs to create a campaign first." }));
+      if (ui.role === "sponsor") empty.append(h("button", { type: "button", class: "btn primary small", onClick: openNewCampaign }, "Create the first campaign"));
+      list.replaceChildren(empty);
+    }
+    campaignListView.visible = key;
+  }
+  updateCampaignSelection();
+  if (focus && !active.isConnected) {
+    const replacement = Array.from(list.querySelectorAll("button")).find(n => focus.campaign
+      ? n.dataset.campaignId === focus.campaign
+      : n.dataset.portfolioId === focus.id && n.dataset.portfolioAction === focus.action);
+    const target = replacement || $("#campaignResults");
+    if (!replacement) target.tabIndex = -1;
+    target.focus({ preventScroll: true });
+  }
 }
 
 /* ============================ render: detail ============================ */
@@ -2005,7 +2217,7 @@ function renderSubmission(c, sub) {
   }
 
   const txHash = sub.lastTx || sub.txHash;
-  const card = h("div", { class: "sub-card" },
+  const card = h("div", { class: "sub-card", "data-submission-id": sub.id },
     h("div", { class: "sub-top" },
       h("div", {},
         h("h4", { class: "sub-title", text: sub.title || (sub.metadataMatches === false ? "Details unavailable" : "Untitled submission") }),
@@ -2776,6 +2988,19 @@ async function doClose(c) {
 
 /* ============================ load / refresh ============================ */
 
+// Compare the entire fresh response, including off-chain metadata and pending
+// operations. An unchanged block hash alone is insufficient for UI reuse.
+let confirmedPayload = null, confirmedState = null;
+function acceptState(raw) {
+  const payload = JSON.stringify(raw);
+  if (ui.state !== confirmedState || payload !== confirmedPayload) {
+    ui.state = normalizeState(raw);
+    confirmedState = ui.state;
+    confirmedPayload = payload;
+  } else ui.state.fetchedAt = new Date();
+  return ui.state;
+}
+
 function reconcileActor() {
   if (!ui.state) return;
   if (!ui.state.localDemo) { ui.actorId = null; return; }
@@ -2821,9 +3046,9 @@ async function reconcilePendingWalletOps() {
 async function refresh(userInitiated){
   const ticket=++ui.refreshSeq;
   try{
-    const raw=await Api.getState(),fresh=normalizeState(raw);
+    const raw=await Api.getState();
     if(ticket!==ui.refreshSeq)return;
-    ui.state=fresh;ui.status="ready";ui.staleError=null;
+    acceptState(raw);ui.status="ready";ui.staleError=null;
     reconcileActor();applyBootLink();
   }catch(err){
     if(ticket!==ui.refreshSeq)return;
@@ -2876,6 +3101,13 @@ function schedulePoll() {
 }
 
 function wireChrome() {
+  $("#campaignSearch").addEventListener("input", e => changePortfolio({ query: e.target.value, page: 1 }));
+  $("#campaignStatus").addEventListener("change", e => changePortfolio({ status: e.target.value, page: 1 }));
+  $("#campaignSort").addEventListener("change", e => changePortfolio({ sort: e.target.value, page: 1 }));
+  $("#campaignPageSize").addEventListener("change", e => changePortfolio({ pageSize: Number(e.target.value), page: 1 }));
+  $("#campaignReset").addEventListener("click", () => changePortfolio({ query: "", queue: "all", status: "all", page: 1 }));
+  $("#campaignPrevious").addEventListener("click", () => changePortfolio({ page: Math.max(1, loadPortfolio().page - 1) }));
+  $("#campaignNext").addEventListener("click", () => changePortfolio({ page: loadPortfolio().page + 1 }));
   $("#refreshBtn").addEventListener("click", () => refresh(true));
   $("#retryBtn").addEventListener("click", () => { ui.status = "loading"; renderAll(); refresh(true); });
   $("#newCampaignBtn").addEventListener("click", openNewCampaign);
