@@ -64,8 +64,18 @@ export async function openProject(directory, { env = process.env, quotaDirectory
   const previews = await privateDirectory(join(root, 'previews'));
   const exports = await privateDirectory(join(root, 'exports'));
   const quota = await privateDirectory(quotaDirectory ?? join(root, 'quota'));
-  let closed = false, pending = Promise.resolve(), sourceRuns = new Set();
+  let closed = false, stopping = false, closing, pending = Promise.resolve(), sourceRuns = new Set();
+  const operations = new Set();
   function active() { if (closed) fail('The project is closed.', 503); }
+  function tracked(work) {
+    active(); if (stopping) fail('The project is closing.', 503);
+    // Register before the first filesystem await so shutdown includes accepted
+    // requests still retaining their intent, as well as active provider calls.
+    const operation = Promise.resolve().then(work);
+    operations.add(operation);
+    operation.finally(() => operations.delete(operation)).catch(() => {});
+    return operation;
+  }
   async function read() {
     active();
     try {
@@ -220,7 +230,15 @@ export async function openProject(directory, { env = process.env, quotaDirectory
     }
     return rows;
   }
-  return { root, quotaDirectory: quota, read, save, history, readRevision,
-    preview, readPreview, listPreviews, export: exportProject, readExport, listExports,
-    async close() { await pending; await Promise.allSettled([...sourceRuns]); closed = true; } };
+  return { root, quotaDirectory: quota, read, save: input => tracked(() => save(input)), history, readRevision,
+    preview: input => tracked(() => preview(input)), readPreview, listPreviews,
+    export: input => tracked(() => exportProject(input)), readExport, listExports,
+    close() {
+      if (!closing) {
+        stopping = true;
+        closing = (async () => { await Promise.allSettled([...operations]); await pending;
+          await Promise.allSettled([...sourceRuns]); closed = true; })();
+      }
+      return closing;
+    } };
 }

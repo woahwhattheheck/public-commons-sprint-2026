@@ -27,7 +27,7 @@ The provider origin and operation paths are fixed. A source result records the s
 
 ## Configure and save
 
-Use the original SF30 dependencies, Node 24 and Linux `flock`. The source's explicit Node HTTPS Agent honors the host's proxy environment through the original SF30 exchange; this supports the managed cloud runtime's egress route. Its agent closes after source operations drain. Run these commands from `sf30-seller-sdk`.
+Use the original SF30 dependencies and Linux `flock`. Environment-proxy support requires Node 24.5+ or 22.21+; the native exercise used Node 24.19. The source's explicit Node HTTPS Agent honors the host's proxy environment through the original SF30 exchange; this supports the managed cloud runtime's egress route. Its agent closes after source operations drain. Node documents [built-in proxy support and custom Agent proxyEnv](https://nodejs.org/download/release/latest-v24.x/docs/api/http.html#built-in-proxy-support), and [HTTPS Agent](https://r2.nodejs.org/docs/latest-v24.x/api/https.html) uses those Agent options. Run these commands from `sf30-seller-sdk`.
 
 ~~~bash
 node routescan/cli.mjs inspect --config routescan/merchant.example.json
@@ -73,7 +73,7 @@ The output file is created exclusively at a new path. The retained result contai
 
 After a process restart, reopen the result by ID or call `preview` with the same ID, request and reviewed revision. A completed result returns its existing bytes and completion timestamp. An operation that retained its request but lost completion stays `STARTED`; its selection remains available and a deliberate new operation uses a new ID. Failed responses remain available with their retained status and body.
 
-The project records the request before dispatch and writes completion atomically with the original body. Private directories use mode 0700 and state files use 0600. Linux advisory locks protect authoring and quota mutations across processes. Use durable local storage in an operating deployment.
+The project records the request before dispatch and writes completion atomically with the original body. Shutdown stops new mutations and drains every accepted save, preview and export, including operations still recording their intent. Private directories use mode 0700 and state files use 0600. Linux advisory locks protect authoring and quota mutations across processes. Use durable local storage in an operating deployment.
 
 ## Shared quota and admission
 

@@ -16,9 +16,11 @@ function applicationFailure(error) {
     body: { error: error.code ?? 'ROUTESCAN_SOURCE_UNAVAILABLE', message: error.code ? error.message : 'The gas data source is unavailable.' } };
 }
 export async function createRoutescanSource(compiled, { quotaDirectory, env = process.env } = {}) {
-  const quota = await openRoutescanQuota({ directory: quotaDirectory, provider: compiled.config.provider, policy: compiled.config.quota });
+  let quota, agent;
+  try {
+  agent = new HttpsAgent({ keepAlive: false, proxyEnv: env });
+  quota = await openRoutescanQuota({ directory: quotaDirectory, provider: compiled.config.provider, policy: compiled.config.quota });
   let closed = false, pending = new Set();
-  const agent = new HttpsAgent({ keepAlive: false, proxyEnv: env });
   const headers = () => {
     const name = compiled.config.provider.apiKeyEnv;
     if (!name) return {};
@@ -78,4 +80,9 @@ export async function createRoutescanSource(compiled, { quotaDirectory, env = pr
   return { handlers, request, quota, async snapshot() { return { quota: await quota.snapshot(),
     upstreams: Object.fromEntries([...upstreams].map(([id, handler]) => [id, handler.snapshot()])) }; },
     async close() { closed = true; await Promise.allSettled([...pending]); agent.destroy(); await quota.close(); } };
+  } catch (error) {
+    agent?.destroy();
+    await quota?.close();
+    throw error;
+  }
 }
