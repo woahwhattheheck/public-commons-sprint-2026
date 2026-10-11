@@ -32,8 +32,11 @@ const HELP = `Starforge merchant MCP
        [--name NAME] [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
        [--catalog CATALOG_CONNECTION_JSON] [--support SUPPORT_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   serve --config MERCHANT_MCP.json [--port PORT] [--token-env ENVIRONMENT_NAME]
+  inspect-support|inspect-client --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
   download-support --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
-       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--cases-dir PRIVATE_CASES]
+       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST] [--cases-dir PRIVATE_CASES]
+  download-client --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
+       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST]
   reopen-support --dir DOWNLOADED_DIRECTORY --cases-dir PRIVATE_CASES
 
 Every init source form also accepts --accounting ACCOUNTING_JSON to attach the
@@ -46,7 +49,8 @@ Every ordinary init form also accepts --receiving RECEIVING_CONNECTION_JSON.
 Open receiving work explicitly with merchant_receiving_open. RECEIVING.md
 describes saved profiles, live reviews, captured replay and private exports.
 Download resumes its original verified files on another invocation. Reopen uses
-the original SF74 case store offline. See SUPPORT.md for private handoff recovery.
+the original SF74 case store offline. See SUPPORT.md for private handoff recovery
+and CLIENT_EXPORTS.md for original customer SDK inspection, adoption and delivery.
 `;
 function pairs(args, allowed, switches = []) {
   const values = new Map();
@@ -74,7 +78,7 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
     const handler = createMcpToolHandler(operator, { bearerToken: environment[tokenEnv],
       allowedClientOrigins: String(environment.MCP_CLIENT_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean),
       serverName: 'starforge-merchant-operator', serverVersion: '0.1.0',
-      instructions: 'Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. For a configured fleet, inspect merchant_fleet_plan and start with its digest; stage/review/prepare/activate uses the original exact candidate and revision. Keep draining sessions until fleet_status reports canRetire, then retire their exact child instance. Rollback uses a fresh retained-revision review; stop/restart uses this process-owned managerId. After a lost response inspect current status before another change. Only this MCP process can stop its owned runtimes. For support observation, inspect host profiles and the current configuration revision, start explicitly and retain the owned watcher instance. Recover notifications using their original event IDs and attempt counts. With a configured support connection, inspect source aliases or incidents, import exact original captures, and reopen the original case before changing owner terms. Case writes use its current revision; workorder and export use that exact saved revision. Inspect support export status after an interrupted reply. For receiving, inspect host source aliases, open the original saved workspace, and retain prepare/import/review IDs with exact source and plan digests. Read saved review status before retrying; replay uses the original capture. Close receiving to hand the same directory to its browser. Customer client export reads original metadata. For accounting, list declared sources and explicitly open their original workspace. Review a recovery request before importing its retained preview, follow jobs and refresh the current revision, then capture and inspect the original report. File retrieval returns SHA-pinned chunks of the saved response or original report/archive; it never purchases again. Close the accounting workspace to release its original lease. Payment verification and settlement remain in the original seller and configured facilitator.' });
+      instructions: 'Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. For a configured fleet, inspect merchant_fleet_plan and start with its digest; stage/review/prepare/activate uses the original exact candidate and revision. Keep draining sessions until fleet_status reports canRetire, then retire their exact child instance. Rollback uses a fresh retained-revision review; stop/restart uses this process-owned managerId. After a lost response inspect current status before another change. Only this MCP process can stop its owned runtimes. For support observation, inspect host profiles and the current configuration revision, start explicitly and retain the owned watcher instance. Recover notifications using their original event IDs and attempt counts. With a configured support connection, inspect source aliases or incidents, import exact original captures, and reopen the original case before changing owner terms. Case writes use its current revision; workorder and export use that exact saved revision. Inspect support export status after an interrupted reply. For receiving, inspect host source aliases, open the original saved workspace, and retain prepare/import/review IDs with exact source and plan digests. Read saved review status before retrying; replay uses the original capture. Close receiving to hand the same directory to its browser. Customer client export reads original metadata and retains its completion receipt. After a lost response, inspect merchant_client_export_status; legacy exports require explicit adoption of the inspected complete files digest. File delivery reads the original five payloads and receipt without running the seller or generated code. For accounting, list declared sources and explicitly open their original workspace. Review a recovery request before importing its retained preview, follow jobs and refresh the current revision, then capture and inspect the original report. File retrieval returns SHA-pinned chunks of the saved response or original report/archive; it never purchases again. Close the accounting workspace to release its original lease. Payment verification and settlement remain in the original seller and configured facilitator.' });
     server = createServer(handler);
     server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
     await new Promise((done, reject) => {
@@ -106,24 +110,35 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command === 'download-support' || command === 'reopen-support') {
+  if (command === 'inspect-support' || command === 'inspect-client') {
+    const options = pairs(rest, ['--url', '--export-id', '--token-env']);
+    for (const key of ['--url', '--export-id']) if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
+    const inspect = command === 'inspect-support' ? (await import('./support-download.mjs')).inspectSupportExport
+      : (await import('./client-download.mjs')).inspectSellerClientDownload;
+    const result = await inspect({ url: options.get('--url'), exportId: options.get('--export-id'), tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN' });
+    process.stdout.write(JSON.stringify(result) + '\n'); return result;
+  }
+  if (command === 'download-support' || command === 'download-client' || command === 'reopen-support') {
     const { downloadSupportExport, reopenDownloadedSupportExport } = await import('./support-download.mjs');
+    const customer = command === 'download-client';
+    const download = customer ? (await import('./client-download.mjs')).downloadSellerClientExport : downloadSupportExport;
     if (command === 'reopen-support') {
       const options = pairs(rest, ['--dir', '--cases-dir']);
       if (!options.has('--dir') || !options.has('--cases-dir')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --cases-dir.');
       const result = await reopenDownloadedSupportExport({ directory: options.get('--dir'), casesDirectory: options.get('--cases-dir') });
       process.stdout.write(JSON.stringify(result) + '\n'); return result;
     }
-    const options = pairs(rest, ['--url', '--export-id', '--out', '--token-env', '--chunk-bytes', '--cases-dir']);
+    const options = pairs(rest, ['--url', '--export-id', '--out', '--token-env', '--chunk-bytes', '--manifest-sha256', ...(customer ? [] : ['--cases-dir'])]);
     for (const key of ['--url', '--export-id', '--out']) if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
     const rawChunk = options.get('--chunk-bytes');
     if (rawChunk !== undefined && !/^[1-9][0-9]{0,5}$/.test(rawChunk)) throw failure('CONFIGURATION_ERROR', 'Use a whole chunk byte count from 1 to 196608.');
     const controller = new AbortController();
-    const stop = () => controller.abort(failure('SUPPORT_DOWNLOAD_INTERRUPTED', 'Download interrupted. Run the same command to continue its saved original files.'));
+    const stop = () => controller.abort(failure((customer ? 'CLIENT' : 'SUPPORT') + '_DOWNLOAD_INTERRUPTED', 'Download interrupted. Run the same command to continue its saved original files.'));
     process.once('SIGINT', stop); process.once('SIGTERM', stop);
     try {
-      const result = await downloadSupportExport({ url: options.get('--url'), exportId: options.get('--export-id'),
+      const result = await download({ url: options.get('--url'), exportId: options.get('--export-id'),
         directory: options.get('--out'), tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', signal: controller.signal,
+        ...(options.has('--manifest-sha256') ? { expectedManifestSha256: options.get('--manifest-sha256') } : {}),
         ...(rawChunk === undefined ? {} : { chunkSize: Number(rawChunk) }),
         onProgress: progress => process.stderr.write(JSON.stringify(progress) + '\n') });
       controller.signal.throwIfAborted();
@@ -168,7 +183,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-accounting, init-receiving, serve, download-support or reopen-support.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-accounting, init-receiving, serve, inspect-support, inspect-client, download-support, download-client or reopen-support.');
   const options = pairs(rest, ['--config', '--port', '--token-env']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),

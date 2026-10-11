@@ -42,6 +42,17 @@ selected option's amount and network. See [payment options](PAYMENT_OPTIONS.md)
 for the runnable example, per-option metadata, buyer selection and catalog
 visibility behavior.
 
+### Deliver the original customer SDK
+
+The original `developer/client-export.mjs` still writes its five generated customer
+files from saved OpenAPI and now publishes a completion receipt after those bytes
+are durable. Its `status` and explicit `adopt` commands recover earlier five-file
+exports without regenerating them. The existing merchant MCP operator exposes
+those retained files after seller shutdown and downloads them with durable resume.
+Follow the [complete customer SDK delivery guide](../../../stellar-forge/mcp-merchant-operator/CLIENT_EXPORTS.md)
+for the original export, legacy adoption, exact receipt review, interrupted
+delivery and unchanged generated-client/buyer use.
+
 ### Merchant capacity and graceful drain
 
 The same original seller runtime now provides bounded request capacity and a
