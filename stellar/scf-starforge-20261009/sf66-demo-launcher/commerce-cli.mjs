@@ -16,7 +16,7 @@ const HELP = `Original SCF commerce session (Node 22+, full checkout)
 
 The foreground console starts the original merchant and operations listeners.
 Commands: status | readiness | review INTENT | signer INTENT | execute INTENT |
-          cancel INTENT | recover INTENT | retrieve INTENT |
+          cancel INTENT | recover INTENT | retrieve INTENT | reset-transfer INTENT |
           verify-rpc INTENT TRANSACTION EXPECTED_REQUEST_SHA256 | recover-rpc INTENT | quit
 The original SF88/SF81 terminal owns payment approval. Reopening uses the same
 original inbox, stable intents, reservations, results and saved resource files.
@@ -114,7 +114,7 @@ export async function main(args = process.argv.slice(2)) {
       if (!stopped.signal.aborted) await new Promise(done => stopped.signal.addEventListener('abort', done, { once: true }));
       return;
     }
-    process.stdout.write('Commands: status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, verify-rpc ID TRANSACTION EXPECTED_REQUEST_SHA256, recover-rpc ID, quit\n');
+    process.stdout.write('Commands: status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, reset-transfer ID, verify-rpc ID TRANSACTION EXPECTED_REQUEST_SHA256, recover-rpc ID, quit\n');
     while (!stopped.signal.aborted) {
       // Release this reader before the original Python approval opens /dev/tty.
       reader = createInterface({ input: process.stdin, output: process.stdout });
@@ -133,6 +133,7 @@ export async function main(args = process.argv.slice(2)) {
         else if (words.length === 2 && words[0] === 'cancel') print(await session.cancel(words[1]));
         else if (words.length === 2 && words[0] === 'recover') print(await session.recover(words[1]));
         else if (words.length === 2 && words[0] === 'retrieve') print(await session.retrieve(words[1]));
+        else if (words.length === 2 && words[0] === 'reset-transfer') print(await session.resetTransfer(words[1]));
         else if ((words.length === 4 && words[0] === 'verify-rpc') || (words.length === 2 && words[0] === 'recover-rpc')) {
           const job = (await session.status()).buyers.find(row => row.operation.intentId === words[1]);
           const original = job?.rpcRecovery?.original;
@@ -142,7 +143,7 @@ export async function main(args = process.argv.slice(2)) {
             transaction: words[0] === 'verify-rpc' ? words[2] : job.rpcRecovery.settlement?.transaction };
           print(await session[words[0] === 'verify-rpc' ? 'verifyRpcPayment' : 'recoverRpcResponse'](words[1], selected));
         }
-        else if (words[0]) process.stdout.write('Use status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, verify-rpc ID TRANSACTION EXPECTED_REQUEST_SHA256, recover-rpc ID, or quit.\n');
+        else if (words[0]) process.stdout.write('Use status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, reset-transfer ID, verify-rpc ID TRANSACTION EXPECTED_REQUEST_SHA256, recover-rpc ID, or quit.\n');
       } catch (error) { print({ error: commerceErrorCode(error) }); }
     }
   } finally {
