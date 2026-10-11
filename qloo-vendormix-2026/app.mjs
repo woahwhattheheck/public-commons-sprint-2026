@@ -153,17 +153,23 @@ async function readBody(request) {
   catch { throw new Error('Invalid JSON request'); }
 }
 
-const mime = { '/': 'text/html; charset=utf-8', '/index.html': 'text/html; charset=utf-8' };
+const assets = {
+  '/': ['index.html', 'text/html; charset=utf-8'],
+  '/index.html': ['index.html', 'text/html; charset=utf-8'],
+  '/review.js': ['review.js', 'application/javascript; charset=utf-8'],
+  '/style.css': ['style.css', 'text/css; charset=utf-8']
+};
 const server = http.createServer(async (request, response) => {
   response.setHeader('X-Content-Type-Options', 'nosniff');
-  response.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'");
+  response.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'");
   if (request.method === 'GET' && request.url === '/api/health') {
     response.writeHead(200, { 'content-type': 'application/json' });
     return response.end(JSON.stringify({ ready: true, liveConfigured: Boolean(process.env.QLOO_API_KEY) }));
   }
-  if (request.method === 'GET' && mime[request.url]) {
-    response.writeHead(200, { 'content-type': mime[request.url], 'cache-control': 'no-store' });
-    return response.end(await readFile(join(ROOT, 'index.html')));
+  if (request.method === 'GET' && Object.hasOwn(assets, request.url)) {
+    const [filename, contentType] = assets[request.url];
+    response.writeHead(200, { 'content-type': contentType, 'cache-control': 'no-store' });
+    return response.end(await readFile(join(ROOT, filename)));
   }
   if (request.method === 'POST' && request.url === '/api/plan') {
     try {
