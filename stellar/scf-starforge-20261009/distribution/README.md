@@ -781,7 +781,8 @@ npx --no-install starforge mcp-client-config \
   --output /private/commerce/buyer-host.json
 npx --no-install starforge merchant-mcp-client-config \
   --config /private/my-merchant/merchant-mcp.json \
-  --output /private/commerce/merchant-host.json
+  --merge /private/commerce/buyer-host.json \
+  --output /private/commerce/buyer-and-merchant-host.json
 ```
 
 Use the deployment's actual catalog and merchant origins. Generated registrations
@@ -791,6 +792,38 @@ output. `mcp-stdio` and `merchant-mcp-stdio` run the same original tools through
 stdio; their included `STDIO.md` guides describe client integration and shutdown.
 The merchant's original owned host process keeps compiler output separate from
 the protocol. These adapters add no payment or framework dependency.
+
+Add the merged file's `mcpServers.stellar-forge` and
+`mcpServers.starforge-merchant` registrations to the local MCP host. Both
+generators preserve existing host settings and server entries, reject a
+conflicting server name, and create the new output with mode `0600`. Backend
+credential variables continue to come from the MCP host environment. Regenerate
+the registrations after moving the package or changing the Node executable.
+
+Keep the same private quote directory across host and package restarts. The
+buyer discovers offers, describes an exact offer, previews its request, and
+retains quote history; its configured original operator owns approval,
+signing, cancellation and recovery. The merchant tools use the same immutable
+release store to inspect configured sources, stage and compare versions,
+activate the exact digest at the current generation, start the owned seller,
+read its catalog, and export the original customer SDK. A cancelled merchant
+wait leaves an admitted change tracked by that operator; read its retained
+status before continuing. EOF, signals and connection failure drain the
+original owned workspace and seller.
+
+Node applications can use the same installed transports directly:
+
+```js
+import { startMcpStdio } from '@tokenjunkielabs/starforge-merchant/buyer/mcp/stdio';
+import { startMerchantMcpStdio } from '@tokenjunkielabs/starforge-merchant/merchant/mcp/stdio';
+```
+
+Both expose `close` and `closed` for their owned connection. The full host,
+approval and reconnect contracts are included in
+`source/stellar-forge/mcp-paid-agent/STDIO.md` and
+`source/stellar-forge/mcp-merchant-operator/STDIO.md`. The complete merchant
+component includes its child host, which redirects application output and
+direct compiler stdout writes to stderr while keeping stdout for MCP messages.
 
 ## Operate several merchants
 
