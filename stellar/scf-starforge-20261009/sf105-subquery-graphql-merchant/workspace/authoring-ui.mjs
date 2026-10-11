@@ -3,6 +3,7 @@ export function createAuthoringWorkspace(ctx) {
   const { $, node, button, control, selectControl, checkControl, detail, table, api, action, notice, json } = ctx;
   let model = null, catalog = null, editingName = null, originalOperation = null, sourceText = null,
     dirty = false, result = null, history = [], currentName = null;
+  const jsonDrafts = new Map(), jsonErrors = new Map();
   const operation = () => ctx.getOperation();
   function edited() {
     dirty = true; $('query-builder-status').textContent = 'Field edits are pending. Apply the selection, or save the draft to apply and retain it.';
@@ -87,7 +88,7 @@ export function createAuthoringWorkspace(ctx) {
         spec.type = type;
         if (type === 'stellar-account' || type === 'boolean') { delete spec.min; delete spec.max; }
         else { spec.min ??= type === 'integer' ? 0 : 1; spec.max ??= type === 'integer' ? 100000 : 256; }
-        delete spec.default; edited(); renderBuilder();
+        delete spec.default; jsonDrafts.delete(name + ':default'); jsonErrors.delete(name + ':default'); edited(); renderBuilder();
       }));
       if (['integer', 'string'].includes(spec.type)) for (const key of ['min', 'max']) fields.append(control(
         (key === 'min' ? 'Minimum' : 'Maximum') + (spec.type === 'string' ? ' characters' : ''), spec[key], number => {
@@ -95,11 +96,22 @@ export function createAuthoringWorkspace(ctx) {
         }, { type: 'number' }));
       box.append(fields, checkControl('Required buyer input', spec.required, checked => { spec.required = checked; edited(); }));
       const values = node('div', undefined, 'grid two');
-      for (const [label, owner, key] of [['Native default (JSON; optional)', spec, 'default'], ['Preview example (JSON)', value, 'sample']])
-        values.append(control(label, Object.hasOwn(owner, key) ? JSON.stringify(owner[key]) : '', text => {
-          if (text.trim()) owner[key] = JSON.parse(text); else delete owner[key]; edited();
+      for (const [label, owner, key] of [['Native default (JSON; optional)', spec, 'default'], ['Preview example (JSON)', value, 'sample']]) {
+        const field = name + ':' + key;
+        values.append(control(label, jsonDrafts.has(field) ? jsonDrafts.get(field) : Object.hasOwn(owner, key) ? JSON.stringify(owner[key]) : '', text => {
+          jsonDrafts.set(field, text); edited();
+          try { if (text.trim()) owner[key] = JSON.parse(text); else delete owner[key]; jsonErrors.delete(field); }
+          catch {
+            const message = 'Enter valid JSON for $' + name + ' ' + (key === 'default' ? 'default' : 'preview example') + '.';
+            jsonErrors.set(field, message); throw new Error(message);
+          }
         }, { placeholder: spec.type === 'integer' ? '10' : spec.type === 'boolean' ? 'true' : '"actual example"' }));
-      box.append(values, button('Remove variable ' + name, () => { delete model.variables[name]; edited(); renderBuilder(); }, true));
+      }
+      box.append(values, button('Remove variable ' + name, () => {
+        delete model.variables[name];
+        for (const key of ['default', 'sample']) { jsonDrafts.delete(name + ':' + key); jsonErrors.delete(name + ':' + key); }
+        edited(); renderBuilder();
+      }, true));
       section.append(box);
     }
     target.append(section);
@@ -129,13 +141,14 @@ export function createAuthoringWorkspace(ctx) {
     if (dirty && !confirm('Discard the unapplied field selection and reopen the saved operation text?')) return;
     const current = operation(); if (!current) throw new Error('Add or select an operation first.');
     const value = await api('/api/authoring/open', { input: ctx.input(), operation: current.name });
-    model = value.model; catalog = value.catalog; editingName = current.name;
+    model = value.model; catalog = value.catalog; editingName = current.name; jsonDrafts.clear(); jsonErrors.clear();
     originalOperation = JSON.stringify(current); sourceText = ctx.input().schemaText; dirty = false;
     $('query-builder-status').textContent = value.note || 'Editing ' + editingName + ' against the loaded source schema. The original validator reviews the complete selection when applied.';
     renderBuilder();
   }
   async function applyPending(force = false) {
     if (!model || !dirty && !force) return;
+    if (jsonErrors.size) throw new Error(jsonErrors.values().next().value);
     let rawOperation;
     try { rawOperation = JSON.parse(ctx.input().queriesText).operations?.find(item => item.name === editingName); } catch { /* The compiler reports raw document errors after reopening. */ }
     if (operation()?.name !== editingName || ctx.input().schemaText !== sourceText || JSON.stringify(rawOperation) !== originalOperation)
@@ -217,6 +230,7 @@ export function createAuthoringWorkspace(ctx) {
   }
   function reset() {
     model = catalog = editingName = originalOperation = sourceText = result = null; dirty = false; history = []; currentName = null;
+    jsonDrafts.clear(); jsonErrors.clear();
     $('query-builder').replaceChildren(); $('preview-result').replaceChildren(); $('preview-status').textContent = '';
     $('query-builder-status').textContent = 'Choose an operation, then select its actual source fields and arguments.';
     operationChanged(); renderHistory();
@@ -247,6 +261,7 @@ export function createAuthoringWorkspace(ctx) {
       ...(q.authorizationEnv ? { authorizationEnv: q.authorizationEnv } : {}),
       timeoutMs: q.timeoutMs ?? 15000, maxResponseBytes: 1048576 }, allowLoopback: $('authoring-loopback').checked });
     ctx.acceptSchema(captured); model = catalog = null; $('query-builder').replaceChildren();
+    jsonDrafts.clear(); jsonErrors.clear();
     notice('Captured the served schema in one original transport request. Save to retain it.');
   }));
   $('open-query-builder').addEventListener('click', () => action('Opening the actual schema fields…', openBuilder));
@@ -254,6 +269,7 @@ export function createAuthoringWorkspace(ctx) {
   $('close-query-builder').addEventListener('click', () => {
     if (dirty && !confirm('Discard the unapplied field selection?')) return;
     model = catalog = null; dirty = false; $('query-builder').replaceChildren();
+    jsonDrafts.clear(); jsonErrors.clear();
     $('query-builder-status').textContent = 'Field editor closed. The original operation text is retained.'; ctx.buttons();
   });
   $('refresh-previews').addEventListener('click', () => action('Reading retained provider requests and results…', refreshHistory));
