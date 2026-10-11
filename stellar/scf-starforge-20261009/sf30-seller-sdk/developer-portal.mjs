@@ -93,11 +93,11 @@ export function compileSellerOpenApi(compiled, { mode = 'CHALLENGE_ONLY' } = {})
         default: { description: 'Application, admission, request or payment processing error.' },
       },
       'x-seller-route': { id, path: binding.path, method, samplePath: binding.samplePath,
-        admission: typeof route.admit === 'function', mode },
+        admission: typeof route.admit === 'function', mode, maxRequestBytes:route.maxRequestBytes??1048576 },
       'x-x402-payment-required': structuredClone(offer),
     };
     if (['POST', 'PUT', 'PATCH'].includes(method)) operation.requestBody = {
-      required: true, content: { 'application/json': {
+      required:inputSchema?.required?.includes('body')===true, content: { [input.bodyType==='form-data'?'multipart/form-data':'application/json']: {
         schema: projected && shape && own(shape, 'body') ? { $ref: rootRef + '/properties/input/properties/body' } : {},
         ...(own(input, 'body') ? { example: structuredClone(input.body) } : {}),
       } },

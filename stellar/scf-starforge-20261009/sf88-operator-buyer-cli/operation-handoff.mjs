@@ -6,10 +6,11 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { InputError, need, operation } from './config.mjs';
 import { prepareReview } from './prepare.mjs';
 import { loadOperationTicket, operationTicketView, parseOperationTicketBytes } from './operation-ticket.mjs';
+import { MAX_REQUEST_BODY_BYTES, requestBodyPin } from './request-body.mjs';
 
 export const OPERATION_HANDOFF_SCHEMA = 'stellar-forge.operation-handoff.v1';
-export const OPERATION_HANDOFF_MAX_BYTES = 4 * 1024 * 1024;
-const limits = {ticket:16384, body:1048576, discovery:1048576};
+export const OPERATION_HANDOFF_MAX_BYTES = 4*Math.ceil(MAX_REQUEST_BODY_BYTES/3)+2*1024*1024;
+const limits = {ticket:16384, body:MAX_REQUEST_BODY_BYTES, discovery:1048576};
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const sha256 = raw => createHash('sha256').update(raw).digest('hex');
@@ -80,11 +81,12 @@ function prepareHandoff(value, directory, acceptIndex) {
   need(shape(value,['schema','intentId','url','headers','ticketHeader','rowIndex','files']) &&
     value.schema===OPERATION_HANDOFF_SCHEMA && shape(value.files,Object.keys(limits)),
     'OPERATION_HANDOFF_SCHEMA_INVALID');
-  const files=Object.fromEntries(Object.entries(limits).map(([name,limit])=>[name,unpacked(value.files[name],limit)]));
+  // null represents an absent body; a packed zero-byte file remains present.
+  const files=Object.fromEntries(Object.entries(limits).map(([name,limit])=>[name,name==='body'&&value.files.body===null?null:unpacked(value.files[name],limit)]));
   const paths={ticket:join(directory,'operation-ticket.json'),body:join(directory,'request.body'),
     discovery:join(directory,'offers.json'),headers:join(directory,'request.headers.json'),config:join(directory,'review.json')};
   const prepared=prepareReview(files.discovery,{rowIndex:value.rowIndex,acceptIndex,
-    intentId:value.intentId,url:value.url,method:'POST',bodyFile:paths.body,headers:value.headers,
+    intentId:value.intentId,url:value.url,method:'POST',...(files.body===null?{}:{bodyFile:paths.body,...requestBodyPin(files.body)}),headers:value.headers,
     ticketFile:paths.ticket,ticketHeader:value.ticketHeader});
   const ticket=parseOperationTicketBytes(files.ticket,prepared.draft.operation,{requireCurrent:true});
   return {...prepared,files,paths,ticket};
@@ -94,11 +96,14 @@ function prepareHandoff(value, directory, acceptIndex) {
  * settings enter this document. The receiving buyer chooses a payment option. */
 export function createOperationHandoff({draft,discoveryBytes,ticketBytes,bodyBytes}) {
   const op=operation(draft?.operation), source=draft.preparedFrom;
-  need(op.method==='POST' && op.ticketFile && op.bodyFile && source &&
+  need(op.method==='POST' && op.ticketFile && source &&
     source.discoveryFileSha256===sha256(discoveryBytes),'OPERATION_HANDOFF_PREPARED_REQUEST_REQUIRED');
+  const present=op.bodyFile!==undefined;
+  need(present?bodyBytes instanceof Uint8Array:bodyBytes==null,'OPERATION_HANDOFF_BODY_PRESENCE_MISMATCH');
+  if (op.bodySha256!==undefined) need(bodyBytes.length===op.bodyBytes&&sha256(bodyBytes)===op.bodySha256,'OPERATION_HANDOFF_BODY_CHANGED');
   const value={schema:OPERATION_HANDOFF_SCHEMA,intentId:op.intentId,url:op.url,
     headers:op.headers,ticketHeader:op.ticketHeader,rowIndex:source.rowIndex,
-    files:{ticket:packed(ticketBytes,limits.ticket),body:packed(bodyBytes,limits.body),
+    files:{ticket:packed(ticketBytes,limits.ticket),body:present?packed(bodyBytes,limits.body):null,
       discovery:packed(discoveryBytes,limits.discovery)}};
   const prepared=prepareHandoff(value,dirname(path(op.ticketFile)),source.acceptIndex);
   need(canonical(prepared.draft.operation.expect)===canonical(op.expect),'OPERATION_HANDOFF_OFFER_CHANGED');
@@ -110,8 +115,8 @@ function view(prepared, filename, raw) {
   const op=prepared.draft.operation;
   return {handoffPath:filename,handoffSha256:sha256(raw),handoffBytes:raw.length,
     intentId:op.intentId,sellerUrl:op.url,method:op.method,acceptedTerms:op.expect,
-    requestHeaderNames:Object.keys(op.headers),bodyBytes:prepared.files.body.length,
-    bodySha256:sha256(prepared.files.body),operationTicket:operationTicketView(prepared.ticket),
+    requestHeaderNames:Object.keys(op.headers),bodyPresent:prepared.files.body!==null,bodyBytes:prepared.files.body?.length??0,
+    bodySha256:sha256(prepared.files.body??new Uint8Array()),operationTicket:operationTicketView(prepared.ticket),
     sourceFileSha256:sha256(prepared.files.discovery)};
 }
 
@@ -127,7 +132,7 @@ export async function importOperationHandoff({file,directory,acceptIndex}) {
   try { await mkdir(directory,{mode:0o700}); }
   catch(error) { throw new InputError(error.code==='EEXIST'?'OPERATION_HANDOFF_DESTINATION_EXISTS':'OPERATION_HANDOFF_DESTINATION_UNAVAILABLE'); }
   try {
-    for (const name of Object.keys(limits)) await writePrivate(prepared.paths[name],prepared.files[name]);
+    for (const name of Object.keys(limits)) if (prepared.files[name]!==null) await writePrivate(prepared.paths[name],prepared.files[name]);
     await writePrivate(prepared.paths.headers,json(prepared.draft.operation.headers));
     await loadOperationTicket(prepared.draft.operation,{requireCurrent:true});
     await syncDirectory(directory);
@@ -148,9 +153,9 @@ export async function importOperationHandoff({file,directory,acceptIndex}) {
 export async function exportOperationHandoff({configFile,discoveryFile,out}) {
   const draft=decode(await privateBytes(configFile,65536)), op=operation(draft.operation);
   const ticket=await loadOperationTicket(op,{requireCurrent:true});
-  need(ticket && op.bodyFile,'OPERATION_HANDOFF_PREPARED_REQUEST_REQUIRED');
+  need(ticket,'OPERATION_HANDOFF_PREPARED_REQUEST_REQUIRED');
   const value=createOperationHandoff({draft,ticketBytes:ticket.sourceBytes,
-    bodyBytes:await privateBytes(op.bodyFile,limits.body),
+    bodyBytes:op.bodyFile===undefined?undefined:await privateBytes(op.bodyFile,limits.body),
     discoveryBytes:await privateBytes(discoveryFile,limits.discovery)});
   const raw=json(value), destination=path(out), parent=dirname(destination), info=await stat(parent);
   need(await realpath(parent)===parent && info.isDirectory() && (info.mode&0o077)===0 &&

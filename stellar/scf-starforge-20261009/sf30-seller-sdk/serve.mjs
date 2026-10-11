@@ -42,6 +42,7 @@ function validateConfig(config) {
   validateAdmissionTimeout(config.admissionTimeoutMs ?? 2000);
   validateHandlerTimeout(config.handlerTimeoutMs ?? 30000);
   validateRequestTimeout(config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS);
+  if (config.maxRequestBytes!==undefined&&(!Number.isSafeInteger(config.maxRequestBytes)||config.maxRequestBytes<1||config.maxRequestBytes>16*1024*1024)) throw new TypeError('Invalid service request byte limit');
   responseAssetLimits(config);
   const seen = new Set();
   for (const route of config.routes) {
@@ -169,6 +170,7 @@ export async function startSellerService({ config, port = 8423, handlers = {},
     const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : url;
     const compiled = compileSellerRoutes(config.routes.map(route => ({
       id: route.id,
+      maxRequestBytes:route.maxRequestBytes,
       ...(admissions.get(route.id) ? { admit: admissions.get(route.id) } : {}),
       ...(assets.has(route.id) ? { offer: compileAssetRouteOffer(route, origin,
         compileHttpSellerOffer, !config.publicOrigin) } :
@@ -183,6 +185,7 @@ export async function startSellerService({ config, port = 8423, handlers = {},
     const nativeServer = nativeFactory ? await nativeFactory(compiled) : null;
     if (nativeFactory && !nativeServer) throw new TypeError('Native factory did not return a resource server');
     const resources = createSellerResourceHandler({ compiled, nativeServer, maxResponseBytes,
+      maxRequestBytes:config.maxRequestBytes??1048576,
       admissionTimeoutMs: config.admissionTimeoutMs ?? 2000,
       handlerTimeoutMs: config.handlerTimeoutMs ?? 30000, requestTimeoutMs: totalTimeout });
     const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
