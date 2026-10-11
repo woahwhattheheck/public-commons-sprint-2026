@@ -46,7 +46,7 @@ starforge runtime-install install \
   --offline --cache /srv/starforge/npm-cache
 ```
 
-The first installation uses `npm install`. A retained lock selects `npm ci` for a subsequent installation attempt. Both use `--ignore-scripts`, `--no-audit`, `--no-fund`, `--legacy-peer-deps`, a hoisted dependency layout, and omission of development dependencies. The exact selected top-level versions live in the profile; the resulting lock retains the resolved transitive dependency tree.
+The first installation uses `npm install`. A retained lock selects `npm ci` for a subsequent installation attempt. Both explicitly select local project mode, disable workspaces, and set the prefix to this runtime directory, so inherited global, location, workspace, or prefix configuration cannot redirect installation. They also use `--ignore-scripts`, `--no-audit`, `--no-fund`, `--legacy-peer-deps`, a hoisted dependency layout, and omission of development dependencies. The exact selected top-level versions live in the profile; the resulting lock retains the resolved transitive dependency tree.
 
 Once the installation is `READY`, original commands can create and operate a merchant workspace outside the runtime directory:
 

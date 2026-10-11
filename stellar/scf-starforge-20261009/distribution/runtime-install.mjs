@@ -242,7 +242,8 @@ export async function installRuntime({ directory, offline = false, cache = null,
     }
     const existingLock = await lockDigest(target);
     const command = existingLock ? 'ci' : 'install';
-    const args = [command, '--ignore-scripts', '--no-audit', '--no-fund', '--legacy-peer-deps',
+    const args = [command, '--global=false', '--location=project', '--workspaces=false', '--prefix', target,
+      '--ignore-scripts', '--no-audit', '--no-fund', '--legacy-peer-deps',
       '--install-strategy=hoisted', '--package-lock=true', '--omit=dev',
       ...(offline ? ['--offline'] : []), ...(cache ? ['--cache', resolve(cache)] : [])];
     const attempt = state.attempts + 1, logName = 'install-' + attempt + '-' + randomUUID() + '.log';
