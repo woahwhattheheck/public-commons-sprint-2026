@@ -114,6 +114,8 @@
     "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_RECOVERY.md"
   ],
   "commands": {
+    "runtime-profile": "stellar/scf-starforge-20261009/distribution/runtime-profile-cli.mjs",
+    "runtime-install": "stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs",
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
     "jsonrpc": "stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/cli.mjs",
@@ -225,6 +227,8 @@
     "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs"
   },
   "exports": {
+    "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
+    "./runtime-install": "./source/stellar/scf-starforge-20261009/distribution/runtime-install.mjs",
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
     "./seller": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "./seller/jsonrpc": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/merchant.mjs",
