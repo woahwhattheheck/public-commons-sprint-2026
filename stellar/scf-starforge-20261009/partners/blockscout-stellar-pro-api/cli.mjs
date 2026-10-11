@@ -24,6 +24,12 @@ export const HELP = [
   '        --out NEW_REVIEW.json --response-out NEW_RESPONSE.json',
   '  status --url PRIVATE_DESK_URL [--token-env VARIABLE]',
   '  attempts --url PRIVATE_DESK_URL [--token-env VARIABLE] [--after N] [--chain CHAIN_ID] [--address 0xADDRESS]',
+  '  attempt --url PRIVATE_DESK_URL [--token-env VARIABLE] --attempt ATTEMPT_ID',
+  '  reconcile --url PRIVATE_DESK_URL [--token-env VARIABLE] --attempt ATTEMPT_ID --revision N',
+  '        --operator NAME --reference ACCOUNT_RECORD --observation OBSERVATION_ID',
+  '        --provider-finished-at UTC_ISO_TIMESTAMP',
+  '  reopen-reservation --url PRIVATE_DESK_URL [--token-env VARIABLE] --attempt ATTEMPT_ID',
+  '        --revision N --operator NAME --reference ACCOUNT_RECORD',
   '  probe --url PRIVATE_DESK_URL [--token-env VARIABLE] --chain CHAIN_ID --address 0xADDRESS',
   '  backup --url PRIVATE_DESK_URL [--token-env VARIABLE] --out NEW_PRIVATE.sqlite',
   '  download-backup --url PRIVATE_DESK_URL [--token-env VARIABLE] --id BACKUP_ID --sha256 SHA256 --out NEW_PRIVATE.sqlite',
@@ -32,6 +38,11 @@ export const HELP = [
   'uses the original SF61/SF88 compilers; probe performs one provider read. Backup',
   'retains the provider database. The original merchant/buyer tools retain payment',
   'and settlement state. Reopening a saved buyer result does not call the provider.',
+  '', 'Reconciliation uses the reviewed attempt revision (0 before any decision), a',
+  'saved later quota observation, and the exact completion time in its provider',
+  'account record, for example 2026-10-11T22:00:00.000Z. Reopen appends a decision',
+  'that restores the reservation. Both commands read back the original history.',
+  'A revision conflict exits 3 with the current attempt for explicit review.',
 ].join('\n');
 const commands = {
   inspect: { required: ['plan'] }, prepare: { required: ['plan', 'out'] },
@@ -39,6 +50,9 @@ const commands = {
   buyer: { required: ['package', 'chain', 'address', 'intent', 'out', 'response-out'] },
   status: { required: ['url'], optional: ['token-env'] },
   attempts: { required: ['url'], optional: ['token-env', 'after', 'chain', 'address'] },
+  attempt: { required: ['url', 'attempt'], optional: ['token-env'] },
+  reconcile: { required: ['url', 'attempt', 'revision', 'operator', 'reference', 'observation', 'provider-finished-at'], optional: ['token-env'] },
+  'reopen-reservation': { required: ['url', 'attempt', 'revision', 'operator', 'reference'], optional: ['token-env'] },
   probe: { required: ['url', 'chain', 'address'], optional: ['token-env'] },
   backup: { required: ['url', 'out'], optional: ['token-env'] },
   'download-backup': { required: ['url', 'id', 'sha256', 'out'], optional: ['token-env'] },
@@ -147,6 +161,62 @@ async function control(target, path, body, binary = false) {
   if (!response.ok) throw error(/^BLOCKSCOUT_[A-Z0-9_]+$/.test(data.error ?? '') ? data.error : 'BLOCKSCOUT_DESK_REQUEST_FAILED', response.status);
   return data;
 }
+
+function attemptId(value) {
+  if (typeof value !== 'string' || !/^[0-9a-f-]{36}$/.test(value)) throw error('BLOCKSCOUT_ATTEMPT_ID_INVALID');
+  return value;
+}
+export function reconciliationPayload(o, action) {
+  if (!['confirm_finished', 'reopen'].includes(action)) throw error('BLOCKSCOUT_RECONCILIATION_ACTION_INVALID');
+  if (!/^(?:0|[1-9]\d*)$/.test(o.revision ?? '') || !Number.isSafeInteger(Number(o.revision)))
+    throw error('BLOCKSCOUT_RECONCILIATION_REVISION_INVALID');
+  const text = (value, max, code) => {
+    if (typeof value !== 'string' || !value.trim() || value !== value.trim() ||
+        value.length > max || /[\u0000-\u001f\u007f]/.test(value)) throw error(code);
+    return value.normalize('NFC');
+  };
+  const payload = { attemptId: attemptId(o.attempt), expectedRevision: Number(o.revision), action,
+    operator: text(o.operator, 160, 'BLOCKSCOUT_RECONCILIATION_OPERATOR_REQUIRED'),
+    reference: text(o.reference, 240, 'BLOCKSCOUT_RECONCILIATION_REFERENCE_REQUIRED') };
+  if (action === 'confirm_finished') {
+    payload.observationId = attemptId(o.observation);
+    const value = o['provider-finished-at'];
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) ||
+        !Number.isFinite(Date.parse(value)) || new Date(value).toISOString() !== value)
+      throw error('BLOCKSCOUT_RECONCILIATION_COMPLETION_TIME_INVALID');
+    payload.providerFinishedAt = value;
+  }
+  return payload;
+}
+function matchedDecision(attempt, payload) {
+  if (attempt?.id !== payload.attemptId || !Array.isArray(attempt.reconciliations)) return null;
+  return attempt.reconciliations.find(row => row.revision === payload.expectedRevision + 1 &&
+    row.action === payload.action && row.operator === payload.operator && row.reference === payload.reference &&
+    (payload.action === 'reopen' || row.observationId === payload.observationId &&
+      row.providerFinishedAt === payload.providerFinishedAt)) ?? null;
+}
+async function reconcile(target, payload) {
+  let failure;
+  try { await control(target, '/api/reconciliation', payload); }
+  catch (e) { failure = e; }
+  let attempt;
+  try { attempt = await control(target, '/api/attempts/' + payload.attemptId); }
+  catch (e) {
+    const result = failure ?? error('BLOCKSCOUT_RECONCILIATION_READBACK_PENDING', 503);
+    result.reconciliation = { status: 'RELOAD_REQUIRED', request: payload,
+      inspect: 'Use the attempt command to read the retained decision before submitting another revision.' };
+    throw result;
+  }
+  const decision = matchedDecision(attempt, payload);
+  if (decision) return { status: failure ? 'RECONCILIATION_RECOVERED' : 'RECONCILIATION_RECORDED',
+    attemptId: payload.attemptId, reconciliation: decision, attempt };
+  const result = failure ?? error('BLOCKSCOUT_RECONCILIATION_READBACK_CHANGED', 409);
+  result.currentAttempt = attempt;
+  result.reconciliation = { status: 'REVIEW_REQUIRED', request: payload,
+    inspect: 'Compare the current decision history and choose the revision explicitly.' };
+  throw result;
+}
+
 async function downloadBackup(target, receipt, destination) {
   if (!/^[0-9a-f-]{36}$/.test(receipt.id) || !/^[a-f0-9]{64}$/.test(receipt.sha256)) throw error('BLOCKSCOUT_BACKUP_IDENTITY_INVALID');
   if (!isAbsolute(destination) || resolve(destination) !== destination) throw error('BLOCKSCOUT_ABSOLUTE_OUTPUT_REQUIRED');
@@ -191,6 +261,9 @@ export async function main(args = process.argv.slice(2)) {
   } else {
     const target = operatorTarget(o.url, o['token-env']);
     if (command === 'status') result = await control(target, '/api/status');
+    else if (command === 'attempt') result = await control(target, '/api/attempts/' + attemptId(o.attempt));
+    else if (command === 'reconcile' || command === 'reopen-reservation')
+      result = await reconcile(target, reconciliationPayload(o, command === 'reconcile' ? 'confirm_finished' : 'reopen'));
     else if (command === 'attempts') {
       const query = new URLSearchParams();
       for (const [flag, field] of [['after', 'after'], ['chain', 'chainId'], ['address', 'addressHash']]) if (own(o, flag)) query.set(field, o[flag]);
@@ -208,5 +281,8 @@ export async function main(args = process.argv.slice(2)) {
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch(e => {
   process.stderr.write(json({ error: /^BLOCKSCOUT_[A-Z0-9_]+$/.test(e.code ?? '') ? e.code : 'BLOCKSCOUT_COMMAND_FAILED',
-    ...(e.retainedBackup ? { retainedBackup: e.retainedBackup } : {}) })); process.exitCode = 1;
+    ...(e.retainedBackup ? { retainedBackup: e.retainedBackup } : {}),
+    ...(e.reconciliation ? { reconciliation: e.reconciliation } : {}),
+    ...(e.currentAttempt ? { currentAttempt: e.currentAttempt } : {}) }));
+  process.exitCode = e.code === 'BLOCKSCOUT_RECONCILIATION_REVISION_CHANGED' ? 3 : 1;
 });
