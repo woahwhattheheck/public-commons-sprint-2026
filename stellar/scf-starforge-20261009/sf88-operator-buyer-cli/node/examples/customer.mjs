@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { Buyer } from '../index.mjs';
+import { readJson } from '../store.mjs';
 
 const usage = `
 node examples/customer.mjs review --runtime SF88_DIR --state PRIVATE_DIR \\
@@ -12,6 +13,36 @@ node examples/customer.mjs review --runtime SF88_DIR --state PRIVATE_DIR \\
 node examples/customer.mjs execute --runtime SF88_DIR --state PRIVATE_DIR --intent STABLE_ID [--output NEW_FILE]
 node examples/customer.mjs recover --runtime SF88_DIR --state PRIVATE_DIR --intent STABLE_ID [--output NEW_FILE]
 node examples/customer.mjs list --runtime SF88_DIR --state PRIVATE_DIR
+
+Native inbox commands retain --runtime SF88_DIR --state PRIVATE_DIR. --inbox is
+the absolute original inbox directory, and --intent selects one saved request:
+node examples/customer.mjs inbox-init --runtime SF88_DIR --state PRIVATE_DIR --inbox NEW_PRIVATE_INBOX
+node examples/customer.mjs inbox-handoff-review --runtime SF88_DIR --state PRIVATE_DIR --packet PRIVATE_HANDOFF_JSON [--accept INDEX]
+node examples/customer.mjs inbox-enqueue-handoff --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR
+  --profile OPERATOR_JSON --packet PRIVATE_HANDOFF_JSON --accept INDEX
+  Optional: --response-max-bytes BYTES --response-stream ndjson|sse --request-timeout-ms MILLISECONDS
+node examples/customer.mjs inbox-enqueue --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent SAVED_NODE_INTENT
+node examples/customer.mjs inbox-enqueue-config --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --config ORIGINAL_BUYER_JSON
+node examples/customer.mjs inbox-list --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR
+node examples/customer.mjs inbox-show --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent ID
+node examples/customer.mjs inbox-review --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent ID
+node examples/customer.mjs inbox-execute --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent ID
+  Optional: --workspace ORIGINAL_OPERATOR_DIR --review-file SAVED_INBOX_REVIEW_JSON
+node examples/customer.mjs inbox-cancel --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent ID
+node examples/customer.mjs inbox-recover --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent ID
+node examples/customer.mjs inbox-response --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent ID
+node examples/customer.mjs inbox-download --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent ID --output NEW_FILE
+node examples/customer.mjs inbox-read --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent ID --format json|csv|ndjson|sse
+  Optional: --csv-headers true|false --allow-partial true|false --max-record-bytes BYTES --max-records COUNT
+  JSON only: --read-limit BYTES. CSV/NDJSON/SSE write one original record per JSONL line.
+node examples/customer.mjs inbox-finalize --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --intent ID --workspace ORIGINAL_OPERATOR_DIR
+  Optional pair: --outbox MERCHANT_OUTBOX --merchant-route ROUTE_ID
+node examples/customer.mjs inbox-report --runtime SF88_DIR --state PRIVATE_DIR --inbox INBOX_DIR --output NEW_PRIVATE_HTML [--workspace ORIGINAL_OPERATOR_DIR]
+All inbox commands accept --inbox-report-limit BYTES for their native result file.
+Enqueue never executes. inbox-execute invokes native terminal approval for the
+selected request once. After interrupted intake use the same saved --intent and
+inbox-enqueue; after an attempt use inbox-show/recover/response. inbox-finalize
+explicitly continues original financial accounting. INBOX.md covers the full path.
 
 node examples/customer.mjs dataset-init --runtime SF88_DIR --state PRIVATE_DIR --dataset NAME
   --config BUYER_JSON --max-pages 20 --max-total-atomic 20000 [--snapshot SHA256]
@@ -74,16 +105,153 @@ Other object modes are offline and preserve the original session and receipts.
 const allowed = new Set(['runtime', 'state', 'profile', 'client', 'operation', 'inputs', 'intent', 'max-atomic', 'accept', 'output',
   'dataset','config','workspace','session','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot',
   'object','description','object-id','bytes','chunk-bytes','sha256','content-type','chunk-offset','chunk-limit','copy','format',
-  'offset','limit','outbox','merchant-route','command-id']);
+  'offset','limit','outbox','merchant-route','command-id',
+  'inbox','packet','review-file','response-max-bytes','response-stream','request-timeout-ms',
+  'inbox-report-limit','csv-headers','allow-partial','read-limit','max-record-bytes','max-records']);
 const accountingActions = ['accounting','accounting-all','accounting-attach','accounting-reopen',
   'finalize','finalize-all','accounting-recover','accounting-export'];
 const accountingModes = ['dataset','object'].flatMap(kind => accountingActions.map(action => kind + '-' + action));
+const inboxFlags = {
+  'inbox-init': ['inbox'],
+  'inbox-handoff-review': ['packet','accept'],
+  'inbox-enqueue-handoff': ['inbox','packet','accept','profile','response-max-bytes','response-stream','request-timeout-ms'],
+  'inbox-enqueue': ['inbox','intent'],
+  'inbox-enqueue-config': ['inbox','config'],
+  'inbox-list': ['inbox'],
+  'inbox-show': ['inbox','intent'],
+  'inbox-review': ['inbox','intent'],
+  'inbox-execute': ['inbox','intent','workspace','review-file'],
+  'inbox-cancel': ['inbox','intent'],
+  'inbox-recover': ['inbox','intent'],
+  'inbox-response': ['inbox','intent'],
+  'inbox-download': ['inbox','intent','output'],
+  'inbox-read': ['inbox','intent','format','csv-headers','allow-partial','read-limit','max-record-bytes','max-records'],
+  'inbox-finalize': ['inbox','intent','workspace','outbox','merchant-route'],
+  'inbox-report': ['inbox','output','workspace'],
+};
+const inboxModes = Object.keys(inboxFlags);
+function integerFlag(flags, name, minimum = 1) {
+  const value = flags[name];
+  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/.test(value) ||
+      !Number.isSafeInteger(Number(value)) || Number(value) < minimum)
+    throw new Error('INBOX_INTEGER_REQUIRED');
+  return Number(value);
+}
+function booleanFlag(flags, name, fallback = false) {
+  if (flags[name] === undefined) return fallback;
+  if (!['true','false'].includes(flags[name])) throw new Error('INBOX_BOOLEAN_REQUIRED');
+  return flags[name] === 'true';
+}
+async function writeRecord(value) {
+  // Retained large streams must respect the consumer's stdout backpressure.
+  await new Promise((resolve, reject) => process.stdout.write(JSON.stringify(value) + '\n',
+    error => error ? reject(error) : resolve()));
+}
+async function runInbox(mode, flags, buyer, signal, required) {
+  const valid = new Set(['runtime','state','inbox-report-limit', ...inboxFlags[mode]]);
+  for (const key of Object.keys(flags)) if (!valid.has(key)) throw new Error('INBOX_ARGUMENT_NOT_USED_BY_COMMAND');
+  const options = {signal};
+  const show = result => {
+    console.log(JSON.stringify(result, null, 2));
+    const processResult = result?.process;
+    if (processResult && (processResult.errorCode || processResult.exitCode !== 0)) process.exitCode = 2;
+    return result;
+  };
+  try {
+    if (mode === 'inbox-handoff-review') {
+      show(await buyer.inspectOperationHandoff(resolve(required('packet')), {
+        ...options, ...(flags.accept === undefined ? {} : {accept:integerFlag(flags,'accept',0)})
+      }));
+      return;
+    }
+    const directory = resolve(required('inbox'));
+    const inbox = mode === 'inbox-init' ? await buyer.createInbox({directory,signal}) : buyer.inbox(directory);
+    if (mode === 'inbox-init' || mode === 'inbox-list') { show(await inbox.list(options)); return; }
+    if (mode === 'inbox-enqueue-handoff') {
+      required('profile');
+      const responseFile = {
+        ...(flags['response-max-bytes'] === undefined ? {} : {maxBytes:integerFlag(flags,'response-max-bytes')}),
+        ...(flags['response-stream'] === undefined ? {} : {stream:{format:flags['response-stream']}}),
+      };
+      if (flags['response-stream'] !== undefined && !['sse','ndjson'].includes(flags['response-stream']))
+        throw new Error('INBOX_RESPONSE_STREAM_INVALID');
+      const operation = await buyer.fromOperationHandoff(resolve(required('packet')), {
+        accept:integerFlag(flags,'accept',0), signal,
+        ...(Object.keys(responseFile).length ? {responseFile} : {}),
+        ...(flags['request-timeout-ms'] === undefined ? {} : {requestTimeoutMs:integerFlag(flags,'request-timeout-ms')}),
+      });
+      try { show(await inbox.enqueue(operation, options)); }
+      catch (error) { error.intentId = operation.intentId; error.inboxDirectory = directory; throw error; }
+      return;
+    }
+    if (mode === 'inbox-enqueue-config') {
+      show(await inbox.enqueueConfig(resolve(required('config')), options)); return;
+    }
+    if (mode === 'inbox-report') {
+      show(await inbox.exportReport(resolve(required('output')), {
+        ...options, ...(flags.workspace ? {workspaceDirectory:resolve(flags.workspace)} : {}),
+      })); return;
+    }
+    const id = required('intent');
+    if (mode === 'inbox-enqueue') { show(await inbox.enqueue(buyer.operation(id), options)); return; }
+    if (mode === 'inbox-review') { show(await inbox.review(id, options)); return; }
+    if (['inbox-show','inbox-cancel','inbox-recover'].includes(mode)) {
+      show(await inbox[mode.slice('inbox-'.length)](id, options)); return;
+    }
+    if (mode === 'inbox-execute') {
+      const review = flags['review-file'] ? await readJson(resolve(flags['review-file']), 1048576)
+        : await inbox.review(id, options);
+      const result = show(await inbox.execute(id, {review,signal,
+        ...(flags.workspace ? {workspaceDirectory:resolve(flags.workspace)} : {})}));
+      if (result.native?.lastError || result.native?.state !== 'ATTEMPT_RECORDED') process.exitCode = 2;
+      const outcome = result.native?.outcome;
+      if (outcome && (outcome.error || outcome.evidenceError || outcome.responseCleanupError ||
+          !Number.isInteger(outcome.httpStatus) || outcome.httpStatus < 200 || outcome.httpStatus >= 300)) process.exitCode = 2;
+      return;
+    }
+    if (mode === 'inbox-finalize') {
+      if (Boolean(flags.outbox) !== Boolean(flags['merchant-route'])) throw new Error('INBOX_MERCHANT_FINALIZATION_PAIR_REQUIRED');
+      const result = show(await inbox.finalize(id, {signal,workspaceDirectory:resolve(required('workspace')),
+        ...(flags.outbox ? {outboxDirectory:resolve(flags.outbox),merchantRoute:flags['merchant-route']} : {})}));
+      if (!['FINALIZED','IDEMPOTENT_FINALIZED'].includes(result.native?.finalization?.result?.outcome) ||
+          result.native?.finalizationView?.status !== 'SAVED') process.exitCode = 2;
+      return;
+    }
+    const response = await inbox.response(id, options);
+    if (!response) {
+      const result = await inbox.show(id, options);
+      show({intentId:id,response:null,job:result.native,process:result.process,commandDirectory:result.commandDirectory});
+      process.exitCode = 2; return;
+    }
+    if (mode === 'inbox-response' || mode === 'inbox-download') {
+      const output = mode === 'inbox-download' ? await response.saveAs(resolve(required('output')), options) : null;
+      show({intentId:id,job:response.job,native:response.native,delivery:response.delivery,stream:response.stream,output});
+      return;
+    }
+    const format = required('format');
+    if (!['json','csv','ndjson','sse'].includes(format)) throw new Error('INBOX_READ_FORMAT_INVALID');
+    if (flags['csv-headers'] !== undefined && format !== 'csv') throw new Error('INBOX_CSV_HEADERS_REQUIRE_CSV');
+    if (flags['read-limit'] !== undefined && format !== 'json') throw new Error('INBOX_READ_LIMIT_REQUIRES_JSON');
+    if (!['ndjson','sse'].includes(format) && ['allow-partial','max-record-bytes','max-records'].some(key => flags[key] !== undefined))
+      throw new Error('INBOX_STREAM_OPTIONS_REQUIRE_STREAM');
+    if (format === 'json') {
+      await writeRecord(await response.json({...options,
+        ...(flags['read-limit'] === undefined ? {} : {limit:integerFlag(flags,'read-limit',0)})}));
+    } else {
+      const records = format === 'csv' ? response.csvRows({...options,headers:booleanFlag(flags,'csv-headers')})
+        : response[format === 'sse' ? 'events' : 'ndjson']({...options,allowPartial:booleanFlag(flags,'allow-partial'),
+          ...(flags['max-record-bytes'] === undefined ? {} : {maxRecordBytes:integerFlag(flags,'max-record-bytes')}),
+          ...(flags['max-records'] === undefined ? {} : {maxRecords:integerFlag(flags,'max-records')})});
+      for await (const record of records) await writeRecord(record);
+    }
+  } finally { if (signal.aborted) process.exitCode = 130; }
+}
 async function main([mode, ...args]) {
   if (!mode || mode === '--help') { console.log(usage.trim()); return; }
   if (!['review', 'execute', 'recover', 'list', 'dataset-init','dataset-attach','dataset-run',
     'dataset-status','dataset-recover','dataset-deliver','dataset-rows','dataset-list',
     'object-init','object-attach','object-reopen','object-status','object-run','object-recover','object-download',
-    'object-assemble','object-verify','object-copy','object-report','object-list',...accountingModes].includes(mode)) throw new Error('MODE_INVALID');
+    'object-assemble','object-verify','object-copy','object-report','object-list',...accountingModes,...inboxModes].includes(mode)) throw new Error('MODE_INVALID');
   const flags = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index]?.slice(2), value = args[index + 1];
@@ -93,11 +261,13 @@ async function main([mode, ...args]) {
   }
   const required = name => { if (!flags[name]) throw new Error('REQUIRED_ARGUMENT_' + name.toUpperCase().replaceAll('-', '_')); return flags[name]; };
   const buyer = new Buyer({ runtimeDirectory: resolve(required('runtime')), stateDirectory: resolve(required('state')),
-    ...(flags.profile ? { operatorProfile: resolve(flags.profile) } : {}) });
+    ...(flags.profile ? { operatorProfile: resolve(flags.profile) } : {}),
+    ...(flags['inbox-report-limit'] === undefined ? {} : {inboxReportLimit:integerFlag(flags,'inbox-report-limit')}) });
   const controller = new AbortController();
   const stop = () => controller.abort();
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
   try {
+    if (inboxModes.includes(mode)) { await runInbox(mode, flags, buyer, controller.signal, required); return; }
     if (accountingModes.includes(mode)) {
       const kind = mode.startsWith('dataset-') ? 'dataset' : 'object';
       const id = required(kind), action = mode.slice(kind.length + 1);
@@ -263,9 +433,13 @@ main(process.argv.slice(2)).catch(error => {
   console.error(JSON.stringify({ error: typeof code === 'string' && /^[A-Z0-9_]{1,120}$/.test(code) ? code : 'CUSTOMER_APPLICATION_FAILED',
     retry: 'NO_AUTOMATIC_RETRY', ...(error.acquisition ? {object:error.acquisition.id} : {}),
     ...(error.dataset ? {dataset:error.dataset.id} : {}),
-    ...(error.commandId ? {commandId:error.commandId, commandDirectory:error.commandDirectory} : {}),
+    ...(error.commandId ? {commandId:error.commandId} : {}),
+    ...(error.commandDirectory ? {commandDirectory:error.commandDirectory} : {}),
+    ...(error.intentId ? {intentId:error.intentId} : {}),
+    ...(error.inboxDirectory ? {inboxDirectory:error.inboxDirectory} : {}),
+    ...(error.name === 'InboxError' && error.result ? {native:error.result.native,process:error.result.process} : {}),
     ...(error.partialPath ? {partialPath:error.partialPath, destination:error.destination,
       destinationPublished:error.destinationPublished, nextOffset:error.nextOffset} : {}),
     ...(error.progress ? {native:error.progress.native, process:error.progress.process} : {}) }));
-  process.exitCode = 1;
+  process.exitCode = process.exitCode === 130 ? 130 : 1;
 });
