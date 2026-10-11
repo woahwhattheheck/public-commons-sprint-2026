@@ -33,7 +33,7 @@ const HELP = `Usage: node opensearch/start.mjs --directory PREPARED_DIRECTORY [-
        [--facilitator HTTPS_URL] [--allow-local-facilitator]
        [--max-in-flight 64] [--drain-grace-ms 60000]
        [--availability-dir PRIVATE_ABSOLUTE_DIRECTORY]
---inspect reads the original source version, mappings and native query validation.
+--inspect reads the original source version, mappings and native query probes.
 The default seller advertises HTTP 402; configure the existing facilitator for paid delivery.`;
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { console.log(HELP); return; }

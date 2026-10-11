@@ -771,7 +771,10 @@ or automatically retry a request.
 | `starforge dataset-refresh` | Publish, retain and activate CSV dataset versions while readers finish their pages |
 | `starforge allium-explorer` | Inspect an approved Allium product and import, run, collect or recover its original saved query |
 | `starforge allium-workspace` | Review retained Allium products/results, publish a versioned merchant, prepare its buyer and reopen a complete workspace |
-| `starforge dataset-publisher` | Upload and publish CSV versions, select the actual offer and export original buyer preparation |
+| `starforge dataset-publisher` | Retain CSV/XLSX sources, publish reviewed selections and export original buyer preparation |
+| `starforge workbook` | Inspect original XLSX, save mappings, compare editions and adopt reviewed updates |
+| `starforge workbook-customer` | Acquire, recover, deliver and analyze the original workbook customer packet |
+| `starforge workbook-receive` | Complete the saved receiving, full query export and portable reopening workflow |
 | `starforge buyer-dataset` | Acquire, pause, resume and deliver all pages of the selected original dataset |
 | `starforge buyer-dataset-workspace` | Review original offers, operate dataset acquisitions, open retained files and use the analysis workspace |
 | `starforge dataset-workspace` | Preview, refresh and select the retained dataset in its private browser workspace |
@@ -1267,6 +1270,62 @@ command. The packaged `sf30-seller-sdk/dataset-refresh/WORKSPACE.md` and
 `sf88-operator-buyer-cli/DATASETS.md` contain the full original configuration,
 publication, acquisition and recovery flow. The `./seller/dataset-publisher`
 and `./buyer/dataset-acquisition` imports expose those original APIs.
+
+### Publish and update an original workbook
+
+The same dataset publisher retains XLSX sources, exact cell inspection and saved
+sheet/range/column mappings. Start it with a new private session file so its
+authenticated workbook CLI can use the running workspace:
+
+```sh
+starforge dataset-publisher --state /private/dataset-state \
+  --seller http://127.0.0.1:8423 --resource https://your-api.example/data \
+  --session-file /private/workbook-session.json --port 8431
+starforge workbook --help
+starforge workbook status --session-file /private/workbook-session.json
+```
+
+In the browser, upload the source, inspect its cells and choose the public
+columns, types and formula/date/null decisions. Prepare and review its selected
+CSV, publish through the existing version store, then save the original review
+and prepared buyer downloads.
+
+For a later edition, select the retained baseline mapping and replacement
+worksheet. Review header and column changes, choose the row keys, and compare
+the complete selected data. The retained review includes added, removed,
+changed, moved and unchanged rows, source coordinates and original values.
+Adoption keeps the reviewed mapping and returns to the same prepare/publish
+flow. Historical mappings and completed comparison reports remain reopenable.
+
+```sh
+starforge workbook edition-read --session-file /private/workbook-session.json \
+  --id RETAINED_COMPARISON_ID --kind changed --offset 0 --limit 50
+starforge workbook edition-export --session-file /private/workbook-session.json \
+  --id RETAINED_COMPARISON_ID --out /private/workbook-comparison.json
+starforge workbook-customer --help
+starforge workbook-receive --help
+```
+
+The [workbook merchant guide](../sf30-seller-sdk/dataset-refresh/workbook/README.md)
+and [edition review guide](../sf30-seller-sdk/dataset-refresh/workbook-comparison/README.md)
+cover the complete source and mapping commands. Every installed command forwards
+the original arguments and retains the same private session.
+
+The [workbook customer guide](../sf30-seller-sdk/dataset-refresh/workbook-customer/README.md)
+continues from the exact downloaded review and buyer configuration: create or
+reopen its packet, attach the existing acquisition or initialize its reviewed
+limits, acquire through the original Buyer, deliver its complete dataset and
+copy a portable receiving packet. The same completed session connects to
+Analysis for typed queries and full JSONL/CSV/SQLite export. A saved
+`starforge workbook-receive --ready /absolute/customer/ready.json` invocation
+performs that complete receiving continuation and reopens its retained result.
+
+For an existing Node application, the package exposes
+`./seller/workbook` (merchant bridge and edition operations),
+`./seller/workbook/cli` (the authenticated workspace client),
+`./buyer/workbook` (customer, delivery and Analysis APIs),
+`./buyer/workbook/receiving` (the original receiving composition), and
+`./buyer/workbook/receiver` (the complete saved receiving operation).
 
 ### Receive datasets in the browser
 
@@ -3292,6 +3351,38 @@ separate captured and recovered origins and time bases, and apply the
 existing verification and transaction matching rules across both. Pricing
 imports and recovery records keep their own source identities in the same
 merchant review.
+
+### Give customers their purchase and usage statements
+
+Open **Customer statements** in the existing accounting workspace. Save the
+customer profile, bind that customer's original order references, select a
+completed reconciliation and import the original API-pass export. Review the
+statement before retaining its immutable version and customer downloads.
+
+The statement keeps each original payment's asset, recipient, atomic amount and
+verification state. Its usage view joins the exact order and native event to the
+purchased plan and complete retained call history. The purchase period and the
+cumulative usage capture time are displayed separately. Internal merchant costs
+and customer notes remain in the operator workspace.
+
+The installed command opens that same accounting state:
+
+```sh
+starforge merchant-customer-statements state \
+  --workspace /private/merchant/accounting
+starforge merchant-customer-statements help
+starforge merchant-customer-statements export \
+  --workspace /private/merchant/accounting \
+  --id STATEMENT_ID --file statement.html \
+  --output /private/customer-delivery/statement.html
+```
+
+Retained customer files include JSON, payment CSV, usage CSV, printable HTML,
+a manifest and current document status. Original revisions and request identifiers
+keep retries attached to the same retained version. The
+[customer statement guide](../merchant-settlement-accounting/customer-statements/README.md)
+covers profiles, assignments, native usage imports, periods, adjustments,
+withdrawal, export and the complete command API.
 
 ### Exchange a completed reconciliation with an accountant
 
