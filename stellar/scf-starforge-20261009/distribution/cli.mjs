@@ -30,6 +30,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
+  merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
+  paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
