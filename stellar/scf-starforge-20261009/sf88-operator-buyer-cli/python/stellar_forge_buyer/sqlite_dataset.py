@@ -191,9 +191,49 @@ class DatasetDatabase:
             raise StateError("DATASET_SQL_ROW_BINDING_INVALID")
         identity = {"schema": _FORMAT, "manifestSha256": manifest_sha, "sourceBindingSha256": binding,
                     "columns": list(zip(fields, mapped))}
+        return self._import_rows(manifest_bytes=manifest_bytes, identity=identity, fields=fields,
+            mapped=mapped, total=total, source=source, opener=delivery.file("dataset.jsonl").open,
+            details={"dataset": dataset, "sourceDirectory": native.get("sourceDirectory"),
+                     "source_pages": len(source_pages), "originalPaymentStatus": native.get("paymentStatus")})
+
+    def import_response(self, projection, *, allow_incomplete=False):
+        """Commit a complete analytical projection with its distinct source manifest.
+
+        This consumes retained response records only. It neither fabricates an
+        SF100 delivery nor changes the original source's payment/completion state.
+        """
+        from .response_tables import ResponseProjection, SCHEMA
+        if not isinstance(projection, ResponseProjection) or projection.manifest.get("schema") != SCHEMA:
+            raise StateError("DATASET_SQL_RESPONSE_PROJECTION_REQUIRED")
+        manifest = parse(projection.manifest_bytes)
+        if type(allow_incomplete) is not bool:
+            raise StateError("ANALYSIS_INCOMPLETE_ACKNOWLEDGEMENT_INVALID")
+        if manifest["completion"]["requiresIncompleteAcknowledgement"] and not allow_incomplete:
+            raise StateError("ANALYSIS_ACKNOWLEDGE_INCOMPLETE_RESPONSE")
+        manifest["completion"]["incompleteAcknowledged"] = allow_incomplete
+        manifest_bytes = _json(manifest).encode()
+        fields, source = manifest["projectedFields"], manifest["outputs"]["mapped.jsonl"]
+        identity = {"schema": _FORMAT, "manifestSha256": digest(manifest_bytes),
+                    "sourceBindingSha256": manifest["sourceBindingSha256"], "columns": list(zip(fields, fields))}
+        dataset = {"kind": "retained-response", "name": manifest["name"], "rows": manifest["rows"],
+                   "projectedFields": fields, "response": manifest["source"],
+                   "completion": manifest["completion"], "mapping": manifest["mapping"],
+                   "missingAsNull": manifest["missingAsNull"]}
+        from .result import FileDelivery
+        file = FileDelivery({"native": {"file": {**source, "path": str(projection.path)}}},
+                            projection.path, 128 * 1024 * 1024)
+        return self._import_rows(manifest_bytes=manifest_bytes, identity=identity, fields=fields,
+            mapped=fields, total=manifest["rows"], source=source, opener=file.open,
+            details={"dataset": dataset, "source_pages": None,
+                     "row_representation": "explicit-response-projection",
+                     "originalPaymentStatus": manifest["source"]["original"].get("paymentStatus")})
+
+    def _import_rows(self, *, manifest_bytes, identity, fields, mapped, total, source, opener, details):
+        """One original transaction and scalar/type policy for both native inputs."""
         version_id = digest(_json(identity).encode())
         table = "sf_dataset_rows_" + version_id
-        with self._connection() as db, delivery.file("dataset.jsonl").open() as stream:
+        quoted = [_identifier(column) for column in mapped]
+        with self._connection() as db, opener() as stream:
             db.execute("BEGIN IMMEDIATE")
             try:
                 existing = db.execute(f"SELECT version_id FROM {_META} WHERE version_id=?", (version_id,)).fetchone()
@@ -229,8 +269,7 @@ class DatasetDatabase:
                     raise StateError("DATASET_SQL_ROWS_CHANGED")
                 record = {**identity, "version_id": version_id, "table": table,
                           "created_at": datetime.now(timezone.utc).isoformat(), "row_count": count,
-                          "dataset": dataset, "sourceDirectory": native.get("sourceDirectory"),
-                          "source_pages": len(source_pages), "originalPaymentStatus": native.get("paymentStatus"),
+                          **details,
                           "jsonl": {key: source[key] for key in ("bytes", "sha256")},
                           "column_types": [{"source": field, "column": mapped[index], "json_types": sorted(observed[index])}
                                            for index, field in enumerate(fields)], "row_order_column": _ORDINAL}
