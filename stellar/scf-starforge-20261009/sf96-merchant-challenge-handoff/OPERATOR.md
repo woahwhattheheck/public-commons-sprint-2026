@@ -25,8 +25,8 @@ operator's testnet payer. Ask the provider for its supported scheme, asset,
 account/funding requirements, expected 402 flow and facilitator/RPC details.
 Use its original response to select the offer. This setup supports the existing
 workspace's `exact` / `stellar:testnet` path; custom schemes require their own
-native integration. A provider invitation or tooling credit is a design-partner
-opportunity; it is not a paid customer, transaction or booked revenue.
+native integration. Provider access requirements and commercial terms remain
+separate from the software's local setup and payment outcome records.
 
 The parent directory of a new pilot must exist, belong to the current user, have
 mode 0700 and resolve without symlinks. Example private root:
