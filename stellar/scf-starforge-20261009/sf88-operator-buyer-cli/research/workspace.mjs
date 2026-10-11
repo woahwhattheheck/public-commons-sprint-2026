@@ -195,33 +195,95 @@ export async function openResearchWorkspace(directory){
       catch(error){if(error.code!=='ENOENT')throw error;}
     }return rows.sort((a,b)=>b.record.createdAt.localeCompare(a.record.createdAt));
   }
+  async function commitPage(e,request,responseBytes,source,nativeRecord){
+    const responseSha=digest(responseBytes),value=pageValue(responseBytes,e.query.entity);
+    const requestSha=digest(canonical(request)),native=nativeOf(nativeRecord,responseBytes);
+    const repeated=e.pages.find(p=>p.requestSha256===requestSha&&p.sha256===responseSha);
+    if(repeated){
+      if(native&&repeated.nativeIntentId)check(repeated.nativeIntentId===native.native.intentId,'NATIVE_PAGE_INTENT_CHANGED',undefined,409);
+      return {page:repeated,edition:e,reused:true};
+    }
+    check(['EMPTY','PARTIAL'].includes(e.coverage.state)&&e.coverage.nextCursor!==null,'EDITION_RETRIEVAL_FINISHED','Create a new edition to refresh this query.',409);
+    const expected={entity:e.query.entity,parameters:{...e.query.parameters,cursor:e.coverage.nextCursor}};
+    check(canonical(request)===canonical(expected),'PAGE_REQUEST_MISMATCH','Receive the next page for this exact saved query.',409);
+    const index=e.pages.length+1,folder=await privateDirectory(join(e.directory,'pages',String(index).padStart(8,'0')));
+    const info=sourceOf(source,request);if(native)info.kind='NATIVE_BUYER_RESPONSE';
+    let nativeBytes=native?jsonBytes(native.record):null;
+    let page={schema:'stellar-forge.research-page.v1',editionId:e.record.id,index,querySha256:e.query.sha256,request,requestSha256:requestSha,
+      sha256:responseSha,bytes:responseBytes.length,records:value.results.length,totalReported:value.meta.count,nextCursor:value.meta.next_cursor,
+      costMeta:{...(value.meta.cost===undefined?{}:{cost:value.meta.cost}),...(value.meta.cost_usd===undefined?{}:{costUsd:value.meta.cost_usd})},
+      source:info,nativeSha256:nativeBytes?digest(nativeBytes):null,nativeIntentId:native?.native.intentId??null};
+    const intentFile=join(folder,'receive-intent.json');let intent=null;
+    try{intent=await readJson(intentFile,5242880);}catch(error){if(error.code!=='ENOENT')throw error;}
+    if(intent){
+      check(intent.schema==='stellar-forge.research-page-commit.v1'&&plain(intent.page),'PAGE_COMMIT_INTENT_CHANGED');
+      const p=intent.page;
+      for(const key of ['schema','editionId','index','querySha256','requestSha256','sha256','bytes','records','totalReported','nextCursor'])
+        check(p[key]===page[key],'PAGE_COMMIT_INTENT_CHANGED',undefined,409);
+      check(canonical(p.request)===canonical(request)&&canonical(p.costMeta)===canonical(page.costMeta)&&p.nativeIntentId===page.nativeIntentId,'PAGE_COMMIT_INTENT_CHANGED',undefined,409);
+      const retainedNative=nativeOf(intent.nativeRecord,responseBytes);
+      check(Boolean(retainedNative)===Boolean(native),'NATIVE_RESPONSE_MISMATCH');
+      if(native)check(canonical(retainedNative.native)===canonical(native.native),'NATIVE_PAGE_INTENT_CHANGED',undefined,409);
+      nativeBytes=retainedNative?jsonBytes(retainedNative.record):null;
+      check((nativeBytes?digest(nativeBytes):null)===p.nativeSha256,'NATIVE_RECORD_CHANGED');
+      check(canonical(sourceOf(p.source,request))===canonical(p.source),'PAGE_SOURCE_CHANGED');
+      page=p;
+    }else{
+      intent={schema:'stellar-forge.research-page-commit.v1',page,nativeRecord:native?.record??null};
+      await writeJson(intentFile,intent,{exclusive:true});
+    }
+    const binding={schema:'stellar-forge.research-page-plan.v1',editionId:e.record.id,index,querySha256:e.query.sha256,
+      requestSha256:requestSha,sha256:responseSha,nativeSha256:page.nativeSha256};
+    await exact(join(folder,'plan.json'),jsonBytes(binding));
+    await exact(join(folder,'request.json'),jsonBytes(request));
+    // Keep complete source/commit intent and the original native record durable
+    // before publishing the response bytes. A restart can finish this same page.
+    if(nativeBytes)await exact(join(folder,'buyer-result.json'),nativeBytes);
+    await exact(join(folder,'response.json'),responseBytes);
+    const pageFile=join(folder,'page.json');
+    if(await exists(pageFile)){
+      const old=await readJson(pageFile,262144);
+      check(canonical(old)===canonical(page),'PAGE_COMMIT_CONFLICT',undefined,409);
+    }else await writeJson(pageFile,page,{exclusive:true});
+    return {page,edition:await edition(e.record.id,{records:false}),reused:false};
+  }
   async function receivePage({editionId,request,responseBytes,source,nativeRecord=null}){
-    responseBytes=Buffer.from(responseBytes);const responseSha=digest(responseBytes);
+    responseBytes=Buffer.from(responseBytes);
+    return serial(async()=>commitPage(await edition(editionId,{records:false}),request,responseBytes,source,nativeRecord));
+  }
+  async function recoverPendingPage(editionId){
+    safeId(editionId);
     return serial(async()=>{
-      const e=await edition(editionId,{records:false}),value=pageValue(responseBytes,e.query.entity);
-      const requestSha=digest(canonical(request));
-      const repeated=e.pages.find(p=>p.requestSha256===requestSha&&p.sha256===responseSha);
-      if(repeated)return {page:repeated,edition:await edition(editionId,{records:false}),reused:true};
-      check(['EMPTY','PARTIAL'].includes(e.coverage.state)&&e.coverage.nextCursor!==null,'EDITION_RETRIEVAL_FINISHED','Create a new edition to refresh this query.',409);
-      const expected={entity:e.query.entity,parameters:{...e.query.parameters,cursor:e.coverage.nextCursor}};
-      check(canonical(request)===canonical(expected),'PAGE_REQUEST_MISMATCH','Receive the next page for this exact saved query.',409);
-      const native=nativeOf(nativeRecord,responseBytes),nativeBytes=native?jsonBytes(native.record):null;
-      const index=e.pages.length+1,folder=await privateDirectory(join(e.directory,'pages',String(index).padStart(8,'0')));
-      const info=sourceOf(source,request);if(native)info.kind='NATIVE_BUYER_RESPONSE';
-      const binding={schema:'stellar-forge.research-page-plan.v1',editionId,index,querySha256:e.query.sha256,requestSha256:requestSha,sha256:responseSha,nativeSha256:nativeBytes?digest(nativeBytes):null};
-      await exact(join(folder,'plan.json'),jsonBytes(binding));await exact(join(folder,'request.json'),jsonBytes(request));
-      await exact(join(folder,'response.json'),responseBytes);
-      if(nativeBytes)await exact(join(folder,'buyer-result.json'),nativeBytes);
-      const p={schema:'stellar-forge.research-page.v1',editionId,index,querySha256:e.query.sha256,request,requestSha256:requestSha,
-        sha256:responseSha,bytes:responseBytes.length,records:value.results.length,totalReported:value.meta.count,nextCursor:value.meta.next_cursor,
-        costMeta:{...(value.meta.cost===undefined?{}:{cost:value.meta.cost}),...(value.meta.cost_usd===undefined?{}:{costUsd:value.meta.cost_usd})},
-        source:info,nativeSha256:nativeBytes?digest(nativeBytes):null,nativeIntentId:native?.native.intentId??null};
-      const pageFile=join(folder,'page.json');
-      if(await exists(pageFile)){
-        const old=await readJson(pageFile,262144);
-        check(old.sha256===p.sha256&&old.requestSha256===p.requestSha256&&old.nativeSha256===p.nativeSha256,'PAGE_COMMIT_CONFLICT',undefined,409);
-      }else await writeJson(pageFile,p,{exclusive:true});
-      return {page:p,edition:await edition(editionId,{records:false}),reused:false};
+      const e=await edition(editionId,{records:false});
+      if(!['EMPTY','PARTIAL'].includes(e.coverage.state))return null;
+      const index=e.pages.length+1,folder=join(e.directory,'pages',String(index).padStart(8,'0'));
+      if(!(await exists(folder)))return null;
+      let raw;
+      try{raw=await readBytes(join(folder,'response.json'),MAX_PAGE_BYTES);}
+      catch(error){if(error.code==='ENOENT')return null;throw error;}
+      let intent;
+      try{intent=await readJson(join(folder,'receive-intent.json'),5242880);}
+      catch(error){if(error.code!=='ENOENT')throw error;}
+      if(intent){
+        check(intent.schema==='stellar-forge.research-page-commit.v1'&&plain(intent.page),'PAGE_COMMIT_INTENT_CHANGED');
+        const received=await commitPage(e,intent.page.request,raw,intent.page.source,intent.nativeRecord);
+        return {...received,recovered:true};
+      }
+      // Older incomplete receives still retain exact request/response/native
+      // files. Record today's import observation without inventing a past time.
+      const plan=await readJson(join(folder,'plan.json'),262144),request=await readJson(join(folder,'request.json'),65536);
+      check(plan.schema==='stellar-forge.research-page-plan.v1'&&plan.editionId===editionId&&plan.index===index&&
+        plan.querySha256===e.query.sha256&&plan.requestSha256===digest(canonical(request))&&plan.sha256===digest(raw),'PAGE_PLAN_CHANGED');
+      let nativeRecord=null;
+      if(plan.nativeSha256){
+        let nativeBytes;
+        try{nativeBytes=await readBytes(join(folder,'buyer-result.json'),4194304);}
+        catch(error){if(error.code==='ENOENT')return null;throw error;}
+        check(digest(nativeBytes)===plan.nativeSha256,'NATIVE_RECORD_CHANGED');nativeRecord=parseJson(nativeBytes);
+      }
+      const received=await commitPage(e,request,raw,{kind:'IMPORTED_RESPONSE',url:requestUrl(request),
+        retrievedAt:new Date().toISOString()},nativeRecord);
+      return {...received,recovered:true,legacyImport:true};
     });
   }
   async function receiveBuyerResult(result,options){
@@ -264,12 +326,35 @@ export async function openResearchWorkspace(directory){
     check(maxPages===Infinity||Number.isSafeInteger(maxPages)&&maxPages>0,'PAGE_BATCH_INVALID');
     const folder=join(root,'editions',editionId);await edition(editionId,{records:false});
     return lock(folder,'gather.lock',async()=>{
+      const binding=fetchPage.retrievalBinding;
+      if(binding!==undefined){
+        check(plain(binding)&&binding.schema==='stellar-forge.research-retrieval-binding.v1','RETRIEVAL_BINDING_INVALID');
+        await serial(()=>exact(join(folder,'retrieval.json'),jsonBytes(binding)));
+      }else if(await exists(join(folder,'retrieval.json')))
+        throw new ResearchError('RETRIEVAL_CONTEXT_REQUIRED','Resume with the original configured retrieval adapter.',409);
       let fetched=0;
       try{
         while(fetched<maxPages){
           signal?.throwIfAborted();
+          const recovered=await recoverPendingPage(editionId);
+          if(recovered?.page){
+            const previous=await edition(editionId,{records:false});
+            await serial(()=>writeJson(join(folder,'pending.json'),{...(previous.pending??{}),editionId,index:recovered.page.index,
+              request:recovered.page.request,requestSha256:recovered.page.requestSha256,
+              state:recovered.edition.coverage.state==='COMPLETE'?'COMPLETE':'PAGE_RECEIVED',
+              pageSha256:recovered.page.sha256,recoveredFromRetainedBytes:true,updatedAt:new Date().toISOString()}));
+            fetched++;if(onPage)await onPage(recovered);continue;
+          }
           const e=await edition(editionId,{records:false});
-          if(e.coverage.state==='COMPLETE'||e.coverage.state==='INTERRUPTED')return e;
+          if(e.coverage.state==='COMPLETE'||e.coverage.state==='INTERRUPTED'){
+            const last=e.pages.at(-1),state=e.coverage.state==='COMPLETE'?'COMPLETE':'INTERRUPTED';
+            if(last&&e.pending?.index===last.index&&e.pending.state!==state){
+              await serial(()=>writeJson(join(folder,'pending.json'),{...e.pending,state,pageSha256:last.sha256,
+                reconciledFromCommittedPage:true,updatedAt:new Date().toISOString()}));
+              return edition(editionId,{records:false});
+            }
+            return e;
+          }
           if(shouldContinue&&!(await shouldContinue(e)))return e;
           const request={entity:e.query.entity,parameters:{...e.query.parameters,cursor:e.coverage.nextCursor}};
           const index=e.pages.length+1,intentId='research-'+digest(canonical({editionId,query:e.query.sha256,index,request})).slice(0,56);
@@ -342,16 +427,16 @@ export async function openResearchWorkspace(directory){
     return readBytes(join(e.directory,'pages',String(index).padStart(8,'0'),name),name==='response.json'?MAX_PAGE_BYTES:4194304);
   }
   return {root,query,saveQuery,listQueries,createEdition,edition,listEditions,receivePage,receiveBuyerResult,receiveResultFile,
-    setDecision,copyDecisions,gatherEdition,compare,report,exportFiles,export:exportEdition,pageBytes,
+    setDecision,copyDecisions,recoverPendingPage,gatherEdition,compare,report,exportFiles,export:exportEdition,pageBytes,
     async close(){await pending;closed=true;}};
 }
 
 /** The original SDK owns approval, signing, delivery and recovery for every purchased page. */
-export function createBuyerPageFetcher({buyer,requestForPage}){
+export function createBuyerPageFetcher({buyer,requestForPage,buyerOptions={}}){
   check(buyer&&typeof buyer.fromRequest==='function'&&typeof buyer.operation==='function'&&typeof requestForPage==='function','NATIVE_BUYER_CONFIGURATION_REQUIRED');
   return async({request,intentId,signal})=>{
-    const proposed=await requestForPage(request);
-    check(plain(proposed)&&proposed.method==='GET'&&typeof proposed.url==='string','GENERATED_PAGE_REQUEST_INVALID');
+    const proposed=await requestForPage(request,{intentId,signal});
+    check(plain(proposed)&&proposed.method==='GET'&&typeof proposed.url==='string'&&proposed.intentId===intentId,'GENERATED_PAGE_REQUEST_INVALID');
     let operation=buyer.operation(intentId),result;
     if(await exists(operation.configPath)){
       const config=await readJson(operation.configPath);
@@ -363,7 +448,7 @@ export function createBuyerPageFetcher({buyer,requestForPage}){
         result=await operation.execute({review:await operation.review(),signal});
       }
     }else{
-      operation=await buyer.fromRequest({...proposed,intentId,signal});
+      operation=await buyer.fromRequest({...proposed,intentId,signal},buyerOptions);
       result=await operation.execute({review:await operation.review(),signal});
     }
     const bytes=await result.bytes({limit:MAX_PAGE_BYTES,signal});
