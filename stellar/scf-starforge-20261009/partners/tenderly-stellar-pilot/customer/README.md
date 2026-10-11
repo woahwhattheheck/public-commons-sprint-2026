@@ -36,7 +36,7 @@ console.log(await readBuyerPreparation({ configFile: prepared.configPath }));
 ```
 
 If the merchant supplied separate request and ticket files, use the same
-`prepareBuyer` helper from `../customer.mjs` instead:
+`prepareBuyer` helper from the [original customer module](../customer.mjs) instead:
 
 ```js
 const prepared = await prepareBuyer({
@@ -226,6 +226,11 @@ On a later run, reopen the same customer and call
 `TenderlyResult.open_export('/absolute/export-directory')` for a fully offline
 portable read. The result exposes `response_bytes`, `envelope`,
 `simulation_id`, `evm_transaction_hash`, and `stellar_payment`.
+
+The [Python guide](python/README.md) covers installation, the complete CLI,
+handoff and workspace imports, and retained accounting. Its
+[purchase example](python/examples/purchase.py) separates preparation, reviewed
+execution, and recovery into runnable commands.
 
 ## 5. Inspect, compare, and review
 
