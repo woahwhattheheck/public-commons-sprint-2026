@@ -190,7 +190,11 @@ export async function openAcquisitions({ directory, source = null, python,
     return store.withRun(id, async path => {
       let { manifest } = await verified(id);
       const keys = await existingKeys(manifest);
+      const retainedBeforeRecovery = manifest.captures.length;
       manifest = await reconcilePending(path, manifest, keys);
+      // A recovered provider-negative is itself the completed original read.
+      // Return that disposition; another explicit resume may retry its cursor.
+      if (manifest.captures.length > retainedBeforeRecovery && !manifest.captures.at(-1).accepted) return manifest;
       if (['completed', 'review_required'].includes(manifest.state)) return manifest;
       for (;;) {
         if (signal?.aborted) {
