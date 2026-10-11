@@ -108,3 +108,56 @@ This runs only the changed authorization, limits, replay, reconciliation, receip
 - The RFP's presence for SCF Round #46 is not confirmed (current listing is #45); no application/interest form submitted.
 
 **Ownership boundary:** `SF-36` spend governor only. Do not duplicate SF-31 buyer client, SF-32 `upto` Stellar scheme work, SF-29 federation, or SF-38 network conformance. License this original code permissively under the accompanying MIT LICENSE (not AGPL). No GitHub Actions/workflows are added.
+
+## Author an operator policy locally
+
+The policy workbench edits the existing `stellar-spend-governor/v1` configuration
+and calls this directory's original `validate_policy()` before offering a
+separate download. It does not instantiate `Governor`, open a ledger, read keys,
+issue consent, inspect balances, sign, or install the downloaded policy.
+
+From the repository root, start an empty editor:
+
+```sh
+python3 stellar/scf-starforge-20261009/sf36-spend-governor/policy_workbench.py --port 0
+```
+
+Open the printed loopback URL. To edit an existing operator configuration, add
+`--policy /private/operator/policy.json`, or select the file in the page. Nothing
+loads the example policy by default. Choose each network and asset explicitly,
+then enter all five caps as positive canonical **base-unit strings**. Empty rows
+are drafts; the original validator determines whether the complete policy is
+valid. The workbench proposes no cap, asset, network or decimal conversion.
+
+The five fields retain their original meanings: `max_single`, `max_total`,
+`max_per_utc_day`, `max_per_actor_utc_day`, and `max_per_service_utc_day`. These
+limits concern transferred resource amounts per network/asset. They are not
+human-readable currency, current remaining capacity, facilitator fees or a
+payment authorization. Existing reservations and settled spending still affect
+the original governor when the operator separately uses the policy.
+
+Import retains the exact source bytes and their SHA-256. Editing a source row
+keeps its unknown metadata; removing that row explicitly removes that row's
+metadata too. New rows contain only the chosen network, asset and caps.
+Top-level metadata remains intact. Original numeric metadata is handled on the
+server without browser or binary-float rounding. Export can change JSON
+formatting but preserves metadata values. Duplicate JSON keys are rejected
+rather than silently discarding one value.
+
+Select **Validate** after editing, inspect the result, and explicitly download
+the separate policy file. Any subsequent edit invalidates that download until
+validation succeeds again. A valid configuration says nothing about available
+balance, live ledger capacity, recipient trust or approval of a purchase. The
+operator remains responsible for choosing and configuring the resulting file
+through the existing SF81/SF88 operator path; this page never updates it.
+
+The editor also saves and reopens a browser draft with the original source and
+pending row values. A draft is not a runtime policy. Keep source files, drafts
+and downloads private; the page uses no browser persistence or remote service.
+Stop the local server with Ctrl-C when finished.
+
+The server uses Python's standard library and binds only to `127.0.0.1`. Source
+and downloaded policies are limited to 1 MiB and 256 asset rows; a request is
+limited to 2 MiB. Failed imports or validation return a clear JSON error without
+changing the startup file. A startup failure exits 2 with
+`POLICY_WORKBENCH_ERROR`; the browser retains edits after a validation failure.
