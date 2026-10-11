@@ -10,6 +10,12 @@ The **Creator** view in the existing `creator-pool/web/` app now carries a creat
 4. Select **Send submission** only once the editor is valid and the original wallet/actor gate passes. The existing API, operation journal, original chain transaction path, and browser transaction reconciliation are used, unmodified.
 5. The creator's submitted work appears in the campaign's actual **Submissions** list after chain confirmation. The sponsor still independently chooses approval; an approved creator initiates any reward claim.
 
+In the local demo, the header's **Demo actor** picker and the form's
+**Submitting as** picker select the same creator. Either control updates the
+form, the submission ownership labels and the claim controls together. Normal
+state refresh keeps that selected actor and their current draft; switching to
+another actor opens that actor's separate saved or unsent draft.
+
 A confirmed submission removes the matching local draft. **Rejected, pending, uncertain, or unconfirmed outcomes preserve it**. The original wallet journal determines whether an outstanding transaction needs reconciliation, not a second click or a fresh operation ID. Do not create a new transaction to "retry" an uncertain send.
 
 ## Limits and boundaries
