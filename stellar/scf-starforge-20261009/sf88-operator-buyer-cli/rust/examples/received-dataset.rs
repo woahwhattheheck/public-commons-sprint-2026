@@ -15,7 +15,7 @@ fn main()->Result<(),Box<dyn Error>>{
     let args:Vec<String>=std::env::args().collect();
     if args.len()!=6 && args.len()!=7{return Err("expected SF88 STATE DATASET_ID DELIVERY CSV_COPY [BRIDGE]".into());}
     let mut options=Options::new(&args[1],&args[2]);
-    if let Some(bridge)=args.get(6) { options.bridge=Some(bridge.into()); }
+    if let Some(bridge)=args.get(6) { options.bridge_path=Some(bridge.into()); }
     let client=Client::new(options)?;
     let context=Context::with_timeout(Duration::from_secs(180));
     client.ready(&context)?;
