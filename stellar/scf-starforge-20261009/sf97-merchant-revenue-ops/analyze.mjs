@@ -8,11 +8,12 @@ import { readFile, mkdir, open } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { run as runNativeReconciliation } from './native-reconcile.mjs';
 
 const SCHEMA = 'stellar-forge.merchant-revenue-ops.v1';
 const USDMICRO = 1_000_000n;
 const MAX_INPUT = 2 * 1024 * 1024;
-const keys = new Set(['--config','--terms','--snapshot','--ops-url','--output']);
+const keys = new Set(['--config','--terms','--snapshot','--ops-url','--output','--native-outbox']);
 const own = (obj,key) => Object.hasOwn(obj,key);
 const digest = data => createHash('sha256').update(data).digest('hex');
 
@@ -244,7 +245,22 @@ export async function main(argv=process.argv.slice(2)) {
     const handle=await open(join(out,name),'wx',0o600);
     try {await handle.writeFile(contents,'utf8');} finally {await handle.close();}
   }
-  process.stdout.write(JSON.stringify({status:'REPORT_CREATED',directory:out,files:['report.json','review.html'],session:report.sessionId,routes:report.routes.length,issues:report.issues.length,mode:report.originalSellerMode})+'\n');
+  // When the actual native SDK SF98 journal exists, join it to THIS actual original
+  // observer session. Retain existing SF97 CLI/output intact without this opt-in.
+  let native = null;
+  if (a['--native-outbox']) {
+    native = await runNativeReconciliation({
+      reportPath: join(out, 'report.json'),
+      outboxDir: resolve(a['--native-outbox']),
+      outDir: join(out, 'native-settlement')
+    });
+  }
+  process.stdout.write(JSON.stringify({status:'REPORT_CREATED',directory:out,
+    files:['report.json','review.html',...(native?['native-settlement/']:[])],
+    session:report.sessionId,routes:report.routes.length,issues:report.issues.length,
+    mode:report.originalSellerMode,
+    native: native ? {matchedNativeEvents:native.matchedNativeEvents,
+      originalEvents:native.originalEvents,issues:native.issues} : null})+'\n');
 }
 if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
   main().catch(e=>{console.error('SF97:',e.message);process.exitCode=1;});
