@@ -86,7 +86,7 @@ async function dependencySame(dependency, limit) {
   const current = await fingerprint(dependency.path, limit);
   need(current.sha256 === dependency.sha256 && current.bytes === dependency.bytes, 'INBOX_DEPENDENCY_CHANGED_REVIEW_REQUIRED');
 }
-async function workspaceEnvironment(cfg, path) {
+export async function workspaceEnvironment(cfg, path) {
   const {openWorkspace} = await import('./workspace.mjs');
   const workspace = await openWorkspace(['--dir', rootPath(path)], {execute:true});
   const {op, owner, transport} = execution(cfg);

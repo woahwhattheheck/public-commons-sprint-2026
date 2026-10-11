@@ -96,6 +96,7 @@ export async function main(args = process.argv.slice(2)) {
       maxInFlight:options.maxInFlight,drainGraceMs:options.drainGraceMs});
   } catch(error) { await application.close(); throw error; }
   session.upstreamSnapshot = application.snapshot;
+  session.operationControl = application.operationControl;
   session.invalidateUpstreamCache = application.invalidateCache;
   const nativeClose = session.close.bind(session);
   let closing;

@@ -9,6 +9,7 @@ import { run as compileSeller } from '../cli.mjs';
 import { compileUpstreamBindings, validateUpstreamService } from '../../sf30-seller-sdk/upstream.mjs';
 import { supportsSellerMethod } from '../../sf30-seller-sdk/http-methods.mjs';
 import { compileOpenApiResponseContract } from '../response-contracts.mjs';
+import { preparePublicOperation, createMerchantCases } from './requests.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -73,9 +74,10 @@ export function inspectOpenApi(specText) {
       const security = op.security ?? spec.security ?? [];
       operations.push({ method:method.toUpperCase(), path, summary:op.summary ?? op.operationId ?? '',
         supported:supportsSellerMethod(method.toUpperCase()),
+        publicDescription:String(op.summary ?? op.description ?? '').replace(/[\s\u0000-\u001f\u007f]+/g, ' ').trim(),
         servers:Array.isArray(servers) ? servers.map((s,i) => ({index:i, url:s?.url ?? '', variables:Boolean(s?.variables)})) : [],
         security:Array.isArray(security) ? security.map(s => plain(s) ? Object.keys(s) : []) : [],
-        error:supportsSellerMethod(method.toUpperCase()) ? null : 'Use the trusted-handler seller for this HTTP method' });
+        error:supportsSellerMethod(method.toUpperCase()) ? null : 'This HTTP method is not supported by the original seller' });
     }
   }
   if (operations.length > 2000) fail('Workspace supports at most 2,000 described operations');
@@ -108,11 +110,9 @@ export function prepareMerchant(specText, plan) {
   const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','timeoutMs','maxResponseBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
-    if (!supportsSellerMethod(method)) fail(key + ': declarative upstreams support GET, HEAD, DELETE, POST, PUT and PATCH');
-    if (row.enforceResponseContract !== undefined && typeof row.enforceResponseContract !== 'boolean') fail(key + ': response contract choice must be boolean');
-    if (row.enforceResponseContract === true && (row.responseMode ?? 'json') !== 'json') fail(key + ': response contracts require JSON response format');
+    if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
     if (seen.has(key)) fail('Duplicate selected operation: ' + key);
     seen.add(key);
     const id = row.id ?? 'route_' + sha(key).slice(0,12);
@@ -132,11 +132,12 @@ export function prepareMerchant(specText, plan) {
       facade.paths[row.path] = structuredClone(item);
       materialized.add(row.path);
     }
-    facade.paths[row.path][method.toLowerCase()] = {...structuredClone(op), servers:[{url:sellerServer.href}], security:[]};
+    const publicOperation = preparePublicOperation(spec, item, op, row, method);
+    facade.paths[row.path][method.toLowerCase()] = {...publicOperation, servers:[{url:sellerServer.href}], security:[]};
     selections.push({method, path:row.path, serverIndex:0,
       ...(plan.serviceName ? {serviceName:plan.serviceName} : {}),
       accepts:[{scheme:'exact', ...plan.payment, amount:row.amountAtomic}]});
-    bindings.push({method, path:row.path, id, handler:id});
+    bindings.push({method, path:row.path, id, handler:id, validateInput:true});
     upstreams.bindings[id] = {origin:backend.origin,
       path:backend.pathname.replace(/\/$/, '') + row.path.replace(/\{([^{}]+)\}/g, ':$1'), method,
       headerEnv:headers, responseMode:row.responseMode ?? 'json',
@@ -147,18 +148,31 @@ export function prepareMerchant(specText, plan) {
       ...(row.cache !== undefined ? {cache:structuredClone(row.cache)} : {}),
       ...(row.availability !== undefined ? {availability:structuredClone(row.availability)} : {})};
     transformations.push({method, path:row.path, originalServer:backend.href, publicServer:sellerServer.href,
+      publicDescription:publicOperation.description ?? null, requestExampleSupplied:row.requestExample !== undefined,
       backendAuthentication:auth, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0});
   }
   const imported = importOpenApi(facade, selections), service = createSellerServiceConfig(imported, bindings);
   for (let i=0; i<imported.offers.length; i++) {
-    const offer = imported.offers[i], binding = upstreams.bindings[bindings[i].id];
+    const offer = imported.offers[i], binding = upstreams.bindings[bindings[i].id], row = plan.operations[i];
+    // Existing v1 plans retain their original transport-only response policy.
+    // The workspace explicitly selects declared validation for new JSON routes.
+    if (row.enforceResponseContract !== undefined && typeof row.enforceResponseContract !== 'boolean') fail('Legacy response contract choice must be boolean');
+    const validation = row.responseValidation ?? (row.enforceResponseContract === true ? 'declared' : 'none');
+    if (row.responseValidation !== undefined && row.enforceResponseContract !== undefined &&
+        (validation === 'declared') !== row.enforceResponseContract) fail('Conflicting response validation choices');
+    if (!['declared','none'].includes(validation)) fail('Response validation must be declared or none');
+    if (validation === 'declared') {
+      if (binding.responseMode !== 'json') fail('Declared response validation requires JSON response format');
+      binding.responseContract = compileOpenApiResponseContract(spec, offer, { specSha256:sha(specText) });
+    }
     binding.query = Object.keys(offer.seller.extensions.bazaar.schema.properties.input.properties.queryParams?.properties ?? {});
-    if (plan.operations[i].enforceResponseContract === true) binding.responseContract = compileOpenApiResponseContract(spec,offer,{specSha256:sha(specText)});
     routes.push({id:bindings[i].id, method:offer.method, path:offer.path, publicUrl:offer.seller.resource.url,
       publicPath:service.routes[i].path, upstream:binding.origin + binding.path, amountAtomic:selections[i].accepts[0].amount,
       network:plan.payment.network, query:binding.query, environment:Object.values(binding.headerEnv),
-      responseContract:Boolean(binding.responseContract),sharedRead:binding.cache?.shareAcrossBuyers === true});
+      publicDescription:facade.paths[offer.path][offer.method.toLowerCase()].description ?? '',
+      responseValidation:validation, responseStatuses:Object.keys(binding.responseContract?.responses ?? {}), validateInput:true, responseContract:Boolean(binding.responseContract), sharedRead:binding.cache?.shareAcrossBuyers === true});
   }
+  const {cases, review} = createMerchantCases(imported, service, plan);
   // Validate environment REFERENCES only. The original launcher reads actual values.
   const compiled = compileUpstreamBindings(upstreams, {allowLoopback:plan.allowLoopbackUpstream === true,
     env:Object.fromEntries([...envNames].map(name => [name, 'SET_IN_LAUNCH_ENVIRONMENT']))});
@@ -168,8 +182,9 @@ export function prepareMerchant(specText, plan) {
     route.availability = compiled[route.id].availability;
     route.requestHeaders = [...compiled[route.id].requestHeaders];
   }
-  return {facade, selections, bindings, upstreams, imported, service, transformations,
+  return {facade, selections, bindings, upstreams, imported, service, transformations, cases,
     preview:{title:titleOf(spec), sourceSha256:sha(specText), routes,
+      routeChecks:review,
       environment:[...envNames].sort(), credentialValuesChecked:false, allowLoopbackUpstream:plan.allowLoopbackUpstream === true}};
 }
 async function regular(path, limit=LIMIT) {
@@ -196,6 +211,8 @@ export async function readPackage(parent, name) {
   for (const file of ['original-openapi.json','merchant-plan.json','facade-openapi.json','selections.json','route-bindings.json','upstreams.json']) {
     if (sha(await regular(join(folder,file))) !== manifest.files[file]) fail('Saved package changed: ' + file + '. Save changes under a new name.');
   }
+  if (own(manifest.files,'operator-cases.json') && sha(await regular(join(folder,'operator-cases.json'),65536)) !== manifest.files['operator-cases.json'])
+    fail('Saved route cases changed. Save changes under a new package name.');
   return {folder, name, manifest, specText:(await regular(join(folder,'original-openapi.json'))).toString('utf8'),
     plan:JSON.parse(await regular(join(folder,'merchant-plan.json')))};
 }
@@ -208,6 +225,7 @@ export async function savePackage({specText, plan, parent, name}) {
     'original-openapi.json':specText, 'merchant-plan.json':json(plan),
     'facade-openapi.json':json(prepared.facade), 'selections.json':json(prepared.selections),
     'route-bindings.json':json(prepared.bindings), 'upstreams.json':json(prepared.upstreams),
+    'operator-cases.json':json(prepared.cases),
   };
   for (const [file,content] of Object.entries(files)) {
     if (Buffer.byteLength(content) > (file==='upstreams.json' ? 1024*1024 : LIMIT))
@@ -241,6 +259,12 @@ export async function savePackage({specText, plan, parent, name}) {
     '', 'The seller listens on loopback. Route your HTTPS gateway to it while preserving the public paths.',
     'Challenge-only mode returns native payment challenges but does not verify or settle payments.',
     'Inspect the operations URL printed at startup. Stop with Ctrl-C. Resume the same compiled directory.',
+    '', '## Check the saved request examples', '',
+    'In the workspace, start challenge preview and select Check unpaid routes. It uses the original SF96 reviewer and this package\'s operator-cases.json.',
+    'For shell use, pass the printed seller URL and a new private output directory:', '', '~~~sh',
+    ['node',join(sourceRoot,'sf96-seller-acceptance/audit.mjs'),'--seller','http://127.0.0.1:SELLER_PORT','--cases',join(folder,'operator-cases.json'),'--out',join(folder,'support','route-review-001')].map(shell).join(' '),
+    '~~~', '', 'Request examples are public offer examples. Keep reusable demonstration values in them. Original request schemas validate inputs before native payment verification.',
+    'Selected declared response contracts retain original successful status, media and JSON schema assertions. Bytes routes or an explicit none selection do not carry JSON response validation.',
     'Optional shared read policies are retained in upstreams.json. Each delivery still uses the original native payment lifecycle.',
     'The API workspace shows live cache counts and can invalidate a selected binding for the exact managed runtime.',
     'Cached bodies stay in process memory. Restart starts empty; backend credentials and response policy are checked by the original transport.',

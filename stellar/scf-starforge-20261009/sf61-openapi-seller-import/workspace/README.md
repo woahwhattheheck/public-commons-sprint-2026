@@ -2,10 +2,11 @@
 
 A local merchant setup application connecting an OpenAPI-described backend to
 the original SF61 compiler, SF30 native upstream seller, SF82 saved pilot and
-SF96 operations dashboard. It supports configure → review → save → run → stop →
-reopen. Supported GET, HEAD, DELETE and JSON POST, PUT or PATCH backends need
-no custom JavaScript. Optional shared GET/HEAD results use the original upstream
-response cache and remain independently payable through native SF30.
+SF96 operations dashboard. It supports configure → review → save → run → check →
+stop → reopen. GET, HEAD, DELETE and JSON POST, PUT, PATCH backends use the
+original native method support and need no custom JavaScript.
+Optional GET/HEAD result sharing, declared response validation and backend
+availability controls use the same native launcher and saved package.
 
 ## Start
 
@@ -25,7 +26,7 @@ The operations link uses an explicitly configured workspace origin for a user
 click to its HTML page; cross-origin API and export reads remain rejected.
 
 For a walkthrough: **Load example**, **Validate configuration**, **Save new
-package**, **Start challenge preview**, then open operations. The example
+package**, **Start challenge preview**, **Check unpaid routes**, then open operations. The example
 reuses the SF82 description with explicitly nonpayable demonstration terms.
 
 ## Configure a merchant
@@ -39,9 +40,22 @@ reuses the SF82 description with explicitly nonpayable demonstration terms.
    Header API keys and HTTP bearer/basic are supported. Set the complete
    credential header value in the environment before launching the workspace.
    The browser never requests or saves credential values.
-5. Review the public routes, original backend targets, prices and required
-   environment names. Save under a new name.
-6. Start a challenge preview, or supply the merchant's authorized HTTPS
+5. Enter a short public description and, where needed, a **public request example**
+   containing `pathParams`, `query`, and a JSON `body`. These are reusable values
+   advertised to buyers, so use demonstration values. The original schemas check
+   them; they do not replace the API's constraints. Explicit samples also prepare
+   dynamic routes and mutations for the existing unpaid route checker.
+6. Choose response validation. New JSON routes default to **Match declared OpenAPI
+   response**: the original response compiler retains successful status, media type
+   and JSON schema promises from the imported description. **Transport limits
+   only** is explicit; bytes routes use it. Review the routes, backend targets,
+   prices, response statuses, required environment names and route-check readiness.
+   Save under a new name.
+7. Start a challenge preview and select **Check unpaid routes** to run the original
+   SF96 reviewer against that active seller. Its result and private review path
+   appear in the workspace. Open operations; stop when finished and reopen the
+   saved project to resume the same configuration.
+8. Supply the merchant's authorized HTTPS
    facilitator for the original native integration. Open operations; stop when
    finished. The project remains available to reopen.
 
@@ -50,6 +64,31 @@ GET /records/{recordId}, offered at https://merchant.example/paid, becomes a pai
 /paid/records/:recordId route calling the original /v1/records/:recordId.
 Declared query parameters pass through the original upstream compiler. Buyer
 credential headers are not implicitly copied to the backend.
+
+For a JSON PATCH operation with a required path identifier, a public example can
+look like this (the names and values must match the imported operation):
+
+~~~json
+{
+  "pathParams": {"recordId": "demo-record"},
+  "query": {},
+  "body": {"name": "Integration example"}
+}
+~~~
+
+POST, PUT and PATCH route checks need a body; DELETE needs an explicit example
+but no body. A static GET or HEAD can use the description's own query examples.
+Samples are limited to 8 KiB each and the combined saved cases to 64 KiB. If the
+API supplies no required body/path example, enter one before validation. Only
+the original challenge-only seller is called by **Check unpaid routes**.
+
+The saved service enables the original request-schema admission before payment
+verification. Declared response contracts are enforced by the original upstream
+runtime before post-handler settlement. Existing v1 plans without a response
+validation choice retain their transport-only policy when reopened; explicitly
+select declared validation and save a new package to adopt it. Earlier cache
+plans using the boolean `enforceResponseContract` field also remain readable;
+new workspace saves use the single `responseValidation` choice.
 
 ## Shared read products and backend controls
 
@@ -79,7 +118,7 @@ serialization. A cache hit does not reset a failure streak. Clearing the cache
 does not reset the backend circuit. Original admission is evaluated for every
 buyer; original source capacity and recovery are rechecked before a backend call.
 
-Select **Validate the declared JSON response schema** to import the selected
+Select **Match declared OpenAPI response** to import the selected
 operation's original OpenAPI response contract. This uses the existing response
 compiler, including source references and declared statuses. Unsupported schema
 features produce the original compiler error; they are not silently omitted.
@@ -108,7 +147,7 @@ For headless preparation, each selected read operation can include:
   "path": "/records/{recordId}",
   "amountAtomic": "20000",
   "requestHeaders": ["accept-language"],
-  "enforceResponseContract": true,
+  "responseValidation": "declared",
   "availability": {"failureThreshold": 3, "resetAfterMs": 30000, "maxResetAfterMs": 300000},
   "cache": {
     "shareAcrossBuyers": true,
@@ -138,6 +177,15 @@ for all required headers. Only then does the generated paid facade replace that
 operation's additional backend authentication with native x402. The package
 records the selected alternative, source server, public server and references.
 
+The public description is a single-line summary; multiline source descriptions
+are preserved in the original document. Request examples annotate only the
+generated operation. OpenAPI 3.1 discriminator hints are removed from compiled
+JSON Schema, with every `oneOf`, `anyOf`, `allOf` and assertion retained: the
+[OpenAPI specification](https://spec.openapis.org/oas/v3.1.1.html#discriminator-object)
+defines the discriminator as a hint that cannot change validation results. The
+original source and generated facade keep it. Unsupported assertion keywords
+still produce the original validator's error.
+
 Cookie/query authentication, OAuth/OIDC, custom header parameter schemas,
 unsupported HTTP methods, unresolved server variables and unsupported schema
 features use the original trusted-handler integration. The workspace reports
@@ -154,19 +202,35 @@ Each save creates a new directory; an existing name is never overwritten.
 | facade-openapi.json | Generated public paid API description |
 | selections.json | Original SF61 operation/payment inputs |
 | route-bindings.json | Original route-to-handler bindings |
-| upstreams.json | Original SF30 configuration with environment references |
+| upstreams.json | Original SF30 configuration, environment references and selected response contracts |
+| operator-cases.json | Explicit public samples in the original SF96 route-check format |
 | compiled/ | Actual original offers, seller service and compiler manifest |
 | merchant-package.json | File hashes and explicit source transformations |
 | support/ | Private original support-workflow output |
 | RUN.md | Exact shell command and route summary |
 
-Reopening verifies the prepared file hashes. Save changed input under a new
+Reopening verifies the prepared file and route-case hashes. Save changed input under a new
 name. SF82 separately snapshots bindings, reloads environment credentials on
 restart, and retains the compiled offer identity.
 
 RUN.md supplies the SF96 command to run without this workspace. Adjust its
 absolute paths when moving the package; use the full source checkout on the
 destination. Stop an existing runtime before launching the same package again.
+It also supplies the original SF96 route-check command with the saved cases.
+Earlier v1 packages without `operator-cases.json` remain readable.
+
+### Importing a real described API
+
+The first-party [Nansen Smart Alerts documentation](https://docs.nansen.ai/api/smart-alerts)
+includes OpenAPI 3.1 descriptions for POST and PATCH `/api/v1/smart-alert`, with
+local references, nested channel compositions, required body fields and JSON
+responses. Use the retrieved JSON operation description as the source, select
+its declared `https://api.nansen.ai` backend, and map `apikey` to an environment
+name such as `NANSEN_API_KEY`. Supply public request examples matching that
+operation's original schema. The workspace preserves the source, its API path,
+backend header mapping and response contract through compilation and save/reopen.
+Preparation is offline. A locally valid request sample does not establish that
+the provider's business rules accept it or that its account is configured.
 
 ## Headless integration
 

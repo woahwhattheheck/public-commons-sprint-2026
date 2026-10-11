@@ -9,6 +9,7 @@ import { compileAvailabilityPolicy, protectUpstream } from './upstream-readiness
 import { compileResponseContract } from './response-contract.mjs';
 import { compileUpstreamIdempotency, configuredUpstreamIdempotency } from './upstream-idempotency-config.mjs';
 import { supportsSellerMethod } from './http-methods.mjs';
+import { createUpstreamOperationControl } from './upstream-operation-control.mjs';
 import { compileUpstreamCache, createConfiguredCachedUpstream } from './response-cache/config.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
@@ -215,6 +216,7 @@ export function createUpstreamApplication(config,bindings,options={}) {
     route.admit = name;
   }
   return {config:service,handlers:Object.freeze(handlers),
+    operationControl:createUpstreamOperationControl(compiled,originals),
     invalidateCache:name => {
       if (name !== undefined && !caches.has(name)) bad('Unknown cached upstream binding');
       return Object.fromEntries([...caches].filter(([id]) => name === undefined || id === name).map(([id,cache]) => [id,cache.invalidate()]));
