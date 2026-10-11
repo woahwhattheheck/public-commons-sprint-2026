@@ -12,6 +12,42 @@ const elem = (tag, className = '', content) => {
 const show = (value, fallback = 'Not declared') => typeof value === 'string' && value.trim() ? value : fallback;
 const short = (s, n=500) => show(s).slice(0,n);
 
+// Operations are display classifications, not authorization to invoke sellers.
+function operationKey(row) {
+  if (String(row.kind ?? '').toLowerCase().includes('mcp')) return 'MCP';
+  const method = String(row.method ?? '').toUpperCase();
+  if (['GET', 'POST', 'HEAD'].includes(method)) return method;
+  return method ? 'OTHER' : 'UNDECLARED';
+}
+
+function sourceBoundHandoff(row) {
+  const source = state.data?.sources?.find(item => item.provider === row.source);
+  const parts = [
+    'STELLAR FORGE SF71 · SOURCE-BOUND OFFER HANDOFF',
+    'Status: advertised native listing only; NOT a payable quote, seller consent, payment or settlement receipt.',
+    'Provider: ' + show(source?.name ?? row.source),
+    'Source endpoint: ' + show(source?.endpoint),
+    'Captured at (UTC): ' + show(source?.observedAt ?? state.data?.observedAt),
+    'Provider row: ' + row.sourceRow,
+    'Resource URL (not fetched): ' + show(row.url),
+    'Operation class: ' + operationKey(row),
+    'Declared HTTP method: ' + show(row.method),
+    'Declared input type: ' + show(row.kind),
+    'Declared tool: ' + show(row.toolName),
+    'Declared route template: ' + show(row.routeTemplate),
+    'Advertised indivisible payment options (not seller-confirmed):',
+  ];
+  for (const [i, option] of row.paymentOptions.entries()) {
+    parts.push('  #' + (i + 1) + ': network=' + show(option.network) +
+      ' | scheme=' + show(option.scheme) + ' | asset=' + show(option.asset) +
+      ' | payTo=' + show(option.payTo) + ' | amountAtomic=' + show(option.amount));
+  }
+  if (!row.paymentOptions.length) parts.push('  None displayed.');
+  if (row.hiddenPaymentOptions) parts.push('  Additional undisplayed options: ' + row.hiddenPaymentOptions);
+  parts.push('Handoff: confirm merchant authority, current original 402 and selected offer terms before buyer approval or signing.');
+  return parts.join('\n');
+}
+
 function renderSource(source) {
   const isAvailable = source.status === 'COMPLETE_GET_CAPTURE';
   const card = elem('article','source '+(isAvailable?'okay':'failed'));
@@ -51,14 +87,29 @@ function renderListing(listing) {
   card.append(elem('h3','',short(listing.label,200)));
   if (listing.description) card.append(elem('p','description',short(listing.description)));
   detail(card,'Resource URL (not invoked)',listing.url);
-  if (listing.method) detail(card,'HTTP method',listing.method);
-  if (listing.kind) detail(card,'Type',listing.kind);
+  detail(card,'Declared operation',operationKey(listing));
+  detail(card,'HTTP method',show(listing.method));
+  detail(card,'Input type',show(listing.kind));
+  if (listing.routeTemplate) detail(card,'Route template',listing.routeTemplate);
   if (listing.toolName) detail(card,'MCP tool',listing.toolName);
   const section=elem('div','options');
   section.append(elem('h4','options-title',listing.paymentOptions.length+' observed payment option(s)'));
   for (const [index,option] of listing.paymentOptions.entries()) section.append(renderPayment(option,index));
   if (listing.hiddenPaymentOptions) section.append(elem('p','warning','Additional options not displayed: '+listing.hiddenPaymentOptions));
   card.append(section);
+  const actions = elem('div','listing-actions');
+  const copy = elem('button','copy-offer','Copy source-bound offer handoff');
+  copy.type = 'button';
+  copy.title = 'Copy the observed provider listing for merchant review. No seller request or payment occurs.';
+  copy.addEventListener('click',async () => {
+    if (!navigator.clipboard?.writeText) { copy.textContent = 'Clipboard unavailable'; return; }
+    try {
+      await navigator.clipboard.writeText(sourceBoundHandoff(listing));
+      copy.textContent = 'Source-bound handoff copied';
+    } catch { copy.textContent = 'Clipboard unavailable'; }
+  });
+  actions.append(copy);
+  card.append(actions);
   return card;
 }
 
@@ -66,9 +117,12 @@ function renderListings() {
   if (!state.data) return;
   const q=$('query').value.trim().toLocaleLowerCase();
   const source=$('provider').value;
+  const operation=$('operation').value;
   const visible=state.data.listings.filter(row =>
     (!source || row.source===source) &&
-    (!q || [row.label,row.url,row.description,row.kind,row.toolName].some(x=>String(x??'').toLocaleLowerCase().includes(q))));
+    (!operation || operationKey(row)===operation) &&
+    (!q || [row.label,row.url,row.description,row.kind,row.method,row.toolName,row.routeTemplate]
+      .some(x=>String(x??'').toLocaleLowerCase().includes(q))));
   $('matches').textContent=visible.length+' of '+state.data.listings.length+' native source rows match filters; separate provider observations are not merged.';
   results.replaceChildren();
   if (!visible.length) {
@@ -112,5 +166,6 @@ async function load() {
 $('filters').addEventListener('submit',e=>e.preventDefault());
 $('query').addEventListener('input',renderListings);
 $('provider').addEventListener('change',renderListings);
+$('operation').addEventListener('change',renderListings);
 $('refresh').addEventListener('click',load);
 load();
