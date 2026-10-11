@@ -14,6 +14,9 @@ node destinations/cli.mjs events --workspace /private/destinations --id accounti
 node destinations/cli.mjs requeue --workspace /private/destinations --id accounting --event ORIGINAL_EVENT_ID --revision 1 --delivery-revision ORIGINAL_DELIVERY_REVISION
 node destinations/cli.mjs run --workspace /private/destinations [--limit 20 --concurrency 1 --destination-concurrency 4 --timeout-ms 7000 --poll-ms 5000]
 node destinations/cli.mjs stop|handoff --workspace /private/destinations
+node destinations/cli.mjs export --workspace /private/destinations --to /private/portable-destinations
+node destinations/cli.mjs inspect --workspace /private/portable-destinations
+node destinations/cli.mjs receive --workspace /private/received --from /private/portable-destinations --fingerprint SHA256
 node destinations/cli.mjs serve --workspace /private/destinations [--source /private/sf98-outbox --port 8478]
 
 Enrollment copies no events and sends no request. Select history "all" or "new" in the private enrollment file.
@@ -25,7 +28,7 @@ const allowed = {
   drain: ['--id', '--limit', '--concurrency', '--destination-concurrency', '--timeout-ms'],
   pause: ['--id', '--revision'], resume: ['--id', '--revision'],
   events: ['--id', '--state', '--offset', '--limit'], requeue: ['--id', '--event', '--revision', '--delivery-revision'],
-  run: ['--limit', '--concurrency', '--destination-concurrency', '--timeout-ms', '--poll-ms'], stop: [], handoff: [], serve: ['--source', '--port'],
+  run: ['--limit', '--concurrency', '--destination-concurrency', '--timeout-ms', '--poll-ms'], stop: [], handoff: [], export: ['--to'], inspect: [], receive: ['--from', '--fingerprint'], serve: ['--source', '--port'],
 };
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['help', '-h', '--help'].includes(args[0])) {
@@ -54,6 +57,13 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify({ url: session.url, directory, sourceDirectory: session.model.sourceDirectory }) + '\n');
     const stop = async () => { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); await session.close(); };
     process.on('SIGINT', stop); process.on('SIGTERM', stop); return session;
+  }
+  if (['export', 'inspect', 'receive'].includes(command)) {
+    const { exportDestinationWorkspace, inspectDestinationExchange, receiveDestinationExchange } = await import('./exchange.mjs');
+    const result = command === 'export' ? await exportDestinationWorkspace(directory, required('--to')) :
+      command === 'inspect' ? await inspectDestinationExchange(directory) :
+      await receiveDestinationExchange(required('--from'), directory, required('--fingerprint'));
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
   const model = await openDestinationWorkspace({ directory,
     sourceDirectory: command === 'init' ? required('--source') : undefined });
