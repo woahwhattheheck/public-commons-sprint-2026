@@ -36,6 +36,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
+  cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Prepare and operate a merchant from its API contract
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
   commerce-console                           Browser workspace for a prepared commerce session
