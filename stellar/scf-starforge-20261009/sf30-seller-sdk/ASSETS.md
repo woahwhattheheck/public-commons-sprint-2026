@@ -10,6 +10,35 @@ SHA-256, and retained as an immutable snapshot. The paid response contains the
 original bytes, an attachment filename, the configured MIME type and its digest.
 Editing the source file cannot change an already-running product.
 
+## Installed package
+
+After installing the generated merchant distribution archive, the same original
+commands are available without a repository checkout:
+
+```sh
+npx --no-install starforge assets inspect --file /private/export.zip --type application/zip
+npx --no-install starforge assets bundle --config /private/seller.json --out /private/release
+npx --no-install starforge assets verify --directory /private/release
+npx --no-install starforge assets catalog --directory /private/release --out /private/catalog.json
+npx --no-install starforge seller --config /private/release/seller.json
+npx --no-install starforge buyer --prepare --discovery /private/catalog.json --row 0 --accept 0 --intent-id export-v1 --url https://files.example/exports/october-v1.zip --method GET --out /private/review.json --response-out /private/purchased.zip
+npx --no-install starforge buyer --review --config /private/review.json
+```
+
+Use your own authorized source file, payment terms and matching public URL as
+explained below. These aliases pass arguments unchanged to the existing modules;
+`--facilitator` and ordinary trusted buyer execution configuration remain explicit.
+They do not download a package, provision a wallet or make a payment automatically.
+The catalog command writes a local file; it does not publish seller content.
+
+For JavaScript applications, the package exposes `./seller/assets` and
+`./seller/asset-bundles` as direct subpaths of `@tokenjunkielabs/starforge-merchant`.
+Its existing typed `./buyer/response-file` export includes
+`BuyerResponseFileIntegrity`, `validateResponseFileIntegrity`, the three optional
+expected-content fields, `SavedBuyerResponse.verifiedAgainst` and the original
+optional `objectMetadata`. The TypeScript types describe the same response writer;
+they do not introduce another download or payment implementation.
+
 ## Prepare the product
 
 Run from a full repository checkout with Node 22 or later. These commands require
@@ -139,6 +168,67 @@ application admission runs after these checks under the same cancellation and
 timeout. Partial transfers, 304 cache responses and resumable purchases are not
 implemented. The challenge-only mode continues to issue its ordinary 402.
 
+## Give buyers a catalog, not the private release
+
+Export only native offers and the release's public product metadata:
+
+```sh
+node "$SDK/asset-cli.mjs" catalog \
+  --directory /srv/private/export-release --out /srv/private/export-catalog.json
+```
+
+The command verifies the bundle's actual bytes and uses those same immutable
+snapshots to build the catalog. It requires a configured public HTTPS origin and
+exports GET products only, not paid HEAD routes. The create-only JSON file
+contains native `resources`, original payment terms and a
+`stellar-forge-asset` extension with the file digest, byte length, MIME type and
+download name. It includes **no paid file bytes, local paths, wallet settings or
+private operator configuration**. The full release directory remains private.
+Review merchant-controlled descriptions and product metadata before sharing the
+catalog through the normal commercial channel; export itself sends nothing.
+
+On the buyer side, use the **existing SF88 CLI**, not another payment program:
+
+```sh
+BUYER=stellar/scf-starforge-20261009/sf88-operator-buyer-cli
+node "$BUYER/cli.mjs" --prepare \
+  --discovery /private/export-catalog.json --row 0 --accept 0 \
+  --intent-id october-export-v1 --url https://files.example/exports/october-v1.zip \
+  --method GET --out /private/review.json --response-out /private/october.zip
+node "$BUYER/cli.mjs" --review --config /private/review.json
+```
+
+The resource URL, row, accepted payment option, stable intent and local output
+path are explicit selections. For a file product, preparation requires the exact
+advertised URL and an explicit output; it never turns the merchant's filename
+into a local path. The prepared config pins `expectedSha256`, `expectedBytes`
+and `expectedContentType` in its original `responseFile` section. The review
+shows those pins and the original payment terms. A catalog is unverified seller
+information, not seller authentication or payment authorization.
+
+Add the existing trusted operator, signer, ledger and evidence-directory
+configuration as described in the original SF88 guide, then use its ordinary
+`--execute --config /private/review.json` operation. No new signer, ledger,
+approval protocol or automatic retry is added by the file workflow.
+
+The ORIGINAL response writer checks MIME type, actual streamed byte count and
+SHA-256 against the locally selected pins **before** atomically publishing the
+buyer's chosen destination. It ignores a response's claimed digest when
+performing this check. Compression is measured as the bytes Fetch actually
+exposes. MIME matching is case-insensitive for the type/subtype and ignores
+optional parameters. A mismatch leaves no completed destination; nonempty
+partial content stays private for reconciliation under the existing failure
+report. A paid transfer may already have settled when a download fails: do not
+repeat payment automatically.
+
+A successful saved result includes `verifiedAgainst` with the pins actually
+checked. Existing buyers without pins keep their prior behavior. The writer
+also preserves optional `objectMetadata` from `content-range`,
+`x-content-sha256`, `x-sf30-object-snapshot` and `x-sf30-object-bytes` as raw
+strings/null for the original large-object acquisition consumer. This metadata
+is omitted when all four headers are absent; it does not validate an object
+plan, range, snapshot, or settlement on its own.
+
 ## Limits and releases
 
 `maxResponseBytes` retains the old 1 MiB default and can be set through the JSON
@@ -167,6 +257,7 @@ Focused local exercise:
 node --test "$SDK/test/assets.test.mjs"
 ```
 
-The three flows cover portable packaging/immutable delivery, startup/admission
-rules and the original HTTP resource adapter with controlled native-server
-outcomes. They do not stand in for SDK cryptography or an on-chain transaction.
+The four flows cover portable packaging/immutable delivery, startup/admission
+rules, the original HTTP resource adapter with controlled native-server
+outcomes, and catalog → original buyer preparation → pinned local HTTP download.
+They do not stand in for SDK cryptography or an on-chain transaction.

@@ -33,6 +33,18 @@ state. Supplying `--workspace` when exporting adds the concrete finalization
 command for each attempted intent. Report export reads no keys and executes no
 accounting. After finalization, the saved workspace is available to later exports.
 
+The maintained Python host and inbox share the original
+`finalizeOriginalAttempt()` export from `finalization.mjs`. The trusted caller
+supplies its existing private `configurationPath`, `configSha256`, `intentId`,
+canonical `evidencePath`, `bodySha256` (null for an absent body), `bodyBytes`,
+`attemptStartedAt`, and `workspace`; `outbox`, `merchantRoute` and `signal` are
+optional. It must validate and retain its original attempt record before calling.
+The shared core checks those facts against the original config, approved request,
+evidence and SF36 ledger without creating a queue job. It returns `result`,
+`approvedRequestSha256`, `evidencePath`, `evidenceSha256`, `workspace` and
+`completedAt`. The inbox wrapper adds only its original attempt identity and
+saved accounting view, including prior successful finalization after restart.
+
 ## Original operation and custody
 
 The queue's private execution snapshot identifies the original operator, ledger,
@@ -44,8 +56,9 @@ prevents evidence replacement between those steps from selecting another request
 
 `openWorkspace(..., {accounting:true})` uses the original protected key loader
 without invoking signer prerequisites, loading a wallet provider or accessing
-its secret variable. Only the three original SF36 keys enter the Python worker
-environment. Its separate Node observer receives no operator keys. A later
+its secret variable. The three original SF36 keys enter the Python worker
+environment; an explicitly configured proxy contributes only its validated,
+credential-free endpoint. Its separate Node observer receives no operator keys. A later
 reduction in the workspace's new-spending cap does not erase an earlier reservation.
 
 The observer uses the workspace's explicitly configured testnet RPC. Supported
@@ -54,11 +67,31 @@ providers are SDF and Gateway, both in the [Stellar provider directory](https://
 - `https://soroban-testnet.stellar.org`
 - `https://soroban-rpc.testnet.stellar.gateway.fm`
 
+Equivalent root URLs with an optional trailing slash normalize to the same
+provider origin. Credentials, additional paths, queries and fragments are rejected.
+
 The selected provider must return the canonical testnet passphrase before its
 transaction and native transfer events are read. The observation retains that
 endpoint. There is no automatic provider fallback, seller-selected RPC or loopback
 finalization. The original official SDK decoder also supports the maintained
 buyer's local pinned installation.
+
+If the workspace already selects `buyerTransport`, finalization uses that same
+explicit fixed proxy or named environment source. It compares the queued and
+workspace profiles and resolves the current endpoint before starting the worker.
+No extra inbox command flag is needed. A managed cloud may change its proxy port
+between commands; the saved environment name remains stable and the next
+invocation resolves its current value. Missing or invalid selected proxy values
+fail without changing the original accounting ledger.
+
+The credential-free endpoint travels through a private worker environment value
+and then the original observer's private JSON pipe. The resolved environment value
+is absent from process arguments, saved workspaces, finalization reports and output.
+An existing fixed proxy profile remains the operator's original configuration. The observer creates
+a separate original SF31 CONNECT transport pinned only to the already selected
+public RPC origin, retaining original SF85 TLS verification. Merchant headers,
+tickets and wallet data never enter that connection. The default continues to
+use the original direct RPC transport; no proxy or provider is selected implicitly.
 
 ## Outcomes and restart
 

@@ -48,6 +48,15 @@
           <div id="preview-area" hidden><div class="preview-heading"><strong id="preview-title">Response preview</strong><span id="preview-size" class="muted"></span></div><pre id="preview-text" tabindex="0"></pre></div>
           <details id="outcome-details" hidden><summary>Operation details</summary><pre id="outcome-json"></pre></details>
         </section>
+        <section id="product-panel" class="panel" aria-labelledby="product-heading" hidden>
+          <div class="panel-heading"><div><span class="eyebrow">04 · Purchased file</span><h2 id="product-heading">Retrieve the promised file</h2></div><span id="product-state" class="badge">Not retrieved</span></div>
+          <p id="product-note" class="help">The merchant handoff identifies the exact file for this prepared operation.</p>
+          <dl id="product-facts" class="facts"></dl>
+          <div class="action-row"><button id="product-retrieve" class="primary-button" type="button" disabled>Retrieve entitled file</button><button id="product-preview" type="button" disabled>Preview file</button><button id="product-download" type="button" disabled>Download file</button></div>
+          <p id="product-result" class="help" role="status" aria-live="polite"></p>
+          <div id="product-preview-area" hidden><div class="preview-heading"><strong>File preview</strong><span id="product-preview-size" class="muted"></span></div><pre id="product-preview-text" tabindex="0"></pre></div>
+          <details><summary>Original request, evidence and file association</summary><dl id="product-binding" class="facts compact"></dl><p id="product-evidence-note" class="help"></p></details>
+        </section>
       </div>
 
       <aside class="sidebar">

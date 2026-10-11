@@ -11,6 +11,12 @@ local directory and the merchant's existing backend. No additional npm package,
 wallet implementation or hosted CI is needed. Issuance, status and recovery make
 no network request or payment.
 
+The original [merchant operations console](operations/MERCHANT_OPERATIONS.md)
+provides stored-operation browse, current detail, original audit history and
+opt-in recovery through this same ledger. Start the original operations launcher
+with `--upstream --operation-controls`; it prints a private capability URL for
+exact-generation reconciliation. The CLI below remains available.
+
 ## Configure the existing seller
 
 Add `idempotency` to an original upstream binding:
@@ -85,7 +91,9 @@ the configured ticket admission with optional `availability`. It clones the
 seller config, installs the composed admission under an internal export, and
 preserves `validateInput:true`. In a custom embedding, pass both its returned
 `config` and `handlers` to the original `startSellerService()`; attach its
-`snapshot` as the session's `upstreamSnapshot` for the existing operations view.
+`snapshot` as the session's `upstreamSnapshot` for the existing operations view,
+and its `operationControl` as the session's `operationControl` for merchant
+operation browse and reconciliation.
 The lower-level `createUpstreamHandlers()` still exports the configured admission
 name for original `serve.mjs` integrations.
 
@@ -144,11 +152,30 @@ conflicts even if the merchant issues a second valid ticket for it. The ticket
 is not forwarded upstream; the transport sends only the stable `sf30_...` backend
 key through the configured backend header, alongside original backend credentials.
 
-Existing native HTTP clients can carry the ticket as an ordinary merchant header.
-The programmatic SF31 client supports ordinary request headers; the narrower
-SF88 configuration currently admits only Content-Type/Accept and does not yet
-provide an operation-ticket field. Do not place a ticket in a URL or reinterpret
-it as `PAYMENT-SIGNATURE`.
+The original SF88 buyer now imports this ticket through a private
+`operation.ticketFile`. Its `--prepare --ticket-file` option takes the received
+file; `--ticket-header` selects the merchant's configured header when it differs
+from the default `x-merchant-operation`. The corresponding optional config field
+is `operation.ticketHeader`. Follow the maintained
+[SF88 merchant-ticket workflow](../sf88-operator-buyer-cli/OPERATION_TICKETS.md)
+for preparation, review, workspace import and queued execution.
+
+The buyer's `--body-file` contains the HTTP JSON body alone, such as
+`{"sku":"item-17","quantity":2}` above. It does not contain the issuer's larger
+method/URL/path/header/body description. The real source URL, query order, body
+and merchant-forwarded headers must match the issued request.
+
+SF88 keeps the received file private, copies its exact bytes into the existing
+workspace and queue, and passes its bearer through the original SF31 ordinary
+request-header path on the unsigned request and approved paid retry. Review and
+queue output show only ticket metadata. The merchant HMAC key remains with the
+merchant. Do not place the ticket in a URL or reinterpret it as
+`PAYMENT-SIGNATURE`.
+
+Use the buyer's reviewed `operationKey` to find the same record in the
+[merchant operations console](operations/MERCHANT_OPERATIONS.md#join-the-original-buyer-workflow).
+Keep its original buyer intent and payment evidence when reconciling a result;
+merchant operation recovery does not authorize another paid retry.
 
 ## Execution and recovery
 
@@ -262,7 +289,8 @@ await handler.idempotency.close();        // after the embedding has stopped req
 ```
 
 The public handler signature is unchanged. `.snapshot()` adds in-memory operation
-counts; `.idempotency` exposes offline issue/status/recovery/close. Source lives in
+counts; `.idempotency` exposes offline issue/status/recovery/close plus bounded
+metadata `list()` and original ledger `audit()` reads. Source lives in
 the original upstream product: durable engine, JSON compiler, CLI and merchant
 example. Existing SF30 lifecycle, SF89, SF98 delivery and payment modules are
 reused without copied implementations.

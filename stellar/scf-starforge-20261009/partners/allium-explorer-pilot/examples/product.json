@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.allium-explorer.v1",
+  "queryId": "REPLACE_WITH_APPROVED_SAVED_QUERY_ID",
+  "parameters": {"window_start":"2026-10-01", "window_end":"2026-10-02"},
+  "apiKeyEnv": "ALLIUM_API_KEY",
+  "origin": "https://api.allium.so",
+  "name": "Approved Stellar transaction snapshot",
+  "sourceTable": "stellar.raw.transactions_v2",
+  "columns": {
+    "transaction_hash": {"source":"transaction_hash","type":"string"},
+    "source_account": {"source":"source_account","type":"string"},
+    "ledger_sequence": {"source":"ledger_sequence","type":"integer"},
+    "ledger_close_time": {"source":"ledger_close_time","type":"string"},
+    "successful": {"source":"successful","type":"boolean"},
+    "fee_charged_stroops": {"source":"fee_charged_stroops","type":"string"},
+    "operation_count": {"source":"operation_count","type":"integer"}
+  },
+  "filters": ["transaction_hash", "source_account", "successful"],
+  "ranges": ["ledger_sequence", "ledger_close_time"],
+  "sorts": ["ledger_sequence", "ledger_close_time"],
+  "defaultLimit": 25,
+  "maxLimit": 100,
+  "maxRows": 10000,
+  "maxResponseBytes": 1048576,
+  "timeoutMs": 15000
+}
