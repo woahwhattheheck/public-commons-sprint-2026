@@ -25,6 +25,7 @@ const types = { 'seller-client.mjs': 'text/javascript', 'seller-client.d.mts': '
   [CLIENT_EXPORT_MANIFEST]: 'application/json' };
 const USAGE = `Usage:
   node client-export.mjs --openapi SAVED_SELLER_OPENAPI.json --out NEW_DIRECTORY
+  node client-export.mjs python --help
   node client-export.mjs status --dir RETAINED_DIRECTORY
   node client-export.mjs adopt --dir RETAINED_DIRECTORY --expected-files-sha256 INSPECTED_DIGEST`;
 
@@ -222,6 +223,7 @@ export async function exportSellerClient({ openapi, out, provenance: suppliedPro
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'python') return (await import('./python-client/export.mjs')).main(args.slice(1));
   if (args.length === 1 && args[0] === '--help') { process.stdout.write(USAGE + '\n'); return null; }
   const command = ['status', 'adopt'].includes(args[0]) ? args[0] : 'export';
   if (command !== 'export') args = args.slice(1);

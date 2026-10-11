@@ -1,0 +1,17 @@
+{
+  "collection": "daily",
+  "locationIds": [
+    "USGS-01646500"
+  ],
+  "parameterCodes": [
+    "00060"
+  ],
+  "statisticIds": [
+    "00003"
+  ],
+  "time": {
+    "start": "2026-10-01",
+    "end": "2026-10-07"
+  },
+  "limit": 2
+}

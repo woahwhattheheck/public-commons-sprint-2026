@@ -33,13 +33,17 @@ function coerce(value, spec, label) {
 // Incremental CSV parser: quoted delimiters/newlines, escaped quotes, CRLF/LF/CR,
 // and a final record without a newline. No eval, regex query engine, or dependencies.
 function csvParser(onRecord, maxCellChars) {
-  let row = [], cell = '', mode = 0, started = false, skipLF = false, first = true;
+  let row = [], cell = [], chunks = [], cellChars = 0, mode = 0, started = false, skipLF = false, first = true;
   const append = c => {
-    cell += c; started = true;
-    if (cell.length > maxCellChars) throw new RangeError('CSV cell exceeds maxCellChars');
+    cellChars += c.length; started = true;
+    if (cellChars > maxCellChars) throw new RangeError('CSV cell exceeds maxCellChars');
+    cell.push(c);
+    // Bound temporary character references and retain flat strings between fields.
+    if (cell.length === 2048) { chunks.push(cell.join('')); cell = []; }
   };
   const field = () => {
-    row.push(cell); cell = ''; mode = 0; started = false;
+    if (cell.length) chunks.push(cell.join(''));
+    row.push(chunks.join('')); cell = []; chunks = []; cellChars = 0; mode = 0; started = false;
     if (row.length > 256) throw new RangeError('CSV exceeds 256 columns');
   };
   const record = () => { field(); onRecord(row); row = []; };
@@ -64,10 +68,13 @@ function csvParser(onRecord, maxCellChars) {
     },
     end() {
       if (mode === 1) throw new TypeError('CSV contains an unterminated quoted field');
-      if (started || cell.length || row.length || mode === 2) record();
+      if (started || cellChars || row.length || mode === 2) record();
     },
   };
 }
+
+// The SFTP source uses this same record parser before its reviewed projection.
+export { csvParser as createCsvRecordParser };
 
 /** Load one immutable snapshot. Only declared columns are retained and exposed. */
 export async function loadCsvDataset({ file, name, columns, filters = [], ranges = [], sorts = [],

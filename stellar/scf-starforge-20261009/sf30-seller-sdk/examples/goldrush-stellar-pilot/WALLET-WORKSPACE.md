@@ -8,10 +8,12 @@ The interface uses plain grayscale panels and tables. Token quantities, transact
 
 Use Node 22.16 or newer and this source tree, or a merchant distribution containing this example and the original SF88 runtime. Build the provider release with the existing commands in [README.md](README.md). Keep its original generated customer client.
 
+The maintained distribution registers this original command as `starforge goldrush workbench`; it can be invoked from any working directory. Use `npx --no-install starforge` when the package is installed only in the current Node application. From a source checkout, the equivalent command is `node customer.mjs workbench` in this example directory. `starforge goldrush-merchant` supplies the original discover/prepare/inspect release workflow.
+
 Use a private directory for application state and the existing operator workspace when execution is required:
 
 ~~~sh
-node customer.mjs workbench \
+starforge goldrush workbench \
   --state /absolute/private/goldrush-wallet \
   --release /absolute/provider-release \
   --buyer-state /absolute/private/goldrush-buyer \
@@ -28,7 +30,7 @@ When the original runtime resides in another installed source tree, add --source
 Stop with Ctrl-C. Reopen the same work with:
 
 ~~~sh
-node customer.mjs workbench --state /absolute/private/goldrush-wallet
+starforge goldrush workbench --state /absolute/private/goldrush-wallet
 ~~~
 
 Repeat --source-root when using a separate installed runtime. --port 8242 selects a stable local port if browser form drafts should survive process restarts at the same origin. Durable requests, the selected resource, saved notes and revisions are retained independently of browser storage.
@@ -106,3 +108,7 @@ The retained source contracts and catalog are in this example's source directory
 - [GoldRush token balance API](https://goldrush.dev/docs/api-reference/foundational-api/balances/get-token-balances-for-address)
 - [GoldRush ERC20 transfer API](https://goldrush.dev/docs/api-reference/foundational-api/balances/get-erc20-token-transfers-for-address)
 - [GoldRush x402 discovery](https://x402.goldrush.dev/v1/x402/endpoints)
+
+## Installed application entry
+
+The package export `@tokenjunkielabs/starforge-merchant/buyer/goldrush/workspace` exposes the original `main(args)` opening function and `openWorkbench` for an existing private server. The root package also exports `startGoldRushWorkspace`, which is that same `main` function. Pass the original CLI argument array; for an initialized workspace, `await startGoldRushWorkspace(['--state', '/absolute/private/goldrush-wallet'])` returns `{app, listener, url, close}`. Keep that returned application alive for the operator and call `await close()` during host shutdown. Initial creation uses the same release, buyer-state, inbox and optional original operator arguments shown above. This API does not prepare or execute a request by opening.

@@ -228,6 +228,22 @@ const selected = await inspectInstalledRuntime({
 });
 ```
 
+## Operate the managed release in this workspace
+
+**Managed releases** opens the original SF46 home directly in this application.
+Register an existing home or a new directory, review a READY runtime's source,
+profile and dependency lock, and adopt it through the original runtime attachment.
+Later adoptions are staged for the original activation and rollback controls.
+
+The same view provides source inspection, the original dependency doctor,
+configuration files, the original merchant initializer and native command catalog.
+Native command output and process identity stay in the existing operation journal;
+reopen the server to continue observing or stop that original command. Configuration
+and merchant state stay under the original home during release changes.
+
+See [Managed release operations](MANAGED_OPERATIONS.md) for the complete browser
+and headless workflow, retained selection guards, configuration saves and recovery.
+
 ## Application API and retained records
 
 The workspace model and server can be embedded in another local operator tool:
