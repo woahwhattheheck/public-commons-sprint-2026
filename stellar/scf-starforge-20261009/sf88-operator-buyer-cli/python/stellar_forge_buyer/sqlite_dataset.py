@@ -341,40 +341,44 @@ class DatasetDatabase:
             raise StateError("DATASET_SQL_TRANSACTION_REQUIRED")
         if not isinstance(sql, str) or type(max_rows) is not int or not 1 <= max_rows <= 100_000 or type(max_result_bytes) is not int or not 1 <= max_result_bytes <= 256 * 1024 * 1024 or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= 300:
             raise StateError("DATASET_SQL_QUERY_OPTIONS_INVALID")
-        permitted = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_RECURSIVE}
-        tables = set()
-        def authorize(action, first, second, database, trigger):
-            if action not in permitted or action == sqlite3.SQLITE_FUNCTION and (second or first or "").lower() in {"load_extension", "writefile", "readfile"}:
-                return sqlite3.SQLITE_DENY
-            if action == sqlite3.SQLITE_READ and first:
-                tables.add(first)
-            return sqlite3.SQLITE_OK
-        views = self._views(db)
-        if expected_views is not None and (not isinstance(expected_views, list) or views != expected_views):
-            raise StateError("DATASET_SQL_VIEWS_CHANGED")
-        deadline = time.monotonic() + timeout
-        previous_length = db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, 16 * 1024 * 1024)
-        db.set_authorizer(authorize)
-        db.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
+        from .query_stream import open_query, row_bytes
         try:
-            cursor = db.execute(sql, parameters)
-            columns = tuple(column[0] for column in cursor.description or ())
-            rows, size, truncated = [], 0, False
-            for row in cursor:
-                values = tuple(row)
-                row_bytes = sum(len(value.encode("utf-8")) if isinstance(value, str) else len(value) if isinstance(value, bytes) else 8 for value in values)
-                if len(rows) == max_rows or size + row_bytes > max_result_bytes:
-                    truncated = True
-                    break
-                rows.append(values)
-                size += row_bytes
-            return QueryResult(columns, tuple(rows), truncated, tuple(views), tuple(sorted(tables)))
-        except sqlite3.Error as exc:
-            raise StateError("DATASET_SQL_QUERY_FAILED") from exc
-        finally:
-            db.set_authorizer(None)
-            db.set_progress_handler(None, 0)
-            db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, previous_length)
+            with open_query(self, db, sql, parameters, timeout=timeout,
+                            expected_views=expected_views) as stream:
+                rows, size, truncated = [], 0, False
+                for values in stream:
+                    length = row_bytes(values)
+                    if len(rows) == max_rows or size + length > max_result_bytes:
+                        truncated = True
+                        break
+                    rows.append(values)
+                    size += length
+                return QueryResult(stream.columns, tuple(rows), truncated,
+                                   tuple(stream.views), stream.read_tables)
+        except StateError as exc:
+            # Keep the existing preview/report error contract.
+            if exc.code == "DATASET_SQL_QUERY_TIMEOUT":
+                raise StateError("DATASET_SQL_QUERY_FAILED") from exc
+            raise
+
+    @contextmanager
+    def stream_query(self, sql, parameters=(), *, timeout=300, expected_views=None, cancel=None):
+        """Yield every row from one reviewed snapshot without materializing it.
+
+        Use as a context manager so an early break closes the cursor and read
+        transaction. cancel is an optional callable such as Event.is_set.
+        """
+        from .query_stream import open_query
+        with self._connection(readonly=True) as db:
+            db.execute("BEGIN")
+            with open_query(self, db, sql, parameters, timeout=timeout,
+                            expected_views=expected_views, cancel=cancel) as stream:
+                yield stream
+
+    def export_query(self, sql, parameters=(), *, destination, **options):
+        """Write a complete private JSONL/CSV/SQLite result from the same reader."""
+        from .query_export import export_query
+        return export_query(self, sql, parameters, destination=destination, **options)
 
     def backup(self, destination):
         """Publish a consistent, create-only database copy that reopens normally."""
