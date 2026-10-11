@@ -5,7 +5,7 @@ import { bindPostgresSeller } from './bindings.mjs';
 
 export async function startPostgresMerchant({ source, config, bindings, port = 8423,
   nativeFactory = null, maxInFlight = 64, drainGraceMs = 60000, operationsPort = null,
-  availabilityDirectory } = {}) {
+  availabilityDirectory, navigationOrigin = null } = {}) {
   if (!source || typeof source.route !== 'function' || !config || !bindings ||
       typeof bindings !== 'object' || Array.isArray(bindings) || !Object.keys(bindings).length)
     throw new TypeError('POSTGRES_MERCHANT_BINDINGS_REQUIRED');
@@ -18,7 +18,7 @@ export async function startPostgresMerchant({ source, config, bindings, port = 8
   const session = await startSellerService({ config: service, handlers, port, nativeFactory, maxInFlight,
     drainGraceMs, availabilityDirectory });
   let operations;
-  try { if (operationsPort !== null) operations = await startSellerOperations(session, { port: operationsPort }); }
+  try { if (operationsPort !== null) operations = await startSellerOperations(session, { port: operationsPort, navigationOrigin }); }
   catch (issue) { await session.close().finally(() => source.close()); throw issue; }
   let closing;
   return { ...session, source, operations, close() {
