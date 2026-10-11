@@ -163,3 +163,28 @@ Contract references: [OpenAPI 3.0.4](https://spec.openapis.org/oas/v3.0.4.html),
 [SF25 auto-catalog](../../../stellar-forge/payment-auto-catalog/README.md).
 MIT, matching the imported public components.
 
+## Preserve application admission during export
+
+Each service binding can also name an optional trusted `admit` export, alongside
+either `handler` or `response`:
+
+```json
+{"method":"GET","path":"/forecast/{city}","id":"forecast","handler":"forecast","admit":"checkCity"}
+```
+
+The CLI preserves that name in `seller-service.json`; load it through the existing
+SF30 `--handlers FILE` module. Invalid names fail export, and missing or noncallable
+exports fail startup. Export preflight never imports or invokes application code.
+This prevents a seller's explicit prepayment validator from silently disappearing
+between OpenAPI binding and service startup. Bindings without `admit` retain their
+existing behavior. Admission can protect static responses as well as handlers.
+
+Use the application's request contract for this callback. OpenAPI/Bazaar metadata
+validation checks advertised examples, and does not automatically validate live
+request inputs. See [SF30 admission](../sf30-seller-sdk/ADMISSION.md) for decisions,
+timeout/cancellation, isolation and the unchanged challenge-only behavior.
+
+`node --test stellar/scf-starforge-20261009/sf61-openapi-seller-import/admission-acceptance.mjs`
+checks actual CLI export/readback and loopback HTTP rejection before native payment,
+then the accepted dynamic/static paths through a controlled native collaborator.
+It performs no wallet/provider call and proves no network settlement.
