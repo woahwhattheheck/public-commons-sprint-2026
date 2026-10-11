@@ -11,6 +11,20 @@ original merchant package, check the selected data network, start the seller,
 prepare a buyer request, inspect delivery, and pause or resume selected products
 with the original persistent availability controls.
 
+For a retained browser workflow, open the [merchant workspace](workspace/README.md):
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/cli.mjs workspace \
+  --dir /absolute/private/rpc-workspace --create --plan /absolute/private/rpc-plan.json
+```
+
+The same installed command is `starforge jsonrpc workspace`. The workspace
+keeps exact imported plans, immutable saved versions, product/price comparisons,
+original prepared packages, explicit provider diagnoses and buyer reviews.
+Choose the runtime mode in its launcher to start the same original merchant
+and operations desk from the selected saved review, then drain and reopen the
+retained workspace.
+
 ## 1. Choose the product and payment terms
 
 Run these commands from the source checkout with its existing Node and native
