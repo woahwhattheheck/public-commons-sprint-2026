@@ -5,7 +5,8 @@ import { constants } from 'node:fs';
 import { access, lstat, mkdir, open, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { abs, config, execution, need, operation, operator, InputError } from './config.mjs';
+import { abs, buyerTransport, config, execution, need, operation, operator, InputError } from './config.mjs';
+import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.operator-workspace.v1';
 const KEY_NAMES = ['SF36_CONSENT_KEY_B64', 'SF36_AUDIT_KEY_B64', 'SF36_OPERATOR_KEY_B64'];
@@ -123,13 +124,22 @@ async function initializeLedger(python, policy, ledger, keyValues) {
 export async function initializeWorkspace(args, { environment = process.env } = {}) {
   need(process.platform !== 'win32', 'WORKSPACE_POSIX_OPERATOR_REQUIRED');
   const opt = options(args, ['--config', '--dir', '--actor', '--service', '--payer', '--python',
-    '--secret-env', '--signer-provider', '--rpc', '--total-atomic', '--daily-atomic']);
+    '--secret-env', '--signer-provider', '--rpc', '--https-proxy', '--https-proxy-env',
+    '--total-atomic', '--daily-atomic']);
   const inputPath = abs(opt['--config'], 'WORKSPACE_REVIEW_CONFIG_REQUIRED');
   const directory = resolve(abs(opt['--dir'], 'WORKSPACE_PATH_NOT_ABSOLUTE'));
   const source = await config(inputPath);
   need(['operator','signerModule','evidenceDir'].every(name => source[name] === undefined),
     'WORKSPACE_SOURCE_ALREADY_CONFIGURED');
   const op = operation(source.operation);
+  const proxyUrl = opt['--https-proxy'], proxyEnv = opt['--https-proxy-env'];
+  need(proxyUrl === undefined || proxyEnv === undefined, 'WORKSPACE_ONE_PROXY_SOURCE_REQUIRED');
+  need(proxyUrl === undefined && proxyEnv === undefined || source.buyerTransport === undefined,
+    'WORKSPACE_PROXY_CONFIG_AND_FLAG_CONFLICT');
+  const transport = buyerTransport(proxyUrl === undefined && proxyEnv === undefined ? source : {
+    ...source, buyerTransport:{mode:'explicit-connect', origin:new URL(op.url).origin,
+      ...(proxyEnv === undefined ? {proxyUrl} : {proxyEnv})},
+  });
   need(op.expect.network === 'stellar:testnet', 'WORKSPACE_TESTNET_REQUIRED');
   need(/^C[A-Z2-7]{55}$/.test(op.expect.asset) && /^[GC][A-Z2-7]{55}$/.test(op.expect.payTo),
     'WORKSPACE_STELLAR_TERMS_INVALID');
@@ -160,6 +170,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
     max_per_actor_utc_day:daily, max_per_service_utc_day:daily,
   }]};
   const cfg = {...source, operation:op, operator:owner,
+    ...(transport === null ? {} : {buyerTransport:transport}),
     signerModule:join(directory, 'signer.mjs'), evidenceDir:join(directory, 'evidence'),
     trustedPayer:payer};
   execution(cfg);
@@ -181,6 +192,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
   const manifest = {schema:SCHEMA, createdAt:new Date().toISOString(), directory,
     config:'operator.json', keys:'operator-keys.json', sourceCli:cliPath,
     sourceConfig:inputPath, signer:signerPins,
+    ...(transport === null ? {} : {buyerTransport:transport}),
     operatorKeySource:keySet.source, walletKeyEnvironment:secretEnv, signerProvider,
     network:op.expect.network, payer};
   let created;
@@ -203,7 +215,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
       config:join(directory, 'operator.json'), network:manifest.network, payer,
       operatorKeySource:keySet.source, walletKeyEnvironment:secretEnv,
       signerSource:signerProvider === undefined ? 'ENVIRONMENT' : 'TRUSTED_SEP43_PROVIDER',
-      walletKeyStored:false, policy, ledger,
+      buyerTransport:transport, walletKeyStored:false, policy, ledger,
       commands:{review:[process.execPath, cliPath, '--review-workspace', '--dir', directory],
         execute:[process.execPath, cliPath, '--execute-workspace', '--dir', directory]}};
   } catch (error) {
@@ -230,11 +242,14 @@ export async function openWorkspace(args, { execute = false, environment = proce
   const configPath = join(directory, manifest.config);
   await privateJson(configPath);
   const cfg = await config(configPath);
-  const {op, owner} = execution(cfg);
+  const {op, owner, transport} = execution(cfg);
   need(op.expect.network === 'stellar:testnet' && cfg.trustedPayer === manifest.payer &&
     owner.policy === join(directory, 'policy.json') && owner.ledger === join(directory, 'reservations.sqlite') &&
     cfg.signerModule === join(directory, 'signer.mjs') && cfg.evidenceDir === join(directory, 'evidence'),
     'WORKSPACE_CONFIG_BINDING_CHANGED');
+  need(JSON.stringify(transport) === JSON.stringify(buyerTransport({
+    operation:cfg.operation, buyerTransport:manifest.buyerTransport,
+  })), 'WORKSPACE_TRANSPORT_BINDING_CHANGED');
   need(schemaObject(manifest.signer) && manifest.signer.network === op.expect.network &&
     manifest.signer.asset === op.expect.asset && manifest.signer.payTo === op.expect.payTo &&
     manifest.signer.expectedPayer === cfg.trustedPayer &&
@@ -245,6 +260,7 @@ export async function openWorkspace(args, { execute = false, environment = proce
   let operatorEnvironment;
   if (execute) {
     // Surface missing local setup before an inbox attempt or SF36 reservation.
+    if (transport !== null) resolveBuyerProxy(transport, environment);
     const {checkNativeSignerPrerequisites} = await import('./native-signer.mjs');
     await checkNativeSignerPrerequisites({...manifest.signer, environment});
     const stored = await privateJson(join(directory, manifest.keys), 16384);
@@ -267,6 +283,17 @@ export async function diagnoseWorkspace(args, {environment = process.env} = {}) 
   const code = error => /^[A-Z0-9_]{1,120}$/.test(error?.code ?? '')
     ? error.code : 'WORKSPACE_RUNTIME_UNAVAILABLE';
   const pins = validateNativeSignerConfiguration(manifest.signer);
+  const transport = buyerTransport(workspace.config);
+  if (transport !== null) {
+    try {
+      resolveBuyerProxy(transport, environment);
+      checks.push({check:'merchant-proxy', status:'VALIDATED',
+        ...(transport.proxyEnv === undefined ? {} : {name:transport.proxyEnv})});
+    } catch (error) {
+      checks.push({check:'merchant-proxy', status:'UNAVAILABLE', code:code(error),
+        ...(transport.proxyEnv === undefined ? {} : {name:transport.proxyEnv})});
+    }
+  }
   try {
     sdk = await inspectNativeSignerRuntime();
     checks.push({check:'official-sdk', status:'AVAILABLE'});
@@ -288,7 +315,7 @@ export async function diagnoseWorkspace(args, {environment = process.env} = {}) 
   return {mode:'OPERATOR_WORKSPACE_DIAGNOSTICS', status:ready ? 'READY_TO_EXECUTE' : 'SETUP_REQUIRED',
     directory:manifest.directory, network:pins.network, payer:pins.expectedPayer,
     signerSource:provider === undefined ? 'ENVIRONMENT' : 'TRUSTED_SEP43_PROVIDER',
-    rpcOrigin:new URL(pins.rpcUrl).origin, sdk, checks,
+    rpcOrigin:new URL(pins.rpcUrl).origin, buyerTransport:buyerTransport(workspace.config), sdk, checks,
     next:ready ? 'Review the operation, then use --execute-workspace for original terminal approval.' :
       'Resolve the listed runtime requirements and diagnose this same workspace again.'};
 }

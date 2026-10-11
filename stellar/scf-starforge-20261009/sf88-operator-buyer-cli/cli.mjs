@@ -2,7 +2,7 @@
 // MIT — SF88 operator command: source-native review, discovery and handoff.
 import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
-import { config, operation, responseFile, bytes, need } from './config.mjs';
+import { buyerTransport, config, operation, responseFile, bytes, need } from './config.mjs';
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
 const sha256 = data => createHash('sha256').update(data).digest('hex');
@@ -24,6 +24,7 @@ async function review(c) {
     serviceId:c.operator?.service ?? null,
     signerFilename:c.signerModule ? basename(c.signerModule) : null,
     responseFile:download ? { ...download, prepared:false } : null,
+    buyerTransport:buyerTransport(c),
     preparedFrom:c.preparedFrom ?? null,
     next:'Execute an original approved single operation using the private operator module'
   });
@@ -36,7 +37,7 @@ async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
     process.stdout.write('Usage: node cli.mjs --review|--discover|--execute --config /absolute/operator.json [--response-out /absolute/output]\n' +
       '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json\n');
-    process.stdout.write('       node cli.mjs --init-workspace --config /absolute/review.json --dir /absolute/new-workspace --actor operator-id --service seller-id --payer G... --python /usr/bin/python3 [--secret-env STELLAR_SECRET | --signer-provider /absolute/wallet.mjs] [--rpc https://rpc.example] [--total-atomic 1000] [--daily-atomic 1000]\n' +
+    process.stdout.write('       node cli.mjs --init-workspace --config /absolute/review.json --dir /absolute/new-workspace --actor operator-id --service seller-id --payer G... --python /usr/bin/python3 [--secret-env STELLAR_SECRET | --signer-provider /absolute/wallet.mjs] [--rpc https://rpc.example] [--https-proxy http://proxy.example:8080 | --https-proxy-env HTTPS_PROXY] [--total-atomic 1000] [--daily-atomic 1000]\n' +
       '       node cli.mjs --review-workspace|--diagnose-workspace|--execute-workspace --dir /absolute/workspace\n');
     return;
   }
