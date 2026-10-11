@@ -43,7 +43,9 @@ try {
     } } };
   const payment = { scheme: 'exact', network: 'stellar:testnet', amount: '7',
     asset: 'LOCAL_NONPAYABLE_ASSET', payTo: 'LOCAL_NONPAYABLE_RECIPIENT', maxTimeoutSeconds: 60 };
-  const selections = methods.map(method => ({ method, path: '/items/{sku}', accepts: [payment] }));
+  const options = [payment, { ...payment, amount: '11', asset: 'LOCAL_NONPAYABLE_ASSET_ALTERNATIVE',
+    extra: { reference: 'preserve-this-original-choice' } }];
+  const selections = methods.map(method => ({ method, path: '/items/{sku}', accepts: options }));
   const bindings = methods.map(method => ({ id: method.toLowerCase() + 'Item',
     method, path: '/items/{sku}', handler: method.toLowerCase() + 'Item', validateInput: true }));
   for (const [name, value] of [['spec', spec], ['selections', selections], ['bindings', bindings]])
@@ -52,6 +54,7 @@ try {
     '--service-bindings', join(root, 'bindings.json'), '--out', join(root, 'service')]);
   const config = await readSellerConfig(join(root, 'service', 'seller-service.json'));
   assert.deepEqual(config.routes.map(route => route.offer.extensions.bazaar.info.input.method), methods);
+  for (const route of config.routes) assert.deepEqual(route.offer.accepts, options);
 
   const observed = [];
   let item = { quantity: 1 };
@@ -155,7 +158,7 @@ try {
   console.log(JSON.stringify({ status: 'PASS', methods, importedRoutes: 6,
     originalChallengeAcceptance: audit.summary, upstreamRequests: observed.length,
     prepaymentRejections: 3, nativeSettlements: '6 controlled collaborator calls; no ledger payment',
-    supportMethodCoverage: 6, hostedActions: 0 }));
+    supportMethodCoverage: 6, paymentAlternativesPerRoute: options.length, hostedActions: 0 }));
 } finally {
   for (const session of sessions.reverse()) await session.close();
   for (const backend of backends) await new Promise(resolve => {

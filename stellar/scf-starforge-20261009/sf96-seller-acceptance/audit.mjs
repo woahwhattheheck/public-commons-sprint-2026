@@ -9,6 +9,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { supportsSellerMethod, requiresJsonBody } from '../sf30-seller-sdk/http-methods.mjs';
+import { MAX_PAYMENT_OPTIONS } from '../sf30-seller-sdk/seller.mjs';
 
 const sha = b => createHash('sha256').update(b).digest('hex');
 const obj = x => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -61,8 +62,8 @@ function sourceRoutes(health, offers) {
     if (!obj(r) || !/^[A-Za-z0-9_-]{1,80}$/.test(r.id) || ids.has(r.id) ||
         !supportsSellerMethod(r.method) || r.method !== method ||
         r.url !== offer?.resource?.url || offer?.x402Version !== 2 ||
-        !Array.isArray(offer.accepts) || offer.accepts.length !== 1 ||
-        !obj(offer.extensions?.bazaar) || !obj(offer.accepts[0])) die('NONCANONICAL_OR_UNMATCHED_SELLER_OFFER');
+        !Array.isArray(offer.accepts) || offer.accepts.length < 1 || offer.accepts.length > MAX_PAYMENT_OPTIONS ||
+        !obj(offer.extensions?.bazaar) || offer.accepts.some(option => !obj(option))) die('NONCANONICAL_OR_UNMATCHED_SELLER_OFFER');
     ids.add(r.id);
     const u=new URL(r.url);
     if (u.protocol !== 'https:' && !(u.protocol === 'http:' && u.hostname === '127.0.0.1'))
@@ -125,7 +126,8 @@ function actualOffer(header) {
   try { parsed = JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(b)); }
   catch { die('PAYMENT_REQUIRED_HEADER_NOT_UTF8_JSON'); }
   if (parsed?.x402Version !== 2 || !obj(parsed.resource) ||
-      !Array.isArray(parsed.accepts) || parsed.accepts.length !== 1 ||
+      !Array.isArray(parsed.accepts) || parsed.accepts.length < 1 || parsed.accepts.length > MAX_PAYMENT_OPTIONS ||
+      parsed.accepts.some(option => !obj(option)) ||
       !obj(parsed.extensions?.bazaar)) die('PAYMENT_REQUIRED_NOT_V2_BAZAAR');
   return {parsed, digest:sha(b)};
 }

@@ -14,7 +14,8 @@ application handlers, native payment middleware and upstream bindings.
 | PATCH | JSON | Fixed or string path parameters; scalar queries | Same PATCH and parsed JSON value |
 | DELETE | None | Fixed or string path parameters; scalar queries | Same DELETE and configured query mapping |
 
-All operations retain one explicit native `exact` Stellar payment option. The
+All operations retain the original ordered native `exact` Stellar payment
+options, including the existing 1–16 alternative network/asset choices. The
 runtime accepts JSON for POST, PUT and PATCH; arbitrary request streams, form
 data and DELETE bodies are outside this adapter's contract. JSON Merge Patch
 and JSON Patch media types are not silently treated as `application/json`.

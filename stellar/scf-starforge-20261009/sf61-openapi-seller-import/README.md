@@ -94,11 +94,11 @@ including query/body assertions, examples and payment terms, through native
 route configuration, offer inspection and the HTTP 402 header. The original
 SF25 validator checks Bazaar metadata; original SF30 preflight checks supported
 payment/resource terms. The generated service configuration supports fixed and
-whole-segment string-parameter GET, HEAD, DELETE or JSON POST/PUT/PATCH routes, one exact
-testnet/pubnet payment option, one public origin and at most 64 explicit bindings.
+whole-segment string-parameter GET, HEAD, DELETE or JSON POST/PUT/PATCH routes,
+1–16 complete exact testnet/pubnet payment options, one public origin and at most 64 explicit bindings.
 See [dynamic routes and application binding](DYNAMIC-ROUTES.md) and the
 [complete REST serving flow](../sf30-seller-sdk/REST_METHODS.md). Unsupported methods,
-multiple payment options, extra payment parameters or non-Bazaar extensions
+unsupported payment parameters or non-Bazaar extensions
 require a different runtime integration; no partial service config is emitted.
 The existing general importer still supports its broader metadata-only mapping.
 Dynamic runtime parameters remain strings, matching native Bazaar 2.28.0 enrichment;
