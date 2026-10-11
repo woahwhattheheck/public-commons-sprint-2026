@@ -60,6 +60,10 @@ function fileBytes(file) {
   if (file.sha256 !== undefined) need(sha256(bytes) === file.sha256 && bytes.length === file.bytes, 'CONFIGURATION_DIGEST_MISMATCH');
   json(bytes); return bytes;
 }
+function normalizedLabel(value) {
+  need(typeof value === 'string' && value.trim().length > 0 && value.length <= 120, 'PROFILE_LABEL_REQUIRED');
+  return value.trim();
+}
 function normalizedOptions(value = {}) {
   keys(value, ['origin', 'proxyEnv', 'timeoutMs', 'feeOperations']);
   const result = { timeoutMs: value.timeoutMs ?? 12000, feeOperations: value.feeOperations ?? 0 };
@@ -103,12 +107,11 @@ export async function openReceivingWorkspace({ directory, environment = process.
   async function createProfile(input, operation = {}, importRequestDigest) {
     admit(); keys(input, ['label', 'seller', 'assets', 'rpc', 'options']);
     keys(operation, ['id']); if (operation.id !== undefined) checkId(operation.id);
-    need(typeof input.label === 'string' && input.label.trim().length > 0 && input.label.length <= 120, 'PROFILE_LABEL_REQUIRED');
-    const options = normalizedOptions(input.options), sourceFiles = [['seller.json', input.seller], ['input-assets.json', input.assets], ['input-rpc.json', input.rpc]].filter(([, file]) => file !== undefined && file !== null);
+    const label = normalizedLabel(input.label), options = normalizedOptions(input.options), sourceFiles = [['seller.json', input.seller], ['input-assets.json', input.assets], ['input-rpc.json', input.rpc]].filter(([, file]) => file !== undefined && file !== null);
     need(sourceFiles.some(([name]) => name === 'seller.json'), 'SELLER_CONFIGURATION_REQUIRED');
     const buffers = sourceFiles.map(([name, file]) => ({ name, originalName: file.name, bytes: fileBytes(file) }));
     const files = buffers.map(file => ({ name: file.name, originalName: file.originalName, bytes: file.bytes.length, sha256: sha256(file.bytes) }));
-    const requestDigest = sha256(encoded({ label: input.label.trim(), options, files, ...(importRequestDigest ? { importRequestDigest } : {}) }));
+    const requestDigest = sha256(encoded({ label, options, files, ...(importRequestDigest ? { importRequestDigest } : {}) }));
     const profileId = operation.id ?? id(), destination = profilePath(profileId);
     let exists = false; try { await lstat(destination); exists = true; } catch (error) { if (error.code !== 'ENOENT') throw error; }
     if (exists) {
@@ -126,7 +129,7 @@ export async function openReceivingWorkspace({ directory, environment = process.
         if (/^[A-Z][A-Z0-9_]{1,100}$/.test(error?.code ?? '')) throw error;
         throw workspaceFault(error?.message === 'Duplicate payment network, asset and payTo option' ? 'DUPLICATE_PAYMENT_OPTION' : 'SELLER_CONFIG_INVALID');
       }
-      const record = { schema: 'stellar-forge.receiving-workspace-profile.v1', id: profileId, label: input.label.trim(), createdAt: new Date().toISOString(),
+      const record = { schema: 'stellar-forge.receiving-workspace-profile.v1', id: profileId, label, createdAt: new Date().toISOString(),
         options, plan: compiled.plan, planDigest: compiled.planDigest, configurationSha256: compiled.configuration.sha256, requestDigest, files };
       await writeNew(join(path, 'profile.json'), encoded(record)); await syncDirectory(path);
       await rename(path, destination); published = true; await syncDirectory(profilesRoot); return record;
@@ -283,7 +286,9 @@ export async function openReceivingWorkspace({ directory, environment = process.
     const sources = {};
     for (const file of input.profile.files) {
       need(PROFILE_FILES.includes(file.name), 'PROFILE_FILE_INVALID');
-      sources[file.name] = { name: file.originalName ?? file.name, base64: file.base64, bytes: file.bytes, sha256: file.sha256 };
+      const source = { name: file.originalName ?? file.name, base64: file.base64, bytes: file.bytes, sha256: file.sha256 };
+      const bytes = fileBytes(source);
+      sources[file.name] = { ...source, bytes: bytes.length, sha256: sha256(bytes) };
     }
     const buffers = new Map(); let total = 0;
     for (const file of input.bundle) {
@@ -299,7 +304,8 @@ export async function openReceivingWorkspace({ directory, environment = process.
     for (const entry of manifest.files) need(entry.name !== 'manifest.json' && buffers.has(entry.name) && buffers.get(entry.name).length === entry.bytes && sha256(buffers.get(entry.name)) === entry.sha256, 'MANIFEST_DIGEST_MISMATCH');
     const sourceReport = json(buffers.get('review.json')), capture = json(buffers.get('capture.json'));
     need(sourceReport.schema === 'stellar-forge.seller-sac-readiness.v1' && Array.isArray(sourceReport.options) && capture.schema === 'stellar-forge.sf101.merchant-capture.v1', 'INVALID_RECEIVING_REPORT');
-    const requestDigest = sha256(encoded({ label: input.profile.label, options: normalizedOptions(input.profile.options),
+    const label = normalizedLabel(input.profile.label);
+    const requestDigest = sha256(encoded({ label, options: normalizedOptions(input.profile.options),
       files: PROFILE_FILES.filter(name => sources[name]).map(name => ({ name, originalName: sources[name].name, bytes: sources[name].bytes, sha256: sources[name].sha256 })),
       bundle: BUNDLE_FILES.map(name => ({ name, bytes: buffers.get(name).length, sha256: sha256(buffers.get(name)) })) }));
     const reviewId = operation.id ?? id(), destination = reviewPath(reviewId);
@@ -314,7 +320,7 @@ export async function openReceivingWorkspace({ directory, environment = process.
     const importedProfileId = reviewId.split('-')[0] + '-' + sha256('receiving-import-profile:' + reviewId).slice(0, 16);
     let existingProfile = false;
     try { await lstat(profilePath(importedProfileId)); existingProfile = true; } catch (error) { if (error.code !== 'ENOENT') throw error; }
-    const selected = await createProfile({ label: input.profile.label, options: input.profile.options,
+    const selected = await createProfile({ label, options: input.profile.options,
       seller: sources['seller.json'], assets: sources['input-assets.json'], rpc: sources['input-rpc.json'] }, { id: importedProfileId }, requestDigest);
     const path = join(reviewsRoot, '.' + reviewId + '-' + randomBytes(4).toString('hex') + '.stage');
     let owned = false, published = false;
