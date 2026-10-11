@@ -25,6 +25,23 @@ function safeObject(text, label) {
   if (!plain(value)) throw new Error(label + ' must be a JSON object.');
   return value;
 }
+function editorObject(text, kind) {
+  const value = safeObject(text, kind), objects = list => Array.isArray(list) && list.every(plain);
+  let usable;
+  if (kind === 'queries') {
+    usable = value.operations === undefined || objects(value.operations) && value.operations.every(op =>
+      op.variables === undefined || plain(op.variables) && Object.values(op.variables).every(plain));
+  } else {
+    const payments = item => (item.payment === undefined || plain(item.payment)) &&
+      (item.paymentOptions === undefined || objects(item.paymentOptions));
+    usable = payments(value) && (value.routes === undefined || objects(value.routes) && value.routes.every(route =>
+      payments(route) && (route.tags === undefined || Array.isArray(route.tags))));
+  }
+  // Only check shapes used by these controls. The original compiler validates
+  // semantics; unfinished documents remain editable and saveable as raw text.
+  if (!usable) throw new Error('The guided ' + kind + ' editor needs object entries and array lists. Correct the raw JSON or save this unfinished draft.');
+  return value;
+}
 async function api(path, body) {
   const response = await fetch(path, { method: body === undefined ? 'GET' : 'POST',
     headers: { 'X-Workspace-Token': token, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
@@ -108,7 +125,7 @@ function renderOperation() {
     { name: 'Operation name', root: 'GraphQL result root', handler: 'Native handler name', admission: 'Native admission name' }[key], op[key], value => {
       const old = op.name; op[key] = value;
       if (key === 'name') for (const route of state.plan?.routes ?? []) if (route.operation === old) route.operation = value;
-      syncQueries(); if (key === 'name') { syncPlan(); renderQueries(); }
+      syncQueries(); if (key === 'name') { if (state.plan) syncPlan(); renderQueries(); }
     }));
   editor.append(grid, control('Fixed read-only GraphQL query', op.query, value => { op.query = value; syncQueries(); }, { textarea: true, rows: 6 }));
   editor.append(control('Maximum returned nodes', op.maxNodes ?? 100, value => { op.maxNodes = value; syncQueries(); }, { type: 'number' }));
@@ -142,7 +159,10 @@ function renderOperation() {
 }
 function renderQueries() {
   const q = state.queries;
-  if (!q) { empty($('operation-editor'), 'Apply valid queries JSON to use the guided editors.'); return; }
+  if (!q) {
+    $('operation-select').replaceChildren();
+    empty($('operation-editor'), 'Apply valid queries JSON to use the guided editors.'); renderRoute(); return;
+  }
   for (const [id, key, fallback] of [['backend-origin', 'origin', ''], ['backend-path', 'path', '/graphql'],
     ['backend-auth', 'authorizationEnv', ''], ['backend-timeout', 'timeoutMs', 8000],
     ['backend-bytes', 'maxResponseBytes', 262144], ['backend-concurrency', 'maxInFlight', 8]]) $(id).value = q[key] ?? fallback;
@@ -193,9 +213,9 @@ function renderRoute() {
 }
 function renderPlan() { $('public-origin').value = state.plan?.publicOrigin ?? ''; renderPayments(); renderRoute(); }
 function loadEditors() {
-  try { state.queries = safeObject($('queries-text').value, 'Approved queries'); }
+  try { state.queries = editorObject($('queries-text').value, 'queries'); }
   catch { state.queries = null; }
-  try { state.plan = safeObject($('plan-text').value, 'Merchant plan'); }
+  try { state.plan = editorObject($('plan-text').value, 'plan'); }
   catch { state.plan = null; }
   renderQueries(); renderPlan();
 }
@@ -374,8 +394,8 @@ $('add-route').addEventListener('click', () => {
 });
 for (const [buttonId, field, target, render] of [['apply-queries', 'queries-text', 'queries', renderQueries], ['apply-plan', 'plan-text', 'plan', renderPlan]])
   $(buttonId).addEventListener('click', () => {
-    try { state[target] = safeObject($(field).value, target); changed(); render(); notice('JSON applied to the editors.'); }
-    catch (error) { notice(error.message, true); }
+    try { state[target] = editorObject($(field).value, target); changed(); render(); notice('JSON applied to the editors.'); }
+    catch (error) { state[target] = null; render(); notice(error.message, true); }
   });
 for (const [id, target, limit] of [['schema-file', 'schema-text', 1024 * 1024], ['queries-file', 'queries-text', 1024 * 1024], ['plan-file', 'plan-text', 262144]])
   $(id).addEventListener('change', () => action('Loading selected local file…', async () => {
