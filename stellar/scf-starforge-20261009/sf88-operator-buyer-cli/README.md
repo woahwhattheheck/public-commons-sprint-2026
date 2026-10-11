@@ -4,7 +4,103 @@ For several prepared operations and restart recovery, use the [durable buyer
 inbox](QUEUE.md). It adds private request snapshots, a permanent attempt record,
 original-evidence recovery and an offline history report to this same buyer.
 
-Operator-side executable joining ORIGINAL SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 durable evidence. This is not a new signer, wallet, merchant service, ledger, protocol, auto-payer or replacement for the existing SF82 seller pilot.
+Operator-side executable joining SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 checkout recording. The native testnet operator workspace below supplies the official Stellar SDK signer adapter and private local setup. Existing operator-provided signer modules remain supported.
+
+## Set up a complete native testnet operator workspace
+
+Use the complete public sprint checkout on Linux or another POSIX operator host,
+with Node 22+ and Python 3.11+. Install the pinned official SDK dependencies in
+this directory:
+
+```sh
+cd stellar/scf-starforge-20261009/sf88-operator-buyer-cli
+npm ci --ignore-scripts --no-audit --no-fund
+```
+
+Use the saved discovery `--prepare` command below to create a review config for
+the actual chosen seller. Then initialize a **new** private workspace, supplying
+the operator identity, service identity and existing testnet payer address:
+
+```sh
+node cli.mjs --init-workspace \
+  --config /private/weather-review.json --dir /private/weather-operator \
+  --actor owner-operator --service chosen-weather-seller \
+  --payer ACTUAL_EXISTING_TESTNET_PUBLIC_ADDRESS --python /usr/bin/python3
+node cli.mjs --review-workspace --dir /private/weather-operator
+node cli.mjs --diagnose-workspace --dir /private/weather-operator
+```
+
+Replace the payer placeholder with the actual existing public `G...` address.
+The parent directory must already exist. Initialization refuses an existing
+workspace and a source config that already contains operator, signer or ledger
+settings; it cannot replace an established spend journal.
+
+The initializer creates a private `0700` workspace and evidence directory,
+`0600` operator config, policy, key file and lazy signer module, and an empty
+SQLite WAL ledger through the original SF36 `Governor`. It writes the completion
+manifest last. The selected testnet asset, recipient, payer and maximum amount
+are carried into the signer. Changing the config to incompatible terms is
+rejected before any new reservation. Lowering the operation cap remains allowed.
+
+The default total and daily limits equal the review config's `maxAtomic`;
+that is enough for one operation at the maximum price. To authorize a larger
+operator workspace budget, supply explicit `--total-atomic` and `--daily-atomic`
+base-unit strings. The original SF36 signed 64-bit ceiling applies. Daily
+limits cannot exceed the total, and both must cover the per-operation cap.
+
+If all three existing `SF36_CONSENT_KEY_B64`, `SF36_AUDIT_KEY_B64` and
+`SF36_OPERATOR_KEY_B64` variables are present, initialization reuses them.
+If none are present, it creates the local HMAC keys needed for this new empty
+ledger. A partial key set is rejected. These keys live in the private
+`operator-keys.json`; they are never printed or placed in the public repository.
+They are budget-journal keys, not a Stellar wallet key.
+
+Make the existing payer's testnet key available through the operator's existing
+credential setup in `STELLAR_SECRET`, or choose the variable name with
+`--secret-env` during initialization. The workspace stores only that variable's
+name. It neither generates nor writes a wallet key. Execute from the original
+operator terminal:
+
+```sh
+node cli.mjs --execute-workspace --dir /private/weather-operator
+```
+
+For an existing wallet or hardware provider, use
+`--signer-provider /absolute/operator/wallet.mjs` in the initializer instead of
+`--secret-env`. The trusted module exports
+`createSigner({network, payer, rpcUrl})` and returns the official SEP-43 signer.
+Initialization and diagnostics check its file without importing it. The
+generated private module loads it only inside the original approved signing
+callback. An optional `--rpc https://operator-rpc.example` selects a testnet RPC;
+the default is the official testnet endpoint. RPC credentials, query parameters
+and fragments are not accepted in the URL.
+
+`--diagnose-workspace` checks the existing workspace, pinned SDK versions and
+provider file or environment-variable presence. It never reads the SF36 key
+file, opens a wallet, signs, reserves funds or calls RPC. `READY_TO_EXECUTE`
+means the setup requirements are present; actual wallet access, payer identity
+and network availability are checked during approved execution. An empty or
+invalid wallet variable is still rejected at that point. Existing environment
+workspaces keep the same generated signer and operator ledger.
+
+Execution loads the workspace's private SF36 keys into the original approval
+bridge without changing the parent environment. The lazy signer reads the
+existing wallet key only after the native terminal approval and durable budget
+reservation. It checks the payer and chosen terms, then uses the official
+`@x402/core` and `@x402/stellar` implementation through the shared
+[SF103 native payload engine](../sf103-native-buyer-signer/README.md) to simulate and sign the actual
+authorization. SF31 performs the one paid HTTP retry and SF82 records its
+original result. Neither initialization nor review makes a network request,
+reads a wallet key, reserves funds or signs an authorization.
+
+Keep the workspace and the source checkout at their configured absolute paths.
+The workspace's ledger, local key file and recorded checkout outcomes belong
+together. After an interrupted or uncertain execution, reconcile the existing
+operation; initializing a different workspace is not a recovery action.
+For adapter interfaces and SDK source references, see
+[NATIVE_SIGNER.md](NATIVE_SIGNER.md).
+
+## Use an existing operator configuration
 
 From the complete public sprint checkout, using Node 22+ and Python 3.11+:
 
@@ -45,7 +141,7 @@ The evidence directory must already exist with POSIX permissions 0700. Original 
 }
 ~~~
 
-The trusted signer module exports an async sign({intent,challenge,accepted}) function backed by the already-installed official Stellar x402 SDK. Use the merged [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) to connect that interface to an existing account or trusted signer provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB). Only Content-Type and Accept request headers are configurable.
+The trusted signer module exports an async sign({intent,challenge,accepted}) function. The native workspace generates this module using the official SDK adapter; an existing externally managed signer can supply the same interface. The shared [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) also connects an existing configured buyer to an account or trusted provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB). Only Content-Type and Accept request headers are configurable.
 
 Review makes no external calls. Discover returns original source catalog listings but cannot authorize payment. Execute emits a brief status and the original SF52 aggregate report plus local SF82 evidence file path. Seller-reported settlement, observed HTTP delivery, and independently verified testnet transfer event remain distinct. SCF grant and merchant adoption stay with the existing owners. No hosted GitHub Actions or testnet payment is triggered by publication of this code.
 

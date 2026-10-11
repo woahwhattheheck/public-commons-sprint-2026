@@ -22,7 +22,7 @@ const reservationOf = value => {
   return Object.keys(result).length ? result : null;
 };
 
-export async function execute(cfg, { signal, emitSummary = true } = {}) {
+export async function execute(cfg, { signal, emitSummary = true, environment = process.env } = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof emitSummary === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
   const { op, owner, download:responseFile } = execution(cfg);
@@ -44,7 +44,7 @@ export async function execute(cfg, { signal, emitSummary = true } = {}) {
     const sign = signer.sign ?? signer.default?.sign;
     need(typeof sign === 'function', 'TRUSTED_SIGN_FUNCTION_REQUIRED');
     const buyer = new OperatorApprovedBuyer({
-      operator: { ...owner, environment: process.env }
+      operator: { ...owner, environment }
     });
     need(!signal?.aborted, 'OPERATOR_ABORTED');
     const recordingBuyer = {
