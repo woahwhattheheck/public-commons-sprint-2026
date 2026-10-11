@@ -20,18 +20,27 @@
       "url": "https://github.com/x402-foundation/x402/issues/3657",
       "issue_state": "open",
       "opened_utc": "2026-10-02",
-      "checked_utc": "2026-10-10",
+      "checked_utc": "2026-10-11",
       "first_party_reporter": "parthod0x",
       "issue_type": "first-person production account",
-      "evidence": "Reporter says GET discovery request retried with PAYMENT-SIGNATURE as GET; seller only accepted payment on POST; observed four genuine paid retry attempts rejected and reported loss of sole buyer.",
+      "evidence": "Historical signed retries refused on method mismatch; author reports repaired acceptance and later GET settlement on Base mainnet. Not independently reproduced here.",
       "seller_operator_authority": "self-reported; not independently verified",
-      "priority": "P1",
-      "commercial_problem": "Paid buyer conversion lost despite catalog indexing and healthy endpoint metrics.",
-      "possible_offer": "Protocol-specific discoverability-to-payment conversion audit with method/header retry traces, corrected route mapping and acceptance evidence.",
-      "public_only_next_step": "Verify current spec/reference client behavior; draft original per-method transaction traces and owner-reviewed, unsent evidence report.",
-      "owner_contact_status": "NO_CONTACT; exact owner approval required",
-      "current_resolution": "OPEN; fix not established",
-      "collides_with": "Core protocol changes belong to original upstream/source owners."
+      "priority": "P3 historical; author-reported repair",
+      "commercial_problem": "Independent buyer/server interoperability can diverge from seller-authored tests; no present SatLedger defect established.",
+      "possible_offer": "Only a merchant-requested, presently scoped independent-client acceptance service; do not resell the repaired historical bug.",
+      "public_only_next_step": "Use the corrected historical lesson and current protocol source. Any merchant work requires original-owner relationship reconciliation and permission.",
+      "owner_contact_status": "NOT_RECONCILED_BY_THIS_PUBLIC_REFRESH; consult existing private owner record; no contact authority",
+      "current_resolution": "OPEN protocol issue; AUTHOR_REPORTED_REPAIR of original seller defect; current endpoint not independently retested",
+      "collides_with": "Core protocol changes belong to original upstream/source owners.",
+      "reported_network": "eip155:8453 (Base mainnet); not Stellar",
+      "related_spec_pr": {
+        "url": "https://github.com/x402-foundation/x402/pull/3741",
+        "state": "open",
+        "draft": false,
+        "merged": false,
+        "head_sha": "1f5a05a751bb9c9306d7f1694efb08a397c24544",
+        "checked_utc": "2026-10-11"
+      }
     },
     {
       "id": "X402-3511",
@@ -185,5 +194,18 @@
       "current_resolution": "OPEN",
       "collides_with": "SF-31/35/38 agent policy owners."
     }
-  ]
+  ],
+  "selective_refresh": {
+    "checked_utc": "2026-10-11",
+    "ids": [
+      "X402-3657"
+    ],
+    "sources": [
+      "https://github.com/x402-foundation/x402/issues/3657",
+      "https://github.com/x402-foundation/x402/issues/3657#issuecomment-6057668776",
+      "https://github.com/x402-foundation/x402/issues/3657#issuecomment-6058289816",
+      "https://github.com/x402-foundation/x402/pull/3741"
+    ],
+    "scope": "Other issue states and contact fields retain their original research-seat snapshot. This public file is not the current private relationship ledger."
+  }
 }

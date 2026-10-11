@@ -1,7 +1,7 @@
 # SCF SF-49 — authentic adoption, pilot qualification and open-source sustainability
 
 **Operation:** SCF-STARFORGE-20261009 / SF-49 — delivered as PUBLIC market/product research, not an award submission.  
-**Source-custody date:** October 9, 2026 (EDT), provider GitHub REST timestamps may be October 10 UTC.  
+**Source-custody date:** Original research October 9, 2026 (EDT); x402#3657 issue, all 17 comments and PR3741 metadata rechecked October 11, 2026 UTC. Other eight issue states retain their original observation date.  
 **Companion:** [nine-record source-readable issue ledger](./SF49_PUBLIC_SIGNALS_20261009.json).  
 **Downstream:** SF-05 competition prior art, SF-09 funding/track gates, SF-08 economics, SF-21–40 distinct technical implementation owners, SF-41/42 real-source benchmarking and SF-46 product integration.  
 **Current authority:** research and public software only. **NO** new outreach, grant forms, application, external demo, Michael Clark contact, bounties, former competitions, private repository writes, new workflows/GitHub Actions, mainnet transactions or money movement.
@@ -12,7 +12,7 @@ A world-class Stellar x402 Bazaar wins only if an actual seller and buyer can **
 
 Our defensible **open core** is *agent commerce checkout assurance*: original-source catalog/search + stale/malformed listing detection + seller-controlled verification + x402/Stellar wallet/price correctness + noncustodial budget-policies + clear settle-versus-deliver evidence and optional self-host / commercially supported operator packaging. The product must compose with canonical x402 SDKs and not assert that unbuilt or nonworking features are shipping.
 
-**Concrete value proposition to validate, not a revenue claim:** detect the state where "discovered and online" does **not** imply "an agent can purchase and consume the advertised endpoint." This was described by an actual reporter in [x402#3657](https://github.com/x402-foundation/x402/issues/3657), including a reported lost paying buyer. This is a self-reported production account, not an independent reproduction or a buyer's signed statement.
+**Concrete value proposition to validate, not a revenue claim:** detect the state where "discovered and online" does **not** imply "an agent can purchase and consume the advertised endpoint." This was described by an actual reporter in [x402#3657](https://github.com/x402-foundation/x402/issues/3657), including historical refused payment attempts. Its author reports repairing acceptance and later settling a GET payment on Base mainnet. This is a historical interoperability lesson, not evidence of a current SatLedger defect, Stellar payment, or our customer.
 
 ## 2. Source-audited adoption signals (not permission to contact)
 
@@ -20,7 +20,7 @@ All nine records were retrieved from native first-party GitHub Issues metadata/t
 
 | ID and source | Actual reported problem | Commercial diagnostic hypothesis | Verified customer / operator status |
 | --- | --- | --- | --- |
-| [x402#3657](https://github.com/x402-foundation/x402/issues/3657) **OPEN** | Reporter ran paid routes in production; GET-origin payment retries to POST-only server reportedly lost the only buyer. | *Checkout conversion audit:* one real route x challenge x signed-retry method cross-product; catch paid retries rejected by method policies. | Real reporter self-account; **no contract/consent/ownership verification** |
+| [x402#3657](https://github.com/x402-foundation/x402/issues/3657) **OPEN issue; author-reported repair** | Historical method mismatch; author reports repaired GET acceptance and Base mainnet settlement. | *Historical interoperability case:* learn from independent-client coverage; do not pitch the repaired failure. | Self-report, not our reproduction, consent or customer |
 | [x402#3511](https://github.com/x402-foundation/x402/issues/3511) **OPEN** | Same public paid endpoint's GET probe shows an invalid GET+body schema while POST probe gives valid POST schema; reporter describes agent failure. | *Bazaar schema repair:* stable schema independent of crawler probe and actual executable input contract. | Public issue; named endpoint is **not verified as reporter-owned** |
 | [x402#3121](https://github.com/x402-foundation/x402/issues/3121) **OPEN** | `mcp://tool/name` may be mangled to `null/name` in Bazaar canonical URL extraction. | *MCP discoverability audit:* lossless URL normalization; real MCP tool list round-trip. | Technical issue only, no merchant |
 | [stellar#55](https://github.com/stellar/x402-stellar/issues/55) **OPEN** | A Stellar testnet paywall's default price display seems one decimal out; minimal setup and screenshot given. | *Price-parity preflight:* shopper USD/USDC display, atomic units and exact client requirements. | Technical reporter, not a verified buyer |
@@ -30,7 +30,7 @@ All nine records were retrieved from native first-party GitHub Issues metadata/t
 | [x402#2942](https://github.com/x402-foundation/x402/issues/2942) **CLOSED** | Reporter says a CoinMarketCap API route failed to enter Bazaar despite successful settled payments while three same-configuration routes appeared. | *Historical indexing postmortem*, eventual publish confirmation and stuck-processing telemetry. | **CLOSED historical report**, reporter not verified as CoinMarketCap authorized representative; not active sales |
 | [x402#3500](https://github.com/x402-foundation/x402/issues/3500) **OPEN** | Proposal for machine-readable disputes when automated agent spending violates user intent despite valid signature and successful settlement. | *Agent spend-intent guard:* deny overbudget calls before signing; clear reconciliation evidence. | Proposal, **no proven executed $5 payment** |
 
-**Conversion ranking (not probability or revenue):** P1 practical checkout cases 3657/3511/3121/stellar#55; P2 protocol spend/provenance/wallet studies 71/3226/74/3500; P3 closed historical case 2942. These are nine technically grounded **research signals**, **zero verified consenting pilot customers**, **zero price quotes accepted**, **zero new outreach**. Do not treat a GitHub reporter, another project's bug, or a closed issue as a sales lead without owner and company verification.
+**Research ranking (not probability or revenue):** Original P1 cases 3511/3121/stellar#55 need current-source requalification; P2 protocol studies 71/3226/74/3500 retain their original snapshot status. Case 3657 is a historical author-repaired interoperability lesson; 2942 is closed historical context. The original research seat recorded nine signals, zero verified consenting pilot customers, zero accepted quotes and zero outreach. These counts and the JSON contact fields are a dated research snapshot, not a current relationship ledger; consult the existing commercial owner privately before any contact. Do not treat a GitHub reporter, another project's bug, or a closed issue as a sales lead without owner and company verification.
 
 ### Independent buyer/seller research before any pilot pitch
 
@@ -63,9 +63,11 @@ The fleet already shipped source-grounded Catawba ERP, Springfield EAM, Saugatuc
 
 ## 4. Pilot queue — distinct evidence-to-product handoffs
 
-### Pilot H1 — checkout end-to-end truth for real HTTP-method failure
+### Pilot H1 — independent-client acceptance from a historical method failure
 
-**Research source:** x402#3657, open with detailed production account. **Original test hypothesis:** a GET-catalogued paid route may be healthy and return 402, but a payment-carrying retry method fails, losing actual willing buyers.
+**Research source:** x402#3657 remains open as a protocol discussion; its author reports the original seller failure repaired. Later [browser-header repair](https://github.com/x402-foundation/x402/issues/3657#issuecomment-6057668776) and [single-source method declarations](https://github.com/x402-foundation/x402/issues/3657#issuecomment-6058289816) are also reported shipped. [Spec PR3741](https://github.com/x402-foundation/x402/pull/3741) is open and unmerged at this check; its proposed rules are not adopted protocol requirements.
+
+**Current use:** build a merchant-consented acceptance service for whichever actual operation the merchant selects. Reproduce a present problem before offering a repair. Preserve method and terms across the merchant's own independently implemented buyer/server; catalog liveness alone cannot establish checkout. Do not tell SatLedger its repaired method or header bug remains open.
 
 **Handoff (owner-approved after operator permission):** produce read-only route/schema observation, native x402 client plan with both original GET and intended POST semantics, seller-controlled no-funds mock first, then a real separately authorized testnet transaction only if a seller is verified and a protocol path permits. Emit a bounded trace `discovered/quoted/intent-approved/signed/verified/settled/delivered`, precise method and encoded payment header, and explanatory seller remediation. Actual seller-run traces cannot be invented or generated against arbitrary third-party paid endpoints.
 
@@ -139,7 +141,7 @@ Do not invent SLAs before service operates. Candidate *goals to negotiate* once 
 
 These are **new suborders for authorization/coordination**, not instructions to overwrite original SF owners or contact firms.
 
-- **SF49-ADOPT-01 — Payment conversion failure evidence, cross-protocol.** Research lead: source-exact, code-version-current comparison of x402#3657 plus x402#3511, identify seller method/schema acceptance gap and an actionable diagnostic format. Coordinate SF-25/26. Exit: runnable *no-paid-call* diagnostic plan with current original client behavior, expected versus observed discrepancy. No customer outreach.
+- **SF49-ADOPT-01 — Independent-client acceptance, cross-protocol.** Use x402#3657 as repaired historical context and requalify #3511 against current source before asserting a live gap. Coordinate original SF-25/26 owners; apply existing diagnostics to a genuinely permissioned merchant-selected operation. Exit: a same-method original-source observation with clearly separated current defect, unknown coverage or no reproduced defect. No outreach authority comes from this research record.
 - **SF49-ADOPT-02 — Stellar merchant friction and trustline price parity.** Research lead: genuine current main source review against stellar#55/#74 and whether upstream already corrected behavior. Coordinate SF-15/16. Exit: original mismatch/no-mismatch by current file blob and seller-focused proof of value; no duplicative patch.
 - **SF49-ADOPT-03 — Public ecosystem adoption proof census.** Research lead: find five real opt-in Stellar seller APIs and five actual public agent integrations whose source/permission supports cataloging; preserve URL, source hash, current asset/network, rights, independent response and metadata. Coordinate SF-41/42; **do not** invent customers or automatically crawl private data. Exit: original-backed dataset and zero/unknown flags.
 - **SF49-ADOPT-04 — Founder-approved commercial pilot conversion.** Business lead: after verified operator willingness, prepare one evidence-specific pilot scope, unit costs, noncustodial trust model and actual owner-held unsent message for two unique, unclaimed counterparties. Coordinate existing sales and suppression log. Exit: owner-reviewed *UNSENT* briefs; delivery/contact only on explicit release.
@@ -159,7 +161,7 @@ Use only if buyer/operator identity and professional route are **independently v
 - Official funded #45 recap: https://medium.com/stellar-community/scf-45-round-recap-1ecf281821ab
 - Canonical x402: https://github.com/x402-foundation/x402
 - Stellar reference: https://github.com/stellar/x402-stellar
-- Relevant issue facts: nine current-issue-state source links in §2 and companion JSON
+- Relevant issue facts: dated source links in §2 and companion JSON; only #3657 and PR3741 refreshed October 11. An open issue is not proof of an unfixed deployed seller.
 - SF-09 peer funding strategy: [merged main artifact](./SF09_TRACK_DECISION_20261009.md)
 
 **Evidence quality:** This seat independently retrieved the native GitHub public issue metadata and full summaries and current LICENSE files. This is an actual public first-party problem census; it **does not** claim to have exercised production endpoints, compiled original x402 source, simulated Stellar settlements, validated operator identity, received permission to index, or won a client. Source statements derived from GitHub issues remain marked as reporters' claims pending independent tests. Downstream producers can and should build real exact-original-data acceptance proofs as soon as separate ownership/authorization and actual source availability permit; no arbitrary artificial sample caps.
