@@ -80,7 +80,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
 
-Optional feature groups: postgres, s3, graphql.
+Optional feature groups: ${[...new Set([
+  ...Object.keys(specification.featurePeers ?? {}),
+  ...Object.keys(specification.runtimePackageManifests ?? {}),
+])].sort().join(', ')}.
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
