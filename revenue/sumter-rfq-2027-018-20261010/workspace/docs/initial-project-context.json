@@ -1,0 +1,15 @@
+{
+  "schema": "tjl.procurement-template-context.v1",
+  "mode": "operator",
+  "fields": {
+    "agency": "Sumter School District",
+    "project_title": "Digital Procurement Solutions for Solicitations",
+    "solicitation_id": "RFQ-2027-018",
+    "procurement_contact": "Carlos W. Burns; carlos.burns@sumterschools.net; (803) 469-6900 Ext. 310. Source: issuer RFQ cover.",
+    "approved_submission_instructions": "Issuer source instructions for operator review: submit one hard copy and one USB copy in a sealed package to Sumter School District, Procurement Department, 1345 Wilson Hall Road, Sumter, SC 29150. Show the solicitation number and opening date on the package. Source: RFQ cover; Addendum One Q19 retains the original closed-bid instructions. This project copy does not constitute an offer submission or a new issuer instruction.",
+    "purchase_scope": "Configuration preparation for the RFQ's document templates, agency clause library, approval workflow, per-user section locks, and attachments to Solicitations and Contracts projects. The selected prime remains responsible for the full integrated platform scope. Addendum One Q11 describes at least five to seven initial template configurations; Q15 accepts a district-owned library. Final template selection remains to be agreed.",
+    "questions_deadline": "October 9, 2026 at 11:00 a.m., as printed on the issuer RFQ cover; no time zone is printed there. Questions were directed electronically to carlos.burns@sumterschools.net.",
+    "response_deadline": "October 23, 2026 at 11:00 a.m., as printed on the issuer RFQ cover; no time zone is printed there."
+  },
+  "clauses": {}
+}
