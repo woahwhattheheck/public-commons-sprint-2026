@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Google Sheets · Merchant source</title>
+  <link rel="stylesheet" href="/style.css"><script type="module" src="/browser.mjs"></script>
+</head>
+<body>
+<header class="top"><div><p class="eyebrow">STELLAR FORGE / MERCHANT SOURCE</p><h1>Google Sheets</h1>
+  <p>Review the original cells, choose public columns, and continue into the dataset publisher.</p></div>
+  <div class="host"><span id="host-status">Opening workspace</span><small id="workspace-path"></small></div></header>
+<div id="notice" class="notice" role="status" aria-live="polite"></div>
+<section id="recovery" class="recovery" hidden aria-labelledby="recovery-title">
+  <h2 id="recovery-title">Retained operation</h2><p id="recovery-message"></p><code id="recovery-id"></code>
+  <div class="actions"><button id="check-operation">Check original result</button><button id="resume-operation" hidden>Resume retained operation</button>
+    <button id="retry-operation" hidden>Retry the same request</button><button id="dismiss-operation" hidden>Return to saved work</button></div>
+  <label id="retry-file-label" hidden>Reselect the same original file<input id="retry-file" type="file" accept=".json,application/json"></label>
+</section>
+<fieldset id="workspace-controls">
+<nav aria-label="Source workflow"><button data-view="source" class="selected">1. Observations</button><button data-view="review">2. Public source</button>
+  <button data-view="versions">3. Versions &amp; publisher</button><button data-view="activity">Operations</button><button id="refresh" class="end">Refresh saved state</button></nav>
+<main>
+<section data-panel="source">
+  <div class="section-title"><h2>Choose the source observation</h2><p>Original files remain private. A Google read happens only when you request one.</p></div>
+  <div class="two-columns">
+    <article class="card"><h3>Import retained cells or a source package</h3><p>Choose the complete JSON Spreadsheet resource from a connected <code>spreadsheets.get</code> CellData read, or a source package exported here.</p>
+      <label>Original JSON file<input id="source-file" type="file" accept=".json,application/json"></label>
+      <p id="upload-summary" class="muted">No file selected.</p>
+      <div id="upload-range-controls"><label>Original tab<select id="upload-tab"><option value="">Choose a file first</option></select></label>
+        <label>Exact rectangle requested in the original read<input id="upload-range" placeholder="A1:H500" autocomplete="off"></label>
+        <p class="hint">Include the original header and final row. Missing trailing rows in the JSON are blank cells; they do not establish the requested range.</p></div>
+      <label>Observation title<input id="upload-title" maxlength="128" placeholder="Catalog · October edition"></label>
+      <button id="import-source" class="primary">Retain original observation</button>
+    </article>
+    <article class="card"><h3>Read an existing Google connection</h3><p>Use the read-only connection already declared by this host. Paste the exact workbook URL or ID; no Drive-wide file list is requested.</p>
+      <label>Host connection<select id="live-connection"></select></label><p id="connection-state" class="hint"></p>
+      <label>Google Sheets URL or workbook ID<input id="live-workbook" autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/…"></label>
+      <button id="load-workbook">Load workbook tabs</button><p id="workbook-summary" class="muted"></p>
+      <label>Original tab<select id="live-tab"><option value="">Load the workbook first</option></select></label>
+      <div class="two-fields"><label>Bounded rectangle<input id="live-range" placeholder="A1:H500" autocomplete="off"></label>
+        <label>Observation title<input id="live-title" maxlength="128" placeholder="Current catalog"></label></div>
+      <button id="capture-live" class="primary">Read and retain this range</button>
+      <p class="hint">Connection setup and account review use the existing <code>sheets-source auth connect</code> window. Tokens stay in that original connection.</p>
+    </article>
+  </div>
+  <article class="card"><div class="section-title"><h3>Retained observations</h3><div class="actions"><button id="captures-prev">Previous</button><span id="captures-page"></span><button id="captures-next">Next</button></div></div>
+    <div class="table-scroll"><table><thead><tr><th>Observation</th><th>Original range</th><th>Received</th><th>Bytes / source</th><th>Review</th></tr></thead><tbody id="captures-body"></tbody></table></div>
+  </article>
+</section>
+<section data-panel="review" hidden>
+  <div class="section-title"><h2>Review the public source</h2><span id="draft-state" class="badge">No observation selected</span></div>
+  <div id="no-capture" class="empty">Select a retained observation to begin.</div>
+  <div id="editor" hidden>
+    <article class="card"><h3 id="capture-title"></h3><p id="capture-identity" class="metadata"></p>
+      <div class="two-fields"><label>Source title<input id="draft-title" maxlength="128"></label><label>Named query<input id="draft-name" maxlength="48" placeholder="catalog"></label></div>
+      <div class="three-fields"><label>Selected rectangle<input id="draft-range" placeholder="A1:H500"></label>
+        <label>Completely blank public rows<select id="empty-rows"><option value="reject">Require review when blank</option><option value="skip">Skip completely blank projected rows</option></select></label>
+        <div class="field-action"><button id="inspect-range">Inspect this range</button></div></div>
+      <div class="two-fields"><label>Future publisher reads<select id="source-mode"><option value="capture">This exact retained observation</option><option value="live">New Google observation at each extraction</option></select></label>
+        <label id="draft-connection-label">Declared Google connection<select id="draft-connection"></select></label></div>
+      <p id="mode-description" class="hint"></p>
+    </article>
+    <article class="card"><div class="section-title"><h3>Public columns</h3><span id="column-count"></span></div>
+      <p>Only checked columns enter the source. Original samples below are private operator data. Choose type, blank handling and formula policy explicitly.</p>
+      <div class="table-scroll projection"><table><thead><tr><th>Use</th><th>Sheet column / exact header</th><th>Public name</th><th>Type</th><th>Allow blank</th><th>Formula values</th><th>Observed cells / private sample</th></tr></thead><tbody id="columns-body"></tbody></table></div>
+      <div class="actions"><button id="save-draft">Save draft</button><button id="preview-draft" class="primary">Validate and preview public rows</button><button id="reload-draft">Load saved draft</button></div>
+    </article>
+    <article id="preview-card" class="card" hidden><div class="section-title"><h3>Original typed preview</h3><span id="preview-state" class="badge"></span></div>
+      <p id="preview-summary"></p><div id="preview-table" class="table-scroll"></div>
+      <p class="hint">The original projector validates the complete selected range. The table shows at most 25 public rows. It does not publish a dataset or reread Google.</p>
+      <div class="two-fields"><label>Reviewer<input id="reviewer" maxlength="128" autocomplete="name"></label><label>Source change note<input id="version-note" maxlength="2000" placeholder="Selected public catalog fields and approved effective totals"></label></div>
+      <button id="save-version" class="primary">Save reviewed source version</button>
+    </article>
+  </div>
+</section>
+<section data-panel="versions" hidden>
+  <div class="section-title"><h2>Saved versions and original publisher</h2><span id="selected-version" class="badge">No source selected</span></div>
+  <article class="card"><h3>Continue into the dataset publisher</h3><p id="publisher-summary">Save a reviewed source version first.</p>
+    <div class="actions"><button id="open-publisher" class="primary">Open original publisher</button><a id="publisher-link" class="button" target="_blank" rel="noreferrer" hidden>Go to open publisher</a><button id="stop-publisher">Stop publisher</button></div>
+    <dl class="paths"><dt>Reviewed source</dt><dd id="source-path"></dd><dt>Publisher workspace</dt><dd id="publisher-path"></dd><dt>Dataset state</dt><dd id="dataset-path"></dd></dl>
+    <p class="hint">The original publisher saves plans, extracts candidates, records publication review, publishes versions, runs its configured schedules and prepares the native buyer. Selecting a source here changes the input for a new plan; earlier plans and published datasets keep their original versions.</p>
+  </article>
+  <article class="card"><div class="section-title"><h3>Source versions</h3><div class="actions"><button id="versions-prev">Previous</button><span id="versions-page"></span><button id="versions-next">Next</button></div></div>
+    <div class="table-scroll"><table><thead><tr><th>Version / title</th><th>Reviewed source</th><th>Public shape</th><th>Review</th><th>Actions</th></tr></thead><tbody id="versions-body"></tbody></table></div>
+  </article>
+  <article class="card"><h3>Compare retained sources</h3><div class="actions"><label>Earlier version<select id="compare-left"></select></label><label>Later version<select id="compare-right"></select></label><button id="compare-versions">Compare</button></div><div id="comparison"></div></article>
+</section>
+<section data-panel="activity" hidden><div class="section-title"><h2>Retained operations</h2><p>Recent original action IDs and outcomes. Recovery uses the same ID.</p></div>
+  <article class="card"><div class="table-scroll"><table><thead><tr><th>Operation</th><th>Action</th><th>State</th><th>Updated</th><th>Result / recovery</th></tr></thead><tbody id="operations-body"></tbody></table></div><pre id="operation-detail" hidden></pre></article>
+</section>
+</main>
+</fieldset>
+<footer>Local merchant workspace · Original Google Sheets source, dataset publisher and buyer interfaces · Private source packages include original cells.</footer>
+</body></html>
