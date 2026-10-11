@@ -171,7 +171,13 @@ export async function openJobMerchant({ configPath, directory, env = process.env
             current.attempts.push(attempt); current.state = 'RUNNING'; current.error = null;
             return history(current, 'execution-started', { attemptId: attempt.id });
           });
-        } catch (error) { active.delete(candidate.id); throw error; }
+        } catch (error) {
+          active.delete(candidate.id);
+          // An operator may cancel a queued record before its serialized claim.
+          // Refresh the queue after that revision race and keep other paid jobs moving.
+          if (error.code === 'JOB_REVISION_CHANGED') continue;
+          throw error;
+        }
         const attempt = row.attempts.at(-1);
         slot.promise = executeJob(source, row, attempt, { env, signal: slot.controller.signal })
           .then(body => finishAttempt(row.id, attempt.id, body, null), error => finishAttempt(row.id, attempt.id, null, error))
