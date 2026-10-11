@@ -1,6 +1,6 @@
 # Retained data publication through merchant MCP
 
-Operate the original PostgreSQL, SQLite or MySQL publisher through the maintained merchant MCP service. The same saved plans, extraction runs, typed candidates, reviews, version writer, recurring policy and buyer files remain available after the MCP host restarts. The adapter uses the original publisher and scheduler instances under their existing workspace lease.
+Operate the original PostgreSQL, SQLite, MySQL or Google Sheets publisher through the maintained merchant MCP service. The same saved plans, extraction runs, typed candidates, reviews, version writer, recurring policy and buyer files remain available after the MCP host restarts. The adapter uses the original publisher and scheduler instances under their existing workspace lease.
 
 ## Start from the public SQLite example
 
@@ -52,7 +52,7 @@ The producer's `service.json` contains explicitly unverified example payment ter
 
 ## Connect an existing publisher
 
-Use the original [PostgreSQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/README.md), [SQLite publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/README.md) or [MySQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/README.md) to create a private workspace bound to its approved source and dataset target. An empty newly created workspace is supported; the first MCP publication can initialize its absent target.
+Use the original [PostgreSQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/README.md), [SQLite publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/README.md) [MySQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/README.md) or [Sheets publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/README.md) to create a private workspace bound to its approved source and dataset target. An empty newly created workspace is supported; the first MCP publication can initialize its absent target.
 
 For example, the maintained PostgreSQL entrypoint creates the original workspace and opens its browser:
 
@@ -63,7 +63,7 @@ starforge postgres-publisher serve \
   --state /private/inventory-dataset
 ```
 
-Use `sqlite-publisher` for the original SQLite source or `mysql-publisher` for the original MySQL source. Stop that publisher browser before opening the same workspace through MCP. Its original kernel lock gives one process ownership; the separate versioned dataset seller can continue serving customers.
+Use `sqlite-publisher`, `mysql-publisher` or `sheets-publisher` for the corresponding original source. Stop that publisher browser before opening the same workspace through MCP. Its original kernel lock gives one process ownership; the separate versioned dataset seller can continue serving customers.
 
 Create a private publisher connection JSON file:
 
@@ -82,7 +82,7 @@ Create a private publisher connection JSON file:
 }
 ```
 
-`kind` is `postgres`, `sqlite` or `mysql` and must match the retained workspace. Paths resolve relative to this connection file. Up to 32 aliases can refer to distinct private workspaces. The optional `seller` and `resource` pair binds the existing seller's local address and exact public HTTPS resource for buyer preparation. It does not start that seller or a public proxy. Omit both while preparing a target whose seller has not yet been configured.
+`kind` is `postgres`, `sqlite`, `mysql` or `sheets` and must match the retained workspace. Paths resolve relative to this connection file. Up to 32 aliases can refer to distinct private workspaces. The optional `seller` and `resource` pair binds the existing seller's local address and exact public HTTPS resource for buyer preparation. It does not start that seller or a public proxy. Omit both while preparing a target whose seller has not yet been configured.
 
 Create the original MCP host configuration without an unrelated API release:
 
@@ -103,15 +103,118 @@ starforge merchant-mcp serve --config /private/inventory-mcp/merchant-mcp.json
 starforge merchant-mcp-stdio --config /private/inventory-mcp/merchant-mcp.json
 ```
 
-The HTTP command reads its existing `MCP_ACCESS_TOKEN` environment variable; the stdio host owns its private loopback bearer. Provide database credential environment variables to that same host process. No source credential, connection file, executable module or arbitrary filesystem path is an MCP tool argument.
+The HTTP command reads its existing `MCP_ACCESS_TOKEN` environment variable; the stdio host owns its private loopback bearer. Provide source credential environment variables and private renewable connection references to that same host process. No source credential, connection file, executable module or arbitrary filesystem path is an MCP tool argument.
 
-Source-checkout users invoke `node stellar-forge/mcp-merchant-operator/serve.mjs` and `stdio.mjs` with the same arguments. The original whole merchant MCP and SF30 distribution selections include this adapter and its native publisher dependencies. PostgreSQL and MySQL workspaces use their existing `postgres` and `mysql` dependency groups; SQLite uses the original Node runtime.
+Source-checkout users invoke `node stellar-forge/mcp-merchant-operator/serve.mjs` and `stdio.mjs` with the same arguments. The original whole merchant MCP and SF30 distribution selections include this adapter and its native publisher dependencies. PostgreSQL and MySQL workspaces use their existing `postgres` and `mysql` dependency groups; SQLite and Sheets use the original Node runtime.
+
+## Google Sheets publications
+
+The original [Sheets source and publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/README.md) are a supported host-declared source family. The MCP adapter opens `openSheetsPublisher` and its existing workspace, with the same retained source captures, typed candidates, reviews, version writer, recurring policy and buyer handoffs. The original [renewable Google connection](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/README.md) supplies credentials privately when a live source requests another observation.
+
+### Prepare the source on the merchant host
+
+Use the Sheets source workflow to select the actual workbook, stable tab identity, A1 range, headers, public columns, scalar types and formula policy. Retained connected `CellData` captures and live Google sources are both supported. Keep the workbook ID, full capture, client file and account connection outside published application source and customer exports.
+
+For a live source, connect the merchant's registered Desktop client and review its Google-returned account through the original connection window:
+
+```sh
+starforge sheets-source auth connect \
+  --client /private/google/desktop-client.json \
+  --directory /private/google/merchant-connection
+starforge sheets-source use-connection \
+  --source /private/sheets/reviewed-source.json \
+  --connection /private/google/merchant-connection \
+  --out /private/sheets/live-source.json
+starforge sheets-publisher serve \
+  --workspace /private/sheets/publications --create \
+  --source /private/sheets/live-source.json \
+  --state /private/sheets/dataset
+```
+
+`use-connection` creates a new declaration with the reviewed workbook/range/projection and an absolute private `oauthDirectory` reference. Use that declaration when initializing the new live publisher. Existing environment-token sources continue to use their configured environment variable in the MCP host process. An already-created publisher retains its original configured source and directory; reopen those paths rather than initializing it again.
+
+Stop the publisher browser after source review so the MCP host can acquire that same original workspace lease. Declare it in the host's existing publisher connection file:
+
+```json
+{
+  "schema": "stellar-forge.merchant-publisher-connection.v1",
+  "workspaces": {
+    "sheet_catalog": {
+      "label": "Reviewed Sheet catalog",
+      "kind": "sheets",
+      "directory": "/private/sheets/publications"
+    }
+  }
+}
+```
+
+Use `merchant-mcp init-publishers` or the existing host's `publisherConnection` configuration as above. The declared kind must match `stellar-forge.sheets-publisher-workspace.v1`. Sheets adds no npm dependency. The same Linux, Node and `flock` requirements apply. Account connection and renewal remain in the original private credential directory; the agent selects only the declared publisher alias.
+
+### Inspect and publish the approved range
+
+Call `merchant_publisher_open` with `{"publisher":"sheet_catalog"}`, then `merchant_publisher_source`. The source response retains its exact hash, connection kind, named ranges, stable tab ID, public column types, null/formula handling and any captured observation. A Sheets query selects a previously approved named range. Its parameter object is empty.
+
+For a source matching the original public `example-source.json` projection, the plan is:
+
+```json
+{
+  "publisher": "sheet_catalog",
+  "plan": {
+    "title": "Reviewed Sheet catalog",
+    "query": "catalog",
+    "sourceHash": "THE_ACTUAL_SOURCE_SHA256",
+    "input": {},
+    "dataset": {
+      "name": "Sheet catalog",
+      "columns": {
+        "sku": "string",
+        "label": "string",
+        "units_available": "integer",
+        "unit_price": "number",
+        "enabled": "boolean",
+        "serial_id": "string",
+        "stock_value": "number"
+      },
+      "filters": ["enabled"],
+      "ranges": [],
+      "sorts": ["sku"],
+      "defaultLimit": 25,
+      "maxLimit": 100
+    },
+    "extraction": {
+      "maxRows": 500,
+      "maxBytes": 8388608,
+      "maxRowBytes": 65536,
+      "timeoutMs": 30000,
+      "order": [{"column":"sku","direction":"asc"}]
+    }
+  }
+}
+```
+
+Replace the source hash and projection with the actual inspected source before saving. Formula output is included only where the source explicitly permits effective values. Text identifiers keep their original text; an identifier already stored by Google as a rounded number cannot regain lost digits through a type conversion.
+
+Continue through the same plan-save, extraction UUID, candidate inspection, review and publication tools below. `merchant_publisher_inspect` returns the original typed rows and the selected range's native observation: source/manifest hashes, receipt time, byte count, formula-cell count and original one-response semantics. Local capture filenames are omitted from the MCP view while the original files remain with their native runs. Review the exact candidate digest and current target before publication. The seller and buyer sections apply unchanged to this same dataset.
+
+### Refresh and reopen the same publication
+
+| Approved source | Meaning of a later extraction or scheduled occurrence |
+| --- | --- |
+| Retained connected capture | Reads the exact observation copied into the immutable plan. It does not obtain a newer Google response. A newly approved capture requires a newly reviewed source plan. |
+| Live Google source with `oauthDirectory` | The original source resolves the merchant's saved connection and reads a fresh range observation for that extraction. Each run retains that actual response and its hashes. |
+| Live Google source with `accessTokenEnv` | Reads a fresh range using the original host environment credential. Credential lifetime remains the host operator's responsibility. |
+
+An enabled saved policy resumes when the MCP alias opens. Keep the original interval, row-change limits, responsible reviewer and `onError` behavior appropriate to the selected source. A reconnect or renewal serves the same live plan through its stable private connection reference. It does not rewrite an already-retained capture or previously published edition.
+
+After a credential error, inspect the original connection with `starforge sheets-source auth status --directory /private/google/merchant-connection`; use its existing reconnect flow where requested. Retained extraction state and the last published dataset remain available while the source is repaired. Resume the original schedule occurrence or run only as indicated by its current saved state.
+
+Close the exact returned `instanceId`, then reopen the same alias after a host restart. Original plan/run IDs, both older and current candidates, retained editions, schedule history and saved buyer configuration remain in the original workspace. `merchant_publisher_buyer_read` reopens its exact existing handoff without another provider request or purchase.
 
 ## Save, extract, review and publish
 
 Start with `merchant_publishers`, then call `merchant_publisher_open` with the declared alias. Opening acquires the original workspace lease and starts the original scheduler in its saved state, just as the native browser server does. An enabled saved policy resumes; a paused policy stays paused. Reopening an already-open alias returns the same process instance.
 
-Use `merchant_publisher_source` to inspect the exact source hash, approved query names, SQL projections and typed parameter definitions. Use `merchant_publisher_status` to inspect saved plans/runs and `merchant_publisher_target` for the actual current dataset contract, snapshot, revision and retained versions.
+Use `merchant_publisher_source` to inspect the exact source hash, approved query names, source projections and typed parameter definitions (including the original Sheets range and formula policy). Use `merchant_publisher_status` to inspect saved plans/runs and `merchant_publisher_target` for the actual current dataset contract, snapshot, revision and retained versions.
 
 `merchant_publisher_plan_save` accepts the original plan. Select a query that exists in the inspected source; match its parameter names and intentionally select the columns to publish. This illustrative inventory plan uses exact text for large IDs and decimals:
 
