@@ -10,7 +10,16 @@ import { prepareRuntimeInstall, installRuntime, inspectRuntimeInstall, upgradeRu
 import { runtimeCatalog, resolveRuntimeProfile } from '../runtime-profile.mjs';
 import { plain, now, digest, json, canonical, fail, need, recordId, operationId, absolute,
   privateDirectory, makePrivate, readJSON, saveJSON, workerAlive, processIdentity,
-  operationLease, tailFile } from './storage.mjs';
+  operationLease, operationRunning, tailFile } from './storage.mjs';
+
+import { managedOperationFields, initializeManagedWorkspace, managedState, openManagedHome, reviewManagedAdoption,
+  managedConfig, normalizeManagedOperation, executeManagedOperation, managedCommandAlive,
+  stopManagedCommand, recoverManagedOperation } from './managed-workspace.mjs';
+
+import { imageOperationFields, imageWorkspaceState, reviewWorkspaceImage, attachWorkspaceImage,
+  attachWorkspaceImageTransfer, prepareWorkspaceImageTransfer, receiveWorkspaceImageChunk,
+  openWorkspaceImageDownload, reviewWorkspaceImageContainer, normalizeImageOperation,
+  executeImageOperation } from './image-workspace.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
@@ -101,12 +110,17 @@ async function jobView(root, id) {
   const directory = jobPath(root, id), request = await readJSON(join(directory, 'request.json'), true);
   if (!request) return { id, operation: 'prepare request', phase: 'INITIALIZING', displayPhase: 'INITIALIZING', workerActive: false };
   const state = await readJSON(join(directory, 'state.json'), true) ?? { phase: 'QUEUED' };
-  const active = state.phase === 'RUNNING' && await workerAlive(state);
+  const active = state.phase === 'RUNNING' && (await workerAlive(state) || await operationRunning(join(directory, 'worker.lock')));
+  const commandActive = state.phase === 'RUNNING' && Boolean(state.commandProcess) && (await managedCommandAlive(state) || active);
   return { id, operation: request.operation, runtimeId: request.runtimeId ?? request.targetId ?? null,
-    targetId: request.targetId ?? null,
+    homeId: request.homeId ?? null, commandActive,
+    targetId: request.targetId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null,
     targetDirectory: request.targetDirectory ?? null, createdAt: request.createdAt,
+    contextDirectory: request.contextDirectory ?? null, transferDirectory: request.transferDirectory ?? null,
+    containerDirectory: request.containerDirectory ?? null, reviewId: request.reviewId ?? null,
+    deploymentReviewId: request.deploymentReviewId ?? null,
     ...state, workerActive: active,
-    displayPhase: state.phase === 'RUNNING' && !active ? 'INTERRUPTED' : state.phase };
+    displayPhase: state.phase === 'RUNNING' && !active && !commandActive ? 'INTERRUPTED' : state.phase };
 }
 async function spawnWorker(root, id) {
   const log = await open(join(jobPath(root, id), 'worker.log'),
@@ -132,6 +146,8 @@ function newTarget(config, name) {
   return join(config.runtimeHome, name);
 }
 const fields = {
+  ...managedOperationFields,
+  ...imageOperationFields,
   import: ['archive', 'sha256', 'label'],
   prepare: ['archiveId', 'name', 'selection', 'profileId'],
   install: ['runtimeId', 'offline', 'cache', 'nodeHeaders'],
@@ -142,8 +158,23 @@ const fields = {
 
 export async function openRuntimeWorkspace({ directory } = {}) {
   const { root, config } = await context(directory);
+  await initializeManagedWorkspace(root);
   const model = {
     directory: root,
+    async imagesState() { return imageWorkspaceState(root); },
+    async imagesReview(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return reviewWorkspaceImage(root, { ...input, runtimeDirectory: selected.directory });
+    },
+    async imagesAttach(input) { return attachWorkspaceImage(root, input); },
+    async imagesTransferAttach(input) { return attachWorkspaceImageTransfer(root, input); },
+    async imagesTransfer(input) { return prepareWorkspaceImageTransfer(root, input); },
+    async imagesUpload(input) { return receiveWorkspaceImageChunk(root, input); },
+    async imagesDownload(input) { return openWorkspaceImageDownload(root, input); },
+    async imagesContainerReview(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return reviewWorkspaceImageContainer(root, { ...input, runtimeDirectory: selected.directory });
+    },
     async state({ runtimeId = null } = {}) {
       const [saved, archives, names] = await Promise.all([records(root, 'entries'), records(root, 'archives'), readdir(join(root, 'operations'))]);
       const entries = await Promise.all(saved.map(retainedView));
@@ -197,8 +228,17 @@ export async function openRuntimeWorkspace({ directory } = {}) {
         'RUNTIME_WORKSPACE_ACTION_FIELDS_INVALID');
       const id = operationId(input.requestId), request = { ...input };
       delete request.requestId;
+      const clientRequestHash = digest(json(canonical(input)));
+      const retainedRequest = await readJSON(join(jobPath(root, id), 'request.json'), true);
+      if (retainedRequest?.clientRequestHash) {
+        need(retainedRequest.clientRequestHash === clientRequestHash, 'RUNTIME_WORKSPACE_REQUEST_ID_REUSED');
+        return { operationId: id, runtimeId: retainedRequest.targetId ?? retainedRequest.runtimeId ?? null,
+          homeId: retainedRequest.homeId ?? null, imageId: retainedRequest.imageId ?? null, transferId: retainedRequest.transferId ?? null, reopened: true };
+      }
+      if (!retainedRequest) request.clientRequestHash = clientRequestHash;
       for (const key of ['offline', 'load', 'source', 'install']) if (request[key] !== undefined)
         need(typeof request[key] === 'boolean', 'RUNTIME_WORKSPACE_BOOLEAN_REQUIRED');
+      if (Object.hasOwn(managedOperationFields, request.operation)) await normalizeManagedOperation(root, request);
       if (request.cache) absolute(request.cache);
       if (request.nodeHeaders !== undefined) absolute(request.nodeHeaders);
       if (request.runtimeId) request.runtimeDirectory = (await entry(root, request.runtimeId)).directory;
@@ -212,6 +252,16 @@ export async function openRuntimeWorkspace({ directory } = {}) {
           need(!(active.runtimeId === request.runtimeId || active.targetId === request.runtimeId) ||
             !(active.workerActive || active.phase === 'QUEUED'), 'RUNTIME_WORKSPACE_RUNTIME_BUSY',
           'An existing workspace operation is using this runtime; its retained progress is below', 409);
+        }
+      }
+      if (request.homeId && !['managed-run', 'managed-inspect', 'managed-doctor'].includes(request.operation)) {
+        const names = (await readdir(join(root, 'operations'))).filter(name => /^[a-f0-9-]{36}$/.test(name));
+        for (const existingId of names) {
+          if (existingId === id) continue;
+          const active = await jobView(root, existingId);
+          need(active.homeId !== request.homeId || active.operation === 'managed-run' ||
+            !(active.workerActive || active.phase === 'QUEUED'), 'MANAGED_HOME_BUSY',
+            'Open the retained managed-home operation before starting another change', 409);
         }
       }
       if (['prepare', 'upgrade'].includes(request.operation)) {
@@ -233,11 +283,13 @@ export async function openRuntimeWorkspace({ directory } = {}) {
           'RUNTIME_WORKSPACE_LABEL_INVALID');
         request.targetDirectory = join(root, 'sources', id);
       }
+      if (Object.hasOwn(imageOperationFields, request.operation))
+        Object.assign(request, await normalizeImageOperation(root, request, id));
       const operationDirectory = jobPath(root, id), body = canonical(request), requestHash = digest(json(body));
       const previous = await readJSON(join(operationDirectory, 'request.json'), true);
       if (previous) {
         need(previous.requestHash === requestHash, 'RUNTIME_WORKSPACE_REQUEST_ID_REUSED');
-        return { operationId: id, runtimeId: previous.targetId ?? previous.runtimeId ?? null, reopened: true };
+        return { operationId: id, runtimeId: previous.targetId ?? previous.runtimeId ?? null, homeId: previous.homeId ?? null, imageId: previous.imageId ?? null, transferId: previous.transferId ?? null, reopened: true };
       }
       await makePrivate(operationDirectory);
       await saveJSON(join(operationDirectory, 'request.json'), { ...body, requestHash, createdAt: now() });
@@ -249,7 +301,7 @@ export async function openRuntimeWorkspace({ directory } = {}) {
           phase: 'QUEUED', updatedAt: now(), error: asError(error), launchPending: true }, true);
         throw error;
       }
-      return { operationId: id, runtimeId: request.targetId ?? request.runtimeId ?? null };
+      return { operationId: id, runtimeId: request.targetId ?? request.runtimeId ?? null, homeId: request.homeId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null };
     },
     async resumeQueued(operation) {
       const current = await jobView(root, operation);
@@ -289,6 +341,18 @@ export async function openRuntimeWorkspace({ directory } = {}) {
         'RUNTIME_WORKSPACE_INSTALL_LOG_UNAVAILABLE', 'This runtime has no npm attempt log yet');
       return { name: state.logFile, ...await tailFile(join(selected.directory, state.logFile)) };
     },
+    async managedState(options) { return managedState(root, options); },
+    async openManagedHome(options) { return openManagedHome(root, options); },
+    async reviewManagedAdoption({ homeId, runtimeId }) {
+      return reviewManagedAdoption(root, { homeId, runtimeId, runtimeDirectory: (await entry(root, runtimeId)).directory });
+    },
+    async managedConfig(options) { return managedConfig(root, options); },
+    async stopManagedCommand(id) { return stopManagedCommand(root, id); },
+    async recoverManagedOperation(id) {
+      const result = await recoverManagedOperation(root, id);
+      if (result.resume) await spawnWorker(root, id);
+      return result;
+    },
     async close() {},
   };
   return model;
@@ -307,14 +371,22 @@ export async function executeRuntimeWorkspaceOperation({ directory, operation: i
     if (['SUCCEEDED', 'FAILED'].includes(previous.phase)) return previous;
     need(previous.phase === 'QUEUED', 'RUNTIME_WORKSPACE_INTERRUPTED_REQUEST',
       'Open the retained target runtime and use its original install or recovery operation');
-    const started = { phase: 'RUNNING', startedAt: now(), updatedAt: now(), pid: process.pid,
+    const started = { phase: 'RUNNING', attempt: previous.attempt ?? 1, startedAt: now(), updatedAt: now(), pid: process.pid,
       processStart: await processIdentity() };
     await saveJSON(join(operationDirectory, 'state.json'), started, true);
     try {
       let result;
       const installOptions = { offline: request.offline ?? false, cache: request.cache ?? null,
         ...(request.nodeHeaders ? { nodeHeaders: request.nodeHeaders } : {}) };
-      if (request.operation === 'import') {
+      if (Object.hasOwn(managedOperationFields, request.operation)) {
+        result = await executeManagedOperation({ root, request, operationDirectory, leaseFd: lease.fd,
+          checkpoint: async value => {
+            Object.assign(started, value, { updatedAt: now() });
+            await saveJSON(join(operationDirectory, 'state.json'), started, true);
+          } });
+      } else if (Object.hasOwn(imageOperationFields, request.operation)) {
+        result = await executeImageOperation(root, request, id);
+      } else if (request.operation === 'import') {
         result = await prepareRuntimeInstall({ directory: request.targetDirectory, archive: request.archive, sha256: request.sha256 });
         result = { ...result, archive: await retainArchive(root, request.targetDirectory, request.label) };
       } else if (request.operation === 'prepare') {

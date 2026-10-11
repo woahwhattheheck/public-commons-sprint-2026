@@ -4,6 +4,7 @@ import {constants} from 'node:fs';
 import {open, lstat, realpath, unlink} from 'node:fs/promises';
 import {dirname, isAbsolute, resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {randomUUID} from 'node:crypto';
 import {createObjectSession, inspectObjectSession, runObjectSession,
   recoverObjectSession, assembleObjectSession, accountObjectSession} from './object-session.mjs';
 import {selectObjectDescription} from './object-description.mjs';
@@ -32,6 +33,11 @@ backup --state ABS --state-root ABS --out NEW_BUNDLE --review SHA256 --quiesced
        [--profile ABS] [--pass-env SF88_BACKUP_PASSPHRASE]
 backup-verify --bundle ABS [--expect RECORD_SHA256] [--pass-env NAME] [--python ABS]
 backup-restore --bundle ABS [--expect RECORD_SHA256] [--pass-env NAME] [--python ABS]
+analysis-review --state ABS --session SAVED_NAME --name SOURCE --format json|csv
+                [--analysis-python ABS]
+analysis-open --state ABS [--session SAVED_NAME --name SOURCE --format json|csv --review SHA256]
+              [--analysis-python ABS]
+analysis-status --state ABS [--analysis-python ABS]
 
 init selects one ORIGINAL SF30 S3 objects.json row, or explicit reviewed object facts.
 Whole products use one GET without a query, including an empty file; chunks use exact ranges.
@@ -45,6 +51,11 @@ saved parts and completed objects through the existing encrypted recovery engine
 Restore publishes only to the original absent/empty state root and reopens saved
 purchase records. Set its separate passphrase environment in this terminal.
 All destinations are absolute and new. See OBJECTS.md for the complete journey.
+Analysis commands select a saved session NAME inside the Object Buyer workspace.
+Review binds its existing recorded file and target source revision. analysis-open
+registers that reviewed source, or reopens saved analysis without a source file.
+Keep the analysis-open terminal running; Ctrl+C stops its owned original Python
+application and preserves saved tables, queries and exports in STATE/analysis.
 `;
 const common = ['session'];
 function parse(tokens) {
@@ -110,6 +121,9 @@ export async function main(tokens = process.argv.slice(2)) {
   if (['backup-review','backup','backup-verify','backup-restore'].includes(tokens[0])) {
     await recoveryCommand(tokens); return;
   }
+  if (['analysis-review','analysis-open','analysis-status'].includes(tokens[0])) {
+    await analysisCommand(tokens); return;
+  }
   const {command,flags:f} = parse(tokens);
   let report;
   if (command === 'init') {
@@ -166,6 +180,56 @@ export async function main(tokens = process.argv.slice(2)) {
     !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','NOT_ATTEMPTED'].includes(entry.outcome)))
     process.exitCode=2;
   return report;
+}
+
+async function analysisCommand([command,...tokens]) {
+  const names = command === 'analysis-status' ? ['state','analysis-python'] :
+    ['state','session','name','format','analysis-python', ...(command === 'analysis-open' ? ['review'] : [])];
+  need(tokens.length % 2 === 0, 'OBJECT_FLAG_VALUE_REQUIRED');
+  const options = {};
+  for (let index = 0; index < tokens.length; index += 2) {
+    const key = tokens[index].startsWith('--') ? tokens[index].slice(2) : '';
+    need(names.includes(key) && !Object.hasOwn(options,key) && tokens[index+1] &&
+      !tokens[index+1].startsWith('--'), 'OBJECT_FLAG_INVALID_OR_REPEATED');
+    options[key] = tokens[index+1];
+  }
+  need(options.state, 'OBJECT_WORKSPACE_STATE_REQUIRED');
+  const attachment = ['session','name','format','review'].some(key => options[key] !== undefined);
+  if (command === 'analysis-review' || command === 'analysis-open' && attachment) {
+    need(options.session && options.name && ['json','csv'].includes(options.format), 'OBJECT_ANALYSIS_SOURCE_INVALID');
+    if (command === 'analysis-open') need(/^[a-f0-9]{64}$/.test(options.review ?? ''), 'OBJECT_ANALYSIS_REVIEW_REQUIRED');
+  }
+  const {openObjectWorkspace} = await import('./object-workspace/model.mjs');
+  const model = await openObjectWorkspace({stateDirectory:options.state, analysisPython:options['analysis-python'] ?? 'python3'});
+  let interrupted = null;
+  const stop = code => { interrupted = code; void model.close(); };
+  const interrupt = () => stop(130), terminate = () => stop(143);
+  process.on('SIGINT',interrupt); process.on('SIGTERM',terminate);
+  try {
+    if (command === 'analysis-status') {
+      process.stdout.write(JSON.stringify(await model.inspectAnalysis(),null,2)+'\n'); return;
+    }
+    let review;
+    if (command === 'analysis-review' || attachment) {
+      const current = await model.view({session:options.session});
+      review = await model.reviewAnalysis({session:options.session, expectedRevision:current.selected.revision,
+        name:options.name, format:options.format});
+      if (command === 'analysis-review') { process.stdout.write(JSON.stringify(review,null,2)+'\n'); return; }
+      need(review.reviewSha256 === options.review, 'OBJECT_WORKSPACE_REVIEW_CHANGED');
+    }
+    const actionId = randomUUID();
+    model.startAnalysis({kind:review ? 'ATTACH' : 'OPEN',actionId,...(review ? {reviewId:review.reviewId} : {})});
+    const result = await model.waitForAnalysisAction(actionId);
+    if (interrupted) return;
+    const state = model.analysisState();
+    process.stdout.write(JSON.stringify({result,...(state.url ? {workspaceId:state.workspaceId,url:state.url} : {})},null,2)+'\n');
+    if (result.state !== 'COMPLETED') { process.exitCode = 2; return; }
+    process.stderr.write('Keep this terminal open. Ctrl+C stops the original analysis workspace and retains its saved work.\n');
+    await model.waitForAnalysis();
+  } finally {
+    await model.close(); process.off('SIGINT',interrupt); process.off('SIGTERM',terminate);
+    if (interrupted) process.exitCode = interrupted;
+  }
 }
 
 async function recoveryCommand([command,...tokens]) {

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Research dossiers</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to dossier</a>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">R</span><span>Research dossiers</span></div>
+    <div class="topbar-right"><span id="connection" role="status">Opening workspace</span><button id="open-portable" class="quiet" title="Reopen a portable dossier JSON file up to 256 MiB">Open dossier file</button></div>
+  </header>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <div class="shell">
+    <aside class="collection" aria-label="Saved dossiers">
+      <div class="section-heading"><h2>Dossiers</h2><button id="new-dossier" class="compact" aria-label="Create dossier">New</button></div>
+      <label class="search-field"><span class="sr-only">Find a saved dossier</span><input id="dossier-search" type="search" placeholder="Find a dossier" autocomplete="off"></label>
+      <div id="dossier-list" class="dossier-list"></div>
+      <p id="collection-empty" class="muted small" hidden>Create a dossier to collect research questions and useful source material.</p>
+      <div class="collection-footer"><span id="dossier-count">0 saved dossiers</span><button id="refresh" class="quiet compact">Refresh</button></div>
+    </aside>
+    <main id="workspace" tabindex="-1">
+      <section id="empty-workspace" class="empty-workspace">
+        <span class="eyebrow">Research workspace</span>
+        <h1>Keep the useful parts of your research together.</h1>
+        <p>Organize questions, import saved research results, choose evidence, add your analysis, and export a source-linked report.</p>
+        <div class="button-row"><button id="empty-create" class="primary">Create a dossier</button><button id="empty-open" title="Reopen a portable dossier JSON file up to 256 MiB">Open dossier file</button></div>
+        <ol class="getting-started"><li><strong>Set the question.</strong><span>Give each line of research its own question.</span></li><li><strong>Add the sources.</strong><span>Import original saved result files into dated editions.</span></li><li><strong>Write the finding.</strong><span>Select evidence and record your notes alongside it.</span></li><li><strong>Deliver the report.</strong><span>Export HTML, Markdown, or a portable dossier to reopen.</span></li></ol>
+      </section>
+      <section id="dossier-workspace" hidden>
+        <header class="dossier-header">
+          <div class="title-block"><span class="eyebrow" id="dossier-eyebrow">Dossier</span><h1 id="dossier-title"></h1><p id="dossier-description" class="muted"></p><div class="record-meta" id="dossier-meta"></div></div>
+          <div class="header-actions"><button id="edit-dossier" class="quiet">Edit details</button><button id="import-results" class="primary">Add research</button><button id="export-open">Export</button></div>
+        </header>
+        <div class="summary-strip" aria-label="Dossier summary">
+          <div><span id="count-questions">0</span><label>Questions</label></div>
+          <div><span id="count-editions">0</span><label>Result editions</label></div>
+          <div><span id="count-sources">0</span><label>Unique sources</label></div>
+          <div><span id="count-selected">0</span><label>Selected evidence</label></div>
+        </div>
+        <nav class="tabs" aria-label="Dossier views">
+          <button class="tab active" data-tab="sources" aria-current="page">Sources</button>
+          <button class="tab" data-tab="questions">Questions</button>
+          <button class="tab" data-tab="findings">Findings</button>
+          <button class="tab" data-tab="revisions">Revisions</button>
+        </nav>
+        <section id="view-sources">
+          <div class="source-toolbar">
+            <label class="search-field grow"><span class="sr-only">Search sources and notes</span><input id="source-search" type="search" placeholder="Search titles, sources, excerpts, and notes" autocomplete="off"></label>
+            <label class="field-inline"><span class="sr-only">Filter by question</span><select id="question-filter"><option value="">All questions</option></select></label>
+            <label class="check-filter"><input id="selected-only" type="checkbox"><span>Selected evidence</span></label>
+          </div>
+          <div class="source-layout">
+            <div class="sources-area">
+              <div class="table-caption"><span id="source-count"></span><label class="sort-label">Sort<select id="source-sort"><option value="original">Result order</option><option value="title">Title</option><option value="coverage">Citation count</option><option value="newest">Publication date</option></select></label></div>
+              <div id="sources-empty" class="panel-empty" hidden><h2 id="sources-empty-title">Add the first result edition</h2><p id="sources-empty-text">Choose Add result files to import the original JSON returned by your research provider or saved buyer operation.</p><button id="sources-add">Add result files</button></div>
+              <div id="source-table-wrap" class="table-wrap"><table class="sources-table"><thead><tr><th class="select-column"><span class="sr-only">Evidence selection</span></th><th>Source</th><th class="coverage-column">Coverage</th><th class="date-column">Published</th></tr></thead><tbody id="source-rows"></tbody></table></div>
+              <section id="unavailable-sources" class="unavailable-sources" hidden><h3>Saved source references</h3><p class="muted small">These references have no current source projection. Your selected evidence and analysis remain in the dossier.</p><div id="unavailable-source-list"></div></section>
+              <div class="pagination" id="source-pagination"><button id="page-prev" class="quiet compact">Previous</button><span id="page-status"></span><button id="page-next" class="quiet compact">Next</button></div>
+            </div>
+            <aside id="source-detail" class="source-detail" aria-label="Source detail" hidden>
+              <div class="detail-heading"><span class="eyebrow">Source detail</span><button id="detail-close" class="quiet compact" aria-label="Close source detail">Close</button></div>
+              <h2 id="detail-title"></h2><a id="detail-link" target="_blank" rel="noopener noreferrer"></a><div id="detail-meta" class="record-meta"></div>
+              <label class="evidence-toggle"><input id="detail-selected" type="checkbox"><span>Include in selected evidence</span></label>
+              <section><div class="excerpt-heading"><h3>Edition excerpt</h3><select id="detail-variant" aria-label="Select source edition excerpt" hidden></select></div><div id="detail-excerpt" class="source-excerpt"></div></section>
+              <section><h3>Appears in</h3><ul id="detail-citations" class="citation-list"></ul></section>
+              <section><label for="detail-classification" class="field-label">Evidence role</label><select id="detail-classification"><option value="unreviewed">Unreviewed</option><option value="supports">Supports the question</option><option value="contradicts">Contradicts the question</option><option value="background">Background</option></select></section>
+              <section><label for="detail-note" class="field-label">Analyst note</label><textarea id="detail-note" rows="7" placeholder="What does this source establish? Record the implication, uncertainty, or useful quotation."></textarea><div class="note-footer"><span id="note-state" class="muted small"></span><button id="save-note" class="compact">Save note</button></div></section>
+            </aside>
+          </div>
+        </section>
+        <section id="view-questions" hidden>
+          <div class="view-heading"><div><h2>Research questions</h2><p class="muted">Keep each result edition attached to the question it answers.</p></div><button id="add-question" class="primary">Add question</button></div>
+          <div id="question-list" class="question-list"></div>
+          <div id="questions-empty" class="panel-empty" hidden><h2>What do you need to find out?</h2><p>Add a question before importing the first result edition.</p><button id="questions-add">Add question</button></div>
+          <section class="editions-section"><h2>Retained result editions</h2><div id="edition-list" class="edition-list"></div></section>
+        </section>
+        <section id="view-findings" hidden>
+          <div class="view-heading"><div><h2>Findings</h2><p class="muted">Write the conclusion in your own words and link the sources that support it.</p></div><button id="add-finding" class="primary">Add finding</button></div>
+          <div id="finding-list" class="finding-list"></div>
+          <div id="findings-empty" class="panel-empty" hidden><h2>Turn the evidence into a useful conclusion</h2><p>Add a finding with its question, analysis, and source references.</p><button id="findings-add">Add finding</button></div>
+        </section>
+        <section id="view-revisions" hidden>
+          <div class="view-heading"><div><h2>Revision comparison</h2><p class="muted">Compare saved dossier states to see how evidence and analysis changed.</p></div></div>
+          <form id="compare-form" class="compare-controls"><label>Earlier revision<select id="compare-before"></select></label><label>Later revision<select id="compare-after"></select></label><button type="submit">Compare revisions</button></form>
+          <div id="compare-output" class="comparison" aria-live="polite"><p class="muted">Select two revisions to compare.</p></div>
+          <h3 class="history-heading">Saved history</h3><ol id="revision-list" class="revision-list"></ol>
+        </section>
+      </section>
+    </main>
+  </div>
+  <dialog id="dossier-dialog"><form id="dossier-form"><div class="dialog-heading"><h2 id="dossier-dialog-title">Create a dossier</h2><button type="button" class="quiet dialog-close" aria-label="Close">Close</button></div><label>Title<input name="title" id="form-title" required maxlength="240" placeholder="A specific research decision"></label><label>Description<textarea name="description" id="form-description" rows="4" maxlength="12000" placeholder="Scope, audience, and the decision this research should support"></textarea></label><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="dialog-close">Cancel</button><button type="submit" class="primary" id="dossier-submit">Create dossier</button></div></form></dialog>
+  <dialog id="question-dialog"><form id="question-form"><div class="dialog-heading"><h2 id="question-dialog-title">Add research question</h2><button type="button" class="quiet dialog-close" aria-label="Close">Close</button></div><label>Question<textarea name="text" id="form-question" rows="4" required maxlength="4000" placeholder="What do you need to establish?"></textarea></label><div id="question-extra" hidden><label class="stack-label">Question status<select id="form-question-status"><option value="open">Open</option><option value="answered">Answered</option><option value="parked">Parked</option></select></label><label class="stack-label">Research notes<textarea id="form-question-notes" rows="4" maxlength="30000"></textarea></label></div><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="dialog-close">Cancel</button><button type="submit" class="primary" id="question-submit">Add question</button></div></form></dialog>
+  <dialog id="import-dialog" class="wide-dialog"><form id="import-form"><div class="dialog-heading"><div><h2>Add research</h2><p class="muted">Attach a result file or an edition from the original research service.</p></div><button type="button" class="quiet dialog-close" aria-label="Close">Close</button></div><div class="import-modes"><label><input type="radio" name="importMode" value="files" checked><span>Retained result files</span></label><label><input type="radio" name="importMode" value="reference"><span>Provider edition</span></label></div><label>Research question<select id="import-question" required></select></label><label>Edition label<input id="import-label" maxlength="240" placeholder="Optional; file name is used when blank"></label><div id="import-files-fields"><label class="stack-label">File format<select id="import-retained-provider"><option value="research">Research result envelope</option><option value="openalex">Original OpenAlex response</option></select></label><p id="import-format-help" class="muted small">Research envelopes retain their source terms and original result entries.</p><label class="file-picker">Original result files<input id="import-files" type="file" accept=".json,application/json" multiple required><span class="muted small">Up to 16 MiB per result file. Use a file you can retain. For Valyu sources, choose Provider edition.</span></label><div id="import-file-list" class="selected-files"></div></div><div id="import-reference-fields" hidden><label class="stack-label">Provider<input id="import-provider" value="valyu" maxlength="80" autocomplete="off"></label><label class="stack-label">Edition reference<textarea id="import-reference" rows="6" spellcheck="false" placeholder='{"editionId":"…"}'></textarea></label><p class="muted small">Paste the reference produced by the original provider workspace. Current source availability follows that edition.</p></div><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="dialog-close">Cancel</button><button type="submit" class="primary" id="import-submit">Import files</button></div></form></dialog>
+  <dialog id="export-dialog"><form id="export-form"><div class="dialog-heading"><h2>Export dossier</h2><button type="button" class="quiet dialog-close" aria-label="Close">Close</button></div><p class="muted">The report includes your research questions, selected evidence, analyst notes, and original source references.</p><label>Format<select id="export-format"><option value="html">HTML report — ready to read and share</option><option value="md">Markdown report — ready to edit</option><option value="json">Portable JSON dossier — reopen in this workspace (up to 256 MiB)</option></select></label><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="dialog-close">Cancel</button><button type="submit" class="primary">Download</button></div></form></dialog>
+  <dialog id="finding-dialog" class="wide-dialog"><form id="finding-form"><div class="dialog-heading"><h2 id="finding-dialog-title">Add finding</h2><button type="button" class="quiet dialog-close" aria-label="Close">Close</button></div><label>Research question<select id="finding-question" required></select></label><label>Finding title<input id="finding-title" required maxlength="240" placeholder="The conclusion this evidence supports"></label><label>Analysis<textarea id="finding-text" required rows="7" maxlength="30000" placeholder="Explain the finding, cite the selected sources, and record qualifications that matter."></textarea></label><label id="replace-sources-control" class="replace-sources" hidden><input id="replace-finding-sources" type="checkbox"><span>Replace the current source selection</span></label><p id="preserve-finding-sources" class="muted small" hidden>Current source references are kept when you edit the analysis.</p><fieldset class="source-picks"><legend>Sources for this finding</legend><div id="finding-sources"></div></fieldset><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="dialog-close">Cancel</button><button type="submit" class="primary" id="finding-submit">Save finding</button></div></form></dialog>
+  <dialog id="selection-dialog"><form id="selection-form"><div class="dialog-heading"><h2>Edit saved evidence</h2><button type="button" class="quiet dialog-close" aria-label="Close">Close</button></div><p id="selection-question" class="muted"></p><label class="saved-selection-check"><input id="selection-selected" type="checkbox"><span>Include in selected evidence</span></label><label>Evidence role<select id="selection-classification"><option value="unreviewed">Unreviewed</option><option value="supports">Supports the question</option><option value="contradicts">Contradicts the question</option><option value="background">Background</option></select></label><label>Analyst note<textarea id="selection-note" rows="7" maxlength="30000"></textarea></label><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="dialog-close">Cancel</button><button type="submit" class="primary">Save analysis</button></div></form></dialog>
+  <input id="portable-file" type="file" accept=".json,application/json" hidden>
+  <dialog id="session-dialog"><div class="dialog-heading"><h2>Open the workspace session</h2></div><p>Open the complete local address printed when this workspace started. It includes the session fragment needed to access your saved dossiers.</p><form id="session-form"><label>Complete workspace address<input id="session-url" type="text" required autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:PORT/#token=…"></label><p class="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="submit" class="primary">Open session</button></div></form></dialog>
+</body>
+</html>

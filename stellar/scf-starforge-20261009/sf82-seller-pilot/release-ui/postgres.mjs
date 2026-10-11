@@ -92,12 +92,51 @@ export function renderPostgresComparison(before, after) {
   return section;
 }
 
-export function postgresRuntimeInputs(prefix) {
-  const field = suffix => document.getElementById(prefix + suffix), port = Number(field('-port').value);
-  if (field('-port').value === '' || !Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Enter a seller port from 0 to 65535.');
+export function postgresRuntimeInputs(prefix, { includePort = true } = {}) {
+  const field = suffix => document.getElementById(prefix + suffix), runtime = {};
+  if (includePort) {
+    const port = Number(field('-port').value);
+    if (field('-port').value === '' || !Number.isInteger(port) || port < 0 || port > 65535)
+      throw new Error('Enter a seller port from 0 to 65535.');
+    runtime.port = port;
+  }
   const facilitator = field('-facilitator').value.trim(), allowLocal = field('-local-facilitator').checked;
   if (allowLocal && !facilitator) throw new Error('Enter the explicitly selected local facilitator URL.');
-  return { port, ...(facilitator ? { facilitator } : {}), ...(allowLocal ? { allowLocalFacilitator: true } : {}) };
+  if (facilitator) {
+    let url;
+    try { url = new URL(facilitator); } catch { throw new Error('Enter a complete facilitator URL.'); }
+    const local = allowLocal && url.protocol === 'http:' && url.hostname === '127.0.0.1';
+    if ((!local && url.protocol !== 'https:') || url.username || url.password || url.search || url.hash)
+      throw new Error('Use a credential-free HTTPS facilitator URL, or explicitly enabled loopback HTTP.');
+    runtime.facilitator = url.href.replace(/\/$/, '');
+  }
+  if (allowLocal) runtime.allowLocalFacilitator = true;
+  return runtime;
+}
+
+/** Carry the original native review into a host-selected fleet package alias. */
+export function postgresFleetSource(review, runtime = {}) {
+  if (review?.schema !== 'stellar-forge.postgres-release-review.v1' ||
+      review.sourceKind !== 'POSTGRES_MERCHANT_PACKAGE' ||
+      typeof review.postgresPackage !== 'string' || !review.postgresPackage.startsWith('/') ||
+      /[\u0000-\u001f\u007f]/.test(review.postgresPackage) ||
+      typeof review.postgres?.inputManifestSha256 !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(review.postgres.inputManifestSha256))
+    throw new Error('Review the original PostgreSQL package before downloading its fleet source.');
+  const selectedRuntime = {};
+  if (runtime.facilitator) selectedRuntime.facilitator = runtime.facilitator;
+  if (runtime.allowLocalFacilitator) selectedRuntime.allowLocalFacilitator = true;
+  return { postgresPackage: review.postgresPackage,
+    postgresInputManifestSha256: review.postgres.inputManifestSha256, runtime: selectedRuntime };
+}
+
+export function downloadPostgresFleetSource(review, runtime) {
+  const source = postgresFleetSource(review, runtime);
+  const url = URL.createObjectURL(new Blob([JSON.stringify(source, null, 2) + '\n'], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url; link.download = 'postgres-fleet-source.json'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return source;
 }
 
 export function bindPostgresStaging({ request, notice, isBusy, setBusy, onStaged }) {
@@ -106,6 +145,7 @@ export function bindPostgresStaging({ request, notice, isBusy, setBusy, onStaged
   const buttons = blocked => {
     $('postgres-review').disabled = blocked || Boolean(pending);
     $('postgres-stage').disabled = blocked || !review;
+    $('postgres-fleet-source').disabled = blocked || Boolean(pending) || !review;
     for (const input of $('postgres-stage-form').querySelectorAll('input')) input.disabled = blocked || Boolean(pending);
     $('postgres-stage').textContent = pending ? 'Recover same stage' : 'Stage reviewed package';
   };
@@ -139,6 +179,13 @@ export function bindPostgresStaging({ request, notice, isBusy, setBusy, onStaged
       if (cause.status) pending = null;
       notice(cause.message + (pending ? ' Keep this request and use Recover same stage; the immutable release ID prevents a second release.' : ''), true);
     } finally { setBusy(false); }
+  });
+  $('postgres-fleet-source').addEventListener('click', () => {
+    if (isBusy() || pending || !review) return;
+    try {
+      downloadPostgresFleetSource(review, postgresRuntimeInputs('postgres', { includePort: false }));
+      notice('Fleet source downloaded. Import it into the intended source card in Fleet setup; the fleet assigns each seller port.');
+    } catch (cause) { notice(cause.message, true); }
   });
   return { buttons };
 }

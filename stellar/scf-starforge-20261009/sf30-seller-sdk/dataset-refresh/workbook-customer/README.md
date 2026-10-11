@@ -8,21 +8,31 @@ The merchant's workbook intake remains in [workbook](../workbook/). Its sheet/ra
 
 Requirements are those of the original SF30/SF88 product: Node 22.16 or newer. Live Analysis also uses the original Python Analysis workspace. The merchant's workbook parser uses its own bundled standard-library Python reader.
 
-From this directory:
+The maintained installed command launcher forwards arguments to these original implementations:
 
 ```bash
-node cli.mjs --help
+starforge workbook-customer --help
+starforge workbook-receive --help
+starforge workbook-receive --ready /absolute/customer/ready.json
 ```
 
-In an installed merchant package, the same files are under:
+A Node application imports the same installed customer API:
+
+```js
+import { Buyer, WorkbookCustomer, WorkbookDelivery } from '@tokenjunkielabs/starforge-merchant/buyer/workbook';
+import { receiveWorkbook } from '@tokenjunkielabs/starforge-merchant/buyer/workbook/receiving';
+import { runWorkbookReceiver } from '@tokenjunkielabs/starforge-merchant/buyer/workbook/receiver';
+```
+
+The production distributor includes the entire SF30, SF88, SF100, and native Analysis components and preserves their relative imports. The selected cumulative source cut must contain this customer directory, the workbook command/export catalog entries, and original native Analysis integration from PR 1266. The default runtime is the original SF88 directory beside these components; `--runtime` selects an explicitly supplied original runtime.
+
+From this source directory, the equivalent command is `node cli.mjs --help`. The complete receiver is `node examples/run-workbook-receiver.mjs --ready /absolute/customer/ready.json`. Installed files retain their original path under:
 
 ```text
 source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook-customer/
 ```
 
-The production distributor includes the entire SF30, SF88, SF100, and native Analysis components and preserves these relative imports. The cumulative source cut must contain this customer directory and the original native Analysis integration from PR 1266. The default runtime is the original SF88 directory beside these components; `--runtime` selects an explicitly supplied original runtime.
-
-The JavaScript entrypoint is [index.mjs](index.mjs). It exports `WorkbookCustomer`, `WorkbookDelivery`, `WorkbookAnalysis`, `Buyer`, `nativeRuntimeDirectory`, and the packet creation/opening functions. Import it by its actual installed file path when using a package that does not expose an additional package subpath.
+The JavaScript [index.mjs](index.mjs) exports `WorkbookCustomer`, `WorkbookDelivery`, `WorkbookAnalysis`, `Buyer`, `nativeRuntimeDirectory`, and the packet creation/opening functions. A previously installed source cut without the new catalog can use that exact file path after its customer and original native Analysis source are present.
 
 ## 1. Review and publish the workbook in the existing merchant workspace
 
