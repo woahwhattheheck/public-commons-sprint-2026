@@ -12,9 +12,16 @@ This package adds durable application operations and result recovery around thos
 
 ## Choose the customer's product workflow
 
+[Uploads, typed stream records and resumable file delivery](CUSTOMER_WORKFLOWS.md)
+joins the original native 16 MiB multipart authoring, SSE/NDJSON reader and paid-file
+continuation in one Python customer workflow. `MultipartRequest` and `UploadFile`
+retain exact request bytes; `BuyerResult.events()`, `ndjson()` and `export_stream()`
+consume and reopen the original saved response through the native parser.
+
 | Product | Python entry point | Durable source and recovery |
 | --- | --- | --- |
 | One HTTP response | `Buyer.from_workspace` or `Buyer.from_config` | The original request and permanent attempt; `Operation.recover`, `finalize` and local accounting/history |
+| Multipart upload or finite stream | `MultipartRequest`, `BuyerResult.events` / `ndjson` | Original encoded body pins and stream capture; reusable typed exports, complete-prefix inspection and record-index continuation |
 | An approved private file | `Buyer.from_paid_file` | The original order handoff, native purchase and separate merchant entitlement; `retrieve_file` and local `recover_file` |
 | A paginated dataset | `DatasetAcquisition.create` | The original dataset session, selected snapshot, per-page attempts and SF100 data room; `recover`, explicit continuation, verified typed rows and original accounting |
 | A large object | `ObjectBuyer.prepare` | The original object descriptor, chunk queue and assembly receipts; reopen, recover, continue, consume verified streamed files and finalize original reservations |
