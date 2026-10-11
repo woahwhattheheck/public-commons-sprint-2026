@@ -164,10 +164,13 @@ function syncReviewButtons() {
   $('operations-next').disabled = operationsOffset + 20 >= operationsTotal;
   if (!reviewed) return;
   $('execute-operation').hidden = reviewed.phase !== 'prepared';
+  $('reconcile-operation').hidden = reviewed.phase === 'prepared' || !['admit', 'apply-withdrawal'].includes(reviewed.operation);
   $('inspect-operation').hidden = !['unknown', 'rejected', 'succeeded', 'sending'].includes(reviewed.phase);
 }
 function showReview(record) {
   reviewed = record;
+  CatalogRevisionUI.renderReview($('revision-comparison'), record.revisionReview);
+  CatalogRevisionUI.renderReconciliation($('reconciliation-panel'), record.reconciliation);
   $('review-title').textContent = record.operation === 'admit' ? 'Offer admission / revision' : 'Signed withdrawal';
   $('review-phase').textContent = record.phase.toUpperCase();
   const explanations = {
@@ -195,6 +198,7 @@ async function loadOperations() {
     const tr = el('tr'), created = el('td', new Date(record.createdAt).toLocaleString());
     const type = el('td'); type.append(el('div', record.operation, 'title'), el('div', record.summary.sellerId || '', 'small'));
     const state = el('td'); state.append(el('span', record.phase, 'badge'));
+    if (record.reconciliation) state.append(el('div', record.reconciliation === 'MATCHING_ORIGINAL_REVISION_PRESENT' ? 'Matching revision found' : 'No matching revision observed', 'small'));
     const controls = el('td'), button = el('button', record.phase === 'prepared' ? 'Review' : 'Open', 'secondary');
     action(button, async () => showReview(await api('/api/operations/' + record.id))); controls.append(button);
     tr.append(created, type, state, controls); rows.append(tr);
@@ -203,6 +207,14 @@ async function loadOperations() {
   $('operations-state').textContent = `${result.items.length ? operationsOffset + 1 : 0}–${operationsOffset + result.items.length} of ${result.total} operations`;
   $('operations-prev').disabled = operationsOffset === 0; $('operations-next').disabled = operationsOffset + 20 >= result.total;
 }
+
+action($('reconcile-operation'), async () => {
+  if (!reviewed) return;
+  const id = reviewed.id, digest = reviewed.digest;
+  const record = await api('/api/operations/' + id + '/reconcile', { digest });
+  if (reviewed?.id === id) showReview(record);
+  if (tab === 'operations') await loadOperations();
+});
 
 document.querySelectorAll('[data-tab]').forEach(button => action(button, async () => { setTab(button.dataset.tab); if (tab === 'operations') await loadOperations(); if (tab === 'catalog') { offset = 0; cursors = [null]; searchPage = 0; await loadCatalog(); } }));
 action($('refresh'), async () => { await refreshStatus(); if (tab === 'catalog') { offset = 0; cursors = [null]; searchPage = 0; await loadCatalog(); } if (tab === 'operations') await loadOperations(); });
@@ -261,8 +273,10 @@ action($('execute-operation'), async () => {
 });
 action($('inspect-operation'), async () => {
   if (!reviewed) return;
-  const result = await api('/api/operations/' + reviewed.id + '/inspect');
-  $('inspection-json').textContent = pretty(result); $('operation-inspection').hidden = false;
+  const id = reviewed.id;
+  const result = await api('/api/operations/' + id + '/inspect');
+  if (reviewed?.id !== id) return;
+  $('inspection-json').textContent = pretty(result); CatalogRevisionUI.renderReconciliation($('reconciliation-panel'), result.reconciliation); $('operation-inspection').hidden = false;
 });
 action($('export-operation'), () => { if (reviewed) download(`catalog-operation-${reviewed.id}.json`, reviewed); });
 action($('close-review'), () => { $('review-panel').hidden = true; });

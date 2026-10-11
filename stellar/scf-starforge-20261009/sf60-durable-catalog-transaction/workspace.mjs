@@ -7,6 +7,7 @@ import { mkdir, lstat, realpath, open, rename, unlink, readdir, readFile } from 
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { requestCatalogOperator } from './operator.mjs';
+import { reviewCatalogRevision, assertReviewedRevision, reconcileCatalogRevision } from './workspace-revisions.mjs';
 import { validateCatalogEntry } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 
 const SCHEMA = 'stellar-forge.catalog-workspace-operation/v1';
@@ -94,7 +95,8 @@ function brief(record) {
   const { declaration, request, ...summary } = record.summary;
   return { id: record.id, operation: record.operation, phase: record.phase, digest: record.digest,
     createdAt: record.createdAt, updatedAt: record.updatedAt, summary: { ...summary, sequence: summary.sequence ?? request?.sequence },
-    error: record.error ?? null, policySha256: record.policySha256 };
+    error: record.error ?? null, policySha256: record.policySha256,
+    reconciliation: record.reconciliation?.verdict ?? null };
 }
 function validateIntent(operation, input) {
   privateKeyGuard(input);
@@ -196,6 +198,7 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
     if (record.phase !== 'prepared') return record; // Never replay sent operations.
     const status = await call('status');
     if (status.policySha256 !== record.policySha256) fail('SELLER_POLICY_CHANGED_REVIEW_AGAIN', 409);
+    await assertReviewedRevision(record, call);
     record.phase = 'sending'; record.updatedAt = now();
     await save(record); // Durable intent precedes any possible native send.
     try {
@@ -244,7 +247,7 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
     if (url.origin !== origin || url.hash || [...url.searchParams.keys()].length !== new Set(url.searchParams.keys()).size) fail('REQUEST_URL_INVALID');
     if (req.headers.origin && req.headers.origin !== origin) fail('SAME_ORIGIN_REQUIRED', 403);
     if (req.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(req.headers['sec-fetch-site'])) fail('SAME_ORIGIN_REQUIRED', 403);
-    const assets = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
+    const assets = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/revisions.js': ['revisions.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
     if (Object.hasOwn(assets, url.pathname) && req.method === 'GET') {
       if (url.search) fail('STATIC_QUERY_NOT_ALLOWED');
       const [name, type] = assets[url.pathname];
@@ -273,12 +276,36 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
       const record = await readRecord(selected[1]);
       if (!selected[2]) return send(res, 200, record);
       const currentStatus = await call('status');
+      const observed = await reconcileCatalogRevision(record, call, { includeInspection: true });
+      const { inspection, ...reconciliation } = observed ?? {};
       const catalogKey = record.summary.catalogKey ?? record.result?.catalogKey;
-      const lookup = catalogKey ? await call('lookup', { catalogKey }) : null;
+      const lookup = inspection?.lookup ?? (catalogKey ? await call('lookup', { catalogKey }) : null);
       const lifecycleId = lookup?.current?.lifecycleId ?? record.result?.lifecycleId;
-      const history = lifecycleId ? await call('history', { lifecycleId }) : null;
+      const history = inspection?.history ?? (lifecycleId ? await call('history', { lifecycleId }) : null);
       return send(res, 200, { operation: brief(record), status: currentStatus, lookup, history,
-        interpretation: 'Inspection does not resubmit or change the recorded outcome. Use exact native records to resolve uncertain delivery.' });
+        reconciliation: observed ? reconciliation : null,
+        interpretation: 'Inspection does not resubmit or change the recorded outcome. A matching original revision is an observation, not a reconstructed command receipt.' });
+    }
+    const reconciliationTarget = url.pathname.match(/^\/api\/operations\/([a-f0-9-]+)\/reconcile$/);
+    if (req.method === 'POST' && reconciliationTarget) {
+      const input = await body(req); fields(input, ['digest']);
+      return send(res, 200, await serialize(async () => {
+        const record = await readRecord(reconciliationTarget[1]);
+        if (record.digest !== input.digest) fail('REVIEW_DIGEST_CHANGED', 409);
+        const observation = await reconcileCatalogRevision(record, call);
+        if (!observation) fail('RECONCILIATION_NOT_SUPPORTED');
+        record.reconciliation = observation; record.updatedAt = now();
+        // Keep the original phase and receipt, including a known outcome that
+        // previously survived only in memory. Saving does not send a command.
+        const previousPersistenceError = record.persistenceError;
+        delete record.persistenceError;
+        try { await save(record); }
+        catch {
+          record.persistenceError = previousPersistenceError ?? 'RECONCILIATION_NOT_SAVED_EXPORT_NOW';
+          memoryOutcomes.set(record.id, structuredClone(record)); summaries.set(record.id, brief(record));
+        }
+        return record;
+      }));
     }
     if (req.method === 'POST' && url.pathname === '/api/review') {
       const input = await body(req); fields(input, ['operation', 'input']);
@@ -290,6 +317,7 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
         const createdAt = now(), record = { schema: SCHEMA, id: randomUUID(), operation: input.operation,
           input: input.input, summary, digest: hash(stable(input)), phase: 'prepared', createdAt, updatedAt: createdAt,
           policySha256: status.policySha256, reviewedJournalHead: status.journalHead };
+        record.revisionReview = await reviewCatalogRevision(record, call);
         await save(record, true); return record;
       }));
     }
