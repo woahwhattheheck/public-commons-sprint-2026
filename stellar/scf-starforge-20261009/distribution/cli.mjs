@@ -41,6 +41,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
+  assets                                     Inspect, package and catalog immutable file products
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
