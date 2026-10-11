@@ -66,12 +66,16 @@ No schema translation occurs: the runtime retains the complete original offer,
 including query/body assertions, examples and payment terms, through native
 route configuration, offer inspection and the HTTP 402 header. The original
 SF25 validator checks Bazaar metadata; original SF30 preflight checks supported
-payment/resource terms. The generated service configuration requires fixed GET,
-HEAD or JSON POST routes, one exact testnet/pubnet payment option, one public
-origin and at most 64 explicit bindings. Dynamic routes, unsupported methods,
+payment/resource terms. The generated service configuration supports fixed and
+whole-segment string-parameter GET, HEAD or JSON POST routes, one exact
+testnet/pubnet payment option, one public origin and at most 64 explicit bindings.
+See [dynamic routes and application binding](DYNAMIC-ROUTES.md). Unsupported methods,
 multiple payment options, extra payment parameters or non-Bazaar extensions
 require a different runtime integration; no partial service config is emitted.
 The existing general importer still supports its broader metadata-only mapping.
+Dynamic runtime parameters remain strings, matching native Bazaar 2.28.0 enrichment;
+numeric/boolean path schemas require a typed native integration rather than
+silently changing their original assertions.
 
 Focused integration: `node stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-acceptance.mjs`.
 This exercises the original compiler, CLI, service config and actual local HTTP
