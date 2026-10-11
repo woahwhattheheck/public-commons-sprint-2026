@@ -4,6 +4,12 @@ A live, read-only operator surface for the **existing SF30 seller service**, wit
 
 For a one-command original native seller with the same SF98 fulfillment journal and live local operations, see [merchant launch](MERCHANT_LAUNCH.md).
 
+For durable merchant POST bindings, [merchant operation recovery](MERCHANT_OPERATIONS.md)
+adds stored-operation browse, detail and original ledger history to the same
+listener. Opt-in `--operation-controls` enables exact-generation reconciliation
+through the original bound handler and a private startup capability. Existing
+traffic, history, fulfillment and exports remain read-only.
+
 Upstream-backed sessions also expose optional [backend availability and recovery](../UPSTREAM_AVAILABILITY.md)
 in this same console. The original `/api/snapshot` and JSON export include an
 `upstreams` object; read-only `/api/upstreams` serves it separately. Binding names,
@@ -71,7 +77,7 @@ await existingSellerSession.close();
 await operations.close();
 ```
 
-`existingSellerSession` is the original `{server, compiled, mode, ...}`. All new source is in `operations/`; no modifications to seller compilation, admission, routing or payment code are needed. `observeSellerTraffic(session)` from `traffic.mjs` also provides `snapshot()` and `detach()` without a browser listener.
+`existingSellerSession` is the original `{server, compiled, mode, ...}`. Traffic observation needs no modifications to seller compilation, admission, routing or payment code. `observeSellerTraffic(session)` from `traffic.mjs` also provides `snapshot()` and `detach()` without a browser listener. Upstream merchant-operation browsing uses the running application's `operationControl`; see the dedicated guide for custom launcher composition.
 
 ## Seller capacity and readiness
 

@@ -2,6 +2,7 @@
 import { stat, readFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { normalizeBuyerTransport } from '../sf31-buyer-client/public-transport.mjs';
+import { operationTicketReference } from './operation-ticket.mjs';
 
 export class InputError extends Error {
   constructor(code) { super(code); this.code = code; this.name = 'InputError'; }
@@ -89,7 +90,7 @@ export function catalog(x) {
   return x;
 }
 export function operation(x) {
-  shape(x, ['intentId','url','method','expect','bodyFile','headers','orderReference'], 'INVALID_OPERATION');
+  shape(x, ['intentId','url','method','expect','bodyFile','headers','orderReference','ticketFile','ticketHeader'], 'INVALID_OPERATION');
   need(typeof x.intentId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(x.intentId),
     'STABLE_INTENT_ID_REQUIRED');
   let u;
@@ -131,7 +132,8 @@ export function operation(x) {
       'ORDER_HEADER_MISMATCH');
     headers['X-SF98-Order-ID'] = x.orderReference;
   } else need(headers['X-SF98-Order-ID'] === undefined, 'ORDER_REFERENCE_REQUIRED');
-  return { ...x, method, headers };
+  const ticket = operationTicketReference({...x, method, headers});
+  return { ...x, method, headers, ...(ticket ? {ticketHeader:ticket.requestHeader} : {}) };
 }
 export function operator(x) {
   shape(x, ['python','actor','service','policy','ledger'], 'INVALID_OPERATOR');

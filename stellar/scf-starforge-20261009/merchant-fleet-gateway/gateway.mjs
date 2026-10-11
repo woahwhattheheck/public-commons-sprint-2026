@@ -3,11 +3,23 @@
 import { createServer, request as httpRequest } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { readSellerConfig } from '../sf30-seller-sdk/serve.mjs';
+import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
+import { compileHttpSellerOffer } from '../sf30-seller-sdk/seller.mjs';
+import { compileAssetRouteOffer, responseAssetLimits } from '../sf30-seller-sdk/response-asset.mjs';
+import { selectServiceRoute } from '../sf30-seller-sdk/route-path.mjs';
+import { createFleetRollout } from './rollout.mjs';
+import { openRolloutState } from './rollout-state.mjs';
+import { createFleetControl } from './control-server.mjs';
 
 const HOST = '127.0.0.1';
 const SCHEMA = 'stellar-forge.merchant-fleet.v1';
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
+const canonical = value => Array.isArray(value) ? value.map(canonical) : object(value) ?
+  Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+const fingerprint = value => createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
 const domainLabel = '[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?';
 const domainPattern = new RegExp('^' + domainLabel + '(?:\\.' + domainLabel + ')+$');
 const banned = new Set(['host', 'connection', 'keep-alive', 'proxy-authenticate',
@@ -39,7 +51,7 @@ function safePath(raw) {
       raw.startsWith('//') || raw.includes('#') || /%(?:2f|5c|00)/i.test(raw)) return null;
   try {
     const url = new URL(raw, 'https://seller.invalid');
-    return url.pathname;
+    return url.pathname === raw.split('?')[0] ? url.pathname : null;
   } catch { return null; }
 }
 function safeHeaders(input, response = false) {
@@ -54,6 +66,7 @@ function safeHeaders(input, response = false) {
 }
 async function originalRead(port, route, timeoutMs = 3000) {
   return new Promise((done, fail) => {
+    const timer = setTimeout(() => call.destroy(new Error('ORIGINAL_SELLER_PROBE_TIMEOUT')), timeoutMs);
     const call = httpRequest({ hostname: HOST, port, path: route, method: 'GET',
       headers: { host: HOST } }, response => {
       if (response.statusCode !== 200) {
@@ -70,7 +83,7 @@ async function originalRead(port, route, timeoutMs = 3000) {
         try { done(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch (e) { fail(e); }
       });
     });
-    call.setTimeout(timeoutMs, () => call.destroy(new Error('ORIGINAL_SELLER_PROBE_TIMEOUT')));
+    call.once('close', () => clearTimeout(timer));
     call.on('error', fail);
     call.end();
   });
@@ -83,7 +96,7 @@ export async function loadMerchantFleet(manifestPath) {
       raw.tenants.length < 2 || raw.tenants.length > 32) {
     throw new TypeError('Expected merchant-fleet.v1 with 2..32 independent tenants');
   }
-  const names = new Set(), hosts = new Set(), ports = new Set(), tenants = [];
+  const names = new Set(), hosts = new Set(), ports = new Set(), tenants = [], sourceConfigs = [];
   for (const item of raw.tenants) {
     if (!object(item) || typeof item.id !== 'string' ||
         !/^[a-z][a-z0-9-]{1,39}$/.test(item.id) || names.has(item.id) ||
@@ -102,23 +115,39 @@ export async function loadMerchantFleet(manifestPath) {
     if (source.publicOrigin !== 'https://' + item.host) {
       throw new TypeError(item.id + ': original seller publicOrigin MUST equal https://' + item.host);
     }
-    const paths = new Map();
+    const sellerLimits = responseAssetLimits(source);
+    const compiled = compileSellerRoutes(source.routes.map(route => ({ id: route.id,
+      ...(route.responseAsset ? { offer: compileAssetRouteOffer(route, source.publicOrigin, compileHttpSellerOffer) } :
+        route.offer ? { offer: route.offer } :
+        { definition: { ...route.definition, url: source.publicOrigin + route.path } }),
+      handler: () => { throw new Error('Gateway never executes merchant applications'); },
+    })));
     for (const route of source.routes) {
-      const method = route.offer?.extensions?.bazaar?.info?.input?.method ?? route.definition?.method;
-      if (!['GET', 'HEAD', 'POST'].includes(method) || route.path.startsWith('/_seller/') ||
-          route.path.startsWith('/_fleet/') || route.path.includes('%')) {
-        throw new TypeError(item.id + ': invalid original seller method/path');
+      const path = route.path.toLowerCase();
+      if (path === '/_seller' || path.startsWith('/_seller/') ||
+          path === '/_fleet' || path.startsWith('/_fleet/')) {
+        throw new TypeError(item.id + ': original operator routes cannot be published');
       }
-      if (!paths.has(route.path)) paths.set(route.path, new Set());
-      if (paths.get(route.path).has(method)) throw new TypeError('DUPLICATE_ORIGINAL_ROUTE');
-      paths.get(route.path).add(method);
     }
+    const expectedHealth = compiled.routes.map(route => {
+      const config = source.routes.find(entry => entry.id === route.id);
+      return { id: route.id, method: route.method, url: route.offer.resource.url,
+        admission: Boolean(config.admit) || config.validateInput === true || Boolean(config.responseAsset),
+        inputValidation: config.validateInput === true,
+        ...(config.responseAsset ? { asset: { sha256: config.responseAsset.sha256,
+          contentType: config.responseAsset.contentType, downloadName: config.responseAsset.downloadName } } : {}),
+        ...(route.binding.dynamic ? { routeTemplate: route.path } : {}) };
+    });
+    const identity = { id: item.id, host: item.host, upstreamPort, maxInFlight,
+      maxRequestBytes, maxResponseBytes, timeoutMs, config: source };
     names.add(item.id); hosts.add(item.host); ports.add(upstreamPort);
     tenants.push({ id: item.id, host: item.host, upstreamPort, maxInFlight, maxRequestBytes,
-      maxResponseBytes, timeoutMs, paths, active: 0, accepted: 0, completed: 0,
-      refused: 0, errors: 0, mode: null });
+      maxResponseBytes, timeoutMs, compiled, expectedHealth, sellerLimits, fingerprint: fingerprint(identity),
+      nativeFingerprint: fingerprint({ host: item.host, config: source }),
+      active: 0, accepted: 0, completed: 0, refused: 0, errors: 0, mode: null });
+    sourceConfigs.push(source);
   }
-  return { schema: SCHEMA, tenants };
+  return { schema: SCHEMA, tenants, sourceManifest: raw, sourceConfigs };
 }
 async function checkOriginal(tenant) {
   const [health, offers] = await Promise.all([
@@ -127,17 +156,25 @@ async function checkOriginal(tenant) {
   ]);
   if (health.schema !== 'stellar-forge.seller-service.v1' ||
       !['CHALLENGE_ONLY', 'NATIVE_X402'].includes(health.mode) ||
-      !Array.isArray(health.routes) || !Array.isArray(offers)) {
+      !Array.isArray(health.routes) || !Array.isArray(offers) || health.lifecycle?.accepting !== true) {
     throw new Error(tenant.id + ': upstream is NOT an original SF30 seller');
   }
-  const expected = [...tenant.paths].flatMap(([path, methods]) =>
-    [...methods].map(method => method + ' https://' + tenant.host + path)).sort();
-  const actual = health.routes.map(route => route.method + ' ' + route.url).sort();
-  const actualOffers = offers.map(offer => offer.extensions?.bazaar?.info?.input?.method +
-    ' ' + offer.resource?.url).sort();
-  if (JSON.stringify(expected) !== JSON.stringify(actual) ||
-      JSON.stringify(expected) !== JSON.stringify(actualOffers)) {
-    throw new Error(tenant.id + ': original live seller routes/identity drift from config');
+  let assetBytes = 0, assets = 0;
+  const liveRoutes = health.routes.map(route => {
+    if (!Object.hasOwn(route, 'asset')) return route;
+    const { bytes, ...metadata } = route.asset ?? {};
+    if (!Number.isSafeInteger(bytes) || bytes < 0 ||
+        bytes > tenant.sellerLimits.maxResponseBytes || bytes > tenant.maxResponseBytes)
+      throw new Error(tenant.id + ': original asset exceeds published gateway response capacity');
+    assetBytes += bytes; assets++;
+    return { ...route, asset: metadata };
+  });
+  if (assets && (assetBytes > tenant.sellerLimits.assetBudgetBytes ||
+      health.assetSnapshotBytes !== assetBytes || health.maxResponseBytes !== tenant.sellerLimits.maxResponseBytes))
+    throw new Error(tenant.id + ': original retained asset limits drift from config');
+  if (!isDeepStrictEqual(tenant.expectedHealth, liveRoutes) ||
+      !isDeepStrictEqual(tenant.compiled.routes.map(route => route.offer), offers)) {
+    throw new Error(tenant.id + ': original live seller offers/routes/admission drift from config');
   }
   tenant.mode = health.mode;
 }
@@ -197,87 +234,101 @@ function forward(req, res, tenant, body) {
     upstream.end(body);
   });
 }
-export async function startMerchantFleet(fleet, { port = 8400, adminPort = 8401 } = {}) {
-  if (fleet?.schema !== SCHEMA || !Array.isArray(fleet.tenants) || fleet.tenants.length < 2)
-    throw new TypeError('A prepared merchant fleet is required');
+export async function startMerchantFleet(fleet, { port = 8400, adminPort = 8401,
+  stateDirectory = null, initialManifest = null } = {}) {
   number(port, 0, 65535, 'publicPort'); number(adminPort, 0, 65535, 'adminPort');
   if (port !== 0 && port === adminPort) throw new TypeError('Separate public/admin loopback ports required');
-  for (const tenant of fleet.tenants) {
-    if (port !== 0 && tenant.upstreamPort === port || adminPort !== 0 && tenant.upstreamPort === adminPort) {
-      throw new TypeError('An ingress port conflicts with an original seller port');
-    }
-    await checkOriginal(tenant); // Only real ORIGINAL running sellers, never pretend merchant service.
-  }
-  const byHost = new Map(fleet.tenants.map(t => [t.host, t]));
-  const publicServer = createServer(async (req, res) => {
-    const host = authority(req);
-    if (!host) return fault(res, 400, 'CANONICAL_HOST_REQUIRED');
-    const tenant = byHost.get(host);
-    if (!tenant) return fault(res, 421, 'UNKNOWN_MERCHANT_AUTHORITY');
-    const path = safePath(req.url);
-    if (!path || path.startsWith('/_seller/') || path.startsWith('/_fleet/')) {
-      tenant.refused++; return fault(res, 404, 'SELLER_ROUTE_NOT_PUBLIC');
-    }
-    const allowed = tenant.paths.get(path);
-    if (!allowed) { tenant.refused++; return fault(res, 404, 'SELLER_ROUTE_NOT_PUBLISHED'); }
-    if (!allowed.has(req.method)) {
-      tenant.refused++; return fault(res, 405, 'SELLER_METHOD_NOT_PUBLISHED',
-        { allow: [...allowed].join(', ') });
-    }
-    if (tenant.active >= tenant.maxInFlight) {
-      tenant.refused++; return fault(res, 503, 'SELLER_AT_CAPACITY', { 'retry-after': '1' });
-    }
-    const bodyForbidden = req.method !== 'POST' &&
-      (Number(req.headers['content-length'] ?? 0) > 0 || req.headers['transfer-encoding']);
-    if (bodyForbidden) { tenant.refused++; return fault(res, 400, 'BODY_ON_READ_METHOD'); }
-    tenant.active++;
-    tenant.accepted++;
-    try {
-      const body = req.method === 'POST' ? await collectBody(req, tenant.maxRequestBytes) : Buffer.alloc(0);
-      await forward(req, res, tenant, body);
-    } catch (error) {
-      tenant.errors++;
-      fault(res, error.status === 413 ? 413 : 400,
-        error.status === 413 ? 'REQUEST_TOO_LARGE' : 'REQUEST_BODY_INVALID');
-    } finally { tenant.active--; }
-  });
-  publicServer.headersTimeout = 10000;
-  publicServer.requestTimeout = 60000;
-  publicServer.keepAliveTimeout = 5000;
-  const adminServer = createServer((req, res) => {
-    if (req.method !== 'GET' || req.url !== '/_fleet/health') {
-      return fault(res, 404, 'ADMIN_ROUTE_NOT_FOUND');
-    }
-    const data = { schema: SCHEMA, merchants: fleet.tenants.map(t => ({
-      id: t.id, host: t.host, mode: t.mode, upstreamPort: t.upstreamPort,
-      routes: [...t.paths.values()].reduce((n, methods) => n + methods.size, 0),
-      active: t.active, maxInFlight: t.maxInFlight, accepted: t.accepted,
-      completed: t.completed, refused: t.refused, errors: t.errors,
-    })) };
-    const body = JSON.stringify(data);
-    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store',
-      'x-content-type-options': 'nosniff', 'content-length': Buffer.byteLength(body) });
-    res.end(body);
-  });
-  const listen = (server, listenPort) => new Promise((done, fail) => {
-    server.once('error', fail);
-    server.listen(listenPort, HOST, done);
+  const store = stateDirectory === null ? null : await openRolloutState(stateDirectory);
+  let publicServer, adminServer, rollout, stopping = false, closePromise;
+  const closeOne = server => !server?.listening ? Promise.resolve() : new Promise((done, fail) => {
+    server.close(error => error ? fail(error) : done());
+    server.closeIdleConnections?.();
   });
   try {
+    let record = store?.read();
+    // Retained selection is authoritative. Editing an input manifest cannot
+    // silently bypass preparation/activation on a gateway restart.
+    if (record) fleet = await loadMerchantFleet(store.manifest(record));
+    else if (!fleet && initialManifest) fleet = await loadMerchantFleet(initialManifest);
+    if (fleet?.schema !== SCHEMA || !Array.isArray(fleet.tenants) || fleet.tenants.length < 2 ||
+        fleet.tenants.some(tenant => !tenant.compiled?.routes?.length))
+      throw new TypeError('A prepared merchant fleet or retained --state is required');
+    for (const tenant of fleet.tenants) {
+      if (port !== 0 && tenant.upstreamPort === port || adminPort !== 0 && tenant.upstreamPort === adminPort)
+        throw new TypeError('An ingress port conflicts with an original seller port');
+    }
+    await Promise.all(fleet.tenants.map(checkOriginal));
+    if (store && !record) record = store.activate(store.snapshot(fleet), 0);
+    rollout = createFleetRollout(fleet, { store, record, load: loadMerchantFleet, check: checkOriginal,
+      ports: () => [publicServer?.address()?.port, adminServer?.address()?.port].filter(Boolean) });
+    publicServer = createServer(async (req, res) => {
+      if (stopping) return fault(res, 503, 'FLEET_DRAINING');
+      const host = authority(req);
+      if (!host) return fault(res, 400, 'CANONICAL_HOST_REQUIRED');
+      // This exact object stays captured through body collection and forwarding,
+      // even when another generation is activated during either await.
+      const tenant = rollout.tenant(host);
+      if (!tenant) return fault(res, 421, 'UNKNOWN_MERCHANT_AUTHORITY');
+      const path = safePath(req.url);
+      if (!path || /^\/_(?:seller|fleet)(?:\/|$)/i.test(path)) {
+        tenant.refused++; return fault(res, 404, 'SELLER_ROUTE_NOT_PUBLIC');
+      }
+      let selected;
+      try { selected = selectServiceRoute(tenant.compiled.routes, path, req.method); }
+      catch { tenant.refused++; return fault(res, 400, 'INVALID_ORIGINAL_ROUTE_TARGET'); }
+      if (!selected) { tenant.refused++; return fault(res, 404, 'SELLER_ROUTE_NOT_PUBLISHED'); }
+      if (!selected.route) {
+        tenant.refused++; return fault(res, 405, 'SELLER_METHOD_NOT_PUBLISHED',
+          { allow: selected.allow.join(', ') });
+      }
+      const acceptsBody = selected.route.offer.extensions.bazaar.info.input.bodyType === 'json';
+      const bodyForbidden = !acceptsBody &&
+        (Number(req.headers['content-length'] ?? 0) > 0 || req.headers['transfer-encoding']);
+      if (bodyForbidden) { tenant.refused++; return fault(res, 400, 'BODY_NOT_PUBLISHED'); }
+      const release = rollout.admit(tenant);
+      if (!release) {
+        tenant.refused++; return fault(res, 503, 'SELLER_AT_CAPACITY', { 'retry-after': '1' });
+      }
+      try {
+        const body = acceptsBody ? await collectBody(req, tenant.maxRequestBytes) : Buffer.alloc(0);
+        await forward(req, res, tenant, body);
+      } catch (error) {
+        tenant.errors++;
+        fault(res, error.status === 413 ? 413 : 400,
+          error.status === 413 ? 'REQUEST_TOO_LARGE' : 'REQUEST_BODY_INVALID');
+      } finally { release(); }
+    });
+    publicServer.headersTimeout = 10000;
+    publicServer.requestTimeout = 60000;
+    publicServer.keepAliveTimeout = 5000;
+    adminServer = createServer(createFleetControl({ rollout, store,
+      url: () => 'http://' + HOST + ':' + adminServer.address().port }));
+    adminServer.headersTimeout = 10000;
+    adminServer.requestTimeout = 10000;
+    adminServer.keepAliveTimeout = 5000;
+    const listen = (server, listenPort) => new Promise((done, fail) => {
+      server.once('error', fail);
+      server.listen(listenPort, HOST, done);
+    });
     await listen(publicServer, port);
     await listen(adminServer, adminPort);
-    const closeOne = server => new Promise((done, fail) => {
-      server.close(error => error ? fail(error) : done());
-      server.closeIdleConnections?.();
-    });
-    const close = () => Promise.all([closeOne(publicServer), closeOne(adminServer)]);
-    return { publicServer, adminServer, close,
-      publicURL: 'http://' + HOST + ':' + publicServer.address().port,
-      adminURL: 'http://' + HOST + ':' + adminServer.address().port };
+    const adminURL = 'http://' + HOST + ':' + adminServer.address().port;
+    store?.publish(adminURL);
+    const close = () => {
+      if (!closePromise) {
+        stopping = true; rollout.shutdown();
+        closePromise = Promise.all([closeOne(publicServer), closeOne(adminServer)])
+          .then(() => store?.close());
+      }
+      return closePromise;
+    };
+    return { publicServer, adminServer, close, status: rollout.status,
+      publicURL: 'http://' + HOST + ':' + publicServer.address().port, adminURL,
+      controlPath: store?.controlPath ?? null };
   } catch (error) {
-    publicServer.closeIdleConnections?.();
-    if (publicServer.listening) await new Promise(done => publicServer.close(done));
-    if (adminServer.listening) await new Promise(done => adminServer.close(done));
+    stopping = true; rollout?.shutdown();
+    await Promise.allSettled([closeOne(publicServer), closeOne(adminServer)]);
+    await store?.close();
     throw error;
   }
 }

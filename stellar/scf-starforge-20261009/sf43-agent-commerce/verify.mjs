@@ -1,6 +1,7 @@
 // MIT — SF-43. Independently inspect a real Stellar TESTNET x402 receipt.
 // Read-only RPC calls; neither this module nor its caller may infer a paid sale
 // from HTTP status 200 or a seller-generated PAYMENT-RESPONSE header alone.
+import {createRequire} from 'node:module';
 const RPC = 'https://soroban-testnet.stellar.org';
 const HASH = /^[0-9a-f]{64}$/;
 const AMOUNT = /^[1-9][0-9]*$/;
@@ -157,7 +158,14 @@ export function parseSep41TransferAmount(native) {
 
 /** Prefer actual @stellar/stellar-sdk provided by @x402/stellar installation. */
 export async function createOfficialEventDecoder() {
-  const sdk=await import('@stellar/stellar-sdk');
+  let sdk;
+  try { sdk=await import('@stellar/stellar-sdk'); }
+  catch(error) {
+    if(error.code !== 'ERR_MODULE_NOT_FOUND') throw error;
+    // The maintained buyer installs its pinned SDK in its own package. Reuse
+    // that exact runtime when the operator has no hoisted root installation.
+    sdk=createRequire(new URL('../sf88-operator-buyer-cli/package.json',import.meta.url))('@stellar/stellar-sdk');
+  }
   const decode=value=>sdk.scValToNative(sdk.xdr.ScVal.fromXDR(value,'base64'));
   return async event=>{
     if (!Array.isArray(event.topic) || event.topic.length < 3 || !event.value) return null;

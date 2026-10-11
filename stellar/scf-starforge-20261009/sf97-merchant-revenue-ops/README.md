@@ -2,6 +2,8 @@
 
 **Product:** a runnable seller-to-commercial-decision workbench. It consumes the existing **SF30 native seller-service JSON and its actual operator traffic snapshot** from `operations/launch.mjs`, joins merchant-owned USD prices, real costs and monthly targets, and exports a private, readable merchant pricing/acceptance review (`review.html`) plus machine-readable report (`report.json`). Both outputs are built from the same calculation. Standard-library Node 22+, no new payment or data collector, no npm install, hosted Actions or background jobs.
 
+**Local merchant workspace:** [WORKSPACE.md](WORKSPACE.md) provides the complete browser workflow for editing actual quote/cost assumptions, reviewing all original payment choices, saving private report versions, reopening history and downloading CLI-compatible merchant terms. It uses the same analyzer and optional native companion described here.
+
 This is a distinct commercial adoption layer. Use **SF87** for cross-rail x402/MPP cost comparison. Use **SF93** for merchant incident/support export, **SF96** for seller+dashboard launch composition and **SF10** for the single grant application. SF97 changes none of those sources or payment logic.
 
 ## One merchant pilot, start to finish

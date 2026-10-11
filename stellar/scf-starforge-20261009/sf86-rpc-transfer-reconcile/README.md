@@ -14,7 +14,14 @@ node stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/cli.mjs \
   --payer G_YOUR_ACTUAL_TRUSTED_56_CHARACTER_ADDRESS
 ```
 
-The default endpoint is the first-party read-only `https://soroban-testnet.stellar.org`. For a focused *local* HTTP test only, `--rpc-endpoint http://127.0.0.1:PORT/` is permitted and **cannot** return the live verdict. Optional `--max-event-pages 24` (valid range 1–100) caps HTTP reads. No endpoint from the untrusted receipt is accepted.
+The default endpoint is SDF's `https://soroban-testnet.stellar.org`. An explicit
+`--rpc-endpoint https://soroban-rpc.testnet.stellar.gateway.fm` selects Gateway,
+also listed in the [official Stellar provider directory](https://developers.stellar.org/docs/data/apis/rpc/providers).
+The observer checks the canonical testnet passphrase with `getNetwork` and
+records the selected endpoint. It does not fall back automatically.
+For a focused local HTTP check, `--rpc-endpoint http://127.0.0.1:PORT/` retains
+its separate local verdict. Optional `--max-event-pages 24` (range 1–100) limits
+event reads. An endpoint in a seller receipt is never selected.
 
 ### Open the original SF82 evidence file
 
