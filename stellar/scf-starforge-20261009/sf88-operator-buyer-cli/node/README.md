@@ -420,6 +420,14 @@ Private native logs are never embedded in application error messages. Configure
 `environment` explicitly when the application should pass a reduced environment.
 The default preserves the caller's original signer/operator environment.
 
+`BuyerError` and its subclasses format as an error code, stack, and the public
+`exitCode` and `destinationPublished` fields when available. `JSON.stringify`
+uses the same public fields through `error.toJSON()`. Recovery objects, saved
+results, paths and other private details remain directly accessible through
+`error.operation`, `error.dataset`, `error.acquisition` and their existing
+properties, but are non-enumerable and excluded from default diagnostic output.
+Use those handles to reopen the existing operation after handling the error.
+
 ## Data consumption and integrity
 
 A `BuyerResult` preserves the native summary, exit status, recovery marker and

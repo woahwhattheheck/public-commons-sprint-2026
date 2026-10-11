@@ -10,7 +10,7 @@ import { openGitSource } from './git-source.mjs';
 const ownPath = 'stellar/scf-starforge-20261009/distribution';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|json|toml|md|html|css|txt|sql|csv|svg|png|woff2)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|json|toml|md|html|css|txt|sql|csv|svg|png|woff2|service)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 

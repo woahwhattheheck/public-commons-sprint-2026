@@ -25,6 +25,17 @@ Other release operations select host-declared source aliases and retained IDs.
 Owner-entered support terms may reference their existing consent and proposal
 records; those URLs are retained as text.
 
+## Review pricing and retain seller changes
+
+Attach an original SF97 workspace with `init-pricing --dir NEW_HOST --pricing
+CONNECTION_JSON`, or add `--pricing` to ordinary initialization. The same MCP
+can capture native observations, save commercial pricing reviews, compare saved
+versions, review explicit atomic payment changes, and download the retained
+seller/source files. Original API packages stage directly into their existing
+SF82 release store, ready for the existing inspect/compare/activate workflow.
+See [PRICING.md](PRICING.md) for host aliases, exact revision and review hashes,
+capture paging, release-store selection and resumed file delivery.
+
 ## Operate a retained merchant fleet
 
 The same provider also exposes the original multi-store fleet lifecycle. Use
@@ -448,3 +459,4 @@ tools, host configuration, replay, comparison, export and browser handoff.
 ## Retained data publication
 
 The same provider now operates original PostgreSQL, SQLite and MySQL publisher workspaces: approved saved query and typed candidate, native review/publication, recurring maintenance, retained buyer configuration and restart recovery. Use `init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json` or add the host `publisherConnection` to an existing merchant. [PUBLISHERS.md](PUBLISHERS.md) gives complete setup, agent operations, seller/customer handoff and shutdown.
+
