@@ -3,9 +3,9 @@ const $=id=>document.getElementById(id);
 const uuid=value=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value ?? '');
 const date=value=>value?new Date(value).toLocaleString():'—';
 const kind=value=>({DELIVERY_EXHAUSTED:'Exhausted delivery notifications',DELIVERY_BACKLOG:'Delivery backlog',
-  DELIVERY_UNAVAILABLE:'Delivery journal unavailable',SELLER_UNAVAILABLE:'Seller unavailable',
-  OPERATIONS_UNAVAILABLE:'Operations unavailable',HTTP_ERRORS:'Elevated HTTP errors',
-  DISCONNECTS:'Elevated disconnects'})[value] ?? value.replaceAll('_',' ').toLowerCase();
+  DELIVERY_UNAVAILABLE:'Delivery journal unavailable',ENDPOINT_UNAVAILABLE:'Seller or operations endpoint unavailable',
+  OBSERVER_INCOMPLETE:'Traffic observer incomplete',HTTP_5XX:'Elevated server errors',
+  DISCONNECTED:'Elevated disconnects'})[value] ?? value.replaceAll('_',' ').toLowerCase();
 const status=value=>({OPEN:'Open',ACKNOWLEDGED:'Acknowledged',RECOVERED:'Recovery observed',RETIRED:'Source registration changed'})[value] ?? value;
 const signal=value=>value?Object.entries(value).map(([key,item])=>key.replaceAll(/([A-Z])/g,' $1').toLowerCase()+': '+
   (typeof item==='object'?JSON.stringify(item):String(item))).join(' · '):'—';

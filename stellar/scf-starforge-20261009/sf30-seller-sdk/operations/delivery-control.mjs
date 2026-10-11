@@ -111,7 +111,8 @@ export function createDeliveryDesk(outbox,{enabled=true,recovery=null,incidents=
       const call = respond(req,origins).catch(error => ({
         status:Number.isInteger(error.status) && error.status >= 400 && error.status <= 599 ? error.status :
           error instanceof TypeError ? 400 : error instanceof RangeError ? 409 : 503,
-        body:{error:typeof error.code === 'string' && /^DELIVERY_[A-Z_]+$/.test(error.code) ? error.code :
+        body:{error:error.code==='SF98_DELIVERY_BUSY'?'DELIVERY_WORKER_ACTIVE':
+          typeof error.code === 'string' && /^DELIVERY_[A-Z_]+$/.test(error.code) ? error.code :
           error instanceof TypeError ? 'DELIVERY_QUERY_INVALID' : 'DELIVERY_STATE_UNAVAILABLE'},
       }));
       pending.add(call); call.finally(() => pending.delete(call)); return call;
