@@ -27,7 +27,34 @@
   <p id="status" class="status" role="status" aria-live="polite">Ready for your merchant-specific source information.</p>
   <section id="output" hidden>
     <div class="card"><div class="eyebrow">Original-source outcome</div><h2 id="outcome"></h2><p id="observed"></p><p id="source-note"></p><div id="scope" class="scope"></div><h3>2 · Actionable original findings</h3><ol id="actions" class="findings"></ol><p id="safeguards" class="notice"></p></div>
-    <div class="card"><div class="split"><div><h3>3 · Handoff source without rewriting evidence</h3><p>This exact complete JSON belongs with the original SF49 seller case. Obtain separate customer agreement and terms before offering a paid fix.</p></div><button id="copy" type="button" disabled class="secondary">Copy original JSON</button></div><pre id="raw-report" tabindex="0"></pre></div>
+    <div class="card"><div class="split"><div><h3>3 · Retain the original diagnosis</h3><p>Download and keep this complete JSON before repairing the merchant route. Keep the downloaded file unchanged if you use it for an SF72 preflight or repair comparison.</p></div><div class="actions"><button id="download-intake" type="button" disabled class="secondary">Download intake JSON</button><button id="copy" type="button" disabled class="secondary">Copy original JSON</button></div></div><pre id="raw-report" tabindex="0"></pre></div>
+  </section>
+  <section class="card" aria-labelledby="compare-heading">
+    <h2 id="compare-heading">4 · Review a merchant repair</h2>
+    <p>Select the unchanged SF70 JSON captured before and after the repair. The seller resource, facilitator, recipient, network, browser origin and method must match. This step reads files locally and makes no seller or provider requests.</p>
+    <form id="compare-form">
+      <div class="form-grid">
+        <label>Before repair · SF70 JSON<input id="before-source" name="before" type="file" accept=".json,application/json" required></label>
+        <label>After repair · SF70 JSON<input id="after-source" name="after" type="file" accept=".json,application/json" required></label>
+      </div>
+      <details><summary>Optional POST-only preflight reports · SF72</summary><p>For a POST-only route, include both original SF72 files. Each must refer to the exact corresponding SF70 file above.</p>
+        <div class="form-grid">
+          <label>Before repair · SF72 JSON<input id="post-before-source" name="postBefore" type="file" accept=".json,application/json"></label>
+          <label>After repair · SF72 JSON<input id="post-after-source" name="postAfter" type="file" accept=".json,application/json"></label>
+        </div>
+      </details>
+      <p class="hint">Up to 2,000,000 bytes per file. Files stay in this local session; nothing is saved on the server.</p>
+      <button id="compare-run" type="submit">Compare repair captures</button>
+    </form>
+    <p id="compare-status" class="status" role="status" aria-live="polite">Choose before and after captures to review the repair.</p>
+    <div id="comparison-output" hidden>
+      <h3 id="comparison-outcome"></h3><p id="comparison-summary"></p>
+      <div id="comparison-scope" class="scope"></div>
+      <div id="comparison-changes"></div>
+      <p id="comparison-boundaries" class="notice"></p>
+      <button id="download-comparison" type="button" class="secondary" disabled>Download repair comparison JSON</button>
+      <details><summary>Full source-bound comparison</summary><pre id="raw-comparison" tabindex="0"></pre></details>
+    </div>
   </section>
 </main>
 <footer class="wrap">SCF SF74 · Local operator interface only. Zero claims of external merchant authorization, customer adoption, or paid Stellar settlement.</footer>
