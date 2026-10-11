@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.firecrawl-product.v1",
+  "auth": {
+    "mode": "public-starter"
+  },
+  "policy": {
+    "maxResultsPerSource": 10,
+    "maxSources": 3,
+    "sourceTimeoutMs": 60000,
+    "maxResponseBytes": 1048576,
+    "maxInFlight": 4
+  },
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "maxTimeoutSeconds": 180
+  },
+  "prices": {
+    "firecrawl-search": "10000",
+    "firecrawl-search-content": "30000",
+    "firecrawl-read": "10000"
+  }
+}

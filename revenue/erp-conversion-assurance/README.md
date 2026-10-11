@@ -166,6 +166,13 @@ master, financial-history and payroll cohorts. The
 The operator maps actual export headers, approves the unique grain and selects
 fields from these starting definitions.
 
+The [Asheville utility conversion operator](profiles/asheville-cis-2026/README.md)
+adds the complete CIS workspace: native meter and provider files, exact published
+billing rules, original comparison and review, payments and collections, offline
+field returns, and full encrypted restoration. Its
+[installation guide](profiles/asheville-cis-2026/INSTALL.md) and
+[operator guide](profiles/asheville-cis-2026/OPERATOR.md) cover the usable workflow.
+
 The CSV reader handles quoted multiline fields, escaped quotes, CRLF and UTF-8
 BOMs. It streams complete files and holds one entry per distinct key, so memory
 grows with key count and selected fields. Configure the original retained
