@@ -8,6 +8,7 @@ import { config, catalog, operation, responseFile, bytes, need } from './config.
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
 const sha256 = data => createHash('sha256').update(data).digest('hex');
+let cancellationExitCode;
 
 async function review(c) {
   const op = operation(c.operation);
@@ -53,12 +54,46 @@ async function main(args) {
   }
   if (args[0] === '--review') return review(c);
   if (args[0] === '--discover') return discover(c);
-  const { execute } = await import('./execute.mjs');
-  return execute(c);
+  const controller = new AbortController();
+  const cancel = exitCode => {
+    if (controller.signal.aborted) return;
+    cancellationExitCode = exitCode;
+    controller.abort();
+  };
+  const onInterrupt = () => cancel(130);
+  const onTerminate = () => cancel(143);
+  process.on('SIGINT', onInterrupt);
+  process.on('SIGTERM', onTerminate);
+  try {
+    const { execute } = await import('./execute.mjs');
+    return await execute(c, { signal:controller.signal });
+  } finally {
+    process.off('SIGINT', onInterrupt);
+    process.off('SIGTERM', onTerminate);
+    // Let execution finish its cleanup and original outcome summary before exit.
+    if (cancellationExitCode !== undefined) process.exitCode = cancellationExitCode;
+  }
 }
 main(process.argv.slice(2)).catch(error => {
-  const code = typeof error?.code === 'string' && /^[A-Z0-9_]+$/.test(error.code)
-    ? error.code : 'OPERATION_FAILED_RECONCILE_ORIGINAL_LEDGER';
-  process.stderr.write(JSON.stringify({error:code,retry:'NO_AUTOMATIC_RETRY'}) + '\n');
-  process.exitCode = 1;
+  const safeCode = (value, fallback) => typeof value === 'string' && /^[A-Z0-9_]{1,120}$/.test(value)
+    ? value : fallback;
+  const code = safeCode(error?.code, 'OPERATION_FAILED_RECONCILE_ORIGINAL_LEDGER');
+  const warnings = values => values.filter(value => value !== null && typeof value === 'object' &&
+    !Array.isArray(value)).map(value => ({
+      code:safeCode(value.code, 'RESPONSE_FILE_CLEANUP_FAILED'),
+      ...(typeof value.path === 'string' || value.path === null ? {path:value.path} : {})
+    }));
+  const detail = {};
+  if (Number.isSafeInteger(error?.bytes) && error.bytes >= 0) detail.bytes = error.bytes;
+  if (typeof error?.partialPath === 'string' || error?.partialPath === null) detail.partialPath = error.partialPath;
+  if (Array.isArray(error?.cleanupWarnings)) detail.cleanupWarnings = warnings(error.cleanupWarnings);
+  const cleanup = error?.responseCleanupError;
+  if (cleanup !== null && typeof cleanup === 'object' && !Array.isArray(cleanup))
+    detail.responseCleanupError = {
+      code:safeCode(cleanup.code, 'RESPONSE_FILE_CLEANUP_FAILED'),
+      cleanupWarnings:Array.isArray(cleanup.cleanupWarnings) ? warnings(cleanup.cleanupWarnings) : []
+    };
+  process.stderr.write(JSON.stringify({error:code,retry:'NO_AUTOMATIC_RETRY',...detail}) + '\n');
+  process.exitCode = cancellationExitCode ?? 1;
 });
+
