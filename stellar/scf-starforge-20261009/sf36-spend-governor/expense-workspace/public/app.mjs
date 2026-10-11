@@ -68,7 +68,7 @@ async function mutate(path,payload={}) {
 function field(def) {
   const id="field-"+(++serial);
   const wrap=el("label",{class:"field"+(def.wide?" wide":""),for:id});
-  wrap.append(el("span",{},def.label));
+  wrap.append(el("span",{id:id+"-label"},def.label));
   let input;
   if(def.choices) {
     input=el("select",{id,name:def.name});
@@ -83,8 +83,9 @@ function field(def) {
   if(def.required)input.required=true;
   if(def.maxlength)input.maxLength=def.maxlength;
   if(def.readonly)input.readOnly=true;
+  input.setAttribute("aria-labelledby",id+"-label");
   wrap.append(input);
-  if(def.help)wrap.append(el("small",{},def.help));
+  if(def.help){input.setAttribute("aria-describedby",id+"-help");wrap.append(el("small",{id:id+"-help"},def.help));}
   return {wrap,input};
 }
 function formCard(title, defs, submitLabel, action, options={}) {
