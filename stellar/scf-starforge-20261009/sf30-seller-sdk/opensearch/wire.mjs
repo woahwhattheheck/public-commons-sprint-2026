@@ -40,7 +40,12 @@ export function parseNativeJSON(text) {
 export function nativeJSON(value) {
   if (value instanceof NativeInteger) return value.token;
   if (value === null || ['string', 'boolean'].includes(typeof value)) return JSON.stringify(value);
-  if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const token = JSON.stringify(value);
+    // Large integral doubles must retain a floating-point JSON token. Exact
+    // native long integers use NativeInteger and remain unquoted integer text.
+    return Number.isInteger(value) && !Number.isSafeInteger(value) && /^-?\d+$/.test(token) ? token + '.0' : token;
+  }
   if (Array.isArray(value)) return '[' + value.map(nativeJSON).join(',') + ']';
   if (value && typeof value === 'object') return '{' + Object.entries(value).map(([key, item]) =>
     JSON.stringify(key) + ':' + nativeJSON(item)).join(',') + '}';
@@ -82,14 +87,16 @@ export function resolveConnection(config, env) {
   return { endpoint: url, headers };
 }
 export function createWire(connection) {
-  return function requestJSON(method, path, { body, signal, timeoutMs = 15000, maxBytes = 1048576 } = {}) {
+  return function requestJSON(method, path, { body, signal, timeoutMs = 15000, maxBytes = 1048576, maxRequestBytes = 262144 } = {}) {
     const target = new URL(path.replace(/^\//, ''), connection.endpoint);
     if (target.origin !== connection.endpoint.origin || !target.pathname.startsWith(connection.endpoint.pathname))
       return Promise.reject(new OpenSearchSourceError('OPENSEARCH_REQUEST_TARGET_INVALID'));
     let bytes;
     try { bytes = body === undefined ? undefined : Buffer.from(nativeJSON(body)); }
     catch (issue) { return Promise.reject(issue); }
-    if (bytes && bytes.length > 262144) return Promise.reject(new OpenSearchSourceError('OPENSEARCH_REQUEST_TOO_LARGE'));
+    if (!Number.isSafeInteger(maxRequestBytes) || maxRequestBytes < 1 || maxRequestBytes > 33554432)
+      return Promise.reject(new OpenSearchSourceError('OPENSEARCH_REQUEST_BUDGET_INVALID'));
+    if (bytes && bytes.length > maxRequestBytes) return Promise.reject(new OpenSearchSourceError('OPENSEARCH_REQUEST_TOO_LARGE'));
     return new Promise((resolve, reject) => {
       let request, response, done = false, timer, count = 0;
       const chunks = [];
