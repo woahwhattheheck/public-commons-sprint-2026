@@ -1,0 +1,39 @@
+{
+  "schema": "commons.customer-example-sources.v1",
+  "collection": {
+    "author": "Commons",
+    "license": "MIT",
+    "file": "collection.json",
+    "authoredFrom": "Public interface facts from the primary USGS documentation"
+  },
+  "importer": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "sourceHead": "b1f2930be38eeb69d2b4d1db783ba7f656e495e8",
+    "path": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/collection.mjs"
+  },
+  "references": [
+    {
+      "url": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "purpose": "Query/count routes, ISO8601 UTC times, inclusive boundaries, geographic filters, limit of 20000 and recommendation to use real-time feeds for automated displays"
+    },
+    {
+      "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php",
+      "purpose": "FeatureCollection, event IDs, longitude/latitude/depth order, event time/update and feed generation fields, past-day magnitude feeds"
+    },
+    {
+      "url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+      "purpose": "USGS-produced data public-domain status, separate marked third-party material and source credit"
+    }
+  ],
+  "attribution": "Source data: U.S. Geological Survey.",
+  "commercialService": "Merchant integration, managed delivery and facility-specific reporting are the operator's service. USGS continues to provide its original public API and data.",
+  "sample": {
+    "file": "historical-response.json",
+    "provider": "U.S. Geological Survey",
+    "url": "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2014-08-24&endtime=2014-08-25&minmagnitude=4&minlatitude=37&maxlatitude=39&minlongitude=-123&maxlongitude=-121&orderby=time-asc&limit=20000",
+    "providerGeneratedAt": 1791756729000,
+    "eventIds": [
+      "nc72282711"
+    ]
+  }
+}

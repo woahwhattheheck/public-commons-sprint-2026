@@ -85,7 +85,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
-  openapi-workspace                          Prepare and operate a merchant from its API contract
+  openapi-workspace                          Import an API contract or Postman collection and operate its merchant
+  openapi postman                            Review collections, retain source and create merchant packages
+  openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
   duckdb-prepare                             Prepare, verify and reopen native data packages
   duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant

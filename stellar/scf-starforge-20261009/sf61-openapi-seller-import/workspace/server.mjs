@@ -16,9 +16,11 @@ import { describeMerchantStreamCustomers, createMerchantStreamCustomer, readMerc
   prepareMerchantStreamCustomer } from './stream-customer.mjs';
 import { openCommerce, completeCommerceShutdown } from '../../sf66-demo-launcher/commerce.mjs';
 import { startCommerceConsole } from '../../sf66-demo-launcher/commerce-console.mjs';
+import { inspectPostman, preparePostmanSource } from '../postman/collection.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
+STATIC.set('/postman-browser.mjs','../postman/browser.mjs');
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
@@ -159,6 +161,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type']??'')) return send(415,{error:'Use application/json'});
       const body=await limited(req);
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
+      if (pathname==='/api/postman/inspect') return send(200,inspectPostman(body));
+      if (pathname==='/api/postman/prepare') return send(200,preparePostmanSource(body));
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
