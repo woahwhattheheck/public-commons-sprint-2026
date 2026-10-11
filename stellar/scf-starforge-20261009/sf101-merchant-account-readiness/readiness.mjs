@@ -94,7 +94,7 @@ export function evaluateSnapshots({account, ledgerEnvelope, accountId, network, 
   nonnegativeSafe(feeOperations, 'feeOperations', 100_000);
   if (asset !== 'native') {
     requireObject(asset, 'asset');
-    if (!/^[A-Za-z0-9]{1,12}$/.test(asset.code) || asset.code !== asset.code.toUpperCase()) fail('INVALID_ASSET', 'Asset code must be uppercase 1..12 ASCII alphanumeric');
+    if (!/^[A-Za-z0-9]{1,12}$/.test(asset.code)) fail('INVALID_ASSET', 'Asset code must be 1..12 case-sensitive ASCII alphanumeric');
     validateGAddress(asset.issuer);
   }
   const requested = positiveAtomicText(inboundAmount, 'inboundAmount');
@@ -173,11 +173,11 @@ export function evaluateSnapshots({account, ledgerEnvelope, accountId, network, 
   };
 }
 
-async function fetchBounded(url, timeoutMs) {
+async function fetchBounded(url, timeoutMs, fetchImpl = fetch) {
   const ctrl = new AbortController();
   const clock = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const response = await fetch(url, {method:'GET',headers:{accept:'application/json'},redirect:'error',signal:ctrl.signal});
+    const response = await fetchImpl(url, {method:'GET',headers:{accept:'application/json'},redirect:'error',signal:ctrl.signal});
     if (!response.ok) fail('HORIZON_HTTP_' + response.status, 'Horizon GET ' + new URL(url).pathname + ' HTTP ' + response.status);
     let size = 0, chunks = [];
     if (!response.body) fail('EMPTY_HORIZON_RESPONSE');
@@ -192,14 +192,29 @@ async function fetchBounded(url, timeoutMs) {
     return {json, digest:sha256(raw), bytes:size};
   } finally { clearTimeout(clock); }
 }
-export async function fetchOfficialSnapshots({network, accountId, timeoutMs = 12000}) {
+export async function fetchOfficialAccount({network, accountId, timeoutMs = 12000, fetchImpl = fetch}) {
+  if (!(network in OFFICIAL)) fail('INVALID_NETWORK');
+  validateGAddress(accountId);
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 30000) fail('INVALID_TIMEOUT');
+  const url = OFFICIAL[network] + '/accounts/' + accountId;
+  const result = await fetchBounded(url, timeoutMs, fetchImpl);
+  return {account:result.json, source:{url,digest:result.digest,bytes:result.bytes}};
+}
+export async function fetchOfficialLedger({network, timeoutMs = 12000, fetchImpl = fetch}) {
+  if (!(network in OFFICIAL)) fail('INVALID_NETWORK');
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 30000) fail('INVALID_TIMEOUT');
+  const url = OFFICIAL[network] + '/ledgers?order=desc&limit=1';
+  const result = await fetchBounded(url, timeoutMs, fetchImpl);
+  return {ledgerEnvelope:result.json, source:{url,digest:result.digest,bytes:result.bytes}};
+}
+export async function fetchOfficialSnapshots({network, accountId, timeoutMs = 12000, fetchImpl = fetch}) {
   if (!(network in OFFICIAL)) fail('INVALID_NETWORK');
   validateGAddress(accountId);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 30000) fail('INVALID_TIMEOUT');
   const origin = OFFICIAL[network];
   const [account, ledger] = await Promise.all([
-    fetchBounded(origin + '/accounts/' + accountId, timeoutMs),
-    fetchBounded(origin + '/ledgers?order=desc&limit=1', timeoutMs),
+    fetchBounded(origin + '/accounts/' + accountId, timeoutMs, fetchImpl),
+    fetchBounded(origin + '/ledgers?order=desc&limit=1', timeoutMs, fetchImpl),
   ]);
   return {account:account.json,ledgerEnvelope:ledger.json,
     source:{mode:'live', account:{url:origin+'/accounts/'+accountId,...account, json:undefined},
