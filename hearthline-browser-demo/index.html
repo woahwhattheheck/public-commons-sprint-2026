@@ -1,11 +1,41 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hearthline · live MCP demonstration</title><link rel="stylesheet" href="/style.css"></head>
-<body><header><a href="/" class="brand">◈ HEARTHLINE</a><span id="connection">Connecting to local MCP…</span></header>
-<main><div class="eyebrow">HOUSEHOLD MISSION CONTROL / WORKING SOFTWARE</div><h1>A plan that survives <br>the conversation.</h1><p class="lead">Prepare together. Approve deliberately. Resume without repeating.</p>
-<div class="boundary"><strong>DEMONSTRATION</strong><span>Real local MCP server · simulated weather · no purchases or delivered messages · no Alexa device or model</span></div>
-<section class="metrics" aria-label="Live runtime metrics"><div><span>MISSION</span><strong id="mission-status">Not created</strong></div><div><span>SERVER GENERATION</span><strong id="generation">—</strong></div><div><span>LOCAL OUTBOX</span><strong id="outbox">0 items</strong></div><div><span>RECEIPTS</span><strong id="receipts">0</strong></div></section>
-<section class="mission-history panel" aria-labelledby="history-title"><div><div class="section-title"><span>YOUR SAVED PLANS</span><span id="history-count">Loading…</span></div><h2 id="history-title">Pick up where you left off.</h2><p class="hint">Reopen a household plan to review its saved actions. Opening a plan never approves or executes anything.</p></div><div class="history-controls"><label for="mission-picker">Saved mission</label><select id="mission-picker" disabled></select><p id="history-empty" class="hint" hidden>No saved missions yet. Create your first household plan below.</p><div class="buttons"><button id="open-mission" class="primary" disabled>Open saved mission</button><button id="refresh-missions" disabled>Refresh saved missions</button></div></div></section>
-<div class="workspace"><section class="mission panel"><div class="section-title"><span>01 / PREPARE & ACT</span><span id="protocol">MCP</span></div><h2 id="mission-title">Storm-readiness mission</h2><p class="hint">A two-person household, one pet and a small inventory. Weather is an explicit fixture, never a live warning.</p><button id="prepare" class="primary">Create household mission</button><div id="actions" aria-live="polite"></div>
-<p id="mission-context" class="hint mission-context"></p><div id="controls" hidden><label for="action">Choose a local demo action</label><select id="action"></select><div id="action-detail" class="action-detail" aria-live="polite"></div><div class="buttons"><button id="probe">Try before approval</button><button id="approve">Approve exact plan</button><button id="execute" class="primary">Execute approved action</button></div></div></section>
-<section class="panel evidence"><div class="section-title"><span>02 / SAVED PROGRESS</span><span>LIVE RESPONSES</span></div><h2>Continue with confidence.</h2><p class="hint">Your plan and approved actions stay in this local server's store. Reload the page or restart the MCP process, then continue from the saved state.</p><div class="buttons"><button id="restart">Restart MCP process</button><button id="replay">Replay last execution</button></div><div id="verdict" role="status" aria-live="polite">Ready to prepare or reopen a household plan.</div><ol id="events"></ol><details id="receipt-details"><summary>Inspect actual execution receipt</summary><pre id="receipt">No execution yet.</pre></details><button id="export">Export this session's evidence</button></section></div>
-<footer><span>SELF-HOSTED · NODE.JS · ZERO RUNTIME DEPENDENCIES</span><span>Not a Devpost submission or proof of prize eligibility.</span></footer></main><script type="module" src="/app.mjs"></script></body></html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hearthline — household workboard</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><a href="/" class="brand">HEARTHLINE</a><span id="connection">Connecting to local MCP…</span></header>
+<main>
+<div class="page-heading"><div><div class="eyebrow">HOUSEHOLD WORKSPACE</div><h1>Keep the household moving.</h1><p class="lead">Assign the work, count your supplies, and return to the same plan.</p></div><button id="download-workspace" disabled>Download saved workspace</button></div>
+<p class="boundary"><strong>Sample weather scenario</strong> Real local MCP · saved tasks and stock · shopping handoffs and reminders stay local.</p>
+<section class="metrics" aria-label="Household progress">
+<div><span>TASKS DONE</span><strong id="workspace-tasks">—</strong></div>
+<div><span>SUPPLY GAPS</span><strong id="workspace-supplies">—</strong></div>
+<div><span>SAVED MISSIONS</span><strong id="workspace-missions">0</strong></div>
+<div><span>WORKSPACE</span><strong id="workspace-storage">Opening…</strong></div>
+</section>
+<section class="mission-history panel" aria-labelledby="history-title">
+<div><div class="section-title">YOUR SAVED PLANS</div><h2 id="history-title">Continue a household mission</h2><p class="hint">New missions use the stock already recorded here. Existing tasks, notes and completed work stay with their own plan.</p><button id="prepare" class="primary">Create household mission</button></div>
+<div class="history-controls"><label for="mission-picker">Saved mission</label><select id="mission-picker" disabled></select><p id="history-empty" class="hint" hidden>No saved missions yet. Create the first household plan.</p><div class="buttons"><button id="open-mission" disabled>Open saved mission</button><button id="refresh-missions" disabled>Refresh saved missions</button></div></div>
+</section>
+<section id="workboard" class="panel" aria-labelledby="workboard-title">
+<div class="workboard-heading"><div><div class="section-title">HOUSEHOLD WORK</div><h2 id="workboard-title">Assignments and supplies</h2><p id="workboard-progress">No mission open</p><p id="workboard-assignment" class="hint">Assignments and notes stay with each plan</p></div><div class="workboard-controls"><label for="task-filter">Show tasks</label><select id="task-filter"><option value="all">All tasks</option><option value="todo">To do</option><option value="doing">In progress</option><option value="done">Done</option></select><button id="refresh-workboard">Refresh workboard</button></div></div>
+<div class="workboard-columns">
+<div><div id="task-list" aria-live="polite"></div><p id="workboard-updated" class="hint"></p>
+<details class="add-task"><summary>Add a household task</summary><form id="add-task-form">
+<label>Task<input name="title" maxlength="160" required placeholder="For example, check the porch drains"></label>
+<div class="task-fields"><label>Assigned to<input name="assignee" maxlength="80" placeholder="Name"></label><label>Due date<input name="dueDate" type="date"></label></div>
+<label>Notes<textarea name="notes" maxlength="2000" rows="2"></textarea></label><button type="submit" class="primary">Add task</button>
+</form></details></div>
+<aside class="stock-panel"><div class="section-title">COUNTS ON HAND</div><h3>Household stock</h3><p class="hint">Record what you have. Supply targets and count units come from the prepared plan.</p><form id="stock-form"></form><p id="stock-updated" class="hint"></p><p class="hint">Updating stock changes current gaps. A previous shopping handoff keeps the quantities that were originally approved.</p></aside>
+</div>
+</section>
+<details class="panel prepared-actions" open><summary>Prepared shopping and household reminder</summary>
+<div class="workspace">
+<section class="mission"><div class="section-title"><span>PLAN ACTIONS</span><span id="mission-status">Not created</span></div><h2 id="mission-title">Storm-readiness mission</h2><p class="hint">The sample scenario uses two people, one pet and simulated weather. Review the prepared content before a local action.</p><div id="actions" aria-live="polite"></div><p id="mission-context" class="hint mission-context"></p>
+<div id="controls" hidden><label for="action">Choose a prepared action</label><select id="action"></select><div id="action-detail" class="action-detail" aria-live="polite"></div><div class="buttons"><button id="approve">Approve action</button><button id="execute" class="primary">Execute approved action</button></div></div></section>
+<section class="runtime"><div class="section-title">SAVED ACTIVITY</div><h2>Continue from the saved result</h2><p class="hint">Household progress and prepared actions share this saved workspace. Page reloads, MCP restarts and host restarts retain the same work.</p><div id="verdict" role="status" aria-live="polite">Ready to prepare or reopen a household plan.</div><ol id="events"></ol>
+<details id="runtime-details"><summary>Local runtime and operation details</summary><dl class="runtime-metrics"><div><dt>Protocol</dt><dd id="protocol">MCP</dd></div><div><dt>Process</dt><dd id="generation">—</dd></div><div><dt>Local outbox</dt><dd id="outbox">0 items</dd></div><div><dt>Receipts</dt><dd id="receipts">0</dd></div></dl><div class="buttons"><button id="probe">Try before approval</button><button id="restart">Restart MCP process</button><button id="replay">Replay last execution</button></div><details id="receipt-details"><summary>Saved execution receipt</summary><pre id="receipt">No execution yet.</pre></details><button id="export">Download session details</button></details>
+</section>
+</div></details>
+<footer><span>HEARTHLINE · SELF-HOSTED MCP · NODE.JS</span><span>Workspace data stays on this computer.</span></footer>
+</main><script type="module" src="/app.mjs"></script>
+</body></html>
