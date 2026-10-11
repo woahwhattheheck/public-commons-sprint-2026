@@ -5,14 +5,15 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {join,resolve} from 'node:path';
 import {openAccountingWorkspace,WorkspaceError} from './store.mjs';
+import {handlePricingRequest,PRICING_REQUEST_BYTES} from './pricing-workspace.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
 const TYPES={'.json':'application/json; charset=utf-8','.csv':'text/csv; charset=utf-8','.html':'text/html; charset=utf-8','.tar':'application/x-tar'};
 const check=(ok,code,message,status=400)=>{if(!ok)throw new WorkspaceError(code,message,status);};
-async function body(request){
+async function body(request,limit=600_000){
   check(request.headers['content-type']?.split(';')[0]==='application/json','JSON_REQUIRED','Send a JSON workspace request.');
   let length=0;const parts=[];
-  for await(const part of request){length+=part.length;check(length<=600_000,'BODY_TOO_LARGE','The upload exceeds the supported file size.',413);parts.push(part);}
+  for await(const part of request){length+=part.length;check(length<=limit,'BODY_TOO_LARGE','The upload exceeds the supported file size.',413);parts.push(part);}
   let value;try{value=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{throw new WorkspaceError('INVALID_JSON','The request is not valid JSON.');}
   check(value&&typeof value==='object'&&!Array.isArray(value),'INVALID_REQUEST','Send an object.');return value;
 }
@@ -31,15 +32,18 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',...op
     try{
       check(hosts.has(request.headers.host),'INVALID_HOST','Open the printed local workspace address.',403);
       const url=new URL(request.url,'http://'+request.headers.host),path=url.pathname;
-      const assets={'/':['index.html','text/html; charset=utf-8'],'/app.mjs':['app.mjs','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+      const assets={'/':['index.html','text/html; charset=utf-8'],'/app.mjs':['app.mjs','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],
+        '/pricing.mjs':['pricing.mjs','text/javascript; charset=utf-8'],'/pricing.html':['pricing.html','text/html; charset=utf-8'],'/pricing.css':['pricing.css','text/css; charset=utf-8']};
       if(request.method==='GET'&&assets[path]){const [name,type]=assets[path];send(response,200,await readFile(join(PUBLIC,name)),{type});return;}
       let value;
       if(request.method==='POST'){
         check(request.headers['x-workspace-request']==='1','WORKSPACE_REQUEST_REQUIRED','Use the operator workspace form.',403);
         check(!request.headers.origin||request.headers.origin==='http://'+request.headers.host,'INVALID_ORIGIN','Use this local workspace address.',403);
-        value=await body(request);
+        value=await body(request,path==='/api/pricing/reviews'?PRICING_REQUEST_BYTES:600_000);
       }
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
+      const pricing=await handlePricingRequest(workspace,{method:request.method,path,query,value});
+      if(pricing){if(pricing.file)send(response,200,pricing.file.bytes,{type:TYPES['.json'],name:pricing.file.name});else send(response,200,pricing.value);return;}
       let result;
       if(path==='/api/state'&&request.method==='GET')result=workspace.view();
       else if(path==='/api/recovered/source'&&request.method==='POST')result=await workspace.connectRecovered(value);

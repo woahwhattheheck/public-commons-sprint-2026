@@ -1,3 +1,5 @@
+import {mountPricing} from './pricing.mjs';
+let pricingPane;
 // MIT. Operator UI over the original merchant accounting workspace.
 // Monetary and atomic values remain the original strings from the native report.
 const $ = id => document.getElementById(id);
@@ -87,6 +89,7 @@ function updateButtons() {
   for (const button of document.querySelectorAll('[data-recovery-cancel]')) button.disabled = busy || button.dataset.requested === 'true';
   for (const button of document.querySelectorAll('[data-recovery-retry]')) button.disabled = busy || !connected || recoveryActive();
   document.body.classList.toggle('working', busy);
+  pricingPane?.setBusy(busy);
 }
 
 function renderRuns() {
@@ -125,11 +128,12 @@ function adopt(next) {
   if (state && next.revision < state.revision) return;
   state = next;
   if (!state.runs.some(run => run.id === selectedRun)) selectedRun = state.runs[0]?.id || '';
-  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); updateButtons();
+  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); updateButtons();
   schedulePoll();
 }
 function renderRun() {
   const run = selectedReport?.run;
+  pricingPane?.renderRun(selectedReport);
   $('empty-run').hidden = Boolean(run);
   $('selected-run').hidden = !run;
   if (!run) return;
@@ -394,6 +398,8 @@ async function importRecovery(previewId) {
   if (!previewId) throw new Error('Choose a saved original input review.');
   await perform({path:'/api/recovered/import',body:{revision:state.revision,previewId,actor:operator()},description:'original recovered-payment import',message:'Original transfer verification started. Its result and any retained import are shown in the saved attempts.',success:() => openArea('recovery')});
 }
+
+pricingPane = await mountPricing({api,perform,operator,attempt,notify,openArea,loadRun});
 
 document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click',() => openArea(button.dataset.area)));
 document.querySelectorAll('[data-open-sources]').forEach(button => button.addEventListener('click',() => openArea('sources')));
