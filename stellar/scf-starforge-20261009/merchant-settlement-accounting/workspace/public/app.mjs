@@ -1,7 +1,7 @@
 import {mountPricing} from './pricing.mjs';
-let pricingPane;
+import {mountAccountant} from './accountant.mjs';
 import {mountPeriods} from './periods.mjs';
-let periodPane;
+let pricingPane,accountantPane,periodPane;
 // MIT. Operator UI over the original merchant accounting workspace.
 // Monetary and atomic values remain the original strings from the native report.
 import {mountCollection} from './collection.mjs';
@@ -92,7 +92,7 @@ function updateButtons() {
   for (const button of document.querySelectorAll('[data-recovery-cancel]')) button.disabled = busy || button.dataset.requested === 'true';
   for (const button of document.querySelectorAll('[data-recovery-retry]')) button.disabled = busy || !connected || recoveryActive();
   document.body.classList.toggle('working', busy);
-  pricingPane?.setBusy(busy);periodPane?.setBusy(busy);
+  pricingPane?.setBusy(busy);periodPane?.setBusy(busy);accountantPane?.setBusy(busy);
 }
 
 function renderRuns() {
@@ -131,7 +131,7 @@ function adopt(next) {
   if (state && next.revision < state.revision) return;
   state = next;
   if (!state.runs.some(run => run.id === selectedRun)) selectedRun = state.runs[0]?.id || '';
-  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); periodPane?.render(state); updateButtons();
+  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); periodPane?.render(state); accountantPane?.render(state); updateButtons();
   schedulePoll();
 }
 function renderRun() {
@@ -188,6 +188,7 @@ function schedulePoll() {
 }
 function openArea(area) {
   if (area === 'collection') attempt(() => collectionUI?.refresh());
+  if (area === 'accountant') attempt(() => accountantPane?.refresh());
   for (const button of document.querySelectorAll('[data-area]')) { const active = button.dataset.area === area; button.classList.toggle('active',active); if (active) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current'); }
   for (const section of document.querySelectorAll('.area')) section.hidden = section.id !== 'area-' + area;
 }
@@ -414,6 +415,7 @@ periodPane = await mountPeriods({api,perform,operator,attempt,notify,openArea,lo
     $('compare-current').dataset.chosen=$('compare-baseline').dataset.chosen='true';
     await compareRuns(0);openArea('compare');
   }});
+accountantPane = await mountAccountant({api,perform,operator,attempt,notify});
 
 document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click',() => openArea(button.dataset.area)));
 document.querySelectorAll('[data-open-sources]').forEach(button => button.addEventListener('click',() => openArea('sources')));
