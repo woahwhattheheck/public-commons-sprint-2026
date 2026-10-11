@@ -150,8 +150,12 @@ export async function openMigrationHandovers({ projects, releases, acquisition, 
       for (const entry of project.state.acquisitions) {
         const selected = await acquisition(projectId, entry.id);
         const exported = await selected.service.exportRun(entry.id, { directory: join(exportParent, entry.id) });
+        const manifestFiles = exported.files.filter(file => /^runs\/[^/]+\/manifest\.json$/.test(file.path));
+        need(manifestFiles.length === 1 && manifestFiles[0].sha256 === exported.manifestSha256,
+          'The original acquisition export must retain its exact manifest file.');
+        const manifestPath = manifestFiles[0].path, runPrefix = manifestPath.slice(0, -'manifest.json'.length);
         for (const file of exported.files) {
-          need(file.path.startsWith('runs/' + entry.id + '/') || file.path.startsWith('sources/'), 'Unexpected native acquisition export path.');
+          need(file.path.startsWith(runPrefix) || file.path.startsWith('sources/'), 'Unexpected native acquisition export path.');
           const body = await bytes(join(exported.directory, pathname(file.path)));
           need(body.length === file.bytes && sha256(body) === file.sha256, 'Native acquisition export changed.');
           files.add(prefix + '/acquisitions/' + file.path, body);
@@ -159,7 +163,7 @@ export async function openMigrationHandovers({ projects, releases, acquisition, 
         files.add(prefix + '/acquisitions/export-records/' + entry.id + '.json',
           await bytes(join(exported.directory, 'export.json')));
         native.acquisitions.push({ id: entry.id, fingerprint: exported.fingerprint,
-          manifestSha256: exported.manifestSha256, sourceRef: entry.sourceRef, status: exported.manifest.status ?? exported.manifest.state ?? null });
+          manifestSha256: exported.manifestSha256, manifestPath, sourceRef: entry.sourceRef, status: exported.manifest.status ?? exported.manifest.state ?? null });
       }
       const packageNames = [...new Set([project.state.merchant?.baseline, project.state.merchant?.package?.name].filter(Boolean))];
       for (const name of packageNames) {
@@ -274,7 +278,11 @@ export async function restoreMigrationHandover({ body, name, parent, expectedSha
       const service = await openAcquisitions({ directory: join(project.directory, 'acquisitions'),
         source: { file: source.file, url: source.metadata.provenance.url, sha256: source.metadata.sha256 }, ...(python ? { python } : {}) });
       const observed = await service.get(entry.id), exported = manifest.native.acquisitions.find(row => row.id === entry.id);
-      need(exported && sha256(await bytes(join(service.directory, 'runs', entry.id, 'manifest.json'))) === exported.manifestSha256, 'The original received acquisition manifest changed.');
+      need(exported && typeof exported.manifestPath === 'string', 'The original acquisition manifest path is missing.');
+      const manifestBytes = await bytes(join(service.directory, pathname(exported.manifestPath)));
+      need(sha256(manifestBytes) === exported.manifestSha256 &&
+        canonical(JSON.parse(manifestBytes.toString('utf8'))) === canonical(observed),
+        'The original received acquisition manifest changed.');
       for (const capture of observed.captures) await service.readCapture(entry.id, capture.id);
     }
     if (manifest.native.releaseState) {
