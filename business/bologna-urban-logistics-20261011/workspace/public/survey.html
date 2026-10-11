@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bologna · Survey analyst</title><link rel="stylesheet" href="/survey.css"><script src="/survey.js" defer></script></head>
+<body>
+<header><a href="/">Bologna assessment</a><span> / Survey analyst</span><span id="revision">Loading workspace…</span></header>
+<main>
+<div class="heading"><div><p class="eyebrow">CONSULTATION OPERATIONS</p><h1>Survey intake and analysis</h1><p>Questionnaire, source review, response coding and retained report tables.</p></div><button id="refresh" type="button">Refresh saved state</button></div>
+<div id="message" role="status" aria-live="polite"></div>
+<nav aria-label="Survey workspace"><button data-tab="overview" aria-selected="true">Overview</button><button data-tab="questionnaire">Questionnaire</button><button data-tab="intake">Import</button><button data-tab="review">Response review</button><button data-tab="analysis">Analysis and reports</button></nav>
+<section id="overview" class="tab">
+<h2>Collection position</h2><div id="metrics" class="metrics"></div><p id="cohort-note"></p>
+<div class="columns"><section><h3>Collection record</h3><form id="campaign-form">
+<label>Target cohort<input name="targetCohort" value="current" required maxlength="80"></label>
+<label>Invited stakeholder population<textarea name="population" rows="3"></textarea></label>
+<label>Municipality reference<textarea name="municipalityReference" rows="2"></textarea></label>
+<div class="two"><label>Opened on<input name="openedOn" type="date"></label><label>Closed on<input name="closedOn" type="date"></label></div>
+<div class="two"><label>One reminder round · date<input name="reminderDate" type="date"></label><label>Coordination reference<input name="reminderReference"></label></div>
+<label>Collection notes<textarea name="notes" rows="3"></textarea></label>
+<label>Reviewer<input name="reviewer" required maxlength="160"></label><button type="submit">Save collection record</button>
+<p class="hint">This records a completed or planned coordination step. It does not send invitations or reminders.</p></form></section>
+<section><h3>Retained input sources</h3><div id="sources"></div><h3>Available questionnaire cohorts</h3><div id="cohorts"></div><p>Historical questionnaires retain their own cohort and collection dates. The target uses the cohort selected in the collection record.</p><h3>Operating sequence</h3><p>Retain the questionnaire. Review a CSV. Decide each addition or correction. Code the included responses. Inspect denominators. Publish through the original assessment workspace.</p></section></div>
+</section>
+<section id="questionnaire" class="tab" hidden><h2>Italian questionnaire</h2><p id="questionnaire-id"></p>
+<div class="toolbar"><a href="/api/survey/questionnaire" target="_blank" rel="noopener">Open printable questionnaire</a><a href="/api/survey/template" download="survey-template.csv">Blank CSV template</a><a href="/api/survey/schema" target="_blank" rel="noopener">Data dictionary</a></div>
+<form id="questionnaire-form"><div class="two"><label>Title<input name="title" required maxlength="240"></label><label>Cohort ID<input name="cohortId" value="current" required maxlength="80"></label></div>
+<label>Introduction<textarea name="introduction" rows="3" required></textarea></label><label>Organization-provided privacy notice<textarea name="privacyNotice" rows="3"></textarea></label>
+<div class="two"><label>Source / prior questionnaire reference<textarea name="sourceReference" rows="2"></textarea></label><label>Municipality review reference<textarea name="municipalityReference" rows="2"></textarea></label></div>
+<div id="question-wording"></div>
+<div class="two"><label>Review state<select name="status"><option value="PROPOSED">Proposed wording</option><option value="REVIEWED">Reviewed wording</option></select></label><label>Reviewer<input name="reviewer" required maxlength="160"></label></div>
+<button type="submit">Retain a new questionnaire version</button><p class="hint">Existing responses retain their original questionnaire ID. Wording revisions preserve the typed response schema and previous versions.</p></form>
+</section>
+<section id="intake" class="tab" hidden><h2>Review a response CSV</h2><p>UTF-8, one row per pseudonymous respondent. Use declared codes; multiple choices use <code>|</code>. Empty numeric answers remain missing. Each questionnaire ID determines its cohort.</p>
+<form id="preview-form"><label>Source CSV<input id="source-file" type="file" accept=".csv,text/csv" required></label><button type="submit">Preview exact file</button><span id="file-info"></span></form>
+<div id="preview" hidden><h3 id="preview-title"></h3><p id="preview-source" class="mono"></p><p>Review every row. Unchanged or invalid rows can only be skipped. A correction replaces the current response and retains its earlier version.</p>
+<button id="select-new" type="button">Select all valid new rows for addition</button><div id="preview-rows" class="table-scroll"></div>
+<form id="commit-form"><label>Import / correction reason<textarea name="reason" required rows="2"></textarea></label><label>Reviewer<input name="reviewer" required maxlength="160"></label>
+<label class="check"><input name="nonIdentifyingReviewed" type="checkbox" required> I reviewed the source for names, contact details and identifying free text.</label><button type="submit">Commit reviewed row decisions</button></form></div>
+</section>
+<section id="review" class="tab" hidden><h2>Response review</h2><div class="toolbar"><label>Search ID, role or source text<input id="response-search" type="search"></label><label>Inclusion<select id="response-inclusion"><option value="all">All responses</option><option value="included">Included</option><option value="excluded">Excluded</option></select></label></div>
+<div class="columns"><section><div id="responses" class="table-scroll"></div><div class="toolbar"><button id="previous" type="button">Previous</button><span id="page-position"></span><button id="next" type="button">Next</button></div><p id="selected-count"></p></section>
+<section><h3 id="selected-title">Choose a response</h3><div id="response-detail"></div><div id="response-controls" hidden>
+<form id="inclusion-form"><label>Inclusion<select name="included"><option value="true">Include in eligible analysis</option><option value="false">Exclude from analysis</option></select></label><label>Reason<textarea name="reason" required rows="2"></textarea></label><label>Reviewer<input name="reviewer" required></label><button type="submit">Save inclusion decision</button></form>
+<form id="coding-form"><h4>Analyst coding</h4><div id="coding-themes"></div><label>Coding note<textarea name="note" rows="2"></textarea></label><label>Reviewer<input name="reviewer" required></label><button type="submit">Save current-response coding</button></form></div></section></div>
+<div class="columns"><section><h3>Theme dictionary</h3><div id="theme-list"></div><form id="theme-form"><label>Theme ID<input name="id" required maxlength="80" placeholder="loading-conflict"></label><div class="two"><label>Italian label<input name="it" required></label><label>English label<input name="en" required></label></div><label>Reviewer<input name="reviewer" required></label><button type="submit">Save theme</button></form></section>
+<section><h3>Evidence-linked finding</h3><p>Check response rows to select evidence. Revisions keep the same finding ID; changing or excluding evidence marks its interpretation for review.</p><form id="finding-form"><label>Finding ID (empty creates a finding)<input name="id"></label><label>Italian interpretation<textarea name="it" required rows="3"></textarea></label><label>English interpretation<textarea name="en" required rows="3"></textarea></label><label>Scenario links<select id="finding-scenarios" multiple size="3"></select></label><label>Decision links<select id="finding-decisions" multiple size="3"></select></label><label>Reviewer<input name="reviewer" required></label><button type="submit">Retain finding with selected evidence</button></form></section></div>
+</section>
+<section id="analysis" class="tab" hidden><h2>Descriptive analysis</h2><form id="analysis-form" class="toolbar"><label>Cohort<select id="filter-cohort"></select></label><label>Street<select id="filter-street"></select></label><label>Role<select id="filter-role"></select></label><button type="submit">Apply filters</button></form>
+<p id="methods"></p><div id="analysis-summary" class="metrics"></div><div id="analysis-tables"></div><h3>Themes and reviewed findings</h3><div id="analysis-findings"></div>
+<section class="publication"><h3>Retained reports</h3><p>Publish the full assessment and its unfiltered target-cohort analysis through the original workspace. Existing publications remain immutable.</p><form id="publish-form"><label>Publication name<input name="name" required maxlength="200"></label><button type="submit">Publish original assessment</button></form><label>Report source<select id="publication-source"><option value="">Current filtered analysis</option></select></label>
+<div class="toolbar"><a id="report-it" href="/api/survey/report?language=it" target="_blank" rel="noopener">Italian report</a><a id="report-en" href="/api/survey/report?language=en" target="_blank" rel="noopener">English report</a><a id="report-zip" href="/api/survey/export" download>CSV / JSON / HTML package</a></div></section></section>
+</main><footer>Bologna · Original assessment workspace · Private operator records remain in the selected state directory.</footer>
+</body></html>
