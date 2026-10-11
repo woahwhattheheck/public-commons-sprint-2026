@@ -33,6 +33,77 @@ Use a new private directory to import another certificate profile. The browser d
 
 The provided HPD examples use official public building-in-project records. Their production-event totals, recorded BBLs and source coverage remain distinct measures. The native guide and data importer explain their source semantics.
 
+## Dataset publication and recurring refresh
+
+The **Dataset publisher** tab takes a saved report through the maintained MongoDB
+publisher, the original CSV dataset loader, the original retained version store,
+and the existing publication scheduler. It uses the same immutable merchant
+revision as the authoring workspace.
+
+1. **Create a publication.** Select a saved merchant route and a fixed dataset
+   resource path. The publication retains that route's source revision, public
+   origin, description, service name, and every inherited or route-specific
+   payment choice, including exact string amounts and option extensions.
+2. **Save an extraction plan.** Set exact report inputs, public columns and scalar
+   types, optional equality/range/sort capabilities, stable source ordering and
+   extraction limits. Each plan is immutable. The UI retains an unsaved plan in
+   session storage separately from the main source draft.
+3. **Extract the complete report.** The native publisher exhausts the reviewed
+   aggregation in one native source session and awaits the original CSV writer.
+   The live report's response-row limit does not truncate this extraction.
+   Authored pipeline limits remain part of the report. Exceeding any extraction
+   budget produces a failed run, with the current published dataset preserved.
+   The UI follows the original run identifier through completion or cancellation.
+4. **Review and publish.** Inspect a candidate page and its exact source read,
+   schema, row count and retained snapshot. Enter a reviewer and review note.
+   Initial publication creates the native dataset store; subsequent publication
+   compares the displayed current snapshot and target revision before the
+   original writer activates the candidate.
+5. **Start the dataset seller.** The workbench generates the original seller
+   configuration from the native dataset query capabilities, retaining every
+   merchant payment option. The seller advertises the original optional snapshot
+   selector. Its developer explorer, current mode and retained versions are
+   available in the same tab. A still-retained version can be explicitly
+   activated against the displayed current target.
+6. **Configure recurring publication.** Select the current published extraction
+   as the baseline, set the interval and row criteria, and save the original
+   schedule policy. Enable it or run one explicit refresh. The maintained
+   scheduler owns the extraction, review, source/target binding, recovery and
+   publication history; unchanged data retains the current version.
+7. **Prepare the buyer handoff.** Select an extraction, inspect a first-page
+   query, and load the running seller's current offer. Choose the payment
+   alternative and buyer intent. The original SF88 preparation pins the
+   selected retained snapshot. Download the native review and original offer
+   together, or download the candidate CSV, dataset configuration and extraction
+   manifest individually.
+
+CSV column names must use the original dataset naming rules. Alias an unsupported
+MongoDB field in the fixed aggregation before publishing it. The extraction
+order can still use a declared source column that is omitted from the public CSV.
+String projection preserves exact Int64/Decimal128 text and canonical Extended
+JSON for structured BSON. Integer projection requires safe integers. Missing
+fields require an explicit source projection; nullable empty CSV cells represent
+null, so the original publisher rejects a real empty string in a nullable column.
+
+The workbench uses the original schedule controls directly. Reopening restores
+every publication's source revision, plans, runs, enabled policies and explicitly
+started dataset sellers. Dataset sellers start before their schedules resume.
+Stopping a dataset seller pauses future refreshes and drains that seller; closing
+the whole workbench closes its original native lifetimes while retaining enabled
+policies for the next launch.
+
+To configure native dataset payment processing with the existing facilitator:
+
+    node workspace/server.mjs --state /private/mongo-merchant \
+      --dataset-facilitator https://facilitator.example
+
+Local facilitator development additionally requires
+--allow-local-dataset-facilitator. Supply the same facilitator option on each
+launch. Embedding applications can supply the original datasetNativeFactory
+function to startMongoWorkbench. The browser displays the seller's actual
+CHALLENGE_ONLY or NATIVE_X402 mode. Buyer execution uses the existing SF88
+operator flow.
+
 ## Revisions and concurrent authoring
 
 Saving commits the full source and merchant plan together through the native Linux file lock and expected revision check. An independent CLI or another browser can advance the same workspace. A history refresh displays that newer head while retaining this tab's original expected revision; saving an older draft returns a conflict until the operator reloads or explicitly reconciles the draft.
@@ -90,3 +161,24 @@ The browser calls a small local interface whose data operations compose the nati
 | Prepare buyer | `readMongoBuyerOffer`, `prepareMongoBuyer` |
 
 The browser uses the existing query compiler, payment protocol, seller contract and plan store.
+
+Dataset publications add private publication-links/ and publications/ directories.
+Each publication contains the original publisher database, plans and runs, the
+native dataset version directory, retained seller configuration and service intent.
+Original dataset buyer handoffs are retained in dataset-buyers/.
+
+The publication endpoints remain behind the same local session authorization:
+
+| Operation | Native implementation |
+| --- | --- |
+| Create / reopen publication | openMongoPublisher bound to the retained MongoDB revision |
+| Save plan / extract / inspect / review / publish / reconcile | Original publisher methods and native MongoDB streaming driver |
+| Start / stop dataset seller | openDatasetVersions and startVersionedDatasetSeller |
+| Retained-version activation | Original datasetControl with expected snapshot and revision |
+| Configure / enable / run / pause / continue refresh | Original openPostgresSchedule shared publication scheduler |
+| Inspect / prepare dataset buyer | readDatasetBuyerOffer and prepareDatasetBuyer from the original SF88 handoff |
+
+Candidate CSV downloads stream the verified original file. Dataset configuration
+and extraction manifests use the same retained run. Clients cannot provide a
+filesystem source path, target path, facilitator, driver or executable through a
+publication request. Native facilitator setup belongs to the launch configuration.

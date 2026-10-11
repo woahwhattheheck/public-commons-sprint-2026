@@ -15,6 +15,7 @@ import { MerchantReceiving, receivingTools } from './receiving.mjs';
 import { MerchantPythonWorkspaces, pythonWorkspaceTools } from './python-workspace.mjs';
 import { MerchantS3Workspaces, s3WorkspaceTools } from './s3-workspace.mjs';
 import { MerchantPublisher, publisherTools } from './publisher.mjs';
+import { createReleaseFacilitatorControl } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs';
 import { MerchantPricing, pricingTools } from './pricing.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -34,6 +35,12 @@ export const MERCHANT_TOOLS = [
   tool('merchant_stage', 'Retain a configured source alias as a new immutable original SF82 release: saved API workspace, upstream snapshot, Python application, original DuckDB datasets, S3 objects, Stellar RPC product one native SQLite database snapshot or original prepared MySQL merchant. Does not activate, import application code, start a listener or make a payment.',
     { source: idSchema, id: idSchema, label: textSchema }, ['source', 'id']),
   tool('merchant_inspect', 'Inspect and verify one retained original release including complete terms, application hashes and native/challenge mode.', { id: idSchema }, ['id'], { readOnly: true, idempotent: true }),
+  tool('merchant_facilitators', 'List host-configured facilitator aliases for the retained merchant release. Reads the current host configuration without network requests.',
+    {}, [], { readOnly: true, idempotent: true }),
+  tool('merchant_facilitator_review', 'Review a configured provider against one retained release through the original native SDK. Returns actual supported capabilities and generated payment requirements, including fee sponsorship changes. Retain the review ID before staging.',
+    { provider: idSchema, releaseId: idSchema, id: idSchema, label: textSchema }, ['provider', 'releaseId', 'id'], { readOnly: true, openWorld: true }),
+  tool('merchant_facilitator_stage', 'Stage the reviewed facilitator with the same original compiled merchant source. Rechecks current capabilities and selection generation. A repeated completed review returns its same retained release; use existing compare, activate and restart afterward.',
+    { reviewId: digestSchema }, ['reviewId'], { idempotent: true, openWorld: true }),
   tool('merchant_compare', 'Compare a staged release against the active release or a named retained version. Returns exact payment, route and application changes with the selection generation.',
     { to: idSchema, from: { anyOf: [idSchema, { type: 'null' }] } }, ['to'], { readOnly: true, idempotent: true }),
   tool('merchant_activate', 'Select an inspected immutable release using its exact digest and current selection generation. A running seller keeps its existing version until explicitly restarted.',
@@ -110,8 +117,8 @@ function expectedDigest(value) {
 
 export class MerchantReleaseOperator {
   #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #s3Workspaces; #publishers; #pricing;
-  #clientExports;
-  constructor(config) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#publishers = new MerchantPublisher(config); this.#pricing = new MerchantPricing(config); }
+  #clientExports; #facilitators;
+  constructor(config) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
@@ -177,6 +184,12 @@ export class MerchantReleaseOperator {
     switch (name) {
       case 'merchant_status': return this.status();
       case 'merchant_sources': return this.#sources(args.source);
+      case 'merchant_facilitators': return this.#facilitators.status();
+      case 'merchant_facilitator_review': return this.#facilitators.review(args);
+      case 'merchant_facilitator_stage': {
+        const result = await this.#facilitators.stage(args);
+        return { ...result, release: releaseView(result.release) };
+      }
       case 'merchant_operations': {
         const session = this.#owned(args.instanceId);
         return { instanceId: session.observation.instanceId, releaseId: session.release.id,
@@ -257,7 +270,7 @@ export class MerchantReleaseOperator {
     this.#fleet.cancelStaging();
     this.#close = (async () => {
       await this.#active;
-      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#publishers.close(), this.#pricing.close(), this.#clientExports.close(),
+      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#clientExports.close(),
         this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');
