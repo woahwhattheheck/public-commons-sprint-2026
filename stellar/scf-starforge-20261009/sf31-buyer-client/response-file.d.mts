@@ -41,6 +41,8 @@ export interface PreparedBuyerResponseFile {
   readonly destination: string;
   /** Consumes the original successful response body once. Does not change payment metadata. */
   save(result: { response: Response }, options?: { signal?: AbortSignal }): Promise<SavedBuyerResponse>;
+  /** Save an already-returned non-HTTP representation through the same reserved writer. */
+  saveBytes(bytes: Uint8Array, options?: { contentType?: string; signal?: AbortSignal }): Promise<SavedBuyerResponse>;
   /** Release an unused destination, or cancel an active save. Never retries the buyer. */
   abort(): Promise<void>;
 }
