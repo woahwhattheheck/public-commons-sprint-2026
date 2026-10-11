@@ -25,6 +25,7 @@ const USAGE = `Buyer runbook — compose original SF88 operations
                              [--pass-env NAME] [--python /absolute/current-python]
   node cli.mjs workspace --state /absolute/private-workspace --configs /absolute/buyer-configs
                         [--operator-settings /absolute/private-operator.json]
+                        [--claim-envs SF101_CLAIM_TOKEN,OTHER_ORDER_TOKEN]
                         [--run /absolute/existing-run] [--port 8460]
 
 init snapshots explicit complete SF88 configs and request bodies without loading
@@ -49,6 +50,8 @@ the original absent-or-empty state root and reopens saved acquisitions without
 executing purchases. Set the passphrase environment variable before launching.
 --operator-settings declares this machine's payer, signer source and maximum
 budgets for receiving private merchant requests. Its path is retained for reopen.
+--claim-envs declares existing environment names available for paid-file delivery.
+Only names enter the browser; values stay in this process's existing environment.
 `;
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 function options(args, names) {
@@ -109,11 +112,12 @@ export async function main(args = process.argv.slice(2)) {
     return;
   }
   if (command === 'workspace') {
-    const opts = options(tail, ['--state','--configs','--operator-settings','--run','--port']);
+    const opts = options(tail, ['--state','--configs','--operator-settings','--claim-envs','--run','--port']);
     need(opts['--state'], 'WORKSPACE_STATE_DIRECTORY_REQUIRED');
     const {startRunbookWorkspace} = await import('./workspace.mjs');
     const service = await startRunbookWorkspace({directory:opts['--state'], configsDirectory:opts['--configs'],
       operatorSettings:opts['--operator-settings'],
+      paidFileClaimEnvs:opts['--claim-envs']===undefined?undefined:opts['--claim-envs'].split(','),
       runs:opts['--run'] ? [opts['--run']] : [], port:Number(opts['--port'] ?? 8460)});
     const state = await service.model.state();
     print({mode:'BUYER_RUNBOOK_WORKSPACE', url:service.url, directory:service.model.directory,

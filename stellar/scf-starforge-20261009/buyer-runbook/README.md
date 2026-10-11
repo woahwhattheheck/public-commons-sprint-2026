@@ -42,6 +42,12 @@ the original SF81 approval. Existing runs can be registered with `--run` and
 reopened alongside newly initialized acquisitions. See [WORKSPACE.md](WORKSPACE.md)
 for the complete draft, execution, recovery, resource and accounting workflow.
 
+Customers receiving an SF101 paid-file order can use **Receive paid file order**
+in this same workspace. Review the original handoff, prepare the native buyer,
+add it to an acquisition and retrieve or resume its entitled file from the saved
+operation. [PAID_FILES.md](PAID_FILES.md) covers local operator setup, claim-token
+environment names, delivery, reopening and original encrypted recovery.
+
 ## Assemble one acquisition job
 
 1. Use the existing SF88 `--prepare` / `--review`, or the original SF96 merchant

@@ -246,6 +246,36 @@ and the result reports its measured complete-file SHA-256. That measured hash is
 useful for local transfer verification; it is not a substitute for an independently
 supplied expected digest.
 
+## Encrypted workspace backup and restore
+
+The original Object Buyer now joins received merchant files, prepared native
+operators, committed journals, whole/chunk sessions, response parts and completed
+files into one reviewed encrypted recovery workflow. Open **Backup and
+recovery** in the [existing workspace](./object-workspace/README.md#back-up-and-restore-the-complete-buyer-workspace),
+or use these original object commands. A maintained installation forwards them
+unchanged through `starforge buyer-object`:
+
+```sh
+starforge buyer-object backup-review --state /private/buyer-state/workspace --state-root /private/buyer-state
+starforge buyer-object backup --state /private/buyer-state/workspace --state-root /private/buyer-state --out /private/backups/buyer-20261011 --review REVIEW_SHA256 --quiesced --pass-env SF88_BACKUP_PASSPHRASE
+starforge buyer-object backup-verify --bundle /private/backups/buyer-20261011 --expect ORIGINAL_RECORD_SHA256 --pass-env SF88_BACKUP_PASSPHRASE
+starforge buyer-object backup-restore --bundle /private/backups/buyer-20261011 --expect ORIGINAL_RECORD_SHA256 --pass-env SF88_BACKUP_PASSPHRASE
+```
+
+Use `profile.reviewSha256` from the current review, then retain the returned
+`recordSha256` and bundle path. Set the separate passphrase in the process
+environment first. Include `--profile ABS` on review/capture when using an
+existing trusted product profile. The state root must contain every selected
+application dependency; native runtimes remain installation requirements.
+Capture requires other writers to be stopped and holds original metadata,
+session and journal leases itself.
+
+Restore authenticates and publishes only at the original absent/empty root,
+reopens the same application and returns `reopened.urlCommand`. No purchase or
+finalization runs. Unresolved native attempts keep their state. The workspace
+guide covers limits, cancellation, missing optional outputs and separate
+post-publication errors.
+
 ## Explicit object facts and embedding
 
 For another merchant that implements the same original byte-range response

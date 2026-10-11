@@ -420,6 +420,14 @@ Private native logs are never embedded in application error messages. Configure
 `environment` explicitly when the application should pass a reduced environment.
 The default preserves the caller's original signer/operator environment.
 
+`BuyerError` and its subclasses format as an error code, stack, and the public
+`exitCode` and `destinationPublished` fields when available. `JSON.stringify`
+uses the same public fields through `error.toJSON()`. Recovery objects, saved
+results, paths and other private details remain directly accessible through
+`error.operation`, `error.dataset`, `error.acquisition` and their existing
+properties, but are non-enumerable and excluded from default diagnostic output.
+Use those handles to reopen the existing operation after handling the error.
+
 ## Data consumption and integrity
 
 A `BuyerResult` preserves the native summary, exit status, recovery marker and
@@ -478,3 +486,7 @@ existing SF88/SF101/SF36 implementation through the same native Runtime.
 See [the complete customer recovery workflow](RECOVERY.md) for passphrase-variable
 selection, quiescing writers, expected-record binding, typed interruption results
 and reopening the same Node and Python applications without repeating purchases.
+
+## LangGraph and LangChain applications
+
+[FRAMEWORKS.md](FRAMEWORKS.md) provides the optional persistent graph, standard LangChain tools, TypeScript customer program, and executable operator CLI. Select one existing `buyer.operation(intentId)` and retain its original state. Graph checkpoints and ToolMessages refer to that same operation, native attempt, and verified response. The base package remains dependency-free; install the optional frameworks only for their corresponding subpath imports.
