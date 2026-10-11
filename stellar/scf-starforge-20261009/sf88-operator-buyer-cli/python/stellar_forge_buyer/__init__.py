@@ -3,10 +3,10 @@ from .client import Buyer, Operation, Review
 from .datasets import DatasetAcquisition, DatasetDelivery, DatasetError
 from .errors import BuyerError, DeliveryError, NativeError, StateError
 from .objects import ObjectBuyer, ObjectSession, ObjectReport, ObjectDelivery, ObjectDownloadError
-from .result import AccountingResult, BuyerResult, FileDelivery
+from .result import AccountingResult, BuyerResult, FileDelivery, SessionAccountingResult
 
 __all__ = [
-    "Buyer", "Operation", "Review", "BuyerResult", "FileDelivery", "AccountingResult",
+    "Buyer", "Operation", "Review", "BuyerResult", "FileDelivery", "AccountingResult", "SessionAccountingResult",
     "DatasetAcquisition", "DatasetDelivery", "DatasetError",
     "ObjectBuyer", "ObjectSession", "ObjectReport", "ObjectDelivery", "ObjectDownloadError",
     "BuyerError", "DeliveryError", "NativeError", "StateError",

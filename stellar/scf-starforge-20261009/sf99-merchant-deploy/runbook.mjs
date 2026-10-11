@@ -60,7 +60,7 @@ chown root:${p.serviceGroup} ${q(bundle)} ${readable}
 chmod 0750 ${q(bundle)}
 chmod 0640 ${readable}
 ${cli} check --bundle ${q(bundle)}
-runuser -u ${p.serviceUser} -- ${cli} check --bundle ${q(bundle)}
+runuser -u ${p.serviceUser} -g ${p.serviceGroup} -- ${cli} check --bundle ${q(bundle)}
 systemd-analyze verify ${files}
 caddy adapt --adapter caddyfile --config ${q(join(bundle, 'Caddyfile'))} --pretty
 install -m 0644 ${files} /etc/systemd/system/
@@ -123,6 +123,18 @@ older unlocked drain beside this worker. SERVICE.md supplies exact retry/requeue
 and cancellation behavior.\n` : ''}
 
 ## Stop, upgrade and recover
+
+For this installed systemd/Caddy host, the source release includes the complete
+maintenance and restored-state cutover command:
+
+\`\`\`sh
+${cli} maintenance --help
+\`\`\`
+
+sf99-merchant-deploy/MAINTENANCE.md carries its actual plan format, declared writer
+group, encrypted backup, restored file/configuration paths, service activation,
+interruption recovery and rollback. It maintains only this merchant's imported
+Caddy fragment. The direct original engine sequence remains below.
 
 Remove this merchant's public ingress before maintenance using the existing
 Caddy configuration procedure. This bundle does not stop a shared Caddy service.

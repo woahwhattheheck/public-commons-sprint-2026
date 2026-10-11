@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // MIT. Original SF88 paginated dataset acquisition, with per-page operator approval.
 import { createDatasetSession, inspectDatasetSession, runDatasetSession,
-  recoverDatasetSession, exportDatasetManifest, deliverDatasetSession } from './dataset-session.mjs';
+  recoverDatasetSession, exportDatasetManifest, deliverDatasetSession, accountDatasetSession } from './dataset-session.mjs';
 import { InputError, need } from './config.mjs';
 import { pathToFileURL } from 'node:url';
 
@@ -16,17 +16,24 @@ const help = [
   'recover --session /private/session',
   'export --session /private/session --out /private/dataset-manifest.json',
   'deliver --session /private/session --out /private/dataset-data-room',
+  'accounting --session /private/session [--offset 0] [--limit 100]',
+  'finalize --session /private/session [--workspace /private/operator] [--offset 0] [--limit 100]',
+  '         [--outbox /private/outbox --merchant-route /private/route.json]',
   '',
   'init, status, recover, export and deliver are offline.',
   'run uses the original SF88 buyer for each new page, including its current quote review and durable reservation.',
   'Completed pages are reused. An incomplete attempted page is never sent again.',
+  'accounting reads original saved receipts; finalize reconciles those original reservations without buying again.',
+  'Accounting ranges are zero-based; continue from range.nextOffset and review unresolved entries.',
 ].join('\n') + '\n';
 function parse(args) {
   const command = args.shift();
-  need(['init','status','run','recover','export','deliver'].includes(command), 'DATASET_COMMAND_REQUIRED');
+  need(['init','status','run','recover','export','deliver','accounting','finalize'].includes(command), 'DATASET_COMMAND_REQUIRED');
   const allowed = command === 'init'
     ? new Set(['session','config','workspace','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot'])
-    : new Set(['export','deliver'].includes(command) ? ['session','out'] : ['session']);
+    : new Set(['accounting','finalize'].includes(command)
+      ? ['session','workspace','offset','limit',...(command==='finalize'?['outbox','merchant-route']:[])]
+      : ['export','deliver'].includes(command) ? ['session','out'] : ['session']);
   const flags = {};
   need(args.length % 2 === 0, 'DATASET_FLAG_VALUE_REQUIRED');
   for (let i = 0; i < args.length; i += 2) {
@@ -41,6 +48,11 @@ function parse(args) {
 function number(value, required) {
   if (value === undefined && !required) return undefined;
   need(typeof value === 'string' && /^[1-9][0-9]{0,9}$/.test(value), 'DATASET_INTEGER_REQUIRED');
+  return Number(value);
+}
+function offset(value) {
+  if(value===undefined)return 0;
+  need(/^(0|[1-9][0-9]{0,9})$/.test(value),'DATASET_INTEGER_REQUIRED');
   return Number(value);
 }
 export async function main(args = process.argv.slice(2)) {
@@ -59,7 +71,9 @@ export async function main(args = process.argv.slice(2)) {
   if (command === 'recover') report = await recoverDatasetSession(f.session);
   if (command === 'export') report = await exportDatasetManifest(f.session, f.out);
   if (command === 'deliver') report = await deliverDatasetSession(f.session, f.out);
-  if (command === 'run') {
+  if (command === 'accounting') report = await accountDatasetSession(f.session,{
+    workspace:f.workspace,offset:offset(f.offset),limit:number(f.limit)});
+  if (command === 'run' || command === 'finalize') {
     const controller = new AbortController();
     let exit;
     const interrupt = () => { exit = 130; controller.abort(); };
@@ -67,7 +81,10 @@ export async function main(args = process.argv.slice(2)) {
     process.on('SIGINT', interrupt);
     process.on('SIGTERM', terminate);
     try {
-      report = await runDatasetSession(f.session, {signal:controller.signal,
+      report = command === 'finalize' ? await accountDatasetSession(f.session,{
+        workspace:f.workspace,offset:offset(f.offset),limit:number(f.limit),finalize:true,
+        signal:controller.signal,outbox:f.outbox,merchantRoute:f['merchant-route']})
+        : await runDatasetSession(f.session, {signal:controller.signal,
         onPage:state => process.stderr.write('Dataset: ' + state.completedPages + ' pages, ' +
           state.acquiredRows + ' rows, ' + state.status + '\n')});
     } finally {
@@ -79,6 +96,9 @@ export async function main(args = process.argv.slice(2)) {
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');
   if (!process.exitCode && ['RECONCILIATION_REQUIRED','PAGE_LIMIT_REACHED','TOTAL_CAP_REACHED'].includes(report.status))
     process.exitCode = 2;
+  if (!process.exitCode && command==='finalize' && report.entries.some(entry=>
+    !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','NOT_ATTEMPTED'].includes(entry.outcome)))
+    process.exitCode=2;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
   main().catch(error => {

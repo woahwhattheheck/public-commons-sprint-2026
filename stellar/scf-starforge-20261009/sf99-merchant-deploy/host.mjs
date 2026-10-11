@@ -17,7 +17,7 @@ const inside = (root, path) => path === root || path.startsWith(root + '/');
 const keys = (x, allowed, name) => need(object(x) && Object.keys(x).every(k => allowed.includes(k)), 'Unknown or invalid ' + name + ' field');
 function path(value, name) {
   need(typeof value === 'string' && isAbsolute(value) && resolve(value) === value && value !== '/' &&
-    !/[\x00-\x1f\x7f]/.test(value), name + ' must be an absolute normalized path');
+    !/[\\\x00-\x1f\x7f]/.test(value), name + ' must be an absolute normalized path');
   return value;
 }
 function integer(value, fallback, low, high, name) {
@@ -49,9 +49,10 @@ async function bytes(file, maximum = 1024 * 1024) {
 const json = async file => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await bytes(file)));
 // systemd specifier and environment expansion are independent from shell quoting.
 export const unitWord = (value, command = false) => '"' + String(value).replaceAll('%', '%%')
-  .replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('$', command ? '$$' : '$') + '"';
+  .replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('$', () => command ? '$$' : '$') + '"';
 export const shellWord = value => "'" + String(value).replaceAll("'", "'\\''") + "'";
-const commandLine = args => args.map(value => unitWord(value, true)).join(' ');
+// systemd expands environment variables in arguments, not the executable token.
+const commandLine = args => args.map((value, index) => unitWord(value, index > 0)).join(' ');
 const regex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const routePattern = binding => '^' + binding.segments.map(segment => segment.startsWith(':') ? '[^/]+' : regex(segment)).join('/') + '$';
 
@@ -125,6 +126,7 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
       timeoutMs: integer(delivery.timeoutMs, 7000, 100, 60000, 'delivery timeoutMs') };
   }
   const environmentFile = raw.environmentFile === undefined ? null : path(raw.environmentFile, 'environmentFile');
+  need(!environmentFile || !/\s$/.test(environmentFile), 'Environment-file path must not end with config-line whitespace');
   need(!delivery || environmentFile, 'Signed delivery requires the private shared environmentFile path');
   need(!environmentFile || !inside(stateRoot, environmentFile) && !inside(sourceRoot, environmentFile) &&
     !inputs.includes(environmentFile), 'Keep environmentFile outside source, state and selected configuration files');
@@ -183,7 +185,7 @@ export function serviceUnit(p, s, bundle) {
   const predecessor = s.role === 'seller' && p.delivery ? p.services.find(x => x.role === 'delivery')?.unit :
     s.role === 'delivery' && p.receiverState ? p.services.find(x => x.role === 'receiver')?.unit : null;
   const check = [p.node, join(p.sourceRoot, BASE + 'sf99-merchant-deploy/cli.mjs'), 'check', '--bundle', bundle];
-  return `[Unit]\nDescription=Stellar Forge ${p.merchant} ${s.role}\nWants=network-online.target\nAfter=network-online.target${predecessor ? ' ' + predecessor : ''}\nPartOf=${p.target}\n\n[Service]\nType=exec\nUser=${p.serviceUser}\nGroup=${p.serviceGroup}\nWorkingDirectory=${p.sourceRoot.replaceAll('%', '%%')}\nUMask=0077\n${p.environmentFile ? 'EnvironmentFile=' + unitWord(p.environmentFile) + '\n' : ''}Environment=PYTHONDONTWRITEBYTECODE=1\nExecStartPre=${commandLine(check)}\n${s.initialize ? 'ExecStartPre=' + commandLine(s.initialize) + '\n' : ''}ExecStart=${commandLine(s.args)}\nRestart=on-failure\nRestartSec=5\n${s.role === 'delivery' ? 'RestartPreventExitStatus=75\n' : ''}KillMode=mixed\nTimeoutStopSec=${s.stopSeconds}\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nProtectHome=read-only\nReadWritePaths=${unitWord(p.stateRoot)}\n\n[Install]\nWantedBy=${p.target}\n`;
+  return `[Unit]\nDescription=Stellar Forge ${p.merchant} ${s.role}\nWants=network-online.target\nAfter=network-online.target${predecessor ? ' ' + predecessor : ''}\nPartOf=${p.target}\n\n[Service]\nType=exec\nUser=${p.serviceUser}\nGroup=${p.serviceGroup}\nWorkingDirectory=${(/\s$/.test(p.sourceRoot) ? p.sourceRoot + '/.' : p.sourceRoot).replaceAll('%', '%%')}\nUMask=0077\n${p.environmentFile ? 'EnvironmentFile=' + p.environmentFile.replaceAll('%', '%%') + '\n' : ''}Environment=PYTHONDONTWRITEBYTECODE=1\nExecStartPre=${commandLine(check)}\n${s.initialize ? 'ExecStartPre=' + commandLine(s.initialize) + '\n' : ''}ExecStart=${commandLine(s.args)}\nRestart=on-failure\nRestartSec=5\n${s.role === 'delivery' ? 'RestartPreventExitStatus=75\n' : ''}KillMode=mixed\nTimeoutStopSec=${s.stopSeconds}\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nProtectHome=read-only\nReadWritePaths=${unitWord(p.stateRoot)}\n\n[Install]\nWantedBy=${p.target}\n`;
 }
 export function recoveryPlan(p) {
   const roots = [{ name: 'merchantState', path: p.stateRoot }];

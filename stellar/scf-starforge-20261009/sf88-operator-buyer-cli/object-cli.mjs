@@ -5,7 +5,7 @@ import {open, lstat, realpath, unlink} from 'node:fs/promises';
 import {dirname, isAbsolute, resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createObjectSession, inspectObjectSession, runObjectSession,
-  recoverObjectSession, assembleObjectSession} from './object-session.mjs';
+  recoverObjectSession, assembleObjectSession, accountObjectSession} from './object-session.mjs';
 import {selectObjectDescription} from './object-description.mjs';
 import {renderObjectReport} from './object-report.mjs';
 import {need} from './config.mjs';
@@ -22,11 +22,16 @@ recover --session ABS
 assemble --session ABS --out ABS
 report --session ABS --out ABS
 export --session ABS --out ABS
+accounting --session ABS [--offset 0] [--limit 100]
+finalize --session ABS [--workspace ABS] [--offset 0] [--limit 100]
+         [--outbox ABS --merchant-route ABS]
 
 init selects one ORIGINAL SF30 S3 objects.json row, or explicit reviewed object facts.
 run uses the original buyer inbox, fresh per-chunk approval and configured spending ledger.
 Completed chunks are reused. Previously attempted uncertain chunks are never sent again.
 status, recover, assemble, report and export work offline without signing keys.
+accounting reads saved native receipts; finalize reconciles original reservations without another purchase.
+Accounting ranges are zero-based. Continue range.nextOffset and inspect any unresolved entries.
 All destinations are absolute and new. See OBJECTS.md for the complete journey.
 `;
 const common = ['session'];
@@ -35,6 +40,7 @@ function parse(tokens) {
   const additions = {
     init:['config','description','object','bytes','chunk-bytes','snapshot','sha256','content-type','max-total-atomic','workspace'],
     status:[], run:['workspace'], recover:[], assemble:['out'], report:['out'], export:['out'],
+    accounting:['workspace','offset','limit'], finalize:['workspace','offset','limit','outbox','merchant-route'],
   }[command];
   need(additions !== undefined, 'OBJECT_COMMAND_REQUIRED');
   const allowed = new Set([...common,...additions]), flags = Object.create(null);
@@ -53,6 +59,12 @@ function positive(value, optional = false) {
   if (value === undefined && optional) return undefined;
   need(typeof value === 'string' && /^[1-9][0-9]{0,15}$/.test(value) &&
     Number.isSafeInteger(Number(value)), 'OBJECT_POSITIVE_INTEGER_REQUIRED');
+  return Number(value);
+}
+function offset(value) {
+  if(value===undefined)return 0;
+  need(/^(0|[1-9][0-9]{0,15})$/.test(value)&&Number.isSafeInteger(Number(value)),
+    'OBJECT_ACCOUNTING_RANGE_INVALID');
   return Number(value);
 }
 
@@ -98,20 +110,25 @@ export async function main(tokens = process.argv.slice(2)) {
   }
   if (command === 'status') report = await inspectObjectSession(f.session);
   if (command === 'recover') report = await recoverObjectSession(f.session);
+  if (command === 'accounting') report = await accountObjectSession(f.session,{
+    workspace:f.workspace,offset:offset(f.offset),limit:positive(f.limit,true)});
   if (command === 'assemble') report = await assembleObjectSession(f.session,f.out);
   if (command === 'report' || command === 'export') {
     report = await inspectObjectSession(f.session);
     await saveNew(f.out, command === 'report' ? renderObjectReport(report) : JSON.stringify(report,null,2)+'\n');
     report = {...report,output:{path:f.out,kind:command === 'report' ? 'OFFLINE_OBJECT_REPORT' : 'OBJECT_STATE_JSON'}};
   }
-  if (command === 'run') {
+  if (command === 'run' || command === 'finalize') {
     const controller = new AbortController();
     let signalExit;
     const interrupt = () => {signalExit = 130; controller.abort();};
     const terminate = () => {signalExit = 143; controller.abort();};
     process.on('SIGINT',interrupt); process.on('SIGTERM',terminate);
     try {
-      report = await runObjectSession(f.session,{signal:controller.signal,
+      report = command === 'finalize' ? await accountObjectSession(f.session,{
+        workspace:f.workspace,offset:offset(f.offset),limit:positive(f.limit,true),finalize:true,
+        signal:controller.signal,outbox:f.outbox,merchantRoute:f['merchant-route']})
+        : await runObjectSession(f.session,{signal:controller.signal,
         ...(f.workspace === undefined ? {} : {workspace:f.workspace}),
         onChunk:state => process.stderr.write('Object: '+state.completeChunks+'/'+state.chunkCount+
           ' chunks, '+state.downloadedBytes+' bytes, '+state.status+'\n')});
@@ -122,6 +139,9 @@ export async function main(tokens = process.argv.slice(2)) {
   }
   process.stdout.write(JSON.stringify(report,null,2)+'\n');
   if (!process.exitCode && ['RECONCILIATION_REQUIRED','INTERRUPTED'].includes(report.status)) process.exitCode = 2;
+  if (!process.exitCode && command==='finalize' && report.entries.some(entry=>
+    !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','NOT_ATTEMPTED'].includes(entry.outcome)))
+    process.exitCode=2;
   return report;
 }
 

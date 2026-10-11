@@ -19,6 +19,7 @@ const help = `Starforge merchant toolkit
 
 Native commands (arguments pass unchanged to the maintained implementation):
   seller      JSON/application seller         upstream    Existing API seller
+  jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   operations  Seller + live dashboard         dataset     Dataset API compiler
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
@@ -37,6 +38,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
+  delivery-workspace                         Configure receivers and operate retained delivery recovery
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
@@ -67,7 +69,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   fleet-release                              Stage, compare and operate original releases across a fleet
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
-  merchant-accounting-recovery                Recover an original completed purchase and saved response
+  merchant-accounting-pricing                Import a saved original pricing report as accounting terms
+  merchant-accounting-recovery               Review, import and reopen an original completed purchase
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   merchant-readiness                         Review every configured Stellar receiving account
