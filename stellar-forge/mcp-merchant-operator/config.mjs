@@ -16,6 +16,7 @@ import { normalizeAccountingConfig, readAccountingConfig } from './accounting.mj
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
 export const SUPPORT_CONFIG_SCHEMA = 'stellar-forge.merchant-support-connection.v1';
+export const PUBLISHER_CONFIG_SCHEMA = 'stellar-forge.merchant-publisher-connection.v1';
 export const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export const failure = (code, message) => Object.assign(new Error(message), { code });
 export function exact(value, keys, required = []) {
@@ -85,6 +86,39 @@ export async function readSupportConfiguration(path) {
     handoffs: aliases('handoffs'), workspaces: aliases('workspaces'), profiles: aliases('profiles') };
 }
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+/** Bind existing native workspaces without opening their database or scheduler. */
+export async function readPublisherConfiguration(path) {
+  path = resolve(path);
+  const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 65536)));
+  exact(raw, ['schema', 'workspaces'], ['schema', 'workspaces']);
+  if (raw.schema !== PUBLISHER_CONFIG_SCHEMA || !plain(raw.workspaces) ||
+      Object.keys(raw.workspaces).length < 1 || Object.keys(raw.workspaces).length > 32)
+    throw failure('CONFIGURATION_ERROR', 'Declare between 1 and 32 original publisher workspaces.');
+  const base = dirname(path), workspaces = Object.create(null), directories = new Set();
+  for (const [alias, input] of Object.entries(raw.workspaces)) {
+    identifier(alias, 'Publisher alias');
+    exact(input, ['label', 'kind', 'directory', 'seller', 'resource'], ['kind', 'directory']);
+    if (!['postgres', 'sqlite', 'mysql'].includes(input.kind))
+      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite or mysql.');
+    const directory = hostPath(input.directory, base), info = await lstat(directory);
+    if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && (info.mode & 0o077))
+      throw failure('CONFIGURATION_ERROR', 'Bind an existing private original publisher directory (0700).');
+    const canonical = await realpath(directory);
+    if (directories.has(canonical)) throw failure('CONFIGURATION_ERROR', 'Each publisher workspace must have one declared alias.');
+    directories.add(canonical);
+    const saved = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(join(directory, 'workspace.json'), 4096)));
+    if (saved.schema !== 'stellar-forge.' + input.kind + '-publisher-workspace.v1')
+      throw failure('CONFIGURATION_ERROR', 'The declared kind must match the original retained publisher workspace.');
+    let buyer = {};
+    if (input.seller !== undefined || input.resource !== undefined) {
+      const { datasetBuyerEndpoint } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/buyer-handoff.mjs');
+      buyer = datasetBuyerEndpoint(input.seller, input.resource);
+    }
+    workspaces[alias] = { label: line(input.label ?? alias, 'Publisher label'), kind: input.kind,
+      directory: canonical, ...buyer };
+  }
+  return { workspaces };
+}
 const parse = bytes => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 export function pythonSourceView(python) {
   if (!python) return null;
@@ -234,7 +268,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection', 'publisherConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -247,7 +281,9 @@ export async function readMerchantConfig(path) {
     catalog: raw.catalogConnection === undefined ? null
       : await readReleaseCatalogConfig(hostPath(raw.catalogConnection, base)),
     support: raw.supportConnection === undefined ? null
-      : await readSupportConfiguration(hostPath(raw.supportConnection, base)) };
+      : await readSupportConfiguration(hostPath(raw.supportConnection, base)),
+    publishers: raw.publisherConnection === undefined ? null
+      : await readPublisherConfiguration(hostPath(raw.publisherConnection, base)) };
   await readReleaseState(config.releaseStore);
   config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
   config.accounting = normalizeAccountingConfig(raw.accounting, base);
@@ -333,4 +369,22 @@ export async function initializeAccountingMerchant({ directory, accounting, name
   await readMerchantConfig(configuration);
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED',
     accountingWorkspaces: Object.keys(accountingConfig.workspaces), accounting: 'OPENED_ONLY_BY_EXPLICIT_TOOL' };
+}
+
+/** Configure the same MCP provider for retained data authoring and maintenance. */
+export async function initializePublisherMerchant({ directory, connection, name = 'Starforge data publisher' }) {
+  const root = resolve(directory);
+  name = line(name, 'Merchant publisher name');
+  const publisherConnection = hostPath(connection, process.cwd());
+  const publishers = await readPublisherConfiguration(publisherConnection);
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, publisherConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', publishersConfigured: true,
+    publishers: Object.entries(publishers.workspaces).map(([publisher, entry]) =>
+      ({ publisher, label: entry.label, kind: entry.kind, buyerConfigured: Boolean(entry.seller) })) };
 }
