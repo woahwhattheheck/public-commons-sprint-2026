@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {fixtureCatalog,validateCatalog} from './src/catalog.mjs';
 import {fixturePlan, normalizeRequest,planAuditedVenues} from './src/engine.mjs';
 import {QlooClient,ProviderError} from './src/qloo.mjs';
+import {AffinityCache} from './src/affinity-cache.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const mode=process.env.ACCESSLENS_MODE ?? 'fixture';
@@ -25,6 +26,16 @@ if (!Number.isSafeInteger(maxLivePerHour)||maxLivePerHour<2||maxLivePerHour>500)
 const maxAuditAgeDays=Number(process.env.ACCESSLENS_MAX_AUDIT_AGE_DAYS||180);
 if(!Number.isSafeInteger(maxAuditAgeDays)||maxAuditAgeDays<1||maxAuditAgeDays>365) throw new Error('invalid access audit recency policy');
 let inflight=false;
+const affinityReuseSeconds=Number(process.env.ACCESSLENS_AFFINITY_REUSE_SECONDS ?? 120);
+if(!Number.isSafeInteger(affinityReuseSeconds)||affinityReuseSeconds<0||affinityReuseSeconds>300)throw new Error('invalid affinity reuse interval');
+const affinityCache=new AffinityCache({ttlMs:affinityReuseSeconds*1000});
+function livePlan(input,snapshot,providerCalls){
+  const plan=planAuditedVenues(catalog,input,snapshot.affinity,{mode:'live',maxAuditAgeDays});
+  return {...plan,providerCalls,providerCapture:snapshot.providerCapture,
+    notices:[...plan.notices,snapshot.providerCapture.reused
+      ? `Artist affinity reused from ${snapshot.providerCapture.capturedAtUTC}; all venue constraints and audit recency were checked again for this request.`
+      : `Artist affinity retrieved at ${snapshot.providerCapture.capturedAtUTC}; no prior response substituted.`]};
+}
 function answer(res,code,data){const bytes=Buffer.from(JSON.stringify(data));res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(bytes);}
 function allowed(ip){const now=Date.now();const existing=perIP.get(ip)||[];const future=existing.filter(t=>now-t<60000);future.push(now);perIP.set(ip,future);if(perIP.size>400){for(const[k,v]of perIP) if(!v.length||now-v.at(-1)>60000) perIP.delete(k);}return future.length<=8;}
 async function body(req){let chunks=[],count=0;for await (const part of req){count+=part.length;if(count>12000)throw new Error('body exceeds 12KB');chunks.push(part);}return JSON.parse(Buffer.concat(chunks).toString('utf8'));}
@@ -42,13 +53,15 @@ async function serve(req,res){
    let input;try {input=normalizeRequest(await body(req));}catch{return answer(res,400,{error:'INVALID_PLANNING_INPUT'});}
    if(mode==='fixture')return answer(res,200,fixturePlan(input,catalog));
    if(inflight)return answer(res,429,{error:'LIVE_SINGLE_FLIGHT_BUSY'});
+   const cached=affinityCache.lookup(input.artist);
+   if(cached)return answer(res,200,livePlan(input,cached,0));
    const hour=Math.floor(Date.now()/3600000);
    if(liveBudget.hour!==hour)liveBudget={hour,requests:0};
    // Reserve all two needed requests before touching provider; failed requests still burn budget.
    if(liveBudget.requests+2>maxLivePerHour)return answer(res,429,{error:'LIVE_QLOO_GLOBAL_BUDGET_EXHAUSTED'});
    liveBudget.requests+=2;inflight=true;
    try{const client=new QlooClient({apiKey:key,maxCalls:2});const affinity=await client.placesFromArtist(input.artist);
-     return answer(res,200,{...planAuditedVenues(catalog,input,affinity,{mode:'live',maxAuditAgeDays}),providerCalls:client.calls});
+     return answer(res,200,livePlan(input,affinityCache.remember(input.artist,affinity),client.calls));
    }catch(e){return answer(res,502,{error:e instanceof ProviderError?e.code:'LIVE_PLANNING_UNAVAILABLE',providerEvidence:'NONE'});}finally{inflight=false;}
  }
  answer(res,404,{error:'NOT_FOUND'});
