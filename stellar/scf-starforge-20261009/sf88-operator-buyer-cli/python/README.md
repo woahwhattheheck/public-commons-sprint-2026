@@ -1,18 +1,129 @@
 # Python applications for the Stellar Forge buyer
 
-Version 0.3.0 completes original workspace accounting and retained purchase history,
-following 0.2.0's native-workspace execution and approved-file applications.
-Existing installations can upgrade normally.
+Version 0.4.0 joins the original paginated dataset and resumable object applications
+to the same installed package. It retains 0.3.0's original reservation accounting
+and history, and 0.2.0's native-workspace execution and approved-file applications.
+Upgrade the Python package and its matching original Node checkout together.
 
 Installable Python 3.11+ package for Linux and macOS. A Python application can discover an existing catalog, select one exact advertised offer, review its native payment terms, execute through the original SF88 buyer, and consume the saved JSON, CSV or binary response. The original SF31 wire client, SF81/SF62 operator approval, SF36 reservation ledger, signer and SF82 outcome handling all remain the execution path.
 
 This package adds durable application operations and result recovery around those existing components. It has no Python dependencies and does not embed a second Stellar/payment implementation. Supply a complete current repository checkout and its existing Node runtime/dependencies. SF46 distribution should include this directory with the original runtime closure; the Python wheel alone does not contain the Node source.
+
+## Choose the customer's product workflow
+
+| Product | Python entry point | Durable source and recovery |
+| --- | --- | --- |
+| One HTTP response | `Buyer.from_workspace` or `Buyer.from_config` | The original request and permanent attempt; `Operation.recover`, `finalize` and local accounting/history |
+| An approved private file | `Buyer.from_paid_file` | The original order handoff, native purchase and separate merchant entitlement; `retrieve_file` and local `recover_file` |
+| A paginated dataset | `DatasetAcquisition.create` | The original dataset session, selected snapshot, per-page attempts and SF100 data room; `recover`, explicit continuation and verified typed rows |
+| A large object | `ObjectBuyer.prepare` | The original object descriptor, chunk queue and assembly receipts; reopen the same session, `recover`, explicit continuation and verified streamed file access |
+
+Each entry point keeps the original source of its state. Dataset and object
+sessions can reopen directories created by the corresponding native tools;
+they do not create ordinary Python `Operation` records or a second purchase
+journal. Use the session's native report for those products. `Buyer.history`
+describes the ordinary and approved-file operations retained in that buyer's
+application directory.
+
+All acquisition limits are explicit atomic-unit ceilings for the selected
+asset. Preparation and inspection do not buy a product. The operator explicitly
+calls `execute`, dataset `run`, or object `run`/`download` from its controlling
+terminal; original approval and spending rules apply to each paid request.
+Retain the same session after interruption and recover its existing work before
+explicitly continuing. Completed files and local history are available to an
+application without another purchase.
+
+The fixed `application`, `dataset` and `object` Runtime targets all use the same
+bounded process execution, cancellation and structured output handling. A
+missing matching Node bridge fails before starting a process. Upgrading only a
+wheel while retaining an older Node checkout cannot enable the new native
+workflow.
+
+## Acquire a dataset for a Python data application
+
+The existing native publisher/customer setup supplies the selected query,
+snapshot and payment terms. Initialize one original acquisition session from
+that reviewed configuration or its operator workspace:
+
+```python
+from stellar_forge_buyer import DatasetAcquisition, DatasetError
+
+acquisition = DatasetAcquisition.create(
+    checkout="/work/public-commons-sprint-2026",
+    session="/private/customer/weekly-inventory",
+    workspace="/private/operator/inventory",
+    max_pages=20,
+    max_total_atomic="20000",
+    max_rows=100_000,
+)
+print(acquisition.inspect())
+report = acquisition.run()  # original approval for each remaining paid page
+if report["status"] == "COMPLETE":
+    delivery = acquisition.deliver("/private/customer/inventory-data-room")
+    print(delivery.payment_status)
+    for row in delivery.jsonl_rows():
+        print(row)  # replace with the application's own typed-row consumer
+```
+
+`DatasetError` retains native progress when available. Reopen the same session,
+call `recover`, inspect its status and explicitly continue remaining pages. The
+complete native guide covers partial statuses, immutable page/total limits,
+snapshot retention, original report export, JSONL/CSV consumption and delivery
+recovery: [DATASETS.md](DATASETS.md). The installed source includes the executable
+`examples/acquire_dataset.py` customer workflow.
+
+## Download a large object for a Python file application
+
+Select an actual row from the merchant's original `objects.json` description,
+using the reviewed buyer configuration or matching operator workspace. Native
+preparation retains the expected snapshot, exact bytes, chunk plan and total
+budget in the same original object session:
+
+```python
+from stellar_forge_buyer import ObjectBuyer, ObjectDownloadError
+
+objects = ObjectBuyer(checkout="/work/public-commons-sprint-2026")
+session = objects.prepare(
+    "/private/customer/model-download",
+    description_file="/private/customer/objects.json",
+    object_id="model",
+    workspace="/private/operator/model",
+    max_total_atomic="20000",
+)
+print(session.inspect().native)
+delivery = session.download("/private/customer/model.bin")
+with delivery.open() as source:
+    for block in iter(lambda: source.read(1_048_576), b""):
+        print(len(block))  # replace with the application's streamed consumer
+```
+
+`ObjectDownloadError.progress` carries the native report. Reopen with
+`objects.open` and inspect or recover the same chunk queue before explicitly
+continuing. `session.delivery` reopens an existing assembly receipt, and the
+file reader verifies its current bytes before yielding the same descriptor.
+Payment classification remains in each original chunk outcome; a local assembly
+does not replace those financial records. [OBJECTS.md](OBJECTS.md) and
+`examples/download_object.py` cover exact descriptor selection, interrupted
+recovery, report export and application file consumption.
 
 ## Install and buy from an existing configuration
 
 ```sh
 python -m pip install ./stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python
 ```
+
+For a published companion wheel, activate the matching maintained Node release
+and install the wheel into the application's existing Python environment:
+
+```sh
+python -m pip install --upgrade /path/to/stellar_forge_buyer-0.4.0-py3-none-any.whl
+export STELLAR_FORGE_CHECKOUT=/path/to/matching-release
+```
+
+`STELLAR_FORGE_CHECKOUT` supplies the installed command's default checkout. Python
+APIs take the explicit `checkout` argument shown below. Existing 0.3.0 operation
+directories and original dataset/object sessions remain the same durable state;
+upgrading the package does not move them or create a new economic attempt.
 
 ```python
 from stellar_forge_buyer import Buyer
@@ -40,7 +151,7 @@ Execution uses the original terminal approval. Run a purchase from an operator t
 ## Use the existing native operator workspace
 
 An operator who already completed the original SF88 `--init-workspace` setup can
-use that private workspace directly. This is the same testnet workspace, policy,
+use that private workspace directly. This is the same selected-network workspace, policy,
 ledger, payer, environment or trusted wallet provider, and generated native
 signer used by the original command line and durable inbox.
 
