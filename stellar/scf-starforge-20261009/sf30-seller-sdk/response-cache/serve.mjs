@@ -6,7 +6,7 @@ import { readSellerConfig, startSellerService } from '../serve.mjs';
 import { bindResponseCaches } from './bind.mjs';
 import { startCacheControl } from './control.mjs';
 
-export async function startCachedSeller({ config, handlers, policy, socketPath,
+export async function startCachedSeller({ config, handlers, policy, socketPath, controlFile,
   closeSource, ...sellerOptions } = {}) {
   if (closeSource !== undefined && typeof closeSource !== 'function') throw new TypeError('closeSource must be a function');
   const binding = bindResponseCaches({ config, handlers, policy });
@@ -22,13 +22,14 @@ export async function startCachedSeller({ config, handlers, policy, socketPath,
   })();
   try {
     seller = await startSellerService({ ...sellerOptions, config: binding.config, handlers: binding.handlers });
-    if (socketPath) control = await startCacheControl({ socketPath, binding });
-    return { ...seller, binding, socketPath: control?.socketPath, close };
+    if (socketPath || controlFile) control = await startCacheControl({ socketPath, controlFile, binding });
+    return { ...seller, binding, socketPath: control?.socketPath, controlFile: control?.controlFile, close };
   } catch (error) { await close().catch(() => {}); throw error; }
 }
 
 const USAGE = `Usage: node response-cache/serve.mjs --config FILE --handlers FILE --cache FILE
-  [--port 8423] [--socket /private/cache/control.sock] [--close-export NAME]
+  [--port 8423] [--socket /private/cache/control.sock | --control-file /private/cache/control.json]
+  [--close-export NAME]
   [--facilitator HTTPS_URL] [--allow-local-facilitator]
   [--max-in-flight 64] [--drain-grace-ms 60000]
 
@@ -39,7 +40,7 @@ Policy and source exports remain private operator configuration.`;
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { process.stdout.write(USAGE + '\n'); return null; }
   const flags = new Map(), allowed = new Set(['--config', '--handlers', '--cache', '--port',
-    '--socket', '--close-export', '--facilitator', '--max-in-flight', '--drain-grace-ms']);
+    '--socket', '--control-file', '--close-export', '--facilitator', '--max-in-flight', '--drain-grace-ms']);
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
     if (flags.has(flag)) throw new TypeError('Duplicate option');
@@ -48,7 +49,8 @@ export async function main(args = process.argv.slice(2)) {
     flags.set(flag, args[++i]);
   }
   if (!flags.has('--config') || !flags.has('--handlers') || !flags.has('--cache') ||
-      flags.has('--allow-local-facilitator') && !flags.has('--facilitator')) throw new TypeError(USAGE);
+      flags.has('--allow-local-facilitator') && !flags.has('--facilitator') ||
+      flags.has('--socket') && flags.has('--control-file')) throw new TypeError(USAGE);
   const configPath = resolve(flags.get('--config')), config = await readSellerConfig(configPath);
   const sourcePath = resolve(dirname(configPath), flags.get('--handlers'));
   const handlers = await import(pathToFileURL(sourcePath).href);
@@ -75,12 +77,13 @@ export async function main(args = process.argv.slice(2)) {
   const portText = flags.get('--port') ?? '8423';
   if (!/^\d{1,5}$/.test(portText)) throw new TypeError('Invalid port');
   const session = await startCachedSeller({ config, handlers, policy, closeSource, nativeFactory,
-    port: Number(portText), socketPath: flags.get('--socket'),
+    port: Number(portText), socketPath: flags.get('--socket'), controlFile: flags.get('--control-file'),
     maxInFlight: Number(flags.get('--max-in-flight') ?? 64),
     drainGraceMs: Number(flags.get('--drain-grace-ms') ?? 60000) });
   process.stdout.write(JSON.stringify({ url: session.url, mode: session.mode,
     health: session.url + '/_seller/health', docs: session.url + '/_seller/docs',
     ...(session.socketPath ? { controlSocket: session.socketPath } : {}),
+    ...(session.controlFile ? { controlFile: session.controlFile } : {}),
     cachedRoutes: Object.keys(session.binding.stats()) }) + '\n');
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
     session.close().then(() => { process.exitCode = 0; }, () => { process.exitCode = 1; });

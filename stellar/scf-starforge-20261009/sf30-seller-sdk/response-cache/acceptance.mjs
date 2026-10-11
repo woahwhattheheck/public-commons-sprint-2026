@@ -12,7 +12,7 @@ import { createUpstreamHandler } from '../upstream-handler.mjs';
 import { protectUpstream } from '../upstream-readiness.mjs';
 import { createResponseCache } from './cache.mjs';
 import { startCachedSeller } from './serve.mjs';
-import { callCacheControl } from './control.mjs';
+import { callCacheControlFile } from './control.mjs';
 
 let backendReads = 0, verified = 0, settled = 0, admitted = 0;
 const backend = createServer(async (req, res) => {
@@ -60,7 +60,7 @@ const directory = await mkdtemp(join(tmpdir(), 'sf30-cache-'));
 let seller;
 try {
   seller = await startCachedSeller({ config: app.config, handlers: app.handlers, policy,
-    port: 0, socketPath: join(directory, 'control.sock'),
+    port: 0, controlFile: join(directory, 'control.json'),
     nativeFactory: compiled => createNativeSellerServer(compiled, { facilitatorClient: facilitator }) });
   const unsigned = await fetch(seller.url + '/query?q=one');
   assert.equal(unsigned.status, 402); assert.equal(backendReads, 0);
@@ -83,10 +83,10 @@ try {
   const beforeRejected = verified;
   assert.equal((await attempt('reject')).status, 422); assert.equal(verified, beforeRejected);
   assert.equal((await attempt('one', { range: 'bytes=0-5' })).status, 400); assert.equal(verified, beforeRejected);
-  const snapshot = await callCacheControl(seller.socketPath, { op: 'status' });
+  const snapshot = await callCacheControlFile(seller.controlFile, { op: 'status' });
   assert.equal(snapshot.dataset.entries, 1); assert.equal(snapshot.dataset.hits, 1);
   assert.ok(snapshot.dataset.coalesced >= 1); assert.ok(!JSON.stringify(snapshot).includes('credential'));
-  await callCacheControl(seller.socketPath, { op: 'invalidate', route: 'dataset' });
+  await callCacheControlFile(seller.controlFile, { op: 'invalidate', route: 'dataset' });
   assert.equal((await attempt()).status, 200); assert.equal(backendReads, 2);
   const french = await (await attempt('one', { 'accept-language': 'fr' })).json();
   assert.equal(french.language, 'fr'); assert.equal(backendReads, 3);
@@ -118,7 +118,7 @@ try {
   console.log(JSON.stringify({ result: 'PASS', source: 'original SF30 seller + original upstream availability + official x402 2.28.0',
     backendReads, controlledVerifyCalls: verified, controlledSettleCalls: settled, admitted,
     initialConcurrentBuyers: 12, initialBackendReads: 1, cache: seller.binding.stats(),
-    control: 'private socket status and invalidation', externalRequests: 0, chainTransactions: 0 }));
+    control: 'private descriptor-authenticated loopback status and invalidation', externalRequests: 0, chainTransactions: 0 }));
 } finally {
   if (seller) { seller.server.closeAllConnections(); await seller.close(); }
   backend.closeAllConnections(); await new Promise(done => backend.close(done));
