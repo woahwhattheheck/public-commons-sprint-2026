@@ -69,9 +69,11 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
       }
       if (req.method !== 'POST') return reply(405,'text/plain','Use GET or POST.',{allow:'GET, HEAD, POST'});
       const input = await body();
+      if (url.pathname === '/api/source') return json(200,{...await model.state(input.selection),token});
       if (url.pathname === '/api/preview') return json(200,await model.preview(input));
       if (url.pathname === '/api/save') return json(200,await model.save(input));
       if (url.pathname === '/api/load-version') return json(200,await model.loadVersion(input.version));
+      if (url.pathname === '/api/compare') return json(200,await model.compare(input));
       throw fault('NOT_FOUND','Workspace operation not found.',404);
     })().catch(error => json(error.status ?? (error instanceof TypeError || error instanceof RangeError ? 422 : 500),
       {code:error.code ?? 'WORKSPACE_OPERATION_FAILED',
