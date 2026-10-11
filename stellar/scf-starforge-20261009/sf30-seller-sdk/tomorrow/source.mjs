@@ -1,6 +1,6 @@
 // MIT. Weather response interpretation and original SF30/SF31 provider transport.
 import { createUpstreamHandlers, closeUpstreamHandlers } from '../upstream.mjs';
-import { compileWeatherPlan, API_ORIGIN, fixedTime, object, need, fail, requestsFor } from './config.mjs';
+import { compileWeatherPlan, API_ORIGIN, fixedTime, object, need, fail, requestsFor, weatherRequestVariants } from './config.mjs';
 import { createHash } from 'node:crypto';
 import { createPublicHttpsFetch } from '../../sf31-buyer-client/public-transport.mjs';
 export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -37,6 +37,66 @@ export function readPng(bytes, mime) {
   need(width === 256 && height === 256, 'WEATHER_TILE_DIMENSIONS_INVALID');
   return { width, height, mime: 'image/png' };
 }
+
+/** Preserve a bounded provider failure independently of JSON and stream cleanup. */
+export async function readProviderError(response, { apiKey } = {}) {
+  const safe = (value, limit = 1200) => {
+    if (!['string', 'number'].includes(typeof value)) return null;
+    let text = String(value);
+    if (apiKey) for (const secret of new Set([apiKey, encodeURIComponent(apiKey), JSON.stringify(apiKey).slice(1, -1)]))
+      if (secret) text = text.replaceAll(secret, '[redacted]');
+    text = text.replace(/([?&](?:apikey|api_key|access_token|token)=)[^&\s"'<>]*/gi, '$1[redacted]')
+      .replace(/("(?:apikey|api_key|access_token|authorization)"\s*:\s*")[^"]*/gi, '$1[redacted]')
+      .replace(/\b(Bearer\s+)[A-Za-z0-9._~+\/=-]+/gi, '$1[redacted]');
+    return text.slice(0, limit);
+  };
+  const limit = 65536, chunks = [];
+  let observedBytes = 0, retainedBytes = 0, truncated = false, reader;
+  let bodyState = response.body ? 'COMPLETE' : 'ABSENT', readError = null;
+  try {
+    reader = response.body?.getReader();
+    if (reader) for (;;) {
+      const { done, value } = await reader.read(); if (done) break;
+      const chunk = Buffer.from(value); observedBytes += chunk.length;
+      const part = chunk.subarray(0, Math.max(0, limit - retainedBytes));
+      if (part.length) { chunks.push(part); retainedBytes += part.length; }
+      if (observedBytes > limit) { truncated = true; bodyState = 'TRUNCATED'; break; }
+    }
+  } catch (error) {
+    bodyState = 'READ_FAILED';
+    readError = { code: safe(error.code ?? error.name), message: safe(error.message, 400) };
+  } finally {
+    if (reader) {
+      try { await reader.cancel(); } catch {}
+      try { reader.releaseLock(); } catch {}
+    }
+  }
+  const bytes = Buffer.concat(chunks, retainedBytes);
+  let text = '', parsed = null, parseState = bytes.length ? 'TEXT' : 'EMPTY';
+  if (bytes.length) {
+    try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
+    catch { text = bytes.toString('utf8'); parseState = 'INVALID_UTF8'; }
+    if (parseState !== 'INVALID_UTF8') try { parsed = JSON.parse(text); parseState = 'JSON'; } catch {}
+  }
+  const normalize = value => object(value)
+    ? { code: safe(value.code), type: safe(value.type), message: safe(value.message ?? value.detail ?? value.description) }
+    : { code: null, type: null, message: safe(value) };
+  const errors = (Array.isArray(parsed) ? parsed : Array.isArray(parsed?.errors) ? parsed.errors : [])
+    .slice(0, 5).map(normalize);
+  const nested = object(parsed?.error) ? parsed.error : null;
+  const providerError = {
+    code: safe(parsed?.code ?? nested?.code ?? errors[0]?.code),
+    type: safe(parsed?.type ?? nested?.type ?? errors[0]?.type),
+    message: safe(parsed?.message ?? nested?.message ?? parsed?.detail ?? parsed?.error ?? errors[0]?.message ?? (typeof parsed === 'string' ? parsed : null) ?? (parseState === 'TEXT' ? text : null)),
+    ...(errors.length ? { errors } : {}),
+  };
+  const headerNames = ['content-type', 'content-length', 'content-encoding', 'x-request-id', 'x-correlation-id', 'cf-ray'];
+  const providerDiagnostic = { bodyState, observedBytes, retainedBytes, bodySha256: digest(bytes),
+    truncated, parseState, text: safe(text, 4096), readError,
+    headers: Object.fromEntries(headerNames.flatMap(name => response.headers.has(name) ? [[name, safe(response.headers.get(name), 300)]] : [])) };
+  return { providerError, providerDiagnostic };
+}
+
 export function createTomorrowSource(raw, { env = process.env, lookup, clock = Date.now } = {}) {
   const plan = compileWeatherPlan(raw), licensed = plan.usage.mode === 'licensed-service';
   const responseHeaders = ['content-type'];
@@ -45,36 +105,19 @@ export function createTomorrowSource(raw, { env = process.env, lookup, clock = D
     ...(licensed ? { headerEnv: { apikey: plan.apiKeyEnv } } : {}) };
   const native = createUpstreamHandlers({ schema: 'stellar-forge.seller-upstreams.v1', bindings: {
     weatherTimeline: { ...common, path: '/v4/timelines', method: 'POST', bodyType: 'json', responseMode: 'json' },
-    weatherTile: { ...common, path: '/v4/map/tile/:zoom/:x/:y/:field/:timeFile', method: 'GET', responseMode: 'bytes' },
   } }, { env, ...(lookup ? { lookup } : {}) });
-  const proxyFetch = plan.transport ? createPublicHttpsFetch({ timeoutMs: plan.timeoutMs, trustedProxy: plan.transport }) : null;
-  async function throughOriginalProxy(request, signal) {
-    const response = await proxyFetch(request.url, { method: request.method, redirect: 'manual', signal,
+  const publicFetch = createPublicHttpsFetch({ timeoutMs: plan.timeoutMs,
+    ...(plan.transport ? { trustedProxy: plan.transport } : {}), ...(lookup ? { lookup } : {}) });
+  async function throughOriginalTransport(request, signal) {
+    const response = await publicFetch(request.url, { method: request.method, redirect: 'manual', signal,
       headers: { accept: request.kind === 'tile' ? 'image/png' : 'application/json',
         ...(request.body ? { 'content-type': 'application/json' } : {}), ...(licensed ? { apikey: env[plan.apiKeyEnv] } : {}) },
       ...(request.body ? { body: JSON.stringify(request.body) } : {}) });
     const headers = Object.fromEntries([...response.headers].filter(([name]) => name === 'content-type' || name === 'retry-after' || /^(?:x-)?rate-?limit(?:-|$)/i.test(name)));
     if (response.status !== 200) {
-      let providerError = null;
-      try {
-        const reader = response.body?.getReader(), parts = []; let size = 0;
-        if (reader) try { for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.length;
-          if (size > 65536) break; parts.push(Buffer.from(value)); } }
-        finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
-        if (size <= 65536) {
-          const body = JSON.parse(Buffer.concat(parts).toString('utf8'));
-          const safe = value => {
-            if (!['string', 'number'].includes(typeof value)) return null;
-            let text = String(value).slice(0, 1200);
-            if (licensed && env[plan.apiKeyEnv]) text = text.replaceAll(env[plan.apiKeyEnv], '[redacted]');
-            return text;
-          };
-          providerError = { code: safe(body.code ?? body.error?.code), type: safe(body.type),
-            message: safe(body.message ?? body.error?.message ?? body.error) };
-        }
-      } catch {}
+      const failure = await readProviderError(response, { apiKey: licensed ? env[plan.apiKeyEnv] : undefined });
       return { status: response.status, headers, body: { error: 'WEATHER_PROVIDER_HTTP_STATUS',
-        upstreamStatus: response.status, providerError } };
+        upstreamStatus: response.status, ...failure } };
     }
     const chunks = []; let size = 0; const reader = response.body.getReader();
     try { for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.length;
@@ -91,7 +134,7 @@ export function createTomorrowSource(raw, { env = process.env, lookup, clock = D
       need(['timeline', 'tile'].includes(kind), 'WEATHER_CAPTURE_KIND_INVALID');
       const originalRequest = requestsFor(work).find(value => value.kind === kind); need(originalRequest, 'WEATHER_REQUEST_NOT_SELECTED');
       const request = selectedRequest ?? originalRequest;
-      const allowed = [originalRequest, requestsFor(work, { tileTimeFormat: 'whole-seconds' }).find(value => value.kind === kind)];
+      const allowed = weatherRequestVariants(work).flat().filter(value => value.kind === kind);
       need(allowed.some(value => JSON.stringify(value) === JSON.stringify(request)), 'WEATHER_REQUEST_CHANGED');
       if (plan.usage.expiresAt) need(clock() < Date.parse(plan.usage.expiresAt), 'WEATHER_LICENSE_EXPIRED');
       while (starts.length && starts[0] <= clock() - 60000) starts.shift();
@@ -103,13 +146,15 @@ export function createTomorrowSource(raw, { env = process.env, lookup, clock = D
         const context = { method: request.method, url: new URL(request.url), headers: {}, pathParams: tile ? {
           zoom: String(tile.zoom), x: String(tile.x), y: String(tile.y), field: tile.field, timeFile: tile.time + '.png',
         } : {}, bodyPresent: kind === 'timeline', ...(request.body ? { body: request.body } : {}), ...(signal ? { signal } : {}) };
-        const response = proxyFetch ? await throughOriginalProxy(request, signal) : await native[kind === 'timeline' ? 'weatherTimeline' : 'weatherTile'](context);
+        const usePublicTransport = !!plan.transport || kind === 'tile';
+        const response = usePublicTransport ? await throughOriginalTransport(request, signal) : await native.weatherTimeline(context);
         const bytes = response.body instanceof Uint8Array ? Buffer.from(response.body) : null;
         const observation = { kind, method: request.method, url: request.url, startedAt, receivedAt: new Date(clock()).toISOString(),
           status: response.status, upstreamStatus: response.body?.upstreamStatus ?? (response.status === 200 ? 200 : null),
           providerError: response.body?.providerError ?? null,
+          providerDiagnostic: response.body?.providerDiagnostic ?? null,
           contentType: response.headers?.['content-type'] ?? null, retryAfter: response.headers?.['retry-after'] ?? null,
-          transport: proxyFetch ? 'ORIGINAL_SF31_EXPLICIT_CONNECT' : 'ORIGINAL_SF30_UPSTREAM',
+          transport: usePublicTransport ? (plan.transport ? 'ORIGINAL_SF31_EXPLICIT_CONNECT' : 'ORIGINAL_SF31_PUBLIC_HTTPS') : 'ORIGINAL_SF30_UPSTREAM',
           quota: Object.fromEntries(Object.entries(response.headers ?? {}).filter(([name]) => /^(?:x-)?rate-?limit(?:-|$)/i.test(name))),
           bytes: bytes?.length ?? 0, sha256: bytes ? digest(bytes) : null };
         if (response.status !== 200) return { observation, error: response.body?.error ?? 'WEATHER_PROVIDER_RESPONSE_FAILED', bytes: null };

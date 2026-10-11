@@ -128,7 +128,7 @@ export class ValyuStore{
     const parsed=parseResponse(raw);need(!parsed.error,'DELIVERY_JSON_INVALID');validateDelivery(parsed.payload,{profile:this.provider.deliveryProfile});validateProvenance(provenance,kind);
     const sha=digest(raw);
     need(kind==='NATIVE_BUYER'?(provenance.deliverySha256===sha&&provenance.deliveredBytes===raw.length):
-      (provenance.sha256===sha&&provenance.upstreamSha256===parsed.payload.provider.upstreamSha256),'CAPTURE_PROVENANCE_BINDING_MISMATCH');
+      (provenance.sha256===sha&&provenance.upstreamSha256===parsed.payload.provider.upstreamSha256&&provenance.status===parsed.payload.provider.httpStatus),'CAPTURE_PROVENANCE_BINDING_MISMATCH');
     return this.transaction(()=>{
       let q=this.query(id);need(q.requestSha256===requestSha256,'QUERY_STALE');
       if(observedRequest!==undefined){
@@ -235,7 +235,7 @@ export class ValyuStore{
     validateDelivery(parsed.payload,{profile:this.provider.deliveryProfile});need(isDeepStrictEqual(parsed.payload.request,manifest.query.input),'EDITION_REQUEST_CHANGED');
     need(response.capturedAt===provenance.capturedAt&&(kind==='NATIVE_BUYER'?
       (provenance.deliverySha256===response.sha256&&provenance.deliveredBytes===response.bytes):
-      (provenance.sha256===response.sha256&&provenance.upstreamSha256===parsed.payload.provider.upstreamSha256)),'EDITION_PROVENANCE_BINDING_MISMATCH');
+      (provenance.sha256===response.sha256&&provenance.upstreamSha256===parsed.payload.provider.upstreamSha256&&provenance.status===parsed.payload.provider.httpStatus)),'EDITION_PROVENANCE_BINDING_MISMATCH');
     const ids=new Set(analyze(parsed.payload,parsed.error).rows.map(r=>r.id));
     for(const[key,note]of Object.entries(manifest.annotations)){
       need(ids.has(key)&&exact(note,['revision','selected','note','tags','updatedAt'])&&Number.isSafeInteger(note.revision)&&note.revision>=0&&timestamp(note.updatedAt)&&typeof note.selected==='boolean'&&typeof note.note==='string'&&note.note.length<=16000&&

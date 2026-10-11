@@ -205,9 +205,23 @@ function adjustmentView(record) {
 /** Stateless original operations plus process-owned verified file snapshots. */
 export class MerchantWooCommerce {
   #config; #stores; #files; #closing = false; #close; #pending = new Set();
-  constructor(config) {
+  #environment; #fetchImpl;
+  constructor(config, { environment = process.env, fetchImpl } = {}) {
+    assert(environment && typeof environment === 'object' && !Array.isArray(environment) &&
+      (fetchImpl === undefined || typeof fetchImpl === 'function'),
+      'HOST_TRANSPORT_INVALID', 'Supply the merchant host environment and an optional trusted transport function.');
     this.#config = config; this.#stores = config.woocommerce?.stores ?? {};
+    this.#environment = environment; this.#fetchImpl = fetchImpl;
     this.#files = new RetainedFileReads({ errorPrefix: 'WOO_MCP' });
+  }
+  #client(config) {
+    // Reopening a completed review retains its original offline behavior.
+    // Resolve the native client and credentials only at its first live call.
+    let client;
+    return Object.fromEntries(['consoleStatus', 'orders', 'inspect', 'release',
+      'inspectRefunds', 'prepareRefund', 'applyRefund'].map(name => [name, (...args) =>
+      (client ??= createMerchantClient(config,
+        { env: this.#environment, fetchImpl: this.#fetchImpl }))[name](...args)]));
   }
   get summary() { return { configured: Object.keys(this.#stores).length > 0, stores: Object.keys(this.#stores).length,
     pendingOperations: this.#pending.size, ...this.#files.summary }; }
@@ -272,12 +286,12 @@ export class MerchantWooCommerce {
     const store = this.#store(args.store), config = store.operator;
     if (await exists(config.workspace)) await realDirectory(config.workspace);
     switch (name) {
-      case 'merchant_woo_store_status': return createMerchantClient(config).consoleStatus();
+      case 'merchant_woo_store_status': return this.#client(config).consoleStatus();
       case 'merchant_woo_queue': {
         const { store: _store, ...selection } = args;
-        return createMerchantClient(config).orders(selection);
+        return this.#client(config).orders(selection);
       }
-      case 'merchant_woo_order': return createMerchantClient(config).inspect(args.order);
+      case 'merchant_woo_order': return this.#client(config).inspect(args.order);
       case 'merchant_woo_review_source': {
         const source = this.#source(store, args.source), bytes = await readBytes(source.file, MAX_RECORD);
         const parsed = parseJson(bytes), record = parsed?.schema === 'scf82.checkout-evidence.v1' ? originalRecordFromEvidence(parsed) : parsed;
@@ -291,19 +305,20 @@ export class MerchantWooCommerce {
         const source = this.#source(store, args.source);
         return reviewView(await reviewOrder(config, { id: args.reviewId, order: args.order, recordPath: source.file,
           payer: source.payer, rpcEndpoint: source.rpcEndpoint, maxEventPages: source.maxEventPages,
-          expectedRecordSha256: args.expectedRecordSha256 }));
+          expectedRecordSha256: args.expectedRecordSha256, client: this.#client(config) }));
       }
-      case 'merchant_woo_review_resume': return reviewView(await resumeReview(config, args.reviewId));
+      case 'merchant_woo_review_resume': return reviewView(await resumeReview(config, args.reviewId, { client: this.#client(config) }));
       case 'merchant_woo_review_status': {
-        const status = await inspectReview(config, args.reviewId, { live: args.live === true });
+        const status = await inspectReview(config, args.reviewId, { live: args.live === true,
+          ...(args.live === true ? { client: this.#client(config) } : {}) });
         return { ...picked(status, ['schema', 'reviewId', 'siteUrl', 'orderReference', 'status', 'order']),
           input: { ...picked(status.input, ['schema', 'reviewId', 'siteUrl', 'orderReference', 'payer', 'createdAt', 'binding', 'rpcEndpoint', 'maxEventPages']),
             sourceSha256: status.input.source.sha256, nativeRecordSha256: status.input.source.nativeRecordSha256 },
           review: reviewView(status.review), attempts: paged(status.attempts.map(attemptView), args) };
       }
       case 'merchant_woo_release': return releaseOrder(config, args.reviewId, {
-        confirmOrder: args.confirmOrder, expectedReviewSha256: args.expectedReviewSha256 });
-      case 'merchant_woo_refunds': return refundOrderView(await inspectRefunds(config, args.order), args);
+        confirmOrder: args.confirmOrder, expectedReviewSha256: args.expectedReviewSha256, client: this.#client(config) });
+      case 'merchant_woo_refunds': return refundOrderView(await inspectRefunds(config, args.order, { client: this.#client(config) }), args);
       case 'merchant_woo_refund_source': {
         const source = await this.#adjustmentSource(store, args.source, args.exportId);
         if (args.adjustmentId) {
@@ -321,16 +336,16 @@ export class MerchantWooCommerce {
         assert(source.sourceSha256 === args.expectedSourceSha256, 'SOURCE_CHANGED', 'Reopen this original accounting export before preparing it.');
         const outcome = await prepareRefund(config, { adjustmentId: args.adjustmentId, order: args.order,
           adjustmentsPath: source.path, wooAmount: args.wooAmount, expectedSourceSha256: args.expectedSourceSha256,
-          expectedCurrency: args.currency });
+          expectedCurrency: args.currency, client: this.#client(config) });
         return refundOutcome(outcome);
       }
       case 'merchant_woo_refund_apply': {
         const outcome = await applyRefund(config, args.adjustmentId, { confirmOrder: args.confirmOrder,
-          expectedReviewSha256: args.expectedReviewSha256 });
+          expectedReviewSha256: args.expectedReviewSha256, client: this.#client(config) });
         return refundOutcome(outcome);
       }
       case 'merchant_woo_refund_recover': {
-        const outcome = await recoverRefund(config, args.adjustmentId);
+        const outcome = await recoverRefund(config, args.adjustmentId, { client: this.#client(config) });
         return refundOutcome(outcome);
       }
       case 'merchant_woo_refund_status': return refundView(await inspectRefund(config, args.adjustmentId), args);

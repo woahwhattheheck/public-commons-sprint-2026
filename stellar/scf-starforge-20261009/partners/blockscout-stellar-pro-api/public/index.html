@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blockscout token desk</title><link rel="stylesheet" href="/style.css"></head>
+<body><header><div><p class="eyebrow">Stellar Forge / Provider operations</p><h1>Blockscout token desk</h1>
+<p id="identity">Opening the retained merchant…</p></div><button id="refresh" type="button">Refresh</button></header>
+<nav aria-label="Original merchant controls"><a id="operations" target="_blank" rel="noreferrer">Traffic and usage</a>
+<a id="availability" target="_blank" rel="noreferrer">Pause and resume routes</a><a id="fulfillment" target="_blank" rel="noreferrer">Native settlement and delivery</a></nav>
+<main><p id="message" role="status" aria-live="polite"></p>
+<section aria-labelledby="state-title"><div class="section-heading"><h2 id="state-title">Provider capacity</h2><strong id="admission">Loading</strong></div>
+<div class="metrics"><article><h3>Local UTC day</h3><p id="local-usage" class="metric">—</p><p id="local-detail"></p></article>
+<article><h3>Provider observation</h3><p id="provider-credits" class="metric">—</p><p id="provider-rate"></p><p id="provider-age" class="muted"></p></article>
+<article><h3>Retained responses</h3><p id="retention" class="metric">—</p><p id="retention-detail"></p><p id="reconciliation-count" class="muted"></p></article></div>
+<p class="note">Local budgets count provider attempts at the configured credit cost. Provider balances are timestamped observations of the shared account. The original merchant journal records payment settlement.</p></section>
+<section aria-labelledby="routes-title"><h2 id="routes-title">Active token routes</h2><div class="table-wrap"><table><thead><tr><th>Data chain</th><th>Merchant route</th><th>Stellar price</th></tr></thead><tbody id="routes"></tbody></table></div>
+<p id="payment" class="muted"></p></section>
+<section aria-labelledby="token-title"><h2 id="token-title">Select a token</h2><form id="token-form">
+<div class="fields"><label>Data chain<select id="chain" required></select></label>
+<label class="wide">EVM token address<input id="address" required maxlength="42" pattern="0x[A-Fa-f0-9]{40}" spellcheck="false" placeholder="0x…"></label>
+<label>Stable buyer intent<input id="intent" required maxlength="100" spellcheck="false" placeholder="token-report-001"></label>
+<label class="wide">Buyer response file<input id="response-out" required spellcheck="false" placeholder="/private/customer/token-response.json"></label></div>
+<div class="actions"><button type="submit">Prepare buyer review</button><button id="diagnose" type="button">Read provider once</button></div>
+<p class="note">Preparation selects the exact original offer and produces an SF88 review config. “Read provider once” calls the provider directly and consumes this merchant’s provider-attempt budget.</p></form>
+<div id="prepared" hidden><h3>Prepared buyer request</h3><p id="prepared-summary"></p><button id="download-review" type="button">Download review config</button>
+<p class="note">Open this config with the existing SF88 buyer workspace. Node and Python applications use that same workspace, saved result and receipt.</p><pre id="review-json"></pre></div></section>
+<section aria-labelledby="history-title"><div class="section-heading"><h2 id="history-title">Provider attempt history</h2><span id="history-total"></span></div>
+<form id="filter-form" class="filters"><label>Chain<select id="filter-chain"><option value="">All chains</option></select></label>
+<label class="wide">Exact token address<input id="filter-address" maxlength="42" placeholder="All tokens" spellcheck="false"></label><button type="submit">Apply filter</button></form>
+<div class="table-wrap"><table><thead><tr><th>Sequence / time</th><th>Chain / token</th><th>Provider outcome</th><th>Local credits</th><th>Response</th></tr></thead><tbody id="attempts"></tbody></table></div>
+<button id="more" type="button" hidden>Load next page</button>
+<div id="selected" hidden><h3>Selected provider attempt</h3><p id="selection-summary"></p>
+<div class="actions"><button id="download-response" type="button">Download original response</button><button id="show-response" type="button">View response</button></div>
+<div id="reconciliation" class="reconciliation" hidden>
+<div class="section-heading"><h3>Reconcile an interrupted provider request</h3><span id="reconciliation-version"></span></div>
+<p id="reconciliation-summary"></p>
+<p class="note">Use the provider account record to establish when this request finished. Select a saved quota observation whose request began after that completion. The recorded decision adjusts the pending reservation against those later observations. “Restore reservation” records a correction to that decision.</p>
+<p id="reconciliation-feedback" role="status" aria-live="polite"></p>
+<form id="reconciliation-form"><fieldset id="reconciliation-fields">
+<div class="fields">
+<label>Decision<select id="reconciliation-action"><option value="confirm_finished">Record provider completion</option><option value="reopen">Restore reservation</option></select></label>
+<label>Operator<input id="reconciliation-operator" required maxlength="160" autocomplete="name"></label>
+<label class="wide">Provider account record or correction reference<input id="reconciliation-reference" required maxlength="240" spellcheck="false"></label>
+</div>
+<div id="completion-fields">
+<div class="fields">
+<label class="wide">Saved quota observation ID<input id="reconciliation-observation" maxlength="36" spellcheck="false" placeholder="Saved provider attempt ID"></label>
+<label>Provider completion time in UTC<input id="reconciliation-finished" spellcheck="false" placeholder="2026-10-11T22:00:00.000Z" aria-describedby="completion-help"></label>
+</div>
+<p id="completion-help" class="note">Copy the exact UTC time from the provider record, including milliseconds and Z. It must be at or after this attempt started and strictly before the selected observation started.</p>
+<div class="actions"><button id="inspect-observation" type="button">Inspect saved observation</button><button id="latest-observation" type="button">Use displayed provider observation</button></div>
+<div id="observation-details" hidden><p id="observation-summary"></p><details><summary>Saved observation data</summary><pre id="observation-json"></pre></details></div>
+</div>
+<div class="actions"><button id="reconciliation-submit" type="submit">Record provider completion</button></div>
+</fieldset></form>
+<div class="actions"><button id="reload-attempt" type="button">Reload saved decision</button><button id="use-latest-revision" type="button" hidden>Use latest reviewed revision</button></div>
+<h3 class="history-heading">Decision history</h3><p id="reconciliation-empty">This attempt has no recorded reconciliation decision.</p>
+<div class="table-wrap"><table><thead><tr><th>Revision / recorded</th><th>Decision / operator</th><th>Account reference</th><th>Provider completion / observation</th></tr></thead><tbody id="reconciliation-history"></tbody></table></div>
+</div>
+<details class="attempt-data"><summary>Original attempt data and history</summary><pre id="selection-json"></pre></details><pre id="response-json" hidden></pre></div></section>
+<section aria-labelledby="backup-title"><h2 id="backup-title">Retain and restore</h2><p>Export the complete provider database, including plans, attempts, quota observations, reconciliation decisions and original response bytes. A restored database keeps the same local usage. The original SF98/SF88 backup workflows retain merchant and buyer payment state.</p>
+<button id="backup" type="button">Create provider backup</button><div id="backup-result" hidden><p id="backup-summary"></p><button id="download-backup" type="button">Download provider backup</button><pre id="backup-json"></pre></div></section>
+</main><footer id="footer">Private loopback operator workspace</footer><script type="module" src="/app.mjs"></script></body></html>

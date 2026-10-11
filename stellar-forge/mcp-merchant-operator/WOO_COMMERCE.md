@@ -315,3 +315,27 @@ verification errors, unknown writes and native recovery states retain their
 original codes. Every explicit release, prepare and apply uses the original
 single-dispatch/readback behavior. An MCP client should recover an interrupted
 original operation instead of automatically replaying a mutation.
+
+## Embed in an existing merchant host
+
+`startMerchantMcp({ configPath, environment })` carries the supplied host environment into the original Woo client as well as the MCP listener. The configured WordPress variable names resolve when the original client makes its first live request. Retained status, history, original-file delivery and completed review reopening use their original workspace without resolving those values.
+
+An application hosting its existing merchant transport can provide that function in memory:
+
+```js
+const session = await startMerchantMcp({
+  configPath,
+  environment,
+  woocommerceFetchImpl: originalMerchantTransport,
+});
+```
+
+The function has the same fetch signature as the original `createMerchantClient(config, { fetchImpl })` option. It receives the canonical configured store URL, method, authorization headers, body and abort signal. Order readiness, queues, review/recovery and refund operations all use that original client and its response validation. The host owns the function and its connection to the configured store. Connection JSON and MCP tool arguments retain their existing schemas; this option is application code.
+
+The installed command continues to use the original public HTTPS transport by default. For the retained native Woo runtime, the owner passes its existing canonical-store-to-loopback transport while keeping the original site identity and order/refund records. The receiving record includes that explicit native origin.
+
+When the original payment review and refund operation already use separate
+operator workspaces, declare both original operators as distinct store aliases
+pointing to the same merchant. Select the payment alias for its retained review
+and the refund alias for its existing adjustment UUIDs. Each alias preserves its
+own original files and history.

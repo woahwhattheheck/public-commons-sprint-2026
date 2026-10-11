@@ -21,9 +21,27 @@ Source filters are JSON request data. They cannot choose an egress URL, credenti
 
 The current source contract is [Valyu Search](https://docs.valyu.ai/api-reference/endpoint/search). Pinned implementation references are the official Python [request implementation](https://github.com/valyuAI/valyu-py/blob/b735d8df4f612b603a61cd0613807d3f89bc814f/valyu/api.py) and [response types](https://github.com/valyuAI/valyu-py/blob/b735d8df4f612b603a61cd0613807d3f89bc814f/valyu/types/response.py).
 
+## Provider account and credential setup
+
+Use the account owner's intended existing identity at [platform.valyu.ai](https://platform.valyu.ai/). The [official quickstart](https://docs.valyu.ai/quickstart) covers account setup and copying the API key from the dashboard; its trial supports starting without a card. Check the actual account's plan, balance and source access before selecting request limits.
+
+Keep the API key in the service operator's existing credential setup. `provider.apiKeyEnv` is the environment-variable name read by the merchant process; the compiled configuration retains that reference. For an interactive Bash session with the example `VALYU_API_KEY` name:
+
+~~~sh
+read -r -s -p 'Valyu API key: ' VALYU_API_KEY
+printf '\n'
+export VALYU_API_KEY
+~~~
+
+Start the merchant from that same credential-bearing environment, or supply the reference through the existing private service manager. The customer receives the original generated seller client and the public provider policy. Provider credentials stay with the merchant.
+
+Use the selected first research request through the native merchant. When the account operator has already completed that request, the customer can import its exact original request, response and provenance using [the observation flow](README.md#5-receive-an-existing-provider-observation). That flow reuses the completed response and applies the configured delivery profile.
+
 ## Configure
 
-Use Node 22 or later and the existing repository's native x402 dependencies. Run the following commands from stellar/scf-starforge-20261009/sf30-seller-sdk.
+Use Node 24 or later for the complete merchant/customer installation, with the original native x402 and Stellar SDK dependencies. The customer store uses Node's built-in SQLite. [README.md](README.md#install-and-select-the-maintained-runtime) provides the original archive installation, dependency selection, runtime command prefixes and complete customer flow.
+
+The source commands below run from `stellar/scf-starforge-20261009/sf30-seller-sdk`. With the maintained installed runtime, use the README's `valyu_merchant` prefix in place of `node valyu/merchant-cli.mjs` and `valyu_research` in place of `node valyu/run.mjs`. An established source overlay selects its complete original seller/buyer root through `VALYU_RUNTIME_ROOT`; the installed distribution resolves its colocated components automatically.
 
 Create merchant-input.json with the account owner's public HTTPS origin, verified asset and recipient, native route fee, and provider policy. Replace the uppercase payment placeholders with the actual deployment values.
 
@@ -82,7 +100,7 @@ node valyu/merchant-cli.mjs inspect --config seller-service.json
 
 Compile creates a new private file and refuses to overwrite an existing configuration. Inspect prints the public policy and native offer. Credential values stay in the server environment. Recompile after changing provider limits so the generated request schema and application admission agree.
 
-There are two independent prices:
+Price controls and observed usage retain their separate units:
 
 - payment.amount is the fixed merchant route fee, a positive decimal string in atomic Stellar asset units.
 - request.max_price is Valyu's positive numeric CPM ceiling. provider.limits.maxPriceCPM is the merchant's permitted upper bound for that request field.
@@ -130,18 +148,21 @@ Trusted hosts can import startValyuMerchant({config, port, operationsPort, facil
 
 The running seller exposes /_seller/docs, /_seller/openapi.json and /_seller/client/seller-client.mjs. The generated operationId is valyuSearch.
 
-Initialize the customer desk with that original generated client, the existing SF88 operator profile, and the same public provider object used by the merchant:
+Create or adopt an original SF88 operator inside the selected customer state root. The complete first-setup commands, exact source request, original native review and generated-client download are in [README.md](README.md#2-initialize-the-original-buyer-and-private-customer-workspace). With the original operator already initialized at the path below, adopt it directly:
 
 ~~~sh
 node valyu/run.mjs init --state-root /absolute/private/valyu-research \
   --seller-client /absolute/private/seller-client.mjs \
-  --operator-profile /absolute/private/operator-profile.json \
-  --operator-directory /absolute/private/original-buyer \
+  --operator-directory /absolute/private/valyu-research/operator \
   --provider-config /absolute/private/provider.json
 node valyu/run.mjs serve --settings /absolute/private/valyu-research/settings.json
 ~~~
 
-provider.json contains the provider object from seller-service.json. Use the settings path returned by init. The industrial desk keeps the query, provider ceiling, native purchase review, collected response, annotations and immutable editions together. node valyu/run.mjs --help lists CLI counterparts for requesting, preparing, reviewing, executing, collecting, comparing, exporting and backing up the workspace.
+The original operator directory must be an existing child of the selected state root. The initializer derives its native operator profile and retains the generated client. `provider.json` contains the `provider` object from `seller-service.json`, including the same trusted delivery profile. On separate hosts, transfer this public configuration and the original client through the existing private delivery channel.
+
+Use the settings path returned by initialization. Open the returned local browser URL with its access fragment. The industrial desk keeps the query, provider ceiling, native purchase review, collected response, annotations and immutable editions together. `node valyu/run.mjs --help` lists CLI counterparts.
+
+Save the intended question, prepare its current revision with the selected native accept index and atomic cap, review it, then execute from the original operator terminal. `inspect` and `collect` resume that saved intent; collection reads the original response. The complete backup flow composes the in-root original operator with this research state. [README.md](README.md#6-recover-the-complete-workspace) covers canonical restore and reopening the same operation.
 
 The original generated-client request is:
 
@@ -181,6 +202,8 @@ normalizeValyuRequest(input, {defaults, limits}) validates and freezes the exact
 | fast_mode | Boolean; incompatible with proprietary search |
 | url_only | Boolean; requires web or news |
 | include_abstracts | Boolean |
+
+The customer browser offers a dedicated Custom character count option for numeric `response_length`. Selecting it preserves the positive integer on save and reopen; selecting a named length saves the provider's named value. The visible control determines this field, while the additional-options JSON supplies other admitted fields.
 
 Start dates cannot follow end dates. maxSources bounds source arrays and bias entries. The configured request byte cap is at most 64 KiB. Native and provider byte limits are checked against one another at launch.
 

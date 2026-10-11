@@ -42,7 +42,7 @@ native receipt review, selected-order completion and verified refund operators.
 Agents retain the inspected source and review hashes, confirm the exact order,
 recover interrupted results from the same native records, and retrieve complete
 original exports through the existing file reader. The host connection names
-receipt aliases and the original accounting export roots; The original accounting
+receipt aliases and the original accounting export roots; the original accounting
 adjustment workflow supplies the verified return export.
 
 See [WOO_COMMERCE.md](WOO_COMMERCE.md) for configuration, the full order and refund
@@ -71,6 +71,18 @@ revision; and stop or reopen the saved fleet. The original gateway, release
 stores and sessions own these operations. See [FLEET.md](FLEET.md) for the full
 host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
 initialization can include the same fleet with `--fleet-plan`.
+
+## Operate a Tenderly simulation merchant
+
+Use `init-tenderly-workspaces --dir NEW_OPERATOR_DIRECTORY --connection CONNECTION.json`
+to bind an existing private Tenderly workspace, or a new empty private directory.
+The same MCP opens its original browser, reviews and saves merchant profiles,
+prepares the product, issues original customer request tickets, and starts or
+drains the seller. Saved provider simulations can be retrieved, reviewed and
+applied to the original merchant operation through its current generation.
+Full plan, request, merchant response and provider response files use the shared
+SHA256-pinned resumable reader. See [TENDERLY-WORKSPACE.md](TENDERLY-WORKSPACE.md)
+for the complete setup, 26 tools, customer handoff, histories and recovery flow.
 
 ## Prepare a merchant
 
