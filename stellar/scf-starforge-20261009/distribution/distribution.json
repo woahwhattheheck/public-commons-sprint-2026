@@ -262,6 +262,8 @@
     "grant-workspace": "stellar/scf_2026/sf47_budget_model/workspace/launcher.mjs",
     "provider-operator": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli.mjs",
     "provider-workspace": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/cli.mjs",
+    "merchant-recovery": "stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs",
+    "merchant-recovery-remote": "stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-cli.mjs",
     "sftp": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/cli.mjs",
     "sftp-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/publisher/cli.mjs",
     "sftp-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/server.mjs"
@@ -508,6 +510,9 @@
     "./buyer/provider-workspace": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/model.mjs",
     "./buyer/provider-workspace/server": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/server.mjs",
     "./buyer/provider-workspace/recovery": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/archive.mjs",
+    "./merchant/state-recovery": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs",
+    "./merchant/remote-recovery": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/remote.mjs",
+    "./merchant/remote-recovery/s3": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-s3.mjs",
     "./seller/sftp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/source.mjs",
     "./seller/sftp/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/config.mjs",
     "./seller/sftp/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/publisher/model.mjs",

@@ -1,0 +1,9 @@
+{
+  "name": "@tokenjunkielabs/cskt-migration-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=24"},
+  "description": "Source-reviewed WordPress content, document and GIS migration with native destination rollback",
+  "scripts": {"start": "node cli.mjs serve", "status": "node cli.mjs status"}
+}
