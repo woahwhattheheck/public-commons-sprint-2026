@@ -5,6 +5,7 @@ import { lstat, mkdir, open, realpath, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readSellerConfig } from '../sf30-seller-sdk/serve.mjs';
+import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { compileHttpSellerOffer } from '../sf30-seller-sdk/seller.mjs';
 import { compileAssetRouteOffer } from '../sf30-seller-sdk/response-asset.mjs';
@@ -18,6 +19,8 @@ import { initializeWorkspace, openWorkspace } from '../sf88-operator-buyer-cli/w
 import { config as readBuyer, operation, execution, responseFile, buyerTransport } from '../sf88-operator-buyer-cli/config.mjs';
 import { validateNativeSignerConfiguration } from '../sf88-operator-buyer-cli/native-signer.mjs';
 import { absolute, parseJson, readPrivateFile } from '../sf103-native-buyer-signer/operator.mjs';
+import { readUpstreamCommerce, describeUpstreamCommerce, readUpstreamPurchaseTicket,
+  upstreamPurchaseTicketView } from './commerce-upstream.mjs';
 import { preparePythonCommerce, describePythonCommerce } from './commerce-python.mjs';
 
 const SCHEMA = 'stellar-forge.commerce-setup.v1';
@@ -99,13 +102,22 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   absolute(configFile); absolute(directory);
   const source = await readPrivateFile(configFile);
   const input = fields(parseJson(source),
-    ['schema','seller','operator','purchases','operationsPort'], 'COMMERCE_SETUP_FIELDS_INVALID');
+    ['schema','seller','operator','purchases','operationsPort','operationControls'], 'COMMERCE_SETUP_FIELDS_INVALID');
   need(input.schema === SCHEMA, 'COMMERCE_SETUP_SCHEMA_INVALID');
-  const seller = fields(input.seller, ['config','python','handlers','facilitatorConfig','port'],
+  const seller = fields(input.seller, ['config','python','handlers','upstreams','allowLoopbackUpstream',
+    'availabilityDirectory','facilitatorConfig','port'],
     'COMMERCE_SETUP_SELLER_INVALID');
   need([seller.config, seller.python].filter(Boolean).length === 1,
     'COMMERCE_SETUP_ONE_MERCHANT_CONFIGURATION_REQUIRED');
   need(!seller.python || seller.handlers === undefined, 'COMMERCE_SETUP_PYTHON_USES_ORIGINAL_HANDLERS');
+  need(seller.upstreams === undefined || seller.config && seller.handlers === undefined,
+    'COMMERCE_UPSTREAM_USES_CONFIGURED_APPLICATION');
+  need(seller.allowLoopbackUpstream === undefined || seller.upstreams !== undefined &&
+    typeof seller.allowLoopbackUpstream === 'boolean', 'COMMERCE_UPSTREAM_LOOPBACK_INVALID');
+  need(input.operationControls === undefined || typeof input.operationControls === 'boolean',
+    'COMMERCE_OPERATION_CONTROLS_INVALID');
+  const availabilityDirectory = seller.availabilityDirectory === undefined ? null :
+    validateAvailabilityDirectory(seller.availabilityDirectory);
   const sellerPath = seller.python ?? seller.config;
   absolute(sellerPath); absolute(seller.facilitatorConfig);
   // Validate the original private bytes before its readers resolve response paths.
@@ -113,6 +125,11 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   const facilitatorBytes = await readPrivateFile(seller.facilitatorConfig);
   const python = seller.python ? await preparePythonCommerce(seller.python) : null;
   const merchant = python?.compiled.service ?? await readSellerConfig(seller.config);
+  const upstream = seller.upstreams === undefined ? null : await readUpstreamCommerce(seller.upstreams, merchant,
+    {allowLoopback:seller.allowLoopbackUpstream === true});
+  need(!input.operationControls || upstream &&
+    Object.values(upstream.review.bindings).some(binding => binding.idempotency),
+  'COMMERCE_OPERATION_CONTROLS_REQUIRE_IDEMPOTENT_UPSTREAM');
   const facilitator = await readFacilitator(seller.facilitatorConfig);
   need(sha(await readPrivateFile(sellerPath, 1048576)) === sha(sellerBytes) &&
     sha(await readPrivateFile(seller.facilitatorConfig)) === sha(facilitatorBytes),
@@ -128,7 +145,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     'COMMERCE_SETUP_ADVERTISED_TERMS_OUTSIDE_FACILITATOR');
   }
   const handlers = seller.handlers === undefined ? null : await regularSource(seller.handlers);
-  need(python || handlers || !merchant.routes.some(route => route.handler || route.admit),
+  need(python || upstream || handlers || !merchant.routes.some(route => route.handler || route.admit),
     'COMMERCE_SETUP_HANDLER_MODULE_REQUIRED');
   const operator = fields(input.operator,
     ['actor','service','python','payer','secretEnv','signerProvider','httpsProxyEnv','totalAtomic','dailyAtomic'],
@@ -153,7 +170,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   const selections = [], intents = new Set();
   for (const [index, value] of input.purchases.entries()) {
     const selected = fields(value, ['routeId','acceptIndex','intentId','method','path','query',
-      'bodyFile','saveResponse','responseMaxBytes','responseTimeoutMs'], 'COMMERCE_SETUP_SELECTION_INVALID');
+      'bodyFile','ticketFile','ticketHeader','saveResponse','responseMaxBytes','responseTimeoutMs'], 'COMMERCE_SETUP_SELECTION_INVALID');
     const route = compiled.routes.find(route => route.id === selected.routeId);
     need(route && selected.method === route.method, 'COMMERCE_SETUP_EXPLICIT_ROUTE_METHOD_REQUIRED');
     need(Number.isInteger(selected.acceptIndex) && selected.acceptIndex >= 0 &&
@@ -191,7 +208,10 @@ export async function reviewCommerceSetup({ configFile, directory }) {
         ...(terms.extra?.paymentFlow ? {paymentFlow:terms.extra.paymentFlow} : {})},
       headers:{Accept:request.init.headers.accept,
         ...(body === null ? {} : {'Content-Type':request.init.headers['content-type']})},
+      ...(selected.ticketFile === undefined ? {} : {ticketFile:join(directory, 'tickets', key + '.json')}),
+      ...(selected.ticketHeader === undefined ? {} : {ticketHeader:selected.ticketHeader}),
       ...(body === null ? {} : {bodyFile:join(directory, 'bodies', key + '.json')})});
+    const ticket = await readUpstreamPurchaseTicket(selected, op, upstream, originalRoute);
     intents.add(op.intentId);
     const draft = {operation:op, captureBody:false, ...(saveResponse ? {
       responseFile:{destination:join(directory, 'responses', key + '.bin'),
@@ -200,7 +220,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     } : {})};
     responseFile(draft);
     selections.push({key, routeId:route.id, acceptIndex:selected.acceptIndex,
-      originalOffer:structuredClone(route.offer), draft, body,
+      originalOffer:structuredClone(route.offer), draft, body, ticket,
       bodySha256:body === null ? null : sha(body), bodyBytes:body?.length ?? 0});
   }
   const first = selections[0].draft.operation.expect;
@@ -220,6 +240,9 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   const summary = {schema:SCHEMA, state:'CONFIGURATION_REVIEWED', directory,
     publicOrigin:merchant.publicOrigin, network:facilitator.network,
     ...(python ? {python:describePythonCommerce(python)} : {}),
+    ...(upstream ? {upstreams:describeUpstreamCommerce(upstream)} : {}),
+    operationControls:input.operationControls === true,
+    availabilityDirectory,
     payer:operator.payer, asset:first.asset, recipient:first.payTo, buyerTransport:transport,
     sharedBudget:{maxSingleAtomic:String(single), totalAtomic:String(total), dailyAtomic:String(daily),
       selectedTotalAtomic:String(planned), allSelectionsFitTotal:planned <= total},
@@ -227,14 +250,18 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     selections:selections.map(item => ({intentId:item.draft.operation.intentId, routeId:item.routeId,
       method:item.draft.operation.method, url:item.draft.operation.url, acceptIndex:item.acceptIndex,
       originalTerms:item.originalOffer.accepts[item.acceptIndex], bodyBytes:item.bodyBytes,
-      bodySha256:item.bodySha256, responseFile:item.draft.responseFile ?? null})),
+      bodySha256:item.bodySha256, operationTicket:upstreamPurchaseTicketView(item.ticket),
+      responseFile:item.draft.responseFile ?? null})),
     signingMaterialLoaded:false, paymentAttempts:0};
-  return {summary, merchant, facilitator, operator, selections, maximum, handlers, python,
+  return {summary, merchant, facilitator, operator, selections, maximum, handlers, python, upstream,
+    operationControls:input.operationControls === true,
+    availabilityDirectory,
     sellerPort:port(seller.port, 8423), operationsPort:port(input.operationsPort, 0),
     source:{configFile, configSha256:sha(source), sellerFile:sellerPath,
       sellerSha256:sha(sellerBytes), facilitatorFile:seller.facilitatorConfig,
       ...(python ? {pythonApplication:python.compiled.options.application,
         pythonApplicationSha256:python.applicationSha256} : {}),
+      ...(upstream ? {upstreamsFile:upstream.file, upstreamsSha256:upstream.sha256} : {}),
       facilitatorSha256:sha(facilitatorBytes)}};
 }
 
@@ -243,7 +270,7 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
   const reviewed = await reviewCommerceSetup({configFile, directory});
   await privateDirectory(dirname(directory));
   const {initializeCommerce, bindMerchantPurchase} = await import('./commerce.mjs');
-  const {summary, merchant, facilitator, operator, selections, maximum, handlers, python} = reviewed;
+  const {summary, merchant, facilitator, operator, selections, maximum, handlers, python, upstream} = reviewed;
   const compiled = compileMerchant(merchant);
   // Reuse the session's own offer selection rules before creating any workspace.
   for (const item of selections) need(bindMerchantPurchase(compiled, item.draft).acceptIndex === item.acceptIndex,
@@ -252,7 +279,7 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
   try {
     await mkdir(directory, {mode:0o700});
     created = await privateDirectory(directory);
-    for (const name of ['bodies','responses','buyers']) await mkdir(join(directory, name), {mode:0o700});
+    for (const name of ['bodies','responses','buyers','tickets']) await mkdir(join(directory, name), {mode:0o700});
     const captured = [];
     const retain = async (path, value) => {
       const bytes = Buffer.isBuffer(value) ? value : json(value);
@@ -261,10 +288,12 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
     };
     for (const item of selections) {
       if (item.body !== null) await retain(item.draft.operation.bodyFile, item.body);
+      if (item.ticket) await retain(item.draft.operation.ticketFile, item.ticket.sourceBytes);
       await retain(join(directory, 'buyers', item.key + '-review.json'), item.draft);
     }
     await retain(join(directory, 'seller.json'), merchant);
     if (python) await retain(join(directory, 'python.json'), python.declaration);
+    if (upstream) await retain(join(directory, 'upstreams.json'), upstream.sourceBytes);
     await retain(join(directory, 'facilitator.json'), facilitator);
     const workspace = join(directory, 'operator');
     const args = ['--config', join(directory, 'buyers', maximum.key + '-review.json'), '--dir', workspace,
@@ -287,13 +316,17 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
     const planFile = join(directory, 'commerce-plan.json');
     await retain(planFile, {schema:'stellar-forge.commerce-plan.v1',
       seller:{...(python ? {python:join(directory, 'python.json')} : {config:join(directory, 'seller.json')}),
+        ...(reviewed.availabilityDirectory ? {availabilityDirectory:reviewed.availabilityDirectory} : {}),
+        ...(upstream ? {upstreams:join(directory, 'upstreams.json'), allowLoopbackUpstream:upstream.allowLoopback} : {}),
         facilitatorConfig:join(directory, 'facilitator.json'),
         port:reviewed.sellerPort, ...(handlers ? {handlers:handlers.path} : {})},
-      operationsPort:reviewed.operationsPort, buyers});
+      operationsPort:reviewed.operationsPort, operationControls:reviewed.operationControls, buyers});
     const session = join(directory, 'session');
     const initializedSession = await initializeCommerce({planFile, directory:session});
     need(!python || initializedSession.python?.applicationSha256 === python.applicationSha256,
       'COMMERCE_SETUP_PYTHON_SOURCE_CHANGED');
+    need(!upstream || initializedSession.upstreams?.sha256 === upstream.sha256,
+      'COMMERCE_UPSTREAM_CONFIG_CHANGED');
     await retain(join(directory, 'prepared.json'), {
       schema:SNAPSHOT, createdAt:new Date().toISOString(), directory, session, workspace,
       planFile, source:reviewed.source, files:captured, handlers,
@@ -319,7 +352,7 @@ export async function inspectCommerceSetup(directory) {
   need(record.schema === SNAPSHOT && record.directory === directory &&
     record.session === join(directory, 'session') && record.workspace === join(directory, 'operator') &&
     record.planFile === join(directory, 'commerce-plan.json') && Array.isArray(record.files) &&
-    record.files.length <= 200, 'COMMERCE_SETUP_SNAPSHOT_INVALID');
+    record.files.length <= 64 * 4 + 16, 'COMMERCE_SETUP_SNAPSHOT_INVALID');
   for (const item of record.files) {
     need(typeof item.path === 'string' && item.path.startsWith(directory + '/') &&
       resolve(item.path) === item.path && item.path !== join(directory, 'prepared.json'),

@@ -77,6 +77,8 @@
     "stellar/scf-starforge-20261009/sf96-seller-acceptance/audit.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-purchase.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-python.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-upstream.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/UPSTREAM_COMMERCE.md",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_PAID_FILES.md",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/PYTHON_COMMERCE.md",
     "stellar/scf-starforge-20261009/sf16-asset-engine/assets.mjs",
@@ -307,7 +309,10 @@
     "./catalog/workspace": "./source/stellar/scf-starforge-20261009/sf60-durable-catalog-transaction/workspace.mjs",
     "./buyer/object-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs",
     "./seller/duckdb/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/server.mjs",
-    "./seller/duckdb/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/model.mjs"
+    "./seller/duckdb/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/model.mjs",
+    "./buyer/mcp/remote": "./source/stellar-forge/mcp-paid-agent/remote-mcp.mjs",
+    "./buyer/mcp/native-operator": "./source/stellar-forge/mcp-paid-agent/native-mcp-operator.mjs",
+    "./merchant/mcp/paid-tools": "./source/stellar-forge/mcp-paid-agent/paid-tool-server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -335,7 +340,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/exercise.mjs",
     "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.journey.mjs",
     "stellar-forge/mcp-merchant-operator/exercise.mjs",
-    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/check.mjs"
+    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/check.mjs",
+    "stellar/scf-starforge-20261009/sf82-seller-pilot/release-discovery-journey.mjs"
   ],
   "featurePeers": {
     "postgres": {
@@ -343,12 +349,19 @@
         "version": "8.23.1",
         "probe": "pg"
       }
+    },
+    "mcp": {
+      "@modelcontextprotocol/sdk": {
+        "version": "1.32.1",
+        "probe": "@modelcontextprotocol/sdk/client/index.js"
+      }
     }
   },
   "runtimePackageManifests": {
     "schema": "stellar-forge/payment-auto-catalog/package.json",
     "postgres": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json",
     "s3": "stellar/scf-starforge-20261009/sf30-seller-sdk/s3/package.json",
-    "graphql": "stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/package.json"
+    "graphql": "stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/package.json",
+    "mcp": "stellar-forge/mcp-paid-agent/package.json"
   }
 }

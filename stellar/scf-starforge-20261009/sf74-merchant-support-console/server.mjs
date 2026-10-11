@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // MIT. Local-only interactive wrapper around the ORIGINAL SF70 merchant intake.
-// Optional private case persistence; original diagnostics and workorders are unchanged.
+// Private case persistence and original-source diagnostic/runtime workorders.
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -9,7 +9,7 @@ import {createHash} from 'node:crypto';
 import {parseArgs, capture} from '../sf70-merchant-intake/run.mjs';
 import {compare, validateIntake} from '../sf76-merchant-remediation-delta/compare.mjs';
 import {evaluate as postPreflight} from '../sf72-post-only-preflight/preflight.mjs';
-import {buildPacket, renderHtml, renderChecklist} from '../sf77-merchant-workorder/workorder.mjs';
+import {buildPacket, buildRuntimePacket, renderHtml, renderChecklist} from '../sf77-merchant-workorder/workorder.mjs';
 import {openCaseStore, inspectCaseWriter, recoverCaseWriter, CASE_STATUSES, caseMetadata} from './case-store.mjs';
 import {MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 import {inspectRuntimeFiles, reviewRuntime, exportRuntimeHandoff, importRuntimeHandoff,
@@ -115,9 +115,17 @@ function compareUploadedSources(input) {
 function workorderFromSources(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw new TypeError('Expected original capture files and owner terms');
-  const fields = ['before', 'after', 'postBefore', 'postAfter', 'terms'];
+  const fields = ['before', 'after', 'postBefore', 'postAfter', 'terms', 'supportText', 'inputs'];
   if (Object.keys(input).some(key => !fields.includes(key))) throw new TypeError('Unexpected workorder field');
-  const before = uploadedSource(input.before, 'before', true), terms = uploadedSource(input.terms, 'terms', true);
+  const terms = uploadedSource(input.terms, 'terms', true);
+  if(Object.hasOwn(input,'supportText')) {
+    if(['before','after','postBefore','postAfter'].some(key=>Object.hasOwn(input,key)))
+      throw new TypeError('Select original diagnostic sources or the attached runtime case for this workorder');
+    const packet=buildRuntimePacket({supportText:input.supportText,inputs:input.inputs},terms.data,new Date().toISOString());
+    return {packet,html:renderHtml(packet),checklist:renderChecklist(packet)};
+  }
+  if(Object.hasOwn(input,'inputs'))throw new TypeError('Runtime mapping requires its original supportText');
+  const before = uploadedSource(input.before, 'before', true);
   const after = uploadedSource(input.after, 'after');
   const pb = uploadedSource(input.postBefore, 'postBefore'), pa = uploadedSource(input.postAfter, 'postAfter');
   if (!after && (pb || pa)) throw new TypeError('Browser check comparison requires an after capture');
@@ -238,7 +246,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
       if (req.headers.origin !== ownOrigin) { json(res, 403, {error: 'ORIGIN_MISMATCH'}); return; }
       try {
         // Offline and in-memory: no filesystem paths, fetching, sending or acceptance side effects.
-        json(res, 200, workorderFromSources(await boundedBody(req, MAX_WORKORDER_BODY)));
+        json(res, 200, workorderFromSources(await boundedBody(req, MAX_RUNTIME_BYTES*2+MAX_WORKORDER_BODY)));
       } catch (error) {
         json(res, Number(error?.status) || 422, {error: 'INVALID_WORKORDER',
           detail: String(error?.message ?? error).slice(0, 240)});

@@ -21,6 +21,8 @@ The original SF88/SF81 terminal owns payment approval. Reopening uses the same
 original inbox, stable intents, reservations, results and saved resource files.
 Without a TTY, start prints readiness and stays running until SIGINT/SIGTERM.
 --one-shot prints readiness or runs the explicitly selected intent, then closes.
+An upstream session with operationControls prints its private merchant recovery
+URL at startup; ordinary status output includes only the read-only operations URL.
 `;
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 function printExecution(value) {
@@ -42,9 +44,14 @@ function options(args, allowed) {
 function stateView(value) {
   return { schema: value.schema, state: value.state, directory: value.directory,
     seller: value.seller ?? { configuration: value.sellerConfig, port: value.sellerPort,
-      ...(value.python ? { python: value.python } : {}) },
+      availabilityDirectory: value.availabilityDirectory ?? null,
+      ...(value.python ? { python: value.python } : {}),
+      ...(value.upstreams ? { upstreams: value.upstreams } : {}) },
     facilitator: value.facilitator,
     operations: value.operations ? { url: value.operations.url,
+      availabilityUrl: value.operations.availabilityUrl ?? null,
+      merchantOperationsUrl: value.operations.merchantOperationsUrl ?? null,
+      operationControls: value.operations.operationControls === true,
       sessionId: value.operations.traffic.sessionId,
       routes: value.operations.traffic.routes } : null,
     buyers: value.buyers.map(job => ({ intentId: job.operation.intentId, state: job.state,
@@ -91,6 +98,10 @@ export async function main(args = process.argv.slice(2)) {
   process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
   try {
     print(stateView(await session.status()));
+    if (session.operations.operationControlUrl)
+      print({merchantOperationControlUrl:session.operations.operationControlUrl});
+    if (session.operations.availabilityControlUrl)
+      print({availabilityControlUrl:session.operations.availabilityControlUrl});
     if (opts['--execute']) printExecution(await session.execute(opts['--execute']));
     if (opts['--one-shot'] || stopped.signal.aborted) return;
     if (!process.stdin.isTTY) {
@@ -125,6 +136,7 @@ export async function main(args = process.argv.slice(2)) {
     print({ state: closeResult?.state ?? 'STOPPED', inboxRetained: true,
       directory: resolve(opts['--directory']), interrupted,
       drained: closeResult?.drained, shutdown: closeResult?.shutdown,
+      ...(closeResult?.upstreams ? { upstreams: closeResult.upstreams } : {}),
       ...(closeResult?.nativeCompletion ? { nativeCompletion: closeResult.nativeCompletion } : {}),
       ...(closeResult?.python ? { python: closeResult.python } : {}) });
     if (closeResult?.drained === false) {

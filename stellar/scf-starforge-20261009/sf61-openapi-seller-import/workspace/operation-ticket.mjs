@@ -12,6 +12,7 @@ import { materializeSellerRequestOffer } from '../../sf30-seller-sdk/resource-se
 import { prepareReview } from '../../sf88-operator-buyer-cli/prepare.mjs';
 import { loadOperationTicket } from '../../sf88-operator-buyer-cli/operation-ticket.mjs';
 import { normalizeOperationHeaders } from '../../sf88-operator-buyer-cli/request-headers.mjs';
+import { createOperationHandoff, OPERATION_HANDOFF_SCHEMA, OPERATION_HANDOFF_MAX_BYTES } from '../../sf88-operator-buyer-cli/operation-handoff.mjs';
 import { merchantTicketDirectory } from './operation-plan.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
@@ -107,9 +108,17 @@ export async function saveMerchantTicket(project, runtimeId, issued) {
   await writeTicket(headersPath,headers);
   await writeTicket(offersPath,discovery);
   await writeTicket(reviewPath,draft);
+  const handoff=createOperationHandoff({draft,discoveryBytes:raw,ticketBytes:bytes,
+    bodyBytes:Buffer.from(JSON.stringify(request.body,null,2)+'\n')});
+  const handoffBytes=Buffer.from(JSON.stringify(handoff,null,2)+'\n');
+  const handoffId=randomUUID()+'-'+digest(handoffBytes);
+  const handoffFilename='operation-'+runtimeId+'-'+handoffId+'.handoff.json';
+  const handoffPath=join(directory,handoffFilename);
+  await writeTicket(handoffPath,handoff);
   return { fileId,filename,path,operationKey:document.operationKey,
     requestHash:document.requestHash,expiresAt:document.expiresAt,
     bodyPath,headersPath,offersPath,reviewPath,intentId,requestHeader,
+    handoffId,handoffFilename,handoffPath,handoffSha256:digest(handoffBytes),
     reviewCommand:['node',fileURLToPath(new URL('../../sf88-operator-buyer-cli/cli.mjs',import.meta.url)),
       '--review','--config',reviewPath].map(shell).join(' ') };
 }
@@ -117,16 +126,26 @@ export async function saveMerchantTicket(project, runtimeId, issued) {
 /** The active runtime and a pinned file digest identify the exact issued bytes.
  * No growing in-memory ticket registry or arbitrary caller-supplied path. */
 export async function readMerchantTicket(project, runtimeId, fileId) {
+  return readIssuedDocument(project,runtimeId,fileId,{suffix:'.json',limit:16384,
+    schema:'stellar-forge.upstream-operation-ticket.v1',keys:'expiresAt,operationKey,requestHash,schema,ticket'});
+}
+
+export async function readMerchantOperationHandoff(project, runtimeId, fileId) {
+  return readIssuedDocument(project,runtimeId,fileId,{suffix:'.handoff.json',limit:OPERATION_HANDOFF_MAX_BYTES,
+    schema:OPERATION_HANDOFF_SCHEMA,keys:'files,headers,intentId,rowIndex,schema,ticketHeader,url'});
+}
+
+async function readIssuedDocument(project,runtimeId,fileId,{suffix,limit,schema,keys}) {
   if (typeof fileId !== 'string' || !fileKey.test(fileId)) fail('Select a ticket file issued by this runtime');
   const directory = await merchantTicketDirectory(project);
-  const path = join(directory,'operation-'+runtimeId+'-'+fileId+'.json');
+  const path = join(directory,'operation-'+runtimeId+'-'+fileId+suffix);
   const file = await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
   try {
     const info = await file.stat();
-    if (!info.isFile() || (info.mode&0o077)!==0 || info.size>16384 ||
+    if (!info.isFile() || (info.mode&0o077)!==0 || info.size>limit ||
         typeof process.getuid==='function' && info.uid!==process.getuid() || await realpath(path)!==path)
       fail('Ticket must remain a private original file');
-    const bytes = Buffer.alloc(16385);
+    const bytes = Buffer.alloc(limit+1);
     let size=0;
     while(size<bytes.length) {
       const {bytesRead}=await file.read(bytes,size,bytes.length-size,size);
@@ -134,10 +153,9 @@ export async function readMerchantTicket(project, runtimeId, fileId) {
       size+=bytesRead;
     }
     const value = bytes.subarray(0,size);
-    if (size>16384 || digest(value)!==fileId.slice(-64)) fail('Issued ticket file changed');
+    if (size>limit || digest(value)!==fileId.slice(-64)) fail('Issued ticket file changed');
     const document = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(value));
-    if (document?.schema!=='stellar-forge.upstream-operation-ticket.v1' ||
-        Object.keys(document).sort().join(',')!=='expiresAt,operationKey,requestHash,schema,ticket')
+    if (document?.schema!==schema || Object.keys(document).sort().join(',')!==keys)
       fail('Original operation ticket envelope required');
     return document;
   } finally { await file.close(); }

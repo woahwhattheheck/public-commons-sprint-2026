@@ -14,6 +14,8 @@ For a durable merchant queue, add `--cases-dir "$HOME/.local/share/stellar-forge
 
 The [runtime support flow](RUNTIME_SUPPORT.md) accepts an original SF93 process packet or the original SF30 `history.json` plus matching SF97 `report.json`. It retains exact sources, method/path variants, saved session coverage and optional native journal reconciliation through case save/reopen and complete private handoff. HEAD is available alongside the other five original seller methods; the maintained diagnostic still performs only its existing unpaid GET/OPTIONS work when original catalog evidence supports GET.
 
+The existing workorder stage accepts either the selected diagnostic captures or **Attached runtime case**. Owner-entered scope, deliverables, acceptance criteria and commercial terms are saved with the case. The same SF77 packet, readable workorder and checklist retain the original source review; a runtime-only case can proceed directly to this handoff. [Runtime workorders](RUNTIME_SUPPORT.md#prepare-a-workorder-from-this-case) covers source selection, reopening and the complete-handoff CLI.
+
 ## Diagnose → review → prepare
 
 1. **Diagnose a route.** Enter the actual seller resource, facilitator catalog, buyer origin, Stellar network, public payment recipient and advertised buyer method. Set the credentialed-browser option to match the intended buyer, confirm authorization, then choose **Run diagnosis**. Review the findings and captured scope.
