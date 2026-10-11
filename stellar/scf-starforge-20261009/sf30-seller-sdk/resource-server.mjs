@@ -6,8 +6,8 @@ import { isDeepStrictEqual } from 'node:util';
 import { evaluateAdmission, validateAdmissionTimeout } from './admission.mjs';
 import { compileServicePath, orderServiceRoutes, selectServiceRoute } from './route-path.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
+import { supportsSellerMethod, requiresJsonBody } from './http-methods.mjs';
 
-const METHODS = new Set(['GET', 'HEAD', 'POST']);
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const hopHeaders = new Set(['connection', 'keep-alive', 'proxy-authenticate',
   'proxy-authorization', 'te', 'trailer', 'transfer-encoding', 'upgrade', 'content-length']);
@@ -24,16 +24,16 @@ function importedOffer(raw, allowLocalhost) {
   }
   const offer = structuredClone(raw), bazaar = offer.extensions.bazaar;
   const input = bazaar?.info?.input;
-  if (input?.type !== 'http' || !METHODS.has(input.method) ||
-      (input.method === 'POST' && input.bodyType !== 'json')) {
-    throw new TypeError('Imported service offer requires GET, HEAD or JSON POST');
+  if (input?.type !== 'http' || !supportsSellerMethod(input.method) ||
+      (requiresJsonBody(input.method) && input.bodyType !== 'json')) {
+    throw new TypeError('Imported service offer requires GET, HEAD, DELETE or JSON POST, PUT, PATCH');
   }
   const checked = compileHttpSellerOffer({
     url: offer.resource.url, method: input.method,
     description: offer.resource.description ?? 'Imported API resource',
     serviceName: offer.resource.serviceName, tags: offer.resource.tags,
     paymentOptions: offer.accepts,
-    ...(input.method === 'POST' ? { bodyType: 'json', body: input.body } : {}),
+    ...(requiresJsonBody(input.method) ? { bodyType: 'json', body: input.body } : {}),
   }, { allowLocalhost });
   if (checked.resource.url !== offer.resource.url ||
       checked.accepts.some((terms, index) => {
@@ -81,8 +81,8 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
       importedOffer(originalOffer, allowLocalhost);
     paymentRequiredResponse(offer); // Validate the whole multi-option header before serving or native setup.
     const method = offer.extensions.bazaar.info.input.method;
-    if (!METHODS.has(method) || (method === 'POST' && offer.extensions.bazaar.info.input.bodyType !== 'json')) {
-      throw new TypeError('Seller service supports GET, HEAD and JSON POST only');
+    if (!supportsSellerMethod(method) || (requiresJsonBody(method) && offer.extensions.bazaar.info.input.bodyType !== 'json')) {
+      throw new TypeError('Seller service supports GET, HEAD, DELETE and JSON POST, PUT, PATCH');
     }
     const url = new URL(offer.resource.url), binding = compileServicePath(offer);
     const path = binding.path;
@@ -169,7 +169,7 @@ async function readBody(req, maxBytes) {
     chunks.push(chunk);
   }
   if (!count) return null;
-  if (req.method !== 'POST') throw fault('REQUEST_BODY_NOT_SUPPORTED');
+  if (!requiresJsonBody(req.method)) throw fault('REQUEST_BODY_NOT_SUPPORTED');
   if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '')) {
     throw fault('JSON_CONTENT_TYPE_REQUIRED', 415);
   }

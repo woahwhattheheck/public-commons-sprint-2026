@@ -18,24 +18,31 @@ function https(value) {
   return url;
 }
 
-/** No network, operator settings, signer, approval or automatic option choice. */
-export async function prepare(args) {
-  need(args.length === required.length * 2, 'PREPARE_EXPLICIT_SELECTION_REQUIRED');
-  const flags = new Map();
-  for (let i = 0; i < args.length; i += 2) {
-    need(required.includes(args[i]) && !flags.has(args[i]), 'INVALID_PREPARE_FLAGS');
-    flags.set(args[i], args[i+1]);
-  }
-  need(required.every(key => flags.has(key)), 'PREPARE_EXPLICIT_SELECTION_REQUIRED');
-  const rowIndex = index(flags.get('--row')), acceptIndex = index(flags.get('--accept'));
-  const destination = abs(flags.get('--out'), 'DRAFT_PATH_MUST_BE_ABSOLUTE');
-  const raw = await bytes(flags.get('--discovery'), 1048576, 'INVALID_DISCOVERY_FILE');
+/** Shared by the original CLI and Atlas. Pure preparation: no I/O or signer. */
+export function prepareReview(raw, selection) {
+  need(raw instanceof Uint8Array && raw.byteLength <= 1048576, 'INVALID_DISCOVERY_FILE');
+  need(object(selection) && Object.keys(selection).every(key =>
+    ['rowIndex','acceptIndex','intentId','url','method','bodyFile','headers'].includes(key)),
+    'PREPARE_EXPLICIT_SELECTION_REQUIRED');
+  const {rowIndex, acceptIndex, intentId, url, method, bodyFile, headers} = selection;
+  need(typeof method === 'string' && ['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(method),
+    'INVALID_METHOD');
+  need(Number.isSafeInteger(rowIndex) && rowIndex >= 0 &&
+    Number.isSafeInteger(acceptIndex) && acceptIndex >= 0, 'EXPLICIT_SELECTION_INDEX_REQUIRED');
   let saved;
   try { saved = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
   catch { throw new InputError('DISCOVERY_JSON_INVALID'); }
   need(object(saved), 'INVALID_SAVED_DISCOVERY');
   let rows, source = null, sourceEnvelope;
-  if (saved.mode === 'ORIGINAL_UNSIGNED_CATALOG') {
+  if (saved.schema === 'scf61-observed-native-page-v1') {
+    need(saved.readOnly === true && saved.paidOrSettled === false &&
+      !['resources','items','originalListings'].some(key => Object.hasOwn(saved,key)) &&
+      (saved.sourceUrl === undefined || typeof saved.sourceUrl === 'string'),
+      'INVALID_SAVED_DISCOVERY');
+    rows = saved.nativeProviderRows;
+    source = saved.sourceUrl ?? null;
+    sourceEnvelope = 'resources';
+  } else if (saved.mode === 'ORIGINAL_UNSIGNED_CATALOG') {
     need(!Object.hasOwn(saved, 'resources') && !Object.hasOwn(saved, 'items') &&
       ['resources','items'].includes(saved.sourceEnvelope) &&
       typeof saved.source === 'string', 'INVALID_SAVED_DISCOVERY');
@@ -51,7 +58,7 @@ export async function prepare(args) {
     acceptIndex < row.accepts.length && object(row.accepts[acceptIndex]), 'DISCOVERY_ACCEPT_NOT_FOUND');
   need(row.type === undefined || row.type === 'http', 'HTTP_RESOURCE_REQUIRED');
   const advertised = https(typeof row.resource === 'string' ? row.resource : row.resource?.url);
-  const requested = https(flags.get('--url'));
+  const requested = https(url);
   // The operator supplies concrete query values. Selecting another host/path is
   // a different offer; templates must first be resolved in its source workflow.
   need(!/[{}]|%7[bd]/i.test(advertised.pathname) &&
@@ -59,7 +66,6 @@ export async function prepare(args) {
     'CONCRETE_URL_MUST_MATCH_SELECTED_RESOURCE_PATH');
   const input = row.extensions?.bazaar?.info?.input;
   need(input?.type === undefined || input.type === 'http', 'HTTP_RESOURCE_REQUIRED');
-  const method = flags.get('--method');
   need(input?.method === undefined || input.method === method, 'DISCOVERED_METHOD_MISMATCH');
   const accepted = row.accepts[acceptIndex];
   need(Number.isInteger(accepted.maxTimeoutSeconds) && accepted.maxTimeoutSeconds >= 1 &&
@@ -68,13 +74,32 @@ export async function prepare(args) {
   const expect = { scheme:accepted.scheme, network:accepted.network, asset:accepted.asset,
     payTo:accepted.payTo, maxAtomic:accepted.amount, maxTimeoutSeconds:accepted.maxTimeoutSeconds };
   if (accepted.extra?.paymentFlow !== undefined) expect.paymentFlow = accepted.extra.paymentFlow;
-  const op = operation({intentId:flags.get('--intent-id'), url:requested.href, method, expect});
+  const op = operation({intentId, url:requested.href, method, expect,
+    ...(bodyFile === undefined ? {} : {bodyFile}), ...(headers === undefined ? {} : {headers})});
   const origin = preparedFrom({schema:'stellar-forge.sf88.saved-discovery.v1',
     discoveryFileSha256:createHash('sha256').update(raw).digest('hex'), source, sourceEnvelope,
     rowIndex, acceptIndex, originalListing:structuredClone(row)});
   const draft = {operation:op, captureBody:false, preparedFrom:origin};
   const data = Buffer.from(JSON.stringify(draft, null, 2) + '\n');
   need(data.length <= 65536, 'PREPARED_CONFIG_EXCEEDS_CONFIG_LIMIT');
+  return {draft, data, configSha256:createHash('sha256').update(data).digest('hex')};
+}
+
+/** Original file-based CLI; output remains private, create-only and fsynced. */
+export async function prepare(args) {
+  need(args.length === required.length * 2, 'PREPARE_EXPLICIT_SELECTION_REQUIRED');
+  const flags = new Map();
+  for (let i = 0; i < args.length; i += 2) {
+    need(required.includes(args[i]) && !flags.has(args[i]), 'INVALID_PREPARE_FLAGS');
+    flags.set(args[i], args[i+1]);
+  }
+  need(required.every(key => flags.has(key)), 'PREPARE_EXPLICIT_SELECTION_REQUIRED');
+  const rowIndex = index(flags.get('--row')), acceptIndex = index(flags.get('--accept'));
+  const destination = abs(flags.get('--out'), 'DRAFT_PATH_MUST_BE_ABSOLUTE');
+  const raw = await bytes(flags.get('--discovery'), 1048576, 'INVALID_DISCOVERY_FILE');
+  const {draft, data, configSha256} = prepareReview(raw, {rowIndex,acceptIndex,
+    intentId:flags.get('--intent-id'),url:flags.get('--url'),method:flags.get('--method')});
+  const op = draft.operation, origin = draft.preparedFrom;
   let file;
   try { file = await open(destination, 'wx', 0o600); }
   catch (error) { throw new InputError(error.code === 'EEXIST' ? 'DRAFT_DESTINATION_EXISTS' : 'DRAFT_DESTINATION_UNAVAILABLE'); }
@@ -86,7 +111,7 @@ export async function prepare(args) {
   }
   await file.close();
   return {mode:'OFFLINE_CONFIG_PREPARED', configPath:destination,
-    configSha256:createHash('sha256').update(data).digest('hex'),
+    configSha256,
     sourceFileSha256:origin.discoveryFileSha256, rowIndex, acceptIndex,
     intentId:op.intentId, sellerUrl:op.url, method:op.method, acceptedTerms:op.expect,
     sourceStatus:'SAVED_UNVERIFIED_DISCOVERY',
