@@ -164,7 +164,9 @@ function resolver(context, item) {
       if (!own(context.variables, name)) fail('Supply a public sample for unresolved variable: ' + name);
       return expand(context.variables[name], publicValue, [...stack, name]);
     });
-    if (/\{\{|\}\}/.test(text)) fail('Request has an unresolved or malformed variable');
+    // Consecutive closing braces are ordinary nested JSON; an opening token
+    // remaining after expansion still identifies an unresolved variable.
+    if (/\{\{/.test(text)) fail('Request has an unresolved or malformed variable');
     if (text.length > 16384) fail('Resolved request value exceeds 16 KiB');
     return text;
   }
