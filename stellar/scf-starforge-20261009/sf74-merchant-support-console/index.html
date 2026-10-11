@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stellar merchant support | SF74</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/console.mjs"></script>
+</head>
+<body>
+<header><div class="wrap header"><span class="mark">✳</span><div><p class="eyebrow">Stellar Discovery Trust Layer · SF74</p><h1>Merchant support console</h1><p>Turn one authorized seller issue into a source-grounded remediation plan, using the original SF70 diagnostic.</p></div></div></header>
+<main class="wrap">
+  <section class="card"><div class="split"><div><h2>1 · Inspect one real merchant resource</h2><p>Run the existing SF52 seller/Bazaar and SF68 browser-origin diagnostics as one read-only intake. Fill the <em>actual</em> authorized endpoints and terms, not example or guessed values.</p></div><div class="notice">Localhost only<br>No signing or paid requests<br>No hosted accounts or persistence</div></div>
+    <form id="intake-form">
+      <div class="form-grid">
+        <label class="full">Seller resource URL <small>Actual HTTPS operation to diagnose</small><input required name="resource" type="url" maxlength="2048" placeholder="https://seller.example/paid" autocomplete="off"></label>
+        <label class="full">Facilitator Bazaar catalog URL <small>Original discovery/resources endpoint, as supplied by seller/provider</small><input required name="catalog" type="url" maxlength="2048" placeholder="https://provider.example/discovery/resources" autocomplete="off"></label>
+        <label>Buyer browser origin <small>Different origin from seller; no path/query</small><input required name="origin" type="url" maxlength="2048" placeholder="https://buyer.example" autocomplete="off"></label>
+        <label>Stellar network <small>Exact original provider network</small><select required name="network"><option value="stellar:testnet">stellar:testnet</option><option value="stellar:pubnet">stellar:pubnet</option></select></label>
+        <label class="full">Seller public payTo recipient <small>Provided by the seller; never paste secret keys</small><input required name="payTo" type="text" maxlength="256" placeholder="Stellar public recipient address" autocomplete="off" spellcheck="false"></label>
+        <label>Intended buyer operation <small>Unpaid GET/CORS checks are method-aware, not paid retry</small><select name="method"><option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="PATCH">PATCH</option><option value="DELETE">DELETE</option></select></label>
+      </div>
+      <label class="approval"><input type="checkbox" id="permission" required><span>I am authorized to assess these seller/facilitator public endpoints. I understand the tool does not purchase, sign, settle, or validate seller consent automatically.</span></label>
+      <div class="actions"><button id="run" type="submit">Run original merchant diagnosis</button><span class="hint">No network probes until you choose Run.</span></div>
+    </form>
+  </section>
+  <p id="status" class="status" role="status" aria-live="polite">Ready for your merchant-specific source information.</p>
+  <section id="output" hidden>
+    <div class="card"><div class="eyebrow">Original-source outcome</div><h2 id="outcome"></h2><p id="observed"></p><p id="source-note"></p><div id="scope" class="scope"></div><h3>2 · Actionable original findings</h3><ol id="actions" class="findings"></ol><p id="safeguards" class="notice"></p></div>
+    <div class="card"><div class="split"><div><h3>3 · Handoff source without rewriting evidence</h3><p>This exact complete JSON belongs with the original SF49 seller case. Obtain separate customer agreement and terms before offering a paid fix.</p></div><button id="copy" type="button" disabled class="secondary">Copy original JSON</button></div><pre id="raw-report" tabindex="0"></pre></div>
+  </section>
+</main>
+<footer class="wrap">SCF SF74 · Local operator interface only. Zero claims of external merchant authorization, customer adoption, or paid Stellar settlement.</footer>
+</body>
+</html>
