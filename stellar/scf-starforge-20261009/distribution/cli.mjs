@@ -98,6 +98,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
   merchant-accounting-pricing                Import a saved original pricing report as accounting terms
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
+  merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases
