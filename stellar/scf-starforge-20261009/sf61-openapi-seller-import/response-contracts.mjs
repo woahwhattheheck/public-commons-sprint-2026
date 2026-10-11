@@ -19,7 +19,7 @@ export function compileOpenApiResponseContract(document, offer, { specSha256 } =
   if (document.jsonSchemaDialect !== undefined &&
       !['https://json-schema.org/draft/2020-12/schema', 'https://spec.openapis.org/oas/3.1/dialect/base'].includes(document.jsonSchemaDialect))
     fail('Unsupported OpenAPI response schema dialect');
-  const refs = createOpenApiResolver(document), item = refs.reference(document.paths[offer.path]);
+  const refs = createOpenApiResolver(document, { direction: 'response' }), item = refs.reference(document.paths[offer.path]);
   const operation = item[offer.method.toLowerCase()];
   if (!plain(operation) || !plain(operation.responses)) fail('Selected operation must declare responses');
   const responses = Object.create(null);

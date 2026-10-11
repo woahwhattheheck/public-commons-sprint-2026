@@ -1,0 +1,20 @@
+{
+  "schema": "stellar-forge.mysql-source.v1",
+  "connection": { "host": "127.0.0.1", "port": 3306, "database": "sf30_demo", "user": "sf30_reader", "passwordEnv": "SF30_MYSQL_PASSWORD", "tls": "local-plaintext" },
+  "maxConnections": 4,
+  "maxPending": 32,
+  "queries": {
+    "catalog": {
+      "sql": "SELECT id, title, region, price, updated_at FROM products WHERE region = ? AND id > CAST(? AS UNSIGNED) ORDER BY id",
+      "parameterOrder": ["region", "after_id"],
+      "parameters": {
+        "region": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "after_id": { "type": "integer", "minimum": "0", "default": "0" }
+      },
+      "columns": ["id", "title", "region", "price", "updated_at"],
+      "maxRows": 100,
+      "maxBytes": 524288,
+      "timeoutMs": 5000
+    }
+  }
+}

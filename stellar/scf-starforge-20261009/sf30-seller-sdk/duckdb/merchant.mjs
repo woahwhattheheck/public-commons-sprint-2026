@@ -3,6 +3,7 @@ import { startSellerService, readSellerConfig } from '../serve.mjs';
 import { startSellerOperations } from '../operations/server.mjs';
 import { openDuckdbSourceFile } from './source.mjs';
 import { isDeepStrictEqual } from 'node:util';
+import { validateAvailabilityDirectory } from '../availability/store.mjs';
 
 export function bindDuckdbSeller(config, source, bindings) {
   if (!Array.isArray(config?.routes) || !source?.route || !bindings || typeof bindings !== 'object' ||
@@ -30,9 +31,10 @@ export function bindDuckdbSeller(config, source, bindings) {
 }
 
 export async function startDuckdbMerchant({ source, config, bindings, port = 8423, operationsPort = 8424,
-  nativeFactory = null, maxInFlight = 64, drainGraceMs = 60000 } = {}) {
+  nativeFactory = null, maxInFlight = 64, drainGraceMs = 60000, availabilityDirectory } = {}) {
+  if (availabilityDirectory !== undefined) validateAvailabilityDirectory(availabilityDirectory);
   const { service, handlers } = bindDuckdbSeller(config, source, bindings);
-  const seller = await startSellerService({ config: service, handlers, port, nativeFactory, maxInFlight, drainGraceMs });
+  const seller = await startSellerService({ config: service, handlers, port, nativeFactory, maxInFlight, drainGraceMs, availabilityDirectory });
   let operations, closing;
   try { if (operationsPort !== null) operations = await startSellerOperations(seller, { port: operationsPort }); }
   catch (issue) { await seller.close().finally(() => source.close()); throw issue; }
@@ -45,6 +47,7 @@ export async function startDuckdbMerchant({ source, config, bindings, port = 842
 export async function startDuckdbSeller({ sourceFile, configFile, python = 'python3', environment = process.env,
   expectedSourceSha256, expectedSourceConfig, expectedServiceConfig,
   ...options } = {}) {
+  if (options.availabilityDirectory !== undefined) validateAvailabilityDirectory(options.availabilityDirectory);
   const config = await readSellerConfig(configFile);
   const { source, config: declaration } = await openDuckdbSourceFile(sourceFile, { python, environment });
   try {

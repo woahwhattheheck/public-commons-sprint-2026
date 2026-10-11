@@ -6,7 +6,8 @@ SF96 operations dashboard. It supports configure → review → save → run →
 stop → reopen. GET, HEAD, DELETE and JSON POST, PUT, PATCH backends use the
 original native method support and need no custom JavaScript.
 Optional GET/HEAD result sharing, declared response validation and backend
-availability controls use the same native launcher and saved package.
+availability controls use the same native launcher and saved package. Durable
+POST setup issues original merchant tickets and a ready private buyer review.
 
 ## Start
 
@@ -14,10 +15,15 @@ Use Node 22+ and the full source checkout. Create a private project directory
 outside the checkout, then launch:
 
 ~~~sh
+npm ci --prefix stellar-forge/payment-auto-catalog --ignore-scripts
 mkdir -m 700 /tmp/my-merchant-projects
 node stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs \
   --out-parent /tmp/my-merchant-projects --port 0
 ~~~
+
+The install supplies the pinned engine for API string patterns. Existing
+descriptions without patterns can run without it; pattern-bearing schemas
+require the engine and retain their original assertions.
 
 Open the complete loopback URL printed by the command. Its fragment contains
 the workspace's temporary access token. The interface uses exact local origin
@@ -36,10 +42,15 @@ reuses the SF82 description with explicitly nonpayable demonstration terms.
    network, asset identifier, payment recipient and timeout.
 3. Select operations, choose their declared backend servers, and enter positive
    prices in atomic units. The original payment compiler enforces its amount limit.
-4. Map backend authentication headers to **environment-variable names**.
-   Header API keys and HTTP bearer/basic are supported. Set the complete
-   credential header value in the environment before launching the workspace.
-   The browser never requests or saves credential values.
+4. Select a declared backend security alternative and map header API keys or
+   HTTP bearer/basic to **environment-variable names**. Set the complete header
+   value in the launch environment. For a declared OAuth `clientCredentials`
+   flow, open **OAuth client credentials**, review its resolved token endpoint
+   and required scopes, then enter client ID/secret environment references and
+   the provider's token authentication method. The original provider owns
+   renewal and cache credential identity. Follow the complete
+   [OAuth setup and saved-package guide](AUTHENTICATION.md). The browser accepts
+   credential references only.
 5. Enter a short public description and, where needed, a **public request example**
    containing `pathParams`, `query`, and a JSON `body`. These are reusable values
    advertised to buyers, so use demonstration values. The original schemas check
@@ -130,8 +141,7 @@ entries/bytes/hits/shared waiters, source-call totals and backend circuit state.
 **Invalidate** clears only the chosen binding for that exact running seller.
 Already admitted requests finish in their original generation; subsequent reads
 cannot join it. A stale tab receives a conflict if the seller has restarted.
-The original operations dashboard keeps its read-only interface; cache writes
-require the workspace's existing private token and exact origin.
+Cache writes require the workspace's existing private token and exact origin.
 
 Settings are saved in the original `merchant-plan.json` and `upstreams.json`.
 SF82 resumes those same bindings with fresh environment credentials. Cache bodies
@@ -164,6 +174,71 @@ Optional `cache.maxSourceInFlight` cannot exceed that operation's `maxInFlight`.
 The cache constructor owns all other numeric and header validation. Omit `cache`
 to retain a fresh backend call per application invocation. Mutation methods
 reject a cache policy instead of silently ignoring it.
+
+## Durable POST setup and buyer handoff
+
+For a selected POST route, open **Durable POST operations** and enable the
+merchant-issued ticket requirement. Supply a stable operation scope, canonical
+absolute state directory, and the **name** of the environment variable containing
+the persistent 32-byte hexadecimal operation key. Configure the original buyer
+ticket/backend operation-key headers and ledger count, byte, lifetime and wait
+limits. The original upstream compiler validates all settings and requires a
+distinct state directory and admission binding for each configured write route.
+GET/HEAD sharing and POST idempotency remain separate policies on their routes.
+
+Set the real key in the launch environment before starting this workspace.
+Saving checks its reference and required shape without reading or saving a key.
+At startup the workspace creates missing state directories with mode `0700`;
+existing directories must already be private and have no symlink aliases. Keep
+the same scope, directory and key when restarting or publishing another release.
+The generated shell guide explains the same directory setup for direct launches.
+
+In the running seller, choose an operation and enter a merchant operation ID,
+opaque customer reference, ticket lifetime and exact public request. The form
+starts with the original public path/query/body examples. Its request is checked
+by the **active seller's original route selection and SF89 input schema** before
+the bound original handler issues it. Ordinary headers must match the eventual
+buyer request, including spelling of their values; surrounding whitespace is
+rejected because browser and HTTP header processing would trim it.
+The form lists the configured forwarded headers. Include the buyer's actual
+`accept-language`, `x-region` or other listed values in the request JSON before
+issuing its ticket. The merchant and original SF88 buyer share the same ordinary
+header validation; private ticket, authentication and payment headers retain
+their original separate assembly.
+
+**Create private buyer ticket file** stores the original five-field
+`stellar-forge.upstream-operation-ticket.v1` envelope, the exact JSON body and
+ordinary headers, the original seller's concrete request offer, and a prepared
+SF88 buyer review. These are create-only `0600` files in `operation-tickets/`.
+The original seller materializes dynamic paths without changing its accepted
+payment terms or schema; the original SF88 `prepareReview` builds the buyer
+config and its private ticket loader checks the resulting file. No operation,
+payment, signer or backend is invoked by preparation.
+
+Run the displayed **complete buyer review command** on the same host. The review
+is ready for the maintained [buyer workspace and inbox](../../sf88-operator-buyer-cli/OPERATION_TICKETS.md)
+with its actual operator, budget and signer. Its stable buyer intent derives
+from the original operation key, so issuing another ticket for the same merchant
+operation does not silently invent another buyer intent. A browser download
+contains only the original ticket envelope. On Linux or macOS, run `chmod 600`
+on that download before importing it; when transferring hosts, move the matching
+body/headers/offer privately and prepare with the destination's actual paths.
+Pass the supplied ordinary JSON file as `--headers-file`, the exact body as
+`--body-file`, and the separate ticket as `--ticket-file`. The original buyer
+stores those header values in its prepared config, so later file changes do not
+alter the reviewed request or an existing inbox job. The same private review
+can also be imported by the original Node `Buyer.fromConfig` or Python
+`Buyer.from_config` customer application.
+
+Ticket bytes and key values never enter workspace status or DOM summaries.
+Issuance/download calls require the workspace token, exact origin and current
+runtime ID. Downloads pin the original private bytes by digest and cannot name
+arbitrary paths. Stop/restart invalidates the old runtime controls while keeping
+its files and original durable operation records. Use **Open operations
+dashboard** for the already-delivered list, detail, audit and guarded recovery
+flow. The original lifecycle's actual idle signal closes the same bound SQLite
+controllers after dispatch and accepted console work finish, including late
+work following a forced drain error.
 
 ## Explicit public facade
 
@@ -207,6 +282,7 @@ Each save creates a new directory; an existing name is never overwritten.
 | compiled/ | Actual original offers, seller service and compiler manifest |
 | merchant-package.json | File hashes and explicit source transformations |
 | support/ | Private original support-workflow output |
+| operation-tickets/ | Issued private tickets and exact original buyer handoff files |
 | RUN.md | Exact shell command and route summary |
 
 Reopening verifies the prepared file and route-case hashes. Save changed input under a new

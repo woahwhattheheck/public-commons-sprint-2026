@@ -8,9 +8,10 @@ SF81/SF36 terminal approval and budget ledger, SF103 native signer, SF82 checkou
 evidence and SF31 response writer continue to do their existing jobs.
 
 The result is usable after a process restart: the operator can inspect the exact
-source and request, execute the queued operation from its private workspace, find
-the returned file, recover the original evidence and export the existing operator
-report. There is one stable intent and one existing queue attempt record.
+source and request, diagnose its runtime, execute the queued operation from its
+private workspace, find the returned file, recover original evidence, finalize
+the original accounting and export the existing operator report. There is one
+stable intent and one existing queue attempt record.
 
 ## Prerequisites
 
@@ -21,12 +22,19 @@ workspace's declared dependencies as described in that guide, on the operator
 machine. Do not install a separate payment implementation for this command.
 
 Have the provider's actual approved HTTPS URL and the public address of the
-operator's testnet payer. Ask the provider for its supported scheme, asset,
+operator's payer on the selected network. Ask the provider for its supported scheme, asset,
 account/funding requirements, expected 402 flow and facilitator/RPC details.
-Use its original response to select the offer. This setup supports the existing
-workspace's `exact` / `stellar:testnet` path; custom schemes require their own
-native integration. Provider access requirements and commercial terms remain
+Use its original response to select the offer. This setup consumes the existing
+workspace's `exact` Stellar network catalog, currently `stellar:testnet` and
+`stellar:pubnet`. Custom schemes require their own native integration.
+Provider access requirements and commercial terms remain
 separate from the software's local setup and payment outcome records.
+
+The selected offer controls the network, asset and recipient. There is no network
+switch that rewrites an existing quote or case. Pubnet uses real mainnet assets;
+the source selection, workspace, policy, inbox and accounting receipt retain that
+network throughout the original approval and payment flow. Testnet examples do
+not establish mainnet funding or a mainnet payment.
 
 The parent directory of a new pilot must exist, belong to the current user, have
 mode 0700 and resolve without symlinks. Example private root:
@@ -75,7 +83,7 @@ node stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli
   --offer-index 0 --intent-id provider-resource-001 --max-atomic 1000 \
   --dir /absolute/private-pilots/provider-resource-001 \
   --actor YOUR_OPERATOR_ID --service YOUR_VERIFIED_PROVIDER_ID \
-  --payer YOUR_TESTNET_G_ADDRESS --python /usr/bin/python3
+  --payer YOUR_SELECTED_NETWORK_G_ADDRESS --python /usr/bin/python3
 ```
 
 The index and amount above are examples, not a provider quote. The ceiling must
@@ -97,7 +105,7 @@ node stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli
   prepare --handoff /absolute/private-pilots/existing-handoff \
   --dir /absolute/private-pilots/provider-resource-001 \
   --actor YOUR_OPERATOR_ID --service YOUR_VERIFIED_PROVIDER_ID \
-  --payer YOUR_TESTNET_G_ADDRESS --python /usr/bin/python3
+  --payer YOUR_SELECTED_NETWORK_G_ADDRESS --python /usr/bin/python3
 ```
 
 Preparation preserves the exact original capture and, for imports, its original
@@ -116,23 +124,46 @@ the data. Defaults are 64 MiB and 30 seconds, configurable with
 `--max-response-bytes` and `--response-timeout-ms`. The existing writer preserves
 completed output and reports a private partial path when appropriate.
 
-The original workspace's `--secret-env`, `--signer-provider`, `--rpc` and `--https-proxy` options
-are forwarded unchanged. A wallet provider is a trusted operator module, never a
+The original workspace's `--secret-env`, `--signer-provider`, `--rpc`,
+`--https-proxy` and `--https-proxy-env` options are forwarded unchanged.
+A wallet provider is a trusted operator module, never a
 file chosen by a seller. The source workspace validates these options and owns
 the signer. Only use options present in the current merged workspace version.
-An explicit HTTPS proxy comes from the trusted operator; the original workspace
+An explicit CONNECT proxy comes from the trusted operator; the original workspace
 binds it to this merchant origin and the original queue validates that binding.
+Choose either a direct proxy URL or its environment-variable name. A named proxy
+keeps the resolved URL in the runtime environment and is validated again before
+the permanent inbox attempt. Supplying both options is rejected by the original
+workspace before a usable case is published.
+The original parser accepts an `http://HOST:PORT` proxy without credentials or
+path; the destination connection still verifies the merchant's HTTPS identity.
+
+The shared [network catalog](../sf86-rpc-transfer-reconcile/networks.json) supplies
+the default RPC for the selected network. `--rpc` retains the original signer's
+explicit provider setting and opposite-network provider checks. The current
+catalog defaults to SDF for testnet and Gateway for pubnet; use the current
+[mainnet operating guide](../sf88-operator-buyer-cli/MAINNET.md) for the native
+provider and accounting contracts. `show` reports the selected network, asset,
+recipient, configured public payer and RPC origin after rechecking the original
+source/workspace/inbox binding.
 
 ## 3. Review, then execute from the trusted terminal
 
 ```sh
 node stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli.mjs \
   review --dir /absolute/private-pilots/provider-resource-001
+node stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli.mjs \
+  diagnose --dir /absolute/private-pilots/provider-resource-001
 ```
 
 Review re-derives the saved original handoff, checks the workspace and queued
 configuration against it, and launches the original SF88 workspace review. It
 does not open `operator-keys.json`, load a signer or contact the provider.
+`diagnose` calls the original workspace diagnostics: terminal availability,
+installed official SDK, selected proxy configuration and the configured wallet
+environment/provider reference. It loads no wallet key, makes no purchase and
+does not claim the inbox attempt. Its result identifies setup work on this same
+case; it does not initialize another one.
 
 With the existing wallet supplied to its configured runtime environment or
 trusted provider, execute the exact saved request:
@@ -196,6 +227,32 @@ file completion and the original chain tools for transaction reconciliation.
 For an unattempted operation, `cancel --dir ...` records the original queue's
 local cancellation. An attempted or cancelled intent cannot be executed again
 through this command. `show` includes the applicable original commands.
+
+## 5. Finalize the existing payment accounting
+
+After an original execution has retained its checkout/reservation record, use:
+
+```sh
+node stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli.mjs \
+  finalize --dir /absolute/private-pilots/provider-resource-001
+```
+
+This invokes the original queue's `finalize` command with the same inbox, intent
+and bound workspace. The original SF36/SF86 finalizer checks the approved request,
+network, native transfer and reservation and owns the resulting ledger update.
+It opens the original accounting keys as needed; it does not open the wallet,
+create another payment attempt or sign a transaction. A queued or locally
+cancelled request has no executed purchase to finalize and is rejected before
+this child command runs.
+
+Reopening `show` includes the queue's saved accounting result. The exported
+report also supplies the original workspace-bound finalization command and its
+separate merchant/file outcomes. Repeat finalization only through this same
+original lifecycle: the shared finalizer reuses an authenticated result when
+already finalized. A pending or failed observation remains its actual result;
+the wrapper preserves the original command's exit status. See
+[FINALIZATION.md](../sf88-operator-buyer-cli/FINALIZATION.md) for receiver/outbox
+options and the complete recovery procedure.
 
 ## Source and compatibility
 

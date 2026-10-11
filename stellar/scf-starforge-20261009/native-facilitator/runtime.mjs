@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { validateConfig, requireValue, FacilitatorError } from './config.mjs';
 import { createRpcReadiness } from './readiness.mjs';
 import { acquireSignerOwnership } from './ownership.mjs';
+import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 
@@ -127,7 +128,8 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
 
 /** Reuse the original SF30 seller and native server, with no intermediary HTTP service. */
 export async function startSelfFacilitatedSeller({ facilitatorConfig, config, port = 0, handlers = {},
-  environment = process.env } = {}) {
+  environment = process.env, availabilityDirectory } = {}) {
+  if (availabilityDirectory !== undefined) validateAvailabilityDirectory(availabilityDirectory);
   const policy = validateConfig(facilitatorConfig);
   const facilitator = await createNativeFacilitator(policy, {environment});
   let seller;
@@ -136,7 +138,7 @@ export async function startSelfFacilitatedSeller({ facilitatorConfig, config, po
       import('../sf30-seller-sdk/serve.mjs'), import('../sf30-seller-sdk/native-factory.mjs'),
     ]);
     seller = await startSellerService({config,port,handlers,maxInFlight:1,
-      drainGraceMs:facilitator.drainGraceMs,
+      drainGraceMs:facilitator.drainGraceMs, availabilityDirectory,
       nativeFactory:compiled => {
         // Refuse a service whose advertised quotes this backend cannot accept.
         for (const route of compiled.routes) for (const terms of route.offer.accepts) {
