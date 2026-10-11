@@ -1,21 +1,24 @@
 {
-  "name": "creator-pool-backend",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "engines": { "node": ">=20" },
-  "scripts": {
-    "prechain": "node -e \"require('fs').mkdirSync('data/ganache-db',{recursive:true})\"",
-    "chain": "ganache --wallet.deterministic --chain.chainId 1337 --server.host 127.0.0.1 --server.port 8545 --database.dbPath ./data/ganache-db",
-    "deploy:local": "node scripts/deploy-local.mjs",
-    "start": "node server.mjs",
-    "flow": "node scripts/run-flow.mjs"
-  },
-  "dependencies": {
-    "ethers": "6.13.4",
-    "solc": "0.8.26"
-  },
-  "devDependencies": {
-    "ganache": "7.9.2"
-  }
+  "name": "creator-pool-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "prechain": "node -e \"require('fs').mkdirSync('data/ganache-db',{recursive:true})\"",
+    "chain": "ganache --wallet.deterministic --chain.chainId 1337 --server.host 127.0.0.1 --server.port 8545 --database.dbPath ./data/ganache-db",
+    "deploy:local": "node scripts/deploy-local.mjs",
+    "start": "node server.mjs",
+    "flow": "node scripts/run-flow.mjs",
+    "demo": "node scripts/start-local.mjs"
+  },
+  "dependencies": {
+    "ethers": "6.13.4",
+    "solc": "0.8.26"
+  },
+  "devDependencies": {
+    "ganache": "7.9.2"
+  }
 }
