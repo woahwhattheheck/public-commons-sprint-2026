@@ -14,6 +14,7 @@ final class Starforge_SF98_Woo {
     const TOLERANCE = 300;
     const MAX_BODY = 8192;
     const MAX_AMOUNT = '170141183460469231731687303715884105727';
+    const METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
     static function table() {
         global $wpdb;
@@ -80,7 +81,7 @@ final class Starforge_SF98_Woo {
             ($x['settlement'] ?? '') !== 'ORIGINAL_NATIVE_SUCCESS' ||
             !preg_match('/^[0-9a-f]{64}$/D', $x['eventId'] ?? '') ||
             !preg_match('/^[A-Za-z0-9_-]{1,80}$/D', $x['routeId'] ?? '') ||
-            !in_array($x['method'] ?? null, ['GET', 'HEAD', 'POST'], true) ||
+            !in_array($x['method'] ?? null, self::METHODS, true) ||
             !in_array($x['network'] ?? null, ['stellar:testnet', 'stellar:pubnet'], true) ||
             !self::amount_ok($x['amountAtomic'] ?? null) ||
             !preg_match('/^[0-9a-f]{64}$/D', $x['assetDigest'] ?? '') ||
@@ -191,7 +192,7 @@ final class Starforge_SF98_Woo {
         $asset = sanitize_text_field(wp_unslash($_POST['asset'] ?? ''));
         if (!$order || !in_array($order->get_status(), ['pending','on-hold'], true) ||
             !preg_match('/^[A-Za-z0-9_-]{1,80}$/D', $route) ||
-            !in_array($method, ['GET','HEAD','POST'], true) ||
+            !in_array($method, self::METHODS, true) ||
             !in_array($network, ['stellar:testnet','stellar:pubnet'], true) ||
             !self::amount_ok($amount) || strlen($asset) < 3 || strlen($asset) > 128 ||
             preg_match('/[\x00-\x1f\x7f]/', $asset) ||
@@ -282,7 +283,9 @@ final class Starforge_SF98_Woo {
         foreach ([['order_id','Woo order ID'], ['route_id','Seller route ID'], ['amount_atomic','Atomic amount'], ['asset','SEP-41 asset identifier']] as $field) {
             echo '<p><label>' . esc_html($field[1]) . ' <input required name="' . esc_attr($field[0]) . '" autocomplete="off" size="42"></label></p>';
         }
-        echo '<p><label>Method <select name="method"><option>GET</option><option>HEAD</option><option>POST</option></select></label> ';
+        echo '<p><label>Method <select name="method">';
+        foreach (self::METHODS as $method) echo '<option>' . esc_html($method) . '</option>';
+        echo '</select></label> ';
         echo '<label>Network <select name="network"><option>stellar:testnet</option><option>stellar:pubnet</option></select></label></p>';
         submit_button('Prebind order (no charge, no fulfillment)');
         echo '</form><h2>Original accepted notice queue</h2><table class="widefat striped"><thead><tr><th>Order</th><th>Event</th><th>Status</th><th>Received UTC</th><th>Independent chain review and fulfillment</th></tr></thead><tbody>';

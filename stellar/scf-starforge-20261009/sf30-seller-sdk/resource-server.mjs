@@ -4,10 +4,11 @@ import { compileHttpSellerOffer, paymentRequiredResponse, MAX_PAYMENT_OPTIONS } 
 import { validateHeaderName, validateHeaderValue } from 'node:http';
 import { isDeepStrictEqual } from 'node:util';
 import { evaluateAdmission, validateAdmissionTimeout } from './admission.mjs';
+import { createHandlerExecution, validateHandlerTimeout } from './handler-execution.mjs';
 import { compileServicePath, orderServiceRoutes, selectServiceRoute } from './route-path.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
+import { supportsSellerMethod, requiresJsonBody } from './http-methods.mjs';
 
-const METHODS = new Set(['GET', 'HEAD', 'POST']);
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const hopHeaders = new Set(['connection', 'keep-alive', 'proxy-authenticate',
   'proxy-authorization', 'te', 'trailer', 'transfer-encoding', 'upgrade', 'content-length']);
@@ -24,16 +25,16 @@ function importedOffer(raw, allowLocalhost) {
   }
   const offer = structuredClone(raw), bazaar = offer.extensions.bazaar;
   const input = bazaar?.info?.input;
-  if (input?.type !== 'http' || !METHODS.has(input.method) ||
-      (input.method === 'POST' && input.bodyType !== 'json')) {
-    throw new TypeError('Imported service offer requires GET, HEAD or JSON POST');
+  if (input?.type !== 'http' || !supportsSellerMethod(input.method) ||
+      (requiresJsonBody(input.method) && input.bodyType !== 'json')) {
+    throw new TypeError('Imported service offer requires GET, HEAD, DELETE or JSON POST, PUT, PATCH');
   }
   const checked = compileHttpSellerOffer({
     url: offer.resource.url, method: input.method,
     description: offer.resource.description ?? 'Imported API resource',
     serviceName: offer.resource.serviceName, tags: offer.resource.tags,
     paymentOptions: offer.accepts,
-    ...(input.method === 'POST' ? { bodyType: 'json', body: input.body } : {}),
+    ...(requiresJsonBody(input.method) ? { bodyType: 'json', body: input.body } : {}),
   }, { allowLocalhost });
   if (checked.resource.url !== offer.resource.url ||
       checked.accepts.some((terms, index) => {
@@ -81,8 +82,8 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
       importedOffer(originalOffer, allowLocalhost);
     paymentRequiredResponse(offer); // Validate the whole multi-option header before serving or native setup.
     const method = offer.extensions.bazaar.info.input.method;
-    if (!METHODS.has(method) || (method === 'POST' && offer.extensions.bazaar.info.input.bodyType !== 'json')) {
-      throw new TypeError('Seller service supports GET, HEAD and JSON POST only');
+    if (!supportsSellerMethod(method) || (requiresJsonBody(method) && offer.extensions.bazaar.info.input.bodyType !== 'json')) {
+      throw new TypeError('Seller service supports GET, HEAD, DELETE and JSON POST, PUT, PATCH');
     }
     const url = new URL(offer.resource.url), binding = compileServicePath(offer);
     const path = binding.path;
@@ -169,7 +170,7 @@ async function readBody(req, maxBytes) {
     chunks.push(chunk);
   }
   if (!count) return null;
-  if (req.method !== 'POST') throw fault('REQUEST_BODY_NOT_SUPPORTED');
+  if (!requiresJsonBody(req.method)) throw fault('REQUEST_BODY_NOT_SUPPORTED');
   if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '')) {
     throw fault('JSON_CONTENT_TYPE_REQUIRED', 415);
   }
@@ -177,7 +178,7 @@ async function readBody(req, maxBytes) {
   catch { throw fault('INVALID_JSON_BODY'); }
 }
 
-function requestContext(req, route, target, body, pathParams) {
+function requestContext(req, route, target, body, pathParams, signal) {
   const decodedPath = decodeURIComponent(target.pathname);
   const query = Object.create(null);
   for (const [key, value] of target.searchParams) {
@@ -198,14 +199,15 @@ function requestContext(req, route, target, body, pathParams) {
     paymentHeader: getHeader('payment-signature') || getHeader('x-payment') },
   application: { method: req.method, url: new URL(target.href), query, body,
     pathParams: Object.freeze({ ...pathParams }),
-    headers: { ...req.headers } } };
+    headers: { ...req.headers }, signal } };
 }
 
 /** Node handler; nativeServer must be the operator-configured canonical SDK. */
 export function createSellerResourceHandler({ compiled, nativeServer = null,
   maxRequestBytes = 1024 * 1024, maxResponseBytes = 1024 * 1024,
-  admissionTimeoutMs = 2000 } = {}) {
+  admissionTimeoutMs = 2000, handlerTimeoutMs = 30000 } = {}) {
   validateAdmissionTimeout(admissionTimeoutMs);
+  validateHandlerTimeout(handlerTimeoutMs);
   if (!compiled?.routes?.length || !compiled.nativeRoutes) throw new TypeError('Compiled seller routes required');
   for (const limit of [maxRequestBytes, maxResponseBytes]) {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16 * 1024 * 1024) throw new TypeError('Invalid body limit');
@@ -215,7 +217,7 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
   return async function sellerResourceHandler(req, res) {
     const simple = (status, error, extra = {}) => send(req, res,
       encodeResponse({ status, headers: extra, body: { error } }, maxResponseBytes));
-    let payment;
+    let payment, execution;
     try {
       // Never derive advertised payment/resource identity from the Host header.
       if (typeof req.url !== 'string' || !req.url.startsWith('/') || req.url.startsWith('//')) {
@@ -246,16 +248,13 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
         return send(req, res, encodeResponse({ status: challenge.statusCode,
           headers: challenge.headers, body: challenge.body }, maxResponseBytes));
       }
+      execution = createHandlerExecution(req, res, { timeoutMs: handlerTimeoutMs });
       const body = await readBody(req, maxRequestBytes);
-      const context = requestContext(req, route, target, body, pathParams);
+      const context = requestContext(req, route, target, body, pathParams, execution.signal);
       if (route.admit) {
-        const controller = new AbortController();
-        const disconnected = () => controller.abort();
-        res.once('close', disconnected);
         try {
-          if (res.destroyed || req.aborted) controller.abort();
           const decision = await evaluateAdmission(route.admit, context.application,
-            { timeoutMs: admissionTimeoutMs, signal: controller.signal });
+            { timeoutMs: admissionTimeoutMs, signal: execution.signal });
           if (res.destroyed || res.writableEnded || req.aborted) return;
           if (decision !== true) {
             const rejected = decision === false ?
@@ -269,10 +268,10 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
         } catch {
           // No native verification, cancellation or settlement has been invoked.
           return simple(503, 'REQUEST_ADMISSION_UNAVAILABLE');
-        } finally {
-          res.removeListener('close', disconnected);
         }
       }
+      // No native verification for a request already abandoned during input/admission.
+      execution.check();
       payment = await nativeServer.processHTTPRequest(context.sdk);
       if (payment?.type === 'payment-error') {
         return send(req, res, encodeResponse(payment.response, maxResponseBytes));
@@ -284,20 +283,30 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       }
       let response;
       try {
-        response = encodeResponse(await route.handler(context.application), maxResponseBytes, true);
+        // A verification that finished after disconnect must still use the native
+        // cancellation path, but must not invoke the merchant's application.
+        response = encodeResponse(await execution.run(route.handler, context.application), maxResponseBytes, true);
+        execution.check();
+        if (response.status < 400) execution.beginSettlement();
       } catch (error) {
-        const cancelled = await payment.cancellationDispatcher.cancel({ reason: 'handler_threw', error });
+        const reason = execution.interruption;
+        const cancelled = await execution.cancel(payment, {
+          reason: 'handler_threw', error: reason ? execution.signal.reason : error,
+        });
         const receiptHeaders = nativeServer.createFailurePathSettlementHeaders(cancelled,
           payment.beforeHandlerSettlement, payment.paymentPayload, 'private, no-store') ?? {};
-        return simple(500, 'APPLICATION_FAILED', headers(receiptHeaders));
+        return simple(reason === 'handler_timeout' ? 504 : 500,
+          reason === 'handler_timeout' ? 'APPLICATION_TIMEOUT' : 'APPLICATION_FAILED', headers(receiptHeaders));
       }
       if (response.status >= 400) {
-        const cancelled = await payment.cancellationDispatcher.cancel({ reason: 'handler_failed', responseStatus: response.status });
+        const cancelled = await execution.cancel(payment, { reason: 'handler_failed', responseStatus: response.status });
         const receiptHeaders = nativeServer.createFailurePathSettlementHeaders(cancelled,
           payment.beforeHandlerSettlement, payment.paymentPayload, 'private, no-store') ?? {};
         response.headers = { ...response.headers, ...headers(receiptHeaders) };
         return send(req, res, response);
       }
+      // Once started, native settlement is awaited without timeout, cancellation,
+      // or retry even if the peer disconnects. The native result remains authoritative.
       const settled = await nativeServer.processSettlement(payment.paymentPayload, payment.paymentRequirements,
         payment.declaredExtensions, { request: context.sdk, responseBody: response.body,
           responseHeaders: response.headers }, undefined, payment.beforeHandlerSettlement);
@@ -312,7 +321,9 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       // a native exception. Raw SDK/handler errors may contain private data.
       return simple(error?.status ?? (payment ? 502 : 500),
         error?.status ? error.message : payment ? 'PAYMENT_PROCESSING_UNAVAILABLE' : 'SELLER_REQUEST_FAILED');
+    } finally {
+      execution?.dispose();
+      await execution?.settled();
     }
   };
 }
-

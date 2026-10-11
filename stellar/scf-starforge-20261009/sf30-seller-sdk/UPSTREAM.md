@@ -105,8 +105,8 @@ Declare that exact name in a separate bindings file:
 }
 ```
 
-The seller route in this example must itself declare JSON `POST`. GET, HEAD
-and JSON POST are supported; omitted binding `method` means GET. A binding
+The seller route in this example must itself declare JSON `POST`. GET, HEAD,
+DELETE and JSON POST/PUT/PATCH are supported; omitted binding `method` means GET. A binding
 reused by several routes must match every route's method and required path
 parameters. Unused bindings, missing names, unknown fields and conflicting
 methods fail at startup rather than silently selecting a different operation.
@@ -133,7 +133,7 @@ operator-managed HTTPS reverse proxy.
 `query` may be an array of unchanged names or an input-to-upstream name map.
 Repeated values and their request order are preserved. The shared handler
 **rejects undeclared query parameters**, rather than dropping them or accepting
-an arbitrary backend URL. Request bodies remain JSON values; POST reserializes
+an arbitrary backend URL. Request bodies remain JSON values; POST/PUT/PATCH reserialize
 the parsed original body and does not preserve its raw wire whitespace.
 
 Only explicitly listed ordinary `requestHeaders` are forwarded. Buyer
@@ -229,7 +229,14 @@ the same session's state through the existing private operations dashboard.
 Omitting the option preserves current binding behavior. No probes or automatic
 request retries are introduced.
 
-There is one backend invocation and **no automatic redirect or retry** per
+For merchant-owned POST operations that need persistent duplicate protection,
+the existing launcher supports [durable operation tickets and response replay](./IDEMPOTENCY.md).
+Its original transport binds the exact request, claims it in private SQLite,
+forwards one stable backend idempotency key, and preserves completed or uncertain
+outcomes across restarts. Explicit recovery never initiates another payment or
+backend call. Existing SF89 input validation composes with the ticket admission.
+
+There is at most one backend invocation and **no automatic redirect or retry** per
 handler call. Timeouts include connection and body handling. Shared per-binding
 capacity limits return a failure rather than unbounded parallel backend work.
 Malformed, truncated, oversized, unsupported or failed responses return the
@@ -237,14 +244,16 @@ shared handler's structured error, not the backend's private error body. The
 existing SF30 cancellation/failure path consumes those non-success results.
 
 **Backend execution and settlement are not an atomic database transaction.**
-The upstream can finish a POST before the subsequent payment/delivery step
+The upstream can finish a POST, PUT, PATCH or DELETE before the subsequent payment/delivery step
 fails. This adapter cannot undo that work, promise a refund for every native
 settlement flow, or prevent a buyer making a second separate request. Use GET,
 HEAD or read-only/stateless POST queries first. A mutating backend needs its
 own authenticated idempotency/business-transaction design; do not rely on
-HTTP payment verification as a rollback mechanism. The original application
-context has no abort signal, so an upstream call may continue until its own
-deadline after the buyer disconnects.
+HTTP payment verification as a rollback mechanism. The shared upstream transport
+consumes the application's optional `context.signal`; when the original handler
+lifecycle supplies it, cancellation closes the backend socket and response
+streams. A disconnected or timed-out POST can still have committed upstream, so
+the durable adapter preserves uncertainty until the merchant reconciles it.
 
 ## Programmatic composition and focused execution
 

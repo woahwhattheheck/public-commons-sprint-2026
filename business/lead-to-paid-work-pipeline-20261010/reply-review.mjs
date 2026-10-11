@@ -17,6 +17,7 @@ const lanes = Object.freeze({
   HUMAN_INTEREST: 'ACTIVE_CUSTOMER_REPLY',
   HUMAN_REPLY_NEEDS_TRIAGE: 'REVIEW_HUMAN_REPLY',
   HUMAN_NEUTRAL: 'REVIEW_HUMAN_REPLY',
+  MESSAGE_CONTENT_REQUIRED: 'READ_GMAIL_CONTENT',
   HUMAN_DECLINE: 'CLOSED_DECLINED',
   CONTACT_ROUTING_AVAILABLE: 'RECONNECT_NAMED_CONTACT',
   CONTACT_ROUTED_AWAITING_REPLY: 'AWAITING_REPLY',
@@ -35,7 +36,7 @@ function hold(decision, reasons, action) {
   decision.blockers.push(...reasons.filter(x => !decision.blockers.includes(x)));
   // Never leave the original cold-introduction CTA visible beside provider proof it already happened.
   decision.nextActions = decision.nextActions.filter(x =>
-    !x.startsWith('Owner may authorize one tailored unsent prime approach'));
+    !x.startsWith('Owner may authorize one tailored unsent prime approach') && !x.startsWith('Proceed with the authorized'));
   if (action && !decision.nextActions.includes(action)) decision.nextActions.unshift(action);
 }
 
@@ -74,7 +75,7 @@ export function attachReplyResults(opportunities, decisions, report) {
     const summary = c ? {
       caseId, status: c.status, engagementLane: engagementLane(c.status), sentCount: c.sentCount, inboundCount: c.inboundCount,
       humanReplyCount: c.humanReplyCount, autoReplyCount: c.autoReplyCount,
-      bounceCount: c.bounceCount, nextAction: c.nextAction,
+      bounceCount: c.bounceCount, contentReadCount: c.contentReadCount || 0, nextAction: c.nextAction,
       // Intentionally no raw body, address, subject, message ID, or private receipt URL on the board.
       reasons: unique(reasons)
     } : { caseId: caseId || null, status: 'UNMAPPED', engagementLane: engagementLane('UNMAPPED'), reasons: unique(reasons) };

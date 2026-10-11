@@ -1,6 +1,7 @@
 // MIT. Bounded HTTP observations around the original SF30 server, not payment accounting.
 import { randomUUID } from 'node:crypto';
 import { selectServiceRoute } from '../route-path.mjs';
+import { supportsSellerMethod } from '../http-methods.mjs';
 
 const LIMITS = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 15000, Infinity];
 const OUTCOMES = ['success', 'challenge', 'clientError', 'serverError', 'other', 'disconnected'];
@@ -52,7 +53,7 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
   for (const route of routes) {
     if (typeof route.id !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(route.id) ||
         stats.has(route.id) || typeof route.path !== 'string' || route.path.length > 2048 ||
-        !['GET', 'HEAD', 'POST'].includes(route.method) || !route.binding) {
+        !supportsSellerMethod(route.method) || !route.binding) {
       throw new TypeError('Original compiled seller routes required');
     }
     stats.set(route.id, { id: route.id, method: route.method, path: route.path, ...empty() });
@@ -61,7 +62,7 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
     ['@method', 'Unsupported methods'], ['@invalid', 'Invalid request targets']]) {
     stats.set(id, { id, method: '-', path, ...empty() });
   }
-  const totals = empty(), buckets = new Map();
+  const totals = empty(), buckets = new Map(), days = new Map();
   const startedAt = new Date(now()).toISOString(), sessionId = randomUUID();
   let attached = true, observerErrors = 0, ignoredMetadata = 0;
   const recent = Array(recentLimit);
@@ -73,6 +74,21 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
     for (const key of buckets.keys()) if (key < latestMinute - 59) buckets.delete(key);
     if (!buckets.has(latestMinute)) buckets.set(latestMinute, empty());
     return buckets.get(latestMinute);
+  }
+  // Use the same start/terminal events as the original observer. Daily starts
+  // and completions have their own UTC event dates; no lifetime-delta estimates.
+  function dayRow(id) {
+    const key = new Date(now()).toISOString().slice(0, 10);
+    if (!days.has(key)) days.set(key, { totals: empty(), routes: new Map() });
+    const day = days.get(key);
+    if (!day.routes.has(id)) {
+      const { method, path } = stats.get(id);
+      day.routes.set(id, { id, method, path, ...empty() });
+    }
+    // Disk history checkpoints merge these day rows by session and date. Keep
+    // the observer bounded even when persistence is disabled or unavailable.
+    if (days.size > 32) days.delete([...days.keys()].sort()[0]);
+    return [day.totals, day.routes.get(id)];
   }
   function identify(req) {
     const target = req.url;
@@ -94,6 +110,7 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
       if (!row) { observerErrors++; return; }
       for (const item of [row, totals]) { item.started++; item.inFlight++; }
       minute().started++;
+      for (const item of dayRow(id)) item.started++;
       const requestId = ++sequence, method = METHODS.has(req.method) ? req.method : 'OTHER';
       let done = false;
       function terminal(disconnected) {
@@ -108,6 +125,7 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
             code >= 500 && code < 600 ? 'serverError' : 'other';
           for (const item of [row, totals]) { item.inFlight--; complete(item, outcome, duration, code); }
           complete(minute(), outcome, duration, code);
+          for (const item of dayRow(id)) complete(item, outcome, duration, code);
           if (recentLimit) {
             recent[recentNext] = { requestId, at: new Date(now()).toISOString(), routeId: id,
               method, outcome, status: disconnected && !res.headersSent ? null : code,
@@ -139,6 +157,10 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
         mode: ['NATIVE_X402', 'CHALLENGE_ONLY'].includes(session.mode) ? session.mode : 'UNKNOWN',
         observerErrors, ignoredMetadata, totals: view(totals),
         routes: [...stats.values()].map(view),
+        days: [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, rows]) => {
+          const dailyView = row => { const { inFlight, ...result } = view(row); return result; };
+          return { day, totals: dailyView(rows.totals), routes: [...rows.routes.values()].map(dailyView) };
+        }),
         recentLimit, recent: Array.from({ length: recentCount }, (_, i) =>
           ({ ...recent[(recentNext - 1 - i + recentLimit) % recentLimit] })),
         minutes: Array.from({ length: 60 }, (_, i) => {
@@ -152,7 +174,8 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
           latency: 'Arrival to response finish/disconnect, including cancelled responses',
           p95: 'Upper bound of fixed histogram bin, not an exact percentile',
           persistence: 'Process memory only; restart begins a new session',
-          retention: 'Cumulative route totals, 60 minute buckets, and a bounded ring of metadata-only outcomes; no request contents' } };
+          retention: 'Cumulative route totals, 60 minute buckets, 32 UTC day aggregates, and a bounded ring of metadata-only outcomes; no request contents',
+          days: 'Starts and finishes/disconnects use their own UTC event dates; day rows have no in-flight gauge' } };
     },
   };
 }
@@ -205,3 +228,4 @@ export function trafficPrometheus(snapshot) {
   }
   return output.join('\n') + '\n';
 }
+

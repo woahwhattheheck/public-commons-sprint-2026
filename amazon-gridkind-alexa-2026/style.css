@@ -6,3 +6,14 @@ fieldset{border:0;padding:0;margin:0;min-width:0}h2{font-size:24px;margin:7px 0}
 @media(min-width:701px){.scenario-grid.robustness-rates{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:850px){.robustness-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){.scenario-grid.robustness-rates,.robustness-metrics{grid-template-columns:1fr}#robustness-panel .controls>button{width:100%}.robustness-metrics>div{padding:14px}}
 
 
+
+/* Portable scenario exchange inherits the existing sober household-control surface. */
+.handoff{margin-top:20px;padding:18px;border:1px solid #34505b;background:#0d1821;border-radius:14px}
+.handoff h3{font-size:18px;margin:0 0 8px}
+.handoff p{line-height:1.55;overflow-wrap:anywhere}
+.handoff .handoff-picker{display:block;max-width:560px;margin:16px 0 0;font-size:14px;font-weight:650}
+.handoff input[type=file]{display:block;margin:8px 0 0;padding:12px;max-width:100%;font-size:14px}
+.handoff input[type=file]::file-selector-button{background:#334958;color:#eef5ff;border:0;border-radius:8px;padding:9px 11px;margin-right:12px;cursor:pointer}
+.handoff input[type=file]:focus-visible{outline:3px solid #c0e69d;outline-offset:3px}
+#handoff-preview:empty{display:none}
+#handoff-status{margin-top:12px}
