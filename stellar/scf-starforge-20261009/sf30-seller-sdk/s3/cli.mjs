@@ -1,6 +1,8 @@
 // MIT. Local operator inspection and setup; this command does not authorize a buyer payment.
-import { readFile, open, mkdir, rm } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { constants } from 'node:fs';
+import { readFile, open, mkdir, rm, link, lstat } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { resolve, join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openS3ObjectFile } from './source.mjs';
 import { compileHttpSellerOffer } from '../seller.mjs';
@@ -9,6 +11,7 @@ const HELP = `Usage:
   node cli.mjs describe --source PRIVATE_SOURCE.json
   node cli.mjs inspect --source PRIVATE_SOURCE.json --object ID --out NEW_FILE [--offset N --length N]
   node cli.mjs configure --source PRIVATE_SOURCE.json --payment PAYMENT.json --origin HTTPS_ORIGIN --directory NEW_DIR
+  node cli.mjs workspace --state PRIVATE_DIRECTORY [--source SOURCE.json --payment PAYMENT.json --origin HTTPS_ORIGIN]
 
 describe performs authorized private HEAD reads and prints public object contracts.
 inspect retrieves one approved object/chunk directly as its local operator, without x402.
@@ -32,19 +35,43 @@ function argsOf(args) {
   return { command, options };
 }
 
-async function writeNew(path, data) {
-  const file = await open(path, 'wx', 0o600);
-  let complete = false;
-  try { await file.writeFile(data); await file.sync(); complete = true; }
-  finally { await file.close(); if (!complete) await rm(path, { force: true }); }
+async function writeNew(path, data, resume) {
+  const expected = Buffer.from(data), temporary = join(dirname(path), '.s3-write-' + randomUUID());
+  const file = await open(temporary, 'wx', 0o600);
+  try {
+    await file.writeFile(expected); await file.sync();
+    try { await link(temporary, path); }
+    catch (error) {
+      if (!resume || error.code !== 'EEXIST') throw error;
+      const existing = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      try {
+        const before = await existing.stat({ bigint: true });
+        const actual = Buffer.alloc(expected.length + 1); let used = 0;
+        if (before.isFile() && before.size === BigInt(expected.length)) {
+          while (used < actual.length) {
+            const part = await existing.read(actual, used, actual.length - used, null);
+            if (!part.bytesRead) break; used += part.bytesRead;
+          }
+        }
+        const after = await existing.stat({ bigint: true });
+        if (!before.isFile() || used !== expected.length || before.size !== after.size ||
+            before.mtimeNs !== after.mtimeNs || !actual.subarray(0, used).equals(expected)) {
+          const conflict = new Error('Existing S3 package file differs from this saved preparation: ' + basename(path));
+          conflict.code = 'S3_PACKAGE_CONTENT_CONFLICT'; conflict.status = 409; throw conflict;
+        }
+      } finally { await existing.close(); }
+    }
+    const parent = await open(dirname(path), 'r');
+    try { await parent.sync(); } finally { await parent.close(); }
+  } finally { await file.close(); await rm(temporary, { force: true }); }
 }
 
-/** Generate original seller config and native handler exports; does not start a seller. */
-export async function configureS3Seller({ sourcePath, payment, origin, directory, source }) {
+/** Compile the same original S3 service from an operator-selected description. */
+export function compileS3Seller({ payment, origin, description }) {
   const target = new URL(origin);
   if (target.protocol !== 'https:' || target.username || target.password || target.search || target.hash || target.pathname !== '/')
     throw new TypeError('Choose one public HTTPS origin');
-  const originText = target.origin, description = source.describe();
+  const originText = target.origin;
   const perObject = payment?.schema === 'stellar-forge.s3-payments.v1' ? payment.objects : null;
   if (perObject && (typeof perObject !== 'object' || Array.isArray(perObject) ||
       Object.keys(perObject).some(id => !description.objects.some(item => item.id === id))))
@@ -65,6 +92,13 @@ export async function configureS3Seller({ sourcePath, payment, origin, directory
     delete offer.extensions.bazaar.schema.properties.output;
     return { id: item.id, path: item.path, offer, handler: `object${i}`, admit: `admit${i}` };
   });
+  return { schema: 'stellar-forge.seller-service.v1', publicOrigin: originText, routes };
+}
+
+/** Generate original seller config and native handler exports; does not start a seller. */
+export async function configureS3Seller({ sourcePath, payment, origin, directory, source, resume = false }) {
+  const description = source.describe();
+  const service = compileS3Seller({ payment, origin, description });
   const out = resolve(directory);
   const sourceModule = new URL('./source.mjs', import.meta.url).href;
   const handlers = `// Generated for the ORIGINAL SF30 --handlers interface. Keep this file operator-private.\n` +
@@ -72,12 +106,16 @@ export async function configureS3Seller({ sourcePath, payment, origin, directory
     `const source = await openS3ObjectFile(${JSON.stringify(join(out, 'source.json'))});\n` +
     description.objects.map((item, i) => `const route${i} = source.route(${JSON.stringify(item.id)});\nexport const object${i} = route${i}.handler;\nexport const admit${i} = route${i}.admit;`).join('\n') +
     `\nexport const closeS3Source = source.close;\nexport const describeS3Source = source.describe;\n`;
-  const service = { schema: 'stellar-forge.seller-service.v1', publicOrigin: originText, routes };
-  await mkdir(out, { mode: 0o700 }); // No recursive/existing directory reuse.
-  await writeNew(join(out, 'source.json'), JSON.stringify(source.snapshotConfig(), null, 2) + '\n');
-  await writeNew(join(out, 'service.json'), JSON.stringify(service, null, 2) + '\n');
-  await writeNew(join(out, 'handlers.mjs'), handlers);
-  await writeNew(join(out, 'objects.json'), JSON.stringify(description, null, 2) + '\n');
+  try { await mkdir(out, { mode: 0o700 }); }
+  catch (error) {
+    // Only a retained authoring operation requests replay. Original CLI setup
+    // still requires a new directory; replay compares every published byte.
+    if (!resume || error.code !== 'EEXIST' || !(await lstat(out)).isDirectory()) throw error;
+  }
+  await writeNew(join(out, 'source.json'), JSON.stringify(source.snapshotConfig(), null, 2) + '\n', resume);
+  await writeNew(join(out, 'service.json'), JSON.stringify(service, null, 2) + '\n', resume);
+  await writeNew(join(out, 'handlers.mjs'), handlers, resume);
+  await writeNew(join(out, 'objects.json'), JSON.stringify(description, null, 2) + '\n', resume);
   return { schema: 'stellar-forge.s3-setup.v1', directory: out,
     source: join(out, 'source.json'), service: join(out, 'service.json'), handlers: join(out, 'handlers.mjs'), objects: description.objects.length,
     sellerCommand: [process.execPath, fileURLToPath(new URL('../serve.mjs', import.meta.url)),
@@ -86,6 +124,7 @@ export async function configureS3Seller({ sourcePath, payment, origin, directory
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'workspace') return (await import('./workspace/server.mjs')).main(args.slice(1));
   const parsed = argsOf(args);
   if (!parsed) { process.stdout.write(HELP + '\n'); return; }
   const { command, options } = parsed;
