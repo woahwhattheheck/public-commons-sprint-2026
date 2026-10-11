@@ -28,6 +28,11 @@ upstream application, including configured credentials, availability, response
 contracts, read caching and durable POST operations. The same session retains
 the selected buyers and optionally mounts the existing merchant recovery controls.
 
+For finite SSE and NDJSON resources, use [Streamed purchases in the commerce
+workspace](./COMMERCE_STREAMS.md). The existing session preserves reviewed flow
+and deadline settings, live capture, retained records, cited answers and
+same-intent interruption/reopening in its original browser.
+
 ## 1. Use the existing merchant and operator configurations
 
 Use Node 22.16+ and Python 3.11+ on the operator's POSIX host. Install the same

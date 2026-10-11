@@ -1,4 +1,5 @@
 // MIT. Presentation and explicit operator actions over the original commerce session.
+import { createStreamPanel } from './stream.mjs';
 const byId = id => document.getElementById(id);
 const tokenKey = 'stellar-forge-commerce-token';
 const supplied = location.hash.slice(1);
@@ -29,10 +30,10 @@ function notice(message, error = false) {
   const target = byId('notice'); target.hidden = !message; target.textContent = message ?? '';
   target.dataset.error = String(error);
 }
-async function request(path, { method = 'GET', body, raw = false } = {}) {
+async function request(path, { method = 'GET', body, raw = false, signal } = {}) {
   const headers = { 'x-commerce-token': token };
   if (body !== undefined) headers['content-type'] = 'application/json';
-  const response = await fetch(path, { method, headers, cache: 'no-store',
+  const response = await fetch(path, { method, headers, cache: 'no-store', signal,
     ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   if (!response.ok) {
     const failure = await response.json().catch(() => ({}));
@@ -40,6 +41,7 @@ async function request(path, { method = 'GET', body, raw = false } = {}) {
   }
   return raw ? response : response.json();
 }
+const streamPanel = createStreamPanel({ host:byId('stream-workspace'), request, action });
 function link(container, title, value) {
   if (!value) return;
   let url;
@@ -85,8 +87,15 @@ function render(next) {
   text('seller-origin', seller.publicOrigin); text('seller-mode', label(seller.mode));
   text('intent', op?.intentId ?? 'No prepared buyer');
   text('operation-state', review ? 'Reviewed at ' + time(review.at) : label(op?.state));
+  const streamResult = next.stream ? ({ COMPLETE:'Complete response', PARTIAL:'Partial response',
+    FAILED:'Capture failed', CAPTURING:'Capturing response', AWAITING_RESPONSE:'Awaiting response',
+    PREPARED:'Prepared request', CANCELLED:'Request cancelled', NO_CAPTURE:'Response not captured',
+    RECOVERY_REQUIRED:'Original result needs recovery' }[next.stream.phase] ?? label(next.stream.phase)) +
+    (next.stream.payment.settlement === 'REPORTED_SUCCESS' ? ' · payment reported settled' :
+      next.stream.payment.buyerStatus === 'PAYMENT_REPORTED_FAILED' ? ' · payment reported failed' :
+      next.stream.payment.buyerStatus === 'SETTLEMENT_PENDING' ? ' · payment pending' : '') : null;
   text('result-state', next.rpcRecovery?.state === 'SETTLED_RESULT_RECOVERED' ? 'Settled · result recovered' :
-    next.rpcRecovery?.settlement ? 'Settled · response recovery pending' : attempt?.outcome?.status ?? label(attempt?.state ?? 'NOT_RUN'));
+    next.rpcRecovery?.settlement ? 'Settled · response recovery pending' : streamResult ?? attempt?.outcome?.status ?? label(attempt?.state ?? 'NOT_RUN'));
   text('last-updated', 'Updated ' + time(next.updatedAt));
   text('method', op?.method); text('request-url', op?.url ?? 'This session has no prepared buyer operation.');
   const terms = op?.expect ?? {};
@@ -95,6 +104,9 @@ function render(next) {
     ['Quoted amount (atomic)', op?.quotedAtomic], ['Spending limit (atomic)', terms.maxAtomic],
     ['Offered timeout', op?.originalTerms?.maxTimeoutSeconds === undefined ? undefined : op.originalTerms.maxTimeoutSeconds + ' seconds'],
     ['Maximum timeout', terms.maxTimeoutSeconds === undefined ? undefined : terms.maxTimeoutSeconds + ' seconds'],
+    ['Payment flow', label(terms.paymentFlow ?? 'authorization')],
+    ['HTTP response deadline', next.stream?.configuration.requestTimeoutMs === undefined ? undefined : next.stream.configuration.requestTimeoutMs + ' ms'],
+    ['Response destination', next.stream?.configuration.responseFile.destination],
   ]);
   facts('request-facts', [
     ['Intent', op?.intentId], ['Method', op?.method],
@@ -107,7 +119,7 @@ function render(next) {
   byId('review').disabled = pending || !controls.canReview;
   text('review-note', review ? 'The displayed operation is the current reviewed request.' : 'The operation comes from the prepared buyer configuration.');
   text('execution-state', attempt ? label(attempt.state) : review ? 'Ready to execute' : 'Awaiting review');
-  text('execution-note', attempt?.state === 'RUNNING' ? 'The buyer is running. Answer its payment approval in the terminal that started this workspace. Stop session interrupts remaining work and drains the merchant.' :
+  text('execution-note', attempt?.state === 'RUNNING' ? 'The buyer is running. Answer its payment approval in the terminal that started this workspace. Interrupt this buyer retains its recorded progress; Stop session drains the merchant.' :
     next.activeIntent ? 'Another prepared operation is running: ' + next.activeIntent + '. This session runs one buyer at a time.' :
     attempt?.state === 'SETUP_FAILED' ? 'The buyer could not start. Resolve the reported setup error, then review this queued request again.' :
     op?.state === 'CANCELLED' ? 'This request was cancelled before execution and remains in the inbox.' :
@@ -158,10 +170,12 @@ function render(next) {
     rpcAction.operation === 'VERIFY_PAYMENT' ? 'Verifying the original reservation and transaction…' : 'Reading and saving the paid RPC result…' :
     rpcAction?.error ? label(rpcAction.error) : rpc?.settlement && !rpc.canRecover && !rpc.responseFile ?
       'Resume the product in its availability desk before requesting the recovery read.' : '');
-  text('delivery-state', delivery?.available ? 'Saved response' : label(delivery?.status ?? 'NO_SAVED_RESPONSE'));
+  text('delivery-state', next.stream ? label(next.stream.phase) : delivery?.available ? 'Saved response' : label(delivery?.status ?? 'NO_SAVED_RESPONSE'));
   text('delivery-note', delivery?.source === 'SETTLED_RPC_RECOVERY_READ' ?
     'Download the exact saved recovery response. The original request time and the later provider read remain recorded together.' :
     delivery?.available ? 'Download the exact file saved by the buyer, or preview its contents.' :
+    next.stream?.phase === 'PARTIAL' ? 'The original buyer retained an interrupted stream. Open its completed records below.' :
+    next.stream ? 'The selected stream’s capture and original payment status appear below.' :
     'A response saved by the buyer appears here after the operation completes.');
   byId('delivery-facts').hidden = !delivery?.available;
   facts('delivery-facts', delivery?.available ? [
@@ -170,6 +184,7 @@ function render(next) {
   ] : []);
   byId('preview').disabled = pending || !delivery?.available;
   byId('download').disabled = pending || !delivery?.available;
+  streamPanel.render(next, { pending:pending || selectionLoading });
   const purchase = next.purchase, retrieval = next.retrieval, transfer = purchase?.transfer;
   byId('product-panel').hidden = !purchase;
   const currentProduct = selectedIntent + ':' + (purchase?.delivery?.sha256 ?? purchase?.delivery?.status ?? '');
@@ -321,6 +336,7 @@ async function action(name, body = {}) {
   if (pending || selectionLoading && name !== 'stop') return;
   pending = true; if (view) render(view); notice(null);
   if (name === 'stop') notice('Stopping the active buyer and draining the merchant session…');
+  if (name === 'interrupt') notice('Interrupting this buyer and retaining its original capture…');
   if (name === 'review') notice('Reading the prepared buyer request…');
   if (name === 'facilitator') notice('Checking the configured network, node health and latest ledger…');
   ++lastRequest;
@@ -328,6 +344,7 @@ async function action(name, body = {}) {
     const next = await request('/api/' + name, { method: 'POST', body: { intent: selectedIntent, ...body } }); render(next);
     if (name === 'review') notice('Review ready. The exact prepared request and terms are shown above.');
     if (name === 'execute') notice('Operation started. Its progress and result will appear below.');
+    if (name === 'interrupt') notice('This buyer finished handling the interruption. Its original result and captured bytes appear below.');
     if (name === 'cancel') notice('The queued request was cancelled and retained in the inbox.');
     if (name === 'recover') notice('The recorded result was recovered from the inbox.');
     if (name === 'retrieve') notice('File retrieval started. Its result will appear in Purchased file.');
@@ -344,6 +361,7 @@ byId('operation-select').addEventListener('change', async event => {
   if (pending) return;
   selectionLoading = true;
   selectedIntent = event.target.value; ++lastRequest;
+  streamPanel.reset();
   for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download', 'product-retrieve', 'product-reset-transfer', 'product-preview', 'product-download', 'facilitator', 'rpc-verify', 'rpc-read']) byId(id).disabled = true;
   byId('preview-area').hidden = true;
   byId('product-preview-area').hidden = true;

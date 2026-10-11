@@ -24,6 +24,7 @@ import { readUpstreamCommerce, retainUpstreamCommerce, openUpstreamCommerce,
 import { readJsonrpcCommerce, retainJsonrpcCommerce, describeJsonrpcCommerce,
   openJsonrpcCommerce } from './commerce-jsonrpc.mjs';
 import { createJsonrpcCommerceRecovery } from './commerce-jsonrpc-recovery.mjs';
+import { createCommerceStreamAccess } from './commerce-stream.mjs';
 
 const PLAN = 'stellar-forge.commerce-plan.v1';
 const SESSION = 'stellar-forge.commerce-session.v1';
@@ -395,8 +396,9 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     nativeFactory = compiled => createNativeSellerServer(compiled, { facilitatorClient: client });
   }
   let seller, operations, checkoutSession, ownedFacilitator, python, upstream, jsonrpc, jsonrpcRecovery, closing, active;
-  let state = 'STARTING';
+  let state = 'STARTING', activeIntent = null, activeBuyerController = null;
   const controller = new AbortController();
+  const streams = createCommerceStreamAccess(queue.root);
   const pending = new Set(), activeRetrievals = new Map(), activeRpcActions = new Map();
   const waitForIdle = async ({ sharedOnly = false } = {}) => {
     need(state === 'STOPPING' || state === 'STOPPED', 'COMMERCE_DRAIN_REQUIRED');
@@ -532,16 +534,20 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
         historyUrl: operations.history ? operations.url + '/history.json' : null, usageHistory: operations.history?.status() ?? null },
       buyers: await Promise.all((await queue.list()).map(async job => {
         const bound = { ...job, merchant: bindMerchantPurchase(seller.compiled, job) };
-        return { ...bound, paidFile: await inspectCommercePurchase(
+        return { ...bound, stream: await streams.inspect(bound, { active: activeIntent === job.operation.intentId }),
+          paidFile: await inspectCommercePurchase(
           saved.buyers.find(entry => entry.intentId === job.operation.intentId), bound),
           ...(jsonrpcRecovery ? { rpcRecovery: await jsonrpcRecovery.inspect(bound) } : {}) };
       })),
     });
-    const jobFor = async intentId => {
-      need(state === 'RUNNING', 'COMMERCE_SESSION_NOT_RUNNING');
+    const retainedJobFor = async intentId => {
       const job = await queue.show(intentId);
       need(saved.buyers.some(entry => entry.intentId === intentId), 'COMMERCE_INTENT_NOT_IN_SESSION');
       return { ...job, merchant: bindMerchantPurchase(seller.compiled, job) };
+    };
+    const jobFor = async intentId => {
+      need(state === 'RUNNING', 'COMMERCE_SESSION_NOT_RUNNING');
+      return retainedJobFor(intentId);
     };
     const fileAction = (intentId, operation) => {
       need(!activeRetrievals.has(intentId), 'COMMERCE_FILE_RETRIEVAL_BUSY');
@@ -564,6 +570,9 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       return work.finally(() => { pending.delete(work); activeRpcActions.delete(intentId); });
     };
     return Object.freeze({ seller, operations, status, close, waitForIdle,
+      async streamRecords(intentId, options) { return streams.records(await retainedJobFor(intentId), options); },
+      async streamAnswer(intentId, options) { return streams.answer(await retainedJobFor(intentId), options); },
+      async streamFile(intentId, options) { return streams.file(await retainedJobFor(intentId), options); },
       verifyRpcPayment: (intentId, selection) => rpcAction(intentId, 'verify', selection),
       recoverRpcResponse: (intentId, selection) => rpcAction(intentId, 'recover', selection),
       async probeReadiness() {
@@ -587,6 +596,9 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       },
       async execute(intentId) {
         need(!active, 'COMMERCE_BUYER_BUSY');
+        activeIntent = intentId;
+        activeBuyerController = new AbortController();
+        const signal = AbortSignal.any([controller.signal, activeBuyerController.signal]);
         active = (async () => {
           need(seller.mode === 'NATIVE_X402', 'COMMERCE_NATIVE_FACILITATOR_REQUIRED');
           const job = await jobFor(intentId);
@@ -594,12 +606,19 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
           const { env, workspace } = await signerEnvironment(saved, job, environment);
           const args = ['execute', '--root', queue.root, '--intent', intentId];
           if (workspace) args.push('--workspace', workspace);
-          return runOriginal(queueCli, args, { environment: env, signal: controller.signal });
+          return runOriginal(queueCli, args, { environment: env, signal });
         })();
         try {
           const original = await active;
           return { ...original, merchantTraffic: operations.observer.snapshot() };
-        } finally { active = null; }
+        } finally { active = null; activeIntent = null; activeBuyerController = null; }
+      },
+      async interrupt(intentId) {
+        need(state === 'RUNNING' && active && activeIntent === intentId, 'COMMERCE_BUYER_NOT_ACTIVE');
+        const running = active;
+        activeBuyerController.abort();
+        await running.catch(() => {});
+        return retainedJobFor(intentId);
       },
       async cancel(intentId) { await jobFor(intentId); return queue.cancel(intentId); },
       async recover(intentId) { await jobFor(intentId); return queue.recover(intentId); },
