@@ -1,5 +1,10 @@
 # Python applications for the Stellar Forge buyer
 
+The complete [acquisition workflow](ACQUISITIONS.md) joins private request intake,
+receiver-owned preparation, immutable runbooks, original execution/accounting,
+verified downloads and multi-operator recovery through `AcquisitionWorkspace`
+or `buyer.acquisitions(...)`. It shares the original bridge with the Node SDK.
+
 Version 0.5.0 completes original reservation accounting and retained receipt views
 for the paginated dataset and resumable object applications joined in 0.4.0.
 It retains 0.3.0's original single-operation reservation accounting
@@ -640,3 +645,12 @@ return typed recovery/process results; `WorkspaceRecoveryError.result` retains
 completion metadata and interruption outcomes without raw stderr. No restore
 exception deletes state or retries a purchase. See [RECOVERY.md](RECOVERY.md) for
 the full capture, selected-checkpoint and same-application reopen workflow.
+
+## LangChain and LangGraph customer applications
+
+The optional `agents` extra provides native typed LangChain tools and a persistent
+LangGraph customer workflow over the original Buyer intents, reviews, attempt
+recovery and response readers. It retains JSON/CSV/SSE/NDJSON or paid-file data,
+resumes the same application checkpoints, and exports a portable customer package.
+See [AGENT_CUSTOMERS.md](AGENT_CUSTOMERS.md) for setup, the installed
+`stellar-forge-agent` command and the complete original customer example.

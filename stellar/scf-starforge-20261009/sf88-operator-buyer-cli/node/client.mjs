@@ -1,11 +1,15 @@
 // MIT — Durable Node applications on the original SF88 CLI.
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { NativeRuntime } from './runtime.mjs';
 import { WorkspaceRecovery } from './workspace-recovery.mjs';
+import {AcquisitionWorkspace} from './acquisitions.mjs';
+import { readWorkspace, checkWorkspace, workspaceCommand } from './workspace.mjs';
 import { BuyerResult } from './result.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
+import { Inbox, createInbox, inspectOperationHandoff } from './inbox.mjs';
 import { absolute, privateDirectory, digest, now, intent, object, need, BuyerError,
   jsonBytes, parseJson, readBytes, readJson, exists, writeBytes, writeJson, syncDirectory } from './store.mjs';
 
@@ -15,13 +19,17 @@ const copy = value => parseJson(jsonBytes(value));
 const profileKeys = new Set(['operator', 'signerModule', 'trustedPayer', 'bodyCaptureTimeoutMs', 'buyerTransport', 'requestTimeoutMs']);
 
 export class Buyer {
-  constructor({ runtimeDirectory, stateDirectory, operatorProfile, datasetReportLimit = 33554432, ...runtimeOptions }) {
+  constructor({ runtimeDirectory, stateDirectory, operatorProfile, datasetReportLimit = 33554432,
+    inboxReportLimit = 33554432, ...runtimeOptions }) {
     this.runtime = new NativeRuntime({ runtimeDirectory, ...runtimeOptions });
     this.stateDirectory = absolute(stateDirectory);
     this.operatorProfile = operatorProfile;
     need(Number.isSafeInteger(datasetReportLimit) && datasetReportLimit >= 1048576 &&
       datasetReportLimit <= 268435456, 'DATASET_REPORT_LIMIT_INVALID');
     this.datasetReportLimit = datasetReportLimit;
+    need(Number.isSafeInteger(inboxReportLimit) && inboxReportLimit >= 1048576 &&
+      inboxReportLimit <= 268435456, 'INBOX_REPORT_LIMIT_INVALID');
+    this.inboxReportLimit = inboxReportLimit;
   }
   dataset(id) { return new Dataset(this, id); }
   createDataset(options) { return createDataset(this, options); }
@@ -31,11 +39,24 @@ export class Buyer {
   createObject(options) { return createObject(this, options); }
   attachObject(options) { return createObject(this, options, true); }
   listObjects() { return listObjects(this); }
+  inbox(directory) { return new Inbox(this, directory); }
+  createInbox(options) { return createInbox(this, options); }
+  inspectOperationHandoff(file, options) { return inspectOperationHandoff(this, file, options); }
 
   workspaceRecovery() { return WorkspaceRecovery.fromBuyer(this); }
+  acquisitions(options) { return AcquisitionWorkspace.fromBuyer(this, options); }
 
   async ready() { await privateDirectory(this.stateDirectory); return this; }
   operation(intentId) { return new Operation(this, intent(intentId)); }
+
+  async _requestFiles() {
+    // The installed original runtime owns the shared request ceiling and exact
+    // descriptor read. The standalone package keeps no second body parser/limit.
+    const source = await import(pathToFileURL(join(this.runtime.directory, 'request-body.mjs')).href);
+    need(Number.isSafeInteger(source.MAX_REQUEST_BODY_BYTES) && source.MAX_REQUEST_BODY_BYTES > 0 &&
+      typeof source.readRequestFile === 'function', 'ORIGINAL_REQUEST_BODY_RUNTIME_REQUIRED');
+    return source;
+  }
 
   async _profile(config, override) {
     let profile = override ?? this.operatorProfile;
@@ -45,9 +66,11 @@ export class Buyer {
     return { ...config, ...copy(profile) };
   }
 
-  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs } = {}) {
+  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs, nativeWorkspace } = {}) {
     await this.ready();
-    const config = await this._profile(copy(input), operatorProfile);
+    // Explicit workspace adoption uses its native operator, never a global profile override.
+    const config = nativeWorkspace === undefined ? await this._profile(copy(input), operatorProfile) : copy(input);
+    const workspace = nativeWorkspace === undefined ? {} : { nativeWorkspace: absolute(nativeWorkspace) };
     need(object(config.operation), 'OPERATION_REQUIRED');
     const op = this.operation(config.operation.intentId);
     try { await mkdir(op.directory, { mode: 0o700 }); }
@@ -58,17 +81,22 @@ export class Buyer {
     await syncDirectory(this.stateDirectory);
     try {
       await writeJson(join(op.directory, 'operation.json'), { schema: SCHEMA,
-        intentId: op.intentId, state: 'PREPARING', createdAt: now() }, { exclusive: true });
+        intentId: op.intentId, state: 'PREPARING', createdAt: now(), ...workspace }, { exclusive: true });
+      const bodyFiles = body !== undefined || config.operation.bodyFile !== undefined
+        ? await this._requestFiles() : null;
       if (body === undefined && config.operation.bodyFile !== undefined)
-        body = await readBytes(config.operation.bodyFile, 1048576);
+        body = await bodyFiles.readRequestFile(config.operation.bodyFile);
       if (body !== undefined) {
         need(typeof body === 'string' || body instanceof Uint8Array, 'BODY_BYTES_OR_STRING_REQUIRED');
         body = Buffer.from(body);
-        need(body.length <= 1048576, 'REQUEST_BODY_LIMIT');
+        need(body.length <= bodyFiles.MAX_REQUEST_BODY_BYTES, 'REQUEST_BODY_LIMIT');
         config.operation.bodyFile = join(op.directory, 'request.body');
         await writeBytes(config.operation.bodyFile, body, { exclusive: true });
       }
-      config.evidenceDir = await privateDirectory(join(op.directory, 'evidence'));
+      // Workspace evidence remains beside its original policy/ledger; application
+      // request and response files retain the ordinary SDK destination contract.
+      if (nativeWorkspace === undefined)
+        config.evidenceDir = await privateDirectory(join(op.directory, 'evidence'));
       config.captureBody = false;
       // Original native review validates every retained option. The application
       // owns the destination; expected bytes/type/digest and stream framing survive.
@@ -105,9 +133,9 @@ export class Buyer {
       need(native.intentId === op.intentId && native.bodySha256 === hashes.bodySha256, 'NATIVE_REVIEW_MISMATCH');
       await writeJson(join(op.directory, 'operation.json'), { schema: SCHEMA,
         intentId: op.intentId, state: 'PREPARED', createdAt: now(),
-        runtimeDirectory: this.runtime.directory, ...hashes });
+        runtimeDirectory: this.runtime.directory, ...workspace, ...hashes });
       await writeJson(join(op.directory, 'review.json'), { intentId: op.intentId,
-        ...hashes, native, reviewedAt: now() }, { exclusive: true });
+        ...hashes, ...workspace, native, reviewedAt: now() }, { exclusive: true });
       return op;
     } catch (error) {
       // This creating call has not returned an operation or launched a purchase.
@@ -120,6 +148,17 @@ export class Buyer {
   async fromConfig(input, options) {
     const config = typeof input === 'string' ? await readJson(absolute(input)) : input;
     return this._create(config, options);
+  }
+
+  async fromWorkspace(directory, { configuration, intentId, body, responseFile, requestTimeoutMs,
+    signal, ...extra } = {}) {
+    need(Object.keys(extra).length === 0, 'WORKSPACE_IMPORT_FIELDS_INVALID');
+    await this.ready();
+    const workspace = await readWorkspace(this, directory, { configuration, signal });
+    const config = copy(workspace.configuration);
+    if (intentId !== undefined) config.operation.intentId = intent(intentId);
+    need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
+    return this._create(config, { body, responseFile, requestTimeoutMs, nativeWorkspace: workspace.directory });
   }
 
   async fromOperationHandoff(file, { accept, operatorProfile, signal, responseFile, requestTimeoutMs } = {}) {
@@ -219,8 +258,12 @@ export class Operation {
     const meta = await readJson(join(this.directory, 'operation.json'));
     need(meta.schema === SCHEMA && meta.intentId === this.intentId, 'OPERATION_ID_MISMATCH');
     need(meta.state === 'PREPARED', 'OPERATION_PREPARATION_INCOMPLETE');
+    if (meta.nativeWorkspace !== undefined)
+      need(typeof meta.nativeWorkspace === 'string' && absolute(meta.nativeWorkspace) === meta.nativeWorkspace,
+        'ORIGINAL_WORKSPACE_PATH_INVALID');
     const raw = await readBytes(this.configPath), config = parseJson(raw);
-    const body = config.operation.bodyFile ? await readBytes(config.operation.bodyFile, 1048576) : Buffer.alloc(0);
+    const body = config.operation.bodyFile ? await (await this.buyer._requestFiles()).readRequestFile(config.operation.bodyFile)
+      : Buffer.alloc(0);
     need(digest(raw) === meta.configSha256 && digest(body) === meta.bodySha256, 'OPERATION_INPUT_CHANGED');
     const ticketHash = config.operation.ticketFile
       ? digest(await readBytes(config.operation.ticketFile, 16384)) : null;
@@ -235,7 +278,9 @@ export class Operation {
     need(native.intentId === this.intentId && native.bodySha256 === meta.bodySha256 &&
       (native.operationTicket?.sha256 ?? null) === (meta.ticketSha256 ?? null), 'NATIVE_REVIEW_MISMATCH');
     const review = { intentId: this.intentId, configSha256: meta.configSha256,
-      bodySha256: meta.bodySha256, ticketSha256: meta.ticketSha256 ?? null, native, reviewedAt: now() };
+      bodySha256: meta.bodySha256, ticketSha256: meta.ticketSha256 ?? null,
+      ...(meta.nativeWorkspace === undefined ? {} : { nativeWorkspace: meta.nativeWorkspace }),
+      native, reviewedAt: now() };
     await writeJson(join(this.directory, 'review.json'), review);
     return copy(review);
   }
@@ -244,23 +289,48 @@ export class Operation {
     need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
     const { meta, config } = await this._bound();
     need(review?.intentId === this.intentId && review.configSha256 === meta.configSha256 &&
-      review.bodySha256 === meta.bodySha256 && (review.ticketSha256 ?? null) === (meta.ticketSha256 ?? null),
+      review.bodySha256 === meta.bodySha256 && (review.ticketSha256 ?? null) === (meta.ticketSha256 ?? null) &&
+      (review.nativeWorkspace ?? null) === (meta.nativeWorkspace ?? null),
       'MATCHING_REVIEW_REQUIRED');
     need(config.operator && config.signerModule, 'ORIGINAL_OPERATOR_CONFIGURATION_REQUIRED');
     let attempt = { schema: SCHEMA, intentId: this.intentId, state: 'STARTING', createdAt: now(),
       configSha256: meta.configSha256, bodySha256: meta.bodySha256, retry: 'NO_AUTOMATIC_RETRY' };
     const attemptPath = join(this.directory, 'attempt.json');
+    let command = { args: ['--execute', '--config', this.configPath], entryFile: this.buyer.runtime.cli };
+    if (meta.nativeWorkspace !== undefined) {
+      // An existing/delegated attempt must recover without reopening wallet setup.
+      if (await exists(attemptPath)) {
+        const previous = await readJson(attemptPath);
+        if (previous.kind === 'INBOX_DELEGATED') throw new BuyerError('OPERATION_DELEGATED_USE_INBOX',
+          { operation: this, inboxDirectory: previous.inboxDirectory });
+        throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation: this });
+      }
+      const context = { directory: meta.nativeWorkspace, configPath: this.configPath,
+        ticketSha256: meta.ticketSha256 ?? null };
+      await checkWorkspace(this.buyer, context, { intentId: this.intentId, signal });
+      const current = (await this._bound()).meta;
+      need(current.configSha256 === meta.configSha256 && current.bodySha256 === meta.bodySha256 &&
+        (current.ticketSha256 ?? null) === (meta.ticketSha256 ?? null) &&
+        current.nativeWorkspace === meta.nativeWorkspace, 'MATCHING_REVIEW_REQUIRED');
+      need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
+      command = workspaceCommand(this.buyer, context);
+    }
     // Atomic hard-link publication: all processes contend for one nonreplaceable
     // attempt marker. A crash cannot expire it or authorize another purchase.
     try { await writeJson(attemptPath, attempt, { exclusive: true }); }
     catch (error) {
-      if (error.code === 'EEXIST') throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation: this });
+      if (error.code === 'EEXIST') {
+        const previous = await readJson(attemptPath);
+        if (previous.kind === 'INBOX_DELEGATED') throw new BuyerError('OPERATION_DELEGATED_USE_INBOX',
+          {operation:this, inboxDirectory:previous.inboxDirectory});
+        throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation: this });
+      }
       throw error;
     }
     let run;
     try {
-      run = await this.buyer.runtime.run(['--execute', '--config', this.configPath], {
-        directory: this.directory, signal,
+      run = await this.buyer.runtime.run(command.args, {
+        directory: this.directory, signal, entryFile: command.entryFile,
         started: async pid => {
           attempt = { ...attempt, state: 'STARTED', pid, startedAt: now() };
           await writeJson(attemptPath, attempt);
@@ -310,6 +380,9 @@ export class Operation {
     const result = await this.recover();
     return { intentId: this.intentId, directory: this.directory, state: attempt?.state ?? meta.state,
       resultRecoverable: result !== null, nativeStatus: result?.status ?? null,
-      deliveryStatus: result?.delivery.status ?? null, retry: 'NO_AUTOMATIC_RETRY' };
+      deliveryStatus: result?.delivery.status ?? null,
+      ...(attempt?.kind === 'INBOX_DELEGATED' ? {inboxDirectory:attempt.inboxDirectory} : {}),
+      ...(meta.nativeWorkspace === undefined ? {} : {nativeWorkspace:meta.nativeWorkspace}),
+      retry: 'NO_AUTOMATIC_RETRY' };
   }
 }

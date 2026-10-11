@@ -1,0 +1,126 @@
+{
+  "name": "Starforge — recover original evidence",
+  "active": false,
+  "nodes": [
+    {
+      "id": "9ad6467a-850e-4a56-b22b-35068a3cb1a4",
+      "name": "Start selected operation",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "4d8b2604-cea3-405d-97e6-e10113e2c59e",
+      "name": "Select original intent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8ba3eb84-300d-4370-9683-756f394e48ab",
+              "name": "intentId",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "9d032c0d-6e3d-482d-97d3-56aaf33a57da",
+      "name": "Recover original evidence",
+      "type": "n8n-nodes-starforge-buyer.starforgeBuyer",
+      "typeVersion": 1,
+      "position": [
+        480,
+        240
+      ],
+      "parameters": {
+        "operation": "recover",
+        "intentId": "={{ $json.intentId }}",
+        "options": {}
+      },
+      "credentials": {
+        "starforgeBuyerWorkspace": {
+          "name": "Original Starforge buyer workspace"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "90a7690f-5c98-4812-ad1d-1b70c398a80f",
+      "name": "Read retained response",
+      "type": "n8n-nodes-starforge-buyer.starforgeBuyer",
+      "typeVersion": 1,
+      "position": [
+        720,
+        240
+      ],
+      "parameters": {
+        "operation": "response",
+        "intentId": "={{ $json.intentId }}",
+        "responseFormat": "binary",
+        "options": {}
+      },
+      "credentials": {
+        "starforgeBuyerWorkspace": {
+          "name": "Original Starforge buyer workspace"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    }
+  ],
+  "connections": {
+    "Start selected operation": {
+      "main": [
+        [
+          {
+            "node": "Select original intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select original intent": {
+      "main": [
+        [
+          {
+            "node": "Recover original evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recover original evidence": {
+      "main": [
+        [
+          {
+            "node": "Read retained response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

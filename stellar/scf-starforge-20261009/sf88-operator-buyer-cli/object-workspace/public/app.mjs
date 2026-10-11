@@ -9,6 +9,7 @@ let section = sessionStorage.getItem('starforge-object-workspace-view') === 'acc
 let query = '', filter = 'all', generation = 0, pollTimer, queryTimer, confirmAction = null;
 let downloadWatchUntil = 0;
 let receiving = { sources: [], operator: null }, receivedChoices = [], receivedReview = null, receivingGeneration = 0;
+let recoveryState = null, backupReview = null;
 const readable = value => String(value ?? '').replace(/_/g, ' ').toLowerCase();
 const integer = value => value === null || value === undefined ? '—' : String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const bytes = value => {
@@ -17,6 +18,15 @@ const bytes = value => {
   const unit = value < 1048576 ? ['KiB',1024] : value < 1073741824 ? ['MiB',1048576] : ['GiB',1073741824];
   return (value / unit[1]).toFixed(2) + ' ' + unit[0];
 };
+const isWhole = value => value?.deliveryMode === 'whole';
+const deliveryLabel = value => isWhole(value) ? 'Whole file · one GET' : 'Byte chunks';
+function requestPlan(value) {
+  return [['Delivery',deliveryLabel(value)],['Complete bytes',integer(value.bytes)],['Requests',integer(value.chunkCount)],
+    ...(isWhole(value) ? [['Request', 'GET ' + value.sourceUrl],['Expected response','HTTP 200 · complete file']] :
+      [['Bytes per request',integer(value.chunkBytes)],
+        ['First range',value.firstRange.offset + '–' + (value.firstRange.length - 1)],
+        ['Last range',value.lastRange.offset + '–' + (value.lastRange.offset + value.lastRange.length - 1)]])];
+}
 const messages = {
   OBJECT_WORKSPACE_REVIEW_CHANGED: 'The saved source or download has changed. Refresh it and review the current plan before continuing.',
   OBJECT_WORKSPACE_REVIEW_EXPIRED: 'This preparation review has expired. Review the download plan again.',
@@ -33,7 +43,12 @@ const messages = {
   OBJECT_RECEIVING_PRESET_CHANGED: 'The local operator preset changed after review. Review the received download with its current settings.',
   OBJECT_RECEIVING_BUDGET_OUTSIDE_OPERATOR_LIMITS: 'The daily and whole-download caps must fit this host’s operator ceilings. Each request must also fit the daily cap.',
   OBJECT_RECEIVING_SOURCE_CHANGED: 'The retained merchant files changed. Receive the original files again before preparing this object.',
+  OBJECT_WHOLE_FILE_SIZE_FIXED: 'This merchant sells the complete file in one request. Its byte count is fixed by the original descriptor.',
   REQUEST_OPERATOR_PRESET_REQUIRED: 'Launch this workspace with its private --operator-settings preset to prepare a new buyer.',
+  OBJECT_RECOVERY_REVIEW_CHANGED: 'The selected backup contents changed. Review the current state before creating the backup.',
+  OBJECT_RECOVERY_DEPENDENCY_OUTSIDE_ROOT: 'Choose the common private state root that contains this workspace, its operator preset and every selected native buyer.',
+  OBJECT_RECOVERY_ORIGINAL_OPERATOR_REQUIRED: 'Workspace backup requires the original prepared buyer and its committed spending journal. Prepare the received product with your local preset first, or select its existing native operator.',
+  WORKSPACE_RECOVERY_TARGET_NOT_EMPTY: 'The original restore location contains files. Close its programs and preserve that existing directory before restoring to an absent or empty location.',
 };
 function notice(message = '', error = false) {
   $('notice').hidden = !message; $('notice').textContent = message; $('notice').classList.toggle('error', error);
@@ -75,6 +90,7 @@ async function load() {
   const current = ++generation, result = await request('/api/state' + selectedParams());
   if (current !== generation) return;
   state = result; render(); $('connection').textContent = 'Connected'; schedulePoll();
+  if (!$('recovery-panel').hidden) await loadRecovery();
 }
 function showError(error) { $('connection').textContent = 'Needs attention'; notice(errorMessage(error), true); }
 async function action(work) {
@@ -88,6 +104,7 @@ function selectSession(id) {
   selected = id; page = 0; query = ''; filter = 'all'; review = null;
   $('chunk-query').value = ''; $('chunk-filter').value = 'all'; $('setup').hidden = true;
   $('selection-review').hidden = true; load().catch(showError);
+  $('recovery-panel').hidden = true;
 }
 function renderSessions() {
   const list = $('session-list'); list.replaceChildren();
@@ -96,7 +113,7 @@ function renderSessions() {
     button.dataset.session = session.id;
     button.append(element('strong', session.name), element('span', session.id));
     const status = state.active?.session === session.id ? state.active.state : session.status;
-    button.append(element('span', readable(status) + (session.bytes ? ' · ' + bytes(session.bytes) : '')));
+    button.append(element('span', readable(status) + (Number.isFinite(session.bytes) ? ' · ' + bytes(session.bytes) : '')));
     button.onclick = () => selectSession(session.id); list.append(button);
   }
   if (!state.sessions.length) list.append(element('p', 'No saved downloads yet.', 'list-empty'));
@@ -111,15 +128,17 @@ function explanation(row) {
   if (row.lastRun?.state === 'SETUP_REQUIRED') return 'The original buyer needs its operator setup: ' + readable(row.lastRun.error) + '. Repair that setup, refresh, and deliberately continue.';
   if (row.status === 'RECONCILIATION_REQUIRED') return 'Part ' + ((row.stoppedChunk?.index ?? 0) + 1) + ' needs reconciliation: ' + readable(row.stoppedChunk?.code) + '. Recover the saved original result or export its record for the existing operator workflow.';
   if (row.lock?.state === 'STALE') return 'The original run has a stale local process lease. Recover the saved session to reopen it.';
-  if (row.status === 'COMPLETE') return 'Every part is verified. Assemble the file, then download the completed bytes.';
+  if (row.status === 'COMPLETE') return isWhole(row) ?
+    'The complete response is verified. Save the whole file, then download its recorded bytes.' :
+    'Every part is verified. Assemble the file, then download the completed bytes.';
   if (row.status === 'RUNNING_OR_INTERRUPTED' || row.lock) return 'The original session is owned by another process. Refresh after its operation ends.';
   if (row.completeChunks) return 'Continue from the next unattempted part. ' + integer(row.completeChunks) + ' completed parts remain in the original session.';
   return 'The reviewed byte plan is saved. Start the download when you are ready to approve its original requests.';
 }
 function render() {
   renderSessions(); const row = state.selected;
-  $('empty').hidden = Boolean(row) || !$('setup').hidden;
-  $('session').hidden = !row || !$('setup').hidden;
+  $('empty').hidden = Boolean(row) || !$('setup').hidden || !$('recovery-panel').hidden;
+  $('session').hidden = !row || !$('setup').hidden || !$('recovery-panel').hidden;
   if (!row) { controls(); return; }
   $('session-id').textContent = 'SAVED DOWNLOAD / ' + row.id;
   $('session-title').textContent = row.name;
@@ -134,9 +153,10 @@ function render() {
   $('bytes-value').textContent = bytes(row.downloadedBytes) + ' / ' + bytes(row.bytes);
   $('cap-value').textContent = integer(row.limits.maxTotalAtomic);
   $('allocated-value').textContent = integer(row.capAllocatedAtomic);
-  $('progress-bar').style.width = Math.min(100, row.downloadedBytes / row.bytes * 100) + '%';
+  $('progress-bar').style.width = (row.bytes ? Math.min(100, row.downloadedBytes / row.bytes * 100) :
+    row.completeChunks === row.chunkCount ? 100 : 0) + '%';
   $('session-explanation').textContent = explanation(row);
-  details($('session-terms'), [['Resource',row.sourceUrl],['Network',row.terms.network],['Scheme',row.terms.scheme],
+  details($('session-terms'), [['Delivery',deliveryLabel(row)],['Resource',row.sourceUrl],['Network',row.terms.network],['Scheme',row.terms.scheme],
     ['Asset',row.terms.asset],['Recipient',row.terms.payTo],['Maximum per request',row.limits.maxAtomic + ' atomic units'],
     ['Planned maximum',row.limits.plannedMaxAtomic + ' atomic units'],['Whole-download cap',row.limits.maxTotalAtomic + ' atomic units'],
     ['Content type',row.contentType],['Object snapshot',row.snapshot],['Expected whole-file SHA-256',row.expectedSha256 ?? 'Not supplied'],
@@ -145,7 +165,9 @@ function render() {
   const assembly = row.assembly;
   $('assembly-status').textContent = assembly ? 'RECORDED' : row.status === 'COMPLETE' ? 'READY' : 'WAITING FOR PARTS';
   $('assembly-description').textContent = assembly ? assembly.name + ' · ' + bytes(assembly.bytes) + '. Download rechecks the saved file against this recorded SHA-256.' :
-    'Assembly reads verified parts in byte order, checks the complete length and digest, and saves a new private file.';
+    isWhole(row) ? 'Save the verified whole response to a new private file with its recorded length and digest.' :
+      'Assembly reads verified parts in byte order, checks the complete length and digest, and saves a new private file.';
+  $('assemble').textContent = isWhole(row) ? 'Save whole file' : 'Assemble file';
   $('assembly-digest').hidden = !assembly; $('assembly-digest').textContent = assembly?.sha256 ?? '';
   const fileTransfer = state.active?.session === row.id && state.active.kind === 'FILE_DOWNLOAD' ? state.active : row.lastFileTransfer;
   $('file-transfer-progress').hidden = !fileTransfer;
@@ -163,7 +185,8 @@ function render() {
   $('last-inspection').textContent = row.inspectedAt ? 'Observed ' + new Date(row.inspectedAt).toLocaleTimeString() : '';
   const rows = $('chunk-rows'); rows.replaceChildren();
   for (const chunk of row.chunks) {
-    const tr = element('tr'); tr.append(element('td',String(chunk.index + 1)),element('td',integer(chunk.offset) + '–' + integer(chunk.offset + chunk.length - 1)));
+    const tr = element('tr'); tr.append(element('td',String(chunk.index + 1)),element('td',isWhole(row) ?
+      'Whole file' : integer(chunk.offset) + '–' + integer(chunk.offset + chunk.length - 1)));
     const status = element('td',readable(chunk.state)); status.append(element('small',integer(chunk.length) + ' bytes')); tr.append(status);
     const outcome = element('td',chunk.outcome ? readable(chunk.outcome) : '—'); outcome.append(element('small',chunk.intentId)); tr.append(outcome);
     const digest = element('td'); digest.append(element('code',chunk.sha256 ?? (chunk.code ? readable(chunk.code) : 'Awaiting original request'))); tr.append(digest); rows.append(tr);
@@ -175,7 +198,7 @@ function render() {
 function renderAccounting(row) {
   const record = row.accounting, counts = row.totals;
   $('accounting-observed').textContent = 'Read ' + new Date(record.observedAt).toLocaleTimeString();
-  details($('accounting-terms'),[['Network',record.terms.network],['Asset',record.terms.asset],
+  details($('accounting-terms'),[['Delivery',deliveryLabel(record)],['Network',record.terms.network],['Asset',record.terms.asset],
     ['Recipient',record.terms.payTo],['Original parts',integer(record.range.total)],
     ['Operator workspace',record.workspace ? 'Saved with this original session' : 'Not bound to this session']]);
   $('accounting-explanation').textContent = record.workspace ?
@@ -236,6 +259,7 @@ function controls() {
   $('review-selection').disabled = pending || !products.some(product => product.id === $('product').value && !product.error);
   $('create-session').disabled = pending || !review;
   $('refresh-list').disabled = pending;
+  for (const id of ['new-download','empty-new','close-setup']) $(id).disabled = pending;
   for (const id of ['export-html','export-json']) $(id).disabled = pending || !row || Boolean(state?.active || state?.mutation);
   for (const name of ['delivery','accounting']) $(name + '-tab').disabled = pending;
   const financial = row?.section === 'accounting';
@@ -245,9 +269,16 @@ function controls() {
   $('accounting-next').disabled = pending || !financial || row.pagination.page + 1 >= row.pagination.pages;
   const receivingBusy = pending || Boolean(state?.active || state?.mutation);
   $('receive-files').disabled = receivingBusy;
+  for (const id of ['receive-source','receive-object','receive-offer']) $(id).disabled = receivingBusy;
   $('receive-review').disabled = receivingBusy || !receiving.operator || !receivedChoices.some(choice =>
     !choice.error && choice.rowIndex + ':' + choice.acceptIndex === $('receive-offer').value);
   $('receive-create').disabled = receivingBusy || !receivedReview;
+  $('open-recovery').disabled = pending; $('close-recovery').disabled = pending;
+  $('backup-review').disabled = receivingBusy;
+  $('backup-create').disabled = receivingBusy || !backupReview || !$('backup-quiesced').checked;
+  $('backup-verify').disabled = receivingBusy;
+  $('recovery-stop').hidden = !recoveryState?.active;
+  $('recovery-stop').disabled = pending || recoveryState?.active?.state === 'STOPPING';
 }
 function productChanged() {
   review = null; $('selection-review').hidden = true;
@@ -256,14 +287,16 @@ function productChanged() {
     $('product-summary').textContent = product ? 'This product needs operator setup: ' + readable(product.error) : 'Add a trusted product profile when launching this workspace.';
     controls(); return;
   }
-  $('product-summary').textContent = product.filename + ' · ' + bytes(product.bytes) + ' · ' + product.sourceUrl;
+  $('product-summary').textContent = product.filename + ' · ' + deliveryLabel(product) + ' · ' + bytes(product.bytes) + ' · ' + product.sourceUrl;
   $('chunk-bytes').value = String(product.chunkBytes); $('chunk-bytes').max = String(product.chunkBytes);
+  $('chunk-size-field').hidden = isWhole(product); $('chunk-bytes').readOnly = isWhole(product);
   $('total-cap').value = product.plannedMaxAtomic;
   $('session-name').value = product.id + '-' + new Date().toISOString().slice(0,10);
   controls();
 }
 async function newDownload() {
   await action(async () => {
+    $('recovery-panel').hidden = true;
     products = (await request('/api/products')).products;
     const select = $('product'); select.replaceChildren();
     for (const product of products) { const option = element('option',product.label + (product.error ? ' · setup required' : '')); option.value = product.id; select.append(option); }
@@ -273,6 +306,95 @@ async function newDownload() {
     $('receiving-panel').open = !products.some(product => !product.error);
   });
 }
+
+const shellQuote = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
+function selectedBackup(bundle, record) {
+  $('verify-bundle').value = bundle ?? ''; $('verify-record').value = record ?? '';
+  $('recovery-command').textContent = 'buyer-object backup-restore --bundle ' + shellQuote(bundle ?? '/absolute/backup') +
+    (record ? ' --expect ' + record : '') + ' --pass-env ' + shellQuote($('backup-pass-env').value);
+}
+async function loadRecovery() {
+  recoveryState = await request('/api/recovery');
+  if (!$('backup-root').value) $('backup-root').value = recoveryState.suggestedStateRoot;
+  const record = recoveryState.last, output = record?.result;
+  $('recovery-progress').hidden = !record;
+  if (record) {
+    const event = record.events.at(-1);
+    $('recovery-progress').textContent = (record.kind === 'BACKUP' ? 'Encrypted backup' : 'Backup verification') +
+      ': ' + readable(recoveryState.active?.state ?? record.state) + '. ' +
+      (output ? integer(output.sessions) + ' downloads, ' + integer(output.operators) + ' native buyers, ' +
+        integer(output.files) + ' files / ' + bytes(output.bytes) + '. Record ' + output.recordSha256 +
+        (output.selectionRecordError ? '. Bundle completed; history needs attention: ' + readable(output.selectionRecordError) : '') :
+        record.error ? errorMessage({code:record.error}) : event ? readable(event.stage) + '.' : 'Preparing original state.') +
+      (output?.leaseReleaseErrors?.length ? ' Source lease release needs attention; reopen the original session before another capture.' : '');
+    if (output && !$('verify-bundle').value) selectedBackup(output.bundle, output.recordSha256);
+  }
+  const history = $('recovery-history'); history.replaceChildren();
+  for (const row of recoveryState.history) {
+    const item = element('article', undefined, 'recovery-record');
+    item.append(element('strong',row.error ? 'History entry needs attention' : readable(row.kind) + ' · ' + new Date(row.observedAt).toLocaleString()));
+    item.append(element('p',row.error ? readable(row.error) : row.bundle));
+    if (!row.error) {
+      item.append(element('code',row.recordSha256));
+      item.append(element('p',integer(row.sessions) + ' downloads · ' + integer(row.operators) + ' native buyers · ' + bytes(row.bytes)));
+      const choose = element('button','Select this backup','small'); choose.disabled = pending || Boolean(state?.active);
+      choose.onclick = () => selectedBackup(row.bundle,row.recordSha256); item.append(choose);
+    }
+    history.append(item);
+  }
+  if (!recoveryState.history.length) history.append(element('p','No backup has been retained in this workspace yet.','intro'));
+  controls();
+}
+$('open-recovery').onclick = () => action(async () => {
+  $('setup').hidden = true; $('recovery-panel').hidden = false; await loadRecovery();
+});
+$('close-recovery').onclick = () => { $('recovery-panel').hidden = true; render(); };
+$('backup-root').oninput = () => { backupReview = null; $('backup-selection').hidden = true; controls(); };
+$('backup-quiesced').onchange = controls;
+$('backup-review-form').onsubmit = event => {
+  event.preventDefault(); action(async () => {
+    backupReview = null; $('backup-selection').hidden = true;
+    const review = await request('/api/recovery/review',{stateRoot:$('backup-root').value});
+    backupReview = review.profile;
+    details($('backup-selection-terms'),[['Workspace',backupReview.directory],['State root',backupReview.stateRoot],
+      ['Original downloads',integer(backupReview.sessions.length)],['Prepared buyers',integer(backupReview.operators.length)],
+      ['Received merchant sources',integer(backupReview.received.length)],['Review SHA-256',backupReview.reviewSha256]]);
+    details($('backup-selection-paths'),[['Selected paths',backupReview.selected.join('\n')],
+      ['Missing optional files',backupReview.missing.join('\n') || 'None'],
+      ['Existing runtime required on restore',backupReview.runtime.map(item=>item.path).join('\n')],
+      ['Wallet secrets','Environment values are not included in the bundle.']]);
+    const rows=$('backup-session-rows');rows.replaceChildren();
+    for(const session of backupReview.sessions) {
+      const row=element('tr');row.append(element('td',session.id),element('td',deliveryLabel(session)),
+        element('td',bytes(session.bytes)),element('td',integer(session.chunkCount)));rows.append(row);
+    }
+    if (!backupReview.sessions.length) { const row=element('tr'),cell=element('td','Prepared buyer and received sources; no download sessions yet.');cell.colSpan=4;row.append(cell);rows.append(row); }
+    $('backup-selection').hidden=false;
+    if (!$('backup-output').value) $('backup-output').value = backupReview.stateRoot.slice(0,backupReview.stateRoot.lastIndexOf('/')) +
+      '/object-backup-' + new Date().toISOString().replace(/[:.]/g,'-');
+    notice('The current original state is reviewed. Choose a new bundle destination to capture it.');
+  });
+};
+$('backup-form').onsubmit = event => {
+  event.preventDefault(); action(async () => {
+    if (!backupReview || !$('backup-quiesced').checked) throw new Error('OBJECT_RECOVERY_REVIEW_REQUIRED');
+    await request('/api/recovery/start',{kind:'BACKUP',actionId:crypto.randomUUID(),stateRoot:backupReview.stateRoot,
+      expectedReviewSha256:backupReview.reviewSha256,output:$('backup-output').value,
+      passEnv:$('backup-pass-env').value,quiesced:true});
+    await loadRecovery();
+  });
+};
+$('backup-verify-form').onsubmit = event => {
+  event.preventDefault(); action(async () => {
+    const bundle=$('verify-bundle').value,expected=$('verify-record').value;
+    selectedBackup(bundle,expected);
+    await request('/api/recovery/start',{kind:'VERIFY_BACKUP',actionId:crypto.randomUUID(),bundle,
+      ...(expected ? {expected} : {}),passEnv:$('backup-pass-env').value});await loadRecovery();
+  });
+};
+$('recovery-stop').onclick = () => action(async () => {
+  if(recoveryState?.active)await request('/api/stop',{session:null,runId:recoveryState.active.id});
+});
 function clearReceivedReview() {
   receivingGeneration++; receivedReview = null; $('received-review').hidden = true; controls();
 }
@@ -299,7 +421,8 @@ async function loadReceiving(sourceId = $('receive-source').value) {
 async function receivedSourceChanged() {
   clearReceivedReview(); const select = $('receive-object'); select.replaceChildren();
   for (const item of receivedSource()?.objects ?? []) {
-    const option = element('option', item.name + (item.error ? ' · ' + readable(item.error) : ' · ' + bytes(item.bytes)));
+    const option = element('option', item.name + (item.error ? ' · ' + readable(item.error) :
+      ' · ' + deliveryLabel(item) + ' · ' + bytes(item.bytes)));
     option.value = item.id; option.disabled = Boolean(item.error); select.append(option);
   }
   const available = receivedSource()?.objects?.find(item => !item.error);
@@ -311,8 +434,9 @@ async function receivedObjectChanged() {
   const select = $('receive-offer'); select.replaceChildren(); receivedChoices = [];
   const placeholder = element('option', 'Choose the exact resource and payment option'); placeholder.value = ''; select.append(placeholder);
   if (!item || item.error) { $('receive-object-summary').textContent = ''; controls(); return; }
-  $('receive-object-summary').textContent = item.name + ' · ' + bytes(item.bytes) + ' · ' + item.path;
+  $('receive-object-summary').textContent = item.name + ' · ' + deliveryLabel(item) + ' · ' + bytes(item.bytes) + ' · ' + item.path;
   $('receive-chunk').value = String(item.chunkBytes); $('receive-chunk').max = String(item.chunkBytes);
+  $('receive-chunk-size-field').hidden = isWhole(item); $('receive-chunk').readOnly = isWhole(item);
   $('receive-session').value = 'download-' + item.id.slice(0,32) + '-' + new Date().toISOString().slice(0,10);
   $('receive-total').value = ''; $('receive-daily').value = '';
   const result = await request('/api/receiving/options?' + new URLSearchParams({ id: receivedSource().id, objectId: item.id }));
@@ -324,20 +448,20 @@ async function receivedObjectChanged() {
     const option = element('option', label); option.value = choice.rowIndex + ':' + choice.acceptIndex;
     option.disabled = Boolean(choice.error); select.append(option);
   }
-  if (!receivedChoices.some(choice => !choice.error)) placeholder.textContent = 'No matching native chunk offer in these files';
+  if (!receivedChoices.some(choice => !choice.error)) placeholder.textContent = 'No matching native object offer in these files';
   controls();
 }
 function receivedOfferChanged() {
   clearReceivedReview(); const item = receivedObject();
   const choice = receivedChoices.find(value => value.rowIndex + ':' + value.acceptIndex === $('receive-offer').value);
   if (!item || !choice || choice.error) return;
-  const chunks = Math.ceil(item.bytes / Number($('receive-chunk').value));
+  const chunks = isWhole(item) ? 1 : Math.ceil(item.bytes / Number($('receive-chunk').value));
   if (!Number.isSafeInteger(chunks) || chunks < 1) return;
   const total = BigInt(choice.terms.maxAtomic) * BigInt(chunks);
   $('receive-total').value = String(total);
   const ceiling = receiving.operator?.maxDailyAtomic;
   $('receive-daily').value = ceiling && BigInt(ceiling) < total ? ceiling : String(total);
-  $('receive-object-summary').textContent = item.name + ' · ' + bytes(item.bytes) + ' · ' + choice.url +
+  $('receive-object-summary').textContent = item.name + ' · ' + deliveryLabel(item) + ' · ' + bytes(item.bytes) + ' · ' + choice.url +
     ' · recipient ' + choice.terms.payTo;
 }
 function fileBase64(file, maximum) {
@@ -373,9 +497,7 @@ $('receive-plan-form').onsubmit = event => {
     if (current !== receivingGeneration) return;
     receivedReview = result;
     details($('received-review-terms'), [['Session',result.sessionName],['File',result.filename],['Resource',result.sourceUrl],
-      ['Complete bytes',integer(result.bytes)],['Requests',integer(result.chunkCount)],['Bytes per request',integer(result.chunkBytes)],
-      ['First range',result.firstRange.offset + '–' + (result.firstRange.length - 1)],
-      ['Last range',result.lastRange.offset + '–' + (result.lastRange.offset + result.lastRange.length - 1)],
+      ...requestPlan(result),
       ['Payer',result.operator.payer],['Network',result.terms.network],['Scheme',result.terms.scheme],['Asset',result.terms.asset],
       ['Recipient',result.terms.payTo],['Maximum per request',result.terms.maxAtomic + ' atomic units'],
       ['Planned maximum',result.plannedMaxAtomic + ' atomic units'],['Whole-download cap',result.maxTotalAtomic + ' atomic units'],
@@ -410,10 +532,7 @@ $('setup-form').onsubmit = event => {
   event.preventDefault(); action(async () => {
     review = await request('/api/review',{productId:$('product').value,sessionName:$('session-name').value,
       chunkBytes:Number($('chunk-bytes').value),maxTotalAtomic:$('total-cap').value});
-    details($('review-terms'),[['Session',review.sessionName],['File',review.filename],['Complete bytes',integer(review.bytes)],
-      ['Requests',integer(review.chunkCount)],['Bytes per request',integer(review.chunkBytes)],
-      ['First range',review.firstRange.offset + '–' + (review.firstRange.length - 1)],
-      ['Last range',review.lastRange.offset + '–' + (review.lastRange.offset + review.lastRange.length - 1)],
+    details($('review-terms'),[['Session',review.sessionName],['File',review.filename],...requestPlan(review),
       ['Network',review.terms.network],['Asset',review.terms.asset],['Recipient',review.terms.payTo],
       ['Maximum per request',review.terms.maxAtomic + ' atomic units'],['Planned maximum',review.plannedMaxAtomic + ' atomic units'],
       ['Whole-download cap',review.maxTotalAtomic + ' atomic units'],['Snapshot',review.snapshot],
@@ -430,7 +549,8 @@ $('create-session').onclick = () => action(async () => {
 $('run').onclick = () => {
   const row = state.selected, session = selected, expectedRevision = row.revision, actionId = crypto.randomUUID();
   confirm({title:row.completeChunks ? 'Continue this download?' : 'Start this download?',
-    copy:'The original buyer will request the next untouched parts from the selected merchant.',
+    copy:isWhole(row) ? 'The original buyer will request the complete file once from the selected merchant.' :
+      'The original buyer will request the next untouched parts from the selected merchant.',
     fields:[['File',row.name],['Remaining parts',integer(row.chunkCount - row.completeChunks)],['Network',row.terms.network],
       ['Asset',row.terms.asset],['Recipient',row.terms.payTo],['Maximum per request',row.limits.maxAtomic + ' atomic units'],
       ['Whole-download cap',row.limits.maxTotalAtomic + ' atomic units']],
@@ -444,7 +564,9 @@ $('refresh').onclick = () => action(async()=>{await request('/api/refresh',{sess
 $('refresh-list').onclick = () => action(async()=>{await request('/api/refresh',{session:selected,section});});
 $('assemble').onclick = () => {
   const row = state.selected;
-  confirm({title:'Assemble the complete file?',copy:'This reads the original verified parts and saves their byte sequence to a new private file.',
+  confirm({title:isWhole(row) ? 'Save the verified whole file?' : 'Assemble the complete file?',
+    copy:isWhole(row) ? 'This reads the original whole response and saves its verified bytes to a new private file.' :
+      'This reads the original verified parts and saves their byte sequence to a new private file.',
     fields:[['File',row.name],['Size',integer(row.bytes) + ' bytes'],['Parts',integer(row.chunkCount)],['Complete SHA-256',row.objectSha256]],
     note:'The original chunk files and attempt history remain available for subsequent review.',button:'Assemble file'},
   async()=>{await request('/api/assemble',{session:row.id,expectedRevision:row.revision});notice('The complete file is assembled and ready to download.');});

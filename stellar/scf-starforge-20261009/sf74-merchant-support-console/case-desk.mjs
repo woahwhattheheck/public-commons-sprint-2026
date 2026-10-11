@@ -284,6 +284,7 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
   return {
     changed,
     importWorkspace,
+    openSavedCase(id){return transition(()=>openCase(id),'open the received case');},
     async exportSnapshot(){
       if(busy)throw new Error('Finish the current case operation before preparing a handoff.');
       const caseName=name.value,meta=metadata(),epoch=generation;

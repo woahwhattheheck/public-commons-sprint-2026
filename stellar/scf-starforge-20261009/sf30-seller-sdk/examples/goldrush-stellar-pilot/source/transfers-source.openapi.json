@@ -1,0 +1,348 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Provider wallet transfers contract",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.covalenthq.com"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/{chainName}/address/{walletAddress}/transfers_v2/": {
+      "get": {
+        "tags": [
+          "get-erc20-token-transfers-for-address"
+        ],
+        "operationId": "getErc20TransfersForWalletAddress",
+        "parameters": [
+          {
+            "name": "chainName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletAddress",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quote-currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contract-address",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "starting-block",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "ending-block",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page-size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page-number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "quote_currency": {
+                      "type": "string"
+                    },
+                    "chain_id": {
+                      "type": "integer"
+                    },
+                    "chain_name": {
+                      "type": "string"
+                    },
+                    "chain_tip_height": {
+                      "type": "integer"
+                    },
+                    "chain_tip_signed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "block_signed_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "block_height": {
+                            "type": "integer"
+                          },
+                          "block_hash": {
+                            "type": "string"
+                          },
+                          "tx_hash": {
+                            "type": "string"
+                          },
+                          "tx_offset": {
+                            "type": "integer"
+                          },
+                          "successful": {
+                            "type": "boolean"
+                          },
+                          "miner_address": {
+                            "type": "string"
+                          },
+                          "from_address": {
+                            "type": "string"
+                          },
+                          "to_address": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          },
+                          "value_quote": {
+                            "type": "number",
+                            "format": "double"
+                          },
+                          "pretty_value_quote": {
+                            "type": "string"
+                          },
+                          "gas_metadata": {
+                            "type": "object",
+                            "properties": {
+                              "contract_decimals": {
+                                "type": "integer"
+                              },
+                              "contract_name": {
+                                "type": "string"
+                              },
+                              "contract_ticker_symbol": {
+                                "type": "string"
+                              },
+                              "contract_address": {
+                                "type": "string"
+                              },
+                              "supports_erc": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "logo_url": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "gas_offered": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "gas_spent": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "gas_price": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fees_paid": {
+                            "type": "string"
+                          },
+                          "gas_quote": {
+                            "type": "number",
+                            "format": "double"
+                          },
+                          "pretty_gas_quote": {
+                            "type": "string"
+                          },
+                          "gas_quote_rate": {
+                            "type": "number",
+                            "format": "double"
+                          },
+                          "transfers": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "block_signed_at": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "tx_hash": {
+                                  "type": "string"
+                                },
+                                "from_address": {
+                                  "type": "string"
+                                },
+                                "to_address": {
+                                  "type": "string"
+                                },
+                                "contract_decimals": {
+                                  "type": "integer"
+                                },
+                                "contract_name": {
+                                  "type": "string"
+                                },
+                                "contract_ticker_symbol": {
+                                  "type": "string"
+                                },
+                                "contract_address": {
+                                  "type": "string"
+                                },
+                                "logo_url": {
+                                  "type": "string"
+                                },
+                                "transfer_type": {
+                                  "type": "string"
+                                },
+                                "delta": {
+                                  "type": "string"
+                                },
+                                "balance": {
+                                  "type": "string"
+                                },
+                                "quote_rate": {
+                                  "type": "number",
+                                  "format": "double"
+                                },
+                                "delta_quote": {
+                                  "type": "number",
+                                  "format": "double"
+                                },
+                                "pretty_delta_quote": {
+                                  "type": "string"
+                                },
+                                "balance_quote": {
+                                  "type": "number",
+                                  "format": "double"
+                                },
+                                "method_calls": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "sender_address": {
+                                        "type": "string"
+                                      },
+                                      "method": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                },
+                                "explorers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "label": {
+                                        "type": "string"
+                                      },
+                                      "url": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "has_more": {
+                          "type": "boolean"
+                        },
+                        "page_number": {
+                          "type": "integer"
+                        },
+                        "page_size": {
+                          "type": "integer"
+                        },
+                        "total_count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Provider HTTP 200 response"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "TypeScript",
+            "label": "GoldRush SDK",
+            "source": "import { GoldRushClient } from \"@covalenthq/client-sdk\";\n\nconst ApiServices = async () => {\n    const client = new GoldRushClient(\"<GOLDRUSH_API_KEY>\");\n    const resp = await client.BalanceService.getErc20TransfersForWalletAddress({chainName: \"chainName\", walletAddress: \"walletAddress\"});\n    console.log(resp.data);\n};\n\nApiServices();"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

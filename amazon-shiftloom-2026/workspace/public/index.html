@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="workspace-token" content="__SESSION_TOKEN__">
+  <title>ShiftLoom · Coverage workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <header class="app-header">
+    <div><h1>ShiftLoom</h1><p>Volunteer coverage workspace</p></div>
+    <div class="header-state"><strong id="organization">Opening workspace</strong><span id="revision"></span></div>
+  </header>
+  <nav id="navigation" aria-label="Workspace sections"></nav>
+  <div class="status-line"><p id="status" role="status" aria-live="polite">Reading retained workspace…</p><button id="refresh" type="button">Refresh</button></div>
+  <main id="main" tabindex="-1"><p>Opening retained workspace…</p></main>
+  <dialog id="inspector" aria-labelledby="dialog-title"></dialog>
+  <footer class="app-footer"><span>Source versions, coordinator decisions and handovers stay in this workspace.</span><a href="/api/backup" download>Download workspace backup</a></footer>
+</body>
+</html>

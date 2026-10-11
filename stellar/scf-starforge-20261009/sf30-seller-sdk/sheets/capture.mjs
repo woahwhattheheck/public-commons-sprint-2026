@@ -4,6 +4,8 @@ import { mkdir } from 'node:fs/promises';
 import { object, bytes, digest, readPrivate, createFile, privateDirectory, syncDirectory, fault, stamp } from '../postgres/publisher/files.mjs';
 import { MAX_CAPTURE_BYTES, HASH, parseQualifiedRange, spreadsheetId, integer } from './declaration.mjs';
 
+import { getGoogleAccessToken } from './auth/oauth.mjs';
+
 export const GOOGLE_FIELDS = 'spreadsheetId,properties(title,locale,timeZone),sheets(properties(sheetId,title,sheetType,gridProperties(rowCount,columnCount)),data(startRow,startColumn,rowData(values(userEnteredValue,effectiveValue,formattedValue,effectiveFormat(numberFormat)))))';
 const decode = buffer => {
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buffer)); }
@@ -78,21 +80,30 @@ export function bindSheetsCapture(capture, config, query) {
   return capture.grid;
 }
 
-/** One bounded GET to the fixed Google origin. No redirects, writes, credential
- * persistence or implicit retries; 401/403/429 remain distinct operator outcomes. */
+/** One retained read from the fixed Google origin. Renewable connections may
+ * renew and replay a rejected 401 once; 403/429 never trigger token refresh.
+ * Tokens remain in their separate private connection, outside capture files. */
 export async function fetchSheetsResource(config, query, { env = process.env, signal } = {}) {
   const connection = config.connection;
   if (connection.kind !== 'google') throw fault('SHEETS_LIVE_CONNECTION_REQUIRED');
-  const token = env[connection.accessTokenEnv];
-  if (typeof token !== 'string' || !token.length || token.length > 16384 || /[^\x21-\x7e]/.test(token))
-    throw fault('SHEETS_ACCESS_TOKEN_MISSING', 'Provide the configured environment reference with an authorized Sheets read-only OAuth access token.');
   const timeout = AbortSignal.timeout(connection.timeoutMs ?? 30000);
   const abort = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  let token = connection.oauthDirectory ? await getGoogleAccessToken(connection.oauthDirectory, { signal: abort }) : env[connection.accessTokenEnv];
+  if (typeof token !== 'string' || !token.length || token.length > 16384 || /[^\x21-\x7e]/.test(token))
+    throw fault('SHEETS_ACCESS_TOKEN_MISSING', 'Provide the configured environment reference with an authorized Sheets read-only OAuth access token.');
   const url = new URL('https://sheets.googleapis.com/v4/spreadsheets/' + config.spreadsheetId);
   url.searchParams.set('ranges', query.qualifiedRange); url.searchParams.set('fields', GOOGLE_FIELDS);
   let response;
-  try { response = await fetch(url, { method: 'GET', headers: { authorization: 'Bearer ' + token, accept: 'application/json' }, redirect: 'error', signal: abort }); }
-  catch { throw fault(signal?.aborted ? 'SHEETS_CAPTURE_CANCELLED' : timeout.aborted ? 'SHEETS_CAPTURE_TIMEOUT' : 'SHEETS_PROVIDER_UNREACHABLE'); }
+  const read = async () => {
+    try { return await fetch(url, { method: 'GET', headers: { authorization: 'Bearer ' + token, accept: 'application/json' }, redirect: 'error', signal: abort }); }
+    catch { throw fault(signal?.aborted ? 'SHEETS_CAPTURE_CANCELLED' : timeout.aborted ? 'SHEETS_CAPTURE_TIMEOUT' : 'SHEETS_PROVIDER_UNREACHABLE'); }
+  };
+  response = await read();
+  if (response.status === 401 && connection.oauthDirectory) {
+    await response.body?.cancel();
+    token = await getGoogleAccessToken(connection.oauthDirectory, { signal: abort, rejectedAccessToken: token, force: true });
+    response = await read();
+  }
   if (!response.ok) {
     await response.body?.cancel();
     const codes = { 400: 'SHEETS_PROVIDER_REQUEST_INVALID', 401: 'SHEETS_AUTH_EXPIRED', 403: 'SHEETS_ACCESS_DENIED', 404: 'SHEETS_WORKBOOK_NOT_FOUND', 429: 'SHEETS_RATE_LIMITED' };

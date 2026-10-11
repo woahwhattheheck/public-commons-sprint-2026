@@ -128,6 +128,16 @@ keys only into the original buyer child's environment. A missing key file fails
 preflight before an attempt starts; restore local setup and retry the untouched
 operation. Other selected configurations retain their original environment path.
 
+## Receive a paid-file order
+
+Choose **Receive paid file order** for an original SF101 purchase handoff. The
+same local operator preset prepares its native buyer and spending ledger. Review
+the file promise and budgets, select a host-declared claim environment name, then
+add the prepared order to an acquisition. Its operation row keeps the original
+purchase result, resumable entitled transfer and verified customer download
+together. See [PAID_FILES.md](PAID_FILES.md) for the full receiving and delivery
+workflow and the optional launcher flag `--claim-envs`.
+
 ## Arrange and review a plan
 
 1. Choose **New acquisition plan** and give it a stable plan ID and title.
@@ -311,3 +321,9 @@ metadata lease and workspace shutdown queue. `executeRunbook` accepts an optiona
 trusted `environmentForOperation(op)` function; it resolves after original input
 preflight and before the durable started record. This callback is code supplied
 by the local workspace, never a manifest field or a received setting.
+
+## Back up acquisitions
+
+Choose **Back up acquisitions** in the existing navigation. Review the common private parent containing the workspace, configurations, operator settings, retained original operators, imported runs and downloads. Stop the other processes writing that state, choose a new archive outside it, and enter the name of the passphrase environment variable already set in the server terminal. The workspace retains progress, native checkpoints, cancellation and the published backup selection.
+
+The same view verifies an existing archive and displays exact restore and reopen commands. Restore runs from the installed CLI after stopping the live workspace and requires its original state root to be absent or empty. See [the complete recovery workflow](RECOVERY.md); verification and restore do not execute a buyer or refresh accounting.

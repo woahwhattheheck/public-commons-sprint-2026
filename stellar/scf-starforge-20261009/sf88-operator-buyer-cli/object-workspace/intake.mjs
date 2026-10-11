@@ -126,6 +126,7 @@ function objects(raw) {
       // the full original bytes and their original description digest.
       const selected = selectObjectDescriptionBytes(encode({ schema: value.schema, objects: [item] }), { objectId: item?.id });
       return { id: selected.selection.objectId, name: selected.selection.filename, path: selected.selection.path,
+        deliveryMode: selected.deliveryMode ?? 'chunks',
         bytes: selected.bytes, chunkBytes: selected.chunkBytes, snapshot: selected.expectedSnapshot,
         expectedSha256: selected.expectedSha256, contentType: selected.expectedContentType };
     } catch (error) {
@@ -162,7 +163,7 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
   async function receive({ descriptionName, descriptionBase64, catalogName, catalogBase64 } = {}) {
     const description = decoded(descriptionBase64, DESCRIPTION_LIMIT), offers = decoded(catalogBase64, CATALOG_LIMIT);
     const selected = objects(description); catalog(offers);
-    check(selected.some(item => !item.error), 'OBJECT_RECEIVING_CHUNK_OBJECT_REQUIRED');
+    check(selected.some(item => !item.error), 'OBJECT_RECEIVING_OBJECT_REQUIRED');
     const descriptionSha256 = hash(description), catalogSha256 = hash(offers);
     const id = hash(encode([descriptionSha256, catalogSha256])), path = sourcePath(id);
     const names = { descriptionName: filename(descriptionName), catalogName: filename(catalogName) };
@@ -186,7 +187,7 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
         try {
           const prepared = prepareReview(displayedRow, { rowIndex: 0, acceptIndex, intentId: 'object-source:' + id,
             url: url.href, method: 'GET' });
-          check(!prepared.draft.responseFile, 'OBJECT_RECEIVING_CHUNK_OFFER_REQUIRED');
+          check(!prepared.draft.responseFile, 'OBJECT_RECEIVING_OBJECT_OFFER_REQUIRED');
           choices.push({ rowIndex, acceptIndex, url: prepared.draft.operation.url, terms: prepared.draft.operation.expect });
         } catch (error) { choices.push({ rowIndex, acceptIndex, url: url.href, error: code(error) }); }
       }
@@ -204,7 +205,8 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
     const op = prepared.draft.operation, url = new URL(op.url);
     check(!url.search && url.pathname === selected.selection.path && !prepared.draft.responseFile,
       'OBJECT_DESCRIPTION_BUYER_ROUTE_MISMATCH');
-    const count = Math.ceil(selected.bytes / selected.chunkBytes), single = BigInt(amount(op.expect.maxAtomic));
+    const whole = selected.deliveryMode === 'whole';
+    const count = whole ? 1 : Math.ceil(selected.bytes / selected.chunkBytes), single = BigInt(amount(op.expect.maxAtomic));
     validateNativeSignerConfiguration({ ...op.expect, expectedPayer: operator.value.payer, rpcUrl: operator.value.rpc });
     const total = BigInt(amount(maxTotalAtomic)), daily = BigInt(amount(dailyAtomic));
     check(count <= 100000 && single * BigInt(count) <= total, 'OBJECT_TOTAL_BUDGET_INSUFFICIENT');
@@ -215,9 +217,10 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
       descriptionSha256: received.record.descriptionSha256, catalogSha256: received.record.catalogSha256,
       configSha256: prepared.configSha256, selected, terms: op.expect, sourceUrl: op.url, operator: operator.view };
     return { proof, prepared, public: { ...proof, filename: selected.selection.filename, bytes: selected.bytes,
+      deliveryMode: selected.deliveryMode ?? 'chunks',
       chunkCount: count, plannedMaxAtomic: (single * BigInt(count)).toString(),
-      firstRange: { offset: 0, length: Math.min(selected.chunkBytes, selected.bytes) },
-      lastRange: { offset: (count - 1) * selected.chunkBytes, length: selected.bytes - (count - 1) * selected.chunkBytes } } };
+      firstRange: whole ? null : { offset: 0, length: Math.min(selected.chunkBytes, selected.bytes) },
+      lastRange: whole ? null : { offset: (count - 1) * selected.chunkBytes, length: selected.bytes - (count - 1) * selected.chunkBytes } } };
   }
   async function review(input) {
     const built = await build(input, await preset()), reviewId = hash(encode(built.proof));
@@ -306,7 +309,8 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
       try { const value = await source(id); records.push({ ...value.record, objects: objects(value.description) }); }
       catch (error) { records.push({ id, error: code(error) }); }
     }
-    return { operator, presetError, sources: records.sort((a,b) => (b.receivedAt ?? '').localeCompare(a.receivedAt ?? '')) };
+    return { operator, presetError, settingsFile,
+      sources: records.sort((a,b) => (b.receivedAt ?? '').localeCompare(a.receivedAt ?? '')) };
   }
   async function preparedProducts() {
     const result = [];
