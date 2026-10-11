@@ -3,6 +3,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { createRefreshCoordinator } from './refresh.mjs';
 
 // Original independent public testnet facilitator sources. Do not infer seller ownership or endorsement.
 export const PROVIDERS = Object.freeze([
@@ -183,6 +184,8 @@ export async function readFederation(network = 'stellar:testnet', capture = capt
 export async function start({ port = 0, network = 'stellar:testnet' } = {}) {
   if (!Number.isSafeInteger(port) || port < PORT_MIN || port > PORT_MAX) fail('INVALID_PORT');
   if (!NETWORKS.has(network)) fail('UNSUPPORTED_STELLAR_NETWORK');
+  // A shared native fetch for concurrent local tabs; only complete captures are briefly reusable.
+  const coordinatedCapture = createRefreshCoordinator(readFederation);
   const server = createServer(async (req, res) => {
     for (const [key, value] of Object.entries(HEADERS)) res.setHeader(key, value);
     const localPort = server.address()?.port;
@@ -192,9 +195,9 @@ export async function start({ port = 0, network = 'stellar:testnet' } = {}) {
     }
     if (req.method !== 'GET') { res.writeHead(405, {allow:'GET'}); res.end('GET only'); return; }
     const path = req.url;
-    if (path === '/api/federated') {
+    if (path === '/api/federated' || path === '/api/federated?refresh=1') {
       try {
-        const result = await readFederation(network);
+        const result = await coordinatedCapture(network, { force: path.endsWith('?refresh=1') });
         const payload = JSON.stringify(result);
         res.writeHead(result.state === 'NO_SOURCES_AVAILABLE' ? 502 : 200,
           {'content-type': 'application/json; charset=utf-8'});
