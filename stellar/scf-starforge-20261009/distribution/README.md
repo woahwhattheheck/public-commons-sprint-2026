@@ -3300,6 +3300,29 @@ exports the same original reports with optional captured sources. Its ordinary
 The public `./merchant/recovery` entry exposes the original importer, collection
 reader and saved-response export for applications embedding this workflow.
 
+## ArcGIS source publication and GIS receiving
+
+Use `starforge arcgis` (or `arcgis-publisher`) for the maintained
+[ArcGIS workflow](../sf30-seller-sdk/arcgis/README.md): capture a FeatureServer or
+MapServer layer, or import retained original feature sets; select explicit
+native fields; review and publish through the existing dataset publisher.
+Stable object IDs, scalar attributes, geometry and coordinate reference stay
+in their original Esri representation. The same merchant supplies the original
+SF88 buyer configuration and snapshot-bound page query.
+
+Prepare the public receiving declaration with `starforge arcgis receiving-plan`
+for the retained candidate. After the original SF100 delivery has been
+finalized, `starforge arcgis receive` streams its exact typed JSONL into a usable
+Esri FeatureSet. It verifies the complete retained page chain and source binding
+before publishing the output. Payment history remains with the original buyer.
+The maintained merchant MCP also accepts a host-declared ArcGIS publisher;
+its source credentials remain private environment references.
+
+The package exports `@tokenjunkielabs/starforge-merchant/seller/arcgis`,
+`/seller/arcgis/publisher` and `/buyer/arcgis` for applications. The component
+reuses the included original publisher, dataset and buyer-delivery modules and
+adds no optional native dependency.
+
 ## Run an existing Python merchant
 
 The maintained Python merchant entrypoint is included alongside the buyer
@@ -4376,26 +4399,3 @@ entry exports `startDossierWorkspace` for applications that need only the
 operator server. Use `openDossierStore(directory, {providers})` for the same
 research engine in an existing application. Source and installed usage share
 the original dossier, revision and edition identities.
-
-## ArcGIS source publication and GIS receiving
-
-Use `starforge arcgis` (or `arcgis-publisher`) for the maintained
-[ArcGIS workflow](../sf30-seller-sdk/arcgis/README.md): capture a FeatureServer or
-MapServer layer, or import retained original feature sets; select explicit
-native fields; review and publish through the existing dataset publisher.
-Stable object IDs, scalar attributes, geometry and coordinate reference stay
-in their original Esri representation. The same merchant supplies the original
-SF88 buyer configuration and snapshot-bound page query.
-
-Prepare the public receiving declaration with `starforge arcgis receiving-plan`
-for the retained candidate. After the original SF100 delivery has been
-finalized, `starforge arcgis receive` streams its exact typed JSONL into a usable
-Esri FeatureSet. It verifies the complete retained page chain and source binding
-before publishing the output. Payment history remains with the original buyer.
-The maintained merchant MCP also accepts a host-declared ArcGIS publisher;
-its source credentials remain private environment references.
-
-The package exports `@tokenjunkielabs/starforge-merchant/seller/arcgis`,
-`/seller/arcgis/publisher` and `/buyer/arcgis` for applications. The component
-reuses the included original publisher, dataset and buyer-delivery modules and
-adds no optional native dependency.
