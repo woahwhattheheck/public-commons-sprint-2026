@@ -23,6 +23,7 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
@@ -30,6 +31,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
   valyu-merchant                            Configure and operate the native research search merchant
   valyu-research                            Save queries, operate purchases, compare research and export editions
+  opendatasoft                              Discover, retain and publish Huwise data with original buyer handoff
+  huwise                                    Alias for the same Opendatasoft data workspace
   arcgis                                    Capture ArcGIS layers and receive native Esri FeatureSets
   arcgis-publisher                          Publish reviewed ArcGIS data with original merchant and buyer handoff
   sftp                                      Inspect, capture and resume pinned private report files
@@ -49,6 +52,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   operations  Seller + live dashboard         dataset     Dataset API compiler
   jobs                                      Prepare and operate durable paid application jobs
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
+  job-workspace                             Receive paid jobs, retrieve results and organize research collections
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
@@ -93,6 +97,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   api-pass                                  Sell and operate purchased API allowances on original orders
   api-pass-client                           Use an allowance, inspect usage and recover an original response
+  api-purchase                              Buy an API allowance, call approved routes and recover saved responses
+  api-application                           Run source-pinned application functions over purchased API allowances
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
@@ -112,6 +118,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
+  oauth-connection                           Authorize, review, renew and disconnect an existing provider grant
   openapi postman                            Review collections, retain source and create merchant packages
   openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
@@ -142,6 +149,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   allium-explorer / allium-workspace          Acquire, review and operate retained Allium data products
   merchant-fleet / merchant-fleet-control     Host, prepare, activate and roll back a merchant fleet
   merchant-fleet-workspace                    Review fleet changes in the private operator browser
+  merchant-fleet-host                         Install, run and recover the managed multi-merchant Linux service
   fleet-release                              Stage, compare and operate original releases across a fleet
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
@@ -162,6 +170,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
   grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
   woo-operator                              Review original Stellar transfers and complete selected Woo orders
+  woo-refund                                Record verified order credits and receive original refund handoffs
 
 Optional feature groups: ${[...new Set([
   ...Object.keys(specification.featurePeers ?? {}),

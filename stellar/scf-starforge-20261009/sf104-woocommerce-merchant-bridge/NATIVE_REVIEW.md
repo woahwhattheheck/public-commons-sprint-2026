@@ -13,13 +13,12 @@ result exports can be reopened while the authoring files or store are offline.
 
 ## Install the same plugin and operator
 
-Keep `merchant-operator.php` alongside the original `starforge-sf98-woo.php`,
-`checkout-gateway.php` and `checkout-admission.php` in the installed plugin
-directory. Keep the matching `merchant-console.php`, `merchant-console.js`,
-`merchant-console.css`, `OPERATIONS.md` and this guide from the same release.
-The maintained Site packet copies all nine plugin files together. The original plugin includes the new operator routes; the
-gateway, checkout admission and existing administrator screens continue to use
-their original implementations.
+Install the complete 14-file plugin folder from the same release, including
+`merchant-operator.php`, the merchant console and the native refund assets.
+The [complete plugin inventory](REFUNDS.md#install-the-complete-plugin) lists
+every file. Both maintained installers copy that same folder. The gateway,
+checkout admission, original order review and refund controls share the store's
+existing WordPress and WooCommerce implementations.
 
 The maintained distribution exposes `starforge woo-operator` and the
 `@tokenjunkielabs/starforge-merchant/merchant/woocommerce` application import.
@@ -198,6 +197,15 @@ count and SHA-256. Repeating the export accepts identical existing files and
 preserves conflicting destination bytes. `show`, `history` and `export` reopen
 the retained work without contacting WordPress or loading its authentication
 environment values.
+
+## Refund a reviewed order
+
+After a native return is verified in the accounting workspace, use the order's
+**Refunds** tab or `starforge woo-refund` with this same operator configuration.
+The [refund guide](REFUNDS.md) covers the original adjustment import, explicit
+Woo credit, partial and full refunds, retained history and recovery of an
+already-saved native Woo refund. The original released payment remains the
+binding for every subsequent credit.
 
 ## Application and REST integration
 
