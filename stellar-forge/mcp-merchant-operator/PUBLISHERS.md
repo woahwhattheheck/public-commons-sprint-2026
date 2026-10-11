@@ -1,6 +1,6 @@
 # Retained data publication through merchant MCP
 
-Operate the original PostgreSQL, SQLite, MySQL, MongoDB, Google Sheets or SFTP publisher through the maintained merchant MCP service. The same saved plans, extraction runs, typed candidates, reviews, version writer, recurring policy and buyer files remain available after the MCP host restarts. The adapter uses the original publisher and scheduler instances under their existing workspace lease.
+Operate the original PostgreSQL, SQLite, MySQL, MongoDB, Google Sheets, SFTP or ArcGIS publisher through the maintained merchant MCP service. The same saved plans, extraction runs, typed candidates, reviews, version writer, recurring policy and buyer files remain available after the MCP host restarts. The adapter uses the original publisher and scheduler instances under their existing workspace lease.
 
 ## Start from the public SQLite example
 
@@ -375,3 +375,46 @@ unchanged-version behavior. Earlier versions stay with their original pinned
 buyers. Close and reopen the exact native instance; all plans, source bindings,
 transfers, published versions, schedule state and buyer handoffs stay in its
 original private directory.
+
+## ArcGIS layers and GIS receiving
+
+A host-declared `kind: "arcgis"` opens the original
+[sf30 ArcGIS publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/README.md).
+Its workspace schema is `stellar-forge.arcgis-publisher-workspace.v1`.
+Complete the source's capture/import and `source-create` commands, then initialize
+the original publisher directory before binding it in this connection file:
+
+```json
+{
+  "schema": "stellar-forge.merchant-publisher-connection.v1",
+  "workspaces": {
+    "neighborhoods": {
+      "label": "Reviewed neighborhood dataset",
+      "kind": "arcgis",
+      "directory": "publisher"
+    }
+  }
+}
+```
+
+The existing source tool returns the exact query, field types, source hash and
+`serviceQuery` descriptor. Save the selected columns with those native types and
+order extraction by the first object-ID column ascending. The optional
+attributes/geometry/spatial-reference JSON projections retain native values and
+Esri coordinates. Source credentials are environment references in the private
+capture configuration, never agent arguments.
+
+The same publisher tools inspect/extract/review/publish the candidate, control
+recurrence and prepare the original snapshot-pinned SF88 buyer. A saved ArcGIS
+source pins a completed capture; scheduled extractions reuse that exact
+observation. Capture a new source edition and save a newly reviewed plan to
+change the observed provider data. The scheduler does not silently issue new
+ArcGIS requests.
+
+Prepare the small public receiving declaration with `arcgis receiving-plan`
+for the retained candidate. Give it to the buyer with the current merchant
+handoff. After the ORIGINAL SF100 delivery is finalized, `arcgis receive`
+converts its exact typed JSONL to an Esri FeatureSet while verifying the original
+page chain, selected dataset snapshot, fields, object IDs, scalar values and CRS.
+The existing buyer owns each payment intent and page acquisition; conversion
+opens no network connection and makes no payment inference.
