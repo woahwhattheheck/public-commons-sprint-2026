@@ -251,7 +251,7 @@ export async function savePackage({specText, plan, parent, name}) {
   await mkdir(folder, {mode:0o700});
   for (const [file,content] of Object.entries(files)) await writeFile(join(folder,file), content, {flag:'wx',mode:0o600});
   await compileSeller(['--spec',join(folder,'facade-openapi.json'),'--config',join(folder,'selections.json'),
-    '--service-bindings',join(folder,'route-bindings.json'),'--out',join(folder,'compiled')]);
+    '--service-bindings',join(folder,'route-bindings.json'),'--out',join(folder,'compiled')],{report:false});
   await mkdir(join(folder,'support'), {mode:0o700});
   await writeFile(join(folder,'merchant-package.json'), manifestBytes, {flag:'wx',mode:0o600});
   const args = ['node',join(sourceRoot,'sf96-seller-pilot-ops/pilot-ops.mjs'),'start','--ops-port','0','--support-parent',join(folder,'support'),'--',
