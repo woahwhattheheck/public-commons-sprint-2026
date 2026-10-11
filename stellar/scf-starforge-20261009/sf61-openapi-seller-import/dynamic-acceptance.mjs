@@ -82,6 +82,10 @@ const p = b.extensions.bazaar.schema.properties.input.properties.pathParams;
 p.properties = { other: p.properties.id }; p.required = ['other'];
 assert.throws(() => compileSellerRoutes([{ id: 'a', offer: a, handler: handlers.application },
   { id: 'b', offer: b, handler: handlers.application }]), /Ambiguous/);
+const trailing = offered('GET', false).seller;
+trailing.resource.url = 'https://seller.example/api/ITEMS/latest/';
+assert.throws(() => compileSellerRoutes([{ id: 'fixed', offer: trailing, handler: handlers.application },
+  { id: 'dynamic', offer: a, handler: handlers.application }]), /Trailing-slash/);
 const numeric = structuredClone(a);
 numeric.resource.url = 'https://seller.example/api/items/42';
 numeric.extensions.bazaar.info.input.pathParams.id = 42;

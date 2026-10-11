@@ -85,8 +85,8 @@ export function orderServiceRoutes(routes) {
     const a = routes[i], b = routes[j];
     if (a.path === b.path) continue; // Distinct methods for the same path are valid.
     if (!a.binding.dynamic && !b.binding.dynamic && a.method === b.method &&
-        a.path.toLowerCase() === b.path.toLowerCase())
-      throw new TypeError('Case-ambiguous native service paths: ' + a.path + ' and ' + b.path);
+        a.path.replace(/(.+?)\/+$/, '$1').toLowerCase() === b.path.replace(/(.+?)\/+$/, '$1').toLowerCase())
+      throw new TypeError('Case- or slash-ambiguous native service paths: ' + a.path + ' and ' + b.path);
     if (!a.binding.dynamic || !b.binding.dynamic) continue; // Concrete paths win.
     const left = a.binding.segments, right = b.binding.segments;
     if (left.length === right.length && left.every((s, k) => s.toLowerCase() === right[k].toLowerCase() ||
@@ -98,7 +98,7 @@ export function orderServiceRoutes(routes) {
   // overlap a dynamic route only after this normalization.
   for (const a of routes.filter(r => !r.binding.dynamic && r.path.length > 1 && r.path.endsWith('/'))) {
     for (const b of routes.filter(r => r.binding.dynamic)) {
-      if (match(b.binding, a.path.slice(0, -1))) throw new TypeError('Trailing-slash route overlaps a dynamic native path');
+      if (b.binding.nativePattern.test(a.path.slice(0, -1))) throw new TypeError('Trailing-slash route overlaps a dynamic native path');
     }
   }
   return [...routes].sort((a, b) => Number(a.binding.dynamic) - Number(b.binding.dynamic));
