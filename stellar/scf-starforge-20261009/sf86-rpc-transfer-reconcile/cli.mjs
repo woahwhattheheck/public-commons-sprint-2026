@@ -5,28 +5,55 @@ import { createOfficialEventDecoder } from '../sf43-agent-commerce/verify.mjs';
 import { reconcileRpc, ReconciliationError, DEFAULT_RPC } from './verify.mjs';
 
 function argsOf(argv) {
-  const known = new Set(['--sf81-result','--payer','--rpc-endpoint','--max-event-pages']);
+  const known = new Set(['--sf81-result','--sf82-evidence','--payer','--rpc-endpoint','--max-event-pages']);
   const parsed={};
   for(let i=0;i<argv.length;i+=2) {
     if(!known.has(argv[i]) || !argv[i+1] || parsed[argv[i]] !== undefined)
       throw new ReconciliationError('INVALID_CLI_ARGUMENTS');
     parsed[argv[i]]=argv[i+1];
   }
-  if(!parsed['--sf81-result'] || !parsed['--payer'])
+  if(Boolean(parsed['--sf81-result']) === Boolean(parsed['--sf82-evidence']))
+    throw new ReconciliationError('EXACTLY_ONE_SF81_RECORD_OR_SF82_EVIDENCE_REQUIRED');
+  if(!parsed['--payer'])
     throw new ReconciliationError('SF81_RECORD_AND_TRUSTED_PAYER_REQUIRED');
   return parsed;
+}
+
+function originalRecordFromEvidence(envelope) {
+  if(envelope?.schema !== 'scf82.checkout-evidence.v1')
+    throw new ReconciliationError('SF82_EVIDENCE_SCHEMA_INVALID');
+  if(envelope.reconciliation?.status !== 'AVAILABLE' || !envelope.reconciliation.record)
+    throw new ReconciliationError('SF82_ORIGINAL_RECONCILIATION_RECORD_UNAVAILABLE');
+  const record=envelope.reconciliation.record;
+  const observation=envelope.observation, buyer=observation?.buyer;
+  const reservation=envelope.operatorReservation;
+  // Identify the same saved operation without deriving missing approval fields.
+  // The unchanged verifier still checks the complete original record and payer.
+  if(record.intentId !== envelope.intentId || record.intentId !== observation?.intentId ||
+    buyer?.attempts !== 2 ||
+    !['scheme','network','asset','payTo','amount'].every(key =>
+      record.requirement?.[key] !== undefined && record.requirement[key] === buyer?.requirement?.[key]) ||
+    !['network','transaction','success'].every(key =>
+      record.receipt?.[key] !== undefined && record.receipt[key] === buyer?.receipt?.[key]) ||
+    ![['outcome','outcome'],['request_id','requestId'],['network','network'],
+      ['reserved_atomic_units','reservedAtomicUnits']].every(([key,savedKey]) =>
+      record.operatorReservation?.[key] !== undefined && record.operatorReservation[key] === reservation?.[savedKey]))
+    throw new ReconciliationError('SF82_RECONCILIATION_RECORD_MISMATCH');
+  return record;
 }
 
 export async function main(argv=process.argv.slice(2)) {
   try {
     const args=argsOf(argv);
-    const path=args['--sf81-result'];
-    let stat,raw;
-    try { raw=await readFile(path); } catch { throw new ReconciliationError('SF81_RECORD_READ_FAILED'); }
-    if(raw.length>4_000_000) throw new ReconciliationError('SF81_RECORD_TOO_LARGE');
+    const path=args['--sf81-result'] ?? args['--sf82-evidence'];
+    const kind=args['--sf82-evidence'] ? 'SF82_EVIDENCE' : 'SF81_RECORD';
+    let raw;
+    try { raw=await readFile(path); } catch { throw new ReconciliationError(kind+'_READ_FAILED'); }
+    if(raw.length>4_000_000) throw new ReconciliationError(kind+'_TOO_LARGE');
     let record;
     try { record=JSON.parse(raw.toString('utf8')); }
-    catch { throw new ReconciliationError('SF81_RECORD_INVALID_JSON'); }
+    catch { throw new ReconciliationError(kind+'_INVALID_JSON'); }
+    if(args['--sf82-evidence']) record=originalRecordFromEvidence(record);
     // SDK loads from the same actual @x402/stellar / SF43 host as the original product.
     // There is intentionally no fake decoder, credential, or fallback for production CLI.
     let decodeContractEvent;
