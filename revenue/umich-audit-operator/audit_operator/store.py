@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -149,7 +150,8 @@ class Store:
             fd = os.open(dbpath, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
             try:
                 info = os.fstat(fd)
-                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_mode & 0o077:
+                if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_mode & 0o077
+                    or (hasattr(os, "getuid") and info.st_uid != os.getuid())):
                     raise ValueError("The workspace database must be a private regular file.")
             finally:
                 os.close(fd)
@@ -168,6 +170,10 @@ class Store:
                 kind TEXT NOT NULL,id TEXT NOT NULL,revision INTEGER NOT NULL,
                 sha256 TEXT NOT NULL,body TEXT NOT NULL,
                 PRIMARY KEY(kind,id,revision));
+            CREATE TABLE IF NOT EXISTS projection_variants(
+                kind TEXT NOT NULL,id TEXT NOT NULL,revision INTEGER NOT NULL,
+                sha256 TEXT NOT NULL,body TEXT NOT NULL,
+                PRIMARY KEY(kind,id,revision,sha256));
             CREATE TABLE IF NOT EXISTS heads(
                 kind TEXT NOT NULL,id TEXT NOT NULL,revision INTEGER NOT NULL,
                 PRIMARY KEY(kind,id),
@@ -206,20 +212,45 @@ class Store:
 
     def _ensure_owner(self):
         keypath = self.root / "operator.key"
+        row = self.db.execute("SELECT body FROM grants WHERE id='owner'").fetchone()
         if keypath.exists():
             token = private_bytes(keypath, 256).decode().strip()
-            if self.authenticate_token(token) is None:
-                raise ValueError("The retained operator key does not match this workspace.")
-            return
-        with self.lock, self.db:
+            if row:
+                if self.authenticate_token(token) is None:
+                    raise ValueError("The retained operator key does not match this workspace.")
+                return
+            # Finish first-boot initialization after a key write survived a DB rollback.
+            if not token or len(token) < 40:
+                raise ValueError("The retained operator key is incomplete.")
+        else:
+            if row:
+                raise ValueError("Restore the retained operator.key or use an encrypted backup to renew access.")
             token = secrets.token_urlsafe(36)
+            atomic_write(keypath, (token + "\n").encode())
+        with self.lock, self.db:
             body = {"id": "owner", "label": "Workspace operator", "role": "auditor",
                     "unit_ids": [], "selected_record_ids": [], "recipient_unit_ids": [],
                     "admin": True, "active": True, "created_at": now(), "expires_at": None}
-            self.db.execute("DELETE FROM sessions")
-            self.db.execute("DELETE FROM grants")
             self.db.execute("INSERT INTO grants VALUES(?,?,?)", ("owner", digest(token.encode()), encoded(body)))
-            atomic_write(keypath, (token + "\n").encode())
+
+    def operation(self, operation_id, action=None, request=None, actor=None):
+        with self.lock:
+            row = self.db.execute("SELECT * FROM operations WHERE id=?", (identifier(operation_id),)).fetchone()
+        if not row:
+            return None
+        if ((action is not None and row["action"] != action)
+            or (request is not None and row["request_sha256"] != fingerprint(request))
+            or (actor is not None and row["actor"] != actor)):
+            raise Conflict("This operation ID belongs to another action, actor or input.")
+        return {**json.loads(row["result"]), "replayed": True} if row["state"] == "complete" else None
+
+    def source_for_evidence(self, source_id, sha256):
+        matches = [s for s in self.sources() if s["sha256"] == sha256
+                   and (s["id"] == source_id or s.get("original_source_id") == source_id)]
+        if not matches:
+            raise KeyError("The exact source ID and evidence hash are not retained.")
+        return sorted(matches, key=lambda s: (s["id"] != source_id, s["id"]))[0]
+
 
     def owner_key(self):
         return private_bytes(self.root / "operator.key", 256).decode().strip()
@@ -269,7 +300,7 @@ class Store:
         with self.lock:
             return [json.loads(r["body"]) for r in self.db.execute("SELECT body FROM grants ORDER BY id")]
 
-    def create_grant(self, request, actor):
+    def create_grant(self, request, actor, operation_id):
         if not actor.get("admin"):
             raise Forbidden("Only the workspace owner can create access links.")
         role = request.get("role")
@@ -288,17 +319,23 @@ class Store:
         expires_days = request.get("expires_days", 30)
         if isinstance(expires_days, bool) or not isinstance(expires_days, int) or not 1 <= expires_days <= 366:
             raise ValueError("Access links expire after 1 to 366 days.")
-        token = secrets.token_urlsafe(36)
-        value = {"id": "grant-" + secrets.token_hex(12), "label": str(request.get("label", "")).strip()[:120],
+        identifier(operation_id)
+        seed = private_bytes(self.root / "operator.key", 256).strip()
+        token = hmac.new(seed, ("grant:" + operation_id).encode(), hashlib.sha256).hexdigest()
+        value = {"id": "grant-" + fingerprint([operation_id, actor["id"]])[:32], "label": str(request.get("label", "")).strip()[:120],
                  "role": role, "unit_ids": sorted(set(units)), "recipient_unit_ids": sorted(set(recipients)),
                  "selected_record_ids": sorted(set(selected)), "admin": False, "active": True,
                  "created_at": now(), "expires_at": (datetime.now(timezone.utc) + timedelta(days=expires_days)).isoformat()}
         if not value["label"]:
             raise ValueError("Name the person or receiving team for this access link.")
-        with self.lock, self.db:
+        def create():
             self.db.execute("INSERT INTO grants VALUES(?,?,?)", (value["id"], digest(token.encode()), encoded(value)))
             self._event(actor["id"], "access_created", value["id"], {k: value[k] for k in ("label", "role", "unit_ids", "expires_at")})
-        return {"grant": value, "token": token}
+            return {"grant": value}
+        result = self.execute(operation_id, "create_grant", request, actor["id"], create)
+        # Re-derive the original token for an authenticated retry; never store plaintext in operation history.
+        grant = next(g for g in self.grants() if g["id"] == result["grant"]["id"])
+        return {**result, "grant": grant, **({"token": token} if grant["active"] else {})}
 
     def revoke_grant(self, grant_id, actor):
         if not actor.get("admin") or grant_id == "owner":
@@ -385,8 +422,12 @@ class Store:
 
     def history(self, kind, record_id):
         with self.lock:
-            return [json.loads(r["body"]) for r in self.db.execute(
-                "SELECT body FROM revisions WHERE kind=? AND id=? ORDER BY revision DESC", (identifier(kind), identifier(record_id)))]
+            args = (identifier(kind), identifier(record_id))
+            full = [json.loads(r["body"]) for r in self.db.execute(
+                "SELECT body FROM revisions WHERE kind=? AND id=? ORDER BY revision DESC", args)]
+            variants = [json.loads(r["body"]) for r in self.db.execute(
+                "SELECT body FROM projection_variants WHERE kind=? AND id=? ORDER BY revision DESC", args)]
+            return sorted(full + variants, key=lambda r: (r["revision"], not bool(r.get("projection"))), reverse=True)
 
     def _insert_record(self, record, expected, actor, preserve_revision=False):
         if not self.db.in_transaction:
@@ -437,11 +478,82 @@ class Store:
                 self.db.rollback()
                 raise
 
+    def _adopt_sources(self, sources, blobs):
+        """Preserve the sender's original file IDs after full byte preflight."""
+        prepared = []
+        for source in sources:
+            identifier(source["id"])
+            sha = source["sha256"]
+            old = self.db.execute("SELECT body FROM sources WHERE id=?", (source["id"],)).fetchone()
+            if old:
+                if encoded(json.loads(old["body"])) != encoded(source):
+                    raise Conflict("A receiving source ID has different retained metadata.")
+                self.bytes(sha)
+                continue
+            data = blobs.get(sha)
+            if data is None and (self.objects / sha).exists():
+                data = self.bytes(sha)
+            if not isinstance(data, bytes) or digest(data) != sha or len(data) != source["bytes"]:
+                raise ValueError("Receiving source bytes or original size do not match.")
+            prepared.append((source, data))
+        for source, data in prepared:
+            self._blob(data)
+            self.db.execute("INSERT INTO sources VALUES(?,?,?)", (source["id"], source["sha256"], encoded(source)))
+
+    def _adopt_snapshot(self, snapshot, actor):
+        """Commit a fully preflighted receiving graph without losing local history."""
+        heads = {(r["kind"], r["id"]): r for r in snapshot["records"]}
+        candidates = {}
+        for record in snapshot.get("revisions", []) + snapshot["records"]:
+            validate_record(record)
+            key = (record["kind"], record["id"], record["revision"])
+            if key in candidates and encoded(candidates[key]) != encoded(record):
+                raise Conflict("Receiving repeats a revision with different content.")
+            candidates[key] = record
+        additions, promotions = [], []
+        for key, record in candidates.items():
+            old = self.db.execute("SELECT body FROM revisions WHERE kind=? AND id=? AND revision=?", key).fetchone()
+            if not old:
+                additions.append(record)
+                continue
+            previous = json.loads(old["body"])
+            if encoded(previous) == encoded(record):
+                continue
+            if (previous.get("projection") and not record.get("projection")
+                and previous["projection"].get("source_record_sha256") == fingerprint(record)):
+                promotions.append((previous, record))
+            else:
+                raise Conflict("Receiving would overwrite an original retained revision.")
+        # All conflicts have been checked before the first domain write.
+        for previous, record in promotions:
+            key = (previous["kind"], previous["id"], previous["revision"])
+            self.db.execute("INSERT OR IGNORE INTO projection_variants VALUES(?,?,?,?,?)",
+                            (*key, fingerprint(previous), encoded(previous)))
+            self.db.execute("DELETE FROM heads WHERE kind=? AND id=? AND revision=?", key)
+            self.db.execute("DELETE FROM revisions WHERE kind=? AND id=? AND revision=?", key)
+            additions.append(record)
+            self._event(actor, "projection_expanded", record["id"],
+                        {"revision": record["revision"], "retained_projection_sha256": fingerprint(previous),
+                         "original_record_sha256": fingerprint(record)})
+        for record in additions:
+            self.db.execute("INSERT INTO revisions VALUES(?,?,?,?,?)",
+                (record["kind"], record["id"], record["revision"], fingerprint(record), encoded(record)))
+        for (kind, record_id), record in heads.items():
+            previous = self.db.execute("SELECT revision FROM heads WHERE kind=? AND id=?", (kind, record_id)).fetchone()
+            if previous and previous["revision"] > record["revision"]:
+                raise Conflict("Receiving cannot reduce a retained current revision.")
+            self.db.execute("INSERT INTO heads VALUES(?,?,?) ON CONFLICT(kind,id) DO UPDATE SET revision=excluded.revision",
+                            (kind, record_id, record["revision"]))
+        self._event(actor, "receiving_graph_adopted", snapshot["workspace_id"],
+                    {"new_revision_records": len(additions), "expanded_projections": len(promotions)})
+
     def snapshot(self, include_history=False):
         with self.lock:
             result = {"format": "commons-audit-snapshot/1", "workspace_id": self.setting("workspace_id"),
                       "records": [r for r in self.records() if r["kind"] in DOMAIN_KINDS],
-                      "sources": self.sources(), "captured_at": now()}
+                      "sources": [s for s in self.sources() if s["role"] not in {
+                          "import_plan", "receipt_plan", "receipt", "report_projection", "report",
+                          "handoff", "received_bundle", "comparison", "native_export"}], "captured_at": now()}
             if include_history:
                 result["revisions"] = [json.loads(r["body"]) for r in self.db.execute(
                     "SELECT body FROM revisions ORDER BY kind,id,revision") if json.loads(r["body"])["kind"] in DOMAIN_KINDS]
