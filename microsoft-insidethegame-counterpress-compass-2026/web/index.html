@@ -3,30 +3,74 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Counterpress Compass — Synthetic Match Intelligence</title>
+<title>Counterpress Compass — Live synthetic match</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<header><div class="brand">COUNTERPRESS / COMPASS</div><div class="pill">SYNTHETIC MATCH DATA ONLY</div></header>
+<a class="skip" href="#broadcast">Skip to match</a>
+<header><div class="brand">COUNTERPRESS / COMPASS</div><div class="pill" data-i18n="synthetic">SYNTHETIC MATCH · invented teams and events</div></header>
 <main>
-<section class="hero"><div class="kicker">Evidence-linked football intelligence</div><h1>See the <span>eight seconds</span> that change a match.</h1><p class="intro">A tactical story engine that watches possession loss, pressing actions, and recovery windows — then turns exact event evidence into timed overlays for fans and analysts.</p></section>
-<div class="grid">
-<section class="panel" aria-labelledby="live-title"><div class="kicker">01 / Interactive replay</div><h2 id="live-title">Match control</h2>
-<div class="scoreboard"><div class="teamname">Harbor FC</div><div class="vs">SYNTHETIC<br>VS</div><div class="teamname">Metro Rovers</div></div>
-<div class="controlrow"><div><label for="team">Focus club</label><select id="team"><option>Harbor FC</option><option>Metro Rovers</option></select></div><div><label for="audience">Experience</label><select id="audience"><option value="casual">Casual fan</option><option value="analyst">Analyst</option></select></div><div><label for="locale">Language</label><select id="locale"><option value="en">English</option><option value="es">Español</option></select></div></div>
-<div class="progress"><div id="progress" class="progressfill"></div></div><div id="frame" class="eventlabel" aria-live="polite">No events played</div>
-<div class="buttonrow"><button class="primary" id="next">Next event →</button><button id="play">Auto-play</button><button id="reset">Restart</button><button id="evidenceJson" disabled>Evidence JSON</button><button id="evidenceCsv" disabled>Evidence CSV</button></div>
-<div class="kicker" class="kicker timeline-label">Incoming evidence</div><ol class="event-ticker" id="events" aria-label="Synthetic event timeline"></ol>
+<section class="setup" aria-label="Choose a match">
+<div class="field"><label for="scenario" data-i18n="scenario">Match situation</label><select id="scenario"></select></div>
+<div class="field"><label for="seed" data-i18n="seed">Seed</label><input id="seed" type="number" min="1" max="999999" value="2026" inputmode="numeric"></div>
+<button id="dice" type="button" data-i18n="dice">Random seed</button>
+<button id="kickoff" class="primary" type="button" data-i18n="kickoff">Kick off</button>
+<p id="blurb" class="blurb"></p>
 </section>
-<aside class="panel"><div class="kicker">02 / Broadcast explanation</div><h2>Why did it matter?</h2>
-<div class="metricgrid"><div class="metric"><strong id="attempts">—</strong><span>Press attempts</span></div><div class="metric"><strong id="successes">—</strong><span>Regains</span></div><div class="metric"><strong id="seconds">—</strong><span>Mean regain</span></div></div>
-<p class="evidence" id="resolution" aria-live="polite">Resolved-window success rate: —; interrupted / unknown: 0.</p>
-<div class="overlay"><div class="kicker">Synchronized on-screen cue</div><p id="overlay" class="no-overlay">Play the event stream to reveal evidence-backed moments.</p><div class="evidence" id="evidence">No cue issued yet.</div></div>
-<div class="optional"><div class="kicker">03 / Optional Microsoft Foundry draft</div><p>Server-side model commentary is opt-in, not used for event evidence. The deterministic explanation always remains the source of truth. Enabling a configured Azure model may incur usage charges.</p><button id="foundry" disabled>Foundry not configured</button><div id="foundryResult" aria-live="polite"></div></div>
+<div class="layout">
+<section class="card" id="broadcast" aria-label="Match broadcast">
+<div class="scoreboard">
+<div class="side"><span class="club harbor">Harbor FC</span><span class="shots" id="shotsH">0 shots</span></div>
+<div class="clock"><strong id="clock">00:00</strong><span id="state" class="state">READY</span></div>
+<div class="side away"><span class="club metro">Metro Rovers</span><span class="shots" id="shotsM">0 shots</span></div>
+</div>
+<p class="note" data-i18n="noGoals">Goals aren't part of this synthetic feed, so shots are shown instead of a scoreline.</p>
+<div class="pitchwrap">
+<svg class="pitch" viewBox="0 0 1050 680" role="img" aria-labelledby="pitchTitle"><title id="pitchTitle">Pitch split into thirds; the highlighted third shows where the latest event happened</title>
+<rect class="turf" width="1050" height="680"/>
+<rect id="bandL" class="band" x="0" y="0" width="350" height="680" fill-opacity="0.04"/>
+<rect id="bandM" class="band" x="350" y="0" width="350" height="680" fill-opacity="0.04"/>
+<rect id="bandR" class="band" x="700" y="0" width="350" height="680" fill-opacity="0.04"/>
+<rect class="line" x="20" y="20" width="1010" height="640"/>
+<line class="line" x1="525" y1="20" x2="525" y2="660"/>
+<circle class="line" cx="525" cy="340" r="90"/>
+<rect class="line" x="20" y="180" width="160" height="320"/>
+<rect class="line" x="870" y="180" width="160" height="320"/>
+<line class="line dash" x1="350" y1="20" x2="350" y2="660"/>
+<line class="line dash" x1="700" y1="20" x2="700" y2="660"/>
+<text class="dir" x="40" y="62">Harbor →</text><text class="dir" x="1010" y="62" text-anchor="end">← Metro</text>
+<circle id="dot" class="dot harbor" cx="525" cy="290" r="24" visibility="hidden"/>
+<text id="marker" class="marker" x="525" y="370"></text>
+</svg>
+<div id="cue" class="cue quiet" aria-live="polite"><span class="label" id="cueLabel">Counterpress</span><p id="cueText">Pick a match and press Play.</p></div>
+</div>
+<p class="note" data-i18n="thirds">Highlighted third = latest event. Shading = where your club pressed most. The feed records pitch thirds, not exact positions.</p>
+<div class="transport">
+<button id="play" class="primary" type="button" aria-pressed="false">▶ Play</button>
+<button id="step" type="button">Next event</button>
+<button id="restart" type="button">Restart</button>
+<label for="speed" class="sr">Speed</label><select id="speed"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option><option value="8">8×</option></select>
+<label for="scrub" class="sr">Jump to event</label><input id="scrub" type="range" min="0" max="0" value="0">
+</div>
+<div class="strip" id="strip" aria-hidden="true"></div>
+<p class="note"><span id="progress"></span> <span id="notice" aria-live="polite"></span></p>
+</section>
+<aside class="card" aria-label="Your view">
+<div class="persona">
+<div class="field"><label for="team" data-i18n="club">Your club</label><select id="team"><option>Harbor FC</option><option>Metro Rovers</option></select></div>
+<div class="field"><label for="audience" data-i18n="mode">Mode</label><select id="audience"><option value="casual">Casual fan</option><option value="analyst">Analyst</option></select></div>
+<div class="field"><label for="locale" data-i18n="language">Language</label><select id="locale"><option value="en">English</option><option value="es">Español</option></select></div>
+</div>
+<h2 data-i18n="story">The story so far</h2><ul id="insight" class="insight plain"></ul>
+<h2 data-i18n="numbers">Numbers</h2>
+<table><thead><tr><th scope="col"><span class="sr">Stat</span></th><th scope="col" id="thFocus">Harbor FC</th><th scope="col" id="thRival">Metro Rovers</th></tr></thead><tbody id="stats"></tbody></table>
+<h2 data-i18n="moments">Key moments</h2><ol id="moments" class="moments plain"></ol>
+<h2 data-i18n="feed">Live feed</h2><ol id="feed" class="feed plain" aria-label="Latest events"></ol>
+<div class="optional"><span data-i18n="aiTitle">Optional AI commentary (Microsoft Foundry)</span> <button id="foundry" type="button" disabled>Not configured</button><div id="foundryResult" aria-live="polite"></div></div>
 </aside>
 </div>
 </main>
-<footer>Created for Microsoft Inside the Game 2026 development. All teams, players, timings, and events here are invented. No real Premier League data, broadcasts, outcomes, performance inference, Microsoft deployment, or competition entry is represented. Local synthetic prototype; the optional Foundry REST adapter has not been authenticated in this source seat.</footer>
+<footer>Synthetic match experience for Microsoft Inside the Game 2026 development. Teams, players and events are invented; not real Premier League data.</footer>
 <script type="module" src="/app.js"></script>
 </body>
 </html>
