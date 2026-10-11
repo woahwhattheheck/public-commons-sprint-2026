@@ -17,6 +17,16 @@ async function create(path,value){
   if(await exists(path)){assert.equal(await readFile(path,'utf8'),raw,'saved operation changed');return;}
   await writeFile(path,raw,{mode:0o600,flag:'wx'});
 }
+// Preserve the first observed receipt while comparing only its stable identity;
+// publication receipts and export timestamps can advance during a saved retry.
+async function preserve(path,value,project){
+  if(await exists(path)){
+    const saved=JSON.parse(await readFile(path,'utf8'));
+    assert.deepEqual(project(saved),project(value),'saved operation identity changed');
+    return saved;
+  }
+  await create(path,value);return value;
+}
 async function cli(path,args){
   return new Promise((resolve,reject)=>{
     const child=spawn(process.execPath,[path,...args],{shell:false,stdio:['ignore','pipe','pipe']});
@@ -37,21 +47,35 @@ export async function continueCensusWorkbook2024({sessionFile,operationDirectory
   const call=(action,payload,extra={})=>callWorkbookWorkspace({sessionFile,action,payload,...extra});
   const workbook=await readFile(targetFile);
   assert.equal(createHash('sha256').update(workbook).digest('hex'),SOURCE_2024,'Use the exact captured official 2024 edition');
+  const requestFile=join(operationDirectory,'comparison-request.json');
+  let request=await exists(requestFile)?JSON.parse(await readFile(requestFile,'utf8')):null;
+  const selected=request?{sourceId:request.sourceId,planId:request.planId,planRevision:request.planRevision}:selection;
+  if(request&&selection)assert.deepEqual(selection,selected,'Use this saved operation’s original baseline pins');
+  if(request&&chosenKeys)assert.deepEqual(chosenKeys,request.keys,'Use this saved operation’s original row keys');
   const initial=await call('status'),sources=initial.workspace.workbookSources;
-  const source=sources.find(x=>x.sha256===SOURCE_2023&&(!selection||x.id===selection.sourceId));
+  const source=sources.find(x=>x.sha256===SOURCE_2023&&(!selected||x.id===selected.sourceId));
   assert(source,'The original merchant must retain the actual 2023 source first');
-  const candidates=source.plans.filter(x=>x.plan.sheet==='Jam Values'&&x.plan.range==='A20:G36'&&x.plan.headerRow===20&&
-    (!selection||x.id===selection.planId&&x.revision===selection.planRevision));
+  const editions=selected?source.plans.flatMap(x=>[x,...(x.editions??[])]):source.plans;
+  const candidates=editions.filter(x=>x.plan.sheet==='Jam Values'&&x.plan.range==='A20:G36'&&x.plan.headerRow===20&&
+    (!selected||x.id===selected.planId&&x.revision===selected.planRevision));
   assert.equal(candidates.length,1,'Pass the exact baseline source/plan/revision when multiple original mappings exist');
   const baseline=candidates[0];
-  const target=(await call('upload',null,{file:targetFile})).source;
-  let request;
-  const requestFile=join(operationDirectory,'comparison-request.json');
-  if(await exists(requestFile))request=JSON.parse(await readFile(requestFile,'utf8'));
-  else{
-    const suggested=await call('edition-suggest',{sourceId:source.id,planId:baseline.id,planRevision:baseline.revision,targetId:target.id,
-      sheet:'Jam Values',range:'A20:G36',headerRow:20});
-    await create(join(operationDirectory,'suggestion.json'),suggested);
+  // A successful upload can outlive its response. A retained request owns its
+  // exact target; before that request exists, reuse the captured original bytes.
+  let target=request?sources.find(x=>x.id===request.targetId):sources.find(x=>x.sha256===SOURCE_2024);
+  if(request)assert(target,'Restore this saved operation’s exact retained replacement source');
+  if(!target)target=(await call('upload',null,{file:targetFile})).source;
+  assert.equal(target.sha256,SOURCE_2024,'The saved replacement must retain the exact 2024 workbook');
+  if(!request){
+    const suggestionFile=join(operationDirectory,'suggestion.json');
+    const suggested=await exists(suggestionFile)?JSON.parse(await readFile(suggestionFile,'utf8')):
+      await call('edition-suggest',{sourceId:source.id,planId:baseline.id,planRevision:baseline.revision,targetId:target.id,
+        sheet:'Jam Values',range:'A20:G36',headerRow:20});
+    assert.equal(suggested.baseline.sourceId,source.id);
+    assert.equal(suggested.baseline.planId,baseline.id);
+    assert.equal(suggested.baseline.planRevision,baseline.revision);
+    assert.equal(suggested.target.sourceId,target.id);
+    await create(suggestionFile,suggested);
     // Both original Census editions were inspected A20:G36. Duplicate lower/upper
     // headings are resolved explicitly by the original coordinate mappings.
     const plan={...suggested.plan,name:baseline.plan.name.replace(/2023/g,'2024').slice(0,150)+' 2024',
@@ -66,6 +90,12 @@ export async function continueCensusWorkbook2024({sessionFile,operationDirectory
     await create(requestFile,request);
   }
   const result=await call('edition-compare',request),comparison=result.comparison;
+  assert.equal(comparison.id,request.id);
+  assert.equal(comparison.baseline.sourceId,source.id);
+  assert.equal(comparison.baseline.planId,baseline.id);
+  assert.equal(comparison.baseline.planRevision,baseline.revision);
+  assert.equal(comparison.target.sourceId,target.id);
+  assert.equal(comparison.target.sha256,SOURCE_2024);
   assert.equal(comparison.rows,16);assert.equal(comparison.baselineProjection.rowCount,16);
   assert.equal(comparison.targetProjection.rowCount,16);assert.equal(comparison.counts.changed,1);
   const change=result.page.rows.find(x=>x.kind==='changed');
@@ -77,16 +107,25 @@ export async function continueCensusWorkbook2024({sessionFile,operationDirectory
     '--kind','unchanged','--offset','2','--limit','3']);
   assert.equal(page.page.offset,2);assert.equal(page.page.rows.length,3);
   assert(page.page.rows.every(x=>x.kind==='unchanged'));
-  await create(join(operationDirectory,'cli-unchanged-page.json'),page);
+  assert.equal(page.comparison.id,comparison.id);assert.equal(page.comparison.sha256,comparison.sha256);
+  await preserve(join(operationDirectory,'cli-unchanged-page.json'),page,value=>({
+    id:value.comparison.id,sha256:value.comparison.sha256,page:value.page}));
   const apply={id:comparison.id,sha256:comparison.sha256,expectedTargetRevision:comparison.expectedTargetRevision,
     expectedSnapshot:comparison.nativeSchema.snapshot,expectedRevision:comparison.nativeSchema.revision};
   const adopted=await call('edition-apply',apply),replayed=await call('edition-apply',apply);
   assert.equal(replayed.reused,true);assert.equal(replayed.plan.id,adopted.plan.id);
-  const prepared=await call('prepare',{id:target.id,planId:adopted.plan.id,expectedPlanRevision:adopted.plan.revision});
+  assert.equal(adopted.source.id,comparison.target.sourceId);
+  const prepared=await call('prepare',{id:comparison.target.sourceId,planId:adopted.plan.id,expectedPlanRevision:adopted.plan.revision});
   assert.equal(prepared.candidate.csvHash,comparison.targetProjection.csvSha256);
   const candidate=prepared.candidate;
   const review=await call('review',{id:candidate.id});
-  await create(join(operationDirectory,'original-candidate-review.json'),review);
+  assert.equal(review.candidate.id,candidate.id);assert.equal(review.candidate.csvHash,candidate.csvHash);
+  assert.equal(review.candidate.workbookSource.sourceId,comparison.target.sourceId);
+  assert.equal(review.candidate.workbookSource.planId,adopted.plan.id);
+  assert.equal(review.candidate.workbookSource.planRevision,adopted.plan.revision);
+  await preserve(join(operationDirectory,'original-candidate-review.json'),review,value=>({
+    id:value.candidate.id,csvHash:value.candidate.csvHash,configHash:value.candidate.configHash,
+    snapshot:value.candidate.dataset.snapshot,workbookSource:value.candidate.workbookSource,datasetConfig:value.datasetConfig}));
   const observed=await call('status');
   const published=observed.status.current===candidate.dataset.snapshot?observed:await call('publish',{
     id:candidate.id,expectedSnapshot:candidate.expectedSnapshot,expectedRevision:candidate.expectedRevision});
@@ -98,6 +137,7 @@ export async function continueCensusWorkbook2024({sessionFile,operationDirectory
   if(!await exists(output))await create(join(operationDirectory,'export.json'),await cli(cliPath,[
     'edition-export','--session-file',sessionFile,'--id',comparison.id,'--out',output]));
   const full=JSON.parse(await readFile(output,'utf8'));assert.equal(full.rows.length,16);
+  assert.equal(full.comparison.id,comparison.id);assert.equal(full.comparison.sha256,comparison.sha256);
   const retained=await call('edition-read',{id:comparison.id,offset:0,limit:50,kind:'all'});
   assert.equal(retained.comparison.sha256,comparison.sha256);
   const report={schema:'stellar-forge.census-workbook-edition-operation.v1',completedAt:new Date().toISOString(),
