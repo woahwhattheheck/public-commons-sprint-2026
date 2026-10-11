@@ -2,6 +2,7 @@ import { createAuthenticationPanel, appendAuthenticationReview, renderCredential
 import { createOperationSettings, createOperationPanel } from './operation-panel.mjs';
 import { createStreamSettings, isStreamFormat, merchantResponseLabel } from './stream-browser.mjs';
 import { createStreamCustomerPanel } from './stream-customer-browser.mjs';
+import { createPostmanPanel } from '/postman-browser.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
@@ -20,6 +21,7 @@ function available() {
   $('save').disabled=busy||!specText;
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;
   $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
+  postmanPanel.refresh(busy);
 }
 function dirty() {
   selectedPackage=null;
@@ -55,6 +57,16 @@ function selectField(label,values,value) {
   input.value=String(value??values[0]?.[0]??'');container.append(input);return {container,input};
 }
 const customerPanel=createStreamCustomerPanel({container:$('stream-customer-content'),make,field,selectField,api,act,notice});
+const postmanPanel=createPostmanPanel({container:$('postman-intake'),api,act,notice,
+  async onSource(text,operations) {
+    const current=planFromForm(), previous=new Map(current.operations.map(row=>[row.method+' '+row.path,row]));
+    current.operations=operations.map(row=>{
+      const saved=previous.get(row.method+' '+row.path);
+      return {...row,...saved,amountAtomic:saved?.amountAtomic??'',requestExample:row.requestExample,
+        responseValidation:'none',headerEnv:{...row.headerEnv,...saved?.headerEnv}};
+    });
+    await loadSource(text,current);
+  }});
 function drawRoutes(saved=[]) {
   const map=new Map(saved.map(v=>[v.method.toUpperCase()+' '+v.path,v]));
   $('routes').replaceChildren();routeFields=[];
@@ -183,6 +195,7 @@ async function loadSource(text,plan) {
   specText=text;inspection=info;selectedPackage=null;
   $('source-summary').textContent=info.title+' · OpenAPI '+info.version+' · '+countLabel(info.operations.length,'operation');
   fillPlan(plan);dirty();available();
+  await postmanPanel.reopen(text);
 }
 function preview(value) {
   const table=make('table'),thead=make('thead'),head=make('tr');
