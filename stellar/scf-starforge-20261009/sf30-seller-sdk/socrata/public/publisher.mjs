@@ -240,6 +240,24 @@ export function createPublisherPanel({getState, perform, download, handle, notic
         ['Allocated payment cap, atomic units', report.capAllocatedAtomic]]));
       if (report.next) card.append(node('p', report.next, 'help'));
       if (session.error) card.append(node('p', session.error.message, 'error-detail'));
+      const continuation = report.unpaidContinuation;
+      const unpaidReady = ['AVAILABLE','PREPARED'].includes(continuation?.status) &&
+        /^[a-f0-9]{64}$/.test(continuation?.attemptSha256 || '');
+      if (unpaidReady) {
+        const review = node('section', undefined, 'publisher-card');
+        const remaining = Number.isSafeInteger(report.totalRows) && Number.isSafeInteger(report.acquiredRows) ?
+          Math.max(0, report.totalRows - report.acquiredRows) : null;
+        review.append(node('h4', 'Unpaid page continuation'), facts([
+          ['Page', continuation.index], ['Rows remaining', count(remaining)],
+          ['Stopped because', continuation.originalError?.operatorReason || continuation.originalError?.code]
+        ]), node('p', 'Continue this same unpaid page through the original approval flow. Earlier completed pages and delivered rows remain in this acquisition.', 'help'),
+        detail('Retained attempt and recovery history', {intentId:continuation.intentId,
+          attemptSha256:continuation.attemptSha256,status:continuation.status,
+          originalError:continuation.originalError,historyDirectory:continuation.historyDirectory}));
+        const resume = button('Continue unpaid page', 'pubSessionUnpaid', session.id);
+        resume.dataset.expectedAttemptSha256 = continuation.attemptSha256;
+        review.append(resume); card.append(review);
+      }
       const operations = node('div', undefined, 'actions');
       for (const [action,label] of [['run','Run acquisition'],['recover','Recover same acquisition'],['account','Finalize account records'],['export','Export customer delivery']])
         operations.append(button(label, 'pubSession' + action[0].toUpperCase() + action.slice(1), session.id));
@@ -297,7 +315,7 @@ export function createPublisherPanel({getState, perform, download, handle, notic
       if (Object.keys(control.dataset).some(key => key.startsWith('pubDownload'))) control.disabled = unavailable;
     });
     document.querySelectorAll('#section-publisher [data-write]').forEach(control => {
-      if (control.dataset.pubSessionRun || control.dataset.pubSessionRecover || control.dataset.pubSessionAccount || control.dataset.pubSessionExport || control.dataset.pubInspectRelease)
+      if (control.dataset.pubSessionRun || control.dataset.pubSessionUnpaid || control.dataset.pubSessionRecover || control.dataset.pubSessionAccount || control.dataset.pubSessionExport || control.dataset.pubInspectRelease)
         control.disabled = unavailable;
     });
   }
@@ -418,6 +436,15 @@ export function createPublisherPanel({getState, perform, download, handle, notic
   $('pub-download-buyer').addEventListener('click', () => handle(() => download('buyer-config',$('pub-buyer-id').value)));
   $('pub-sessions').addEventListener('click', event => {
     const control = event.target.closest('button'); if (!control) return;
+    if (control.dataset.pubSessionUnpaid) handle(() => {
+      const session = pub()?.sessions?.find(item => item.id === control.dataset.pubSessionUnpaid);
+      const continuation = session?.report?.unpaidContinuation;
+      if (!['AVAILABLE','PREPARED'].includes(continuation?.status) ||
+          continuation.attemptSha256 !== control.dataset.expectedAttemptSha256)
+        throw new Error('The retained unpaid attempt changed. Reconcile this acquisition and review its current continuation.');
+      return call('publisher.buyer.run', {id:session.id, retryUnpaid:true,
+        expectedAttemptSha256:continuation.attemptSha256});
+    });
     for (const action of ['Run','Recover','Account','Export'])
       if (control.dataset['pubSession'+action]) handle(() => call('publisher.buyer.'+action.toLowerCase(),{id:control.dataset['pubSession'+action]}));
     if (control.dataset.pubDownloadSession) handle(() => download(control.dataset.pubKind,control.dataset.pubDownloadSession));
