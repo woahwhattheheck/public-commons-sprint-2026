@@ -4,6 +4,7 @@ import { realpath, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { bindParameters, compileQueries, QueryInputError } from './parameters.mjs';
+import { sqliteExtractionOptions } from './publisher/extraction.mjs';
 
 export class SqliteSourceError extends Error {
   constructor(code, query) { super(code); this.name = 'SqliteSourceError'; this.code = code; if (query) this.query = query; }
@@ -22,7 +23,7 @@ export async function createSqliteQuerySource({
   const path = await realpath(database);
   if (!(await stat(path)).isFile()) throw new TypeError('SQLite database must be a regular file');
   const compiled = compileQueries(queries);
-  const waiting = [], children = new Map();
+  const waiting = [], children = new Map(), rowCallbacks = new Set();
   const slots = Array.from({ length: workerCount }, () => ({
     child: null, ready: false, stopping: false, starting: null, rejectBoot: null,
     active: null, failed: null, starts: 0,
@@ -63,7 +64,10 @@ export async function createSqliteQuerySource({
       totals.failed++;
       if (error.code === 'QUERY_TIMEOUT') totals.timedOut++;
       if (error.code === 'QUERY_ABORTED') totals.aborted++;
-      job.reject(error);
+      // Drain the consumer's accepted row write before reporting failure. A
+      // publisher may then close/delete its incomplete candidate safely.
+      if (job.rowPending) job.rowPending.then(() => job.reject(error), () => job.reject(error));
+      else job.reject(error);
     } else { totals.succeeded++; job.resolve(result); }
     schedulePump();
   }
@@ -139,6 +143,30 @@ export async function createSqliteQuerySource({
         }
         const job = slot.active;
         if (!job || message.id !== job.id) return;
+        if (message.type === 'dataset-row' && job.kind === 'dataset-export') {
+          if (job.rowPending || message.sequence !== job.rows + 1) {
+            retire(slot); finish(job, unavailable('DATASET_STREAM_SEQUENCE_INVALID')); return;
+          }
+          const callback = Promise.resolve().then(() => {
+            if (!job.done) return job.onRow(message.row, message.columnTypes, message.progress);
+          });
+          job.rowPending = callback; rowCallbacks.add(callback);
+          callback.then(() => {
+            job.rowPending = null; rowCallbacks.delete(callback);
+            if (job.done || slot.child !== child || slot.stopping) return;
+            job.rows = message.sequence;
+            child.send({ type: 'dataset-row-ack', id: job.id, sequence: message.sequence }, error => {
+              if (error && !job.done) { retire(slot); finish(job, unavailable('SOURCE_PROCESS_FAILED')); }
+            });
+          }, error => {
+            job.rowPending = null; rowCallbacks.delete(callback);
+            if (job.done) return;
+            retire(slot);
+            finish(job, new SqliteSourceError(typeof error?.code === 'string' &&
+              /^DATASET_[A-Z_]+$/.test(error.code) ? error.code : 'DATASET_CONSUMER_FAILED'));
+          });
+          return;
+        }
         if (message.type === 'result') finish(job, null, message.result);
         if (message.type === 'query-error') finish(job, new SqliteSourceError(message.code));
       });
@@ -159,7 +187,8 @@ export async function createSqliteQuerySource({
       const job = waiting.shift(), child = slot.child;
       slot.active = job; job.slot = slot; job.startedAt = performance.now();
       child.ref(); child.channel?.ref();
-      child.send({ type: 'query', id: job.id, name: job.name, parameters: job.parameters }, error => {
+      child.send({ type: job.kind, id: job.id, name: job.name, parameters: job.parameters,
+        ...(job.exportOptions ? { options: job.exportOptions } : {}) }, error => {
         if (error && slot.child === child && !job.done) {
           retire(slot); finish(job, unavailable('SOURCE_PROCESS_FAILED'));
         }
@@ -183,7 +212,7 @@ export async function createSqliteQuerySource({
     return compiled[name];
   }
   function validate(name, input) { return bindParameters(definition(name), input); }
-  function query(name, input, { signal } = {}) {
+  function enqueue(name, input, { signal, exportOptions, onRow } = {}) {
     try {
       if (closed) throw unavailable('SOURCE_CLOSED');
       if (signal?.aborted) throw unavailable('QUERY_ABORTED');
@@ -193,9 +222,10 @@ export async function createSqliteQuerySource({
         throw new TypeError('signal must be an AbortSignal');
       for (const slot of slots) if (!slot.child && !slot.starting) slot.failed = null;
       return new Promise((resolve, reject) => {
-        const job = { id: ++nextId, name, parameters, resolve, reject, signal, done: false, enqueuedAt: performance.now() };
+        const job = { id: ++nextId, name, parameters, resolve, reject, signal, done: false, enqueuedAt: performance.now(),
+          kind: exportOptions ? 'dataset-export' : 'query', exportOptions, onRow, rows: 0, rowPending: null };
         job.onAbort = () => cancel(job, 'QUERY_ABORTED');
-        job.timer = setTimeout(() => cancel(job, 'QUERY_TIMEOUT'), compiled[name].timeoutMs);
+        job.timer = setTimeout(() => cancel(job, 'QUERY_TIMEOUT'), exportOptions?.timeoutMs ?? compiled[name].timeoutMs);
         waiting.push(job); totals.accepted++;
         totals.highWaterPending = Math.max(totals.highWaterPending, busy());
         try { signal?.addEventListener('abort', job.onAbort, { once: true }); }
@@ -203,6 +233,13 @@ export async function createSqliteQuerySource({
         if (signal?.aborted) cancel(job, 'QUERY_ABORTED');
         else pump();
       });
+    } catch (error) { return Promise.reject(error); }
+  }
+  function query(name, input, { signal } = {}) { return enqueue(name, input, { signal }); }
+  function exportDataset(name, input, { signal, onRow, ...options } = {}) {
+    try {
+      if (typeof onRow !== 'function') throw unavailable('DATASET_CONSUMER_REQUIRED');
+      return enqueue(name, input, { signal, onRow, exportOptions: sqliteExtractionOptions(definition(name), options) });
     } catch (error) { return Promise.reject(error); }
   }
   function route(name, { input = 'query' } = {}) {
@@ -237,7 +274,7 @@ export async function createSqliteQuerySource({
       finish(job, unavailable('SOURCE_CLOSED'));
     const exits = [...children.values()];
     for (const slot of slots) retire(slot);
-    closing = Promise.all(exits).then(() => undefined);
+    closing = Promise.all([...exits, ...[...rowCallbacks].map(callback => callback.catch(() => {}))]).then(() => undefined);
     return closing;
   }
   const describe = () => Object.fromEntries(Object.entries(compiled).map(([name, spec]) => [name, {
@@ -254,5 +291,5 @@ export async function createSqliteQuerySource({
     running: running(), queued: waiting.length, pending: busy(), ...totals,
   });
   try { await Promise.all(slots.map(launch)); } catch (error) { await close(); throw error; }
-  return Object.freeze({ query, validate, route, describe, stats, close });
+  return Object.freeze({ query, exportDataset, validate, route, describe, stats, close });
 }

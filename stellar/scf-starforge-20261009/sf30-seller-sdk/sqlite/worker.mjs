@@ -1,6 +1,8 @@
 // MIT. One disposable read-only native SQLite process. Parent enforces wall time.
 import { DatabaseSync } from 'node:sqlite';
+import { readSqliteDataset } from './publisher/extraction.mjs';
 let database;
+let exporting = null;
 const statements = new Map();
 function send(value) { if (process.connected) process.send(value); }
 function fail(code, query) { return { code, ...(query ? { query } : {}) }; }
@@ -12,6 +14,12 @@ function encode(value) {
 }
 process.on('disconnect', () => { try { database?.close(); } finally { process.exit(0); } });
 process.on('message', message => {
+  if (message?.type === 'dataset-row-ack') {
+    if (exporting?.id === message.id && exporting.pending?.sequence === message.sequence) {
+      const pending = exporting.pending; exporting.pending = null; pending.resolve();
+    }
+    return;
+  }
   if (message?.type === 'init') {
     try {
       if (database) throw fail('SOURCE_ALREADY_INITIALIZED');
@@ -30,6 +38,32 @@ process.on('message', message => {
       }
       send({ type: 'ready' });
     } catch (error) { send({ type: 'startup-error', ...fail(error.code ?? 'SOURCE_OPEN_FAILED', error.query) }); }
+    return;
+  }
+  if (message?.type === 'dataset-export') {
+    const { id, name, parameters, options } = message;
+    if (exporting) { send({ type: 'query-error', id, code: 'SOURCE_BUSY' }); return; }
+    const state = { id, pending: null }; exporting = state;
+    (async () => {
+      try {
+        const entry = statements.get(name);
+        if (!entry) throw fail('QUERY_NOT_FOUND');
+        const result = await readSqliteDataset(database, entry.query, { name, parameters, options,
+          onRow(row, columnTypes, progress) {
+            return new Promise((resolve, reject) => {
+              state.pending = { sequence: progress.rowCount, resolve, reject };
+              if (!process.connected) { reject(fail('SOURCE_PROCESS_FAILED')); return; }
+              process.send({ type: 'dataset-row', id, sequence: progress.rowCount, row, columnTypes, progress },
+                error => { if (error) reject(fail('SOURCE_PROCESS_FAILED')); });
+            });
+          } });
+        send({ type: 'result', id, result });
+      } catch (error) {
+        const code = typeof error.code === 'string' && /^(?:DATASET_|QUERY_|SOURCE_)[A-Z_]+$/.test(error.code)
+          ? error.code : 'DATASET_EXTRACTION_FAILED';
+        send({ type: 'query-error', id, code });
+      } finally { exporting = null; }
+    })();
     return;
   }
   if (message?.type !== 'query') return;

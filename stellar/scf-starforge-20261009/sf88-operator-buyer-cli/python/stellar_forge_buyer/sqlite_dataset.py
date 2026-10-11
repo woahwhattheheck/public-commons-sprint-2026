@@ -64,6 +64,8 @@ class QueryResult:
     columns: tuple[str, ...]
     rows: tuple[tuple, ...]
     truncated: bool
+    views: tuple[dict, ...] = ()
+    read_tables: tuple[str, ...] = ()
 
     def dictionaries(self):
         if len(set(self.columns)) != len(self.columns):
@@ -247,13 +249,17 @@ class DatasetDatabase:
 
     def manifest(self, version_id):
         """Read the exact original manifest retained with the acquired rows."""
+        return parse(self.manifest_bytes(version_id))
+
+    def manifest_bytes(self, version_id):
+        """Return the original, hash-verified bytes without JSON re-encoding."""
         with self._connection(readonly=True) as db:
             row = db.execute(f"SELECT manifest,record FROM {_META} WHERE version_id=?", (version_id,)).fetchone()
             if row is None:
                 raise StateError("DATASET_SQL_VERSION_NOT_FOUND")
             if digest(row["manifest"]) != parse(row["record"].encode())["manifestSha256"]:
                 raise StateError("DATASET_SQL_RETAINED_MANIFEST_CHANGED")
-            return parse(row["manifest"])
+            return bytes(row["manifest"])
 
     def versions(self, *, before=None, limit=100):
         if type(limit) is not int or not 1 <= limit <= 1000 or before is not None and (type(before) is not int or before < 1):
@@ -299,16 +305,37 @@ class DatasetDatabase:
                 db.rollback()
                 raise
 
-    def query(self, sql, parameters=(), *, max_rows=1000, max_result_bytes=16 * 1024 * 1024, timeout=10):
-        """Read-only, parameterized SQL, with an explicit result truncation flag."""
+    def view_bindings(self):
+        """Current named-view identities, suitable for a later query review."""
+        with self._connection(readonly=True) as db:
+            return self._views(db)
+
+    @staticmethod
+    def _views(db):
+        return [dict(row) for row in db.execute(f"SELECT name,version_id,revision FROM {_HEADS} ORDER BY name COLLATE NOCASE")]
+
+    def query(self, sql, parameters=(), *, max_rows=1000, max_result_bytes=16 * 1024 * 1024, timeout=10, expected_views=None):
+        """Read-only SQL with result limits and the exact transaction's views.
+
+        Pass a previously reviewed view_bindings() list to reject a changed
+        analytical selection. The view snapshot and rows share one read
+        transaction; immutable physical table names are also retained.
+        """
         if not isinstance(sql, str) or type(max_rows) is not int or not 1 <= max_rows <= 100_000 or type(max_result_bytes) is not int or not 1 <= max_result_bytes <= 256 * 1024 * 1024 or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= 300:
             raise StateError("DATASET_SQL_QUERY_OPTIONS_INVALID")
         permitted = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_RECURSIVE}
+        tables = set()
         def authorize(action, first, second, database, trigger):
             if action not in permitted or action == sqlite3.SQLITE_FUNCTION and (second or first or "").lower() in {"load_extension", "writefile", "readfile"}:
                 return sqlite3.SQLITE_DENY
+            if action == sqlite3.SQLITE_READ and first:
+                tables.add(first)
             return sqlite3.SQLITE_OK
         with self._connection(readonly=True) as db:
+            db.execute("BEGIN")
+            views = self._views(db)
+            if expected_views is not None and (not isinstance(expected_views, list) or views != expected_views):
+                raise StateError("DATASET_SQL_VIEWS_CHANGED")
             deadline = time.monotonic() + timeout
             db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, 16 * 1024 * 1024)
             db.set_authorizer(authorize)
@@ -325,7 +352,7 @@ class DatasetDatabase:
                         break
                     rows.append(values)
                     size += row_bytes
-                return QueryResult(columns, tuple(rows), truncated)
+                return QueryResult(columns, tuple(rows), truncated, tuple(views), tuple(sorted(tables)))
             except sqlite3.Error as exc:
                 raise StateError("DATASET_SQL_QUERY_FAILED") from exc
 

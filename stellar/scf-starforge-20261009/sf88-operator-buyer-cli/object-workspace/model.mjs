@@ -6,7 +6,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { config, execution } from '../config.mjs';
 import { selectObjectDescription } from '../object-description.mjs';
 import { createObjectSession, inspectObjectSession, runObjectSession,
-  recoverObjectSession, assembleObjectSession } from '../object-session.mjs';
+  recoverObjectSession, assembleObjectSession, accountObjectSession } from '../object-session.mjs';
 import { renderObjectReport } from '../object-report.mjs';
 
 const PROFILE = 'stellar-forge.sf88.object-workspace.v1';
@@ -14,6 +14,8 @@ const SESSION = 'stellar-forge.sf88.object-session.v1';
 const HASH = /^[a-f0-9]{64}$/;
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const MAX_ATOMIC = 170141183460469231731687303715884105727n;
+const FINALIZED = new Set(['FINALIZED', 'IDEMPOTENT_FINALIZED']);
+const ACCOUNTING_PAGE = 50;
 const encode = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const sha = value => createHash('sha256').update(value).digest('hex');
 const now = () => new Date().toISOString();
@@ -82,9 +84,28 @@ function revision(report) {
 function summary(id, report) {
   return { id, sessionId: report.sessionId, name: report.selection?.filename ?? id,
     objectId: report.selection?.objectId ?? null, createdAt: report.createdAt, status: report.status,
+    sourceUrl: report.sourceUrl,
     bytes: report.bytes, completeChunks: report.completeChunks, chunkCount: report.chunkCount,
     downloadedBytes: report.downloadedBytes, inspectedAt: report.inspectedAt ?? null };
 }
+function accountingRevision(record) {
+  return sha(JSON.stringify([record.sessionId, record.configurationSha256,
+    record.workspace, record.terms, record.range.total]));
+}
+function accountingTotals(entries) {
+  const value = { finalized: 0, unpaid: 0, unattempted: 0, attention: 0, actualAtomicUnits: '0' };
+  let actual = 0n;
+  for (const entry of entries) {
+    if (FINALIZED.has(entry.outcome)) { value.finalized++; actual += BigInt(entry.actualAtomicUnits); }
+    else if (entry.outcome === 'NO_PAYMENT_REQUIRED') value.unpaid++;
+    else if (entry.outcome === 'NOT_ATTEMPTED') value.unattempted++;
+    else value.attention++;
+    if (FINALIZED.has(entry.outcome) && entry.viewStatus === 'SAVE_FAILED') value.attention++;
+  }
+  value.actualAtomicUnits = actual.toString(); return value;
+}
+const accountingIssue = entry => entry.viewStatus === 'SAVE_FAILED' ||
+  !FINALIZED.has(entry.outcome) && !['NO_PAYMENT_REQUIRED', 'NOT_ATTEMPTED'].includes(entry.outcome);
 
 /** The profile contains trusted local references. Browser actions select IDs only. */
 export async function openObjectWorkspace({ stateDirectory, profilePath = null } = {}) {
@@ -114,7 +135,8 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
       return { ...product, workspace: product.workspace ?? null };
     });
   }
-  const index = new Map(), reports = new Map(), reviews = new Map(), dispatches = new Map();
+  const index = new Map(), reports = new Map(), reviews = new Map(), dispatches = new Map(), finalizations = new Map();
+  const finalizationIssues = new Map();
   let active = null, mutation = null, closed = false, closePromise;
   const sessionPath = id => join(sessionsRoot, slug(id));
   const chooseProfile = id => profiles.find(product => product.id === id) ?? fail('OBJECT_WORKSPACE_PRODUCT_NOT_FOUND', 404);
@@ -140,6 +162,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
         need(definition.schema === SESSION && definition.directory === sessionPath(entry.name), 'OBJECT_SESSION_INVALID');
         index.set(entry.name, { id: entry.name, sessionId: definition.sessionId,
           name: definition.selection?.filename ?? entry.name, objectId: definition.selection?.objectId ?? null,
+          sourceUrl: execution(definition.config).op.url,
           createdAt: definition.createdAt, status: 'NEEDS_INSPECTION', bytes: definition.bytes,
           chunkCount: definition.chunkCount, completeChunks: null, downloadedBytes: null, inspectedAt: null });
       } catch (error) {
@@ -149,7 +172,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
   }
   async function inspect(id) {
     slug(id); need(index.has(id), 'OBJECT_WORKSPACE_SESSION_NOT_FOUND', 404);
-    if (active?.session === id) return reports.get(id);
+    if (active?.session === id && active.kind === 'DOWNLOAD') return reports.get(id);
     return retain(id, await inspectObjectSession(sessionPath(id)));
   }
   async function original(id) { return reports.get(id) ?? inspect(id); }
@@ -238,25 +261,55 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
   }
   function runView(work) {
     if (!work) return null;
-    return { id: work.id, session: work.session, state: work.stopping ? 'STOPPING' : 'RUNNING',
+    return { id: work.id, session: work.session, kind: work.kind ?? 'DOWNLOAD', state: work.stopping ? 'STOPPING' : 'RUNNING',
       startedAt: work.startedAt, progressAt: work.progressAt, completeChunks: work.report?.completeChunks,
-      chunkCount: work.report?.chunkCount };
+      chunkCount: work.report?.chunkCount ?? work.total, processedChunks: work.processed,
+      totals: work.totals, currentOffset: work.offset };
   }
-  async function view({ session = null, page = 0, filter = 'all', query = '' } = {}) {
+  async function readAccounting(session, offset = 0, limit = ACCOUNTING_PAGE) {
+    slug(session); need(index.has(session), 'OBJECT_WORKSPACE_SESSION_NOT_FOUND', 404);
+    const record = await accountObjectSession(sessionPath(session), { offset, limit });
+    need(record.sessionId === index.get(session).sessionId, 'OBJECT_WORKSPACE_SESSION_CHANGED', 409);
+    return record;
+  }
+  async function view({ session = null, page = 0, filter = 'all', query = '', section = 'delivery' } = {}) {
     assertOpen(); need(Number.isInteger(page) && page >= 0 && page <= 2000, 'OBJECT_WORKSPACE_PAGE_INVALID');
+    need(['delivery', 'accounting'].includes(section), 'OBJECT_WORKSPACE_SECTION_INVALID');
     need(['all', 'QUEUED', 'VERIFIED', 'RECONCILIATION_REQUIRED'].includes(filter), 'OBJECT_WORKSPACE_FILTER_INVALID');
     need(typeof query === 'string' && query.length <= 160, 'OBJECT_WORKSPACE_QUERY_INVALID');
     const state = { sessions: [...index.values()].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || a.id.localeCompare(b.id)),
-      selected: null, active: runView(active), mutation, updatedAt: now() };
+      selected: null, section, active: runView(active), mutation, updatedAt: now() };
     if (!session) return state;
+    if (section === 'accounting') {
+      // This path never inspects or hashes a delivered object. The native
+      // accounting reader validates the saved plan, inbox and original views.
+      const metadata = index.get(slug(session));
+      need(metadata, 'OBJECT_WORKSPACE_SESSION_NOT_FOUND', 404);
+      const pages = Math.max(1, Math.ceil((metadata.chunkCount ?? 0) / ACCOUNTING_PAGE));
+      const selectedPage = Math.min(page, pages - 1), record = await readAccounting(session, selectedPage * ACCOUNTING_PAGE);
+      const issues = finalizationIssues.get(session), checks = record.entries.flatMap(entry =>
+        issues?.has(entry.index) ? [{ index: entry.index, ...issues.get(entry.index) }] : []);
+      const totals = accountingTotals(record.entries);
+      totals.attention += record.entries.filter(entry => issues?.has(entry.index) && !accountingIssue(entry)).length;
+      state.selected = { ...metadata, section, status: 'PURCHASE_RECORDS',
+        revision: accountingRevision(record), accounting: record, totals, lastCheckIssues: checks,
+        lastFinalization: finalizations.get(session) ?? null,
+        pagination: { page: selectedPage, pages: Math.max(1, Math.ceil(record.range.total / ACCOUNTING_PAGE)),
+          total: record.range.total, pageSize: ACCOUNTING_PAGE },
+        controls: { finalize: !active && !mutation && record.workspace !== null,
+          stop: active?.session === session && active.kind !== 'DOWNLOAD' && !active.stopping,
+          refresh: !mutation, export: !active && !mutation } };
+      state.active = runView(active); state.mutation = mutation; state.updatedAt = now();
+      return state;
+    }
     const report = await original(session), search = query.toLowerCase();
     const chunks = report.chunks.filter(chunk => (filter === 'all' || chunk.state === filter) &&
       (!search || [chunk.index, chunk.offset, chunk.length, chunk.intentId, chunk.state, chunk.code,
         chunk.sha256, chunk.originalOutcome?.status].some(value => String(value ?? '').toLowerCase().includes(search))));
     const pages = Math.max(1, Math.ceil(chunks.length / 50)), selectedPage = Math.min(page, pages - 1);
-    const status = active?.session === session ? (active.stopping ? 'STOPPING' : 'RUNNING') : report.status;
+    const status = active?.session === session && active.kind === 'DOWNLOAD' ? (active.stopping ? 'STOPPING' : 'RUNNING') : report.status;
     const ownedOutput = assemblyRecord(session, report);
-    state.selected = { ...summary(session, report), status, revision: revision(report),
+    state.selected = { ...summary(session, report), section, status, revision: revision(report),
       sourceUrl: report.sourceUrl, snapshot: report.expectedSnapshot, expectedSha256: report.expectedSha256,
       contentType: report.expectedContentType, limits: report.limits, terms: report.terms,
       capAllocatedAtomic: report.capAllocatedAtomic, attemptedChunks: report.attemptedChunks,
@@ -271,16 +324,19 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
         sha256: chunk.sha256, code: chunk.code ?? null, outcome: chunk.originalOutcome?.status ?? null })),
       pagination: { page: selectedPage, pages, total: chunks.length, pageSize: 50 },
       controls: { run: !active && !mutation && ['READY', 'INTERRUPTED'].includes(report.status) && !report.lock,
-        stop: active?.session === session && !active.stopping,
+        stop: active?.session === session && active.kind === 'DOWNLOAD' && !active.stopping,
         recover: !active && !mutation && report.lock?.state !== 'ACTIVE' && report.lock?.state !== 'OTHER_HOST',
         assemble: !active && !mutation && report.status === 'COMPLETE' && !report.lock && !ownedOutput,
         download: Boolean(ownedOutput) && !active && !mutation,
         refresh: active?.session !== session && !mutation } };
+    state.active = runView(active); state.mutation = mutation; state.updatedAt = now();
     return state;
   }
-  async function refresh(session = null) {
-    assertOpen(); need(!mutation, 'OBJECT_WORKSPACE_BUSY', 409); await scan();
-    if (session && active?.session !== session) await inspect(session);
+  async function refresh(session = null, section = 'delivery') {
+    assertOpen(); need(!mutation, 'OBJECT_WORKSPACE_BUSY', 409);
+    need(['delivery', 'accounting'].includes(section), 'OBJECT_WORKSPACE_SECTION_INVALID');
+    await scan();
+    if (session && section === 'delivery' && active?.session !== session) await inspect(session);
   }
   async function run({ session, expectedRevision, actionId } = {}) {
     assertOpen(); need(typeof actionId === 'string' && /^[a-f0-9-]{36}$/.test(actionId), 'OBJECT_WORKSPACE_ACTION_ID_REQUIRED');
@@ -291,7 +347,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
       const report = await checked(session, expectedRevision);
       need(['READY', 'INTERRUPTED'].includes(report.status) && !report.lock, 'OBJECT_WORKSPACE_RUN_UNAVAILABLE', 409);
       const controller = new AbortController();
-      const work = { id: actionId, session, controller, startedAt: now(), stopping: false, report };
+      const work = { id: actionId, kind: 'DOWNLOAD', session, controller, startedAt: now(), stopping: false, report };
       active = work; dispatches.set(session, { id: actionId, startedAt: work.startedAt, state: 'RUNNING' });
       work.promise = runObjectSession(sessionPath(session), { signal: controller.signal, onChunk: update => {
         const current = reports.get(session);
@@ -316,8 +372,76 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
   function stop({ session, runId } = {}) {
     assertOpen();
     if (!active && dispatches.get(session)?.id === runId) return dispatches.get(session);
+    if (!active && finalizations.get(session)?.id === runId) return finalizations.get(session);
     need(active?.session === session && active.id === runId, 'OBJECT_WORKSPACE_RUN_CHANGED', 409);
     active.stopping = true; active.controller.abort(); return runView(active);
+  }
+  async function finalize({ session, expectedRevision, actionId } = {}) {
+    assertOpen(); need(typeof actionId === 'string' && /^[a-f0-9-]{36}$/.test(actionId), 'OBJECT_WORKSPACE_ACTION_ID_REQUIRED');
+    const previous = finalizations.get(session);
+    if (previous?.id === actionId) return previous;
+    assertIdle(); mutation = { kind: 'REVIEW_FINALIZATION', session };
+    try {
+      const reviewed = await readAccounting(session, 0, 1), binding = accountingRevision(reviewed);
+      need(binding === expectedRevision, 'OBJECT_WORKSPACE_REVIEW_CHANGED', 409);
+      need(reviewed.workspace !== null, 'OBJECT_WORKSPACE_ACCOUNTING_WORKSPACE_REQUIRED', 409);
+      const controller = new AbortController(), work = { id: actionId, kind: 'FINALIZE', session, controller,
+        startedAt: now(), stopping: false, processed: 0, total: reviewed.range.total, offset: 0,
+        totals: accountingTotals([]) };
+      const issues = new Map(); finalizations.delete(session); finalizationIssues.delete(session);
+      finalizationIssues.set(session, issues);
+      while (finalizationIssues.size > 8) {
+        const oldest = finalizationIssues.keys().next().value;
+        finalizationIssues.delete(oldest); finalizations.delete(oldest);
+      }
+      const retainProgress = (state, extra = {}) => finalizations.set(session,
+        { ...runView(work), state, ...extra });
+      active = work; retainProgress('RUNNING');
+      work.promise = (async () => {
+        do {
+          const record = await accountObjectSession(sessionPath(session), { finalize: true,
+            offset: work.offset, limit: 10, signal: controller.signal });
+          need(accountingRevision(record) === binding, 'OBJECT_WORKSPACE_REVIEW_CHANGED', 409);
+          const counts = accountingTotals(record.entries);
+          for (const entry of record.entries) if (accountingIssue(entry)) issues.set(entry.index,
+            { outcome: entry.outcome, code: entry.code ?? entry.reason ?? entry.viewStatus,
+              observedAt: record.observedAt });
+          for (const key of ['finalized', 'unpaid', 'unattempted', 'attention']) work.totals[key] += counts[key];
+          work.totals.actualAtomicUnits = (BigInt(work.totals.actualAtomicUnits) + BigInt(counts.actualAtomicUnits)).toString();
+          work.processed += record.entries.length; work.offset = record.range.nextOffset; work.progressAt = now();
+          retainProgress(controller.signal.aborted ? 'STOPPING' : 'RUNNING');
+        } while (work.offset !== null && !controller.signal.aborted);
+        retainProgress(controller.signal.aborted ? 'STOPPED' : work.totals.attention ? 'NEEDS_ATTENTION' : 'COMPLETE', { endedAt: now() });
+      })().catch(error => retainProgress(controller.signal.aborted ? 'STOPPED' : 'NEEDS_ATTENTION',
+        { error: workspaceError(error), endedAt: now() })).finally(() => { if (active === work) active = null; });
+      return { id: actionId, kind: work.kind, state: 'RUNNING', session };
+    } finally { mutation = null; }
+  }
+  async function openAccountingExport(session) {
+    assertIdle(); mutation = { kind: 'PREPARE_ACCOUNTING_EXPORT', session };
+    try {
+      const first = await readAccounting(session), binding = accountingRevision(first);
+      const controller = new AbortController(), work = { id: randomUUID(), kind: 'EXPORT', session, controller,
+        startedAt: now(), stopping: false, processed: 0, total: first.range.total };
+      let resolveFinished, finished = false;
+      work.promise = new Promise(resolve => { resolveFinished = resolve; });
+      const finish = () => { if (!finished) { finished = true; if (active === work) active = null; resolveFinished(); } };
+      active = work;
+      async function* records() {
+        let record = first;
+        try {
+          while (true) {
+            need(!controller.signal.aborted, 'OBJECT_WORKSPACE_EXPORT_INTERRUPTED');
+            need(accountingRevision(record) === binding, 'OBJECT_WORKSPACE_SESSION_CHANGED', 409);
+            yield Buffer.from(JSON.stringify(record) + '\n');
+            work.processed += record.entries.length; work.progressAt = now();
+            if (record.range.nextOffset === null) break;
+            record = await readAccounting(session, record.range.nextOffset);
+          }
+        } finally { finish(); }
+      }
+      return { name: slug(session) + '.accounting.jsonl', body: records(), signal: controller.signal, finish };
+    } finally { mutation = null; }
   }
   async function recover({ session, expectedRevision } = {}) {
     assertIdle(); mutation = { kind: 'RECOVER', session };
@@ -377,13 +501,15 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
     if (closePromise) return closePromise;
     closed = true;
     closePromise = (async () => {
-      if (active) { active.stopping = true; active.controller.abort(); await active.promise; }
-      while (mutation) await new Promise(resolve => setTimeout(resolve, 20));
+      while (active || mutation) {
+        if (active) { active.stopping = true; active.controller.abort(); await active.promise; }
+        else await new Promise(resolve => setTimeout(resolve, 20));
+      }
       reviews.clear();
     })();
     return closePromise;
   }
   await scan();
   return { products, reviewSelection, create, view, refresh, run, stop, recover, assemble,
-    exportReport, openDownload, close };
+    finalize, openAccountingExport, exportReport, openDownload, close };
 }
