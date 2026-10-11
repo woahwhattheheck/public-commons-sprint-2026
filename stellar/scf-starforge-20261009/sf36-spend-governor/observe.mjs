@@ -2,7 +2,7 @@
 import {createHash} from 'node:crypto';
 import {createOfficialEventDecoder} from '../sf43-agent-commerce/verify.mjs';
 import {reconcileRpc} from '../sf86-rpc-transfer-reconcile/verify.mjs';
-import {DEFAULT_RPC,TESTNET_RPC_ENDPOINTS} from '../sf86-rpc-transfer-reconcile/terms.mjs';
+import {resolveRpcEndpoint} from '../sf86-rpc-transfer-reconcile/terms.mjs';
 import {originalRecordFromEvidence} from '../sf86-rpc-transfer-reconcile/cli.mjs';
 import {openOutbox} from '../sf98-merchant-delivery/outbox.mjs';
 import {createPublicHttpsFetch} from '../sf31-buyer-client/public-transport.mjs';
@@ -19,11 +19,10 @@ try {
   const record=input.source?.schema==='scf82.checkout-evidence.v1'?
     originalRecordFromEvidence(input.source):input.source;
   if(input.action==='observe') {
-    // Provider selection is restricted to the original public testnet list;
+    // Provider selection is restricted to the approved network's public list;
     // decoder and fetch remain fixed original production dependencies.
     // Saved verdicts and loopback replay cannot reach the privileged worker.
-    const rpcEndpoint=input.rpcEndpoint??DEFAULT_RPC;
-    if(!TESTNET_RPC_ENDPOINTS.includes(rpcEndpoint))throw new Error('RPC_ENDPOINT_NOT_ALLOWED');
+    const rpcEndpoint=resolveRpcEndpoint(record?.requirement?.network,input.rpcEndpoint);
     // This optional value comes from the privileged worker's explicit operator
     // configuration, never a receipt, event, merchant header or saved verdict.
     const transport=input.rpcProxyUrl===undefined?null:createPublicHttpsFetch({trustedProxy:{

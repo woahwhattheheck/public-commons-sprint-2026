@@ -3,7 +3,7 @@
 MIT. Node 22 standard library. Source-contract adapter for real, current accepted public modules:
 
 - `../sf31-buyer-client/buyer.mjs`, `X402BuyerClient.call()` / `BuyerError` (current observed Git blob `56f83314e1417b6b165e63efa7f5e0c6260fc8d1`, October 10).
-- `../sf43-agent-commerce/verify.mjs`, `checkStellarTestnetTransaction()` (Git blob `03fc89a93052ab81882ad11ad609f4abe87271d5`).
+- `../sf43-agent-commerce/verify.mjs`, `checkStellarTransaction()` for the original approved testnet or pubnet network; the legacy testnet-only API remains available.
 
 This module **does not implement a second protocol, facilitator, simulated payment network or wallet**. It consumes ordinary results already emitted by those modules and joins evidence. No provider call, payment, signing, onchain transaction, grant action or hosted GitHub Actions job occurs.
 
@@ -11,7 +11,7 @@ This module **does not implement a second protocol, facilitator, simulated payme
 
 ```js
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
-import { checkStellarTestnetTransaction } from '../sf43-agent-commerce/verify.mjs';
+import { checkStellarTransaction } from '../sf43-agent-commerce/verify.mjs';
 import { captureBuyerResult, captureBuyerError, aggregateOutcomes } from './outcomes.mjs';
 
 const client = new X402BuyerClient();
@@ -21,8 +21,8 @@ try {
   // Approved caller supplies actual url, explicit terms, original sign and approve handlers.
   const buyer = await client.call({ intentId, url, expect, approve, sign });
   captured = captureBuyerResult(buyer);
-  // ONLY for authorized genuine Stellar testnet receipts, not network placeholders:
-  // const chain = await checkStellarTestnetTransaction({ receipt: buyer.receipt,
+  // Observe the original receipt on its approved network:
+  // const chain = await checkStellarTransaction({ receipt: buyer.receipt,
   //   expected: { ...buyer.requirement, payer: actualPayer }, decodeContractEvent: actualSdkDecoder });
   // captured = { ...captured, chain };
 } catch (error) {
@@ -31,7 +31,7 @@ try {
 const report = aggregateOutcomes([captured]);
 ```
 
-**Do not call `checkStellarTestnetTransaction` unless there is an actual permitted testnet receipt and a canonical SDK event decoder.** A recorded seller `PAYMENT-RESPONSE.success=true` means *reported*, not transfer-verified. `TOKEN_TRANSFER_MATCHED_TESTNET` plus matching network, transaction, contract, recipient, exact atomic amount, ledger and `RPC_TX_AND_SEP41_TRANSFER_EVENT_MATCH` earns transfer verification. A separately observed 2xx HTTP body SHA-256 adds an observed-delivery category, but not customer satisfaction.
+The original SF43 observer reads the receipt transaction using its canonical network and SDK decoder. `TOKEN_TRANSFER_MATCHED_TESTNET` or `TOKEN_TRANSFER_MATCHED_PUBNET` must agree with the approved network, transaction, contract, recipient, exact atomic amount, ledger and `RPC_TX_AND_SEP41_TRANSFER_EVENT_MATCH`. A status for the other network becomes `PROOF_CONFLICT`; a seller-reported receipt alone remains unverified. A separately observed 2xx HTTP body SHA-256 adds an observed-delivery category, but not customer satisfaction.
 
 ## Operator CLI
 
@@ -42,7 +42,7 @@ node stellar/scf-starforge-20261009/sf52-buyer-outcomes/outcomes.mjs --input /pa
 node --test stellar/scf-starforge-20261009/sf52-buyer-outcomes/test/outcomes.test.mjs
 ```
 
-The zero-network reducer has bounded 8 MiB input, ≤100,000 records, a *single terminal observation per `intentId`*, exact BigInt addition, and separate counts of attempted signed requests, seller-reported success, confirmed testnet asset transfers and observed HTTP payloads. Duplicate intent IDs are **rejected**. Distinct intent IDs cannot reuse the *same independently verified transfer proof* (network, transaction hash, asset, recipient, atomic amount): the reducer throws `DUPLICATE_CHAIN_TRANSFER_PROOF` rather than inflate verified transfer counts or token totals. Different real transaction hashes continue to count independently. This current SF43 proof contract does not carry an event index, so two otherwise identical events within one batched transaction cannot be credited as distinct until uniquely disambiguated by stronger source proof. This prevents a single witnessed transfer from being counted twice. Aggregated amounts remain **asset-denominated atomic testnet token units**, never USD, paid contracts, revenue or cash. The adapter redacts raw `Response`/headers and `BuyerError.cause` by design.
+The zero-network reducer has bounded 8 MiB input, ≤100,000 records, a *single terminal observation per `intentId`*, exact BigInt addition, and separate counts of attempted signed requests, seller-reported success, confirmed transfers grouped by network and asset and observed HTTP payloads. Duplicate intent IDs are **rejected**. Distinct intent IDs cannot reuse the *same independently verified transfer proof* (network, transaction hash, asset, recipient, atomic amount): the reducer throws `DUPLICATE_CHAIN_TRANSFER_PROOF` rather than inflate verified transfer counts or token totals. Different real transaction hashes continue to count independently. This current SF43 proof contract does not carry an event index, so two otherwise identical events within one batched transaction cannot be credited as distinct until uniquely disambiguated by stronger source proof. This prevents a single witnessed transfer from being counted twice. Aggregated amounts remain **asset-denominated atomic testnet token units**, never USD, paid contracts, revenue or cash. The adapter redacts raw `Response`/headers and `BuyerError.cause` by design.
 
 Source-accurate focused Node22 reducer proof: five targeted tests including cross-intent proof reuse — seller-only, independent SF43 match and HTTP delivery, hostile cross-term mismatch, pending/error/duplicate. This verifies the reducer, **not** an original provider integration or an SCF-funded milestone. For proper product claims, consume already-authorized original SF41/Muse public-corpus, current canonical SDK version and actual Stellar testnet ledger data.
 

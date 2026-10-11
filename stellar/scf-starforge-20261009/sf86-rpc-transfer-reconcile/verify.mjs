@@ -1,19 +1,20 @@
-import {checkOriginalTerms, requireTruth, digest, DEFAULT_RPC, LOCAL_RPC, object,
-  TESTNET_RPC_ENDPOINTS, TESTNET_PASSPHRASE, ReconciliationError} from './terms.mjs';
+import {checkOriginalTerms, requireTruth, digest, LOCAL_RPC, object,
+  networkProfile, resolveRpcEndpoint, ReconciliationError} from './terms.mjs';
 import {rpc} from './rpc-transport.mjs';
 export {validStrKey,ReconciliationError,DEFAULT_RPC} from './terms.mjs';
 const EVENT_PAGE_LIMIT=200;
 export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractEvent,
-  rpcEndpoint=DEFAULT_RPC,maxEventPages=24} = {}) {
+  rpcEndpoint,maxEventPages=24} = {}) {
   const {intentId, requirement:q, receipt:r}=checkOriginalTerms(record,payer);
-  const live=TESTNET_RPC_ENDPOINTS.includes(rpcEndpoint);
-  requireTruth(live || LOCAL_RPC.test(rpcEndpoint), 'RPC_ENDPOINT_NOT_ALLOWED');
+  const profile=networkProfile(q.network);
+  rpcEndpoint=resolveRpcEndpoint(q.network,rpcEndpoint,{allowLocal:true});
+  const live=!LOCAL_RPC.test(rpcEndpoint);
   requireTruth(Number.isSafeInteger(maxEventPages) && maxEventPages >= 1 &&
     maxEventPages <= 100, 'INVALID_EVENT_PAGE_BUDGET');
   requireTruth(typeof decodeContractEvent === 'function', 'STELLAR_SDK_DECODER_REQUIRED');
   if(live) {
     const network=await rpc('getNetwork',{},rpcEndpoint,fetchImpl);
-    requireTruth(network.passphrase === TESTNET_PASSPHRASE, 'RPC_NETWORK_PASSPHRASE_MISMATCH');
+    requireTruth(network.passphrase === profile.passphrase, 'RPC_NETWORK_PASSPHRASE_MISMATCH');
   }
   const tx=await rpc('getTransaction',{hash:r.transaction},rpcEndpoint,fetchImpl);
   requireTruth(tx.status === 'SUCCESS' && tx.txHash === r.transaction &&
@@ -67,9 +68,9 @@ export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractE
   requireTruth(reachedEnd, 'EVENT_PAGE_BUDGET_EXHAUSTED');
   requireTruth(count === 1, 'NO_EXACT_TRANSFER');
   return {schema:'stellar-forge.sf86.rpc-reconciliation.v1',
-    verdict:live?'CHAIN_TRANSFER_MATCHED_RPC_TESTNET':'LOCAL_RPC_REPLAY_MATCHED',
-    source:live?'official-stellar-testnet-rpc':'127.0.0.1-loopback',
-    rpcEndpoint, ...(live?{networkPassphrase:TESTNET_PASSPHRASE}:{}),
+    verdict:live?profile.transferVerdict:'LOCAL_RPC_REPLAY_MATCHED',
+    source:live?profile.rpcSource:'127.0.0.1-loopback',
+    rpcEndpoint, ...(live?{networkPassphrase:profile.passphrase}:{}),
     intentId,transaction:r.transaction,network:q.network,ledger:tx.ledger,
     asset:q.asset,payer,recipient:q.payTo,atomicAmount:q.amount,
     matchingTransfers:1,matchingEventId:matchedId,eventPages,
