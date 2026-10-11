@@ -48,6 +48,20 @@ export function validateOriginalReport(report) {
   if (report.verdict === 'LISTED' && report.catalog.matchingResourceCount === 0) {
     throw new TypeError('Contradictory listed-catalog classification');
   }
+  // SF52 skips GET only after full catalog coverage proves a named POST/MCP-only route.
+  // Do not misrepresent an unknown origin as a failed or successful GET/checkout.
+  if (report.challenge.state === 'CATALOG_NON_GET_ONLY') {
+    const c = report.challenge;
+    if (!report.catalog.complete || report.catalog.matchingResourceCount === 0 ||
+      c.observedVia !== 'COMPLETE_CATALOG' ||
+      !Array.isArray(c.declaredHttpMethods) ||
+      c.declaredHttpMethods.some(m => typeof m !== 'string' || m === 'GET') ||
+      !Number.isSafeInteger(c.mcpToolCount) || c.mcpToolCount < 0 ||
+      c.declaredHttpMethods.length + c.mcpToolCount === 0 ||
+      c.httpStatus !== undefined) {
+      throw new TypeError('Contradictory non-GET original catalog-only report');
+    }
+  }
   // A source report is never elevated to receipt or payment proof by this renderer.
   return report;
 }
@@ -58,7 +72,10 @@ export function interpret(report) {
   const add = (priority, finding, action) => tasks.push({priority, finding, action});
   const status = report.challenge.state;
   const statusCode = report.challenge.httpStatus;
-  if (statusCode === 200 && (status === 'UNPAID_GET_HTTP_200' || status === 'NOT_HTTP_402')) {
+  if (status === 'CATALOG_NON_GET_ONLY') {
+    add('INFO', 'Complete catalog declares only POST/MCP or other non-GET operations; no seller-origin GET was performed.',
+      'A GET probe is not an acceptance test for this route. With merchant permission, verify the actual advertised HTTP method or MCP tool and its current x402 terms independently before a buyer-approved invocation.');
+  } else if (statusCode === 200 && (status === 'UNPAID_GET_HTTP_200' || status === 'NOT_HTTP_402')) {
     add('HIGH', 'Unauthenticated seller GET returned HTTP 200 rather than an x402 payment challenge.',
       'Confirm whether a default free tier bypasses the paid route. If this operation is intended to require payment, make free access opt-in and recheck the original 402 before escalating index issues.');
   } else if (status === 'NOT_HTTP_402') {
@@ -118,7 +135,12 @@ export function renderReport(report, {capturedAt, sourceSha256} = {}) {
     ['Original observation time', capturedAt || 'Unspecified by supplied report'],
     ['Original SF52 JSON SHA-256', sourceSha256 || 'Not supplied'],
     ['Seller challenge state', report.challenge.state],
-    ['Seller GET HTTP', report.challenge.httpStatus ?? 'Request failed'],
+    ['Seller GET HTTP', report.challenge.state === 'CATALOG_NON_GET_ONLY' ?
+      'NOT PROBED (catalog contract excludes GET)' : report.challenge.httpStatus ?? 'Request failed'],
+    ...(report.challenge.state === 'CATALOG_NON_GET_ONLY' ? [
+      ['Catalog-declared HTTP methods', report.challenge.declaredHttpMethods.join(', ') || 'None'],
+      ['Catalog-declared MCP tool count', report.challenge.mcpToolCount]
+    ] : []),
     ['Original catalog verdict', report.verdict],
     ['Catalog pages examined', report.catalog.pages],
     ['Raw listings observed', report.catalog.rawRows],
