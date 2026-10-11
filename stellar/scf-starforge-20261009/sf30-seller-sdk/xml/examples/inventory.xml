@@ -1,0 +1,4 @@
+<?xml version="1.0"?><i:inventory xmlns:i="urn:inventory" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<i:item sku="9007199254740993"><i:title><![CDATA[Pump, "A"]]></i:title><i:units>12</i:units><i:active>true</i:active><i:price>1234.5000000000000000001</i:price><i:tag>a</i:tag><i:tag>b</i:tag><i:note>Use <i:b>slowly</i:b>.</i:note></i:item>
+<i:item sku="0002"><i:title> Second </i:title><i:units xsi:nil="true"/><i:active>false</i:active><i:price>0.0100</i:price><i:tag>c</i:tag><i:note>None</i:note></i:item>
+<i:item sku="0003"><i:title>Third</i:title><i:units>8</i:units><i:active>true</i:active><i:price>8.00</i:price><i:tag>d</i:tag><i:note>Third</i:note></i:item></i:inventory>

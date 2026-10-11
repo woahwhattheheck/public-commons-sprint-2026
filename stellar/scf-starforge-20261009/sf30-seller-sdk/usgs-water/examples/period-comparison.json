@@ -1,0 +1,11 @@
+{
+  "quality": "all",
+  "window": {
+    "start": "2026-10-05",
+    "end": "2026-10-07"
+  },
+  "baselineWindow": {
+    "start": "2026-10-01",
+    "end": "2026-10-03"
+  }
+}

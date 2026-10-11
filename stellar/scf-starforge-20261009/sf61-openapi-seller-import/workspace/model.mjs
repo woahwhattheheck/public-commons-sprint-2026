@@ -10,7 +10,7 @@ import { compileUpstreamBindings, validateUpstreamService } from '../../sf30-sel
 import { supportsSellerMethod } from '../../sf30-seller-sdk/http-methods.mjs';
 import { compileOpenApiResponseContract } from '../response-contracts.mjs';
 import { preparePublicOperation, createMerchantCases } from './requests.mjs';
-import { inspectBackendSecurity, inspectAuthenticationRequirements, prepareBackendAuthentication } from './authentication.mjs';
+import { inspectBackendSecurity, inspectAuthenticationRequirements, prepareBackendAuthentication, authorizationCodeSelection } from './authentication.mjs';
 import { merchantOperationPolicy, merchantValidationEnvironment, merchantOperationSummary } from './operation-plan.mjs';
 import { parseOpenApiSource } from '../source-document.mjs';
 import { openApiRequestBody, requestBodySummary } from '../request-body.mjs';
@@ -81,6 +81,14 @@ function backendURL(servers, index) {
   return url;
 }
 
+/** Public selection only; registry access remains in the original local server. */
+export function merchantOAuthSelection(specText,row) {
+  if (!plain(row)) fail('Select an original operation for this authorization grant');
+  const spec=parse(specText),{op,servers}=operationAt(spec,row.method,row.path);
+  const backend=backendURL(servers,row.serverIndex??0);
+  return authorizationCodeSelection(spec,op,row,backend,{sourceSha256:sha(specText)});
+}
+
 /** Build an explicit paid facade and preserve the source and backend auth mapping. */
 export function prepareMerchant(specText, plan) {
   const spec = parse(specText);
@@ -96,7 +104,7 @@ export function prepareMerchant(specText, plan) {
   const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','idempotency','stream'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','oauthConnection','oauthProfile','oauthAlias','idempotency','stream'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
     if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
     const stream = merchantStreamPolicy(row, method);
@@ -114,7 +122,7 @@ export function prepareMerchant(specText, plan) {
     }
     requirePostmanHeaderReferences(op,headers);
     let authentication;
-    try { authentication = prepareBackendAuthentication(spec,op,row,backend,{allowLoopback:plan.allowLoopbackUpstream===true}); }
+    try { authentication = prepareBackendAuthentication(spec,op,row,backend,{allowLoopback:plan.allowLoopbackUpstream===true,sourceSha256:sha(specText)}); }
     catch(e) { fail(key + ': ' + e.message); }
     for (const name of authentication.environment) envNames.add(name);
     if (!materialized.has(row.path)) {
@@ -138,6 +146,7 @@ export function prepareMerchant(specText, plan) {
       ...(requestBody?{bodyType:requestBody.bodyType}:{}),
       ...(row.maxRequestBytes!==undefined?{maxRequestBytes:row.maxRequestBytes}:{}),
       ...(authentication.oauth2 ? {oauth2:authentication.oauth2} : {}),
+      ...(authentication.oauthConnection ? {oauthConnection:authentication.oauthConnection} : {}),
       ...(row.timeoutMs !== undefined ? {timeoutMs:row.timeoutMs} : {}),
       ...(row.maxResponseBytes !== undefined ? {maxResponseBytes:row.maxResponseBytes} : {}),
       ...(row.maxInFlight !== undefined ? {maxInFlight:row.maxInFlight} : {}),
@@ -172,8 +181,9 @@ export function prepareMerchant(specText, plan) {
       paymentFlow:selections[i].accepts[0].extra?.paymentFlow??'authorization',
       responseMode:binding.responseMode, responseMimeType:offer.seller.resource.mimeType??null,
       requestBody:transformations[i].requestBody,maxRequestBytes:binding.maxRequestBytes??1048576,
-      environment:[...new Set([...Object.values(binding.headerEnv),...(binding.oauth2?[binding.oauth2.clientIdEnv,binding.oauth2.clientSecretEnv]:[])])].sort(),
-      backendAuthentication:transformations[i].backendAuthentication,oauth2:binding.oauth2??null,
+      environment:[...new Set([...Object.values(binding.headerEnv),...(binding.oauth2?[binding.oauth2.clientIdEnv,binding.oauth2.clientSecretEnv]:[]),
+        ...(binding.oauthConnection?[binding.oauthConnection.directoryEnv,...(binding.oauthConnection.clientSecretEnv?[binding.oauthConnection.clientSecretEnv]:[])]:[])])].sort(),
+      backendAuthentication:transformations[i].backendAuthentication,oauth2:binding.oauth2??null,oauthConnection:binding.oauthConnection??null,
       publicDescription:facade.paths[offer.path][offer.method.toLowerCase()].description ?? '',
       responseValidation:validation, responseStatuses:Object.keys(binding.responseContract?.responses ?? {}), validateInput:true, responseContract:Boolean(binding.responseContract), sharedRead:binding.cache?.shareAcrossBuyers === true});
   }
@@ -211,6 +221,19 @@ export async function privateParent(path) {
   if (!info.isDirectory() || process.platform !== 'win32' && (info.mode & 0o077) !== 0) fail('Use an existing private output directory (mode 0700)');
   return full;
 }
+function sourceRevisionRecord(value, sourceSha256, planSha256) {
+  if (!plain(value) || value.schema !== 'stellar-forge.api-merchant-revision.v1' ||
+      !/^[a-f0-9]{64}$/.test(value.reviewSha256 ?? '') || !/^[a-f0-9]{64}$/.test(value.refreshReviewId ?? '') ||
+      !plain(value.base) || !plain(value.candidate) ||
+      value.candidate.sourceSha256 !== sourceSha256 || value.candidate.planSha256 !== planSha256 ||
+      !/^[a-f0-9]{64}$/.test(value.candidate.compiledSha256 ?? '') ||
+      !['manifestSha256','sourceSha256','planSha256'].every(key=>/^[a-f0-9]{64}$/.test(value.base[key] ?? '')) ||
+      typeof value.base.id !== 'string' || !Array.isArray(value.decisions) || !value.decisions.length || value.decisions.length>64)
+    fail('Source revision must match this exact original source and merchant plan');
+  packageName(value.base.name);
+  if (Buffer.byteLength(json(value))>MANIFEST_LIMIT) fail('Source revision record exceeds 1 MiB');
+  return value;
+}
 export async function readPackage(parent, name) {
   const folder = join(await privateParent(parent), packageName(name)), entry = await lstat(folder);
   if (!entry.isDirectory()) fail('Package must be a regular directory');
@@ -223,12 +246,18 @@ export async function readPackage(parent, name) {
   }
   if (own(manifest.files,'operator-cases.json') && sha(await regular(join(folder,'operator-cases.json'),65536)) !== manifest.files['operator-cases.json'])
     fail('Saved route cases changed. Save changes under a new package name.');
+  let sourceRevision;
+  if (own(manifest.files,'source-revision.json')) {
+    const bytes=await regular(join(folder,'source-revision.json'),MANIFEST_LIMIT);
+    if (sha(bytes)!==manifest.files['source-revision.json']) fail('Saved source revision changed. Reopen the original candidate.');
+    sourceRevision=sourceRevisionRecord(JSON.parse(bytes),manifest.files[sourceFile],manifest.files['merchant-plan.json']);
+  }
   return {folder, name, manifest, specText:(await regular(join(folder,sourceFile))).toString('utf8'),
-    plan:JSON.parse(await regular(join(folder,'merchant-plan.json')))};
+    plan:JSON.parse(await regular(join(folder,'merchant-plan.json'))),...(sourceRevision?{sourceRevision}:{})};
 }
 
 /** Create a portable private package and the actual original compiler output. */
-export async function savePackage({specText, plan, parent, name}) {
+export async function savePackage({specText, plan, parent, name, sourceRevision}) {
   const prepared = prepareMerchant(specText, plan), base = await privateParent(parent);
   const folder = join(base, packageName(name));
   const sourceFile='original-openapi.'+parseOpenApiSource(specText).format;
@@ -237,6 +266,7 @@ export async function savePackage({specText, plan, parent, name}) {
     'facade-openapi.json':json(prepared.facade), 'selections.json':json(prepared.selections),
     'route-bindings.json':json(prepared.bindings), 'upstreams.json':json(prepared.upstreams),
     'operator-cases.json':json(prepared.cases),
+    ...(sourceRevision===undefined?{}:{'source-revision.json':json(sourceRevisionRecord(sourceRevision,sha(specText),sha(json(plan))))}),
   };
   for (const [file,content] of Object.entries(files)) {
     if (Buffer.byteLength(content) > (file==='upstreams.json' ? 1024*1024 : LIMIT))
@@ -261,12 +291,16 @@ export async function savePackage({specText, plan, parent, name}) {
   const guide = [
     '# API merchant package', '', 'Created from the original API description with an explicit public paid facade.',
     'Source and transformation hashes are in merchant-package.json. Prices are atomic-unit strings.',
+    ...(sourceRevision===undefined?[]:['The reviewed source revision is retained in source-revision.json, including the original package, exact source/plan pins and explicit route decisions.']),
     '', '## Start the original seller and operations dashboard', '', 'Node 22+ and the full current source checkout are required.',
     '', '~~~sh', command, '~~~', '',
     'For native facilitator mode, replace --challenge-only with --facilitator YOUR_AUTHORIZED_HTTPS_FACILITATOR.',
     'Supply environment variables in the launcher process: ' + (prepared.preview.environment.join(', ') || '(none)') + '.',
     'Authorization variables contain the complete header value, including Bearer or Basic when required.',
     'The compiler adds environment-variable references only. Supplied source files may already contain private values; keep the complete package private. After moving the package, adjust command paths.',
+    'Authorization-code routes retain the exact reviewed grant ID, public source/profile and environment references. Provision that approved private connection on the receiving host; its directory and token values are never copied into this package.',
+    'Renewal preserves the grant identity. After reconnecting or selecting another grant, reselect it in the API workspace and save a new compiled package. Existing package references do not silently switch grants.',
+    'The workspace operator workflow and native connection setup are documented in sf61-openapi-seller-import/workspace/AUTHORIZATION_CONNECTIONS.md.',
     '', 'The seller listens on loopback. Route your HTTPS gateway to it while preserving the public paths.',
     'Challenge-only mode returns native payment challenges but does not verify or settle payments.',
     'Inspect the operations URL printed at startup. Stop with Ctrl-C. Resume the same compiled directory.',

@@ -33,7 +33,9 @@ export async function readReleaseWorkspace(path) {
     allowLoopbackUpstream: project.plan.allowLoopbackUpstream === true,
     hashes: project.manifest.files,
     provenance: { name: project.name, id: project.manifest.id, manifestSha256: digest(manifestBytes),
-      originalOpenApiSha256: project.manifest.files['original-openapi.json'] },
+      originalOpenApiSha256: project.manifest.files[project.manifest.sourceFile ?? 'original-openapi.json'],
+      ...(project.sourceRevision ? {sourceRevisionSha256:project.manifest.files['source-revision.json'],
+        sourceRevision:project.sourceRevision} : {}) },
   };
 }
 async function bytesAt(path) {
@@ -67,6 +69,7 @@ function inspectBytes(bytes, service, allowLoopback) {
       idempotency: raw.idempotency ?? null,
       cache: raw.cache ?? null,
       ...(raw.oauth2 === undefined ? {} : { oauth2: raw.oauth2 }),
+      ...(raw.oauthConnection === undefined ? {} : { oauthConnection: raw.oauthConnection }),
     };
   }
   return { bindings, environment: references, credentialValuesChecked: false };
