@@ -1,4 +1,5 @@
 import { APP_URI } from './app-resource.mjs';
+import { WORKBOARD_TOOLS, isWorkboardTool, callWorkboardTool } from './workboard-tools.mjs';
 
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 const text = (value) => ({ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) });
@@ -7,6 +8,7 @@ const operationIdSchema = { type: 'string', minLength: 8, maxLength: 128, patter
 export function listTools() {
   const ui = { ui: { resourceUri: APP_URI } };
   return [
+    ...WORKBOARD_TOOLS,
     { name: 'hearthline_seed_inventory', title: 'Seed household inventory', description: 'Set demo household inventory counts used by preparedness missions. Local state only.', inputSchema: objectSchema({ items: { type: 'object', additionalProperties: { type: 'integer', minimum: 0, maximum: 10000 } } }, ['items']), annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false, readOnlyHint: false } },
     { name: 'hearthline_prepare_storm', title: 'Prepare storm-readiness mission', description: 'Fetch active US National Weather Service alerts, compare local supplies, and prepare a stateful mission. External commits remain gated for explicit approval.', inputSchema: objectSchema({ title: { type: 'string', maxLength: 120 }, latitude: { type: 'number', minimum: -90, maximum: 90 }, longitude: { type: 'number', minimum: -180, maximum: 180 }, household: objectSchema({ people: { type: 'integer', minimum: 1, maximum: 30 }, pets: { type: 'integer', minimum: 0, maximum: 30 }, notes: { type: 'string', maxLength: 500 } }) }, ['latitude', 'longitude']), _meta: ui, annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: true, readOnlyHint: false } },
     { name: 'hearthline_get_mission', title: 'Read mission', description: 'Read a mission including approval state, operation binding, and the plan hash required for approval.', inputSchema: objectSchema({ missionId: { type: 'string', minLength: 1 } }, ['missionId']), _meta: ui, annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false, readOnlyHint: true } },
@@ -19,6 +21,7 @@ export function listTools() {
 
 export async function callTool(orchestrator, name, args = {}) {
   if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('tool arguments must be an object');
+  if (isWorkboardTool(name)) return callWorkboardTool(orchestrator, name, args);
   validateToolArgs(name, args);
   switch (name) {
     case 'hearthline_seed_inventory': { const result = await orchestrator.seedInventory(args.items); return { content: [text(result)], structuredContent: result }; }
