@@ -1,6 +1,7 @@
 """Durable source versions, original-engine plans, named decisions and handoffs."""
 from __future__ import annotations
 
+import base64
 import csv
 import html
 import io
@@ -13,6 +14,7 @@ import tempfile
 import threading
 import uuid
 import zipfile
+import zlib
 from datetime import date, timedelta
 
 from native import native_projection
@@ -28,6 +30,24 @@ SOURCE_LINKS = [
     dict(label="Responses and team reservations", url="https://learn.getconnectedvolunteer.com/en/articles/10179574-need-or-opportunity-responses-site-managers"),
     dict(label="Client integration responsibilities", url="https://learn.getconnectedvolunteer.com/en/articles/11779226-site-settings-api")
 ]
+
+
+def encode_record(value):
+    raw = json_text(value).encode("utf-8")
+    if len(raw) >= 65536:
+        compressed = zlib.compress(raw, 6)
+        if len(compressed) < len(raw) * 0.8:
+            return "zlib-json-v1:" + base64.b64encode(compressed).decode("ascii")
+    return raw.decode("utf-8")
+
+
+def decode_record(value):
+    if value.startswith("zlib-json-v1:"):
+        try:
+            value = zlib.decompress(base64.b64decode(value[13:], validate=True)).decode("utf-8")
+        except (ValueError, zlib.error, UnicodeDecodeError):
+            fail("WORKSPACE_RECORD", "A retained workspace record is damaged. Restore its complete backup.", 409)
+    return json.loads(value)
 
 
 def copy(value):
@@ -72,6 +92,7 @@ class Workspace:
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA busy_timeout=10000")
         self.db.execute("PRAGMA foreign_keys=ON")
+        self.db.execute("PRAGMA temp_store=MEMORY")
         tables = {row[0] for row in self.db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if tables and not {"meta", "records", "sources"}.issubset(tables):
             self.db.close()
@@ -109,16 +130,16 @@ class Workspace:
 
     def _put(self, kind, value):
         self.db.execute("INSERT OR REPLACE INTO records VALUES (?,?,?,?)",
-            (kind, value["id"], value["created_at"], json_text(value)))
+            (kind, value["id"], value["created_at"], encode_record(value)))
 
     def _get(self, kind, ident):
         row = self.db.execute("SELECT payload FROM records WHERE kind=? AND id=?", (kind, ident)).fetchone()
         if not row:
             fail("NOT_FOUND", f"The requested {kind} is not in this workspace.", 404)
-        return json.loads(row[0])
+        return decode_record(row[0])
 
     def _all(self, kind):
-        return [json.loads(row[0]) for row in self.db.execute(
+        return [decode_record(row[0]) for row in self.db.execute(
             "SELECT payload FROM records WHERE kind=? ORDER BY created_at,id", (kind,))]
 
     def _raw(self, ident):
@@ -142,8 +163,12 @@ class Workspace:
                 self._save_meta(meta)
                 self.db.execute("COMMIT")
                 return dict(revision=meta["revision"], **result)
-            except Exception:
-                self.db.execute("ROLLBACK")
+            except Exception as exc:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                if isinstance(exc, sqlite3.Error) and getattr(exc, "sqlite_errorcode", None) == sqlite3.SQLITE_FULL:
+                    fail("WORKSPACE_STORAGE", "Free space on the workspace drive, reload the current revision and retry this operation.", 507,
+                         current_revision=self._meta()["revision"])
                 raise
 
     @staticmethod

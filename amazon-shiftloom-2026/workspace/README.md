@@ -4,7 +4,7 @@ ShiftLoom now carries a complete coordinator workflow around its original planne
 
 ## Start the application
 
-Requirements: Python 3.10 or later and Node 22.16 or later. The Python server and capture command use the standard library; the original JavaScript planner has no package dependencies.
+Requirements: Python 3.10 or later, Node 22.16 or later and the site's IANA time-zone data. The Python server and capture command use the standard library; the original JavaScript planner has no package dependencies.
 
 From this directory:
 
@@ -62,6 +62,13 @@ Download the complete workspace backup to continue all source versions, boards a
 The ZIP is the review and transfer package. The consistent SQLite backup reopens the full application.
 
 ## Work through the supplied source cohort
+
+Create a fresh example workspace directly from the supplied original native source and explicit coordinator recipe:
+
+    python3 -B create_example.py --db /absolute/private/path/shiftloom-example.sqlite
+    python3 -B app.py --db /absolute/private/path/shiftloom-example.sqlite --port 8802
+
+The command accepts a new workspace file and creates the retained original board. Continue its actual plan, named review and corrected-source workflow in the browser.
 
 examples/recipe.json contains exact settings, mappings and coordinator overrides for both native and five-CSV intake. The example contains ten volunteers, three shifts, a canceled response, one extra team-reserved place and distinct qualification, availability, eligibility, overlap and workload conditions.
 
