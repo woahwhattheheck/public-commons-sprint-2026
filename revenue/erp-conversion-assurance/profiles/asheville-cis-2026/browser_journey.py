@@ -53,7 +53,8 @@ def main():
                 result['steps'].append('actual '+tab+' view')
             ut.get_by_role('button',name='Billing',exact=True).click();idle()
             choose=section('Retained candidate runs').locator('select');options=choose.locator('option').evaluate_all("(nodes)=>nodes.map(n=>n.value).filter(Boolean)")
-            choose.select_option(scenario['billingId'] if scenario.get('billingId') in options else options[-1])
+            assert scenario['billingId'] in options,'The original complete billing candidate is absent from the retained-run selector.'
+            choose.select_option(scenario['billingId'])
             section('Retained candidate runs').get_by_role('button',name='Open retained operation',exact=True).click();idle()
             expect(ut.get_by_text('509750.00',exact=True)).to_be_visible()
             page.screenshot(path=str(out/'operator-desktop.png'),full_page=False)
