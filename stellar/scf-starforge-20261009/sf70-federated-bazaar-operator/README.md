@@ -31,7 +31,7 @@ SF70 reports current provider-observed row counts, not users, customers, seller 
 - Two pinned preapproved public HTTPS hosts, never browser-selected URL parameters. The server binds literal `127.0.0.1` and rejects non-loopback sockets and altered `Host` headers.
 - Requests reject redirects, use a 12-second per-page abort, cap each JSON page at 2 MiB, at most 30 pages and 3,000 source rows per provider. No cookies, authorization, credentials, wallet, or private endpoints forwarded.
 - Source JSON is rendered with textContent, under same-origin restrictive CSP; no untrusted HTML insertion. Errors remain source-specific and do not become false absence.
-- No telemetry or persistence; refresh requests new public native captures and may differ from old Muse snapshots.
+- No telemetry or persistence. Independent native source capture timestamps remain unchanged by delivery coordination. The manual **Refresh genuine GETs** button bypasses any recent completed-capture reuse and obtains a new provider observation (or joins a simultaneous in-progress fetch).
 - No CI, customer contacts, SCF submission, commercial promises, or hosted deployments. The grant founder and SF49 merchant operator can reuse this original product for operator demonstration, not claim commercial adoption from a testnet result.
 
 ### Exact live source follow-through
@@ -55,10 +55,22 @@ The **Copy source-bound offer handoff** button copies only currently observed da
 
 This is compatible with SF71's *separate* between-refresh observed-provider-offer delta view. Method identity improves that existing longitudinal view because method changes remain distinct native operations. SF71's previously merged module, source/UI and behavior are preserved. No additional independent facilitator, crawler, controller, CI, wallet, contact or competition proof product is created.
 
-## SF73: corpus-ranked search across actual observed providers
+## Concurrent native capture and operator-visible freshness (SF70)
 
-The live federated browser now ranks **the current original Vellar/Periplo listings** using the existing SCF-23 Bazaar BM25F-style lexical/fuzzy ranker. A phrase such as `weather forecast` searches real observed service metadata, rather than requiring one literal substring. The declared-operation selector is applied first, and the provider selector is applied before scoring. Empty search preserves native source order. The browser never fabricates or merges a result: each hit is an unchanged original SF70 observation retaining its provider, row index, operation/method, all payment alternative tuples and original capture coverage. If one source failed, the original failure banner remains visible; its missing listings are not interpreted as absent. Typo recovery is lexical, **not** inferred semantic equivalence or a price/merchant endorsement.
+This same loopback server coalesces simultaneous browser requests into **one** original native Vellar+Periplo capture per Stellar network. A completed capture with both independent sources marked `COMPLETE_GET_CAPTURE` can be reused by automatic tab loads for **up to 8 seconds**; partial-source failure or total-source failure is **never** stored as an eligible complete capture. Failed attempts clear the in-flight state so the next request can retry. All data, declared native pagination, per-provider source `observedAt`, original advertised payment alternatives and the existing SF71/SF72 operator features remain unchanged.
 
-The SF73 browser adapter imports the original SF23 ranker served from the existing read-only loopback static allowlist, avoiding duplicate search law or a model/vector dependency. There are no new seller fetches, provider POST calls, keys, wallets, signatures, payments, hosted services, CI or GitHub Actions. SF71 same-provider offer-delta and SF72 operation-aware source handoff remain unchanged.
+An added response-level `operatorDelivery` explains **how this HTTP response was served**, separate from when the native providers were read: `LIVE_NATIVE_CAPTURE`, `SHARED_LIVE_CAPTURE`, or `RECENT_COMPLETE_CAPTURE`, with serving time and completed-capture age in milliseconds. UI source cards display native per-provider capture timestamps; the status reports reused versus live/joined delivery. Clicking **Refresh genuine GETs** calls `/api/federated?refresh=1` and always bypasses reuse, preserving SF71's successive-observation semantics. No scheduled background requests or external cache are introduced; no seller-origin calls, credentials, wallets, settlement or fee-bearing hosted CI.
 
-For a current original-provider operator check, launch the merged SF70 server, observe both native GET source statuses and timestamps, search a natural-language phrase and an ordinary typo against those exact captured rows, filter to each individual provider and method, and inspect that the selected hit's original payment alternatives are unchanged. Keep result counts tied to that specific original capture; do not quote older Muse totals as current traffic or commercial adoption.
+Run the focused local check (Node 22+; no hosted Actions):
+
+```sh
+node --test stellar/scf-starforge-20261009/sf70-federated-bazaar-operator/test/refresh.test.mjs
+```
+
+These checks cover concurrent native capture, manual freshness, an incomplete provider, an upstream throw, completed-capture expiry and network-scope independence. They assert coordination semantics, not live provider counts or payment success. For current original provider totals, use new genuine native GET data; the prior Muse 27+2 receipt is a timestamped observation rather than a permanent fixture.
+
+## SF73: live federated lexical/fuzzy service discovery
+
+The federated operator now ranks original Vellar/Periplo observations with the **existing SCF-23 BM25F-style ranker**, rather than requiring a full literal substring. Multiword needs and ordinary typos rank the metadata within the currently selected provider and declared-operation filters; an empty query retains the original source order. The adapter returns the exact unmodified original listing objects: provider, method, source row, URL, every declared indivisible payment tuple, and original source coverage remain intact. It never merges or deduplicates offers across providers.
+
+The original ranker is served only as a whitelisted static module under the existing loopback-only CSP. No vector service, new provider GET/POST, merchant probe, wallet, CI or payment is introduced. SF71 live offer delta, SF72 source-bound merchant handoff, and later original-source refresh coordination remain unchanged. For a current operator read, use the live two-provider page, record provider/row coverage, search two user-intent phrases and a typo, and confirm full original payment-option preservation. Do not infer seller consent or paid success from relevance.
