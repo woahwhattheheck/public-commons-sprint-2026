@@ -1,0 +1,125 @@
+{
+  "schema": "tjlabs.l2d.exact-hessian-source/v1",
+  "operation": "L2D-EXACT-HESSIAN107-6966-20261011",
+  "organizer": {
+    "repository": "artificial-scientist-lab/Learn2Design-2026",
+    "commit": "1dc4d6e7d0ff656555f48bcf3c22a4d284779386",
+    "checked_at": "2026-10-11T18:00:00Z",
+    "rules": "https://github.com/artificial-scientist-lab/Learn2Design-2026/blob/1dc4d6e7d0ff656555f48bcf3c22a4d284779386/docs/submission.md",
+    "validator_sha256": "9ec6ac14de3e04e8edf77c40981496aafc38cae8928105b89a45d87b433ff2e7",
+    "rules_sha256": "78b786e07183ab1350b251fb4283970ba3088df6339ec18a327950963fb10b0b"
+  },
+  "candidates": [
+    {
+      "id": "099",
+      "class": "MeasuredPortfolio099",
+      "submission": "original/099/submission.py",
+      "submission_bytes": 15794,
+      "submission_sha256": "144216f254636979e1878df1f80afeae04240f8bf2e86d6f06d640d570e27b96",
+      "requirements": "original/099/requirements.txt",
+      "requirements_sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a",
+      "archive": "submission-zips/099.zip",
+      "archive_sha256": "e6863aa730cbd05a13b574c786edeb1b3373758b92b872fcd23634fa581a5c92"
+    },
+    {
+      "id": "101",
+      "class": "BudgetLBFGS100",
+      "submission": "original/101/submission.py",
+      "submission_bytes": 23617,
+      "submission_sha256": "9893bc6f4fb3960959f3d01d26509b7727a283f0b4882a460cadff86d439fa7e",
+      "requirements": "original/101/requirements.txt",
+      "requirements_sha256": "51670dcf6af06be3ba281cecc18979041a90378d5dd5a38b01f1091d93952a18",
+      "archive": "submission-zips/101.zip",
+      "archive_sha256": "603bfbefd88552736f50eb582323e13f6587dbdffd889ed3865952e10b9eba1a"
+    },
+    {
+      "id": "107-original",
+      "class": "ExactHessianTR104",
+      "submission": "original/107/submission.py",
+      "submission_bytes": 38784,
+      "submission_sha256": "474e9191fbaa2a058257d0f616608bd207a757ec58481a1a838c2315f155ba17",
+      "requirements": "original/107/requirements.txt",
+      "requirements_sha256": "c3cc7885d8cda069a6801ef2c10a02199acaf1996f4521fbbe54e1ee0734cb68",
+      "archive": "submission-zips/107-original.zip",
+      "archive_sha256": "205b7a3778e163cab1673a20dd4f3202dcad53be46be9575bed2431e7df59150"
+    },
+    {
+      "id": "107-measured6966",
+      "class": "MeasuredExactHessian6966",
+      "submission": "candidate/submission.py",
+      "submission_bytes": 36334,
+      "submission_sha256": "9b478a32e37594b54892884ac24d3a8e04d7c33974affdc5480095416b8ca192",
+      "requirements": "candidate/requirements.txt",
+      "requirements_sha256": "c843ba901b252dad6fe3ce2d7d2888e31e35e90157ee2cbeba68b852d071abc8",
+      "archive": "submission-zips/107-measured6966.zip",
+      "archive_sha256": "c87263b9c4f0ecd8d2829dd47830e133937a5d1807bd78c0581bafea8dd4b352"
+    }
+  ],
+  "native_runner": {
+    "path": "runner/run_public_uifo.py",
+    "sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08",
+    "source_owner": "Original public UIFO comparison runner retained from the existing restart experiment."
+  },
+  "cpu_adapter": {
+    "path": "runner/run_cpu.py",
+    "sha256": "b454eefa84ef435cc79f7272b2c59c86b59003ceb550224114a369c14044dc7c",
+    "launcher_sha256": "706c22439029ec50010cd5e566eeffc4172624e4ce6289698ba5726a86f3d8f8",
+    "jax_cpu_enable_async_dispatch": false
+  },
+  "observed_cpu_runtime": {
+    "packages": {
+      "dfbench": "0.3.3",
+      "differometor": "0.0.5",
+      "optax": "0.2.8",
+      "jax": "0.9.0.1",
+      "scipy": "1.18.1",
+      "numpy": "2.5.4",
+      "jaxlib": "0.9.0.1"
+    },
+    "native_modules": [
+      {
+        "path": "dfbench/core/objective.py",
+        "bytes": 116097,
+        "sha256": "9e2c2bb54517f59efacf4c2a59908ffd55c7fb2e15089d53263ece796e71daa2"
+      },
+      {
+        "path": "dfbench/core/algorithm.py",
+        "bytes": 8664,
+        "sha256": "eacb65b5fb8425b7e65743b8738a4f2d115e8cdcc5cbc116a4a2d0fde518bf18"
+      },
+      {
+        "path": "dfbench/problems/uifo/uifo_problem.py",
+        "bytes": 22698,
+        "sha256": "a6e3e95275987799761831a64a2c7b0aa793656d741df4d5d5e78b64c13f7d08"
+      }
+    ],
+    "objective_matches_wheel_record": true,
+    "physics": {
+      "UIFOProblem_size": 3,
+      "n_frequencies": 50,
+      "Objective_hessian_batch_size": 1
+    }
+  },
+  "source_corrections": [
+    "Default Hessian cost prior comes from a completed logged call, not compile-inclusive/possibly asynchronous warmup wall time.",
+    "An explicit refresh after stale-model rejection evaluates the accepted center before considering another trial."
+  ],
+  "runtime_capture": {
+    "path": "runner/run_recorded.py",
+    "sha256": "d8be45aa9f371bccc8a36b971072eda0ebe2391796aa8b92d3af7081bc614d66",
+    "cpu_launcher": "runner/run_recorded_cpu.sh",
+    "cpu_launcher_sha256": "91a8c98bc46066b737fc2dc121642960f68d6ead7c17fa64c71ded4cd77806f5",
+    "semantics": "Same-process effective affinity, JAX dispatch/config, selected thread/XLA/allocator environment and original native module hashes; native report bytes remain unchanged."
+  },
+  "phase_operator": {
+    "path": "run_phase.py",
+    "sha256": "e7c524e4e169c2fe445e99bb83e145dc7479c944f9f624330926331ef2fdf1e8",
+    "semantics": "One source-pinned serial phase inside an existing allocation; original native runner/context; isolated empty per-cell bounded caches; retain every native outcome and interrupted attempt; raw results export."
+  },
+  "source_carrier": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "base_commit": "d67fa156c6553a9b0c7e367810b5a9564709f13d",
+    "existing_experiment": "competitions/learn2design-2026/experiments/sol-budgeted-restarts-20261011",
+    "cpu_correction": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1048"
+  }
+}
