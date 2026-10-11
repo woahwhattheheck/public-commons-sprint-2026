@@ -76,17 +76,19 @@ function unpacked(value, limit) {
   return raw;
 }
 
-function prepareHandoff(value, directory, acceptIndex) {
+function unpackHandoff(value) {
   need(shape(value,['schema','intentId','url','headers','ticketHeader','rowIndex','files']) &&
     value.schema===OPERATION_HANDOFF_SCHEMA && shape(value.files,Object.keys(limits)),
     'OPERATION_HANDOFF_SCHEMA_INVALID');
-  const files=Object.fromEntries(Object.entries(limits).map(([name,limit])=>[name,unpacked(value.files[name],limit)]));
+  return Object.fromEntries(Object.entries(limits).map(([name,limit])=>[name,unpacked(value.files[name],limit)]));
+}
+function prepareHandoff(value, directory, acceptIndex, {files=unpackHandoff(value),requireCurrent=true}={}) {
   const paths={ticket:join(directory,'operation-ticket.json'),body:join(directory,'request.body'),
     discovery:join(directory,'offers.json'),headers:join(directory,'request.headers.json'),config:join(directory,'review.json')};
   const prepared=prepareReview(files.discovery,{rowIndex:value.rowIndex,acceptIndex,
     intentId:value.intentId,url:value.url,method:'POST',bodyFile:paths.body,headers:value.headers,
     ticketFile:paths.ticket,ticketHeader:value.ticketHeader});
-  const ticket=parseOperationTicketBytes(files.ticket,prepared.draft.operation,{requireCurrent:true});
+  const ticket=parseOperationTicketBytes(files.ticket,prepared.draft.operation,{requireCurrent});
   return {...prepared,files,paths,ticket};
 }
 
@@ -113,6 +115,42 @@ function view(prepared, filename, raw) {
     requestHeaderNames:Object.keys(op.headers),bodyBytes:prepared.files.body.length,
     bodySha256:sha256(prepared.files.body),operationTicket:operationTicketView(prepared.ticket),
     sourceFileSha256:sha256(prepared.files.discovery)};
+}
+
+/** Read-only native selection for receiving operator interfaces. The bearer and
+ * raw body never enter the returned view; every option uses prepareReview. */
+export async function inspectOperationHandoff({file,directory,acceptIndex,requireCurrent=true}) {
+  path(directory);
+  need(typeof requireCurrent==='boolean','OPERATION_HANDOFF_REVIEW_MODE_INVALID');
+  const raw=await privateBytes(file,OPERATION_HANDOFF_MAX_BYTES),value=decode(raw),files=unpackHandoff(value);
+  const choices=[]; let first,firstError,selected;
+  for (let index=0;index<32;index++) {
+    try {
+      const prepared=prepareHandoff(value,directory,index,{files,requireCurrent});
+      first??=prepared;
+      if(index===acceptIndex) selected=prepared;
+      choices.push({acceptIndex:index,acceptedTerms:prepared.draft.operation.expect});
+    } catch(error) {
+      if(error.code==='DISCOVERY_ACCEPT_NOT_FOUND') break;
+      firstError??=error;
+      choices.push({acceptIndex:index,error:error instanceof InputError?error.code:'OPERATION_HANDOFF_REVIEW_FAILED'});
+    }
+  }
+  if(!first) throw firstError??new InputError('DISCOVERY_ACCEPT_NOT_FOUND');
+  if(acceptIndex!==undefined) {
+    need(Number.isSafeInteger(acceptIndex)&&acceptIndex>=0,'EXPLICIT_SELECTION_INDEX_REQUIRED');
+    selected??=prepareHandoff(value,directory,acceptIndex,{files,requireCurrent});
+  }
+  const prepared=selected??first;
+  return {...view(prepared,file,raw),acceptedTerms:selected?.draft.operation.expect??null,
+    acceptIndex:acceptIndex??null,choices,requestHeaders:prepared.draft.operation.headers,
+    configSha256:selected?.configSha256??null};
+}
+
+/** Exact body attachment for the receiving operator; no ticket is returned. */
+export async function readOperationHandoffBody({file}) {
+  const raw=await privateBytes(file,OPERATION_HANDOFF_MAX_BYTES);
+  return unpackHandoff(decode(raw)).body;
 }
 
 /** Create-only receiver. The original review config is written last, after all

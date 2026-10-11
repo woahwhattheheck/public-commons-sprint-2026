@@ -31,6 +31,12 @@ initialization can include the same fleet with `--fleet-plan`.
 
 ## Prepare a merchant
 
+For an existing S3 file product, initialize with
+`--s3-package /private/packages/products-v1`. The same provider then retains,
+compares, starts and rolls back the original pinned whole-file or chunk seller.
+See [S3 releases](../../stellar/scf-starforge-20261009/sf82-seller-pilot/S3_RELEASES.md)
+for private source handling, object version behavior and the original buyer handoff.
+
 Use Node 22+ and the complete source checkout, or the installed Starforge package
 containing the `merchant-mcp` command. The merchant's existing OpenAPI document,
 payment selections and service bindings use the original SF61 formats. Initialize

@@ -1,4 +1,5 @@
 // MIT. Browser presentation; the original server-side buyer owns execution.
+import {createHandoffIntakeUI} from './intake.mjs';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const formatTime = value => value ? new Date(value).toLocaleString() : '—';
@@ -7,6 +8,21 @@ let state, token, draft = null, rows = [], currentRun = null, view = 'welcome', 
 let navigation = 0, editorVersion = 0, sourceRefresh = 0;
 const resourcePreviews = new Map();
 const previewToOpen = new Set();
+const intakeUI = createHandoffIntakeUI({request,notice,refreshState,
+  openPanel(){navigation++;show('requests');},
+  async onPrepared(prepared,item){
+    await refreshState();
+    const saved=draft&&state.drafts.find(value=>value.id===draft.id);
+    if(!$('#draft-form').elements['plan-id'].value||saved&&saved.initialization!=='NOT_STARTED')newDraft();
+    if(rows.some(row=>sourceName(row.config)===prepared.configName)){
+      show('draft');notice('This request is already included in the current plan.');return;
+    }
+    if(rows.length>=64)throw new Error('This plan already has 64 operations. Create another plan to add this request.');
+    let index=rows.length+1;while(rows.some(row=>row.id==='request-'+index))index++;
+    rows.push({id:'request-'+index,label:('POST '+new URL(item.summary.url).pathname).slice(0,160),config:prepared.configName,saveAs:''});
+    navigation++;currentRun=null;renderEditor();show('draft');setDirty(true);
+    notice('Received request added. Save and review this plan, then initialize the acquisition.');
+  }});
 
 function notice(message, error = false) {
   const element = $('#notice'); element.textContent = message; element.className = error ? 'error' : ''; element.hidden = !message;
@@ -21,13 +37,14 @@ async function request(path, data) {
 const handle = action => async event => { if (event?.type === 'submit') event.preventDefault(); try { await action(event); } catch (error) { notice(error.message,true); } };
 function show(name) {
   view = name;
-  for (const target of ['welcome','draft-panel','run-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
+  for (const target of ['welcome','draft-panel','run-panel','requests-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
   renderNavigation();
 }
 async function refreshState() {
   const generation = ++sourceRefresh, result = await request('/api/state');
   if (generation !== sourceRefresh) return;
   state = result; token = state.token; renderNavigation();
+  intakeUI.update(state.intake);
   $('#terminal-state').textContent = state.terminalAvailable ? 'Operator terminal available' : 'Open in a terminal to execute';
   const valid = state.configurations.filter(item => item.valid).length;
   $('#source-summary').innerHTML = `<strong>${valid} ready buyer configuration${valid === 1 ? '' : 's'}</strong><p class="wrap">${escape(state.configsDirectory)}</p>`;
@@ -209,7 +226,7 @@ async function poll() {
 
 $('#new-draft').addEventListener('click',handle(newDraft));
 $('#welcome-new').addEventListener('click',handle(newDraft));
-$('#refresh').addEventListener('click',handle(async () => { await refreshState(); if (view === 'run') await openRun(currentRun.id); notice('Local sources refreshed.'); }));
+$('#refresh').addEventListener('click',handle(async () => { await refreshState(); if (view === 'run') await openRun(currentRun.id); if(view==='requests')await intakeUI.refresh(); notice('Local sources refreshed.'); }));
 $('.sidebar').addEventListener('click',handle(async event => {
   const run = event.target.closest('[data-run]'), plan = event.target.closest('[data-draft]');
   if (run) { notice(''); await openRun(run.dataset.run); }

@@ -262,15 +262,16 @@ def verify_file(state, ref):
         order = db.execute("SELECT file_path,file_sha256,file_bytes FROM orders WHERE order_ref=?", (reference(ref),)).fetchone()
         need(order is not None, "ORDER_NOT_FOUND")
     try:
-        data, fingerprint = receiver.read_private_file(order["file_path"])
+        with receiver.snapshot_private_file(order["file_path"], directory=state) as content:
+            size, fingerprint = content.size, content.sha256
     except (OSError, ValueError):
         return {"schema": "stellar-forge.sf101.file-health.v1", "orderRef": ref,
                 "status": "SOURCE_UNAVAILABLE", "expectedSha256": order["file_sha256"],
                 "expectedBytes": order["file_bytes"]}
     return {"schema": "stellar-forge.sf101.file-health.v1", "orderRef": ref,
-            "status": "MATCH" if fingerprint == order["file_sha256"] and len(data) == order["file_bytes"] else "SOURCE_CHANGED",
+            "status": "MATCH" if fingerprint == order["file_sha256"] and size == order["file_bytes"] else "SOURCE_CHANGED",
             "expectedSha256": order["file_sha256"], "expectedBytes": order["file_bytes"],
-            "actualSha256": fingerprint, "actualBytes": len(data)}
+            "actualSha256": fingerprint, "actualBytes": size}
 
 
 def export_support(state, output):

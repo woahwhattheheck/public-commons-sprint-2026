@@ -54,6 +54,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   duckdb-prepare                             Prepare, verify and reopen native data packages
   duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
+  sqlite-workbench                           Author and export the original SQLite merchant
+  sqlite-publisher                           Review and publish retained SQLite data products
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
   dataset-publisher                          Publish CSV versions and prepare original buyer acquisition
