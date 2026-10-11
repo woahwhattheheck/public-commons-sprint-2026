@@ -76,21 +76,36 @@ export function proposeCoverage(state, command) {
   if (vacancies < 1) return { ok: false, message: 'That shift is already fully covered; no changes proposed.', trace };
   const rejected = { excluded: 0, unavailable: 0, skill: 0, clash: 0, limit: 0, booked: 0 };
   const scored = [];
+  const candidateReview = [];
   for (const v of state.volunteers) {
-    if (v.id === intent.excludedVolunteerId) { rejected.excluded++; continue; }
+    const explain = (status, reason) => candidateReview.push({ id: v.id, name: v.name, status, reason });
+    if (v.id === intent.excludedVolunteerId) { rejected.excluded++; explain('blocked', 'Excluded in this request.'); continue; }
     if (v.id === removing || (state.unavailable[v.id] || []).includes(shift.id) || !v.available.includes(shift.id)) {
-      rejected.unavailable++; continue;
+      rejected.unavailable++;
+      explain('blocked', v.id === removing ? 'Reported absent in this request.'
+        : (state.unavailable[v.id] || []).includes(shift.id) ? 'Previously reported absent for this shift.'
+        : 'Not available for this shift.');
+      continue;
     }
-    if (retained.includes(v.id)) { rejected.booked++; continue; }
-    if (!shift.required.every(s => v.skills.includes(s))) { rejected.skill++; continue; }
+    if (retained.includes(v.id)) { rejected.booked++; explain('assigned', 'Already assigned to this shift.'); continue; }
+    if (!shift.required.every(s => v.skills.includes(s))) {
+      rejected.skill++; explain('blocked', 'Missing required qualification: ' + shift.required.filter(s => !v.skills.includes(s)).join(', ') + '.'); continue;
+    }
     const bookings = state.shifts.filter(s => s.assigned.includes(v.id) && !(s.id === shift.id && removing === v.id));
-    if (bookings.some(s => overlaps(s, shift))) { rejected.clash++; continue; }
-    if (bookings.length >= v.weeklyLimit) { rejected.limit++; continue; }
+    if (bookings.some(s => overlaps(s, shift))) {
+      rejected.clash++; explain('blocked', 'Overlaps an existing assignment: ' + bookings.filter(s => overlaps(s, shift)).map(s => s.label).join(', ') + '.'); continue;
+    }
+    if (bookings.length >= v.weeklyLimit) { rejected.limit++; explain('blocked', 'Already at the weekly limit of ' + v.weeklyLimit + ' assignment(s).'); continue; }
     const score = bookings.length * 100 + (v.preferred.includes(shift.id) ? -20 : 0);
+    explain('eligible', bookings.length + ' current assignment(s)' + (v.preferred.includes(shift.id) ? '; prefers this shift.' : '; available for this shift.'));
     scored.push({ id: v.id, name: v.name, score, currentAssignments: bookings.length, preference: v.preferred.includes(shift.id) });
   }
   scored.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
   const selected = scored.slice(0, vacancies);
+  if (selected.length === vacancies) {
+    const chosenIds = new Set(selected.map(v => v.id));
+    for (const candidate of candidateReview) if (chosenIds.has(candidate.id)) candidate.status = 'chosen';
+  }
   trace.push(
     { tool: 'explicit_exclusion', result: intent.excludedVolunteerId
       ? `Honored named exclusion for ${state.volunteers.find(v => v.id === intent.excludedVolunteerId).name}`
@@ -103,7 +118,7 @@ export function proposeCoverage(state, command) {
   if (selected.length !== vacancies) {
     trace.push({ tool: 'approval_gate', result: 'BLOCKED: incomplete coverage' });
     return { ok: false, message: `Only ${selected.length} eligible volunteer(s) for ${vacancies} vacancy/ies. I will not publish an understaffed schedule.`,
-      trace, alternatives: selected, rejected };
+      trace, alternatives: selected, rejected, candidateReview };
   }
   const changes = [
     ...(removing ? [{ action: 'remove', shiftId: shift.id, volunteerId: removing, name: state.volunteers.find(v => v.id === removing).name }] : []),
@@ -113,7 +128,7 @@ export function proposeCoverage(state, command) {
   return {
     ok: true, message: `I drafted complete ${shift.label} coverage: ${selected.map(x => x.name).join(' and ')}. Nothing changes until you approve.`,
     shift: { id: shift.id, label: shift.label, start: shift.start, end: shift.end, required: shift.required },
-    chosen: selected, rejected, changes, trace, originalRevision: state.revision,
+    chosen: selected, rejected, changes, trace, candidateReview, originalRevision: state.revision,
   };
 }
 

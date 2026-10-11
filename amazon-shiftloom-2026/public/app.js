@@ -28,6 +28,9 @@ function renderBoard(next) {
   $('revision').textContent = `Revision ${state.revision}`;
   $('undo').disabled = !state.canUndo;
   const holder = $('shifts'); holder.replaceChildren();
+  const openings = state.shifts.reduce((total, shift) => total + Math.max(0, shift.capacity - shift.assigned.length), 0);
+  $('coverage-summary').textContent = openings ? `${openings} open place${openings === 1 ? '' : 's'} across ${state.shifts.length} shifts` : 'Every shift is fully covered';
+  renderRoster();
   for (const shift of state.shifts) {
     const card = node('article', 'shift');
     const top = node('div', 'shift-top'), left = node('div');
@@ -37,8 +40,51 @@ function renderBoard(next) {
     top.append(left, node('span', shift.assigned.length >= shift.capacity ? 'count ok' : 'count', `${shift.assigned.length}/${shift.capacity} covered`));
     card.append(top, node('p', 'skills', `Required: ${shift.required.join(' & ')}`));
     const members = node('div');
-    for (const id of shift.assigned) members.append(node('span', 'chip', state.volunteers.find(v => v.id === id)?.name || id));
-    card.append(members); holder.append(card);
+    for (const id of shift.assigned) {
+      const name = state.volunteers.find(v => v.id === id)?.name || id;
+      const assigned = node('div', 'assigned-person');
+      assigned.append(node('span', 'chip', name), planButton(`Replace ${name}`, `Alexa, ${name} can't make ${shift.label}. Find a replacement.`));
+      members.append(assigned);
+    }
+    card.append(members);
+    if (shift.assigned.length < shift.capacity) card.append(planButton('Fill openings', `Alexa, cover ${shift.label}.`));
+    holder.append(card);
+  }
+}
+function planButton(label, command) {
+  const button = node('button', 'plan-action', label);
+  button.type = 'button';
+  button.title = 'Draft a proposal for review; does not change the schedule';
+  button.addEventListener('click', () => requestPlan(command, true));
+  return button;
+}
+function renderRoster() {
+  const roster = $('roster'); roster.replaceChildren();
+  $('roster-count').textContent = String(state.volunteers.length);
+  const labels = ids => ids.map(id => state.shifts.find(shift => shift.id === id)?.label || id).join(', ');
+  for (const volunteer of state.volunteers) {
+    const card = node('article', 'roster-person');
+    const assigned = state.shifts.filter(shift => shift.assigned.includes(volunteer.id));
+    card.append(node('h3', '', volunteer.name),
+      node('p', '', 'Qualifications: ' + volunteer.skills.join(', ')),
+      node('p', '', 'Available: ' + labels(volunteer.available)),
+      node('p', '', 'Prefers: ' + (labels(volunteer.preferred) || 'No stated preference')),
+      node('p', '', 'Assigned ' + assigned.length + ' of ' + volunteer.weeklyLimit + ' weekly places: ' + (assigned.map(shift => shift.label).join(', ') || 'None')));
+    if (state.unavailable[volunteer.id]?.length) card.append(node('p', 'absence-note', 'Reported absent: ' + labels(state.unavailable[volunteer.id])));
+    roster.append(card);
+  }
+}
+function renderCandidates(review = []) {
+  const holder = $('candidates'); holder.replaceChildren();
+  $('candidate-review').hidden = !review.length;
+  const eligible = review.filter(candidate => ['chosen', 'eligible'].includes(candidate.status)).length;
+  $('candidate-summary').textContent = 'Why this plan · ' + eligible + ' eligible of ' + review.length + ' volunteers';
+  const order = { chosen: 0, eligible: 1, assigned: 2, blocked: 3 };
+  const label = { chosen: 'Proposed', eligible: 'Eligible alternative', assigned: 'Already assigned', blocked: 'Not eligible' };
+  for (const candidate of [...review].sort((a, b) => order[a.status] - order[b.status])) {
+    const row = node('li', 'candidate ' + candidate.status);
+    row.append(node('strong', '', candidate.name), node('span', 'candidate-status', label[candidate.status]), node('p', '', candidate.reason));
+    holder.append(row);
   }
 }
 function renderTrace(trace) {
@@ -48,8 +94,9 @@ function renderTrace(trace) {
     const item = node('li'); item.append(node('b', '', step.tool.replaceAll('_', ' ') + ' → '), document.createTextNode(step.result)); items.append(item);
   }
 }
-function hideProposal() { pending = null; $('proposal').hidden = true; $('proposal-changes').replaceChildren(); }
+function hideProposal() { pending = null; $('proposal').hidden = true; $('proposal-changes').replaceChildren(); renderCandidates(); }
 function showProposal(result) {
+  renderCandidates(result.candidateReview);
   pending = result.ok && result.proposalId ? result : null;
   $('proposal').hidden = !pending;
   if (!pending) return;
@@ -70,7 +117,9 @@ async function refresh() {
     $('session-status').textContent = 'This browser keeps its own sample event. Tabs share it; private windows start separately. One hour idle clears it.';
   } catch (error) {
     state = null; hideProposal(); renderTrace([]);
-    $('shifts').replaceChildren();
+    $('shifts').replaceChildren(); $('roster').replaceChildren();
+    $('coverage-summary').textContent = 'Load an event to review coverage';
+    $('roster-count').textContent = '0';
     $('revision').textContent = 'Event unavailable';
     $('session-status').textContent = error.message + ' Use Refresh event to try again.';
     throw error;
@@ -96,12 +145,11 @@ function setBusy(value) {
   $('undo').disabled = unavailable || !state?.canUndo;
   $('reset').disabled = unavailable;
   $('refresh').disabled = value;
-  for (const button of document.querySelectorAll('.example')) button.disabled = unavailable;
+  for (const button of document.querySelectorAll('.example, .plan-action')) button.disabled = unavailable;
 }
-$('ask').addEventListener('submit', async e => {
-  e.preventDefault();
+async function requestPlan(command, focusResult = false) {
   if (busy || !state) return;
-  const command = $('command').value.trim();
+  command = command.trim();
   if (!command) return;
   hideProposal(); setBusy(true); appendLine('human', command);
   try {
@@ -109,9 +157,18 @@ $('ask').addEventListener('submit', async e => {
     appendLine('bot', result.message);
     renderTrace(result.trace);
     showProposal(result);
+    if (focusResult) {
+      const target = result.ok ? $('proposal') : $('conversation');
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+    }
     $('command').value = '';
   } catch (e) { await recover("I couldn't plan that", e); }
   finally { setBusy(false); }
+}
+$('ask').addEventListener('submit', e => {
+  e.preventDefault();
+  return requestPlan($('command').value);
 });
 for (const btn of document.querySelectorAll('.example')) btn.addEventListener('click', () => {
   $('command').value = btn.dataset.prompt;

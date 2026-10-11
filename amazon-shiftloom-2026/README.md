@@ -20,12 +20,12 @@ Approval still requires that session's exact pending proposal ID and revision. U
 
 ## Fast 75-second demo
 
-1. Show the fictional Neighborhood Science Day shift board: the 9–11 a.m. welcome desk is 1/2 staffed.
-2. Click **Cover welcome desk**. The assistant proposes Iris, not Leo; inspect the tool trace: Leo is *already on overlapping equipment setup from 8–9:30 a.m.*
-3. Click **Approve change**; the shift board becomes 2/2, and revision advances. No proposal modifies state before approval.
-4. Click **Undo last approval** and show the revision move again. (Undo increments the monotonic revision rather than making old proposals valid.)
-5. Click **Maya is absent**. The planner removes Maya and backfills *both* vacancies without selecting the absent worker.
-6. Click **Reset demo**. Select **Cover workshop**; the mentor role requirement is enforced. Try entering `Cover the shift` or an unrecognized absence name to see an explicit clarification instead of invented commitments.
+1. Show the fictional shift board and three open places. Open **Volunteer roster** to inspect qualifications, availability and existing assignments.
+2. Click **Fill openings** on the welcome desk. The proposal comes into view. Open **Why this plan**: Iris is proposed, while Leo is blocked by overlapping equipment setup from 8–9:30 a.m.
+3. Click **Approve change**; the welcome desk becomes 2/2 and the roster updates. No proposal modifies state before approval.
+4. Click **Replace Maya** on that shift. Inspect the explicit removal and replacement, then approve. The roster records Maya's absence only after approval.
+5. Click **Undo last approval**. Maya's assignment and availability return, and the revision advances instead of making the old proposal valid.
+6. Click **Reset demo**, then **Replace Omar** on cleanup. Only one replacement is eligible for two places, so the assistant explains the gap and offers no approval. A separate private window can review a different event independently.
 
 ## Real functional components
 
@@ -36,6 +36,14 @@ Approval still requires that session's exact pending proposal ID and revision. U
 - `test/shiftloom.test.mjs`: five focused checks for overlapping shifts, absences, under-qualified candidates, ambiguities, and the real HTTP approval/undo flow. `node --test test/shiftloom.test.mjs` runs only these relevant checks, no other suites.
 
 - `test/session-isolation.focused.test.mjs`: real loopback HTTP checks for independent reviewers, exact approval ownership, stale reset, unknown/expired cookies and the 100-session limit. Run `node --test test/session-isolation.focused.test.mjs`; run the adapted original HTTP workflow alone with `node --test --test-name-pattern='HTTP workflow' test/shiftloom.test.mjs`.
+
+## Coordinator review workspace
+
+The shift board shows outstanding places. **Fill openings** drafts coverage for that exact shift; **Replace [name]** reports an absence on that person's current shift and drafts full replacement coverage. Both use the same original natural-language planner and pause for approval. The schedule stays unchanged until **Approve change**.
+
+Open **Volunteer roster** to inspect the original fictional volunteers' qualifications, availability, preferences, assignments and reported absences. Open **Why this plan** after planning to see the actual filter's decision for every volunteer. The first applicable constraint is shown; eligible people retain the original ranking by workload, preference and name. Infeasible plans show eligible alternatives but cannot be approved. No separate explanation heuristic or new ranking is introduced.
+
+`node --test test/reviewer-workspace.focused.test.mjs` exercises the shipped browser script against the real local HTTP server through fill, approval, replacement, undo, reset and incomplete coverage. Its small DOM harness does not claim rendered-browser validation.
 
 ## Competition mapping and restrictions
 
