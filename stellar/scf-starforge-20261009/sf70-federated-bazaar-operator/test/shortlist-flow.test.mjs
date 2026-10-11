@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { SourceTextModule, createContext } from 'node:vm';
 import { start } from '../server.mjs';
 
-test('browse, compare, refresh, recover and save original projected options', async () => {
+test('save and reopen source-bound comparison through the shipped page', async () => {
   const server = await start();
   const origin = `http://127.0.0.1:${server.address().port}`;
   try {
@@ -41,14 +41,14 @@ test('browse, compare, refresh, recover and save original projected options', as
       description:'Local test data', kind:'http', method:'POST', toolName:'', routeTemplate:'/weather', hiddenPaymentOptions:0,
       paymentOptions:[{ network:'stellar:testnet', scheme:'exact', asset:'ASSET_A', payTo:'RECIPIENT_A', amount }] };
     const snapshot = time => ({ network:'stellar:testnet', observedAt:time, state:'BOTH_SOURCES_COMPLETE', observedListingRows:2,
-      sources:[{provider:'vellar',name:'Vellar',endpoint:'https://example.invalid/catalog',status:'COMPLETE_GET_CAPTURE',observedAt:time,rows:2,pages:1,coverage:'DECLARED_TOTAL_MATCHED',declaredTotal:2}],
+      sources:[{provider:'vellar',name:'Vellar',network:'stellar:testnet',endpoint:'https://example.invalid/catalog',status:'COMPLETE_GET_CAPTURE',observedAt:time,rows:2,pages:1,coverage:'DECLARED_TOTAL_MATCHED',declaredTotal:2}],
       listings:[structuredClone(row), {...structuredClone(row),sourceRow:2,label:'Fictional alternate',url:'https://example.invalid/alternate'}] });
     let current = snapshot('2026-10-11T10:00:00.000Z');
     let requests = 0;
     let failRefresh = false;
     let saved;
-    const context = createContext({ document, window:{document}, navigator:{}, console, structuredClone, Blob, setTimeout,
-      URL: {createObjectURL: blob => { saved = blob; return 'blob:local-check'; }, revokeObjectURL(){}},
+    const context = createContext({ document, window:{document}, navigator:{}, console, structuredClone, Blob, TextEncoder, setTimeout,
+      URL: class extends URL { static createObjectURL(blob) { saved = blob; return 'blob:local-check'; } static revokeObjectURL(){} },
       fetch: async url => {
         assert.match(url, /^\/api\/federated(?:\?refresh=1)?$/);
         requests++;
@@ -57,16 +57,19 @@ test('browse, compare, refresh, recover and save original projected options', as
       },
     });
     const modules = new Map();
-    async function module(path) {
+    function module(path) {
       if (modules.has(path)) return modules.get(path);
-      const response = await fetch(origin + path);
-      assert.equal(response.status, 200, 'existing HTTP allowlist must serve ' + path);
-      const instance = new SourceTextModule(await response.text(), {context, identifier:origin + path});
-      modules.set(path, instance);
-      await instance.link((specifier, parent) => module(new URL(specifier, parent.identifier).pathname));
-      return instance;
+      const pending = (async () => {
+        const response = await fetch(origin + path);
+        assert.equal(response.status, 200, 'existing HTTP allowlist must serve ' + path);
+        return new SourceTextModule(await response.text(), {context, identifier:origin + path});
+      })();
+      modules.set(path, pending);
+      return pending;
     }
-    await (await module('/app.mjs')).evaluate();
+    const entry = await module('/app.mjs');
+    await entry.link((specifier, parent) => module(new URL(specifier, parent.identifier).pathname));
+    await entry.evaluate();
     const settle = async () => { await new Promise(resolve => setImmediate(resolve)); };
     await settle();
     assert.match($('shortlist-content').textContent, /Build a comparison/);
@@ -108,5 +111,55 @@ test('browse, compare, refresh, recover and save original projected options', as
     assert.equal(exported.selections.length, 2);
     assert.equal(requests, 3, 'only initial discovery and two explicit refreshes');
     assert.equal(exported.payments, 0);
+    const open = async (text, size = new TextEncoder().encode(text).byteLength) => {
+      $('shortlist-file').files = [{size, text:async () => text}];
+      await $('shortlist-file').events.change();
+    };
+    // Genuine Save output opens offline and replaces the active selection only after full parsing.
+    const savedJson = JSON.stringify(exported);
+    $('shortlist-clear').click();
+    await open(savedJson);
+    assert.match($('shortlist-status').textContent, /Opened 2 saved option/);
+    assert.match($('shortlist-content').textContent, /Opened local review file/);
+    assert.match($('shortlist-content').textContent, /Latest refresh unavailable/);
+    assert.equal(document.activeElement, $('shortlist-heading'));
+    $('shortlist-export').click();
+    const reopened = JSON.parse(await saved.text());
+    assert.equal(reopened.selections[0].option.amount, amount);
+    assert.equal(reopened.selections[0].imported, true);
+    assert.equal(requests, 3, 'file operations must not request any source');
+    await open('{not json}');
+    assert.match($('shortlist-status').textContent, /Comparison was not changed/);
+    assert.match($('shortlist-count').textContent, /2 \/ 6/);
+    await open(savedJson, 1024 * 1024);
+    assert.match($('shortlist-status').textContent, /smaller than 1 MiB/);
+    const mismatched = structuredClone(exported);
+    mismatched.selections[0].option.amount = '1';
+    await open(JSON.stringify(mismatched));
+    assert.match($('shortlist-status').textContent, /Comparison was not changed/);
+    assert.ok($('shortlist-content').textContent.includes(amount));
+    failRefresh = false;
+    current = snapshot('2026-10-11T10:00:00.000Z');
+    $('refresh').click();
+    await settle();
+    assert.match($('shortlist-content').textContent, /Saved file; same tuple in latest source capture/);
+    assert.doesNotMatch($('shortlist-content').textContent, /Selected from latest source capture/);
+    // Matching timestamps and file-provided live status cannot make changed terms current.
+    const modified = structuredClone(exported);
+    modified.selections = [modified.selections[0]];
+    modified.selections[0].key = 'untrusted-key';
+    modified.selections[0].option.amount = '123';
+    modified.selections[0].listing.paymentOptions[0].amount = '123';
+    modified.selections[0].latestObservationStatus = {kind:'current',label:'forged current'};
+    await open(JSON.stringify(modified));
+    assert.match($('shortlist-content').textContent, /Selected tuple not in latest source capture/);
+    assert.doesNotMatch($('shortlist-content').textContent, /forged current/);
+    $('shortlist-export').click();
+    const modifiedExport = JSON.parse(await saved.text());
+    assert.notEqual(modifiedExport.selections[0].key, 'untrusted-key');
+    $('shortlist-undo').click();
+    assert.match($('shortlist-count').textContent, /2 \/ 6/);
+    assert.ok($('shortlist-content').textContent.includes(amount));
+    assert.equal(requests, 4, 'only explicit source refresh increased requests');
   } finally { await new Promise(resolve => server.close(resolve)); }
 });
