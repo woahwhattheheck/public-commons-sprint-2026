@@ -3,7 +3,8 @@
 Acquire several explicitly selected resources through the **existing SF88 buyer**,
 keep their original results together, and resume untouched operations after an
 interruption. The runbook supplies a local job plan, exact request snapshots,
-serial execution, durable attempt records and an offline operator report. It
+serial execution, durable attempt records, original accounting and receipt totals,
+and an offline operator report. It
 imports SF88's original configuration validator and launches its original CLI.
 SF81 terminal approval, SF36 reservations, the original signer, SF82 evidence and
 SF31 response saving continue to own their existing jobs.
@@ -21,7 +22,9 @@ operator desk for the same runbook. Select original buyer configs, arrange up to
 64 operations, save and compare draft revisions, review exact grouped atomic
 ceilings and body hashes, initialize the reviewed acquisition, and use the
 original execution, cancellation, retained-output recovery and dead-owner unlock.
-Saved resources and original reports are available from the same page.
+Saved resources, original reports and acquisition-wide accounting are available
+from the same page. Accounting uses the existing SF88/SF36 core and original
+operator ledgers, including automatic selection for requests received here.
 
 ```sh
 node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
@@ -31,7 +34,7 @@ node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
 Open the printed loopback URL and keep this process in the operator terminal for
 the original SF81 approval. Existing runs can be registered with `--run` and
 reopened alongside newly initialized acquisitions. See [WORKSPACE.md](WORKSPACE.md)
-for the complete draft, execution, recovery and saved-resource workflow.
+for the complete draft, execution, recovery, resource and accounting workflow.
 
 ## Assemble one acquisition job
 
@@ -94,7 +97,9 @@ two jobs cannot select the same destination. Only `saveAs` may put an output
 inside the runbook, keeping returned bytes separate from plans and journals.
 
 Body files are copied byte for byte, including explicit empty bodies, up to the
-original 1 MiB per-request limit. The frozen config points to that private copy.
+original 16 MiB per-request body limit, within the existing 64 MiB aggregate
+snapshot budget. The same length ceiling applies to the original SF36 approved
+request and SF88 finalization metadata. The frozen config points to that private copy.
 Editing the source body later cannot change an initialized request. Editing a
 frozen config or body is reported before invocation; initialize a new reviewed
 plan when intentionally changing request terms. Runbooks execute at their
@@ -174,12 +179,67 @@ destinations and any partial path are shown exactly. The report does not promote
 a saved file to a settlement or turn a seller receipt into independently proven
 funds.
 
-Use the original SF82 evidence and SF86 reconciliation tools for the same intent
-and reservation when needed. The runbook's attempt record is not another budget
-ledger, custody service or transaction verifier. If a dataset spans paid pages,
+Use acquisition accounting below to invoke the original SF88/SF36 finalization
+for that same SF82 evidence and reservation. If a dataset spans paid pages,
 the existing buyer dataset-delivery tool can consume the individually saved
 original page responses; this runbook does not invent or automatically buy the
 next cursor.
+
+## Complete original accounting
+
+Bind each purchased operation to its existing original SF88 operator workspace:
+
+```sh
+node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs accounting-workspace \
+  --run /private/research/run-001 --only market-dataset \
+  --workspace /private/research/market-operator
+
+node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs finalize \
+  --run /private/research/run-001
+```
+
+The browser's receiving flow resolves its original operator automatically. The
+native CLI reuses saved selections; for a first explicit check, pass `--workspace`
+to `finalize`, optionally with `--only JOB_ID`. A shared workspace supplied to a
+multi-operation check must match each selected operation's original owner and
+terms. Mismatches are recorded per operation while other selected jobs continue.
+Use separate saved selections for acquisitions spanning different native operators.
+
+`finalize` processes already attempted operations in plan order. It verifies the
+original started record, exact frozen config and request identity, body metadata
+and canonical evidence, then delegates to original
+[`finalizeOriginalAttempt`](../sf88-operator-buyer-cli/FINALIZATION.md). The original
+SF36 worker remains the ledger and finality authority. No buyer, signer, payment
+approval or new reservation is started. The original native workspace supplies
+its accounting keys, payer, ledger, network RPC and explicitly selected proxy.
+
+Finalized receipts retain exact actual atomic amounts and the original approved
+request digest. Totals keep each network and asset separate. A later unsuccessful
+check retains an earlier finalized receipt and its contribution to the total.
+Unsigned responses have their original unsigned status and no payment amount or
+ledger receipt. Unresolved and untouched operations remain explicitly counted.
+`status.json`, `report.html` and `accounting.csv` are derived views of those saved
+results. CSV has one row per operation, omits operator keys and ticket inputs, and
+escapes spreadsheet formula prefixes in text fields.
+
+The retained body digest can complete accounting after a spent body file becomes
+unavailable; executing an untouched operation still requires its exact frozen
+body. Original accounting can also resolve a started attempt without a complete
+stdout summary when its authentic native evidence was retained. Accounting never
+converts that attempt into permission to execute it again or repairs a failed
+resource download.
+
+Execution, recovery, workspace selection and finalization share the original run
+lease. `SIGINT`/`SIGTERM` waits for the current accounting worker to stop and leaves
+completed receipts intact. Repeating the same command resolves prior ledger
+completion idempotently. A current failure exits `2`, including a `SAVE_FAILED`
+view; its returned receipt is still included in the command output. Correct local
+storage and refresh the same original attempt to rebuild that view.
+
+For an existing trusted-host SF98 notification outbox, a single selected operation
+can additionally pass `--outbox /absolute/original-outbox --merchant-route ROUTE`.
+Both flags and `--only` are required together. The original finalizer owns that
+merchant notification; remote outboxes are never inferred from buyer headers.
 
 ## Resume and recover an interrupted run
 

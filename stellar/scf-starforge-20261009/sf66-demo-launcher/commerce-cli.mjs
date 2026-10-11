@@ -11,18 +11,21 @@ const HELP = `Original SCF commerce session (Node 22+, full checkout)
   node commerce-cli.mjs init --plan /private/commerce-plan.json --directory /private/NEW-session
   node commerce-cli.mjs inspect --directory /private/session
   node commerce-cli.mjs probe --directory /private/session
-  node commerce-cli.mjs start --directory /private/session
+  node commerce-cli.mjs start --directory /private/session [--finality-node /absolute/trusted-node]
   node commerce-cli.mjs start --directory /private/session --execute INTENT [--one-shot]
 
 The foreground console starts the original merchant and operations listeners.
 Commands: status | readiness | review INTENT | signer INTENT | execute INTENT |
-          cancel INTENT | recover INTENT | retrieve INTENT | quit
+          cancel INTENT | recover INTENT | retrieve INTENT | reset-transfer INTENT |
+          verify-rpc INTENT TRANSACTION EXPECTED_REQUEST_SHA256 | recover-rpc INTENT | quit
 The original SF88/SF81 terminal owns payment approval. Reopening uses the same
 original inbox, stable intents, reservations, results and saved resource files.
 Without a TTY, start prints readiness and stays running until SIGINT/SIGTERM.
 --one-shot prints readiness or runs the explicitly selected intent, then closes.
 An upstream session with operationControls prints its private merchant recovery
 URL at startup; ordinary status output includes only the read-only operations URL.
+RPC recovery verifies an existing payment, then separately reads and saves the
+same retained method and parameters. See JSONRPC_COMMERCE.md for the full workflow.
 `;
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 function printExecution(value) {
@@ -46,6 +49,7 @@ function stateView(value) {
     seller: value.seller ?? { configuration: value.sellerConfig, port: value.sellerPort,
       availabilityDirectory: value.availabilityDirectory ?? null,
       ...(value.python ? { python: value.python } : {}),
+      ...(value.jsonrpc ? { jsonrpc: value.jsonrpc } : {}),
       ...(value.upstreams ? { upstreams: value.upstreams } : {}) },
     facilitator: value.facilitator,
     operations: value.operations ? { url: value.operations.url,
@@ -57,7 +61,8 @@ function stateView(value) {
     buyers: value.buyers.map(job => ({ intentId: job.operation.intentId, state: job.state,
       method: job.operation.method, url: job.operation.url, merchant: job.merchant ?? null,
       lastError: job.lastError, outcome: job.outcome, recovery: job.recovery,
-      evidencePath: job.evidencePath, responseDestination: job.responseDestination, paidFile: job.paidFile ?? null })),
+      evidencePath: job.evidencePath, responseDestination: job.responseDestination, paidFile: job.paidFile ?? null,
+      rpcRecovery: job.rpcRecovery ?? null })),
   };
 }
 
@@ -84,8 +89,9 @@ export async function main(args = process.argv.slice(2)) {
     return;
   }
   if (command !== 'start') throw new Error(HELP);
-  const opts = options(rest, ['--directory', '--execute', '--one-shot']);
-  const session = await openCommerce(resolve(opts['--directory']));
+  const opts = options(rest, ['--directory', '--execute', '--one-shot', '--finality-node']);
+  const session = await openCommerce(resolve(opts['--directory']),
+    { finalityNode: opts['--finality-node'] });
   const stopped = new AbortController();
   let closeResult, closing, reader, interrupted = false;
   const stop = () => closing ??= (async () => {
@@ -108,7 +114,7 @@ export async function main(args = process.argv.slice(2)) {
       if (!stopped.signal.aborted) await new Promise(done => stopped.signal.addEventListener('abort', done, { once: true }));
       return;
     }
-    process.stdout.write('Commands: status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, quit\n');
+    process.stdout.write('Commands: status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, reset-transfer ID, verify-rpc ID TRANSACTION EXPECTED_REQUEST_SHA256, recover-rpc ID, quit\n');
     while (!stopped.signal.aborted) {
       // Release this reader before the original Python approval opens /dev/tty.
       reader = createInterface({ input: process.stdin, output: process.stdout });
@@ -127,7 +133,17 @@ export async function main(args = process.argv.slice(2)) {
         else if (words.length === 2 && words[0] === 'cancel') print(await session.cancel(words[1]));
         else if (words.length === 2 && words[0] === 'recover') print(await session.recover(words[1]));
         else if (words.length === 2 && words[0] === 'retrieve') print(await session.retrieve(words[1]));
-        else if (words[0]) process.stdout.write('Use status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, or quit.\n');
+        else if (words.length === 2 && words[0] === 'reset-transfer') print(await session.resetTransfer(words[1]));
+        else if ((words.length === 4 && words[0] === 'verify-rpc') || (words.length === 2 && words[0] === 'recover-rpc')) {
+          const job = (await session.status()).buyers.find(row => row.operation.intentId === words[1]);
+          const original = job?.rpcRecovery?.original;
+          if (!original) throw Object.assign(new Error('COMMERCE_RPC_MISSING_RECEIPT_REQUIRED'), { code: 'COMMERCE_RPC_MISSING_RECEIPT_REQUIRED' });
+          const selected = { expectedAttemptId: original.attemptId, expectedConfigSha256: original.configSha256,
+            expectedRequestSha256: words[0] === 'verify-rpc' ? words[3] : original.expectedRequestSha256,
+            transaction: words[0] === 'verify-rpc' ? words[2] : job.rpcRecovery.settlement?.transaction };
+          print(await session[words[0] === 'verify-rpc' ? 'verifyRpcPayment' : 'recoverRpcResponse'](words[1], selected));
+        }
+        else if (words[0]) process.stdout.write('Use status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, reset-transfer ID, verify-rpc ID TRANSACTION EXPECTED_REQUEST_SHA256, recover-rpc ID, or quit.\n');
       } catch (error) { print({ error: commerceErrorCode(error) }); }
     }
   } finally {
@@ -138,6 +154,7 @@ export async function main(args = process.argv.slice(2)) {
       drained: closeResult?.drained, shutdown: closeResult?.shutdown,
       ...(closeResult?.upstreams ? { upstreams: closeResult.upstreams } : {}),
       ...(closeResult?.nativeCompletion ? { nativeCompletion: closeResult.nativeCompletion } : {}),
+      ...(closeResult?.jsonrpc ? { jsonrpc: closeResult.jsonrpc } : {}),
       ...(closeResult?.python ? { python: closeResult.python } : {}) });
     if (closeResult?.drained === false) {
       // Shared signer ownership has completed before this legacy forced exit.

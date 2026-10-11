@@ -241,7 +241,7 @@ function options(select, values) {
 const selectedTenant = () => releases?.tenants?.find(row => row.id === $('release-tenant').value);
 const selectedSlot = () => selectedTenant()?.slots.find(row => row.name === $('release-slot').value);
 const sourceName = kind => ({ OPENAPI_WORKSPACE: 'API workspace', OPENAPI_SELLER: 'API seller',
-  PYTHON_APPLICATION: 'Python application', DUCKDB_PACKAGE: 'DuckDB data product' }[kind] ?? 'Seller source');
+  PYTHON_APPLICATION: 'Python application', DUCKDB_PACKAGE: 'DuckDB data product', S3_OBJECT_PACKAGE: 'S3 objects', JSONRPC_MERCHANT_PACKAGE: 'Stellar RPC' }[kind] ?? 'Seller source');
 function releaseReviewValid() {
   return Boolean(releaseReview && releaseReview.baseRevision === status?.revision && Date.parse(releaseReview.expiresAt) > Date.now());
 }

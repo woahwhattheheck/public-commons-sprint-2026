@@ -85,7 +85,8 @@ function render(next) {
   text('seller-origin', seller.publicOrigin); text('seller-mode', label(seller.mode));
   text('intent', op?.intentId ?? 'No prepared buyer');
   text('operation-state', review ? 'Reviewed at ' + time(review.at) : label(op?.state));
-  text('result-state', attempt?.outcome?.status ?? label(attempt?.state ?? 'NOT_RUN'));
+  text('result-state', next.rpcRecovery?.state === 'SETTLED_RESULT_RECOVERED' ? 'Settled · result recovered' :
+    next.rpcRecovery?.settlement ? 'Settled · response recovery pending' : attempt?.outcome?.status ?? label(attempt?.state ?? 'NOT_RUN'));
   text('last-updated', 'Updated ' + time(next.updatedAt));
   text('method', op?.method); text('request-url', op?.url ?? 'This session has no prepared buyer operation.');
   const terms = op?.expect ?? {};
@@ -132,8 +133,35 @@ function render(next) {
       'The recorded operation result is shown above.'));
   byId('outcome-details').hidden = !outcome;
   text('outcome-json', outcome ? JSON.stringify(outcome, null, 2) : '');
+  const rpc = next.rpcRecovery, rpcAction = next.rpcAction;
+  byId('rpc-recovery').hidden = !rpc;
+  const transaction = byId('rpc-transaction');
+  if (transaction.dataset.intent !== selectedIntent) {
+    transaction.dataset.intent = selectedIntent; transaction.value = rpc?.settlement?.transaction ?? '';
+  }
+  byId('rpc-transaction-entry').hidden = Boolean(rpc?.settlement);
+  byId('rpc-verify').hidden = !rpc?.canVerify;
+  byId('rpc-verify').disabled = pending || !controls.canVerifyRpcPayment;
+  byId('rpc-read').hidden = !rpc?.settlement || rpc?.responseFile?.status === 'SAVED';
+  byId('rpc-read').disabled = pending || !controls.canRecoverRpcResponse;
+  text('rpc-recovery-note', rpc?.responseFile?.status === 'SAVED' ?
+    'The recovered response is retained with its original payment and request. Its read time is recorded separately below.' :
+    rpc?.settlement ? 'The existing payment is settled. Recover paid read calls the same selected RPC method with the retained parameters and saves its current result.' :
+    'Select the transaction for this original attempted request. The original ledger and Stellar transfer verifier authenticate it before a recovery read becomes available.');
+  facts('rpc-recovery-facts', rpc ? [
+    ['Original attempt', time(attempt?.startedAt)], ['Transaction', rpc.settlement?.transaction],
+    ['Confirmed ledger', rpc.settlement?.ledger], ['Settled amount (atomic)', rpc.settlement?.amountAtomic],
+    ['Recovery read started', rpc.responseFile?.recoveryReadStartedAt ? time(rpc.responseFile.recoveryReadStartedAt) : undefined],
+    ['Recovery response observed', rpc.responseFile?.responseObservedAt ? time(rpc.responseFile.responseObservedAt) : undefined],
+  ] : []);
+  text('rpc-recovery-result', rpcAction?.state === 'RUNNING' ?
+    rpcAction.operation === 'VERIFY_PAYMENT' ? 'Verifying the original reservation and transaction…' : 'Reading and saving the paid RPC result…' :
+    rpcAction?.error ? label(rpcAction.error) : rpc?.settlement && !rpc.canRecover && !rpc.responseFile ?
+      'Resume the product in its availability desk before requesting the recovery read.' : '');
   text('delivery-state', delivery?.available ? 'Saved response' : label(delivery?.status ?? 'NO_SAVED_RESPONSE'));
-  text('delivery-note', delivery?.available ? 'Download the exact file saved by the buyer, or preview its contents.' :
+  text('delivery-note', delivery?.source === 'SETTLED_RPC_RECOVERY_READ' ?
+    'Download the exact saved recovery response. The original request time and the later provider read remain recorded together.' :
+    delivery?.available ? 'Download the exact file saved by the buyer, or preview its contents.' :
     'A response saved by the buyer appears here after the operation completes.');
   byId('delivery-facts').hidden = !delivery?.available;
   facts('delivery-facts', delivery?.available ? [
@@ -142,29 +170,64 @@ function render(next) {
   ] : []);
   byId('preview').disabled = pending || !delivery?.available;
   byId('download').disabled = pending || !delivery?.available;
-  const purchase = next.purchase, retrieval = next.retrieval;
+  const purchase = next.purchase, retrieval = next.retrieval, transfer = purchase?.transfer;
   byId('product-panel').hidden = !purchase;
   const currentProduct = selectedIntent + ':' + (purchase?.delivery?.sha256 ?? purchase?.delivery?.status ?? '');
   if (productIdentity !== currentProduct) { byId('product-preview-area').hidden = true; productIdentity = currentProduct; }
-  text('product-state', retrieval?.state === 'RUNNING' ? 'Retrieving' : label(purchase?.delivery?.status ?? 'NOT_RETRIEVED'));
-  text('product-note', 'Retrieve uses the merchant’s existing entitlement and the configured private claim token. It does not execute another purchase. Matching local bytes recover without a network request.');
+  const transferLabels = { INTERRUPTED: 'Download interrupted', REJECTED: 'Download needs restart',
+    ACTIVE: 'Download in use', UNAVAILABLE: 'Download record unavailable' };
+  text('product-state', retrieval?.state === 'RUNNING' ? 'Retrieving' :
+    purchase?.delivery?.status === 'NOT_RETRIEVED' && transferLabels[transfer?.status]
+      ? transferLabels[transfer.status] : label(purchase?.delivery?.status ?? 'NOT_RETRIEVED'));
+  text('product-note', 'Retrieve uses this order’s existing entitlement and private claim token. On Linux, an interrupted download continues from its retained bytes. A completed local file is verified locally.');
   facts('product-facts', purchase ? [
     ['Order', purchase.orderReference], ['Expected size', size(purchase.file.bytes)],
     ['Expected SHA-256', purchase.file.sha256], ['Save location', purchase.destination],
     ['Merchant delivery', purchase.deliveryUrl],
+    ...(Number.isSafeInteger(transfer?.retainedBytes) && transfer.retainedBytes > 0
+      ? [['Retained download', size(transfer.retainedBytes) + ' of ' + size(purchase.file.bytes)]] : []),
   ] : []);
   byId('product-retrieve').disabled = pending || !controls.canRetrieve;
   text('product-retrieve', retrieval?.state === 'RUNNING' ? 'Retrieving…' :
-    purchase?.delivery?.status === 'LOCAL_FILE_REQUIRES_CHECK' || purchase?.delivery?.available ? 'Check and recover local file' : 'Retrieve entitled file');
+    purchase?.delivery?.status === 'LOCAL_FILE_REQUIRES_CHECK' || purchase?.delivery?.available ? 'Check and recover local file' :
+    transfer?.resumable && transfer.retainedBytes > 0
+      ? transfer.retainedBytes === transfer.expectedBytes ? 'Finish saved download' : 'Resume download'
+      : 'Retrieve entitled file');
   byId('product-preview').disabled = pending || !purchase?.delivery?.available;
   byId('product-download').disabled = pending || !purchase?.delivery?.available;
   const retrievalMessages = { PRIVATE_CLAIM_TOKEN_REQUIRED: 'Configure the separately supplied claim token in the environment that starts this session, then retrieve again.',
-    ENTITLEMENT_NOT_AVAILABLE: 'The merchant has not returned this entitled file. Check its delivery notification and claim token, then explicitly retrieve again.',
-    DELIVERY_FINGERPRINT_MISMATCH: 'The returned bytes did not match the promised file. No completed file was published.' };
+    ENTITLEMENT_NOT_AVAILABLE: 'Ask the merchant to check this order’s access and enrolled file, then resume with the current claim token. Retained bytes stay at the saved location.',
+    DELIVERY_FINGERPRINT_MISMATCH: 'The returned bytes failed the promised file check. Review the merchant source before starting the download again.',
+    DELIVERY_SOURCE_CHANGED: 'The merchant returned a different file version. Ask the merchant to restore the enrolled source before resuming.',
+    TRANSFER_RESTART_REQUIRED: 'The retained bytes failed the promised file check. Review the merchant source, then discard this retained download to start it again.',
+    FILE_TRANSFER_ACTIVE: 'Another process is using this saved download. Refresh after that process finishes or stops.',
+    RESPONSE_FILE_ABORTED: 'The download was interrupted. Resume this order to continue its retained bytes.',
+    RESPONSE_FILE_TIMEOUT: 'The download timed out. Resume this order to continue its retained bytes.',
+    RESPONSE_FILE_READ_FAILED: 'The download connection stopped. Resume this order to continue its retained bytes.',
+    RESPONSE_FILE_DIGEST_MISMATCH: 'The completed bytes failed the promised file check. Review the merchant source, then discard this retained download to start it again.' };
   text('product-result', retrieval?.error ? retrievalMessages[retrieval.error] ?? label(retrieval.error) :
-    retrieval?.result ? label(retrieval.result.status) + ' · ' + retrieval.result.httpRequests + ' merchant requests' :
+    retrieval?.result?.status === 'FILE_TRANSFER_RESET' ? 'Retained download cleared. Retrieve this same entitled file to start from the beginning.' :
+    retrieval?.result ? label(retrieval.result.status) + ' · ' + retrieval.result.httpRequests + ' merchant requests' +
+      (retrieval.result.transfer?.resumedBytes ? ' · ' + size(retrieval.result.transfer.resumedBytes) + ' recovered locally' : '') :
     purchase?.delivery?.available ? 'The original file receipt is present. Preview and download check the current bytes against its hash.' :
-    'The immediate paid response above is separate from the promised product file.');
+    transfer?.lastError ? retrievalMessages[transfer.lastError] ?? label(transfer.lastError) :
+    'The merchant handoff binds the promised product to this original order.');
+  byId('product-transfer-panel').hidden = !transfer;
+  facts('product-transfer-facts', transfer ? [
+    ['State', label(transfer.status)],
+    ['Retained bytes', Number.isSafeInteger(transfer.retainedBytes) ? size(transfer.retainedBytes) :
+      transfer.status === 'ACTIVE' ? 'In use by another process' : 'Unavailable'],
+    ['Expected bytes', size(transfer.expectedBytes ?? purchase.file.bytes)],
+    ['Attempts', transfer.attempts ?? '—'], ['Transfer record', transfer.statePath ?? 'Unavailable'],
+    ...(transfer.error ? [['Detail', retrievalMessages[transfer.error] ?? label(transfer.error)]] : []),
+  ] : []);
+  byId('product-reset-transfer').disabled = pending || !controls.canResetTransfer;
+  byId('product-reset-transfer').hidden = !transfer?.canReset;
+  text('product-transfer-note', transfer?.status === 'ACTIVE' ? 'The retained download is owned by a running process. Refresh after it releases the file.' :
+    transfer?.status === 'REJECTED' ? 'Review the merchant’s original file, then discard this rejected local download and retrieve the same order again.' :
+    transfer?.canReset ? 'Resume keeps these bytes. Discard retained download clears the unfinished local copy so a later Retrieve starts from the beginning.' :
+    transfer?.status === 'COMPLETE' ? 'This download completed through the original file writer and its promised size and SHA-256 checks.' :
+    'The original transfer record is retained with this order’s saved destination.');
   facts('product-binding', purchase ? [
     ['Original intent', purchase.request.intentId], ['Inbox job', purchase.request.inboxJobId],
     ['Frozen request SHA-256', purchase.request.configSha256], ['Attempt', purchase.request.attemptId ?? 'Not recorded'],
@@ -206,7 +269,13 @@ function render(next) {
   ]);
   byId('facilitator').disabled = pending || selectionLoading || !controls.canProbeFacilitator;
   facts('seller-facts', [['Mode', label(seller.mode)], ['Listener', seller.listener],
-    ['Routes', seller.routes?.length ?? 0], ['Started', time(session.startedAt)]]);
+    ['Routes', seller.routes?.length ?? 0], ['Started', time(session.startedAt)],
+    ...(seller.jsonrpc ? [
+      ['RPC data network', seller.jsonrpc.dataNetwork],
+      ['Provider verified', time(seller.jsonrpc.networkVerifiedAt)],
+      ['Read products', seller.jsonrpc.methods.join(', ')],
+      ['Provider results', seller.jsonrpc.acceptedResults],
+    ] : [])]);
   const links = byId('seller-links'); links.replaceChildren();
   link(links, 'Open developer workspace ↗', seller.developerUrl);
   operationsAddress(links, seller.operationsUrl);
@@ -245,7 +314,7 @@ async function refresh({ quiet = false } = {}) {
   } catch (error) { if (order === lastRequest) notice(error.message, true); }
   finally {
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.activeIntent || view?.retrieval?.state === 'RUNNING' || view?.session?.state === 'STOPPING' ? 1500 : 6000);
+    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.activeIntent || view?.retrieval?.state === 'RUNNING' || view?.rpcAction?.state === 'RUNNING' || view?.session?.state === 'STOPPING' ? 1500 : 6000);
   }
 }
 async function action(name, body = {}) {
@@ -262,6 +331,9 @@ async function action(name, body = {}) {
     if (name === 'cancel') notice('The queued request was cancelled and retained in the inbox.');
     if (name === 'recover') notice('The recorded result was recovered from the inbox.');
     if (name === 'retrieve') notice('File retrieval started. Its result will appear in Purchased file.');
+    if (name === 'reset-transfer') notice('Retained download cleared. Use Retrieve entitled file to start this order’s download again.');
+    if (name === 'verify-rpc-payment') notice('Existing-payment verification and its result are shown with this original attempt.');
+    if (name === 'recover-rpc-response') notice('Recovery progress and the saved response are shown below.');
     if (name === 'facilitator') notice('Payment-service observation refreshed.');
     if (name === 'stop') notice(next.session.state === 'STOPPED' ? 'The session has stopped. Saved results remain available.' : 'The session is draining. Its progress remains visible below.');
   } catch (error) { notice(error.message, true); }
@@ -272,7 +344,7 @@ byId('operation-select').addEventListener('change', async event => {
   if (pending) return;
   selectionLoading = true;
   selectedIntent = event.target.value; ++lastRequest;
-  for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download', 'product-retrieve', 'product-preview', 'product-download', 'facilitator']) byId(id).disabled = true;
+  for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download', 'product-retrieve', 'product-reset-transfer', 'product-preview', 'product-download', 'facilitator', 'rpc-verify', 'rpc-read']) byId(id).disabled = true;
   byId('preview-area').hidden = true;
   byId('product-preview-area').hidden = true;
   await refresh();
@@ -281,8 +353,18 @@ byId('review').addEventListener('click', () => action('review'));
 byId('facilitator').addEventListener('click', () => action('facilitator'));
 byId('execute').addEventListener('click', () => action('execute', { reviewId: view?.review?.id }));
 byId('cancel').addEventListener('click', () => action('cancel'));
+function rpcSelection(transaction) {
+  const original = view?.rpcRecovery?.original;
+  return { transaction, expectedRequestSha256: original?.expectedRequestSha256,
+    expectedAttemptId: original?.attemptId, expectedConfigSha256: original?.configSha256 };
+}
+byId('rpc-verify').addEventListener('click', () => action('verify-rpc-payment', rpcSelection(byId('rpc-transaction').value.trim())));
+byId('rpc-read').addEventListener('click', () => action('recover-rpc-response', rpcSelection(view?.rpcRecovery?.settlement?.transaction)));
 byId('recover').addEventListener('click', () => action('recover'));
 byId('product-retrieve').addEventListener('click', () => action('retrieve', {
+  configSha256: view?.purchase?.request.configSha256, handoffSha256: view?.purchase?.handoffSha256,
+}));
+byId('product-reset-transfer').addEventListener('click', () => action('reset-transfer', {
   configSha256: view?.purchase?.request.configSha256, handoffSha256: view?.purchase?.handoffSha256,
 }));
 byId('stop').addEventListener('click', () => action('stop'));

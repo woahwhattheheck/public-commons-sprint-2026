@@ -2,6 +2,7 @@
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { NativeRuntime } from './runtime.mjs';
+import { WorkspaceRecovery } from './workspace-recovery.mjs';
 import { BuyerResult } from './result.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
@@ -11,7 +12,7 @@ import { absolute, privateDirectory, digest, now, intent, object, need, BuyerErr
 const SCHEMA = 'stellar-forge.node-buyer.v1';
 const NATIVE_RESULT = 'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT';
 const copy = value => parseJson(jsonBytes(value));
-const profileKeys = new Set(['operator', 'signerModule', 'trustedPayer', 'bodyCaptureTimeoutMs', 'buyerTransport']);
+const profileKeys = new Set(['operator', 'signerModule', 'trustedPayer', 'bodyCaptureTimeoutMs', 'buyerTransport', 'requestTimeoutMs']);
 
 export class Buyer {
   constructor({ runtimeDirectory, stateDirectory, operatorProfile, datasetReportLimit = 33554432, ...runtimeOptions }) {
@@ -31,6 +32,8 @@ export class Buyer {
   attachObject(options) { return createObject(this, options, true); }
   listObjects() { return listObjects(this); }
 
+  workspaceRecovery() { return WorkspaceRecovery.fromBuyer(this); }
+
   async ready() { await privateDirectory(this.stateDirectory); return this; }
   operation(intentId) { return new Operation(this, intent(intentId)); }
 
@@ -42,7 +45,7 @@ export class Buyer {
     return { ...config, ...copy(profile) };
   }
 
-  async _create(input, { body, operatorProfile } = {}) {
+  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs } = {}) {
     await this.ready();
     const config = await this._profile(copy(input), operatorProfile);
     need(object(config.operation), 'OPERATION_REQUIRED');
@@ -67,9 +70,16 @@ export class Buyer {
       }
       config.evidenceDir = await privateDirectory(join(op.directory, 'evidence'));
       config.captureBody = false;
-      config.responseFile = { destination: join(op.directory, 'response.bin'),
-        maxBytes: config.responseFile?.maxBytes ?? 67108864,
-        timeoutMs: config.responseFile?.timeoutMs ?? 30000 };
+      // Original native review validates every retained option. The application
+      // owns the destination; expected bytes/type/digest and stream framing survive.
+      need(config.responseFile === undefined || object(config.responseFile), 'APPLICATION_RESPONSE_OPTIONS_INVALID');
+      if (responseFile !== undefined) need(object(responseFile) &&
+        !Object.hasOwn(responseFile, 'destination'), 'APPLICATION_RESPONSE_OPTIONS_INVALID');
+      const output = { ...config.responseFile, ...responseFile };
+      config.responseFile = { ...output, destination: join(op.directory, 'response.bin'),
+        maxBytes: output.maxBytes === undefined ? 67108864 : output.maxBytes,
+        timeoutMs: output.timeoutMs === undefined ? 30000 : output.timeoutMs };
+      if (requestTimeoutMs !== undefined) config.requestTimeoutMs = requestTimeoutMs;
       let raw = jsonBytes(config);
       need(raw.length <= 65536, 'CONFIG_SIZE_LIMIT');
       await writeBytes(op.configPath, raw, { exclusive: true });
@@ -112,7 +122,7 @@ export class Buyer {
     return this._create(config, options);
   }
 
-  async fromOperationHandoff(file, { accept, operatorProfile, signal } = {}) {
+  async fromOperationHandoff(file, { accept, operatorProfile, signal, responseFile, requestTimeoutMs } = {}) {
     need(Number.isSafeInteger(accept) && accept >= 0, 'EXPLICIT_SELECTION_INDEX_REQUIRED');
     await this.ready();
     const temporary=await mkdtemp(join(this.stateDirectory,'.operation-import-'));
@@ -122,7 +132,7 @@ export class Buyer {
       {stateDirectory:this.stateDirectory,mode:'OFFLINE_OPERATION_IMPORTED',signal});
       // _create retains the exact body and original validated ticket before
       // removing the import directory. Operator settings come from this buyer.
-      return await this._create(await readJson(imported.configPath),{operatorProfile});
+      return await this._create(await readJson(imported.configPath),{operatorProfile,responseFile,requestTimeoutMs});
     } finally { await rm(temporary,{recursive:true,force:true}); }
   }
 
@@ -142,10 +152,10 @@ export class Buyer {
 
   // Directly fits the original SF30 createSellerClient({buyer}) interface.
   // Native SF62 approval and SF36 policy still run; no callback is fabricated.
-  async call(request) {
+  async call(request, options) {
     need(object(request), 'GENERATED_REQUEST_FIELDS_INVALID');
     need(!request.signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
-    const operation = await this.fromRequest(request);
+    const operation = await this.fromRequest(request, options);
     return operation.execute({ review: await operation.review(), signal: request.signal });
   }
 
@@ -163,7 +173,7 @@ export class Buyer {
   }
 
   async prepare({ discoveryFile, row, accept, intentId, url, method = 'GET',
-    headers, body, operatorProfile, signal, ticketFile, ticketHeader }) {
+    headers, body, operatorProfile, signal, ticketFile, ticketHeader, responseFile, requestTimeoutMs }) {
     need(Number.isSafeInteger(row) && row >= 0 && Number.isSafeInteger(accept) && accept >= 0,
       'EXPLICIT_SELECTION_INDEX_REQUIRED');
     intent(intentId);
@@ -182,7 +192,7 @@ export class Buyer {
         ...(ticketHeader === undefined ? [] : ['--ticket-header', ticketHeader])],
       { stateDirectory: this.stateDirectory, mode: 'OFFLINE_CONFIG_PREPARED', signal });
       const config = await readJson(output);
-      return await this._create(config, { body, operatorProfile });
+      return await this._create(config, { body, operatorProfile, responseFile, requestTimeoutMs });
     } finally { await rm(directory, { recursive: true, force: true }); }
   }
 
@@ -276,7 +286,7 @@ export class Operation {
     const { meta, config } = await this._bound();
     need(record.schema === SCHEMA && record.intentId === this.intentId && record.configSha256 === meta.configSha256 &&
       record.native?.mode === NATIVE_RESULT && record.native.intentId === this.intentId, 'RESULT_BINDING_MISMATCH');
-    return new BuyerResult(record, config.responseFile);
+    return new BuyerResult(record, config.responseFile, this.buyer.runtime.directory);
   }
   async recover() {
     const { meta } = await this._bound();

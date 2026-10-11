@@ -4,6 +4,8 @@ export interface OperatorProfile {
   signerModule?: string;
   trustedPayer?: string;
   bodyCaptureTimeoutMs?: number;
+  /** Per native HTTP exchange, including response body; 1–300,000 ms. */
+  requestTimeoutMs?: number;
   buyerTransport?: { mode: 'explicit-connect'; origin: string; proxyUrl?: string; proxyEnv?: string };
 }
 export interface BuyerOptions {
@@ -26,7 +28,7 @@ export interface NativeRequest {
   method?: string;
   expect: {
     scheme: string; network: string; asset: string; payTo: string; maxAtomic: string;
-    maxTimeoutSeconds?: number; paymentFlow?: 'authorization';
+    maxTimeoutSeconds?: number; paymentFlow?: 'authorization' | 'upfront';
   };
   headers?: Readonly<Record<string, string>>;
   body?: string | Uint8Array;
@@ -38,7 +40,55 @@ export interface NativeRequest {
   approve?: unknown;
   sign?: unknown;
 }
-export interface ImportOptions { body?: string | Uint8Array; operatorProfile?: OperatorProfile | string }
+export interface ResponseStreamOptions {
+  format: 'sse' | 'ndjson';
+  maxRecordBytes?: number;
+  maxRecords?: number;
+}
+export interface ResponseCaptureOptions {
+  maxBytes?: number;
+  /** Native stream captures allow at most 300,000 ms. */
+  timeoutMs?: number;
+  expectedSha256?: string;
+  expectedBytes?: number;
+  expectedContentType?: string;
+  stream?: ResponseStreamOptions;
+}
+export interface StreamReadOptions {
+  /** Inspect the originally recorded complete prefix of a failed capture. */
+  allowPartial?: boolean;
+  maxRecordBytes?: number;
+  maxRecords?: number;
+  signal?: AbortSignal;
+}
+export interface BuyerStreamSummary {
+  readonly format: 'sse' | 'ndjson';
+  readonly records: number;
+  readonly bytes: number;
+  readonly complete: boolean;
+  readonly pendingRecord: boolean;
+  readonly lastCompleteByte: number;
+  readonly lastEventId?: string;
+  readonly retryMilliseconds?: number | null;
+  readonly emptyLines?: number;
+  readonly error?: string;
+}
+export interface BuyerStreamEvent {
+  readonly index: number;
+  readonly format: 'sse';
+  readonly event: string;
+  readonly data: string;
+  readonly id: string;
+  readonly retry?: number;
+}
+export interface ImportOptions {
+  body?: string | Uint8Array;
+  operatorProfile?: OperatorProfile | string;
+  /** The Node application owns the fixed private destination. */
+  responseFile?: ResponseCaptureOptions;
+  /** Reviewed merchant HTTP deadline; independent of the native subprocess deadline. */
+  requestTimeoutMs?: number;
+}
 export interface Review {
   readonly intentId: string;
   readonly configSha256: string;
@@ -57,7 +107,9 @@ export interface NativeSummary extends JsonObject {
   intentId: string;
   status: unknown;
   httpStatus: number | null;
-  responseFile?: { status: string; path?: string; bytes?: number; sha256?: string; [key: string]: unknown };
+  requestTimeoutMs?: number;
+  responseFile?: { status: string; path?: string; bytes?: number; sha256?: string;
+    stream?: BuyerStreamSummary; partialPath?: string; partialSha256?: string; [key: string]: unknown };
 }
 export interface ResultRecord {
   readonly schema: string;
@@ -74,33 +126,46 @@ export class BuyerError extends Error {
   readonly code: string;
   readonly operation?: Operation;
   readonly exitCode?: number | null;
+  readonly dataset?: Dataset;
+  readonly acquisition?: ObjectAcquisition;
+  readonly commandId?: string;
+  readonly commandDirectory?: string;
+  readonly partialPath?: string;
+  readonly destination?: string;
+  readonly destinationPublished?: boolean;
   constructor(code: string, details?: Record<string, unknown>);
 }
 export class Buyer {
   readonly stateDirectory: string;
   constructor(options: BuyerOptions);
   ready(): Promise<this>;
+  /** Recovery of the original operator plus this existing application state. */
+  workspaceRecovery(): WorkspaceRecovery;
   operation(intentId: string): Operation;
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
   fromOperationHandoff(file: string, options: {
     accept: number; operatorProfile?: OperatorProfile | string; signal?: AbortSignal;
+    responseFile?: ResponseCaptureOptions;
+    requestTimeoutMs?: number;
   }): Promise<Operation>;
   fromRequest(request: NativeRequest, options?: Omit<ImportOptions, 'body'>): Promise<Operation>;
-  call(request: NativeRequest): Promise<BuyerResult>;
+  call(request: NativeRequest, options?: Omit<ImportOptions, 'body'>): Promise<BuyerResult>;
   discover(catalog: JsonObject, options?: { destination?: string; signal?: AbortSignal }): Promise<JsonObject>;
   prepare(input: {
     discoveryFile: string; row: number; accept: number; intentId: string; url: string;
     method?: string; headers?: Record<string, string>; body?: string | Uint8Array;
     operatorProfile?: OperatorProfile | string; signal?: AbortSignal; ticketFile?: string; ticketHeader?: string;
+    responseFile?: ResponseCaptureOptions;
+    requestTimeoutMs?: number;
   }): Promise<Operation>;
   list(): AsyncIterable<Operation>;
   dataset(id: string): Dataset;
   createDataset(options: DatasetOptions): Promise<Dataset>;
-  attachDataset(options: { id: string; directory: string }): Promise<Dataset>;
+  attachDataset(options: { id: string; directory: string; accountingOnly?: boolean }): Promise<Dataset>;
   listDatasets(): AsyncIterable<Dataset>;
   object(id: string): ObjectAcquisition;
   createObject(options: ObjectOptions): Promise<ObjectAcquisition>;
-  attachObject(options: { id: string; directory: string }): Promise<ObjectAcquisition>;
+  attachObject(options: { id: string; directory: string; accountingOnly?: boolean }): Promise<ObjectAcquisition>;
   listObjects(): AsyncIterable<ObjectAcquisition>;
 }
 export class Operation {
@@ -119,9 +184,13 @@ export class BuyerResult extends VerifiedFile {
   readonly native: NativeSummary;
   readonly status: unknown;
   readonly delivery: { status: string; [key: string]: unknown };
+  readonly stream: BuyerStreamSummary | null;
   readonly ok: boolean;
-  constructor(record: ResultRecord, responseFile: { destination: string; maxBytes: number; timeoutMs?: number });
+  constructor(record: ResultRecord, responseFile: ResponseCaptureOptions & { destination: string; maxBytes: number },
+    runtimeDirectory?: string);
   raiseForStatus(): this;
+  events(options?: StreamReadOptions): AsyncIterable<BuyerStreamEvent>;
+  ndjson<T = unknown>(options?: StreamReadOptions): AsyncIterable<T>;
 }
 export abstract class VerifiedFile {
   verify(options?: { chunkSize?: number; signal?: AbortSignal }): Promise<{ bytes: number; sha256: string }>;
@@ -189,11 +258,22 @@ export class Dataset {
   readonly id: string;
   /** Private application entry; the native session path is in its original report. */
   readonly directory: string;
+  readonly lastAccounting?: DatasetAccountingCommand;
   constructor(buyer: Buyer, id: string);
   initialize(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
   inspect(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
   recover(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
   run(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
+  /** Original page financial views; no product file, key or provider is needed. */
+  accounting(options?: SessionAccountingOptions): Promise<DatasetAccountingCommand>;
+  initializeAccounting(options?: SessionAccountingOptions): Promise<DatasetAccountingCommand>;
+  finalize(options?: SessionFinalizationOptions): Promise<DatasetAccountingCommand>;
+  accountingPages(options?: SessionAccountingOptions): AsyncIterable<DatasetAccountingCommand>;
+  /** Explicitly visit each remaining original range; break/abort starts no next range. */
+  finalizeAll(options?: SessionFinalizationOptions): AsyncIterable<DatasetAccountingCommand>;
+  /** Local native-output recovery; no process or provider request is started. */
+  recoverAccounting(options?: {commandId?: string}): Promise<AccountingRecovery<DatasetAccountingCommand> | null>;
+  exportAccounting(destination: string, options?: Omit<SessionAccountingOptions, 'offset'>): Promise<AccountingExport>;
   exportManifest(destination: string, options?: { signal?: AbortSignal }): Promise<DatasetCommand<JsonObject>>;
   /** Offline SF100 export. The same destination resumes its original verified archive. */
   deliver(destination?: string, options?: { signal?: AbortSignal }): Promise<DatasetDelivery>;
@@ -293,8 +373,13 @@ export class ObjectAcquisition {
   run(options?: ObjectCommandOptions): Promise<ObjectReport>;
   recover(options?: ObjectCommandOptions): Promise<ObjectReport>;
   accounting(options?: ObjectAccountingOptions): Promise<ObjectAccountingCommand>;
+  initializeAccounting(options?: ObjectAccountingOptions): Promise<ObjectAccountingCommand>;
   /** Explicit native reservation continuation; can query providers and update the original ledger. */
   finalize(options?: ObjectAccountingOptions & {outboxDirectory?: string; merchantRoute?: string}): Promise<ObjectAccountingCommand>;
+  accountingPages(options?: ObjectAccountingOptions): AsyncIterable<ObjectAccountingCommand>;
+  finalizeAll(options?: SessionFinalizationOptions): AsyncIterable<ObjectAccountingCommand>;
+  recoverAccounting(options?: {commandId?: string}): Promise<AccountingRecovery<ObjectAccountingCommand> | null>;
+  exportAccounting(destination: string, options?: Omit<ObjectAccountingOptions, 'offset'>): Promise<AccountingExport>;
   /** May acquire new chunks, then assembles or reopens this exact destination. */
   download(destination: string, options?: ObjectCommandOptions): Promise<ObjectDelivery>;
   assemble(destination: string, options?: ObjectCommandOptions): Promise<ObjectDelivery>;
@@ -313,25 +398,191 @@ export class ObjectDownloadError extends BuyerError {
   readonly progress: ObjectReport;
   constructor(code: string, acquisition: ObjectAcquisition, progress: ObjectReport);
 }
-export interface ObjectAccountingOptions {
+export interface SessionAccountingOptions {
   workspaceDirectory?: string;
   offset?: number;
   /** Native accounting entries, 1–250; default 100. */
   limit?: number;
   signal?: AbortSignal;
 }
-export interface ObjectAccountingReport extends JsonObject {
-  schema: 'stellar-forge.sf88.session-accounting.v1'; kind: 'object';
+export interface SessionFinalizationOptions extends SessionAccountingOptions {
+  /** Supplied together; passed to the original financial continuation. */
+  outboxDirectory?: string;
+  merchantRoute?: string;
+}
+export interface ObjectAccountingOptions extends SessionAccountingOptions {}
+export interface SessionAccountingEntry extends JsonObject {
+  /** Original index: dataset pages begin at1, object chunks at0. */
+  index: number;
+  intentId?: string | null;
+  outcome: string;
+  actualAtomicUnits?: string | null;
+  receipt?: string | null;
+  requestSha256?: string | null;
+  completedAt?: string | null;
+  code?: string;
+  lastFinalized?: {completedAt: string; outcome: string; actualAtomicUnits: string; receipt: string} | null;
+}
+export interface SessionAccountingReport<K extends 'dataset' | 'object' = 'dataset' | 'object'> extends JsonObject {
+  schema: 'stellar-forge.sf88.session-accounting.v1'; kind: K;
   directory: string; sessionId: string; configurationSha256: string;
   workspace: string | null; mode: 'VIEW' | 'FINALIZE'; observedAt: string;
   terms: NativeRequest['expect'];
   range: {offset: number; limit: number; total: number; nextOffset: number | null};
-  entries: Array<JsonObject & {index: number; intentId: string; outcome: string}>;
+  entries: SessionAccountingEntry[];
   interrupted: boolean; recordAuthority: string;
 }
-export interface ObjectAccountingCommand {
-  readonly native: ObjectAccountingReport;
+export interface ObjectAccountingReport extends SessionAccountingReport<'object'> {}
+export interface DatasetAccountingReport extends SessionAccountingReport<'dataset'> {}
+export interface SessionAccountingCommand<R extends SessionAccountingReport = SessionAccountingReport> {
+  readonly native: R;
   readonly process: ObjectReport['process'];
+  readonly record: JsonObject;
+  readonly commandId: string;
+  readonly commandDirectory: string;
+  readonly startedAt: string;
+  readonly viewStatus: 'SAVED' | 'SAVE_FAILED' | 'RECOVERED_NATIVE_OUTPUT';
+  readonly recovered?: boolean;
+}
+export interface ObjectAccountingCommand extends SessionAccountingCommand<ObjectAccountingReport> {
   readonly record: {readonly mode: 'ORIGINAL_PYTHON_OBJECT'; readonly action: 'accounting' | 'finalize';
     readonly report: ObjectAccountingReport};
+}
+export interface DatasetAccountingCommand extends SessionAccountingCommand<DatasetAccountingReport> {
+  readonly record: {readonly schema: 'stellar-forge.node-dataset-command.v1'; readonly id: string;
+    readonly command: 'accounting' | 'finalize'; readonly result: DatasetAccountingReport};
+}
+export interface AccountingRecovery<C extends SessionAccountingCommand = SessionAccountingCommand> {
+  readonly commandId: string;
+  readonly commandDirectory: string;
+  readonly action: 'accounting' | 'finalize';
+  readonly startedAt: string;
+  readonly status: 'RECORDED' | 'OUTPUT_RECOVERED' | 'NO_COMPLETE_OUTPUT';
+  readonly process: ObjectReport['process'];
+  readonly result: C | null;
+  /** Most recent complete range, also retained when a later command has no complete output. */
+  readonly lastComplete: C | null;
+}
+export interface AccountingExport {
+  readonly path: string;
+  readonly bytes: number;
+  readonly sha256: string;
+  readonly ranges: number;
+  readonly entries: number;
+  readonly kind: 'dataset' | 'object';
+  readonly sessionId: string;
+  readonly configurationSha256: string;
+  readonly format: 'jsonl';
+  readonly scope: 'COMPLETE_ORIGINAL_ACCOUNTING_VIEW';
+}
+
+/** Recovery uses the original native CLI; this constructor creates no application state. */
+export type WorkspaceRecoveryOptions = Pick<BuyerOptions,
+  'runtimeDirectory' | 'node' | 'environment' | 'timeoutMs' | 'cleanupGraceMs' | 'outputLimit'>;
+export type WorkspaceRecoveryOperation = 'inspect' | 'snapshot' | 'verify' | 'restore';
+export interface WorkspaceRecoverySelection {
+  directory: string;
+  stateRoot: string;
+  inboxes?: readonly string[];
+  include?: readonly string[];
+  signal?: AbortSignal;
+}
+export interface WorkspaceRecoverySnapshotOptions extends WorkspaceRecoverySelection {
+  output: string;
+  /** The caller has actually stopped writers; this does not stop them. */
+  quiesced: true;
+  /** Environment variable NAME only. Defaults to SF88_BACKUP_PASSPHRASE. */
+  passphraseEnv?: string;
+}
+export interface WorkspaceRecoveryArchiveOptions {
+  bundle: string;
+  passphraseEnv?: string;
+  /** Current trusted absolute interpreter; not an interpreter selected by the archive. */
+  python?: string;
+  expectedRecordSha256?: string;
+  signal?: AbortSignal;
+}
+export interface WorkspaceRecoveryPlan extends JsonObject {
+  schema: 'stellar-forge.sf88.workspace-recovery.v1';
+  stateRoot: string;
+  directory: string;
+  selected: string[];
+  include: string[];
+  missing: string[];
+  parentDirectories: string[];
+  network: string;
+  payer: string;
+  ledger: string;
+  policy: string;
+  keys: string;
+  python: string;
+  walletEnvironment: string | null;
+  walletEnvironmentExported: false;
+  restoreMode: 'ORIGINAL_CANONICAL_STATE_ROOT';
+  runtime: { path: string; retained: false }[];
+  inboxes: {
+    root: string;
+    jobs: { id: string; intentId: string; state: string; configSha256: string;
+      attemptId: string | null; finality: unknown }[];
+  }[];
+}
+export interface WorkspaceRecoveryRecord extends JsonObject {
+  schema: 'stellar-forge.sf88.workspace-recovery.v1';
+  recordSha256: string;
+  createdAt: string;
+  stateRoot: string;
+  directory: string;
+  network: string;
+  payer: string;
+  files: number;
+  bytes: number;
+  checkpoint: JsonObject;
+  inboxes: { root: string; jobs: number }[];
+  runtime: { path: string; retained: false }[];
+  walletEnvironmentExported: false;
+}
+export interface WorkspaceRecoverySnapshot extends WorkspaceRecoveryRecord {
+  status: 'BUYER_STATE_BACKUP_CREATED';
+  bundle: string;
+}
+export interface WorkspaceRecoveryVerification extends WorkspaceRecoveryRecord {
+  status: 'BUYER_STATE_BACKUP_VERIFIED';
+}
+export interface WorkspaceRecoveryRestore extends WorkspaceRecoveryRecord {
+  status: 'BUYER_STATE_RESTORED';
+  executionStarted: false;
+  originalStateRetained: true;
+}
+export type WorkspaceRecoveryNative = WorkspaceRecoveryPlan | WorkspaceRecoverySnapshot |
+  WorkspaceRecoveryVerification | WorkspaceRecoveryRestore;
+export interface WorkspaceRecoveryProcess {
+  readonly exitCode: number | null;
+  readonly exitSignal: string | null;
+  readonly errorCode: string | null;
+  readonly started: boolean;
+  readonly cleanupErrorCode: string | null;
+}
+export class WorkspaceRecoveryResult<T extends WorkspaceRecoveryNative = WorkspaceRecoveryNative> {
+  private constructor();
+  readonly operation: WorkspaceRecoveryOperation;
+  readonly native: Readonly<T> | null;
+  readonly process: WorkspaceRecoveryProcess;
+  /** Original completion was received. False does not assert that no state was published. */
+  readonly completionReported: boolean;
+  readonly ok: boolean;
+}
+export type WorkspaceRecoverySuccess<T extends WorkspaceRecoveryNative> =
+  WorkspaceRecoveryResult<T> & { readonly native: Readonly<T>; readonly completionReported: true; readonly ok: true };
+export class WorkspaceRecoveryError extends BuyerError {
+  readonly result: WorkspaceRecoveryResult;
+  constructor(code: string, result: WorkspaceRecoveryResult);
+}
+export class WorkspaceRecovery {
+  constructor(options: WorkspaceRecoveryOptions);
+  /** Reuses the Buyer runtime and includes its existing application directory in capture. */
+  static fromBuyer(buyer: Buyer): WorkspaceRecovery;
+  inspect(options: WorkspaceRecoverySelection): Promise<WorkspaceRecoverySuccess<WorkspaceRecoveryPlan>>;
+  snapshot(options: WorkspaceRecoverySnapshotOptions): Promise<WorkspaceRecoverySuccess<WorkspaceRecoverySnapshot>>;
+  verify(options: WorkspaceRecoveryArchiveOptions): Promise<WorkspaceRecoverySuccess<WorkspaceRecoveryVerification>>;
+  restore(options: WorkspaceRecoveryArchiveOptions): Promise<WorkspaceRecoverySuccess<WorkspaceRecoveryRestore>>;
 }

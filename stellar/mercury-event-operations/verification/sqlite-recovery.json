@@ -1,0 +1,22 @@
+{
+  "schema": "mercury-ops.local-destination-recovery.v1",
+  "state": "passed",
+  "input_source": "original native journey canonical envelope",
+  "customer_rows_after_restore_and_replay": 1,
+  "replay_reused": true,
+  "source_destination": "customer-events.sqlite",
+  "restored_destination": "customer.sqlite3",
+  "backup": {
+    "path": "/workspace/scratch/a66ca27a7443/mercury-event-operations/native-output/sqlite-destination-backup.zip",
+    "bytes": 5318,
+    "sha256": "79f80b426e5d6ed9050ff8a690aacfd9b66bd1c29cf082a3f735f5151f26656d",
+    "local_customer_included": true,
+    "files": [
+      "config.json",
+      "customer.sqlite3",
+      "operations.sqlite3"
+    ]
+  },
+  "existing_restore_preserved": true,
+  "maintenance_sha256": "c70696f596ebc72a3da0234f37197954bd1af63fbe4fbc774c026e8ae0468995"
+}

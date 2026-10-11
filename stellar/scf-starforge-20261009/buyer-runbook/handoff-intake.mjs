@@ -7,6 +7,7 @@ import {InputError,operator as nativeOperator,buyerTransport} from '../sf88-oper
 import {initializeWorkspace,openWorkspace} from '../sf88-operator-buyer-cli/workspace.mjs';
 import {loadOperationTicket} from '../sf88-operator-buyer-cli/operation-ticket.mjs';
 import {validateNativeSignerConfiguration} from '../sf88-operator-buyer-cli/native-signer.mjs';
+import {MAX_REQUEST_BODY_BYTES} from '../sf88-operator-buyer-cli/request-body.mjs';
 import {OPERATION_HANDOFF_MAX_BYTES,inspectOperationHandoff,importOperationHandoff,
   readOperationHandoffBody} from '../sf88-operator-buyer-cli/operation-handoff.mjs';
 import {acquireRunbookMetadataLease} from './runbook.mjs';
@@ -68,6 +69,31 @@ async function publish(path,value,{same=false,raw=false}={}) {
   } finally {await file.close().catch(()=>{});await unlink(temporary).catch(()=>{});}
 }
 
+/** Read the ORIGINAL host-owned operator preset for receiving applications. */
+export async function readBuyerOperatorPreset(settingsFile, {directory} = {}) {
+  canonical(directory);
+  check(settingsFile!==null,'REQUEST_OPERATOR_PRESET_REQUIRED');
+  const raw=await bytes(canonical(settingsFile),16384);let value;
+  try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));}
+  catch{throw new InputError('REQUEST_OPERATOR_PRESET_INVALID');}
+  const required=['schema','actor','service','payer','python','maxTotalAtomic','maxDailyAtomic'];
+  fields(value,[...required,'secretEnv','signerProvider','rpc','httpsProxyEnv'],required);
+  check(value.schema===PRESET,'REQUEST_OPERATOR_PRESET_INVALID');
+  nativeOperator({actor:value.actor,service:value.service,python:value.python,
+    policy:join(directory,'policy.json'),ledger:join(directory,'reservations.sqlite')});
+  check(/^G[A-Z2-7]{55}$/.test(value.payer??''),'REQUEST_OPERATOR_PAYER_INVALID');
+  check(BigInt(amount(value.maxDailyAtomic))<=BigInt(amount(value.maxTotalAtomic)),'REQUEST_OPERATOR_BUDGET_INVALID');
+  check(value.signerProvider===undefined||value.secretEnv===undefined,'REQUEST_ONE_SIGNER_SOURCE_REQUIRED');
+  if(value.signerProvider!==undefined)canonical(value.signerProvider);
+  for(const name of ['secretEnv','httpsProxyEnv'])if(value[name]!==undefined)
+    check(/^[A-Z][A-Z0-9_]{0,127}$/.test(value[name])&&!value[name].startsWith('SF36_'),'REQUEST_ENVIRONMENT_NAME_INVALID');
+  if(value.rpc!==undefined)check(typeof value.rpc==='string'&&value.rpc.length<=2048,'REQUEST_RPC_INVALID');
+  return {value,sha256:hash(raw),view:{actor:value.actor,service:value.service,payer:value.payer,
+    maxTotalAtomic:value.maxTotalAtomic,maxDailyAtomic:value.maxDailyAtomic,
+    signerSource:value.signerProvider===undefined?'ENVIRONMENT':'TRUSTED_SEP43_PROVIDER',
+    walletKeyEnvironment:value.signerProvider===undefined?value.secretEnv??'STELLAR_SECRET':null}};
+}
+
 /** The preset is declared by the local launcher, never by a received packet. */
 export async function openHandoffIntake({directory,configsDirectory,operatorSettings}) {
   await privateDirectory(directory,true);await privateDirectory(configsDirectory);
@@ -92,28 +118,7 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
   const configuration=id=>'received-'+id.slice(8)+'.json';
   async function lease(action){const release=await acquireRunbookMetadataLease(directory);
     try{return await action();}finally{await release();}}
-  async function preset() {
-    check(settingsFile!==null,'REQUEST_OPERATOR_PRESET_REQUIRED');
-    const raw=await bytes(canonical(settingsFile),16384);let value;
-    try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));}
-    catch{throw new InputError('REQUEST_OPERATOR_PRESET_INVALID');}
-    const required=['schema','actor','service','payer','python','maxTotalAtomic','maxDailyAtomic'];
-    fields(value,[...required,'secretEnv','signerProvider','rpc','httpsProxyEnv'],required);
-    check(value.schema===PRESET,'REQUEST_OPERATOR_PRESET_INVALID');
-    nativeOperator({actor:value.actor,service:value.service,python:value.python,
-      policy:join(directory,'policy.json'),ledger:join(directory,'reservations.sqlite')});
-    check(/^G[A-Z2-7]{55}$/.test(value.payer??''),'REQUEST_OPERATOR_PAYER_INVALID');
-    check(BigInt(amount(value.maxDailyAtomic))<=BigInt(amount(value.maxTotalAtomic)),'REQUEST_OPERATOR_BUDGET_INVALID');
-    check(value.signerProvider===undefined||value.secretEnv===undefined,'REQUEST_ONE_SIGNER_SOURCE_REQUIRED');
-    if(value.signerProvider!==undefined)canonical(value.signerProvider);
-    for(const name of ['secretEnv','httpsProxyEnv'])if(value[name]!==undefined)
-      check(/^[A-Z][A-Z0-9_]{0,127}$/.test(value[name])&&!value[name].startsWith('SF36_'),'REQUEST_ENVIRONMENT_NAME_INVALID');
-    if(value.rpc!==undefined)check(typeof value.rpc==='string'&&value.rpc.length<=2048,'REQUEST_RPC_INVALID');
-    return {value,sha256:hash(raw),view:{actor:value.actor,service:value.service,payer:value.payer,
-      maxTotalAtomic:value.maxTotalAtomic,maxDailyAtomic:value.maxDailyAtomic,
-      signerSource:value.signerProvider===undefined?'ENVIRONMENT':'TRUSTED_SEP43_PROVIDER',
-      walletKeyEnvironment:value.signerProvider===undefined?value.secretEnv??'STELLAR_SECRET':null}};
-  }
+  const preset = () => readBuyerOperatorPreset(settingsFile, {directory});
   async function record(id){const value=await json(join(root(id),'request.json'));
     check(value.schema===SCHEMA&&value.id===id&&value.handoffSha256===id.slice(8),'REQUEST_RECORD_CHANGED');return value;}
   async function verifiedSource(id){const item=await record(id),raw=await bytes(source(id),OPERATION_HANDOFF_MAX_BYTES);
@@ -205,11 +210,13 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     const result=await openWorkspace(['--dir',attempt.operatorDirectory]);
     const cfg=result.config,op=cfg.operation,manifest=result.manifest;
     const item=await record(review.id);
+    const sourceView=await inspectOperationHandoff({file:source(review.id),directory:attempt.inputDirectory,acceptIndex:review.acceptIndex});
+    const bodyPresent=sourceView.bodyPresent;
     check(op.method==='POST'&&op.url===item.summary.url&&JSON.stringify(op.expect)===JSON.stringify(review.acceptedTerms)&&
       op.intentId===item.summary.intentId&&
       JSON.stringify(op.headers)===JSON.stringify(review.requestHeaders)&&cfg.trustedPayer===settings.payer&&
       cfg.operator.actor===settings.actor&&cfg.operator.service===settings.service&&cfg.operator.python===settings.python&&
-      op.bodyFile===join(attempt.inputDirectory,'request.body')&&op.ticketFile===join(attempt.operatorDirectory,'operation-ticket.json'),
+      op.bodyFile===(bodyPresent?join(attempt.inputDirectory,'request.body'):undefined)&&op.ticketFile===join(attempt.operatorDirectory,'operation-ticket.json'),
       'REQUEST_OPERATOR_BINDING_CHANGED',409);
     check(manifest.signer.secretEnv===(settings.signerProvider===undefined?settings.secretEnv??'STELLAR_SECRET':undefined)&&
       manifest.signer.signerProvider===settings.signerProvider,'REQUEST_SIGNER_BINDING_CHANGED',409);
@@ -222,7 +229,7 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     const ticket=await loadOperationTicket(op,{requireCurrent:true});
     check(ticket.sha256===review.operationTicketSha256&&ticket.operationKey===review.operationKey&&
       ticket.requestHash===review.requestHash,'REQUEST_TICKET_CHANGED',409);
-    check(hash(await bytes(op.bodyFile,1048576))===review.bodySha256,'REQUEST_BODY_CHANGED',409);
+    check(hash(bodyPresent?await bytes(op.bodyFile,MAX_REQUEST_BODY_BYTES):new Uint8Array())===review.bodySha256,'REQUEST_BODY_CHANGED',409);
     const policy=await json(cfg.operator.policy);
     check(policy.assets?.length===1&&policy.assets[0].max_single===review.acceptedTerms.maxAtomic&&
       policy.assets[0].max_total===review.totalAtomic&&policy.assets[0].max_per_utc_day===review.dailyAtomic,
@@ -286,23 +293,32 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
       catch(error){errors.push({id,code:codeOf(error)});}
     }
     requests.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
-    return {requests,errors,operator,presetError,settingsFile};
+    return {requests,errors,operator,presetError,settingsFile,maxHandoffBytes:OPERATION_HANDOFF_MAX_BYTES};
   }
-  async function environmentForOperation(op) {
+  async function originalOperatorForOperation(op,accounting=false) {
     const path=op.sourceConfig?.path;
-    if(typeof path!=='string'||dirname(path)!==configsDirectory||!/^received-[a-f0-9]{64}\.json$/.test(basename(path)))return process.env;
+    if(typeof path!=='string'||dirname(path)!==configsDirectory||!/^received-[a-f0-9]{64}\.json$/.test(basename(path)))return null;
     const id='request-'+basename(path).slice(9,-5),saved=await ready(id);
     check(saved&&saved.configPath===path&&saved.configSha256===op.sourceConfig.sha256&&
       hash(await bytes(path))===saved.configSha256,'REQUEST_OPERATOR_SETUP_CHANGED',409);
-    const native=await openWorkspace(['--dir',saved.operatorDirectory],{accounting:true});
+    const native=await openWorkspace(['--dir',saved.operatorDirectory],{accounting});
     check(hash(await bytes(native.configPath))===saved.configSha256,'REQUEST_OPERATOR_SETUP_CHANGED',409);
-    return {...process.env,...native.operatorEnvironment};
+    return native;
+  }
+  async function environmentForOperation(op) {
+    const native=await originalOperatorForOperation(op,true);
+    return native?{...process.env,...native.operatorEnvironment}:process.env;
+  }
+  async function workspaceForOperation(op) {
+    const native=await originalOperatorForOperation(op);
+    return native?.manifest.directory??null;
   }
   async function attachment(id,kind) {
     await verifiedSource(id);check(['body','handoff'].includes(kind),'REQUEST_ATTACHMENT_INVALID');
     const raw=kind==='body'?await readOperationHandoffBody({file:source(id)}):await bytes(source(id),OPERATION_HANDOFF_MAX_BYTES);
+    check(raw!==null,'REQUEST_BODY_ABSENT',404);
     return {bytes:raw,name:kind==='body'?'request.body':'merchant-operation.handoff.json'};
   }
-  return {state,get,attachment,environmentForOperation,
+  return {state,get,attachment,environmentForOperation,workspaceForOperation,
     receive:input=>lease(()=>receive(input)),review:input=>lease(()=>review(input)),provision:input=>lease(()=>provision(input))};
 }

@@ -86,6 +86,7 @@ export function planProbes(routes, cases={}) {
     if (c !== undefined && !obj(c)) die('CASE_MUST_BE_OBJECT');
     if (c && Object.keys(c).some(k=>!['path','query','body','allowPost','allowMethod'].includes(k))) die('UNKNOWN_CASE_FIELD');
     if (c && Object.hasOwn(c,'allowMethod') && c.allowMethod !== route.method) die('CASE_METHOD_MISMATCH');
+    if (input.bodyType==='form-data') return {route,skip:'MULTIPART_REQUIRES_PRIVATE_FILE_REQUEST'};
     if (route.method === 'POST' && (!c?.allowPost || !Object.hasOwn(c,'body')))
       return {route,skip:'POST_REQUIRES_OPERATOR_CASE_AND_EXPLICIT_ALLOWPOST'};
     if (['PUT','PATCH','DELETE'].includes(route.method) && c?.allowMethod !== route.method)

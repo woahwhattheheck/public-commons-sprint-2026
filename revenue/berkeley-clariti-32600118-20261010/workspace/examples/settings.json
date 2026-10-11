@@ -1,0 +1,46 @@
+{
+  "cohort": "training-permits-2026-10-11",
+  "currency": "USD",
+  "currency_scale": 2,
+  "scope_note": "Training cohort with nine explicit permit, inspection, license and event records at one observation point. The event status transition is a deliberate review example. Use the agreed population and mappings for a commissioned acceptance run.",
+  "scenarios": [
+    {
+      "id": "linked-fire-finalization",
+      "title": "Building and linked Fire finalization",
+      "criterion": "A Building permit reaches Finalized only after every linked Fire permit reaches Finalized. Review the actual linked case IDs and observe the corresponding lifecycle behavior.",
+      "required": true,
+      "source_url": "https://berkeleyca.gov/sites/default/files/documents/Appendix%20B%20-%20Rapid%20Workflow%20To-Be%20Business%20Process%20Maps_0.pdf",
+      "source_locator": "PDF page 6, Sessions 1/6/24",
+      "check": {
+        "kind": "linked_finalization",
+        "parent_type": "permit",
+        "parent_department": "Building",
+        "child_type": "permit",
+        "child_department": "Fire",
+        "finalized_statuses": [
+          "Finalized"
+        ]
+      }
+    },
+    {
+      "id": "open-review-assignment",
+      "title": "Open departmental review ownership and due dates",
+      "criterion": "Every selected open Fire, Public Works or Land Use review retains its assigned reviewer and due date. Confirm the actual department vocabulary and open states with the export owner.",
+      "required": true,
+      "source_url": "https://berkeleyca.gov/sites/default/files/documents/24-11661-C%20-%20Addendum%20E%20-%20Additional%20Vendor%20Questions%20and%20Second%20Extension.pdf",
+      "source_locator": "Question 71",
+      "check": {
+        "kind": "required_review_fields",
+        "departments": [
+          "Fire",
+          "Public Works",
+          "Land Use"
+        ],
+        "open_states": [
+          "Open",
+          "In Review"
+        ]
+      }
+    }
+  ]
+}

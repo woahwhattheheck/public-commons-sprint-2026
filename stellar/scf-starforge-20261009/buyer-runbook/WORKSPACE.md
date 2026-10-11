@@ -3,7 +3,8 @@
 The browser workspace turns the original buyer runbook into a complete local
 operator workflow: arrange selected resources, retain draft revisions, review
 exact request terms, initialize a frozen acquisition, follow native execution,
-recover original results and download saved resources. It uses the existing
+recover original results, download saved resources and complete original purchase
+accounting with retained receipts and an accounting CSV. It uses the existing
 runbook engine and original SF88 command for every operation.
 
 ## Start with original buyer configurations
@@ -89,11 +90,14 @@ preset require a new review before preparing a request; already prepared buyers
 keep their original local policy and identity.
 
 1. Choose **Receive merchant request** and upload the original complete file
-   (up to 4 MiB). The workspace retains its exact bytes privately. Uploading that
+   within the packet limit shown by the receiver. The workspace retains its exact bytes privately. Uploading that
    identical file again opens the same retained request.
 2. Inspect the public request, ticket expiry, exact body and ordinary headers.
    **Download exact body** returns the original bytes, including multipart or
    binary input. The private request attachment retains the original transfer.
+   Multipart bodies use the shared 16 MiB request ceiling, including framing;
+   packet and HTTP upload limits allow their base64 representation. A source-
+   declared absent body stays absent and has no body attachment to download.
 3. Explicitly choose a supported payment option from its original discovery.
    Set a total and daily atomic budget. The daily amount must cover the selected
    request ceiling and fit inside the total and the declared local limits.
@@ -217,7 +221,63 @@ content types, with a clear truncation label; binary files retain their metadata
 and download link. File identity is checked while reading the preview. External
 configured output destinations remain visible in the original result.
 **Download state** and **Download report** export the current original inspection
-and its original HTML renderer.
+and its original HTML renderer, including saved accounting results.
+
+## Complete accounting and retain receipts
+
+The acquisition's **Accounting and receipts** section completes existing buyer
+attempts through the original SF88 `finalizeOriginalAttempt` and SF36 worker.
+Choose **Refresh all accounting**, or **Refresh accounting** on one operation.
+Untouched operations keep their existing state. This action uses the original
+accounting keys and ledger without loading a wallet provider, asking for another
+approval, or starting a purchase. It is available without a controlling terminal.
+
+For requests received and prepared in this workspace, the original private
+operator is selected from that request's retained ready record and source config
+hash. The selection is retained with the acquisition after the first accounting
+check. Existing configurations from elsewhere need their original operator:
+
+1. Open **Select the existing operator workspace** on the operation.
+2. Enter the absolute path to its existing native SF88 operator directory and
+   choose **Save operator selection**.
+3. Choose **Refresh accounting**. The selected workspace must retain the same
+   payer, ledger, policy, service, signer reference, transport, evidence directory
+   and original network/asset/recipient as the frozen request. Selection never
+   creates a replacement operator or spending ledger.
+
+Each refresh checks the original started record, frozen config hash, exact request
+identity, body presence/length/hash and canonical native evidence path. SF88 then
+checks the original approved request and SF36 authenticates its reservation and
+finality. The original network RPC and explicit proxy configuration remain in use.
+A request body that becomes unavailable after purchase does not prevent original
+accounting: the retained approved body digest is checked without rereading the
+spent body file. Execution continues to require its unchanged body snapshot.
+
+The page records the latest accounting outcome and retains the original receipt,
+actual atomic amount and approved request digest when finalized. A later failed
+observation keeps the earlier finalized receipt visible and included in totals.
+The original unsigned-response helper handles a request requiring no payment;
+that response has neither an actual payment amount nor a ledger receipt.
+
+Totals group exact integer amounts by network and asset. Finalized operations,
+unsigned responses, unresolved attempts and untouched operations have distinct
+counts. Delivery status remains the original SF31 result, so an accounting receipt
+does not mark a partial or failed download as complete. **Download accounting CSV**
+exports one row per operation with those current outcomes and retained receipts;
+the HTML report and JSON state contain the same saved accounting view.
+
+Accounting uses the existing per-run lease, serially across the selected attempts.
+The workspace shows progress while it runs. **Cancel accounting refresh** stops
+the current original worker and leaves earlier results intact; reopening and
+refreshing resolves the same attempts against the same original ledgers. A stale
+local process lease uses the existing exact-owner recovery control. Receipt views
+are private `0600` files inside the acquisition's `0700` accounting directory.
+
+If original accounting succeeds but its view cannot be saved, the active result
+reports `SAVE_FAILED` and retains the returned receipt. Refresh that same attempt
+after restoring local storage; original SF36 reuses already finalized accounting.
+The ledger remains authoritative throughout. Native CLI equivalents are documented
+in [README.md](README.md#complete-original-accounting).
 
 ## Native composition and package integration
 

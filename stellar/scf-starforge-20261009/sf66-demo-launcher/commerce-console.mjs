@@ -33,8 +33,13 @@ function savedDelivery(outcome) {
       !Number.isSafeInteger(saved.bytes) || saved.bytes < 0 || !/^[a-f0-9]{64}$/.test(saved.sha256 ?? ''))
     return { available: false, status: saved?.status ?? 'NO_SAVED_RESPONSE' };
   return { available: true, status: 'SAVED', path: saved.path, name: basename(saved.path),
-    bytes: saved.bytes, sha256: saved.sha256, contentType: saved.contentType ?? null };
+    bytes: saved.bytes, sha256: saved.sha256, contentType: saved.contentType ?? null,
+    source: saved.source ?? 'ORIGINAL_BUYER_RESPONSE',
+    originalAttemptStartedAt: saved.originalAttemptStartedAt,
+    recoveryReadStartedAt: saved.recoveryReadStartedAt, responseObservedAt: saved.responseObservedAt };
 }
+const jobDelivery = job => savedDelivery(job?.rpcRecovery?.responseFile ?
+  { responseFile: job.rpcRecovery.responseFile } : job?.outcome);
 async function savedFile(delivery) {
   if (!delivery.available) throw problem('The buyer has no saved response.', 404);
   // The path comes solely from the original buyer's SAVED result. Browser
@@ -99,7 +104,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
   let hosts = new Set(), origins = new Set(), url;
   // These maps retain only this browser session's review/dispatch presentation.
   // Terminal results, replay prevention and files are always read from SF88.
-  const reviews = new Map(), dispatches = new Map(), retrievals = new Map();
+  const reviews = new Map(), dispatches = new Map(), retrievals = new Map(), rpcActions = new Map();
   let work = null, action = null, stopping = false, stopPromise, shutdown, shutdownError, closing;
   const fingerprint = job => createHash('sha256').update(JSON.stringify([
     job.configSha256, job.bodySha256, job.bodyBytes, job.operation, job.merchant,
@@ -137,6 +142,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         shutdown, shutdownError },
       seller: { publicOrigin: original.seller.publicOrigin, listener: original.seller.url,
         mode: original.seller.mode, developerUrl: original.seller.docs,
+        jsonrpc: original.seller.jsonrpc ?? null,
         operationsUrl: original.operations.url,
         routes: session.seller.compiled.routes.map(route => ({ id: route.id, method: route.method, path: route.path })) },
       facilitator: { mode: original.facilitator?.mode ?? 'NOT_CONFIGURED',
@@ -157,7 +163,10 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         bodySha256: job.bodySha256, operatorId: job.operator.actor, serviceId: job.operator.service,
         signerFilename: basename(job.dependencies.signer.path) } : null,
       review: review ? { id: review.id, at: review.at, original: review.original } : null,
-      attempt, delivery: savedDelivery(job?.outcome),
+      attempt, delivery: jobDelivery(job), rpcRecovery: job?.rpcRecovery ?? null,
+      rpcAction: rpcActions.has(id) ? { state: rpcActions.get(id).running ? 'RUNNING' : 'FINISHED',
+        operation: rpcActions.get(id).operation, result: rpcActions.get(id).result ?? null,
+        error: rpcActions.get(id).error ?? null } : null,
       purchase: job?.paidFile ?? null,
       retrieval: retrievals.has(id) ? { state: retrievals.get(id).running ? 'RUNNING' : 'FINISHED',
         result: retrievals.get(id).result ?? null, error: retrievals.get(id).error ?? null } : null,
@@ -168,8 +177,14 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         canExecute: Boolean(review) && runningSession && !action && !work && job.state === 'QUEUED' && original.seller.mode === 'NATIVE_X402',
         canCancel: runningSession && !action && !running && job?.state === 'QUEUED',
         canRecover: runningSession && !action && !work && ['RUNNING_OR_INTERRUPTED', 'REVIEW_REQUIRED'].includes(job?.state),
+        canVerifyRpcPayment: runningSession && !action && !work && !rpcActions.get(id)?.running &&
+          job?.rpcRecovery?.canVerify === true && typeof session.verifyRpcPayment === 'function',
+        canRecoverRpcResponse: runningSession && !action && !work && !rpcActions.get(id)?.running &&
+          job?.rpcRecovery?.canRecover === true && typeof session.recoverRpcResponse === 'function',
         canRetrieve: Boolean(job?.paidFile) && typeof session.retrieve === 'function' && runningSession && !action &&
-          !retrievals.get(id)?.running,
+          !retrievals.get(id)?.running && !['ACTIVE', 'REJECTED'].includes(job?.paidFile?.transfer?.status),
+        canResetTransfer: Boolean(job?.paidFile?.transfer?.canReset) && typeof session.resetTransfer === 'function' &&
+          runningSession && !action && !retrievals.get(id)?.running,
         canStop: runningSession },
       updatedAt: new Date().toISOString(),
     };
@@ -217,7 +232,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         const intent = target.searchParams.get('intent');
         if (target.pathname === '/api/session') return send(200, await snapshot(intent));
         const { job } = await current(intent);
-        const delivery = target.pathname.startsWith('/api/product-') ? job.paidFile?.delivery ?? { available: false } : savedDelivery(job.outcome);
+        const delivery = target.pathname.startsWith('/api/product-') ? job.paidFile?.delivery ?? { available: false } : jobDelivery(job);
         if (['/api/preview', '/api/product-preview'].includes(target.pathname)) return send(200, await preview(delivery));
         const handle = await savedFile(delivery);
         const filename = delivery.name.replace(/[^A-Za-z0-9_. -]/g, '_').slice(0, 120) || 'response.bin';
@@ -230,12 +245,14 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         } finally { await handle.close(); }
         return;
       }
-      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve', '/api/facilitator'].includes(target.pathname))
+      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve', '/api/reset-transfer', '/api/facilitator', '/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname))
         throw problem('Unknown commerce workspace action.', 404);
       if (!origins.has(req.headers.origin)) throw problem('Same-origin operator action required.', 403);
       const value = await input(req);
       const allowed = target.pathname === '/api/execute' ? ['intent', 'reviewId'] :
-        target.pathname === '/api/retrieve' ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
+        ['/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname) ?
+          ['intent', 'transaction', 'expectedRequestSha256', 'expectedAttemptId', 'expectedConfigSha256'] :
+        ['/api/retrieve', '/api/reset-transfer'].includes(target.pathname) ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
       if (Object.keys(value).some(key => !allowed.includes(key))) throw problem('Unknown operator action field.');
       if (target.pathname === '/api/stop') {
         void stopSession().catch(() => {});
@@ -254,14 +271,40 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
       try {
         const { original, job } = await current(value.intent), intent = job.operation.intentId;
         if (original.state !== 'RUNNING') throw problem('The commerce session is not running.', 409);
-        if (target.pathname === '/api/retrieve') {
-          if (typeof session.retrieve !== 'function' || !job.paidFile) throw problem('This operation has no configured paid file.', 409);
+        if (['/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname)) {
+          const original = job.rpcRecovery?.original;
+          if (work || rpcActions.get(intent)?.running) throw problem('Wait for the current buyer or recovery operation.', 409);
+          if (!original || value.expectedAttemptId !== original.attemptId ||
+              value.expectedConfigSha256 !== original.configSha256 ||
+              value.expectedRequestSha256 !== original.expectedRequestSha256 ||
+              !/^[a-f0-9]{64}$/.test(value.transaction ?? ''))
+            throw problem('Refresh this original attempt and select its exact transaction hash.', 409);
+          const verify = target.pathname === '/api/verify-rpc-payment';
+          const method = verify ? 'verifyRpcPayment' : 'recoverRpcResponse';
+          if (typeof session[method] !== 'function' || !(verify ? job.rpcRecovery.canVerify : job.rpcRecovery.canRecover))
+            throw problem('The selected payment or product is not ready for this recovery action.', 409);
+          const selected = { transaction: value.transaction, expectedRequestSha256: value.expectedRequestSha256,
+            expectedAttemptId: value.expectedAttemptId, expectedConfigSha256: value.expectedConfigSha256 };
+          const pending = { running: true, operation: verify ? 'VERIFY_PAYMENT' : 'RECOVER_RESPONSE' };
+          rpcActions.set(intent, pending);
+          pending.promise = Promise.resolve().then(() => session[method](intent, selected))
+            .then(result => { pending.result = result; }, error => { pending.error = commerceErrorCode(error); })
+            .finally(() => { pending.running = false; });
+        } else if (['/api/retrieve', '/api/reset-transfer'].includes(target.pathname)) {
+          const method = target.pathname === '/api/retrieve' ? 'retrieve' : 'resetTransfer';
+          if (typeof session[method] !== 'function' || !job.paidFile) throw problem('This operation has no configured paid-file action.', 409);
           if (retrievals.get(intent)?.running) throw problem('This file is already being retrieved.', 409);
           if (value.configSha256 !== job.configSha256 || value.handoffSha256 !== job.paidFile.handoffSha256)
-            throw problem('The selected request or file handoff changed. Refresh before retrieving.', 409);
-          const file = { running: true }; retrievals.set(intent, file);
-          file.promise = Promise.resolve().then(() => session.retrieve(intent)).then(result => { file.result = result; },
-            error => { file.error = commerceErrorCode(error); }).finally(() => { file.running = false; });
+            throw problem('The selected request or file handoff changed. Refresh before changing its download.', 409);
+          if (method === 'resetTransfer') {
+            if (!job.paidFile.transfer?.canReset) throw problem('This order has no idle retained download to clear. Refresh its current state.', 409);
+            const result = await session.resetTransfer(intent);
+            retrievals.set(intent, { running: false, result });
+          } else {
+            const file = { running: true }; retrievals.set(intent, file);
+            file.promise = Promise.resolve().then(() => session.retrieve(intent)).then(result => { file.result = result; },
+              error => { file.error = commerceErrorCode(error); }).finally(() => { file.running = false; });
+          }
         } else if (target.pathname === '/api/review') {
           const result = await session.review(intent);
           if (result.exitCode !== 0 || result.original?.mode !== 'OFFLINE_REVIEW')
@@ -296,7 +339,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
           });
         }
       } finally { action = null; }
-      return send(['/api/execute', '/api/retrieve'].includes(target.pathname) ? 202 : 200, await snapshot(value.intent));
+      return send(['/api/execute', '/api/retrieve', '/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname) ? 202 : 200, await snapshot(value.intent));
     } catch (error) {
       if (res.headersSent) { res.destroy(error); return; }
       send(error.status ?? 400, { error: error.code ?? 'COMMERCE_OPERATOR_ERROR', message: error.message });
@@ -323,6 +366,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
 const HELP = `StellarForge commerce browser workspace
 
   node commerce-console.mjs start --directory /private/merchant-session [--port 8426]
+                            [--finality-node /absolute/trusted-node]
 
 Initialize the session with commerce-cli.mjs init first.
 Open the complete local operator URL printed here. Review and select requests
@@ -335,13 +379,14 @@ export async function main(args = process.argv.slice(2)) {
   const [command, ...rest] = args, opts = {};
   if (command !== 'start' || rest.length % 2) throw new Error(HELP);
   for (let i = 0; i < rest.length; i += 2) {
-    if (!['--directory', '--port'].includes(rest[i]) || Object.hasOwn(opts, rest[i]) || !rest[i + 1]) throw new Error(HELP);
+    if (!['--directory', '--port', '--finality-node'].includes(rest[i]) || Object.hasOwn(opts, rest[i]) || !rest[i + 1]) throw new Error(HELP);
     opts[rest[i]] = rest[i + 1];
   }
   if (!opts['--directory'] || opts['--port'] !== undefined && !/^[0-9]{1,5}$/.test(opts['--port'])) throw new Error(HELP);
   const port = opts['--port'] === undefined ? 8426 : Number(opts['--port']);
   if (port > 65535) throw new Error(HELP);
-  const session = await openCommerce(resolve(opts['--directory']));
+  const session = await openCommerce(resolve(opts['--directory']),
+    { finalityNode: opts['--finality-node'] });
   let consoleSession, ending;
   const stop = () => ending ??= (async () => {
     const result = await completeCommerceShutdown(session,

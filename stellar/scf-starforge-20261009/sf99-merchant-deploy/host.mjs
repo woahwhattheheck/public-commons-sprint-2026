@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { readSellerConfig } from '../sf30-seller-sdk/serve.mjs';
 import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { readCheckout } from '../sf101-merchant-receiver/checkout-config.mjs';
+import { prepareRetainedRelease, checkRetainedRelease } from './retained-release.mjs';
 
 export const SCHEMA = 'stellar-forge.merchant-host.v1';
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
@@ -54,6 +55,9 @@ export const shellWord = value => "'" + String(value).replaceAll("'", "'\\''") +
 // systemd expands environment variables in arguments, not the executable token.
 const commandLine = args => args.map((value, index) => unitWord(value, index > 0)).join(' ');
 const regex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Caddy quoted tokens preserve backslashes except escaped quotes. JSON string
+// quoting would double the regex escapes and change exact dotted path matches.
+const caddyToken = value => '"' + value.replaceAll('"', '\\"') + '"';
 const routePattern = binding => '^' + binding.segments.map(segment => segment.startsWith(':') ? '[^/]+' : regex(segment)).join('/') + '$';
 
 export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
@@ -61,23 +65,35 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
   const raw = await json(planFile);
   keys(raw, ['schema','merchant','serviceUser','serviceGroup','kind','mode','config','privateRoot',
     'environmentFile','facilitator','handlers','upstreams','allowLoopbackUpstream','ports','runtime',
-    'delivery','maxInFlight','drainGraceMs','historyDays'], 'host plan');
+    'delivery','maxInFlight','drainGraceMs','historyDays','release','discovery'], 'host plan');
   need(raw.schema === SCHEMA && /^[a-z][a-z0-9-]{0,39}$/.test(raw.merchant ?? ''), 'Host schema and merchant ID required');
   need(/^[a-z_][a-z0-9_-]{0,30}$/.test(raw.serviceUser ?? '') && raw.serviceUser !== 'root', 'Existing unprivileged serviceUser required');
   const group = raw.serviceGroup ?? raw.serviceUser;
   need(/^[a-z_][a-z0-9_-]{0,30}$/.test(group) && group !== 'root', 'Unprivileged serviceGroup required');
-  need(['api','paid-file'].includes(raw.kind) && ['challenge','native'].includes(raw.mode), 'Explicit kind and mode required');
-  const configPath = path(raw.config, 'config'), stateRoot = path(raw.privateRoot, 'privateRoot');
+  need(['api','paid-file','release'].includes(raw.kind) && ['challenge','native'].includes(raw.mode), 'Explicit kind and mode required');
+  const stateRoot = path(raw.privateRoot, 'privateRoot');
   need(!inside(sourceRoot, stateRoot) && !inside(stateRoot, sourceRoot), 'Merchant state must be outside the source release');
+  if (raw.kind === 'release') need(['config','facilitator','handlers','upstreams','allowLoopbackUpstream',
+    'delivery','maxInFlight','drainGraceMs','historyDays'].every(key => raw[key] === undefined),
+    'Retained releases keep their original staged application, payment and lifecycle options');
+  else need(raw.release === undefined && raw.discovery === undefined, 'Release/discovery selections require kind:release');
+  const retained = raw.kind === 'release' ? await prepareRetainedRelease(raw, { stateRoot, sourceRoot }) : null;
+  const configPath = retained?.configPath ?? path(raw.config, 'config');
   const runtime = raw.runtime ?? {}; keys(runtime, ['node','python'], 'runtime');
   const node = path(runtime.node ?? process.execPath, 'Node executable');
   const python = path(runtime.python ?? '/usr/bin/python3', 'Python executable');
-  const ports = raw.ports ?? {}; keys(ports, ['seller','operations','receiver'], 'ports');
-  const sellerPort = integer(ports.seller, 8423, 1024, 65535, 'seller port');
-  const operationsPort = integer(ports.operations, 8424, 1024, 65535, 'operations port');
+  const ports = raw.ports ?? {}; keys(ports, ['seller','operations','receiver','discovery'], 'ports');
+  need(retained ? ports.operations === undefined && ports.receiver === undefined : ports.discovery === undefined,
+    'Select ports for the actual original components of this host kind');
+  need(ports.discovery === undefined || retained?.discovery, 'A discovery port requires the selected original setup');
+  const sellerPort = integer(ports.seller, retained?.port ?? 8423, 1024, 65535, 'seller port');
+  need(!retained || sellerPort === retained.port, 'Seller port must match the immutable release runtime');
+  const operationsPort = retained ? null : integer(ports.operations, 8424, 1024, 65535, 'operations port');
   const receiverPort = integer(ports.receiver, 8472, 1024, 65535, 'receiver port');
-  need(new Set([sellerPort, operationsPort, ...(raw.kind === 'paid-file' ? [receiverPort] : [])]).size ===
-    (raw.kind === 'paid-file' ? 3 : 2), 'Component ports must differ');
+  const discoveryPort = retained?.discovery ? integer(ports.discovery, 8473, 1024, 65535, 'discovery port') : null;
+  const componentPorts = [sellerPort, operationsPort, raw.kind === 'paid-file' ? receiverPort : null, discoveryPort]
+    .filter(value => value !== null);
+  need(new Set(componentPorts).size === componentPorts.length, 'Component ports must differ');
   const maxInFlight = integer(raw.maxInFlight, 64, 1, 1024, 'maxInFlight');
   const drainGraceMs = integer(raw.drainGraceMs, 60000, 1000, 300000, 'drainGraceMs');
   const historyDays = integer(raw.historyDays, 90, 1, 365, 'historyDays');
@@ -87,7 +103,7 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
   need(!(raw.handlers && raw.upstreams), 'Choose handlers or upstreams');
   need(raw.allowLoopbackUpstream === undefined || typeof raw.allowLoopbackUpstream === 'boolean', 'Invalid allowLoopbackUpstream');
   need(!raw.allowLoopbackUpstream || raw.upstreams, 'Loopback upstream requires bindings');
-  const inputs = [configPath];
+  const inputs = [...new Set([configPath, ...(retained?.inputPaths ?? [])])];
   for (const name of ['handlers','upstreams']) if (raw[name]) inputs.push(path(raw[name], name));
   const checkout = raw.kind === 'paid-file' ? await readCheckout(configPath) : null;
   const config = checkout ? checkout.service : await readSellerConfig(configPath);
@@ -97,17 +113,18 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
     handler: async () => { throw new Error('Deployment preparation does not execute a merchant operation'); },
   })));
   if (!checkout && config.routes.some(route => route.handler || route.admit))
-    need(raw.handlers || raw.upstreams, 'Configured application exports require handlers or upstream bindings');
+    need(retained || raw.handlers || raw.upstreams, 'Configured application exports require handlers or upstream bindings');
+  const facilitator = retained?.facilitator ?? raw.facilitator;
   if (raw.mode === 'native') {
-    need(raw.facilitator, 'Native deployment requires the selected facilitator');
-    https(raw.facilitator.endsWith('/') ? raw.facilitator : raw.facilitator + '/', 'facilitator');
+    need(facilitator, 'Native deployment requires the selected facilitator');
+    https(facilitator.endsWith('/') ? facilitator : facilitator + '/', 'facilitator');
     for (const route of compiled.routes) for (const terms of route.offer.accepts)
       need(!/UNVERIFIED_DEMO_|REPLACE_|YOUR_ASSET|YOUR_RECIPIENT/i.test(terms.asset + ' ' + terms.payTo),
         'Replace demonstration payment markers with the merchant\'s approved native terms');
   } else need(raw.facilitator === undefined, 'Challenge mode does not select a facilitator');
-  const outbox = checkout?.outbox ?? join(stateRoot, 'outbox');
+  const outbox = retained ? null : checkout?.outbox ?? join(stateRoot, 'outbox');
   const receiverState = checkout?.state ?? null;
-  need(inside(stateRoot, outbox) && outbox !== stateRoot && (!receiverState ||
+  need(retained || inside(stateRoot, outbox) && outbox !== stateRoot && (!receiverState ||
     inside(stateRoot, receiverState) && receiverState !== stateRoot && !inside(outbox, receiverState) && !inside(receiverState, outbox)),
     'Original outbox and receiver store must be separate descendants of privateRoot');
   let delivery = raw.delivery;
@@ -132,7 +149,9 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
     !inputs.includes(environmentFile), 'Keep environmentFile outside source, state and selected configuration files');
   const prefix = 'stellar-forge-' + raw.merchant;
   const entry = name => join(sourceRoot, BASE + name);
-  const sellerArgs = checkout ? [node, entry('sf101-merchant-receiver/checkout.mjs'), 'serve', '--config', configPath,
+  const sellerArgs = retained ? [node, entry('sf82-seller-pilot/release-cli.mjs'), 'run',
+    '--store', retained.release.store, '--expect', retained.release.expectedGeneration] :
+    checkout ? [node, entry('sf101-merchant-receiver/checkout.mjs'), 'serve', '--config', configPath,
     '--port', sellerPort, '--operations-port', operationsPort, ...(raw.mode === 'native' ? ['--facilitator', raw.facilitator] : [])] :
     raw.mode === 'native' ? [node, entry('sf30-seller-sdk/operations/merchant-launch.mjs'), '--config', configPath,
       '--state', outbox, '--facilitator', raw.facilitator, '--port', sellerPort, '--operations-port', operationsPort,
@@ -145,7 +164,10 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
       ...(raw.handlers ? ['--handlers', raw.handlers] : [])];
   need(raw.mode !== 'challenge' || !raw.upstreams, 'Challenge API profile supports original static/configured handlers; use native for upstream bindings');
   const services = [{ role: 'seller', unit: prefix + '-seller.service', args: sellerArgs.map(String),
-    stopSeconds: Math.ceil(drainGraceMs / 1000) + 20 }];
+    stopSeconds: retained ? 140 : Math.ceil(drainGraceMs / 1000) + 20 }];
+  if (retained?.discovery) services.push({ role: 'discovery', unit: prefix + '-discovery.service',
+    args: [node, entry('sf82-seller-pilot/release-cli.mjs'), 'catalog-run', '--store', retained.release.store,
+      '--setup', retained.discovery.directory, '--port', String(discoveryPort), '--no-workspace'], stopSeconds: 30 });
   if (checkout) services.push({ role: 'receiver', unit: prefix + '-receiver.service',
     args: [python, entry('sf101-merchant-receiver/receiver.py'), 'serve', '--state', receiverState,
       '--host','127.0.0.1','--port',String(receiverPort),'--secret-env','SF98_WEBHOOK_SECRET'],
@@ -154,17 +176,27 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
     args: [node, entry('sf98-merchant-delivery/worker.mjs'),'run','--state',outbox,'--url',delivery.url,
       '--allow-host',delivery.allowHost,'--secret-env','SF98_WEBHOOK_SECRET','--limit',String(delivery.limit),
       '--concurrency',String(delivery.concurrency),'--poll-ms',String(delivery.pollMs),'--timeout-ms',String(delivery.timeoutMs)], stopSeconds: 20 });
-  const sourceFiles = [...new Set(services.flatMap(s => [s.args[1], ...(s.initialize ? [s.initialize[1]] : [])]))];
-  const inputFiles = await Promise.all(inputs.map(async file => ({ path: file, sha256: hash(await bytes(file)) })));
+  const sourceFiles = [...new Set([...services.flatMap(s => [s.args[1], ...(s.initialize ? [s.initialize[1]] : [])]),
+    ...(retained?.sourceFiles ?? [])])];
+  const inputFiles = await Promise.all(inputs.map(async file => ({ path: file, sha256: hash(await bytes(file, 8 * 1024 * 1024)) })));
   const sourceEntries = await Promise.all(sourceFiles.map(async file => ({ path: file, sha256: hash(await bytes(file, 4 * 1024 * 1024)) })));
   const routes = compiled.routes.map(route => ({ id: route.id, method: route.method, path: route.path,
     pattern: routePattern(route.binding), samplePath: route.binding.samplePath }));
   if (checkout) need(!routes.some(r => ['/internal/x402-events','/sf98/events','/deliver'].includes(r.path) ||
     r.path.startsWith('/deliver/')), 'Checkout route collides with its original file delivery routes');
+  if (retained?.discovery) {
+    const published = [...retained.discovery.paths, retained.discovery.sourceMatchPath];
+    need(!routes.some(route => published.some(value => new RegExp(route.pattern).test(value))),
+      'Paid merchant routes collide with the original public discovery or offer export path');
+    need(retained.discovery.sourceMatchPath === '/_seller/offers' ||
+      ![...DOC_PATHS, '/_seller/health','/_seller/ready','/api/snapshot','/healthz','/v1/command','/delivery.json']
+        .includes(retained.discovery.sourceMatchPath), 'Discovery offer alias collides with an original host interface');
+  }
   return { schema: SCHEMA, merchant: raw.merchant, kind: raw.kind, mode: raw.mode, sourceRoot,
     serviceUser: raw.serviceUser, serviceGroup: group, configPath, stateRoot, environmentFile,
     node, python, publicOrigin: publicUrl.origin, hostname: publicUrl.hostname, sellerPort, operationsPort,
     receiverPort: checkout ? receiverPort : null, outbox, receiverState, delivery: delivery ?? null,
+    ...(retained ? { release: retained.release, discovery: retained.discovery, discoveryPort } : {}),
     target: prefix + '.target', services, routes, inputFiles, sourceEntries, planFile };
 }
 
@@ -172,8 +204,13 @@ const DOC_PATHS = ['/_seller/offers','/_seller/docs','/_seller/docs/','/_seller/
   '/_seller/developer/browser.mjs','/_seller/developer/request.mjs','/_seller/developer/style.css',
   '/_seller/client/seller-client.mjs','/_seller/client/seller-client.d.mts','/_seller/client/README.md','/_seller/client/package.json'];
 export function caddyfile(p) {
-  const blocks = p.routes.map((r, i) => `  @route${i} {\n    method ${r.method}\n    path_regexp route${i} ${JSON.stringify(r.pattern)}\n  }\n  handle @route${i} {\n    reverse_proxy 127.0.0.1:${p.sellerPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
+  const blocks = p.routes.map((r, i) => `  @route${i} {\n    method ${r.method}\n    path_regexp route${i} ${caddyToken(r.pattern)}\n  }\n  handle @route${i} {\n    reverse_proxy 127.0.0.1:${p.sellerPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
   blocks.push(`  @documentation {\n    method GET HEAD\n    path ${DOC_PATHS.join(' ')}\n  }\n  handle @documentation {\n    reverse_proxy 127.0.0.1:${p.sellerPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
+  if (p.discovery) {
+    blocks.push(`  @discovery {\n    method GET\n    path ${p.discovery.paths.join(' ')}\n  }\n  handle @discovery {\n    reverse_proxy 127.0.0.1:${p.discoveryPort} {\n      header_up Host 127.0.0.1:${p.discoveryPort}\n      header_up -Origin\n      header_up -Sec-Fetch-Site\n      header_up -Authorization\n      header_up -Cookie\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
+    if (p.discovery.sourceMatchPath !== '/_seller/offers') blocks.push(
+      `  @offerExport {\n    method GET\n    path_regexp offerExport ${caddyToken('^' + regex(p.discovery.sourceMatchPath) + '$')}\n  }\n  handle @offerExport {\n    rewrite * /_seller/offers\n    reverse_proxy 127.0.0.1:${p.sellerPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
+  }
   if (p.receiverState) blocks.push(
     `  @settledEvent {\n    method POST\n    path /internal/x402-events\n  }\n  handle @settledEvent {\n    rewrite * /sf98/events\n    reverse_proxy 127.0.0.1:${p.receiverPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`,
     `  @approvedFile {\n    method GET\n    path_regexp approvedFile ^/deliver/[A-Za-z0-9._:-]{1,80}$\n  }\n  handle @approvedFile {\n    reverse_proxy 127.0.0.1:${p.receiverPort} {\n      transport http {\n        keepalive off\n      }\n    }\n  }`);
@@ -182,7 +219,8 @@ export function caddyfile(p) {
 
 export function serviceUnit(p, s, bundle) {
   // Start receiver -> sender -> seller; stop seller -> sender -> receiver.
-  const predecessor = s.role === 'seller' && p.delivery ? p.services.find(x => x.role === 'delivery')?.unit :
+  const predecessor = s.role === 'seller' && p.discovery ? p.services.find(x => x.role === 'discovery')?.unit :
+    s.role === 'seller' && p.delivery ? p.services.find(x => x.role === 'delivery')?.unit :
     s.role === 'delivery' && p.receiverState ? p.services.find(x => x.role === 'receiver')?.unit : null;
   const check = [p.node, join(p.sourceRoot, BASE + 'sf99-merchant-deploy/cli.mjs'), 'check', '--bundle', bundle];
   return `[Unit]\nDescription=Stellar Forge ${p.merchant} ${s.role}\nWants=network-online.target\nAfter=network-online.target${predecessor ? ' ' + predecessor : ''}\nPartOf=${p.target}\n\n[Service]\nType=exec\nUser=${p.serviceUser}\nGroup=${p.serviceGroup}\nWorkingDirectory=${(/\s$/.test(p.sourceRoot) ? p.sourceRoot + '/.' : p.sourceRoot).replaceAll('%', '%%')}\nUMask=0077\n${p.environmentFile ? 'EnvironmentFile=' + p.environmentFile.replaceAll('%', '%%') + '\n' : ''}Environment=PYTHONDONTWRITEBYTECODE=1\nExecStartPre=${commandLine(check)}\n${s.initialize ? 'ExecStartPre=' + commandLine(s.initialize) + '\n' : ''}ExecStart=${commandLine(s.args)}\nRestart=on-failure\nRestartSec=5\n${s.role === 'delivery' ? 'RestartPreventExitStatus=75\n' : ''}KillMode=mixed\nTimeoutStopSec=${s.stopSeconds}\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nProtectHome=read-only\nReadWritePaths=${unitWord(p.stateRoot)}\n\n[Install]\nWantedBy=${p.target}\n`;
@@ -224,12 +262,13 @@ export async function checkBundle(bundle) {
   }
   for (const item of [...p.inputFiles, ...p.sourceEntries]) {
     path(item.path, 'retained input');
-    need(hash(await bytes(item.path, 4 * 1024 * 1024)) === item.sha256, 'Source/configuration changed; regenerate the host bundle: ' + item.path);
+    need(hash(await bytes(item.path, 8 * 1024 * 1024)) === item.sha256, 'Source/configuration changed; regenerate the host bundle: ' + item.path);
   }
   if (p.environmentFile) {
     const env = await lstat(p.environmentFile);
     need(env.isFile() && !env.isSymbolicLink() && (env.mode & 0o077) === 0,
       'Use a private regular environmentFile with no group or world access');
   }
+  if (p.kind === 'release') await checkRetainedRelease(p);
   return p;
 }

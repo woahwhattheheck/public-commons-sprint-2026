@@ -1,7 +1,7 @@
 // MIT. One operator session over the original merchant, inbox and buyer runtimes.
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
-import { mkdir, lstat, open, realpath, rm } from 'node:fs/promises';
+import { access, mkdir, lstat, open, realpath, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -16,11 +16,14 @@ import { config as readBuyer, execution } from '../sf88-operator-buyer-cli/confi
 import { absolute, readPrivateFile, parseJson, inspectOperatorConfig } from '../sf103-native-buyer-signer/operator.mjs';
 import { readCheckout, compileCheckout } from '../sf101-merchant-receiver/checkout-config.mjs';
 import { startCheckout } from '../sf101-merchant-receiver/checkout.mjs';
-import { readPurchaseInput, freezePurchase, inspectCommercePurchase, retrieveCommercePurchase } from './commerce-purchase.mjs';
+import { readPurchaseInput, freezePurchase, inspectCommercePurchase, retrieveCommercePurchase, resetCommercePurchase } from './commerce-purchase.mjs';
 import { preparePythonCommerce, savePythonCommerce, readPythonCommerce,
   describePythonCommerce, openPythonCommerce } from './commerce-python.mjs';
 import { readUpstreamCommerce, retainUpstreamCommerce, openUpstreamCommerce,
   describeUpstreamCommerce } from './commerce-upstream.mjs';
+import { readJsonrpcCommerce, retainJsonrpcCommerce, describeJsonrpcCommerce,
+  openJsonrpcCommerce } from './commerce-jsonrpc.mjs';
+import { createJsonrpcCommerceRecovery } from './commerce-jsonrpc-recovery.mjs';
 
 const PLAN = 'stellar-forge.commerce-plan.v1';
 const SESSION = 'stellar-forge.commerce-session.v1';
@@ -81,15 +84,15 @@ function plan(value) {
   fields(value, ['schema', 'seller', 'buyers', 'operationsPort', 'operationControls'], 'COMMERCE_PLAN_INVALID');
   need(value.schema === PLAN && Array.isArray(value.buyers) && value.buyers.length >= 1 &&
     value.buyers.length <= 64, 'COMMERCE_PLAN_BUYERS_REQUIRED');
-  const seller = fields(value.seller, ['config', 'checkoutConfig', 'python', 'handlers', 'upstreams',
+  const seller = fields(value.seller, ['config', 'checkoutConfig', 'python', 'jsonrpc', 'handlers', 'upstreams',
     'allowLoopbackUpstream', 'availabilityDirectory', 'port', 'facilitator', 'facilitatorConfig'], 'COMMERCE_SELLER_INVALID');
-  need([seller.config, seller.checkoutConfig, seller.python].filter(Boolean).length === 1,
+  need([seller.config, seller.checkoutConfig, seller.python, seller.jsonrpc].filter(Boolean).length === 1,
     'COMMERCE_ONE_SELLER_CONFIGURATION_REQUIRED');
-  absolute(seller.checkoutConfig ?? seller.python ?? seller.config);
-  need(!(seller.checkoutConfig || seller.python) || seller.handlers === undefined, 'COMMERCE_APPLICATION_USES_ORIGINAL_HANDLERS');
+  absolute(seller.checkoutConfig ?? seller.python ?? seller.jsonrpc ?? seller.config);
+  need(!(seller.checkoutConfig || seller.python || seller.jsonrpc) || seller.handlers === undefined, 'COMMERCE_APPLICATION_USES_ORIGINAL_HANDLERS');
   need(seller.upstreams === undefined || seller.config && seller.handlers === undefined,
     'COMMERCE_UPSTREAM_USES_CONFIGURED_APPLICATION');
-  need(seller.allowLoopbackUpstream === undefined || seller.upstreams !== undefined &&
+  need(seller.allowLoopbackUpstream === undefined || (seller.upstreams !== undefined || seller.jsonrpc !== undefined) &&
     typeof seller.allowLoopbackUpstream === 'boolean', 'COMMERCE_UPSTREAM_LOOPBACK_INVALID');
   need(value.operationControls === undefined || typeof value.operationControls === 'boolean',
     'COMMERCE_OPERATION_CONTROLS_INVALID');
@@ -105,7 +108,7 @@ function plan(value) {
     return { ...item };
   });
   return { seller: { config: seller.config ?? null, checkoutConfig: seller.checkoutConfig ?? null, handlers: seller.handlers ?? null,
-    python: seller.python ?? null,
+    python: seller.python ?? null, jsonrpc: seller.jsonrpc ?? null,
     upstreams: seller.upstreams ?? null, allowLoopbackUpstream: seller.allowLoopbackUpstream === true,
     availabilityDirectory: seller.availabilityDirectory === undefined ? null :
       validateAvailabilityDirectory(seller.availabilityDirectory),
@@ -122,7 +125,9 @@ export async function initializeCommerce({ planFile, directory }) {
   const checkoutRaw = input.seller.checkoutConfig ? await readPrivateFile(input.seller.checkoutConfig) : null;
   const checkout = checkoutRaw ? compileCheckout(parseJson(checkoutRaw)) : null;
   const python = input.seller.python ? await preparePythonCommerce(input.seller.python) : null;
-  const seller = checkout?.service ?? python?.compiled.service ?? await readSellerConfig(input.seller.config);
+  const jsonrpc = input.seller.jsonrpc ? await readJsonrpcCommerce(input.seller.jsonrpc,
+    { allowLoopback: input.seller.allowLoopbackUpstream }) : null;
+  const seller = checkout?.service ?? python?.compiled.service ?? jsonrpc?.service ?? await readSellerConfig(input.seller.config);
   need(typeof seller.publicOrigin === 'string', 'COMMERCE_MERCHANT_PUBLIC_ORIGIN_REQUIRED');
   const upstream = input.seller.upstreams ? await readUpstreamCommerce(input.seller.upstreams, seller,
     {allowLoopback:input.seller.allowLoopbackUpstream}) : null;
@@ -166,6 +171,7 @@ export async function initializeCommerce({ planFile, directory }) {
     await writeNew(join(directory, 'seller.json'), seller);
     const pythonSnapshot = python ? await savePythonCommerce(python, directory) : {};
     const upstreamSnapshot = upstream ? await retainUpstreamCommerce(join(directory, 'upstreams.json'), upstream) : null;
+    const jsonrpcSnapshot = jsonrpc ? await retainJsonrpcCommerce(join(directory, 'jsonrpc.json'), jsonrpc) : null;
     const sellerBytes = await readPrivateFile(join(directory, 'seller.json'), 1048576);
     const queueRoot = join(directory, 'inbox');
     const facilitatorPath = facilitatorConfig ? join(directory, 'facilitator.json') : null;
@@ -188,6 +194,8 @@ export async function initializeCommerce({ planFile, directory }) {
         ...pythonSnapshot,
         upstreams: upstreamSnapshot?.file ?? null,
         ...(upstreamSnapshot ? {upstreamsSha256:upstreamSnapshot.sha256} : {}),
+        jsonrpc: jsonrpcSnapshot?.file ?? null,
+        ...(jsonrpcSnapshot ? { jsonrpcSha256: jsonrpcSnapshot.sha256 } : {}),
         checkoutConfig: checkoutPath,
         ...(checkoutPath ? { checkoutConfigSha256: sha(await readPrivateFile(checkoutPath)) } : {}),
         facilitatorConfig: facilitatorPath,
@@ -215,10 +223,10 @@ async function readSession(directory) {
     'COMMERCE_MERCHANT_CONFIG_CHANGED');
   if (saved.seller.availabilityDirectory !== undefined && saved.seller.availabilityDirectory !== null)
     validateAvailabilityDirectory(saved.seller.availabilityDirectory);
-  need(!(saved.seller.python && saved.seller.checkoutConfig) &&
-    (!(saved.seller.python || saved.seller.checkoutConfig) || !saved.seller.handlers),
+  need([saved.seller.python, saved.seller.checkoutConfig, saved.seller.jsonrpc].filter(Boolean).length <= 1 &&
+    (!(saved.seller.python || saved.seller.checkoutConfig || saved.seller.jsonrpc) || !saved.seller.handlers),
     'COMMERCE_ONE_MERCHANT_APPLICATION_REQUIRED');
-  need(!saved.seller.upstreams || !saved.seller.python && !saved.seller.checkoutConfig && !saved.seller.handlers &&
+  need(!saved.seller.upstreams || !saved.seller.python && !saved.seller.checkoutConfig && !saved.seller.jsonrpc && !saved.seller.handlers &&
     saved.seller.upstreams === join(directory, 'upstreams.json') &&
     /^[a-f0-9]{64}$/.test(saved.seller.upstreamsSha256 ?? ''),
   'COMMERCE_UPSTREAM_SNAPSHOT_INVALID');
@@ -226,6 +234,11 @@ async function readSession(directory) {
     'COMMERCE_UPSTREAM_LOOPBACK_INVALID');
   const upstream = saved.seller.upstreams ? await readUpstreamCommerce(saved.seller.upstreams, parseJson(sellerBytes),
     {allowLoopback:saved.seller.allowLoopbackUpstream === true, expectedSha256:saved.seller.upstreamsSha256}) : null;
+  need(!saved.seller.jsonrpc || saved.seller.jsonrpc === join(directory, 'jsonrpc.json') &&
+    /^[a-f0-9]{64}$/.test(saved.seller.jsonrpcSha256 ?? ''), 'COMMERCE_JSONRPC_SNAPSHOT_INVALID');
+  const jsonrpc = saved.seller.jsonrpc ? await readJsonrpcCommerce(saved.seller.jsonrpc,
+    { expectedConfig: parseJson(sellerBytes), expectedSha256: saved.seller.jsonrpcSha256,
+      allowLoopback: saved.seller.allowLoopbackUpstream === true }) : null;
   need(saved.operationControls === undefined || typeof saved.operationControls === 'boolean',
     'COMMERCE_OPERATION_CONTROLS_INVALID');
   need(!saved.operationControls || upstream &&
@@ -249,15 +262,16 @@ async function readSession(directory) {
       'COMMERCE_HANDOFF_PATH_CHANGED');
     await inspectCommercePurchase(entry, jobs.find(job => job.operation.intentId === entry.intentId));
   }
-  return { saved, queue, jobs, python, upstream };
+  return { saved, queue, jobs, python, upstream, jsonrpc };
 }
 export async function inspectCommerce(directory) {
-  const { saved, jobs, python, upstream } = await readSession(directory);
+  const { saved, jobs, python, upstream, jsonrpc } = await readSession(directory);
   return { schema: SESSION, state: 'SAVED_SESSION', directory,
     sellerConfig: saved.seller.config, sellerPort: saved.seller.port,
     availabilityDirectory: saved.seller.availabilityDirectory ?? null,
     python: python ? describePythonCommerce(python) : null,
     upstreams: describeUpstreamCommerce(upstream), operationControls: saved.operationControls === true,
+    jsonrpc: describeJsonrpcCommerce(jsonrpc),
     facilitator: saved.seller.facilitator ?? { config: saved.seller.facilitatorConfig },
     buyers: await Promise.all(jobs.map(async job => ({ ...job,
       paidFile: await inspectCommercePurchase(saved.buyers.find(entry => entry.intentId === job.operation.intentId), job) }))) };
@@ -364,8 +378,11 @@ async function signerEnvironment(saved, job, environment) {
 }
 
 /** Trusted embedding may supply an already configured original nativeFactory. */
-export async function openCommerce(directory, { nativeFactory, environment = process.env, purchaseFetch } = {}) {
+export async function openCommerce(directory, { nativeFactory, environment = process.env, purchaseFetch,
+  finalityNode = process.execPath } = {}) {
   const { saved, queue, jobs, python: pythonApplication } = await readSession(directory);
+  absolute(finalityNode);
+  await access(finalityNode, constants.X_OK);
   need(nativeFactory === undefined || typeof nativeFactory === 'function', 'COMMERCE_NATIVE_FACTORY_INVALID');
   need(purchaseFetch === undefined || typeof purchaseFetch === 'function', 'COMMERCE_PURCHASE_TRANSPORT_INVALID');
   need(!nativeFactory || !saved.seller.facilitator && !saved.seller.facilitatorConfig, 'COMMERCE_ONE_FACILITATOR_REQUIRED');
@@ -377,10 +394,10 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     const client = new HTTPFacilitatorClient({ url: endpoint.url });
     nativeFactory = compiled => createNativeSellerServer(compiled, { facilitatorClient: client });
   }
-  let seller, operations, checkoutSession, ownedFacilitator, python, upstream, closing, active;
+  let seller, operations, checkoutSession, ownedFacilitator, python, upstream, jsonrpc, jsonrpcRecovery, closing, active;
   let state = 'STARTING';
   const controller = new AbortController();
-  const pending = new Set(), activeRetrievals = new Map();
+  const pending = new Set(), activeRetrievals = new Map(), activeRpcActions = new Map();
   const waitForIdle = async ({ sharedOnly = false } = {}) => {
     need(state === 'STOPPING' || state === 'STOPPED', 'COMMERCE_DRAIN_REQUIRED');
     const native = ownedFacilitator ?? seller?.facilitator;
@@ -418,14 +435,26 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     catch (error) { failures.push(error); }
     const traffic = operations?.observer.snapshot() ?? null;
     try { await (checkoutSession ? checkoutSession.close() : operations?.close()); } catch (error) { failures.push(error); }
+    let jsonrpcShutdown = null;
+    if (jsonrpc) try {
+      await jsonrpc.close();
+      jsonrpcShutdown = { closed: true, rpc: jsonrpc.snapshot().rpc };
+    } catch (error) { failures.push(error); }
     state = 'STOPPED';
     need(failures.length === 0, 'COMMERCE_SHUTDOWN_INCOMPLETE');
-    return { state, shutdown, python: pythonShutdown, upstreams: upstreamShutdown,
+    return { state, shutdown, python: pythonShutdown, upstreams: upstreamShutdown, jsonrpc: jsonrpcShutdown,
       drained: shutdown?.drained !== false && shutdown?.forcedClose !== true && pythonShutdown?.clean !== false &&
         (upstreamShutdown ?? []).every(result => result.drained !== false),
       traffic, buyers: await queue.list() };
   })();
   try {
+    if (saved.seller.jsonrpc) {
+      jsonrpc = await openJsonrpcCommerce(saved.seller.jsonrpc, {
+        expectedConfig: config, expectedSha256: saved.seller.jsonrpcSha256,
+        allowLoopback: saved.seller.allowLoopbackUpstream === true, environment,
+      });
+      config = jsonrpc.config; handlers = jsonrpc.handlers;
+    }
     if (saved.seller.upstreams) {
       ({application:upstream} = await openUpstreamCommerce(saved.seller.upstreams, config, {
         allowLoopback:saved.seller.allowLoopbackUpstream === true,
@@ -477,6 +506,7 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       seller.operationControl = upstream.operationControl;
       seller.invalidateUpstreamCache = upstream.invalidateCache;
     }
+    if (jsonrpc) seller.upstreamSnapshot = jsonrpc.snapshot;
     for (const job of jobs) {
       const merchant = bindMerchantPurchase(seller.compiled, job);
       await inspectCommercePurchase(saved.buyers.find(entry => entry.intentId === job.operation.intentId), { ...job, merchant });
@@ -484,11 +514,14 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     operations ??= await startSellerOperations(seller, { port: saved.operationsPort,
       historyDirectory: join(directory, 'usage'), historyRetentionDays: 90,
       operationControls: saved.operationControls === true });
+    if (jsonrpc) jsonrpcRecovery = createJsonrpcCommerceRecovery({ saved, queue, application: jsonrpc,
+      availability: seller.availability, environment, node: finalityNode, signal: controller.signal });
     state = 'RUNNING';
     const status = async () => ({ schema: SESSION, state, directory,
       seller: { url: seller.url, publicOrigin: config.publicOrigin, mode: seller.mode,
         health: seller.url + '/_seller/health', docs: seller.url + '/_seller/docs', lifecycle: seller.lifecycle.snapshot(),
         ...(upstream ? { upstreams: upstream.snapshot() } : {}),
+        ...(jsonrpc ? { jsonrpc: jsonrpc.snapshot().rpc } : {}),
         ...(python ? { python: python.status() } : {}) },
       facilitator: (ownedFacilitator ?? seller.facilitator)?.status() ?? { mode: saved.seller.facilitator ? 'EXISTING_HTTP_FACILITATOR' :
         nativeFactory ? 'TRUSTED_NATIVE_EMBEDDING' : 'NOT_CONFIGURED' },
@@ -500,7 +533,8 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       buyers: await Promise.all((await queue.list()).map(async job => {
         const bound = { ...job, merchant: bindMerchantPurchase(seller.compiled, job) };
         return { ...bound, paidFile: await inspectCommercePurchase(
-          saved.buyers.find(entry => entry.intentId === job.operation.intentId), bound) };
+          saved.buyers.find(entry => entry.intentId === job.operation.intentId), bound),
+          ...(jsonrpcRecovery ? { rpcRecovery: await jsonrpcRecovery.inspect(bound) } : {}) };
       })),
     });
     const jobFor = async intentId => {
@@ -509,7 +543,29 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       need(saved.buyers.some(entry => entry.intentId === intentId), 'COMMERCE_INTENT_NOT_IN_SESSION');
       return { ...job, merchant: bindMerchantPurchase(seller.compiled, job) };
     };
+    const fileAction = (intentId, operation) => {
+      need(!activeRetrievals.has(intentId), 'COMMERCE_FILE_RETRIEVAL_BUSY');
+      const work = (async () => {
+        const job = await jobFor(intentId), entry = saved.buyers.find(item => item.intentId === intentId);
+        need(!controller.signal.aborted, 'COMMERCE_INTERRUPTED');
+        return operation(entry, job);
+      })();
+      pending.add(work); activeRetrievals.set(intentId, work);
+      return work.finally(() => { pending.delete(work); activeRetrievals.delete(intentId); });
+    };
+    const rpcAction = (intentId, method, selection) => {
+      need(jsonrpcRecovery && !activeRpcActions.has(intentId), 'COMMERCE_RPC_RECOVERY_BUSY');
+      const work = (async () => {
+        const job = await jobFor(intentId);
+        need(!controller.signal.aborted, 'COMMERCE_INTERRUPTED');
+        return jsonrpcRecovery[method](job, selection);
+      })();
+      pending.add(work); activeRpcActions.set(intentId, work);
+      return work.finally(() => { pending.delete(work); activeRpcActions.delete(intentId); });
+    };
     return Object.freeze({ seller, operations, status, close, waitForIdle,
+      verifyRpcPayment: (intentId, selection) => rpcAction(intentId, 'verify', selection),
+      recoverRpcResponse: (intentId, selection) => rpcAction(intentId, 'recover', selection),
       async probeReadiness() {
         need(state === 'RUNNING', 'COMMERCE_SESSION_NOT_RUNNING');
         const native = ownedFacilitator ?? seller.facilitator;
@@ -548,15 +604,10 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       async cancel(intentId) { await jobFor(intentId); return queue.cancel(intentId); },
       async recover(intentId) { await jobFor(intentId); return queue.recover(intentId); },
       retrieve(intentId) {
-        need(!activeRetrievals.has(intentId), 'COMMERCE_FILE_RETRIEVAL_BUSY');
-        const work = (async () => {
-          const job = await jobFor(intentId), entry = saved.buyers.find(item => item.intentId === intentId);
-          need(!controller.signal.aborted, 'COMMERCE_INTERRUPTED');
-          return retrieveCommercePurchase(entry, job, { environment, signal: controller.signal, fetchImpl: purchaseFetch });
-        })();
-        pending.add(work); activeRetrievals.set(intentId, work);
-        return work.finally(() => { pending.delete(work); activeRetrievals.delete(intentId); });
+        return fileAction(intentId, (entry, job) => retrieveCommercePurchase(entry, job,
+          { environment, signal: controller.signal, fetchImpl: purchaseFetch }));
       },
+      resetTransfer(intentId) { return fileAction(intentId, resetCommercePurchase); },
     });
   } catch (error) {
     await completeCommerceShutdown({ waitForIdle }, close()).catch(() => {});

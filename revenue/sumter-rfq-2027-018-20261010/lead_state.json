@@ -6,8 +6,8 @@
   "buyer_official_notice": "https://scbo.sc.gov/printad?a=69282",
   "buyer_original_document": "https://drive.google.com/file/d/1J_ubcwLrU-bdbGnvEHooerM4R7FrolVB/view",
   "addendum_one": "https://drive.google.com/file/d/1p7WwFwUvGP8BD4wDqRiMb22hVqRzaRHC/view",
-  "response_deadline": "2026-10-23T11:00:00-04:00",
-  "deadline_timezone_basis": "Eastern daylight time inferred from the district location; issuer text states October 23 at 11:00 a.m.",
+  "response_deadline": "2026-10-23T11:00:00",
+  "deadline_timezone_basis": "Literal October 23 at 11:00 a.m. in the issuer documents; no time zone is printed.",
   "rfq_pdf_extracted": true,
   "addendum_pdf_extracted": true,
   "rfq_pdf_sha256": "90dbc9f5507696df56604185857f2b91709451a676ea486b1a659575e5a908c8",
@@ -24,8 +24,8 @@
   "price_hypothesis_usd": 3500,
   "quote_sent": true,
   "quote_status": "NONBINDING_SERVICES_PROPOSAL_SENT_NOT_ACCEPTED",
-  "prepared_product": "Working offline seven-template configuration compiler, source map and demonstration context.",
-  "prepared_product_test": "Seven review copies plus configuration map and handover generated; incomplete-input and create-only journeys executed locally.",
+  "prepared_product": "Persistent staff template and implementation workspace over the original compiler: unlimited reusable records, named project access, source revisions, file custody, sequential review, immutable releases, exact native handover and portable recovery.",
+  "prepared_product_test": "Native issuer-source lifecycle and staff browser handover completed: 9 library templates with the original 7 preserved, Solicitation and Contract source handling, 10 project revisions, 3 retained releases, 2 browser-accepted internal exercise template handovers, and a 4,394,888-byte complete workspace transfer. Concurrent freezes and interrupted-commit custody checked.",
   "platform_configuration_performed": false,
   "vendor_staging_access": false,
   "signed_statement_of_work": false,
@@ -33,5 +33,6 @@
   "cash_received_usd": 0,
   "status": "IMPLEMENTATION_PROPOSAL_SENT_AWAITING_RESPONSE",
   "correspondence_custody": "Private message identifiers, dedup reservation and source scope attachment are recorded in the original internal sales thread, not this public source.",
-  "next_action": "Continue the same partner conversation on an actual response; agree selected templates, authorized platform access, approved content and commercial terms before customer implementation. Do not resend the first introduction."
+  "next_action": "Continue the same partner conversation on an actual response; agree selected templates, authorized platform access, approved content and commercial terms before customer implementation. Do not resend the first introduction.",
+  "warm_lead_follow_up": "Owner contact and direction are required before further outreach once a lead is warm."
 }

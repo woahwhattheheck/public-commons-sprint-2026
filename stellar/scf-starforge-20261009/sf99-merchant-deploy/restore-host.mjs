@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { run as recover } from '../sf101-merchant-recovery/recover.mjs';
 import { checkBundle, generate, prepare, ROOT } from './host.mjs';
+import { restoreRetainedSelections } from './retained-release.mjs';
 
 const SCHEMA = 'stellar-forge.merchant-host-restore.v1';
 const need = (value, message) => { if (!value) throw new Error(message); };
@@ -150,7 +151,7 @@ export async function prepareRestoredHost({ previousBundle, recoveryPlan, snapsh
   await real(stateRoot, 'restored privateRoot', true);
   const configuration = [];
   for (const input of previous.inputFiles) {
-    const current = inputPaths.get(input.path), data = await bytes(current);
+    const current = inputPaths.get(input.path), data = await bytes(current, 8 * 1024 * 1024);
     need(sha(data) === input.sha256, 'Snapshot configuration differs from the selected deployment: ' + input.path);
     configuration.push({ original: input.path, restored: current, originalSha256: input.sha256,
       restoredSha256: input.sha256 });
@@ -188,10 +189,10 @@ export async function prepareRestoredHost({ previousBundle, recoveryPlan, snapsh
     const to = mapped(from, field);
     rewrites.push({ field, from, to }); holder[key] = to;
   };
-  const config = decode(await bytes(configPath));
+  const config = previous.kind === 'release' ? null : decode(await bytes(configPath));
   if (previous.kind === 'paid-file') {
     rewrite(config, 'state', 'checkout.state'); rewrite(config, 'outbox', 'checkout.outbox');
-  } else {
+  } else if (config) {
     for (const [index, route] of config.routes.entries()) {
       if (Object.hasOwn(route, 'responseFile')) rewrite(route, 'responseFile',
         'routes[' + index + '].responseFile', dirname(previous.configPath));
@@ -199,9 +200,14 @@ export async function prepareRestoredHost({ previousBundle, recoveryPlan, snapsh
         'routes[' + index + '].responseAsset.file', dirname(previous.configPath));
     }
   }
-  await writeJson(configPath, config, false);
-  const nextPlan = structuredClone(raw);
-  nextPlan.config = configPath; nextPlan.privateRoot = stateRoot;
+  if (config) await writeJson(configPath, config, false);
+  const nextPlan = previous.kind === 'release' ? restoreRetainedSelections(raw, previous, mapped) : structuredClone(raw);
+  if (previous.kind === 'release') {
+    rewrites.push({ field: 'release.store', from: previous.release.store, to: nextPlan.release.store });
+    if (previous.discovery) rewrites.push({ field: 'discovery.setup', from: previous.discovery.directory,
+      to: nextPlan.discovery.setup });
+  } else nextPlan.config = configPath;
+  nextPlan.privateRoot = stateRoot;
   for (const key of ['handlers', 'upstreams']) if (raw[key]) nextPlan[key] = inputPaths.get(raw[key]);
   if (raw.upstreams) {
     const file = nextPlan.upstreams;
@@ -212,7 +218,7 @@ export async function prepareRestoredHost({ previousBundle, recoveryPlan, snapsh
   // Pin the original resolved executables, including defaults absent from its plan.
   // checkout.python is an executable selection, never a merchant-state reference.
   nextPlan.runtime = { node: previous.node, python: previous.python };
-  for (const item of configuration) item.restoredSha256 = sha(await bytes(item.restored));
+  for (const item of configuration) item.restoredSha256 = sha(await bytes(item.restored, 8 * 1024 * 1024));
   const receiver = previous.kind === 'paid-file' ?
     await rebaseOrders(previous.python, config.state, mappings) : null;
   const planFile = join(destination, 'host-plan.json');

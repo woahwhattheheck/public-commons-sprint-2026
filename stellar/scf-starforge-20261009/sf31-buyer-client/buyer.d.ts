@@ -9,5 +9,5 @@ export class BuyerError extends Error { readonly code:string; readonly paymentSe
 export class X402BuyerClient {
  constructor(args?:{fetchImpl?:typeof fetch;allowLocal?:boolean});
  discover(args:{origin:string;query?:string;filters?:Record<string,string>;limit?:number;offset?:number;signal?:AbortSignal}):Promise<{source:string;resources:unknown[];pagination:Record<string,unknown>;sourceEnvelope:'resources'|'items'}>;
- call(args:{url:string;method?:string;body?:string|Uint8Array;headers?:Record<string,string>;expect:{scheme?:string;network:string;asset:string;payTo:string;maxAtomic:string;paymentFlow?:string;maxTimeoutSeconds?:number};approve:Approver;sign:Signer;signal?:AbortSignal;intentId?:string}):Promise<BuyerResult>;
+ call(args:{url:string;method?:string;body?:string|Uint8Array;headers?:Record<string,string>;expect:{scheme?:string;network:string;asset:string;payTo:string;maxAtomic:string;paymentFlow?:'authorization'|'upfront';maxTimeoutSeconds?:number};approve:Approver;sign:Signer;signal?:AbortSignal;intentId?:string}):Promise<BuyerResult>;
 }

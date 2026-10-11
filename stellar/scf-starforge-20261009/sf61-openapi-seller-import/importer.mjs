@@ -2,6 +2,7 @@
 import { createSellerDiscovery, makePaymentRequiredResponse } from '../sf30-seller-discovery/index.mjs';
 import { adaptOpenApi30Schema, adaptOpenApi31Schema, applyOpenApiDirection } from './schema-compat.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
+import { openApiRequestBody } from './request-body.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const own = (o, k) => Object.hasOwn(o, k);
@@ -191,14 +192,12 @@ function makeOffer(document, selection, refs) {
   const input = { type: 'http', method: method.toUpperCase() };
   if (Object.keys(properties).length) input.querySchema = { type: 'object', properties, required, additionalProperties: false };
   const bodyMethod = ['post', 'put', 'patch'].includes(method);
+  let requestBody;
   if (bodyMethod) {
-    const body = refs.reference(object(operation.requestBody, 'Body-method requestBody'));
-    if (body.required !== true) fail('The seller compiler requires a body: optional request bodies need manual integration');
-    const media = object(body.content?.['application/json'], 'application/json request body');
-    if (media.encoding) fail('Custom body encoding is not supported');
-    input.bodyType = 'json';
-    input.bodySchema = withExample(refs.schema(media.schema), declaredExample(media, refs.reference));
-    if (input.bodySchema.type !== 'object' || !plain(input.bodySchema.properties)) fail('Only JSON object bodies are supported');
+    requestBody = openApiRequestBody(operation,refs);
+    if (!requestBody) fail('Body-method requestBody declaration required');
+    input.bodyType = requestBody.bodyType;
+    input.bodySchema = withExample(requestBody.schema, declaredExample(requestBody.media, refs.reference));
   } else if (operation.requestBody !== undefined) fail('Request bodies on query methods require manual integration');
   const resource = { url: url.href };
   if (selection.serviceName !== undefined) resource.serviceName = selection.serviceName;
@@ -206,6 +205,12 @@ function makeOffer(document, selection, refs) {
   if (operation.tags !== undefined) resource.tags = clone(operation.tags);
   const routeTemplate = pathNames.length ? prefix + path.replace(/\{([^{}]+)\}/g, ':$1') : undefined;
   const seller = createSellerDiscovery({ resource, accepts: selection.accepts, input, routeTemplate });
+  // The body remains a public example. Presence in an actual request follows
+  // the original OpenAPI Request Body Object, independently of its properties.
+  if (requestBody && !requestBody.required) {
+    const schema = seller.extensions.bazaar.schema.properties.input;
+    schema.required = schema.required.filter(name => name !== 'body');
+  }
   // Canonical Bazaar dynamic-route contract: concrete pathParams accompany the
   // colon routeTemplate. Extend only the returned value, not SF30 source.
   if (pathNames.length) {
