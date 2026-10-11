@@ -1934,6 +1934,66 @@ function buildNewCampaignForm() {
   return form;
 }
 
+
+const CREATOR_DRAFT_PREFIX = "creator-pool:work:v1";
+function creatorDraftShape(v) {
+  const d = v && typeof v === "object" ? v : {};
+  return {
+    title: typeof d.title === "string" ? d.title.slice(0, 140) : "",
+    workUrl: typeof d.workUrl === "string" ? d.workUrl.slice(0, 2048) : "",
+    notes: typeof d.notes === "string" ? d.notes.slice(0, 1000) : "",
+  };
+}
+function creatorDraftEqual(a, b) {
+  return JSON.stringify(creatorDraftShape(a)) === JSON.stringify(creatorDraftShape(b));
+}
+function creatorDraftKey(c, actor) {
+  const net = ui.state && ui.state.chainId || "unknown-chain";
+  const pool = ui.state && ui.state.contracts && ui.state.contracts.pool || "unknown-pool";
+  const who = isLocalDemo() ? "demo:" + (actor || ui.actorId || "unknown")
+    : isPublicMode() ? "wallet:" + (Wallet.address || "unconnected").toLowerCase() : "session";
+  return [CREATOR_DRAFT_PREFIX, encodeURIComponent(net),
+    encodeURIComponent(pool.toLowerCase()), encodeURIComponent(c.id),
+    encodeURIComponent(who)].join(":");
+}
+function readCreatorDraft(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && parsed.version === 1 ? creatorDraftShape(parsed.data) : null;
+  } catch { return null; }
+}
+function storeCreatorDraft(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ version: 1,
+      savedAt: new Date().toISOString(), data: creatorDraftShape(data) }));
+    return true;
+  } catch { return false; }
+}
+function removeCreatorDraft(key) {
+  try { localStorage.removeItem(key); } catch {}
+}
+function validCreatorWorkUrl(raw) {
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (value.length < 8 || value.length > 2048) return null;
+  const parsed = safeHttpUrl(value);
+  if (!parsed || parsed.username || parsed.password || !parsed.hostname) return null;
+  const hostname = parsed.hostname.toLowerCase();
+  if (hostname === "localhost" || hostname.endsWith(".local") ||
+    hostname === "[::1]" || /^127\./.test(hostname) || /^10\./.test(hostname) ||
+    /^192\.168\./.test(hostname) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)) return null;
+  return parsed;
+}
+window.addEventListener("beforeunload", (event) => {
+  for (const [key, draft] of ui.drafts) {
+    if (!creatorDraftEqual(draft, readCreatorDraft(key))) {
+      event.preventDefault();
+      event.returnValue = "";
+      break;
+    }
+  }
+});
+
 function buildSubmissionForm(c) {
   const demo = isLocalDemo();
   const pub = isPublicMode();
