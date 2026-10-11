@@ -177,12 +177,16 @@ locations. The generated Compose installation uses that cached image with
 bindings, and the original writable state root. The existing image preparation
 workflow can supply this runtime without a separate fleet package builder.
 
-Use Linux Docker Engine with Docker Compose 2.15.1 or later. The service shares
+Use rootful Linux Docker Engine with Docker Compose 2.15.1 or later. The service shares
 the host network, PID, UTS and user namespaces. Original SF82 release ownership
 records bind the hostname and live process IDs; preserving those identities lets
 the original lock recovery work across container replacement. Numeric UID/GID
 and retained file ownership also stay aligned when the daemon enables remapping.
 The process still runs as the declared non-root user with all capabilities dropped.
+This profile retains the same positive numeric service UID/GID on the real host
+and inside the container. Docker rootless mode has a separate UID/GID mapping,
+so use the rootful Engine context for this profile. The systemd profile runs the
+service directly as its declared non-root host account.
 
 The gateway, workspace and seller slots retain their original loopback addresses.
 The signal-owning Node runtime runs directly, closes its owned native sessions,
@@ -240,5 +244,6 @@ Underlying runtime contracts: [Docker Compose services](https://docs.docker.com/
 [Compose interpolation](https://docs.docker.com/reference/compose-file/interpolation/),
 [Linux host networking](https://docs.docker.com/engine/network/drivers/host/),
 [host namespace and user-remapping compatibility](https://docs.docker.com/engine/security/userns-remap/#user-namespace-known-limitations),
+[Docker rootless UID/GID mapping](https://docs.docker.com/engine/security/rootless/uid-gid-mapping/),
 [Node environment loading](https://nodejs.org/docs/latest-v24.x/api/process.html#processloadenvfilepath),
 and [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).
