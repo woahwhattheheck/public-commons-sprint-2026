@@ -1,0 +1,51 @@
+{
+  "schema": "stellar-forge.python-merchant.v1",
+  "application": "example-application.py",
+  "publicOrigin": "https://python-merchant.example",
+  "serviceName": "Python Data Functions",
+  "tags": ["data", "python"],
+  "workerCount": 2,
+  "maxPending": 16,
+  "environment": [],
+  "functions": {
+    "summarize": {
+      "path": "/summary",
+      "method": "POST",
+      "description": "Distribution statistics and rolling means for a supplied numeric series",
+      "payment": { "scheme": "exact", "network": "stellar:testnet", "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT", "amount": "10000", "maxTimeoutSeconds": 60 },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "values": { "type": "array", "items": { "type": "number", "minimum": -1000000000, "maximum": 1000000000 }, "minItems": 1, "maxItems": 10000 },
+          "window": { "type": "integer", "minimum": 1, "maximum": 10000 }
+        },
+        "required": ["values", "window"],
+        "additionalProperties": false
+      },
+      "example": { "values": [2, 4, 6, 8], "window": 2 },
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxOutputBytes": 524288,
+      "output": { "format": "json" }
+    },
+    "amortize": {
+      "path": "/schedule",
+      "method": "GET",
+      "description": "Export a numeric fixed-rate amortization calculation as CSV",
+      "payment": { "scheme": "exact", "network": "stellar:testnet", "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT", "amount": "10000", "maxTimeoutSeconds": 60 },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "principal": { "type": "number", "minimum": 1, "maximum": 1000000000 },
+          "annual_rate": { "type": "number", "minimum": 0, "maximum": 100 },
+          "periods": { "type": "integer", "minimum": 1, "maximum": 600 }
+        },
+        "required": ["principal", "annual_rate", "periods"],
+        "additionalProperties": false
+      },
+      "example": { "principal": 1200, "annual_rate": 0, "periods": 12 },
+      "maxOutputBytes": 262144,
+      "output": { "format": "bytes", "contentType": "text/csv; charset=utf-8" }
+    }
+  }
+}
