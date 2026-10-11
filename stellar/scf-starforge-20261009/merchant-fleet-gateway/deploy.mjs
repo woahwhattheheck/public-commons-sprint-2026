@@ -240,7 +240,7 @@ export function fleetDeploymentRunbook(p, bundle) {
     `The selected cached runtime image is ${p.container.image}; its Node executable is ${q(p.container.node)}. ` +
     `It must include Linux flock and all original provider interpreters/libraries at their retained paths. ` +
     `The selected source and extra read-only inputs are bound at the same absolute paths. One container owns the complete fleet; ` +
-    `Use Linux Docker Engine with Compose 2.15.1 or later. Host network, PID, UTS and user namespaces preserve ` +
+    `Use rootful Linux Docker Engine with Compose 2.15.1 or later. Host network, PID, UTS and user namespaces preserve ` +
     `the original loopback listeners, hostname/PID lease identities and numeric state ownership across container replacement. ` +
     `The signal-owning Node runtime runs directly under the declared non-root UID/GID.\n\n` +
     '```sh\n' + `docker compose -f ${q(join(bundle, 'compose.json'))} config --quiet\n` +
