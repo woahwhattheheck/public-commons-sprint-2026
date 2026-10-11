@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DuckDB merchant · Stellar Forge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="brand">STELLAR FORGE</span><h1>DuckDB merchant</h1></div>
+    <div class="header-actions"><span id="connection">Opening workspace</span><button id="refresh" type="button">Refresh</button></div>
+  </header>
+  <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+  <section class="summary" aria-label="Workspace status">
+    <div><span>Approved source</span><strong id="source-status">—</strong></div>
+    <div><span>Saved draft</span><strong id="draft-status">—</strong></div>
+    <div><span>Prepared packages</span><strong id="package-count">—</strong></div>
+    <div><span>Merchant</span><strong id="runtime-status">—</strong></div>
+  </section>
+  <nav class="tabs" aria-label="Merchant workflow">
+    <button type="button" data-tab="author">Build a query</button>
+    <button type="button" data-tab="queries" aria-current="page">1 · Query review</button>
+    <button type="button" data-tab="plan">2 · Merchant plan</button>
+    <button type="button" data-tab="packages">3 · Packages &amp; runtime</button>
+    <button type="button" data-tab="history">Saved revisions</button>
+  </nav>
+  <main>
+    <section id="author" class="tab-panel" hidden aria-labelledby="author-heading">
+      <div class="section-heading"><div><h2 id="author-heading">Build a named query from actual data</h2><p>Inspect the declared database and Parquet files. Choose columns, scalar filters and stable ordering, then carry the query into the same merchant draft.</p></div></div>
+      <div id="query-author"></div>
+    </section>
+    <section id="queries" class="tab-panel" aria-labelledby="query-heading">
+      <div class="section-heading"><div><h2 id="query-heading">Review approved queries</h2><p>Run a local preview against the selected data before deciding what buyers will receive.</p></div></div>
+      <div class="columns">
+        <aside class="panel"><h3>Available queries</h3><div id="query-list" class="item-list"></div><div id="source-detail" class="small muted"></div></aside>
+        <section class="panel grow"><div id="query-description"></div>
+          <label for="query-input">Local preview input</label><textarea id="query-input" rows="5" spellcheck="false">{}</textarea>
+          <div class="toolbar"><button id="preview" type="button" class="primary">Run local preview</button><button id="use-query" type="button">Add merchant route</button></div>
+          <p class="small muted">Preview results stay in this private workspace. Public examples are chosen separately in the merchant plan.</p>
+          <div id="preview-result" class="result" aria-live="polite"></div>
+        </section>
+      </div>
+    </section>
+    <section id="plan" class="tab-panel" hidden aria-labelledby="plan-heading">
+      <div class="section-heading"><div><h2 id="plan-heading">Configure the merchant</h2><p>Choose public routes, request examples and exact payment options for the original seller.</p></div>
+        <div class="toolbar"><button id="import-plan" type="button">Import draft</button><button id="export-plan" type="button">Merchant plan</button><button id="export-draft" type="button">Complete draft</button><input id="plan-file" type="file" accept="application/json,.json" hidden></div></div>
+      <section class="panel"><div class="form-grid">
+        <label>Public HTTPS origin<input id="public-origin" type="url" placeholder="https://data.example.com" autocomplete="off"></label>
+        <div><label for="default-payment">Default payment options</label><textarea id="default-payment" rows="7" spellcheck="false"></textarea><p class="small muted">Original payment-option JSON. Amounts use integer atomic-unit strings; each option retains its asset, recipient and timeout.</p></div>
+      </div></section>
+      <div class="columns">
+        <aside class="panel"><div class="panel-heading"><h3>Merchant routes</h3><button id="add-route" type="button">Add</button></div><div id="route-list" class="item-list"></div></aside>
+        <section id="route-editor" class="panel grow"></section>
+      </div>
+      <div class="sticky-actions"><span id="edit-status">No edits</span><div class="toolbar"><button id="save-draft" type="button">Save draft</button><button id="review-plan" type="button" class="primary">Review package</button></div></div>
+      <section id="plan-review" class="panel" hidden></section>
+    </section>
+    <section id="packages" class="tab-panel" hidden aria-labelledby="packages-heading">
+      <div class="section-heading"><div><h2 id="packages-heading">Prepared packages &amp; merchant runtime</h2><p>Open an exact saved package, download its public API files and control the original local seller.</p></div></div>
+      <section id="runtime-detail" class="panel"></section>
+      <div class="columns"><aside class="panel"><h3>Retained packages</h3><div id="package-list" class="item-list"></div></aside><section id="package-detail" class="panel grow"></section></div>
+    </section>
+    <section id="history" class="tab-panel" hidden aria-labelledby="history-heading">
+      <div class="section-heading"><div><h2 id="history-heading">Saved merchant revisions</h2><p>Reopen a previous plan for editing. Saving creates a new current revision.</p></div></div>
+      <section class="panel"><div id="history-list" class="table-wrap"></div></section>
+    </section>
+  </main>
+  <footer>Local merchant operations · Original DuckDB reader, package compiler and Stellar x402 seller</footer>
+</body>
+</html>
