@@ -48,6 +48,34 @@ Refresh preserves unsaved form text. If another operator saved the same review o
 
 The **Accountant handoffs** area prepares a labeled CSV and offline packet from a completed original reconciliation or recorded-activity close. Preview a returned bookkeeping file, inspect exact source matches and conflicts, and save its references with inherited partial progress and immutable revision history. The original source amounts, networks, transfer classifications, and merchant quotes remain visible beside the accountant's returned fields. Follow the [accountant workflow guide](../accountant/README.md) for the complete exchange and integration routes.
 
+## Exchange merchant attribution with Bitwave
+
+Open **Bitwave Data Fusion** from Accountant handoffs, or `/bitwave.html` on the
+same merchant accounting workspace. Select a saved handoff and its original or
+returned accountant version to freeze a named Data Fusion plan. Each source
+amount, asset identity, network and fingerprint remains an exact string beside
+the four editable bookkeeping fields.
+
+The application prepares the native schema and row batches, creates or selects
+the customer's exact organization/table, retains each native request and
+response, and captures every returned page. Configure `BITWAVE_ACCESS_TOKEN` in
+the merchant host environment for native delivery. Original JSON page imports
+also support an existing customer-operated API workflow. Review a completed
+capture before repairing missing rows after an interrupted upload.
+
+Returned bookkeeping fields are compared with both the frozen export and the
+current accountant version. Concurrent edits appear together for review;
+matched changes enter the original immutable return history. The complete
+download contains original merchant source, native requests/pages, comparisons
+and every accepted accountant return with its full CSV and HTML review. A
+retained save request reconnects the same return after an interrupted operation.
+
+Follow [the complete Bitwave workflow](BITWAVE_WORKFLOW.md) for source selection,
+native setup, interruption recovery, source correction and accountant handover.
+The maintained package includes this whole application through its existing
+`merchant-accounting-workspace` command; `./merchant/bitwave` and
+`./merchant/bitwave-http` expose the pure mapping and native HTTP client.
+
 ## Collect verification in the same workspace
 
 The **RPC collections** area retains original reserved payment records and their read-only verification work alongside the accounting inputs. Use the merchant runtime's existing `@stellar/stellar-sdk` event decoder for network collection.

@@ -363,6 +363,8 @@
     "./merchant/accounting": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/reconcile.mjs",
     "./merchant/accounting-workspace": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/server.mjs",
     "./merchant/accountant": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/engine.mjs",
+    "./merchant/bitwave": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/bitwave.mjs",
+    "./merchant/bitwave-http": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/bitwave-http.mjs",
     "./merchant/accounting-pricing": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/pricing.mjs",
     "./merchant/recovery": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/recovery.mjs",
     "./merchant/host": "./source/stellar/scf-starforge-20261009/sf99-merchant-deploy/host.mjs",
