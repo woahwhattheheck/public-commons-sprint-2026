@@ -9,6 +9,7 @@ import { execute } from './execute.mjs';
 import { createOperatorApproval, checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { analyzeOne } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { canonical, digest, inspectDatasetPage, object, validateDatasetQuery } from './dataset-page.mjs';
+import { MAX_DATASET_PAGE_BYTES, MAX_DATASET_PAGES } from '../sf100-buyer-dataset-delivery/deliver.mjs';
 
 const VERSION = 'stellar-forge.sf88.dataset-session.v1';
 const MAX_ATOMIC = 170141183460469231731687303715884105727n;
@@ -114,6 +115,10 @@ function validateDefinition(value, directory) {
 export async function createDatasetSession({directory, configPath, workspaceDirectory, maxPages, maxTotalAtomic,
   maxRows = 1000000, maxPageBytes = 1048576, expectedSnapshot = null} = {}) {
   need(typeof directory === 'string' && isAbsolute(directory) && directory === resolve(directory), 'DATASET_ABSOLUTE_SESSION_REQUIRED');
+  // New acquisitions must fit the SAME original exporter they deliver into.
+  // Keep historical definition validation unchanged for existing session recovery.
+  need(isCount(maxPages, 1, MAX_DATASET_PAGES) && isCount(maxPageBytes, 1024, MAX_DATASET_PAGE_BYTES),
+    'DATASET_DELIVERY_LIMITS_EXCEEDED');
   need((configPath !== undefined) !== (workspaceDirectory !== undefined), 'DATASET_ONE_CONFIG_SOURCE_REQUIRED');
   const source = workspaceDirectory === undefined ? await config(configPath)
     : (await (await import('./workspace.mjs')).openWorkspace(['--dir', workspaceDirectory])).config;
