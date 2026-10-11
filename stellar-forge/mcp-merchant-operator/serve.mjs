@@ -35,6 +35,7 @@ const HELP = `Starforge merchant MCP
        [--name NAME] [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
        [--catalog CATALOG_CONNECTION_JSON] [--support SUPPORT_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   serve --config MERCHANT_MCP.json [--port PORT] [--token-env ENVIRONMENT_NAME]
+  maintenance open|close|status|job|prepare|execute|reconcile|download ...
   inspect-support|inspect-client --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
   download-support --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
        [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST] [--cases-dir PRIVATE_CASES]
@@ -115,6 +116,7 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
   const [command, ...rest] = args;
+  if (command === 'maintenance') return (await import('./accounting-maintenance-cli.mjs')).main(rest);
   if (command === 'download-python' || command === 'reopen-python') {
     const { downloadPythonWorkspace, reopenDownloadedPythonWorkspace } = await import('./python-workspace-download.mjs');
     if (command === 'reopen-python') {
@@ -235,7 +237,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-publishers, serve, inspect-support, inspect-client, download-support, download-client, reopen-support, download-python or reopen-python.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-publishers, serve, maintenance, inspect-support, inspect-client, download-support, download-client, reopen-support, download-python or reopen-python.');
   const options = pairs(rest, ['--config', '--port', '--token-env']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),
