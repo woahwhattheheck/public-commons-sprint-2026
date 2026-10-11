@@ -51,6 +51,15 @@ report. It loads no signer, obtains no approval, makes no merchant request,
 and reserves no budget. Environment variables and operator keys are never
 copied into a job.
 
+An operation with `ticketFile` also copies the merchant's private ticket into
+the job as `0600` `operation-ticket.json`. Its configured header, file hash,
+operation key, request hash and expiry are pinned alongside the body. The
+bearer remains in that private file; `show` and `list` expose only metadata.
+Deleting or replacing the source ticket after enqueue does not change the
+saved job. A different ticket under the same existing intent conflicts even
+when the source config path is unchanged. See [the ticket workflow](OPERATION_TICKETS.md)
+for preparation and merchant issuance.
+
 The original stable intent ID identifies the job. Reusing that ID cannot
 replace its stored request. Keep the original identity when recovering an
 attempt; a new ID is a different requested operation, not a retry mechanism.
@@ -125,6 +134,13 @@ mismatched workspace, absent wallet environment variable, unavailable local SDK
 or invalid private operator key file leaves the job `QUEUED`, with its request
 and budget untouched. Correct the selected workspace and inspect
 the same intent; no attempt marker has been consumed by that refusal.
+
+The queue also checks the saved ticket's private file, exact hash and expiry
+before writing an attempt marker. Expired tickets remain available in review
+and history with `expired:true`, but cannot start a new attempt. Execution
+rechecks the pinned hash at its own entry before sending the merchant header.
+Selecting a workspace supplies its original operator keys and signer; its
+current template ticket does not replace or invalidate the queued ticket.
 
 After a successful match, the original workspace supplies its local SF36
 operator keys directly to the existing execution environment. Keys are never
