@@ -33,7 +33,9 @@
       <label>Provider<select id="provider"><option value="">Both source catalogs</option><option value="vellar">Vellar only</option><option value="periplo">Periplo only</option></select></label>
       <label>Declared operation<select id="operation"><option value="">All native operations</option><option value="GET">HTTP GET</option><option value="POST">HTTP POST</option><option value="HEAD">HTTP HEAD</option><option value="MCP">MCP tools</option><option value="OTHER">Other declared methods</option><option value="UNDECLARED">Undeclared method</option></select></label>
       <button id="refresh" type="button">Refresh genuine GETs</button>
+      <button id="export-csv" type="button" disabled>Export matching offers CSV</button>
     </form>
+    <p id="export-status" class="match" role="status" aria-live="polite"></p>
     <p id="matches" class="match" aria-live="polite"></p>
     <section id="results" class="cards" aria-label="Source-backed resource advertisements"></section>
   </main>
