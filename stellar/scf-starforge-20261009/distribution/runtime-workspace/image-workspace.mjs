@@ -160,12 +160,17 @@ async function transferView(base, record) {
     const stat = await lstat(path).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
     if (stat) need(stat.isFile() && !stat.isSymbolicLink() && stat.size <= manifest.archive.bytes,
       'RUNTIME_IMAGE_TRANSFER_FILE_CHANGED');
-    const observed = await readJSON(join(record.directory, 'workspace-import.json'), true);
-    return { ...record, phase: observed?.result?.status ?? (complete ? 'READY' : 'RECEIVING'),
+    const [observed, verification] = await Promise.all([
+      readJSON(join(record.directory, 'workspace-import.json'), true),
+      readJSON(join(record.directory, 'workspace-receive.json'), true),
+    ]);
+    return { ...record, phase: verification?.error ? 'VERIFICATION_FAILED' :
+      observed?.result?.status ?? (complete ? 'READY' : 'RECEIVING'),
       receivedBytes: stat?.size ?? 0, bytes: manifest.archive.bytes, sha256: manifest.archive.sha256,
       imageId: manifest.image.imageId, contextSha256: manifest.image.contextSha256,
       release: manifest.image.release, sourceModes: manifest.image.sourceModes,
-      manifest, observation: observed, complete: complete && stat?.size === manifest.archive.bytes };
+      manifest, observation: observed, verification, error: verification?.error ?? null,
+      complete: complete && stat?.size === manifest.archive.bytes && !verification?.error };
   } catch (error) { return { ...record, phase: 'UNAVAILABLE', error: errorView(error) }; }
 }
 export async function imageWorkspaceState(root) {
@@ -257,6 +262,18 @@ async function fileDigest(path, maximum) {
     return { bytes, sha256: hash.digest('hex') };
   } finally { await handle.close(); }
 }
+async function verifyReceivedArchive(directory, path, manifest) {
+  const actual = await fileDigest(path, manifest.archive.bytes);
+  const matches = actual.bytes === manifest.archive.bytes && actual.sha256 === manifest.archive.sha256;
+  const error = matches ? null : { code: 'RUNTIME_IMAGE_TRANSFER_HASH_MISMATCH',
+    message: 'The received archive does not match its original SHA-256. Select the correct original files and choose Start a new receiving transfer. This failed transfer remains retained.' };
+  await saveJSON(join(directory, 'workspace-receive.json'), {
+    schema: 'stellar-forge.runtime-image-receive-verification.v1', checkedAt: now(),
+    expected: manifest.archive, actual, error,
+  }, true);
+  need(matches, error?.code, error?.message, 409);
+  return actual;
+}
 /** Each acknowledged chunk is fsynced. Reopen reads the retained offset; no base64 or whole-image buffer. */
 export async function receiveWorkspaceImageChunk(root, { transferId, offset, body }) {
   const base = await rootFor(root), record = await transferEntry(base, transferId);
@@ -265,11 +282,12 @@ export async function receiveWorkspaceImageChunk(root, { transferId, offset, bod
   let handle;
   try {
     const manifest = portable(await readJSON(join(record.directory, 'image-bundle.json')));
+    const verification = await readJSON(join(record.directory, 'workspace-receive.json'), true);
+    need(!verification?.error, verification?.error?.code, verification?.error?.message, 409);
     const target = join(record.directory, 'image.tar'), partial = target + '.partial';
     need(Number.isSafeInteger(offset) && offset >= 0 && offset <= manifest.archive.bytes, 'RUNTIME_IMAGE_UPLOAD_OFFSET_INVALID');
     if (await exists(target)) {
-      const actual = await fileDigest(target, manifest.archive.bytes);
-      need(actual.bytes === manifest.archive.bytes && actual.sha256 === manifest.archive.sha256, 'RUNTIME_IMAGE_TRANSFER_HASH_MISMATCH');
+      const actual = await verifyReceivedArchive(record.directory, target, manifest);
       return { transferId, receivedBytes: actual.bytes, complete: true };
     }
     handle = await open(partial, constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW | constants.O_NONBLOCK, 0o600);
@@ -292,8 +310,7 @@ export async function receiveWorkspaceImageChunk(root, { transferId, offset, bod
       need(chunkBytes > 0 || received === manifest.archive.bytes, 'RUNTIME_IMAGE_UPLOAD_EMPTY');
     } finally { await handle.sync(); await handle.close(); handle = null; }
     if (received === manifest.archive.bytes) {
-      const actual = await fileDigest(partial, manifest.archive.bytes);
-      need(actual.bytes === manifest.archive.bytes && actual.sha256 === manifest.archive.sha256, 'RUNTIME_IMAGE_TRANSFER_HASH_MISMATCH');
+      await verifyReceivedArchive(record.directory, partial, manifest);
       await link(partial, target); await unlink(partial);
       const directory = await open(record.directory, constants.O_RDONLY | constants.O_DIRECTORY);
       try { await directory.sync(); } finally { await directory.close(); }

@@ -1,4 +1,4 @@
-import { initImageWorkspace } from './image.mjs';
+import { initImageWorkspace, imageOperationRecovery } from './image.mjs';
 // MIT. Industrial operator presentation; original runtime records remain authoritative.
 const $ = id => document.getElementById(id);
 const make = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
@@ -120,10 +120,12 @@ function renderOperations() {
     article.dataset.operationId = job.id;
     title.append(make('h3', job.operation.charAt(0).toUpperCase() + job.operation.slice(1)), make('span', job.displayPhase, 'status'));
     article.append(title, make('p', (job.createdAt ? new Date(job.createdAt).toLocaleString() + ' · ' : '') + job.id, 'muted'));
-    if (job.targetDirectory) article.append(make('p', job.targetDirectory));
+    for (const [label, path] of [['Runtime output', job.targetDirectory], ['Image context', job.contextDirectory],
+      ['Image transfer', job.transferDirectory], ['Container output', job.containerDirectory]])
+      if (path) article.append(make('p', label + ': ' + path));
     if (job.error) article.append(make('p', job.error.code + ': ' + job.error.message));
     if (job.displayPhase === 'INTERRUPTED') article.append(make('p', job.imageId || job.transferId
-      ? 'The workspace worker ended. Open its image context or transfer and review the retained native result before continuing.'
+      ? imageOperationRecovery(job)
       : 'The workspace worker ended. Open its retained runtime and resume installation or recover into a new directory.', 'note'));
     const actions = make('div', undefined, 'actions');
     if (job.imageId || job.transferId) {
