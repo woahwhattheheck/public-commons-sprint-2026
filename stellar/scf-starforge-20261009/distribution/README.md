@@ -132,6 +132,7 @@ or automatically retry a request.
 | `starforge upstream-operation` | Issue, inspect and reconcile an original merchant operation ticket |
 | `starforge operations` | SF30 seller plus live operations dashboard |
 | `starforge dataset` | SF30 dataset API compilation |
+| `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
 | `starforge openapi-workspace` | Select an API contract, prepare the merchant and use its native operator workflow |

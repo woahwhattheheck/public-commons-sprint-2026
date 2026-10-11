@@ -110,6 +110,46 @@ function queryMapping(value) {
   return result;
 }
 
+/** One lifetime covers credentials and the original backend, not two deadlines.
+ * Shared with the original cache adapter; caller reasons never enter outputs. */
+export function beginUpstreamRequest(parent, timeoutMs) {
+  if (parent !== undefined && !(parent instanceof AbortSignal)) throw new TypeError('Invalid upstream signal');
+  integer(timeoutMs, 1, 120000, 'timeoutMs');
+  const controller = new AbortController();
+  const stop = code => controller.abort(Object.assign(new Error(code), {code}));
+  const abort = () => stop('UPSTREAM_ABORTED');
+  const timer = setTimeout(() => stop('UPSTREAM_TIMEOUT'), timeoutMs);
+  if (parent?.aborted) abort(); else parent?.addEventListener('abort', abort, {once:true});
+  return {
+    signal:controller.signal,
+    cancel:abort,
+    wait(promise) {
+      return new Promise((resolve,reject) => {
+        const signal = controller.signal;
+        const cancel = () => { signal.removeEventListener('abort',cancel); reject(signal.reason); };
+        if (signal.aborted) { Promise.resolve(promise).catch(() => {}); cancel(); return; }
+        signal.addEventListener('abort',cancel,{once:true});
+        Promise.resolve(promise).then(value => { signal.removeEventListener('abort',cancel); resolve(value); },
+          error => { signal.removeEventListener('abort',cancel); reject(error); });
+      });
+    },
+    close() { clearTimeout(timer); parent?.removeEventListener('abort',abort); },
+  };
+}
+
+/** Server-owned headers only. No buyer input is given to a credential factory. */
+export async function resolveUpstreamHeaders(headers, provider, lifetime) {
+  lifetime.signal.throwIfAborted();
+  const fixed = serverHeaders(typeof headers === 'function'
+    ? await lifetime.wait(headers({signal:lifetime.signal})) : headers);
+  if (!provider) return fixed;
+  if (Object.hasOwn(fixed,'authorization')) throw new TypeError('OAuth owns the authorization header');
+  const supplied = serverHeaders(await lifetime.wait(provider.headers({signal:lifetime.signal})));
+  if (Object.keys(supplied).length !== 1 || !Object.hasOwn(supplied,'authorization'))
+    throw new TypeError('Credential provider must supply only authorization');
+  return serverHeaders({...fixed,...supplied});
+}
+
 /**
  * Create an SF30 application handler for one operator-owned upstream operation.
  * Invoke only through the existing seller payment gate. Config is trusted local
@@ -119,12 +159,12 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata']);
+    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency, cachePolicyMetadata = false } = options;
+    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider } = options;
   if (!supportsSellerMethod(method) || !['json', 'bytes'].includes(responseType) || typeof allowLocal !== 'boolean' ||
       typeof cachePolicyMetadata !== 'boolean' ||
       onResult !== undefined && typeof onResult !== 'function' ||
@@ -138,9 +178,14 @@ export function createUpstreamHandler(options = {}) {
   if (responseContract !== undefined && (responseType !== 'json' || !expose.includes('content-type')))
     throw new TypeError('A response contract requires JSON mode and exposed content-type');
   const responseCheck = responseContract === undefined ? null : compileResponseContract(responseContract, { method });
-  // Static credentials are copied at construction; a synchronous factory reads
-  // freshly rotated environment credentials on each request without buyer input.
+  if (credentialProvider !== undefined && (!object(credentialProvider) ||
+      ['headers','snapshot','invalidate','close','generation'].some(key => typeof credentialProvider[key] !== 'function')))
+    throw new TypeError('Invalid server credential provider');
+  // Factories may be asynchronous. Resolution belongs inside the backend attempt,
+  // after capacity admission, never before a durable-operation replay.
   const staticHeaders = typeof configuredHeaders === 'function' ? null : serverHeaders(configuredHeaders);
+  if (credentialProvider && staticHeaders && Object.hasOwn(staticHeaders,'authorization'))
+    throw new TypeError('OAuth owns the authorization header');
   if (idempotency !== undefined) {
     if (!object(idempotency) || method !== 'POST' || typeof idempotency.scope !== 'string' ||
         !object(idempotency.operations) || ['issue','admit','execute','inspect','recover'].some(k => typeof idempotency.operations[k] !== 'function') ||
@@ -194,7 +239,8 @@ export function createUpstreamHandler(options = {}) {
     return new Promise(resolve => {
       let request, response, decoded, timer, done = false, dispatched = false, count = 0, wire = 0;
       const chunks = [];
-      const aborted = () => bad(499, 'UPSTREAM_ABORTED');
+      const aborted = () => signal?.reason?.code === 'UPSTREAM_TIMEOUT'
+        ? bad(504, 'UPSTREAM_TIMEOUT') : bad(499, 'UPSTREAM_ABORTED');
       function finish(result, outcome = 'COMPLETE') {
         if (done) return;
         done = true; clearTimeout(timer);
@@ -312,26 +358,37 @@ export function createUpstreamHandler(options = {}) {
     let prepared, attempt;
     try { prepared = prepare(context); }
     catch { return failure(400, 'UPSTREAM_REQUEST_INVALID'); }
-    try {
-      const trustedHeaders = staticHeaders ?? serverHeaders(configuredHeaders());
-      if (idempotency && (Object.hasOwn(trustedHeaders,idempotency.requestHeader) || Object.hasOwn(trustedHeaders,idempotency.backendHeader))) {
-        throw new TypeError('Operation headers cannot be supplied as credentials');
-      }
-      Object.assign(prepared.outgoing, trustedHeaders);
-      prepared.outgoing['accept-encoding'] = 'gzip, deflate, br';
-      prepared.outgoing.accept ??= responseType === 'json' ? 'application/json' : '*/*';
-      if (prepared.body !== undefined) {
-        prepared.outgoing['content-type'] = 'application/json; charset=utf-8';
-        prepared.outgoing['content-length'] = String(prepared.body.length);
-      }
-    } catch { return failure(503, 'UPSTREAM_CONFIGURATION_UNAVAILABLE'); }
     async function perform({backendKey} = {}) {
       if (totals.inFlight >= maxInFlight) return {outcome:'NOT_DISPATCHED',
         response:failure(503,'UPSTREAM_CAPACITY_EXHAUSTED'),error:'UPSTREAM_CAPACITY_EXHAUSTED'};
-      if (backendKey !== undefined) prepared.outgoing[idempotency.backendHeader] = backendKey;
+      let lifetime, result, startedExchange = false;
       totals.started++; totals.inFlight++;
       const began = performance.now();
-      const result = await exchange(prepared, context.signal);
+      try {
+        lifetime = beginUpstreamRequest(context.signal, timeoutMs);
+        const trustedHeaders = await resolveUpstreamHeaders(staticHeaders ?? configuredHeaders, credentialProvider, lifetime);
+        if (idempotency && (Object.hasOwn(trustedHeaders,idempotency.requestHeader) || Object.hasOwn(trustedHeaders,idempotency.backendHeader)))
+          throw new TypeError('Operation headers cannot be supplied as credentials');
+        Object.assign(prepared.outgoing, trustedHeaders);
+        prepared.outgoing['accept-encoding'] = 'gzip, deflate, br';
+        prepared.outgoing.accept ??= responseType === 'json' ? 'application/json' : '*/*';
+        if (prepared.body !== undefined) {
+          prepared.outgoing['content-type'] = 'application/json; charset=utf-8';
+          prepared.outgoing['content-length'] = String(prepared.body.length);
+        }
+        if (backendKey !== undefined) prepared.outgoing[idempotency.backendHeader] = backendKey;
+        startedExchange = true;
+        result = await exchange(prepared, lifetime.signal);
+        // Invalidate only the bearer actually rejected by this native call.
+        // Never retry a GET or mutation here; 403 is not token expiry.
+        if (credentialProvider && result.response.body?.upstreamStatus === 401) {
+          try { credentialProvider.invalidate(trustedHeaders.authorization); } catch { /* Never rewrite an observed backend outcome. */ }
+        }
+      } catch {
+        const error = lifetime?.signal.aborted ? lifetime.signal.reason.code : 'UPSTREAM_CONFIGURATION_UNAVAILABLE';
+        result = {outcome:startedExchange ? 'UNCERTAIN' : 'NOT_DISPATCHED',error,response:failure(
+          error === 'UPSTREAM_TIMEOUT' ? 504 : error === 'UPSTREAM_ABORTED' ? 499 : 503,error)};
+      } finally { lifetime?.close(); }
       attempt = Object.freeze({dispatched:result.outcome !== 'NOT_DISPATCHED',
         status:result.response.status,error:result.response.body?.error ?? null,
         upstreamStatus:result.response.body?.upstreamStatus ?? null});
@@ -358,6 +415,7 @@ export function createUpstreamHandler(options = {}) {
   }
   // No URL, credential, request or response payload is retained in diagnostics.
   upstreamHandler.snapshot = () => Object.freeze({ ...totals,
+    ...(credentialProvider ? {oauth2:credentialProvider.snapshot()} : {}),
     ...(idempotency ? {idempotency:idempotency.operations.snapshot()} : {}) });
   if (idempotency) {
     upstreamHandler.admit = context => {
@@ -391,4 +449,3 @@ export function createUpstreamHandler(options = {}) {
   }
   return upstreamHandler;
 }
-
