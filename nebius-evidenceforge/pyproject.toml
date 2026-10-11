@@ -1,7 +1,7 @@
 [project]
 name = "evidenceforge"
-version = "0.1.0"
-description = "Evidence-gated coding agent foundation for Nebius x NVIDIA Global AI Hackathon"
+version = "0.2.0"
+description = "Retained coding workspace with original task execution and Nebius NVIDIA model integration"
 requires-python = ">=3.11"
 
 [project.scripts]
