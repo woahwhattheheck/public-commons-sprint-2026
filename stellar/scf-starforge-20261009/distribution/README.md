@@ -4513,3 +4513,15 @@ The workspace downloads semantic accountant packets and a complete private proje
 with included source for receiving. Its fixed command starts the original Python
 server. See the [buyer expense operating guide](../sf36-spend-governor/expense-workspace/README.md)
 for source continuity, coding, review and recovery.
+
+## Open-Meteo weather merchant and operations
+
+The complete `weather-operations` command uses the original SF30 seller and generated client, original SF88 operator/buyer, and original encrypted workspace recovery. It covers explicit forecast/reanalysis/ensemble requests, retained source bytes, UTC/local/member analysis, attributed operating decision revisions, frozen JSON/CSV/HTML/ZIP reports, and same-root restore.
+
+```sh
+npx --no-install starforge weather-operations --help
+npx --no-install starforge weather-operations serve \
+  --settings /private/weather/settings.json
+```
+
+The [complete original product guide](../partners/open-meteo-operations/README.md) includes merchant compilation, receiving-operator initialization, controlling-terminal execution, provider mode/attribution, exact weather semantics and full recovery commands. Installed imports are `./partners/open-meteo` plus `/application`, `/workspace`, `/server`, `/analysis`, and `/reports`. The new component adds no dependency group; it retains the maintained native SDK/Python implementations and built-in Node SQLite. Evaluation data and commercial provider configuration remain explicit choices.
