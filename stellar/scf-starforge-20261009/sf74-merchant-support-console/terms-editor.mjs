@@ -81,8 +81,34 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
     for(const [name,value] of Object.entries(values))fields[name].value=value;
     sync();onChange();
   }
+  // Case files must also preserve incomplete and currently hidden form entries.
+  // These are raw drafts, not a validated SF77 proposal or an approval decision.
+  function readDraft() {
+    return validateDraft(Object.fromEntries(Object.entries(fields).map(([name,field])=>[name,field.value])));
+  }
+  function validateDraft(values) {
+    if(!values||typeof values!=='object'||Array.isArray(values)||
+        Object.keys(values).length!==Object.keys(fields).length||
+        Object.keys(values).some(name=>!Object.hasOwn(fields,name)))
+      throw new Error('Unknown owner terms draft shape.');
+    for(const [name,field] of Object.entries(fields)) {
+      const value=values[name];
+      if(typeof value!=='string'||value.length>8192||
+          (field.maxLength>0&&value.length>field.maxLength))
+        throw new Error('Invalid '+field.dataset.label+' draft.');
+      // Preserve browser-native values exactly, including select and number semantics.
+      const probe=field.cloneNode(true);probe.value=value;
+      if(probe.value!==value)throw new Error('Unrepresentable '+field.dataset.label+' draft.');
+    }
+    return values;
+  }
+  function loadDraft(values) {
+    validateDraft(values);
+    for(const [name,value] of Object.entries(values))fields[name].value=value;
+    sync();onChange();
+  }
   container.addEventListener('input',()=>{sync();onChange();});
   container.addEventListener('change',()=>{sync();onChange();});
   sync();
-  return {read,load};
+  return {read,load,readDraft,validateDraft,loadDraft};
 }
