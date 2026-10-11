@@ -181,6 +181,16 @@ export function createDurableUpstreamOperations({ scope, stateDir, key, maxRespo
     if (row && row.scope !== scope) throw fail('OPERATION_SCOPE_MISMATCH');
     return publicRow(row);
   }
+  // Trusted merchant-side retrieval of the same immutable completed payload.
+  // Reading never claims, issues, dispatches or retries an operation.
+  async function response(operationKey) {
+    if (!HEX.test(operationKey ?? '')) throw new TypeError('Exact operationKey required');
+    const row = rowFor(await database(), operationKey);
+    if (!row) return null;
+    if (row.scope !== scope) throw fail('OPERATION_SCOPE_MISMATCH');
+    if (row.state !== 'COMPLETE') throw fail('OPERATION_RESPONSE_NOT_COMPLETE');
+    return decoded(row);
+  }
   // Read the original ledger's metadata, never its response payloads or tickets.
   // Keyset pagination stays bounded even when the ledger has many completed rows.
   async function list({ state, cursor, limit = 25 } = {}) {
@@ -335,7 +345,7 @@ export function createDurableUpstreamOperations({ scope, stateDir, key, maxRespo
       const current = rowFor(db, operationKey); audit(db, current, reference); return publicRow(current);
     });
   }
-  return Object.freeze({ issue, verify, admit, execute, inspect, list, audit: auditHistory, recover,
+  return Object.freeze({ issue, verify, admit, execute, inspect, response, list, audit: auditHistory, recover,
     snapshot: () => Object.freeze({ ...counts }),
     async close() { if (databasePromise) { const db = await databasePromise; db.close(); databasePromise = undefined; } },
   });

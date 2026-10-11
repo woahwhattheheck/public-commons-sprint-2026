@@ -454,6 +454,13 @@ export function createUpstreamHandler(options = {}) {
     upstreamHandler.idempotency = Object.freeze({
       issue(context, options) { const prepared = prepare(context); return idempotency.operations.issue({...options,requestHash:prepared.operation.requestHash}); },
       inspect:idempotency.operations.inspect,
+      async response(operationKey) {
+        const response = await idempotency.operations.response(operationKey);
+        if (response === null) return null;
+        const error = storedResponseError(response);
+        if (error) throw new TypeError('Stored response violates configured upstream contract: ' + error);
+        return response;
+      },
       list:idempotency.operations.list,
       audit:idempotency.operations.audit,
       recover(options) {

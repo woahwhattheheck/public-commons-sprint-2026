@@ -1,5 +1,7 @@
 # SF98: post-settlement merchant delivery outbox
 
+For merchants that need separate fulfillment, accounting, or operations receivers, the [delivery destinations workspace](./destinations/README.md) routes these same retained native events into independently operated original-format outboxes. It provides receiver enrollment, history selection, delivery control, durable worker operation, revision-checked recovery, and an industrial local UI. Run `starforge delivery-destinations --help` from the maintained distribution, or use the source CLI described in the guide.
+
 **Business function:** an existing merchant API can put its fulfillment system behind the original SF30 Stellar x402 seller and receive a tiny, authenticated, retryable notice only **after the native SDK's actual settlement success**. This is a customer integration layer, not another payment scheme, merchant dashboard, facilitator or claim of received cash.
 
 The source is additive. It uses the original SF30 \`startSellerService()\`, native factory and resource-handler sequence. The existing SDK still controls signature verification, settlement, cancellation and resource release. SF98 does not create a signer, verify an on-chain transaction, change an offer, or trigger a payment. A 402, browser 2xx, successful app handler, or HTTP request counter can never enqueue an SF98 event.

@@ -450,7 +450,7 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
   need(purchaseFetch === undefined || typeof purchaseFetch === 'function', 'COMMERCE_PURCHASE_TRANSPORT_INVALID');
   need(!nativeFactory || !saved.seller.facilitator && !saved.seller.facilitatorConfig, 'COMMERCE_ONE_FACILITATOR_REQUIRED');
   let config = await readSellerConfig(saved.seller.config);
-  let handlers = saved.seller.handlers ? await import(pathToFileURL(saved.seller.handlers).href) : {};
+  let handlers = {};
   if (saved.seller.facilitator) {
     const endpoint = facilitator(saved.seller.facilitator);
     const { HTTPFacilitatorClient } = await import('@x402/core/server');
@@ -459,19 +459,26 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
   }
   let seller, operations, checkoutSession, ownedFacilitator, python, upstream, jsonrpc, jsonrpcRecovery, closing, active;
   let state = 'STARTING', activeIntent = null, activeBuyerController = null;
+  let runtimeLease, runtimeRelease;
+  const releaseRuntime = () => runtimeRelease ??= runtimeLease?.close();
   const controller = new AbortController();
   const streams = createCommerceStreamAccess(queue.root);
   const pending = new Set(), activeRetrievals = new Map(), activeRpcActions = new Map();
   const waitForIdle = async ({ sharedOnly = false } = {}) => {
     need(state === 'STOPPING' || state === 'STOPPED', 'COMMERCE_DRAIN_REQUIRED');
     const native = ownedFacilitator ?? seller?.facilitator;
-    if (!native || sharedOnly && native.status().ownership?.mode !== 'HOST_SIGNER_LEASES') return null;
+    if (!native || sharedOnly && native.status().ownership?.mode !== 'HOST_SIGNER_LEASES') {
+      if (!native && state === 'STOPPED') await releaseRuntime();
+      return null;
+    }
     need(typeof native.waitForIdle === 'function', 'COMMERCE_NATIVE_DRAIN_INTERFACE_REQUIRED');
     // A failed original close can reach this path before native draining begins.
     if (native.status().state === 'ACCEPTING') {
       try { await native.drain(); } catch {}
     }
-    return native.waitForIdle();
+    const result = await native.waitForIdle();
+    if (state === 'STOPPED') await releaseRuntime();
+    return result;
   };
   const runOriginal = (script, args, options) => {
     const promise = originalCommand(script, args, options);
@@ -505,6 +512,15 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       jsonrpcShutdown = { closed: true, rpc: jsonrpc.snapshot().rpc };
     } catch (error) { failures.push(error); }
     state = 'STOPPED';
+    const native = ownedFacilitator ?? seller?.facilitator;
+    const nativeState = native?.status();
+    if (!native || (nativeState.activeVerify ?? 0) + (nativeState.activeSettle ?? 0) === 0)
+      await releaseRuntime();
+    else {
+      // Keep the original OS lease through accepted native work, including a
+      // timed-out close. The original completion path also awaits this drain.
+      void waitForIdle().catch(() => {});
+    }
     need(failures.length === 0, 'COMMERCE_SHUTDOWN_INCOMPLETE');
     return { state, shutdown, python: pythonShutdown, upstreams: upstreamShutdown, jsonrpc: jsonrpcShutdown,
       drained: shutdown?.drained !== false && shutdown?.forcedClose !== true && pythonShutdown?.clean !== false &&
@@ -512,6 +528,9 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       traffic, buyers: await queue.list() };
   })();
   try {
+    const { owner } = execution(await readBuyer(join(queue.root, 'jobs', jobs[0].id, 'execution.json')));
+    runtimeLease = await acquireInitialization(directory, { python: owner.python, resume: true });
+    handlers = saved.seller.handlers ? await import(pathToFileURL(saved.seller.handlers).href) : {};
     if (saved.seller.jsonrpc) {
       jsonrpc = await openJsonrpcCommerce(saved.seller.jsonrpc, {
         expectedConfig: config, expectedSha256: saved.seller.jsonrpcSha256,

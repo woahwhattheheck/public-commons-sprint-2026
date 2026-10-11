@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stellar-forge-tenderly-customer"
+version = "0.1.0"
+description = "Tenderly simulation customer workflows on the original Stellar Forge buyer"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = ["stellar-forge-buyer>=0.5.0"]
+readme = "README.md"
+
+[project.scripts]
+stellar-forge-tenderly = "stellar_forge_tenderly.__main__:main"
+
+[tool.setuptools]
+packages = ["stellar_forge_tenderly"]

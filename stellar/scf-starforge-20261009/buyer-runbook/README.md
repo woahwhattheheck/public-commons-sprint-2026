@@ -1,5 +1,11 @@
 # Buyer runbook
 
+Customer applications can use this complete original workflow through the
+maintained [Node](../sf88-operator-buyer-cli/node/ACQUISITIONS.md) and
+[Python](../sf88-operator-buyer-cli/python/ACQUISITIONS.md) acquisition APIs. Both
+join the same request intake, immutable revisions, execution leases, accounting,
+saved resources and complete operator recovery used by this workspace.
+
 Acquire several explicitly selected resources through the **existing SF88 buyer**,
 keep their original results together, and resume untouched operations after an
 interruption. The runbook supplies a local job plan, exact request snapshots,
@@ -35,6 +41,12 @@ Open the printed loopback URL and keep this process in the operator terminal for
 the original SF81 approval. Existing runs can be registered with `--run` and
 reopened alongside newly initialized acquisitions. See [WORKSPACE.md](WORKSPACE.md)
 for the complete draft, execution, recovery, resource and accounting workflow.
+
+Customers receiving an SF101 paid-file order can use **Receive paid file order**
+in this same workspace. Review the original handoff, prepare the native buyer,
+add it to an acquisition and retrieve or resume its entitled file from the saved
+operation. [PAID_FILES.md](PAID_FILES.md) covers local operator setup, claim-token
+environment names, delivery, reopening and original encrypted recovery.
 
 ## Assemble one acquisition job
 

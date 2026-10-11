@@ -1,0 +1,4 @@
+id,label,start,end,capacity,reserved,required,target,need_id
+7001,Welcome team,2026-10-12T09:00:00-06:00,2026-10-12T12:00:00-06:00,4,1,501,true,6001
+7002,Existing assignment 7002,2026-10-12T10:00:00-06:00,2026-10-12T11:00:00-06:00,1,0,501,false,6001
+7003,Existing assignment 7003,2026-10-13T09:00:00-06:00,2026-10-13T11:00:00-06:00,1,0,501,false,6001

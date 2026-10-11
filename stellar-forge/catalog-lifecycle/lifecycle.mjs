@@ -179,6 +179,20 @@ export class LifecycleCatalog {
 
   history(id) { return clone(this.#history.get(id) ?? []); }
 
+  // Native admission/retirement and snapshot loading enforce increasing sequences.
+  // Read a detached exact revision without cloning every prior event.
+  revision(id, sequence) {
+    validateSequence(sequence);
+    const history = this.#history.get(id) ?? [];
+    let low = 0, high = history.length;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      if (history[middle].sequence < sequence) low = middle + 1;
+      else high = middle;
+    }
+    return history[low]?.sequence === sequence ? clone(history[low]) : null;
+  }
+
   snapshot() {
     return canonical({
       schemaVersion: STORAGE_SCHEMA,
