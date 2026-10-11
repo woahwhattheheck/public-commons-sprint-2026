@@ -1,7 +1,7 @@
 # Download and consume a merchant object from Node
 
 The existing Node `Buyer` selects an original merchant object description,
-retains one native acquisition, continues its untouched chunks, assembles the
+retains one native whole-file or chunked acquisition, continues its untouched requests, assembles the
 verified bytes, and passes the file to application code. Its native session also
 opens in the original [object CLI](../OBJECTS.md), browser workspace and Python
 application.
@@ -27,11 +27,12 @@ the companion and native runtime at the same current distribution.
 
 ## Select and retain a download
 
-Obtain the merchant's original `objects.json`, choose its nonempty `chunks`
+Obtain the merchant's original `objects.json`, choose its `whole` or `chunks`
 product, and prepare the corresponding original buyer configuration or operator
 workspace. The initial operation is its base `GET` route without query, body or
-response destination. The original engine derives every exact `offset` and
-`length` and retains the matching native inbox jobs.
+response destination. The original engine retains a whole file as one query-free
+request or derives each chunk's exact `offset` and `length`; both modes retain
+their matching native inbox jobs.
 
 ```js
 const acquisition = await buyer.createObject({
@@ -47,7 +48,7 @@ console.log(acquisition.lastReport.native);
 
 These paths, alias and amounts are illustrative: select the actual merchant's
 descriptor, reviewed terms and authorized spending limits. `id` is the customer's
-stable application name, separate from the original session UUID and per-chunk
+stable application name, separate from the original session UUID and per-request
 intent IDs. Preparation is offline.
 
 The descriptor supplies route, byte count, snapshot, content type, chunk cap and
@@ -57,7 +58,32 @@ string for the entire download and must cover
 `ceil(bytes / chunkBytes) × per-request maxAtomic`. A 1,843,229-byte object in
 921,600-byte chunks needs three requests; a 1,000-unit per-request ceiling needs
 at least `"3000"` total allocation. These are ceilings. Original outcomes and
-ledger entries remain the authority for the actual payment state.
+ledger entries remain the authority for the actual payment state. For a `whole`
+descriptor, omit `chunkBytes`: the original engine fixes one request covering the
+complete file, and the total allocation must cover one per-request ceiling.
+An empty whole file still has one reviewed request and its original payment terms.
+
+```js
+const whole = await buyer.createObject({
+  id: 'monthly-report',
+  workspaceDirectory: '/private/operator/report',
+  descriptionFile: '/private/customer/merchant-objects.json',
+  objectId: 'report', // Select the actual merchant's whole-file alias.
+  maxTotalAtomic: '1000',
+});
+console.log(whole.lastReport.native.deliveryMode); // 'whole'
+const report = await whole.download('/private/customer/files/report.pdf');
+await report.verify();
+```
+
+The original whole-file engine requires HTTP 200 without a range response,
+checks the selected complete length, snapshot and digest, and keeps that one
+intent for accounting and restart. The same `ObjectDelivery` supports a valid
+zero-byte whole file; an empty chunked product remains invalid. Its verified
+empty byte stream yields no chunks, while `verify()` and `saveAs()` still check
+the original receipt and empty-file SHA-256. New Node bindings retain the native
+delivery mode. Historical bindings without that field continue as chunks and
+cannot silently change into a whole-file session.
 
 Use `config: '/private/buyer.json'` or a JSON configuration object for an explicit
 original operator configuration. `operatorProfile` can fill its original fields.
@@ -67,8 +93,9 @@ and ignores the Buyer's global profile; a per-call profile requires config.
 
 For an explicit byte contract, supply `bytes`, `chunkBytes`, `expectedSnapshot`,
 and optionally `expectedSha256` and `expectedContentType`, without
-`descriptionFile` or `objectId`. Whole-mode and empty files use the original
-single-response `Operation`.
+`descriptionFile` or `objectId`. This explicit byte plan describes a positive-size
+chunked product. Whole-file and empty-file selection use the original merchant
+descriptor in the same named `ObjectAcquisition` workflow above.
 
 ## Return an application file
 
@@ -128,8 +155,9 @@ const imported = await buyer.attachObject({
 });
 ```
 
-Only `run()` and `download()` can acquire new chunks. `run()` returns progress
-without assembly. `assemble(newPath)` assembles complete chunks offline.
+Only `run()` and `download()` can acquire new whole-file or chunk requests. `run()` returns progress
+without assembly. `assemble(newPath)` assembles retained complete whole-file or
+chunk responses offline.
 `delivery(path?)` reopens the selected assembly or the latest recorded receipt.
 These methods preserve the same original native intents and attempts.
 
