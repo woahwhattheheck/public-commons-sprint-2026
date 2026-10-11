@@ -59,6 +59,43 @@ The console also has **Stage a PostgreSQL merchant package**. Enter the prepared
 
 Without a facilitator the retained seller serves original payment challenges. Add the operator's existing credential-free HTTPS facilitator URL when configuring its native payment runtime. Loopback HTTP requires the explicit local-facilitator option. Keep the original database credential environment available to the process that starts the seller.
 
+## Bring the reviewed merchant into a managed fleet
+
+After **Review for release** in the PostgreSQL workspace, choose **Download fleet
+source**. The original Seller releases console offers the same action after
+**Review package**. Both use the shared native review: its canonical package
+path, exact input-manifest SHA-256 and the facilitator settings currently chosen
+in that view. The download omits the single seller's fixed port; the fleet assigns
+an independent port to each declared slot. A workspace can download its saved
+package for a fleet before a single-merchant release store is configured.
+
+Open the existing **Fleet setup** workbench at `/fleet.html`, select the intended
+merchant and source card, then use **Import source JSON**. The source retains its
+card alias, so an import into `next` leaves `current` and the other merchants
+intact. Review the package path on the target host, exact public DNS host and
+manifest shown in that card. Draft downloads and the launch ZIP keep
+`postgresPackage` and `postgresInputManifestSha256` together.
+
+The ZIP supplies the original `fleet-release setup`, workspace and
+`merchant-mcp init-fleet --fleet-directory` commands for one retained directory.
+Run them using the installed original PostgreSQL dependencies and configured
+credential environment. Setup retains each initial package through the original
+release adapter. It compares the reviewed manifest before capture, so editing
+source, bindings, service, query or selected CA after review requires a new
+review and source download. The retained plan's host must match the package's
+public HTTPS origin.
+
+Later packages follow the existing fleet stage, compare, prepare, activate,
+drain, retire and rollback flow. Fleet MCP uses the registered source alias and
+same controller. A source move after staging preserves the retained release;
+PostgreSQL database contents remain live. The original adapter observes fleet
+shutdown cancellation during package capture, removes incomplete output and
+keeps committed releases available for reopening.
+
+See the [fleet bootstrap guide](../merchant-fleet-gateway/BOOTSTRAP.md) and
+[complete release operator workflow](../merchant-fleet-gateway/RELEASE_OPERATOR.md)
+for the same-directory terminal, browser and MCP commands.
+
 ## Compare, select, and operate
 
 Choose a candidate in **Prepared releases**. The console compares exact route, receiver, asset, network, atomic amount, request-contract and application identities. Its PostgreSQL section compares named queries and the source, binding, connection-policy, CA and execution hashes. Private SQL, connection address/database/user fields, credential values, and private parameter defaults are absent from these public records. Changes to those private settings still alter the appropriate retained identities.
