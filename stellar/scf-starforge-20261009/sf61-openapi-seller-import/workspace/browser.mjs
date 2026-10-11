@@ -1,18 +1,20 @@
 import { createAuthenticationPanel, appendAuthenticationReview, renderCredentialRuntime } from './authentication-browser.mjs';
+import { createOAuthConnections } from './oauth-browser.mjs';
 import { createOperationSettings, createOperationPanel } from './operation-panel.mjs';
+import { createRevisionDesk } from './revision-browser.mjs';
 import { createStreamSettings, isStreamFormat, merchantResponseLabel } from './stream-browser.mjs';
 import { createStreamCustomerPanel } from './stream-customer-browser.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
-let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false;
+let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 async function api(path,body) {
   const form=body instanceof FormData;
   const response=await fetch('/api/'+path,{method:body===undefined?'GET':'POST',headers:{'x-workspace-token':token,...(body===undefined||form?{}:{'content-type':'application/json'})},...(body===undefined?{}:{body:form?body:JSON.stringify(body)})});
   const value=await response.json();
-  if(!response.ok)throw new Error(value.error??'Workspace request failed');
+  if(!response.ok){const error=new Error(value.error??'Workspace request failed');error.status=response.status;error.code=value.code;error.outcomeUnknown=value.outcomeUnknown===true;throw error;}
   return value;
 }
 function available() {
@@ -20,6 +22,7 @@ function available() {
   $('save').disabled=busy||!specText;
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;
   $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
+  revisionDesk?.available(busy);connections?.available(busy);
 }
 function dirty() {
   selectedPackage=null;
@@ -55,6 +58,17 @@ function selectField(label,values,value) {
   input.value=String(value??values[0]?.[0]??'');container.append(input);return {container,input};
 }
 const customerPanel=createStreamCustomerPanel({container:$('stream-customer-content'),make,field,selectField,api,act,notice});
+connections=createOAuthConnections({container:$('oauth-connections'),make,field,selectField,api,act,notice,
+  onChanged(values,changed){
+    for(const route of routeFields)route.authentication?.refreshConnections();
+    revisionDesk?.connectionsChanged(changed);
+    if(changed.some(alias=>routeFields.some(route=>route.authentication?.usesAlias(alias))))dirty();
+  }});
+revisionDesk=createRevisionDesk({container:$('source-revisions'),api,act,notice,connections,onSaved:async(result,configuration)=>{
+  await loadSource(configuration.specText,configuration.plan);preview(result.preview);await saved(result.name,result);
+  $('package-name').value=result.name;$('saved-path').textContent='Saved to '+result.folder+'\n\n'+result.command;$('saved-path').hidden=false;
+  await refresh();
+}});
 function drawRoutes(saved=[]) {
   const map=new Map(saved.map(v=>[v.method.toUpperCase()+' '+v.path,v]));
   $('routes').replaceChildren();routeFields=[];
@@ -107,7 +121,7 @@ function drawRoutes(saved=[]) {
       if(op.streamError) fields.append(make('p','Stream declaration: '+op.streamError,'hint wide'));
       advanced.append(summary,fields);settings.append(advanced);card.append(settings);
       const authentication=createAuthenticationPanel({operation:op,definitions:inspection.backendSecurity??[],previous,
-        server:server.input,security:security.input,make,field,selectField});settings.append(authentication.element);
+        server:server.input,security:security.input,make,field,selectField,connections,sourceText:()=>specText,act,notice,onChanged:dirty});settings.append(authentication.element);
       let cache=null;
       if(['GET','HEAD'].includes(op.method)) {
         const section=make('details'),cacheFields=make('div',undefined,'fields');
@@ -181,7 +195,8 @@ function fillPlan(plan) {
 async function loadSource(text,plan) {
   const info=await api('inspect',{specText:text});
   specText=text;inspection=info;selectedPackage=null;
-  $('source-summary').textContent=info.title+' · OpenAPI '+info.version+' · '+countLabel(info.operations.length,'operation');
+  $('source-summary').replaceChildren(make('p',info.title+' · OpenAPI '+info.version+' · '+countLabel(info.operations.length,'operation')),
+    make('p','Original source SHA256: '+info.sourceSha256,'hint wrap'));
   fillPlan(plan);dirty();available();
 }
 function preview(value) {
@@ -203,8 +218,8 @@ function preview(value) {
     for(const route of value.routeChecks.filter(r=>r.state!=='READY'))$('review').append(make('p',route.method+' '+route.id+': '+(route.reason==='MULTIPART_REQUIRES_PRIVATE_FILE_REQUEST'?'select and retain an actual private file in the running operation form.':'add a public request example with its path, query and body values.'),'hint'));}
   appendAuthenticationReview($('review'),value.routes,{make});
 }
-async function saved(name) {
-  selectedPackage=name;$('run-label').textContent='Saved package: '+name;available();
+async function saved(name,value) {
+  selectedPackage=name;$('run-label').textContent='Saved package: '+name;revisionDesk.selectPackage(name,value);available();
   await customerPanel.setPackage(name);
 }
 function runtime(value) {
@@ -250,19 +265,20 @@ function runtime(value) {
   }
 }
 async function refresh() {
+  await connections.refresh();
   const result=await api('packages');$('packages').replaceChildren();
   for(const project of result.packages) {
     const button=make('button',undefined,'project');button.type='button';button.append(make('strong',project.name),
       make('span',project.title+' · '+countLabel(project.routes,'route')));
     button.addEventListener('click',()=>act(async()=>{
       const loaded=await api('load?name='+encodeURIComponent(project.name));
-      await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);await saved(loaded.name);
+      await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);await saved(loaded.name,loaded);
       $('package-name').value=loaded.name;
       notice('Reopened '+loaded.name+'. Save edits under a new package name.');
     }));$('packages').append(button);
   }
   if(!result.packages.length)$('packages').append(make('p','No saved projects yet.','small'));
-  $('output').textContent='Output: '+result.output;runtime(result.runtime);
+  $('output').textContent='Output: '+result.output;runtime(result.runtime);await revisionDesk.refresh();
 }
 $('file').addEventListener('change',()=>act(async()=>{
   const file=$('file').files[0];if(!file)return;

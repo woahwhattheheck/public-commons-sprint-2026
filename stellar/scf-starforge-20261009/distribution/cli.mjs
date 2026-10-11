@@ -83,6 +83,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Prepare and operate a merchant from its API contract
+  oauth-connection                           Authorize, review, renew and disconnect an existing provider grant
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
   duckdb-prepare                             Prepare, verify and reopen native data packages
   duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant

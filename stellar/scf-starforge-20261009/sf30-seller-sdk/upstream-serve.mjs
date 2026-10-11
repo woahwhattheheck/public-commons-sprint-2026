@@ -15,7 +15,8 @@ Both JSON paths resolve from the current directory. Backend origins are fixed;
 credential headers name environment variables, not values in JSON.
 --check validates both configs and their route bindings without network/listening.
 Without --facilitator, requests return payment challenges and never call a backend.
-See UPSTREAM.md for merchant setup and OAUTH.md for OAuth client-credentials backends.`;
+See UPSTREAM.md for merchant setup, OAUTH.md for client credentials, and
+oauth-connections/README.md for reviewed authorization-code connections.`;
 
 function parse(args) {
   const options = new Map(), switches = new Set(['--allow-loopback-upstream','--allow-local-facilitator','--check']);
@@ -49,7 +50,8 @@ function parse(args) {
     facilitator, maxInFlight, drainGraceMs};
 }
 
-export async function main(args = process.argv.slice(2)) {
+export async function main(args = process.argv.slice(2), {env=process.env}={}) {
+  if(env===null||typeof env!=='object'||Array.isArray(env))throw new TypeError('Use the host environment object for the original upstream launcher');
   if (args.length === 1 && args[0] === '--help') { process.stdout.write(USAGE + '\n'); return null; }
   let options;
   try { options = parse(args); } catch (error) { error.cliMessage = error.message; throw error; }
@@ -59,8 +61,8 @@ export async function main(args = process.argv.slice(2)) {
   try {
     [config,bindings] = await Promise.all([readSellerConfig(options.configPath),readUpstreamBindings(options.upstreamPath)]);
     // Capture environment values once for a stable launch-time credential snapshot.
-    const env = {...process.env};
-    application = createUpstreamApplication(config,bindings,{allowLoopback:options.allowLoopback,env});
+    const environment = {...env};
+    application = createUpstreamApplication(config,bindings,{allowLoopback:options.allowLoopback,env:environment});
     if (options.check) {
       const {compileSellerRoutes} = await import('./resource-server.mjs');
       const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : 'http://127.0.0.1:8423';
@@ -80,7 +82,7 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify({status:'CONFIG_VALID',routes:config.routes.length,
       upstreamBindings:upstreams.length,protectedUpstreamBindings:upstreams.filter(row => row.protected).length,
       cachedUpstreamBindings:upstreams.filter(row => row.cache).length,
-      oauthUpstreamBindings:upstreams.filter(row => row.oauth2).length}) + '\n');
+      oauthUpstreamBindings:upstreams.filter(row => row.oauth2||row.oauthConnection).length}) + '\n');
     await application.close();
     return null;
   }
