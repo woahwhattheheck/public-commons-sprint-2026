@@ -1,5 +1,11 @@
 # Native buyer for Node applications
 
+The complete [acquisition workflow](ACQUISITIONS.md) joins private merchant
+requests, explicit receiver review, original operator preparation, immutable
+runbooks, native execution/accounting, verified downloads and recovery of every
+original operator journal. Use `AcquisitionWorkspace` directly or
+`buyer.acquisitions(...)`; Node and Python share the same original bridge.
+
 This package connects an application to the **existing SF88 operator buyer**. It
 also fits the original SF30 generated client's `createSellerClient({ buyer })`
 interface. It does not implement a signer, approve payments, decide settlement,
