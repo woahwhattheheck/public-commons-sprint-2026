@@ -52,7 +52,7 @@ try {
   const unsupported = structuredClone(imported); unsupported.offers[0].seller.accepts.push(payment);
   assert.throws(() => createSellerServiceConfig(unsupported, bindings), /one exact payment/);
   const dynamic = structuredClone(imported); dynamic.offers[0].seller.extensions.bazaar.routeTemplate = '/v1/:name';
-  assert.throws(() => createSellerServiceConfig(dynamic, bindings), /fixed GET/);
+  assert.throws(() => createSellerServiceConfig(dynamic, bindings), /string pathParams/);
   assert.equal(JSON.parse(await readFile(join(dir, 'out', 'offers.json'))).offers.length, 2);
   console.log('PASS: original schemas/terms survive CLI, config, inspection and two real HTTP 402 routes; zero handler calls; unsupported bindings/routes rejected');
 } finally { if (session) await session.close(); await rm(dir, { recursive: true, force: true }); }

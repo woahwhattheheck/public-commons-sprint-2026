@@ -2,6 +2,7 @@
 // This adapter implements no payment scheme, signature verifier or chain client.
 import { compileHttpSellerOffer, paymentRequiredResponse } from './seller.mjs';
 import { validateHeaderName, validateHeaderValue } from 'node:http';
+import { compileServicePath, orderServiceRoutes, selectServiceRoute } from './route-path.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/auto-catalog.mjs';
 
 const METHODS = new Set(['GET', 'HEAD', 'POST']);
@@ -22,9 +23,8 @@ function importedOffer(raw, allowLocalhost) {
   const offer = structuredClone(raw), bazaar = offer.extensions.bazaar;
   const input = bazaar?.info?.input;
   if (input?.type !== 'http' || !METHODS.has(input.method) ||
-      bazaar.routeTemplate !== undefined || input.pathParams !== undefined ||
       (input.method === 'POST' && input.bodyType !== 'json')) {
-    throw new TypeError('Imported service offer requires fixed GET, HEAD or JSON POST');
+    throw new TypeError('Imported service offer requires GET, HEAD or JSON POST');
   }
   const checked = compileHttpSellerOffer({
     url: offer.resource.url, method: input.method,
@@ -77,17 +77,16 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
     if (!METHODS.has(method) || (method === 'POST' && offer.extensions.bazaar.info.input.bodyType !== 'json')) {
       throw new TypeError('Seller service supports GET, HEAD and JSON POST only');
     }
-    const url = new URL(offer.resource.url), path = url.pathname;
-    // The native router treats * and : as pattern syntax. Only static ASCII
-    // paths are exposed by this adapter; parameterized routes need another API.
-    if (!/^\/[A-Za-z0-9_./~-]*$/.test(path) || path.includes('//')) {
-      throw new TypeError('Seller service requires a fixed canonical ASCII path');
-    }
+    const url = new URL(offer.resource.url), binding = compileServicePath(offer);
+    const path = binding.path;
     const key = `${method} ${path}`;
     if (Object.hasOwn(nativeRoutes, key)) throw new TypeError('Duplicate method/path');
     const accepted = offer.accepts[0];
     nativeRoutes[key] = {
-      resource: offer.resource.url, description: offer.resource.description,
+      // Native x402 uses the trusted adapter URL when resource is omitted.
+      // Never freeze dynamic requests to the documentation sample resource.
+      ...(!binding.dynamic ? { resource: offer.resource.url } : {}),
+      description: offer.resource.description,
       mimeType: offer.resource.mimeType,
       ...(offer.resource.serviceName ? { serviceName: offer.resource.serviceName } : {}),
       ...(offer.resource.tags ? { tags: [...offer.resource.tags] } : {}),
@@ -97,10 +96,16 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
       extensions: structuredClone(offer.extensions),
     };
     ids.add(id); origins.add(url.origin);
-    return Object.freeze({ id, path, method, offer: freeze(offer), handler });
+    return Object.freeze({ id, path, method, binding, offer: freeze(offer), handler });
   });
   if (origins.size !== 1) throw new TypeError('All seller routes must use one public origin');
-  return Object.freeze({ routes: Object.freeze(routes), nativeRoutes: freeze(nativeRoutes) });
+  const ordered = orderServiceRoutes(routes);
+  const orderedNative = Object.create(null);
+  for (const route of ordered) {
+    const key = `${route.method} ${route.path}`;
+    orderedNative[key] = nativeRoutes[key];
+  }
+  return Object.freeze({ routes: Object.freeze(ordered), nativeRoutes: freeze(orderedNative) });
 }
 
 function headers(input = {}, { application = false } = {}) {
@@ -165,7 +170,8 @@ async function readBody(req, maxBytes) {
   catch { throw fault('INVALID_JSON_BODY'); }
 }
 
-function requestContext(req, route, target, body) {
+function requestContext(req, route, target, body, pathParams) {
+  const decodedPath = decodeURIComponent(target.pathname);
   const query = Object.create(null);
   for (const [key, value] of target.searchParams) {
     if (!Object.hasOwn(query, key)) query[key] = value;
@@ -176,14 +182,15 @@ function requestContext(req, route, target, body) {
     return Array.isArray(value) ? value.join(', ') : value;
   };
   const adapter = {
-    getHeader, getMethod: () => req.method, getPath: () => route.path,
+    getHeader, getMethod: () => req.method, getPath: () => decodedPath,
     getUrl: () => target.href, getAcceptHeader: () => getHeader('accept') ?? '',
     getUserAgent: () => getHeader('user-agent') ?? '', getQueryParams: () => query,
     getQueryParam: name => query[name], getBody: () => body,
   };
-  return { sdk: { adapter, path: route.path, decodedPath: route.path, method: req.method,
+  return { sdk: { adapter, path: target.pathname, decodedPath, method: req.method,
     paymentHeader: getHeader('payment-signature') || getHeader('x-payment') },
   application: { method: req.method, url: new URL(target.href), query, body,
+    pathParams: Object.freeze({ ...pathParams }),
     headers: { ...req.headers } } };
 }
 
@@ -196,11 +203,6 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
   }
   if (nativeServer !== null && ['processHTTPRequest', 'processSettlement', 'createFailurePathSettlementHeaders']
       .some(key => typeof nativeServer[key] !== 'function')) throw new TypeError('Native x402 HTTP server required');
-  const byPath = new Map();
-  for (const route of compiled.routes) {
-    const methods = byPath.get(route.path) ?? new Map();
-    methods.set(route.method, route); byPath.set(route.path, methods);
-  }
   return async function sellerResourceHandler(req, res) {
     const simple = (status, error, extra = {}) => send(req, res,
       encodeResponse({ status, headers: extra, body: { error } }, maxResponseBytes));
@@ -210,19 +212,31 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       if (typeof req.url !== 'string' || !req.url.startsWith('/') || req.url.startsWith('//')) {
         return simple(400, 'INVALID_REQUEST_TARGET');
       }
-      const rawPath = req.url.split('?')[0], methods = byPath.get(rawPath);
-      if (!methods) return simple(404, 'RESOURCE_NOT_FOUND');
-      const route = methods.get(req.method);
-      if (!route) return simple(405, 'METHOD_NOT_ALLOWED', { allow: [...methods.keys()].join(', ') });
+      const rawPath = req.url.split('?')[0];
+      const selected = selectServiceRoute(compiled.routes, rawPath, req.method);
+      if (!selected) return simple(404, 'RESOURCE_NOT_FOUND');
+      const { route, pathParams } = selected;
+      if (!route) return simple(405, 'METHOD_NOT_ALLOWED', { allow: selected.allow.join(', ') });
       const target = new URL(req.url, route.offer.resource.url);
       if (target.hash || target.pathname !== rawPath) return simple(400, 'INVALID_REQUEST_TARGET');
+      let requestOffer = route.offer;
+      if (route.binding.dynamic) {
+        if (target.href.length > 2048) return simple(414, 'REQUEST_TARGET_TOO_LONG');
+        requestOffer = structuredClone(route.offer);
+        requestOffer.resource.url = target.href;
+        requestOffer.extensions.bazaar.info.input.pathParams = { ...pathParams };
+        if (!validateBazaarExtension(requestOffer.extensions.bazaar).ok)
+          return simple(400, 'PATH_PARAMETERS_REJECTED');
+        // Enforce the same header limit before entering either runtime mode.
+        paymentRequiredResponse(requestOffer);
+      }
       if (nativeServer === null) {
-        const challenge = paymentRequiredResponse(route.offer);
+        const challenge = paymentRequiredResponse(requestOffer);
         return send(req, res, encodeResponse({ status: challenge.statusCode,
           headers: challenge.headers, body: challenge.body }, maxResponseBytes));
       }
       const body = await readBody(req, maxRequestBytes);
-      const context = requestContext(req, route, target, body);
+      const context = requestContext(req, route, target, body, pathParams);
       payment = await nativeServer.processHTTPRequest(context.sdk);
       if (payment?.type === 'payment-error') {
         return send(req, res, encodeResponse(payment.response, maxResponseBytes));
