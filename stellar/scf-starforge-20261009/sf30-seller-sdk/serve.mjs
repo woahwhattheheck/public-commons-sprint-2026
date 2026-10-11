@@ -6,6 +6,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { compileSellerRoutes, createSellerResourceHandler } from './resource-server.mjs';
 import { validateAdmissionTimeout } from './admission.mjs';
 import { compileServicePath } from './route-path.mjs';
+import { readJsonResponseFile, validateResponseFile } from './response-file.mjs';
 
 const SCHEMA = 'stellar-forge.seller-service.v1';
 const HOST = '127.0.0.1';
@@ -46,9 +47,10 @@ function validateConfig(config) {
     } else if (route.path.includes(':')) {
       throw new TypeError('Dynamic service paths require an imported offer with pathParams schema');
     }
-    if (OWN(route, 'handler') === OWN(route, 'response')) {
-      throw new TypeError('Each route must choose exactly one handler export or static JSON response');
+    if (['handler', 'response', 'responseFile'].filter(key => OWN(route, key)).length !== 1) {
+      throw new TypeError('Each route must choose exactly one handler export, response or responseFile');
     }
+    if (OWN(route, 'responseFile')) validateResponseFile(route.responseFile);
     if (OWN(route, 'handler') && !/^[A-Za-z_$][\w$]{0,127}$/.test(route.handler)) {
       throw new TypeError('Invalid application handler export name');
     }
@@ -73,7 +75,11 @@ export async function readSellerConfig(path) {
   if (!info.isFile() || info.size > 1024 * 1024) throw new TypeError('Config must be a regular JSON file up to 1 MiB');
   const bytes = await readFile(path);
   if (bytes.length > 1024 * 1024) throw new RangeError('Config exceeds 1 MiB');
-  return validateConfig(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
+  const config = validateConfig(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
+  for (const route of config.routes) {
+    if (OWN(route, 'responseFile')) route.responseFile = resolve(dirname(resolve(path)), route.responseFile);
+  }
+  return config;
 }
 
 function facilitatorEndpoint(raw, allowLocal) {
@@ -100,6 +106,15 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
       throw new TypeError(`Admission export missing: ${route.admit}`);
     }
   }
+  const fileResponses = new Map();
+  for (const route of config.routes) {
+    if (!OWN(route, 'responseFile')) continue;
+    try {
+      fileResponses.set(route.id, (await readJsonResponseFile(route.responseFile)).body);
+    } catch (error) {
+      throw new Error(`Route ${route.id} responseFile: ${error.message}`, { cause: error });
+    }
+  }
   let dispatch = (_req, res) => { res.writeHead(503, { 'retry-after': '1' }); res.end(); };
   const server = createServer((req, res) => {
     Promise.resolve().then(() => dispatch(req, res)).catch(() => {
@@ -123,7 +138,8 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
       ...(route.admit ? { admit: handlers[route.admit] } : {}),
       ...(route.offer ? { offer: route.offer } : { definition: { ...route.definition, url: origin + route.path } }),
       handler: route.handler ? handlers[route.handler] : async () => ({
-        status: 200, headers: { 'content-type': 'application/json' }, body: structuredClone(route.response),
+        status: 200, headers: { 'content-type': 'application/json' },
+        body: fileResponses.has(route.id) ? Buffer.from(fileResponses.get(route.id)) : structuredClone(route.response),
       }),
     })), { allowLocalhost: !config.publicOrigin });
     const nativeServer = nativeFactory ? await nativeFactory(compiled) : null;

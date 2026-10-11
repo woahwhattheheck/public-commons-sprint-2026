@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile, lstat, mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { importOpenApi } from './importer.mjs';
 const sha = data => createHash('sha256').update(data).digest('hex');
@@ -28,7 +28,23 @@ export async function run(args = process.argv.slice(2)) {
   // Metadata-only import need not load a network resource-server module.
   const createSellerServiceConfig = bindings
     ? (await import('./service-config.mjs')).createSellerServiceConfig : null;
-  const serviceBytes = bindings ? Buffer.from(JSON.stringify(createSellerServiceConfig(compiled, bindings.value), null, 2) + '\n') : null;
+  const serviceConfig = bindings ? createSellerServiceConfig(compiled, bindings.value) : null;
+  const responseFiles = [];
+  if (serviceConfig?.routes.some(route => Object.hasOwn(route, 'responseFile'))) {
+    const { readJsonResponseFile } = await import('../sf30-seller-sdk/response-file.mjs');
+    for (const route of serviceConfig.routes) {
+      if (!Object.hasOwn(route, 'responseFile')) continue;
+      let snapshot;
+      try {
+        snapshot = await readJsonResponseFile(resolve(dirname(resolve(options.get('--service-bindings'))), route.responseFile));
+      } catch (error) {
+        throw new Error(`Route ${route.id} responseFile: ${error.message}`, { cause: error });
+      }
+      route.responseFile = 'responses/' + route.id + '.json';
+      responseFiles.push({ routeId: route.id, file: route.responseFile, bytes: snapshot.source });
+    }
+  }
+  const serviceBytes = serviceConfig ? Buffer.from(JSON.stringify(serviceConfig, null, 2) + '\n') : null;
   if (serviceBytes && serviceBytes.length > 1024 * 1024) throw new RangeError('Service config exceeds the SF30 1 MiB limit');
   const native = await readFile(new URL('../sf30-seller-discovery/index.mjs', import.meta.url));
   const adapter = await readFile(new URL('./importer.mjs', import.meta.url));
@@ -44,8 +60,16 @@ export async function run(args = process.argv.slice(2)) {
     manifest.serviceConfigSha256 = sha(serviceBytes);
     manifest.serviceAdapterSha256 = sha(await readFile(new URL('./service-config.mjs', import.meta.url)));
   }
+  if (responseFiles.length) {
+    manifest.responseFiles = responseFiles.map(({ routeId, file, bytes }) => ({ routeId, file, sha256: sha(bytes) }));
+    manifest.responseFileLoaderSha256 = sha(await readFile(new URL('../sf30-seller-sdk/response-file.mjs', import.meta.url)));
+  }
   const output = resolve(options.get('--out'));
   await mkdir(output, { mode: 0o700 });
+  if (responseFiles.length) {
+    await mkdir(resolve(output, 'responses'), { mode: 0o700 });
+    for (const { file, bytes } of responseFiles) await writeFile(resolve(output, file), bytes, { flag: 'wx', mode: 0o600 });
+  }
   await writeFile(resolve(output, 'offers.json'), bytes, { flag: 'wx', mode: 0o600 });
   if (serviceBytes) await writeFile(resolve(output, 'seller-service.json'), serviceBytes, { flag: 'wx', mode: 0o600 });
   await writeFile(resolve(output, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx', mode: 0o600 });

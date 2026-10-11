@@ -34,9 +34,30 @@ The service derives `definition.url` from the configured origin and path.
 Choose one response source per route:
 
 - `response`: a static JSON value, useful for a protected dataset or onboarding.
+- `responseFile`: a local JSON dataset loaded once before the listener starts.
 - `handler`: an export from a trusted local ESM module supplied through
   `--handlers`. Paths passed to `--handlers` are relative to the config file's
   directory, or may be absolute.
+
+### Sell an existing JSON dataset
+
+Use `"responseFile":"./data/catalog.json"` in place of `response` or `handler`.
+The path resolves beside the seller config, including when the command runs
+from another directory. Absolute paths also work. The file must be regular,
+valid UTF-8 JSON and at most 1 MiB. Missing, invalid or oversized files fail with
+the route ID before the server listens. Every JSON value is supported, including
+arrays, strings and `null`; the loaded JSON text is kept as a startup snapshot.
+Restart to load a changed file. No file path is exposed in health or offers.
+
+Exactly one of `handler`, `response` and `responseFile` is required; supplying
+two is an error. Existing inline responses keep their behavior. An optional
+`admit` export works with file responses through the same application module.
+The existing native payment flow protects the snapshot just like an application
+response; challenge-only mode never returns the dataset.
+
+For embedded use, `readSellerConfig(configPath)` resolves file paths before
+passing the result to `startSellerService()`. A directly constructed config
+uses paths relative to the embedding process's working directory.
 
 Routes can alternatively supply an original compiled `offer` instead of
 `definition`. This preserves richer OpenAPI-derived Bazaar schemas and examples
