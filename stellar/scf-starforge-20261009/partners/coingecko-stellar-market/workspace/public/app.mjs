@@ -126,7 +126,7 @@ function openForm({title,fields,initial={},intro="",extra="",read,apply,save,lat
 }
 function setFormBusy(busy){
   S.busy=busy;$("#dialog").toggleAttribute("aria-busy",busy);
-  for(const e of $("button,input,select,textarea",$("#dialog"))){if(busy){e.dataset.wasDisabled=e.disabled?"1":"0";e.disabled=true}else{if(e.dataset.wasDisabled!==undefined){e.disabled=e.dataset.wasDisabled==="1";delete e.dataset.wasDisabled}}}
+  for(const e of $$("button,input,select,textarea",$("#dialog"))){if(busy){e.dataset.wasDisabled=e.disabled?"1":"0";e.disabled=true}else{if(e.dataset.wasDisabled!==undefined){e.disabled=e.dataset.wasDisabled==="1";delete e.dataset.wasDisabled}}}
   const submit=$("#editor button[type=submit]");if(submit)submit.textContent=busy?"Saving…":S.modal?.submitLabel||"Save";
 }
 function threeWay(base,mine,current,path=[],conflicts=[]){
