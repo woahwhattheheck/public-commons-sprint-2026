@@ -21,6 +21,12 @@ def main():
     create.add_argument("--snapshot")
     for command in ("status", "run", "recover"):
         commands.add_parser(command)
+    accounting = commands.add_parser("accounting", help="offline original receipt views")
+    accounting.add_argument("--offset", type=int, default=0)
+    accounting.add_argument("--limit", type=int, default=100)
+    finalize = commands.add_parser("finalize", help="finish every existing original page reservation")
+    finalize.add_argument("--workspace")
+    finalize.add_argument("--page-size", type=int, default=25)
     for command in ("deliver", "consume"):
         action = commands.add_parser(command)
         action.add_argument("--out", required=True)
@@ -33,7 +39,15 @@ def main():
         report = acquisition.last_report
     else:
         acquisition = DatasetAcquisition(checkout=args.checkout, session=args.session)
-        if args.command in {"deliver", "consume"}:
+        if args.command == "finalize":
+            attention = False
+            for view in acquisition.finalize_all(workspace=args.workspace, page_size=args.page_size):
+                print(json.dumps(view.native, ensure_ascii=False))
+                attention = attention or not view.window_complete
+            return 2 if attention else 0
+        if args.command == "accounting":
+            report = acquisition.accounting(offset=args.offset, limit=args.limit).native
+        elif args.command in {"deliver", "consume"}:
             delivery = acquisition.deliver(args.out)
             if args.command == "consume":
                 for row in delivery.jsonl_rows():
