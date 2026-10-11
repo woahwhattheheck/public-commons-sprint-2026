@@ -7,10 +7,17 @@ import { openWorkspace, requireValue, json } from './storage.mjs';
 import { merchantConfig, buyerConfig } from './config.mjs';
 import { serveWorkspace, serveMerchant, exportResponse } from './server.mjs';
 import { preparePurchase, executePurchase, finalizePurchase, purchaseView } from './buyer.mjs';
+import { merchantContract, contractOpenAPI } from './customer/contract.mjs';
+import { exportCustomerPackage, receiveCustomerBundle, inspectCustomerExport, resumeCustomerExport,
+  readCustomerBundleFile } from './customer/export.mjs';
 
 const HELP='Native Stellar MPP Charge\n\n'+
   'node mpp-charge/cli.mjs runtime-template DEPENDENCY_DIRECTORY\n'+
   'node mpp-charge/cli.mjs init WORKSPACE\n'+
+  'node mpp-charge/cli.mjs customer-contract|customer-openapi WORKSPACE\n'+
+  'node mpp-charge/cli.mjs customer-export WORKSPACE NEW_CUSTOMER_DIRECTORY\n'+
+  'node mpp-charge/cli.mjs customer-receive BUNDLE.json NEW_CUSTOMER_DIRECTORY\n'+
+  'node mpp-charge/cli.mjs customer-inspect|customer-resume CUSTOMER_DIRECTORY\n'+
   'node mpp-charge/cli.mjs profile WORKSPACE merchant|buyer CONFIG.json\n'+
   'node mpp-charge/cli.mjs serve WORKSPACE [PORT]\n'+
   'node mpp-charge/cli.mjs merchant WORKSPACE [PORT]\n'+
@@ -30,6 +37,17 @@ export async function main(argv=process.argv.slice(2)) {
       await writeFile(target+'/package.json',await readFile(new URL('./package.json',import.meta.url)),{flag:'wx',mode:0o600});
       await writeFile(target+'/package-lock.json',await readFile(new URL('./package-lock.json',import.meta.url)),{flag:'wx',mode:0o600});
       console.log(json({directory:target,manifest:target+'/package.json',lockfile:target+'/package-lock.json'}));return 0;
+    }
+    if(command==='customer-receive') {
+      requireValue(rest.length===1,'MPP_CUSTOMER_RECEIVE_ARGUMENTS_INVALID');
+      const bundle=await readCustomerBundleFile(resolve(directory));
+      console.log(json(await receiveCustomerBundle({bundle,directory:resolve(rest[0])})));return 0;
+    }
+    if(['customer-inspect','customer-resume'].includes(command)) {
+      requireValue(rest.length===0,'MPP_CUSTOMER_DIRECTORY_ARGUMENTS_INVALID');
+      const result=command==='customer-inspect'?await inspectCustomerExport(resolve(directory)):
+        await resumeCustomerExport(resolve(directory));
+      console.log(json(result));return 0;
     }
     if(command==='serve') {
       requireValue(rest.length<=1,'MPP_CLI_ARGUMENTS_INVALID');
@@ -52,6 +70,12 @@ export async function main(argv=process.argv.slice(2)) {
         port:rest[0]===undefined?8788:Number(rest[0])});
       console.log('Merchant listener: http://127.0.0.1:'+app.port);
       await waitForStop(app.close);return 0;
+    } else if(['customer-contract','customer-openapi','customer-export'].includes(command)) {
+      requireValue(rest.length===(command==='customer-export'?1:0),'MPP_CUSTOMER_EXPORT_ARGUMENTS_INVALID');
+      const profile=await workspace.profile('merchant');requireValue(profile,'MPP_MERCHANT_PROFILE_REQUIRED');
+      const contract=merchantContract(profile);
+      result=command==='customer-contract'?contract:command==='customer-openapi'?contractOpenAPI(contract):
+        await exportCustomerPackage({contract,directory:resolve(rest[0])});
     } else if(command==='prepare') {
       requireValue(rest.length<=1,'MPP_CLI_ARGUMENTS_INVALID');
       result=await preparePurchase({workspace,profile:await workspace.profile('buyer'),challengeId:rest[0]});
