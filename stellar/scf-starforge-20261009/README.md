@@ -22,6 +22,7 @@ the numbered source directories identify implementation components.
 | Sell and deliver a separate private file | [Approved order and paid-file workflow](sf101-merchant-receiver/CHECKOUT.md) | Original order, native delivery event, entitlement and exact completed bytes |
 | Integrate an agent or customer application | [Durable MCP workspace](../../stellar-forge/mcp-paid-agent/DURABILITY.md), [customer SDK](sf30-seller-sdk/DEVELOPER.md), [Python buyer](sf88-operator-buyer-cli/python/README.md) | Original operation identity and the operator's configured payment authority |
 | Change a live product or recover an incident | [Seller releases](sf82-seller-pilot/RELEASES.md), [buyer inbox](sf88-operator-buyer-cli/QUEUE.md), [operations](sf30-seller-sdk/operations/README.md) | Reviewed versions, original attempts, retained output and operating history |
+| Stage and replace merchant releases | [Managed fleet workspace](merchant-fleet-gateway/workspace/README.md) and [release operator](merchant-fleet-gateway/RELEASE_OPERATOR.md) | Immutable original releases, reviewed traffic changes, drained sellers and restart rollback |
 | Review merchant pricing and operating costs | [Merchant pricing workspace](sf97-merchant-revenue-ops/WORKSPACE.md) | Every configured payment option, the original operating capture, saved cost assumptions and financial reports |
 
 ## Install and open the merchant workspace
@@ -177,6 +178,46 @@ selection, review, execution, saved-resource preview/download and recovery over
 that same session. Start it instead of a second terminal session for the same
 directory. Its original approval prompt remains in the terminal from which it
 was launched.
+
+## Stage, replace and restore a live merchant release
+
+Use the [managed fleet workspace](merchant-fleet-gateway/workspace/README.md)
+to operate several merchants from their original SF82 release stores. Prepare
+the private plan and original startup releases with the
+[release operator guide](merchant-fleet-gateway/RELEASE_OPERATOR.md). Each merchant
+has independent stores on fixed ports and registered saved API workspace
+packages for future staging. The merchant's public hostname and original
+payment/runtime configuration stay attached to its released source.
+
+From the installed application directory, open the existing fleet workspace:
+
+```sh
+npx --no-install starforge merchant-fleet-workspace \
+  --releases /absolute/private/fleet/plan.json \
+  --release-state /absolute/private/fleet/operator --port 8402
+```
+
+From a source checkout, the equivalent entry is
+`node stellar/scf-starforge-20261009/merchant-fleet-gateway/workspace/server.mjs`
+with the same arguments. The plan, saved packages, original release stores and
+private state belong outside the software installation. The gateway state
+defaults to the operator's `gateway/` subdirectory; pass its existing `--state`
+directory when reopening a deployment that used a separate gateway location.
+
+Stage a registered package in the selected replacement slot and compare its
+actual routes, atomic payment terms and application changes with the serving
+release. Start and prepare the reviewed source, then explicitly activate the
+gateway candidate. Already-admitted work finishes on the original seller.
+When that exact port has drained, retire the session this operator owns.
+
+To return to a retained revision, review the original release comparison and
+confirm restoration. The operator starts any stopped retained sellers on their
+fixed ports before the gateway restores routing as a new revision. Normal
+shutdown drains the gateway and closes its owned sellers; reopening the same
+plan and directories restores the saved selection. Export status and source
+links with the handoff. The browser and
+[terminal release operator](merchant-fleet-gateway/RELEASE_OPERATOR.md#start-one-complete-foreground-session)
+are alternative owners of that session.
 
 ## Deliver useful output and recover the failed step
 

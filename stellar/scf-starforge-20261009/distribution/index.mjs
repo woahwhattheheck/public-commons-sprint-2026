@@ -3,6 +3,8 @@ export { compileHttpSellerOffer, paymentRequiredResponse } from '../sf30-seller-
 export { compileSellerRoutes, createSellerResourceHandler } from '../sf30-seller-sdk/resource-server.mjs';
 export { readSellerConfig, startSellerService } from '../sf30-seller-sdk/serve.mjs';
 export { startSellerOperations } from '../sf30-seller-sdk/operations/server.mjs';
+export { startDuckdbWorkbench } from '../sf30-seller-sdk/duckdb/workbench/server.mjs';
+export { openDuckdbWorkbench } from '../sf30-seller-sdk/duckdb/workbench/model.mjs';
 export { X402BuyerClient, BuyerError } from '../sf31-buyer-client/buyer.mjs';
 export { createPublicBuyer } from '../sf31-buyer-client/public-buyer.mjs';
 export { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
@@ -26,5 +28,3 @@ export { startVersionedDatasetSeller, datasetControl } from '../sf30-seller-sdk/
 export { reviewCommerceSetup, prepareCommerceSetup, inspectCommerceSetup } from '../sf66-demo-launcher/commerce-setup.mjs';
 export { fleetControl } from '../merchant-fleet-gateway/control.mjs';
 export { startFleetWorkspace } from '../merchant-fleet-gateway/workspace/server.mjs';
-export { startDuckdbWorkbench } from '../sf30-seller-sdk/duckdb/workbench/server.mjs';
-export { openDuckdbWorkbench } from '../sf30-seller-sdk/duckdb/workbench/model.mjs';

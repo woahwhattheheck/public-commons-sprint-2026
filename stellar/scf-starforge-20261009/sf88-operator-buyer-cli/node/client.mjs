@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { NativeRuntime } from './runtime.mjs';
 import { BuyerResult } from './result.mjs';
+import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { absolute, privateDirectory, digest, now, intent, object, need, BuyerError,
   jsonBytes, parseJson, readBytes, readJson, exists, writeBytes, writeJson, syncDirectory } from './store.mjs';
 
@@ -24,11 +25,19 @@ function nativeHeaders(headers) {
 const profileKeys = new Set(['operator', 'signerModule', 'trustedPayer', 'bodyCaptureTimeoutMs', 'buyerTransport']);
 
 export class Buyer {
-  constructor({ runtimeDirectory, stateDirectory, operatorProfile, ...runtimeOptions }) {
+  constructor({ runtimeDirectory, stateDirectory, operatorProfile, datasetReportLimit = 33554432, ...runtimeOptions }) {
     this.runtime = new NativeRuntime({ runtimeDirectory, ...runtimeOptions });
     this.stateDirectory = absolute(stateDirectory);
     this.operatorProfile = operatorProfile;
+    need(Number.isSafeInteger(datasetReportLimit) && datasetReportLimit >= 1048576 &&
+      datasetReportLimit <= 268435456, 'DATASET_REPORT_LIMIT_INVALID');
+    this.datasetReportLimit = datasetReportLimit;
   }
+  dataset(id) { return new Dataset(this, id); }
+  createDataset(options) { return createDataset(this, options); }
+  attachDataset(options) { return createDataset(this, options, true); }
+  listDatasets() { return listDatasets(this); }
+
   async ready() { await privateDirectory(this.stateDirectory); return this; }
   operation(intentId) { return new Operation(this, intent(intentId)); }
 
