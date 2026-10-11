@@ -203,7 +203,7 @@ final class Starforge_SF104_Merchant_Refunds {
             ($proof['recipient'] ?? '') === $native['payer'] &&
             ($proof['atomicAmount'] ?? '') === $payload['amountAtomic'] &&
             ($proof['matchingTransfers'] ?? null) === 1 &&
-            is_int($proof['ledger'] ?? null) && $proof['ledger'] > 0 &&
+            is_int($proof['ledger'] ?? null) && $proof['ledger'] > 0 && $proof['ledger'] <= 9007199254740991 &&
             is_string($proof['matchingEventId'] ?? null) && strlen($proof['matchingEventId']) > 0 &&
             strlen($proof['matchingEventId']) <= 512, 'REFUND_NATIVE_TERMS_MISMATCH');
         foreach (['transaction', 'transactionResultSha256', 'networkResultSha256'] as $name)
@@ -340,13 +340,6 @@ final class Starforge_SF104_Merchant_Refunds {
     }
     static function finish($order, $row, $refund, $status) {
         global $wpdb;
-        if ($row->status !== 'APPLIED') {
-            $saved = $wpdb->update(self::table(), ['status' => 'APPLIED', 'refund_id' => $refund->get_id(),
-                'history' => self::history($row, 'APPLIED', ['refundId' => (string) $refund->get_id(), 'result' => $status]),
-                'updated_at' => current_time('mysql', true)],
-                ['adjustment_id' => $row->adjustment_id, 'review_sha256' => $row->review_sha256]);
-            self::need($saved === 1, 'WOO_REFUND_SAVED_REOPEN_REQUIRED');
-        }
         $current = wc_get_order($order->get_id());
         // A completed child survives an interrupted HTTP response. Never call
         // wc_create_refund again when its same saved metadata is already present.
@@ -356,6 +349,13 @@ final class Starforge_SF104_Merchant_Refunds {
             $next = apply_filters('woocommerce_order_fully_refunded_status', 'refunded',
                 $current->get_id(), $refund->get_id());
             if ($next) $current->update_status($next);
+        }
+        if ($row->status !== 'APPLIED') {
+            $saved = $wpdb->update(self::table(), ['status' => 'APPLIED', 'refund_id' => $refund->get_id(),
+                'history' => self::history($row, 'APPLIED', ['refundId' => (string) $refund->get_id(), 'result' => $status]),
+                'updated_at' => current_time('mysql', true)],
+                ['adjustment_id' => $row->adjustment_id, 'review_sha256' => $row->review_sha256]);
+            self::need($saved === 1, 'WOO_REFUND_SAVED_REOPEN_REQUIRED');
         }
         return self::response(200, ['schema' => self::SCHEMA, 'status' => $status,
             'adjustment' => self::row_view(self::row($row->adjustment_id)),

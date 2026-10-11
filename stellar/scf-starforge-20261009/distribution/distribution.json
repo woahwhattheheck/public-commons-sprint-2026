@@ -128,7 +128,12 @@
     "stellar/scf-starforge-20261009/sf46-release/release-core.mjs",
     "stellar/scf-starforge-20261009/sf46-release/command-catalog.mjs",
     "stellar/scf-starforge-20261009/sf46-release/runtime-package.mjs",
-    "stellar/scf-starforge-20261009/sf46-release/MANAGED_PACKAGE.md"
+    "stellar/scf-starforge-20261009/sf46-release/MANAGED_PACKAGE.md",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.js",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.css",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-networks.json",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/REFUNDS.md"
   ],
   "commands": {
     "installation": "stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
@@ -263,7 +268,8 @@
     "provider-operator": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli.mjs",
     "provider-workspace": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/cli.mjs",
     "merchant-recovery": "stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs",
-    "merchant-recovery-remote": "stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-cli.mjs"
+    "merchant-recovery-remote": "stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-cli.mjs",
+    "woo-refund": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator-cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -509,7 +515,8 @@
     "./buyer/provider-workspace/recovery": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/archive.mjs",
     "./merchant/state-recovery": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs",
     "./merchant/remote-recovery": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/remote.mjs",
-    "./merchant/remote-recovery/s3": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-s3.mjs"
+    "./merchant/remote-recovery/s3": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-s3.mjs",
+    "./merchant/woocommerce/refunds": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator.mjs"
   },
   "nativePeers": {
     "@x402/core": {
