@@ -10,6 +10,7 @@ import { releaseCacheControlPath } from './release-cache.mjs';
 import { PYTHON_SOURCE_SCHEMA, stagePythonRelease, inspectPythonRelease } from './release-python.mjs';
 import { DUCKDB_SOURCE_SCHEMA, stageDuckdbRelease, inspectDuckdbRelease } from './release-duckdb.mjs';
 import { S3_SOURCE_SCHEMA, stageS3Release, inspectS3Release } from './release-s3.mjs';
+import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
@@ -18,6 +19,7 @@ const PILOT = fileURLToPath(new URL('./pilot.mjs', import.meta.url));
 const PYTHON_PILOT = fileURLToPath(new URL('./release-python.mjs', import.meta.url));
 const DUCKDB_PILOT = fileURLToPath(new URL('./release-duckdb.mjs', import.meta.url));
 const S3_PILOT = fileURLToPath(new URL('./release-s3.mjs', import.meta.url));
+const JSONRPC_PILOT = fileURLToPath(new URL('./release-jsonrpc.mjs', import.meta.url));
 const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
 const LIMIT = 4 * 1024 * 1024;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -188,6 +190,11 @@ function runtimeOptions(value = {}) {
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
   const manifest = JSON.parse(manifestBytes);
+  if (manifest.schema === JSONRPC_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('An RPC package owns its original method and provider bindings.');
+    const snapshot = await inspectJsonrpcRelease(path);
+    return { ...snapshot, routes: sourceRoutes(snapshot.service, new Map(), null, null, null, null, snapshot.jsonrpc) };
+  }
   if (manifest.schema === S3_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('An S3 release owns its original object bindings.');
     const snapshot = await inspectS3Release(path);
@@ -231,7 +238,7 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const hasApplication = service.routes.some(route => route.handler || route.admit);
   return { manifest, offers, service, files: files.sort((a, b) => a.file.localeCompare(b.file)), routes, hasApplication };
 }
-function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb = null, s3 = null) {
+function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb = null, s3 = null, jsonrpc = null) {
   return service.routes.map(route => {
     if (route.responseFile && !snapshots.has(route.responseFile)) throw new Error('Unpinned response file: ' + route.id);
     if (!route.offer || typeof route.offer.extensions?.bazaar?.info?.input?.method !== 'string')
@@ -252,6 +259,8 @@ function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb
         ...(duckdb ? { duckdbExecutionSha256: duckdb.executionSha256 } : {}),
         ...(s3 ? { s3ExecutionSha256: s3.executionSha256,
           object: s3.objects.find(item => item.id === route.id) } : {}),
+        ...(jsonrpc ? { jsonrpcExecutionSha256: jsonrpc.executionSha256, dataNetwork: jsonrpc.dataNetwork,
+          rpcMethod: jsonrpc.methods.find(item => item.method === route.id)?.method } : {}),
         responseSha256: route.responseFile ? snapshots.get(route.responseFile) :
           Object.hasOwn(route, 'response') ? hash(stable(route.response)) : null } };
   });
@@ -264,7 +273,8 @@ function publicRelease(record) {
     source: record.source, ...(record.inputPackage ? { inputPackage: record.inputPackage } : {}),
     ...(record.python ? { python: record.python } : {}),
     ...(record.duckdb ? { duckdb: record.duckdb } : {}),
-    ...(record.s3 ? { s3: record.s3 } : {}) };
+    ...(record.s3 ? { s3: record.s3 } : {}),
+    ...(record.jsonrpc ? { jsonrpc: record.jsonrpc } : {}) };
 }
 async function releaseRecord(root, releaseId, verify = false) {
   const path = join(resolve(root), 'releases', id(releaseId)); await directory(path);
@@ -277,7 +287,8 @@ async function releaseRecord(root, releaseId, verify = false) {
     if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes) ||
         stable(snapshot.python ?? null) !== stable(record.python ?? null) ||
         stable(snapshot.duckdb ?? null) !== stable(record.duckdb ?? null) ||
-        stable(snapshot.s3 ?? null) !== stable(record.s3 ?? null))
+        stable(snapshot.s3 ?? null) !== stable(record.s3 ?? null) ||
+        stable(snapshot.jsonrpc ?? null) !== stable(record.jsonrpc ?? null))
       throw new Error('Release files changed after staging. Restore the selected immutable release.');
     if (record.handlerEntry && hash(await regular(record.handlerEntry.path)) !== record.handlerEntry.sha256)
       throw new Error('Trusted handler entry changed after staging. Restore it or stage a new release.');
@@ -292,6 +303,10 @@ export async function stageRelease(root, options) {
   const pythonSource = options.python !== undefined;
   const duckdbSource = options.duckdbPackage !== undefined;
   const s3Source = options.s3Package !== undefined;
+  const jsonrpcSource = options.jsonrpcPackage !== undefined;
+  if (jsonrpcSource && (['workspace', 'spec', 'config', 'bindings', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package'].some(key => options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams))
+    throw new TypeError('Choose the original prepared RPC package or another source; the package owns its method and provider bindings.');
   if (s3Source && (['workspace', 'spec', 'config', 'bindings', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython'].some(key => options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
     throw new TypeError('Choose the original S3 configured package or another source; the package owns its pinned object bindings.');
@@ -312,12 +327,14 @@ export async function stageRelease(root, options) {
   if (workspace?.allowLoopbackUpstream) runtime.allowLoopbackUpstream = true;
   if (runtime.upstreams) throw new TypeError('Stage takes --upstreams FILE, not an existing release snapshot.');
   if (inputs.upstreams && runtime.handlers) throw new TypeError('Choose --upstreams or --handlers for this release.');
-  if (runtime.allowLoopbackUpstream && !inputs.upstreams) throw new TypeError('Loopback upstream permission requires --upstreams.');
+  if (runtime.allowLoopbackUpstream && !inputs.upstreams && !jsonrpcSource)
+    throw new TypeError('Loopback upstream permission requires --upstreams or the original RPC package.');
   const temp = join(root, 'releases', '.stage-' + randomUUID());
   let committed = false;
   try {
     let stagedDuckdb;
-    if (s3Source) await stageS3Release(temp, options.s3Package);
+    if (jsonrpcSource) await stageJsonrpcRelease(temp, options.jsonrpcPackage);
+    else if (s3Source) await stageS3Release(temp, options.s3Package);
     else if (duckdbSource) stagedDuckdb = await stageDuckdbRelease(temp, options.duckdbPackage, { python: options.duckdbPython });
     else if (pythonSource) await stagePythonRelease(temp, options.python, { sourceRoot: options.pythonRoot });
     else {
@@ -338,7 +355,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !source.python && !source.duckdb && !source.s3 && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !source.duckdb && !source.s3 && !source.jsonrpc && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -352,8 +369,11 @@ export async function stageRelease(root, options) {
       ...(source.python ? { python: source.python } : {}),
       ...(source.duckdb ? { duckdb: source.duckdb } : {}),
       ...(source.s3 ? { s3: source.s3 } : {}),
+      ...(source.jsonrpc ? { jsonrpc: source.jsonrpc } : {}),
       source: { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256,
-        ...(source.s3 ? { kind: 'S3_OBJECT_PACKAGE', sourceConfigSha256: source.s3.sourceConfigSha256,
+        ...(source.jsonrpc ? { kind: 'JSONRPC_MERCHANT_PACKAGE', planSha256: source.jsonrpc.planSha256,
+          packageManifestSha256: source.jsonrpc.packageManifestSha256, executionSha256: source.jsonrpc.executionSha256 }
+          : source.s3 ? { kind: 'S3_OBJECT_PACKAGE', sourceConfigSha256: source.s3.sourceConfigSha256,
           objectsSha256: source.s3.objectsSha256, executionSha256: source.s3.executionSha256 }
           : source.duckdb ? { kind: 'DUCKDB_PACKAGE', packageManifestSha256: source.duckdb.packageManifestSha256,
           sourceConfigSha256: source.duckdb.sourceConfigSha256, planSha256: source.duckdb.planSha256,
@@ -419,6 +439,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'duckdb', before: before?.duckdb ?? null, after: after.duckdb ?? null });
   if (stable(before?.s3 ?? null) !== stable(after.s3 ?? null))
     runtimeChanges.push({ field: 's3', before: before?.s3 ?? null, after: after.s3 ?? null });
+  if (stable(before?.jsonrpc ?? null) !== stable(after.jsonrpc ?? null))
+    runtimeChanges.push({ field: 'jsonrpc', before: before?.jsonrpc ?? null, after: after.jsonrpc ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
     summary: { added: changes.filter(c => c.state === 'ADDED').length,
       removed: changes.filter(c => c.state === 'REMOVED').length,
@@ -513,7 +535,7 @@ export async function releaseStatus(root) {
 // its private cache controls attach before the release reports readiness.
 
 /** Spawn the ORIGINAL foreground launcher so each run gets fresh application imports. */
-export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs, expectedGeneration, handleSignals = true } = {}) {
+export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs, expectedGeneration, handleSignals = true, operationsNavigationOrigin } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 120000 ||
       shutdownGraceMs !== undefined && (!Number.isInteger(shutdownGraceMs) || shutdownGraceMs < 1000 || shutdownGraceMs > 120000))
@@ -521,6 +543,10 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
   if (expectedGeneration !== undefined && (!Number.isSafeInteger(expectedGeneration) || expectedGeneration < 0))
     throw new TypeError('expectedGeneration must be the nonnegative integer shown by release status.');
   if (typeof handleSignals !== 'boolean') throw new TypeError('handleSignals must be a boolean.');
+  if (operationsNavigationOrigin !== undefined &&
+      (!/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(operationsNavigationOrigin) ||
+        Number(new URL(operationsNavigationOrigin).port) > 65535))
+    throw new TypeError('Use the explicit loopback console origin for merchant operations navigation.');
   const releaseLock = await lock(root, 'run.lock');
   let child, observation, closing, finishing, stopping, completion, startupTimer, failure;
   let ownsWorkerGroup = false, effectiveShutdownGraceMs = shutdownGraceMs ?? 70000;
@@ -589,7 +615,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       effectiveShutdownGraceMs = Math.max(70000, 60000 + record.python.shutdownTimeoutMs + 5000);
     // Replace only original mutable runtime settings, never compiled source. This
     // prevents a previous manual resume override from leaking into the release.
-    const originalOptions = { ...record.runtime, port: String(record.runtime.port) };
+    const originalOptions = { ...record.runtime, port: String(record.runtime.port),
+      ...(record.jsonrpc && operationsNavigationOrigin ? { operationsNavigationOrigin } : {}) };
     await atomic(join(path, 'pilot-runtime.json'), { schema: 'stellar-forge.seller-pilot-runtime.v1',
       source: { offersSha256: record.source.offersSha256, serviceConfigSha256: record.source.serviceConfigSha256 },
       options: originalOptions });
@@ -597,7 +624,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
+    child = spawn(process.execPath, [CHILD, record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     let readyResolve, readyReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
@@ -636,10 +663,15 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
         report.originalServiceConfigSha256 !== record.source.serviceConfigSha256 ||
         report.cacheControlAvailable !== Boolean(cacheRoutes.length))
       throw new Error('Original pilot reported a different release source.');
+    const operations = report.operations ?? null;
+    if (Boolean(record.jsonrpc) !== Boolean(operations) || operations && (!/^http:\/\/127\.0\.0\.1:\d+$/.test(operations.url) ||
+        operations.availability !== operations.url + '/availability' ||
+        operations.availabilityControl !== null && !new RegExp('^' + operations.url.replaceAll('.', '\\.') + '/availability#[0-9a-f]{64}$').test(operations.availabilityControl)))
+      throw new Error('Original merchant reported invalid private operations links.');
     await originalReadback(report.listener, record, mode);
     if (exitSettled || shutdownRequested) throw new Error('Original seller stopped during startup.');
     Object.assign(observation, { listener: report.listener, phase: 'RUNNING', readyAt: new Date().toISOString(),
-      cacheControlAvailable: report.cacheControlAvailable });
+      cacheControlAvailable: report.cacheControlAvailable, ...(operations ? { operations: operations.url } : {}) });
     await atomic(join(root, 'runtime.json'), observation);
     completion = exited.then(finish);
     void completion.catch(() => {});
@@ -650,7 +682,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       })();
       return closing;
     };
-    return { release: publicRelease(record), url: report.listener, mode, child, observation, close, completion };
+    return { release: publicRelease(record), url: report.listener, mode, child, observation, operations, close, completion };
   } catch (error) {
     failure ??= error.message;
     await stopChild();
