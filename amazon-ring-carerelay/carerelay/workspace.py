@@ -149,6 +149,14 @@ def apply_reviews(previous: dict[str, Any], path: Path) -> dict[str, Any]:
     return _pack(relay, source)
 
 
+def record_review(previous: dict[str, Any], *, proposal_id: str,
+                  approver: str, decision: str) -> dict[str, Any]:
+    """Record one explicit local decision with the same reducer as JSONL review."""
+    relay, source = restore(previous)
+    relay.approve(proposal_id, approver, decision)
+    return _pack(relay, source)
+
+
 def publish_new(path: Path, payload: bytes) -> None:
     """Publish a complete private file without replacing any existing path.
 
