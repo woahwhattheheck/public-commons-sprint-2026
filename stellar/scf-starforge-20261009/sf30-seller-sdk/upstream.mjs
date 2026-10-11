@@ -10,6 +10,7 @@ import { compileResponseContract } from './response-contract.mjs';
 import { compileUpstreamIdempotency, configuredUpstreamIdempotency } from './upstream-idempotency-config.mjs';
 import { supportsSellerMethod } from './http-methods.mjs';
 import { createUpstreamOperationControl } from './upstream-operation-control.mjs';
+import { compileOAuthClientCredentials, createOAuthClientCredentials } from './oauth-client-credentials.mjs';
 import { compileUpstreamCache, createConfiguredCachedUpstream } from './response-cache/config.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
@@ -18,8 +19,9 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
 const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability','responseContract','idempotency','cache']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability','responseContract','idempotency','cache','oauth2']);
 const bad = text => { throw new TypeError(text); };
+const handlerRuntimes = new WeakMap();
 
 function integer(value,fallback,max,name) {
   const result = value ?? fallback;
@@ -84,7 +86,34 @@ export async function readUpstreamBindings(path) {
   return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(data));
 }
 
-/** Trusted operator data, captured once; compiled objects contain private headers. */
+/** Sorted environment REFERENCES for offline review. No environment access,
+ * imports, provider construction or network activity. Full compile is separate. */
+export function upstreamCredentialReferences(config) {
+  if (!plain(config) || config.schema !== SCHEMA || !plain(config.bindings)) bad('Expected seller-upstreams.v1');
+  const references = new Set();
+  const add = value => {
+    if (typeof value !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) bad('Invalid credential environment reference');
+    references.add(value);
+  };
+  for (const binding of Object.values(config.bindings)) {
+    if (!plain(binding)) bad('Invalid upstream binding');
+    if (binding.headerEnv !== undefined) {
+      if (!plain(binding.headerEnv)) bad('Invalid headerEnv');
+      for (const value of Object.values(binding.headerEnv)) add(value);
+    }
+    if (binding.oauth2 !== undefined) {
+      if (!plain(binding.oauth2)) bad('Invalid OAuth declaration');
+      add(binding.oauth2.clientIdEnv); add(binding.oauth2.clientSecretEnv);
+    }
+    if (binding.idempotency !== undefined) {
+      if (!plain(binding.idempotency)) bad('Invalid idempotency declaration');
+      add(binding.idempotency.keyEnv);
+    }
+  }
+  return Object.freeze([...references].sort());
+}
+
+/** Trusted operator data; static headers are captured once, OAuth stores references. */
 export function compileUpstreamBindings(config,{allowLoopback=false,env=process.env}={}) {
   if (typeof allowLoopback !== 'boolean' || !plain(config) || config.schema !== SCHEMA || !plain(config.bindings) ||
       Object.keys(config).some(k => !['schema','bindings'].includes(k)) ||
@@ -108,6 +137,8 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       try { validateHeaderValue(header,value); } catch { bad(`Invalid environment header value: ${variable}`); }
       credentials[key] = value;
     }
+    const oauth2 = raw.oauth2 === undefined ? undefined : compileOAuthClientCredentials(raw.oauth2,{allowLoopback,env});
+    if (oauth2 && OWN(credentials,'authorization')) bad('OAuth cannot be combined with an authorization headerEnv');
     const method = raw.method ?? 'GET', responseMode = raw.responseMode ?? 'json';
     if (!supportsSellerMethod(method) || !['json','bytes'].includes(responseMode)) bad('Invalid upstream method or responseMode');
     if (OWN(raw,'responseContract') && responseMode !== 'json') bad('Response contracts require JSON responseMode');
@@ -123,6 +154,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       path:raw.path,pathKeys:Object.freeze(keys),method,query:queryMapping(raw.query),
       requestHeaders:Object.freeze(requestHeaders),responseHeaders:Object.freeze(responseHeaders),
       credentials:Object.freeze(credentials),responseMode,...(idempotency ? {idempotency} : {}),
+      ...(oauth2 ? {oauth2} : {}),
       ...(responseContract === undefined ? {} : {responseContract}),
       timeoutMs:integer(raw.timeoutMs,10000,120000,'timeoutMs'),
       maxResponseBytes,
@@ -177,9 +209,12 @@ function publicLookup(binding,lookup) {
 export function createUpstreamHandlers(config,{allowLoopback=false,env=process.env,lookup=systemLookup}={}) {
   if (typeof lookup !== 'function') bad('lookup must be a function');
   const compiled = compileUpstreamBindings(config,{allowLoopback,env});
-  const handlers = Object.create(null);
+  const handlers = Object.create(null), providers = new Map();
   for (const [name,binding] of Object.entries(compiled)) {
-    const options = {baseUrl:binding.origin,path:binding.path,method:binding.method,
+    const key = binding.oauth2 ? JSON.stringify(binding.oauth2) : null;
+    if (key && !providers.has(key)) providers.set(key,createOAuthClientCredentials(binding.oauth2,{allowLoopback,env,lookup}));
+    const provider = key ? providers.get(key) : undefined;
+    const options = {...(provider ? {credentialProvider:provider} : {}),baseUrl:binding.origin,path:binding.path,method:binding.method,
       query:binding.query,headers:binding.credentials,requestHeaders:binding.requestHeaders,
       responseHeaders:[...new Set(['content-type',...binding.responseHeaders])],responseType:binding.responseMode,
       ...(binding.responseContract === undefined ? {} : {responseContract:binding.responseContract}),
@@ -194,7 +229,24 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
     }
     if (binding.idempotency) handlers[binding.idempotency.admission] = handlers[name].admit;
   }
+  let closing;
+  handlerRuntimes.set(handlers,options => closing ??= (async () => {
+    const cacheControls = new Set(Object.values(handlers).map(handler => handler.cache).filter(Boolean));
+    try { await Promise.all([...cacheControls].map(control => control.close(options))); }
+    finally {
+      for (const provider of providers.values()) provider.close();
+      await Promise.all([...new Set(Object.values(handlers).map(handler => handler.idempotency).filter(Boolean))]
+        .map(control => control.close()));
+    }
+  })());
   return Object.freeze(handlers);
+}
+
+/** Drain the original seller before releasing its private credentials/state. */
+export function closeUpstreamHandlers(handlers, options) {
+  const close = handlerRuntimes.get(handlers);
+  if (!close) throw new TypeError('Original upstream handlers required');
+  return close(options);
 }
 
 /** Compose opt-in backend admission with the original seller's schema admission.
@@ -215,13 +267,12 @@ export function createUpstreamApplication(config,bindings,options={}) {
     handlers[name] = handler.admit;
     route.admit = name;
   }
-  return {config:service,handlers:Object.freeze(handlers),
-    operationControl:createUpstreamOperationControl(compiled,originals),
+  return {config:service,handlers:Object.freeze(handlers),operationControl:createUpstreamOperationControl(compiled,originals),
     invalidateCache:name => {
       if (name !== undefined && !caches.has(name)) bad('Unknown cached upstream binding');
       return Object.fromEntries([...caches].filter(([id]) => name === undefined || id === name).map(([id,cache]) => [id,cache.invalidate()]));
     },
-    close:options => Promise.all([...caches.values()].map(cache => cache.close(options))),
+    close:options => closeUpstreamHandlers(originals,options),
     snapshot:() => ({
     schema:'stellar-forge.seller-upstream-availability.v1',capturedAt:new Date().toISOString(),
     bindings:Object.entries(compiled).map(([name,binding]) => ({name,method:binding.method,
