@@ -136,8 +136,9 @@ worker counters describe application processing, not Stellar settlement or
 revenue. The terminal prints the Python cleanup result when the session stops.
 
 On `quit`, SIGINT or SIGTERM, the commerce runtime first waits for its original
-buyer/review/signer children, then drains the original seller and facilitator,
-checkpoints its existing operations history, and closes the Python pool. Idle
+buyer/review/signer/retrieval work, then drains the original seller and
+facilitator, closes the Python pool, and checkpoints its existing operations
+history. Idle
 workers run the application shutdown hook and finish loop cleanup; the parent
 waits for actual process exit. A hanging hook reaches the declaration's
 `shutdownTimeoutMs` and is retired. The existing close result includes the exact
