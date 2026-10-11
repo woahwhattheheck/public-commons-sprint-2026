@@ -13,6 +13,7 @@ const help = [
   '     Use --workspace /private/existing-buyer instead of --config to attach its original operator keys.',
   'status --session /private/session',
   'run --session /private/session [--workspace /private/existing-buyer]',
+  '    [--retry-unpaid true --expect-attempt ORIGINAL_ATTEMPT_SHA256]',
   'recover --session /private/session',
   'export --session /private/session --out /private/dataset-manifest.json',
   'deliver --session /private/session --out /private/dataset-data-room',
@@ -22,7 +23,9 @@ const help = [
   '',
   'init, status, recover, export and deliver are offline.',
   'run uses the original SF88 buyer for each new page, including its current quote review and durable reservation.',
-  'Completed pages are reused. An incomplete attempted page is never sent again.',
+  'Completed pages are reused. Signed or unresolved attempts remain retained for accounting.',
+  'An explicitly reviewed unsigned page can continue after its original ledger proves the intent absent.',
+  'Its failed attempt and evidence remain in the same page unpaid-history directory.'
   'accounting reads original saved receipts; finalize reconciles those original reservations without buying again.',
   'Accounting ranges are zero-based; continue from range.nextOffset and review unresolved entries.',
 ].join('\n') + '\n';
@@ -33,7 +36,7 @@ function parse(args) {
     ? new Set(['session','config','workspace','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot'])
     : new Set(['accounting','finalize'].includes(command)
       ? ['session','workspace','offset','limit',...(command==='finalize'?['outbox','merchant-route']:[])]
-      : ['export','deliver'].includes(command) ? ['session','out'] : command === 'run' ? ['session','workspace'] : ['session']);
+      : ['export','deliver'].includes(command) ? ['session','out'] : command === 'run' ? ['session','workspace','retry-unpaid','expect-attempt'] : ['session']);
   const flags = {};
   need(args.length % 2 === 0, 'DATASET_FLAG_VALUE_REQUIRED');
   for (let i = 0; i < args.length; i += 2) {
@@ -43,6 +46,9 @@ function parse(args) {
     flags[name] = args[i+1];
   }
   need(flags.session, 'DATASET_SESSION_REQUIRED');
+  if(command==='run')need(flags['retry-unpaid']===undefined&&flags['expect-attempt']===undefined||
+    flags['retry-unpaid']==='true'&&/^[a-f0-9]{64}$/.test(flags['expect-attempt']??''),
+    'DATASET_UNPAID_ATTEMPT_REVIEW_REQUIRED');
   return {command, flags};
 }
 function number(value, required) {
@@ -85,6 +91,7 @@ export async function main(args = process.argv.slice(2)) {
         workspace:f.workspace,offset:offset(f.offset),limit:number(f.limit),finalize:true,
         signal:controller.signal,outbox:f.outbox,merchantRoute:f['merchant-route']})
         : await runDatasetSession(f.session, {signal:controller.signal, workspace:f.workspace,
+        retryUnpaid:f['retry-unpaid']==='true',expectedAttemptSha256:f['expect-attempt'],
         onPage:state => process.stderr.write('Dataset: ' + state.completedPages + ' pages, ' +
           state.acquiredRows + ' rows, ' + state.status + '\n')});
     } finally {
