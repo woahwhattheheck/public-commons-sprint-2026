@@ -1,7 +1,7 @@
 // MIT. Retain original upstream JSON as an immutable SF82 release input.
 import { createHash } from 'node:crypto';
 import { lstat, readFile, open } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname, basename, resolve } from 'node:path';
 import { compileUpstreamBindings, validateUpstreamService } from '../sf30-seller-sdk/upstream.mjs';
 
 const LIMIT = 1024 * 1024;
@@ -19,6 +19,23 @@ export function upstreamReleaseSnapshot(value) {
     throw new TypeError('Invalid original upstream release snapshot.');
   return { file: value.file, sha256: value.sha256 };
 }
+/** Resolve a saved ORIGINAL workspace package through its own integrity reader. */
+export async function readReleaseWorkspace(path) {
+  const { readPackage } = await import('../sf61-openapi-seller-import/workspace/model.mjs');
+  const folder = resolve(path), project = await readPackage(dirname(folder), basename(folder));
+  const manifestBytes = await bytesAt(join(folder, 'merchant-package.json'));
+  const retainedManifest = JSON.parse(manifestBytes);
+  if (stable(retainedManifest) !== stable(project.manifest))
+    throw new Error('Saved merchant package changed while reading. Save a new package and stage it.');
+  return {
+    inputs: { spec: join(folder, 'facade-openapi.json'), config: join(folder, 'selections.json'),
+      bindings: join(folder, 'route-bindings.json'), upstreams: join(folder, 'upstreams.json') },
+    allowLoopbackUpstream: project.plan.allowLoopbackUpstream === true,
+    hashes: project.manifest.files,
+    provenance: { name: project.name, id: project.manifest.id, manifestSha256: digest(manifestBytes),
+      originalOpenApiSha256: project.manifest.files['original-openapi.json'] },
+  };
+}
 async function bytesAt(path) {
   const info = await lstat(path);
   if (!info.isFile() || info.size > LIMIT) throw new TypeError('Upstream release input must be a regular JSON file up to 1 MiB.');
@@ -31,11 +48,15 @@ function inspectBytes(bytes, service, allowLoopback) {
   // Validate reference syntax with the ORIGINAL compiler. Staging does not
   // consult process.env or import a handler; actual values resolve at launch.
   const references = new Set();
-  for (const raw of Object.values(plain(input?.bindings) ? input.bindings : {}))
+  for (const raw of Object.values(plain(input?.bindings) ? input.bindings : {})) {
     for (const name of Object.values(plain(raw?.headerEnv) ? raw.headerEnv : {}))
       if (typeof name === 'string') references.add(name);
+    if (typeof raw?.idempotency?.keyEnv === 'string') references.add(raw.idempotency.keyEnv);
+  }
   const compiled = compileUpstreamBindings(input, { allowLoopback,
-    env: Object.fromEntries([...references].map(name => [name, 'SET_IN_LAUNCH_ENVIRONMENT'])) });
+    // A syntax-only value satisfies both original header and 32-byte key input
+    // validation. No operator value is read; no durable operation is opened.
+    env: Object.fromEntries([...references].map(name => [name, '0'.repeat(64)])) });
   validateUpstreamService(service, compiled);
   const bindings = Object.create(null);
   for (const [name, value] of Object.entries(compiled)) {
@@ -48,6 +69,7 @@ function inspectBytes(bytes, service, allowLoopback) {
       responseContractSha256: raw.responseContract ? digest(stable(raw.responseContract)) : null,
       timeoutMs: value.timeoutMs, maxResponseBytes: value.maxResponseBytes,
       maxInFlight: value.maxInFlight, availability: value.availability,
+      idempotency: raw.idempotency ?? null,
       cache: raw.cache ?? null,
     };
   }

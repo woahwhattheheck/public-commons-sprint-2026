@@ -13,6 +13,7 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
            [--label TEXT] [--port 8423] [--handlers TRUSTED_ESM | --upstreams BINDINGS_JSON]
            [--allow-loopback-upstream]
            [--facilitator HTTPS_URL] [--allow-local-facilitator]
+  stage    --store DIR --id RELEASE --workspace SAVED_API_PACKAGE [runtime options above]
   list     --store DIR
   inspect  --store DIR --id RELEASE
   diff     --store DIR --to RELEASE [--from RELEASE]
@@ -31,7 +32,7 @@ Run starts the original foreground seller; Ctrl-C stops this process's seller.
 Console opens a private loopback interface to compare, activate, start, stop and roll back.
 Application entry modules are pinned; their external dependencies remain operator-managed.`;
 const COMMANDS = {
-  init: ['store'], stage: ['store', 'id', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
+  init: ['store'], stage: ['store', 'id', 'workspace', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
   list: ['store'], inspect: ['store', 'id'], diff: ['store', 'from', 'to'],
   activate: ['store', 'id', 'expect', 'reason'], rollback: ['store', 'expect', 'to', 'reason'],
   status: ['store'], run: ['store', 'expect'], console: ['store', 'port'],
@@ -67,12 +68,13 @@ export async function main(args = process.argv.slice(2)) {
   switch (command) {
     case 'init': result = await initReleaseStore(root); break;
     case 'stage': {
-      for (const key of ['id', 'spec', 'config', 'bindings']) if (!o[key]) throw new Error('Stage requires --' + key);
+      for (const key of o.workspace ? ['id'] : ['id', 'spec', 'config', 'bindings'])
+        if (!o[key]) throw new Error('Stage requires --' + key);
       const runtime = {};
       for (const key of ['port', 'handlers', 'facilitator']) if (o[key] !== undefined) runtime[key] = o[key];
       if (o['allow-local-facilitator']) runtime.allowLocalFacilitator = true;
       if (o['allow-loopback-upstream']) runtime.allowLoopbackUpstream = true;
-      result = await stageRelease(root, { id: o.id, label: o.label, spec: o.spec, config: o.config, bindings: o.bindings,
+      result = await stageRelease(root, { id: o.id, label: o.label, workspace: o.workspace, spec: o.spec, config: o.config, bindings: o.bindings,
         upstreams: o.upstreams, runtime }); break;
     }
     case 'list': result = { state: await readReleaseState(root), ...await listReleases(root) }; break;
