@@ -1,0 +1,22 @@
+{
+  "siteId": "REPLACE_WITH_RETAINED_SITE_ID",
+  "siteRevision": 1,
+  "title": "Two-day operating forecast",
+  "request": {
+    "family": "forecast",
+    "model": "best_match",
+    "startDate": "2026-10-12",
+    "endDate": "2026-10-13",
+    "variables": [
+      "temperature_2m",
+      "precipitation",
+      "wind_speed_10m",
+      "wind_gusts_10m"
+    ],
+    "units": {
+      "temperature": "celsius",
+      "wind": "kmh",
+      "precipitation": "mm"
+    }
+  }
+}
