@@ -21,7 +21,10 @@ function match(binding, rawPath) {
   for (let i = 0; i < values.length; i++) {
     const expected = binding.segments[i];
     if (expected.startsWith(':')) result[expected.slice(1)] = decodeSegment(values[i]);
-    else if (expected !== values[i]) return null;
+    // The native x402 router matches literal segments case-insensitively.
+    // Keep path parameter spelling intact; the native collision check still
+    // rejects dynamic routes shadowed by a differently priced concrete route.
+    else if (expected.toLowerCase() !== values[i].toLowerCase()) return null;
   }
   return result;
 }
