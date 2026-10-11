@@ -36,10 +36,11 @@ node stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/workspace/serv
   --state /private/cube-browser
 ```
 
-Its source snapshot, saved merchant versions, exported packages, backend results
-and customer reviews survive the original source files being moved. An updated
-Cube schema starts a new workspace with its new metadata. Supplying a different
-`--metadata` to an existing workspace reports the mismatch.
+Its original source snapshot, saved merchant versions, exported packages, backend
+results and customer reviews survive the original source files being moved. Use
+**Schema refresh** to retain a changed metadata edition in the same workbench.
+Supplying a different `--metadata` at startup still reports the mismatch: reopen
+without that option and deliberately capture or import the candidate in the UI.
 
 ## Compose reports
 
@@ -157,3 +158,122 @@ The six files in this directory are a consumer of `../onboarding/`. Distribute
 both directories with the original SF102 and SF30 runtime. The original
 onboarding factories retain query compilation, storage, backend transport,
 package generation and buyer preparation ownership.
+
+
+## Refresh a schema in the same merchant workspace
+
+The fourth workspace step continues a saved merchant version against a new
+Cube metadata edition. The original `workbench.json`, original metadata,
+versions, packages, probes and buyer reviews remain intact.
+
+1. Select the saved merchant version that defines the source reports and the
+   configured Cube backend. Capture the candidate through **Capture from saved
+   Cube backend**, or import its complete original JSON file. A capture uses the
+   original `captureCubeMetadata` transport, the saved upstream origin and the
+   existing environment authorization binding. The fixed metadata path defaults
+   to `/cubejs-api/v1/meta`. An imported file retains its original bytes and
+   filename. Give the edition a useful label.
+2. Select **Compare source and report impact**. The view compares exact names,
+   cube/view membership, member kind, public visibility, type, time granularities
+   and title. Each report shows whether its unchanged query compiles against the
+   candidate. “Unavailable” means absent from the response; the
+   [official Cube metadata API](https://docs.cube.dev/reference/core-data-apis/rest-api/reference)
+   omits private cubes and views, so absence does not identify why a member is
+   unavailable. Original unknown metadata fields remain in the downloadable
+   source.
+3. Enter the accountable review operator and choose **keep**, **remap**, or
+   **retire** for every report, with a reason. Remap controls use exact candidate
+   member names. The candidate search helps find names outside the first page.
+   A blank replacement keeps the original reference. Fixed time granularities
+   can be explicitly remapped; public input choices are retained.
+4. **Save reviewed transition** creates an immutable review. It retains the
+   source version, both metadata bindings, decisions, operator, generated plan,
+   compiler findings and its predecessor review. A query that no longer compiles
+   produces a saved `NEEDS_CHANGES` review. Reopen it, correct the decisions and
+   save a successor; the earlier findings remain available.
+5. Inspect the retained reports, routes and exact payment options, then **Apply
+   saved review**. Only a ready, unchanged review can create the native version.
+   The selected report editor and member catalog switch to that version's
+   metadata edition. Continue through the existing merchant handoff to read the
+   actual backend, export its native package and prepare the buyer operation.
+6. Reopening the workbench selects the most recently applied refresh. Choosing
+   an older saved version restores that version's metadata catalog. The
+   metadata, review and version lists have controls for older pages; earlier
+   packages and buyer preparations remain addressable. To return reports to an
+   earlier schema, select that retained metadata edition as the candidate and
+   review the complete transition from the desired saved version.
+
+### What a remap changes
+
+The migration visits only the original query's member slots: measures,
+dimensions, segments, filter member fields, time dimensions, and ordering
+members in either supported native order format. A time dimension's explicit
+fixed granularity can also change. The
+[official query format](https://docs.cube.dev/reference/core-data-apis/rest-api/query-format)
+defines these distinct slots.
+
+Filter values, dates, parameter references, input definitions and enum choices,
+range guards, service identity, backend configuration, payment choices and
+surviving report IDs/routes remain exact. A remap cannot make a hidden member
+public. All replacements compile through the original
+`compileCubeMerchantPlan`, `compileCubeMetadata`, `bindCubeReport` and named
+query compiler. If a change also needs a different public input or price
+contract, make that deliberate change through the original report editor in a
+separate native version.
+
+Retiring a report removes its route only from the successor plan. The original
+version and any already exported package still contain the original report.
+Retiring every report yields a compiler finding; it does not silently produce an
+empty merchant service.
+
+### Saved editions, interruption and concurrent operations
+
+Additional state lives under `metadata-editions/` and `schema-refreshes/`.
+Source and review files are create-only and bound by SHA-256 to the original
+workbench. Metadata and reviews are staged completely before becoming visible.
+The existing native version format remains unchanged: every version contains
+its own exact `cube-meta.json` and `merchant-plan.json`, and original package
+opening recompiles and verifies its contents.
+
+Applying a review has a deterministic target version. The original
+`createCubeWorkspace` completes in a staging directory before that version is
+made visible. The completed application is also committed as a nonempty
+directory. If the process closes after creating the native version, applying
+the same saved review reuses that exact bound version and finishes the
+application. Repeated application returns the original result. A review saved
+before a different refresh was applied must be reopened and saved as a
+successor, so an old browser view cannot replace a newer applied transition.
+
+Mutating model operations take their guard before asynchronous reads and release
+it in `finally`; the existing HTTP queue serializes changes. Independent source
+and history reads remain available. The editor preserves unsaved report and
+schema decisions in the browser session, confirms explicit source switches, and
+warns on dirty unload. Its busy state prevents competing input while allowing
+buttons to retain their actual post-operation enabled state.
+
+### Integration methods
+
+The original model methods remain available. `save(plan, { metadataId })` and
+`previewFor(plan, metadataId)` select an explicit retained edition; omitted
+edition selection uses the currently applied source. The synchronous
+`preview(plan)`, `members(options)` and `bootstrap()` still work.
+
+The same model also exposes `metadataInfo`, `metadataMembers`,
+`listMetadata`, `importMetadata`, `captureMetadata`, `refreshImpact`,
+`reviewRefresh`, `inspectRefresh`, `listRefreshes` and `applyRefresh`.
+The HTTP surface maps these to the existing private `/api/` transport.
+A review is applied with both its ID and exact `reviewSha256`. Known-file
+downloads include original metadata and the retained review, plan, manifest
+and completed application. Uploads accept a complete metadata file of at most
+16 MiB; ordinary plan and review requests retain the 1 MiB request bound.
+
+This operation authors and exercises merchant source configuration. Backend
+read receipts report the actual upstream result. Native buyer preparation
+preserves its original intent and terms; a paid purchase is recorded only by
+the original settlement and delivery flow.
+
+### Writer lifetime and restart selection
+
+A private workbench has one native writer lifetime. The browser model composes the existing SF30 history writer lock in a private scope beside the canonical workspace path, before reading, recovering or initializing workspace state. Model initialization and listener failures release that writer; normal close drains accepted mutations before release. The original native lock owns process identity and stale-owner recovery. Direct `openCubeWorkbench` callers must await `model.close()` when finished.
+
+Completed schema applications form an immutable parent chain. Reopening validates the applied records and their native versions, then selects the unique terminal application; wall-clock timestamps remain descriptive. Missing parents, competing successors or cycles are reported explicitly. Retrying an application after its complete directory was committed reconciles that same chain and returns the existing native version.
