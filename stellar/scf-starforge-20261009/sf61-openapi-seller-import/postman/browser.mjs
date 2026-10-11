@@ -19,7 +19,7 @@ function select(title, choices, value) {
 const stringify = value => value === undefined ? '' : JSON.stringify(value, null, 2);
 
 export function createPostmanPanel({container, api, act, notice, onSource}) {
-  let collectionText = '', environmentText = null, inventory = null, prepared = null, offset = 0;
+  let collectionText = '', environmentText = null, inventory = null, prepared = null, offset = 0, revision = 0;
   const choices = new Map();
   const details = make('details'), title = make('summary', 'Import an existing Postman collection');
   const explanation = make('p', 'Choose a Collection v2.1 and optional environment export. Review the concrete URL, public request sample, backend headers and script dependencies before using these requests.', 'hint');
@@ -43,7 +43,7 @@ export function createPostmanPanel({container, api, act, notice, onSource}) {
     make('p', 'The original collection and environment remain in the private source packet. Backend credential values and saved response bodies are excluded from the generated public description. Collection scripts are retained as source; the merchant does not execute them.', 'hint'));
   container.append(details);
 
-  function changed() {prepared = null; approved.input.checked = false; use.disabled = true; adoption.hidden = true; review.replaceChildren();}
+  function changed() {revision++; prepared = null; approved.input.checked = false; use.disabled = true; adoption.hidden = true; review.replaceChildren();}
   function decision(row) {
     const state = choices.get(row.pointer);
     const result = {pointer:row.pointer, urlSource:state?.urlSource ?? row.urlSource ?? 'structured',
@@ -54,14 +54,15 @@ export function createPostmanPanel({container, api, act, notice, onSource}) {
     }
     return result;
   }
-  function input({selectedOnly = false} = {}) {
+  function input() {
     if (!collectionText) throw new Error('Choose a collection JSON file');
     let publicVariables;
     try {publicVariables = JSON.parse(variables.input.value);} catch {throw new Error('Public variable overrides must be JSON');}
     const byPointer = new Map((inventory?.requests ?? []).map(row => [row.pointer,row]));
-    const rows = [...choices].filter(([_pointer, state]) => !selectedOnly || state.selected)
+    // Deselected edits remain in the panel; only selected requests enter a source decision.
+    const rows = [...choices].filter(([_pointer, state]) => state.selected)
       .map(([pointer]) => byPointer.get(pointer) ?? {pointer,name:pointer});
-    if (rows.length > 64) throw new Error('Keep this import to at most 64 selected or adapted requests');
+    if (rows.length > 64) throw new Error('Keep this import to at most 64 selected requests');
     return {collectionText, environmentText, decisions:{publicVariables, requests:rows.map(decision)}};
   }
   function draw() {
@@ -108,7 +109,9 @@ export function createPostmanPanel({container, api, act, notice, onSource}) {
     if (!visible.length) requestList.append(make('p', 'No requests match this selection.', 'empty'));
   }
   async function inspectCurrent() {
-    const result = await api('postman/inspect', input());
+    const expectedRevision = revision, selection = input();
+    const result = await api('postman/inspect', selection);
+    if (revision !== expectedRevision) return;
     inventory = result; offset = 0; changed(); draw();
     sourceLabel.textContent = result.title + ' · ' + result.requests.length + ' requests · Collection ' + result.collectionSha256 +
       (result.environment ? ' · Environment: ' + result.environment : ' · No environment selected');
@@ -118,12 +121,17 @@ export function createPostmanPanel({container, api, act, notice, onSource}) {
     return new TextDecoder('utf-8', {fatal:true, ignoreBOM:true}).decode(await file.arrayBuffer());
   }
   collection.input.addEventListener('change', () => act(async () => {
-    const text = await fileText(collection.input.files[0]);
+    changed(); const expectedRevision = revision, selected = collection.input.files[0];
+    const text = await fileText(selected);
+    if (revision !== expectedRevision) return;
     collectionText = text; inventory = null; choices.clear(); changed(); requestList.replaceChildren();
     reviewButton.disabled = true; sourceLabel.textContent = 'Collection selected. Inspect it with the chosen environment and public overrides.';
   }));
   environment.input.addEventListener('change', () => act(async () => {
-    environmentText = await fileText(environment.input.files[0]); changed();
+    changed(); const expectedRevision = revision, selected = environment.input.files[0];
+    const text = await fileText(selected);
+    if (revision !== expectedRevision) return;
+    environmentText = text; changed();
     sourceLabel.textContent = 'Environment selected. Inspect the resolved requests again.';
   }));
   clearEnvironment.addEventListener('click', () => {environmentText = null; environment.input.value = ''; changed(); sourceLabel.textContent = 'Environment cleared. Inspect the resolved requests again.';});
@@ -133,7 +141,9 @@ export function createPostmanPanel({container, api, act, notice, onSource}) {
   previous.addEventListener('click', () => {offset = Math.max(0, offset - 20); draw();});
   next.addEventListener('click', () => {offset += 20; draw();});
   reviewButton.addEventListener('click', () => act(async () => {
-    changed(); const result = await api('postman/prepare', input({selectedOnly:true}));
+    changed(); const expectedRevision = revision, selection = input();
+    const result = await api('postman/prepare', selection);
+    if (revision !== expectedRevision) return;
     prepared = result;
     review.append(make('h3', result.review.title + ' — review before import'),
       make('p', 'Only the selected requests enter the generated merchant source. Pricing and backend environment references remain editable in the original workspace.', 'hint'));
@@ -171,6 +181,7 @@ export function createPostmanPanel({container, api, act, notice, onSource}) {
     async reopen(text) {
       let packet; try {packet = JSON.parse(text);} catch {return;}
       if (packet?.schema !== SCHEMA) return;
+      changed(); inventory = null;
       collectionText = packet.collectionText; environmentText = packet.environmentText; choices.clear();
       variables.input.value = stringify(packet.decisions.publicVariables ?? {});
       for (const row of packet.decisions.requests) choices.set(row.pointer, {selected:true, urlSource:row.urlSource ?? 'structured',
