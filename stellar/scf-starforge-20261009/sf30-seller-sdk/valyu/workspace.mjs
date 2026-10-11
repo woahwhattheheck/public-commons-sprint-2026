@@ -63,7 +63,7 @@ export class ValyuWorkspace{
     const provider=normalizeValyuProvider(settings.provider??{});
     const store=await ValyuStore.open(settings.researchDirectory,{provider});
     try{
-      const buyer=new Buyer({runtimeDirectory:join(runtimeRoot,'sf88-operator-buyer-cli'),stateDirectory:settings.buyerDirectory,
+      const buyer=new Buyer({runtimeDirectory:await realpath(join(runtimeRoot,'sf88-operator-buyer-cli')),stateDirectory:settings.buyerDirectory,
         ...(settings.operatorProfile?{operatorProfile:settings.operatorProfile}:{})});
       return new ValyuWorkspace(settings,store,buyer,provider);
     }catch(e){store.close();throw e;}
