@@ -20,8 +20,8 @@ export async function attachReleaseCacheControls(session, { controlFile, routes 
     const bindings = new Map(original.bindings.map(row => [row.name, row]));
     return Object.fromEntries([...selected].map(([id, route]) => {
       const source = bindings.get(route.binding);
-      if (!source) throw new Error('Original cache binding is unavailable.');
-      return [id, { binding: route.binding, policy: route.policy, source }];
+      if (!source?.cachePolicy || !source.cache) throw new Error('Original cache binding is unavailable.');
+      return [id, { binding: route.binding, policy: source.cachePolicy, source }];
     }));
   };
   const invalidate = routeId => {
