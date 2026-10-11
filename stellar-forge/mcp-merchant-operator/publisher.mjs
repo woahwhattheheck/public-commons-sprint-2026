@@ -49,7 +49,7 @@ const policy = {
 
 export function publisherTools(tool) {
   return [
-    tool('merchant_publishers', 'List host-declared retained PostgreSQL/SQLite/MySQL/MongoDB/Google Sheets/SFTP publisher aliases and process ownership. Does not open a workspace, start a timer or query a source.', {}, [], read),
+    tool('merchant_publishers', 'List host-declared retained PostgreSQL/SQLite/MySQL/MongoDB/Google Sheets/SFTP/ArcGIS publisher aliases and process ownership. Does not open a workspace, start a timer or query a source.', {}, [], read),
     tool('merchant_publisher_open', 'Open the original retained publisher and its single native scheduler under the original workspace lease. Previously enabled refreshes resume as in the original browser server. An already-open alias returns the same instance.', selected, ['publisher'], { idempotent: true, openWorld: true }),
     tool('merchant_publisher_close', 'Close this exact process-owned publisher instance. Original scheduler stops future intervals, original active work drains or cancels through its existing close method, and the workspace lease is released. Saved policy and operations remain.', { ...selected, instanceId: uuid }, ['publisher', 'instanceId'], { destructive: true }),
     tool('merchant_publisher_status', 'Read native saved plans, extraction runs, events and active progress, with original pagination. Local source paths are omitted; native hashes and identities are unchanged. Open the alias first.', {
@@ -178,7 +178,8 @@ async function originalFactory(kind) {
   if (kind === 'mongodb') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/publisher/model.mjs')).openMongoPublisher;
   if (kind === 'sheets') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/model.mjs')).openSheetsPublisher;
   if (kind === 'sftp') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/publisher/model.mjs')).openSftpPublisher;
-  throw failure('PUBLISHER_KIND_INVALID', 'Choose a host-declared PostgreSQL, SQLite, MySQL, MongoDB, Google Sheets or SFTP publisher.');
+  if (kind === 'arcgis') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/publisher.mjs')).openArcgisPublisher;
+  throw failure('PUBLISHER_KIND_INVALID', 'Choose a host-declared PostgreSQL, SQLite, MySQL, MongoDB, Google Sheets, SFTP or ArcGIS publisher.');
 }
 
 export class MerchantPublisher {

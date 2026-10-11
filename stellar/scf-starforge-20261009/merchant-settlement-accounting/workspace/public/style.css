@@ -5,7 +5,7 @@ a {color:inherit;text-underline-offset:2px}
 button,input,select,textarea {font:inherit;color:inherit}
 button,.button {display:inline-flex;align-items:center;justify-content:center;min-height:35px;padding:7px 12px;border:1px solid #b8c0c5;border-radius:3px;background:#fff;color:inherit;line-height:1.3;font-weight:550;text-decoration:none;cursor:pointer}
 button:hover,.button:hover {background:#e9edef;border-color:#89949b}
-button:disabled {opacity:.45;cursor:default}
+button:disabled,.tabs a[aria-disabled="true"] {opacity:.45;cursor:default}
 button.primary {color:#fff;background:var(--ink);border-color:var(--ink)}
 button.primary:hover {background:#414b52}
 button.quiet {background:transparent;border-color:transparent}
@@ -45,7 +45,7 @@ main {padding:29px 30px 60px;min-width:0;max-width:1600px;width:100%}
 .badge.strong {background:#364148;border-color:#364148;color:#fff}
 .tabs,.table-tabs {display:flex;gap:23px;border-bottom:1px solid #bcc5cb;overflow-x:auto}
 .tabs {margin-bottom:23px}
-.tabs button,.table-tabs button {border:0;border-bottom:3px solid transparent;border-radius:0;padding:12px 0;color:var(--muted);background:transparent;white-space:nowrap;font-size:12px}
+.tabs button,.tabs a,.table-tabs button {border:0;border-bottom:3px solid transparent;border-radius:0;padding:12px 0;color:var(--muted);background:transparent;white-space:nowrap;font-size:12px}
 .tabs button.active,.table-tabs button.active {border-bottom-color:var(--ink);color:var(--ink);font-weight:650}
 .panel {background:#fff;border:1px solid var(--border);border-radius:3px;margin-bottom:20px;overflow:hidden}
 .panel-heading {padding:18px 20px;border-bottom:1px solid #e0e5e7;display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
@@ -188,7 +188,7 @@ body.working {cursor:progress}
   h1 {font-size:23px}
   .eyebrow {font-size:9px;letter-spacing:.6px}
   .tabs {gap:18px}
-  .tabs button {font-size:11px}
+  .tabs button,.tabs a {font-size:11px}
   .panel-heading,.padded {padding:15px}
   .inline-form {align-items:stretch}
   .inline-form label {width:100%}

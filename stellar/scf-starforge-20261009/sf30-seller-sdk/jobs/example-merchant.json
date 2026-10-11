@@ -1,0 +1,117 @@
+{
+  "schema": "stellar-forge.paid-jobs.v1",
+  "application": "./example-application.mjs",
+  "publicOrigin": "https://jobs-merchant.example",
+  "serviceName": "Application Jobs",
+  "environment": [],
+  "workerCount": 2,
+  "maxPending": 128,
+  "maxJobs": 10000,
+  "memoryLimitMb": 256,
+  "functions": {
+    "analyze": {
+      "path": "/analysis",
+      "description": "Compute descriptive statistics and rolling means for a numeric series.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 1,
+            "maxItems": 20000
+          },
+          "window": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "values",
+          "window"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "values": [
+          2,
+          4,
+          6,
+          8
+        ],
+        "window": 2
+      },
+      "payment": {
+        "scheme": "exact",
+        "network": "stellar:testnet",
+        "asset": "UNVERIFIED_DEMO_ASSET",
+        "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+        "amount": "10000",
+        "maxTimeoutSeconds": 60
+      },
+      "timeoutMs": 300000,
+      "maxInputBytes": 1048576,
+      "maxOutputBytes": 8388608,
+      "output": {
+        "format": "json",
+        "contentType": "application/json; charset=utf-8",
+        "filename": "analysis.json"
+      }
+    },
+    "tabulate": {
+      "path": "/tabulation",
+      "description": "Produce a CSV table of a numeric series and its rolling mean.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 1,
+            "maxItems": 20000
+          },
+          "window": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "values",
+          "window"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "values": [
+          2,
+          4,
+          6,
+          8
+        ],
+        "window": 2
+      },
+      "payment": {
+        "scheme": "exact",
+        "network": "stellar:testnet",
+        "asset": "UNVERIFIED_DEMO_ASSET",
+        "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+        "amount": "10000",
+        "maxTimeoutSeconds": 60
+      },
+      "timeoutMs": 300000,
+      "maxInputBytes": 1048576,
+      "maxOutputBytes": 8388608,
+      "output": {
+        "format": "bytes",
+        "contentType": "text/csv; charset=utf-8",
+        "filename": "series.csv"
+      }
+    }
+  }
+}

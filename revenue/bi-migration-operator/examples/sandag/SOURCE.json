@@ -1,0 +1,50 @@
+{
+  "title": "2024 Crime in the San Diego Region \u2014 published aggregate appendix tables",
+  "url": "https://www.sandag.org/-/media/SANDAG/Documents/PDF/data-and-research/criminal-justice-and-public-safety/criminal-justice-research-clearinghouse/cj-bulletin/cj-bulletin-2024-crime-in-the-san-diego-region-2025-08-18.pdf",
+  "sha256": "e25453715fbf0712c8b690ba09b2fb6c44191534f24f228b19d626d2da59738b",
+  "bytes": 1345423,
+  "data_scope": "Published aggregate table cells; no individual or incident-level records.",
+  "normalization": "Blank extracted cells use the explicit CSV null token \\N; original value_state/raw_value and source row/table/page remain. Booleans use lowercase true/false. Counts are unchanged.",
+  "specification_origin": "Commons-authored Cognos-compatible demonstration report, explicitly mapped to these public aggregate CSV tables.",
+  "datasets": [
+    {
+      "table": "OffenseCells",
+      "source_file": "offenses.csv",
+      "source_csv_sha256": "a1416c8e5198f3a8d0b7e7a852b2045e5a67c5bfd3e78df65b5a456522977a82",
+      "rows": 5037,
+      "file": "data/OffenseCells.csv",
+      "sha256": "3d61804ae639c7e7907da106ca18d313973846f9748b36495b590e847fa153a4"
+    },
+    {
+      "table": "Jurisdictions",
+      "source_file": "jurisdictions.csv",
+      "source_csv_sha256": "5b3d26dc335662010871dabf8e5393332bf98e765c8098f2a452cb9e8e5857ff",
+      "rows": 26,
+      "file": "data/Jurisdictions.csv",
+      "sha256": "061dd1803271587090d1706b9d000a642eb30007019809bde4c56d18d3118e69"
+    },
+    {
+      "table": "Population",
+      "source_file": "population.csv",
+      "source_csv_sha256": "1c280c8ec1c500efe60337848f37252258ac318ac16a9d84f8435de55f7d2229",
+      "rows": 42,
+      "file": "data/Population.csv",
+      "sha256": "bb77407f4fd95d43685f8d6715cececc938847f76137389e6a92dd1d30d18e92"
+    },
+    {
+      "table": "PublishedControls",
+      "source_file": "summary_reference.csv",
+      "source_csv_sha256": "6021cdac9460975b69bdb704beb2a0fe838144ec34cd646987661ac36db5f36f",
+      "rows": 312,
+      "file": "data/PublishedControls.csv",
+      "sha256": "79aeee884a34e0c5a1126611d7761f7a955520b6cc0392816b1b00f7680aa749"
+    },
+    {
+      "table": "Years",
+      "rows": 3,
+      "file": "data/Years.csv",
+      "sha256": "28c05d6c87cff6f806598aaae1556c99c76014e8c0db6bc2928ef6aa586c7fb0",
+      "source": "Distinct years actually reported in the retained appendix tables."
+    }
+  ]
+}
