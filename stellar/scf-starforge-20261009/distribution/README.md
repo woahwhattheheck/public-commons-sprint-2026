@@ -776,6 +776,70 @@ subpaths expose the same runtime and configuration functions to applications.
 
 ## Embed in an application
 
+### Add a merchant to an existing Node or Express application
+
+The `@tokenjunkielabs/starforge-merchant/seller/embedded` package entry exposes
+the original SF30 seller as Node, Connect or Express middleware, with TypeScript
+declarations. The host application keeps its listener, authentication, free
+endpoints and process lifecycle. It uses the same compiled offers, original
+facilitator client and paid handlers as the standalone seller.
+
+```js
+import { createEmbeddedSeller } from
+  '@tokenjunkielabs/starforge-merchant/seller/embedded';
+import { createNativeSellerServer } from
+  '@tokenjunkielabs/starforge-merchant/seller/native';
+
+const merchant = await createEmbeddedSeller({
+  routes: applicationPaidRoutes,
+  nativeFactory: compiled => createNativeSellerServer(compiled, {
+    facilitatorClient: applicationFacilitatorClient,
+  }),
+  contextFromRequest: req => ({ account: req.account }),
+  maxInFlight: 32,
+  drainGraceMs: 60000,
+});
+
+app.use(existingAuthentication); // Complete authentication without parsing the body.
+app.use(merchant.middleware);
+app.use(express.json());
+app.use(existingApplicationRoutes);
+```
+
+`applicationPaidRoutes` is the application's original SF30 route list: each route
+has an `id`, a complete `offer` or `definition`, and its existing `handler` plus
+optional readiness `admit`. The original handler receives the request's method,
+URL, query, body, path parameters, headers, signal and deadline. It executes the
+application operation through the original native payment workflow. Existing
+API-key authentication, entitlements and current quote policy remain in the
+host's chosen request path. Mount the seller before body parsers for paid paths;
+unknown paths continue through the application's existing middleware.
+
+`getEmbeddedRequestContext()` from the same package entry returns the explicitly
+selected account/context throughout asynchronous admission and handler work.
+An Express mount preserves the complete `originalUrl`, including its query.
+Configured paid paths retain ownership across wrong-method and equivalent-path
+requests. The original merchant explorer, OpenAPI, client downloads, health,
+offers and readiness remain available under `/_seller`.
+
+A plain Node server can `await merchant.handle(req, res)` and continue to its
+existing handler when it returns `false`. `await merchant.close()` drains this
+merchant while the host's listener and other routes stay available. Observe its
+original drain error and close the host listener in the application's own
+shutdown handler when the entire application should exit.
+
+Run the packaged example without installing Express or another payment engine:
+
+```sh
+node ./node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/example-node.mjs
+```
+
+The example serves `/health`, the original `/api/dataset` challenge and
+`/_seller/docs` from one listener. The installed `sf30-seller-sdk/embedded/README.md`
+contains the complete native facilitator, mount-path, request-context and drain
+guide. Node 22.16+ is required; native execution uses the existing optional
+dependencies described above.
+
 ### Optional Python buyer applications
 
 The original Python 3.11+ buyer adapter and its install metadata are included.
