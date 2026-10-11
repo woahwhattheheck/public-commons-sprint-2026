@@ -12,9 +12,13 @@ import { stageMerchantFileRequest, loadMerchantFileRequest, listMerchantFileRequ
 import { MAX_REQUEST_BODY_BYTES } from '../../sf31-buyer-client/request-body.mjs';
 import { readSellerConfig } from '../../sf30-seller-sdk/serve.mjs';
 import { readUpstreamBindings } from '../../sf30-seller-sdk/upstream.mjs';
+import { describeMerchantStreamCustomers, createMerchantStreamCustomer, readMerchantStreamCustomer,
+  prepareMerchantStreamCustomer } from './stream-customer.mjs';
+import { openCommerce, completeCommerceShutdown } from '../../sf66-demo-launcher/commerce.mjs';
+import { startCommerceConsole } from '../../sf66-demo-launcher/commerce-console.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
+const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
@@ -55,7 +59,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
   const output = await privateParent(parent);
   if (!Number.isInteger(port) || port<0 || port>65535) throw new TypeError('Port must be 0–65535');
   const token = randomBytes(32).toString('hex');
-  let origin, active=null, busy=false, shuttingDown=false, mutationDone=Promise.resolve();
+  let origin, active=null, customerActive=null, busy=false, shuttingDown=false, mutationDone=Promise.resolve();
   const cacheView = () => {
     const rows = active?.session.session?.upstreamSnapshot?.().bindings ?? [];
     return rows.filter(row=>row.cachePolicy).map(row=>({binding:row.name,method:row.method,routes:row.routes,
@@ -68,11 +72,20 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         'tokenRequests','cacheHits','renewals','failures','cancellations','rotations','invalidations','lastError']
         .filter(key=>Object.hasOwn(row.oauth2,key)).map(key=>[key,row.oauth2[key]]))}));
   };
-  const view = () => active ? {name:active.name, mode:active.session.mode, seller:active.session.seller,
+  const customerView=()=>customerActive ? {packageName:customerActive.packageName,name:customerActive.name,
+    configSha256:customerActive.configSha256,operatorUrl:customerActive.console.operatorUrl,
+    directory:customerActive.directory,seller:customerActive.session.seller.url} : null;
+  const view = () => ({...(active ? {name:active.name, mode:active.session.mode, seller:active.session.seller,
     operations:active.session.operationsDashboard, state:'RUNNING',runtimeId:active.runtimeId,caches:cacheView(),credentials:credentialView(),
     operationBindings:active.tickets.bindings,
     ...(active.tickets.bindings.length ? {operationConsole:active.session.operations.operationControlUrl ?? active.session.operations.merchantOperationsUrl} : {}),
-    ...(active.acceptance?{acceptance:active.acceptance}:{})} : {state:'STOPPED'};
+    ...(active.acceptance?{acceptance:active.acceptance}:{})} : {state:'STOPPED'}),customer:customerView()});
+  async function closeCustomer() {
+    if(!customerActive) return;
+    const result=await completeCommerceShutdown(customerActive.session,customerActive.console.close());
+    if(result?.drained===false) throw new Error('The original customer session is still draining its native operation');
+    customerActive=null;
+  }
   async function list() {
     const entries = (await readdir(output,{withFileTypes:true})).filter(e=>e.isDirectory()).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,200);
     const values=[];
@@ -105,8 +118,20 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
             serviceName:'Dataset example',payment:{network:'stellar:testnet',asset:'DEMO_NONPAYABLE_ASSET',payTo:'DEMO_NONPAYABLE_RECIPIENT',maxTimeoutSeconds:60},
             operations:[{method:'GET',path:'/dataset',amountAtomic:'20000',responseValidation:'declared'}],allowLoopbackUpstream:false}});
         }
+        if(pathname==='/api/stream-example') return send(200,{
+          specText:await readFile(new URL('./examples/streaming-openapi.json',import.meta.url),'utf8'),
+          plan:JSON.parse(await readFile(new URL('./examples/streaming-plan.json',import.meta.url),'utf8'))});
         if (pathname==='/api/packages') return send(200,{packages:await list(),runtime:view(),output});
         if (pathname==='/api/status') return send(200,view());
+        if (pathname==='/api/customer/options') {
+          const project=await readPackage(output,url.searchParams.get('name'));
+          return send(200,{...await describeMerchantStreamCustomers(project),customer:customerView(),
+            sellerPort:active?.name===project.name?Number(new URL(active.session.seller).port):0});
+        }
+        if (pathname==='/api/customer/load') {
+          const project=await readPackage(output,url.searchParams.get('name'));
+          return send(200,await readMerchantStreamCustomer(project,url.searchParams.get('customer')));
+        }
         if (pathname==='/api/operations/requests') {
           const selected=active;
           if (!selected||url.searchParams.get('runtimeId')!==selected.runtimeId) return send(409,{error:'The managed runtime changed. Reopen its operation form.'});
@@ -136,7 +161,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
-      if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff'].includes(pathname)) return send(404,{error:'Not found'});
+      if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
+        '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close'].includes(pathname)) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
@@ -145,6 +171,34 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         if (pathname==='/api/save') {
           const result=await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name});
           return send(201,{name:result.name,folder:result.folder,command:result.command,preview:result.preview});
+        }
+        if(pathname.startsWith('/api/customer/')) {
+          const project=await readPackage(output,body.packageName);
+          if(pathname==='/api/customer/create')
+            return send(201,await createMerchantStreamCustomer(project,body.customer));
+          if(pathname==='/api/customer/close') {
+            if(!customerActive||customerActive.packageName!==project.name||
+              customerActive.name!==body.customerName||customerActive.configSha256!==body.configSha256)
+              return send(409,{error:'Select the customer console currently owned by this workspace'});
+            await closeCustomer();return send(200,view());
+          }
+          const customer=await prepareMerchantStreamCustomer(project,body.customerName,body.configSha256);
+          if(pathname==='/api/customer/prepare') return send(200,customer);
+          if(customerActive) {
+            if(customerActive.packageName===project.name&&customerActive.name===customer.name&&
+              customerActive.configSha256===customer.configSha256) return send(200,customerView());
+            return send(409,{error:'Close the current customer console before opening another saved session'});
+          }
+          if(active&&active.name!==project.name) return send(409,{error:'Stop the other managed seller before opening this customer session'});
+          if(active) {await active.session.close();active=null;}
+          const session=await openCommerce(customer.sessionDirectory);
+          let console;
+          try {console=await startCommerceConsole(session,{port:0});}
+          catch(error) {await completeCommerceShutdown(session,session.close());throw error;}
+          if(shuttingDown) {await completeCommerceShutdown(session,console.close());return send(503,{error:'Workspace stopped during customer startup'});}
+          customerActive={packageName:project.name,name:customer.name,configSha256:customer.configSha256,
+            directory:customer.directory,session,console};
+          return send(200,customerView());
         }
         if (pathname==='/api/stop') {
           if (active) { await active.session.close(); active=null; }
@@ -193,6 +247,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           return send(201,await saveMerchantTicket(active.project,runtimeId,document));
         }
         packageName(body.name);
+        if(customerActive) return send(409,{error:'Close the managed customer console before starting a separate seller'});
         if (active) return send(409,{error:'Stop the current managed seller before starting another package'});
         const project=await readPackage(output,body.name);
         const [service,upstreams]=await Promise.all([
@@ -250,6 +305,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
     shuttingDown=true;
     const closed=new Promise((yes,no)=>server.close(e=>e?no(e):yes()));
     await mutationDone;
+    await closeCustomer();
     if (active) {await active.session.close();active=null;}
     await closed;
   })();

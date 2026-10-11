@@ -7,7 +7,7 @@
 <main>
 <aside><h2>Saved projects</h2><p class="muted">Projects stay in the private output folder selected at launch.</p><button id="refresh" type="button">Refresh projects</button><div id="packages" class="project-list"></div><p id="output" class="small wrap"></p></aside>
 <div class="content">
-<section id="source"><div class="section-heading"><span class="step">1</span><div><h2>Load your API description</h2><p class="muted">OpenAPI 3.0 or 3.1 JSON or YAML, up to 4 MiB. The original document is preserved.</p></div></div><div class="inline"><label class="file-label">OpenAPI JSON or YAML<input id="file" type="file" accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"></label><button id="example" type="button">Load example</button></div><div id="source-summary" class="small"></div></section>
+<section id="source"><div class="section-heading"><span class="step">1</span><div><h2>Load your API description</h2><p class="muted">OpenAPI 3.0 or 3.1 JSON or YAML, up to 4 MiB. The original document is preserved.</p></div></div><div class="inline"><label class="file-label">OpenAPI JSON or YAML<input id="file" type="file" accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"></label><button id="example" type="button">Load example</button><button id="stream-example" type="button">Load stream example</button></div><div id="source-summary" class="small"></div></section>
 <section id="configuration"><div class="section-heading"><span class="step">2</span><div><h2>Set the public offer</h2><p class="muted">Enter the public address of your paid seller and your payment terms.</p></div></div>
 <div class="fields">
 <label class="wide">Public seller server<input id="seller-server" type="url" placeholder="https://merchant.example.com/api"><span class="hint">Your HTTPS gateway address, with its public path prefix.</span></label>
@@ -16,6 +16,7 @@
 <label class="wide">Asset identifier<input id="asset" placeholder="Your supported Stellar asset identifier" autocomplete="off"></label>
 <label class="wide">Payment recipient<input id="recipient" placeholder="Your payment destination" autocomplete="off"></label>
 <label>Payment timeout, seconds<input id="payment-timeout" type="number" min="1" value="60"></label>
+<label>Payment flow<select id="payment-flow"><option value="authorization">Authorization — generate, then settle</option><option value="upfront">Upfront — settle, then generate</option></select><span class="hint">Applies to every selected offer. Buyers review the same explicit terms. Upfront supports live generation after settlement.</span></label>
 <label class="check"><input id="allow-loopback" type="checkbox">Allow a local HTTP backend for development</label>
 </div>
 </section>
@@ -28,6 +29,7 @@
 <details><summary>Use a native facilitator</summary><label>Authorized facilitator HTTPS URL<input id="facilitator" type="url" placeholder="https://your-facilitator.example"></label><p class="hint">This uses the original native seller integration. Required backend environment variables must be set before launching this workspace.</p><button id="start-native" type="button" disabled>Start native seller</button></details>
 <div id="runtime" class="runtime"></div><div id="cache-runtime" class="runtime"></div><div id="credential-runtime" class="runtime"></div><div id="operation-runtime" class="runtime"></div><p class="hint">Challenge preview returns real payment challenges. It does not settle payments or establish revenue.</p>
 </section>
+<section id="stream-customers"><div class="section-heading"><span class="step">6</span><div><h2>Prepare a streaming customer</h2><p class="muted">Review an exact request and customer budget for the original Stellar testnet setup, then use its commerce console to approve the purchase and retain its output.</p></div></div><div id="stream-customer-content"></div></section>
 </div>
 </main><footer>Local configuration and execution · Original OpenAPI source retained · No credential values saved</footer>
 <script type="module" src="/browser.mjs"></script>
