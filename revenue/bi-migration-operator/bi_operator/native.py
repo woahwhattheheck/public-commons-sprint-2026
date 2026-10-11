@@ -175,6 +175,24 @@ class Generator(PbipGenerator):
         self.project_key = project_key
         self.data_files = {}
 
+    def _write_review_report(self, root, project):
+        # Keep the pinned parser and metadata writer unchanged. This application
+        # has an operator review workflow, not the upstream optional AI stage.
+        if not project.review_flags:
+            return
+        def cell(value):
+            return str(value or "").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
+        lines = [f"# Migration review: {project.name}", "",
+            "Review these retained source findings in the migration workspace and Power BI Desktop.",
+            "Resolve the relevant bindings, calculations, prompts, filters and report behavior; rebuild",
+            "and compare the resulting query outputs with the original Cognos results before rollout.",
+            "Original findings and query metadata remain in MIGRATION_PLAN.json and the metadata files.", "",
+            "| Severity | Code | Message | Source |", "| --- | --- | --- | --- |"]
+        for flag in project.review_flags:
+            lines.append("| " + " | ".join(cell(value) for value in
+                (flag.severity.value, flag.code, flag.message, flag.source_ref)) + " |")
+        (root / "MIGRATION_REVIEW.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
     def _binding_m(self, table):
         binding = self.bindings.get(table.name)
         if not binding:
@@ -394,7 +412,7 @@ def validate_schemas(folder):
     registry = Registry().with_resources(resources.items())
     checked, errors = [], []
     for path in sorted(Path(folder).rglob("*")):
-        if path.is_file() and path.suffix in {".json", ".pbip", ".pbir", ".pbism", ".platform"}:
+        if path.is_file() and (path.suffix in {".json", ".pbip", ".pbir", ".pbism"} or path.name == ".platform"):
             try:
                 document = json.loads(path.read_text(encoding="utf-8"))
             except ValueError:

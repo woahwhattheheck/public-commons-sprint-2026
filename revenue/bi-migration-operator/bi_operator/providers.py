@@ -31,9 +31,11 @@ def environment_name(value):
 
 
 class ApiError(ValueError):
-    def __init__(self, status, message, retry_after=0):
+    def __init__(self, status, message, retry_after=0, operation_id=None, request_ids=None):
         self.status = status
         self.retry_after = retry_after
+        self.operation_id = operation_id
+        self.request_ids = request_ids or {}
         super().__init__(f"Microsoft API HTTP {status}: {message}")
 
 
@@ -74,7 +76,15 @@ class Microsoft:
             except Exception:
                 message = f"Native request failed ({error.reason})."
             retry = error.headers.get("Retry-After", "0")
-            raise ApiError(error.code, message, int(retry) if retry.isdigit() else 0) from None
+            operation_id = error.headers.get("x-ms-operation-id")
+            try:
+                operation_id = guid(operation_id) if operation_id else None
+            except ValueError:
+                operation_id = None
+            request_ids = {k.lower(): v for k, v in error.headers.items()
+                           if k.lower() in {"requestid", "x-ms-request-id"}}
+            raise ApiError(error.code, message, int(retry) if retry.isdigit() else 0,
+                           operation_id, request_ids) from None
 
     def item_url(self, target, item):
         family, key = ("semanticModels", "model_id") if item == "model" else ("reports", "report_id")
@@ -96,20 +106,26 @@ class Microsoft:
 
 def definition_value(response):
     value = response.get("definition")
-    if not isinstance(value, dict) or not isinstance(value.get("parts"), list) or not value["parts"]:
+    if (not isinstance(value, dict) or not isinstance(value.get("parts"), list)
+            or not value["parts"] or len(value["parts"]) > 100000):
         raise ValueError("The native response did not contain an item definition.")
     seen = set()
     size = 0
     for part in value["parts"]:
+        if not isinstance(part, dict):
+            raise ValueError("The native definition contains an invalid part.")
         path = part.get("path")
-        if not isinstance(path, str) or path in seen or PurePosixPath(path).is_absolute() or ".." in PurePosixPath(path).parts or "\\" in path:
+        if (not isinstance(path, str) or not path or len(path) > 2048 or path in seen
+                or any(ord(c) < 32 for c in path) or PurePosixPath(path).is_absolute()
+                or ".." in PurePosixPath(path).parts or "\\" in path
+                or PurePosixPath(path).as_posix() != path):
             raise ValueError("The native definition contains an invalid or duplicate part path.")
         seen.add(path)
-        if part.get("payloadType") != "InlineBase64":
+        if part.get("payloadType") != "InlineBase64" or not isinstance(part.get("payload"), str):
             raise ValueError("The native definition has an unsupported part payload type.")
         size += len(base64.b64decode(part["payload"], validate=True))
-    if size > 48 * 1024 * 1024:
-        raise ValueError("The native item definition exceeds 48 MiB.")
+        if size > 48 * 1024 * 1024:
+            raise ValueError("The native item definition exceeds 48 MiB.")
     return value
 
 
@@ -122,10 +138,13 @@ def definition_digest(value):
 
 def project_definitions(package, model_id):
     model_parts, report_parts = [], []
+    roots = {"model": set(), "report": set()}
     with zipfile.ZipFile(io.BytesIO(package)) as source:
         names = source.namelist()
-        if len(names) != len(set(names)):
-            raise ValueError("The built project has duplicate ZIP paths.")
+        if len(names) != len(set(names)) or len(names) > 100000:
+            raise ValueError("The built project has duplicate ZIP paths or too many entries.")
+        if sum(item.file_size for item in source.infolist()) > 64 * 1024 * 1024:
+            raise ValueError("The expanded rollout project exceeds 64 MiB.")
         for info in source.infolist():
             path = PurePosixPath(info.filename)
             if path.is_absolute() or ".." in path.parts or "\\" in info.filename:
@@ -136,6 +155,7 @@ def project_definitions(package, model_id):
                 report_parts if path.parts[0].endswith(".Report") else None)
             if family is None or info.is_dir():
                 continue
+            roots["model" if family is model_parts else "report"].add(path.parts[0])
             data = source.read(info)
             relative = "/".join(path.parts[1:])
             if family is report_parts and relative == "definition.pbir":
@@ -143,10 +163,12 @@ def project_definitions(package, model_id):
                 link["datasetReference"] = {"byConnection": {"connectionString": "semanticmodelid=" + guid(model_id)}}
                 data = encoded(link).encode()
             family.append({"path": relative, "payload": base64.b64encode(data).decode(), "payloadType": "InlineBase64"})
-    if not any(x["path"] == "definition.pbism" for x in model_parts) or not any(
-        x["path"] == "definition.pbir" for x in report_parts):
+    if (any(len(value) != 1 for value in roots.values()) or
+            not any(x["path"] == "definition.pbism" for x in model_parts) or not any(
+        x["path"] == "definition.pbir" for x in report_parts)):
         raise ValueError("The artifact must contain one complete semantic model and report project.")
-    return {"model": {"parts": model_parts}, "report": {"parts": report_parts}}
+    return {key: definition_value({"definition": {"parts": parts}})
+            for key, parts in (("model", model_parts), ("report", report_parts))}
 
 
 def capture_results(store, request):
@@ -220,8 +242,12 @@ class Rollouts:
             "notes": request.get("notes", ""), "history": [], "mode": "deploy"})
 
     def rollback(self, request):
-        original = self.store.get("rollout", request["id"], request.get("revision"))
+        original = self.store.get("rollout", request["id"])
+        if request.get("expected") is None or original["revision"] != int(request["expected"]):
+            raise ValueError("Reload the current rollout before preparing its rollback.")
         payload = original["payload"]
+        if (payload.get("pending") or {}).get("phase") in {"sending", "uncertain", "waiting"}:
+            raise ValueError("Reconcile the original pending update before rolling back; a running write must finish first.")
         if set(payload["original"]) != {"model", "report"}:
             raise ValueError("This rollout has not captured both original native definitions.")
         return self.service.write("rollout", {"label": "Rollback: " + payload["label"], "target": payload["target"],
@@ -234,7 +260,7 @@ class Rollouts:
         payload = record["payload"]
         payload["history"].append({"time": now(), "index": payload["index"], "state": payload["state"], "note": note})
         saved = self.service.write("rollout", payload, record["id"], record["revision"])
-        record.update(saved)
+        record.update({key: value for key, value in saved.items() if key != "payload"})
         return saved
 
     def _complete_stage(self, record, response=None):
@@ -304,10 +330,30 @@ class Rollouts:
                 raise ValueError("Unexpected native completion status " + str(response["status"]))
             return self._complete_stage(record, response["data"])
         except ApiError as error:
+            if error.operation_id and not (payload.get("pending") or {}).get("operation_id"):
+                payload["pending"] = {**(payload.get("pending") or {}), "operation_id": error.operation_id}
+            if (payload.get("pending") or {}).get("operation_id"):
+                payload["pending"]["phase"] = "waiting"
+                payload["pending"]["not_before"] = time.time() + max(5, error.retry_after)
+                payload["state"] = "waiting"
+                return self._save(record, str(error))
+            if verb == "update" and (error.status == 408 or error.status >= 500):
+                # A server/gateway failure is not proof that the accepted write
+                # had no effect. Keep the same intent for native reconciliation.
+                payload["pending"] = {**(payload.get("pending") or {}), "phase": "uncertain",
+                    "http_status": error.status, "request_ids": error.request_ids,
+                    "not_before": time.time() + error.retry_after}
+                payload["state"] = "uncertain"
+                return self._save(record, str(error))
             payload["pending"] = {"phase": "rejected", "not_before": time.time() + error.retry_after}
             payload["state"] = "failed"
             return self._save(record, str(error))
         except Exception as error:
+            if (payload.get("pending") or {}).get("operation_id"):
+                payload["pending"]["phase"] = "waiting"
+                payload["pending"]["not_before"] = time.time() + 5
+                payload["state"] = "waiting"
+                return self._save(record, str(error)[:1200])
             payload["state"] = "uncertain" if verb == "update" else "retry_read"
             payload["pending"] = {**(payload.get("pending") or {}), "phase": "uncertain" if verb == "update" else "retry_read"}
             return self._save(record, str(error)[:1200])
@@ -322,10 +368,20 @@ class Rollouts:
         verb, item = payload["steps"][payload["index"]].split(":")
         if verb != "update":
             return self.advance(request)
-        if request.get("operation_id"):
-            payload["pending"] = {"phase": "waiting", "operation_id": guid(request["operation_id"]), "not_before": 0}
+        pending = payload.get("pending") or {}
+        # operation_id is the application's action identity, consumed by
+        # Service.dispatch. The provider's operation has its own request field.
+        if request.get("native_operation_id"):
+            native_id = guid(request["native_operation_id"])
+            if pending.get("phase") == "waiting" and pending.get("operation_id") != native_id:
+                raise ValueError("This update already tracks a different native operation; poll its original identity.")
+            payload["pending"] = {"phase": "waiting", "operation_id": native_id, "not_before": pending.get("not_before", 0)}
             payload["state"] = "waiting"
             return self._save(record, "Attached the original native operation ID for continued polling.")
+        if pending.get("phase") == "waiting" and pending.get("operation_id"):
+            # Do not treat an intermediate item snapshot as completion while
+            # the original provider operation can still change it.
+            return self.advance(request)
         api = Microsoft(payload["target"]["token_env"])
         probe = payload.get("probe")
         if probe:
