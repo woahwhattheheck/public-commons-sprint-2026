@@ -34,7 +34,7 @@ node stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs verify \
   --bundle /private/backups/merchant-20261011-001 --pass-env SF101_RECOVERY_PASSPHRASE
 ```
 
-Each file is AES-256-GCM authenticated and the key derives from a random per-bundle salt using scrypt; each file has its own random IV. Explicit 0700 directories/0600 files, exclusive-create output, original content SHA-256 plus ciphertext integrity digest, complete authenticated re-read and fast fail on corruption. The manifest contains only named logical roots/relative paths and metadata, no original absolute directories or secret values. Keep backup bundles private and outside public Git. For off-host retention, use the configured private object store described in [Remote recovery](REMOTE.md). Passphrase loss makes encrypted recovery impossible. Encrypt volume storage and control access to the passphrase separately.
+Each file is AES-256-GCM authenticated and the key derives from a random per-bundle salt using scrypt; each file has its own random IV. Explicit 0700 directories/0600 files, exclusive-create output, original content SHA-256 plus ciphertext integrity digest, complete authenticated re-read and fast fail on corruption. The manifest contains only named logical roots/relative paths and metadata, no original absolute directories or secret values. Keep encrypted backup bundles private and never commit them to Git. For off-host retention, use the configured private object store described in [Remote recovery](REMOTE.md). Secret loss makes encrypted recovery impossible. Encrypt volume storage and control access to the passphrase separately.
 
 ## Dry recovery drill / controlled restore
 

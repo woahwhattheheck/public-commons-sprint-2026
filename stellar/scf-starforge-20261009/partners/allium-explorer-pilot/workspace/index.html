@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Allium data workspace</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+  <header><div><strong>Allium data workspace</strong><span id="workspace-name">Opening retained workspace</span></div><button type="button" data-action="refresh">Refresh saved state</button></header>
+  <div class="shell"><nav aria-label="Workspace sections">
+    <button type="button" data-view="overview">Overview</button><button type="button" data-view="product">Product & projection</button>
+    <button type="button" data-view="acquisitions">Source acquisitions</button><button type="button" data-view="explore">Explore results</button>
+    <button type="button" data-view="merchant">Merchant & buyers</button><button type="button" data-view="history">History & handoff</button>
+    <p>Original Allium Explorer<br>SF30 dataset merchant</p>
+  </nav><main><div id="message" role="status" aria-live="polite"></div><div id="pending"></div><div id="content"><p>Open the complete private operator URL printed by the workspace CLI.</p></div></main></div>
+  <footer><span id="local-status">Local draft storage</span><span id="server-status"></span></footer>
+  <script type="module" src="/browser.mjs"></script>
+</body></html>

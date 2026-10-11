@@ -58,6 +58,7 @@ Optional configuration fields are:
 | --- | --- |
 | `endpoint` | The HTTPS endpoint of the selected S3-compatible service. |
 | `forcePathStyle` | Use the endpoint's path-style bucket addressing when required. |
+| `proxyEnvironment` | Use the deployment's existing HTTP(S) proxy environment with the SDK transport. Default is false; see supported Node versions below. |
 | `timeoutMs` | Request/body deadline, from 100 to 3,600,000 milliseconds; default 60,000. |
 | `allowLocalEndpoint` | Allow an explicitly configured `http://127.0.0.1` endpoint for a local native integration. Default is false. |
 
@@ -80,6 +81,27 @@ The private passphrase is already available through
 `SF101_RECOVERY_PASSPHRASE` or another existing uppercase environment variable.
 `--pass-env` passes its **name** to the original engine. The passphrase value is
 kept out of commands, bucket configuration, transfer metadata, and source.
+
+### Deployments that use an outbound proxy
+
+Set `proxyEnvironment` to `true` when S3 traffic must use the deployment's existing proxy configuration. The CLI reads `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` from its environment; lowercase forms take precedence when both forms are present. Programmatic callers can supply the same settings through `openS3Store`'s `env` option. This mode uses the SDK's Node HTTP handler with dedicated proxy-aware agents. Use Node 22.21.0 or later within 22.x, Node 24.5.0 or later within 24.x, or a later major release. Omitted or `false` keeps the direct transport. The bucket, prefix, credentials, and retained snapshot identity use the same configuration as before. When supplying an existing client, configure that client's transport before passing it to `openS3Store`.
+
+For example, add the option to the existing private-bucket configuration:
+
+```json
+{
+  "schema": "stellar-forge.merchant-recovery-s3.v1",
+  "region": "us-east-1",
+  "bucket": "existing-private-bucket",
+  "prefix": "merchant-recovery/",
+  "credentialProvider": "environment",
+  "proxyEnvironment": true
+}
+```
+
+Configure the existing proxy URL and bypass hosts in the deployment environment, alongside its existing AWS credential variables. Then run the same `push`, `list`, `pull`, and `restore` commands.
+
+See [Node's built-in proxy support](https://nodejs.org/api/http.html#built-in-proxy-support) for supported environment variables and bypass patterns.
 
 ## 1. Obtain the original consistent snapshot
 

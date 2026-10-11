@@ -243,11 +243,54 @@ async function executeQuote(quoteId) {
     if (serial === state.serial) renderQuote();
   }
 }
-async function quoteAction(name, quoteId) {
-  const serial = state.serial, quote = await client.call(name, {quoteId});
+async function quoteAction(name, quoteId, additional = {}) {
+  const serial = state.serial, quote = await client.call(name, {...additional,quoteId});
   if (serial !== state.serial) return;
   if (state.quote?.quoteId === quoteId) { state.quote = quote; renderQuote(); }
-  notice('Original quote ' + quoteId + ' is ' + quote.status + '.');
+  notice(name === 'bazaar_reconcile_payment'
+    ? 'Transaction observation: ' + (quote.transactionObservation ?? quote.result.reconciliation).outcome +
+      (quote.transactionObservation ? '. Observation was not saved; inspect and download its details. Original quote remains ' : '. Original quote: ') + quote.status + '.'
+    : 'Original quote ' + quoteId + ' is ' + quote.status + '.', Boolean(quote.transactionObservation));
+}
+function paymentInspection(q, active) {
+  const receipt = q.result?.paymentResponse, report = q.transactionObservation ?? q.result?.reconciliation;
+  const panel = node('section', {className:'content-block', id:'payment-inspection'}, [
+    node('h4', {text:'Payment transaction'}),
+  ]);
+  if (receipt) panel.append(facts([
+    ['Server settlement', receipt.success ? 'Reported success' : 'Reported failure'],
+    ['Transaction', receipt.transaction], ['Network', receipt.network], ['Payer', receipt.payer],
+    ['Server failure code', receipt.errorReason], ['Server failure detail', receipt.errorMessage],
+  ]), detail('Original server receipt fields', receipt));
+  if (report) panel.append(node('h4', {text:'Stellar transaction observation'}), facts([
+    ['Outcome', report.outcome], ['Checked', report.checkedAt], ['Transaction', report.transaction],
+    ['Observation storage', report.saved === false ? 'Not saved; available in this response' : 'Retained in this workspace'],
+    ['Reference source', report.transactionSource === 'ORIGINAL_RECEIPT' ? 'Original server receipt' : 'Operator transaction reference'],
+    ['Ledger', report.ledger], ['Network', report.network], ['RPC endpoint', report.rpcEndpoint],
+    ['Reviewed payer', report.payer], ['Quoted recipient', report.recipient],
+    [report.outcome === 'TRANSFER_MATCHED' ? 'Transferred atomic amount' : 'Quoted atomic amount', report.atomicAmount],
+  ]), detail('Complete transaction observation', report),
+    button('Download transaction observation', () => download(new TextEncoder().encode(stringify(report)), q.quoteId + '-transaction.json')));
+  if(q.result?.supersededReconciliation)panel.append(detail('Earlier observation for a different transaction reference', q.result.supersededReconciliation));
+  if (q.signedRequestDispatched && !active) {
+    const hasHash = typeof receipt?.transaction === 'string' && /^[0-9a-f]{64}$/i.test(receipt.transaction);
+    let reference;
+    if (!hasHash) {
+      reference = node('input', {id:'original-transaction-reference', type:'text', spellcheck:'false',
+        autocomplete:'off', maxlength:64, pattern:'[0-9a-fA-F]{64}',
+        value:report?.transactionSource === 'OPERATOR_REFERENCE' ? report.transaction : '',
+        placeholder:'64 hexadecimal characters'});
+      panel.append(node('label', {for:'original-transaction-reference', text:'Original transaction hash'}, [reference]),
+        node('p', {className:'caption', text:'This saved response has no transaction hash. Enter the original transaction reference to inspect it; the saved response remains unchanged.'}));
+    }
+    panel.append(button('Read transaction outcome', async () => {
+      const additional = hasHash ? {} : {transaction:reference.value.trim()};
+      if (!hasHash && !/^[0-9a-f]{64}$/i.test(additional.transaction)) throw new Error('Enter the original 64-character transaction hash.');
+      await quoteAction('bazaar_reconcile_payment', q.quoteId, additional);
+    }, {disabled:!client.tools.has('bazaar_reconcile_payment')}),
+    node('p', {className:'caption', text:'Reads Stellar through the host’s configured observation adapter. Keeps the original quote and authorization; this action does not sign or submit a payment.'}));
+  }
+  return panel;
 }
 function renderQuote() {
   const q = state.quote, target = $('quote-detail'); if (!q) { target.hidden = true; return; }
@@ -271,7 +314,7 @@ function renderQuote() {
       ['Expires', time(q.expiresAt)], ['Attempts', q.attempts], ['Phase', q.phase],
     ]), ...(q.invocation ? [detail('Complete invocation and arguments', q.invocation)] : [])]),
     node('div', {}, [node('h4', {text:'Selected payment terms'}), facts(Object.entries(q.acceptedTerms ?? q.selected ?? {})),
-      ...(q.result?.paymentResponse ? [detail('Original server payment receipt', q.result.paymentResponse)] : []),
+      ...(q.result?.paymentResponse || q.signedRequestDispatched ? [paymentInspection(q, active)] : []),
       ...(q.failure ? [node('p', {text:q.failure})] : []),
       ...(q.result?.responseFile ? [detail('Saved file', q.result.responseFile)] : []),
       ...(q.result?.content ? [detail(q.result.content.truncated ? 'Truncated status preview' : 'Status preview', q.result.content)] : []),

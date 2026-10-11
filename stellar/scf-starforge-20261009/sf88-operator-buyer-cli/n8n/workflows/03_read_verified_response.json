@@ -1,0 +1,93 @@
+{
+  "name": "Starforge — read saved response",
+  "active": false,
+  "nodes": [
+    {
+      "id": "fd0015fb-0ad6-4567-b5f4-e120cbcce684",
+      "name": "Start selected operation",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "12c6f747-0f5e-45ea-942d-7e8cf7c90dbf",
+      "name": "Select original intent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "03a17813-48fe-45f2-a82c-323265ec7b12",
+              "name": "intentId",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "34361fa9-de59-45e7-93fb-9199611851d1",
+      "name": "Read original verified response",
+      "type": "n8n-nodes-starforge-buyer.starforgeBuyer",
+      "typeVersion": 1,
+      "position": [
+        480,
+        240
+      ],
+      "parameters": {
+        "operation": "response",
+        "intentId": "={{ $json.intentId }}",
+        "responseFormat": "binary",
+        "options": {}
+      },
+      "credentials": {
+        "starforgeBuyerWorkspace": {
+          "name": "Original Starforge buyer workspace"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    }
+  ],
+  "connections": {
+    "Start selected operation": {
+      "main": [
+        [
+          {
+            "node": "Select original intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select original intent": {
+      "main": [
+        [
+          {
+            "node": "Read original verified response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

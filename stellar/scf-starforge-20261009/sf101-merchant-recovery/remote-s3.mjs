@@ -5,6 +5,8 @@ import { lstat, open } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { Agent as HttpAgent } from 'node:http';
+import { Agent as HttpsAgent } from 'node:https';
 
 export const S3_STORE_SCHEMA = 'stellar-forge.merchant-recovery-s3.v1';
 const MAX_BYTES = 4 * 1024 ** 3 + 12 * 1024 ** 2;
@@ -58,7 +60,7 @@ function relativeKey(value, { empty = false, prefix = false } = {}) {
 
 export function validateS3StoreConfig(raw) {
   const allowed = ['schema', 'region', 'bucket', 'prefix', 'endpoint', 'forcePathStyle', 'allowLocalEndpoint',
-    'credentialProvider', 'expectedBucketOwner', 'timeoutMs'];
+    'credentialProvider', 'expectedBucketOwner', 'timeoutMs', 'proxyEnvironment'];
   need(object(raw) && Object.keys(raw).every(key => allowed.includes(key)) && raw.schema === S3_STORE_SCHEMA,
     'Expected the original merchant-recovery-s3.v1 configuration');
   need(safeToken(raw.region, 64) && /^[a-z0-9][a-z0-9-]*$/.test(raw.region), 'Invalid S3 region');
@@ -67,6 +69,7 @@ export function validateS3StoreConfig(raw) {
   'Use an ordinary existing S3 bucket');
   need(raw.forcePathStyle === undefined || typeof raw.forcePathStyle === 'boolean', 'Invalid forcePathStyle');
   need(raw.allowLocalEndpoint === undefined || typeof raw.allowLocalEndpoint === 'boolean', 'Invalid allowLocalEndpoint');
+  need(raw.proxyEnvironment === undefined || typeof raw.proxyEnvironment === 'boolean', 'Invalid proxyEnvironment');
   let endpoint;
   if (raw.endpoint !== undefined) {
     need(safeToken(raw.endpoint, 2048), 'Invalid S3 endpoint');
@@ -87,6 +90,7 @@ export function validateS3StoreConfig(raw) {
   return Object.freeze({ schema: S3_STORE_SCHEMA, region: raw.region, bucket: raw.bucket, prefix,
     ...(endpoint ? { endpoint } : {}), forcePathStyle: raw.forcePathStyle ?? false,
     allowLocalEndpoint: raw.allowLocalEndpoint ?? false, credentialProvider,
+    proxyEnvironment: raw.proxyEnvironment ?? false,
     ...(raw.expectedBucketOwner ? { expectedBucketOwner: raw.expectedBucketOwner } : {}), timeoutMs });
 }
 
@@ -143,9 +147,38 @@ export async function openS3Store(input, { client: suppliedClient, sdk: supplied
     credentials = { accessKeyId: env.AWS_ACCESS_KEY_ID, secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
       ...(env.AWS_SESSION_TOKEN ? { sessionToken: env.AWS_SESSION_TOKEN } : {}) };
   }
-  const client = suppliedClient ?? new sdk.S3Client({ region: config.region,
-    ...(config.endpoint ? { endpoint: config.endpoint } : {}), forcePathStyle: config.forcePathStyle,
-    maxAttempts: 1, followRegionRedirects: false, ...(credentials ? { credentials } : {}) });
+  let requestHandler;
+  if (!suppliedClient && config.proxyEnvironment) {
+    const [major, minor] = process.versions.node.split('.').map(Number);
+    if (!(major >= 25 || major === 24 && minor >= 5 || major === 22 && minor >= 21))
+      throw failure('S3_RECOVERY_PROXY_NODE_VERSION_REQUIRED');
+    // Keep transport credentials in the process environment. The selected origin,
+    // immutable keys and recovery journal identity continue to name the same store.
+    const proxyEnv = Object.fromEntries(['HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY',
+      'http_proxy', 'https_proxy', 'no_proxy'].filter(key => typeof env[key] === 'string')
+      .map(key => [key, env[key]]));
+    const agents = [];
+    try {
+      const { NodeHttpHandler } = nativeRequire('@smithy/node-http-handler');
+      need(typeof NodeHttpHandler === 'function', 'Original Smithy HTTP handler required');
+      const httpAgent = new HttpAgent({ keepAlive: true, proxyEnv });
+      agents.push(httpAgent);
+      const httpsAgent = new HttpsAgent({ keepAlive: true, proxyEnv });
+      agents.push(httpsAgent);
+      requestHandler = new NodeHttpHandler({ httpAgent, httpsAgent,
+        connectionTimeout: config.timeoutMs, requestTimeout: config.timeoutMs });
+    } catch {
+      for (const agent of agents) agent.destroy();
+      throw failure('S3_RECOVERY_PROXY_CONFIGURATION_INVALID');
+    }
+  }
+  let client;
+  try {
+    client = suppliedClient ?? new sdk.S3Client({ region: config.region,
+      ...(config.endpoint ? { endpoint: config.endpoint } : {}), forcePathStyle: config.forcePathStyle,
+      maxAttempts: 1, followRegionRedirects: false, ...(credentials ? { credentials } : {}),
+      ...(requestHandler ? { requestHandler } : {}) });
+  } catch (error) { requestHandler?.destroy(); throw error; }
   need(client && typeof client.send === 'function', 'S3 client required');
   const target = { region: config.region, bucket: config.bucket, prefix: config.prefix,
     endpoint: config.endpoint ?? null, forcePathStyle: config.forcePathStyle,

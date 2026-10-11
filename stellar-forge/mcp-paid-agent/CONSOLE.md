@@ -72,6 +72,19 @@ stops its pending reads; it does not cancel an operation in the server.
 
 ## Use the complete saved result
 
+The quote's **Payment transaction** panel shows the original receipt's transaction,
+network, payer and failure details directly. **Read transaction outcome** uses
+the host's original SF86 read-only adapter and saves the observation on this quote.
+It displays a failed transaction, a missing RPC record or an exact matched
+transfer with its ledger and endpoint. Download the complete observation from
+the same panel. If an older response lost its hash, enter its original transaction
+reference; that source remains explicitly labeled. See [payment recovery](PAYMENT_RECOVERY.md)
+for operator setup, including a workspace with no signing function.
+
+The native result and the transaction observation remain separately visible.
+Refreshing quote status is still a local read. Transaction inspection occurs
+only when selected and does not start another payment or purchased tool call.
+
 **Saved results** lists the original `bazaar_results` inbox. Open a result to
 read every byte through `bazaar_read_result`; the client follows the explicit
 range cursor and verifies the final SHA-256 against the original file identity.
