@@ -1,13 +1,13 @@
 # Paid MCP access to existing data products
 
-The original SQLite, PostgreSQL, DuckDB and ClickHouse query sources can serve
+The original SQLite, PostgreSQL, DuckDB, ClickHouse, MySQL and MongoDB sources can serve
 their prepared products through native MCP. An agent discovers a named tool,
 reviews its exact arguments and payment terms, and buys its original query result.
 The complete result remains available in the buyer's [result inbox](RESULTS.md).
 
 `data-tools.mjs` binds existing prepared routes into
 [`paid-tool-server.mjs`](PAID_TOOLS.md). `data-serve.mjs` opens the selected original
-source and runs the server. The SQL, database permissions, parameter conversion,
+source and runs the server. The SQL or fixed aggregation, database permissions, parameter conversion,
 public column projection, row/byte/time limits and source shutdown remain in the
 existing SF30 provider. The existing HTTP seller can continue to use its prepared
 configuration.
@@ -15,13 +15,16 @@ configuration.
 ## What must already exist
 
 Use the source, service and bindings files exported by the original provider
-workspace or preparation command. They describe an actual data product:
+workspace or preparation command. For MySQL and MongoDB, select the complete
+existing prepared directory: its source file already contains the original
+bindings. These files describe the selected data product:
 
 | File | Purpose |
 | --- | --- |
 | Source configuration | Fixed database or approved files, prepared queries, private parameters, public columns and execution limits. |
 | `service.json` | Original prepared HTTP offers, public parameter schemas, descriptions and examples. |
-| `bindings.json` | Original route ID → query name and `query`/`body` input mapping. |
+| `bindings.json`, or prepared `source.json` bindings | Original route ID → query name and `query`/`body` input mapping. |
+| MySQL/MongoDB prepared `manifest.json` and `merchant-plan.json` | Original complete package identity, approved service plan, public OpenAPI contract and generated customer. The original provider verifier checks them before opening the source. |
 | Native facilitator configuration | Existing funded signer, explicit Stellar network, asset and recipient policy, fee ceiling, RPC and signer ownership. |
 
 The original SQLite workbench exports its route mapping in its generated handler
@@ -92,6 +95,62 @@ authorization profile. A prepared example's placeholder addresses are not valid
 native payment configuration; choose explicit real terms in this operator file.
 There is no automatic price, asset, network or payment-flow substitution.
 
+### Use an existing MySQL or MongoDB package
+
+Keep the complete output of the original MySQL or MongoDB preparation workflow.
+The package includes `source.json`, `service.json`, `merchant-plan.json`,
+`openapi.json`, `manifest.json`, its generated `client/` and a selected CA file
+when the original profile requires one. Do not copy its bindings into a second
+file or edit its prepared service to introduce MCP.
+
+Set `provider` to `mysql` or `mongodb` and use `preparedDirectory` in place of
+`sourceFile`, `serviceFile` and `bindingsFile`. The latter three fields are rejected
+for these two providers, so a stale separate mapping cannot override the original
+prepared contract. The other four providers retain their existing file configuration.
+
+```json
+{
+  "schema":"stellar-forge.data-mcp.v1",
+  "provider":"mongodb",
+  "preparedDirectory":"../prepared-public-records",
+  "facilitatorFile":"facilitator.json",
+  "tools":[{"routeId":"catalog", "name":"public_records"}],
+  "server":{"host":"127.0.0.1","port":4100,"maxInFlight":1}
+}
+```
+
+Here `catalog` must be an actual route ID in that package's manifest. The example
+uses the prepared offer's complete payment options. If those are preparation
+placeholders, add the complete real native `accepts` array to this selection as in
+the preceding example. The prepared files keep their original bytes in either case.
+
+The launcher calls `verifyPreparedMysqlSeller` or `verifyPreparedMongoSeller`
+from the existing provider, then opens that provider's `source.json` and uses its
+embedded bindings. A changed or incomplete package fails before database startup
+or signing. The startup record includes the selected provider and the verified
+manifest SHA-256. Retain that identity with the operator's configuration when
+moving the complete package or investigating a later source change.
+
+The host supplies the environment reference already declared by the source:
+MySQL uses `connection.passwordEnv` when configured; MongoDB uses
+`connection.uriEnv`. The original connection resolver applies the declared
+TLS/CA policy. A remote database retains verified TLS; the provider's explicitly
+selected plaintext development mode only admits its original loopback connection.
+No URI, password or query text is added to MCP discovery or the browser console.
+
+Use the existing installed command for all six providers:
+
+```sh
+npx --no-install starforge mcp-data --config /private/operator/data-mcp.json
+```
+
+Choose the package's existing `mysql` or `mongodb` runtime dependency group
+alongside the MCP/x402 runtime. Keep the original driver's version from that
+release's manifest; the MCP adapter does not introduce a second driver. Source
+preparation and connection work continue in the original
+[MySQL workspace](../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/README.md)
+or [MongoDB workspace](../../stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/README.md).
+
 Supported provider values and their original runtimes are:
 
 | `provider` | Existing opener and runtime |
@@ -100,6 +159,8 @@ Supported provider values and their original runtimes are:
 | `postgres` | `postgres/config.mjs` → original PostgreSQL pool and read-only transactions. Uses the existing `pg` dependency and connection environment/TLS settings. |
 | `duckdb` | `duckdb/source.mjs` → original Python DuckDB workers, local database and approved Parquet files. `python` selects an existing interpreter with DuckDB installed. |
 | `clickhouse` | `clickhouse/source.mjs` → original native HTTP source, selected environment credentials, typed schema preflight and scan limits. |
+| `mysql` | `mysql/prepare.mjs` verifies the complete original package; `mysql/config.mjs` opens its existing MySQL/MariaDB pool, exact scalar bindings and read-only repeatable-read transactions. Uses the original `mysql2` runtime. |
+| `mongodb` | `mongodb/prepare.mjs` verifies the complete original package and compiled contract; `mongodb/config.mjs` opens its existing fixed aggregation source. Uses the original MongoDB driver, connection policy, admission and snapshot/read-concern semantics. |
 
 Install the component's existing [MCP/x402 dependencies](PAID_TOOLS.md#install-and-compose)
 at the complete checkout or distribution root. The launcher imports only the
@@ -143,6 +204,23 @@ The response contains a short text summary and one complete original data body i
 rows, row count, truncation flag and native value encodings. Large integers and
 exact decimals remain strings when the original provider returns strings. The
 body is not duplicated as a second full text table.
+
+For MySQL/MariaDB, the original column types, exact large integer and decimal
+strings, binary encodings and null values remain in that body. For MongoDB, the
+original canonical Extended JSON v2 values remain intact: ObjectId, Date, Long,
+Decimal128, binary and null are not flattened into JavaScript numbers or text.
+The source's `columnTypes`, ordered projection, source/consistency metadata and
+truncation flag accompany the rows. Query callers supply only the published typed
+arguments. They cannot supply SQL, collection names, an aggregation pipeline,
+projection, read concern or a replacement connection.
+
+Buyers can use the existing [browser console](CONSOLE.md) to find the tool, review
+its arguments and complete native terms, request the independent operator's
+approval, then inspect or download the entire saved result. After closing both
+processes, reopen the same buyer state to read that result. This read uses the
+original result inbox and does not query the database or purchase it again. A
+later live query is a new explicitly approved purchase against the current source;
+the earlier paid result remains its original observation.
 
 ## Admission, errors and shutdown
 
@@ -191,3 +269,14 @@ await server.close();
 already owns its source lifecycle and composes `startNativePaidToolServer`
 directly. Each descriptor has original admission and handler callbacks.
 `startDataMcpFile` is the file-driven API used by the launcher.
+
+An original provider's configuration preparer can use
+`compileDataToolDeclarations({description, serviceConfig, bindings, selections})`
+for the same offline declaration review. Supply its original `describe()` result
+or offline description, together with its actual prepared service and bindings.
+The returned copied declarations include `routeId`, `query`, public tool schema,
+example and selected payment options. Runtime uses this same compiler and then
+binds the original source callbacks. For offline native policy review,
+`paid-tool-server.mjs` exports the same `validateTerms(terms, policy)` used during
+server startup; supply the original facilitator's validated policy. These pure
+operations neither create substitute handlers nor open a database or signer.
