@@ -49,6 +49,18 @@ node stellar/scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs \
   --terms /private/seller-terms.json --out /private/seller-post-recheck-packet
 ```
 
+### Use the existing SF74 console downloads
+
+The merged [SF74 support console](../sf74-merchant-support-console/README.md) supplies these same original inputs:
+
+```bash
+node stellar/scf-starforge-20261009/sf74-merchant-support-console/server.mjs
+```
+
+1. Run the authorized before diagnosis and choose **Download intake JSON** (`merchant-intake.json`). For a POST-only offer, review the displayed target, Origin and credential mode, explicitly authorize its separate check, choose **Run original OPTIONS-only preflight**, then download `merchant-post-preflight.json`.
+2. Keep both files unchanged. Repeat the diagnosis and optional preflight after the agreed repair with identical scope and credential policy. The browser may suffix filenames; identify before/after pairs by the original timestamps and hashes. Renaming is fine; reformatting changes the bound bytes.
+3. Pass the actual before and after intake files to `--intake` and `--after`. For POST, pass their corresponding preflight files to `--sf72-before` and `--sf72-after`. Use the same owner-supplied terms and a new output directory in the command above. The console's downloaded comparison JSON is useful for review, but SF77 consumes the original source pairs and recomputes through SF76.
+
 The optional `packet.json.repairReview` is the unchanged return value of the original `sf76-merchant-remediation-delta/compare.mjs`. The HTML and checklist show its classification, unpaid technical milestone, original source timestamps and hashes, and finding changes. The original baseline and commercial terms remain separate. All seller acceptance boxes remain open, including when an unpaid technical milestone is observed.
 
 The comparator re-evaluates retained original SF70/SF72 observations. It rejects changed resource/catalog/origin/network/payee/method, non-later captures, forged stored decisions, changed known browser credential modes, conflicting original observations, unpaired SF72 reports and SF72 hashes that do not match the exact SF70 bytes. Keep the original JSON files unchanged: reformatting an SF70 file invalidates an SF72 report bound to its old bytes. Each comparison source is limited to 2,000,000 bytes; owner terms retain the 5 MiB limit. Input must be valid UTF-8 JSON. Outputs use a new 0700 directory and 0600 files.
