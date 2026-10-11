@@ -1,6 +1,6 @@
 // MIT. One response-cache engine and the original SF30 upstream transport.
 import { createHash } from 'node:crypto';
-import { createUpstreamHandler } from '../upstream-handler.mjs';
+import { createUpstreamHandler, beginUpstreamRequest, resolveUpstreamHeaders } from '../upstream-handler.mjs';
 import { createResponseCache } from './cache.mjs';
 import { cacheDirectives, upstreamCacheBypass, upstreamFreshness } from './http-freshness.mjs';
 
@@ -31,7 +31,7 @@ export function createCachedUpstream(options, cacheOptions) {
   if (Object.hasOwn(cacheOptions, 'handler') || Object.hasOwn(cacheOptions, 'storagePolicy') || Object.hasOwn(cacheOptions, 'bypassRequest')) {
     throw new TypeError('Upstream factory owns handler and HTTP cache policy hooks');
   }
-  const { headers = {}, lookup, onResult, invokeSource, ...serializable } = options;
+  const { headers = {}, lookup, onResult, invokeSource, credentialProvider, ...serializable } = options;
   if (invokeSource !== undefined && typeof invokeSource !== 'function') throw new TypeError('invokeSource must be a trusted source function');
   const fixed = structuredClone(serializable);
   if (lookup !== undefined) fixed.lookup = lookup;
@@ -49,10 +49,11 @@ export function createCachedUpstream(options, cacheOptions) {
   const policy = { ...structuredClone(cacheData), ...(admit === undefined ? {} : { admit }), varyHeaders,
     maxSourceInFlight, maxResponseBytes: cacheOptions.maxResponseBytes ?? fixed.maxResponseBytes ?? 1048576 };
   // Original factories perform their complete construction-time validation.
-  createUpstreamHandler({ ...fixed, headers: staticHeaders ?? {} });
+  createUpstreamHandler({ ...fixed, headers: staticHeaders ?? {}, ...(credentialProvider ? {credentialProvider} : {}) });
   const admission = createResponseCache({ ...policy, handler: () => { throw new Error('Admission-only cache has no source'); } });
-  const generations = new Set();
-  const totals = { requests: 0, credentialUnavailable: 0, credentialRotations: 0, invalidations: 0,
+  const generations = new Set(), credentialWaiters = new Set();
+  const maxCredentialWaiters = admission.stats().limits.maxWaiters;
+  const totals = { requests: 0, credentialUnavailable: 0, credentialRotations: 0, invalidations: 0, credentialInFlight: 0,
     sourceStarted: 0, sourceCompleted: 0, sourceInFlight: 0, sourceFailed: 0, sourceResponseBytes: 0 };
   let current = null, sequence = 0, closed = false, closing;
 
@@ -66,9 +67,9 @@ export function createCachedUpstream(options, cacheOptions) {
     const previous = current; current = null;
     previous.cache.invalidate(); release(previous);
   }
-  function select(serverHeaders) {
+  function select(serverHeaders, credentialGeneration) {
     // This digest is only a private equality token, never a diagnostic or output.
-    const fingerprint = createHash('sha256').update(JSON.stringify(serverHeaders)).digest('hex');
+    const fingerprint = createHash('sha256').update(JSON.stringify([serverHeaders,credentialGeneration])).digest('hex');
     if (current?.fingerprint === fingerprint) return current;
     const original = createUpstreamHandler({ ...fixed, headers: serverHeaders });
     if (current) { totals.credentialRotations++; retire(); }
@@ -81,6 +82,9 @@ export function createCachedUpstream(options, cacheOptions) {
       const requestTime = Date.now();
       try {
         const result = await (invokeSource ? invokeSource(original, context) : original(context));
+        if (credentialProvider && result.body?.upstreamStatus === 401) {
+          try { credentialProvider.invalidate(serverHeaders.authorization); } catch { /* Do not rewrite a native result. */ }
+        }
         totals.sourceCompleted++;
         if (result.status >= 400) totals.sourceFailed++;
         if (Buffer.isBuffer(result.body)) totals.sourceResponseBytes += result.body.length;
@@ -109,24 +113,45 @@ export function createCachedUpstream(options, cacheOptions) {
     // This application cache does not implement HTTP only-if-cached/revalidation.
     // Refuse the former explicitly rather than accidentally contacting a backend.
     if (cacheDirectives(context.headers?.['cache-control'])?.has('only-if-cached')) return failure(504, 'UPSTREAM_CACHE_ONLY_IF_CACHED_UNSUPPORTED');
-    let generation;
-    try { generation = select(headerFactory ? frozenHeaders(headerFactory()) : staticHeaders); }
-    catch { totals.credentialUnavailable++; return failure(503, 'UPSTREAM_CONFIGURATION_UNAVAILABLE'); }
-    // The generic cache removes hop fields before invoking source. Preserve the
-    // original transport's Connection-nominated header removal before that step.
-    const incoming = { ...(context.headers ?? {}) };
-    const connection = incoming.connection;
-    const nominated = new Set((Array.isArray(connection) ? connection.join(',') : typeof connection === 'string' ? connection : '')
-      .split(',').map(name => name.trim().toLowerCase()).filter(Boolean));
-    for (const name of forwarded) if (nominated.has(name)) delete incoming[name];
-    generation.users++;
+    if (credentialWaiters.size >= maxCredentialWaiters) return failure(503, 'UPSTREAM_CAPACITY_EXHAUSTED');
+    let generation, lifetime;
     try {
-      const result = await generation.cache.handler({ ...context, headers: incoming });
-      const outward = { ...result.headers };
-      for (const name of META) if (!expose.has(name)) delete outward[name];
-      // Cache metadata is never a seller response field, even for a bypass.
-      return { status: result.status, headers: outward, body: result.body };
-    } finally { generation.users--; release(generation); }
+      lifetime = beginUpstreamRequest(context.signal,fixed.timeoutMs ?? 10000);
+      let complete;
+      const waiting = {lifetime,done:new Promise(resolve => {complete=resolve;})};
+      credentialWaiters.add(waiting); totals.credentialInFlight++;
+      try {
+        // Token renewal/rotation precedes cache selection. Each source generation
+        // still receives one fixed immutable authorization snapshot, never a
+        // provider that can change credentials while its cached data is in use.
+        const trusted = frozenHeaders(await resolveUpstreamHeaders(headerFactory ?? staticHeaders,credentialProvider,lifetime));
+        if (closed) return failure(503,'UPSTREAM_CACHE_CLOSED');
+        const epoch = credentialProvider ? credentialProvider.generation() : null;
+        if (epoch !== null && (!Number.isSafeInteger(epoch) || epoch < 0)) throw new TypeError('Invalid credential generation');
+        generation = select(trusted,epoch);
+      } catch {
+        if (closed) return failure(503,'UPSTREAM_CACHE_CLOSED');
+        if (lifetime.signal.aborted) return failure(lifetime.signal.reason.code === 'UPSTREAM_TIMEOUT' ? 504 : 499,lifetime.signal.reason.code);
+        totals.credentialUnavailable++; retire(); return failure(503,'UPSTREAM_CONFIGURATION_UNAVAILABLE');
+      } finally { totals.credentialInFlight--; credentialWaiters.delete(waiting); complete(); }
+      // Preserve original Connection-nominated header removal before cache input.
+      const incoming = { ...(context.headers ?? {}) };
+      const connection = incoming.connection;
+      const nominated = new Set((Array.isArray(connection) ? connection.join(',') : typeof connection === 'string' ? connection : '')
+        .split(',').map(name => name.trim().toLowerCase()).filter(Boolean));
+      for (const name of forwarded) if (nominated.has(name)) delete incoming[name];
+      generation.users++;
+      try {
+        const result = await lifetime.wait(generation.cache.handler({ ...context, headers: incoming, signal:lifetime.signal }));
+        const outward = { ...result.headers };
+        for (const name of META) if (!expose.has(name)) delete outward[name];
+        return { status: result.status, headers: outward, body: result.body };
+      } finally { generation.users--; release(generation); }
+    } catch {
+      if (closed) return failure(503,'UPSTREAM_CACHE_CLOSED');
+      const error = lifetime?.signal.aborted ? lifetime.signal.reason.code : 'UPSTREAM_CONFIGURATION_UNAVAILABLE';
+      return failure(error === 'UPSTREAM_TIMEOUT' ? 504 : error === 'UPSTREAM_ABORTED' ? 499 : 503,error);
+    } finally { lifetime?.close(); }
   }
 
   const stats = () => Object.freeze({ schema: 'stellar-forge.upstream-response-cache.v1', ...totals,
@@ -136,7 +161,8 @@ export function createCachedUpstream(options, cacheOptions) {
   const close = options => {
     if (closing) return closing;
     closed = true;
-    const pending = [admission.close(options), ...[...generations].map(generation => generation.cache.close(options))];
+    const credentialDrains = [...credentialWaiters].map(waiting => { waiting.lifetime.cancel(); return waiting.done; });
+    const pending = [...credentialDrains, admission.close(options), ...[...generations].map(generation => generation.cache.close(options))];
     current = null;
     closing = Promise.all(pending).then(() => {
       for (const generation of generations) release(generation);

@@ -1,5 +1,11 @@
 # SF102: sell named Cube analytics queries through the original Stellar x402 seller
 
+For a merchant deployment, use the [Cube onboarding workflow](onboarding/README.md).
+It binds approved reports to the actual saved `/meta` catalog, validates public
+input examples, retains private plans and backend probes, and exports original
+seller configs, buyer preparation, OpenAPI and a portable native launcher. Its
+generated admission hook validates the original template before payment.
+
 This is an **actual merchant integration module**, not another x402 server. An operator selects fixed Cube analytic reports; the existing SF30 seller sells a permitted HTTP GET route, then (only after its native payment gate) this adapter calls the original SF30 `createUpstreamHandlers` transport as a server-authenticated Cube `/cubejs-api/v1/load` POST. It preserves original DNS public-address pinning, HTTPS certificate checking, redirect and nested-402 rejection, bounded response, timeout, concurrency and cancellation behavior. No buyer-supplied SQL, arbitrary Cube JSON, upstream URL, authorization header, or bearer JWT crosses that boundary.
 
 The operator still owns their merchant account, price, seller, payment facilitator, data rights, and seller environment. This package does not create a wallet, sign a Stellar transaction, settle a charge, process customer data automatically, or prove a provider agreed to a pilot.

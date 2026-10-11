@@ -37,6 +37,22 @@ python3 stellar/scf-starforge-20261009/sf36-spend-governor/finalize.py \
   --reports /private/operator/finalization-reports
 ```
 
+On a managed host that requires its operator-selected HTTP CONNECT proxy, add
+`--rpc-proxy-env HTTPS_PROXY` and the existing `--rpc-endpoint` selection. The
+worker reads only that explicitly named variable; it never auto-detects a proxy.
+The value must be a credential-free HTTP proxy URL accepted by the original
+SF31/SF85 parser, with no additional path, query or fragment. The SF88 workspace
+command forwards its existing validated profile automatically.
+
+The endpoint is sent only in the private JSON input to the original Node
+observer, which still receives no SF36 keys or unrelated environment. The observer
+constructs an original SF31 transport pinned to the selected public RPC origin;
+the existing SF86 network, transaction and exact SEP-41 matching checks remain
+unchanged. TLS verification, response bounds and redirect refusal remain in the
+original transport. Proxy values never appear in reports or command output. Each
+new worker invocation resolves the selected environment variable again, so an
+ephemeral cloud proxy port is not persisted as accounting configuration.
+
 For the existing SF88 inbox/evidence directory, replace `--record` with
 `--records-dir /private/operator/evidence`. One invocation processes every
 original JSON capture once. `--watch-seconds 60` keeps observing unresolved

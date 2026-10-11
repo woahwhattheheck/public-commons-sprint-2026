@@ -57,7 +57,8 @@ export function createConfiguredCachedUpstream(upstream, policy, availability) {
     if (result !== true && result !== undefined && result !== null) return result;
     return typeof source.admit === 'function' ? source.admit(context) : true;
   };
-  handler.snapshot = () => Object.freeze({ ...source.snapshot(), cache: control.stats() });
+  handler.snapshot = () => Object.freeze({ ...source.snapshot(), cache: control.stats(),
+    ...(upstream.credentialProvider ? {oauth2:upstream.credentialProvider.snapshot()} : {}) });
   handler.cache = control;
   return handler;
 }
