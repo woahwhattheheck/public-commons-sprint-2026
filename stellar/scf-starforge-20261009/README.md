@@ -23,7 +23,8 @@ the numbered source directories identify implementation components.
 | Integrate an agent or customer application | [Durable MCP workspace](../../stellar-forge/mcp-paid-agent/DURABILITY.md), [customer SDK](sf30-seller-sdk/DEVELOPER.md), [Python buyer](sf88-operator-buyer-cli/python/README.md) | Original operation identity and the operator's configured payment authority |
 | Change a live product or recover an incident | [Seller releases](sf82-seller-pilot/RELEASES.md), [buyer inbox](sf88-operator-buyer-cli/QUEUE.md), [operations](sf30-seller-sdk/operations/README.md) | Reviewed versions, original attempts, retained output and operating history |
 | Stage and replace merchant releases | [Managed fleet workspace](merchant-fleet-gateway/workspace/README.md) and [release operator](merchant-fleet-gateway/RELEASE_OPERATOR.md) | Immutable original releases, reviewed traffic changes, drained sellers and restart rollback |
-| Review merchant pricing and operating costs | [Merchant pricing workspace](sf97-merchant-revenue-ops/WORKSPACE.md) | Every configured payment option, the original operating capture, saved cost assumptions and financial reports |
+| Review merchant pricing and operating costs | [Merchant pricing workspace](sf97-merchant-revenue-ops/WORKSPACE.md) | Every configured payment option, retained-period coverage, saved assumptions and report comparisons |
+| Reconcile merchant settlements with a saved pricing decision | [Pricing import](merchant-settlement-accounting/PRICING.md) and [accounting workspace](merchant-settlement-accounting/workspace/README.md) | Original quote context, exact payment terms, native events, verification results and reviewed accounting runs |
 
 ## Install and open the merchant workspace
 
@@ -99,8 +100,11 @@ node stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/cli.mjs 
 ```
 
 Use the actual configuration path and listener printed by your seller. For a
-retained operating capture, replace `--ops-url` with
-`--snapshot /absolute/private/merchant/original-seller-traffic.json`.
+saved session capture, replace `--ops-url` with
+`--snapshot /absolute/private/merchant/original-seller-traffic.json`. For retained
+history, use `--history /absolute/private/merchant/original-history.json`. Both
+files can be configured together; a live listener exposes the original UTC
+date and route controls.
 The optional `--native-outbox` points at the same merchant's existing private
 SF98 outbox and adds its native settlement companion.
 
@@ -108,9 +112,42 @@ The private browser workspace presents every configured payment option. Enter
 your USD quote and basis, target request volume, fulfillment and challenge
 costs, and fixed operating costs. The original SF97 analyzer calculates the
 review; unspecified costs stay unknown. Save the review to retain its exact
-source snapshot and terms, reopen the saved version, and download reusable
-merchant terms and the original reports. Saved versions preserve the assumptions
-behind a pricing decision through service restart and concurrent editing.
+session or history export and terms, reopen the saved version, and compare two
+saved reports. The view keeps original coverage gaps and changed route
+identities visible. Saved versions preserve the assumptions behind a pricing
+decision through service restart and concurrent editing.
+
+## Reconcile the merchant's native settlements
+
+Use the saved pricing version's **Report JSON** to carry its complete payment
+selection and unit costs into the original accounting format:
+
+```sh
+node stellar/scf-starforge-20261009/merchant-settlement-accounting/pricing-cli.mjs \
+  --report /absolute/private/merchant/saved-pricing-report.json \
+  --out /absolute/private/merchant/new-pricing-import
+```
+
+The [pricing import guide](merchant-settlement-accounting/PRICING.md) covers
+explicit accounting references for descriptive quote bases. The new private
+directory retains the original report and validated `accounting-terms.json`.
+
+Open the [merchant accounting workspace](merchant-settlement-accounting/workspace/README.md)
+with that terms file and the merchant's existing native sources:
+
+```sh
+node stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/server.mjs \
+  --workspace /absolute/private/merchant/accounting-workspace \
+  --outbox /absolute/private/merchant/sf98-outbox \
+  --proof-dir /absolute/private/merchant/sf86-results \
+  --terms /absolute/private/merchant/new-pricing-import/accounting-terms.json
+```
+
+In an existing workspace, import and select the generated terms through
+**Sources & imports**. Each reconciliation retains the native journal, selected
+terms and original network-verification files. Review its route and payment
+option totals, investigate exceptions, keep named review notes, compare saved
+runs and export the reviewed handoff. Reopen with `--workspace` alone to continue.
 
 ## Prepare the buyer's real request
 
