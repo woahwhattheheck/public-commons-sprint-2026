@@ -125,6 +125,113 @@ should continue. Await it before dispatching to another handler. A Node host can
 omit `originalUrl`; the incoming `url` is then used directly. The caller owns
 listener binding, TLS/proxy configuration, HTTP parsing timeouts and process signals.
 
+## Pause and resume individual products
+
+Set `availabilityDirectory` when creating the embedded merchant to use the same
+persistent availability policy as the standalone seller:
+
+```js
+const merchant = await createEmbeddedSeller({
+  routes: existingSellerRoutes,
+  nativeFactory: originalNativeFactory,
+  availabilityDirectory: '/srv/merchant-a/availability',
+});
+```
+
+Choose a canonical absolute directory owned by this merchant. The original store
+creates private files, uses Linux `flock` for one active writer, and retains pauses
+across restarts. It binds the policy to the compiled offers' trusted public origin.
+Keep that origin and directory stable when restarting the application; the host's
+local listening port may change when its advertised offer origin stays the same.
+
+A selected product can pause while the application's other products and ordinary
+endpoints continue serving. The original availability gate runs after mounted URL
+restoration and before resource admission, native verification and application
+execution. A paused route returns `503 SELLER_ROUTE_PAUSED`. Work already admitted
+to the product continues, and its in-flight count remains until the HTTP response
+and original native work both finish. The original offer, price and documentation
+remain discoverable.
+
+`merchant.availability.snapshot()` returns current route IDs, saved revision,
+states, in-flight counts, retained removed-route pauses and recent changes.
+The private controller accepts the exact change the operator reviewed:
+
+```js
+await merchant.availability.update({
+  expectedRevision: reviewedRevision,
+  action: 'pause',
+  routeIds: reviewedRouteIds,
+  reason: 'Dataset maintenance',
+});
+```
+
+Use `action: 'resume'` to restore admission. Each change accepts up to 100 distinct
+route IDs and one optional reason of at most 160 characters. A stale revision
+returns `AVAILABILITY_REVISION_CHANGED`; inspect the new snapshot and review the
+change again. After an interrupted update, read current state before sending
+another change. The [shared availability guide](../availability/README.md) covers
+the full state and restart contract, including explicitly resuming a removed ID.
+
+### Use the original private operator desk
+
+Attach the maintained operations service to the actual host server and the embedded
+merchant. Its existing availability page, API and CLI operate this same controller:
+
+```js
+import { startSellerOperations } from
+  '@tokenjunkielabs/starforge-merchant/seller/operations';
+
+const operations = await startSellerOperations({
+  ...merchant,
+  server: existingHostServer,
+}, { port: 8424 });
+
+console.log(operations.availabilityControlUrl);
+```
+
+Keep the printed control URL in the operator session. The listener binds to IPv4
+loopback and its fragment authorizes changes. The plain `availabilityUrl` shows
+current state. The application's public health response keeps its original shape;
+operator reasons and history stay in the private controller and desk.
+
+The original traffic observer attaches to this host server. Its general traffic
+view includes ordinary host requests in the unmatched category; product
+availability counts describe only the configured merchant routes. Calling
+`operations.close()` closes its private listener and detaches that observer. The
+application retains ownership of the host listener and facilitator.
+
+### Run the complete example workflow
+
+The supplied example starts the same operations service when availability is
+enabled. Choose a private writable directory for this example merchant:
+
+```sh
+S=stellar/scf-starforge-20261009/sf30-seller-sdk
+node "$S/embedded/example-node.mjs" --port 8423 \
+  --availability-dir /srv/example-merchant/availability --operations-port 8424
+```
+
+Startup prints the host URL, route ID, operations URL and `availabilityControl`.
+Open the control URL to select the dataset product and pause/resume it. `/health`
+continues serving from the existing host throughout product pauses. Alternatively,
+set `SELLER_AVAILABILITY_URL` in the operator environment to that startup control
+URL and use the original CLI from another terminal:
+
+```sh
+node "$S/availability/cli.mjs" status --url http://127.0.0.1:8424
+node "$S/availability/cli.mjs" pause --url-env SELLER_AVAILABILITY_URL \
+  --revision 0 --route dataset --reason 'Dataset maintenance'
+node "$S/availability/cli.mjs" resume --url-env SELLER_AVAILABILITY_URL \
+  --revision 1 --route dataset --reason 'Dataset ready'
+```
+
+Replace the example revisions with the states actually reviewed. The CLI prints
+the saved result and never replays a mutation. Stop and restart this example with
+the same directory to retain its selected policy; its compiled public origin is
+stable even when the local port is chosen with `--port 0`. On process shutdown,
+the example drains the merchant, closes the private operations service, and then
+closes its own host listener, retaining the first reported shutdown error.
+
 ## Operate and drain the merchant
 
 The existing documentation assets, generated OpenAPI and customer-client downloads
@@ -148,6 +255,13 @@ each slot until both the HTTP response and original dispatch finish. Concurrent
 free endpoints and the host listener continue serving. Calls to `close()` share
 the same result; `snapshot()` remains available throughout shutdown.
 
+With availability configured, successful merchant drain also releases its policy
+writer lease. A failed forced drain retains that lease until process teardown,
+matching the original seller while native work can still be active. Keep the
+host's existing shutdown and outcome-recovery handling for that error. Per-product
+pause/resume uses `merchant.availability`; `merchant.close()` owns policy cleanup
+as part of complete merchant shutdown.
+
 If `drainGraceMs` expires, the original lifecycle reports
 `SELLER_DRAIN_DEADLINE_EXCEEDED`. Only outstanding merchant responses are destroyed;
 the host listener is retained. Node may close a connection carrying an interrupted
@@ -170,3 +284,4 @@ validation and defaults apply unchanged.
 - [Original handler lifecycle](../HANDLER_LIFECYCLE.md)
 - [Express middleware and mount paths](https://expressjs.com/en/guide/using-middleware/)
 - [Node asynchronous request context](https://nodejs.org/api/async_context.html)
+
