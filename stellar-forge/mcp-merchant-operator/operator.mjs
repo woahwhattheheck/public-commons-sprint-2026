@@ -4,9 +4,8 @@ import { join } from 'node:path';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { stageRelease, inspectRelease, compareReleases, activateRelease, rollbackRelease,
   readReleaseState, releaseStatus, runActiveRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
-import { importOpenApi } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/importer.mjs';
 import { exportSellerClient } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs';
-import { exact, failure, identifier, line, fileBytes, writePrivate, readMerchantConfig } from './config.mjs';
+import { exact, failure, identifier, line, writePrivate, readMerchantConfig, inspectMerchantSource } from './config.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const idSchema = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
@@ -21,8 +20,8 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
 }
 export const MERCHANT_TOOLS = [
   tool('merchant_status', 'Inspect original release selection, retained history, seller readiness and this MCP process ownership. Makes only original loopback health/offer reads.', {}, [], { readOnly: true, idempotent: true }),
-  tool('merchant_sources', 'List operator-configured source aliases or inspect one source: exact file digests, selected API routes and every payment choice. Reads configured local files only.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
-  tool('merchant_stage', 'Compile a configured source alias into a new immutable original SF82 release. Does not activate, import application code, start a listener or make a payment.',
+  tool('merchant_sources', 'List configured aliases or inspect an original saved API package or source files: exact input hashes, public routes, payment choices, backend mapping and credential environment names. Reads configured local files without credential values or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
+  tool('merchant_stage', 'Compile a configured source alias into a new immutable original SF82 release, including its original saved workspace and upstream snapshot. Does not activate, import application code, start a listener or make a payment.',
     { source: idSchema, id: idSchema, label: textSchema }, ['source', 'id']),
   tool('merchant_inspect', 'Inspect and verify one retained original release including complete terms, application hashes and native/challenge mode.', { id: idSchema }, ['id'], { readOnly: true, idempotent: true }),
   tool('merchant_compare', 'Compare a staged release against the active release or a named retained version. Returns exact payment, route and application changes with the selection generation.',
@@ -51,7 +50,7 @@ function releaseView(release) {
   if (!release) return null;
   const { handlerEntry, runtime, ...rest } = release;
   const { handlers, ...options } = runtime;
-  return { ...rest, runtime: { ...options, applicationConfigured: Boolean(handlers) },
+  return { ...rest, runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams) },
     handlerEntry: handlerEntry ? { sha256: handlerEntry.sha256, bytes: handlerEntry.bytes, scope: handlerEntry.scope } : null };
 }
 function runtimeView(runtime) {
@@ -136,11 +135,7 @@ export class MerchantReleaseOperator {
     identifier(source, 'Source alias');
     const candidate = this.#config.sources[source];
     if (!candidate) throw failure('SOURCE_NOT_FOUND', 'Choose one of the host-configured source aliases.');
-    const [spec, selections, bindings] = await Promise.all([candidate.spec, candidate.config, candidate.bindings].map(path => fileBytes(path)));
-    const compiled = importOpenApi(JSON.parse(spec), JSON.parse(selections));
-    return { source, label: candidate.label, mode: candidate.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
-      sourceDigests: { spec: hash(spec), selections: hash(selections), bindings: hash(bindings) },
-      routes: compiled.offers.map(row => ({ method: row.method, path: row.path, resource: row.seller.resource, accepts: row.seller.accepts })) };
+    return inspectMerchantSource(candidate);
   }
   async #execute(name, args) {
     const root = this.#config.releaseStore;
