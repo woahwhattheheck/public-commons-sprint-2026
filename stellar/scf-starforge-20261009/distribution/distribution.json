@@ -273,7 +273,9 @@
     "sftp-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/server.mjs",
     "valyu-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/merchant-cli.mjs",
     "valyu-research": "stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/run.mjs",
-    "mpp": "stellar/scf-starforge-20261009/mpp-charge/cli.mjs"
+    "mpp": "stellar/scf-starforge-20261009/mpp-charge/cli.mjs",
+    "webhook-feed": "stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/cli.mjs",
+    "buyer-event-feed": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -558,7 +560,12 @@
     "./mpp": "./source/stellar/scf-starforge-20261009/mpp-charge/index.mjs",
     "./mpp/merchant": "./source/stellar/scf-starforge-20261009/mpp-charge/merchant.mjs",
     "./mpp/buyer": "./source/stellar/scf-starforge-20261009/mpp-charge/buyer.mjs",
-    "./mpp/workspace": "./source/stellar/scf-starforge-20261009/mpp-charge/server.mjs"
+    "./mpp/workspace": "./source/stellar/scf-starforge-20261009/mpp-charge/server.mjs",
+    "./seller/webhook-feed": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/index.mjs",
+    "./seller/webhook-feed/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/store.mjs",
+    "./seller/webhook-feed/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/merchant.mjs",
+    "./buyer/event-feed": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/index.mjs",
+    "./buyer/event-feed/workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workspace.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -588,7 +595,8 @@
     "stellar-forge/mcp-merchant-operator/exercise.mjs",
     "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/check.mjs",
     "stellar/scf-starforge-20261009/sf82-seller-pilot/release-discovery-journey.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/streaming-journey.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/streaming-journey.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/journey.mjs"
   ],
   "featurePeers": {
     "postgres": {
