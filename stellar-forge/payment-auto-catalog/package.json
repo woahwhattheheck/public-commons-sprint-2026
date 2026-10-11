@@ -1,0 +1,9 @@
+{
+  "name": "@stellar-forge/payment-auto-catalog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "dependencies": { "re2js": "2.8.6" }
+}
