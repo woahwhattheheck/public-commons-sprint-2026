@@ -1,9 +1,14 @@
 // MIT. Preserve the original source bytes; normalize only the compiler's value.
 import { parseOpenApiValue } from './source-value.mjs';
 import { SOURCE_BUNDLE_SCHEMA, openSourceBundle } from './source-bundle.mjs';
+import { POSTMAN_SOURCE_SCHEMA, openPostmanSource } from './postman/collection.mjs';
 
 export function parseOpenApiSource(text) {
   const parsed = parseOpenApiValue(text);
+  if (parsed.value?.schema === POSTMAN_SOURCE_SCHEMA) {
+    const opened = openPostmanSource(parsed.value);
+    return {document:opened.document, format:'json', postmanSource:opened.summary};
+  }
   if (parsed.value?.schema === SOURCE_BUNDLE_SCHEMA) {
     const opened = openSourceBundle(parsed.value);
     // JSON keeps the original workspace's retained source filename and format.
