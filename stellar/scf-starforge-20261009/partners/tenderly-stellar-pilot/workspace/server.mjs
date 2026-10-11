@@ -96,13 +96,22 @@ export async function startTenderlyWorkspace({ port = 0, ...options } = {}) {
         else if (url.pathname === '/api/audit') result = await model.audit({
           ...operation(), after: Number(query.get('after') ?? 0), limit: limit(),
         });
+        else if (url.pathname === '/api/provider-lookups') result = await model.providerLookups({
+          ...operation(), before: query.get('before') ?? '', limit: limit(),
+        });
+        else if (url.pathname === '/api/provider-lookup') result = await model.providerLookup({ ...selected(), id: query.get('id') });
+        else if (url.pathname === '/api/provider-response') {
+          const saved = await model.providerResponse({ ...selected(), lookupId: query.get('lookupId'), observationId: query.get('observationId') });
+          result = { ...saved.record, preview: saved.bytes.subarray(0, 65536).toString('utf8'),
+            previewTruncated: saved.bytes.length > 65536 };
+        }
         else if (url.pathname === '/api/response') {
           const saved = await model.response(operation());
           result = { status: saved.status, headers: saved.headers, summary: saved.summary,
             bytes: saved.bytes.length, sha256: saved.sha256,
             preview: saved.bytes.subarray(0, 65536).toString('utf8'), previewTruncated: saved.bytes.length > 65536 };
         } else if (url.pathname === '/api/download') {
-          const saved = await model.download({ ...selected(), kind: query.get('kind'), id: query.get('id') });
+          const saved = await model.download({ ...selected(), kind: query.get('kind'), id: query.get('id'), observationId: query.get('observationId') });
           res.writeHead(200, { 'content-type': saved.mime, 'content-length': saved.bytes.length,
             'content-disposition': 'attachment; filename="' + saved.name + '"' });
           res.end(saved.bytes); return;
@@ -123,6 +132,11 @@ export async function startTenderlyWorkspace({ port = 0, ...options } = {}) {
           fields(value, ['profile']); result = await model.stop(value.profile);
         } else if (url.pathname === '/api/issue') {
           fields(value, ['profile', 'body', 'id', 'subject', 'expiresAt']); result = await model.issue(value);
+        } else if (url.pathname === '/api/provider-lookup') {
+          fields(value, ['profile', 'operationKey', 'simulationId', 'refresh']); result = await model.lookupProvider(value);
+        } else if (url.pathname === '/api/provider-recover') {
+          fields(value, ['profile', 'lookupId', 'observationId', 'expectedGeneration', 'reference']);
+          result = await model.recoverProvider(value);
         } else if (url.pathname === '/api/recover') {
           fields(value, ['profile', 'operationKey', 'expectedGeneration', 'requestHash', 'action', 'reference', 'response']);
           result = await model.recover(value);
@@ -136,7 +150,7 @@ export async function startTenderlyWorkspace({ port = 0, ...options } = {}) {
       // Original handlers use constant provider errors. Avoid filesystem paths from native errors.
       const message = /^(EACCES|EPERM|EIO|ENOSPC)$/.test(error.code ?? '') ?
         'Workspace storage operation failed (' + error.code + ')' : error.message;
-      sendJson(res, status >= 400 && status < 600 ? status : 400, { error: message, code: error.code });
+      sendJson(res, status >= 400 && status < 600 ? status : 400, { error: message, code: error.code, ...(error.retryAt ? { retryAt: error.retryAt } : {}) });
     });
   });
   server.requestTimeout = 20000; server.headersTimeout = 10000; server.keepAliveTimeout = 5000;
