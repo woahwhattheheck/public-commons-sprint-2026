@@ -13,7 +13,17 @@ cd paypal-disburselens-2026
 node src/server.mjs
 ```
 
-Open http://127.0.0.1:8787. The loaded fictional batch has six payouts and an exact-cent $700.00 aggregate; review the duplicated sender ID, a still-PENDING payout, a FAILED payout, and flagged note language. Filter **Needs review**, click **Escalate**, and download the redacted evidence CSV. Refresh the page to see the local review state in memory. **Load fictional example** replaces the current batch and resets the casebook after an evidence change.
+Open http://127.0.0.1:8787. The loaded fictional batch has six payouts and an exact-cent $700.00 aggregate; review the duplicated sender ID, a still-PENDING payout, a FAILED payout, and flagged note language. Filter **Needs review**, click **Escalate**, and download the redacted evidence CSV. Refresh the page to see the local review state in memory. Use **Download casebook** to keep a portable copy before stopping the server. **Load fictional example** replaces the current batch and resets the casebook after an evidence change.
+
+## Save and resume a review
+
+The casebook JSON contains the complete set of case IDs and their local `open`, `acknowledged`, or `escalated` states, together with the source, evidence SHA-256, export time and historical report version. It omits payout amounts, recipients, free-text notes and credentials. It is a portable review snapshot, not a payment instruction, provider receipt or accounting archive.
+
+After a restart, load the same batch evidence, choose the saved JSON, and inspect its read-only preview. The preview shows the source, evidence, saved state counts and proposed state changes. **Restore casebook** explicitly replaces the entire current review snapshot, including reopening cases marked `open` in the file. File selection, preview and download do not change review states. Cancel discards the pending preview.
+
+Both preview and restore require the same source, exact evidence SHA-256 and complete unique case-ID set. Restore also checks the current preview's report version; a new decision, demo load or sync requires a fresh preview. The historical export version is metadata, so a saved file can be restored after restart. A changed provider response needs fresh review even when its batch ID is unchanged. Restored changes receive a new local timestamp and `casebook_import` audit event; old audit history is not imported. This confirms which local snapshot was restored, not who originally made each saved decision.
+
+The browser accepts JSON files up to 262,144 bytes. The API exposes `GET /api/casebook.json`, read-only `POST /api/casebook/preview`, and explicit `POST /api/casebook/restore`. POST bodies are `application/json` objects containing `{ "version": CURRENT_REPORT_VERSION, "casebook": SAVED_JSON }` and share a 262,144-byte body limit. Nothing is restored automatically, and uncertain saves are followed by a read-only report refresh rather than an automatic retry.
 
 The classifier is trained locally at process startup using 24 included labeled fictional payout narratives; no model key/provider/token call. `src/model.mjs` exposes `train(rows)` and `classify()` to illustrate a transparent approach; review scores and strongest token contributions are visible in the UI. For production, supply more representative labeled cases and independently evaluate false positives/negatives.
 
@@ -46,11 +56,12 @@ Enter an existing **sandbox** payout batch ID in the dashboard. The server only 
 - `src/paypal.mjs` — fixed-host, bounded sandbox OAuth + paginated Payouts GET, no payout write methods.
 - `src/model.mjs` — directly trained/interpretable local multinomial Bayes note classification.
 - `src/reconcile.mjs` — exact-cent BigInt, complete batch counts, deterministic evidence hashes, masked receiver, anomaly flags.
-- `src/server.mjs` — loopback-only API and static UI, human review states with stale-version checks, CSV export, source-bound audit log.
+- `src/casebook.mjs` — bounded portable review snapshots and complete source-bound restore planning.
+- `src/server.mjs` — loopback-only API and static UI, human review states with stale-version checks, CSV/casebook export, explicit preview and restore, source-bound audit log.
 - `public/` — accessible responsive dashboard, filters, model explanations, review decisions, evidence export.
 - `fixtures/payout_batch.json` — clearly marked fictional 6-item example, not a provider receipt.
 - `test/focused.test.mjs` — one narrowly relevant workflow check.
 
-**Known limitations:** Local review decisions live in RAM and reset on restart. The review queue should not be treated as an accounting system of record or anti-fraud engine. Case evidence uses a full SHA-256 hash of the source response, but no durable encrypted archive is stored. No live sandbox credentials or PayPal-enabled account are bundled. Payment status comes from source and is never inferred from learned AI scores; `PENDING` remains unsettled even when the text looks routine. Limit processing to sandbox test data and qualified authorized reviewers.
+**Known limitations:** Local review decisions live in RAM and reset on restart unless you explicitly download and restore a casebook. The file is not encrypted or authenticated; its hash binds it to source evidence, not to an author. Keep saved files appropriately and inspect their proposed changes before restoring. The review queue should not be treated as an accounting system of record or anti-fraud engine. Case evidence uses a full SHA-256 hash of the source response, but no durable encrypted archive is stored. No live sandbox credentials or PayPal-enabled account are bundled. Payment status comes from source and is never inferred from learned AI scores; `PENDING` remains unsettled even when the text looks routine. Limit processing to sandbox test data and qualified authorized reviewers.
 
 No live payouts, subscription changes, external contact, or paid API/model inference.

@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname,resolve} from 'node:path';
 import {reconcile} from './reconcile.mjs';
 import {fetchBatch} from './paypal.mjs';
+import {exportCasebook,planCasebookRestore} from './casebook.mjs';
 
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const FIXTURE=JSON.parse(await readFile(resolve(ROOT,'fixtures/payout_batch.json'),'utf8'));
@@ -20,11 +21,13 @@ function respond(res,status,body,type='application/json; charset=utf-8'){
     'X-Frame-Options':'DENY'
   });res.end(content);
 }
-async function jsonBody(request){
-  let body='';for await(const chunk of request){
-    body+=chunk.toString('utf8');
-    if(Buffer.byteLength(body)>16_384)throw new Error('request too large');
+async function jsonBody(request,limit=16_384){
+  const chunks=[];let size=0;for await(const chunk of request){
+    size+=chunk.length;
+    if(size>limit)throw new Error('request too large');
+    chunks.push(chunk);
   }
+  const body=Buffer.concat(chunks).toString('utf8');
   const parsed=JSON.parse(body||'{}');
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('invalid request object');
   return parsed;
@@ -38,7 +41,7 @@ function exportCSV(result,cases){
   return cells.map(row=>row.map(esc).join(',')).join('\n')+'\n';
 }
 export async function createServer({fixture=FIXTURE}={}){
-  let result=reconcile([fixture],{source:'fixture'});const cases=new Map();let version=1;
+  let result=reconcile([fixture],{source:'fixture'});let cases=new Map();let version=1;
   let busy=false;const audit=[];
   function refresh(next){
     const old=result;result=next;version++;
@@ -53,6 +56,35 @@ export async function createServer({fixture=FIXTURE}={}){
       if(req.method==='GET'&&url.pathname==='/api/report')return respond(res,200,{...result,version,model:'locally-trained Multinomial Naive Bayes',cases:Object.fromEntries(cases),audit:audit.slice(-40)});
       if(req.method==='GET'&&url.pathname==='/api/export.csv'){
         return respond(res,200,exportCSV(result,cases),'text/csv; charset=utf-8');
+      }
+      if(req.method==='GET'&&url.pathname==='/api/casebook.json'){
+        res.setHeader('Content-Disposition','attachment; filename="DisburseLens-casebook.json"');
+        return respond(res,200,exportCasebook({result,cases,version}));
+      }
+      if(req.method==='POST'&&['/api/casebook/preview','/api/casebook/restore'].includes(url.pathname)){
+        if(busy)return respond(res,409,{error:'sync in progress; review after refreshed evidence'});
+        if(req.headers['content-type']?.split(';')[0].trim().toLowerCase()!=='application/json'){
+          return respond(res,400,{error:'application/json request required'});
+        }
+        const body=await jsonBody(req,262_144);
+        // A sync or another operator can change the report while this body arrives.
+        if(busy)return respond(res,409,{error:'sync in progress; review after refreshed evidence'});
+        const now=new Date().toISOString();
+        const plan=planCasebookRestore(body.casebook,{result,cases,version,expectedVersion:body.version,now});
+        if(url.pathname==='/api/casebook/preview')return respond(res,200,plan.summary);
+        // Validation and replacement are synchronous: a partial import is never visible.
+        const changes=plan.summary.changes;
+        if(changes.length){
+          const items=new Map(result.items.map(item=>[item.caseId,item]));
+          const events=changes.map(change=>({
+            ...change,batchId:result.id,itemId:items.get(change.caseId).itemId,
+            at:now,evidenceHash:result.evidenceHash,via:'casebook_import'
+          }));
+          cases=plan.nextCases;
+          audit.push(...events);if(audit.length>100)audit.splice(0,audit.length-100);
+          version++;
+        }
+        return respond(res,200,{ok:true,version,changed:changes.length,counts:plan.summary.counts});
       }
       if(req.method==='POST'&&url.pathname==='/api/load-demo'){
         if(busy)return respond(res,409,{error:'sync in progress'});
@@ -98,7 +130,7 @@ export async function createServer({fixture=FIXTURE}={}){
     }catch(error){
       // Fail closed. No provider responses/secrets forwarded to browser.
       const message=String(error?.message||'unexpected error').slice(0,160);
-      respond(res,message.startsWith('PayPal')?502:400,{error:message});
+      respond(res,error?.status===409?409:message.startsWith('PayPal')?502:400,{error:message});
     }
   });
 }
