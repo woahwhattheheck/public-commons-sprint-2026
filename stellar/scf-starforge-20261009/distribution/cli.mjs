@@ -31,6 +31,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
   valyu-merchant                            Configure and operate the native research search merchant
   valyu-research                            Save queries, operate purchases, compare research and export editions
+  opendatasoft                              Discover, retain and publish Huwise data with original buyer handoff
+  huwise                                    Alias for the same Opendatasoft data workspace
   arcgis                                    Capture ArcGIS layers and receive native Esri FeatureSets
   arcgis-publisher                          Publish reviewed ArcGIS data with original merchant and buyer handoff
   sftp                                      Inspect, capture and resume pinned private report files
@@ -50,6 +52,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   operations  Seller + live dashboard         dataset     Dataset API compiler
   jobs                                      Prepare and operate durable paid application jobs
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
+  job-workspace                             Receive paid jobs, retrieve results and organize research collections
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
@@ -92,6 +95,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   api-pass                                  Sell and operate purchased API allowances on original orders
   api-pass-client                           Use an allowance, inspect usage and recover an original response
+  api-purchase                              Buy an API allowance, call approved routes and recover saved responses
+  api-application                           Run source-pinned application functions over purchased API allowances
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
@@ -102,8 +107,6 @@ Native commands (arguments pass unchanged to the maintained implementation):
   sheets-publisher                           Review and publish retained Sheet observations as datasets
   ckan                                       Discover, capture and operate retained CKAN data merchants
   ckan-publisher                             Review and publish complete DataStore editions and buyer handoffs
-  opendatasoft                              Discover, retain and publish Huwise data with original buyer handoff
-  huwise                                    Alias for the same Opendatasoft data workspace
   mongodb                                    Inspect, author and operate fixed native BSON reports
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
   mongodb-publisher                          Publish complete reviewed BSON snapshots and retained refreshes
@@ -165,6 +168,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
   grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
   woo-operator                              Review original Stellar transfers and complete selected Woo orders
+  woo-refund                                Record verified order credits and receive original refund handoffs
 
 Optional feature groups: ${[...new Set([
   ...Object.keys(specification.featurePeers ?? {}),

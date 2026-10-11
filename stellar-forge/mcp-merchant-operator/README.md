@@ -32,6 +32,23 @@ review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
 
+## Operate existing WooCommerce stores
+
+Connect the current SF104 merchant operator using
+`init-woocommerce --dir NEW_HOST --connection WOO_CONNECTION_JSON`,
+or attach `--woocommerce` to ordinary merchant initialization. The 20
+`merchant_woo_*` tools use its original Application Password client,
+native receipt review, selected-order completion and verified refund operators.
+Agents retain the inspected source and review hashes, confirm the exact order,
+recover interrupted results from the same native records, and retrieve complete
+original exports through the existing file reader. The host connection names
+receipt aliases and the original accounting export roots; the original accounting
+adjustment workflow supplies the verified return export.
+
+See [WOO_COMMERCE.md](WOO_COMMERCE.md) for configuration, the full order and refund
+workflow, exact tool arguments, partial refunds, download access behavior,
+export recovery and the same HTTP/stdio receiving setup.
+
 ## Review pricing and retain seller changes
 
 Attach an original SF97 workspace with `init-pricing --dir NEW_HOST --pricing

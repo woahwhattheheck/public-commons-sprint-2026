@@ -2,7 +2,7 @@
 
 A merchant can sell a report, export, or other long-running application function through the existing SF30 seller. The original paid POST returns a job ticket after settlement. The buyer can then inspect progress and retrieve the retained result through the customer endpoint. The merchant workspace prepares jobs, runs workers, handles cancellation and explicit retries, and retains the input, payment association, execution attempts, and complete output.
 
-[INSTALL.md](./INSTALL.md) covers installed commands, the four service ports, HTTPS routing, and the customer handoff. [BUYER.md](./BUYER.md) covers retaining the actual native purchase response and downloading its result.
+[INSTALL.md](./INSTALL.md) covers installed commands, the four service ports, HTTPS routing, and the customer handoff. [BUYER.md](./BUYER.md) covers retaining the actual native purchase response and downloading its result. The [customer workspace](../../sf88-operator-buyer-cli/job-workspace/README.md) adds job intake, monitoring, verified resources, research notes, and portable collections.
 
 ## Use the original payment path
 
@@ -66,6 +66,7 @@ The state directory must be absolute and private. The original Linux fleet lease
 | Model method | Result or action |
 | --- | --- |
 | `createJob({functionId,input,label,reference,claimToken})` | Private handoff with job identity, claim token, original purchase request and expected ticket |
+| `renewClaim({id,expectedRevision,reason,claimToken})` | Replace a lost purchase capability for an unsubmitted PREPARED job and return its replacement private handoff |
 | `snapshot()`, `get(id)` | Operator state, configured functions, attempts, settlement association and history |
 | `startWorker()` | Reconcile and execute paid queued jobs up to configured concurrency |
 | `stopWorker({cancelRunning})` | Stop scheduling, optionally interrupt running jobs, and wait for actual worker retirement |
@@ -75,6 +76,8 @@ The state directory must be absolute and private. The original Linux fleet lease
 | `result(id)` | Read and verify the complete retained output bytes |
 
 The optional reference is the merchant's stable job identifier. Reusing it requires the original claim token and the same function and input. The token is returned in the private handoff and retained as a hash in merchant state. The operator should preserve the handoff when preparing the customer's purchase.
+
+If preparation finishes but the private ticket is lost before purchase, use **Renew purchase ticket** in the operator workspace or the `renew-claim` CLI command. Renewal requires the current revision and a reason; it changes only the claim hash and retained revision/history of an unsubmitted PREPARED job. Save the replacement handoff before buyer preparation. The original job, input, source, and payment terms remain attached to that job. Staging rechecks the current claim in the same serialized state change, so a prior capability cannot stage the job after renewal.
 
 ## Customer contract and recovery
 
