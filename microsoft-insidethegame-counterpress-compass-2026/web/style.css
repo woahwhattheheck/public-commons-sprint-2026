@@ -81,3 +81,22 @@ footer{padding-top:24px;padding-bottom:40px;color:#8aa5ad;font-size:.78rem}
 .match-link{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--edge)}
 .match-link input{flex:1 1 100%;width:100%;min-width:0;font-size:.8rem}
 .match-link p{flex-basis:100%;margin:0}
+
+
+/* First-party event film room: reserved, native-control industrial UI. */
+.review-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 7px}
+.review-tools select{min-height:36px;padding:5px 8px;flex:1 1 130px}
+.review-tools .note{flex:1 1 100%;font-variant-numeric:tabular-nums}
+.moment-select{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;width:100%;border:1px solid transparent;border-radius:4px;background:transparent;color:inherit;min-height:38px;font:inherit;font-weight:400;text-align:left;padding:7px 4px}
+.moment-select b{color:var(--muted);font-variant-numeric:tabular-nums}
+.moment-select.selected{border-color:var(--edge);background:#243642}
+.moment-select:hover{background:#293a44}
+.review-panel{background:#172a35;border:1px solid var(--edge);border-radius:7px;padding:12px;margin:10px 0}
+.review-panel h3,.review-panel h4{font-size:.8rem;line-height:1.3;margin:0 0 7px;text-transform:none;letter-spacing:.04em;color:var(--text)}
+.review-panel h4{color:var(--muted);margin-top:11px}
+.review-summary{margin:5px 0;font-weight:650}
+.review-why,.review-following{font-size:.85rem;margin:6px 0;line-height:1.4}
+.review-evidence{margin:5px 0;padding-left:0;list-style:none}
+.review-evidence li{display:grid;grid-template-columns:50px 42px minmax(0,1fr);gap:5px;padding:6px 0;border-top:1px solid var(--edge);font-size:.75rem}
+.review-evidence code,.review-evidence time{color:var(--muted);font-variant-numeric:tabular-nums}
+.review-jump{min-height:36px;margin-top:8px;font-size:.82rem}
