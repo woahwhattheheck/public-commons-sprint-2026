@@ -1,0 +1,206 @@
+{
+  "settings": {
+    "organization": "Community service worked example",
+    "label": "Monday welcome coverage",
+    "timezone": "America/Denver",
+    "week_start": "2026-10-12",
+    "source_observed_at": "2026-10-11T19:40:00Z",
+    "expiry_date_inclusive": true,
+    "cohort_complete": true,
+    "notes": "One target shift, two committed assignment contexts, ten volunteers, one additional team-reserved place. All planning-week bookings for this selected example cohort are included."
+  },
+  "csv_files": {
+    "volunteers": "volunteers.csv",
+    "shifts": "shifts.csv",
+    "assignments": "responses.csv",
+    "availability": "availability.csv",
+    "qualifications": "qualifications.csv"
+  },
+  "csv_mappings": {
+    "volunteers": {
+      "mapping": {
+        "id": "id",
+        "name": "name",
+        "active": "active",
+        "weekly_limit": "weekly_limit"
+      },
+      "constants": {},
+      "value_maps": {}
+    },
+    "shifts": {
+      "mapping": {
+        "id": "id",
+        "label": "label",
+        "start": "start",
+        "end": "end",
+        "capacity": "capacity",
+        "reserved": "reserved",
+        "required": "required",
+        "target": "target",
+        "need_id": "need_id"
+      },
+      "constants": {},
+      "value_maps": {}
+    },
+    "assignments": {
+      "mapping": {
+        "id": "id",
+        "shift_id": "shift_id",
+        "volunteer_id": "volunteer_id",
+        "status": "status",
+        "team_id": "team_id"
+      },
+      "constants": {},
+      "value_maps": {
+        "status": {
+          "Active": "confirmed",
+          "Cancelled": "excluded"
+        }
+      }
+    },
+    "availability": {
+      "mapping": {
+        "volunteer_id": "volunteer_id",
+        "shift_id": "shift_id",
+        "available": "available",
+        "eligible": "eligible",
+        "preferred": "preferred",
+        "eligibility_note": "eligibility_note",
+        "observed_at": "observed_at"
+      },
+      "constants": {},
+      "value_maps": {}
+    },
+    "qualifications": {
+      "mapping": {
+        "volunteer_id": "volunteer_id",
+        "qualification_id": "qualification_id",
+        "status": "status",
+        "expires": "expires",
+        "valid_from": "valid_from",
+        "label": "label"
+      },
+      "constants": {},
+      "value_maps": {}
+    }
+  },
+  "native_mappings": {
+    "volunteers": {
+      "mapping": {
+        "id": "id",
+        "name": "display_name",
+        "active": "user_status"
+      },
+      "constants": {
+        "weekly_limit": "2"
+      },
+      "value_maps": {
+        "active": {
+          "active": "true",
+          "inactive": "false",
+          "pending": "false",
+          "imported": "false"
+        }
+      }
+    },
+    "shifts": {
+      "mapping": {
+        "id": "id",
+        "label": "label",
+        "start": "start",
+        "end": "end",
+        "capacity": "slots",
+        "need_id": "need_id"
+      },
+      "constants": {
+        "reserved": "0",
+        "required": "501",
+        "target": "true"
+      },
+      "value_maps": {}
+    },
+    "assignments": {
+      "mapping": {
+        "id": "id",
+        "shift_id": "shift_id",
+        "volunteer_id": "user_id",
+        "status": "response_status",
+        "team_id": "team_id"
+      },
+      "constants": {},
+      "value_maps": {
+        "status": {
+          "Active": "confirmed",
+          "Cancelled": "excluded"
+        }
+      }
+    },
+    "qualifications": {
+      "mapping": {
+        "volunteer_id": "user_id",
+        "qualification_id": "qualification_id",
+        "status": "status",
+        "expires": "expires",
+        "label": "qualification_title"
+      },
+      "constants": {},
+      "value_maps": {}
+    }
+  },
+  "native_overrides": {
+    "volunteers": [
+      {
+        "row_index": 1,
+        "fields": {
+          "weekly_limit": "3"
+        }
+      },
+      {
+        "row_index": 5,
+        "fields": {
+          "weekly_limit": "1"
+        }
+      }
+    ],
+    "shifts": [
+      {
+        "row_index": 1,
+        "fields": {
+          "reserved": "1"
+        }
+      },
+      {
+        "row_index": 2,
+        "fields": {
+          "target": "false"
+        }
+      },
+      {
+        "row_index": 3,
+        "fields": {
+          "target": "false"
+        }
+      }
+    ]
+  },
+  "expectations": {
+    "shift_id": "7001",
+    "chosen": [
+      "1010",
+      "1002"
+    ],
+    "initial_gap": 2,
+    "additional_reserved_places": 1,
+    "corrected_chosen": [
+      "1010",
+      "1008"
+    ],
+    "expired_id": "1003",
+    "overlap_id": "1004",
+    "weekly_limit_id": "1005",
+    "inactive_id": "1006",
+    "unavailable_id": "1007",
+    "pending_id": "1008",
+    "ineligible_id": "1009"
+  }
+}
