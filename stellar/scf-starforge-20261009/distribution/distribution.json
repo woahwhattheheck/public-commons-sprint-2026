@@ -240,6 +240,7 @@
     "merchant-accounting-pricing": "stellar/scf-starforge-20261009/merchant-settlement-accounting/pricing-cli.mjs",
     "merchant-accounting-recovery": "stellar/scf-starforge-20261009/merchant-settlement-accounting/recovery-cli.mjs",
     "merchant-accounting-maintenance": "stellar-forge/mcp-merchant-operator/accounting-maintenance-cli.mjs",
+    "merchant-accounting-adjustments": "stellar-forge/mcp-merchant-operator/accounting-adjustment-cli.mjs",
     "catalog-workspace": "stellar/scf-starforge-20261009/sf60-durable-catalog-transaction/workspace.mjs",
     "buyer-object-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs",
     "availability": "stellar/scf-starforge-20261009/sf30-seller-sdk/availability/cli.mjs",
@@ -253,7 +254,10 @@
     "tenderly": "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/cli.mjs",
     "tenderly-workspace": "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/workspace/server.mjs",
     "tenderly-customer": "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/customer/cli.mjs",
-    "tenderly-analysis": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/cli.mjs"
+    "tenderly-analysis": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/cli.mjs",
+    "routescan-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/cli.mjs",
+    "routescan-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/workspace-cli.mjs",
+    "buyer-n8n-workflows": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -437,6 +441,8 @@
     "./merchant/accounting-pricing": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/pricing.mjs",
     "./merchant/accounting-maintenance": "./source/stellar-forge/mcp-merchant-operator/accounting-maintenance-client.mjs",
     "./merchant/accounting-maintenance/operations": "./source/stellar-forge/mcp-merchant-operator/accounting-maintenance-cli.mjs",
+    "./merchant/accounting-adjustments": "./source/stellar-forge/mcp-merchant-operator/accounting-adjustment-client.mjs",
+    "./merchant/accounting-adjustments/operations": "./source/stellar-forge/mcp-merchant-operator/accounting-adjustment-cli.mjs",
     "./merchant/recovery": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/recovery.mjs",
     "./merchant/host": "./source/stellar/scf-starforge-20261009/sf99-merchant-deploy/host.mjs",
     "./merchant/host-maintenance": "./source/stellar/scf-starforge-20261009/sf99-merchant-deploy/maintenance.mjs",
@@ -485,7 +491,12 @@
     "./partners/tenderly/workspace/server": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/workspace/server.mjs",
     "./buyer/tenderly-analysis": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/library.mjs",
     "./buyer/tenderly-analysis/server": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/server.mjs",
-    "./buyer/tenderly-analysis/records": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/analyze.mjs"
+    "./buyer/tenderly-analysis/records": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/analyze.mjs",
+    "./seller/routescan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/merchant.mjs",
+    "./seller/routescan/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/project.mjs",
+    "./seller/routescan/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/workspace.mjs",
+    "./seller/routescan/backup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/backup.mjs",
+    "./buyer/n8n/workflows": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs"
   },
   "nativePeers": {
     "@x402/core": {
