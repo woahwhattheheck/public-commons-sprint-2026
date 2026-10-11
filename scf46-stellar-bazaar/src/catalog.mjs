@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 import { inspectResourceURL, inspectRouteTemplate } from '../../stellar-forge/route-identity/identity.mjs';
-import { rankBazaarEntries } from './ranking.mjs';
+import { CatalogQueryIndex } from './query-index.mjs';
 import { sanitizeBazaarPricing, parseAtomicBudget, describeCatalogPricing } from './pricing.mjs';
 
 const plain = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -53,17 +53,6 @@ function filtersFrom(params) {
     if (v !== null) f[k] = v;
   }
   return f;
-}
-function matches(row, filters) {
-  if (Object.hasOwn(filters, 'type') && row.extensions?.bazaar?.info?.input?.type !== filters.type) return false;
-  if (Object.hasOwn(filters, 'extensions') && !Object.hasOwn(row.extensions, filters.extensions)) return false;
-  // Network, scheme and recipient MUST match one actual offered payment option.
-  // Matching each parameter against a different option fabricates an offer that
-  // the seller never published (e.g. testnet from one, pubnet payTo from another).
-  const paymentKeys = ['payTo', 'network', 'scheme', 'asset'].filter(k => Object.hasOwn(filters, k));
-  if (paymentKeys.length && !row.accepts.some(option =>
-    paymentKeys.every(k => option?.[k] === filters[k]))) return false;
-  return true;
 }
 function keyOf(entry) {
   const info = entry.extensions?.bazaar?.info?.input;
@@ -126,19 +115,23 @@ const asInteger = (v, fallback, max, min = 0) => {
 
 export class BazaarCatalog {
   #entries = new Map(); #version = 0;
+  #queries = new CatalogQueryIndex(this.#entries);
   // Call only from a trusted post-verification facilitator hook AFTER checking the
   // settlement, seller/recipient binding, and JSON Schema Draft 2020-12. NEVER
   // route this method directly to an unauthenticated HTTP client or payment payload.
   insertValidated(entry) {
     const { id, entry: sanitized } = validateCatalogEntry(entry);
+    const previous = this.#entries.get(id);
     this.#entries.set(id, sanitized); this.#version++;
+    this.#queries.changed(id, previous, sanitized);
     return id;
   }
   /** Internal integration primitive: remove an already-authorized key. */
   removeValidated(id) {
     if (typeof id !== 'string') throw new TypeError('Catalog key required');
+    const previous = this.#entries.get(id);
     const removed = this.#entries.delete(id);
-    if (removed) this.#version++;
+    if (removed) { this.#version++; this.#queries.changed(id, previous, undefined); }
     return removed;
   }
   /** Stage an isolated transaction while preserving the cursor generation. */
@@ -146,18 +139,15 @@ export class BazaarCatalog {
     const copy = new BazaarCatalog();
     copy.#entries = new Map([...this.#entries].map(([key, value]) => [key, structuredClone(value)]));
     copy.#version = this.#version;
+    copy.#queries = new CatalogQueryIndex(copy.#entries);
     return copy;
   }
   list(params = new URLSearchParams()) {
     const filters = filtersFrom(params);
     const offset = asInteger(params.get('offset'),0,1_000_000);
     const limit = asInteger(params.get('limit'),20,100,1);
-    // Map insertion order depends on ingest/restart history. Canonical-key
-    // ordering makes offset pagination stable across equivalent rebuilds.
-    const all = [...this.#entries.entries()]
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([, row]) => row)
-      .filter(row => matches(row, filters));
+    // The original ordering/filtering contract now reuses the private query index.
+    const all = this.#queries.list(filters);
     // Public read results must not expose the authoritative mutable entry objects.
     // Clone only the returned page, not the whole filtered catalog.
     return { resources: all.slice(offset,offset+limit).map(row => structuredClone(row)),pagination:{offset,limit,total:all.length} };
@@ -174,9 +164,8 @@ export class BazaarCatalog {
       if (c?.v !== this.#version || c?.h !== digest || !Number.isSafeInteger(c.at) || c.at < 0) throw new RangeError('Stale or invalid cursor');
       at = c.at;
     }
-    const ranked = rankBazaarEntries([...this.#entries.entries()]
-      .filter(([,row]) => matches(row,filters)),q);
-    const page = ranked.slice(at,at+limit).map(e => structuredClone(e.row));
+    const ranked = this.#queries.search(filters, q);
+    const page = ranked.slice(at,at+limit).map(row => structuredClone(row));
     const next = at+limit < ranked.length ? encode({v:this.#version,h:digest,at:at+limit}) : null;
     return { resources:page,partialResults:next !== null,pagination:{limit:page.length,cursor:next} };
   }
@@ -208,6 +197,8 @@ export class BazaarCatalog {
   }
   get size() {return this.#entries.size;}
   get version() {return this.#version;}
+  /** Detached process-local diagnostics; no rows, queries or payment data. */
+  get queryStats() {return this.#queries.stats;}
 }
 
 export function createDiscoveryServer(catalog) {

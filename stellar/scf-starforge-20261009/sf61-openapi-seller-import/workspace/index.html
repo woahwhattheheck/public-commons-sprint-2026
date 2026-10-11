@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>API merchant workspace</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div><p class="eyebrow">STELLAR / MERCHANT TOOLS</p><h1>API merchant workspace</h1><p class="lede">Configure a paid facade for your existing API. Save a reusable project, then run the seller and its operations dashboard.</p></div><span class="badge">LOCAL WORKSPACE</span></header>
+<div id="notice" role="status" aria-live="polite">Connecting to the local workspace…</div>
+<main>
+<aside><h2>Saved projects</h2><p class="muted">Projects stay in the private output folder selected at launch.</p><button id="refresh" type="button">Refresh projects</button><div id="packages" class="project-list"></div><p id="output" class="small wrap"></p></aside>
+<div class="content">
+<section id="source"><div class="section-heading"><span class="step">1</span><div><h2>Load your API description</h2><p class="muted">OpenAPI 3.0 or 3.1 JSON, up to 4 MiB. The original document is preserved.</p></div></div><div class="inline"><label class="file-label">OpenAPI JSON<input id="file" type="file" accept=".json,application/json"></label><button id="example" type="button">Load example</button></div><div id="source-summary" class="small"></div></section>
+<section id="configuration"><div class="section-heading"><span class="step">2</span><div><h2>Set the public offer</h2><p class="muted">Enter the public address of your paid seller and your payment terms.</p></div></div>
+<div class="fields">
+<label class="wide">Public seller server<input id="seller-server" type="url" placeholder="https://merchant.example.com/api"><span class="hint">Your HTTPS gateway address, with its public path prefix.</span></label>
+<label>Service name<input id="service-name" maxlength="32" placeholder="My API"></label>
+<label>Stellar network<input id="network" value="stellar:testnet"></label>
+<label class="wide">Asset identifier<input id="asset" placeholder="Your supported Stellar asset identifier" autocomplete="off"></label>
+<label class="wide">Payment recipient<input id="recipient" placeholder="Your payment destination" autocomplete="off"></label>
+<label>Payment timeout, seconds<input id="payment-timeout" type="number" min="1" value="60"></label>
+<label class="check"><input id="allow-loopback" type="checkbox">Allow a local HTTP backend for development</label>
+</div>
+</section>
+<section><div class="section-heading"><span class="step">3</span><div><h2>Select and price routes</h2><p class="muted">Prices use atomic units of the selected asset. Backend credentials stay in the launch environment.</p></div></div><div id="routes"><p class="empty">Load an API description to see its operations.</p></div></section>
+<section><div class="section-heading"><span class="step">4</span><div><h2>Review and save</h2><p class="muted">Validation uses the existing seller compiler. Saving creates a new private package and compiled seller.</p></div></div>
+<div class="inline"><button id="preview" type="button" disabled>Validate configuration</button><label>New package name<input id="package-name" value="merchant-api" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" maxlength="64"></label><button id="save" class="primary" type="button" disabled>Save new package</button></div><div id="review"></div><pre id="saved-path" class="wrap" hidden></pre>
+</section>
+<section><div class="section-heading"><span class="step">5</span><div><h2>Run the saved seller</h2><p class="muted" id="run-label">Save or reopen a project to start it here.</p></div></div>
+<div class="inline"><button id="start-preview" class="primary" type="button" disabled>Start challenge preview</button><button id="stop" type="button" disabled>Stop managed seller</button></div>
+<details><summary>Use a native facilitator</summary><label>Authorized facilitator HTTPS URL<input id="facilitator" type="url" placeholder="https://your-facilitator.example"></label><p class="hint">This uses the original native seller integration. Required backend environment variables must be set before launching this workspace.</p><button id="start-native" type="button" disabled>Start native seller</button></details>
+<div id="runtime" class="runtime"></div><p class="hint">Challenge preview returns real payment challenges. It does not settle payments or establish revenue.</p>
+</section>
+</div>
+</main><footer>Local configuration and execution · Original OpenAPI source retained · No credential values saved</footer>
+<script type="module" src="/browser.mjs"></script>
+</body></html>

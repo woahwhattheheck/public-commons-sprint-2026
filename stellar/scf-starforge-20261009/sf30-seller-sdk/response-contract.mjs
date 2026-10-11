@@ -1,5 +1,6 @@
 // MIT. Original SF25 schema acceptance applied to a merchant's response contract.
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
+import { supportsSellerMethod } from './http-methods.mjs';
 
 export const RESPONSE_CONTRACT_SCHEMA = 'stellar-forge.upstream-response-contract.v1';
 const DRAFT = 'https://json-schema.org/draft/2020-12/schema';
@@ -51,7 +52,7 @@ function freeze(value) {
  */
 export function compileResponseContract(input, { method } = {}) {
   if (!plain(input) || input.schema !== RESPONSE_CONTRACT_SCHEMA ||
-      !['GET', 'HEAD', 'POST'].includes(input.method) || method !== undefined && input.method !== method ||
+      !supportsSellerMethod(input.method) || method !== undefined && input.method !== method ||
       Object.keys(input).some(key => !['schema', 'method', 'responses', 'source'].includes(key)) ||
       !plain(input.responses)) fail('Invalid upstream response contract or method');
   let text;

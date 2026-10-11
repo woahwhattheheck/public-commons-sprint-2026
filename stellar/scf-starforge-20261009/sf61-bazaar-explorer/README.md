@@ -1,6 +1,6 @@
 # SF61 · Bazaar Atlas, Stellar x402 discovery explorer
 
-A practical, accessible buyer/operator interface for the **original x402 v2 Bazaar GET discovery API**. It lists HTTP and MCP resources, searches with the provider's own native search, pages without substituting a synthetic ranking engine, and displays each individual payment offer with its network, scheme, payTo, asset and atomic-unit amount. It never combines fields from different offers or invokes a listed paid endpoint.
+A practical buyer/operator interface for the **original x402 v2 Bazaar GET discovery API**. Browse HTTP and MCP resources, inspect each original payment option, and prepare an exact Stellar HTTP request for the existing SF88 buyer terminal. The compact neutral interface preserves individual asset, recipient and atomic-unit amount strings. It never combines terms across options or invokes a listed seller endpoint.
 
 This is an additive original product interface, **not** a second index, facilitator, signer, seller-registration service, settlement engine, proof packet, funding application or simulation harness. It requires Node 22+ and the existing public Commons checkout. MIT.
 
@@ -14,7 +14,7 @@ node stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs --fixture
 
 Open the printed local address in a browser on the same machine. The process imports the already-published **SF44 developer onramp** and calls its original startLocalDevelopmentCatalog(). SF44 itself imports the actual **PR451 BazaarCatalog** and createDiscoveryServer(), then serves a real loopback HTTP discovery API. The original SF44 seeded row has a deliberately invalid wallet recipient, INVALID_DEMO_RECIPIENT_NOT_A_WALLET; it is not a payable seller.
 
-The explorer runs another loopback HTTP listener whose UI sends only same-origin GET requests. Those are forwarded exclusively to the original SF44 GET discovery endpoints. No duplicated catalog, ranking engine, mock HTTP service or remote merchant access is introduced. Ctrl-C closes both listeners.
+The explorer runs another loopback HTTP listener. Discovery uses same-origin GET requests forwarded exclusively to the original source's GET discovery endpoints. Buyer preparation uses one same-origin local JSON POST to the existing SF88 pure configuration builder; that request performs no network or disk I/O. The deliberately nonpayable development listing has its review action disabled. Ctrl-C closes both listeners.
 
 ## Connect to the ORIGINAL persistent SF60 catalog
 
@@ -55,7 +55,27 @@ Form edits are drafts until **Explore catalog** is submitted. They do not relabe
 
 Explore can replace an in-flight request. The browser cancels its pending request and ignores delayed replies from superseded requests. If a request fails, the previously loaded page remains visible with an explicit failure status; its labels, pagination and export stay bound to the original applied query. When no page has loaded yet, there are no retained rows to display.
 
-Each catalog card shows the resource URL as **text, not a clickable merchant request**, source descriptions, tool or HTTP method when declared, tags and individual offered terms. UI text is inserted using DOM textContent, never interpreted as untrusted markup. Optional export saves the actual observed page to local JSON with mode, observation timestamp and the immutable query used to fetch that page, including its view, filters, limit and original cursor or offset. Unapplied form drafts are never substituted into that source-page record.
+Each catalog card shows the resource URL as text, source descriptions, declared operation, tags and individual offered terms. UI text uses DOM textContent. Page export saves the original normalized rows with source mode, exact discovery URL, observation timestamp and immutable query, including its original cursor or offset. Unapplied form drafts are never substituted into that record.
+
+## Catalog selection to buyer terminal
+
+1. Connect Atlas to an original SF60 catalog or an explicitly chosen public facilitator and find the intended HTTP resource.
+2. Choose **Review this offer** beside one exact Stellar option. The buyer workspace retains that original page, row and option independently of later browsing, form-filter edits and refreshes. It shows the full asset, recipient, atomic amount and timeout. An earlier selection is visibly labeled when another page is displayed.
+3. Enter a **stable operation ID**, the concrete URL and intended method. A declared original method is fixed; an undeclared method requires an explicit choice. The original SF88 builder enforces the selected origin/path, supported exact Stellar terms, timeout, atomic integer bounds and optional payment flow. Enter your own query values; seller examples never become request inputs automatically. Optional Content-Type, Accept and an absolute body-file path use SF88's original operation validator. Preparation does not read a body file.
+4. Choose **Prepare buyer review**. Atlas calls `prepareReview()` from the existing `sf88-operator-buyer-cli/prepare.mjs`, including its same 1 MiB source-input and 64 KiB configuration limits. The generated configuration contains the whole original listing and source file SHA-256. No operator identity, secret, signer, budget policy or execution approval is created.
+5. Save **both** the buyer configuration and selected source JSON in the private operator workspace. The displayed source digest hashes the exact downloaded UTF-8 source bytes; the configuration digest hashes the exact downloaded configuration. Browser downloads use the browser's normal directory and file permissions. Use private storage; these downloads do not inherit the CLI's POSIX `0600` guarantee.
+6. Run the existing terminal review command with the absolute path to the saved configuration:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs \
+  --review --config /private/operator/buyer-review.json
+```
+
+Complete the existing trusted operator, evidence and public payer settings using the SF88 guide. The merged [SF103 native Stellar signer](../sf103-native-buyer-signer/README.md) then connects the official x402 SDK to this same saved operation; its setup command creates a private buyer/signing configuration pair without requiring a custom signer implementation. Follow its preparation and inspection steps before using the generated buyer configuration with SF88. SF88's original current-challenge matching, SF62 terminal approval and SF36 reservation still own spending. A saved listing is review context, not proof of current seller terms or approval.
+
+Editing any buyer request field invalidates a prepared configuration and disables its download until prepared again. Replacing or clearing a selection cancels its pending preparation; a delayed response cannot overwrite the new request. Browsing a different source page keeps the selected observation and its prepared configuration intact.
+
+The unchanged CLI `--prepare` entrypoint now also accepts original `scf61-observed-native-page-v1` exports (including older exports without a source URL). It uses the same builder as Atlas, then performs its existing private, exclusive, fsynced write. The browser endpoint writes no files; source JSON supplied to it remains unverified local review input. It accepts only loopback Host/socket, an exact same-origin Origin, JSON content type and limited request bytes, and imports no signer or execution module. All remote discovery remains GET-only.
 
 CLI switches: --fixture (default), --local-upstream with an existing SF60 read-only local source, --upstream with an explicit public HTTPS facilitator, and --port for a local listener (0 means ephemeral).
 

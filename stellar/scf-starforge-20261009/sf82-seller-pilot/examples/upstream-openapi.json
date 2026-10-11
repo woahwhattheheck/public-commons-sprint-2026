@@ -1,0 +1,15 @@
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Local dataset example", "version": "1.0.0" },
+  "servers": [{ "url": "https://dataset.example/api" }],
+  "paths": {
+    "/dataset": {
+      "get": {
+        "operationId": "dataset",
+        "summary": "Read a dataset region",
+        "parameters": [{ "name": "region", "in": "query", "schema": { "type": "string" }, "example": "north" }],
+        "responses": { "200": { "description": "Dataset rows" } }
+      }
+    }
+  }
+}

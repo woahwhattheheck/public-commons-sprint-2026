@@ -1,5 +1,6 @@
 // MIT. Developer documentation from the exact compiled SF30 seller snapshot.
 import { readFileSync } from 'node:fs';
+import { generateSellerClient } from './developer/client-generator.mjs';
 
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -38,7 +39,7 @@ export function compileSellerOpenApi(compiled, { mode = 'CHALLENGE_ONLY' } = {})
   for (const route of compiled.routes) {
     const { offer, id, method, binding } = route;
     if (!/^[A-Za-z0-9_-]{1,80}$/.test(id ?? '') || names.has(id) ||
-        !['GET', 'HEAD', 'POST'].includes(method) || !binding || !Array.isArray(binding.names))
+        !['GET', 'HEAD', 'DELETE', 'POST', 'PUT', 'PATCH'].includes(method) || !binding || !Array.isArray(binding.names))
       throw new TypeError('Invalid compiled seller route');
     names.add(id);
     const bazaar = offer.extensions.bazaar, input = bazaar.info.input;
@@ -95,7 +96,7 @@ export function compileSellerOpenApi(compiled, { mode = 'CHALLENGE_ONLY' } = {})
         admission: typeof route.admit === 'function', mode },
       'x-x402-payment-required': structuredClone(offer),
     };
-    if (method === 'POST') operation.requestBody = {
+    if (['POST', 'PUT', 'PATCH'].includes(method)) operation.requestBody = {
       required: true, content: { 'application/json': {
         schema: projected && shape && own(shape, 'body') ? { $ref: rootRef + '/properties/input/properties/body' } : {},
         ...(own(input, 'body') ? { example: structuredClone(input.body) } : {}),
@@ -129,9 +130,18 @@ const assets = new Map([
 export function createSellerDeveloperPortal({ compiled, mode } = {}) {
   const specification = compileSellerOpenApi(compiled, { mode });
   const specBytes = Buffer.from(JSON.stringify(specification, null, 2) + '\n');
+  const client = generateSellerClient(specBytes);
+  const downloads = new Map([
+    ['seller-client.mjs', ['text/javascript; charset=utf-8', client.javascript]],
+    ['seller-client.d.mts', ['text/plain; charset=utf-8', client.declarations]],
+    ['README.md', ['text/markdown; charset=utf-8', client.readme]],
+    ['package.json', ['application/json; charset=utf-8', client.packageJson]],
+  ].map(([name, [mime, text]]) => ['/_seller/client/' + name,
+    { mime, bytes: Buffer.from(text), download: name }]));
   return function developerPortal(req, res) {
     const path = typeof req.url === 'string' ? req.url.split('?')[0] : '';
-    const asset = path === '/_seller/openapi.json' ? { mime: 'application/json; charset=utf-8', bytes: specBytes } : assets.get(path);
+    const asset = path === '/_seller/openapi.json' ? { mime: 'application/json; charset=utf-8', bytes: specBytes } :
+      downloads.get(path) ?? assets.get(path);
     if (!asset) return false;
     const common = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
       'referrer-policy': 'no-referrer', 'x-frame-options': 'DENY',
@@ -139,7 +149,8 @@ export function createSellerDeveloperPortal({ compiled, mode } = {}) {
     if (!['GET', 'HEAD'].includes(req.method)) {
       res.writeHead(405, { ...common, allow: 'GET, HEAD', 'content-length': '0' }); res.end(); return true;
     }
-    res.writeHead(200, { ...common, 'content-type': asset.mime, 'content-length': String(asset.bytes.length) });
+    res.writeHead(200, { ...common, 'content-type': asset.mime, 'content-length': String(asset.bytes.length),
+      ...(asset.download ? { 'content-disposition': `attachment; filename="${asset.download}"` } : {}) });
     res.end(req.method === 'HEAD' ? undefined : asset.bytes);
     return true;
   };
