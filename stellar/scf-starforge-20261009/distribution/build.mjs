@@ -39,12 +39,27 @@ const result = sources.map(([path, source]) => {
 });
 process.stdout.write(JSON.stringify(result));
 `;
-  const modules = [...sources].filter(([path]) => /\.(?:mjs|js)$/.test(path))
-    .map(([path, bytes]) => [path, bytes.toString('utf8')]);
-  return JSON.parse(execFileSync(process.execPath,
-    ['--no-warnings', '--experimental-vm-modules', '--input-type=commonjs', '--eval', parse],
-    { input: JSON.stringify(modules), encoding: 'utf8', timeout: 10000,
-      maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }));
+  // Keep each parser child small as the cumulative source grows. Preserve the
+  // input order and allow shared hosts time to schedule a batch under load.
+  const requests = [];
+  let batch = [], batchBytes = 0;
+  const flush = () => {
+    if (!batch.length) return;
+    requests.push(...JSON.parse(execFileSync(process.execPath,
+      ['--no-warnings', '--experimental-vm-modules', '--input-type=commonjs', '--eval', parse],
+      { input: JSON.stringify(batch), encoding: 'utf8', timeout: 60000,
+        maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] })));
+    batch = [];
+    batchBytes = 0;
+  };
+  for (const [path, bytes] of sources) {
+    if (!/\.(?:mjs|js)$/.test(path)) continue;
+    if (batch.length && (batch.length >= 64 || batchBytes + bytes.length > 1024 * 1024)) flush();
+    batch.push([path, bytes.toString('utf8')]);
+    batchBytes += bytes.length;
+  }
+  flush();
+  return requests;
 }
 
 export async function buildDistribution({ repository = fileURLToPath(new URL('../../../', import.meta.url)), ref = 'HEAD', output,
