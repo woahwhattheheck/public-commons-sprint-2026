@@ -11,15 +11,18 @@ const USAGE = `Stellar RPC merchant workspace
   [--seller-port 0] [--operations-port 0] [--history-days 90]
   [--max-in-flight 64] [--drain-grace-ms 60000]
   [--allow-loopback-upstream] [--allow-local-facilitator]
+  [--commerce-profile /private/rpc-commerce-profile.json]
 
 Create without --plan to save an editable starter. Reopen with --dir alone.
 The browser saves/imports public plans, reviews exact product terms, prepares
 the original merchant package and buyer request, and retains explicit provider
 diagnosis. Runtime mode is selected here and started from a saved browser review.
 Provider URLs and credentials come from the declared launch environment.
+The private commerce profile enables reviewed native buyer preparation, named
+existing-session attachment, and the original commerce console with retained intent ownership.
 The original merchant owns native payment, operations, product pause and drain.`;
 const values = new Set(['dir','plan','port','facilitator','seller-port','operations-port',
-  'history-days','max-in-flight','drain-grace-ms']);
+  'history-days','max-in-flight','drain-grace-ms','commerce-profile']);
 const switches = new Set(['create','challenge-only','allow-loopback-upstream','allow-local-facilitator']);
 function integer(value,fallback,min,max) {
   const raw = value ?? String(fallback);
@@ -55,6 +58,7 @@ export async function main(args = process.argv.slice(2), { env = process.env, st
   } : null;
   const server = await startRpcWorkspace({ directory:resolve(options.dir), create:Boolean(options.create),
     ...(options.plan ? { planFile:resolve(options.plan) } : {}), port,env,runtimeOptions,
+    ...(options['commerce-profile'] ? { commerceProfileFile:resolve(options['commerce-profile']) } : {}),
     allowLoopbackUpstream:Boolean(options['allow-loopback-upstream']) });
   let closing;
   const close = () => closing ??= server.close().finally(() => {
@@ -68,3 +72,4 @@ export async function main(args = process.argv.slice(2), { env = process.env, st
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
   main().catch(() => { process.stderr.write('RPC_WORKSPACE_START_FAILED: review --help and the private workspace directory.\n'); process.exitCode=1; });
+

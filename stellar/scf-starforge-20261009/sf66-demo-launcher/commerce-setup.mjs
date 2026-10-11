@@ -4,25 +4,27 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, open, realpath, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { isDeepStrictEqual as same } from 'node:util';
 import { readSellerConfig } from '../sf30-seller-sdk/serve.mjs';
 import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { compileHttpSellerOffer } from '../sf30-seller-sdk/seller.mjs';
 import { compileAssetRouteOffer } from '../sf30-seller-sdk/response-asset.mjs';
 import { compileSellerOpenApi } from '../sf30-seller-sdk/developer-portal.mjs';
-import { buildUnpaidRequest } from '../sf30-seller-sdk/developer/request.mjs';
-import { requiresJsonBody } from '../sf30-seller-sdk/http-methods.mjs';
-import { selectServiceRoute } from '../sf30-seller-sdk/route-path.mjs';
-import { createLiveRequestAdmission } from '../sf89-live-request-admission/index.mjs';
 import { readConfig as readFacilitator, reviewConfig } from '../native-facilitator/config.mjs';
 import { initializeWorkspace, openWorkspace } from '../sf88-operator-buyer-cli/workspace.mjs';
-import { config as readBuyer, operation, execution, responseFile, requestTimeoutMs, buyerTransport } from '../sf88-operator-buyer-cli/config.mjs';
+import { acquireInitialization, initializationDirectory, optionalInitializationBytes,
+  retainInitializationFile, retainInitializationRecord, verifyInitializationFile } from '../sf88-operator-buyer-cli/initialization.mjs';
+import { config as readBuyer, execution, responseFile, requestTimeoutMs, buyerTransport } from '../sf88-operator-buyer-cli/config.mjs';
 import { validateNativeSignerConfiguration } from '../sf88-operator-buyer-cli/native-signer.mjs';
 import { absolute, parseJson, readPrivateFile } from '../sf103-native-buyer-signer/operator.mjs';
-import { readUpstreamCommerce, describeUpstreamCommerce, readUpstreamPurchaseTicket,
+import { readUpstreamCommerce, describeUpstreamCommerce,
   upstreamPurchaseTicketView } from './commerce-upstream.mjs';
 import { preparePythonCommerce, describePythonCommerce } from './commerce-python.mjs';
 import { readJsonrpcCommerce, describeJsonrpcCommerce, validateJsonrpcCommerceRequest } from './commerce-jsonrpc.mjs';
+import { prepareCommerceRequest, COMMERCE_REQUEST_TOTAL_BYTES } from './commerce-request.mjs';
+import { MAX_REQUEST_BODY_BYTES } from '../sf88-operator-buyer-cli/request-body.mjs';
+import { OPERATION_HANDOFF_MAX_BYTES } from '../sf88-operator-buyer-cli/operation-handoff.mjs';
 
 const SCHEMA = 'stellar-forge.commerce-setup.v1';
 const SNAPSHOT = 'stellar-forge.prepared-commerce.v1';
@@ -73,23 +75,15 @@ async function regularSource(path) {
     return { path, sha256:sha(await file.readFile()) };
   } finally { await file.close(); }
 }
-function queryObject(url) {
-  const result = Object.create(null);
-  for (const [key, value] of url.searchParams) {
-    if (!own(result, key)) result[key] = value;
-    else result[key] = Array.isArray(result[key]) ? [...result[key], value] : [result[key], value];
-  }
-  return result;
-}
-
 // The original compiler requires application callbacks. This offline projection
 // never imports or invokes an application's handler, admission or response source.
 const compilationOnly = () => { throw new Error('COMMERCE_SETUP_COMPILATION_ONLY'); };
-function compileMerchant(config) {
+function compileMerchant(config, upstream) {
   const origin = config.publicOrigin;
   need(typeof origin === 'string', 'COMMERCE_SETUP_PUBLIC_ORIGIN_REQUIRED');
   return compileSellerRoutes(config.routes.map(route => ({
     id:route.id, handler:compilationOnly,
+    maxRequestBytes:upstream?.configuration.bindings[route.handler]?.maxRequestBytes ?? route.maxRequestBytes ?? config.maxRequestBytes ?? 1048576,
     ...(route.admit || route.validateInput ? {admit:compilationOnly} : {}),
     ...(route.responseAsset ? {
       offer:compileAssetRouteOffer(route, origin, compileHttpSellerOffer),
@@ -140,7 +134,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     sha(await readPrivateFile(seller.facilitatorConfig)) === sha(facilitatorBytes),
   'COMMERCE_SETUP_SOURCE_CHANGED_DURING_REVIEW');
   need(facilitator.network === 'stellar:testnet', 'COMMERCE_SETUP_TESTNET_REQUIRED');
-  const compiled = compileMerchant(merchant);
+  const compiled = compileMerchant(merchant, upstream);
   for (const route of compiled.routes) for (const terms of route.offer.accepts) {
     need(terms.scheme === 'exact' && terms.network === facilitator.network &&
       facilitator.payments.assets.includes(terms.asset) &&
@@ -173,59 +167,28 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   const specification = compileSellerOpenApi(compiled);
   const operations = Object.values(specification.paths).flatMap(path => Object.values(path));
   const selections = [], intents = new Set();
+  let requestBytes=0;
   for (const [index, value] of input.purchases.entries()) {
     const selected = fields(value, ['routeId','acceptIndex','intentId','method','path','query',
       'bodyFile','ticketFile','ticketHeader','saveResponse','responseMaxBytes','responseTimeoutMs',
-      'requestTimeoutMs','paymentFlow','responseStream'], 'COMMERCE_SETUP_SELECTION_INVALID');
-    const route = compiled.routes.find(route => route.id === selected.routeId);
-    need(route && selected.method === route.method, 'COMMERCE_SETUP_EXPLICIT_ROUTE_METHOD_REQUIRED');
-    need(Number.isInteger(selected.acceptIndex) && selected.acceptIndex >= 0 &&
-      selected.acceptIndex < route.offer.accepts.length, 'COMMERCE_SETUP_EXPLICIT_PAYMENT_OPTION_REQUIRED');
-    need(!intents.has(selected.intentId), 'COMMERCE_SETUP_DUPLICATE_INTENT');
-    const terms = route.offer.accepts[selected.acceptIndex];
-    const paymentFlow = selected.paymentFlow === undefined ? 'authorization' : selected.paymentFlow;
-    need(['authorization','upfront'].includes(paymentFlow) &&
-      paymentFlow === (terms.extra?.paymentFlow ?? 'authorization'), 'COMMERCE_SETUP_EXPLICIT_PAYMENT_FLOW_REQUIRED');
+      'requestTimeoutMs','requestFile','headers','paymentFlow','responseStream'], 'COMMERCE_SETUP_SELECTION_INVALID');
+    const key = String(index + 1).padStart(2, '0');
+    const requestInput = await prepareCommerceRequest({selected,compiled,merchant,operations,directory,key,upstream});
+    const {route,terms,op,body,ticket,context}=requestInput;
+    need(!intents.has(op.intentId), 'COMMERCE_SETUP_DUPLICATE_INTENT');
     atomic(terms.amount, 'COMMERCE_SETUP_AMOUNT_EXCEEDS_ORIGINAL_LEDGER');
-    need(requiresJsonBody(route.method) === (selected.bodyFile !== undefined),
-      'COMMERCE_SETUP_EXPLICIT_BODY_FILE_REQUIRED');
-    const body = selected.bodyFile === undefined ? null : await readPrivateFile(selected.bodyFile, 1048576);
-    const bodyText = body === null ? undefined :
-      new TextDecoder('utf-8', {fatal:true, ignoreBOM:true}).decode(body);
-    const apiOperation = operations.find(operation => operation.operationId === route.id);
-    const request = buildUnpaidRequest(apiOperation, {path:selected.path, query:selected.query,
-      ...(body === null ? {} : {body:bodyText})}, merchant.publicOrigin);
-    const target = new URL(request.publicUrl);
-    const matched = selectServiceRoute(compiled.routes, target.pathname, route.method);
-    need(matched?.route?.id === route.id, 'COMMERCE_SETUP_REQUEST_SELECTS_ANOTHER_ROUTE');
-    const originalRoute = merchant.routes.find(item => item.id === route.id);
-    if (originalRoute.validateInput) {
-      const valid = createLiveRequestAdmission(route.offer)({method:route.method,
-        query:queryObject(target), pathParams:matched.pathParams,
-        ...(body === null ? {} : {body:JSON.parse(bodyText)})});
-      need(valid === true, valid?.body?.error ?? 'COMMERCE_SETUP_REQUEST_SCHEMA_REJECTED');
-    }
-    if (jsonrpc) validateJsonrpcCommerceRequest(jsonrpc, route.id, { method: route.method,
-      url: target, query: queryObject(target), body: JSON.parse(bodyText) });
+    requestBytes+=body?.length ?? 0;
+    need(requestBytes<=COMMERCE_REQUEST_TOTAL_BYTES,'COMMERCE_SETUP_TOTAL_REQUEST_BYTES_EXCEEDED');
+    if (jsonrpc) validateJsonrpcCommerceRequest(jsonrpc,route.id,context);
     const saveResponse = selected.saveResponse ?? route.method !== 'HEAD';
     need(typeof saveResponse === 'boolean' && !(route.method === 'HEAD' && saveResponse),
       'COMMERCE_SETUP_HEAD_HAS_NO_RESPONSE_BODY');
     need(saveResponse || selected.responseMaxBytes === undefined && selected.responseTimeoutMs === undefined &&
       selected.responseStream === undefined,
       'COMMERCE_SETUP_RESPONSE_LIMIT_WITHOUT_DESTINATION');
-    const key = String(index + 1).padStart(2, '0');
-    const op = operation({intentId:selected.intentId, url:request.publicUrl, method:route.method,
-      expect:{scheme:terms.scheme, network:terms.network, asset:terms.asset, payTo:terms.payTo,
-        maxAtomic:terms.amount, maxTimeoutSeconds:terms.maxTimeoutSeconds,
-        paymentFlow},
-      headers:{Accept:request.init.headers.accept,
-        ...(body === null ? {} : {'Content-Type':request.init.headers['content-type']})},
-      ...(selected.ticketFile === undefined ? {} : {ticketFile:join(directory, 'tickets', key + '.json')}),
-      ...(selected.ticketHeader === undefined ? {} : {ticketHeader:selected.ticketHeader}),
-      ...(body === null ? {} : {bodyFile:join(directory, 'bodies', key + '.json')})});
-    const ticket = await readUpstreamPurchaseTicket(selected, op, upstream, originalRoute);
     intents.add(op.intentId);
     const draft = {operation:op, captureBody:false,
+      ...(requestInput.preparedFrom ? {preparedFrom:requestInput.preparedFrom} : {}),
       ...(selected.requestTimeoutMs === undefined ? {} : {requestTimeoutMs:selected.requestTimeoutMs}),
       ...(saveResponse ? {
       responseFile:{destination:join(directory, 'responses', key + '.bin'),
@@ -238,6 +201,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     requestTimeoutMs(draft);
     selections.push({key, routeId:route.id, acceptIndex:selected.acceptIndex,
       originalOffer:structuredClone(route.offer), draft, body, ticket,
+      packet:requestInput.packet, input:requestInput.input,
       bodySha256:body === null ? null : sha(body), bodyBytes:body?.length ?? 0});
   }
   const first = selections[0].draft.operation.expect;
@@ -269,7 +233,10 @@ export async function reviewCommerceSetup({ configFile, directory }) {
       method:item.draft.operation.method, url:item.draft.operation.url, acceptIndex:item.acceptIndex,
       originalTerms:item.originalOffer.accepts[item.acceptIndex], paymentFlow:item.draft.operation.expect.paymentFlow,
       bodyBytes:item.bodyBytes,
-      bodySha256:item.bodySha256, operationTicket:upstreamPurchaseTicketView(item.ticket),
+      bodySha256:item.bodySha256, bodyPresent:item.body!==null,
+      requestInput:{bodyType:item.input.bodyType,contentType:item.input.contentType,fileCount:item.input.files.length,
+        source:item.input.source ?? null},
+      operationTicket:upstreamPurchaseTicketView(item.ticket),
       responseFile:item.draft.responseFile ?? null, requestTimeoutMs:requestTimeoutMs(item.draft)})),
     signingMaterialLoaded:false, paymentAttempts:0};
   return {summary, merchant, facilitator, operator, selections, maximum, handlers, python, upstream, jsonrpc,
@@ -286,44 +253,66 @@ export async function reviewCommerceSetup({ configFile, directory }) {
 }
 
 /** Create the original SF88 workspace once, then reuse its ledger for every intent. */
-export async function prepareCommerceSetup({configFile, directory}, {environment = process.env} = {}) {
+export async function prepareCommerceSetup({configFile, directory}, {environment = process.env, resume = false} = {}) {
   const reviewed = await reviewCommerceSetup({configFile, directory});
   await privateDirectory(dirname(directory));
   const {initializeCommerce, bindMerchantPurchase} = await import('./commerce.mjs');
   const {summary, merchant, facilitator, operator, selections, maximum, handlers, python, upstream, jsonrpc} = reviewed;
-  const compiled = compileMerchant(merchant);
+  const compiled = compileMerchant(merchant, upstream);
   // Reuse the session's own offer selection rules before creating any workspace.
   for (const item of selections) need(bindMerchantPurchase(compiled, item.draft).acceptIndex === item.acceptIndex,
     'COMMERCE_SETUP_PAYMENT_OPTION_NOT_UNIQUE');
-  let created;
+  const lease = await acquireInitialization(directory, { python: operator.python, resume });
   try {
-    await mkdir(directory, {mode:0o700});
-    created = await privateDirectory(directory);
-    for (const name of ['bodies','responses','buyers','tickets']) await mkdir(join(directory, name), {mode:0o700});
+    const checkpoint = { schema: 'stellar-forge.commerce-setup-initialization.v1',
+      source: reviewed.source, summary, directory, handlers };
+    const completed = await optionalInitializationBytes(join(directory, 'prepared.json'), 1048576);
+    if (completed) {
+      const record = parseJson(completed);
+      const { operatorKeySource, ...originalSummary } = record.summary ?? {};
+      need(record.summary?.state === 'PREPARED' && same(record.source, reviewed.source) &&
+        same({...originalSummary, state: summary.state}, JSON.parse(json(summary))),
+      'COMMERCE_SETUP_RESUME_SOURCE_CHANGED');
+      return await inspectCommerceSetup(directory);
+    }
+    const priorCheckpoint = await optionalInitializationBytes(join(directory, 'initializing.json'));
+    if (lease.created || priorCheckpoint)
+      await retainInitializationRecord(join(directory, 'initializing.json'), checkpoint, { resume });
+    for (const name of ['bodies','responses','buyers','tickets','requests']) await initializationDirectory(join(directory, name), { create: true });
     const captured = [];
     const retain = async (path, value) => {
       const bytes = Buffer.isBuffer(value) ? value : json(value);
-      await writeNew(path, bytes);
+      await retainInitializationFile(path, bytes, { resume });
       captured.push({path, bytes:bytes.length, sha256:sha(bytes)});
     };
+    const staged = [];
     for (const item of selections) {
-      if (item.body !== null) await retain(item.draft.operation.bodyFile, item.body);
-      if (item.ticket) await retain(item.draft.operation.ticketFile, item.ticket.sourceBytes);
-      await retain(join(directory, 'buyers', item.key + '-review.json'), item.draft);
+      if (item.packet) staged.push([item.packet.path, item.packet.bytes]);
+      if (item.body !== null) staged.push([item.draft.operation.bodyFile, item.body]);
+      if (item.ticket) staged.push([item.draft.operation.ticketFile, item.ticket.sourceBytes]);
+      staged.push([join(directory, 'buyers', item.key + '-review.json'), item.draft]);
     }
-    await retain(join(directory, 'seller.json'), merchant);
-    if (python) await retain(join(directory, 'python.json'), python.declaration);
-    if (upstream) await retain(join(directory, 'upstreams.json'), upstream.sourceBytes);
-    if (jsonrpc) await retain(join(directory, 'jsonrpc.json'), jsonrpc.sourceBytes);
-    await retain(join(directory, 'facilitator.json'), facilitator);
+    staged.push([join(directory, 'seller.json'), merchant]);
+    if (python) staged.push([join(directory, 'python.json'), python.declaration]);
+    if (upstream) staged.push([join(directory, 'upstreams.json'), upstream.sourceBytes]);
+    if (jsonrpc) staged.push([join(directory, 'jsonrpc.json'), jsonrpc.sourceBytes]);
+    staged.push([join(directory, 'facilitator.json'), facilitator]);
     const workspace = join(directory, 'operator');
+    const operatorPresent = await lstat(workspace).then(() => true).catch(error => {
+      if (error.code === 'ENOENT') return false; throw error;
+    });
+    if (resume) for (const [path, value] of staged) {
+      const present = await verifyInitializationFile(path, Buffer.isBuffer(value) ? value : json(value));
+      need(!operatorPresent || present, 'COMMERCE_SETUP_RESTORE_ORIGINAL_INPUTS');
+    }
+    for (const [path, value] of staged) await retain(path, value);
     const args = ['--config', join(directory, 'buyers', maximum.key + '-review.json'), '--dir', workspace,
       '--actor', operator.actor, '--service', operator.service, '--python', operator.python,
       '--payer', operator.payer, '--total-atomic', operator.totalAtomic, '--daily-atomic', operator.dailyAtomic,
       '--rpc', facilitator.rpcUrl, ...(operator.httpsProxyEnv === undefined ? [] :
         ['--https-proxy-env', operator.httpsProxyEnv]), ...(operator.secretEnv !== undefined ?
         ['--secret-env', operator.secretEnv] : ['--signer-provider', operator.signerProvider])];
-    const initialized = await initializeWorkspace(args, {environment});
+    const initialized = await initializeWorkspace(args, {environment, resume});
     const base = await readBuyer(initialized.config);
     const buyers = [];
     for (const item of selections) {
@@ -346,13 +335,15 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
         port:reviewed.sellerPort, ...(handlers ? {handlers:handlers.path} : {})},
       operationsPort:reviewed.operationsPort, operationControls:reviewed.operationControls, buyers});
     const session = join(directory, 'session');
-    const initializedSession = await initializeCommerce({planFile, directory:session});
+    const initializedSession = await initializeCommerce({planFile, directory:session}, {resume});
     need(!python || initializedSession.python?.applicationSha256 === python.applicationSha256,
       'COMMERCE_SETUP_PYTHON_SOURCE_CHANGED');
     need(!upstream || initializedSession.upstreams?.sha256 === upstream.sha256,
       'COMMERCE_UPSTREAM_CONFIG_CHANGED');
     need(!jsonrpc || initializedSession.jsonrpc?.sha256 === jsonrpc.sha256,
       'COMMERCE_JSONRPC_PLAN_CHANGED');
+    if (!lease.created && !priorCheckpoint)
+      await retainInitializationRecord(join(directory, 'initializing.json'), checkpoint, { resume });
     await retain(join(directory, 'prepared.json'), {
       schema:SNAPSHOT, createdAt:new Date().toISOString(), directory, session, workspace,
       planFile, source:reviewed.source, files:captured, handlers,
@@ -360,15 +351,15 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
     });
     const handle = await open(directory, 'r');
     try { await handle.sync(); } finally { await handle.close(); }
-    return inspectCommerceSetup(directory);
+    return await inspectCommerceSetup(directory);
   } catch (error) {
-    if (created) {
+    if (lease.created && !resume) {
       const current = await lstat(directory).catch(() => null);
-      if (current?.dev === created.dev && current?.ino === created.ino)
+      if (current?.dev === lease.identity.dev && current?.ino === lease.identity.ino)
         await rm(directory, {recursive:true, force:true}).catch(() => {});
     }
     throw error;
-  }
+  } finally { await lease.close(); }
 }
 
 /** Reopen original retained setup and inbox without opening wallet or operator keys. */
@@ -378,12 +369,16 @@ export async function inspectCommerceSetup(directory) {
   need(record.schema === SNAPSHOT && record.directory === directory &&
     record.session === join(directory, 'session') && record.workspace === join(directory, 'operator') &&
     record.planFile === join(directory, 'commerce-plan.json') && Array.isArray(record.files) &&
-    record.files.length <= 64 * 4 + 16, 'COMMERCE_SETUP_SNAPSHOT_INVALID');
+    record.files.length <= 64 * 5 + 16, 'COMMERCE_SETUP_SNAPSHOT_INVALID');
   for (const item of record.files) {
     need(typeof item.path === 'string' && item.path.startsWith(directory + '/') &&
       resolve(item.path) === item.path && item.path !== join(directory, 'prepared.json'),
     'COMMERCE_SETUP_SNAPSHOT_PATH_INVALID');
-    const bytes = await readPrivateFile(item.path, 1048576);
+    const maximum = dirname(item.path) === join(directory, 'requests') ? OPERATION_HANDOFF_MAX_BYTES :
+      dirname(item.path) === join(directory, 'bodies') ? MAX_REQUEST_BODY_BYTES : 1048576;
+    need(Number.isSafeInteger(item.bytes) && item.bytes >= 0 && item.bytes <= maximum &&
+      /^[a-f0-9]{64}$/.test(item.sha256), 'COMMERCE_SETUP_SNAPSHOT_FILE_INVALID');
+    const bytes = await readPrivateFile(item.path, maximum);
     need(bytes.length === item.bytes && sha(bytes) === item.sha256, 'COMMERCE_SETUP_INPUT_CHANGED');
   }
   await openWorkspace(['--dir', record.workspace]);
@@ -415,9 +410,10 @@ function options(args) {
 }
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') {
-    process.stdout.write('Usage: commerce-setup.mjs review|prepare --config /private/setup.json --directory /private/new-commerce\n' +
+    process.stdout.write('Usage: commerce-setup.mjs review|prepare|resume --config /private/setup.json --directory /private/commerce\n' +
       '       commerce-setup.mjs inspect --directory /private/prepared-commerce\n' +
       'Preparation creates one original testnet operator workspace and commerce session. Use commerce-cli.mjs for the actual native purchase.\n' +
+      'Resume completes the same interrupted preparation, preserving its original keys, ledger, source bytes and queue intents. See RESUMABLE_SETUP.md.\n' +
       'For a retained Stellar JSON-RPC product, set seller.jsonrpc and follow JSONRPC_COMMERCE.md.\n');
     return;
   }
@@ -426,6 +422,7 @@ export async function main(args = process.argv.slice(2)) {
   let result;
   if (command === 'review') result = (await reviewCommerceSetup(input)).summary;
   else if (command === 'prepare') result = await prepareCommerceSetup(input);
+  else if (command === 'resume') result = await prepareCommerceSetup(input, {resume:true});
   else if (command === 'inspect' && opt['--config'] === undefined) result = await inspectCommerceSetup(input.directory);
   else need(false, 'COMMERCE_SETUP_COMMAND_REQUIRED');
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
@@ -437,3 +434,4 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     process.stderr.write(JSON.stringify({error:code}) + '\n');
     process.exitCode = 1;
   });
+

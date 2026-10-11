@@ -9,6 +9,7 @@ import {openCollectionWorkspace} from './collection-workspace.mjs';
 import {handlePricingRequest,PRICING_REQUEST_BYTES} from './pricing-workspace.mjs';
 import {handlePeriodRequest} from './period-workspace.mjs';
 import {AccountantWorkspace,handleAccountantRequest,ACCOUNTANT_REQUEST_BYTES} from './accountant-workspace.mjs';
+import {RECOVERY_COMMANDS,RECOVERY_HELP,recoveryMain} from './recovery-cli.mjs';
 import {BitwaveWorkspace,handleBitwaveRequest,BITWAVE_REQUEST_BYTES} from './bitwave-workspace.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
@@ -122,9 +123,15 @@ Optional: --port 8446 and --recovered-dir /private/original-recovered-settlement
 For an explicitly configured cloud HTTPS proxy, add --rpc-proxy-env HTTPS_PROXY.
 Requires Node22+, Linux flock, and tar for review downloads.
 Uses the original accounting engine and report writer; all serving is loopback.
+Operating backup and recovery: backup | inspect-backup | verify-backup | restore | recovery-status.
+Use a recovery subcommand with --help for the original encrypted workflow.
 `;
 export async function main(argv=process.argv.slice(2)){
-  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP);return;}
+  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP);return;}
+  if(RECOVERY_COMMANDS.has(argv[0])){
+    const controller=new AbortController(),stop=()=>controller.abort();process.once('SIGINT',stop);process.once('SIGTERM',stop);
+    try{return await recoveryMain(argv,{signal:controller.signal});}finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
+  }
   const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port','--recovered-dir','--rpc-proxy-env']),values={};
   for(let i=0;i<argv.length;i+=2){check(keys.has(argv[i])&&argv[i+1]&&!Object.hasOwn(values,argv[i]),'INVALID_ARGUMENTS',HELP);values[argv[i]]=argv[i+1];}
   check(values['--workspace'],'WORKSPACE_REQUIRED',HELP);

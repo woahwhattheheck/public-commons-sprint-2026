@@ -277,33 +277,41 @@ class DatasetDatabase:
 
     def activate(self, name, version_id, *, expected_revision):
         """Atomically select an imported version for one ordinary SQL view."""
-        name = _view_name(name)
-        if type(expected_revision) is not int or expected_revision < 0:
-            raise StateError("DATASET_SQL_REVISION_REQUIRED")
         with self._connection() as db:
             db.execute("BEGIN IMMEDIATE")
             try:
-                version = self._version(db, version_id)
-                current = db.execute(f"SELECT * FROM {_HEADS} WHERE name=?", (name,)).fetchone()
-                revision = current["revision"] if current else 0
-                if revision != expected_revision:
-                    raise StateError("DATASET_SQL_VIEW_CHANGED")
-                if current and current["version_id"] == version_id:
-                    db.commit()
-                    return {"name": current["name"], "revision": revision, "version": version, "activation_status": "UNCHANGED"}
-                if current:
-                    db.execute(f"DROP VIEW {_identifier(current['name'])}")
-                elif db.execute("SELECT 1 FROM sqlite_master WHERE name=? COLLATE NOCASE", (name,)).fetchone():
-                    raise StateError("DATASET_SQL_VIEW_NAME_IN_USE")
-                db.execute(f"CREATE VIEW {_identifier(name)} AS SELECT * FROM {_identifier(version['table'])}")
-                db.execute(f"INSERT INTO {_HEADS}(name,version_id,revision) VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET version_id=excluded.version_id,revision=excluded.revision", (name, version_id, revision + 1))
-                db.execute(f"INSERT INTO {_HISTORY}(name,version_id,previous_version,revision,activated_at) VALUES(?,?,?,?,?)",
-                           (name, version_id, current["version_id"] if current else None, revision + 1, datetime.now(timezone.utc).isoformat()))
+                result = self._activate(db, name, version_id, expected_revision=expected_revision)
                 db.commit()
-                return {"name": name, "revision": revision + 1, "version": version, "activation_status": "ACTIVATED"}
+                return result
             except BaseException:
                 db.rollback()
                 raise
+
+    def _activate(self, db, name, version_id, *, expected_revision):
+        """Apply the original view transition inside an owner's transaction.
+
+        The analysis workspace uses this same operation to retain its reviewed
+        comparison and select the candidate in one commit.
+        """
+        name = _view_name(name)
+        if type(expected_revision) is not int or expected_revision < 0:
+            raise StateError("DATASET_SQL_REVISION_REQUIRED")
+        version = self._version(db, version_id)
+        current = db.execute(f"SELECT * FROM {_HEADS} WHERE name=?", (name,)).fetchone()
+        revision = current["revision"] if current else 0
+        if revision != expected_revision:
+            raise StateError("DATASET_SQL_VIEW_CHANGED")
+        if current and current["version_id"] == version_id:
+            return {"name": current["name"], "revision": revision, "version": version, "activation_status": "UNCHANGED"}
+        if current:
+            db.execute(f"DROP VIEW {_identifier(current['name'])}")
+        elif db.execute("SELECT 1 FROM sqlite_master WHERE name=? COLLATE NOCASE", (name,)).fetchone():
+            raise StateError("DATASET_SQL_VIEW_NAME_IN_USE")
+        db.execute(f"CREATE VIEW {_identifier(name)} AS SELECT * FROM {_identifier(version['table'])}")
+        db.execute(f"INSERT INTO {_HEADS}(name,version_id,revision) VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET version_id=excluded.version_id,revision=excluded.revision", (name, version_id, revision + 1))
+        db.execute(f"INSERT INTO {_HISTORY}(name,version_id,previous_version,revision,activated_at) VALUES(?,?,?,?,?)",
+                   (name, version_id, current["version_id"] if current else None, revision + 1, datetime.now(timezone.utc).isoformat()))
+        return {"name": name, "revision": revision + 1, "version": version, "activation_status": "ACTIVATED"}
 
     def view_bindings(self):
         """Current named-view identities, suitable for a later query review."""
