@@ -91,7 +91,43 @@ Without a facilitator, the original seller runs in CHALLENGE_ONLY mode and respo
 
 The original HTTPFacilitatorClient and native seller factory handle the payment path, including the existing Stellar scheme. Payment accounts, assets and networks are the explicit terms from the reviewed plan. The workspace does not substitute its own verifier, signer, settlement semantics or payment policy.
 
-The original explicit local facilitator mode is available with both --facilitator and --allow-local-facilitator. Native ports default to dynamically allocated loopback ports; --seller-port and --operations-port select fixed ports. --port selects the operator browser port, default 8443. --max-in-flight and --drain-grace-ms pass through to the original seller lifecycle.
+The original explicit local facilitator mode is available with both --facilitator and --allow-local-facilitator. Native ports default to dynamically allocated loopback ports; --seller-port and --operations-port select fixed ports. --port selects the operator browser port, default 8443. --max-in-flight and --drain-grace-ms pass through to this direct seller lifecycle.
+
+## 4. Publish, upgrade and roll back
+
+**Publish and roll back retained releases** connects the selected prepared folder
+to the existing SF82 merchant release store. Enter a release ID and label, then
+choose **Stage selected merchant**. The original release adapter verifies and
+retains the source, full typed input/payment contract, customer files and this
+workspace's saved native result-column types. Repeating an identical stage
+reopens the same release; different source or runtime needs a new ID.
+
+Choose **Open release controls** and follow the private console link. The
+original release console compares routes, complete payment alternatives, named
+query contracts and limits. **Select this release** records the original
+generation-checked selection. **Start selected** opens it; **Restart selected**
+drains the running original seller before starting the selected version. The
+running instance exposes its original customer API, live OpenAPI, operations and
+availability controls. **Select previous release** followed by **Restart selected**
+serves a retained version again.
+
+The release store is `STATE/merchant-releases`. It remains usable when a former
+prepared input folder moves. Downloads beside each retained release use that
+verified private copy and the original six-file customer archive. The release
+console owns retained child launches; stop a direct workspace merchant before
+opening it, and close the console before returning to direct starts. **Close
+controls and drain seller** closes its original owned processes while preserving
+all releases and selection history.
+
+The release runtime inherits the original CLI's seller port and facilitator.
+Its child uses the original ClickHouse command's capacity of 64 and 60-second
+drain grace. The source's separate query/scan/concurrency limits remain unchanged.
+ClickHouse data stays live: rollback restores a service definition, not database
+history. Every launch performs the original actual preflight; a changed native
+column type fails before the retained workspace release opens a listener.
+
+Use [Retained ClickHouse merchant releases](../../../sf82-seller-pilot/CLICKHOUSE_RELEASES.md)
+for the complete console, CLI, existing MCP, customer-delivery and recovery flow.
 
 ## Deliver the customer client
 
@@ -109,10 +145,10 @@ Ctrl-C or SIGTERM in the launching terminal drains the original merchant before 
 
 Only one workspace process can own a state directory. The reused native flock lease releases when its owning file description closes or its process exits; it has no stale-PID deletion or manual unlock race. Stop the owning workspace before opening that same state directory elsewhere.
 
-Keep the entire private state directory for backup or migration. Its revisions/ directory contains immutable source/plan pairs and their retained native reviews; prepared/ contains the original complete merchant folders and original availability state; staging/ contains unpublished offline preparation work. Complete merchant folders remain usable with the existing clickhouse/start.mjs --directory command after the workspace has stopped.
+Keep the entire private state directory for backup or migration. Its revisions/ directory contains immutable source/plan pairs and their retained native reviews; prepared/ contains the original complete merchant folders and original availability state; staging/ contains unpublished offline preparation work; merchant-releases/ contains the original immutable SF82 releases, selection history and retained per-release availability. Complete merchant folders remain usable with the existing clickhouse/start.mjs --directory command after the workspace has stopped.
 
 ## Programmatic composition
 
-model.mjs exports createClickHouseWorkspace. server.mjs exports startClickHouseWorkspace and main. The model accepts stateDirectory, optional initial sourceFile/planFile, the existing nativeFactory, native seller ports/lifecycle options and an environment object.
+model.mjs exports createClickHouseWorkspace. server.mjs exports startClickHouseWorkspace and main. The model accepts stateDirectory, optional initial sourceFile/planFile, the existing nativeFactory, native seller ports/lifecycle options and an environment object. An embedding with a custom nativeFactory supplies releaseRuntime with the explicit original facilitator/port options when it wants retained child launches; the normal CLI derives these values from its existing options. The host-only environment also reaches the original release child without being stored or returned to the browser.
 
-The server's loopback capability API exposes state, saved revision selection, save, native review, private preview, prepare, retained release inspection, run, stop and customer export. State changes use the original atomic file helper and one process-owned native lease. Browser mutations carry explicit revision, review or run identity; they do not submit arbitrary source paths, credential values, shell commands or replacement payment behavior.
+The server's loopback capability API exposes state, saved revision selection, save, native review, private preview, prepare, retained release inspection, run, stop and customer export. It also stages a selected prepared merchant through the original release store and opens/closes the original release console. State changes use the original atomic file helper and one process-owned native lease. Browser mutations carry explicit revision, review, release or run identity; they do not submit arbitrary source paths, credential values, shell commands or replacement payment behavior.

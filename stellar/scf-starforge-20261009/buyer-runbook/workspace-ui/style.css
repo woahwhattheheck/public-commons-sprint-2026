@@ -17,3 +17,27 @@
 #recovery-panel .page-heading .badge{max-width:100%;white-space:normal}
 @media(max-width:690px){.sidebar #open-requests{grid-row:2}.sidebar #open-recovery{grid-row:3}.sidebar h2{grid-row:4}.sidebar nav{grid-row:5}#recovery-panel button{max-width:100%;white-space:normal}}
 @media(max-width:690px){.sidebar #open-paid-files{grid-row:3}.sidebar #open-recovery{grid-row:4}.sidebar h2{grid-row:5}.sidebar nav{grid-row:6}.operation-paid-file .toolbar{align-items:stretch;flex-direction:column}}
+
+/* Customer SDK sources and exact options share the existing industrial workspace. */
+#clients-panel,#client-detail,#client-operation-detail { min-width:0; }
+#clients-panel .panel,#clients-panel .detail-grid>div { min-width:0; }
+#clients-panel code,#clients-panel .wrap { overflow-wrap:anywhere; }
+#clients-panel textarea { width:100%; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; resize:vertical; }
+#clients-panel pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:28rem; overflow:auto; }
+#clients-panel .table-wrap,#request-option-terms { width:100%; max-width:100%; overflow-x:auto; }
+.client-options { min-width:1100px; table-layout:fixed; }
+.client-options th:nth-child(1) { width:65px; }
+.client-options th:nth-child(2) { width:70px; }
+.client-options th:nth-child(3) { width:130px; }
+.client-options th:nth-child(4),.client-options th:nth-child(5) { width:205px; }
+.client-options th:nth-child(6) { width:165px; }
+.client-options th:nth-child(7) { width:90px; }
+.client-options code { overflow-wrap:anywhere; white-space:normal; }
+.client-options .atomic { white-space:nowrap; }
+.client-options pre { white-space:pre-wrap; overflow-wrap:anywhere; margin:0; font-size:12px; }
+.client-files { min-width:720px; }
+.client-files code { overflow-wrap:anywhere; }
+.client-file-part { display:grid; grid-template-columns:1fr 2fr 1fr auto; align-items:end; gap:12px; padding:12px 0; border-bottom:1px solid var(--line,#d1d5db); }
+#clients-panel .wide { grid-column:1/-1; }
+#client-request-form>button[type="submit"] { margin-top:20px; }
+@media(max-width:700px) { .client-file-part { grid-template-columns:1fr; } #clients-panel .fields.two { grid-template-columns:1fr; } }

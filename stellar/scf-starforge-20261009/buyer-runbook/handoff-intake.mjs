@@ -11,6 +11,7 @@ import {MAX_REQUEST_BODY_BYTES} from '../sf88-operator-buyer-cli/request-body.mj
 import {OPERATION_HANDOFF_MAX_BYTES,inspectOperationHandoff,importOperationHandoff,
   readOperationHandoffBody} from '../sf88-operator-buyer-cli/operation-handoff.mjs';
 import {acquireRunbookMetadataLease} from './runbook.mjs';
+import {createSellerClientIntake} from './client-intake.mjs';
 
 const SCHEMA='stellar-forge.buyer-request-intake.v1';
 const PRESET='stellar-forge.buyer-runbook-operator.v1';
@@ -162,7 +163,7 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     const item=await verifiedSource(id);
     const view=await inspectOperationHandoff({file:source(id),directory:join(root(id),'review-input'),requireCurrent:false});
     const [review,prepared]=await Promise.all([reviews(id),ready(id)]);
-    return {...item,view,review,prepared,expired:view.operationTicket.expiresAt<=Date.now()};
+    return {...item,view,review,prepared,expired:view.operationTicket!==null&&view.operationTicket.expiresAt<=Date.now()};
   }
   async function receive(input) {
     fields(input,['filename','base64']);
@@ -181,8 +182,8 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     if(existing)return get(id);
     const view=await inspectOperationHandoff({file:source(id),directory:join(path,'review-input')});
     await publish(join(path,'request.json'),{schema:SCHEMA,id,filename:basename(input.filename),createdAt:new Date().toISOString(),
-      handoffSha256:hash(raw),summary:{intentId:view.intentId,url:view.sellerUrl,bodyBytes:view.bodyBytes,
-        bodySha256:view.bodySha256,expiresAt:view.operationTicket.expiresAt}});
+      handoffSha256:hash(raw),summary:{intentId:view.intentId,url:view.sellerUrl,method:view.method,bodyBytes:view.bodyBytes,
+        bodySha256:view.bodySha256,expiresAt:view.operationTicket?.expiresAt??null}});
     return get(id);
   }
   async function review(input) {
@@ -197,8 +198,8 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
       BigInt(daily)<=BigInt(operator.value.maxDailyAtomic),'REQUEST_BUDGET_OUTSIDE_OPERATOR_LIMITS');
     const proof={schema:SCHEMA,id:input.id,handoffSha256:item.handoffSha256,acceptIndex:input.acceptIndex,
       acceptedTerms:view.acceptedTerms,bodySha256:view.bodySha256,requestHeaders:view.requestHeaders,
-      operationKey:view.operationTicket.operationKey,requestHash:view.operationTicket.requestHash,
-      operationTicketSha256:view.operationTicket.sha256,
+      operationKey:view.operationTicket?.operationKey??null,requestHash:view.operationTicket?.requestHash??null,
+      operationTicketSha256:view.operationTicket?.sha256??null,
       settingsSha256:operator.sha256,operator:operator.view,totalAtomic:total,dailyAtomic:daily};
     const old=await reviews(input.id),result={...proof,reviewSha256:hash(encode(proof)),
       revision:(old?.revision??0)+1,reviewedAt:new Date().toISOString()};
@@ -212,11 +213,11 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     const item=await record(review.id);
     const sourceView=await inspectOperationHandoff({file:source(review.id),directory:attempt.inputDirectory,acceptIndex:review.acceptIndex});
     const bodyPresent=sourceView.bodyPresent;
-    check(op.method==='POST'&&op.url===item.summary.url&&JSON.stringify(op.expect)===JSON.stringify(review.acceptedTerms)&&
+    check(op.method===sourceView.method&&op.url===item.summary.url&&JSON.stringify(op.expect)===JSON.stringify(review.acceptedTerms)&&
       op.intentId===item.summary.intentId&&
       JSON.stringify(op.headers)===JSON.stringify(review.requestHeaders)&&cfg.trustedPayer===settings.payer&&
       cfg.operator.actor===settings.actor&&cfg.operator.service===settings.service&&cfg.operator.python===settings.python&&
-      op.bodyFile===(bodyPresent?join(attempt.inputDirectory,'request.body'):undefined)&&op.ticketFile===join(attempt.operatorDirectory,'operation-ticket.json'),
+      op.bodyFile===(bodyPresent?join(attempt.inputDirectory,'request.body'):undefined)&&op.ticketFile===(sourceView.operationTicket?join(attempt.operatorDirectory,'operation-ticket.json'):undefined),
       'REQUEST_OPERATOR_BINDING_CHANGED',409);
     check(manifest.signer.secretEnv===(settings.signerProvider===undefined?settings.secretEnv??'STELLAR_SECRET':undefined)&&
       manifest.signer.signerProvider===settings.signerProvider,'REQUEST_SIGNER_BINDING_CHANGED',409);
@@ -227,8 +228,8 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
       {buyerTransport:{mode:'explicit-connect',origin:new URL(op.url).origin,proxyEnv:settings.httpsProxyEnv}})});
     check(JSON.stringify(buyerTransport(cfg))===JSON.stringify(expectedTransport),'REQUEST_TRANSPORT_BINDING_CHANGED',409);
     const ticket=await loadOperationTicket(op,{requireCurrent:true});
-    check(ticket.sha256===review.operationTicketSha256&&ticket.operationKey===review.operationKey&&
-      ticket.requestHash===review.requestHash,'REQUEST_TICKET_CHANGED',409);
+    check((ticket?.sha256??null)===review.operationTicketSha256&&(ticket?.operationKey??null)===review.operationKey&&
+      (ticket?.requestHash??null)===review.requestHash,'REQUEST_TICKET_CHANGED',409);
     check(hash(bodyPresent?await bytes(op.bodyFile,MAX_REQUEST_BODY_BYTES):new Uint8Array())===review.bodySha256,'REQUEST_BODY_CHANGED',409);
     const policy=await json(cfg.operator.policy);
     check(policy.assets?.length===1&&policy.assets[0].max_single===review.acceptedTerms.maxAtomic&&
@@ -248,6 +249,16 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
       'REQUEST_READY_BINDING_CHANGED',409);return old;}
     await publish(join(root(review.id),'ready.json'),value);return value;
   }
+  async function prepareAttempt(attempt,selected,value) {
+    await importOperationHandoff({file:source(attempt.id),directory:attempt.inputDirectory,acceptIndex:selected.acceptIndex,resume:true});
+    const args=['--config',join(attempt.inputDirectory,'review.json'),'--dir',attempt.operatorDirectory,
+      '--actor',value.actor,'--service',value.service,'--payer',value.payer,'--python',value.python,
+      '--total-atomic',selected.totalAtomic,'--daily-atomic',selected.dailyAtomic];
+    for(const [key,flag]of [['secretEnv','--secret-env'],['signerProvider','--signer-provider'],['rpc','--rpc'],['httpsProxyEnv','--https-proxy-env']])
+      if(value[key]!==undefined)args.push(flag,value[key]);
+    await initializeWorkspace(args,{resume:true});
+    return finish(attempt,selected,value);
+  }
   async function provision(input) {
     fields(input,['id','reviewSha256']);
     const item=await verifiedSource(input.id),existing=await ready(input.id);
@@ -257,7 +268,7 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     check(selected.settingsSha256===operator.sha256,'REQUEST_OPERATOR_SETTINGS_CHANGED',409);
     const current=await inspectOperationHandoff({file:source(input.id),directory:join(root(input.id),'review-input'),acceptIndex:selected.acceptIndex});
     check(JSON.stringify(selected.acceptedTerms)===JSON.stringify(current.acceptedTerms)&&
-      selected.bodySha256===current.bodySha256&&selected.operationTicketSha256===current.operationTicket.sha256&&
+      selected.bodySha256===current.bodySha256&&selected.operationTicketSha256===(current.operationTicket?.sha256??null)&&
       JSON.stringify(selected.requestHeaders)===JSON.stringify(current.requestHeaders)&&
       JSON.stringify(selected.operator)===JSON.stringify(operator.view),'REQUEST_REVIEW_CHANGED',409);
     const intentPath=join(directory,'intents',hash(item.summary.intentId)+'.json');
@@ -268,22 +279,18 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     for(const name of names) {
       const previous=attemptRecord(input.id,Number(name.slice(1,-5)),await json(join(attemptsDirectory,name)));
       if(previous.reviewSha256!==selected.reviewSha256)continue;
+      // Resume this exact reviewed generation, including keys/ledger written
+      // before workspace.json. The original import and initializer verify pins.
       const manifest=await optional(join(previous.operatorDirectory,'workspace.json'));
       if(manifest)return finish(previous,selected,operator.value);
+      return prepareAttempt(previous,selected,operator.value);
     }
     const generation=names.length?Number(names[0].slice(1,-5))+1:1;
     check(Number.isSafeInteger(generation)&&generation<=10000,'REQUEST_ATTEMPT_LIMIT');
     const attempt={schema:SCHEMA,id:input.id,generation,reviewSha256:selected.reviewSha256,
       inputDirectory:join(root(input.id),'input-'+generation),operatorDirectory:join(root(input.id),'operator-'+generation)};
     await publish(join(attemptsDirectory,'a'+generation+'.json'),attempt);
-    await importOperationHandoff({file:source(input.id),directory:attempt.inputDirectory,acceptIndex:selected.acceptIndex});
-    const value=operator.value,args=['--config',join(attempt.inputDirectory,'review.json'),'--dir',attempt.operatorDirectory,
-      '--actor',value.actor,'--service',value.service,'--payer',value.payer,'--python',value.python,
-      '--total-atomic',selected.totalAtomic,'--daily-atomic',selected.dailyAtomic];
-    for(const [key,flag]of [['secretEnv','--secret-env'],['signerProvider','--signer-provider'],['rpc','--rpc'],['httpsProxyEnv','--https-proxy-env']])
-      if(value[key]!==undefined)args.push(flag,value[key]);
-    await initializeWorkspace(args);
-    return finish(attempt,selected,value);
+    return prepareAttempt(attempt,selected,operator.value);
   }
   async function state() {
     const requests=[],errors=[];let operator=null,presetError=null;
@@ -293,7 +300,9 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
       catch(error){errors.push({id,code:codeOf(error)});}
     }
     requests.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
-    return {requests,errors,operator,presetError,settingsFile,maxHandoffBytes:OPERATION_HANDOFF_MAX_BYTES};
+    const customerClients=await clients.state();
+    return {requests,errors:[...errors,...customerClients.errors],operator,presetError,settingsFile,
+      maxHandoffBytes:OPERATION_HANDOFF_MAX_BYTES,clients:customerClients};
   }
   async function originalOperatorForOperation(op,accounting=false) {
     const path=op.sourceConfig?.path;
@@ -319,6 +328,8 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     check(raw!==null,'REQUEST_BODY_ABSENT',404);
     return {bytes:raw,name:kind==='body'?'request.body':'merchant-operation.handoff.json'};
   }
-  return {state,get,attachment,environmentForOperation,workspaceForOperation,
+  const clients=await createSellerClientIntake({directory:join(directory,'clients'),request:get,receiveRequest:receive,
+    storage:{privateDirectory,bytes,publish,json,optional,lease,lstat,readdir}});
+  return {state,get,attachment,environmentForOperation,workspaceForOperation,clients,
     receive:input=>lease(()=>receive(input)),review:input=>lease(()=>review(input)),provision:input=>lease(()=>provision(input))};
 }

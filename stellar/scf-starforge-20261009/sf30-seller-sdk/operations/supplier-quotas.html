@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Supplier accounts · Stellar Forge</title>
+  <link rel="stylesheet" href="/supplier-quotas.css">
+  <script type="module" src="/supplier-quotas-panel.mjs"></script>
+</head>
+<body>
+<header>
+  <div><p class="eyebrow">STELLAR FORGE / MERCHANT OPERATIONS</p><h1>Supplier accounts</h1>
+    <p>Review the capacity shared by your merchant routes.</p></div>
+  <a href="/">Seller operations</a>
+</header>
+<main>
+  <section class="toolbar" aria-label="Snapshot controls">
+    <div><button id="refresh" type="button">Load supplier accounts</button>
+      <span id="status" role="status" aria-live="polite">Load a snapshot to review account usage.</span></div>
+    <div class="exports"><a id="download-json" aria-disabled="true" tabindex="-1">Snapshot JSON</a>
+      <a id="download-csv" aria-disabled="true" tabindex="-1">Account CSV</a></div>
+  </section>
+  <p id="failure" class="notice" role="alert" hidden></p>
+  <section id="setup" class="panel" hidden>
+    <h2>Attach your supplier accounts</h2>
+    <p>This seller has no shared supplier quota service attached. Add the supplier account configuration to its upstream file and restart the existing seller.</p>
+    <p>Use one account entry for routes that draw from the same supplier allowance. The operator guide is included with the seller SDK.</p>
+  </section>
+  <div id="content" hidden>
+    <section class="summary" aria-label="Account summary">
+      <article><h2>Accounts</h2><strong id="account-count">0</strong><p>In this seller configuration</p></article>
+      <article><h2>Accepting calls</h2><strong id="allowed-count">0</strong><p>At the snapshot time</p></article>
+      <article><h2>Supplier cooldowns</h2><strong id="cooldown-count">0</strong><p>Waiting for the provider</p></article>
+      <article><h2>Unavailable</h2><strong id="unavailable-count">0</strong><p>Account state needs attention</p></article>
+    </section>
+    <section class="panel">
+      <div class="section-heading"><div><h2>Shared capacity</h2><p id="captured">Snapshot —</p></div>
+        <label>Find account or route<input id="filter" type="search" autocomplete="off" placeholder="Account, label or route"></label></div>
+      <div class="table-wrap" tabindex="0" aria-label="Scrollable supplier account usage">
+        <table><caption class="sr-only">Supplier account usage at the displayed snapshot time</caption>
+          <thead><tr><th scope="col">Account</th><th scope="col">Routes</th><th scope="col">Window calls</th><th scope="col">Remaining</th><th scope="col">Calls / second</th><th scope="col">Admission</th><th scope="col">Retry at, UTC</th><th scope="col">Details</th></tr></thead>
+          <tbody id="accounts"></tbody>
+        </table>
+      </div>
+      <p id="empty" class="empty" hidden>No supplier accounts match this filter.</p>
+      <p class="hint">Usage is shared across routes and seller processes using the same configured supplier account. Refresh to read its current state.</p>
+    </section>
+    <section id="detail" class="panel" aria-labelledby="detail-title" hidden>
+      <div class="section-heading"><div><h2 id="detail-title">Account detail</h2><p id="detail-state"></p></div>
+        <button id="close-detail" type="button">Close details</button></div>
+      <dl id="detail-fields" class="details"></dl>
+      <h3>Routes sharing this account</h3><ul id="detail-bindings" class="bindings"></ul>
+      <p id="detail-guidance" class="hint"></p>
+    </section>
+    <section class="panel explanation">
+      <h2>Reading this view</h2>
+      <p>Each original supplier dispatch reserves one call. Routes using the same account share that allowance. Cached responses and completed request replays keep their existing behavior.</p>
+      <p>A supplier cooldown follows its original rate-limit response. Capacity and retry times describe the saved snapshot; your next request checks the account again before dispatch.</p>
+      <p>The JSON and CSV downloads contain the exact displayed snapshot, including every configured account. The search field filters the table.</p>
+    </section>
+  </div>
+</main>
+<footer><span>Local merchant workspace</span><span id="footer-time">No snapshot loaded</span></footer>
+</body>
+</html>
