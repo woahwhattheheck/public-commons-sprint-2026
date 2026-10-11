@@ -11,6 +11,7 @@ import { readUpstreamBindings, compileUpstreamBindings,
 import { openOutbox, instrumentNativeSettlement } from '../../sf98-merchant-delivery/outbox.mjs';
 import { startSellerOperations } from './server.mjs';
 import { validateAvailabilityDirectory } from '../availability/store.mjs';
+import {idPattern} from '../../sf93-seller-support-bundle/incident-config.mjs';
 
 const HELP = [
   'Usage: node operations/merchant-launch.mjs --config SELLER.json',
@@ -20,11 +21,14 @@ const HELP = [
   ' [--drain-grace-ms 60000] [--allow-loopback-upstream]',
   ' [--history-dir /private/merchant/usage] [--history-days 90]',
   ' [--availability-dir /private/merchant/availability]',
+  ' [--delivery-workspace /private/merchant/receiver-workspace]',
+  ' [--incident-state /private/monitor --incident-merchant REGISTERED_ID]',
   ' [--allow-local-facilitator] [--check]',
   'Explicit operator-run native x402, original SF98 outbox and local fulfillment view.',
 ].join('\n');
 const VALUE = new Set(['--config','--facilitator','--state','--handlers','--upstreams',
-  '--port','--operations-port','--max-in-flight','--drain-grace-ms','--history-dir','--history-days','--availability-dir']);
+  '--port','--operations-port','--max-in-flight','--drain-grace-ms','--history-dir','--history-days','--availability-dir',
+  '--delivery-workspace','--incident-state','--incident-merchant']);
 const SWITCH = new Set(['--check','--allow-loopback-upstream','--allow-local-facilitator']);
 const fail = m => { throw new TypeError(m); };
 
@@ -72,10 +76,22 @@ function cliOptions(args) {
     fail('Absolute normalized private history directory separate from the outbox required');
   if(availabilityDirectory!==undefined && [directory,historyDirectory].includes(availabilityDirectory))
     fail('Use a separate private availability directory');
+  const deliveryWorkspaceDirectory=o.get('--delivery-workspace') ?? null;
+  const incidentDirectory=o.get('--incident-state') ?? null;
+  if(o.has('--incident-state')!==o.has('--incident-merchant') ||
+      o.has('--incident-merchant')&&!idPattern.test(o.get('--incident-merchant')))
+    fail('--incident-state and its registered --incident-merchant ID are required together');
+  for(const path of [deliveryWorkspaceDirectory,incidentDirectory])
+    if(path!==null&&(!isAbsolute(path)||resolve(path)!==path||path==='/'||path.includes('\0')))
+      fail('Absolute normalized private receiver workspace and incident directories required');
+  const directories=[directory,historyDirectory,availabilityDirectory,deliveryWorkspaceDirectory,incidentDirectory].filter(Boolean);
+  if(new Set(directories).size!==directories.length)fail('Use separate private directories for each original service');
   return {
     configPath:resolve(o.get('--config')),stateDirectory:directory,
     historyDirectory,historyRetentionDays:int('--history-days',90,1,365),
     availabilityDirectory,
+    deliveryWorkspaceDirectory,
+    incidentSource:incidentDirectory===null?null:{directory:incidentDirectory,merchantId:o.get('--incident-merchant')},
     handlersPath:o.has('--handlers')?o.get('--handlers'):null,
     upstreamPath:o.has('--upstreams')?resolve(o.get('--upstreams')):null,
     facilitator:url.href.replace(/\/$/,''),check:o.has('--check'),
@@ -128,6 +144,8 @@ export async function main(args=process.argv.slice(2)) {
       facilitatorNotContacted:true,
       usageHistoryEnabled:o.historyDirectory!==undefined,
       availabilityEnabled:o.availabilityDirectory!==undefined,
+      receiverWorkspaceEnabled:o.deliveryWorkspaceDirectory!==null,
+      incidentMonitoringEnabled:o.incidentSource!==null,
       historyRetentionDays:o.historyDirectory===undefined?null:o.historyRetentionDays,
     };
     process.stdout.write(JSON.stringify(info)+'\n');
@@ -161,6 +179,7 @@ export async function main(args=process.argv.slice(2)) {
     operations=await startSellerOperations(seller,{
       port:o.operationsPort,deliveryOutbox:outbox,
       historyDirectory:o.historyDirectory,historyRetentionDays:o.historyRetentionDays,
+      deliveryWorkspaceDirectory:o.deliveryWorkspaceDirectory,incidentSource:o.incidentSource,
     });
   } catch(e) {
     if(operations)await operations.close().catch(()=>{});
@@ -186,6 +205,7 @@ export async function main(args=process.argv.slice(2)) {
     operator:operations.url,fulfillment:operations.url+'/fulfillment',
     availability:operations.availabilityUrl,availabilityControl:operations.availabilityControlUrl,
     fulfillmentControl:operations.deliveryControlUrl,
+    receiverWorkspace:operations.deliveryWorkspaceUrl,
     usageHistory:o.historyDirectory===undefined?null:operations.url+'/api/history',
     privateOriginalOutboxAttached:true,
     webhookDelivery:'OPERATOR_ONLY',
