@@ -110,6 +110,9 @@ async function jobView(root, id) {
   return { id, operation: request.operation, runtimeId: request.runtimeId ?? request.targetId ?? null,
     targetId: request.targetId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null,
     targetDirectory: request.targetDirectory ?? null, createdAt: request.createdAt,
+    contextDirectory: request.contextDirectory ?? null, transferDirectory: request.transferDirectory ?? null,
+    containerDirectory: request.containerDirectory ?? null, reviewId: request.reviewId ?? null,
+    deploymentReviewId: request.deploymentReviewId ?? null,
     ...state, workerActive: active,
     displayPhase: state.phase === 'RUNNING' && !active ? 'INTERRUPTED' : state.phase };
 }

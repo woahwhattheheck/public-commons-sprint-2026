@@ -28,6 +28,19 @@ function selectedFile(input, maximum) {
   return file;
 }
 const fingerprint = value => [value.image?.imageId, value.image?.contextSha256, value.archive?.sha256, value.archive?.bytes].join(':');
+export function imageOperationRecovery(job) {
+  const messages = {
+    image_prepare: 'Open the retained context and Check context. If preparation left an incomplete directory, choose Prepare reviewed context from the same saved review to create a new context directory; the earlier output stays retained.',
+    image_lock: 'Open the retained context and check its dependency lock. Lock dependencies again only if the original lock operation did not finish.',
+    image_check: 'Choose Check context to inspect the same retained artifacts again.',
+    image_build: 'Inspect the retained context, native build journal and worker log. Build / reconcile image checks that same context and its original native build before continuing.',
+    image_status: 'Choose Inspect local image to read the original native image again.',
+    image_export: 'Open the retained export directory. A complete image-bundle.json and image.tar remain available through the transfer. If export is incomplete, choose Export image to save the same immutable image into a new transfer directory; the interrupted export stays retained.',
+    image_import: 'Open this same complete transfer and choose Import exact image. The original engine checks for the existing immutable image before loading it.',
+    image_container: 'Inspect the retained container output and original worker result. Use the original container check before its RUNBOOK. If generation is incomplete, choose Prepare original container bundle from the same saved review to create a new output directory; the earlier output stays retained.',
+  };
+  return messages[job.operation] ?? 'Open the retained operation and its original worker log.';
+}
 export function initImageWorkspace({ root, api, operation, refresh, openLog, message, error, switchView, getState, getToken, getView }) {
   root.innerHTML = '<div class="section-title"><div><p class="eyebrow">ORIGINAL RUNTIME IMAGE</p><h2>Prepare, build and move a merchant image</h2></div><button id="iw-refresh" type="button">Refresh images</button></div>' +
     '<p class="muted">Keep the selected source, dependency lock and immutable image together. Native build and transfer results remain with the existing operation worker.</p>' +
@@ -49,7 +62,7 @@ export function initImageWorkspace({ root, api, operation, refresh, openLog, mes
     '<div class="panel"><h3>Retained image reviews</h3><label>Saved source and profile review<select id="iw-review-select"></select></label><div id="iw-review"></div><button id="iw-prepare" type="button" disabled>Prepare reviewed context</button></div>' +
     '<div class="panel"><h3>Portable images</h3><label>Original export or receiving transfer<select id="iw-transfer-select"></select></label><dl id="iw-transfer-facts" class="paths"></dl><div class="actions"><button id="iw-download-manifest" type="button" disabled>Download image-bundle.json</button><button id="iw-download-image" type="button" disabled>Download image.tar</button><button id="iw-import" type="button" disabled>Import exact image</button></div><div id="iw-transfer-result"></div>' +
     '<details><summary>Open an existing image transfer</summary><form id="iw-transfer-attach"><label>Original transfer directory<input id="iw-transfer-directory" required autocomplete="off" placeholder="/srv/starforge/image-transfer"></label><button type="submit">Open transfer</button></form></details>' +
-    '<details id="iw-receive"><summary>Receive or resume an image from another operator</summary><form id="iw-upload"><label>Original image-bundle.json<input id="iw-manifest-file" type="file" accept=".json,application/json" required></label><label>Original image.tar<input id="iw-tar-file" type="file" accept=".tar,application/x-tar" required></label><div class="actions"><button id="iw-upload-start" type="submit">Receive / resume upload</button><button id="iw-upload-pause" type="button" disabled>Pause upload</button></div><p id="iw-upload-progress" role="status" aria-live="polite" class="note">Uploads use retained 4 MiB chunks and support images up to 16 GiB. Select the same original files to resume after reopening.</p></form></details></div>' +
+    '<details id="iw-receive"><summary>Receive or resume an image from another operator</summary><form id="iw-upload"><label>Original image-bundle.json<input id="iw-manifest-file" type="file" accept=".json,application/json" required></label><label>Original image.tar<input id="iw-tar-file" type="file" accept=".tar,application/x-tar" required></label><div class="actions"><button id="iw-upload-start" type="submit">Receive / resume upload</button><button id="iw-upload-pause" type="button" disabled>Pause upload</button><button id="iw-upload-new" type="button">Start a new receiving transfer</button></div><p id="iw-upload-progress" role="status" aria-live="polite" class="note">Uploads use retained 4 MiB chunks and support images up to 16 GiB. Select the same original files to resume after reopening.</p></form></details></div>' +
     '<div class="panel"><h3>Use the image in an existing merchant container plan</h3><form id="iw-container-review"><label>Built or imported image<select id="iw-container-image" required></select></label><label>Original runtime used by this merchant<select id="iw-container-runtime" required></select></label><label>Original plan type<select id="iw-plan-kind"><option value="host">Existing merchant host plan</option><option value="container">Existing merchant container plan</option></select></label><label>Existing merchant plan<input id="iw-container-plan" required autocomplete="off" placeholder="/srv/starforge/host-plan.json"></label><label>Source mode for a host plan<select id="iw-source-mode"><option value="bind">Bind the selected original source</option><option value="image">Use the source retained in the image</option></select></label><label class="check"><input id="iw-adapt-runtime" type="checkbox" checked>Use this image’s Node/Python paths in a retained host-plan copy</label><label>Selected source root (optional)<input id="iw-container-source" autocomplete="off" placeholder="Use the selected runtime’s source root"></label><button type="submit">Review merchant image selection</button></form><p class="note">The new plan keeps the original merchant configuration and uses this exact image ID and runtime UID/GID. Bind mode includes the selected runtime’s dependency root. The original container generator supplies the operating bundle.</p><label>Retained container review<select id="iw-container-review-select"></select></label><div id="iw-container-result"></div><button id="iw-container-prepare" type="button" disabled>Prepare original container bundle</button></div>';
   const $ = id => root.querySelector('#' + id);
   let data = null, imageId = null, transferId = null, reviewId = null, deploymentReviewId = null;
@@ -159,10 +172,21 @@ export function initImageWorkspace({ root, api, operation, refresh, openLog, mes
     $('iw-download-manifest').disabled = !transfer?.manifest;
     $('iw-download-image').disabled = !transfer?.complete;
     $('iw-import').disabled = !transfer?.complete || !!active || busy;
-    const result = $('iw-transfer-result'), resultSignature = JSON.stringify([transfer?.error, transfer?.observation]);
+    $('iw-upload-new').disabled = !!upload;
+    const result = $('iw-transfer-result'), resultSignature = JSON.stringify([transfer?.error, transfer?.verification, transfer?.observation]);
     if (result.dataset.signature !== resultSignature) {
       result.dataset.signature = resultSignature; result.replaceChildren();
       if (transfer?.error) result.append(el('p', transfer.error.code + ': ' + transfer.error.message));
+      if (transfer?.verification) result.append(detail('Retained archive verification', transfer.verification));
+      if (transfer?.verification?.error) {
+        const recover = el('button', 'Choose files for a new receiving transfer'); recover.type = 'button';
+        recover.addEventListener('click', () => {
+          $('iw-receive').open = true; $('iw-upload-new').scrollIntoView({ block: 'center' });
+          $('iw-upload-progress').textContent = 'Select the correct original manifest and archive, then choose Start a new receiving transfer. The failed transfer and its verification result remain retained.';
+          $('iw-manifest-file').focus();
+        });
+        result.append(recover);
+      }
       if (transfer?.observation) result.append(detail('Original import result', transfer.observation));
     }
     const imageChoices = [...data.images.filter(x => x.imageId).map(x => ({ id: 'image:' + x.id, label: x.label + ' · built image' })),
@@ -191,12 +215,17 @@ export function initImageWorkspace({ root, api, operation, refresh, openLog, mes
     if (currentJob) {
       $('iw-progress-title').textContent = currentJob.operation.replaceAll('_', ' ') + ' · ' + currentJob.displayPhase;
       $('iw-progress-detail').textContent = currentJob.id + (currentJob.error ? ' · ' + currentJob.error.code + ': ' + currentJob.error.message : '');
-      const resultRoot = $('iw-operation-result'), value = JSON.stringify(currentJob.result ?? null);
+      const resultRoot = $('iw-operation-result'), value = JSON.stringify([currentJob.id, currentJob.displayPhase,
+        currentJob.result, currentJob.contextDirectory, currentJob.transferDirectory, currentJob.containerDirectory]);
       if (resultRoot.dataset.result !== value) {
         resultRoot.dataset.result = value; resultRoot.replaceChildren();
+        const paths = [['Retained context', currentJob.contextDirectory], ['Retained transfer', currentJob.transferDirectory],
+          ['Retained container output', currentJob.containerDirectory], ['Saved image review', currentJob.reviewId],
+          ['Saved merchant review', currentJob.deploymentReviewId]].filter(([, path]) => path);
+        if (paths.length) { const dl = el('dl', undefined, 'paths'); facts(dl, paths); resultRoot.append(dl); }
         if (currentJob.result) resultRoot.append(detail('Original retained operation result', currentJob.result));
         if (currentJob.displayPhase === 'INTERRUPTED')
-          resultRoot.append(el('p', 'The worker ended. The context and native build journal remain. Inspect the original image or choose Build / reconcile to continue that context.', 'note'));
+          resultRoot.append(el('p', imageOperationRecovery(currentJob), 'note'));
       }
       if (getView() === 'images') {
         const activeScope = scope(), selectedJob = currentJob.id;
@@ -270,26 +299,32 @@ export function initImageWorkspace({ root, api, operation, refresh, openLog, mes
     const result = await api('/api/images/download', { transferId, file });
     const link = el('a'); link.href = result.url; link.download = file; root.append(link); link.click(); link.remove();
   });
-  form($('iw-upload'), async () => {
+  async function uploadFiles({ newTransfer = false } = {}) {
     if (upload) return;
     const activeScope = scope(), manifestFile = selectedFile($('iw-manifest-file'), 32768);
     const manifest = JSON.parse(await manifestFile.text()), file = selectedFile($('iw-tar-file'), 16 * 1024 * 1024 * 1024);
     if (file.size !== manifest.archive?.bytes) throw new Error('The selected image.tar size differs from the original manifest.');
-    upload = new AbortController(); $('iw-upload-pause').disabled = false; $('iw-upload-start').disabled = true;
+    const controller = new AbortController(); upload = controller;
+    $('iw-upload-pause').disabled = false; $('iw-upload-start').disabled = true; $('iw-upload-new').disabled = true;
     const current = selectedTransfer(), mark = fingerprint(manifest);
     const key = 'starforge-runtime-image-upload-' + workspaceId;
     try {
-      let selected;
-      if (current?.receiving && fingerprint(current.manifest) === mark) selected = { transferId: current.id, transfer: current };
-      else {
-        let pending; try { pending = JSON.parse(sessionStorage.getItem(key) ?? 'null'); } catch {}
-        if (!pending || pending.fingerprint !== mark) pending = { requestId: crypto.randomUUID(), fingerprint: mark };
+      let selected, pending; try { pending = JSON.parse(sessionStorage.getItem(key) ?? 'null'); } catch {}
+      const matchingCurrent = current?.receiving && fingerprint(current.manifest) === mark;
+      const matchingPending = pending?.fingerprint === mark;
+      if (newTransfer || !matchingPending && !matchingCurrent) {
+        pending = { requestId: crypto.randomUUID(), fingerprint: mark };
         sessionStorage.setItem(key, JSON.stringify(pending));
+      } else if (!matchingPending) pending = null;
+      if (pending) {
         selected = await api('/api/images/transfer', { requestId: pending.requestId, manifest, label: manifest.image?.localTag });
-        sessionStorage.removeItem(key);
+      } else {
+        if (current.verification?.error) throw new Error(current.verification.error.message);
+        selected = { transferId: current.id, transfer: current };
       }
       if (scope() !== activeScope) return;
       transferId = selected.transferId; save();
+      if (pending) sessionStorage.removeItem(key);
       let offset = selected.transfer.receivedBytes ?? 0;
       if (selected.transfer.complete) { message('This exact original image is already received. Its native import remains available.'); return; }
       while (offset < file.size || offset === file.size && !selected.transfer.complete) {
@@ -298,7 +333,7 @@ export function initImageWorkspace({ root, api, operation, refresh, openLog, mes
         $('iw-upload-progress').textContent = 'Receiving ' + size(offset) + ' of ' + size(file.size) + ' · retained transfer ' + transferId;
         const response = await fetch('/api/images/upload?' + new URLSearchParams({ transferId, offset: String(offset) }), {
           method: 'POST', headers: { 'content-type': 'application/octet-stream', 'x-runtime-workspace-token': getToken() },
-          body: file.slice(offset, stop), signal: upload.signal });
+          body: file.slice(offset, stop), signal: controller.signal });
         const result = await response.json();
         if (scope() !== activeScope) throw new DOMException('Workspace changed', 'AbortError');
         if (!response.ok) throw Object.assign(new Error(result.message ?? result.error), { code: result.error });
@@ -310,11 +345,22 @@ export function initImageWorkspace({ root, api, operation, refresh, openLog, mes
     } catch (value) {
       if (value.name === 'AbortError') {
         if (scope() === activeScope) $('iw-upload-progress').textContent = 'Upload paused. Select the same original files to resume at the retained byte offset.';
-      } else throw value;
+      } else {
+        if (scope() === activeScope) $('iw-upload-progress').textContent = value.message;
+        throw value;
+      }
     } finally {
-      upload = null; $('iw-upload-pause').disabled = true; $('iw-upload-start').disabled = false;
-      if (scope() === activeScope) await refreshImages(true);
+      if (upload === controller) upload = null;
+      if (scope() === activeScope) {
+        $('iw-upload-pause').disabled = true; $('iw-upload-start').disabled = false; $('iw-upload-new').disabled = false;
+        await refreshImages(true);
+      }
     }
+  }
+  form($('iw-upload'), () => uploadFiles());
+  action($('iw-upload-new'), async () => {
+    if (!$('iw-upload').reportValidity()) return;
+    await uploadFiles({ newTransfer: true });
   });
   $('iw-upload-pause').addEventListener('click', () => upload?.abort());
   form($('iw-container-review'), async () => {
