@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tenderly customer analysis · Stellar Forge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
+<body><header class="topbar"><div><strong>STELLAR FORGE</strong><span class="divider">/</span><span>Tenderly customer analysis</span></div><span class="tag">LOCAL WORKSPACE</span></header>
+<div id="notice" class="notice" role="status" hidden></div>
+<div class="layout"><aside><div class="aside-head"><h2>Received simulations</h2><button id="receive-open" type="button">Receive</button></div>
+<p class="hint">Open a completed delivery to inspect its execution and compare retained results.</p><nav id="captures" aria-label="Received simulations"></nav>
+<section class="aside-foot"><button id="refresh" type="button">Refresh workspace</button><p id="capture-count" class="hint"></p></section></aside>
+<main id="main"><section class="empty"><p class="eyebrow">CUSTOMER RESULTS</p><h1>Turn a saved simulation into a review.</h1>
+<p>Receive the original Tenderly response, inspect what the transaction did, and compare it with another retained result.</p><button class="primary" id="empty-receive">Receive a saved simulation</button>
+<div class="empty-steps"><div><strong>1. Receive</strong><p>Select the response and its original request. Attach the buyer result when available.</p></div><div><strong>2. Examine</strong><p>Review the exact execution context, calls, events and state changes.</p></div><div><strong>3. Compare and export</strong><p>Keep your notes with the selected results and download the review.</p></div></div></section></main></div>
+<dialog id="receive-dialog"><form id="receive-form"><header class="dialog-head"><div><p class="eyebrow">RECEIVE RESULTS</p><h2>Saved simulation</h2></div><button type="button" data-close="receive-dialog" aria-label="Close">×</button></header>
+<label>Response JSON <span class="required">required</span><input name="response" type="file" accept=".json,application/json" required><small>The exact response.json exported by the merchant or original buyer.</small></label>
+<label>Simulation request<input name="request" type="file" accept=".json,application/json"><small>Use simulation-request.json to retain the requested network, block and transaction index.</small></label>
+<label>Original buyer result<input name="buyerResult" type="file" accept=".json,application/json"><small>Its saved-file size and SHA-256 are checked against the selected response.</small></label>
+<label>Label<input name="label" maxlength="160" placeholder="For example, baseline approval at block 16533883"></label>
+<details><summary>Merchant response envelope</summary><label>Provider object pointer<input name="payloadPointer" maxlength="2048" placeholder="Leave empty for the original Tenderly response"><small>Use an explicit JSON pointer such as /result only when the merchant wraps the provider object.</small></label></details>
+<footer class="dialog-actions"><button type="button" data-close="receive-dialog">Cancel</button><button class="primary" id="receive-submit" type="submit">Receive simulation</button></footer></form></dialog>
+<dialog id="review-dialog"><form id="review-form"><header class="dialog-head"><div><p class="eyebrow">SAVE REVIEW</p><h2>Retain this analysis</h2></div><button type="button" data-close="review-dialog" aria-label="Close">×</button></header>
+<p id="review-selection" class="hint"></p><label>Review title<input id="review-title" maxlength="160" required></label><label>Notes<textarea id="review-notes" rows="8" maxlength="20000" placeholder="Record the interpretation, material changes and decisions for this review."></textarea></label>
+<footer class="dialog-actions"><button type="button" data-close="review-dialog">Cancel</button><button class="primary" type="submit">Save review</button></footer></form></dialog>
+<dialog id="source-dialog" class="source-dialog"><header class="dialog-head"><div><p class="eyebrow">ORIGINAL RESPONSE</p><h2>Source record</h2></div><button type="button" data-close="source-dialog" aria-label="Close">×</button></header><code id="source-pointer"></code><pre id="source-json"></pre></dialog>
+</body></html>
