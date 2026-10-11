@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.seller-upstreams.v1",
+  "bindings": {
+    "telemetryEvents": {
+      "origin": "http://127.0.0.1:8425",
+      "path": "/v1/metrics/events",
+      "method": "GET",
+      "query": ["count", "intervalMs"],
+      "responseMode": "sse",
+      "timeoutMs": 10000,
+      "maxInFlight": 16,
+      "stream": {"maxBytes": 67108864, "maxDurationMs": 60000, "idleTimeoutMs": 10000},
+      "availability": {"failureThreshold": 3, "resetAfterMs": 30000, "maxResetAfterMs": 300000}
+    },
+    "telemetryRecords": {
+      "origin": "http://127.0.0.1:8425",
+      "path": "/v1/metrics/records",
+      "method": "POST",
+      "responseMode": "ndjson",
+      "timeoutMs": 10000,
+      "maxInFlight": 16,
+      "stream": {"maxBytes": 67108864, "maxDurationMs": 60000, "idleTimeoutMs": 10000},
+      "availability": {"failureThreshold": 3, "resetAfterMs": 30000, "maxResetAfterMs": 300000}
+    }
+  }
+}

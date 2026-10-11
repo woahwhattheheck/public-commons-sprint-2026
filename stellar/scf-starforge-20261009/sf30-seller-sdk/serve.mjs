@@ -13,6 +13,7 @@ import { readJsonResponseFile, validateResponseFile } from './response-file.mjs'
 import { createSellerDeveloperPortal } from './developer-portal.mjs';
 import { createSellerLifecycle } from './lifecycle.mjs';
 import { createSellerAvailability } from './availability/gate.mjs';
+import { validateMaxStreamBytes } from './stream-response.mjs';
 import { validateAvailabilityDirectory } from './availability/store.mjs';
 import { compileHttpSellerOffer } from './seller.mjs';
 import { responseAssetLimits, validateResponseAssetRoute, prepareResponseAssets,
@@ -42,6 +43,7 @@ function validateConfig(config) {
   validateAdmissionTimeout(config.admissionTimeoutMs ?? 2000);
   validateHandlerTimeout(config.handlerTimeoutMs ?? 30000);
   validateRequestTimeout(config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS);
+  validateMaxStreamBytes(config.maxStreamBytes);
   responseAssetLimits(config);
   const seen = new Set();
   for (const route of config.routes) {
@@ -183,6 +185,8 @@ export async function startSellerService({ config, port = 8423, handlers = {},
     const nativeServer = nativeFactory ? await nativeFactory(compiled) : null;
     if (nativeFactory && !nativeServer) throw new TypeError('Native factory did not return a resource server');
     const resources = createSellerResourceHandler({ compiled, nativeServer, maxResponseBytes,
+      maxRequestBytes: config.maxRequestBytes,
+      maxStreamBytes: config.maxStreamBytes,
       admissionTimeoutMs: config.admissionTimeoutMs ?? 2000,
       handlerTimeoutMs: config.handlerTimeoutMs ?? 30000, requestTimeoutMs: totalTimeout });
     const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';

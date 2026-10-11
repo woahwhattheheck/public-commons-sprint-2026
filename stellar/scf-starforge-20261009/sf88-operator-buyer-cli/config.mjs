@@ -5,6 +5,7 @@ import { normalizeBuyerTransport } from '../sf31-buyer-client/public-transport.m
 import { operationTicketReference } from './operation-ticket.mjs';
 import { normalizeOperationHeaders } from './request-headers.mjs';
 import { validateResponseFileIntegrity } from '../sf31-buyer-client/response-file.mjs';
+import { normalizeResponseStream, responseStreamContentType } from '../sf31-buyer-client/response-stream.mjs';
 
 export class InputError extends Error {
   constructor(code) { super(code); this.code = code; this.name = 'InputError'; }
@@ -34,9 +35,10 @@ export async function config(path) {
   catch { throw new InputError('CONFIG_JSON_INVALID'); }
   shape(value, ['catalog','operation','operator','signerModule','evidenceDir',
     'trustedPayer','captureBody','bodyCaptureTimeoutMs','responseFile','preparedFrom',
-    'buyerTransport'], 'INVALID_CONFIG_FIELDS');
+    'buyerTransport','requestTimeoutMs'], 'INVALID_CONFIG_FIELDS');
   if (value.preparedFrom !== undefined) preparedFrom(value.preparedFrom);
   buyerTransport(value);
+  if (value.requestTimeoutMs !== undefined) requestTimeoutMs(value, null);
   return value;
 }
 export function buyerTransport(c) {
@@ -65,7 +67,7 @@ export function preparedFrom(x) {
 export function responseFile(c) {
   if (c.responseFile === undefined) return null;
   const x = shape(c.responseFile, ['destination','maxBytes','timeoutMs',
-    'expectedSha256','expectedBytes','expectedContentType'], 'INVALID_RESPONSE_FILE');
+    'expectedSha256','expectedBytes','expectedContentType','stream'], 'INVALID_RESPONSE_FILE');
   abs(x.destination, 'RESPONSE_FILE_PATH_NOT_ABSOLUTE');
   need(c.captureBody === undefined || c.captureBody === false,
     'RESPONSE_FILE_REQUIRES_CAPTURE_BODY_FALSE');
@@ -75,7 +77,20 @@ export function responseFile(c) {
   need(Number.isInteger(timeoutMs) && timeoutMs >= 1 && timeoutMs <= 2147483647,
     'RESPONSE_FILE_TIMEOUT_INVALID');
   const pins = validateResponseFileIntegrity(x, maxBytes);
-  return { destination:x.destination, maxBytes, timeoutMs, ...pins };
+  if (x.stream !== undefined) need(timeoutMs <= 300000, 'RESPONSE_STREAM_TRANSPORT_TIMEOUT_LIMIT');
+  const stream = x.stream === undefined ? null : normalizeResponseStream(x.stream);
+  if (stream && pins.expectedContentType !== undefined)
+    need(responseStreamContentType(stream.format, pins.expectedContentType), 'BAD_RESPONSE_STREAM_EXPECTED_TYPE');
+  return { destination:x.destination, maxBytes, timeoutMs, ...pins,
+    ...(stream === null ? {} : {stream}) };
+}
+/** One HTTP exchange, including DNS, TLS, headers and body consumption. */
+export function requestTimeoutMs(c, download = responseFile(c)) {
+  const selected = c.requestTimeoutMs === undefined
+    ? (download?.stream ? download.timeoutMs : 30000) : c.requestTimeoutMs;
+  need(Number.isSafeInteger(selected) && selected >= 1 && selected <= 300000,
+    'REQUEST_TIMEOUT_INVALID');
+  return selected;
 }
 export function catalog(x) {
   shape(x, ['origin','query','filters','limit','offset','sandboxGatewayIPv4'], 'INVALID_CATALOG');
@@ -115,7 +130,7 @@ export function operation(x) {
   if (e.maxTimeoutSeconds !== undefined)
     need(Number.isInteger(e.maxTimeoutSeconds) && e.maxTimeoutSeconds >= 1 &&
       e.maxTimeoutSeconds <= 86400, 'MAX_TIMEOUT_INVALID');
-  if (e.paymentFlow !== undefined) need(e.paymentFlow === 'authorization', 'PAYMENT_FLOW_UNSUPPORTED');
+  if (e.paymentFlow !== undefined) need(['authorization','upfront'].includes(e.paymentFlow), 'PAYMENT_FLOW_UNSUPPORTED');
   if (x.bodyFile !== undefined) {
     abs(x.bodyFile, 'BODY_PATH_MUST_BE_ABSOLUTE');
     need(!['GET','HEAD'].includes(method), 'BODY_DISALLOWED_FOR_METHOD');
@@ -156,5 +171,7 @@ export function execution(x) {
   if (x.bodyCaptureTimeoutMs !== undefined)
     need(Number.isInteger(x.bodyCaptureTimeoutMs) && x.bodyCaptureTimeoutMs >= 1 &&
       x.bodyCaptureTimeoutMs <= 60000, 'BODY_TIMEOUT_INVALID');
-  return { op, owner, download:responseFile(x), transport:buyerTransport(x) };
+  const download = responseFile(x);
+  return { op, owner, download, transport:buyerTransport(x),
+    requestTimeoutMs:requestTimeoutMs(x, download) };
 }

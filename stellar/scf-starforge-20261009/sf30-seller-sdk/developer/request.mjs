@@ -36,8 +36,11 @@ export function buildUnpaidRequest(operation, values, browserOrigin) {
   const advertised = new URL(offer.resource.url);
   const publicUrl = new URL(local.pathname + local.search, advertised.origin);
   if (local.href.length > 2048 || publicUrl.href.length > 2048) throw new RangeError('Request URL exceeds the seller 2048-character limit');
-  const init = { method: route.method, credentials: 'omit', redirect: 'error', cache: 'no-store', headers: { accept: 'application/json' } };
+  const resourceType=String(offer.resource.mimeType ?? '').split(';')[0].trim().toLowerCase();
+  const accept=['text/event-stream','application/x-ndjson','application/ndjson'].includes(resourceType) ? resourceType : 'application/json';
+  const init = { method: route.method, credentials: 'omit', redirect: 'error', cache: 'no-store', headers: { accept } };
   let command = `curl --include --max-time 15${route.method === 'HEAD' ? ' --head' : ' --request ' + route.method} ` + quote(publicUrl.href);
+  if(accept!=='application/json')command += " \\\n  --header " + quote('Accept: '+accept);
   if (jsonBodyMethods.has(route.method)) {
     if (typeof values.body !== 'string') throw new TypeError('JSON body text required');
     JSON.parse(values.body);

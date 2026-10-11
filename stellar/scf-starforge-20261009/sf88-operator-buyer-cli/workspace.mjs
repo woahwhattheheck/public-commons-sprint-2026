@@ -5,7 +5,7 @@ import { constants } from 'node:fs';
 import { access, lstat, mkdir, open, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { abs, buyerTransport, config, execution, need, operation, operator, InputError } from './config.mjs';
+import { abs, buyerTransport, config, execution, need, operation, operator, requestTimeoutMs, InputError } from './config.mjs';
 import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
 import { checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
@@ -182,7 +182,8 @@ export async function initializeWorkspace(args, { environment = process.env } = 
   const configuredBytes = Buffer.from(json(cfg));
   need(configuredBytes.length <= 65536, 'WORKSPACE_CONFIG_TOO_LARGE');
   const signerPins = {network:op.expect.network, asset:op.expect.asset, payTo:op.expect.payTo,
-    maxAtomic:maximum, expectedPayer:payer, secretEnv, signerProvider, rpcUrl:opt['--rpc']};
+    maxAtomic:maximum, expectedPayer:payer, secretEnv, signerProvider, rpcUrl:opt['--rpc'],
+    paymentFlow:op.expect.paymentFlow ?? 'authorization'};
   const {validateNativeSignerConfiguration, inspectSignerProvider} = await import('./native-signer.mjs');
   signerPins.rpcUrl = validateNativeSignerConfiguration(signerPins).rpcUrl;
   if (signerProvider !== undefined) await inspectSignerProvider(signerProvider);
@@ -222,7 +223,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
       operatorKeySource:keySet.source, walletKeyEnvironment:secretEnv,
       operationTicket:operationTicketView(ticket),
       signerSource:signerProvider === undefined ? 'ENVIRONMENT' : 'TRUSTED_SEP43_PROVIDER',
-      buyerTransport:transport, walletKeyStored:false, policy, ledger,
+      buyerTransport:transport, requestTimeoutMs:requestTimeoutMs(cfg), walletKeyStored:false, policy, ledger,
       commands:{review:[process.execPath, cliPath, '--review-workspace', '--dir', directory],
         execute:[process.execPath, cliPath, '--execute-workspace', '--dir', directory]}};
   } catch (error) {
@@ -269,6 +270,7 @@ export async function openWorkspace(args, { execute = false, accounting = false,
   need(schemaObject(manifest.signer) && manifest.signer.network === op.expect.network &&
     manifest.signer.asset === op.expect.asset && manifest.signer.payTo === op.expect.payTo &&
     manifest.signer.expectedPayer === cfg.trustedPayer &&
+    (manifest.signer.paymentFlow ?? 'authorization') === (op.expect.paymentFlow ?? 'authorization') &&
     BigInt(amount(op.expect.maxAtomic, 'WORKSPACE_SINGLE_AMOUNT_INVALID')) <=
       BigInt(amount(manifest.signer.maxAtomic, 'WORKSPACE_SIGNER_CAP_INVALID')),
     'WORKSPACE_SIGNER_BINDING_CHANGED');
@@ -341,7 +343,8 @@ export async function diagnoseWorkspace(args, {environment = process.env} = {}) 
   return {mode:'OPERATOR_WORKSPACE_DIAGNOSTICS', status:ready ? 'READY_TO_EXECUTE' : 'SETUP_REQUIRED',
     directory:manifest.directory, network:pins.network, payer:pins.expectedPayer,
     signerSource:provider === undefined ? 'ENVIRONMENT' : 'TRUSTED_SEP43_PROVIDER',
-    rpcOrigin:new URL(pins.rpcUrl).origin, buyerTransport:buyerTransport(workspace.config), sdk, checks,
+    rpcOrigin:new URL(pins.rpcUrl).origin, buyerTransport:buyerTransport(workspace.config),
+    requestTimeoutMs:requestTimeoutMs(workspace.config), sdk, checks,
     next:ready ? 'Review the operation, then use --execute-workspace for original terminal approval.' :
       'Resolve the listed runtime requirements and diagnose this same workspace again.'};
 }

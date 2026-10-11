@@ -89,6 +89,13 @@ diagnostic does not assert successful RPC access or signer initialization.
 
 The adapter permits the configured `stellar:testnet` or `stellar:pubnet` exact scheme. It checks the complete accepted requirement against the original challenge and SF31 approved intent, including resource identity, fee sponsorship, atomic amount, asset, recipient and timeout. The operator cap and the intent cap are both enforced. The challenge must contain exactly one copy of the selected option.
 
+The workspace also pins the operation's selected payment flow. Omitted
+`expect.paymentFlow` selects `authorization`; an upfront offer requires the
+explicit value `upfront`. The generated signer retains that value as
+`configuration.paymentFlow`, and the SF88 and SF103 adapters compare it to the
+same complete accepted requirement before native payment construction. Existing
+workspace manifests without this field continue to select authorization.
+
 The shared SF103 engine configures the original `x402Client` with `ExactStellarScheme`, the exact approved network registration, an exact-option selector and the approved asset-specific atomic spend control. It passes the original challenge to `createPaymentPayload`. The SDK performs Stellar simulation and authorization signing when the operator executes; the adapter returns its unchanged canonical envelope. The same SF88 signer instance refuses a second signing attempt for the same intent ID, including after failure. Separate approved intents continue to use the original durable SF36 budget and reservations. No payment-aware fetch wrapper or additional merchant request is introduced.
 
 `SIGNER_*` errors identify invalid local configuration, provider initialization or quote drift. `OFFICIAL_STELLAR_SDK_UNAVAILABLE` means the dependencies cannot be imported from the source module. `OFFICIAL_STELLAR_SDK_VERSION_MISMATCH` reports a different installed version; `OFFICIAL_STELLAR_SDK_INCOMPATIBLE` means the installed API lacks the required exports. The shared engine's `NATIVE_PAYMENT_CREATION_FAILED` identifies simulation/signing failure without placing private account material or raw transaction data in the CLI error. Preserve the original SF81 reservation after any failure; use the existing reconciliation path before another operation.
