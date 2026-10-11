@@ -17,6 +17,8 @@ Features and versions come from the selected original merchant distribution.
 Repeated --feature/--pin options select independent features/packages.
 --operator includes the original Linux/Python/flock host requirements.
 --load imports the selected installed entries in one isolated Node process.
+Declared SQLite readiness always operates an isolated in-memory database, including
+without --load, so importing an unbuilt native module cannot report READY.
 create saves profile.json and package.json. It does not invoke npm.`;
 function options(args, allowed, flags = []) {
   const values = { features: [], pins: {} };
