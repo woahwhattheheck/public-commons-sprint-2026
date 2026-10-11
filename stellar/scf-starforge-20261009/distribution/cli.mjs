@@ -26,6 +26,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   handoff     Captured challenge -> review    support     Private seller support case
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
+  mcp-stdio                                  Run the original buyer as an MCP subprocess
+  mcp-client-config                          Prepare a private buyer MCP host registration
+  merchant-mcp-stdio                         Run the original merchant as an MCP subprocess
+  merchant-mcp-client-config                 Prepare a private merchant MCP host registration
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
