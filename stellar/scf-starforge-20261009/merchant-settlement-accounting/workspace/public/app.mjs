@@ -7,13 +7,14 @@ const short = value => typeof value === 'string' && value.length > 22 ? value.sl
 const date = value => value ? new Date(value).toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'}) : 'Not recorded';
 const network = value => ({'stellar:testnet':'Stellar testnet','stellar:pubnet':'Stellar public network'}[value] || shown(value));
 const friendly = value => String(value ?? '').toLowerCase().replace(/_/g, ' ').replace(/^./, char => char.toUpperCase());
-const classification = value => ({OFFICIAL_TRANSFER_MATCHED:'Official transfer match',NATIVE_SUCCESS_UNVERIFIED:'Awaiting transfer verification',REUSED_TRANSACTION_UNVERIFIED:'Reused transaction',WEBHOOK_ACCEPTED_NOT_FULFILLED:'Webhook acknowledged',DELIVERY_EXHAUSTED:'Delivery exhausted',DELIVERY_RETRY:'Delivery retry',DELIVERY_REQUEUED:'Delivery requeued',NOT_DELIVERED:'Not delivered'}[value] || friendly(value));
+const classification = value => ({OFFICIAL_TRANSFER_MATCHED:'Official transfer match',NATIVE_SUCCESS_UNVERIFIED:'Awaiting transfer verification',REUSED_TRANSACTION_UNVERIFIED:'Reused transaction',WEBHOOK_ACCEPTED_NOT_FULFILLED:'Webhook acknowledged',DELIVERY_EXHAUSTED:'Delivery exhausted',DELIVERY_RETRY:'Delivery retry',DELIVERY_REQUEUED:'Delivery requeued',NOT_DELIVERED:'Not delivered',RECOVERED_RESPONSE_SAVED:'Original response retained',RECOVERED_RESPONSE_NOT_RETAINED:'Original response absent'}[value] || friendly(value));
 const badge = (value, label = friendly(value)) => '<span class="badge" title="' + esc(value) + '">' + esc(label) + '</span>';
 const endpoint = value => encodeURIComponent(value);
 const LIMIT = 50;
 let state = null, selectedRun = '', selectedReport = null, view = 'ledger';
 let records = {items:[], total:0, offset:0, limit:LIMIT}, selectedKey = null, recordRequest = 0, runRequest = 0;
 let comparison = null, compareRequest = 0, busy = false, pollTimer = null, pendingIntent = null, runLimit = 30;
+let recoveryOffset = 0, recoverySelection = '', recoveryJobLimit = 20, recoverySearch = '';
 const drafts = new Map();
 const fieldLabels = {
   eventId:'Event ID',at:'Event time',routeId:'Route',method:'Method',network:'Network',amountAtomic:'Atomic amount per event',
@@ -28,7 +29,15 @@ const fieldLabels = {
   unresolvedTermsEvents:'Unresolved terms',nativeAmountAtomic:'Native reported atomic total',officialMatchedAmountAtomic:'Matched atomic total',
   reason:'Native exception',source:'Source',name:'File name',path:'Captured file path',sha256:'SHA-256',bytes:'Bytes',schema:'Original schema',
   verdict:'Original verdict',eligibility:'Original eligibility decision',duplicateOfOriginal:'Identical to original directory file',
-  createdAt:'Imported',actor:'Operator',included:'Included in future runs',id:'Retained file ID'
+  createdAt:'Imported',actor:'Operator',included:'Included in future runs',id:'Retained file ID',
+  origin:'Original source type',timeBasis:'Event time basis',recoveryId:'Recovered payment ID',
+  recoveredEntryDigest:'Recovered entry digest',recoveredResponseSha256:'Retained response SHA-256',
+  recoveredResponseBytes:'Retained response bytes',recoveredSettlements:'Recovered settlements',
+  recoveredResponseFiles:'Recovered response files',recoveredAmountAtomic:'Recovered atomic total',
+  entrySha256:'Original entry SHA-256',sourceBinding:'Original source binding',requestBody:'Retained request body',
+  response:'Original delivered response',verification:'Original transfer verification',sources:'Retained original files',
+  payerDigest:'Payer digest',receiptFingerprintEncoding:'Receipt fingerprint encoding',reservation:'Reservation source',
+  outbox:'Native outbox source',rpcEndpoint:'Original RPC endpoint',nextOperation:'Original next operation'
 };
 const label = key => fieldLabels[key] || key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^./, char => char.toUpperCase());
 const values = object => '<dl class="record-values">' + Object.entries(object).filter(([key]) => key !== 'review').map(([key, value]) => '<dt>' + esc(label(key)) + '</dt><dd class="' + (/(?:Id|Digest|Fingerprint|Atomic|Sha256)$/.test(key) ? 'mono' : '') + '">' + esc(key === 'network' ? network(value) : shown(value)) + '</dd>').join('') + '</dl>';
@@ -56,7 +65,7 @@ function operator() {
 }
 function remember(key, value) { try { localStorage.setItem('merchant-accounting.' + key, value); } catch {} }
 function remembered(key) { try { return localStorage.getItem('merchant-accounting.' + key) || ''; } catch { return ''; } }
-function keyOf(row, kind = view) { return kind === 'exceptions' ? row.id : kind === 'ledger' ? row.eventId : kind === 'options' ? row.optionId : row.sha256 + ':' + row.source + ':' + row.name; }
+function keyOf(row, kind = view) { return kind === 'exceptions' ? row.id : kind === 'ledger' ? row.eventId : kind === 'options' ? row.optionId : kind === 'recovered' ? row.recoveryId : row.sha256 + ':' + row.source + ':' + row.name; }
 function reviewDraftKey(runId, id) { return runId + ':' + id; }
 function currentRecord() { return records.items.find(row => keyOf(row) === selectedKey); }
 function selectOptions(element, items, preferred) {
@@ -72,19 +81,24 @@ function updateButtons() {
   $('export-button').disabled = busy || !state?.runs.some(run => run.status === 'complete');
   $('reapply-conflict').disabled = busy || !pendingIntent?.reloaded;
   $('reload-conflict').disabled = busy;
+  const connected = Boolean(state?.recovery?.directory);
+  $('recovery-refresh').disabled = $('recovery-disconnect').disabled = busy || !connected;
+  $('recovery-import').disabled = busy || !connected || !$('recovery-preview-select').value || recoveryActive();
+  for (const button of document.querySelectorAll('[data-recovery-cancel]')) button.disabled = busy || button.dataset.requested === 'true';
+  for (const button of document.querySelectorAll('[data-recovery-retry]')) button.disabled = busy || !connected || recoveryActive();
   document.body.classList.toggle('working', busy);
 }
 
 function renderRuns() {
   const search = $('run-search').value.trim().toLowerCase();
   const all = state.runs.filter(run => !search || [run.name,run.actor,run.id].some(value => value.toLowerCase().includes(search)));
-  $('run-list').innerHTML = all.slice(0, runLimit).map(run => '<button type="button" data-run="' + esc(run.id) + '" class="' + (run.id === selectedRun ? 'selected' : '') + '"' + (run.id === selectedRun ? ' aria-current="true"' : '') + '><strong>' + esc(run.name) + '</strong><span>' + esc(date(run.createdAt)) + '</span><span>' + esc(friendly(run.status)) + (run.status === 'complete' ? ' · ' + esc(run.totals.nativeSuccessEvents) + ' events' : '') + '</span></button>').join('') || '<p class="hint">' + (search ? 'No matching reconciliations.' : 'Your retained reconciliations will appear here.') + '</p>';
+  $('run-list').innerHTML = all.slice(0, runLimit).map(run => '<button type="button" data-run="' + esc(run.id) + '" class="' + (run.id === selectedRun ? 'selected' : '') + '"' + (run.id === selectedRun ? ' aria-current="true"' : '') + '><strong>' + esc(run.name) + '</strong><span>' + esc(date(run.createdAt)) + '</span><span>' + esc(friendly(run.status)) + (run.status === 'complete' ? ' · ' + esc(run.totals.nativeSuccessEvents) + ' native' + (run.totals.recoveredSettlements === undefined ? '' : ' · ' + esc(run.totals.recoveredSettlements) + ' recovered') : '') + '</span></button>').join('') || '<p class="hint">' + (search ? 'No matching reconciliations.' : 'Your retained reconciliations will appear here.') + '</p>';
   $('run-more').hidden = all.length <= runLimit;
   $('run-more').textContent = 'Show more (' + Math.max(0, all.length - runLimit) + ' remaining)';
   $('state-version').textContent = 'Saved revision ' + state.revision + ' · ' + state.runs.length + ' retained runs';
 }
 function renderSources() {
-  const names = {outboxDir:'Native merchant journal',proofDir:'Original verification files',termsFile:'Original accounting terms'};
+  const names = {outboxDir:'Native merchant journal',proofDir:'Original verification files',termsFile:'Original accounting terms',recoveredDir:'Recovered payment collection'};
   $('source-paths').innerHTML = Object.entries(state.sources).map(([key,value]) => '<dt>' + esc(names[key] || key) + '</dt><dd class="mono">' + esc(value) + '</dd>').join('');
   const terms = [['source','Original source terms'],...state.termsImports.map(item => [item.id,item.name + ' · ' + item.options + ' options · ' + date(item.createdAt)])];
   selectOptions($('terms-selection'), terms, $('terms-selection').dataset.dirty === 'true' ? $('terms-selection').value : state.termsSelection);
@@ -111,7 +125,7 @@ function adopt(next) {
   if (state && next.revision < state.revision) return;
   state = next;
   if (!state.runs.some(run => run.id === selectedRun)) selectedRun = state.runs[0]?.id || '';
-  renderRuns(); renderSources(); renderSelectors(); renderExports(); updateButtons();
+  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); updateButtons();
   schedulePoll();
 }
 function renderRun() {
@@ -131,7 +145,10 @@ function renderRun() {
   $('run-review-summary').hidden = !complete;
   if (!complete) return;
   const total = selectedReport.totals, reviews = selectedReport.reviewCounts;
-  $('run-metrics').innerHTML = metrics([['Native events',total.nativeSuccessEvents],['Official transfer matches',total.officialTransferMatches],['Need reconciliation',total.requiringReconciliation],['Webhook acknowledgements',total.webhookAccepted]]);
+  const totals = [['Native events',total.nativeSuccessEvents],['Official transfer matches',total.officialTransferMatches],['Need reconciliation',total.requiringReconciliation],['Webhook acknowledgements',total.webhookAccepted]];
+  if (total.recoveredSettlements !== undefined) totals.splice(1,0,['Recovered settlements',total.recoveredSettlements]);
+  if (total.recoveredResponseFiles !== undefined) totals.push(['Recovered response files',total.recoveredResponseFiles]);
+  $('run-metrics').innerHTML = metrics(totals);
   $('run-review-summary').textContent = run.exceptionCount + ' exceptions · ' + reviews.open + ' open · ' + reviews.investigating + ' investigating · ' + reviews.reviewed + ' reviewed. ' + total.publicNetworkPending + ' public-network events awaiting verification; ' + total.exhaustedDelivery + ' exhausted deliveries.';
 }
 async function loadRun(id, {reset = false} = {}) {
@@ -152,7 +169,7 @@ async function refreshState() {
 }
 function schedulePoll() {
   clearTimeout(pollTimer);
-  if (!state?.runs.some(run => ['queued','running'].includes(run.status))) return;
+  if (!state?.runs.some(run => ['queued','running'].includes(run.status)) && !recoveryActive()) return;
   pollTimer = setTimeout(() => attempt(async () => {
     const before = state.runs.find(run => run.id === selectedRun)?.status;
     adopt(await api('/api/state'));
@@ -167,15 +184,17 @@ function openArea(area) {
 
 const columns = {
   ledger:['Event','Route / network','Transfer','Atomic amount','Webhook'],
-  options:['Payment option','Native / matched events','Atomic amount per event','Matched atomic total'],
+  options:['Payment option','Native / recovered / matched','Atomic amount per event','Matched atomic total'],
   exceptions:['Native exception','Event / route','Review'],
-  proofs:['Verification file','Original verdict','Eligibility']
+  proofs:['Verification file','Original verdict','Eligibility'],
+  recovered:['Original recovered source','Atomic amount','Original verification','Retained response']
 };
 function inspectButton(index, title, subtitle = '') { return '<button class="inspect" type="button" data-inspect="' + index + '">' + esc(title) + '</button>' + (subtitle ? '<span class="subtle">' + esc(subtitle) + '</span>' : ''); }
 function recordCells(row, index) {
-  if (view === 'ledger') return [inspectButton(index,short(row.eventId),date(row.at)),esc(row.method + ' ' + row.routeId) + '<span class="subtle">' + esc(network(row.network)) + '</span>',badge(row.transfer,classification(row.transfer)), '<span class="exact">' + esc(row.amountAtomic) + '</span>',badge(row.delivery,classification(row.delivery))];
-  if (view === 'options') return [inspectButton(index,row.method + ' ' + row.routeId,network(row.network)) + '<span class="subtle mono">' + esc(short(row.optionId)) + '</span>',esc(row.nativeSuccessEvents) + ' / ' + esc(row.officialTransferMatches),'<span class="exact">' + esc(row.amountAtomic) + '</span>','<span class="exact">' + esc(row.officialMatchedAmountAtomic) + '</span>'];
+  if (view === 'ledger') return [inspectButton(index,short(row.eventId),date(row.at)) + (row.origin ? '<span class="subtle">' + esc(friendly(row.origin)) + '</span>' : ''),esc(row.method + ' ' + row.routeId) + '<span class="subtle">' + esc(network(row.network)) + '</span>',badge(row.transfer,classification(row.transfer)), '<span class="exact">' + esc(row.amountAtomic) + '</span>',badge(row.delivery,classification(row.delivery))];
+  if (view === 'options') return [inspectButton(index,row.method + ' ' + row.routeId,network(row.network)) + '<span class="subtle mono">' + esc(short(row.optionId)) + '</span>',esc(row.nativeSuccessEvents) + ' / ' + esc(row.recoveredSettlements ?? '—') + ' / ' + esc(row.officialTransferMatches),'<span class="exact">' + esc(row.amountAtomic) + '</span>','<span class="exact">' + esc(row.officialMatchedAmountAtomic) + '</span>'];
   if (view === 'exceptions') return [inspectButton(index,friendly(row.reason),network(row.network)),esc(row.method + ' ' + row.routeId) + '<span class="subtle mono" title="' + esc(row.eventId) + '">' + esc(short(row.eventId)) + '</span>',badge(row.review.status) + (row.review.assignee ? '<span class="subtle">' + esc(row.review.assignee) + '</span>' : '')];
+  if (view === 'recovered') return [inspectButton(index,row.method + ' ' + row.routeId,network(row.network)) + '<span class="subtle">' + esc(row.origin) + '</span>','<span class="exact">' + esc(row.amountAtomic) + '</span>',badge(row.verification?.verdict,shown(row.verification?.verdict)),row.response ? esc(row.response.bytes) + ' bytes' : 'Not retained'];
   return [inspectButton(index,row.name,row.source) + (row.duplicateOfOriginal ? '<span class="subtle">Already present in original directory</span>' : ''),esc(shown(row.verdict)),esc(friendly(row.eligibility))];
 }
 function renderRecords() {
@@ -206,6 +225,7 @@ function renderDetail(row = currentRecord()) {
   if (!row) { $('record-detail').innerHTML = '<p class="empty">Select a record to inspect its complete values.</p>'; return; }
   const title = view === 'exceptions' ? friendly(row.reason) : view === 'proofs' ? row.name : row.method + ' ' + row.routeId;
   let html = '<h3>' + esc(title) + '</h3>' + values(row);
+  if (view === 'recovered' && row.response) html += '<div class="actions"><a class="button" download href="/api/runs/' + endpoint(selectedRun) + '/recovered/' + endpoint(row.recoveryId) + '/response">Download retained response</a></div><p class="hint">This response comes from the selected run’s immutable source capture.</p>';
   if (view === 'exceptions') {
     const key = reviewDraftKey(selectedRun,row.id), saved = row.review, draft = drafts.get(key) || saved;
     html += '<form id="review-form" data-run="' + esc(selectedRun) + '" data-id="' + esc(row.id) + '" data-event="' + esc(row.eventId) + '" data-version="' + draft.version + '"><h3>Exception review</h3><p class="hint">Your review is retained alongside the original transfer classification.</p><label for="review-status">Review status</label><select id="review-status">' + ['open','investigating','reviewed'].map(status => '<option value="' + status + '"' + (status === draft.status ? ' selected' : '') + '>' + friendly(status) + '</option>').join('') + '</select><label for="review-assignee">Assigned to</label><input id="review-assignee" maxlength="160" value="' + esc(draft.assignee) + '" placeholder="Person or team"><label for="review-note">Review note</label><textarea id="review-note" required rows="5" maxlength="4000" placeholder="Record the finding and the action taken.">' + esc(draft.note) + '</textarea><div class="actions"><button class="primary" type="submit">Save review</button><span id="draft-status" class="hint">' + (drafts.has(key) ? 'Unsaved draft retained in this tab' : 'Original classification retained') + '</span></div></form>';
@@ -253,12 +273,13 @@ async function reloadConflict() {
     intent.savedVersion = row.review.version;
     if (selectedRun === intent.review.runId && view === 'exceptions') { selectedKey = row.id; renderDetail(row); }
     $('conflict-text').textContent = 'Loaded saved review ' + row.review.version + ' by ' + (row.review.actor || 'no previous reviewer') + '. Your draft remains in the form. Reapply will save your submitted status, assignee, and note over that saved review.';
-  } else $('conflict-text').textContent = 'Loaded workspace revision ' + state.revision + '. Your submitted ' + intent.description + ' remains unchanged. Reapply will submit it against this saved revision.';
+  } else $('conflict-text').textContent = 'Loaded workspace revision ' + state.revision + '. Your ' + intent.description + ' draft remains in this tab. Reapply will use ' + (intent.currentBody ? 'the current edited form' : 'the submitted values') + ' against this saved revision.';
   if (pendingIntent === intent) { intent.reloaded = true; updateButtons(); }
 }
 async function reapplyConflict() {
   const intent = pendingIntent;
   if (!intent?.reloaded || busy) return;
+  if (intent.currentBody) intent.body = {...intent.body,...intent.currentBody()};
   intent.body = {...intent.body,...(intent.review ? {version:intent.savedVersion} : {revision:state.revision})};
   await perform(intent);
 }
@@ -282,7 +303,7 @@ function renderComparison() {
   if (kind === 'changed' || kind === 'options') {
     $('compare-head').innerHTML = '<tr><th scope="col">' + (kind === 'changed' ? 'Event / route' : 'Payment option') + '</th><th scope="col">Baseline: ' + esc(comparison.baseline.name) + '</th><th scope="col">Current: ' + esc(comparison.current.name) + '</th></tr>';
     $('compare-body').innerHTML = comparison.items.map(row => {
-      const fields = kind === 'changed' ? row.fields : ['nativeSuccessEvents','officialTransferMatches','nativeAmountAtomic','officialMatchedAmountAtomic','merchantQuoteUsd','merchantVariableCostUsd','verifiedQuotedValueUsd'];
+      const fields = kind === 'changed' ? row.fields : ['nativeSuccessEvents','recoveredSettlements','officialTransferMatches','nativeAmountAtomic','recoveredAmountAtomic','officialMatchedAmountAtomic','merchantQuoteUsd','merchantVariableCostUsd','verifiedQuotedValueUsd'];
       const original = row.after || row.before;
       const identity = kind === 'changed' ? row.eventId : row.optionId;
       return '<tr><td><strong>' + esc(original.method + ' ' + original.routeId) + '</strong><span class="subtle">' + esc(network(original.network)) + '</span><span class="mono" title="' + esc(identity) + '">' + esc(short(identity)) + '</span></td><td class="change-values">' + comparisonValues(row.before,fields) + '</td><td class="change-values">' + comparisonValues(row.after,fields) + '</td></tr>';
@@ -304,6 +325,74 @@ async function compareRuns(offset = 0) {
   const result = await api('/api/runs/' + endpoint(current) + '/compare?' + query);
   if (request !== compareRequest) return;
   comparison = result; renderComparison();
+}
+
+function recoveryActive() {
+  return (state?.recoveryJobs || []).some(job => ['queued','running'].includes(job.status));
+}
+function selectedRecoveryPreview() {
+  return state?.recoveryPreviews?.find(item => item.id === $('recovery-preview-select').value);
+}
+function renderRecoveryPreview() {
+  const preview = selectedRecoveryPreview();
+  $('recovery-preview-detail').innerHTML = preview
+    ? '<p class="hint">Reviewed by ' + esc(preview.actor) + ' · ' + esc(date(preview.createdAt)) + '</p>' + values(preview.review) +
+      '<details class="history-detail"><summary>Retained review identity</summary>' + values({id:preview.id,configSha256:preview.configSha256}) + '</details>'
+    : '<p class="empty">Review an original recovery request to inspect its retained inputs.</p>';
+  updateButtons();
+}
+function renderRecoveryEntries() {
+  const collection = state?.recovery?.entries || [];
+  const found = collection.filter(row => !recoverySearch || JSON.stringify(row).toLowerCase().includes(recoverySearch));
+  recoveryOffset = Math.min(recoveryOffset, Math.max(0,Math.floor((found.length - 1) / LIMIT) * LIMIT));
+  const entries = found.slice(recoveryOffset,recoveryOffset + LIMIT);
+  $('recovery-entries').innerHTML = entries.map(row =>
+    '<tr' + (row.recoveryId === recoverySelection ? ' class="selected"' : '') + '><td><button class="inspect" type="button" data-recovery-entry="' + esc(row.recoveryId) + '">' + esc(row.method + ' ' + row.routeId) + '</button><span class="subtle">' + esc(network(row.network)) + '</span></td><td class="exact">' + esc(row.amountAtomic) + '</td><td>' + esc(shown(row.verification?.verdict)) + '</td><td>' +
+    (row.response ? '<a download href="/api/recovered/' + endpoint(row.recoveryId) + '/response">Download response</a><span class="subtle">' + esc(row.response.bytes) + ' bytes</span>' : 'Not retained') + '</td></tr>'
+  ).join('') || '<tr><td colspan="4" class="empty">' + (state?.recovery?.directory ? 'No recovered payments match this view.' : 'Connect an original recovered payment collection to inspect its entries.') + '</td></tr>';
+  $('recovery-entry-count').textContent = found.length ? (recoveryOffset + 1) + '–' + Math.min(recoveryOffset + LIMIT,found.length) + ' of ' + found.length + ' recovered payments' : '0 recovered payments';
+  $('recovery-previous').disabled = recoveryOffset === 0;
+  $('recovery-next').disabled = recoveryOffset + LIMIT >= found.length;
+  const row = collection.find(item => item.recoveryId === recoverySelection);
+  $('recovery-entry-detail').innerHTML = row
+    ? '<h3>' + esc(row.method + ' ' + row.routeId) + '</h3>' + (row.response ? '<div class="actions"><a class="button" download href="/api/recovered/' + endpoint(row.recoveryId) + '/response">Download original response</a></div>' : '') + values(row)
+    : '<p class="empty">Select a recovered payment to inspect its full original values.</p>';
+}
+function renderRecovery() {
+  const recovery = state.recovery || {directory:null,capturedAt:null,entries:[]};
+  const previews = state.recoveryPreviews || [], jobs = state.recoveryJobs || [];
+  if (!$('recovery-directory').dataset.dirty) $('recovery-directory').value = recovery.directory || '';
+  $('recovery-source-saved').textContent = recovery.directory ? 'Connected: ' + recovery.directory : 'No recovered payment collection is connected.';
+  $('recovery-captured').textContent = recovery.capturedAt ? 'Last collection refresh: ' + date(recovery.capturedAt) : 'The collection is refreshed when you request it.';
+  $('recovery-metrics').innerHTML = metrics([['Retained recovered entries',recovery.entries.length],['Original response files',recovery.entries.filter(row => row.response).length],['Saved input reviews',previews.length],['Active imports',jobs.filter(job => ['queued','running'].includes(job.status)).length]]);
+  if (previews.length) selectOptions($('recovery-preview-select'),previews.map(item => [item.id,item.name + ' · ' + date(item.createdAt)]));
+  else $('recovery-preview-select').innerHTML = '<option value="">Review original inputs first</option>';
+  renderRecoveryPreview();
+  const active = jobs.find(job => ['queued','running'].includes(job.status));
+  $('recovery-progress').hidden = !active;
+  $('recovery-progress-text').textContent = active ? active.name + ' · ' + friendly(active.status) + (active.cancelRequested ? ' · stop requested' : ' · original transfer verification and retained-source import') : '';
+  $('recovery-jobs').innerHTML = jobs.slice(0,recoveryJobLimit).map(job => {
+    const ongoing = ['queued','running'].includes(job.status);
+    const retryable = ['failed','interrupted','cancelled'].includes(job.status);
+    const result = job.result ? shown(job.result) : job.error || 'Original verifier result will appear here.';
+    return '<tr><td><strong>' + esc(job.name) + '</strong><span class="subtle">' + esc(job.actor) + ' · ' + esc(date(job.createdAt)) + '</span><details class="history-detail"><summary>Saved attempt</summary>' + values({id:job.id,previewId:job.previewId,recoveredDir:job.recoveredDir,startedAt:job.startedAt,completedAt:job.completedAt}) + '</details></td><td>' + badge(job.status) + '</td><td><div class="recovery-native-result">' + esc(result) + '</div></td><td><div class="actions"><button type="button" data-recovery-preview="' + esc(job.previewId) + '">Inspect inputs</button>' +
+      (ongoing ? '<button type="button" data-write data-recovery-cancel="' + esc(job.id) + '" data-requested="' + Boolean(job.cancelRequested) + '">' + (job.cancelRequested ? 'Stop requested' : 'Stop attempt') + '</button>' : '') +
+      (retryable ? '<button type="button" data-write data-recovery-retry="' + esc(job.previewId) + '">Retry original import</button>' : '') + '</div></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">Original transfer verification attempts will be retained here.</td></tr>';
+  $('recovery-job-count').textContent = Math.min(jobs.length,recoveryJobLimit) + ' of ' + jobs.length + ' saved attempts';
+  $('recovery-job-more').hidden = jobs.length <= recoveryJobLimit;
+  renderRecoveryEntries();
+}
+function recoveryConfigBody() {
+  const name = $('recovery-config-name').value.trim(), content = $('recovery-config-content').value;
+  if (!name) throw new Error('Name this original input review.');
+  if (!content.trim() || new TextEncoder().encode(content).length > 200_000) throw new Error('Use an original recovery request JSON up to 200 KB.');
+  try { JSON.parse(content); } catch { throw new Error('The original recovery request must be valid JSON.'); }
+  return {name,content};
+}
+async function importRecovery(previewId) {
+  if (!previewId) throw new Error('Choose a saved original input review.');
+  await perform({path:'/api/recovered/import',body:{revision:state.revision,previewId,actor:operator()},description:'original recovered-payment import',message:'Original transfer verification started. Its result and any retained import are shown in the saved attempts.',success:() => openArea('recovery')});
 }
 
 document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click',() => openArea(button.dataset.area)));
@@ -367,6 +456,58 @@ $('proof-form').addEventListener('submit',event => { event.preventDefault(); att
 $('proof-imports').addEventListener('click',event => {
   const button = event.target.closest('[data-proof-selection]'); if (!button) return;
   attempt(() => perform({path:'/api/proofs/' + endpoint(button.dataset.proofSelection) + '/selection',body:{revision:state.revision,included:button.dataset.included === 'true',actor:operator()},description:'verification file selection',message:'Verification selection saved for the next reconciliation.'}));
+});
+$('recovery-directory').addEventListener('input',() => { $('recovery-directory').dataset.dirty = 'true'; });
+$('recovery-source-form').addEventListener('submit',event => { event.preventDefault(); attempt(async () => {
+  const currentBody = () => {
+    const directory = $('recovery-directory').value.trim();
+    if (!directory) throw new Error('Enter the private original recovered collection directory.');
+    return {directory};
+  };
+  await perform({path:'/api/recovered/source',body:{revision:state.revision,actor:operator(),...currentBody()},currentBody,description:'recovered source connection',message:'Original recovered collection connected for future reconciliations.',success:() => {
+    if ($('recovery-directory').value.trim() === state.recovery.directory) delete $('recovery-directory').dataset.dirty;
+    renderRecovery();
+  }});
+}); });
+$('recovery-refresh').addEventListener('click',() => attempt(() => perform({path:'/api/recovered/refresh',body:{revision:state.revision,actor:operator()},description:'recovered collection refresh',message:'Original recovered collection refreshed. Saved reconciliations retain their existing source captures.'})));
+$('recovery-disconnect').addEventListener('click',() => attempt(() => perform({path:'/api/recovered/source',body:{revision:state.revision,actor:operator(),directory:null},description:'recovered source disconnection',message:'Recovered collection disconnected from future runs. Existing entries and saved runs remain in their original storage.',success:() => { delete $('recovery-directory').dataset.dirty; renderRecovery(); }})));
+$('recovery-config-file').addEventListener('change',() => attempt(async () => {
+  const file = $('recovery-config-file').files[0];
+  if (!file) return;
+  if (file.size > 200_000) throw new Error('Choose an original recovery request JSON up to 200 KB.');
+  const content = await file.text();
+  if ($('recovery-config-file').files[0] !== file) return;
+  $('recovery-config-content').value = content;
+  $('recovery-config-name').value = file.name;
+  notify('Original recovery request loaded. Review the retained inputs to inspect their binding.');
+}));
+$('recovery-config-form').addEventListener('submit',event => { event.preventDefault(); attempt(async () => {
+  await perform({path:'/api/recovered/review',body:{revision:state.revision,actor:operator(),...recoveryConfigBody()},currentBody:recoveryConfigBody,description:'original recovery input review',message:'Original source files reviewed locally. Their exact request, receipt, terms, and response identities are retained below.',success:result => {
+    $('recovery-preview-select').value = result.preview.id;
+    renderRecoveryPreview();
+    $('recovery-preview-select').scrollIntoView({block:'center',behavior:'smooth'});
+  }});
+}); });
+$('recovery-preview-select').addEventListener('change',renderRecoveryPreview);
+$('recovery-import').addEventListener('click',() => attempt(() => importRecovery($('recovery-preview-select').value)));
+$('recovery-jobs').addEventListener('click',event => {
+  const inspect = event.target.closest('[data-recovery-preview]');
+  if (inspect) { $('recovery-preview-select').value = inspect.dataset.recoveryPreview; renderRecoveryPreview(); $('recovery-preview-select').scrollIntoView({block:'center',behavior:'smooth'}); }
+  const cancel = event.target.closest('[data-recovery-cancel]');
+  if (cancel) attempt(() => perform({path:'/api/recovered/jobs/' + endpoint(cancel.dataset.recoveryCancel) + '/cancel',body:{actor:operator()},description:'original import stop request',message:'Stop requested. A completed native import remains retained; retry reuses that original entry.'}));
+  const retry = event.target.closest('[data-recovery-retry]');
+  if (retry) attempt(() => importRecovery(retry.dataset.recoveryRetry));
+});
+$('recovery-job-more').addEventListener('click',() => { recoveryJobLimit += 20; renderRecovery(); updateButtons(); });
+$('recovery-filter-form').addEventListener('submit',event => { event.preventDefault(); recoverySearch = $('recovery-search').value.trim().toLowerCase(); recoveryOffset = 0; renderRecoveryEntries(); });
+$('recovery-previous').addEventListener('click',() => { recoveryOffset = Math.max(0,recoveryOffset - LIMIT); renderRecoveryEntries(); });
+$('recovery-next').addEventListener('click',() => { recoveryOffset += LIMIT; renderRecoveryEntries(); });
+$('recovery-entries').addEventListener('click',event => {
+  const button = event.target.closest('[data-recovery-entry]');
+  if (!button) return;
+  recoverySelection = button.dataset.recoveryEntry; renderRecoveryEntries();
+  $('recovery-entry-detail').focus({preventScroll:true});
+  if (matchMedia('(max-width:1150px)').matches) $('recovery-entry-detail').scrollIntoView({block:'start',behavior:'smooth'});
 });
 $('reload-conflict').addEventListener('click',() => attempt(reloadConflict));
 $('reapply-conflict').addEventListener('click',() => attempt(reapplyConflict));
