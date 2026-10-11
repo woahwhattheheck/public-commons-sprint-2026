@@ -6,11 +6,13 @@ import { hostname } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { upstreamReleaseSnapshot, stageReleaseUpstreams, inspectReleaseUpstreams, readReleaseWorkspace } from './release-upstreams.mjs';
+import { releaseCacheControlPath } from './release-cache.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
 const RUN = 'stellar-forge.seller-release-process.v1';
 const PILOT = fileURLToPath(new URL('./pilot.mjs', import.meta.url));
+const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
 const LIMIT = 4 * 1024 * 1024;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const stable = value => JSON.stringify(normalize(value));
@@ -434,22 +436,8 @@ export async function releaseStatus(root) {
 
 // The child cannot import handlers or open a listener until its PID is durably
 // registered. If the parent dies before granting startup, IPC disconnect ends
-// this waiting child. After the grant, the unchanged original pilot owns serving.
-const CHILD_LAUNCH = `
-import { pathToFileURL } from 'node:url';
-const [pilot, directory, instanceId] = process.argv.slice(1);
-let started = false;
-process.once('disconnect', () => { if (!started) process.exit(0); });
-process.once('message', message => {
-  if (message?.type !== 'sf82-start' || message.instanceId !== instanceId) process.exit(1);
-  started = true;
-  process.disconnect();
-  process.argv = [process.execPath, pilot, '--resume', directory];
-  import(pathToFileURL(pilot).href).catch(error => {
-    process.stderr.write(String(error?.message ?? error) + '\\n'); process.exitCode = 1;
-  });
-});
-`;
+// this waiting child. After the grant, the unchanged original pilot owns serving;
+// its private cache controls attach before the release reports readiness.
 
 /** Spawn the ORIGINAL foreground launcher so each run gets fresh application imports. */
 export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs = 70000, expectedGeneration } = {}) {
@@ -518,8 +506,10 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       source: { offersSha256: record.source.offersSha256, serviceConfigSha256: record.source.serviceConfigSha256 },
       options: originalOptions });
     const instanceId = randomUUID(), mode = record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
+    const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
+      id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, ['--input-type=module', '--eval', CHILD_LAUNCH, PILOT, path, instanceId],
+    child = spawn(process.execPath, [CHILD, PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     let readyResolve, readyReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
@@ -540,7 +530,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       if (stdout.length > 1024 * 1024) { readyReject(new Error('Original seller startup output exceeded its limit.')); stdout = ''; return; }
       while (stdout.includes('\n')) {
         const newline = stdout.indexOf('\n'), line = stdout.slice(0, newline); stdout = stdout.slice(newline + 1);
-        try { const value = JSON.parse(line); if (value.pilotReady === true) readyResolve(value); } catch {}
+        try { const value = JSON.parse(line); if (value.releaseReady === true && value.instanceId === instanceId) readyResolve(value); } catch {}
       }
     });
     startupTimer = setTimeout(() => readyReject(new Error('Original seller startup timed out.')), startupTimeoutMs);
@@ -550,15 +540,17 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       selectionGeneration: state.generation, listener: null, mode, phase: 'STARTING', startedAt: new Date().toISOString() };
     await atomic(join(root, 'runtime.json'), observation);
     if (exitSettled || shutdownRequested) throw new Error(failure ?? 'Original seller stopped before launch.');
-    await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId }, error => error ? fail(error) : done()));
+    await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId, cacheRoutes }, error => error ? fail(error) : done()));
     let report;
     try { report = await ready; } finally { clearTimeout(startupTimer); }
     if (report.originalOffersSha256 !== record.source.offersSha256 ||
-        report.originalServiceConfigSha256 !== record.source.serviceConfigSha256)
+        report.originalServiceConfigSha256 !== record.source.serviceConfigSha256 ||
+        report.cacheControlAvailable !== Boolean(cacheRoutes.length))
       throw new Error('Original pilot reported a different release source.');
     await originalReadback(report.listener, record, mode);
     if (exitSettled || shutdownRequested) throw new Error('Original seller stopped during startup.');
-    Object.assign(observation, { listener: report.listener, phase: 'RUNNING', readyAt: new Date().toISOString() });
+    Object.assign(observation, { listener: report.listener, phase: 'RUNNING', readyAt: new Date().toISOString(),
+      cacheControlAvailable: report.cacheControlAvailable });
     await atomic(join(root, 'runtime.json'), observation);
     completion = exited.then(finish);
     void completion.catch(() => {});
