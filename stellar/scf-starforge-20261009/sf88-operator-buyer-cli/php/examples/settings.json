@@ -1,0 +1,9 @@
+{
+  "runtimeDirectory": "/opt/stellar-forge/stellar/scf-starforge-20261009/sf88-operator-buyer-cli",
+  "node": "/usr/bin/node",
+  "directory": "/srv/stellar-forge-customer/state/acquisitions",
+  "configsDirectory": "/srv/stellar-forge-customer/state/configs",
+  "operatorSettings": "/srv/stellar-forge-customer/state/operator-settings.json",
+  "paidFileClaimEnvs": ["SF101_CLAIM_TOKEN"],
+  "temporaryDirectory": "/srv/stellar-forge-customer/tmp"
+}
