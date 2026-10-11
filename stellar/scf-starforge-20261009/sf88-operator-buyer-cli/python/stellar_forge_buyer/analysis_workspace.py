@@ -30,6 +30,7 @@ import webbrowser
 from . import _analysis_ui
 from .datasets import DatasetAcquisition
 from .dataset_changes import DatasetChanges
+from .analysis_reports import AnalysisReports
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
 from .storage import digest, dump, parse, private_directory, read
@@ -151,6 +152,7 @@ class AnalysisWorkspace:
                 db.execute("UPDATE sf_analysis_jobs SET status='INTERRUPTED',finished_at=?,error='WORKSPACE_PROCESS_INTERRUPTED' WHERE status='RUNNING'", (_now(),))
                 db.commit()
             self.changes = DatasetChanges(self.database)
+            self.reports = AnalysisReports(self.database, encode_cell=_cell, parse_parameters=_parameters, changes=self.changes)
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
         except BaseException:
             os.close(self._owner)
@@ -225,8 +227,9 @@ class AnalysisWorkspace:
             queries = [dict(row) for row in db.execute("SELECT name,revision FROM sf_analysis_queries ORDER BY name")]
             jobs = [dict(row) for row in db.execute("SELECT sequence,id,kind,status,created_at,finished_at,error FROM sf_analysis_jobs ORDER BY sequence DESC LIMIT 30")]
             views = database._views(db)
+            reports = AnalysisReports.state(db)
         return {"schema": _SCHEMA, "workspace_id": identity, "database": str(database.path),
-                "can_import": can_import, "sources": sources, "queries": queries, "views": views, "jobs": jobs}
+                "can_import": can_import, "sources": sources, "queries": queries, "views": views, "jobs": jobs, "reports": reports}
 
     def save_query(self, name, value, *, expected_revision):
         name, spec = _name(name), _query(value)
@@ -262,7 +265,7 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "backup", "compare", "change-export"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "backup", "compare", "change-export", "report", "report-export"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
@@ -273,6 +276,10 @@ class AnalysisWorkspace:
             if not isinstance(request.get("expected_views"), list):
                 raise StateError("ANALYSIS_REVIEWED_VIEWS_REQUIRED")
             spec["expected_views"] = request["expected_views"]
+        elif kind == "report":
+            spec.update(self.reports.prepare(request))
+        elif kind == "report-export":
+            spec.update(self.reports.prepare_export(request))
         elif kind == "compare":
             spec.update(self.changes.prepare(request, check=False))
         elif kind == "change-export":
@@ -308,6 +315,10 @@ class AnalysisWorkspace:
                     self.changes._inputs(db, spec)
                 elif kind == "change-export":
                     self.changes._export_input(db, spec)
+                elif kind == "report":
+                    self.reports._input(db, spec)
+                elif kind == "report-export":
+                    self.reports._export_input(db, spec)
                 db.execute("INSERT INTO sf_analysis_jobs(id,kind,status,created_at,request) VALUES(?,?,'RUNNING',?,?)", (job_id, kind, _now(), raw))
                 db.commit()
             self._executor.submit(self._execute, job_id, kind, spec)
@@ -342,6 +353,11 @@ class AnalysisWorkspace:
                 return
             elif kind == "change-export":
                 result = self.changes.export({key: value for key, value in spec.items() if key != "id"})
+            elif kind == "report":
+                self.reports.run(job_id, {key: value for key, value in spec.items() if key != "id"})
+                return
+            elif kind == "report-export":
+                result = self.reports.export({key: value for key, value in spec.items() if key != "id"})
             else:
                 target = self.database.backup(self.database.directory / "analysis-backups" / job_id)
                 with target.open("rb") as stream:
@@ -374,6 +390,9 @@ class AnalysisWorkspace:
         elif job["kind"] == "compare" and job["result"] is not None:
             with self.database._connection(readonly=True) as db:
                 job["result"] = self.changes._report(db, job_id)
+        elif job["kind"] == "report" and job["result"] is not None:
+            with self.database._connection(readonly=True) as db:
+                job["result"] = self.reports._report(db, job_id)
         return job
 
     def job(self, job_id, *, offset=0, limit=100):
@@ -426,6 +445,18 @@ class AnalysisWorkspace:
         path = self.database.directory / "analysis-exports" / result["filename"]
         if str(path) != result["path"]:
             raise StateError("ANALYSIS_CHANGE_EXPORT_REGENERATE_AFTER_RECOVERY")
+        return path, result
+
+    def report_export_file(self, job_id):
+        job = self._job(job_id)
+        if job["kind"] != "report-export" or job["status"] != "COMPLETE":
+            raise StateError("ANALYSIS_COMPLETE_REPORT_EXPORT_REQUIRED")
+        result = job["result"]
+        if not re.fullmatch(r"report-[a-f0-9]{64}\.(html|json|zip)", result["filename"]):
+            raise StateError("ANALYSIS_REPORT_EXPORT_LOCATION_CHANGED")
+        path = self.database.directory / "analysis-exports" / result["filename"]
+        if str(path) != result["path"]:
+            raise StateError("ANALYSIS_REPORT_EXPORT_REGENERATE_AFTER_RECOVERY")
         return path, result
 
 
@@ -505,6 +536,17 @@ def serve(workspace, *, port=0):
                     return self._reply(200, workspace.state())
                 if url.path == "/api/versions":
                     return self._reply(200, workspace.database.versions(before=int(get("before")) if get("before") else None, limit=25))
+                if len(parts) == 3 and parts[:2] == ["api", "reports"]:
+                    return self._reply(200, workspace.reports.definition(parts[2], revision=int(get("revision")) if get("revision") else None))
+                if url.path == "/api/report-runs":
+                    return self._reply(200, workspace.reports.history(name=get("name"), before=int(get("before")) if get("before") else None))
+                if len(parts) == 3 and parts[:2] == ["api", "report-runs"]:
+                    return self._reply(200, workspace.reports.result(parts[2], section=int(get("section", "0")), offset=int(get("offset", "0"))))
+                if url.path == "/api/report-publications":
+                    return self._reply(200, workspace.reports.publications(name=get("name"), before=int(get("before")) if get("before") else None))
+                if len(parts) == 3 and parts[:2] == ["api", "report-export"]:
+                    path, record = workspace.report_export_file(parts[2])
+                    return self._file_reply(path, record)
                 if url.path == "/api/changes":
                     return self._reply(200, workspace.changes.history(before=int(get("before")) if get("before") else None))
                 if len(parts) == 3 and parts[:2] == ["api", "changes"]:
@@ -545,6 +587,10 @@ def serve(workspace, *, port=0):
                     return self._reply(200, workspace.database.activate(body.get("name"), body.get("version_id"), expected_revision=body.get("expected_revision")))
                 if len(parts) == 4 and parts[:2] == ["api", "changes"] and parts[3] == "select":
                     return self._reply(200, workspace.changes.select(parts[2], body))
+                if len(parts) == 3 and parts[:2] == ["api", "reports"]:
+                    return self._reply(200, workspace.reports.save(parts[2], body))
+                if len(parts) == 4 and parts[:2] == ["api", "report-runs"] and parts[3] == "publish":
+                    return self._reply(200, workspace.reports.publish(parts[2], body))
                 if len(parts) == 3 and parts[:2] == ["api", "queries"]:
                     return self._reply(200, workspace.save_query(parts[2], body, expected_revision=body.get("expected_revision")))
                 if len(parts) == 3 and parts[:2] == ["api", "start"]:
