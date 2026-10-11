@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ClickHouse merchant · Stellar Forge</title>
+  <link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar"><div><strong>STELLAR FORGE</strong><span>ClickHouse merchant</span></div><span id="mode" class="badge">Connecting</span></header>
+  <div class="shell">
+    <aside>
+      <h1>Operator workspace</h1>
+      <p class="muted">Private source. Reviewed offers. Retained merchants.</p>
+      <nav aria-label="Workspace steps">
+        <button data-view="editor" aria-current="page"><span>01</span> Source &amp; offers</button>
+        <button data-view="review"><span>02</span> Native review</button>
+        <button data-view="merchants"><span>03</span> Prepared merchants</button>
+      </nav>
+      <div class="aside-heading"><h2>Saved revisions</h2><button id="refresh" class="small">Refresh</button></div>
+      <div id="revisions" class="stack"><p class="muted">Loading saved work…</p></div>
+      <details class="state-details"><summary>Private state folder</summary><code id="state-path"></code><p>Reopen this folder with the same workspace command.</p></details>
+    </aside>
+    <main>
+      <div id="notice" role="status" aria-live="polite" hidden></div>
+      <section id="editor" class="view">
+        <div class="section-heading"><div><p class="eyebrow">01 / SOURCE &amp; OFFERS</p><h2>Build a merchant revision</h2></div><span id="draft-state" class="badge">Unsaved draft</span></div>
+        <p class="intro">Choose existing JSON files or edit the approved queries and complete payment terms below. Saving validates the original native contract and retains both documents together.</p>
+        <div class="toolbar">
+          <label class="file-button">Load source JSON<input id="source-file" type="file" accept=".json,application/json"></label>
+          <label class="file-button">Load plan JSON<input id="plan-file" type="file" accept=".json,application/json"></label>
+          <button id="example">Load example draft</button>
+        </div>
+        <div class="savebar"><label>Revision label<input id="revision-label" maxlength="160" placeholder="Production transfers · October"></label><button id="save" class="primary">Save revision</button></div>
+        <div class="panel">
+          <div class="panel-heading"><h3>Private source connection</h3><span class="muted">Environment references only</span></div>
+          <p class="hint">Connection values come from the launching terminal. SQL and private probe values stay in this operator workspace and the retained merchant folder.</p>
+          <div class="grid three">
+            <label>Database<input id="database"></label>
+            <label>Endpoint environment variable<input id="endpoint-env" spellcheck="false"></label>
+            <label>User environment variable<input id="user-env" spellcheck="false"></label>
+            <label>Password environment variable<input id="password-env" spellcheck="false"></label>
+            <label>Concurrent source requests<input id="source-concurrency" inputmode="numeric"></label>
+            <label>Threads per query<input id="threads" inputmode="numeric"></label>
+            <label>Native memory limit · bytes<input id="memory" inputmode="numeric"></label>
+            <label>Rows scanned per query<input id="scan-rows" inputmode="numeric"></label>
+            <label>Bytes scanned per query<input id="scan-bytes" inputmode="numeric"></label>
+          </div>
+          <label class="check"><input id="allow-local" type="checkbox"> Allow a loopback HTTP ClickHouse source</label>
+        </div>
+        <div class="panel">
+          <div class="panel-heading"><h3>Approved named queries</h3><div class="row"><select id="query-select" aria-label="Selected query"></select><button id="add-query" class="small">Add</button><button id="remove-query" class="small">Remove</button></div></div>
+          <div id="query-editor">
+            <label>Query name<input id="query-name" spellcheck="false"></label>
+            <label>Private SELECT statement<textarea id="query-sql" class="code sql" spellcheck="false" rows="7"></textarea></label>
+            <p class="hint">Use $name placeholders. The original adapter sends typed native parameters separately and validates the selected account's actual schema.</p>
+            <div class="grid two">
+              <label>Typed parameter declarations · JSON<textarea id="query-parameters" class="code" spellcheck="false" rows="10"></textarea></label>
+              <div class="stack">
+                <label>Explicit parameter order · comma separated<input id="query-order" spellcheck="false"></label>
+                <label>Result columns · comma separated<input id="query-columns" spellcheck="false"></label>
+                <label>Private preflight probe · JSON<textarea id="query-probe" class="code" spellcheck="false" rows="5"></textarea></label>
+              </div>
+            </div>
+            <div class="grid three">
+              <label>Maximum returned rows<input id="query-rows" inputmode="numeric"></label>
+              <label>Maximum result bytes<input id="query-bytes" inputmode="numeric"></label>
+              <label>Query deadline · milliseconds<input id="query-timeout" inputmode="numeric"></label>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-heading"><h3>Public merchant offers</h3><div class="row"><select id="route-select" aria-label="Selected route"></select><button id="add-route" class="small">Add</button><button id="remove-route" class="small">Remove</button></div></div>
+          <label>Public HTTPS origin<input id="public-origin" placeholder="https://data.example.com" spellcheck="false"></label>
+          <div id="route-editor">
+            <div class="grid three">
+              <label>Route ID<input id="route-id" spellcheck="false"></label>
+              <label>Path<input id="route-path" spellcheck="false"></label>
+              <label>HTTP method<select id="route-method"><option>GET</option><option>HEAD</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select></label>
+              <label>Approved query<select id="route-query"></select></label>
+              <label>Service name<input id="route-service" maxlength="32"></label>
+              <label>Tags · comma separated<input id="route-tags"></label>
+            </div>
+            <label>Public description<textarea id="route-description" rows="2" maxlength="2048"></textarea></label>
+            <div class="grid two">
+              <label>Public request example · JSON<textarea id="route-example" class="code" spellcheck="false" rows="6"></textarea></label>
+              <label>Public parameter descriptions · JSON<textarea id="route-descriptions" class="code" spellcheck="false" rows="6"></textarea></label>
+            </div>
+            <details><summary>Route-specific payment options</summary><p class="hint">Leave empty to inherit the ordered options below. An override is a complete JSON array of payment options, preserving scheme, network, asset, payTo, amount, timeout and any extra terms.</p><textarea id="route-payments" class="code" spellcheck="false" rows="7" aria-label="Route-specific payment options JSON"></textarea></details>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-heading"><h3>Ordered payment options</h3><button id="add-payment" class="small">Add option</button></div>
+          <p class="hint">Amounts remain exact strings in asset base units. Buyers see this complete order. Route overrides are shown again during native review.</p>
+          <div id="payments" class="stack"></div>
+        </div>
+        <details class="panel"><summary>Complete native documents</summary><p class="hint">Apply both documents to the editor when using native fields directly. This uses the same source and merchant-plan schemas.</p><div class="grid two"><label>Private source JSON<textarea id="raw-source" class="code" rows="18" spellcheck="false"></textarea></label><label>Merchant plan JSON<textarea id="raw-plan" class="code" rows="18" spellcheck="false"></textarea></label></div><div class="toolbar"><button id="refresh-json">Fill from editor</button><button id="apply-json">Apply JSON to editor</button></div></details>
+      </section>
+      <section id="review" class="view" hidden>
+        <div class="section-heading"><div><p class="eyebrow">02 / NATIVE REVIEW</p><h2>Review schema and offers</h2></div><button id="review-native" class="primary">Review native source</button></div>
+        <p class="intro">The original source performs its live zero-row schema preflight. Private previews execute only the selected approved query through the same native adapter.</p>
+        <div id="review-status" class="panel empty">Save a revision to review it.</div>
+        <div id="schema" class="stack"></div>
+        <div id="preview-panel" class="panel" hidden>
+          <div class="panel-heading"><h3>Private query preview</h3><select id="preview-query" aria-label="Query to preview"></select></div>
+          <p class="hint">This reads your merchant source directly. Results remain here. It does not perform a customer purchase.</p>
+          <label>Typed input values · JSON<textarea id="preview-input" class="code" rows="6" spellcheck="false"></textarea></label>
+          <div class="toolbar"><button id="preview-run">Run private preview</button></div><div id="preview-output"></div>
+        </div>
+        <div id="review-offers" class="stack"></div>
+        <div id="prepare-panel" class="panel" hidden>
+          <h3>Prepare the retained merchant</h3>
+          <p>The original preparer writes the private source, compiled seller service, OpenAPI and generated customer client. This revision and its native review remain attached to that folder.</p>
+          <label class="check"><input id="acknowledge" type="checkbox"> I reviewed these named queries and every payment option for this revision.</label>
+          <button id="prepare" class="primary">Prepare merchant</button>
+        </div>
+      </section>
+      <section id="merchants" class="view" hidden>
+        <div class="section-heading"><div><p class="eyebrow">03 / PREPARED MERCHANTS</p><h2>Operate and deliver</h2></div></div>
+        <div id="runtime" class="panel"></div>
+        <div class="merchant-layout"><div id="prepared" class="stack"></div><div id="merchant-detail" class="stack"><div class="panel empty">Choose a prepared merchant to inspect its terms, start it or download its customer client.</div></div></div>
+        <div id="unfinished" class="panel" hidden></div>
+      </section>
+      <footer>Stellar Forge · Original ClickHouse HTTP source and SF30 merchant. Keep this terminal running while operating a merchant.</footer>
+    </main>
+  </div>
+</body>
+</html>
