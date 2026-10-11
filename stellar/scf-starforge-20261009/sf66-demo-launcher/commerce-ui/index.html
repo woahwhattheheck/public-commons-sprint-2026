@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stellar Forge · Commerce workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="brand">STELLAR FORGE</span><h1>Commerce workspace</h1></div>
+    <div class="header-actions"><span id="session-state" class="badge">Connecting</span><button id="refresh" type="button">Refresh</button></div>
+  </header>
+  <main>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section class="overview" aria-label="Session overview">
+      <div><span class="eyebrow">Seller</span><strong id="seller-origin">—</strong><span id="seller-mode" class="muted">Reading session</span></div>
+      <div><span class="eyebrow">Operation</span><strong id="intent">—</strong><span id="operation-state" class="muted">Prepared operation</span></div>
+      <div><span class="eyebrow">Result</span><strong id="result-state">Not run</strong><span id="last-updated" class="muted">—</span></div>
+    </section>
+
+    <div class="workspace">
+      <div class="primary">
+        <section class="panel" aria-labelledby="request-heading">
+          <div class="panel-heading"><div><span class="eyebrow">01 · Request</span><h2 id="request-heading">Review the operation</h2></div><span id="method" class="method">—</span></div>
+          <label class="selection-label" for="operation-select">Prepared operation</label>
+          <select id="operation-select" disabled><option>Loading operations…</option></select>
+          <p id="request-url" class="request-url">Loading the prepared request…</p>
+          <p class="help">Review the selected payment terms and spending limit before starting this operation.</p>
+          <dl id="terms" class="facts"></dl>
+          <details id="request-details"><summary>Request details</summary><dl id="request-facts" class="facts compact"></dl><pre id="request-headers"></pre></details>
+          <div class="action-row"><button id="review" class="primary-button" type="button" disabled>Review operation</button><span id="review-note" class="muted">The operation comes from the prepared buyer configuration.</span></div>
+        </section>
+
+        <section class="panel" aria-labelledby="execute-heading">
+          <div class="panel-heading"><div><span class="eyebrow">02 · Run</span><h2 id="execute-heading">Execute the reviewed request</h2></div><span id="execution-state" class="badge">Awaiting review</span></div>
+          <p id="execution-note" class="help">Execution uses the configured buyer. Its payment approval appears in the terminal that started this workspace.</p>
+          <div class="action-row"><button id="execute" class="primary-button" type="button" disabled>Execute operation</button><button id="cancel" type="button" disabled>Cancel queued request</button><button id="recover" type="button" hidden disabled>Recover recorded result</button></div>
+          <div id="outcome" class="outcome" hidden><dl id="outcome-facts" class="facts"></dl><p id="outcome-message" class="help"></p></div>
+        </section>
+
+        <section class="panel" aria-labelledby="delivery-heading">
+          <div class="panel-heading"><div><span class="eyebrow">03 · Delivery</span><h2 id="delivery-heading">Use the result</h2></div><span id="delivery-state" class="badge">No saved response</span></div>
+          <p id="delivery-note" class="help">A response saved by the original buyer appears here after the operation completes.</p>
+          <dl id="delivery-facts" class="facts" hidden></dl>
+          <div class="action-row"><button id="preview" type="button" disabled>Preview result</button><button id="download" type="button" disabled>Download result</button></div>
+          <div id="preview-area" hidden><div class="preview-heading"><strong id="preview-title">Response preview</strong><span id="preview-size" class="muted"></span></div><pre id="preview-text" tabindex="0"></pre></div>
+          <details id="outcome-details" hidden><summary>Original operation details</summary><pre id="outcome-json"></pre></details>
+        </section>
+      </div>
+
+      <aside class="sidebar">
+        <section class="panel" aria-labelledby="seller-heading">
+          <div class="panel-heading"><div><span class="eyebrow">Live session</span><h2 id="seller-heading">Merchant service</h2></div></div>
+          <dl id="seller-facts" class="facts compact"></dl>
+          <div id="seller-links" class="links"></div>
+          <h3>Available routes</h3><ul id="routes" class="route-list"><li class="muted">Loading routes…</li></ul>
+        </section>
+        <section class="panel" aria-labelledby="control-heading">
+          <h2 id="control-heading">Session control</h2>
+          <p id="stop-note" class="help">Stop and drain this workspace’s seller and buyer session. This also interrupts its active buyer. Saved operation results remain available.</p>
+          <button id="stop" type="button" disabled>Stop session</button>
+        </section>
+      </aside>
+    </div>
+  </main>
+  <footer><span>Local operator workspace</span><span id="session-id"></span></footer>
+</body>
+</html>
