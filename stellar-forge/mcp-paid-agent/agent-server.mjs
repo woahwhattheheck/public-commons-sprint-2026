@@ -4,14 +4,15 @@
  * canonical x402 v2 HTTP payment challenge / signed retry.
  * No wallet, payer, approval or private key lives in this source.
  */
-import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mcpAgentCommerceTool } from '../../stellar/scf-starforge-20261009/sf43-agent-commerce/mcp-buyer-acceptance.mjs';
 import { explainFailure } from '../../stellar/scf-starforge-20261009/sf33-failure-contract/contract.mjs';
 import { describeDiscoveredResource } from './descriptor.mjs';
 import { requiredQueryKeys } from './query-requirements.mjs';
 import { historyPage } from './quote-history.mjs';
 
-export const MCP_VERSION='2025-11-25';
+import { createMcpToolHandler } from './http-tools.mjs';
+export { MCP_VERSION } from './http-tools.mjs';
 const plain = x => x!==null && typeof x==='object' && !Array.isArray(x);
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const fail = (code,message)=>{const e=new Error(message);e.code=code;throw e;};
@@ -362,72 +363,8 @@ export class McpPaidToolBroker {
   }
 }
 
-const jsonErr=(code,message,id=null)=>({jsonrpc:'2.0',id,error:{code,message}});
-const rpcReply=(id,result)=>({jsonrpc:'2.0',id,result});
-const safeCompare=(a,b)=>{
-  const A=Buffer.from(String(a??'')),B=Buffer.from(String(b??''));
-  return A.length===B.length&&timingSafeEqual(A,B);
-};
-/**
- * The transport is meant for an operator-controlled 127.0.0.1 listener.
- * It offers JSON-only responses, no SSE stream, tasks, roots or server push.
- */
-export function createMcpHttpHandler(broker,{bearerToken,allowedClientOrigins=[]}={}){
+/** Original buyer broker entrypoint; merchant tools reuse this same HTTP transport. */
+export function createMcpHttpHandler(broker,options={}){
   if(!(broker instanceof McpPaidToolBroker))throw new TypeError('Broker required');
-  if(typeof bearerToken!=='string'||bearerToken.length<24)throw new TypeError('Strong operator access token required');
-  const allowedOrigins=new Set(allowedClientOrigins);
-  return async(req,res)=>{
-    const send=(status,body)=>{res.writeHead(status,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(body));};
-    const origin=req.headers.origin;
-    if(origin&&!allowedOrigins.has(origin))return send(403,jsonErr(-32000,'Origin not allowed'));
-    if(!safeCompare(req.headers.authorization,`Bearer ${bearerToken}`))return send(401,jsonErr(-32001,'Unauthorized'));
-    if(req.method==='GET')return send(405,jsonErr(-32601,'SSE stream not supported'));
-    if(req.method!=='POST')return send(405,jsonErr(-32601,'POST required'));
-    if(!String(req.headers['content-type']??'').toLowerCase().startsWith('application/json'))return send(415,jsonErr(-32600,'Content type must be application/json'));
-    const accept=String(req.headers.accept??'');
-    if(!accept.includes('application/json')||!accept.includes('text/event-stream'))return send(406,jsonErr(-32600,'Accept must include application/json and text/event-stream'));
-    // HTTP stream chunks are byte boundaries, not UTF-8 character boundaries.
-    // Enforce the 128 KiB limit on raw bytes before decoding the whole body.
-    const chunks=[];let byteCount=0;
-    try {
-      for await(const c of req){
-        byteCount+=c.byteLength;
-        if(byteCount>128*1024)throw new Error('Too large');
-        chunks.push(c);
-      }
-    }catch{return send(413,jsonErr(-32700,'Invalid or oversized body'));}
-    let raw;
-    try{raw=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks,byteCount));}
-    catch{return send(400,jsonErr(-32700,'Invalid UTF-8 body'));}
-    let rpc;try{rpc=JSON.parse(raw);}catch{return send(400,jsonErr(-32700,'Parse error'));}
-    const id=rpc?.id??null;
-    if(!plain(rpc)||rpc.jsonrpc!=='2.0'||typeof rpc.method!=='string'||Array.isArray(rpc))return send(400,jsonErr(-32600,'Invalid JSON-RPC request',id));
-    if(rpc.method==='notifications/initialized'){
-      res.writeHead(202);res.end();return;
-    }
-    if(rpc.method!=='initialize'&&req.headers['mcp-protocol-version']!==MCP_VERSION)return send(400,jsonErr(-32602,'Unsupported or missing MCP-Protocol-Version',id));
-    if(id===null && rpc.method!=='notifications/initialized')return send(400,jsonErr(-32600,'Request ID required'));
-    if(rpc.method==='initialize')return send(200,rpcReply(id,{protocolVersion:MCP_VERSION,
-      capabilities:{tools:{listChanged:false}},serverInfo:{name:'stellar-bazaar-paid-bridge',version:'0.1.0'},
-      instructions:'Search, describe and preview are read-only. Describe a search handle to inspect declared inputs before preview. Calls need out-of-band operator approval and an external x402 signer.'}));
-    if(rpc.method==='ping')return send(200,rpcReply(id,{}));
-    if(rpc.method==='tools/list')return send(200,rpcReply(id,{tools:TOOLS}));
-    if(rpc.method!=='tools/call')return send(200,jsonErr(-32601,'Method not found',id));
-    const name=rpc.params?.name,args=rpc.params?.arguments??{};
-    if(typeof name!=='string'||!plain(args))return send(200,jsonErr(-32602,'Invalid tool arguments',id));
-    try{
-      const data=await broker.call(name,args);
-      return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(data)}],structuredContent:data,isError:false}));
-    }catch(e){
-      // SF-33 hints are additive; preserve existing MCP wire fields and never
-      // treat an agent-visible hint as authority to sign or retry a payment.
-      const recoveryCode=e.code==='RESOURCE_STALE'||e.code==='CHALLENGE_MISMATCH'
-        ? 'discovery_stale_terms' : e.code==='TOOL_NOT_FOUND'
-          ? 'mcp_tool_missing' : 'unknown_upstream_error';
-      const recovery=explainFailure({stage:name==='bazaar_search'?'discovery':'mcp',reason:recoveryCode});
-      const err={code:e.code??'TOOL_ERROR',reason:e.message??'Error',recovery};
-      return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(err)}],structuredContent:err,isError:true}));
-    }
-  };
+  return createMcpToolHandler({tools:TOOLS,call:(name,args)=>broker.call(name,args)},options);
 }
-

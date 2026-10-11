@@ -117,6 +117,7 @@ or automatically retry a request.
 | `starforge pilot` | SF96 original SF82 seller pilot, dashboard and SF93 support composition |
 | `starforge buyer` | SF88 discovery, saved-source preparation, offline review and approved execution |
 | `starforge commerce` | Persistent native merchant, operations and selected buyer session |
+| `starforge merchant-mcp` | MCP staging, comparison, activation, seller lifecycle and customer SDK export through the original release system |
 | `starforge commerce-console` | Browser workspace for prepared requests, execution and delivered resources |
 | `starforge inbox` | Original durable buyer requests, outcomes and recovery |
 | `starforge native-signer` | SF103 native buyer configuration, inspection and signer loading check |
