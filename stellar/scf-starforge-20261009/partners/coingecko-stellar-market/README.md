@@ -61,7 +61,7 @@ An unsigned collection probe makes one GET for each explicitly selected request.
 To import a captured response metadata file, select its request and provide the original file. A metadata record may contain:
 
     {
-      "url": "https://api.coingecko.com/api/v3/x402/simple/price?ids=bitcoin&vs_currencies=usd",
+      "url": "https://pro-api.coingecko.com/api/v3/x402/simple/price?ids=bitcoin&vs_currencies=usd",
       "method": "GET",
       "status": 402,
       "headers": {"payment-required": "ORIGINAL_BASE64_HEADER"},
@@ -153,7 +153,7 @@ Commercial use of a provider API and redistribution are governed by that provide
 
 ## Handover and restart
 
-Export a named complete handover from History. It contains the project configuration, all original source files and hashes, request and note versions, saved comparisons, original native summaries and retained outputs, operator history, and the runnable source closure. Repeated exports do not recursively include previous archives. Their history remains visible; an older archive payload may be marked unavailable after restore.
+Export a named complete handover from Handover. It contains the project configuration, all original source files and hashes, request and note versions, saved comparisons, original native summaries and retained outputs, operator history, and the runnable source closure. Repeated exports do not recursively include previous archives. Their history remains visible; an older archive payload may be marked unavailable after restore.
 
 The source files and archive can include private research and operational records. The live signer, active native ledger, and existing buyer workspace remain outside the portable handover.
 

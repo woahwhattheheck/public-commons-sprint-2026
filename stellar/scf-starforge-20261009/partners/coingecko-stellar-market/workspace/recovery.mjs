@@ -17,6 +17,7 @@ function runtimeSources(){
   for(const name of productFiles)add(join(featureRoot,name));
   // SF88's original Python ledger initializer resolves this directory at runtime.
   add(resolve(featureRoot,'../../sf36-spend-governor/governor.py'));
+  add(resolve(featureRoot,'../../distribution/distribution.json'));
   add(resolve(featureRoot,'../../sf61-openapi-seller-import/package.json'));
   add(resolve(featureRoot,'../../../../stellar-forge/payment-auto-catalog/package.json'));
   for(const name of ['LICENSE','LICENSE.md','package.json'])add(join(repositoryRoot,name));
