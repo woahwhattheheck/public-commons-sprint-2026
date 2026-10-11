@@ -11,6 +11,18 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/cli.mjs workspace \
   --source /private/merchant-draft/source.json --state /private/mysql-workspace
 ```
 
+For a complete immutable data product, use the [MySQL dataset publisher](publisher/README.md).
+It streams a reviewed query through one native read-only transaction, retains
+the exact typed projection, publishes through the original dataset version
+store, and prepares the original buyer for a selected retained snapshot. The
+same browser and CLI provide review, refresh, recovery and scheduled publication:
+
+```bash
+node stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/cli.mjs publisher serve \
+  --workspace /private/catalog-publications --create \
+  --source /private/mysql-release/source.json --state /private/catalog-dataset
+```
+
 ## Install and create a workspace
 
 Use Node 22.16 or later. From the repository root:
