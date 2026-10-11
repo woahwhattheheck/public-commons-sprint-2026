@@ -179,7 +179,7 @@ export async function inspectArcgisDeployment(directory) {
 
 /** Stage through the original SF82 engine; an identical retained release ID is safe to reopen. */
 export async function stageArcgisDeployment({ packageDirectory, releaseDirectory, id, label, runtime = { port: 0 } } = {}) {
-  const { initReleaseStore, inspectRelease, stageRelease, normalizeReleaseRuntime } =
+  const { initReleaseStore, readReleaseState, inspectRelease, stageRelease, normalizeReleaseRuntime } =
     await import('../../sf82-seller-pilot/releases.mjs');
   if (!object(runtime) || Object.keys(runtime).some(key => !['port', 'facilitator', 'allowLocalFacilitator'].includes(key)))
     fail('ARCGIS_DEPLOYMENT_RUNTIME_INVALID', 'Use the original dataset release port and facilitator options.');
@@ -188,7 +188,21 @@ export async function stageArcgisDeployment({ packageDirectory, releaseDirectory
       !selectedLabel.trim() || /[\u0000-\u001f\u007f]/.test(selectedLabel))
     fail('ARCGIS_DEPLOYMENT_LABEL_INVALID');
   const prepared = await inspectArcgisDeployment(packageDirectory), root = resolve(releaseDirectory);
-  await initReleaseStore(root);
+  try { await readReleaseState(root); }
+  catch (issue) {
+    if (issue.code !== 'ENOENT') throw issue;
+    const present = await lstat(root).then(() => true, error => {
+      if (error.code !== 'ENOENT') throw error; return false;
+    });
+    if (present) fail('ARCGIS_RELEASE_STORE_INCOMPLETE',
+      'This existing release directory has no readable native state. Preserve it and reopen the original store.');
+    try { await initReleaseStore(root); }
+    catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      // Another original owner may have initialized it after our missing-root read.
+      await readReleaseState(root);
+    }
+  }
   let existing;
   try { existing = await inspectRelease(root, id); }
   catch (issue) { if (issue.code !== 'ENOENT') throw issue; }
