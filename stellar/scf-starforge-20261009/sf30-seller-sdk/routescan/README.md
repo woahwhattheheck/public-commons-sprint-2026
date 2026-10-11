@@ -2,7 +2,7 @@
 
 Operate a Stellar-priced merchant for Routescan's original gas-price aggregation responses. The operator selects the provider network and chain, aggregation intervals, date-range ceiling, upstream quota and each product's native payment terms. The customer selects dates and, for a series, its aggregation interval.
 
-This package composes the existing SF30 seller, HTTP upstream handler, native factory, operations interface and original generated customer package. A persistent project connects provider selection, retained source results and customer handover. The complementary workspace calls this same API.
+This package composes the existing SF30 seller, HTTP upstream handler, native factory, operations interface and original generated customer package. A persistent project connects provider selection, retained source results and customer handover. The operator workspace, portable customer handoff and Node/Python customer adapters call this same API.
 
 ## Original provider contract
 
@@ -112,6 +112,22 @@ node routescan/cli.mjs export --project /srv/routescan-project --revision 1 --id
 The export freezes the reviewed input and writes merchant.json, review.json, seller-openapi.json and the original generated client directory. That package includes JavaScript, declarations, metadata, the original OpenAPI, its export receipt and client/README.md with buyer invocation instructions. The complementary customer workspace keeps the original Node/Python buyer result and payment receipt.
 
 Reopening an export ID returns the existing release. An interrupted export fills missing members using the original deterministic generator, compares retained members byte-for-byte and completes the original client export receipt. The final manifest identifies the input revision and original file hashes.
+
+## Operator workspace and customer handoff
+
+Open the saved project in its private operator workspace. The same interface edits merchant revisions, retains source selections, controls the original merchant and Operations listeners, creates customer packages and restores portable project backups.
+
+~~~bash
+node routescan/workspace-cli.mjs --project /srv/routescan-project --port 8425 --merchant-port 8423 --operations-port 8424
+~~~
+
+For native service, add the configured `--facilitator` endpoint. The printed workspace URL binds to loopback. Select a completed source preview when preparing a customer package to carry that exact date range, time interval and optional filters into the customer's editable request file.
+
+Each customer package includes the original generated client, frozen merchant terms, a Node adapter and a Python adapter. Both language entry points use one original SF88 inbox, so preparation, native execution, recovery, original JSON download and accounting continuation share the same intent. The workspace-based customer path requires a Stellar Forge release containing the original `Buyer.fromWorkspace` API.
+
+Project backups preserve revisions, retained source bytes, generated exports and the provider quota ledger. Stop and drain the active merchant before creating or restoring its backup. Keep the restored account's quota history with the project.
+
+See [WORKSPACE.md](./WORKSPACE.md) for the complete operator and customer procedure.
 
 ## Workspace API
 
