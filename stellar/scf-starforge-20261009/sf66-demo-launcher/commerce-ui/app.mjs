@@ -49,6 +49,20 @@ function link(container, title, value) {
   element.href = url.href; element.target = '_blank'; element.rel = 'noopener noreferrer';
   container.append(element);
 }
+function operationsAddress(container, value) {
+  if (!value) return;
+  const field = document.createElement('input'); field.type = 'text'; field.readOnly = true;
+  field.value = value; field.setAttribute('aria-label', 'Merchant operations URL');
+  const button = document.createElement('button'); button.type = 'button';
+  button.textContent = 'Copy merchant operations URL';
+  button.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(value); notice('Merchant operations URL copied. Paste it into a new browser tab.'); }
+    catch { field.focus(); field.select(); notice('Copy the selected merchant operations URL and paste it into a new browser tab.'); }
+  });
+  const hint = document.createElement('span'); hint.className = 'muted';
+  hint.textContent = 'Open this address directly in a new tab.';
+  container.append(button, field, hint);
+}
 function render(next) {
   // Only a successful matching selection may unlock the selected operation.
   // An older preview/action callback or superseded refresh must not restore it.
@@ -163,7 +177,7 @@ function render(next) {
     ['Routes', seller.routes?.length ?? 0], ['Started', time(session.startedAt)]]);
   const links = byId('seller-links'); links.replaceChildren();
   link(links, 'Open developer workspace ↗', seller.developerUrl);
-  link(links, 'Open merchant operations ↗', seller.operationsUrl);
+  operationsAddress(links, seller.operationsUrl);
   const routes = byId('routes'); routes.replaceChildren();
   for (const route of seller.routes ?? []) {
     const row = document.createElement('li'), method = document.createElement('span');
@@ -199,7 +213,7 @@ async function refresh({ quiet = false } = {}) {
   }
 }
 async function action(name, body = {}) {
-  if (pending || selectionLoading) return;
+  if (pending || selectionLoading && name !== 'stop') return;
   pending = true; if (view) render(view); notice(null);
   if (name === 'stop') notice('Stopping the active buyer and draining the merchant session…');
   if (name === 'review') notice('Reading the prepared buyer request…');
