@@ -20,6 +20,9 @@ from urllib.parse import urlsplit
 
 SCHEMA="stellar-spend-governor/v1"
 MAX_AMOUNT=2**63-1
+# Same native request ceiling as sf31-buyer-client/request-body.mjs.
+# The governor binds length and digest; it does not load request bodies.
+MAX_REQUEST_BODY_BYTES=16*1024*1024
 ID_PATTERN=re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
 NETWORKS={"stellar:testnet", "stellar:pubnet"}
 CURRENCY_FIELDS=("max_single", "max_total", "max_per_utc_day", "max_per_actor_utc_day", "max_per_service_utc_day")
@@ -118,7 +121,7 @@ def validate_request(obj:dict[str,Any])->dict[str,Any]:
     if not isinstance(r['method'],str) or r['method'] not in HTTP_METHODS:
         raise Denied('method must be an uppercase supported HTTP verb')
     present=r['body_present'];size=r['body_bytes']
-    if type(present) is not bool or type(size) is not int or not (0<=size<=1_048_576):
+    if type(present) is not bool or type(size) is not int or not (0<=size<=MAX_REQUEST_BODY_BYTES):
         raise Denied('body presence/byte length invalid')
     if (not present) and size!=0:
         raise Denied('body absent but byte length is nonzero')

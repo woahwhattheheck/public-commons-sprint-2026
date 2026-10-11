@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // MIT. No shell commands or payment approval replacements are accepted as input.
-import { initializeRunbook, saveRunbookReport, executeRunbook, recoverRunbook, unlockRunbook } from './runbook.mjs';
+import { initializeRunbook, saveRunbookReport, executeRunbook, recoverRunbook, unlockRunbook,
+  finalizeRunbook,bindRunbookWorkspace } from './runbook.mjs';
 import { need } from '../sf88-operator-buyer-cli/config.mjs';
 
 const USAGE = `Buyer runbook — compose original SF88 operations
@@ -9,6 +10,11 @@ const USAGE = `Buyer runbook — compose original SF88 operations
   node cli.mjs status --run /absolute/existing-run
   node cli.mjs execute --run /absolute/existing-run [--only JOB_ID]
   node cli.mjs recover --run /absolute/existing-run
+  node cli.mjs accounting-workspace --run /absolute/existing-run --only JOB_ID
+                                   --workspace /absolute/original-sf88-workspace
+  node cli.mjs finalize --run /absolute/existing-run [--only JOB_ID]
+                       [--workspace /absolute/original-sf88-workspace]
+                       [--outbox /absolute/original-outbox --merchant-route ORIGINAL_ROUTE_ID]
   node cli.mjs unlock --run /absolute/existing-run --owner-pid PID
   node cli.mjs workspace --state /absolute/private-workspace --configs /absolute/buyer-configs
                         [--operator-settings /absolute/private-operator.json]
@@ -19,6 +25,10 @@ a signer or making a network call. Optional saveAs names reserve a download path
 inside the runbook. execute invokes the original buyer serially with its original
 controlling-terminal approval. Only previously untouched jobs are executed.
 recover imports complete retained original output and never starts a buyer.
+finalize completes existing attempts through the original SF88/SF36 ledger. It
+retains receipts and per-asset totals without a signer, payment or terminal prompt.
+accounting-workspace binds one operation to its existing original operator; later
+finalize calls reuse that selection. Optional outbox arguments require --only.
 status rewrites only derived status.json/report.html, not plans or attempts.
 unlock releases an exact dead local process lease; it preserves every attempt.
 workspace opens the private browser planner and original run controls. Start it
@@ -37,10 +47,12 @@ function options(args, names) {
   }
   return result;
 }
-function compact({state, reportPath, statusPath}) {
-  return {id:state.plan.id, reportPath, statusPath, executionLock:state.executionLock,
+function compact({state, reportPath, statusPath,accountingPath}) {
+  return {id:state.plan.id, reportPath, statusPath,accountingPath, executionLock:state.executionLock,
+    accounting:state.accounting,
     operations:state.operations.map(row => ({id:row.id, state:row.state, integrity:row.integrity,
       buyerStatus:row.result?.summary?.status ?? null, responseFile:row.result?.summary?.responseFile?.status ?? null,
+      accounting:row.accounting,
       ...(row.lastError ? {localError:row.lastError.code} : {})}))};
 }
 
@@ -70,28 +82,36 @@ export async function main(args = process.argv.slice(2)) {
     await initializeRunbook({manifest:opts['--manifest'], output:opts['--out']});
     print(compact(await saveRunbookReport(opts['--out']))); return;
   }
-  need(['status','execute','recover','unlock'].includes(command), 'UNKNOWN_COMMAND');
-  const opts = options(tail, command === 'execute' ? ['--run','--only'] : command === 'unlock' ? ['--run','--owner-pid'] : ['--run']);
+  need(['status','execute','recover','unlock','finalize','accounting-workspace'].includes(command), 'UNKNOWN_COMMAND');
+  const opts = options(tail, command === 'execute' ? ['--run','--only'] : command === 'unlock' ? ['--run','--owner-pid'] :
+    command==='finalize'?['--run','--only','--workspace','--outbox','--merchant-route']:
+      command==='accounting-workspace'?['--run','--only','--workspace']:['--run']);
   need(opts['--run'], 'RUN_DIRECTORY_REQUIRED');
   let action;
-  if (command === 'unlock') {
+  if(command==='accounting-workspace') {
+    need(opts['--only']&&opts['--workspace'],'RUNBOOK_ACCOUNTING_SELECTION_REQUIRED');
+    action=await bindRunbookWorkspace(opts['--run'],{only:opts['--only'],workspace:opts['--workspace']});
+  } else if (command === 'unlock') {
     need(/^[1-9][0-9]{0,9}$/.test(opts['--owner-pid'] ?? ''), 'EXACT_OWNER_PID_REQUIRED');
     action = await unlockRunbook(opts['--run'], Number(opts['--owner-pid']));
   } else if (command === 'recover') action = await recoverRunbook(opts['--run']);
-  else if (command === 'execute') {
+  else if (command === 'execute'||command==='finalize') {
     const controller = new AbortController();
     let interruptedCode;
     const interrupt = () => { interruptedCode ??= 130; controller.abort(); };
     const terminate = () => { interruptedCode ??= 143; controller.abort(); };
     process.on('SIGINT', interrupt); process.on('SIGTERM', terminate);
     try {
-      action = await executeRunbook(opts['--run'], {only:opts['--only'], signal:controller.signal,
+      const run=command==='finalize'?finalizeRunbook:executeRunbook;
+      action = await run(opts['--run'], {only:opts['--only'], signal:controller.signal,
+        ...(command==='finalize'?{workspace:opts['--workspace'],outbox:opts['--outbox'],merchantRoute:opts['--merchant-route']}:{}),
         onProgress:event => process.stderr.write(JSON.stringify(event) + '\n')});
     } finally {
       process.off('SIGINT', interrupt); process.off('SIGTERM', terminate);
       if (interruptedCode) process.exitCode = interruptedCode;
     }
-    if (!process.exitCode && action.results.some(result =>
+    if (!process.exitCode && action.results.some(result => command==='finalize'?
+      !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','UNATTEMPTED'].includes(result.status)||result.viewStatus==='SAVE_FAILED':
       !['RESULT_RECORDED','ALREADY_ATTEMPTED'].includes(result.status) ||
       result.exitCode !== undefined && result.exitCode !== 0)) process.exitCode = 2;
   }
