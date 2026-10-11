@@ -406,6 +406,20 @@ textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
   font-family: var(--mono); pointer-events: none;
 }
 .atomic-echo { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+/* Source-backed creation preview: planning only, never a funded-balance claim. */
+.launch-plan {
+  padding: 12px 13px;
+  background: var(--slate-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.launch-plan strong { display: block; color: var(--ink); font-size: 13px; margin-bottom: 5px; }
+.launch-plan p { margin: 4px 0 0; }
+.launch-plan p.muted { margin-top: 9px; }
+
 .form-actions { display: flex; gap: 9px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
 .form-error {
   font-size: 13px; color: var(--rust); background: var(--rust-soft);

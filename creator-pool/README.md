@@ -79,6 +79,24 @@ resume-signing, and never invents a hash.
 
 See `backend/API-CONTRACT.md` for the exact wire format.
 
+## Sponsor launch planner
+
+Open **New campaign** from the Sponsor view. The creation drawer now
+previews the maximum number of complete creator rewards and the leftover
+uncommitted budget **at hypothetical full funding**, calculated as integer
+atomic units using the asset decimals reported by the live backend. That
+preview is not a funded balance, an approval, a creator selection or a
+transaction. It updates as the reward/budget inputs change and displays the
+separate chain funding requirement before creation.
+
+Set a closing date in **device local time** (the default) or explicitly
+switch to **UTC**. The form shows the exact UTC close that would be recorded
+on chain; the backend still enforces the original five-minute to 400-day
+range. Title (140 characters), creative brief (4,000 characters) and uint128
+money constraints now match the original API rather than waiting for a
+backend validation failure. The contract, creator choice, funding, wallet
+signing and approval paths are unchanged. Local CPDEMO remains valueless.
+
 ## Sponsor's pool view
 
 The existing campaign workspace now makes its contract-backed pool accounting

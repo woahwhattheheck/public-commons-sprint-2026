@@ -1769,11 +1769,11 @@ function amountInput(name) {
   return { wrap, input };
 }
 
-// datetime-local labelled UTC -> ISO-8601 Z string the backend accepts.
-function deadlineLocalToIso(v) {
+// datetime-local can be interpreted in the sponsor's device timezone or explicitly as UTC; the chain receives ISO-8601 UTC.
+function deadlineLocalToIso(v, mode = "UTC") {
   if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/.test(v)) return null;
   const withSec = v.length === 16 ? v + ":00" : v;
-  const ms = Date.parse(withSec + "Z");
+  const ms = Date.parse(mode === "local" ? withSec : withSec + "Z");
   if (!Number.isFinite(ms)) return null;
   return new Date(ms).toISOString();
 }
@@ -1790,11 +1790,15 @@ function deadlineRangeError(iso, nowMs) {
 
 function buildNewCampaignForm() {
   const precisionKnown = decimalsKnown();
-  const title = h("input", { name: "title", maxlength: "200", required: true, placeholder: "e.g. October product launch clips" });
-  const brief = h("textarea", { name: "brief", required: true, placeholder: "What should creators make? Deliverables, tone, required disclosures, do / don't." });
+  const title = h("input", { name: "title", maxlength: "140", required: true, placeholder: "e.g. October product launch clips" });
+  const brief = h("textarea", { name: "brief", maxlength: "4000", required: true, placeholder: "What should creators make? Deliverables, tone, required disclosures, do / don't." });
   const reward = amountInput("reward");
   const budget = amountInput("budget");
   const deadline = h("input", { name: "deadline", type: "datetime-local", required: true, step: "60" });
+  const deadlineZone = h("select", { name: "deadlineZone", "aria-label": "Deadline input timezone" },
+    h("option", { value: "local", text: "My device's local time" }),
+    h("option", { value: "UTC", text: "UTC" }));
+  const launchPlan = h("div", { class: "launch-plan", role: "status", "aria-live": "polite" });
   const echo = h("div", { class: "atomic-echo", "aria-live": "polite" });
   const dlEcho = h("div", { class: "atomic-echo", "aria-live": "polite" });
   const errBox = h("p", { class: "form-error", hidden: true });
@@ -1805,7 +1809,39 @@ function buildNewCampaignForm() {
     precisionKnown ? {} : { hint: "disabled until the backend reports token precision" });
   const fBudget = fieldWrap("Total pool budget", budget.wrap,
     precisionKnown ? {} : { hint: "disabled until the backend reports token precision" });
-  const fDeadline = fieldWrap("Closing date and time", deadline, { hint: "UTC — the server requires 5 minutes to 400 days ahead" });
+  const fDeadline = fieldWrap("Closing date and time", deadline, { hint: "The server requires 5 minutes to 400 days ahead." });
+  const fDeadlineZone = fieldWrap("Interpret the closing time as", deadlineZone, { hint: "The exact UTC chain deadline appears below before creation." });
+
+  function refreshPlan() {
+    if (!precisionKnown) {
+      launchPlan.textContent = "The live asset precision is unavailable. Budget preview is paused.";
+      return;
+    }
+    try {
+      const rewardAtomic = BigInt(Amount.parse(reward.input.value, formDecimals()));
+      const budgetAtomic = BigInt(Amount.parse(budget.input.value, formDecimals()));
+      if (rewardAtomic <= 0n || budgetAtomic <= 0n || rewardAtomic >= (1n << 128n) || budgetAtomic >= (1n << 128n)) {
+        launchPlan.textContent = "Enter positive reward and budget amounts within the chain's range to preview this campaign.";
+        return;
+      }
+      if (rewardAtomic > budgetAtomic) {
+        launchPlan.textContent = "Increase the pool budget or lower the reward: one creator reward must fit inside the budget.";
+        return;
+      }
+      const maxWinners = budgetAtomic / rewardAtomic;
+      const leftover = budgetAtomic % rewardAtomic;
+      const rewardLabel = fmtWithUnit(String(rewardAtomic));
+      const remainderLabel = fmtWithUnit(String(leftover));
+      launchPlan.replaceChildren(
+        h("strong", { text: "Sponsor launch plan · if fully funded" }),
+        h("p", { text: `Maximum ${maxWinners.toLocaleString("en-US")} approved creator ${maxWinners === 1n ? "piece" : "pieces"} at ${rewardLabel} each. Approvals reserve rewards; creators must claim their payouts.` }),
+        h("p", { text: `Remaining after that many full rewards: ${remainderLabel}. Any still-uncommitted funding can be refunded when the campaign closes.` }),
+        h("p", { class: "muted small", text: "Create records the campaign only. Funding is a separate transaction; this preview is a plan, not on-chain funding, awards or payments." })
+      );
+    } catch {
+      launchPlan.textContent = "Enter a reward and total budget to preview how many pieces the pool can support.";
+    }
+  }
 
   function echoAtomic() {
     if (!precisionKnown) { echo.textContent = ""; return; }
@@ -1817,18 +1853,22 @@ function buildNewCampaignForm() {
     } catch { echo.textContent = ""; }
   }
   function echoDeadline() {
-    const iso = deadlineLocalToIso(deadline.value);
-    dlEcho.textContent = iso ? `closes at ${iso}` : "";
+    const iso = deadlineLocalToIso(deadline.value, deadlineZone.value);
+    dlEcho.textContent = iso ? `On-chain close: ${iso} · your device: ${new Date(iso).toLocaleString()}` : "";
     dlEcho.style.color = "";
   }
   reward.input.addEventListener("input", echoAtomic);
   budget.input.addEventListener("input", echoAtomic);
   deadline.addEventListener("input", echoDeadline);
+  deadlineZone.addEventListener("change", echoDeadline);
+  reward.input.addEventListener("input", refreshPlan);
+  budget.input.addEventListener("input", refreshPlan);
+  refreshPlan();
 
   const form = h("form", { class: "stack", noValidate: false },
     fTitle, fBrief,
     h("div", { class: "field-row" }, fReward, fBudget),
-    fDeadline, dlEcho, echo, errBox,
+    fDeadline, fDeadlineZone, dlEcho, echo, launchPlan, errBox,
     h("div", { class: "form-actions" },
       h("button", { type: "submit", class: "btn primary", id: "createCampaignSubmit", disabled: !precisionKnown }, "Create campaign"),
       h("span", { class: "hint", text: precisionKnown ? "Metadata is created first — fund the pool next." : "Amount entry waits until the backend reports asset decimals." })));
@@ -1843,16 +1883,16 @@ function buildNewCampaignForm() {
     let deadlineIso = null;
     if (!deadline.value) { setFieldError(fDeadline, "Pick a closing date and time (UTC)."); bad = true; }
     else {
-      deadlineIso = deadlineLocalToIso(deadline.value);
+      deadlineIso = deadlineLocalToIso(deadline.value, deadlineZone.value);
       const rangeErr = deadlineIso ? deadlineRangeError(deadlineIso) : "Enter a valid date and time.";
       if (rangeErr) { setFieldError(fDeadline, rangeErr); bad = true; }
     }
     let rewardAtomic = null, budgetAtomic = null;
     if (!precisionKnown) { setFieldError(fReward, "Token precision is unknown — amounts can't be entered safely."); bad = true; }
     else {
-      try { rewardAtomic = Amount.parse(reward.input.value, formDecimals()); if (rewardAtomic === "0") throw new Error("Reward must be greater than zero."); }
+      try { rewardAtomic = Amount.parse(reward.input.value, formDecimals()); if (rewardAtomic === "0") throw new Error("Reward must be greater than zero."); if (BigInt(rewardAtomic) >= (1n << 128n)) throw new Error("Reward exceeds the chain limit."); }
       catch (e) { setFieldError(fReward, e.message); bad = true; }
-      try { budgetAtomic = Amount.parse(budget.input.value, formDecimals()); if (budgetAtomic === "0") throw new Error("Budget must be greater than zero."); }
+      try { budgetAtomic = Amount.parse(budget.input.value, formDecimals()); if (budgetAtomic === "0") throw new Error("Budget must be greater than zero."); if (BigInt(budgetAtomic) >= (1n << 128n)) throw new Error("Budget exceeds the chain limit."); }
       catch (e) { setFieldError(fBudget, e.message); bad = true; }
       if (!bad && rewardAtomic && budgetAtomic && Amount.cmp(rewardAtomic, budgetAtomic) > 0) {
         setFieldError(fReward, "Reward can't exceed the total budget."); bad = true;
