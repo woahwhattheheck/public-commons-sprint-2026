@@ -1,6 +1,7 @@
 // MIT. Concrete commands derived from the same original host plan.
 import { join } from 'node:path';
 import { shellWord as q } from './host.mjs';
+import { retainedOperations } from './retained-runbook.mjs';
 
 export function renderRunbook(p, bundle) {
   const root = join(p.sourceRoot, 'stellar/scf-starforge-20261009');
@@ -13,7 +14,7 @@ export function renderRunbook(p, bundle) {
   return `# ${p.merchant}: original Stellar Forge host
 
 Profile: **${p.kind} / ${p.mode}**. Public origin: ${p.publicOrigin}.
-Source: ${p.sourceRoot}. Operator: http://127.0.0.1:${p.operationsPort}/.
+Source: ${p.sourceRoot}.${p.operationsPort ? ` Operator: http://127.0.0.1:${p.operationsPort}/.` : ' Operator: original retained release CLI and private catalog controls.'}
 This bundle uses the original product entry points. Configuration and original
 merchant stores remain at their selected paths. Keep this private bundle at
 ${bundle}: service preflight refers to this exact location.
@@ -49,9 +50,9 @@ Keep approved file bytes under ${p.stateRoot}, or include their storage root in
 a separate private recovery plan before snapshotting. The original database retains
 their path and digest; it does not contain the file bytes.\n` : `The original seller configuration is ${p.configPath}.\n`}
 Challenge mode advertises original unpaid challenges. Native mode uses the
-explicit facilitator and original SDK. Delivery independently processes any
+explicit facilitator and original SDK.${p.delivery ? ` Delivery independently processes any
 events already present in its selected outbox; use a fresh private state root for
-a demonstration. Starting this service never enrolls a customer or signs a purchase.
+a demonstration.` : ''} Starting this service never enrolls a customer or signs a purchase.
 
 ## Review and install the generated configuration
 
@@ -77,7 +78,7 @@ at 0700/0600 cannot be read by the unprivileged ExecStartPre command.
 
 Check every component; a target groups services but its active state alone does
 not establish application readiness. The smoke command reads the actual original
-seller readiness, offers and private operations interface${p.receiverState ? ', plus receiver health' : ''}.
+seller readiness and offers${p.operationsPort ? ', private operations' : ', retained process/source identity'}${p.receiverState ? ', plus receiver health' : ''}${p.discovery ? ', plus discovery readiness/resources' : ''}.
 It sends no payment header and executes no paid merchant operation.
 
 Merge this bundle's Caddyfile fragment into the host's EXISTING Caddy configuration.
@@ -94,7 +95,7 @@ ${cli} smoke --bundle ${q(bundle)} --public
 
 The fragment admits the original route/method pairs and seller documentation.
 It preserves request query strings, original payment headers and order identity.
-It does not expose the operations port, readiness/health, diagnostics or exports.
+It does not expose the operations port, readiness/health, diagnostics or private exports.
 ${p.receiverState ? `Only POST /internal/x402-events rewrites to the original receiver's /sf98/events.
 GET /deliver/ORDER reaches that same receiver, retaining its bearer token and
 original entitlement/access rules. Both remain on ${p.publicOrigin}, matching the
@@ -113,15 +114,16 @@ journalctl ${p.services.map(s => '-u ' + s.unit).join(' ')} --since today
 ${cli} smoke --bundle ${q(bundle)}
 ${p.delivery ? `${q(p.node)} ${q(join(root, 'sf98-merchant-delivery/worker.mjs'))} status --state ${q(p.outbox)}\n` : ''}\`\`\`
 
-The private operations interface is loopback-only. Use the host's existing SSH
-tunnel or private access workflow, retaining its original Host/Origin checks.
-An accepted webhook and a separately delivered file remain distinct outcomes.
+${p.operationsPort ? `The private operations interface is loopback-only. Use the host's existing SSH
+tunnel or private access workflow, retaining its original Host/Origin checks.` : 'Use the original retained release and catalog commands below through the host’s existing private access workflow.'}
+${p.delivery || p.receiverState ? 'An accepted webhook and a separately delivered file remain distinct outcomes.\n' : ''}
 ${p.delivery ? `The continuous worker reuses the original eight-attempt retry budget and private
 checkpoint. A crash releases its Linux lock; restart resumes saved events. A
 competing sender exits75, and the unit avoids a busy-restart loop. Do not run an
 older unlocked drain beside this worker. SERVICE.md supplies exact retry/requeue
 and cancellation behavior.\n` : ''}
 
+${retainedOperations(p)}
 ## Stop, upgrade and recover
 
 For this installed systemd/Caddy host, the source release includes the complete
@@ -145,9 +147,11 @@ systemctl stop ${p.target}
 systemctl is-active ${names}
 \`\`\`
 
-The dependency order stops the seller first, then sender, then receiver. The
+${p.release ? `The dependency order stops the original retained seller first, then its catalog
+writer. The release manager drains its owned accepted work and the original
+catalog completes accepted writes before closing its journal.` : `The dependency order stops the seller first, then sender, then receiver. The
 original seller drains accepted work while its operations observer remains attached;
-the sender retains ambiguous attempts for retry. Confirm all components stopped.
+the sender retains ambiguous attempts for retry.`} Confirm all components stopped.
 Also stop any separately operated catalog, application or database writers before
 declaring their data quiesced. An inactive target does not prove unrelated writers
 stopped. The generated recovery plan includes this merchant's state and selected
