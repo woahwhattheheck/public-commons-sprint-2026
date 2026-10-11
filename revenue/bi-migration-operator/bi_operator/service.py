@@ -14,9 +14,10 @@ import zipfile
 from . import archive, native
 from .compare import compare_outputs, read_csv, csv_bytes
 from .providers import Rollouts, capture_results
+from .report_server import ReportServer
 from .store import Store, Conflict, digest, encoded, identifier, now
 
-KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup")
+KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result")
 
 
 def decoded_file(request):
@@ -52,6 +53,7 @@ class Service:
         self.operation_id = None
         self.actor = "operator"
         self.rollouts = Rollouts(self)
+        self.report_server = ReportServer(self)
         self.actions = {
             "source.import": self.source_import, "source.assign": self.source_assign,
             "dataset.import": self.dataset_import, "dataset.correct": self.dataset_correct,
@@ -62,6 +64,12 @@ class Service:
             "rollout.reconcile": self.rollouts.reconcile, "rollout.rollback": self.rollouts.rollback,
             "delivery.build": self.delivery_build, "backup.create": self.backup_create,
             "example.load": self.example_load,
+            "server.native.import": self.report_server.import_native,
+            "server.native.register": self.report_server.register_native,
+            "server.family.build": self.report_server.build_family,
+            "server.job.prepare": self.report_server.prepare_job,
+            "server.result.import": self.report_server.import_result,
+            "server.handoff": self.report_server.handoff,
         }
 
     def close(self):

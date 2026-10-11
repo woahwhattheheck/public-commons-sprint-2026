@@ -138,7 +138,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlsplit(self.path)
-        public = parsed.path in {"/", "/index.html", "/app.js", "/style.css", "/favicon.ico"}
+        public = parsed.path in {"/", "/index.html", "/app.js", "/report-server.js", "/style.css", "/favicon.ico"}
         if not self.allowed(authenticate=not public):
             return
         try:
