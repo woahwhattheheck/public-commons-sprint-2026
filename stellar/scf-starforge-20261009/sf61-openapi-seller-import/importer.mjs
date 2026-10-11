@@ -1,6 +1,6 @@
 // MIT. Offline OpenAPI 3.0/3.1 adapter for the original SF30 seller compiler.
 import { createSellerDiscovery, makePaymentRequiredResponse } from '../sf30-seller-discovery/index.mjs';
-import { adaptOpenApi30Schema, adaptOpenApi31Schema } from './schema-compat.mjs';
+import { adaptOpenApi30Schema, adaptOpenApi31Schema, applyOpenApiDirection } from './schema-compat.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -27,7 +27,8 @@ function inspect(value, depth = 0, count = { n: 0 }) {
 }
 
 // Resolve reference OBJECTS only. Examples are data and are never traversed.
-function resolver(document) {
+function resolver(document, { direction = 'request' } = {}) {
+  if (!['request', 'response'].includes(direction)) fail('OpenAPI schema direction must be request or response');
   const legacy = /^3\.0\./.test(document.openapi);
   let expanded = 0;
   const pointer = ref => {
@@ -78,7 +79,9 @@ function resolver(document) {
       if (!Array.isArray(value[k])) fail(k + ' must be an array');
       result[k] = value[k].map(child => schema(child, stack, depth + 1));
     }
-    return result;
+    // OAS 3.1 retains JSON Schema required semantics. OAS 3.0 explicitly
+    // scopes required readOnly/writeOnly properties to the relevant direction.
+    return legacy ? applyOpenApiDirection(result, direction) : result;
   };
   return { reference, schema };
 }
