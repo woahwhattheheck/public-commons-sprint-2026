@@ -3,13 +3,13 @@
 // Experiment driver: execute once in the original PostgreSQL owner's admitted job.
 import assert from 'node:assert/strict';
 import { createServer, request as httpRequest } from 'node:http';
-import { mkdir, readFile, writeFile, stat, rename, unlink, readdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, stat, rename, unlink, readdir, open, lstat } from 'node:fs/promises';
 import { spawn, fork, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { join, resolve, relative, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 const driverDirectory = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(process.env.PG_FLEET_SOURCE ?? join(driverDirectory, '../..'));
@@ -20,12 +20,27 @@ const dist = join(repo, 'stellar-forge/developer-site/dist');
 const directory = join(work, 'operator'), planFile = join(directory, 'fleet-plan.json');
 const packet = join(work, 'unpacked/postgres-fleet');
 const read = async file => JSON.parse(await readFile(file, 'utf8'));
-const save = (file, value) => writeFile(file, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
+async function save(file, value) {
+  const temporary = file + '.' + randomUUID() + '.tmp';
+  let handle;
+  try {
+    handle = await open(temporary, 'wx', 0o600);
+    await handle.writeFile(JSON.stringify(value, null, 2) + '\n'); await handle.sync();
+    await handle.close(); handle = null; await rename(temporary, file);
+    if (process.platform !== 'win32') {
+      const parent = await open(dirname(file), 'r'); try { await parent.sync(); } finally { await parent.close(); }
+    }
+  } finally { await handle?.close(); await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+}
+async function exists(path) {
+  try { await lstat(path); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; }
+}
 const hash = value => createHash('sha256').update(value).digest('hex');
 const delay = milliseconds => new Promise(done => setTimeout(done, milliseconds));
 const run = promisify(execFile), require = createRequire(join(repo, 'package.json'));
 const { main: startPostgresWorkspace } = await import(join(postgres, 'workspace/server.mjs'));
 const { reviewPostgresSelection } = await import(join(sdk, 'sf82-seller-pilot/release-postgres-control.mjs'));
+const { preparePostgresRelease } = await import(join(sdk, 'sf82-seller-pilot/release-postgres.mjs'));
 const { startReleaseConsole } = await import(join(sdk, 'sf82-seller-pilot/release-console.mjs'));
 const { initReleaseStore, readReleaseState, inspectRelease } = await import(join(sdk, 'sf82-seller-pilot/releases.mjs'));
 const { readFleetReleasePlan } = await import(join(sdk, 'merchant-fleet-gateway/release-operator.mjs'));
@@ -428,7 +443,34 @@ async function nativePhase() {
     });
   }
   if (!receipt.sourcesMoved) {
-    for (const path of new Set(receipt.exports.map(item => item.directory))) await rename(path, path + '-moved');
+    receipt.sourceRelocations ??= {};
+    for (const item of receipt.exports) {
+      const path = item.directory, target = path + '-moved';
+      const present = await exists(path), moved = await exists(target);
+      assert(present !== moved, 'Exactly one original or moved PostgreSQL package must exist: ' + path);
+      const retained = await inspectRelease(join(directory, 'stores', item.tenant,
+        item.alias === 'current' ? 'blue' : 'green'), item.alias === 'current' ? 'initial' : 'second');
+      const identity = { inputManifestSha256: retained.postgres.inputManifestSha256,
+        executionSha256: retained.postgres.executionSha256 };
+      assert.equal(identity.inputManifestSha256,
+        receipt.inputs.packages[item.tenant][item.alias].postgresInputManifestSha256);
+      const previous = receipt.sourceRelocations[path];
+      if (previous) {
+        assert.equal(previous.target, target); assert.deepEqual(previous.identity, identity);
+      } else {
+        receipt.sourceRelocations[path] = { target, identity, complete: false };
+        await save(join(work, 'receipt.json'), receipt);
+      }
+      const inspect = async candidate => {
+        const prepared = await preparePostgresRelease(candidate);
+        assert.equal(prepared.postgres.inputManifestSha256, identity.inputManifestSha256);
+        assert.equal(prepared.postgres.executionSha256, identity.executionSha256);
+      };
+      await inspect(present ? path : target);
+      if (present) { await rename(path, target); await inspect(target); }
+      receipt.sourceRelocations[path].complete = true;
+      await save(join(work, 'receipt.json'), receipt);
+    }
     receipt.sourcesMoved = true; await save(join(work, 'receipt.json'), receipt);
   }
   const resumed = await command('setup'); assert.equal(resumed.planDigest, receipt.planDigest);
