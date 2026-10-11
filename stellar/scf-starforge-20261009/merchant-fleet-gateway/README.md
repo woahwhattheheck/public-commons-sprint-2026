@@ -1,5 +1,10 @@
 # Original SF30 merchant fleet gateway | single-host multi-merchant operations
 
+For an initialized managed fleet, [deploy the complete fleet and private operator
+workspace](DEPLOYMENT.md) with the generated Caddy/systemd or Docker Compose
+installation. The same original release operator owns all merchant sessions,
+live changes, graceful shutdown and retained reopening.
+
 **Purpose:** Run two to 32 independently configured **original SF30** Stellar x402 sellers behind one local ingress and one operator-managed HTTPS reverse proxy. Each merchant keeps its own original service config, route declarations, x402 facilitator choice, settlement semantics, pay-to account, operations and delivery outbox. The gateway does **not** create a payment scheme, reuse a merchant credential, share seller ports, authorize payments, simulate on-chain activity or mark transactions settled. It is a product for operators onboarding several paid merchants without duplicating an HTTPS ingress host per merchant.
 
 **Relationship to existing project work:** Complements SF30 original seller, SF49 paid merchant program and the separate SF99 **single** merchant Caddy/systemd deployment. It does not modify those source files. Preserve original SF98 settlement webhook path/status and challenge/receipt headers byte-for-byte. The existing original SF30 server still listens on 127.0.0.1 and builds Bazaar offers from each trusted HTTPS publicOrigin.
