@@ -1,0 +1,45 @@
+{
+  "schema": "stellar-forge.amberdata-research-plan.v1",
+  "label": "Amberdata Spot Research",
+  "publicOrigin": "https://amberdata-merchant.example",
+  "provider": {
+    "apiVersion": "2023-09-30",
+    "exchange": "gdax",
+    "instrument": "btc_usd",
+    "instrumentsShape": "array"
+  },
+  "window": {
+    "startDate": "2023-07-24T00:00:00.000Z",
+    "endDate": "2023-07-25T00:00:00.000Z",
+    "timeInterval": "days"
+  },
+  "units": {
+    "base": "BTC",
+    "quote": "USD",
+    "volume": "BTC",
+    "volumeKind": "base",
+    "dailyBoundaryMinutes": 0,
+    "source": "https://docs.amberdata.io/data-dictionary/market/ohlcv"
+  },
+  "limits": {
+    "maxResponseBytes": 262144,
+    "maxInputBytes": 524288,
+    "maxRows": 2000,
+    "maxPages": 16,
+    "timeoutMs": 20000,
+    "continuationTtlSeconds": 3600
+  },
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "maxTimeoutSeconds": 60
+  },
+  "prices": {
+    "spot_instruments": "10000",
+    "spot_ohlcv": "20000",
+    "ohlcv_summary": "10000"
+  },
+  "workerCount": 2
+}

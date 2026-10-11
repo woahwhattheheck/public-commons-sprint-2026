@@ -1,0 +1,15 @@
+{
+  "node": "n8n-nodes-starforge-buyer.starforgeBuyer",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": [
+    "Data & Storage"
+  ],
+  "resources": {
+    "primaryDocumentation": [
+      {
+        "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n"
+      }
+    ]
+  }
+}

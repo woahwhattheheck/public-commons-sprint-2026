@@ -17,6 +17,7 @@ import { MerchantReceiving, receivingTools } from './receiving.mjs';
 import { MerchantPythonWorkspaces, pythonWorkspaceTools } from './python-workspace.mjs';
 import { MerchantS3Workspaces, s3WorkspaceTools } from './s3-workspace.mjs';
 import { MerchantPublisher, publisherTools } from './publisher.mjs';
+import { MerchantPricing, pricingTools } from './pricing.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const idSchema = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
@@ -75,6 +76,7 @@ export const MERCHANT_TOOLS = [
   ...pythonWorkspaceTools(tool),
   ...s3WorkspaceTools(tool),
   ...publisherTools(tool),
+  ...pricingTools(tool),
 ];
 const definitions = new Map(MERCHANT_TOOLS.map(value => [value.name, value]));
 const mutations = new Set(MERCHANT_TOOLS.filter(value => !value.annotations.readOnlyHint).map(value => value.name));
@@ -119,9 +121,9 @@ async function originalJson(url, maximum = 16 * 1024 * 1024) {
 }
 
 export class MerchantReleaseOperator {
-  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #s3Workspaces; #publishers;
+  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #s3Workspaces; #publishers; #pricing;
   #clientReads = new RetainedFileReads({ errorPrefix: 'CLIENT' });
-  constructor(config) { this.#config = config; this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#publishers = new MerchantPublisher(config); }
+  constructor(config) { this.#config = config; this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#publishers = new MerchantPublisher(config); this.#pricing = new MerchantPricing(config); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
@@ -129,7 +131,7 @@ export class MerchantReleaseOperator {
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, publishers: this.#publishers.summary, clientExports: this.#clientReads.summary } };
+        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, clientExports: this.#clientReads.summary } };
   }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
@@ -204,6 +206,7 @@ export class MerchantReleaseOperator {
   async #execute(name, args) {
     if (name.startsWith('merchant_client_export_')) return this.#clientExport(name, args);
     if (name.startsWith('merchant_accounting_')) return this.#accounting.call(name, args);
+    if (name.startsWith('merchant_pricing_')) return this.#pricing.call(name, args);
     if (name.startsWith('merchant_receiving_')) return this.#receiving.call(name, args);
     if (name.startsWith('merchant_python_')) return this.#pythonWorkspaces.call(name, args);
     if (name.startsWith('merchant_s3_')) return this.#s3Workspaces.call(name, args);
@@ -303,7 +306,7 @@ export class MerchantReleaseOperator {
     this.#fleet.cancelStaging();
     this.#close = (async () => {
       await this.#active;
-      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#publishers.close(), this.#clientReads.close(),
+      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#publishers.close(), this.#pricing.close(), this.#clientReads.close(),
         this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');
@@ -314,3 +317,4 @@ export class MerchantReleaseOperator {
 export async function openMerchantOperator(configPath) {
   return new MerchantReleaseOperator(await readMerchantConfig(configPath));
 }
+
