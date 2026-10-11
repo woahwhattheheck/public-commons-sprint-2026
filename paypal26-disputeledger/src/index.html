@@ -1,116 +1,70 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DisputeLedger • PayPal Sandbox Case Studio</title>
-<style>
-:root{color-scheme:dark;--bg:#0c121b;--pane:#172333;--edge:#344557;--blue:#85b7ff;--text:#eaf0f8;--muted:#adbed3;--gold:#e9ca8e}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#1b3351,var(--bg) 65%);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:1160px;margin:auto;padding:36px 24px 70px}header{padding-bottom:23px;border-bottom:1px solid var(--edge);margin-bottom:23px}
-.eyebrow{font-size:12px;color:var(--blue);letter-spacing:.21em;font-weight:800}
-h1{font-size:clamp(36px,6vw,66px);letter-spacing:-.055em;line-height:1.05;margin:11px 0}
-h2{font-size:21px;margin:0 0 14px}.sub{max-width:770px;color:var(--muted);font-size:17px}
-.grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:18px}@media(max-width:780px){.grid{grid-template-columns:1fr}}
-section{background:var(--pane);padding:24px;border:1px solid var(--edge);border-radius:18px;margin-bottom:18px}
-button{padding:11px 16px;background:var(--blue);border:0;color:#08172b;border-radius:9px;font-weight:750;cursor:pointer;margin:4px 6px 4px 0}
-button.secondary{background:#263b57;color:var(--text);border:1px solid #587292}button:disabled{opacity:.4;cursor:not-allowed}
-.small{font-size:13px;color:var(--muted)}.warn{border-left:3px solid var(--gold);padding:10px 14px;background:#302b2a;color:#f5dbad;border-radius:6px}
-.item{display:block;background:#111d2a;width:100%;margin:8px 0;padding:12px;text-align:left;color:var(--text);border:1px solid #48617c;font-weight:500}
-.item.selected{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
-.check{display:flex;align-items:start;gap:10px;margin:10px 0;background:#101e2f;padding:11px;border-radius:8px}
-.check input{margin-top:4px;accent-color:var(--blue)}.code{overflow-wrap:anywhere;white-space:pre-wrap;background:#081322;padding:17px;border-radius:10px;border:1px solid var(--edge);font-size:13px;min-height:65px}
-a{color:var(--blue)}#feedback{min-height:25px}strong{font-weight:750}
-</style></head><body><main>
-<header><div class="eyebrow">DISPUTELEDGER / PAYPAL AI HACKATHON 2026 / SOURCE PROTOTYPE</div>
-<h1>Build the case. Never invent the evidence.</h1>
-<p class="sub">Connect a permitted PayPal <strong>sandbox</strong> merchant app, inspect actual dispute status, and prepare a human-reviewable evidence checklist with optional AI drafting. Nothing is filed, refunded, charged, or resolved here.</p>
-<div class="warn">SANDBOX ONLY · Read-only Disputes API. The synthetic example is not a real PayPal case. Checkboxes mean evidence exists in your own records; this tool cannot validate documents.</div></header>
-<div class="grid"><div>
-<section><div class="eyebrow">01 / FETCH & SELECT</div><h2>Dispute inbox</h2>
-<p id="health" class="small">Checking local configuration…</p>
-<button id="load">Read sandbox cases</button><button id="demo" class="secondary">Load synthetic example</button>
-<div id="cases"></div><p id="feedback" role="status" aria-live="polite" class="small"></p>
-</section>
-<section><div class="eyebrow">02 / DOCUMENT CHECKLIST</div><h2>What can you substantiate?</h2><div id="checks"></div>
-<button id="prepare" disabled>Prepare review packet</button>
-<p class="small">No buyer messages, credentials or identity fields are transmitted to the optional AI model. Select only evidence categories you can substantiate with actual records.</p></section></div>
-<div><section><div class="eyebrow">CASE FACTS</div><h2>Verified versus asserted</h2><div class="code" id="detail">Select a case to inspect status and reason.</div></section>
-<section><div class="eyebrow">03 / HUMAN-REVIEW DRAFT</div><h2>Gaps, not guarantees</h2>
-<div id="report" class="code">No draft prepared. Every packet is local evidence preparation, not a PayPal API submission.</div>
-<button id="save" class="secondary" disabled>Save packet as JSON</button>
-<p class="small">An exported packet is <strong>not</strong> a payment or dispute submission receipt. Evidence must be verified and filed separately through the real PayPal process.</p>
-</section></div></div><p class="small">Local-first prototype · Node 22+ · no production endpoint, no dispute mutations, no contest entry or award claimed.</p></main>
-<script>
-const get=id=>document.getElementById(id),CASE=['delivery','refund','order_record','merchant_terms','buyer_messages'];
-let selection=null, packet=null,records=[];
-const say=x=>get('feedback').textContent=x;
-function renderCases(){
-  const place=get('cases');place.replaceChildren();
-  records.forEach(d=>{
-    const b=document.createElement('button');b.type='button';
-    b.className='item'+(selection?.dispute_id===d.dispute_id?' selected':'');
-    b.textContent=d.dispute_id+' / '+d.status+' / '+d.reason;
-    b.onclick=async()=>{
-      try {
-        let detail=d;
-        if(d.source==='PAYPAL_SANDBOX_API'){
-          say('Refreshing one dispute from PayPal sandbox…');
-          const response=await fetch('/api/detail?id='+encodeURIComponent(d.dispute_id));
-          const json=await response.json();if(!response.ok)throw Error(json.error);
-          detail=json.case;
-        }
-        selection=detail;packet=null;get('save').disabled=true;
-        get('detail').textContent=JSON.stringify(detail,null,2);
-        get('report').textContent='No packet prepared.';
-        get('prepare').disabled=false;renderChecks();renderCases();
-        say(detail.provider_verified?'Read-only sandbox provider details loaded.':'Synthetic demo loaded; no provider data.');
-      } catch(e){say(e.message)}
-    };
-    place.append(b);
-  });
-}
-function renderChecks(){
-  const box=get('checks');box.replaceChildren();
-  for(const value of CASE){
-    const label=document.createElement('label');label.className='check';
-    const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.dataset.key=value;
-    label.append(checkbox,document.createTextNode(value.replaceAll('_',' ')+' — supporting records available'));
-    box.append(label);
-  }
-}
-async function load(url){
-  try {
-    say('Reading…');
-    const response=await fetch(url);const data=await response.json();
-    if(!response.ok)throw Error(data.error||'Read failed');
-    records=data.cases||[data.case];selection=null;packet=null;
-    get('prepare').disabled=true;get('save').disabled=true;
-    get('detail').textContent='Choose a case.';get('report').textContent='No packet prepared.';
-    renderCases();renderChecks();
-    say(data.synthetic?'One synthetic demo case loaded; no PayPal request.':
-      records.length+' sandbox case(s) across '+data.pages_read+' page(s). '+
-      (data.incomplete?'PARTIAL: 80-case review limit reached. More disputes exist; this count is not the merchant total.':
-        'Select one.'));
-  }catch(e){say(e.message)}
-}
-get('load').onclick=()=>load('/api/disputes');get('demo').onclick=()=>load('/api/demo');
-get('prepare').onclick=async()=>{
-  if(!selection)return;
-  const evidence=Object.fromEntries([...get('checks').querySelectorAll('input')].map(x=>[x.dataset.key,x.checked]));
-  get('prepare').disabled=true;say('Building read-only evidence draft…');
-  try{
-    const response=await fetch('/api/packet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selection.dispute_id,evidence})});
-    const body=await response.json();if(!response.ok)throw Error(body.error);
-    packet=body;get('report').textContent=JSON.stringify(body,null,2);
-    get('save').disabled=false;say('Draft only. No evidence filed, dispute changed or money moved.');
-  }catch(e){say(e.message)}finally{get('prepare').disabled=false}
-};
-get('save').onclick=()=>{
-  if(!packet)return;
-  const bytes=new Blob([JSON.stringify(packet,null,2)+'\n'],{type:'application/json'});
-  const url=URL.createObjectURL(bytes),a=document.createElement('a');
-  a.href=url;a.download='disputeledger-'+selection.dispute_id+'.json';a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),500);
-  say('Saved the local draft. No PayPal submission has occurred.');
-};
-fetch('/api/health').then(r=>r.json()).then(s=>get('health').textContent='PayPal sandbox: '+(s.paypal_sandbox_configured?'configured':'not configured')+' · Optional AI: '+(s.ai_configured?'configured':'offline checklist only')).catch(()=>get('health').textContent='Backend unavailable');
-renderChecks();
-</script></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>DisputeLedger · Sandbox Case Studio</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#workbench">Skip to case workspace</a>
+<header class="site-header"><div class="shell header-inner">
+  <div class="brand"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><div><p class="brand-name">DisputeLedger</p><p class="brand-caption">Sandbox Case Studio</p></div></div>
+  <span class="environment-label"><span class="environment-dot" aria-hidden="true"></span>Read-only sandbox</span>
+</div></header>
+<main class="shell">
+  <section class="intro" aria-labelledby="pageHeading">
+    <div class="intro-copy"><p class="eyebrow">Facts first. Human review always.</p><h1 id="pageHeading">Prepare evidence with<br class="wide-break"> the facts in view.</h1><p class="intro-description">Inspect a dispute, record the evidence you hold, and prepare a review packet with the remaining gaps made clear.</p></div>
+    <div class="scope-note"><span class="scope-icon" aria-hidden="true">i</span><div><strong>Case preparation only</strong><p>Nothing is filed, refunded, charged, or resolved here. The synthetic example is separate from actual sandbox case data.</p></div></div>
+  </section>
+  <p id="feedback" class="feedback" role="status" aria-live="polite" aria-atomic="true">Choose a source to begin.</p>
+  <div id="workbench" class="workbench" tabindex="-1">
+    <section class="surface inbox" aria-labelledby="inboxHeading">
+      <div class="panel-heading"><div><p class="step-label">01 · Choose a case</p><h2 id="inboxHeading">Dispute inbox</h2></div><span id="caseCount" class="count-label">0 cases</span></div>
+      <div class="source-controls"><button id="load" class="button primary" type="button">Read sandbox cases</button><button id="demo" class="button secondary" type="button">Load synthetic example</button></div>
+      <p id="health" class="configuration">Checking local configuration…</p>
+      <div class="inbox-filters"><label for="caseSearch">Search cases</label><input id="caseSearch" type="search" placeholder="Case ID, reason or status" autocomplete="off" spellcheck="false"><label for="caseStatus">Status</label><select id="caseStatus"><option value="all">All statuses</option></select></div>
+      <p id="coverage" class="coverage">No case source loaded.</p>
+      <div id="cases" class="case-list"><div class="empty-state inbox-empty"><span class="empty-mark" aria-hidden="true">↳</span><p>Your case list will appear here.</p><span>Use a configured sandbox connection or explore the synthetic example.</span></div></div>
+    </section>
+    <div class="review-column">
+      <div id="detailEmpty" class="surface detail-empty empty-state"><span class="empty-step" aria-hidden="true">01</span><h2>Select a case to get started</h2><p>The selected case’s status, reason, amount, and source will appear here.</p></div>
+      <section id="detail" class="surface detail-panel" aria-labelledby="caseHeading" hidden>
+        <div class="panel-heading case-heading-row"><div><p class="step-label">Recorded case facts</p><h2 id="caseHeading" tabindex="-1">Selected case</h2></div><button id="refreshCase" class="button quiet" type="button" disabled>Refresh selected case</button></div>
+        <p id="caseSource" class="case-source-label"></p><dl id="caseFacts" class="facts-grid"></dl>
+      </section>
+      <section class="surface evidence-panel" aria-labelledby="evidenceHeading">
+        <div class="panel-heading"><div><p class="step-label">02 · Identify supporting records</p><h2 id="evidenceHeading">What can you substantiate?</h2></div></div>
+        <p class="section-description">Mark only evidence categories supported by records you actually hold.</p>
+        <p id="evidenceStatus" class="evidence-status">Select a case before recording evidence.</p>
+        <div id="checks" class="check-list"><p class="muted">The evidence checklist appears after you choose a case.</p></div>
+        <div class="prepare-row"><button id="prepare" class="button primary" type="button" disabled>Prepare review packet</button><p>Checks record your assertions. Documents are not uploaded or verified here.</p></div>
+      </section>
+      <section class="surface draft-panel" aria-labelledby="draftHeading">
+        <div class="panel-heading draft-heading-row"><div><p class="step-label">03 · Review and export</p><h2 id="draftHeading">Evidence review packet</h2></div><button id="save" class="button secondary" type="button" disabled>Save packet as JSON</button></div>
+        <div id="draftEmpty" class="empty-state draft-empty"><span class="empty-step" aria-hidden="true">03</span><h3>No review packet yet</h3><p>Prepare a packet to see available evidence, missing categories, and any drafting guidance together.</p></div>
+        <section id="report" class="packet-content" aria-label="Prepared review draft" hidden>
+          <div class="packet-status-row"><p id="draftStatus" class="draft-status"></p><span class="draft-caption">For human review</span></div>
+          <dl id="packetMeta" class="facts-grid packet-meta"></dl>
+          <div class="evidence-columns">
+            <section class="evidence-summary available-summary" aria-labelledby="availableHeading"><div class="summary-heading"><span aria-hidden="true">✓</span><h3 id="availableHeading">Marked available</h3></div><p>Categories you asserted are supported by your records.</p><ul id="availableEvidence" class="evidence-items"></ul></section>
+            <section class="evidence-summary missing-summary" aria-labelledby="missingHeading"><div class="summary-heading"><span aria-hidden="true">!</span><h3 id="missingHeading">Needs supporting evidence</h3></div><p>Categories to substantiate before relying on the case.</p><ul id="missingEvidence" class="evidence-items"></ul></section>
+          </div>
+          <p id="packetNotice" class="packet-notice"></p>
+          <section class="advisory" aria-labelledby="advisoryHeading">
+            <div class="advisory-heading"><h3 id="advisoryHeading">Drafting guidance</h3><span id="advisoryStatus" class="advisory-status"></span></div>
+            <p id="advisorySummary" class="advisory-summary"></p><ol id="advisoryQuestions" class="advisory-questions"></ol>
+            <p class="advisory-note">Check every suggestion against your source records. Guidance is separate from verified evidence.</p>
+          </section>
+          <details class="raw-details"><summary>View full packet JSON</summary><pre id="rawPacket" class="raw-packet" tabindex="0"></pre></details>
+        </section>
+        <p class="export-note">An exported packet is a local draft. It is not a PayPal submission or payment receipt.</p>
+      </section>
+    </div>
+  </div>
+</main>
+<footer class="shell site-footer"><span>DisputeLedger</span><p>Local case preparation · Source labels stay with the case and its exported packet.</p></footer>
+</body>
+</html>
