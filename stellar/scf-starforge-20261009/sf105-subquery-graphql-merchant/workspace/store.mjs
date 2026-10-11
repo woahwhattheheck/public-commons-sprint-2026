@@ -1,5 +1,7 @@
 // MIT. Private revisioned drafts for the original SF105 merchant onboarding.
 import { createHash, randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
+import { constants } from 'node:fs';
 import { mkdir, lstat, open, readFile, readdir, rename, rm, realpath, link } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 
@@ -82,29 +84,33 @@ function validateVersion(value, id) {
 const summary = value => ({ id: value.id, title: value.input.title, revision: value.revision,
   updatedAt: value.updatedAt, inputDigest: value.inputDigest, exports: value.exports.length });
 
+async function acquireWriter(root) {
+  if (process.platform !== 'linux') fail('This workspace requires Linux with util-linux flock.', 501);
+  const file = await open(join(root, 'writer.lock'), constants.O_CREAT | constants.O_RDWR | constants.O_NOFOLLOW, 0o600);
+  try {
+    const info = await file.stat();
+    if (!info.isFile() || (info.mode & 0o077)) fail('The workspace writer lock must be a private regular file.');
+    await new Promise((done, reject) => {
+      // fd 3 duplicates this process's open file description. The kernel lock
+      // remains on our retained descriptor after flock exits, and dies with it.
+      const child = spawn('flock', ['--exclusive', '--nonblock', '--conflict-exit-code', '73', '3'],
+        { stdio: ['ignore', 'ignore', 'ignore', file.fd] });
+      child.once('error', () => reject(new Error('Install util-linux flock to open this Linux workspace.')));
+      child.once('close', code => code === 0 ? done() : reject(Object.assign(new Error(code === 73 ?
+        'This workspace is already open in another process.' : 'Could not acquire the workspace writer lock.'),
+      { status: code === 73 ? 409 : 500 })));
+    });
+    return file;
+  } catch (error) { await file.close(); throw error; }
+}
+
 /** One process owns the local writer; readers never load partial version files. */
 export async function openWorkspaceStore(directory) {
   if (typeof directory !== 'string' || !directory) fail('Choose --workspace PRIVATE_DIRECTORY.');
   const root = await privateDir(resolve(directory), true);
   const projects = await privateDir(join(root, 'projects'), true);
   const packages = await privateDir(join(root, 'packages'), true);
-  const lock = join(root, 'writer.json'), nonce = randomUUID();
-  const owner = { schema: 'stellar-forge.graphql-workspace-writer.v1', pid: process.pid, nonce };
-  try { await createPrivate(lock, json(owner)); }
-  catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    const previous = await regular(lock, 4096);
-    if (previous.schema !== owner.schema || !Number.isSafeInteger(previous.pid) || previous.pid < 1)
-      fail('The workspace writer record is invalid.');
-    try { process.kill(previous.pid, 0); fail('This workspace is already open in another process.', 409); }
-    catch (probe) {
-      if (probe.code !== 'ESRCH') throw probe;
-      // Only remove the exact observed dead-process record; never a replaced lock.
-      if ((await regular(lock, 4096)).nonce !== previous.nonce) fail('Workspace ownership changed; reopen it.', 409);
-      await rm(lock);
-      await createPrivate(lock, json(owner));
-    }
-  }
+  const writer = await acquireWriter(root);
   let busy = false, closed = false;
   async function read(id, revision) {
     projectName(id);
@@ -172,9 +178,11 @@ export async function openWorkspaceStore(directory) {
     });
   }
   async function close() {
+    if (closed) return;
     closed = true;
-    const current = await regular(lock, 4096).catch(() => null);
-    if (current?.nonce === nonce) await rm(lock, { force: true });
+    // Keep the lock inode: unlinking it would let another opener lock a
+    // different inode while an existing writer still owns the previous one.
+    await writer.close();
   }
   return { root, packages, read, list, history, save, close };
 }
