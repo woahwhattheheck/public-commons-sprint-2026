@@ -35,7 +35,8 @@ async function optional(path,max) {
 function retryTime(value,at) {
   if(typeof value!=='string')return null;
   const time=/^[0-9]+$/.test(value)?Date.parse(at)+Number(value)*1000:Date.parse(value);
-  return Number.isFinite(time)&&time>=Date.parse(at)?new Date(time).toISOString():null;
+  const date=new Date(time);
+  return Number.isFinite(date.getTime())&&time>=Date.parse(at)?date.toISOString():null;
 }
 function summary(observation) {
   if(!observation)return null;
@@ -215,7 +216,7 @@ export function createTenderlyProviderRecovery({plan:rawPlan,stateDirectory,oper
       if(recorded) {
         need(equal(recorded.command,command),'TENDERLY_RECOVERY_RECORD_CHANGED');
         const current=await operations.inspect(command.operationKey),saved=await operations.response(command.operationKey);
-        need(current?.state==='COMPLETE'&&saved&&sha256(saved.body)===observed.responseSha256,
+        need(current?.state==='COMPLETE'&&saved&&saved.status===200&&sha256(saved.body)===observed.responseSha256,
           'TENDERLY_RECOVERED_OPERATION_CHANGED');
         return {...recorded,operation:current,reused:true};
       }
@@ -223,7 +224,7 @@ export function createTenderlyProviderRecovery({plan:rawPlan,stateDirectory,oper
       need(current&&current.requestHash===command.requestHash,'TENDERLY_REQUEST_RECORD_MISMATCH');
       if(current.state==='COMPLETE') {
         const saved=await operations.response(command.operationKey);
-        need(saved&&sha256(saved.body)===observed.responseSha256,'TENDERLY_COMPLETE_RESPONSE_DIFFERS');
+        need(saved&&saved.status===200&&sha256(saved.body)===observed.responseSha256,'TENDERLY_COMPLETE_RESPONSE_DIFFERS');
         reused=true;
       } else {
         await operations.recover({operationKey:command.operationKey,requestHash:command.requestHash,
@@ -233,7 +234,7 @@ export function createTenderlyProviderRecovery({plan:rawPlan,stateDirectory,oper
         current=await operations.inspect(command.operationKey);
       }
       const saved=await operations.response(command.operationKey);
-      need(current?.state==='COMPLETE'&&saved&&sha256(saved.body)===observed.responseSha256,
+      need(current?.state==='COMPLETE'&&saved&&saved.status===200&&sha256(saved.body)===observed.responseSha256,
         'TENDERLY_RECOVERY_RESULT_NOT_RETAINED');
       const result={schema:SCHEMA+'.reconciliation',id:commandId,command,operation:current,completedAt:now(),reused};
       await atomic(completedPath,json(result));return result;
