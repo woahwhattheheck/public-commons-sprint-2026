@@ -58,7 +58,7 @@ function renderCatalog(value) {
     const before = node('td'), after = node('td');
     before.append(node('pre', terms(item.before?.payment))); after.append(node('pre', terms(item.payment)));
     const action = node('td');
-    if (item.before && !item.before.retired && item.state !== 'OTHER_SELLER') {
+    if (item.before && !item.before.retired && !['OTHER_SELLER', 'SIGNER_CHANGED'].includes(item.state)) {
       const button = node('button', 'Review withdrawal'); button.dataset.catalogRoute = item.routeId;
       button.addEventListener('click', () => reviewCatalog('withdraw', item.routeId)); action.append(button);
     }
@@ -87,8 +87,11 @@ async function reviewCatalog(action = 'publish', routeId) {
     const changes = $('#catalog-changes'); changes.replaceChildren();
     for (const row of catalogReview.changes) {
       changes.append(fieldPair(row.method + ' ' + row.url,
-        { sequence: row.before?.sequence ?? null, payment: row.before?.payment ?? null },
+        { sequence: row.before?.sequence ?? null, payment: row.before?.payment ?? null,
+          sourceURL: row.before?.sourceURL ?? null, sourceSha256: row.before?.sourceSha256 ?? null },
         { sequence: row.nextSequence, payment: action === 'withdraw' ? null : row.payment,
+          sourceURL: catalogReview.catalog.sourceURL,
+          ...(action === 'publish' ? { sourceSha256: row.sourceSha256 } : {}),
           ...(action === 'withdraw' ? { reason: catalogReview.reason } : {}) }));
     }
     if (!catalogReview.changes.length) changes.append(node('p', 'The catalog already contains these exact release offers.'));

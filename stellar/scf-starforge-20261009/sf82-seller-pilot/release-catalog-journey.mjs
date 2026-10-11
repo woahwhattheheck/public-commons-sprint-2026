@@ -4,9 +4,9 @@ import { generateKeyPairSync } from 'node:crypto';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { initReleaseStore, stageRelease } from './releases.mjs';
+import { initReleaseStore, stageRelease, inspectRelease } from './releases.mjs';
 import { startReleaseConsole } from './release-console.mjs';
-import { applyReleaseCatalog, readReleaseCatalogConfig, RELEASE_CATALOG_CONFIG } from './release-catalog.mjs';
+import { applyReleaseCatalog, reviewReleaseCatalog, readReleaseCatalogConfig, RELEASE_CATALOG_CONFIG } from './release-catalog.mjs';
 import { openCatalogOperator, requestCatalogOperator, POLICY_SCHEMA } from '../sf60-durable-catalog-transaction/operator.mjs';
 
 const work = await mkdtemp(join(tmpdir(), 'sf82-catalog-'));
@@ -33,6 +33,19 @@ try {
   selections[0].accepts[0].amount = '25000'; selections[0].accepts[1].amount = '45000';
   await save(selectionsFile, [selections[0]]); await save(bindingsFile, [bindings[0]]);
   await stageRelease(root, { ...inputs, id: 'second' });
+
+  // Compose the original OAuth declaration into a retained release without
+  // configuring merchant credentials or contacting either source endpoint.
+  const oauth = JSON.parse(await readFile(new URL('../sf30-seller-sdk/examples/upstreams-oauth.json', import.meta.url)));
+  oauth.bindings.existingDataset.oauth2.clientIdEnv = 'SF82_CATALOG_JOURNEY_CLIENT_ID';
+  oauth.bindings.existingDataset.oauth2.clientSecretEnv = 'SF82_CATALOG_JOURNEY_CLIENT_SECRET';
+  const oauthFile = join(work, 'oauth-upstreams.json');
+  await save(oauthFile, oauth);
+  await save(bindingsFile, [{ method: 'GET', path: '/dataset', id: 'dataset', handler: 'existingDataset', validateInput: true }]);
+  await stageRelease(root, { ...inputs, id: 'oauth-retained', upstreams: oauthFile });
+  await save(oauthFile, { changedAfterStaging: true });
+  const oauthRetained = await inspectRelease(root, 'oauth-retained');
+  assert.deepEqual(oauthRetained.routes[0].upstream.oauth2, oauth.bindings.existingDataset.oauth2);
 
   const keys = generateKeyPairSync('ed25519');
   await save(policyFile, { schema: POLICY_SCHEMA, sellers: [{ sellerId: 'merchant-1',
@@ -82,17 +95,27 @@ try {
   result = await ok('/api/catalog/apply', { reviewId: unchanged.id });
   assert.equal(result.decision, 'UNCHANGED'); assert.equal(result.signaturesIssued, 0);
 
+  // Identical offer bytes still require publication when the public export URL
+  // changes. The original batch updates that provenance with fresh proofs.
+  const movedConfig = { ...config, sourceURL: 'https://dataset.example/_seller/offers-v2' };
+  const moved = await reviewReleaseCatalog(root, { config: movedConfig, releaseId: 'first' });
+  assert.equal(moved.changes.length, 2);
+  assert.ok(moved.changes.every(row => row.before.sourceSha256 === row.sourceSha256));
+  result = await applyReleaseCatalog(root, { config: movedConfig, review: moved });
+  quoteSignatures += result.signaturesIssued;
+  assert.ok(result.status.rows.every(row => row.state === 'MATCHES' && row.before.sourceURL === movedConfig.sourceURL));
+
   await ok('/api/activate', { id: 'second', expectedGeneration: 1, reason: 'Revised price and retained archive history' });
   state = await ok('/api/restart', { expectedGeneration: 2, instanceId: state.console.instanceId });
   const upgrade = await ok('/api/catalog/review', { id: 'second' });
   assert.equal(upgrade.changes[0].before.payment[0].amount, '20000');
   assert.equal(upgrade.changes[0].payment[0].amount, '25000');
   result = await ok('/api/catalog/apply', { reviewId: upgrade.id }); quoteSignatures += result.signaturesIssued;
-  assert.equal(result.status.rows[0].before.sequence, 2);
+  assert.equal(result.status.rows[0].before.sequence, 3);
   const beforeRetirement = await ok('/api/catalog/review', { id: 'second' });
   const retirement = await ok('/api/catalog/review', { id: 'first', action: 'withdraw', routeId: 'archive', reason: 'Archived API retired' });
   result = await ok('/api/catalog/apply', { reviewId: retirement.id }); withdrawalSignatures += result.signaturesIssued;
-  assert.equal(result.receipt.sequence, 2);
+  assert.equal(result.receipt.sequence, 3);
   await assert.rejects(applyReleaseCatalog(root, { config, review: beforeRetirement }), { code: 'RELEASE_CATALOG_REVIEW_STALE' });
   assert.equal((await resources()).resources.length, 1);
   const history = await ok('/api/catalog?id=first');
@@ -103,14 +126,15 @@ try {
   catalog = await openCatalogOperator({ directory, policyFile, controlTransport: 'loopback' });
   const resumed = await ok('/api/catalog?id=second');
   assert.equal(resumed.rows[0].state, 'MATCHES');
-  assert.equal((await currentCatalog()).committedOperations, 4);
+  assert.equal((await currentCatalog()).committedOperations, 6);
   assert.equal((await resources()).resources.length, 1);
   await ok('/api/stop', { instanceId: state.console.instanceId });
   assert.equal((await ok('/api/catalog?id=second')).runtime.running, false);
-  console.log(JSON.stringify({ result: 'PASS', originalCatalogOperations: 4,
+  console.log(JSON.stringify({ result: 'PASS', originalCatalogOperations: 6,
     originalQuoteSignatures: quoteSignatures, originalWithdrawalSignatures: withdrawalSignatures,
     journey: ['original retained releases', 'real running seller', 'review without key access',
-      'authenticated original catalog batch', 'all payment alternatives signed', 'exact-source no-op',
+      'credential-free original OAuth staging', 'authenticated original catalog batch',
+      'all payment alternatives signed', 'exact-source no-op', 'source URL update',
       'running release upgrade', 'original seller withdrawal', 'stale-head refusal', 'catalog restart reconciliation'],
     paymentCalls: 0, hostedActions: 0 }));
 } finally {

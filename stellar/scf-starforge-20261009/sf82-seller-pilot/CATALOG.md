@@ -43,7 +43,7 @@ node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs console \
    refresh to see each route's current catalog state, sequence and exact atomic
    payment terms alongside the retained release terms.
 2. Select **Review offer publication**. The review contains only offers whose
-   exact exported source differs from the active catalog. It binds the original
+   exact exported source or configured export URL differs from the active catalog. It binds the original
    release digest, current running instance, catalog head, configured public
    key pin, policy and source references. No signature is issued during review.
 3. Select **Publish reviewed offers**. The merchant signs every payment
@@ -76,6 +76,12 @@ own signature, ownership, source, sequence and head checks on every apply.
 There is no automatic write retry. If a response is lost, **Refresh catalog**
 reads the original committed source hashes and lifecycle history to reconcile
 what is now listed. A new publication review skips exact matching offers.
+The configured export URL participates in that comparison, so moving the public
+offer endpoint produces an explicit update even when offer bytes stay unchanged.
+The original journal binds a seller to its original signer; a different current
+pin is displayed as `SIGNER_CHANGED` and requires that existing authority for
+updates or withdrawal. This adapter does not reinterpret a policy change as a
+seller-key rotation.
 
 ## Terminal workflow
 
