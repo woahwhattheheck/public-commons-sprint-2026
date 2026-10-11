@@ -13,6 +13,8 @@ node server.mjs
 
 Default `ACCESSLENS_MODE=fixture` is completely offline and makes zero provider calls. **All** default venues, IDs, and ranking are intentionally fictional and conspicuously labeled. Try a group of 45 people with step-free + low-sensory + accessible toilet, budget $25; try increasing size to 900 or budget to $0 to see safe abstention.
 
+Set the optional **destination city** to restrict the shortlist to that city in the independent operator catalog. City labels match after Unicode NFC and whitespace normalization with a case-insensitive comparison; spelling aliases and nearby cities are never inferred. A venue outside the requested city is excluded even when its Qloo affinity is stronger. If no matching-city venue satisfies every other hard constraint, the planner abstains with `outside_requested_city` among the rejection reasons. This does not establish an accessible travel route. Omitted or blank `city` keeps the original behavior and response shape; existing operator requests and accepted evidence remain unchanged.
+
 ## Live Qloo integration
 
 See [docs/OPERATOR.md](docs/OPERATOR.md). An authorized operator must supply a real Qloo hackathon key and separate real, independently audited venue catalog. The server calls the documented hackathon origin's **GET `/search`** and **GET `/v2/insights`**, using `X-Api-Key`; only canonical Qloo IDs match. There is no API-key input in the browser, guessed venue metadata, or silent live→fixture fallback. Artist exact-match ambiguity and invalid response envelopes fail closed. An in-process global provider request budget and single-flight constraint prevent unbounded browsing cost.
@@ -35,3 +37,4 @@ See [docs/OPERATOR.md](docs/OPERATOR.md). An authorized operator must supply a r
 5. No match → **ABSTAIN_NO_VERIFIED_FIT**; ambiguous Qloo upstream state → **error**, with no synthetic replacement in live mode.
 
 This is a build artifact, not a published hackathon entry, a hosted live site, or a cash award. Don't submit fixture output as live Qloo evidence.
+
