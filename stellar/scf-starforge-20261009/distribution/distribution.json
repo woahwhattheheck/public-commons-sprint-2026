@@ -77,6 +77,8 @@
     "stellar/scf-starforge-20261009/sf96-seller-acceptance/audit.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-purchase.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-python.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-upstream.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/UPSTREAM_COMMERCE.md",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_PAID_FILES.md",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/PYTHON_COMMERCE.md",
     "stellar/scf-starforge-20261009/sf16-asset-engine/assets.mjs",
