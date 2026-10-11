@@ -5,7 +5,7 @@ const fragment = new URLSearchParams(location.hash.slice(1));
 let token = fragment.get('token') || sessionStorage.getItem(SESSION_KEY) || '';
 if (/^[a-f0-9]{64}$/.test(token)) sessionStorage.setItem(SESSION_KEY, token);
 if (location.hash) history.replaceState(null, '', location.pathname + location.search);
-let current = null, profileId = '', review = null, local = [];
+let current = null, profileId = '', review = null, local = [], reviewEpoch = 0;
 let inventoryRows = [], inventoryCursor = null, journalCursor = null, requestCursor = null;
 const journal = new Map(), requests = new Map();
 let polling = false, lastRequests = '', requestsExpanded = false;
@@ -71,6 +71,7 @@ function nextId() {
   return 'recovery-' + Date.now().toString(36) + '-' + crypto.randomUUID().slice(0, 8);
 }
 function invalidateReview() {
+  reviewEpoch++;
   review = null; $('review-panel').hidden = true; updateStart();
 }
 function updateStart() {
@@ -119,7 +120,7 @@ function intent() {
 function showReview(value) {
   review = value;
   const details = [
-    ['Profile', profile()?.label ?? value.profileId],
+    ['Profile', current?.profiles.find(item => item.id === value.profileId)?.label ?? value.profileId],
     ['Action', actionNames[value.command] ?? value.command],
     ['Operation ID', value.operationId],
     ['Store', (value.store.endpoint ?? 'AWS S3') + ' · ' + value.store.region],
@@ -167,6 +168,8 @@ async function refreshBundles() {
   const selected = profileId;
   const value = await api(url('/api/bundles', { profile: selected }));
   if (selected !== profileId) return;
+  const previousBundle = $('bundle').value;
+  const previousSnapshot = local.find(item => item.bundleId === previousBundle)?.snapshotId;
   local = value.bundles; $('bundle-count').textContent = local.length;
   const children = [];
   for (const item of local) {
@@ -180,6 +183,8 @@ async function refreshBundles() {
   if (!children.length) children.push(element('p', 'No original encrypted bundle manifests were found in the selected host roots.', 'empty'));
   for (const error of value.errors) children.push(element('p', error.bundleId + ' · ' + error.code + ': ' + error.message, 'hint'));
   $('bundle-list').replaceChildren(...children); syncFields();
+  if (previousBundle !== $('bundle').value || previousSnapshot !== local.find(item => item.bundleId === $('bundle').value)?.snapshotId)
+    invalidateReview();
 }
 function useSnapshot(row, action) {
   invalidateReview(); $('action').value = action; $('snapshot').value = row.snapshotId;
@@ -222,9 +227,21 @@ async function details(id) {
   $('detail-body').textContent = JSON.stringify(value, null, 2); $('detail-panel').hidden = false;
   $('detail-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+async function reviewSelection(input) {
+  invalidateReview();
+  const generation = reviewEpoch, selected = input.profileId;
+  try {
+    const value = await post('/api/review', input);
+    if (generation !== reviewEpoch || selected !== profileId) return null;
+    showReview(value); return value;
+  } catch (error) {
+    if (generation !== reviewEpoch || selected !== profileId) return null;
+    throw error;
+  }
+}
 async function adopt(id) {
-  const value = await post('/api/review', { profileId, action: 'resume', id });
-  showReview(value); notice('Reviewed the original selection for ' + id + '.');
+  const value = await reviewSelection({ profileId, action: 'resume', id });
+  if (value) notice('Reviewed the original selection for ' + id + '.');
 }
 function renderJournal() {
   const tbody = $('operation-rows'); tbody.replaceChildren();
@@ -313,13 +330,17 @@ for (const id of ['bundle', 'snapshot', 'operation-id', 'destination']) $(id).ad
 $('new-selection').addEventListener('click', newSelection);
 $('transfer-form').addEventListener('submit', event => {
   event.preventDefault();
-  task($('review-button'), async () => { showReview(await post('/api/review', intent())); notice('Review the exact snapshot, store and destination below.'); });
+  task($('review-button'), async () => {
+    const value = await reviewSelection(intent());
+    if (value) notice('Review the exact snapshot, store and destination below.');
+  });
 });
 $('discard-review').addEventListener('click', invalidateReview);
 $('start-button').addEventListener('click', () => task($('start-button'), async () => {
   const chosen = review;
   const result = await post('/api/start', { selection: chosen.intent, expectedReviewHash: chosen.reviewHash });
-  invalidateReview(); requests.set(result.profileId + '/' + result.operationId, result);
+  if (review?.reviewHash === chosen.reviewHash) invalidateReview();
+  requests.set(result.profileId + '/' + result.operationId, result);
   notice('Original recovery operation ' + result.operationId + ' opened. Progress is retained in its original journal.');
   await refreshState(); await refreshJournal();
 }));
