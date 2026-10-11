@@ -16,6 +16,7 @@ import { POSTGRES_SOURCE_SCHEMA, stagePostgresRelease, inspectPostgresRelease } 
 import { REDIS_SOURCE_SCHEMA, stageRedisRelease, inspectRedisRelease } from './release-redis.mjs';
 import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
 import { SQLITE_SOURCE_SCHEMA, stageSqliteRelease, inspectSqliteRelease } from './release-sqlite.mjs';
+import { DATASET_SOURCE_SCHEMA, stageDatasetRelease, inspectDatasetRelease } from './release-dataset.mjs';
 import { acquireReleaseLease, releaseProcessOwner, releaseOwnerLiveness, recordedSellerAlive,
   validProcessIdentity, validReleaseLease, sameReleaseLease } from './release-process.mjs';
 import { NATIVE_SDK_VERSION } from '../sf30-seller-sdk/native-factory.mjs';
@@ -32,6 +33,7 @@ const POSTGRES_PILOT = fileURLToPath(new URL('./release-postgres.mjs', import.me
 const REDIS_PILOT = fileURLToPath(new URL('./release-redis.mjs', import.meta.url));
 const JSONRPC_PILOT = fileURLToPath(new URL('./release-jsonrpc.mjs', import.meta.url));
 const SQLITE_PILOT = fileURLToPath(new URL('./release-sqlite.mjs', import.meta.url));
+const DATASET_PILOT = fileURLToPath(new URL('./release-dataset.mjs', import.meta.url));
 const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
 const LIMIT = 4 * 1024 * 1024;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -213,6 +215,13 @@ export { runtimeOptions as normalizeReleaseRuntime };
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
   const manifest = JSON.parse(manifestBytes);
+  if (manifest.schema === DATASET_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('A dataset release owns its original versioned query bindings.');
+    const snapshot = await inspectDatasetRelease(path);
+    const routes = sourceRoutes(snapshot.service, new Map()).map(route => ({ ...route,
+      application: { ...route.application, datasetExecutionSha256: snapshot.dataset.executionSha256 } }));
+    return { ...snapshot, routes };
+  }
   if (manifest.schema === POSTGRES_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('A PostgreSQL package owns its original named-query bindings.');
     const snapshot = await inspectPostgresRelease(path);
@@ -330,7 +339,8 @@ function publicRelease(record) {
     ...(record.redis ? { redis: record.redis } : {}),
     ...(record.s3 ? { s3: record.s3 } : {}),
     ...(record.jsonrpc ? { jsonrpc: record.jsonrpc } : {}),
-    ...(record.sqlite ? { sqlite: record.sqlite } : {}) };
+    ...(record.sqlite ? { sqlite: record.sqlite } : {}),
+    ...(record.dataset ? { dataset: record.dataset } : {}) };
 }
 function checkFacilitatorReview(record) {
   const review = record.facilitatorReview;
@@ -375,7 +385,8 @@ async function releaseRecord(root, releaseId, verify = false) {
         stable(snapshot.redis ?? null) !== stable(record.redis ?? null) ||
         stable(snapshot.s3 ?? null) !== stable(record.s3 ?? null) ||
         stable(snapshot.jsonrpc ?? null) !== stable(record.jsonrpc ?? null) ||
-        stable(snapshot.sqlite ?? null) !== stable(record.sqlite ?? null))
+        stable(snapshot.sqlite ?? null) !== stable(record.sqlite ?? null) ||
+        stable(snapshot.dataset ?? null) !== stable(record.dataset ?? null))
       throw new Error('Release files changed after staging. Restore the selected immutable release.');
     if (record.handlerEntry && hash(await regular(record.handlerEntry.path)) !== record.handlerEntry.sha256)
       throw new Error('Trusted handler entry changed after staging. Restore it or stage a new release.');
@@ -387,6 +398,11 @@ async function releaseRecord(root, releaseId, verify = false) {
 export async function stageRelease(root, options) {
   root = resolve(root); await readReleaseState(root);
   const releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
+  const datasetSource = options.datasetPackage !== undefined;
+  if (datasetSource && (Object.keys(options).some(key =>
+      !['id','label','runtime','datasetPackage'].includes(key) && options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose the prepared dataset package or another source; the dataset owns its original controller and query bindings.');
   const pythonSource = options.python !== undefined;
   const duckdbSource = options.duckdbPackage !== undefined;
   const s3Source = options.s3Package !== undefined;
@@ -443,7 +459,8 @@ export async function stageRelease(root, options) {
   let committed = false;
   try {
     let stagedDuckdb, stagedSqlite;
-    if (postgresSource) await stagePostgresRelease(temp, options.postgresPackage, {
+    if (datasetSource) await stageDatasetRelease(temp, options.datasetPackage);
+    else if (postgresSource) await stagePostgresRelease(temp, options.postgresPackage, {
       signal: options.signal, expectedInputManifestSha256: options.postgresInputManifestSha256 });
     else if (redisSource) await stageRedisRelease(temp, options.redisPackage);
     else if (mysqlSource) await stageMysqlRelease(temp, options.mysqlPackage);
@@ -473,7 +490,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !source.python && !source.duckdb && !source.mysql && !source.postgres && !source.redis && !source.s3 && !source.jsonrpc && !source.sqlite && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !source.duckdb && !source.mysql && !source.postgres && !source.redis && !source.s3 && !source.jsonrpc && !source.sqlite && !source.dataset && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -492,8 +509,13 @@ export async function stageRelease(root, options) {
       ...(source.s3 ? { s3: source.s3 } : {}),
       ...(source.jsonrpc ? { jsonrpc: source.jsonrpc } : {}),
       ...(source.sqlite ? { sqlite: source.sqlite } : {}),
+      ...(source.dataset ? { dataset: source.dataset } : {}),
       source: { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256,
-        ...(source.postgres ? { kind: 'POSTGRES_MERCHANT_PACKAGE', inputManifestSha256: source.postgres.inputManifestSha256,
+        ...(source.dataset ? { kind: 'VERSIONED_DATASET_PACKAGE', baselineSnapshot: source.dataset.baselineSnapshot,
+          contractSha256: source.dataset.contractSha256, sourceConfigSha256: source.dataset.sourceConfigSha256,
+          csvSha256: source.dataset.csvSha256, sourceSha256: source.dataset.sourceSha256,
+          bindingSha256: source.dataset.bindingSha256, executionSha256: source.dataset.executionSha256 }
+          : source.postgres ? { kind: 'POSTGRES_MERCHANT_PACKAGE', inputManifestSha256: source.postgres.inputManifestSha256,
           originalSourceConfigSha256: source.postgres.originalSourceConfigSha256,
           originalServiceConfigSha256: source.postgres.originalServiceConfigSha256,
           sourceConfigSha256: source.postgres.sourceConfigSha256, executionSha256: source.postgres.executionSha256 }
@@ -901,7 +923,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.postgres ? POSTGRES_PILOT : record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId), releaseLock.lifetime ? '4' : '-'],
+    child = spawn(process.execPath, [CHILD, record.dataset ? DATASET_PILOT : record.postgres ? POSTGRES_PILOT : record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId), releaseLock.lifetime ? '4' : '-'],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc', ...(releaseLock.lifetime ? [releaseLock.lifetime.fd] : [])],
         windowsHide: true, detached: process.platform !== 'win32' });
     let readyResolve, readyReject, ownerResolve, ownerReject, stdout = '', stderr = '';
