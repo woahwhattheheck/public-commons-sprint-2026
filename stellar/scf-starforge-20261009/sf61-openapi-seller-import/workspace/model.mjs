@@ -14,6 +14,8 @@ import { inspectBackendSecurity, inspectAuthenticationRequirements, prepareBacke
 import { merchantOperationPolicy, merchantValidationEnvironment, merchantOperationSummary } from './operation-plan.mjs';
 import { parseOpenApiSource } from '../source-document.mjs';
 import { openApiRequestBody, requestBodySummary } from '../request-body.mjs';
+import { openApiResponseStreams } from '../response-stream.mjs';
+import { merchantPaymentRequirements, merchantStreamPolicy } from './stream-plan.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -50,10 +52,11 @@ export function inspectOpenApi(specText) {
     for (const method of methods) if (plain(item[method])) {
       const op = item[method], servers = op.servers ?? item.servers ?? spec.servers ?? [];
       const security = op.security ?? spec.security ?? [];
-      let requestBody=null,bodyError=null;
+      let requestBody=null,bodyError=null,responseStreams=[],streamError=null;
       try { requestBody=requestBodySummary(openApiRequestBody(op,createOpenApiResolver(spec))); } catch(e) { bodyError=e.message; }
+      try { responseStreams=openApiResponseStreams(op,createOpenApiResolver(spec)); } catch(e) { streamError=e.message; }
       operations.push({ method:method.toUpperCase(), path, summary:op.summary ?? op.operationId ?? '',
-        requestBody,bodyError,
+        requestBody,bodyError,responseStreams,streamError,
         supported:supportsSellerMethod(method.toUpperCase()),
         publicDescription:String(op.summary ?? op.description ?? '').replace(/[\s\u0000-\u001f\u007f]+/g, ' ').trim(),
         servers:Array.isArray(servers) ? servers.map((s,i) => ({index:i, url:s?.url ?? '', variables:Boolean(s?.variables)})) : [],
@@ -88,13 +91,14 @@ export function prepareMerchant(specText, plan) {
   if ((sellerServer.href !== plan.sellerServer && plan.sellerServer !== sellerServer.origin) || sellerServer.protocol !== 'https:' ||
       sellerServer.username || sellerServer.password || sellerServer.search || sellerServer.hash)
     fail('Public seller server must be a canonical HTTPS URL, including its path prefix');
-  exactKeys(plan.payment, ['network','asset','payTo','maxTimeoutSeconds'], 'payment');
+  exactKeys(plan.payment, ['network','asset','payTo','maxTimeoutSeconds','paymentFlow'], 'payment');
   const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','idempotency'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','idempotency','stream'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
     if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
+    const stream = merchantStreamPolicy(row, method);
     if (seen.has(key)) fail('Duplicate selected operation: ' + key);
     seen.add(key);
     const id = row.id ?? 'route_' + sha(key).slice(0,12);
@@ -119,14 +123,16 @@ export function prepareMerchant(specText, plan) {
     const requestBody=openApiRequestBody(publicOperation,createOpenApiResolver(spec));
     facade.paths[row.path][method.toLowerCase()] = {...publicOperation, servers:[{url:sellerServer.href}], security:[]};
     selections.push({method, path:row.path, serverIndex:0,
+      ...(stream ? {responseFormat:row.responseMode} : {}),
       ...(plan.serviceName ? {serviceName:plan.serviceName} : {}),
-      accepts:[{scheme:'exact', ...plan.payment, amount:row.amountAtomic}]});
+      accepts:[merchantPaymentRequirements(plan.payment,row.amountAtomic)]});
     const idempotency = merchantOperationPolicy(row.idempotency,{method,id});
     bindings.push({method, path:row.path, id, handler:id, validateInput:true,
       ...(idempotency ? {admit:idempotency.admission} : {})});
     upstreams.bindings[id] = {origin:backend.origin,
       path:backend.pathname.replace(/\/$/, '') + row.path.replace(/\{([^{}]+)\}/g, ':$1'), method,
       headerEnv:headers, responseMode:row.responseMode ?? 'json',
+      ...(stream ? {stream} : {}),
       ...(requestBody?{bodyType:requestBody.bodyType}:{}),
       ...(row.maxRequestBytes!==undefined?{maxRequestBytes:row.maxRequestBytes}:{}),
       ...(authentication.oauth2 ? {oauth2:authentication.oauth2} : {}),
@@ -140,6 +146,7 @@ export function prepareMerchant(specText, plan) {
     transformations.push({method, path:row.path, originalServer:backend.href, publicServer:sellerServer.href,
       requestBody:requestBodySummary(requestBody),
       publicDescription:publicOperation.description ?? null, requestExampleSupplied:row.requestExample !== undefined,
+      responseMode:row.responseMode??'json',paymentFlow:plan.payment.paymentFlow??'authorization',
       backendAuthentication:authentication.authentication, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0});
   }
   const imported = importOpenApi(facade, selections), service = createSellerServiceConfig(imported, bindings);
@@ -160,6 +167,8 @@ export function prepareMerchant(specText, plan) {
     routes.push({id:bindings[i].id, method:offer.method, path:offer.path, publicUrl:offer.seller.resource.url,
       publicPath:service.routes[i].path, upstream:binding.origin + binding.path, amountAtomic:selections[i].accepts[0].amount,
       network:plan.payment.network, query:binding.query,
+      paymentFlow:selections[i].accepts[0].extra?.paymentFlow??'authorization',
+      responseMode:binding.responseMode, responseMimeType:offer.seller.resource.mimeType??null,
       requestBody:transformations[i].requestBody,maxRequestBytes:binding.maxRequestBytes??1048576,
       environment:[...new Set([...Object.values(binding.headerEnv),...(binding.oauth2?[binding.oauth2.clientIdEnv,binding.oauth2.clientSecretEnv]:[])])].sort(),
       backendAuthentication:transformations[i].backendAuthentication,oauth2:binding.oauth2??null,
@@ -173,6 +182,7 @@ export function prepareMerchant(specText, plan) {
   validateUpstreamService(service, compiled);
   for (const route of routes) {
     route.cache = compiled[route.id].cache;
+    route.stream = compiled[route.id].stream ?? null;
     route.availability = compiled[route.id].availability;
     route.requestHeaders = [...compiled[route.id].requestHeaders];
     route.operation = merchantOperationSummary(upstreams.bindings[route.id],compiled[route.id]);
@@ -282,6 +292,14 @@ export async function savePackage({specText, plan, parent, name}) {
     'Select actual files in the running operation form. Retain and review the file names, media types, sizes, SHA-256 hashes and scalar form fields before issuing the original ticket.',
     'The private operation-tickets directory retains the exact multipart bytes and boundary. Reopening that request checks its pinned bytes before issuing another ticket; it does not reread the original source file.',
     'The original SF88 buyer review and inbox retain the same body bytes. Request limits apply across seller and buyer, with an explicit per-binding maximum of up to 16 MiB including framing.',
+    '', '## Finite SSE and NDJSON responses', '',
+    'Stream selections preserve the declared HTTP 200 media type in the native offer and the original maxBytes, maxDurationMs and idleTimeoutMs policy in upstreams.json.',
+    'The payment flow is retained in each original requirement: authorization generates before settlement; upfront settles before opening the backend source.',
+    'In the API workspace, use Prepare a streaming customer to save a concrete original SF66 setup with the customer payer, key-source reference, independent budget, request deadline and response destination.',
+    'The customer review and exact request bytes are retained under stream-customers/<customer-name>. Prepare the original workspace, then start its customer console for terminal approval and retained-output inspection.',
+    'The original native facilitator profile must support the selected flow through payments.paymentFlows. Existing profiles default to authorization.',
+    'A prepared customer session retains the original intent, payment state, complete or interrupted response, and normal reopen commands.',
+    'Full instructions: sf61-openapi-seller-import/workspace/STREAMING.md and sf66-demo-launcher/COMMERCE_STREAMS.md.',
     '', '## Explicit facade adaptation', '',
     'Original server URLs remain in the unchanged original OpenAPI source file identified by merchant-package.json. Selected facade operations use your declared public seller server.',
     'Supported backend security is satisfied by operator header environment references and removed only from the generated public facade.',
