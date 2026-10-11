@@ -48,3 +48,7 @@ Use original buyer clauses and provider outputs for each client. Never represent
 ## Owner-approval and workshare-export follow-on (October 10)
 
 The original Linux implementation is hardened so an owner-entered *estimate* cannot accidentally release a prospect approach. The engine separately requires a nonnegative minimum margin below 100%, an explicitly `OWNER_APPROVED_PROPOSAL` fee, and explicit contact authorization. The additional `workshare-sheet.md` carries a customer-specific buyer-source pointer and objective payable acceptance milestones, but stays **internal/UNSENT**, with price withheld until approved. The program never sends or posts a quote. This reduces repeated boilerplate across buyer leads without assuming contracting authority.
+
+## Collection balances and installment receipts
+
+The same command now also writes `collections.json` and `collection-queue.csv`. See [COLLECTIONS.md](COLLECTIONS.md) for the explicit invoice/receipt input, partial payments, refunds, global duplicate quarantine, currency-separated integer totals and a synthetic runnable example. Use `evaluateAll` for batch totals; standalone `evaluate` is explicitly not duplicate-cleared. Actual payment records remain private operator inputs, never included in public source.
