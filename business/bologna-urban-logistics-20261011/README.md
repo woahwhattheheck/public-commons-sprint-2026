@@ -25,7 +25,7 @@ python3 workspace/server.py serve \
 ```
 
 Open the printed loopback URL. The initial workspace contains the original 264
-records, all 21 priority-street points, the reported 83 spaces on those streets,
+records, all 21 priority-street points, the reported 90 spaces on those streets,
 three explicitly hypothetical scenario frames and an unresolved review item for
 the dated `VIA LAME 37b` / `Via delle Lame 37/c` observations.
 
@@ -72,4 +72,20 @@ The municipal dataset is CC BY 4.0 and remains an external input. The original
 RfP and URBANE deliverables remain linked evidence rather than republished files.
 See [SOURCE_PROVENANCE.md](SOURCE_PROVENANCE.md) for dates, scope and the required
 interpretation boundary.
+
+
+## Complete D1–D5 delivery
+
+The integrated [delivery guide](DELIVERY.md) covers source-method review, the
+five RfP scenario criteria, recorded municipal scenario selection, bilingual
+street-framework extensions, the 2030 roadmap, English learning/factsheet
+production and the supplied CESF template. The original street records and
+roadmap CSV remain available in the same state and export.
+
+Named publications freeze the complete delivery. Use the browser download links,
+`export --publication ID`, or `download --publication ID --format zip` to reopen
+that exact edition after later edits or a restored backup. The complete ZIP
+contains the baseline, map data, matrices, street/roadmap tables, source register,
+consultation planning and printable report files with a byte manifest.
+
 
