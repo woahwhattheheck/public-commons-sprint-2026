@@ -6,6 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { activateRelease, compareReleases, inspectRelease, listReleases,
   readReleaseState, runActiveRelease, stageRelease } from '../sf82-seller-pilot/releases.mjs';
+import { selectDuckdbInterpreter } from '../sf82-seller-pilot/release-duckdb.mjs';
 import { startMerchantFleet, loadMerchantFleet } from './gateway.mjs';
 import { fleetControl } from './control.mjs';
 import { acquireStateLease } from './state-lease.mjs';
@@ -36,6 +37,28 @@ function pathValue(value, base) {
   if (typeof value !== 'string' || !value.trim() || value.length > 4096 || /[\u0000-\u001f]/.test(value))
     throw fail('FLEET_RELEASE_PATH_INVALID', 400);
   return resolve(base, value);
+}
+/** Share original source selectors and path rules with retained fleet setup. */
+export function normalizeFleetPackageSource(source, base) {
+  keys(source, ['workspace', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 'runtime']);
+  const selected = ['workspace', 'python', 'duckdbPackage'].filter(key => source[key] !== undefined);
+  if (selected.length !== 1 || source.pythonRoot !== undefined && selected[0] !== 'python' ||
+      source.duckdbPython !== undefined && selected[0] !== 'duckdbPackage')
+    throw fail('FLEET_RELEASE_PACKAGE_SOURCE_REQUIRED', 400);
+  const runtime = source.runtime ?? {};
+  keys(runtime, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
+  if (selected[0] !== 'workspace' && runtime.allowLoopbackUpstream)
+    throw fail('FLEET_RELEASE_PACKAGE_BINDINGS_OWNED', 400);
+  const value = { [selected[0]]: pathValue(source[selected[0]], base) };
+  if (source.pythonRoot !== undefined) value.pythonRoot = pathValue(source.pythonRoot, base);
+  if (source.duckdbPython !== undefined) value.duckdbPython = selectDuckdbInterpreter(source.duckdbPython, base);
+  return { ...value, runtime: structuredClone(runtime) };
+}
+/** Public aliases retain source type while all configured paths stay with the host. */
+export function describeFleetPackages(packages) {
+  return Object.entries(packages).map(([name, source]) => ({ name,
+    kind: source.duckdbPackage !== undefined ? 'DUCKDB_PACKAGE' :
+      source.python !== undefined ? 'PYTHON_APPLICATION' : 'OPENAPI_WORKSPACE' }));
 }
 function privateDirectory(path) {
   if (!existsSync(path)) mkdirSync(path, { recursive: true, mode: 0o700 });
@@ -103,10 +126,7 @@ export async function readFleetReleasePlan(planFile) {
       throw fail('FLEET_RELEASE_PACKAGES_INVALID', 400);
     for (const [name, source] of Object.entries(raw.packages ?? {})) {
       if (!NAME.test(name)) throw fail('FLEET_RELEASE_PACKAGE_INVALID', 400);
-      keys(source, ['workspace', 'runtime']);
-      const runtime = source.runtime ?? {};
-      keys(runtime, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
-      packages[name] = { workspace: pathValue(source.workspace, base), runtime: structuredClone(runtime) };
+      packages[name] = normalizeFleetPackageSource(source, base);
     }
     const limits = raw.limits ?? {};
     keys(limits, ['maxInFlight', 'maxRequestBytes', 'maxResponseBytes', 'timeoutMs']);
@@ -127,7 +147,7 @@ const slotKey = (tenant, slot) => tenant + '/' + slot;
 function shortRelease(release) {
   return { id: release.id, label: release.label, digest: release.digest,
     publicOrigin: release.publicOrigin, mode: release.mode, port: release.runtime.port,
-    routes: release.routes.length, source: structuredClone(release.source) };
+    routes: release.routes.length, sourceKind: release.source.kind ?? 'OPENAPI_SELLER', source: structuredClone(release.source) };
 }
 function reviewedRelease(release) {
   if (!release) return null;
@@ -140,7 +160,8 @@ function privateView(value) {
   if (Array.isArray(value)) return value.map(privateView);
   if (!object(value)) return value;
   return Object.fromEntries(Object.entries(value).map(([key, item]) => [key,
-    key === 'stateDir' || key === 'directory' ? (item ? '[private original state directory]' : item) : privateView(item)]));
+    key === 'stateDir' || key === 'directory' ? (item ? '[private original state directory]' : item) :
+      key === 'interpreter' && typeof item === 'string' ? { configured: Boolean(item), selectionSha256: hash(item) } : privateView(item)]));
 }
 function publicComparison(comparison) {
   return privateView({ ...comparison, before: reviewedRelease(comparison.before), after: reviewedRelease(comparison.after),
@@ -348,7 +369,8 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
           serving: use.current, candidate: use.candidate, drainingRequests: use.active,
           canRetire: Boolean(runtime && !runtime.ended && !use.current && !use.candidate && use.active === 0 && !native.busy) });
       }
-      view.push({ id: tenant.id, host: tenant.host, slots, packages: Object.keys(tenant.packages), limits: tenant.limits });
+      view.push({ id: tenant.id, host: tenant.host, slots, packages: Object.keys(tenant.packages),
+        packageSources: describeFleetPackages(tenant.packages), limits: tenant.limits });
     }
     return { schema: 'stellar-forge.fleet-release-status.v1', closing, closed, busy: operation?.action ?? null,
       relationship, native, tenants: view, pending: journal.pending ? {
@@ -370,7 +392,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       keys(input, ['tenant', 'slot', 'package', 'releaseId']);
       const { tenant, slot } = locate(input.tenant, input.slot), source = tenant.packages[input.package];
       if (!source || !ID.test(input.releaseId ?? '')) throw fail('FLEET_RELEASE_PACKAGE_OR_ID_INVALID', 400);
-      const release = await stageRelease(slot.store, { id: input.releaseId, workspace: source.workspace,
+      const release = await stageRelease(slot.store, { ...source, id: input.releaseId,
         runtime: { ...source.runtime, port: slot.port } });
       return { tenant: input.tenant, slot: input.slot, package: input.package, release: shortRelease(release) };
     }); },

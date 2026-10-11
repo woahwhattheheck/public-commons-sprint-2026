@@ -62,6 +62,10 @@ Plan fields:
 | `startupSlot` | Slot whose selected original release starts a new fleet |
 | `slots.NAME.store`, `port` | Original SF82 store directory and fixed original seller port |
 | `packages.NAME.workspace` | Previously saved original API workspace package directory |
+| `packages.NAME.python` | Original Python merchant declaration file, including its chosen interpreter |
+| `packages.NAME.pythonRoot` | Optional Python application directory to retain with that declaration |
+| `packages.NAME.duckdbPackage` | Original prepared DuckDB package directory with its retained data and plan |
+| `packages.NAME.duckdbPython` | Optional executable with DuckDB installed; a pathful relative value resolves from this plan |
 | `packages.NAME.runtime` | Original facilitator/local-upstream runtime choices for future staging |
 | `limits` | Original gateway admission, body, response and timeout limits for this merchant |
 
@@ -69,6 +73,59 @@ Relative paths resolve against the plan file. The service resolves and deduplica
 the actual store directories. Browser actions supply only registered tenant, slot
 and package names plus an original release ID. They never supply a path, handler
 module, executable, port override, credential or PID.
+
+Each package chooses exactly one of `workspace`, `python`, or `duckdbPackage`.
+`pythonRoot` belongs to `python`; `duckdbPython` belongs to `duckdbPackage`.
+The Python and DuckDB packages supply their original application bindings.
+Use `allowLoopbackUpstream` for an API workspace that has those upstream bindings.
+Existing workspace-only plans retain their normalized fields and plan digest.
+
+### Operate Python and DuckDB merchants together
+
+[`examples/native-release-plan.json`](examples/native-release-plan.json) declares
+two independent merchants, each with blue/green stores and current/next source
+aliases. The data merchant uses original prepared DuckDB packages. The analysis
+merchant uses Python declarations and their application directories. Set the
+original DuckDB plan and Python declaration public origins to the exact declared
+merchant hosts before preparing or staging them.
+
+Initialize all four original release stores. Stage and select the initial release
+in each blue store with the existing release CLI, for example:
+
+```sh
+starforge releases stage --store /srv/stellar/data/blue --id first \
+  --duckdb-package /srv/stellar/packages/data-current \
+  --duckdb-python /srv/stellar/python/bin/python --port 8521 \
+  --facilitator https://facilitator.example
+starforge releases activate --store /srv/stellar/data/blue --id first \
+  --expect 0 --reason 'Initial data merchant'
+
+starforge releases stage --store /srv/stellar/analysis/blue --id first \
+  --python /srv/stellar/packages/analysis-current/merchant.json \
+  --python-root /srv/stellar/packages/analysis-current/application --port 8531 \
+  --facilitator https://facilitator.example
+starforge releases activate --store /srv/stellar/analysis/blue --id first \
+  --expect 0 --reason 'Initial analysis merchant'
+```
+
+The foreground fleet CLI and browser start with the same plan as above. Inside
+that session, `stage data green next second` and
+`stage analysis green next second` use the declared original source engines.
+The browser labels each alias and retained release with its source type. Compare,
+prepare, activate, drain and retire each replacement through the same controls.
+Original comparisons retain query/data/application identities and exact payment
+changes; private interpreter locations are represented by an opaque selection
+digest. Rollback and process restart reopen the retained release copies, so the
+original source package may subsequently move. The selected Python executable
+and its installed dependencies remain available on the host.
+
+For the existing merchant MCP provider, configure this same fleet plan through
+`merchant-mcp init-fleet` as documented in its fleet guide.
+`merchant_fleet_plan` and live fleet status include `packageSources` with each
+alias and source kind; the existing `packages` alias list stays compatible.
+`merchant_fleet_stage` accepts the same tenant, slot, package and release ID for
+all three source types. The host plan owns their source paths, interpreter choices,
+fixed ports and runtime settings throughout the lifecycle.
 
 Native payment mode is selected by the original release runtime. To stage native
 releases from a registered package, configure that package's runtime:

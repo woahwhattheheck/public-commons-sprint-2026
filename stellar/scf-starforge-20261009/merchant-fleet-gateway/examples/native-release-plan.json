@@ -1,0 +1,48 @@
+{
+  "schema": "stellar-forge.fleet-release-plan.v1",
+  "gateway": { "port": 8400, "adminPort": 8401 },
+  "tenants": [
+    {
+      "id": "data",
+      "host": "data.example",
+      "startupSlot": "blue",
+      "slots": {
+        "blue": { "store": "/srv/stellar/data/blue", "port": 8521 },
+        "green": { "store": "/srv/stellar/data/green", "port": 8522 }
+      },
+      "packages": {
+        "current": {
+          "duckdbPackage": "/srv/stellar/packages/data-current",
+          "duckdbPython": "/srv/stellar/python/bin/python",
+          "runtime": { "facilitator": "https://facilitator.example" }
+        },
+        "next": {
+          "duckdbPackage": "/srv/stellar/packages/data-next",
+          "duckdbPython": "/srv/stellar/python/bin/python",
+          "runtime": { "facilitator": "https://facilitator.example" }
+        }
+      }
+    },
+    {
+      "id": "analysis",
+      "host": "analysis.example",
+      "startupSlot": "blue",
+      "slots": {
+        "blue": { "store": "/srv/stellar/analysis/blue", "port": 8531 },
+        "green": { "store": "/srv/stellar/analysis/green", "port": 8532 }
+      },
+      "packages": {
+        "current": {
+          "python": "/srv/stellar/packages/analysis-current/merchant.json",
+          "pythonRoot": "/srv/stellar/packages/analysis-current/application",
+          "runtime": { "facilitator": "https://facilitator.example" }
+        },
+        "next": {
+          "python": "/srv/stellar/packages/analysis-next/merchant.json",
+          "pythonRoot": "/srv/stellar/packages/analysis-next/application",
+          "runtime": { "facilitator": "https://facilitator.example" }
+        }
+      }
+    }
+  ]
+}

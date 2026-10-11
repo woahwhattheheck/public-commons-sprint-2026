@@ -1,6 +1,6 @@
 // MIT. Agent operations over the original retained merchant fleet lifecycle.
 import { randomUUID } from 'node:crypto';
-import { openFleetReleaseOperator, readFleetReleasePlan }
+import { describeFleetPackages, openFleetReleaseOperator, readFleetReleasePlan }
   from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/release-operator.mjs';
 
 const digest = { type: 'string', pattern: '^[0-9a-f]{64}$' };
@@ -17,7 +17,7 @@ export function fleetControlTools(tool) {
     tool('merchant_fleet_status', 'Read this MCP process ownership and the original live fleet revision, candidates, exact release mapping, retained rollback history, active requests and drain state. A stopped fleet remains stopped.', {}, [], { readOnly: true, idempotent: true }),
     tool('merchant_fleet_start', 'Start or reopen the original retained multi-store fleet using the exact inspected host-plan digest. Starts its original selected merchant sessions and gateway; does not request a paid resource.', { expectedPlanDigest: digest }, ['expectedPlanDigest'], { openWorld: true }),
     tool('merchant_fleet_catalog', 'Inspect the retained original release catalog and selection generation for one declared tenant/slot. Requires this process to own the running fleet.', { tenant, slot: alias }, ['tenant', 'slot'], { readOnly: true, idempotent: true }),
-    tool('merchant_fleet_stage', 'Stage one declared package into a new immutable original release in the selected tenant/slot. Returns its actual digest and native source facts; does not route traffic to it.', { tenant, slot: alias, package: alias, releaseId: release }, ['tenant', 'slot', 'package', 'releaseId']),
+    tool('merchant_fleet_stage', 'Stage one host-declared API workspace, Python application or prepared DuckDB package into a new immutable original release in the selected tenant/slot. Returns its actual digest and native source facts; does not route traffic to it.', { tenant, slot: alias, package: alias, releaseId: release }, ['tenant', 'slot', 'package', 'releaseId']),
     tool('merchant_fleet_review', 'Compare a staged replacement against the currently serving tenant release. Returns exact native changes and a short-lived review bound to the fleet revision and original store generations.', { tenant, slot: alias, releaseId: release }, ['tenant', 'slot', 'releaseId']),
     tool('merchant_fleet_prepare', 'Consume an original replacement review, start its selected merchant session and prepare the native fleet candidate. Returns the candidate ID and exact expected revision for activation.', { reviewId: identity }, ['reviewId'], { openWorld: true }),
     tool('merchant_fleet_activate', 'Activate the exact prepared candidate at its reviewed fleet revision. Existing requests drain on the prior original merchant sessions; new requests use the activated release.', { candidateId: identity, expectedRevision: revision }, ['candidateId', 'expectedRevision']),
@@ -33,7 +33,7 @@ function planView(plan) {
   return { schema: plan.schema, digest: plan.digest, gateway: plan.gateway,
     tenants: plan.tenants.map(row => ({ id: row.id, host: row.host, startupSlot: row.startupSlot,
       slots: Object.entries(row.slots).map(([name, slot]) => ({ name, port: slot.port })),
-      packages: Object.keys(row.packages), limits: row.limits })) };
+      packages: Object.keys(row.packages), packageSources: describeFleetPackages(row.packages), limits: row.limits })) };
 }
 function publicFailure(cause) {
   const code = [cause?.code, cause?.message].find(value => typeof value === 'string' && /^[A-Z][A-Z0-9_]{1,127}$/.test(value)) ?? 'FLEET_OPERATION_FAILED';
