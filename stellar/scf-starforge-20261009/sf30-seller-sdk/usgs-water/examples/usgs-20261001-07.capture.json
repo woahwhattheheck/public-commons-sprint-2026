@@ -1,0 +1,80 @@
+{
+  "schema": "starforge.usgs-water-capture-delivery.v1",
+  "operationId": "usgs-october-01-07",
+  "captureSha256": "274bd27c07abec27b49e28095ae5175b55ea7ca911c6cb54ce1c1ba577682f8e",
+  "sourceBundleSha256": "e957dd6c7f0f5188aa96ecb41f338ec8342896c0e96fa29da6c2f4732206dd63",
+  "files": [
+    {
+      "path": "bodies/246fc3f04ae5de0ad7ef9ec95504f4e06d048ce360f747872f78c206f47c726a.json",
+      "bytes": 2263,
+      "sha256": "246fc3f04ae5de0ad7ef9ec95504f4e06d048ce360f747872f78c206f47c726a"
+    },
+    {
+      "path": "bodies/86eea5da508a4d250bcbc37b100abc10c3363cdcd8323d5d2b12f2581d116a45.json",
+      "bytes": 3294,
+      "sha256": "86eea5da508a4d250bcbc37b100abc10c3363cdcd8323d5d2b12f2581d116a45"
+    },
+    {
+      "path": "bodies/9331b755d421c3b9e78bb9890d300759d2b75d1ed2ec1c897e53b687beb3b40a.json",
+      "bytes": 3294,
+      "sha256": "9331b755d421c3b9e78bb9890d300759d2b75d1ed2ec1c897e53b687beb3b40a"
+    },
+    {
+      "path": "bodies/e84691312d7863e5bec16f957d39a6f6f1030bd9e7739641e53ad08bea943fba.json",
+      "bytes": 3294,
+      "sha256": "e84691312d7863e5bec16f957d39a6f6f1030bd9e7739641e53ad08bea943fba"
+    },
+    {
+      "path": "capture.json",
+      "bytes": 12706,
+      "sha256": "c4eddaad7f6c8d6a2775abb0d8b4ddcaa72380570739d9def6f18df1abee5da7"
+    },
+    {
+      "path": "requests/request-0e6434dd-afd3-4d1c-9448-1c048e3f22f4.json",
+      "bytes": 732,
+      "sha256": "2eb44596a2f28a081db4690e1b5f4a21b26cf40b6558fd4aad5068a6a58eb624"
+    },
+    {
+      "path": "requests/request-20db8c3d-10c1-4e46-8172-01acfe000ccb.json",
+      "bytes": 676,
+      "sha256": "3bde2104d7f8f0f79f77e3ecc6836280856b7595ae39d65611b1464b48715e6e"
+    },
+    {
+      "path": "requests/request-3eaafa64-7bb8-4a52-a482-cb6dd7b001f1.json",
+      "bytes": 732,
+      "sha256": "c9840580f93c1c559e1ac5f59413d48c8c6ec167a962809e4ba0f7b010e061b4"
+    },
+    {
+      "path": "requests/request-e3f4b380-1267-4d0b-8166-ed286fcd3352.json",
+      "bytes": 732,
+      "sha256": "7a47a788d7c15a6ab513363b98d1d07b8e761985cd1ca5a81eea231c4c319b78"
+    },
+    {
+      "path": "responses/request-0e6434dd-afd3-4d1c-9448-1c048e3f22f4.json",
+      "bytes": 1109,
+      "sha256": "1684808543c64ff75c2e62513fa3f66f6cde4897f4bbd3559c14be4f42a33f4c"
+    },
+    {
+      "path": "responses/request-20db8c3d-10c1-4e46-8172-01acfe000ccb.json",
+      "bytes": 1053,
+      "sha256": "8014fe501ea3c7bada085f7739a785e55838d08926629297896021f0ddce78cb"
+    },
+    {
+      "path": "responses/request-3eaafa64-7bb8-4a52-a482-cb6dd7b001f1.json",
+      "bytes": 1109,
+      "sha256": "2ed5a8206abb2d49c46fb447dbfe4b9046564f98529f152680a7dc456cecf17b"
+    },
+    {
+      "path": "responses/request-e3f4b380-1267-4d0b-8166-ed286fcd3352.json",
+      "bytes": 1109,
+      "sha256": "c12daf8a12e93182427d0ddb66cf7a7936967119578e762be6200bb75d5ca762"
+    }
+  ],
+  "archive": {
+    "file": "usgs-20261001-07.capture.tar.gz",
+    "bytes": 3636,
+    "sha256": "4171d14f0e4e457964d394fb9f98e656eb407dbce5f149d2f7bf04de2dd8bd51",
+    "root": "usgs-october-01-07"
+  },
+  "sourceFile": "usgs-20261001-07.source.json"
+}
