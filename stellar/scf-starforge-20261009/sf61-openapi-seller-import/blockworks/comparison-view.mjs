@@ -210,7 +210,7 @@ export function renderComparison(target, comparison, { sourceText, onOpenSource,
     for (const [index, row] of visible.entries()) {
       const record = node('article');
       record.append(node('h4', 'Record ' + (start + index + 1)), statusNode(row.status));
-      const identity = node('code', row.rowId); identity.setAttribute('aria-label', 'Comparison record identity'); const identityLine = node('p'); identityLine.append(identity); record.append(identityLine);
+      const identity = node('code', row.rowId, 'mono'); identity.setAttribute('aria-label', 'Comparison record identity'); const identityLine = node('p'); identityLine.append(identity); record.append(identityLine);
       const keys = row.baseline?.keys ?? row.candidate?.keys ?? [];
       record.append(table(['Mapped key', 'Canonical value'], keys.map(key => [key.id, packed(key.canonical)])));
       const values = (row.measures ?? []).filter(value => !measure.value || value.id === measure.value);
