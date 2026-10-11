@@ -17,7 +17,7 @@
           "amount": "10000",
           "maxTimeoutSeconds": 60
         },
-        "queryParameters": [{"name": "region", "type": "string", "required": false, "example": "north"}],
+        "queryParameters": [{"name": "region", "type": "string", "description": "Optional region filter for the existing dataset", "required": false, "example": "north"}],
         "outputExample": {"dataset": "local-example", "rows": [{"region": "north", "value": 4}]}
       },
       "handler": "existingDataset"

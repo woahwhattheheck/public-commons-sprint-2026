@@ -52,6 +52,16 @@ export async function main(args = process.argv.slice(2)) {
     compiled = compileUpstreamBindings(bindings,{allowLoopback:options.allowLoopback,env});
     validateUpstreamService(config,compiled);
     handlers = createUpstreamHandlers(bindings,{allowLoopback:options.allowLoopback,env});
+    if (options.check) {
+      const {compileSellerRoutes} = await import('./resource-server.mjs');
+      const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : 'http://127.0.0.1:8423';
+      // Compile original offers too; JSON shape alone misses invalid payment metadata.
+      // No handler is invoked and no placeholder origin is published by --check.
+      compileSellerRoutes(config.routes.map(route => ({id:route.id,
+        ...(route.offer ? {offer:route.offer} : {definition:{...route.definition,url:origin+route.path}}),
+        handler:route.handler ? handlers[route.handler] : () => { throw new Error('Validation does not invoke handlers'); },
+      })),{allowLocalhost:!config.publicOrigin});
+    }
   } catch (error) {
     error.cliMessage = error instanceof TypeError ? error.message : 'Cannot read valid seller/upstream JSON files';
     throw error;
