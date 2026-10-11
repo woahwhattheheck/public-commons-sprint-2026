@@ -281,12 +281,40 @@ def accept_event(state: Path, payload: dict, raw_body: bytes) -> tuple[int, dict
         db.close()
 
 
+def access_allowed(db: sqlite3.Connection, ref: str, now: float | None = None) -> bool:
+    """Read only: merchant policy for an existing order, including pending checkout.
+
+    Callers retain original enrollment/payment/entitlement checks. Absence of a
+    configured policy preserves legacy access; it does not establish an order.
+    Read the order and this policy inside the same explicit SQLite transaction.
+    """
+    if not is_match(REF_RE, ref):
+        return False
+    at = time.time() if now is None else now
+    if isinstance(at, bool) or not isinstance(at, (int, float)) or not 0 <= at <= 253402300799:
+        fail("Invalid access evaluation time")
+    if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sf101_access_policy'").fetchone():
+        return True
+    policy = db.execute("SELECT enabled,expires_at FROM sf101_access_policy WHERE order_ref=?", (ref,)).fetchone()
+    return policy is None or (policy["enabled"] == 1 and
+                              (policy["expires_at"] is None or at < policy["expires_at"]))
+
+
 def get_entitled_file(state: Path, ref: str, token: str) -> bytes | None:
     if not is_match(REF_RE, ref) or not 32 <= len(token.encode()) <= 1024:
         return None
-    with connect(state) as db:
+    db = connect(state)
+    try:
+        # One snapshot binds original token/entitlement and access policy together.
+        db.execute("BEGIN")
         order = db.execute("SELECT * FROM orders WHERE order_ref=?", (ref,)).fetchone()
-    if not order or order["state"] != "ENTITLED":
+        permitted = order is not None and access_allowed(db, ref)
+        db.commit()
+    finally:
+        if db.in_transaction:
+            db.rollback()
+        db.close()
+    if not permitted or order["state"] != "ENTITLED":
         return None
     actual = hashlib.sha256(token.encode()).digest()
     expected = bytes.fromhex(order["token_sha256"])
@@ -365,7 +393,8 @@ def make_handler(state: Path, secret: str):
 
         def do_GET(self) -> None:
             if self.path == "/health":
-                return self.reply(200, {"service": "sf101-merchant-receiver", "status": "READY"})
+                return self.reply(200, {"service": "sf101-merchant-receiver", "status": "READY",
+                                        "accessControls": "stellar-forge.sf101.access-policy.v1"})
             if not self.path.startswith("/deliver/") or self.path.count("/") != 2:
                 return self.reply(404, {"code": "NOT_FOUND"})
             reference = unquote(self.path[len("/deliver/"):])
