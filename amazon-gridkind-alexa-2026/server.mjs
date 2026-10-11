@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname,join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {makeAgent} from './agent.mjs';
+import {analyze} from './robustness/compare.mjs';
 const ROOT=dirname(fileURLToPath(import.meta.url));
 const clients=new Map(); // Separate demo visitors; bounded map, no persistence or credentials.
 const LIMIT=100;
@@ -42,8 +43,8 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
     try{
       if(!acceptsHost(req,host))return respond(res,403,{error:'Loopback demo Host mismatch'});
       const path=new URL(req.url,'http://localhost').pathname;
-      if(req.method==='GET'&&['/','/app.js','/style.css'].includes(path)){
-        const file=path==='/'?'index.html':path==='/style.css'?'style.css':'app.js';
+      if(req.method==='GET'&&['/','/app.js','/robustness-ui.js','/style.css'].includes(path)){
+        const file=path==='/'?'index.html':path.slice(1);
         const mime=path==='/'?'text/html; charset=utf-8':path==='/style.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
         res.writeHead(200,{'content-type':mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});
         return res.end(await readFile(join(ROOT,file)));
@@ -51,9 +52,22 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
       if(!path.startsWith('/api/'))return respond(res,404,{error:'Not found'});
       const agent=session(req,res);
       if(req.method==='GET'&&path==='/api/state')return respond(res,200,agent.view());
-      if(req.method!=='POST'||path!=='/api/action')return respond(res,405,{error:'Unsupported operation'});
+      if(req.method!=='POST'||!['/api/action','/api/robustness'].includes(path))return respond(res,405,{error:'Unsupported operation'});
       if(req.headers.origin&&new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'Cross-origin disabled'});
-      const {action,id,command,input}=await readBody(req);
+      const body=await readBody(req);
+      if(path==='/api/robustness'){
+        // Read after the complete request arrives: another tab may have replaced
+        // this session's proposal while its body was still in flight.
+        const current=agent.view();
+        if(!current.proposal||typeof body?.proposalId!=='string'||body.proposalId!==current.proposal.id)
+          return respond(res,409,{error:'This proposal has changed. Reload the current plan before comparing tariffs.'});
+        // Reuse the original deterministic optimizer and report schema. The
+        // caller can vary prices only; loads and fixed schedule come from the
+        // current proposal. No offer, approval, history or dispatch is changed.
+        const report=analyze({base:current.scenario,alternatives:body.alternatives});
+        return respond(res,200,{proposalId:current.proposal.id,report});
+      }
+      const {action,id,command,input}=body;
       const operations={propose:()=>agent.offer(input),approve:()=>agent.approve(id),execute:()=>agent.execute(id),cancel:()=>agent.cancel(),say:()=>agent.say(command,input)};
       if(!Object.hasOwn(operations,action))throw Error('Unknown action');
       return respond(res,200,operations[action]());
@@ -63,4 +77,5 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
   return server;
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1])start();
+
 
