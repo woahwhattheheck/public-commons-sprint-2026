@@ -20,6 +20,7 @@ const help = `Starforge merchant toolkit
   starforge runtime-profile --help
   starforge runtime-install --help
   starforge runtime-workspace --help
+  starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
@@ -39,6 +40,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   runtime-profile                            Select exact dependencies for an original release
   runtime-install                            Install, resume, run, upgrade and recover a customer runtime
   runtime-workspace                          Review, install and recover runtimes in a private browser workspace
+  runtime-transfer                           Transfer exact source, profile and public package cache offline
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
