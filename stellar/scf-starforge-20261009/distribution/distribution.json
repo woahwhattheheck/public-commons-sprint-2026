@@ -311,7 +311,8 @@
     "mercury-feed": "stellar/mercury-event-operations/starforge-feed/cli.mjs",
     "buyer-expenses": "stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/cli.mjs",
     "weather-operations": "stellar/scf-starforge-20261009/partners/open-meteo-operations/cli.mjs",
-    "merchant-fleet-host": "stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-cli.mjs"
+    "merchant-fleet-host": "stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-cli.mjs",
+    "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -662,7 +663,13 @@
     "./partners/open-meteo/analysis": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/analysis.mjs",
     "./partners/open-meteo/reports": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/exports.mjs",
     "./merchant/fleet/host": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy.mjs",
-    "./merchant/fleet/host-runtime": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-runtime.mjs"
+    "./merchant/fleet/host-runtime": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-runtime.mjs",
+    "./seller/water-quality": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/merchant.mjs",
+    "./seller/water-quality/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/provider.mjs",
+    "./seller/water-quality/samples": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/samples.mjs",
+    "./seller/water-quality/analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/analysis.mjs",
+    "./seller/water-quality/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/project.mjs",
+    "./seller/water-quality/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs"
   },
   "nativePeers": {
     "@x402/core": {
