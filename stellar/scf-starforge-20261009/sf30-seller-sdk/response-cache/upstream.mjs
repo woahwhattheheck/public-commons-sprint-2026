@@ -31,12 +31,11 @@ export function createCachedUpstream(options, cacheOptions) {
   if (Object.hasOwn(cacheOptions, 'handler') || Object.hasOwn(cacheOptions, 'storagePolicy') || Object.hasOwn(cacheOptions, 'bypassRequest')) {
     throw new TypeError('Upstream factory owns handler and HTTP cache policy hooks');
   }
-  const { headers = {}, lookup, onResult, invokeSource, credentialProvider, supplierQuota, ...serializable } = options;
+  const { headers = {}, lookup, onResult, invokeSource, credentialProvider, ...serializable } = options;
   if (invokeSource !== undefined && typeof invokeSource !== 'function') throw new TypeError('invokeSource must be a trusted source function');
   const fixed = structuredClone(serializable);
   if (lookup !== undefined) fixed.lookup = lookup;
   if (onResult !== undefined) fixed.onResult = onResult;
-  if (supplierQuota !== undefined) fixed.supplierQuota = supplierQuota;
   const headerFactory = typeof headers === 'function' ? headers : null;
   const staticHeaders = headerFactory ? null : frozenHeaders(headers);
   const expose = new Set((fixed.responseHeaders ?? ['content-type', 'content-language']).map(name => name.toLowerCase()));

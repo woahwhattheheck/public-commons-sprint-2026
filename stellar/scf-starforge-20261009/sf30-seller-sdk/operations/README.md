@@ -309,24 +309,3 @@ available. Keep merchant state/export files on a trusted owner machine with
 the original 0700/0600 protection and never deploy this loopback listener
 through the public seller reverse proxy. CSS follows existing restrained
 industrial operations styling.
-
-## Shared supplier account capacity
-
-The original upstream seller can attach a shared supplier quota service. Open
-**Supplier accounts** from the seller operations toolbar and select **Load
-supplier accounts**. The view shows each configured account, its original route
-bindings, rolling-window usage, remaining calls, per-second allowance, provider
-cooldown and the original retry time. Select **View** for its complete state.
-
-Each refresh reads the account's original local ledger. The page keeps the last
-displayed snapshot during a failed refresh and labels its capture time. JSON and
-CSV buttons export that exact snapshot; the account search only filters the
-table. The existing private operator listener serves current snapshots at
-/api/supplier-quotas, /supplier-quotas.json and
-/supplier-quotas.csv, with the same origin and method controls as
-the other operations reads.
-
-The complete account configuration and operating procedure are in
-[the supplier quota guide](../supplier-quota/README.md). Existing Routescan
-rolling-window accounting supplies admission, reservation and provider cooldown
-behavior across routes and processes.
