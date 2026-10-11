@@ -1,12 +1,13 @@
 // MIT. Receive an original verified Woo refund handoff into the operator workspace.
 import {constants} from 'node:fs';
-import {open, lstat, readdir, rm} from 'node:fs/promises';
-import {join, sep} from 'node:path';
+import {open, lstat, readdir, link, unlink, rm} from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
+import {join, dirname, sep} from 'node:path';
 import {reference} from './buyer.mjs';
 import {inspectRefund} from './refund-operator.mjs';
 import {adjustmentId} from '../merchant-settlement-accounting/adjustments.mjs';
 import {absolute, need, object, digest, now, privateDirectory, parseJson,
-  writeBytes, jsonBytes, exists} from '../sf88-operator-buyer-cli/node/store.mjs';
+  jsonBytes, exists, syncDirectory} from '../sf88-operator-buyer-cli/node/store.mjs';
 
 export const REFUND_HANDOFF_SCHEMA = 'stellar-forge.sf104.merchant-refund-export.v1';
 export const REFUND_RECEIVE_SCHEMA = 'stellar-forge.sf104.merchant-refund-receive.v1';
@@ -27,16 +28,16 @@ function exactFields(value, keys, code) {
   need(object(value) && Object.keys(value).sort().join('\n') === [...keys].sort().join('\n'), code);
 }
 
-/** Read one regular, single-link snapshot with fixed allocation and an exact digest. */
-async function snapshotFile(path, {bytes, sha256, limit}) {
+/** Delivered files stay single-link; only exact receiver-owned temporary aliases can recover. */
+async function snapshotFile(path, {bytes, sha256, limit, receiverCopy = false}) {
   const named = await lstat(absolute(path));
-  need(named.isFile() && !named.isSymbolicLink() && named.nlink === 1, 'WOO_REFUND_HANDOFF_FILE_INVALID');
+  need(named.isFile() && !named.isSymbolicLink() &&
+    (receiverCopy ? named.nlink >= 1 : named.nlink === 1), 'WOO_REFUND_HANDOFF_FILE_INVALID');
   const handle = await open(absolute(path), constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   try {
     const before = await handle.stat();
     need(before.dev === named.dev && before.ino === named.ino, 'WOO_REFUND_HANDOFF_FILE_CHANGED');
-    need(before.isFile() && before.nlink === 1 &&
-      Number.isSafeInteger(before.size) && before.size > 0 && before.size <= limit &&
+    need(before.isFile() && Number.isSafeInteger(before.size) && before.size > 0 && before.size <= limit &&
       (bytes === undefined || before.size === bytes), 'WOO_REFUND_HANDOFF_FILE_INVALID');
     const raw = Buffer.alloc(before.size);
     let offset = 0;
@@ -46,17 +47,52 @@ async function snapshotFile(path, {bytes, sha256, limit}) {
       offset += read.bytesRead;
     }
     const extra = await handle.read(Buffer.alloc(1), 0, 1, raw.length), after = await handle.stat();
-    need(extra.bytesRead === 0 && after.size === before.size && after.nlink === 1 &&
+    const currentName = await lstat(path), actualHash = digest(raw);
+    need(extra.bytesRead === 0 && after.size === before.size && after.nlink === before.nlink &&
       after.mtimeMs === before.mtimeMs && after.ctimeMs === before.ctimeMs &&
-      (sha256 === undefined || digest(raw) === sha256), 'WOO_REFUND_HANDOFF_FILE_CHANGED');
+      currentName.dev === before.dev && currentName.ino === before.ino && !currentName.isSymbolicLink() &&
+      (sha256 === undefined || actualHash === sha256), 'WOO_REFUND_HANDOFF_FILE_CHANGED');
+    if (receiverCopy && after.nlink > 1) {
+      // A killed exclusive copy may have linked its completed file but not yet
+      // removed its private temporary name. Retire only this receiver's aliases
+      // of the exact verified inode; an unrelated external hard link still fails.
+      const prefix = '.sf104-receive-' + actualHash + '-';
+      for (const name of await readdir(dirname(path))) {
+        if (!name.startsWith(prefix) || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(name.slice(prefix.length))) continue;
+        const candidate = join(dirname(path), name);
+        let alias;
+        try { alias = await lstat(candidate); } catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+        if (alias.isFile() && !alias.isSymbolicLink() && alias.dev === before.dev && alias.ino === before.ino)
+          await unlink(candidate).catch(error => { if (error.code !== 'ENOENT') throw error; });
+      }
+      need((await handle.stat()).nlink === 1, 'WOO_REFUND_HANDOFF_FILE_INVALID');
+      await syncDirectory(dirname(path));
+    } else need(after.nlink === 1, 'WOO_REFUND_HANDOFF_FILE_INVALID');
     return raw;
   } finally { await handle.close(); }
 }
 
+/** Publish one complete file exclusively; its recoverable temporary stays in this private directory. */
+async function writeFirst(path, raw) {
+  const temporary = join(dirname(path), '.sf104-receive-' + digest(raw) + '-' + randomUUID());
+  let handle;
+  try {
+    handle = await open(temporary, 'wx', 0o600);
+    await handle.writeFile(raw); await handle.sync(); await handle.close(); handle = undefined;
+    await link(temporary, path);
+  } finally {
+    if (handle) await handle.close();
+    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  }
+  await syncDirectory(dirname(path));
+}
+
 async function retainFile(path, raw, descriptor) {
-  try { await writeBytes(path, raw, {exclusive:true}); }
-  catch (error) { if (error.code !== 'EEXIST') throw error; }
-  await snapshotFile(path, {...descriptor, limit:descriptor.bytes});
+  if (!await exists(path)) {
+    try { await writeFirst(path, raw); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+  }
+  await snapshotFile(path, {...descriptor, limit:descriptor.bytes, receiverCopy:true});
 }
 
 function manifestFrom(raw, config) {
@@ -119,12 +155,12 @@ async function completedReceipt(config, manifest, manifestSha256, total, workspa
   for (const parent of [join(workspace, 'refund-handoffs'),
     join(workspace, 'refund-handoffs', manifest.adjustmentId), directory,
     join(workspace, 'refunds'), target]) await privateDirectory(parent, {create:false});
-  const raw = await snapshotFile(path, {limit:REFUND_HANDOFF_LIMITS.manifestBytes});
+  const raw = await snapshotFile(path, {limit:REFUND_HANDOFF_LIMITS.manifestBytes, receiverCopy:true});
   const expected = {manifestSha256, inputSha256:manifest.inputSha256,
     adjustmentId:manifest.adjustmentId, orderReference:manifest.orderReference, siteUrl:manifest.siteUrl, workspace};
   const receipt = readReceipt(raw, expected);
   for (const file of manifest.files)
-    await snapshotFile(join(target, file.name), {...file, limit:entryLimit(file.name)});
+    await snapshotFile(join(target, file.name), {...file, limit:entryLimit(file.name), receiverCopy:true});
   const current = await inspectRefund(config, manifest.adjustmentId);
   summary(manifest, current, manifestSha256, total);
   return receipt;
@@ -181,13 +217,13 @@ export async function receiveRefund(config, sourceDirectory, {expectedManifestSh
   await privateDirectory(target);
   for (const file of manifest.files) {
     const path = join(target, file.name);
-    if (await exists(path)) await snapshotFile(path, {...file, limit:entryLimit(file.name)});
+    if (await exists(path)) await snapshotFile(path, {...file, limit:entryLimit(file.name), receiverCopy:true});
   }
   // A new operation becomes readable only after all of its source/history files.
   const ordered = [...manifest.files].sort((a, b) =>
     Number(a.name === 'input.json') - Number(b.name === 'input.json') || a.name.localeCompare(b.name));
   for (const file of ordered) {
-    const raw = await snapshotFile(join(stagedOperation, file.name), {...file, limit:entryLimit(file.name)});
+    const raw = await snapshotFile(join(stagedOperation, file.name), {...file, limit:entryLimit(file.name), receiverCopy:true});
     await retainFile(join(target, file.name), raw, file);
   }
   const received = await inspectRefund(config, manifest.adjustmentId);
@@ -201,12 +237,12 @@ export async function receiveRefund(config, sourceDirectory, {expectedManifestSh
   const receiptPath = join(receiptDirectory, 'receipt.json');
   const receipt = sealed({...reviewed, status:'RECEIVED', receivedAt:now(), workspace,
     operationDirectory:target, receiptDirectory});
-  try { await writeBytes(receiptPath, jsonBytes(receipt), {exclusive:true}); }
+  try { await writeFirst(receiptPath, jsonBytes(receipt)); }
   catch (error) { if (error.code !== 'EEXIST') throw error; }
-  const saved = readReceipt(await snapshotFile(receiptPath, {limit:REFUND_HANDOFF_LIMITS.manifestBytes}),
+  const saved = readReceipt(await snapshotFile(receiptPath, {limit:REFUND_HANDOFF_LIMITS.manifestBytes, receiverCopy:true}),
     {...reviewed, workspace});
   // This exact stage is owned by the validated claim and is now fully copied.
-  await snapshotFile(join(stage, 'claim.json'), {bytes:claim.length, sha256:digest(claim), limit:claim.length});
+  await snapshotFile(join(stage, 'claim.json'), {bytes:claim.length, sha256:digest(claim), limit:claim.length, receiverCopy:true});
   await rm(stage, {recursive:true, force:true}).catch(() => {});
   return saved;
 }
