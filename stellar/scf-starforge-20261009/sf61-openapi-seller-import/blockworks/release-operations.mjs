@@ -7,7 +7,9 @@ import { initReleaseStore, readReleaseState, listReleases, inspectRelease, compa
   stageRelease, activateRelease, rollbackRelease, releaseStatus, runActiveRelease } from '../../sf82-seller-pilot/releases.mjs';
 import { canonical, sha256 } from './project-store.mjs';
 
-export async function openMigrationReleases({ projects, origin, parentRuntime = () => ({ state: 'STOPPED' }) }) {
+export async function openMigrationReleases({ projects, origin, parentRuntime = () => ({ state: 'STOPPED' }),
+  env = process.env, validatePlan } = {}) {
+  if (validatePlan !== undefined && typeof validatePlan !== 'function') throw new TypeError('The host plan validator must be a function.');
   const sessions = new Map();
   const owned = () => [...sessions].map(([projectId, session]) => ({ projectId, url: session.url, mode: session.mode, releaseId: session.release.id }));
   const root = id => join(projects.projectDirectory(id), 'releases');
@@ -41,6 +43,7 @@ export async function openMigrationReleases({ projects, origin, parentRuntime = 
     const source = await projects.readSource(projectId, retained.value.sourceRef);
     if (source.metadata.sha256 !== retained.value.sourceSha256 || source.body.toString('utf8') !== document.input.candidateSpecText)
       throw new TypeError('The source review no longer matches its retained provider description.');
+    if (validatePlan && report.plan) await validatePlan(document.input.candidateSpecText, report.plan);
     return exportRefreshReview({ parent: projects.merchantParent, document, reviewId, name });
   }
   async function status(projectId) {
@@ -53,6 +56,7 @@ export async function openMigrationReleases({ projects, origin, parentRuntime = 
   async function stage({ projectId, package: selectedPackage, id, label, runtime = { port: 0 } }) {
     await projects.get(projectId); packageName(selectedPackage);
     const merchant = await readPackage(projects.merchantParent, selectedPackage);
+    if (validatePlan) await validatePlan(merchant.specText, merchant.plan);
     if (!await exists(projectId)) await initReleaseStore(root(projectId));
     const staged = await stageRelease(root(projectId), { id, label, workspace: merchant.folder, runtime });
     return { staged, package: merchant.name, sourcePackageId: merchant.manifest.id, status: await status(projectId) };
@@ -79,7 +83,7 @@ export async function openMigrationReleases({ projects, origin, parentRuntime = 
     const parent = parentRuntime();
     if (parent?.state === 'RUNNING' || parent?.customer) throw new Error('Stop the merchant setup session before starting its migration release.');
     if (sessions.size) throw new Error('This workspace already owns a running migration seller. Open it or stop it before starting another.');
-    const session = await runActiveRelease(root(projectId), { expectedGeneration: generation, handleSignals: false,
+    const session = await runActiveRelease(root(projectId), { expectedGeneration: generation, handleSignals: false, env,
       ...(origin ? { operationsNavigationOrigin: typeof origin === 'function' ? origin() : origin } : {}) });
     sessions.set(projectId, session);
     session.completion.finally(() => { if (sessions.get(projectId) === session) sessions.delete(projectId); }).catch(() => {});

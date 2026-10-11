@@ -1,12 +1,17 @@
 # Publish merchant datasets from a local workspace
 
-Save and compare CSV candidates, inspect their typed rows, publish through the
+Save and compare CSV or reviewed XLSX candidates, inspect their typed rows, publish through the
 running SF30 seller, and reopen unfinished reviews from one operator interface.
 Named candidates, notes, the selected query, publication history and prepared
 buyer configurations remain available after restart. The workspace uses
 the original dataset loader and private `datasetControl()` API. The existing
 version store remains the only publisher; the seller keeps its current routes,
 payment terms, verification, settlement and buyer cursor behavior.
+
+For local Excel files, use **Workbook sources** in this same interface. The
+[workbook operating guide](workbook/README.md) covers exact source retention,
+worksheet/cell inspection, explicit mappings, native CSV preparation, private
+source bundles and the original-session workbook CLI.
 
 ## Open the workspace
 
@@ -33,8 +38,15 @@ to the published dataset's own lower byte limit.
 Saved work defaults to `/srv/dataset-state/.publisher-workspace`. Use
 `--workspace /private/merchant-work` to choose a different private directory and
 pass the same path when reopening. The default retained capacity is 32 candidates
-and 256 MiB of CSV source; `--max-drafts` accepts 1–256, and `--max-draft-bytes`
-accepts 1 KiB–4 GiB. The upload limit still applies to each individual file.
+and 256 MiB of retained source (CSV, original workbooks and source-row maps); `--max-drafts` accepts 1–256, and `--max-draft-bytes`
+accepts 1 KiB–4 GiB. The upload limit still applies to each individual file. XLSX originals are additionally
+limited to 64 MiB; extraction alone uses Python 3.10+ via optional
+`--workbook-python python3`. The existing CSV path remains Node-only.
+
+Use `--session-file /private/publisher-session.json` to write an unused private
+mode0600 session file for the same authenticated merchant CLI. The file is removed
+on owned shutdown. `starforge dataset-publisher workbook --help` lists its complete
+source/plan/candidate/publication/buyer operations; no second version writer opens.
 
 Open the printed private session URL on the same computer. The workspace binds
 only `127.0.0.1`. Keep it outside the public HTTPS proxy. Its session capability

@@ -1,0 +1,34 @@
+{
+  "schema": "stellar-forge.sheetbest-source.v1",
+  "connectionId": "00000000-0000-0000-0000-000000000000",
+  "tab": "Catalog",
+  "valueMode": "strings",
+  "connection": {
+    "kind": "rest",
+    "apiKeyEnv": "SHEETBEST_API_KEY",
+    "maxResponseBytes": 67108864,
+    "timeoutMs": 30000
+  },
+  "queries": {
+    "catalog": {
+      "columns": {
+        "id": {
+          "source": "ID",
+          "type": "string"
+        },
+        "name": {
+          "source": "Name",
+          "type": "string"
+        },
+        "price": {
+          "source": "Price",
+          "type": "number"
+        },
+        "available": {
+          "source": "Available",
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,755 @@
+<?xml version='1.0' encoding='utf-8'?>
+<report xmlns="http://developer.cognos.com/schemas/report/7.0/" expressionLocale="en-us">
+  <modelPath>/content/package[@name='Published SANDAG Aggregates']/model[@name='model']</modelPath>
+  <queries>
+    <query name="OffenseCells">
+      <selection>
+        <dataItem name="Source Row" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[source_record_id]</expression>
+        </dataItem>
+        <dataItem name="Table" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[table]</expression>
+        </dataItem>
+        <dataItem name="Page" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[OffenseCells].[page]</expression>
+        </dataItem>
+        <dataItem name="Year" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[OffenseCells].[year]</expression>
+        </dataItem>
+        <dataItem name="Source Column" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[OffenseCells].[source_column]</expression>
+        </dataItem>
+        <dataItem name="Measure" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[measure]</expression>
+        </dataItem>
+        <dataItem name="Unit" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[unit]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[jurisdiction_id]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[jurisdiction]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Label" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[jurisdiction_label]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Raw" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[jurisdiction_raw]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Level" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[jurisdiction_level]</expression>
+        </dataItem>
+        <dataItem name="Parent Jurisdiction ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[jurisdiction_parent_id]</expression>
+        </dataItem>
+        <dataItem name="Is Regional Component" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[OffenseCells].[is_regional_component]</expression>
+        </dataItem>
+        <dataItem name="Is Sheriff Component" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[OffenseCells].[is_sheriff_component]</expression>
+        </dataItem>
+        <dataItem name="Offense ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[offense_id]</expression>
+        </dataItem>
+        <dataItem name="Offense" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[offense]</expression>
+        </dataItem>
+        <dataItem name="Offense Raw" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[offense_raw]</expression>
+        </dataItem>
+        <dataItem name="Offense Level" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[offense_level]</expression>
+        </dataItem>
+        <dataItem name="Offense Parent Id" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[offense_parent_id]</expression>
+        </dataItem>
+        <dataItem name="Category" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[category]</expression>
+        </dataItem>
+        <dataItem name="Group" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[group]</expression>
+        </dataItem>
+        <dataItem name="Raw Value" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[raw_value]</expression>
+        </dataItem>
+        <dataItem name="Value" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[OffenseCells].[value]</expression>
+        </dataItem>
+        <dataItem name="Value State" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[value_state]</expression>
+        </dataItem>
+        <dataItem name="Numeric Format Anomaly" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[OffenseCells].[numeric_format_anomaly]</expression>
+        </dataItem>
+        <dataItem name="Source Table Alignment Review" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[OffenseCells].[source_table_alignment_review]</expression>
+        </dataItem>
+        <dataItem name="Source URL" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[source_url]</expression>
+        </dataItem>
+        <dataItem name="Source SHA256" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[source_sha256]</expression>
+        </dataItem>
+        <dataItem name="Footnote Ids" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[OffenseCells].[footnote_ids]</expression>
+        </dataItem>
+        <dataItem name="Is Detail Leaf" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[OffenseCells].[is_detail_leaf]</expression>
+        </dataItem>
+        <dataItem name="Regional Group Component" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[OffenseCells].[is_regional_group_component]</expression>
+        </dataItem>
+      </selection>
+      <source>
+        <model />
+      </source>
+    </query>
+    <query name="Jurisdictions">
+      <selection>
+        <dataItem name="Jurisdiction ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Jurisdictions].[jurisdiction_id]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Jurisdictions].[jurisdiction]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Label" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Jurisdictions].[jurisdiction_label]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Level" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Jurisdictions].[jurisdiction_level]</expression>
+        </dataItem>
+        <dataItem name="Parent Jurisdiction ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Jurisdictions].[jurisdiction_parent_id]</expression>
+        </dataItem>
+        <dataItem name="Is Regional Component" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[Jurisdictions].[is_regional_component]</expression>
+        </dataItem>
+        <dataItem name="Is Sheriff Component" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[Jurisdictions].[is_sheriff_component]</expression>
+        </dataItem>
+      </selection>
+      <source>
+        <model />
+      </source>
+    </query>
+    <query name="Population">
+      <selection>
+        <dataItem name="Source Row" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[source_record_id]</expression>
+        </dataItem>
+        <dataItem name="Table" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[table]</expression>
+        </dataItem>
+        <dataItem name="Page" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[Population].[page]</expression>
+        </dataItem>
+        <dataItem name="Year" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[Population].[year]</expression>
+        </dataItem>
+        <dataItem name="Year Label" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[year_label]</expression>
+        </dataItem>
+        <dataItem name="Applicable Years" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[applicable_years]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[jurisdiction_id]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[jurisdiction]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Label" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[jurisdiction_label]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Raw" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[jurisdiction_raw]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Level" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[jurisdiction_level]</expression>
+        </dataItem>
+        <dataItem name="Parent Jurisdiction ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[jurisdiction_parent_id]</expression>
+        </dataItem>
+        <dataItem name="Is Regional Component" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[Population].[is_regional_component]</expression>
+        </dataItem>
+        <dataItem name="Is Sheriff Component" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[Population].[is_sheriff_component]</expression>
+        </dataItem>
+        <dataItem name="Raw Value" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[raw_value]</expression>
+        </dataItem>
+        <dataItem name="Value" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[Population].[value]</expression>
+        </dataItem>
+        <dataItem name="Value State" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[value_state]</expression>
+        </dataItem>
+        <dataItem name="Numeric Format Anomaly" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[Population].[numeric_format_anomaly]</expression>
+        </dataItem>
+        <dataItem name="Measure" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[measure]</expression>
+        </dataItem>
+        <dataItem name="Unit" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[unit]</expression>
+        </dataItem>
+        <dataItem name="Population Source" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[population_source]</expression>
+        </dataItem>
+        <dataItem name="Footnote Ids" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[footnote_ids]</expression>
+        </dataItem>
+        <dataItem name="Source URL" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[source_url]</expression>
+        </dataItem>
+        <dataItem name="Source SHA256" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[Population].[source_sha256]</expression>
+        </dataItem>
+      </selection>
+      <source>
+        <model />
+      </source>
+    </query>
+    <query name="PublishedControls">
+      <selection>
+        <dataItem name="Source Row" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[source_record_id]</expression>
+        </dataItem>
+        <dataItem name="Table" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[table]</expression>
+        </dataItem>
+        <dataItem name="Page" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[PublishedControls].[page]</expression>
+        </dataItem>
+        <dataItem name="Year" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[PublishedControls].[year]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[jurisdiction_id]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[jurisdiction]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Label" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[jurisdiction_label]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Raw" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[jurisdiction_raw]</expression>
+        </dataItem>
+        <dataItem name="Jurisdiction Level" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[jurisdiction_level]</expression>
+        </dataItem>
+        <dataItem name="Parent Jurisdiction ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[jurisdiction_parent_id]</expression>
+        </dataItem>
+        <dataItem name="Is Regional Component" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[PublishedControls].[is_regional_component]</expression>
+        </dataItem>
+        <dataItem name="Is Sheriff Component" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[PublishedControls].[is_sheriff_component]</expression>
+        </dataItem>
+        <dataItem name="Offense ID" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[offense_id]</expression>
+        </dataItem>
+        <dataItem name="Offense" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[offense]</expression>
+        </dataItem>
+        <dataItem name="Offense Raw" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[offense_raw]</expression>
+        </dataItem>
+        <dataItem name="Offense Level" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[offense_level]</expression>
+        </dataItem>
+        <dataItem name="Offense Parent Id" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[offense_parent_id]</expression>
+        </dataItem>
+        <dataItem name="Category" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[category]</expression>
+        </dataItem>
+        <dataItem name="Group" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[group]</expression>
+        </dataItem>
+        <dataItem name="Raw Value" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[raw_value]</expression>
+        </dataItem>
+        <dataItem name="Value" aggregate="none" dataType="double">
+          <expression>[Published Aggregates].[PublishedControls].[value]</expression>
+        </dataItem>
+        <dataItem name="Value State" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[value_state]</expression>
+        </dataItem>
+        <dataItem name="Numeric Format Anomaly" aggregate="none" dataType="boolean">
+          <expression>[Published Aggregates].[PublishedControls].[numeric_format_anomaly]</expression>
+        </dataItem>
+        <dataItem name="Unit" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[unit]</expression>
+        </dataItem>
+        <dataItem name="Footnote Ids" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[footnote_ids]</expression>
+        </dataItem>
+        <dataItem name="Source URL" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[source_url]</expression>
+        </dataItem>
+        <dataItem name="Source SHA256" aggregate="none" dataType="string">
+          <expression>[Published Aggregates].[PublishedControls].[source_sha256]</expression>
+        </dataItem>
+      </selection>
+      <source>
+        <model />
+      </source>
+    </query>
+    <query name="Years">
+      <selection>
+        <dataItem name="Year" aggregate="none" dataType="int64">
+          <expression>[Published Aggregates].[Years].[year]</expression>
+        </dataItem>
+      </selection>
+      <source>
+        <model />
+      </source>
+    </query>
+  </queries>
+  <layouts>
+    <layout>
+      <reportPages>
+        <page name="OffenseCells">
+          <pageBody>
+            <contents>
+              <list refQuery="OffenseCells" name="OffenseCells">
+                <listColumns>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Source Row" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Table" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Page" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Year" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Source Column" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Measure" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Unit" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction ID" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                </listColumns>
+              </list>
+            </contents>
+          </pageBody>
+        </page>
+        <page name="Jurisdictions">
+          <pageBody>
+            <contents>
+              <list refQuery="Jurisdictions" name="Jurisdictions">
+                <listColumns>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction ID" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction Label" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction Level" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Parent Jurisdiction ID" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Is Regional Component" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Is Sheriff Component" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                </listColumns>
+              </list>
+            </contents>
+          </pageBody>
+        </page>
+        <page name="Population">
+          <pageBody>
+            <contents>
+              <list refQuery="Population" name="Population">
+                <listColumns>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Source Row" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Table" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Page" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Year" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Year Label" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Applicable Years" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction ID" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction Label" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                </listColumns>
+              </list>
+            </contents>
+          </pageBody>
+        </page>
+        <page name="PublishedControls">
+          <pageBody>
+            <contents>
+              <list refQuery="PublishedControls" name="PublishedControls">
+                <listColumns>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Source Row" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Table" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Page" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Year" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction ID" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction Label" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction Raw" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Jurisdiction Level" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                </listColumns>
+              </list>
+            </contents>
+          </pageBody>
+        </page>
+        <page name="Years">
+          <pageBody>
+            <contents>
+              <list refQuery="Years" name="Years">
+                <listColumns>
+                  <listColumn>
+                    <listColumnBody>
+                      <contents>
+                        <textItem>
+                          <dataSource>
+                            <dataItemValue refDataItem="Year" />
+                          </dataSource>
+                        </textItem>
+                      </contents>
+                    </listColumnBody>
+                  </listColumn>
+                </listColumns>
+              </list>
+            </contents>
+          </pageBody>
+        </page>
+      </reportPages>
+    </layout>
+  </layouts>
+</report>

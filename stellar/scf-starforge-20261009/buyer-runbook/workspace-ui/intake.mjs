@@ -1,9 +1,10 @@
 // MIT. Presentation for native private-request review and local preparation.
+import {paymentOptionsTable} from './clients.mjs';
 const $=selector=>document.querySelector(selector);
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const when=value=>new Date(value).toLocaleString();
 const readable=value=>String(value??'').toLowerCase().replaceAll('_',' ');
-const title=item=>'POST '+new URL(item.summary.url).pathname;
+const title=item=>(item.summary.method??'POST')+' '+new URL(item.summary.url).pathname;
 
 export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refreshState}) {
   let state={requests:[]},selected=null,busy=false,generation=0,reviewChanged=false;
@@ -18,7 +19,7 @@ export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refre
     $('#request-size-limit').textContent=Number.isSafeInteger(state.maxHandoffBytes)?'Complete packet limit: '+state.maxHandoffBytes.toLocaleString()+' bytes.':'';
     $('#request-count').textContent=String(state.requests.length);
     $('#received-request-list').innerHTML=state.requests.length?state.requests.map(item=>
-      `<button class="request-row ${item.id===selected?.id?'selected':''}" data-request="${item.id}"><span><strong>${escape(title(item))}</strong><small>${escape(item.summary.url)}</small></span><span class="badge">${item.prepared?'Ready':item.summary.expiresAt<=Date.now()?'Expired':'Needs review'}</span></button>`).join(''):
+      `<button class="request-row ${item.id===selected?.id?'selected':''}" data-request="${item.id}"><span><strong>${escape(title(item))}</strong><small>${escape(item.summary.url)}</small></span><span class="badge">${item.prepared?'Ready':item.summary.expiresAt!=null&&item.summary.expiresAt<=Date.now()?'Expired':'Needs review'}</span></button>`).join(''):
       '<p class="muted">Uploaded merchant requests are retained here for review and reopening.</p>';
     const op=state.operator;
     $('#request-operator').innerHTML=op?
@@ -33,14 +34,16 @@ export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refre
     $('#request-filename').textContent=title(item);
     $('#request-state').textContent=item.prepared?'Ready to add':item.expired?'Ticket expired':review?'Reviewed':'Select payment option';
     $('#request-url').textContent=view.method+' '+view.sellerUrl;
-    $('#request-summary').innerHTML=`<div><dt>Stable intent</dt><dd>${escape(view.intentId)}</dd></div><div><dt>Ticket expires</dt><dd>${escape(when(view.operationTicket.expiresAt))}</dd></div><div><dt>Exact request body</dt><dd>${view.bodyPresent===false?'Omitted as declared by the source':view.bodyBytes.toLocaleString()+' bytes'}</dd></div><div><dt>Forwarded request headers</dt><dd>${view.requestHeaderNames.length}</dd></div>`;
+    $('#request-summary').innerHTML=`<div><dt>Stable intent</dt><dd>${escape(view.intentId)}</dd></div><div><dt>Operation ticket / expiry</dt><dd>${escape(view.operationTicket?when(view.operationTicket.expiresAt):'No operation ticket')}</dd></div><div><dt>Exact request body</dt><dd>${view.bodyPresent===false?'Omitted as declared by the source':view.bodyBytes.toLocaleString()+' bytes'}</dd></div><div><dt>Forwarded request headers</dt><dd>${view.requestHeaderNames.length}</dd></div>`;
     $('#request-body-download').href=`/files/requests/${item.id}/body`;
     $('#request-body-download').hidden=view.bodyPresent===false;
     $('#request-handoff-download').href=`/files/requests/${item.id}/handoff`;
-    $('#request-bytes').innerHTML=`<p>Original private file</p><code>${escape(item.filename)}</code><p>Body SHA-256</p><code>${escape(view.bodySha256)}</code><p>Merchant operation key</p><code>${escape(view.operationTicket.operationKey)}</code><p>Request headers</p><pre>${escape(JSON.stringify(view.requestHeaders,null,2))}</pre>`;
+    $('#request-bytes').innerHTML=`<p>Original private file</p><code>${escape(item.filename)}</code><p>Body SHA-256</p><code>${escape(view.bodySha256)}</code><p>Merchant operation key</p><code>${escape(view.operationTicket?.operationKey??'Not part of this request')}</code><p>Request headers</p><pre>${escape(JSON.stringify(view.requestHeaders,null,2))}</pre>`;
     $('#request-option').innerHTML='<option value="">Choose a payment option</option>'+view.choices.map(choice=>choice.error?
       `<option disabled>Option ${choice.acceptIndex+1} · ${escape(readable(choice.error))}</option>`:
       `<option value="${choice.acceptIndex}" ${review?.acceptIndex===choice.acceptIndex?'selected':''}>Option ${choice.acceptIndex+1} · ${escape(choice.acceptedTerms.maxAtomic)} atomic · ${escape(choice.acceptedTerms.network)} · ${escape(choice.acceptedTerms.asset)}</option>`).join('');
+    $('#request-option-terms').innerHTML=paymentOptionsTable(view.choices.map(choice=>({
+      index:choice.acceptIndex,terms:choice.offeredTerms??choice.acceptedTerms,error:choice.error})));
     $('#request-total').value=review?.totalAtomic??'';
     $('#request-daily').value=review?.dailyAtomic??'';
     $('#request-payment-review').hidden=!review;
@@ -107,6 +110,6 @@ export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refre
     if(!selected?.prepared)throw new Error('Prepare this local buyer first.');
     await onPrepared(selected.prepared,selected);
   }));
-  return {update(value){state=value??{requests:[]};renderList();disabled();},
+  return {open,update(value){state=value??{requests:[]};renderList();disabled();},
     async refresh(){if(selected)await open(selected.id);else renderList();}};
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // MIT. Complete customer research workflow on the maintained native merchant/buyer.
 import {resolve,join} from 'node:path';
+import {realpath} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {ValyuWorkspace,initializeValyu} from './workspace.mjs';
 import {startValyuDesk} from './server.mjs';
@@ -71,7 +72,7 @@ export async function main([mode,...args]=process.argv.slice(2)){
   }
   if(mode==='verify'||mode==='restore'){
     const {WorkspaceRecovery}=await native('sf88-operator-buyer-cli/node/index.mjs');
-    const engine=new WorkspaceRecovery({runtimeDirectory:join(runtimeRoot,'sf88-operator-buyer-cli')});
+    const engine=new WorkspaceRecovery({runtimeDirectory:await realpath(join(runtimeRoot,'sf88-operator-buyer-cli'))});
     const result=await engine[mode]({bundle:resolve(required(options,'bundle')),expectedRecordSha256:required(options,'record-sha'),
       passphraseEnv:options['pass-env']??'SF88_BACKUP_PASSPHRASE'});
     console.log(JSON.stringify(result,null,2));return;

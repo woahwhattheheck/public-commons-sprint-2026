@@ -11,6 +11,12 @@ The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
 install hooks, test suites or GitHub Actions configuration.
 
+Browser modules served under shared URLs use the same
+[asset contracts](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/c26eee9e80fe4bccfd9faa5d79b4464742d8d95f/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md)
+in their original HTTP servers and the source collector. The same guide is included
+at `source/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md` inside the
+installed package.
+
 ## Install the source archive
 
 Use Node 22.16 or later. From a new application directory, install the supplied
@@ -723,6 +729,7 @@ or automatically retry a request.
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge postgres-publisher` | Review and publish complete query snapshots; keep the original data product current on a saved cadence |
+| `starforge arcgis` / `arcgis-publisher` | Retain ArcGIS layers, publish reviewed datasets and receive original Esri FeatureSets from finalized buyer deliveries |
 | `starforge sheets-source` | Retain an actual Google cell response, inspect headers and prepare an explicit public projection |
 | `starforge sheets-publisher` | Review and publish selected Sheet observations through the original retained dataset and buyer workflow |
 | `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
@@ -771,7 +778,10 @@ or automatically retry a request.
 | `starforge dataset-refresh` | Publish, retain and activate CSV dataset versions while readers finish their pages |
 | `starforge allium-explorer` | Inspect an approved Allium product and import, run, collect or recover its original saved query |
 | `starforge allium-workspace` | Review retained Allium products/results, publish a versioned merchant, prepare its buyer and reopen a complete workspace |
-| `starforge dataset-publisher` | Upload and publish CSV versions, select the actual offer and export original buyer preparation |
+| `starforge dataset-publisher` | Retain CSV/XLSX sources, publish reviewed selections and export original buyer preparation |
+| `starforge workbook` | Inspect original XLSX, save mappings, compare editions and adopt reviewed updates |
+| `starforge workbook-customer` | Acquire, recover, deliver and analyze the original workbook customer packet |
+| `starforge workbook-receive` | Complete the saved receiving, full query export and portable reopening workflow |
 | `starforge buyer-dataset` | Acquire, pause, resume and deliver all pages of the selected original dataset |
 | `starforge buyer-dataset-workspace` | Review original offers, operate dataset acquisitions, open retained files and use the analysis workspace |
 | `starforge dataset-workspace` | Preview, refresh and select the retained dataset in its private browser workspace |
@@ -1267,6 +1277,62 @@ command. The packaged `sf30-seller-sdk/dataset-refresh/WORKSPACE.md` and
 `sf88-operator-buyer-cli/DATASETS.md` contain the full original configuration,
 publication, acquisition and recovery flow. The `./seller/dataset-publisher`
 and `./buyer/dataset-acquisition` imports expose those original APIs.
+
+### Publish and update an original workbook
+
+The same dataset publisher retains XLSX sources, exact cell inspection and saved
+sheet/range/column mappings. Start it with a new private session file so its
+authenticated workbook CLI can use the running workspace:
+
+```sh
+starforge dataset-publisher --state /private/dataset-state \
+  --seller http://127.0.0.1:8423 --resource https://your-api.example/data \
+  --session-file /private/workbook-session.json --port 8431
+starforge workbook --help
+starforge workbook status --session-file /private/workbook-session.json
+```
+
+In the browser, upload the source, inspect its cells and choose the public
+columns, types and formula/date/null decisions. Prepare and review its selected
+CSV, publish through the existing version store, then save the original review
+and prepared buyer downloads.
+
+For a later edition, select the retained baseline mapping and replacement
+worksheet. Review header and column changes, choose the row keys, and compare
+the complete selected data. The retained review includes added, removed,
+changed, moved and unchanged rows, source coordinates and original values.
+Adoption keeps the reviewed mapping and returns to the same prepare/publish
+flow. Historical mappings and completed comparison reports remain reopenable.
+
+```sh
+starforge workbook edition-read --session-file /private/workbook-session.json \
+  --id RETAINED_COMPARISON_ID --kind changed --offset 0 --limit 50
+starforge workbook edition-export --session-file /private/workbook-session.json \
+  --id RETAINED_COMPARISON_ID --out /private/workbook-comparison.json
+starforge workbook-customer --help
+starforge workbook-receive --help
+```
+
+The [workbook merchant guide](../sf30-seller-sdk/dataset-refresh/workbook/README.md)
+and [edition review guide](../sf30-seller-sdk/dataset-refresh/workbook-comparison/README.md)
+cover the complete source and mapping commands. Every installed command forwards
+the original arguments and retains the same private session.
+
+The [workbook customer guide](../sf30-seller-sdk/dataset-refresh/workbook-customer/README.md)
+continues from the exact downloaded review and buyer configuration: create or
+reopen its packet, attach the existing acquisition or initialize its reviewed
+limits, acquire through the original Buyer, deliver its complete dataset and
+copy a portable receiving packet. The same completed session connects to
+Analysis for typed queries and full JSONL/CSV/SQLite export. A saved
+`starforge workbook-receive --ready /absolute/customer/ready.json` invocation
+performs that complete receiving continuation and reopens its retained result.
+
+For an existing Node application, the package exposes
+`./seller/workbook` (merchant bridge and edition operations),
+`./seller/workbook/cli` (the authenticated workspace client),
+`./buyer/workbook` (customer, delivery and Analysis APIs),
+`./buyer/workbook/receiving` (the original receiving composition), and
+`./buyer/workbook/receiver` (the complete saved receiving operation).
 
 ### Receive datasets in the browser
 
@@ -3202,6 +3268,38 @@ existing verification and transaction matching rules across both. Pricing
 imports and recovery records keep their own source identities in the same
 merchant review.
 
+### Give customers their purchase and usage statements
+
+Open **Customer statements** in the existing accounting workspace. Save the
+customer profile, bind that customer's original order references, select a
+completed reconciliation and import the original API-pass export. Review the
+statement before retaining its immutable version and customer downloads.
+
+The statement keeps each original payment's asset, recipient, atomic amount and
+verification state. Its usage view joins the exact order and native event to the
+purchased plan and complete retained call history. The purchase period and the
+cumulative usage capture time are displayed separately. Internal merchant costs
+and customer notes remain in the operator workspace.
+
+The installed command opens that same accounting state:
+
+```sh
+starforge merchant-customer-statements state \
+  --workspace /private/merchant/accounting
+starforge merchant-customer-statements help
+starforge merchant-customer-statements export \
+  --workspace /private/merchant/accounting \
+  --id STATEMENT_ID --file statement.html \
+  --output /private/customer-delivery/statement.html
+```
+
+Retained customer files include JSON, payment CSV, usage CSV, printable HTML,
+a manifest and current document status. Original revisions and request identifiers
+keep retries attached to the same retained version. The
+[customer statement guide](../merchant-settlement-accounting/customer-statements/README.md)
+covers profiles, assignments, native usage imports, periods, adjustments,
+withdrawal, export and the complete command API.
+
 ### Exchange a completed reconciliation with an accountant
 
 Open the same retained accounting workspace:
@@ -3298,6 +3396,29 @@ exports the same original reports with optional captured sources. Its ordinary
 `merchant-accounting` command accepts the same optional `--recovered-dir`.
 The public `./merchant/recovery` entry exposes the original importer, collection
 reader and saved-response export for applications embedding this workflow.
+
+## ArcGIS source publication and GIS receiving
+
+Use `starforge arcgis` (or `arcgis-publisher`) for the maintained
+[ArcGIS workflow](../sf30-seller-sdk/arcgis/README.md): capture a FeatureServer or
+MapServer layer, or import retained original feature sets; select explicit
+native fields; review and publish through the existing dataset publisher.
+Stable object IDs, scalar attributes, geometry and coordinate reference stay
+in their original Esri representation. The same merchant supplies the original
+SF88 buyer configuration and snapshot-bound page query.
+
+Prepare the public receiving declaration with `starforge arcgis receiving-plan`
+for the retained candidate. After the original SF100 delivery has been
+finalized, `starforge arcgis receive` streams its exact typed JSONL into a usable
+Esri FeatureSet. It verifies the complete retained page chain and source binding
+before publishing the output. Payment history remains with the original buyer.
+The maintained merchant MCP also accepts a host-declared ArcGIS publisher;
+its source credentials remain private environment references.
+
+The package exports `@tokenjunkielabs/starforge-merchant/seller/arcgis`,
+`/seller/arcgis/publisher` and `/buyer/arcgis` for applications. The component
+reuses the included original publisher, dataset and buyer-delivery modules and
+adds no optional native dependency.
 
 ## Run an existing Python merchant
 
@@ -4375,3 +4496,32 @@ entry exports `startDossierWorkspace` for applications that need only the
 operator server. Use `openDossierStore(directory, {providers})` for the same
 research engine in an existing application. Source and installed usage share
 the original dossier, revision and edition identities.
+
+## Allocate buyer expenses and issue accountant periods
+
+Use the original SF36 expense workspace with Python 3.11 or later:
+
+```sh
+starforge buyer-expenses --state /absolute/private/buyer-expenses --port 0
+```
+
+Register the existing buyer ledger, review its retained statement capture, assign
+recognition dates and exact cost-center/project allocations, and close a period
+under its named reviewer. Outstanding reservations keep their native maximum;
+amounts stay separate by network and asset. Reopening preserves issued editions.
+The workspace downloads semantic accountant packets and a complete private project
+with included source for receiving. Its fixed command starts the original Python
+server. See the [buyer expense operating guide](../sf36-spend-governor/expense-workspace/README.md)
+for source continuity, coding, review and recovery.
+
+## Open-Meteo weather merchant and operations
+
+The complete `weather-operations` command uses the original SF30 seller and generated client, original SF88 operator/buyer, and original encrypted workspace recovery. It covers explicit forecast/reanalysis/ensemble requests, retained source bytes, UTC/local/member analysis, attributed operating decision revisions, frozen JSON/CSV/HTML/ZIP reports, and same-root restore.
+
+```sh
+npx --no-install starforge weather-operations --help
+npx --no-install starforge weather-operations serve \
+  --settings /private/weather/settings.json
+```
+
+The [complete original product guide](../partners/open-meteo-operations/README.md) includes merchant compilation, receiving-operator initialization, controlling-terminal execution, provider mode/attribution, exact weather semantics and full recovery commands. Installed imports are `./partners/open-meteo` plus `/application`, `/workspace`, `/server`, `/analysis`, and `/reports`. The new component adds no dependency group; it retains the maintained native SDK/Python implementations and built-in Node SQLite. Evaluation data and commercial provider configuration remain explicit choices.
