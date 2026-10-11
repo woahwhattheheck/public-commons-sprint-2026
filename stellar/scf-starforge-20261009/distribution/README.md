@@ -386,6 +386,44 @@ Follow [the complete installed Chainstack workflow](../partners/chainstack-stell
 for selected provider configuration, method inputs, retained provider results,
 customer handoff, both buyer languages, release rollback and native host setup.
 
+## Routescan and n8n installed workflows
+
+The original Routescan merchant and its local workspace are included in the
+installed package. Use the same private project for its selected provider
+configuration, retained previews, quota accounting and merchant operation:
+
+```sh
+npx --no-install starforge routescan-merchant init \
+  --project /private/routescan --config /private/routescan-merchant.json
+npx --no-install starforge routescan-merchant status --project /private/routescan
+npx --no-install starforge routescan-workspace --project /private/routescan --port 0
+```
+
+The original APIs are exported as `./seller/routescan`,
+`./seller/routescan/project`, `./seller/routescan/workspace` and
+`./seller/routescan/backup`. Follow the
+[Routescan merchant guide](../sf30-seller-sdk/routescan/README.md) and
+[workspace guide](../sf30-seller-sdk/routescan/WORKSPACE.md) for provider setup,
+customer handoff and retained project recovery.
+
+The n8n workflow generator uses an existing buyer-workspace credential reference
+and the selected original intent:
+
+```sh
+npx --no-install starforge buyer-n8n-workflows --output /private/n8n-workflows \
+  --credential-name "Original Starforge buyer workspace" \
+  --intent ORIGINAL_ID --format binary
+```
+
+It writes six inactive workflow JSON files and their manifest into a new private
+directory. The workflows use the original SF88 workspace, buyer inbox and terminal
+execution paths for packet intake, review, response consumption, recovery,
+finalization and resuming an existing prepared intent. Import and configure the
+selected workflows in the receiving n8n installation using the
+[original n8n guide](../sf88-operator-buyer-cli/n8n/README.md).
+The `./buyer/n8n/workflows` API exports `createCustomerWorkflows` and
+`writeCustomerWorkflows`.
+
 ## GetBlock Stellar merchant
 
 The installed `getblock-stellar` command includes the complete original partner
