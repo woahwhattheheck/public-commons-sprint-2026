@@ -111,7 +111,7 @@ function stdoutPath(dir, id) { return join(dir, 'attempts', id + '.stdout.json')
 function stderrPath(dir, id) { return join(dir, 'attempts', id + '.stderr.txt'); }
 
 /** Snapshot explicit, complete SF88 configurations. No signer module is loaded. */
-export async function initializeRunbook({ manifest, output }) {
+async function prepareRunbook({ manifest, output }) {
   const manifestPath = absolute(manifest), directory = absolute(output);
   const parent = await realpath(dirname(directory));
   need(directory === join(parent, basename(directory)), 'RUNBOOK_PARENT_MUST_BE_CANONICAL');
@@ -185,20 +185,20 @@ export async function initializeRunbook({ manifest, output }) {
   const plan = { schema:PLAN_SCHEMA, id:source.id, title, createdAt:now(), directory,
     manifest:{path:manifestPath, sha256:sha256(raw)}, operations:records, plannedMaximums:[...groups.values()],
     budgetMeaning:'Independent request ceilings grouped by network and asset. These sums are not an approval, reservation, exchange rate or available governor budget.' };
-  await mkdir(directory, {mode:0o700});
-  await syncDir(dirname(directory));
-  for (const child of ['configs','bodies','downloads','attempts']) await mkdir(join(directory, child), {mode:0o700});
-  await syncDir(directory);
-  for (const [path, data] of writes) await createFile(join(directory, path), data);
-  await createFile(join(directory, 'manifest.source.json'), raw);
-  await createFile(join(directory, 'plan.json'), serialized(plan));
-  return plan;
+  return {plan, writes, raw};
 }
 
-export async function readPlan(path) {
-  const directory = absolute(path);
-  await privateDirectory(directory);
-  const plan = await readJson(join(directory, 'plan.json'), 8 * 1048576);
+/** Review the same native import without creating a run or loading a signer. */
+export function runbookPlanDigest(plan) {
+  const {createdAt, ...reviewed} = plan;
+  return sha256(serialized(reviewed));
+}
+export async function previewRunbook(options) {
+  const {plan} = await prepareRunbook(options);
+  return {plan, sha256:runbookPlanDigest(plan)};
+}
+
+function savedPlan(plan, directory) {
   need(plan.schema === PLAN_SCHEMA && plan.directory === directory && idPattern.test(plan.id ?? '') &&
     Array.isArray(plan.operations) && plan.operations.length >= 1 && plan.operations.length <= 64, 'INVALID_SAVED_RUNBOOK');
   const ids = new Set();
@@ -208,6 +208,114 @@ export async function readPlan(path) {
     ids.add(op.id);
   }
   return plan;
+}
+
+export async function readPlan(path) {
+  const directory = absolute(path);
+  await privateDirectory(directory);
+  return savedPlan(await readJson(join(directory, 'plan.json'), 8 * 1048576), directory);
+}
+
+async function initializationDirectory(path) {
+  await mkdir(path, {mode:0o700}).catch(error => { if (error.code !== 'EEXIST') throw error; });
+  await privateDirectory(path);
+  need(await realpath(path) === path, 'RUNBOOK_INITIALIZATION_DIRECTORY_CHANGED');
+  await syncDir(dirname(path));
+}
+async function initializationFile(path, data) {
+  try { await publishFile(path, data); }
+  catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    need((await readRegular(path, data.length)).equals(data), 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
+  }
+}
+async function readInitialization(snapshot, directory, expectedSha256) {
+  await privateDirectory(snapshot);
+  need(await realpath(snapshot) === snapshot, 'RUNBOOK_INITIALIZATION_DIRECTORY_CHANGED');
+  const plan = savedPlan(await readJson(join(snapshot, 'plan.json'), 8 * 1048576), directory);
+  need(runbookPlanDigest(plan) === expectedSha256, 'RUNBOOK_REVIEW_CHANGED');
+  const raw = await readRegular(join(snapshot, 'manifest.source.json'));
+  need(sha256(raw) === plan.manifest.sha256, 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
+  const writes = [];
+  for (const op of plan.operations) {
+    const config = 'configs/' + op.id + '.json';
+    need(op.config.path === config, 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
+    const data = await readRegular(join(snapshot, config), 65536);
+    need(sha256(data) === op.config.sha256, 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
+    if (op.body) {
+      const body = 'bodies/' + op.id + '.bin';
+      need(op.body.path === body, 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
+      const bytes = await readRegular(join(snapshot, body));
+      need(bytes.length === op.body.bytes && sha256(bytes) === op.body.sha256, 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
+      writes.push([body, bytes]);
+    }
+    writes.push([config, data]);
+  }
+  return {plan, writes, raw};
+}
+async function retainedInitialization({manifest, output, expectedSha256}) {
+  const directory = absolute(output);
+  const snapshot = join(dirname(directory), '.' + basename(directory) + '.initialization-' +
+    (expectedSha256 ?? randomUUID()));
+  if (expectedSha256) {
+    try { return {snapshot, ...await readInitialization(snapshot, directory, expectedSha256)}; }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+  const prepared = await prepareRunbook({manifest, output});
+  const review = runbookPlanDigest(prepared.plan);
+  if (expectedSha256 !== undefined) need(review === expectedSha256, 'RUNBOOK_REVIEW_CHANGED');
+  await initializationDirectory(snapshot);
+  for (const child of ['configs','bodies']) await initializationDirectory(join(snapshot, child));
+  for (const [path, data] of prepared.writes) await initializationFile(join(snapshot, path), data);
+  await initializationFile(join(snapshot, 'manifest.source.json'), prepared.raw);
+  try { await publishFile(join(snapshot, 'plan.json'), serialized(prepared.plan)); }
+  catch (error) { if (error.code !== 'EEXIST') throw error; }
+  return {snapshot, ...await readInitialization(snapshot, directory, review)};
+}
+async function unattemptedInitialization(directory) {
+  for (const name of ['.execution-lock.json', '.execution-leases']) {
+    try { await lstat(join(directory, name)); need(false, 'RUNBOOK_INITIALIZATION_HAS_EXECUTION_STATE'); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+  for (const name of ['attempts', 'downloads']) {
+    const path = join(directory, name);
+    try {
+      await privateDirectory(path);
+      need((await readdir(path)).length === 0, 'RUNBOOK_INITIALIZATION_HAS_EXECUTION_STATE');
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+}
+
+/** Retain reviewed native bytes before a run exists; resume only that snapshot. */
+export async function initializeRunbook({manifest, output, expectedSha256, resume = false}) {
+  need(expectedSha256 === undefined || /^[a-f0-9]{64}$/.test(expectedSha256), 'RUNBOOK_REVIEW_CHANGED');
+  need(!resume || expectedSha256 !== undefined, 'RUNBOOK_RESUME_REVIEW_REQUIRED');
+  const directory = absolute(output);
+  if (resume) {
+    try {
+      const existing = await readPlan(directory);
+      need(runbookPlanDigest(existing) === expectedSha256, 'RUNBOOK_REVIEW_CHANGED');
+      return existing;
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+  const {plan, writes, raw, snapshot} = await retainedInitialization({manifest, output, expectedSha256});
+  try { await mkdir(directory, {mode:0o700}); await syncDir(dirname(directory)); }
+  catch (error) { if (!resume || error.code !== 'EEXIST') throw error; }
+  await privateDirectory(directory);
+  need(await realpath(directory) === directory, 'RUNBOOK_INITIALIZATION_DIRECTORY_CHANGED');
+  await unattemptedInitialization(directory);
+  const identity = {schema:'stellar-forge.buyer-runbook-initialization.v1',
+    directory, snapshot, reviewSha256:runbookPlanDigest(plan)};
+  await initializationFile(join(directory, 'initialization.json'), serialized(identity));
+  for (const child of ['configs','bodies','downloads','attempts']) await initializationDirectory(join(directory, child));
+  for (const [path, data] of writes) await initializationFile(join(directory, path), data);
+  await initializationFile(join(directory, 'manifest.source.json'), raw);
+  await unattemptedInitialization(directory);
+  try { await publishFile(join(directory, 'plan.json'), serialized(plan)); }
+  catch (error) { if (error.code !== 'EEXIST') throw error; }
+  const result = await readPlan(directory);
+  need(runbookPlanDigest(result) === runbookPlanDigest(plan), 'RUNBOOK_REVIEW_CHANGED');
+  return result;
 }
 
 async function nativeInput(plan, op) {
@@ -322,6 +430,24 @@ export async function acquireExecutionLease(directory) {
   // the same next generation meet one create-exclusive publication; a delayed
   // release of an older generation cannot affect its successor.
   return () => releaseLease(directory, record, 'OPERATION_FINISHED');
+}
+
+/** Short metadata mutations share the original immutable lease generations.
+ * No native buyer is launched under this lease. A dead local metadata owner
+ * can be recovered before the next draft save or initialization continues. */
+export async function acquireRunbookMetadataLease(directory) {
+  await privateDirectory(directory);
+  need(await realpath(directory) === directory, 'LEASE_DIRECTORY_MUST_BE_CANONICAL');
+  const previous = await latestLease(directory);
+  if (previous && !await wasReleased(directory, previous)) {
+    need(previous.host === hostname() && !await alive(previous.pid, previous.processToken), 'RUNBOOK_METADATA_LOCK_EXISTS');
+    await releaseLease(directory, previous, 'DEAD_METADATA_OWNER_RECOVERY');
+  }
+  try { return await acquireExecutionLease(directory); }
+  catch (error) {
+    if (error.code === 'RUNBOOK_EXECUTION_LOCK_EXISTS') need(false, 'RUNBOOK_METADATA_LOCK_EXISTS');
+    throw error;
+  }
 }
 
 /** Release only an explicitly selected, local dead owner's immutable lease. */
