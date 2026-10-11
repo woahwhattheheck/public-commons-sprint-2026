@@ -50,15 +50,14 @@ function verifiedPin(pinnedPublicKey) {
 }
 
 /**
- * Commit one unchanged, original-source seller declaration, only after
- * independent caller-provided seller policy and ALL SF50 quote proofs pass.
- * Requires a real SF60 writer. No HTTP endpoint, key management or payments.
+ * Verify one unchanged original-source declaration against independent seller
+ * policy and ALL original SF50 quote proofs, without publishing any state.
+ * The prepared operation is for a trusted original SF60 single or batch writer.
  */
-export async function admitPinnedSeller({
-  journal, sourceBytes, sourceURL, observedAt, sellerId, sequence,
+export function verifyPinnedSellerAdmission({
+  sourceBytes, sourceURL, observedAt, sellerId, sequence,
   authority, pinnedPublicKey, proofs, now = Date.now()
 }) {
-  if (!(journal instanceof DurableCatalogTransaction)) fail('REAL_SF60_WRITER_REQUIRED');
   if (!Number.isSafeInteger(now)) fail('VERIFIER_CLOCK_INVALID');
   if (!Number.isSafeInteger(sequence) || sequence < 1) fail('SELLER_SEQUENCE_INVALID');
   if (typeof sellerId !== 'string' || !/^[A-Za-z0-9_.:-]{1,128}$/.test(sellerId))
@@ -106,15 +105,26 @@ export async function admitPinnedSeller({
     authority: 'signed_export', sellerId, sourceURL: source.href,
     sourceSha256, observedAt
   };
-  // SF60 replays the ACTUAL SF27 trust, SF21 lifecycle and Bazaar parser
-  // against a private staged projection. Disk commit or nothing is visible.
-  const commit = await journal.ingest(candidate, authority, provenance);
   return {
-    schema: 'SCF-SF73/pinned-seller-durable-admission-v1',
-    decision: commit.decision, reason: commit.reason,
-    head: commit.head, operations: commit.operations ?? journal.count,
-    sourceSha256, signerPublicKeySha256: pin.fingerprint,
-    sellerId, verifiedPaymentOptions: proofs.length,
-    observedAt, paymentCalls: 0, signaturesIssued: 0
+    operation: {kind:'upsert', candidate, authority, provenance},
+    verification: {sourceSha256, signerPublicKeySha256:pin.fingerprint, sellerId,
+      verifiedPaymentOptions:proofs.length, observedAt,
+      expiresAt:Math.min(...proofs.map(item=>item.proof.statement.expiresAt))}
+  };
+}
+
+/** Original single-admission API, with the same native verification and receipt. */
+export async function admitPinnedSeller(options) {
+  const {journal} = options;
+  if (!(journal instanceof DurableCatalogTransaction)) fail('REAL_SF60_WRITER_REQUIRED');
+  const {operation, verification} = verifyPinnedSellerAdmission(options);
+  const commit = await journal.ingest(operation.candidate,operation.authority,operation.provenance);
+  const {sourceSha256,signerPublicKeySha256,sellerId,verifiedPaymentOptions,observedAt} = verification;
+  return {
+    schema:'SCF-SF73/pinned-seller-durable-admission-v1',
+    decision:commit.decision, reason:commit.reason,
+    head:commit.head, operations:commit.operations ?? journal.count,
+    sourceSha256, signerPublicKeySha256, sellerId, verifiedPaymentOptions,
+    observedAt, paymentCalls:0, signaturesIssued:0
   };
 }
