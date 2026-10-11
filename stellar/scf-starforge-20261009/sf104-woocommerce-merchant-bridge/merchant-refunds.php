@@ -37,7 +37,7 @@ final class Starforge_SF104_Merchant_Refunds {
             PRIMARY KEY  (adjustment_id),
             UNIQUE KEY returned_transfer (network, refund_tx),
             KEY original_order (order_id)
-        ) {$collate};");
+        ) ENGINE=InnoDB {$collate};");
         if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table))) === $table)
             update_option('sf104_refunds_schema', self::VERSION, false);
     }
@@ -159,6 +159,7 @@ final class Starforge_SF104_Merchant_Refunds {
             self::need(get_option('sf104_refunds_schema') === self::VERSION, 'REFUND_JOURNAL_UNAVAILABLE', 503);
             $id = Starforge_SF104_Merchant_Operator::order_id($request);
             return Starforge_SF104_Checkout::with_order_lock($id, static function () use ($id, $request, $callback) {
+                self::clear_order_cache($id);
                 $order = wc_get_order($id);
                 self::need($order && !is_a($order, 'WC_Order_Refund'), 'ORDER_NOT_FOUND', 404);
                 return $callback($order, $request);
@@ -348,7 +349,7 @@ final class Starforge_SF104_Merchant_Refunds {
             !$current->has_status('refunded')) {
             $next = apply_filters('woocommerce_order_fully_refunded_status', 'refunded',
                 $current->get_id(), $refund->get_id());
-            if ($next) $current->update_status($next);
+            if ($next) self::need($current->update_status($next), 'WOO_REFUND_STATUS_REOPEN_REQUIRED');
         }
         if ($row->status !== 'APPLIED') {
             $saved = $wpdb->update(self::table(), ['status' => 'APPLIED', 'refund_id' => $refund->get_id(),
@@ -361,55 +362,156 @@ final class Starforge_SF104_Merchant_Refunds {
             'adjustment' => self::row_view(self::row($row->adjustment_id)),
             'order' => self::snapshot(wc_get_order($order->get_id()))]);
     }
+    /** Only native SQL stores with transactional tables can join the Woo child and journal. */
+    static function transactional_storage($order) {
+        global $wpdb;
+        $order_store = $order->get_data_store()->get_current_class_name();
+        $refund_store = WC_Data_Store::load('order-refund')->get_current_class_name();
+        $hpos = 'Automattic\\WooCommerce\\Internal\\DataStores\\Orders\\';
+        self::need(in_array($order_store, ['WC_Order_Data_Store_CPT', $hpos . 'OrdersTableDataStore'], true) &&
+            in_array($refund_store, ['WC_Order_Refund_Data_Store_CPT', $hpos . 'OrdersTableRefundDataStore'], true),
+            'REFUND_TRANSACTIONAL_STORE_REQUIRED', 503);
+        $required = [self::table(), $wpdb->posts, $wpdb->postmeta, $wpdb->comments, $wpdb->commentmeta,
+            $wpdb->options, $wpdb->prefix . 'woocommerce_order_items', $wpdb->prefix . 'woocommerce_order_itemmeta',
+            $wpdb->prefix . 'woocommerce_downloadable_product_permissions'];
+        $custom = array_map(static function ($name) use ($wpdb) { return $wpdb->prefix . $name; },
+            ['wc_orders', 'wc_order_addresses', 'wc_order_operational_data', 'wc_orders_meta']);
+        if ($order_store === $hpos . 'OrdersTableDataStore') $required = array_merge($required, $custom);
+        $optional = array_map(static function ($name) use ($wpdb) { return $wpdb->prefix . $name; },
+            ['wc_order_stats', 'wc_order_product_lookup', 'wc_order_tax_lookup', 'wc_order_coupon_lookup',
+             'wc_customer_lookup', 'wc_download_log', 'sf98_woo_events', 'sf104_checkout_attempts',
+             'actionscheduler_actions', 'actionscheduler_claims',
+             'actionscheduler_groups', 'actionscheduler_logs']);
+        $tables = array_values(array_unique(array_merge($required, $custom, $optional)));
+        $marks = implode(',', array_fill(0, count($tables), '%s'));
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT TABLE_NAME AS name, ENGINE AS engine FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ({$marks})", $tables));
+        self::need(!$wpdb->last_error && is_array($rows), 'REFUND_STORAGE_INSPECTION_FAILED', 503);
+        $found = [];
+        foreach ($rows as $row) {
+            self::need(strtoupper((string) $row->engine) === 'INNODB', 'REFUND_INNODB_TABLES_REQUIRED', 503);
+            $found[$row->name] = true;
+        }
+        foreach ($required as $table) self::need(isset($found[$table]), 'REFUND_NATIVE_TABLE_MISSING', 503);
+        return $order_store === $hpos . 'OrdersTableDataStore' ? $wpdb->prefix . 'wc_orders' : $wpdb->posts;
+    }
+    /** Refresh only the selected order and children after commit, rollback, or a lost response. */
+    static function clear_order_cache($order_id, $refund_ids = []) {
+        $ids = array_values(array_unique(array_merge([(int) $order_id], array_map('intval', $refund_ids))));
+        foreach ($ids as $id) {
+            clean_post_cache($id);
+            if (class_exists('Automattic\\WooCommerce\\Caches\\OrderCache'))
+                wc_get_container()->get('Automattic\\WooCommerce\\Caches\\OrderCache')->remove($id);
+        }
+        wp_cache_delete(WC_Cache_Helper::get_cache_prefix('orders') . 'refund_ids' . $order_id, 'orders');
+        $store = WC_Data_Store::load('order');
+        if (method_exists($store->get_current_class_name(), 'clear_cached_data')) $store->clear_cached_data($ids);
+    }
+    static function atomic($order, $callback) {
+        global $wpdb;
+        $order_table = self::transactional_storage($order);
+        self::need((string) $wpdb->get_var('SELECT @@SESSION.autocommit') === '1' && !$wpdb->last_error,
+            'REFUND_TRANSACTION_CONTEXT_UNAVAILABLE', 503);
+        // SET TRANSACTION without SESSION fails inside an existing transaction.
+        // It therefore cannot implicitly commit a caller's unrelated work.
+        self::need($wpdb->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') !== false,
+            'REFUND_TRANSACTION_CONTEXT_UNAVAILABLE', 503);
+        $retries = $wpdb->reconnect_retries;
+        self::need(is_int($retries), 'REFUND_CONNECTION_GUARD_UNAVAILABLE', 503);
+        $wpdb->reconnect_retries = 0; // A lost connection must not resume writes in autocommit mode.
+        $started = false; $refund_ids = [];
+        $created = static function ($id, $refund = null) use ($order, &$refund_ids) {
+            if (!$refund || (string) $refund->get_parent_id() === (string) $order->get_id()) $refund_ids[] = (int) $id;
+        };
+        $guard = static function ($query) use ($wpdb) {
+            // wpdb runs this filter before clearing last_error for the next query.
+            self::need(!$wpdb->last_error, 'REFUND_DATABASE_WRITE_FAILED', 503);
+            // Refund hooks may perform normal data operations, but cannot end this
+            // transaction, run DDL, or call an opaque stored procedure within it.
+            self::need(preg_match('/^\s*(?:SELECT|INSERT|UPDATE|DELETE|REPLACE|SHOW|DESCRIBE|EXPLAIN|WITH)\b/i', $query),
+                'REFUND_TRANSACTION_CONTROL_CONFLICT', 503);
+            return $query;
+        };
+        try {
+            self::need($wpdb->query('START TRANSACTION') !== false, 'REFUND_TRANSACTION_START_FAILED', 503);
+            $started = true;
+            self::need($wpdb->query('SAVEPOINT sf104_refund_atomic') !== false, 'REFUND_TRANSACTION_START_FAILED', 503);
+            add_filter('query', $guard, PHP_INT_MAX);
+            add_action('woocommerce_new_order_refund', $created, 1, 2);
+            $column = $order_table === $wpdb->posts ? 'ID' : 'id';
+            self::need((string) $wpdb->get_var($wpdb->prepare(
+                "SELECT {$column} FROM {$order_table} WHERE {$column}=%d FOR UPDATE", $order->get_id())) === (string) $order->get_id(),
+                'REFUND_ORDER_CHANGED');
+            self::clear_order_cache($order->get_id());
+            $result = $callback(wc_get_order($order->get_id()));
+            self::need(!$wpdb->last_error, 'REFUND_DATABASE_WRITE_FAILED', 503);
+            remove_filter('query', $guard, PHP_INT_MAX);
+            // The savepoint also detects a lost/ended transaction before completion.
+            self::need($wpdb->query('RELEASE SAVEPOINT sf104_refund_atomic') !== false,
+                'REFUND_TRANSACTION_REOPEN_REQUIRED', 503);
+            self::need($wpdb->query('COMMIT') !== false, 'REFUND_COMMIT_REOPEN_REQUIRED', 503);
+            $started = false;
+            return $result;
+        } finally {
+            remove_filter('query', $guard, PHP_INT_MAX);
+            remove_action('woocommerce_new_order_refund', $created, 1);
+            if ($started) $wpdb->query('ROLLBACK');
+            $wpdb->reconnect_retries = $retries;
+            self::clear_order_cache($order->get_id(), $refund_ids);
+        }
+    }
     static function apply($request) {
         return self::dispatch($request, static function ($order, $request) {
-            global $wpdb;
-            self::need(strlen($request->get_body()) <= 4096, 'REFUND_BODY_TOO_LARGE', 413);
-            $payload = $request->get_json_params();
-            self::fields($payload, ['schema', 'adjustmentId', 'reviewSha256', 'expectedRevision', 'confirm']);
-            self::need($payload['schema'] === self::SCHEMA && $payload['confirm'] === 'RECORD_THIS_REFUND' &&
-                self::uuid_ok($payload['adjustmentId']) && self::hash_ok($payload['reviewSha256']) &&
-                self::hash_ok($payload['expectedRevision']), 'REFUND_APPLY_INVALID', 422);
-            $row = self::row($payload['adjustmentId']);
-            self::need($row && (string) $row->order_id === (string) $order->get_id() &&
-                hash_equals($row->review_sha256, $payload['reviewSha256']), 'REFUND_REVIEW_CHANGED');
-            $original = self::decoded($row->payload); $snapshot = self::snapshot($order);
-            self::need($snapshot['identitySha256'] === $original['expectedIdentitySha256'], 'REFUND_ORDER_IDENTITY_CHANGED');
-            self::proof($original['reviewedRefund'], $original, $snapshot);
-            $existing = self::find_refund($order, $row);
-            if ($existing) return self::finish($order, $row, $existing, $row->status === 'APPLIED' ? 'ALREADY_APPLIED' : 'RECOVERED');
-            self::need($row->status !== 'APPLIED', 'WOO_REFUND_MISSING_RECONCILIATION_REQUIRED');
-            self::need(in_array($row->status, ['PREPARED', 'APPLYING'], true), 'REFUND_STATE_INVALID');
-            self::need($snapshot['revision'] === $payload['expectedRevision'], 'REFUND_ORDER_REVISION_CHANGED');
-            self::available($snapshot, $original, $row->adjustment_id);
-            $saved = $wpdb->update(self::table(), ['status' => 'APPLYING',
-                'history' => self::history($row, 'APPLYING'),
-                'updated_at' => current_time('mysql', true)],
-                ['adjustment_id' => $row->adjustment_id, 'review_sha256' => $row->review_sha256, 'status' => $row->status]);
-            self::need($saved === 1, 'REFUND_APPLY_STATE_CHANGED');
-            // This native pre-save hook attaches stable identity before the Woo
-            // child is persisted; a crash cannot strand an unidentifiable credit.
-            $stamp = static function ($refund, $args) use ($row) {
-                if ((string) ($args['order_id'] ?? '') === (string) $row->order_id &&
-                    ($args['sf104_adjustment_id'] ?? '') === $row->adjustment_id) {
-                    $refund->update_meta_data(self::META, ['schema' => self::SCHEMA,
-                        'adjustmentId' => $row->adjustment_id, 'eventId' => $row->event_id,
-                        'transactionHash' => $row->refund_tx, 'amountAtomic' => $row->amount_atomic,
-                        'reviewSha256' => $row->review_sha256]);
-                }
-            };
-            add_action('woocommerce_create_refund', $stamp, 10, 2);
-            try {
-                $refund = wc_create_refund(['order_id' => $order->get_id(), 'amount' => $row->woo_amount,
-                    'reason' => $original['reason'], 'refund_payment' => false,
-                    'restock_items' => false, 'line_items' => [], 'sf104_adjustment_id' => $row->adjustment_id]);
-            } finally { remove_action('woocommerce_create_refund', $stamp, 10); }
-            self::need(!is_wp_error($refund) && is_a($refund, 'WC_Order_Refund') && $refund->get_id() > 0,
-                'WOO_REFUND_CREATE_REOPEN_REQUIRED');
-            $fresh = wc_get_order($order->get_id());
-            $verified = self::find_refund($fresh, $row);
-            self::need($verified && $verified->get_id() === $refund->get_id(), 'WOO_REFUND_SAVED_REOPEN_REQUIRED');
-            return self::finish($fresh, self::row($row->adjustment_id), $verified, 'APPLIED');
+            return self::atomic($order, static function ($order) use ($request) {
+                global $wpdb;
+                self::need(strlen($request->get_body()) <= 4096, 'REFUND_BODY_TOO_LARGE', 413);
+                $payload = $request->get_json_params();
+                self::fields($payload, ['schema', 'adjustmentId', 'reviewSha256', 'expectedRevision', 'confirm']);
+                self::need($payload['schema'] === self::SCHEMA && $payload['confirm'] === 'RECORD_THIS_REFUND' &&
+                    self::uuid_ok($payload['adjustmentId']) && self::hash_ok($payload['reviewSha256']) &&
+                    self::hash_ok($payload['expectedRevision']), 'REFUND_APPLY_INVALID', 422);
+                $row = self::row($payload['adjustmentId']);
+                self::need($row && (string) $row->order_id === (string) $order->get_id() &&
+                    hash_equals($row->review_sha256, $payload['reviewSha256']), 'REFUND_REVIEW_CHANGED');
+                $original = self::decoded($row->payload); $snapshot = self::snapshot($order);
+                self::need($snapshot['identitySha256'] === $original['expectedIdentitySha256'], 'REFUND_ORDER_IDENTITY_CHANGED');
+                self::proof($original['reviewedRefund'], $original, $snapshot);
+                $existing = self::find_refund($order, $row);
+                if ($existing) return self::finish($order, $row, $existing, $row->status === 'APPLIED' ? 'ALREADY_APPLIED' : 'RECOVERED');
+                self::need($row->status !== 'APPLIED', 'WOO_REFUND_MISSING_RECONCILIATION_REQUIRED');
+                self::need(in_array($row->status, ['PREPARED', 'APPLYING'], true), 'REFUND_STATE_INVALID');
+                self::need($snapshot['revision'] === $payload['expectedRevision'], 'REFUND_ORDER_REVISION_CHANGED');
+                self::available($snapshot, $original, $row->adjustment_id);
+                $saved = $wpdb->update(self::table(), ['status' => 'APPLYING',
+                    'history' => self::history($row, 'APPLYING'),
+                    'updated_at' => current_time('mysql', true)],
+                    ['adjustment_id' => $row->adjustment_id, 'review_sha256' => $row->review_sha256, 'status' => $row->status]);
+                self::need($saved === 1, 'REFUND_APPLY_STATE_CHANGED');
+                // Woo update_taxes() already saves the child before this hook.
+                // The enclosing transaction covers every early save and its identity.
+                $stamp = static function ($refund, $args) use ($row) {
+                    if ((string) ($args['order_id'] ?? '') === (string) $row->order_id &&
+                        ($args['sf104_adjustment_id'] ?? '') === $row->adjustment_id) {
+                        $refund->update_meta_data(self::META, ['schema' => self::SCHEMA,
+                            'adjustmentId' => $row->adjustment_id, 'eventId' => $row->event_id,
+                            'transactionHash' => $row->refund_tx, 'amountAtomic' => $row->amount_atomic,
+                            'reviewSha256' => $row->review_sha256]);
+                    }
+                };
+                add_action('woocommerce_create_refund', $stamp, 10, 2);
+                try {
+                    $refund = wc_create_refund(['order_id' => $order->get_id(), 'amount' => $row->woo_amount,
+                        'reason' => $original['reason'], 'refund_payment' => false,
+                        'restock_items' => false, 'line_items' => [], 'sf104_adjustment_id' => $row->adjustment_id]);
+                } finally { remove_action('woocommerce_create_refund', $stamp, 10); }
+                self::need(!is_wp_error($refund) && is_a($refund, 'WC_Order_Refund') && $refund->get_id() > 0,
+                    'WOO_REFUND_CREATE_REOPEN_REQUIRED');
+                $fresh = wc_get_order($order->get_id());
+                $verified = self::find_refund($fresh, $row);
+                self::need($verified && $verified->get_id() === $refund->get_id(), 'WOO_REFUND_SAVED_REOPEN_REQUIRED');
+                return self::finish($fresh, self::row($row->adjustment_id), $verified, 'APPLIED');
+            });
         });
     }
 }
