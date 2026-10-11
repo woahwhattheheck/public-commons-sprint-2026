@@ -309,7 +309,8 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
       try { const value = await source(id); records.push({ ...value.record, objects: objects(value.description) }); }
       catch (error) { records.push({ id, error: code(error) }); }
     }
-    return { operator, presetError, sources: records.sort((a,b) => (b.receivedAt ?? '').localeCompare(a.receivedAt ?? '')) };
+    return { operator, presetError, settingsFile,
+      sources: records.sort((a,b) => (b.receivedAt ?? '').localeCompare(a.receivedAt ?? '')) };
   }
   async function preparedProducts() {
     const result = [];

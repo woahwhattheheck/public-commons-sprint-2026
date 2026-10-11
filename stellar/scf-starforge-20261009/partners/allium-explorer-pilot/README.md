@@ -4,6 +4,19 @@ This is a runnable provider integration for the existing Allium commercial works
 
 The implementation composes the original `sf30-seller-sdk/upstream.mjs`, `dataset-handler.mjs`, `dataset-cli.mjs` and `dataset-refresh/`. It adds no seller, wallet, facilitator, indexer or billing engine. No new dependencies or GitHub Actions are required. Use a full repository checkout and Node 22 or later.
 
+## Retained operator application
+
+The [Allium operator workspace](./workspace/OPERATING.md) provides one complete browser workflow around these original engines: saved product/projection revisions, exact result imports and retained query recovery, typed pagination, native merchant configuration and snapshot operation, direct source review in the existing dataset publisher, original buyer preparation, and full portable export/reopen. Its industrial interface keeps raw source and edit history while the native provider, dataset, publisher and payment implementations remain authoritative.
+
+```sh
+node stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/cli.mjs create \
+  --workspace /private/allium-workspace --product /private/allium-product.json
+node stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/cli.mjs serve \
+  --workspace /private/allium-workspace
+```
+
+The CLI prints its private local operator URL. It also supports offline status, full export and create-only import. The retained application requires Linux util-linux flock in addition to the original Node runtime. See the complete [operating guide](./workspace/OPERATING.md) for source recovery, merchant lifecycle, the original publisher/customer handoff and portable directory rebinding.
+
 ## Verified provider fit, 11 October 2026
 
 Allium publishes [Technology Alliance and Consulting & Services programs](https://www.allium.so/partners) for integrations, implementations and joint customer work. Its [Stellar table catalog](https://docs.allium.so/historical-data/supported-blockchains/other-ecosystems/stellar) and [transactions v2 schema](https://docs.allium.so/historical-data/supported-blockchains/other-ecosystems/stellar/raw/transactions-v2) establish a concrete indexed-data source.

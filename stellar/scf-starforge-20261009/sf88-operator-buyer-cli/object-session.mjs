@@ -154,6 +154,29 @@ function chunkPlan(definition, index) {
     responsePath:configuration.responseFile.destination,
     evidencePath:join(configuration.evidenceDir, sha(intentId) + '.json')};
 }
+/** Read the original immutable plan from live state or a mapped recovery copy.
+ * Logical paths remain unchanged; only the storage location is substituted.
+ * This never opens a signer, starts a request or changes an inbox/ledger. */
+export async function readObjectRecoveryPlan(directory, {storageDirectory = directory} = {}) {
+  absolute(directory); await privateDirectory(storageDirectory);
+  const raw = await readPrivate(join(storageDirectory, 'session.json'), 131072);
+  let value;
+  try { value = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
+  catch { throw new InputError('OBJECT_STATE_JSON_INVALID'); }
+  const definition = validateDefinition(value, directory), digest = createHash('sha256');
+  const configs = join(storageDirectory, 'configs'); await privateDirectory(configs);
+  const names = await readdir(configs);
+  need(names.length === definition.chunkCount && names.every(name => /^[0-9]{6}\.json$/.test(name)),
+    'OBJECT_CONFIGURATION_BINDING_CHANGED');
+  for (let index = 0; index < definition.chunkCount; index++) {
+    const id = indexName(index), bytes = await readPrivate(join(configs, id + '.json'), 131072);
+    need(bytes.equals(encoded(chunkPlan(definition, index).configuration)), 'OBJECT_CONFIGURATION_BINDING_CHANGED');
+    digest.update(id + ':' + sha(bytes) + '\n');
+  }
+  return {definition, definitionSha256:sha(raw), configurationsSha256:digest.digest('hex'),
+    assemblies:await recordedAssemblies(definition, {storageDirectory})};
+}
+
 function baseReport(definition) {
   const {op} = execution(definition.config);
   return {schema:REPORT, directory:definition.directory, sessionId:definition.sessionId,
@@ -363,8 +386,8 @@ async function inspectInternal(directory, {verifyBytes = true} = {}) {
   return {definition,queue,report,hash,contentType};
 }
 
-async function recordedAssemblies(definition) {
-  const root = join(definition.directory, 'assemblies'), result = [];
+async function recordedAssemblies(definition, {storageDirectory = definition.directory} = {}) {
+  const root = join(storageDirectory, 'assemblies'), result = [];
   for (const name of (await readdir(root)).sort()) {
     if (name.startsWith('.object-write-')) continue;
     need(/^[a-f0-9]{64}\.json$/.test(name), 'OBJECT_ASSEMBLY_RECORD_INVALID');
@@ -453,7 +476,21 @@ async function acquireLock(directory, {recover = false, kind = 'RUN'} = {}) {
   }
   // Same native pattern as buyer-runbook: immutable numbered lease claims and
   // generation-specific releases. A delayed recoverer cannot remove a successor.
-  return () => releaseLease(directory, identity, 'OPERATION_FINISHED');
+  const release = () => releaseLease(directory, identity, 'OPERATION_FINISHED');
+  release.sealSnapshot = async stagedDirectory => {
+    need(stagedDirectory !== directory, 'OBJECT_RECOVERY_CAPTURE_LEASE_CHANGED');
+    await privateDirectory(stagedDirectory);
+    const source = await latestLease(directory), captured = await latestLease(stagedDirectory);
+    need(same(source, identity) && same(captured, identity) && !await wasReleased(directory, identity),
+      'OBJECT_RECOVERY_CAPTURE_LEASE_CHANGED');
+    await releaseLease(stagedDirectory, identity, 'RECOVERY_SNAPSHOT_COMPLETED');
+  };
+  return release;
+}
+
+/** Hold the same session owner used by acquisition, assembly and finalization. */
+export async function acquireObjectRecoveryLease(directory) {
+  return acquireLock(directory, {kind:'BACKUP'});
 }
 
 async function bindWorkspace(source, path) {
