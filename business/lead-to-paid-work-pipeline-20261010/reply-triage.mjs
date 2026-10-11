@@ -10,7 +10,7 @@ import path from 'node:path';
 const must=(ok,m)=>{if(!ok) throw new Error(m);};
 const value=x=>String(x??'').trim();
 const own=(x,k)=>Object.prototype.hasOwnProperty.call(x,k);
-const iso=(x,label)=>{must(typeof x==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?(?:Z|[+-]\d\d:\d\d)$/.test(x),`${label}: explicit-offset ISO timestamp required`); const d=new Date(x);must(Number.isFinite(d.getTime()),`${label}: invalid timestamp`);return d;};
+const iso=(x,label)=>{must(typeof x==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,9})?)?(?:Z|[+-]\d\d:\d\d)$/.test(x),`${label}: explicit-offset ISO timestamp required`); const d=new Date(x);must(Number.isFinite(d.getTime()),`${label}: invalid timestamp`);return d;};
 const addr=s=>{const raw=value(s);const email=(raw.match(/<([^<>\s]+)>/)||[])[1]||raw;return /^[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}$/i.test(email)?email.toLowerCase():null;};
 const asList=x=>Array.isArray(x)?x:[x];
 const url=s=>{try{const u=new URL(s);return u.protocol==='https:'&&!!u.hostname;}catch{return false;}};
@@ -24,8 +24,10 @@ function kind(m){
   const labels=m.labels||[];
   if(labels.includes('SENT')) return 'SENT';
   const subj=value(m.subject),from=addr(m.from??m.from_);
-  if(bounceSubject.test(subj)||bounceSender.test(from||''))return 'BOUNCE';
-  if(autoSubject.test(subj)||/\b(automatic reply|auto-reply|out of office)\b/i.test(value(m.autoSubmitted??'')))return 'AUTO_REPLY';
+  if(bounceSubject.test(subj)||bounceSender.test(from||'')||/report-type\s*=\s*[\"']?delivery-status/i.test(value(m.contentType)))return 'BOUNCE';
+  const autoSubmitted=value(m.autoSubmitted).split(';')[0].trim().toLowerCase();
+  if(autoSubject.test(subj)||(autoSubmitted && autoSubmitted !== 'no')||/\b(automatic reply|auto-reply|out of office)\b/i.test(value(m.autoSubmitted??'')))return 'AUTO_REPLY';
+  if(m.detail && m.detail !== 'FULL_HEADERS')return 'CONTENT_REQUIRED';
   return 'HUMAN_REVIEW';
 }
 function routedContacts(auto,messages){
@@ -36,7 +38,7 @@ function routedContacts(auto,messages){
   // Only offer a routing address published inside the same provider reply.
   return candidates.filter(c=>c!==old&&!messages.some(m=>kind(m)==='SENT'&&asList(m.to).map(addr).includes(c)&&iso(m.email_ts||m.sentAt,'sent timestamp')<=iso(auto.email_ts||auto.sentAt,'auto timestamp')));
 }
-const receipt=m=>({messageId:m.id||m.messageId,at:new Date(m.email_ts||m.sentAt).toISOString(),from:addr(m.from??m.from_)||'',to:asList(m.to).map(addr).filter(Boolean),url:m.display_url||m.displayUrl||m.receiptUrl||null,subject:value(m.subject)});
+const receipt=m=>({accountId:m.accountId||null,accountEmail:m.accountEmail||null,messageId:m.id||m.messageId,at:new Date(m.email_ts||m.sentAt).toISOString(),from:addr(m.from??m.from_)||'',to:asList(m.to).map(addr).filter(Boolean),url:m.display_url||m.displayUrl||m.receiptUrl||null,subject:value(m.subject)});
 export function triage(input, now=new Date()){
   must(input&&typeof input==='object'&&!Array.isArray(input),'Input must be object');
   must(Array.isArray(input.cases)&&input.cases.length&&Array.isArray(input.messages),'cases[] and messages[] required');
@@ -51,7 +53,8 @@ export function triage(input, now=new Date()){
   for(const [i,m] of input.messages.entries()){
     must(cs.has(m.caseId),`messages[${i}]: explicit known caseId required`);
     const mid=value(m.id||m.messageId);
-    must(mid&&!seen.has(mid),`messages[${i}]: unique provider id required`);seen.add(mid);
+    const identity=value(m.accountId||m.accountEmail)+':'+mid;
+    must(mid&&!seen.has(identity),`messages[${i}]: unique account/provider id required`);seen.add(identity);
     must(url(m.display_url||m.displayUrl||m.receiptUrl),`messages[${i}]: provider HTTPS receipt required`);
     const t=iso(m.email_ts||m.sentAt,`messages[${i}].email_ts`);
     must(t<=now,`messages[${i}]: future provider event`);
@@ -67,15 +70,17 @@ export function triage(input, now=new Date()){
     const human=received.filter(m=>m._kind==='HUMAN_REVIEW');
     const automated=received.filter(m=>m._kind==='AUTO_REPLY');
     const bounced=received.filter(m=>m._kind==='BOUNCE');
+    const unread=received.filter(m=>m.detail && m.detail!=='FULL_HEADERS');
     const lastSent=sent.at(-1),lastHuman=human.at(-1);
     const routed=uniq(automated.flatMap(a=>routedContacts(a,messages)));
     const alreadyRouted=routed.filter(to=>sent.some(m=>asList(m.to).map(addr).includes(to)));
     const routePending=routed.filter(to=>!alreadyRouted.includes(to));
     const dueHours=c.due?(c.due-now)/36e5:null;
     const sinceSent=lastSent?(now-lastSent._time)/36e5:null;
-    const dispositions=human.map(m=>({messageId:m.id||m.messageId,disposition:['INTEREST','DECLINE','NEUTRAL'].includes(m.humanDisposition)?m.humanDisposition:'UNREVIEWED',url:receipt(m).url}));
+    const dispositions=human.map(m=>({accountId:m.accountId||null,messageId:m.id||m.messageId,disposition:['INTEREST','DECLINE','NEUTRAL'].includes(m.humanDisposition)?m.humanDisposition:'UNREVIEWED',url:receipt(m).url}));
     let status,action;
-    if(lastHuman){
+    if(unread.length){status='MESSAGE_CONTENT_REQUIRED';action='Read the listed full Gmail messages, then resume this queue with the returned native capture';
+    } else if(lastHuman){
       const state=dispositions.at(-1).disposition;
       status=state==='INTEREST'?'HUMAN_INTEREST':state==='DECLINE'?'HUMAN_DECLINE':state==='NEUTRAL'?'HUMAN_NEUTRAL':'HUMAN_REPLY_NEEDS_TRIAGE';
       action=state==='INTEREST'?'Relationship owner: respond in original thread with a concrete scoped acceptance offer and ask for a decision date':state==='DECLINE'?'Record decline; stop pursuing this contact':'Relationship owner: read the actual human response and decide the next tailored action';
@@ -87,9 +92,9 @@ export function triage(input, now=new Date()){
     } else {status='FOLLOWUP_REVIEW';action='Relationship owner: consider one specific follow-up in the original thread if deadline and relationship still justify it';}
     if(c.due&&dueHours<=0&&status!=='HUMAN_INTEREST')action='Buyer opportunity deadline has passed; verify any continuing paid implementation need before outreach';
     const ordered=[...sent,...received].sort((a,b)=>a._time-b._time);
-    output.push({caseId,owner:c.owner,sourceUrl:c.sourceUrl,deadline:c.due?.toISOString()||null,deadlineHours:dueHours===null?null:Number(dueHours.toFixed(1)),status,nextAction:action,sentCount:sent.length,inboundCount:received.length,humanReplyCount:human.length,autoReplyCount:automated.length,bounceCount:bounced.length,replacementContacts:routed,alreadyContacted:alreadyRouted,dispositions,latestSent:lastSent?receipt(lastSent):null,latestHuman:lastHuman?receipt(lastHuman):null,receipts:ordered.map(m=>({...receipt(m),kind:m._kind}))});
+    output.push({caseId,owner:c.owner,sourceUrl:c.sourceUrl,deadline:c.due?.toISOString()||null,deadlineHours:dueHours===null?null:Number(dueHours.toFixed(1)),status,nextAction:action,sentCount:sent.length,inboundCount:received.length,humanReplyCount:human.length,autoReplyCount:automated.length,bounceCount:bounced.length,contentReadCount:unread.length,replacementContacts:routed,alreadyContacted:alreadyRouted,dispositions,latestSent:lastSent?receipt(lastSent):null,latestHuman:lastHuman?receipt(lastHuman):null,receipts:ordered.map(m=>({...receipt(m),kind:m._kind}))});
   }
-  const importance={HUMAN_INTEREST:0,HUMAN_REPLY_NEEDS_TRIAGE:1,CONTACT_ROUTING_AVAILABLE:2,DELIVERY_FAILURE:3,FOLLOWUP_REVIEW:4,HUMAN_NEUTRAL:5,NO_VERIFIED_SEND:6,CONTACT_ROUTED_AWAITING_REPLY:7,OUTBOUND_AWAITING_REPLY:8,HUMAN_DECLINE:9};
+  const importance={MESSAGE_CONTENT_REQUIRED:0,HUMAN_INTEREST:0,HUMAN_REPLY_NEEDS_TRIAGE:1,CONTACT_ROUTING_AVAILABLE:2,DELIVERY_FAILURE:3,FOLLOWUP_REVIEW:4,HUMAN_NEUTRAL:5,NO_VERIFIED_SEND:6,CONTACT_ROUTED_AWAITING_REPLY:7,OUTBOUND_AWAITING_REPLY:8,HUMAN_DECLINE:9};
   output.sort((a,b)=>(importance[a.status]??10)-(importance[b.status]??10)||(a.deadlineHours??Infinity)-(b.deadlineHours??Infinity)||a.caseId.localeCompare(b.caseId));
   const totals={cases:output.length,verifiedSent:output.reduce((n,x)=>n+x.sentCount,0),humanReplyCases:output.filter(x=>x.humanReplyCount>0).length,autoOnlyCases:output.filter(x=>x.autoReplyCount>0&&x.humanReplyCount===0).length,interestCases:output.filter(x=>x.status==='HUMAN_INTEREST').length};
   return {generatedAt:now.toISOString(),source:'OPERATOR_SUPPLIED_PROVIDER_GMAIL',totals,cases:output};
