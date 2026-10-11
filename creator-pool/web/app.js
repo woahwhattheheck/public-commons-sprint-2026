@@ -1836,6 +1836,43 @@ function buildNewCampaignForm() {
   const fDeadline = fieldWrap("Closing date and time", deadline, { hint: "The server requires 5 minutes to 400 days ahead." });
   const fDeadlineZone = fieldWrap("Interpret the closing time as", deadlineZone, { hint: "The exact UTC chain deadline appears below before creation." });
 
+
+  // Only unsent sponsor fields are stored. This is never an authorization or
+  // an on-chain record; choose an identity/asset-specific browser-tab key.
+  const draftInputs = { title, brief, reward: reward.input, budget: budget.input, deadline, deadlineZone };
+  const draftKey = [
+    "creator-pool:sponsor-unsent-v1", ui.state.mode || "unknown",
+    ui.state.chainId || "unknown", (ui.state.assetAddress || "").toLowerCase(),
+    isPublicMode() ? (Wallet.address || "unconnected").toLowerCase() : "local-demo",
+  ].join(":");
+  const clearDraft = () => { try { sessionStorage.removeItem(draftKey); } catch {} };
+  const saveDraft = () => {
+    const data = Object.fromEntries(Object.entries(draftInputs).map(([key, element]) => [key, element.value]));
+    try {
+      if (Object.values(data).some((v) => v.trim())) sessionStorage.setItem(draftKey, JSON.stringify(data));
+      else clearDraft();
+    } catch { /* Form still works when tab storage is unavailable. */ }
+  };
+  try {
+    const restored = JSON.parse(sessionStorage.getItem(draftKey) || "null");
+    if (restored && typeof restored === "object" && !Array.isArray(restored)) {
+      for (const [key, element] of Object.entries(draftInputs)) {
+        if (typeof restored[key] !== "string") continue;
+        if (key === "deadlineZone") {
+          if (restored[key] === "local" || restored[key] === "UTC") element.value = restored[key];
+        } else element.value = restored[key].slice(0, element.maxLength > 0 ? element.maxLength : 4000);
+      }
+    }
+  } catch { /* Ignore damaged saved text. */ }
+  for (const element of Object.values(draftInputs)) element.addEventListener("input", saveDraft);
+  deadlineZone.addEventListener("change", saveDraft);
+  const discardDraft = h("button", { type: "button", class: "btn ghost small", onClick: () => {
+    for (const [key, element] of Object.entries(draftInputs)) element.value = key === "deadlineZone" ? "local" : "";
+    clearDraft(); echoAtomic(); echoDeadline(); refreshPlan(); title.focus();
+  } }, "Discard unsent draft");
+  const draftControls = h("div", { class: "form-actions" }, discardDraft,
+    h("span", { class: "hint", text: "This unsent proposal stays in this browser tab. Creating does not fund." }));
+
   function refreshPlan() {
     if (!precisionKnown) {
       launchPlan.textContent = "The live asset precision is unavailable. Budget preview is paused.";
@@ -1892,7 +1929,7 @@ function buildNewCampaignForm() {
   const form = h("form", { class: "stack", noValidate: false },
     fTitle, fBrief,
     h("div", { class: "field-row" }, fReward, fBudget),
-    fDeadline, fDeadlineZone, dlEcho, echo, launchPlan, errBox,
+    fDeadline, fDeadlineZone, dlEcho, echo, launchPlan, draftControls, errBox,
     h("div", { class: "form-actions" },
       h("button", { type: "submit", class: "btn primary", id: "createCampaignSubmit", disabled: !precisionKnown }, "Create campaign"),
       h("span", { class: "hint", text: precisionKnown ? "Metadata is created first — fund the pool next." : "Amount entry waits until the backend reports asset decimals." })));
@@ -1935,11 +1972,13 @@ function buildNewCampaignForm() {
       okConfirmed: "Campaign created and confirmed on chain.",
       meta: { kind: "create" },
       onDone: (res) => {
-        closeDrawer();
+        if (!isUnsignedResponse(res) || ui.walletOps.get("create")?.status === "done") clearDraft();
+        closeDrawer();
         if (res && res.campaign && res.campaign.id) ui.selectedCampaignId = str(res.campaign.id);
       },
       onConfirmed: () => {
-        // After a wallet-signed create, select the campaign whose create tx
+        if (ui.walletOps.get("create")?.status === "done") clearDraft();
+        // After a wallet-signed create, select the campaign whose create tx
         // we broadcast.
         const entry = ui.walletOps.get("create");
         if (entry && ui.state) {
