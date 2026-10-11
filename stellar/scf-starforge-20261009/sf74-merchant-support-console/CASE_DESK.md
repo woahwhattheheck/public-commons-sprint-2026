@@ -1,6 +1,6 @@
 # Merchant case desk
 
-SF74 keeps a queue of merchant cases inside its existing local workspace. A case joins the exact route settings, original capture files, original runtime support packets and delivery records, unfinished owner terms, follow-up owner, work status, next action, notes and saved versions. It uses the existing SF70 diagnosis, SF72 preflight, SF76 comparison, SF77 workorder, SF93 support packet, SF97 native reconciler and SF74 workspace codec.
+SF74 keeps a queue of merchant cases inside its existing local workspace. A case joins the exact route settings, original capture files, original runtime support packets or retained usage periods and delivery records, unfinished owner terms, follow-up owner, work status, next action, notes and saved versions. It uses the existing SF70 diagnosis, SF72 preflight, SF76 comparison, SF77 workorder, SF30 history, SF93 support packet, SF97 native reconciler and SF74 workspace codec.
 
 ## Start with private case storage
 
@@ -46,6 +46,8 @@ Each case contains an atomic `head.json` pointer, immutable version metadata und
 Attached runtime sources are content-addressed in the same case's `runtime/` directory, completely written and synced before the same head publication. Each version records its runtime file's hash, size and compact summary. Reopening or restoring a version validates its exact runtime bytes and reuses the original reconciler. Existing cases without runtime sources open normally. An older API caller omitting `supportText` preserves a current attachment; an explicit `null` removes it from the new version while retaining previous versions.
 
 The complete `.merchant-support.json` transfer includes the current workspace, runtime files and follow-up metadata. Import opens a new case draft; it does not overwrite an existing case or import history. [Runtime support operations](RUNTIME_SUPPORT.md) explains the capture mapping and handoff.
+
+A retained period attaches the original `history.json` and the matching SF97 `report.json`, with an optional coherent SF98 journal pair. It uses the same case version publication, stale-save protection, historical reopening and private handoff. The case list indicates how many attached captures are retained periods; the original detailed day/session/variant counters stay in the runtime source object. See [support across restarts](RUNTIME_SUPPORT.md#support-a-merchant-across-restarts) for method/path selection, source binding and independent before/after period comparison.
 
 ### Recover a stopped local writer
 

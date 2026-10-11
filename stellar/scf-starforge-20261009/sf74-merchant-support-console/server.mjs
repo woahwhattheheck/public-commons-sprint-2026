@@ -203,7 +203,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         const input=await boundedBody(req,MAX_HANDOFF_BYTES*2+100000);
         if(!input||typeof input!=='object'||Array.isArray(input))throw new TypeError('Expected runtime support sources');
         const allowed={
-          '/api/runtime/inspect':['files','inputs','routeId'],
+          '/api/runtime/inspect':['files','inputs','routeId','path'],
           '/api/runtime/review':['supportText','inputs'],
           '/api/runtime/export':['workspaceText','supportText','metadata'],
           '/api/runtime/import':['handoffText'],
