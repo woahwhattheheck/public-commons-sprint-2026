@@ -1,0 +1,9 @@
+sku,category,units,unit_price,available,updated_at,internal_cost
+W-001,widget,12,4.5,true,2026-10-01,PRIVATE
+W-002,widget,4,7.2,true,2026-10-03,PRIVATE
+W-003,widget,12,3.9,false,2026-10-04,PRIVATE
+P-004,part,27,1.2,true,2026-10-04,PRIVATE
+W-005,widget,20,8.5,true,2026-10-07,PRIVATE
+P-006,part,,2.1,false,2026-10-08,PRIVATE
+W-007,widget,12,5.1,true,2026-10-09,PRIVATE
+P-008,part,8,1.8,true,2026-10-10,PRIVATE
