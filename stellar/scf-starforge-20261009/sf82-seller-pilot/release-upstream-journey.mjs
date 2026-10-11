@@ -1,14 +1,13 @@
 // One original release/process/console journey. Official SDK, local facilitator outcomes.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { mkdtemp, readFile, writeFile, rm, lstat } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { encodePaymentSignatureHeader } from '@x402/core/http';
 import { initReleaseStore, stageRelease, inspectRelease, compareReleases } from './releases.mjs';
 import { startReleaseConsole } from './release-console.mjs';
-import { releaseCacheControlPath } from './release-cache.mjs';
 import { savePackage } from '../sf61-openapi-seller-import/workspace/model.mjs';
 
 let reads = 0, verified = 0, settled = 0;
@@ -44,14 +43,13 @@ try {
   const plan = { schema: 'stellar-forge.api-merchant-plan.v1', sellerServer: 'https://dataset.example/api',
     allowLoopbackUpstream: true, payment, operations: [{ id: 'dataset', method: 'GET', path: '/dataset',
       amountAtomic: amount, headerEnv: { authorization: envName },
-      cache: { shareAcrossBuyers: true, ttlMs: 60000, maxEntries: 8, maxBytes: 65536, maxEntryBytes: 8192,
-        maxSourceInFlight: 4, maxWaiters: 8, sourceTimeoutMs: 10000 } }] };
+      timeoutMs: 10000, maxInFlight: 4, maxResponseBytes: 65536 }] };
   const firstPackage = await savePackage({ specText: JSON.stringify(description), plan, parent: work, name: 'api-first' });
   const input = { runtime: { port: 0, allowLocalFacilitator: true,
       facilitator: `http://127.0.0.1:${facilitator.address().port}` } };
   await stageRelease(root, { ...input, id: 'first', workspace: firstPackage.folder });
   description.servers[0].url = `http://127.0.0.1:${backend.address().port}/v2`;
-  plan.operations[0].cache.ttlMs = 30000; plan.operations[0].amountAtomic = '30000';
+  plan.operations[0].timeoutMs = 5000; plan.operations[0].maxInFlight = 2; plan.operations[0].amountAtomic = '30000';
   const secondPackage = await savePackage({ specText: JSON.stringify(description), plan, parent: work, name: 'api-second' });
   await stageRelease(root, { ...input, id: 'second', workspace: secondPackage.folder });
   await write(join(firstPackage.folder, 'upstreams.json'), { laterInputDoesNotChangeStagedRelease: true });
@@ -59,7 +57,7 @@ try {
   assert.equal(diff.summary.paymentChanged, 1);
   assert.ok(diff.changes[0].fields.some(field => field.field === 'upstream'));
   const retainedFirst = await inspectRelease(root, 'first');
-  assert.equal(retainedFirst.routes[0].upstream.cache.ttlMs, 60000);
+  assert.equal(retainedFirst.routes[0].upstream.timeoutMs, 10000);
   assert.equal(retainedFirst.inputPackage.id, firstPackage.manifest.id);
   assert.equal(reads + verified + settled, 0);
 
@@ -81,38 +79,33 @@ try {
     } });
     assert.equal(response.status, 200); assert.ok(response.headers.get('payment-response')); return response.json();
   };
-  assert.equal((await fetch(operator.url + '/api/cache')).status, 401);
-  await ok('/api/activate', { id: 'first', expectedGeneration: 0, reason: 'Initial cached API' });
+  assert.equal((await fetch(operator.url + '/api/status')).status, 401);
+  await ok('/api/activate', { id: 'first', expectedGeneration: 0, reason: 'Initial merchant API' });
   process.env[envName] = 'local-generation-a';
   let state = await ok('/api/run', { expectedGeneration: 1 });
   const firstInstance = state.console.instanceId;
-  const first = await Promise.all([buy(state.runtime.observed.listener, '20000'), buy(state.runtime.observed.listener, '20000')]);
-  assert.equal(reads, 1); assert.equal(first[0].serial, first[1].serial); assert.equal(first[0].generation, 'local-generation-a');
-  let cache = await ok('/api/cache'); assert.equal(cache.routes.dataset.policy.ttlMs, 60000);
-  assert.ok(!JSON.stringify(cache).includes('local-generation-a'));
-  assert.equal((await call('/api/cache/invalidate', { instanceId: firstInstance }, { origin: 'https://foreign.example' })).status, 403);
-  const invalidated = await ok('/api/cache/invalidate', { instanceId: firstInstance, routeId: 'dataset' });
-  assert.deepEqual(invalidated.invalidatedRoutes, ['dataset']);
-  await buy(state.runtime.observed.listener, '20000'); assert.equal(reads, 2);
-  await ok('/api/activate', { id: 'second', expectedGeneration: 1, reason: 'Updated backend and freshness' });
+  const first = await buy(state.runtime.observed.listener, '20000');
+  assert.equal(reads, 1); assert.equal(first.generation, 'local-generation-a');
+  assert.ok(!JSON.stringify(state).includes('local-generation-a'));
+  assert.equal((await call('/api/stop', { instanceId: firstInstance }, { origin: 'https://foreign.example' })).status, 403);
+  await ok('/api/activate', { id: 'second', expectedGeneration: 1, reason: 'Updated backend and operating limits' });
   process.env[envName] = 'local-generation-b';
   state = await ok('/api/restart', { expectedGeneration: 2, instanceId: firstInstance });
   assert.notEqual(state.console.instanceId, firstInstance);
-  assert.equal((await call('/api/cache/invalidate', { instanceId: firstInstance, routeId: 'dataset' })).status, 409);
-  await assert.rejects(lstat(releaseCacheControlPath(root, firstInstance)), { code: 'ENOENT' });
-  cache = await ok('/api/cache'); assert.equal(cache.routes.dataset.policy.ttlMs, 30000);
-  const second = await Promise.all([buy(state.runtime.observed.listener, '30000'), buy(state.runtime.observed.listener, '30000')]);
-  assert.equal(reads, 3); assert.equal(second[0].generation, 'local-generation-b'); assert.ok(second[0].path.startsWith('/v2/'));
+  assert.equal((await call('/api/stop', { instanceId: firstInstance })).status, 409);
+  const second = await buy(state.runtime.observed.listener, '30000');
+  assert.equal(reads, 2); assert.equal(second.generation, 'local-generation-b'); assert.ok(second.path.startsWith('/v2/'));
+  assert.equal((await inspectRelease(root, 'second')).routes[0].upstream.timeoutMs, 5000);
   await ok('/api/rollback', { expectedGeneration: 2, reason: 'Return to retained original API' });
   process.env[envName] = 'local-generation-c';
   state = await ok('/api/restart', { expectedGeneration: 3, instanceId: state.console.instanceId });
   const restored = await buy(state.runtime.observed.listener, '20000');
-  assert.equal(reads, 4); assert.equal(restored.generation, 'local-generation-c'); assert.ok(restored.path.startsWith('/v1/'));
+  assert.equal(reads, 3); assert.equal(restored.generation, 'local-generation-c'); assert.ok(restored.path.startsWith('/v1/'));
   await ok('/api/stop', { instanceId: state.console.instanceId });
-  assert.equal((await ok('/api/cache')).available, false);
-  assert.equal(verified, 6); assert.equal(settled, 6);
+  assert.equal((await ok('/api/status')).runtime.state, 'STOPPED');
+  assert.equal(verified, 3); assert.equal(settled, 3);
   console.log(JSON.stringify({ result: 'PASS', originalBackendReads: reads, nativeVerifies: verified, nativeSettlements: settled,
-    journey: ['original saved workspace to immutable release', 'exact policy/payment diff', 'real child runtime', 'private instance controls',
+    journey: ['original saved workspace to immutable release', 'exact source/limits/payment diff', 'real child runtime', 'private instance controls',
       'upgrade and stale-instance refusal', 'rollback with current credentials'], chainTransactions: 0, hostedActions: 0 }));
 } finally {
   await operator?.close(); if (priorEnv === undefined) delete process.env[envName]; else process.env[envName] = priorEnv;
