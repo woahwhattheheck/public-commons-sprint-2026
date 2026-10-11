@@ -78,6 +78,7 @@ function outcomeText(value){
     DISABLED_OR_IP_DENIED:'The provider reports a disabled account or an IP restriction. Review the account configuration before a new request.',
     GEOCODE_LOCAL_RATE_LIMIT:'The configured local request interval has not elapsed. Prepare a new request after the interval.',
     GEOCODE_API_KEY_REQUIRED:'Set the plan’s named API key environment variable for this operator process.',
+    GEOCODE_TRANSPORT_CONFIGURATION_UNAVAILABLE:'Check the selected proxy environment and supported Node version on this host, then reopen the operator with that configuration.',
     RECONCILE_RESULT:'This attempt has no complete result. Import its exact retained HTTP observation to reconcile the same request.',
     DISPATCHING:'The retained attempt is awaiting its complete result. Reopen it after the running operation completes.',
     PREPARED:'The exact request is prepared and has no complete response yet.',
@@ -139,7 +140,10 @@ async function loadRequest(id){
 function renderContract(){
   const configuration=state.workspace.configuration;
   facts('contract-facts',[['Workspace',configuration.plan.name],['Plan identity',configuration.planSha256],
-    ['Key environment',configuration.plan.apiKeyEnv],['Minimum interval',configuration.plan.minIntervalMs+' ms'],
+    ['Key environment',configuration.plan.apiKeyEnv],
+    ['Outbound transport',configuration.plan.transport?.mode??'direct'],
+    ...(configuration.plan.transport?.proxyEnv ? [['Proxy environment',configuration.plan.transport.proxyEnv]] : []),
+    ['Minimum interval',configuration.plan.minIntervalMs+' ms'],
     ['Request timeout',configuration.plan.timeoutMs+' ms'],['Response limit',configuration.plan.maxResponseBytes+' bytes']]);
   empty($('contract-products'));
   for(const item of configuration.plan.products){
@@ -173,6 +177,9 @@ async function refresh(){
   }
   $('key-state').textContent=value.source.keyConfigured?'Provider key configured in '+value.configuration.plan.apiKeyEnv+'.':
     'Set '+value.configuration.plan.apiKeyEnv+' before dispatch. Retained results remain available.';
+  $('transport-state').textContent=value.source.transport?.mode==='environment-proxy'
+    ? 'Selected host proxy: '+value.source.transport.proxyEnv+'. Its value stays in the private process environment.'
+    : 'Direct HTTPS to api.opencagedata.com.';
   renderRequests();renderMerchant();
   const id=state.request?.request.id??sessionStorage.getItem('geocode-selected:'+value.identity);
   if(id&&value.requests.some(item=>item.id===id))await loadRequest(id);
