@@ -1,7 +1,7 @@
 /**
  * SF-32 - MCP buyer-side discover/preview/approved paid call bridge.
  * MIT. MCP 2025-11-25 JSON-RPC Streamable HTTP (single-response subset) and
- * canonical x402 v2 HTTP payment challenge / signed retry.
+ * canonical x402 v2 HTTP and native remote MCP payment calls.
  * No wallet, payer, approval or private key lives in this source.
  */
 import { createHash, randomUUID } from 'node:crypto';
@@ -10,6 +10,8 @@ import { explainFailure } from '../../stellar/scf-starforge-20261009/sf33-failur
 import { describeDiscoveredResource } from './descriptor.mjs';
 import { requiredQueryKeys } from './query-requirements.mjs';
 import { historyPage } from './quote-history.mjs';
+import { normalizeMcpPolicies, prepareMcpInvocation, connectRemoteMcp, extractMcpChallenge,
+  requireMcpChallenge, requireMcpPayload, mcpResultContent } from './remote-mcp.mjs';
 
 import { createMcpToolHandler } from './http-tools.mjs';
 export { MCP_VERSION } from './http-tools.mjs';
@@ -36,6 +38,7 @@ async function readData(response,max=64*1024){
   return {body,contentType:response.headers.get('content-type')??null,truncated};
 }
 const statOf=q=>({quoteId:q.quoteId,status:q.status,resource:q.resource,requestUrl:q.url,method:q.method,
+  ...(q.invocation?{invocation:structuredClone(q.invocation)}:{}),
   selected:sanitizedPrice(q.accepted),expiresAt:q.expiresAt,attempts:q.attempts,
   createdAt:q.createdAt,updatedAt:q.updatedAt,phase:q.phase??null,
   signedRequestDispatched:q.signedRequestDispatched===true,
@@ -54,7 +57,7 @@ const schemas={
     annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},
     inputSchema:{type:'object',properties:{handle:{type:'string'}},required:['handle'],additionalProperties:false}},
   bazaar_preview:{
-    name:'bazaar_preview',description:'Validate one discovered HTTP tool and request; return price/recipient/approval quote. Makes no provider request.',
+    name:'bazaar_preview',description:'Validate a discovered HTTP request or remote MCP tool and exact arguments; return price/recipient/approval quote. Makes no provider request.',
     inputSchema:{type:'object',properties:{handle:{type:'string'},acceptIndex:{type:'integer',minimum:0},input:{type:'object'}},required:['handle'],additionalProperties:false}},
   bazaar_execute_approved:{
     name:'bazaar_execute_approved',description:'Attempt the quoted call ONLY when operator approval callback authorizes it; default denies. Never retries a potentially settled signed request.',
@@ -76,9 +79,10 @@ export class McpPaidToolBroker {
   #catalogUrl;#trustedOrigins;#approve;#sign;#fetch;#records=new Map();#quotes=new Map();
   #timeLimit;#quoteTTL;#maxRecords;#agentCommerce;
   #store;#scope;#closing=false;#storeClosed=false;#closePromise;#active=new Set();#shutdown=new AbortController();
+  #mcpPolicies;#remoteControllers=new Map();
   constructor({discoveryUrl,allowedResourceOrigins=[],approve=()=>false,signPayment=null,
     fetchImpl=defaultFetch,timeoutMs=8000,quoteTTL=10*60*1000,maxRecords=500,
-    agentCommerce=null,quoteStore=null}={}){
+    agentCommerce=null,quoteStore=null,remoteMcpPolicies=[]}={}){
     if(!discoveryUrl)throw new TypeError('Explicit configured discoveryUrl required');
     this.#catalogUrl=new URL(discoveryUrl);
     if(!['https:','http:'].includes(this.#catalogUrl.protocol)||this.#catalogUrl.username||this.#catalogUrl.password||
@@ -87,13 +91,16 @@ export class McpPaidToolBroker {
     if(typeof approve!=='function'||typeof fetchImpl!=='function')throw new TypeError('Operator hooks required');
     if(signPayment!==null&&typeof signPayment!=='function')throw new TypeError('Invalid signer callback');
     if(agentCommerce!==null&&typeof agentCommerce!=='function')throw new TypeError('Invalid SF43 agent-commerce adapter');
+    if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>300000)throw new TypeError('timeoutMs must be 1..300000');
     this.#approve=approve;this.#sign=signPayment;this.#fetch=fetchImpl;
     this.#timeLimit=timeoutMs;this.#quoteTTL=quoteTTL;this.#maxRecords=maxRecords;
     this.#agentCommerce=agentCommerce;
+    this.#mcpPolicies=normalizeMcpPolicies(remoteMcpPolicies);
     if(quoteStore!==null&&['load','save','close'].some(name=>typeof quoteStore[name]!=='function'))
       throw new TypeError('Quote store must provide load/save/close');
     this.#store=quoteStore;
-    this.#scope=hash({discoveryUrl:this.#catalogUrl.href,origins:[...this.#trustedOrigins].sort()});
+    this.#scope=hash({discoveryUrl:this.#catalogUrl.href,origins:[...this.#trustedOrigins].sort(),
+      ...(this.#mcpPolicies.length?{remoteMcpPolicies:this.#mcpPolicies}:{})});
     try{for(const saved of this.#store?.load()??[]){
       const q=structuredClone(saved);this.#quotes.set(q.quoteId,q);
       if(['APPROVAL_PENDING','EXECUTING','CANCEL_REQUESTED'].includes(q.status)){
@@ -184,41 +191,47 @@ export class McpPaidToolBroker {
     const row=this.#records.get(handle);
     if(!row||Date.now()-row.createdAt>this.#quoteTTL)fail('RESOURCE_STALE','Search this resource again');
     return describeDiscoveredResource(row,{handle,allowedOrigin:this.#trustedOrigins.has(row.origin),
-      expiresAt:row.createdAt+this.#quoteTTL});
+      expiresAt:row.createdAt+this.#quoteTTL,remoteMcpPolicies:this.#mcpPolicies});
   }
   preview({handle,acceptIndex=0,input={}}={}){
     this.#running();
     const row=this.#records.get(handle);
     if(!row||Date.now()-row.createdAt>this.#quoteTTL)fail('RESOURCE_STALE','Search this resource again');
     if(!this.#trustedOrigins.has(row.origin))fail('ORIGIN_UNAPPROVED','Operator has not approved this exact resource origin');
-    if(row.type!=='http')fail('MCP_REMOTE_NOT_SUPPORTED','Discovered MCP tool is visible but executing remote MCP tools requires a separate approved transport adapter');
     if(!Number.isSafeInteger(acceptIndex)||acceptIndex<0||acceptIndex>=row.accepts.length)fail('INVALID_PARAMS','Invalid accepted payment option');
-    const method=row.input.method;
-    // Probing non-idempotent operations before payment could perform work twice.
-    if(!['GET','HEAD'].includes(method))fail('UNSAFE_PROBE','Only safely probeable GET/HEAD paid routes can execute in this adapter');
-    if(!plain(input))fail('INVALID_PARAMS','Input must be an object');
-    const qs=input.query??{};if(!plain(qs)||Object.keys(input).some(k=>k!=='query'))fail('INVALID_PARAMS','Only query input supported for GET/HEAD');
-    if(Object.keys(qs).length>30)fail('INVALID_PARAMS','Too many query parameters');
-    const allowed=row.input.queryParams&&plain(row.input.queryParams)?Object.keys(row.input.queryParams):[];
-    if(Object.keys(qs).some(k=>!allowed.includes(k)))fail('INPUT_NOT_ADVERTISED','Query keys must be advertised by the seller');
-    const u=new URL(row.resource.url);
-    // Check the actual URL as well as its cached discovery origin before quoting.
-    if(resourceOrigin(u.href)!==row.origin||!this.#trustedOrigins.has(u.origin))
-      fail('ORIGIN_UNAPPROVED','Discovered resource origin changed; search again');
-    for(const [k,v] of Object.entries(qs)){
-      if(!maxText(k,100)||!maxText(v,1024))fail('INVALID_PARAMS','Invalid query value');
-      u.searchParams.set(k,v);
+    let method,u,invocation;
+    if(row.type==='mcp'){
+      invocation=prepareMcpInvocation(row,input,this.#mcpPolicies);
+      method='tools/call';u=new URL(invocation.endpoint);
+    }else{
+      method=row.input.method;
+      // Probing non-idempotent operations before payment could perform work twice.
+      if(!['GET','HEAD'].includes(method))fail('UNSAFE_PROBE','Only safely probeable GET/HEAD paid routes can execute in this adapter');
+      if(!plain(input))fail('INVALID_PARAMS','Input must be an object');
+      const qs=input.query??{};if(!plain(qs)||Object.keys(input).some(k=>k!=='query'))fail('INVALID_PARAMS','Only query input supported for GET/HEAD');
+      if(Object.keys(qs).length>30)fail('INVALID_PARAMS','Too many query parameters');
+      const allowed=row.input.queryParams&&plain(row.input.queryParams)?Object.keys(row.input.queryParams):[];
+      if(Object.keys(qs).some(k=>!allowed.includes(k)))fail('INPUT_NOT_ADVERTISED','Query keys must be advertised by the seller');
+      u=new URL(row.resource.url);
+      // Check the actual URL as well as its cached discovery origin before quoting.
+      if(resourceOrigin(u.href)!==row.origin||!this.#trustedOrigins.has(u.origin))
+        fail('ORIGIN_UNAPPROVED','Discovered resource origin changed; search again');
+      for(const [k,v] of Object.entries(qs)){
+        if(!maxText(k,100)||!maxText(v,1024))fail('INVALID_PARAMS','Invalid query value');
+        u.searchParams.set(k,v);
+      }
+      // Enforce only direct required-query presence, on the concrete request.
+      // Fixed query values already in the discovered URL count. Examples and
+      // schema defaults never become request values; no full schema validation.
+      const missing=requiredQueryKeys(row.bazaar.schema).filter(key=>!u.searchParams.has(key));
+      if(missing.length)fail('INPUT_REQUIRED','Supply required query inputs: '+JSON.stringify(missing)+'. Inspect bazaar_describe for the original declaration.');
     }
-    // Enforce only direct required-query presence, on the concrete request.
-    // Fixed query values already in the discovered URL count. Examples and
-    // schema defaults never become request values; no full schema validation.
-    const missing=requiredQueryKeys(row.bazaar.schema).filter(key=>!u.searchParams.has(key));
-    if(missing.length)fail('INPUT_REQUIRED','Supply required query inputs: '+JSON.stringify(missing)+'. Inspect bazaar_describe for the original declaration.');
     const accepted=row.accepts[acceptIndex];
     if(!['exact','upto'].includes(accepted?.scheme)||!['stellar:testnet','stellar:pubnet'].includes(accepted?.network)||
       !/^(0|[1-9]\d*)$/.test(accepted?.amount??'')||
       ![accepted.payTo,accepted.asset].every(x=>typeof x==='string'&&x.length>0))fail('INVALID_PAYMENT_TERMS','Unsupported or invalid Stellar payment option');
     const quoteId=randomUUID();const q={quoteId,resource:row.resource.url,method,url:u.toString(),accepted:structuredClone(accepted),
+      ...(invocation?{invocation}:{}),
       status:'PREVIEWED',fingerprint:row.fingerprint,expiresAt:Date.now()+this.#quoteTTL,attempts:0,
       signedRequestDispatched:false,createdAt:Date.now(),operatorScope:this.#scope,phase:'PREVIEW'};
     this.#persist(q);
@@ -236,7 +249,7 @@ export class McpPaidToolBroker {
     if(q.status==='EXECUTING'){
       q.status=q.signedRequestDispatched?'INDETERMINATE':'CANCEL_REQUESTED';
       q.failure=q.signedRequestDispatched?'Signed call may have reached merchant; reconcile before any reattempt':null;
-      this.#persist(q);return statOf(q);
+      this.#persist(q);this.#remoteControllers.get(quoteId)?.abort();return statOf(q);
     }
     return statOf(q);
   }
@@ -259,7 +272,8 @@ export class McpPaidToolBroker {
     q.status='APPROVAL_PENDING';q.phase='APPROVAL';this.#persist(q);
     let permission;
     try {
-      permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,accepted:structuredClone(q.accepted),signal:this.#shutdown.signal}));
+      permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,
+        accepted:structuredClone(q.accepted),...(q.invocation?{invocation:structuredClone(q.invocation)}:{}),signal:this.#shutdown.signal}));
     }catch(e){
       if(this.#closing||q.status!=='APPROVAL_PENDING')return statOf(q);
       q.status='PREVIEWED'; // approval errors retain the original retry semantics
@@ -276,6 +290,7 @@ export class McpPaidToolBroker {
     }
     q.status='EXECUTING';q.phase='PROBE';q.attempts++;this.#persist(q);
     try {
+      if(q.invocation)return await this.#executeMcp(q);
       const first=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json'},redirect:'error',signal:this.#signal()});
       if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';if(!this.#storeClosed)this.#persist(q);return statOf(q);}
       if(this.#closing||q.status!=='EXECUTING')return statOf(q);
@@ -323,6 +338,53 @@ export class McpPaidToolBroker {
       q.failure=q.signedRequestDispatched?'Signed request outcome uncertain; do not retry automatically':q.status==='CANCELLED'?null:String(e.code||'PROVIDER_ERROR');
       this.#persist(q);
       return statOf(q);
+    }
+  }
+  #mcpStopped(q){
+    if(q.status==='CANCEL_REQUESTED'){
+      q.status='CANCELLED';if(!this.#storeClosed)this.#persist(q);return true;
+    }
+    return this.#closing||q.status!=='EXECUTING';
+  }
+  async #executeMcp(q){
+    const controller=new AbortController();this.#remoteControllers.set(q.quoteId,controller);
+    const signal=AbortSignal.any([controller.signal,this.#shutdown.signal]);
+    let remote;
+    try{
+      q.phase='MCP_CONNECT';this.#persist(q);
+      remote=await connectRemoteMcp({invocation:q.invocation,fetchImpl:this.#fetch,signal,timeoutMs:this.#timeLimit});
+      if(this.#mcpStopped(q))return statOf(q);
+      q.phase='PROBE';this.#persist(q);
+      const first=await remote.call();
+      if(this.#mcpStopped(q))return statOf(q);
+      const required=extractMcpChallenge(first);
+      if(!required){
+        q.status=first.isError===true?'PROBE_REJECTED':'FREE_SUCCESS';q.phase='RESULT';
+        q.result={protocol:'mcp',paid:false,peer:remote.peer,content:mcpResultContent(first)};
+        this.#persist(q);return statOf(q);
+      }
+      requireMcpChallenge(required,q.invocation,q.accepted);
+      q.phase='SIGNING';this.#persist(q);
+      const payload=await this.#sign(Object.freeze({quoteId:q.quoteId,resource:structuredClone(required.resource),
+        requestUrl:q.url,method:q.method,invocation:structuredClone(q.invocation),
+        accepted:structuredClone(q.accepted),paymentRequired:structuredClone(required),signal}));
+      if(this.#mcpStopped(q))return statOf(q);
+      requireMcpPayload(payload,required,q.accepted);
+      q.signedRequestDispatched=true;q.phase='SIGNED_DISPATCH';this.#persist(q);
+      const second=await remote.call(payload);
+      if(this.#mcpStopped(q))return statOf(q);
+      const receipt=second?._meta?.['x402/payment-response'];
+      q.result={protocol:'mcp',paidAttempted:true,peer:remote.peer,content:mcpResultContent(second),
+        paymentResponse:plain(receipt)?{success:receipt.success===true,
+          network:receipt.network??null,transaction:receipt.transaction??null,payer:receipt.payer??null}:null};
+      const receiptMatches=receipt?.success===true&&receipt.network===q.accepted.network&&
+        typeof receipt.transaction==='string'&&/^[0-9a-f]{64}$/i.test(receipt.transaction);
+      q.status=second.isError!==true&&receiptMatches?'CONFIRMED_BY_SERVER':'INDETERMINATE';
+      if(q.status==='INDETERMINATE')q.failure='Signed MCP call dispatched; reconcile the original payment before any reattempt';
+      q.phase='RESULT';this.#persist(q);return statOf(q);
+    }finally{
+      await remote?.close().catch(()=>{});
+      controller.abort();this.#remoteControllers.delete(q.quoteId);
     }
   }
   close({graceMs=5000}={}){
