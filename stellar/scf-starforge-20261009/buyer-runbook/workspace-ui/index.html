@@ -12,13 +12,37 @@
   <div class="layout">
     <aside class="sidebar" aria-label="Runbook navigation">
       <button id="new-draft" class="primary full">New acquisition plan</button>
+      <button id="open-requests" class="request-entry full">Receive merchant request <span id="request-count" class="badge">0</span></button>
       <h2>Acquisitions</h2><nav id="run-list" aria-label="Saved acquisitions"></nav>
       <h2>Drafts</h2><nav id="draft-list" aria-label="Saved draft plans"></nav>
       <footer><span id="terminal-state"></span><button id="refresh" class="quiet full">Refresh local sources</button></footer>
     </aside>
     <main id="main" tabindex="-1">
       <div id="notice" role="status" aria-live="polite" hidden></div>
-      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Arrange existing buyer configurations, review exact request ceilings, and follow each acquisition from terminal approval to saved files.</p><button id="welcome-new" class="primary">Create a plan</button><div id="source-summary" class="source-summary"></div></section>
+      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Receive a private merchant request or arrange existing buyer configurations. Review exact request ceilings and follow each acquisition from terminal approval to saved files.</p><div class="toolbar"><button id="welcome-new" class="primary">Create a plan</button><button id="welcome-requests">Receive merchant request</button></div><div id="source-summary" class="source-summary"></div></section>
+      <section id="requests-panel" hidden>
+        <div class="page-heading"><div><p class="eyebrow">MERCHANT REQUESTS</p><h1>Receive and prepare a request</h1><p class="muted">Retain the merchant’s exact request, choose its payment option, and prepare a buyer on this machine.</p></div></div>
+        <form id="request-upload-form" class="panel"><label>Private merchant request file<input id="request-upload" type="file" accept=".json,.handoff,application/json" required></label><p class="muted">Use the complete buyer request downloaded by the merchant. Keep this file private; it contains the operation ticket. Up to 4 MiB.</p><button id="upload-request" class="primary" type="submit">Upload and inspect request</button></form>
+        <div id="request-operator" class="panel"></div>
+        <p id="request-errors" class="muted" role="status"></p>
+        <section><div class="section-heading"><h2>Retained requests</h2></div><div id="received-request-list" class="received-requests"></div></section>
+        <article id="request-detail" hidden>
+          <div class="section-heading"><h2 id="request-filename" class="wrap"></h2><span id="request-state" class="badge"></span></div>
+          <p id="request-url" class="operation-url"></p><dl id="request-summary" class="detail-grid"></dl>
+          <div class="toolbar"><a id="request-body-download" class="button">Download exact body</a><a id="request-handoff-download" class="button quiet">Download private request</a></div>
+          <details><summary>Exact request bytes and headers</summary><div id="request-bytes" class="panel wrap"></div></details>
+          <p id="request-expired" class="panel" hidden>This ticket has expired. Retained inputs remain available; obtain a current operation from the merchant before preparing a new purchase.</p>
+          <form id="request-review-form" class="panel">
+            <h3>Payment option and local budget</h3><p class="muted">These limits apply to this prepared request. The buyer still reviews live terms and asks for approval in the operator terminal.</p>
+            <label>Merchant payment option<select id="request-option" required><option value="">Choose a payment option</option></select></label>
+            <div class="fields two request-budgets"><label>Total budget · atomic<input id="request-total" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label><label>Per UTC day · atomic<input id="request-daily" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label></div>
+            <button type="submit">Save request review</button><p id="request-review-changed" class="muted" hidden>Your choices changed. Save a new review before preparing the buyer.</p>
+          </form>
+          <div id="request-payment-review" class="panel" hidden></div>
+          <div class="toolbar"><button id="prepare-request" class="primary" disabled>Prepare local buyer</button></div>
+          <div id="prepared-request" class="panel" hidden><h3>Ready for an acquisition plan</h3><p>This machine’s operator configuration is retained with the exact request inputs.</p><p id="prepared-request-name" class="wrap muted"></p><button id="add-request-to-plan" class="primary">Add to acquisition plan</button></div>
+        </article>
+      </section>
       <section id="draft-panel" hidden>
         <div class="page-heading"><div><p class="eyebrow">ACQUISITION PLAN</p><h1 id="draft-heading">New plan</h1><p id="draft-version" class="muted">Choose the original buyer configurations to include.</p></div><span id="dirty-badge" class="badge">Unsaved</span></div>
         <form id="draft-form">
