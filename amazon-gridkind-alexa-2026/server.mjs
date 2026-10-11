@@ -43,7 +43,7 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
     try{
       if(!acceptsHost(req,host))return respond(res,403,{error:'Loopback demo Host mismatch'});
       const path=new URL(req.url,'http://localhost').pathname;
-      if(req.method==='GET'&&['/','/app.js','/robustness-ui.js','/style.css'].includes(path)){
+      if(req.method==='GET'&&['/','/app.js','/robustness-ui.js','/scenario-handoff.js','/style.css'].includes(path)){
         const file=path==='/'?'index.html':path.slice(1);
         const mime=path==='/'?'text/html; charset=utf-8':path==='/style.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
         res.writeHead(200,{'content-type':mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});

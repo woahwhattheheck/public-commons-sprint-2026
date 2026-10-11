@@ -31,60 +31,73 @@ const freezeAttempt = (attempt, status, endSecond, closingEvent) => ({
   evidenceIds: [attempt.loss.id, ...attempt.pressures.map(p => p.id), ...(closingEvent ? [closingEvent.id] : [])],
 });
 
-// The first same-team regain can resolve exactly one active loss window.
+const newState = () => ({active: new Map(), finished: []});
+const copyState = state => ({
+  active: new Map([...state.active].map(([team, a]) => [team, {loss: a.loss, pressures: a.pressures.slice()}])),
+  finished: state.finished.slice(),
+});
+const byLoss = (a, b) => a.fromSecond - b.fromSecond || a.id.localeCompare(b.id);
+
+// One event transition is shared by stateless analysis and incremental playback.
+// The strictly later watermark preserves regains at the inclusive 8s boundary.
+function advance(state, e) {
+  const {active, finished} = state;
+  for (const [team, a] of active) {
+    if (e.second > a.loss.second + WINDOW_SECONDS) {
+      finished.push(freezeAttempt(a, a.pressures.length ? 'expired' : 'not_attempted', a.loss.second + WINDOW_SECONDS));
+      active.delete(team);
+    }
+  }
+  if (e.type === 'loss') {
+    const old = active.get(e.team);
+    if (old) finished.push(freezeAttempt(old, old.pressures.length ? 'interrupted' : 'not_attempted', e.second, e));
+    active.set(e.team, {loss: e, pressures: []});
+  } else if (e.type === 'pressure') {
+    const a = active.get(e.team);
+    if (a && e.second <= a.loss.second + WINDOW_SECONDS && e.second >= a.loss.second) a.pressures.push(e);
+  } else if (e.type === 'regain') {
+    const a = active.get(e.team);
+    if (a && e.second <= a.loss.second + WINDOW_SECONDS && e.second >= a.loss.second) {
+      finished.push(freezeAttempt(a, a.pressures.length ? 'success' : 'not_attempted', e.second, e));
+      active.delete(e.team);
+    }
+  }
+}
+
 // Closing a window needs a real later event-time watermark; silence never implies failure.
 export function derive(events) {
   validateFixture(events);
-  const active = new Map();
-  const finished = [];
-  for (const e of events) {
-    for (const [team, a] of active.entries()) {
-      if (e.second > a.loss.second + WINDOW_SECONDS) {
-        finished.push(freezeAttempt(a, a.pressures.length ? 'expired' : 'not_attempted', a.loss.second + WINDOW_SECONDS));
-        active.delete(team);
-      }
-    }
-    if (e.type === 'loss') {
-      const old = active.get(e.team);
-      if (old) finished.push(freezeAttempt(old, old.pressures.length ? 'interrupted' : 'not_attempted', e.second, e));
-      active.set(e.team, {loss: e, pressures: []});
-    } else if (e.type === 'pressure') {
-      const a = active.get(e.team);
-      if (a && e.second <= a.loss.second + WINDOW_SECONDS && e.second >= a.loss.second) a.pressures.push(e);
-    } else if (e.type === 'regain') {
-      const a = active.get(e.team);
-      if (a && e.second <= a.loss.second + WINDOW_SECONDS && e.second >= a.loss.second) {
-        finished.push(freezeAttempt(a, a.pressures.length ? 'success' : 'not_attempted', e.second, e));
-        active.delete(e.team);
-      }
-    }
-  }
-  if (events.length) {
-    const watermark = events.at(-1).second;
-    for (const a of active.values()) {
-      // Equal timestamps can still contain an inclusive-boundary regain.
-      // Only a strictly later event proves that the entire window was observed.
-      if (watermark > a.loss.second + WINDOW_SECONDS) {
-        finished.push(freezeAttempt(a, a.pressures.length ? 'expired' : 'not_attempted', a.loss.second + WINDOW_SECONDS));
-      }
-    }
-  }
-  finished.sort((a, b) => a.fromSecond - b.fromSecond || a.id.localeCompare(b.id));
-  return finished;
+  const state = newState();
+  for (const e of events) advance(state, e);
+  return state.finished.sort(byLoss);
 }
 
-export function makeSnapshot(events, {team = TEAMS[0], audience = 'casual', locale = 'en'} = {}) {
+function parseSnapshotView({team = TEAMS[0], audience = 'casual', locale = 'en'} = {}) {
   if (!TEAMS.includes(team) || !['casual', 'analyst'].includes(audience) || !['en', 'es'].includes(locale)) throw new TypeError('Unsupported team, audience or locale');
-  const attempts = derive(events).filter(x => x.team === team);
-  const actionable = attempts.filter(x => x.status !== 'not_attempted');
-  // A second loss without a recorded regain leaves the earlier outcome unknown.
-  // Keep that press in the attempt count, but not in the resolved-window rate.
-  const resolved = actionable.filter(x => x.status === 'success' || x.status === 'expired');
-  const interrupted = actionable.filter(x => x.status === 'interrupted');
-  const successes = actionable.filter(x => x.status === 'success');
-  const seconds = successes.reduce((sum, s) => sum + s.secondsToRecover, 0);
-  const avgSeconds = successes.length ? Math.round((seconds / successes.length) * 10) / 10 : null;
-  const rate = resolved.length ? Math.round(100 * successes.length / resolved.length) : null;
+  return {team, audience, locale};
+}
+
+function projectTeam(derived, team) {
+  const actionable = [];
+  let lossWindows = 0, successes = 0, resolved = 0, interrupted = 0, seconds = 0;
+  for (const x of derived) {
+    if (x.team !== team) continue;
+    lossWindows += 1;
+    if (x.status === 'not_attempted') continue;
+    actionable.push(x);
+    if (x.status === 'success') { successes += 1; seconds += x.secondsToRecover; }
+    if (x.status === 'success' || x.status === 'expired') resolved += 1;
+    if (x.status === 'interrupted') interrupted += 1;
+  }
+  return {actionable, pendingEvidence: lossWindows - actionable.length,
+    stats: {lossWindows, counterpressAttempts: actionable.length, successes,
+      resolvedCounterpressAttempts: resolved, interruptedAttempts: interrupted,
+      successRatePct: resolved ? Math.round(100 * successes / resolved) : null,
+      successRateBasis: 'resolved_counterpress_attempts',
+      meanRecoverySeconds: successes ? Math.round((seconds / successes) * 10) / 10 : null}};
+}
+
+function renderProjection({actionable, pendingEvidence, stats}, elapsedSeconds, {team, audience, locale}) {
   const overlays = actionable.map(x => ({
     id: x.id,
     showAt: x.toSecond,
@@ -97,12 +110,67 @@ export function makeSnapshot(events, {team = TEAMS[0], audience = 'casual', loca
       observedSeconds: Math.round((x.toSecond - x.fromSecond) * 10) / 10, zone: x.zone},
     provenance: 'SYNTHETIC FIXTURE · DETERMINISTIC EVENT LOG',
   }));
-  return {team, audience, locale, elapsedSeconds: events.length ? events.at(-1).second : 0,
-    stats: {lossWindows: attempts.length, counterpressAttempts: actionable.length, successes: successes.length,
-      resolvedCounterpressAttempts: resolved.length, interruptedAttempts: interrupted.length,
-      successRatePct: rate, successRateBasis: 'resolved_counterpress_attempts', meanRecoverySeconds: avgSeconds},
-    overlays, pendingEvidence: attempts.length - actionable.length,
+  return {team, audience, locale, elapsedSeconds, stats: {...stats}, overlays, pendingEvidence,
     provenance: 'SYNTHETIC MATCH ONLY · NOT REAL PREMIER LEAGUE DATA'};
+}
+
+export function makeSnapshot(events, options = {}) {
+  const view = parseSnapshotView(options);
+  return renderProjection(projectTeam(derive(events), view.team), events.length ? events.at(-1).second : 0, view);
+}
+
+/** Incremental replay of one immutable fixture; the public snapshot shape is unchanged.
+ * At most 16 saved states for the existing 1000-event limit. After a backward seek,
+ * replay starts from the nearest 64-event checkpoint; an unseen prefix is consumed once.
+ * Checkpoints retain active windows, so an inclusive-boundary regain is never lost.
+ */
+export function createReplayTimeline(events) {
+  const source = validateFixture(events).map(e => Object.freeze({...e}));
+  const checkpoints = new Map([[0, newState()]]);
+  let state = newState(), cursor = 0, revision = -1, ordered = [];
+  const teams = new Map(), views = new Map();
+  function seek(count) {
+    if (!Number.isInteger(count) || count < 0 || count > source.length) throw new TypeError('Invalid replay event count');
+    let nearest = 0;
+    for (const at of checkpoints.keys()) if (at <= count && at > nearest) nearest = at;
+    if (count < cursor || nearest > cursor) {
+      state = copyState(checkpoints.get(nearest)); cursor = nearest; revision = -1;
+    }
+    while (cursor < count) {
+      advance(state, source[cursor++]);
+      if (cursor % 64 === 0 && !checkpoints.has(cursor)) checkpoints.set(cursor, copyState(state));
+    }
+    if (revision !== state.finished.length) {
+      ordered = state.finished.slice().sort(byLoss);
+      teams.clear(); views.clear(); revision = state.finished.length;
+    }
+  }
+  function projection(team) {
+    if (!teams.has(team)) teams.set(team, projectTeam(ordered, team));
+    return teams.get(team);
+  }
+  function snapshot(count, options = {}) {
+    const view = parseSnapshotView(options);
+    seek(count);
+    const key = view.team + ':' + view.audience + ':' + view.locale;
+    if (!views.has(key)) {
+      const template = renderProjection(projection(view.team), 0, view);
+      // Cached evidence cannot be mutated by one caller and leak into another viewer.
+      for (const overlay of template.overlays) {
+        Object.freeze(overlay.evidenceIds); Object.freeze(overlay.metrics); Object.freeze(overlay);
+      }
+      Object.freeze(template.overlays);
+      views.set(key, template);
+    }
+    const template = views.get(key);
+    return {...template, stats: {...template.stats}, elapsedSeconds: count ? source[count - 1].second : 0};
+  }
+  function stats(count, team) {
+    if (!TEAMS.includes(team)) throw new TypeError('Unsupported team');
+    seek(count);
+    return {...projection(team).stats};
+  }
+  return Object.freeze({snapshot, stats});
 }
 
 function describe(x, audience, locale) {
@@ -124,3 +192,4 @@ function describe(x, audience, locale) {
     ? (success ? `${x.team} won the ball back in ${duration} seconds after pressing.` : `${x.team} pressed but did not regain the ball within eight seconds.`)
     : (success ? `Counterpress: ${x.pressureCount} pressure actions, regained in ${duration}s, ${x.zone} third.` : `Counterpress without regain: ${x.pressureCount} pressure actions, eight-second window.`);
 }
+
