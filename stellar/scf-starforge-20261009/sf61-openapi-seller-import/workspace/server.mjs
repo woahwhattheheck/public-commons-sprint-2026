@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // MIT. Loopback workspace for the original SF61/SF82/SF96 merchant runtime.
 import { createServer } from 'node:http';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -29,7 +29,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
   const token = randomBytes(32).toString('hex');
   let origin, active=null, busy=false, shuttingDown=false, mutationDone=Promise.resolve();
   const view = () => active ? {name:active.name, mode:active.session.mode, seller:active.session.seller,
-    operations:active.session.operationsDashboard, state:'RUNNING'} : {state:'STOPPED'};
+    operations:active.session.operationsDashboard, state:'RUNNING',
+    ...(active.acceptance?{acceptance:active.acceptance}:{})} : {state:'STOPPED'};
   async function list() {
     const entries = (await readdir(output,{withFileTypes:true})).filter(e=>e.isDirectory()).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,200);
     const values=[];
@@ -60,7 +61,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           const specText=await readFile(new URL('../../sf82-seller-pilot/examples/upstream-openapi.json',import.meta.url),'utf8');
           return send(200,{specText,plan:{schema:'stellar-forge.api-merchant-plan.v1',sellerServer:'https://merchant.example/api',
             serviceName:'Dataset example',payment:{network:'stellar:testnet',asset:'DEMO_NONPAYABLE_ASSET',payTo:'DEMO_NONPAYABLE_RECIPIENT',maxTimeoutSeconds:60},
-            operations:[{method:'GET',path:'/dataset',amountAtomic:'20000'}],allowLoopbackUpstream:false}});
+            operations:[{method:'GET',path:'/dataset',amountAtomic:'20000',responseValidation:'declared'}],allowLoopbackUpstream:false}});
         }
         if (pathname==='/api/packages') return send(200,{packages:await list(),runtime:view(),output});
         if (pathname==='/api/status') return send(200,view());
@@ -76,7 +77,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
-      if (!['/api/save','/api/start','/api/stop'].includes(pathname)) return send(404,{error:'Not found'});
+      if (!['/api/save','/api/start','/api/stop','/api/accept'].includes(pathname)) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
@@ -88,6 +89,17 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         }
         if (pathname==='/api/stop') {
           if (active) { await active.session.close(); active=null; }
+          return send(200,view());
+        }
+        if (pathname==='/api/accept') {
+          if (!active || active.session.mode!=='CHALLENGE_ONLY') return send(409,{error:'Start this package in challenge preview to check its unpaid routes'});
+          const project=await readPackage(output,active.name);
+          const {run}=await import('../../sf96-seller-acceptance/audit.mjs');
+          const out=join(project.folder,'support','route-check-'+randomUUID());
+          const result=await run({seller:active.session.seller,out,
+            ...(Object.hasOwn(project.manifest.files,'operator-cases.json')?{casesPath:join(project.folder,'operator-cases.json')}:{})});
+          const report=JSON.parse(await readFile(join(out,'audit.json'),'utf8'));
+          active.acceptance={...result,routes:report.routes};
           return send(200,view());
         }
         packageName(body.name);
