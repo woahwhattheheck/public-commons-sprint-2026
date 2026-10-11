@@ -325,7 +325,9 @@
     "weather-operations": "stellar/scf-starforge-20261009/partners/open-meteo-operations/cli.mjs",
     "merchant-fleet-host": "stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-cli.mjs",
     "woo-refund": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator-cli.mjs",
-    "blockscout": "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/cli.mjs"
+    "blockscout": "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/cli.mjs",
+    "usaspending-research": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/cli.mjs",
+    "usaspending-dossier": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier-cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -702,7 +704,12 @@
     "./partners/blockscout/application": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/application.mjs",
     "./partners/blockscout/launch": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/launch.mjs",
     "./partners/blockscout/accounting": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/accounting.mjs",
-    "./partners/blockscout/customer": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/customer.mjs"
+    "./partners/blockscout/customer": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/customer.mjs",
+    "./research/usaspending": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/workspace.mjs",
+    "./research/usaspending/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/merchant.mjs",
+    "./research/usaspending/source-import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/source-import.mjs",
+    "./research/usaspending/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/server.mjs",
+    "./buyer/usaspending/dossier": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier.mjs"
   },
   "nativePeers": {
     "@x402/core": {
