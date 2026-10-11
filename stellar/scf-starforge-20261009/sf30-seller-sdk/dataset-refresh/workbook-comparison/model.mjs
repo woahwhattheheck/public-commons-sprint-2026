@@ -289,8 +289,12 @@ export async function openWorkbookEditions({drafts,sources,python,parserSource,p
       throw fault('WORKBOOK_REVIEW_REQUIRED','Review the original publication and select distinct row keys.');
     if(!result.plan||typeof result.plan!=='object'||Array.isArray(result.plan))
       throw fault('INVALID_WORKBOOK_PLAN','Review the complete replacement mapping.');
-    result.plan.name=String(result.plan.name??'').trim();
-    result.plan.notes=String(result.plan.notes??'').trim();
+    for(const [name,maximum,required] of [['name',160,true],['notes',2000,false]]){
+      const value=result.plan[name];
+      if(typeof value!=='string'||value.length>maximum||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value)||required&&!value.trim())
+        throw fault('INVALID_WORKBOOK_TEXT','Use a clear mapping name and notes within their displayed limits.');
+      result.plan[name]=value.trim();
+    }
     return result;
   }
   const api={

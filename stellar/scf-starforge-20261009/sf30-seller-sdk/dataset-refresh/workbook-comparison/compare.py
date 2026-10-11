@@ -144,8 +144,13 @@ def cell_value(cell):
         return None
     # Coordinates are represented independently as row/column movement. Style
     # table IDs can change between packages without changing the number format.
-    return {key: cell.get(key) for key in ("type", "value", "raw", "present",
-            "formula", "cachedPresent", "numberFormat", "dateStyle", "hiddenRow")}
+    value = {key: cell.get(key) for key in ("type", "value", "raw", "present",
+             "formula", "cachedPresent", "numberFormat", "dateStyle", "hiddenRow")}
+    # Shared-string indexes describe package storage, not a changed literal.
+    # Keep the exact index in the original cell record but compare its text.
+    if value["type"] == "string":
+        value["raw"] = value["value"]
+    return value
 
 def compare(request):
     baseline_schema = NATIVE["schema_columns"](request["baseline"]["config"])

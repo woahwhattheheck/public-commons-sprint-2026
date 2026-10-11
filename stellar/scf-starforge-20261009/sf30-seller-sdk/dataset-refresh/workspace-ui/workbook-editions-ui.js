@@ -27,15 +27,16 @@ function createWorkbookEditionControls(host) {
   const option=(value,label)=>{const n=el('option',label);n.value=value;return n;};
   const clone=value=>structuredClone(value), state=()=>host.getState();
   const sources=()=>state().workspace?.workbookSources??[], source=id=>sources().find(s=>s.id===id);
-  const selectedPlan=()=>source(field('we-baseline'))?.plans.find(p=>p.id===field('we-baseline-plan'));
-  const selection=()=>({sourceId:field('we-baseline'),planId:field('we-baseline-plan'),targetId:field('we-target')});
+  const availablePlans=()=>(source(field('we-baseline'))?.plans??[]).flatMap(p=>[p,...[...(p.editions??[])].reverse().map(edition=>({...edition,id:p.id}))]);
+  const selectedPlan=()=>availablePlans().find(p=>p.id+':'+p.revision===field('we-baseline-plan'));
+  const selection=()=>({sourceId:field('we-baseline'),planId:selectedPlan()?.id??'',targetId:field('we-target')});
   const literal=value=>value===undefined?'(missing)':value===null?'null':value===''?'""':String(value);
   const number=value=>Number.isSafeInteger(value)?value.toLocaleString():'—';
   const names={added:'Added',removed:'Removed',changed:'Value changed',source:'Source changed',unchanged:'Unchanged',moved:'Moved'};
   let suggestion=null,schema=null,formBaseline=null,report=null,page=null,applied=null,saved=[],savedWarnings=[],stamp='',edit=0,reviewEdit=null,targetRevision=null,pendingId=null;
   const bindings=[];
   function options(node,items,value=node.value){node.replaceChildren(...items.map(([id,text])=>option(id,text)));node.value=items.some(([id])=>id===value)?value:items[0]?.[0]??'';}
-  function plans(){options($('we-baseline-plan'),[['','Choose saved mapping'],...(source(field('we-baseline'))?.plans??[]).map(p=>[p.id,p.plan.name+' / edition '+p.revision])]);}
+  function plans(){options($('we-baseline-plan'),[['','Choose saved mapping'],...availablePlans().map(p=>[p.id+':'+p.revision,p.plan.name+' / edition '+p.revision])]);}
   function initialSheets(reset=false){const items=source(field('we-target'))?.workbook.sheets??[],prior=selectedPlan()?.plan.sheet;const current=reset?'':field('we-initial-sheet');options($('we-initial-sheet'),[['','Choose actual worksheet'],...items.map(s=>[s.name,s.name+(s.state==='visible'?'':' / '+s.state)])],items.some(s=>s.name===current)?current:items.some(s=>s.name===prior)?prior:'');}
   function refreshSources(){
     const next=JSON.stringify(sources().map(s=>[s.id,s.revision,s.plans.map(p=>[p.id,p.revision])]));if(next===stamp)return;stamp=next;
