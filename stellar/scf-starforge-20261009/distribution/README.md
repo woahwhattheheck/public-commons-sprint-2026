@@ -46,6 +46,27 @@ supports interrupted-install continuation, fresh-directory upgrades, recovery,
 and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
 for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
 
+### Runtime installation workspace
+
+Use the private browser workspace to select an original archive, review its exact
+adapter dependencies, and prepare, install, inspect, compare, upgrade and recover
+customer runtimes through the same maintained installer:
+
+```sh
+starforge runtime-workspace init --workspace /srv/starforge/runtime-workspace
+starforge runtime-workspace attach --workspace /srv/starforge/runtime-workspace \
+  --runtime /srv/starforge/runtimes/merchant-01 --label "Merchant production"
+starforge runtime-workspace serve --workspace /srv/starforge/runtime-workspace
+```
+
+Open the private URL printed by `serve`. The workspace retains selected runtimes,
+reviewed profiles, operation progress and logs across browser and server restarts.
+Long-running installation operations continue independently of the browser. Its
+Deployment view exports the exact source/dependency roots, profile, original
+manifest and command needed by the existing managed-release and merchant-host
+workflows. The [complete runtime workspace guide](runtime-workspace/README.md)
+covers archive upload, selected adapters, local Node headers, recovery and handoff.
+
 ### Versioned installation, upgrade and rollback
 
 Use `starforge installation` to put a selected maintained package into the
@@ -385,6 +406,44 @@ execute, inspect and recover to the retained buyer adapters. Public APIs are
 Follow [the complete installed Chainstack workflow](../partners/chainstack-stellar/INSTALLED.md)
 for selected provider configuration, method inputs, retained provider results,
 customer handoff, both buyer languages, release rollback and native host setup.
+
+## Routescan and n8n installed workflows
+
+The original Routescan merchant and its local workspace are included in the
+installed package. Use the same private project for its selected provider
+configuration, retained previews, quota accounting and merchant operation:
+
+```sh
+npx --no-install starforge routescan-merchant init \
+  --project /private/routescan --config /private/routescan-merchant.json
+npx --no-install starforge routescan-merchant status --project /private/routescan
+npx --no-install starforge routescan-workspace --project /private/routescan --port 0
+```
+
+The original APIs are exported as `./seller/routescan`,
+`./seller/routescan/project`, `./seller/routescan/workspace` and
+`./seller/routescan/backup`. Follow the
+[Routescan merchant guide](../sf30-seller-sdk/routescan/README.md) and
+[workspace guide](../sf30-seller-sdk/routescan/WORKSPACE.md) for provider setup,
+customer handoff and retained project recovery.
+
+The n8n workflow generator uses an existing buyer-workspace credential reference
+and the selected original intent:
+
+```sh
+npx --no-install starforge buyer-n8n-workflows --output /private/n8n-workflows \
+  --credential-name "Original Starforge buyer workspace" \
+  --intent ORIGINAL_ID --format binary
+```
+
+It writes six inactive workflow JSON files and their manifest into a new private
+directory. The workflows use the original SF88 workspace, buyer inbox and terminal
+execution paths for packet intake, review, response consumption, recovery,
+finalization and resuming an existing prepared intent. Import and configure the
+selected workflows in the receiving n8n installation using the
+[original n8n guide](../sf88-operator-buyer-cli/n8n/README.md).
+The `./buyer/n8n/workflows` API exports `createCustomerWorkflows` and
+`writeCustomerWorkflows`.
 
 ## GetBlock Stellar merchant
 
@@ -1933,6 +1992,34 @@ and `runMaintenance` from
 `@tokenjunkielabs/starforge-merchant/merchant/host-maintenance`.
 These are the original implementations used by the installed command and do
 not create another supervisor or recovery engine.
+
+## Keep encrypted merchant recovery points off the host
+
+The installed `merchant-recovery` command exposes the original SF101 snapshot,
+verification and cold-restore engine. `merchant-recovery-remote` sends those
+unchanged encrypted bundles to an existing private S3-compatible bucket, lists
+completed recovery points, retrieves them and invokes that same restore engine.
+Use the existing `s3` runtime dependency and Linux `flock`.
+
+Create the snapshot with the original host maintenance command above or with an
+actually quiesced local recovery plan. Then follow the
+[remote recovery guide](../sf101-merchant-recovery/REMOTE.md) for the private
+store configuration, credentials, stable operation IDs and new destination
+paths. A typical upload is:
+
+```sh
+npx --no-install starforge merchant-recovery-remote push \
+  --config /private/merchant/recovery-s3.json \
+  --bundle /private/backups/merchant-20261011-001 \
+  --operations /private/recovery-transfers --id merchant-20261011-001 \
+  --pass-env SF101_RECOVERY_PASSPHRASE
+```
+
+The remote inventory publishes a completion record only after the encrypted
+files and original manifest have been uploaded and read back. Interrupted
+operations retain their progress under the same ID. Cold restore authenticates
+the original bundle and creates a new private destination; the original SF99
+maintenance operator handles the later merchant cutover.
 
 ## Operate several merchants
 
@@ -3904,3 +3991,196 @@ processes on one Linux host. The original `OPERATIONS.md` under the installed
 ownership while already accepted SDK work completes. The existing
 `./facilitator` API retains its runtime entrypoints; `./facilitator/readiness`
 exposes the original RPC probe directly.
+
+## Prepare and receive the SCF grant delivery plan
+
+The maintained release includes the original SF47 scenario, Decimal calculator,
+private browser workspace and headless operator. Use Python 3.10 or newer on Linux alongside
+the package's Node launcher:
+
+```sh
+starforge grant-workspace --help
+starforge grant-workspace init --workspace /absolute/private/scf-planning
+starforge grant-workspace serve --workspace /absolute/private/scf-planning
+```
+
+The same workspace retains source identities, named plans, saved revisions,
+contributor capacity, package pricing, payment timing and the complete deployment
+acceptance plan. Close its browser server before running headless operations so
+the original process lock has one owner. `show`, `estimate`, `save`, `clone` and
+`restore` compose the original model, with explicit expected revisions and durable
+request IDs for saved operations. Omitted planning preserves the reviewed revision.
+
+Use `export` and `import-bundle` for the original complete browser-compatible ZIP;
+`export-all` and `import-all` group those unchanged native bundles for an entire
+saved-plan handover and resume each receiving import through the original request
+ledger. The receiving response maps original plan IDs to their new IDs while
+retaining the complete revision history, saved source and planning assumptions.
+Keep private workspaces and exports outside the installed source directory.
+
+The complete command, input, recovery and receiving guide is
+[SF47 headless planning and receiving](../../scf_2026/sf47_budget_model/workspace/CLI.md),
+installed at `source/stellar/scf_2026/sf47_budget_model/workspace/CLI.md`.
+The CLI also runs directly as `python3 .../workspace/cli.py`; `SF47_PYTHON` selects
+an explicit Python executable for the installed command. All financial calculation
+continues through the original `budget.py` and workspace model.
+
+## Installed direct-provider workspace
+
+The `provider-operator` and `provider-workspace` commands operate the maintained
+SF96 direct-provider flow through the original SF88 buyer. The local desk joins
+retained challenge intake, exact offer and cap review, original private cases,
+native terminal operations, useful-output review and complete encrypted recovery.
+
+Use a POSIX host with Node 22.16 or later, Python 3 and this installed release's
+original SF88 dependency closure. `starforge doctor --native` reports the current
+native dependency setup; the original [signer guide](../sf88-operator-buyer-cli/NATIVE_SIGNER.md)
+and [runtime installer](RUNTIME_INSTALL.md) retain their existing setup
+procedures. The workspace introduces no additional npm package.
+
+Create a private parent and a public host profile. Replace the example identity
+values and paths with the actual selected operator configuration:
+
+```sh
+SF96_PRIVATE="/absolute/private/provider-operations"
+mkdir -m 700 "$SF96_PRIVATE"
+starforge provider-workspace profile \
+  --out "$SF96_PRIVATE/host-profiles.json" \
+  --id provider-operator --label "Provider operator" \
+  --actor ACTUAL_OPERATOR --service ACTUAL_SERVICE \
+  --payer ACTUAL_PUBLIC_G_ADDRESS --python /absolute/python3 \
+  --secret-env EXISTING_WALLET_ENV_NAME
+
+starforge provider-workspace serve \
+  --state "$SF96_PRIVATE/desk" \
+  --profiles "$SF96_PRIVATE/host-profiles.json" --port 8469
+```
+
+Open the printed loopback capability URL and keep its launching terminal open.
+Profiles retain public values and an existing environment-variable name or
+trusted signer reference, never wallet values. Their budgets apply separately
+to each prepared case. A later profile change does not rewrite an existing case.
+Starting without `--profiles` supports attaching and reopening original cases;
+new preparation requires explicitly configured public setup.
+
+In the desk, import an original SF85 capture and its exact header source when
+required, import a complete original SF96 handoff, or explicitly observe an
+allowed endpoint once. Review the actual eligible offer, source provenance and
+independent atomic cap. Preparation uses the original private workspace and
+inbox. An already registered intent returns its existing case.
+
+The original operator remains available alongside the browser:
+
+```sh
+starforge provider-operator show --dir /absolute/original/case
+starforge provider-operator diagnose --dir /absolute/original/case
+starforge provider-operator review --dir /absolute/original/case
+```
+
+The desk's applicable native actions and `provider-operator execute` use the
+same original terminal approval, signer, permanent attempt and spending ledger.
+Read delivery, settlement and accounting outcomes separately, then record useful
+output criteria, local review and private handover. A local reviewer entry does
+not establish customer acceptance. Reopen the same case after interruption;
+original recovery/finalization do not start another purchase.
+
+Complete recovery is also an installed command:
+
+```sh
+starforge provider-workspace backup --dir /absolute/original/case \
+  --out /absolute/private/NEW.sf96case
+starforge provider-workspace inspect --archive /absolute/private/NEW.sf96case
+starforge provider-workspace restore --archive /absolute/private/NEW.sf96case \
+  --expect-directory /absolute/original/case
+```
+
+The passphrase is read without echo from the terminal. The authenticated archive
+contains the original native case, accounting keys, evidence, output and case
+notes/reviews; host wallet values and external signer-module contents are not
+copied. Restore keeps the exact original absolute path and refuses an existing
+destination. Its manifest identifies the actual Python, original source CLI
+and generated/trusted signer dependencies. Keep those required external paths
+and the passphrase in their intended private custody. The separate desk
+navigation/request index is not the archival unit.
+
+The full [provider workspace guide](../sf96-merchant-challenge-handoff/workspace/GUIDE.md)
+covers explicit stopped-owner recovery, retained encrypted upload retry,
+interrupted restore stages and authentication of an already complete archive
+whose presentation index was interrupted. Use `provider-workspace --help`
+for the exact terminal flags.
+
+Native host integrations use `./buyer/provider-operator` for the maintained
+operator functions; `./buyer/provider-workspace` exports `openProviderDesk`
+and `validateProfiles`; `./buyer/provider-workspace/server` exports
+`startProviderWorkspace`; and `./buyer/provider-workspace/recovery` exports
+the original complete-case create/inspect/restore and interrupted-restore
+functions. All resolve to this same packaged source and original native case.
+
+## Tomorrow.io weather operations
+
+`starforge tomorrow --help` opens the complete maintained command surface for location/work selection, reviewed Timeline and PNG capture, staff decisions, operations reports, single-resource recovery, licensed merchant packaging, native customer purchase/recovery and portable handover. `starforge tomorrow serve --workspace PRIVATE_DIRECTORY` serves the industrial browser workspace. The original setup, usage, request semantics and customer/Austin workflows are documented in [Tomorrow weather operations](../sf30-seller-sdk/tomorrow/README.md). All source is included by the existing SF30 component.
+
+## Private SFTP reports and retained dataset commerce
+
+The installed `sftp-workspace` opens a private operator desk for a pinned SFTP
+connection, reviewed CSV/JSON/NDJSON reports and their complete merchant payment
+choices. Each product binds one immutable report revision and opens the original
+dataset publisher console. The original versioned seller, recurring policy and
+snapshot-bound buyer remain the underlying commerce implementation.
+
+Use Node 22.5 or newer on Linux and the maintained `sftp` dependency group, which
+declares the exact `ssh2@1.17.0` package. The original seller, native buyer and
+Linux `flock` dependency requirements still apply. The merchant connects to the
+selected SFTP server through its Node client.
+
+```sh
+starforge doctor --native --feature sftp
+starforge sftp --help
+starforge sftp-workspace --help
+starforge sftp-publisher --help
+```
+
+Save a private source JSON declaration using
+`stellar-forge.sftp-source.v1`, the server operator's confirmed SHA256 host-key
+fingerprint, an absolute remote root and authentication environment reference
+names. A key-file environment value is an absolute private 0600 path.
+Start with `queries: {}` to inspect the folder before authoring the first report.
+
+The source catalogue pages the completely observed directory. Sampling captures
+the entire file and reports its complete row count alongside a limited preview.
+JSON supports an explicit record-array pointer; CSV reuses the original record
+parser; NDJSON reads complete record lines. Public column aliases, scalar types,
+null/missing handling, fixed file path and typed conditions remain in the saved
+report declaration.
+
+Create a publication from a saved report. In its original publisher console,
+save exact parameter inputs and a complete extraction budget, inspect its
+candidate and full capture identity, record the review, and publish. Start the
+native dataset seller from the parent desk and choose an exact advertised
+payment option to prepare the original buyer handoff. Atomic amount strings and
+all payment alternatives retain their original offer semantics.
+
+Every extraction retains the complete received bytes and full digest, negotiated
+host fingerprint and before/after file observations. A transfer interruption
+retains its partial bytes; the next capture validates every saved prefix byte
+before resuming. A reviewed `expectedSha256` can bind an agreed remote edition.
+
+Configure the original recurring policy in that same publication console.
+Complete matching rows must fit its explicit budget. Later file editions become
+new retained candidates; equal content follows the original unchanged-version
+behavior. Existing buyers can keep an earlier snapshot. Close and reopen the
+private desk to restore original source/merchant revisions, publications,
+seller intent, policy and buyer handoffs.
+
+The [source and CLI guide](../sf30-seller-sdk/sftp/README.md) and
+[operator workspace guide](../sf30-seller-sdk/sftp/workspace/README.md) include
+the exact configuration, invocation, field semantics, capture/restart behavior
+and full customer operation. Merchant MCP supports the original publisher under
+`kind: "sftp"`; its [publisher guide](../../../stellar-forge/mcp-merchant-operator/PUBLISHERS.md)
+uses the same native workspace and scheduler.
+
+Programmatic exports are `./seller/sftp` for `createSftpSource`,
+`./seller/sftp/config` for source-file opening and validation,
+`./seller/sftp/publisher` for `openSftpPublisher`,
+`./seller/sftp/workspace` for `startSftpWorkbench`, and
+`./seller/sftp/workspace/model` for `openSftpWorkbench`.

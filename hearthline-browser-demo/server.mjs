@@ -3,12 +3,15 @@ import http from 'node:http';
 import { fork } from 'node:child_process';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const store = join(await mkdtemp(join(tmpdir(), 'hearthline-browser-')), 'state.json');
-const staticFiles = new Map([['/', ['index.html', 'text/html']], ['/app.mjs', ['app.mjs', 'text/javascript']], ['/style.css', ['style.css', 'text/css']]]);
+const ephemeral = process.env.HEARTHLINE_EPHEMERAL === '1';
+const store = ephemeral
+  ? join(await mkdtemp(join(tmpdir(), 'hearthline-browser-')), 'state.json')
+  : resolve(process.env.HEARTHLINE_STORE ?? './data/hearthline-browser-store.json');
+const staticFiles = new Map([['/', ['index.html', 'text/html']], ['/app.mjs', ['app.mjs', 'text/javascript']], ['/workboard-ui.mjs', ['workboard-ui.mjs', 'text/javascript']], ['/style.css', ['style.css', 'text/css']]]);
 let worker, upstream, generation = 0, restarting = false, active = 0;
 
 function startWorker() {
@@ -74,7 +77,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.url === '/demo/status' && req.method === 'GET') {
       const state = JSON.parse(await readFile(store, 'utf8'));
-      return json(res, 200, { pid: upstream?.pid ?? null, generation, localOutboxItems: state.outbox.length, receipts: state.receipts.length, missions: Object.keys(state.missions).length, weather: 'fixture', effects: 'local_only' });
+      return json(res, 200, { pid: upstream?.pid ?? null, generation, localOutboxItems: state.outbox.length, receipts: state.receipts.length, missions: Object.keys(state.missions).length, persistent: !ephemeral, weather: 'fixture', effects: 'local_only' });
+    }
+    if (req.url === '/demo/workspace.json' && req.method === 'GET') {
+      // JsonStore publishes by rename, so this is one complete saved snapshot.
+      const data = await readFile(store);
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'content-disposition': 'attachment; filename="hearthline-workspace.json"' });
+      return res.end(data);
     }
     if (req.method === 'GET' && staticFiles.has(req.url)) {
       const [name, type] = staticFiles.get(req.url);

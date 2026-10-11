@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenWeather integration workspace</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div><p class="eyebrow">STELLAR FORGE / CUSTOMER INTEGRATION</p><h1>OpenWeather workspace</h1><p>Current weather and hourly timelines, with retained source and recoverable delivery.</p></div>
+<div class="project-picker"><label>Project<select id="project-select"><option value="">New project</option></select></label><button id="new-project">New project</button><p id="connection">Connecting…</p></div></header>
+<div id="message" role="status" aria-live="polite"></div>
+<nav aria-label="Workspace"><button data-panel="setup" aria-current="page">Setup &amp; source</button><button data-panel="acquisition">Acquire</button><button data-panel="review">Review &amp; deliver</button><button data-panel="integration">API integration</button><button data-panel="deployment">Deployment</button></nav>
+<main>
+<section id="setup" class="panel">
+<div class="section-head"><div><h2>Customer project</h2><p>Use the customer's location and chosen unit mode. Credential values stay in the server environment.</p></div><span id="revision" class="tag">New</span></div>
+<form id="project-form" class="card grid">
+<label>Project identifier<input id="project-id" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="customer-weather"></label>
+<label>Project name<input id="project-label" required placeholder="Customer weather integration"></label>
+<label>Latitude<input id="lat" type="number" min="-90" max="90" step="any" required></label>
+<label>Longitude<input id="lon" type="number" min="-180" max="180" step="any" required></label>
+<label>Units<select id="units"><option value="metric">Metric · °C, m/s</option><option value="imperial">Imperial · °F, mph</option><option value="standard">Standard · K, m/s</option></select></label>
+<label>Language code<input id="lang" placeholder="Provider default"></label>
+<label>Provider key environment name<input id="key-env" value="OPENWEATHER_API_KEY" required></label>
+<label>Hourly pages per acquisition<input id="max-pages" type="number" min="1" max="10000" value="25" required></label>
+<label>Request deadline (seconds)<input id="timeout" type="number" min="1" max="120" value="20" required></label>
+<div class="form-actions"><button type="submit" class="primary">Save project</button></div>
+</form>
+<div class="section-head"><div><h2>Account call allowance</h2><p>Set a local accounting window within the existing account's allowance. Every attempted provider page is counted, including failures and interrupted requests. Record calls made by other applications.</p></div></div>
+<form id="account-form" class="card grid">
+<label>Account label<input id="account-label" required placeholder="Existing customer account"></label>
+<label>Provider key environment name<input id="account-key-env" value="OPENWEATHER_API_KEY" required></label>
+<label>Window starts (UTC)<input id="budget-start" type="datetime-local" required></label>
+<label>Window ends (UTC)<input id="budget-end" type="datetime-local" required></label>
+<label>Total allowance in this window<input id="budget-limit" type="number" min="1" max="10000000" required></label>
+<label>Calls used elsewhere<input id="external-calls" type="number" min="0" max="10000000" value="0" required></label>
+<div class="form-actions"><button type="submit">Save allowance</button><span id="budget-summary"></span></div>
+</form>
+<div class="section-head"><div><h2>Customer API inventory</h2><p>Import the customer's original OpenAPI JSON or YAML. The maintained SF61 inspector retains the exact source, operations, backend authentication and request contracts.</p></div></div>
+<form id="source-form" class="card">
+<div class="grid"><label>Source name<input id="source-name" value="Customer API" required></label><label>Original HTTPS source URL (optional)<input id="source-url" type="url"></label><label>OpenAPI file<input id="source-file" type="file" accept=".json,.yaml,.yml,text/*,application/json"></label></div>
+<label>Original API source<textarea id="source-text" rows="8" spellcheck="false" placeholder="Paste or load the customer’s original OpenAPI document"></textarea></label>
+<div class="form-actions"><button type="submit">Inspect and retain source</button></div><div id="source-inventory"></div><pre id="source-result" hidden></pre>
+</form>
+<details class="card"><summary>Reviewed field and unit contract</summary><p>One Call 4.0 uses a <code>data</code> array. Missing measurements stay absent. Rain and snow remain mm/h in every mode; precipitation probability remains a fraction. UTC timestamps remain exact, and local display uses the returned IANA time zone.</p><div id="field-map"></div><p><a href="https://openweathermap.org/api/one-call-4" target="_blank" rel="noreferrer">Original One Call 4.0 documentation</a></p></details>
+</section>
+<section id="acquisition" class="panel" hidden>
+<div class="section-head"><div><h2>Acquire current and hourly data</h2><p>The end of the hourly window is exclusive. Provider continuation links determine each next page.</p></div><span id="credential-status" class="tag"></span></div>
+<form id="acquire-form" class="card grid">
+<label>Hourly start (UTC, whole hour)<input id="range-start" type="datetime-local" step="3600" required></label>
+<label>Hourly end (UTC, whole hour)<input id="range-end" type="datetime-local" step="3600" required></label>
+<div class="form-actions"><button type="submit" class="primary">Acquire current + hourly</button><span id="range-estimate"></span></div>
+</form>
+<div class="card"><h3>Acquisitions</h3><div id="jobs"></div></div>
+<div class="card" id="job-controls" hidden><h3 id="job-title">Selected acquisition</h3><p id="job-status"></p>
+<div class="grid"><label>Additional hourly pages when resuming<input id="extra-pages" type="number" min="0" max="10000" value="0"></label><label class="check"><input id="ack-unknown" type="checkbox">Count the interrupted request and make a new attempt</label></div>
+<div class="form-actions"><button id="resume-job">Resume saved acquisition</button><button id="stop-job">Stop after current request</button><button id="inspect-job">Review retained data</button></div>
+<div id="attempts"></div></div>
+<div class="card"><h3>Scheduled refresh</h3><p>Schedules use the same retained call allowance and saved project revision. The provider recommends a ten-minute interval. Automatic selection requires the first edition to have been reviewed; incomplete or conflicting refreshes remain for inspection.</p>
+<form id="schedule-form" class="grid"><label class="check"><input id="schedule-enabled" type="checkbox">Enable acquisition schedule</label><label>Interval (minutes)<input id="schedule-interval" type="number" min="10" max="1440" value="10"></label><label>Hourly window length<input id="schedule-hours" type="number" min="1" max="4800" value="48"></label><label class="check"><input id="schedule-select" type="checkbox">Select complete refreshes under the reviewed mapping</label><div class="form-actions"><button type="submit">Save schedule</button><span id="schedule-status"></span></div></form></div>
+</section>
+<section id="review" class="panel" hidden>
+<div class="section-head"><div><h2>Review and deliver</h2><p>Inspect the actual retained range before accepting a data edition. Existing editions remain available when a project or acquisition changes.</p></div></div>
+<div class="card"><h3>Acquisition review</h3><p id="data-summary">Select an acquisition.</p><div id="coverage"></div><div id="current-data"></div><div id="hourly-data"></div>
+<form id="review-form"><label>Review note<textarea id="review-notes" rows="3" placeholder="Record the customer's field/time mapping decision and any accepted gaps"></textarea></label><div class="grid"><label>Conflicting overlap policy<select id="conflict-policy"><option value="reject">Require resolution</option><option value="first">Keep the first original record</option><option value="last">Keep the last original record</option></select></label><label class="check"><input id="accept-partial" type="checkbox">Accept the displayed partial range with this note</label></div><div class="form-actions"><button type="submit" class="primary">Save reviewed data edition</button></div></form></div>
+<div class="card"><h3>Saved customer editions</h3><label>Edition<select id="review-select"><option value="">No saved edition</option></select></label><p id="active-edition"></p><div class="form-actions"><button id="open-edition">Open saved edition</button><button id="select-edition">Use for the direct customer API</button><button id="rollback-edition">Restore previous customer edition</button></div>
+<div class="form-actions"><button data-download="json">Data + review JSON</button><button data-download="csv">Hourly CSV</button><button data-download="ndjson">Hourly NDJSON</button><button data-download="contract">Customer OpenAPI</button><button data-download="handoff">Complete handoff</button></div>
+<p>Direct clients can use <code>/weather/PROJECT/active/current</code>. Exported merchant releases bind an exact immutable edition. Hourly client pagination pins its first returned edition.</p>
+<details><summary>Node / TypeScript client</summary><pre id="client-example"></pre></details></div>
+<div class="card"><h3>Workspace recovery</h3><p>The weather backup includes all projects, imported source, provider records, call accounting, decisions and data editions. Keep the original merchant packages and release store in the same host backup.</p><button id="backup">Download weather workspace backup</button><pre>node openweather/cli.mjs restore --store NEW_PRIVATE_DIRECTORY --file BACKUP.json</pre></div>
+</section>
+<section id="integration" class="panel" hidden>
+<div class="section-head"><div><h2>Review the customer API integration</h2><p>Export through the original SF61 merchant compiler. Refreshing an existing package preserves its route identities, atomic prices and payment settings.</p></div></div>
+<div class="card"><h3>Saved integration reviews</h3><label>Original source and merchant review<select id="integration-select"><option value="">Choose an integration review</option></select></label><div class="form-actions"><button id="open-integration">Reopen saved integration</button></div><p>Reopen the exact reviewed source and package inputs to continue an export after a restart.</p></div>
+<form id="integration-form" class="card">
+<label>Existing merchant package to refresh (optional)<select id="baseline"><option value="">Create a new merchant package</option></select></label>
+<div class="grid"><label>Public seller HTTPS URL<input id="seller-url" type="url" placeholder="Your existing merchant URL"></label><label>Current route price (atomic units)<input id="price-current" inputmode="numeric"></label><label>Hourly route price (atomic units)<input id="price-hourly" inputmode="numeric"></label></div>
+<label>Authorized payment settings for a new package (JSON)<textarea id="payment" rows="5" spellcheck="false" placeholder='{"network":"existing Stellar network","asset":"existing asset","payTo":"authorized recipient","maxTimeoutSeconds":300}'></textarea></label>
+<label>Source refresh mapping decisions (JSON)<textarea id="mapping-decisions" rows="5" spellcheck="false">{"mappings":[],"additions":[]}</textarea></label>
+<div class="form-actions"><button type="submit" class="primary">Review original merchant output</button></div><p id="integration-identity"></p><div id="integration-preview"></div><details><summary>Complete source / effective comparison</summary><pre id="integration-detail"></pre></details>
+</form>
+<form id="export-form" class="card grid"><label>New original package name<input id="package-name" required placeholder="weather-v1"></label><div class="form-actions"><button type="submit">Save reviewed merchant package</button></div></form>
+</section>
+<section id="deployment" class="panel" hidden>
+<div class="section-head"><div><h2>Stage, run and recover</h2><p>The original SF82 release operator owns selection, startup, drain and rollback. Review its actual generation and source comparison before selecting.</p></div><button id="refresh-deployment">Refresh deployment</button></div>
+<form id="stage-form" class="card grid">
+<label>Original exported merchant package<select id="release-package"></select></label><label>Release name<input id="release-id" required placeholder="weather-v1"></label><label>Release label<input id="release-label" placeholder="Reviewed weather edition"></label><label>Seller listen port (0 chooses available)<input id="release-port" type="number" min="0" max="65535" value="0"></label><label>Authorized HTTPS facilitator (optional)<input id="facilitator" type="url" placeholder="Omit for the original challenge preview"></label><div class="form-actions"><button type="submit">Stage original release</button></div></form>
+<div class="card"><h3>Original release comparison</h3><p id="deployment-summary"></p><label>Saved release<select id="release-select"></select></label><div class="form-actions"><button id="compare-release">Read current comparison</button><button id="activate-release">Select reviewed release</button><button id="rollback-release">Roll back previous release</button><button id="start-release" class="primary">Start selected original seller</button><button id="stop-release">Drain and stop owned seller</button></div><pre id="deployment-detail"></pre></div>
+</section>
+</main><footer>Provider credentials remain in the launch environment. Source, accounting and recovery stay with this private customer workspace.</footer>
+<script type="module" src="/browser.mjs"></script></body></html>
