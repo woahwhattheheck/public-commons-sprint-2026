@@ -5,6 +5,7 @@ import { constants } from 'node:fs';
 import { mkdir, open, readFile, stat } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { selectServiceRoute } from '../sf30-seller-sdk/route-path.mjs';
+import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
 
 export const SCHEMA = 'stellar-forge.sf98.delivery-event.v1';
 const hash = x => createHash('sha256').update(x).digest('hex');
@@ -78,7 +79,7 @@ function selectedPayment(route, requirement) {
 export function nativeEvent(compiled, args, settled, at = date()) {
   if (settled?.success !== true) return null;
   const context = args[3]?.request;
-  if (!context || !['GET', 'HEAD', 'POST'].includes(context.method) ||
+  if (!context || !supportsSellerMethod(context.method) ||
       typeof context.path !== 'string') return null;
   const selected = selectServiceRoute(compiled.routes, context.path, context.method);
   const route = selected?.route;
@@ -95,6 +96,7 @@ export function nativeEvent(compiled, args, settled, at = date()) {
     schema: SCHEMA, id, at, routeId: route.id, method: context.method,
     network: payment.network, amountAtomic: String(payment.amount),
     assetDigest: hash(String(payment.asset)),
+    recipientDigest: hash(String(payment.payTo)),
     receiptFingerprint: receipt.receiptHash,
     transactionFingerprint: receipt.transactionHash,
     orderReference: reference,
@@ -118,7 +120,8 @@ export async function openOutbox(directory) {
     async record(event) {
       if (event?.schema !== SCHEMA || !okId(event.id) ||
           !/^[A-Za-z0-9_-]{1,80}$/.test(event.routeId) ||
-          !['GET', 'HEAD', 'POST'].includes(event.method) ||
+          !supportsSellerMethod(event.method) ||
+          (event.recipientDigest !== undefined && event.recipientDigest !== null && !okId(event.recipientDigest)) ||
           typeof event.receiptFingerprint !== 'string') throw new TypeError('Invalid native settlement event');
       // Native HTTP requests can settle simultaneously. Keep one append in flight,
       // with a stable dedup set updated only after durable journal fsync.

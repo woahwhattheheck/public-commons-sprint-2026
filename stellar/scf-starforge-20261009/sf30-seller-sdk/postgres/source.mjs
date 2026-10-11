@@ -2,6 +2,7 @@
 import { performance } from 'node:perf_hooks';
 import { bindPostgresParameters, compilePostgresQueries, describePostgresQueries,
   projectedStatement, QueryInputError } from './declaration.mjs';
+import { readPostgresResult, PostgresResultError } from './stream.mjs';
 
 export class PostgresSourceError extends Error {
   constructor(code, query = undefined, sqlState = undefined) {
@@ -20,8 +21,10 @@ const inputResponse = issue => ({ status: 422,
   body: { error: 'QUERY_INPUT_INVALID', code: issue.code, field: issue.field } });
 function safeFailure(issue, name) {
   if (issue instanceof PostgresSourceError || issue instanceof QueryInputError) return issue;
+  if (issue instanceof PostgresResultError) return error(issue.code, name);
   if (issue?.code === '57014') return error('QUERY_TIMEOUT', name, issue.code);
   if (issue?.code === '55P03') return error('QUERY_LOCK_TIMEOUT', name, issue.code);
+  if (issue?.code === '25006') return error('QUERY_READ_ONLY_VIOLATION', name, issue.code);
   return error('QUERY_UNAVAILABLE', name, issue?.code);
 }
 
@@ -36,8 +39,8 @@ export async function createPostgresQuerySource({ connection, queries, maxConnec
   lockTimeoutMs = limit(lockTimeoutMs, 1, 30000, 'POSTGRES_LOCK_TIMEOUT');
   startupTimeoutMs = limit(startupTimeoutMs, 100, 60000, 'POSTGRES_STARTUP_TIMEOUT');
   const compiled = compilePostgresQueries(queries);
-  let Pool;
-  try { ({ Pool } = await import('pg')); }
+  let Pool, Cursor;
+  try { ({ Pool } = await import('pg')); ({ default: Cursor } = await import('pg-cursor')); }
   catch { throw error('POSTGRES_DRIVER_UNAVAILABLE'); }
   const pool = new Pool({ ...connection, max: maxConnections,
     connectionTimeoutMillis: connectTimeoutMs, idleTimeoutMillis: idleTimeoutMs,
@@ -60,6 +63,7 @@ export async function createPostgresQuerySource({ connection, queries, maxConnec
     if (!client) return;
     job.client = null;
     try { client.release(destroy === true); } catch { /* already retired */ }
+    if (job.clientError) client.removeListener('error', job.clientError);
   }
   function finish(job, issue, result) {
     if (job.done) return;
@@ -71,6 +75,8 @@ export async function createPostgresQuerySource({ connection, queries, maxConnec
   }
   function cancel(job, code) {
     if (job.done) return;
+    const index = queue.indexOf(job);
+    if (index >= 0) queue.splice(index, 1);
     finish(job, error(code, job.name));
     // Retire this connection. Never put an uncertain/aborted transaction back
     // into the pool, and never replay the query on a replacement connection.
@@ -83,29 +89,22 @@ export async function createPostgresQuerySource({ connection, queries, maxConnec
       const client = await pool.connect();
       if (job.done || closed) { client.release(true); return; }
       job.client = client;
+      job.clientError = () => cancel(job, 'QUERY_UNAVAILABLE');
+      client.on('error', job.clientError);
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
       if (job.done) return;
       const budget = remaining(job);
       await client.query({ text: "SELECT set_config('statement_timeout',$1,true), " +
         "set_config('lock_timeout',$2,true), set_config('idle_in_transaction_session_timeout',$3,true), " +
-        "set_config('search_path','pg_catalog',true)",
+        "set_config('search_path','pg_catalog',true), set_config('TimeZone','UTC',true), " +
+        "set_config('DateStyle','ISO, YMD',true), set_config('IntervalStyle','iso_8601',true), " +
+        "set_config('bytea_output','hex',true)",
         values: [String(budget), String(Math.min(lockTimeoutMs, budget)), String(budget + 1000)],
         queryMode: 'extended' });
       if (job.done) return;
       const query = compiled[job.name];
-      const result = await client.query({ text: projectedStatement(query), values: job.values,
-        rowMode: 'array', types: TEXT_TYPES, queryMode: 'extended' });
-      if (job.done) return;
-      if (result.fields.length !== query.columns.length ||
-          result.fields.some((field, index) => field.name !== query.columns[index]))
-        throw error('QUERY_PROJECTION_CHANGED', job.name);
-      const rows = result.rows.slice(0, query.maxRows).map(row =>
-        Object.fromEntries(query.columns.map((name, index) => [name, row[index]])));
-      const output = { schema: 'stellar-forge.postgres-result.v1', query: job.name,
-        columns: [...query.columns], columnTypes: result.fields.map(field => ({ name: field.name, oid: field.dataTypeID })),
-        rows, rowCount: rows.length, truncated: result.rows.length > query.maxRows,
-        valueEncoding: 'postgres-text', snapshot: 'single-request-repeatable-read' };
-      if (Buffer.byteLength(JSON.stringify(output)) > query.maxBytes) throw error('QUERY_RESULT_TOO_LARGE', job.name);
+      const output = await readPostgresResult(client, query, { name: job.name, values: job.values, Cursor,
+        ensureActive() { if (job.done || closed) throw error(closed ? 'SOURCE_CLOSED' : 'QUERY_ABORTED', job.name); } });
       await client.query('COMMIT');
       if (job.done) return;
       release(job, false); finish(job, null, output);

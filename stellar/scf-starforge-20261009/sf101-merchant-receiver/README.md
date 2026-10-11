@@ -8,6 +8,8 @@ The existing `../sf98-merchant-delivery/deliver.mjs` is the upstream sender. SF1
 
 Python 3.11+ standard library, local SQLite with full synchronous commits, no packages or external jobs. The SF98 sender is Node 22+ and needs the original checkout and x402 packages already documented in its own README.
 
+Paid-route enrollment and signed event validation support the original seller's GET, HEAD, POST, PUT, PATCH and DELETE methods. Each event must still match the exact method enrolled for its order.
+
 1. **Enroll an approved order before payment.** Create a customer/order reference that only your merchant system can approve. Provision a buyer claim token in your existing secure channel. Store the private digital product as a regular **0600** file. Configure the exact currently accepted route, method, network, atomic asset amount and SHA-256 of the asset identifier from the original SF30 seller terms. The `X-SF98-Order-ID` supplied on the buyer request is *untrusted*, so matching it against this existing order is mandatory.
 
 ```sh

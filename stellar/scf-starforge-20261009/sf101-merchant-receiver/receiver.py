@@ -31,7 +31,7 @@ REF_RE = re.compile(r"[A-Za-z0-9._:-]{1,80}\Z")
 ROUTE_RE = re.compile(r"[A-Za-z0-9_-]{1,80}\Z")
 ATOMIC_RE = re.compile(r"[1-9][0-9]{0,49}\Z")
 NETWORK_RE = re.compile(r"[A-Za-z0-9._:-]{3,100}\Z")
-METHODS = {"GET", "HEAD", "POST"}
+METHODS = {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"}
 
 
 def fail(reason: str) -> None:
