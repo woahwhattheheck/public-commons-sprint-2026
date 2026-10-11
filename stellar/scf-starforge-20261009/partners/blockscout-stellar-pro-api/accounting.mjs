@@ -5,7 +5,7 @@ import { constants } from 'node:fs';
 import { open, mkdir, lstat, realpath, unlink } from 'node:fs/promises';
 import { isAbsolute, resolve, dirname, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { error, planSha, QUOTA_HEADERS } from './product.mjs';
+import { error, planSha, QUOTA_HEADERS, plain } from './product.mjs';
 
 const SCHEMA = 'stellar-forge.blockscout-provider-accounting.v1';
 const fail = (code, status = 503) => { throw error(code, status); };
@@ -55,10 +55,12 @@ function rowView(row) {
     localCredits: row.local_credits, status: row.http_status, upstreamStatus: row.upstream_status,
     error: row.error, response: row.body_sha ? { sha256: row.body_sha, bytes: row.body_bytes,
       retained: row.body_retained === 1 } : null,
-    quota: row.quota_json ? JSON.parse(row.quota_json) : null };
+    quota: row.quota_json ? JSON.parse(row.quota_json) : null,
+    reconciliation: row.reconciliation_json ? { ...JSON.parse(row.reconciliation_json), sha256: digest(row.reconciliation_json) } : null };
 }
 const COLUMNS = 'sequence,id,plan_sha,chain_id,address_hash,purpose,started_at,finished_at,state,dispatched,' +
-  'local_credits,http_status,upstream_status,error,body_sha,body_bytes,(body IS NOT NULL) AS body_retained,quota_json';
+  'local_credits,http_status,upstream_status,error,body_sha,body_bytes,(body IS NOT NULL) AS body_retained,quota_json,' +
+  '(SELECT json FROM reconciliations WHERE attempt_id=attempts.id ORDER BY revision DESC LIMIT 1) AS reconciliation_json';
 
 export async function openProviderAccounting({ directory, plan, now = () => Date.now() }) {
   await privateDirectory(directory);
@@ -89,7 +91,11 @@ export async function openProviderAccounting({ directory, plan, now = () => Date
       'dispatched INTEGER,local_credits INTEGER NOT NULL,http_status INTEGER,upstream_status INTEGER,error TEXT,' +
       'body_sha TEXT,body_bytes INTEGER NOT NULL DEFAULT 0,body BLOB,quota_json TEXT);' +
       'CREATE INDEX IF NOT EXISTS attempt_day ON attempts(day,started_ms);' +
-      'CREATE INDEX IF NOT EXISTS attempt_token ON attempts(chain_id,address_hash,sequence);');
+      'CREATE INDEX IF NOT EXISTS attempt_token ON attempts(chain_id,address_hash,sequence);' +
+      'CREATE TABLE IF NOT EXISTS reconciliations(attempt_id TEXT NOT NULL REFERENCES attempts(id),' +
+      'revision INTEGER NOT NULL CHECK(revision>0 AND revision<=100),' +
+      "action TEXT NOT NULL CHECK(action IN ('confirm_finished','reopen')),provider_finished_ms INTEGER," +
+      'json TEXT NOT NULL CHECK(json_valid(json)),PRIMARY KEY(attempt_id,revision));');
     const columns = new Set(db.prepare('PRAGMA table_info(attempts)').all().map(row => row.name));
     for (const name of ['finished_ms', 'finished_order'])
       if (!columns.has(name)) db.exec('ALTER TABLE attempts ADD COLUMN ' + name + ' INTEGER');
@@ -128,13 +134,13 @@ export async function openProviderAccounting({ directory, plan, now = () => Date
     return { day, today, second, stored };
   }
   function quotaState(time) {
-    const latest = db.prepare('SELECT id,started_at,finished_at,finished_ms,quota_json FROM attempts ' +
+    const latest = db.prepare('SELECT id,started_at,started_ms,finished_at,finished_ms,quota_json FROM attempts ' +
       'WHERE quota_json IS NOT NULL ORDER BY finished_ms DESC,finished_order DESC,sequence DESC LIMIT 1').get();
-    const credit = db.prepare("SELECT id,started_at,finished_ms,quota_json FROM attempts WHERE quota_json IS NOT NULL " +
+    const credit = db.prepare("SELECT id,started_at,started_ms,finished_ms,quota_json FROM attempts WHERE quota_json IS NOT NULL " +
       "AND finished_ms>? AND finished_ms<=? AND json_type(quota_json,'$.creditsRemaining')='integer' " +
       "ORDER BY json_extract(quota_json,'$.creditsRemaining'),finished_ms DESC,finished_order DESC LIMIT 1")
       .get(time - limits.quotaFreshnessMs, time);
-    const rate = db.prepare("SELECT id,started_at,finished_ms,quota_json FROM attempts WHERE quota_json IS NOT NULL " +
+    const rate = db.prepare("SELECT id,started_at,started_ms,finished_ms,quota_json FROM attempts WHERE quota_json IS NOT NULL " +
       "AND finished_ms<=? AND json_type(quota_json,'$.rateRemaining')='integer' " +
       "AND json_type(quota_json,'$.resetMs')='integer' AND finished_ms+json_extract(quota_json,'$.resetMs')>? " +
       "ORDER BY json_extract(quota_json,'$.rateRemaining'),finished_ms DESC,finished_order DESC LIMIT 1").get(time, time);
@@ -144,9 +150,13 @@ export async function openProviderAccounting({ directory, plan, now = () => Date
     // balance remains separate from this deliberately conservative estimate.
     // Reopening records an interruption time, never a remote completion: an
     // outcome_unknown call may still be charged after any later sample.
-    const reservations = row => db.prepare("SELECT COALESCE(SUM(local_credits),0) AS credits,COUNT(*) AS requests " +
-      "FROM attempts WHERE id<>? AND (dispatched IS NULL OR dispatched=1) AND " +
-      "(state='outcome_unknown' OR finished_at IS NULL OR finished_at>=?)").get(row.id, row.started_at);
+    const reservations = row => db.prepare("SELECT COALESCE(SUM(a.local_credits),0) AS credits,COUNT(*) AS requests " +
+      "FROM attempts a WHERE a.id<>? AND (a.dispatched IS NULL OR a.dispatched=1) AND (" +
+      "(a.state='outcome_unknown' AND NOT EXISTS (SELECT 1 FROM reconciliations r WHERE r.attempt_id=a.id " +
+      "AND r.revision=(SELECT MAX(revision) FROM reconciliations WHERE attempt_id=a.id) " +
+      "AND r.action='confirm_finished' AND r.provider_finished_ms<?)) OR " +
+      "(a.state<>'outcome_unknown' AND (a.finished_ms IS NULL OR a.finished_ms>=?)))")
+      .get(row.id, row.started_ms, row.started_ms);
     let credits = null, requests = null;
     if (credit) {
       const q = JSON.parse(credit.quota_json), reserved = reservations(credit);
@@ -214,11 +224,83 @@ export async function openProviderAccounting({ directory, plan, now = () => Date
     if (result.changes !== 1) fail('BLOCKSCOUT_ATTEMPT_STATE_CHANGED');
     return get(id);
   }
+
+  function reconcile(input) {
+    live();
+    if (!plain(input) || Object.keys(input).some(key => !['attemptId', 'expectedRevision', 'action',
+      'operator', 'reference', 'observationId', 'providerFinishedAt'].includes(key)) ||
+      !integer(input.expectedRevision) || input.expectedRevision > 100 ||
+      !['confirm_finished', 'reopen'].includes(input.action))
+      fail('BLOCKSCOUT_RECONCILIATION_INVALID', 400);
+    const label = (value, limit) => {
+      if (typeof value !== 'string' || !value.trim() || value.length > limit ||
+          /[\u0000-\u001f\u007f]/.test(value)) fail('BLOCKSCOUT_RECONCILIATION_SOURCE_REQUIRED', 400);
+      return value.normalize('NFC').trim();
+    };
+    const operator = label(input.operator, 160), reference = label(input.reference, 240);
+    get(input.attemptId);
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const attempt = db.prepare('SELECT * FROM attempts WHERE id=?').get(input.attemptId);
+      if (attempt.state !== 'outcome_unknown') fail('BLOCKSCOUT_RECONCILIATION_OUTCOME_REQUIRED', 409);
+      const previous = db.prepare('SELECT revision,action,json FROM reconciliations WHERE attempt_id=? ORDER BY revision DESC LIMIT 1').get(attempt.id);
+      const revision = previous?.revision ?? 0;
+      if (input.expectedRevision !== revision)
+        throw Object.assign(error('BLOCKSCOUT_RECONCILIATION_REVISION_CHANGED', 409), { currentRevision: revision });
+      // Keep room to reopen an existing confirmation even when the normal
+      // decision-retention limit has been reached. Reopens add at most one
+      // extra row per retained attempt; revision 100 is reserved for reopening.
+      if (revision >= 100 || input.action === 'confirm_finished' && (revision >= 99 ||
+          db.prepare('SELECT COUNT(*) AS n FROM reconciliations').get().n >= limits.maxRecords))
+        fail('BLOCKSCOUT_RECONCILIATION_RETENTION_FULL', 503);
+      const attemptSource = { id: attempt.id, planSha256: attempt.plan_sha, chainId: attempt.chain_id,
+        addressHash: attempt.address_hash, startedAt: attempt.started_at, state: attempt.state,
+        dispatched: attempt.dispatched, localCredits: attempt.local_credits };
+      const decision = { schema: 'stellar-forge.blockscout-account-reconciliation.v1',
+        attemptId: attempt.id, attemptSha256: digest(JSON.stringify(attemptSource)), attempt: attemptSource,
+        revision: revision + 1, previousSha256: previous ? digest(previous.json) : null,
+        action: input.action, operator, reference, recordedAt: new Date(now()).toISOString() };
+      let finished = null;
+      if (input.action === 'confirm_finished') {
+        if (typeof input.providerFinishedAt !== 'string' ||
+            !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(input.providerFinishedAt))
+          fail('BLOCKSCOUT_PROVIDER_FINISH_TIME_INVALID', 400);
+        finished = Date.parse(input.providerFinishedAt);
+        if (!Number.isSafeInteger(finished) || new Date(finished).toISOString() !== input.providerFinishedAt ||
+            finished < attempt.started_ms || finished > now()) fail('BLOCKSCOUT_PROVIDER_FINISH_TIME_INVALID', 400);
+        if (typeof input.observationId !== 'string' || !/^[0-9a-f-]{36}$/.test(input.observationId))
+          fail('BLOCKSCOUT_RECONCILIATION_OBSERVATION_REQUIRED', 400);
+        const observation = db.prepare('SELECT * FROM attempts WHERE id=?').get(input.observationId);
+        const quota = observation?.quota_json ? JSON.parse(observation.quota_json) : null;
+        if (!observation || observation.id === attempt.id || observation.dispatched !== 1 ||
+            !['provider_succeeded', 'provider_failed'].includes(observation.state) ||
+            !quota || !integer(quota.creditsRemaining) && !integer(quota.rateRemaining) ||
+            !integer(observation.finished_ms) || observation.finished_ms > now())
+          fail('BLOCKSCOUT_RECONCILIATION_OBSERVATION_REQUIRED', 400);
+        if (finished >= observation.started_ms) fail('BLOCKSCOUT_FINISH_BEFORE_OBSERVATION_REQUIRED', 400);
+        const observationSource = { id: observation.id, planSha256: observation.plan_sha,
+          startedAt: observation.started_at, finishedAt: observation.finished_at,
+          upstreamStatus: observation.upstream_status, responseSha256: observation.body_sha, quota };
+        Object.assign(decision, { providerFinishedAt: input.providerFinishedAt, observationId: observation.id,
+          observationSha256: digest(JSON.stringify(observationSource)), observation: observationSource });
+      } else {
+        if (!previous || previous.action !== 'confirm_finished' || input.observationId !== undefined ||
+            input.providerFinishedAt !== undefined) fail('BLOCKSCOUT_RECONCILIATION_REOPEN_INVALID', 400);
+      }
+      db.prepare('INSERT INTO reconciliations(attempt_id,revision,action,provider_finished_ms,json) VALUES(?,?,?,?,?)')
+        .run(attempt.id, decision.revision, decision.action, finished, JSON.stringify(decision));
+      db.exec('COMMIT');
+      return get(attempt.id);
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+  }
+
   function get(id) {
     live();
     if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id)) fail('BLOCKSCOUT_ATTEMPT_ID_INVALID', 400);
     const row = rowView(db.prepare('SELECT ' + COLUMNS + ' FROM attempts WHERE id=?').get(id));
     if (!row) fail('BLOCKSCOUT_ATTEMPT_NOT_FOUND', 404);
+    row.reconciliations = db.prepare('SELECT json FROM reconciliations WHERE attempt_id=? ORDER BY revision').all(id)
+      .map(value => ({ ...JSON.parse(value.json), sha256: digest(value.json) }));
     return row;
   }
   function list({ after = 0, limit = 50, chainId, addressHash } = {}) {
@@ -248,12 +330,17 @@ export async function openProviderAccounting({ directory, plan, now = () => Date
     const last = db.prepare('SELECT ' + COLUMNS + ' FROM attempts ORDER BY sequence DESC LIMIT 1').get();
     const constraints = quotaState(time), quota = constraints.latest;
     const states = db.prepare('SELECT state,COUNT(*) AS count FROM attempts GROUP BY state').all();
+    const unresolved = db.prepare("SELECT COUNT(*) AS n FROM attempts a WHERE a.state='outcome_unknown' AND " +
+      "COALESCE((SELECT action FROM reconciliations WHERE attempt_id=a.id ORDER BY revision DESC LIMIT 1),'reopen')<>'confirm_finished'").get().n;
+    const unknown = states.find(row => row.state === 'outcome_unknown')?.count ?? 0;
     return { schema: SCHEMA, accountAlias: plan.accountAlias, planSha256: planId, capturedAt: new Date(time).toISOString(),
       contract: 'blockscout-pro-token-detail-2026-10-11', limits: { ...limits }, day: usage.day,
       localUsage: { attempts: usage.today.attempts, configuredCredits: usage.today.credits, lastSecondAttempts: usage.second },
       retention: { records: usage.stored.records, bodyBytes: usage.stored.bytes, inProgress: usage.stored.pending },
       states: Object.fromEntries(states.map(row => [row.state, row.count])), admission: admission(time),
-      providerQuota: quota ? { observedAt: quota.finished_at, ageMs: Math.max(0, time - Date.parse(quota.finished_at)),
+      reconciliation: { unresolved, resolved: unknown - unresolved,
+        decisions: db.prepare('SELECT COUNT(*) AS n FROM reconciliations').get().n },
+      providerQuota: quota ? { observationId: quota.id, startedAt: quota.started_at, observedAt: quota.finished_at, ageMs: Math.max(0, time - Date.parse(quota.finished_at)),
         fresh: time >= quota.finished_ms && time - quota.finished_ms < limits.quotaFreshnessMs, ...JSON.parse(quota.quota_json) } : null,
       quotaEstimates: { credits: constraints.credits, requests: constraints.requests },
       latest: rowView(last) };
@@ -282,7 +369,7 @@ export async function openProviderAccounting({ directory, plan, now = () => Date
     exports.add(work); work.finally(() => exports.delete(work)).catch(() => {});
     return work;
   }
-  return Object.freeze({ directory, planSha256: planId, admission, begin, finish, get, list, response, snapshot, backup,
+  return Object.freeze({ directory, planSha256: planId, admission, begin, finish, get, list, response, snapshot, backup, reconcile,
     close() {
       if (!closing) {
         closed = true;
