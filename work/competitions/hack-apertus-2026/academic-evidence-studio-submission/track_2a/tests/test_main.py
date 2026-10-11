@@ -39,6 +39,42 @@ class Track2ATests(unittest.TestCase):
         parsed = main.parse_model_json('```json\n{"label":2,"evidence":[]}\n```')
         self.assertEqual(parsed["label"], 2)
 
+    @unittest.skipIf(main.fitz is None, "PyMuPDF unavailable")
+    def test_task_a_extracts_one_based_pdf_pages(self):
+        with tempfile.TemporaryDirectory() as root:
+            data_root = Path(root)
+            input_path = data_root / "cases.jsonl"
+            input_path.write_text("", encoding="utf-8")
+            pdf_path = data_root / "booklet.pdf"
+            document = main.fitz.open()
+            first = document.new_page()
+            first.insert_text((72, 72), "First official page")
+            second = document.new_page()
+            second.insert_text((72, 72), "Second official page")
+            document.save(pdf_path)
+            document.close()
+            task, passages = main.case_passages(
+                {"booklet": {"path": "booklet.pdf", "language": "en"}},
+                input_path,
+                data_root,
+            )
+            self.assertEqual(task, "A")
+            self.assertEqual([passage.page for passage in passages], [1, 2])
+            self.assertIn("Second official page", passages[1].text)
+
+    def test_task_b_reference_contract(self):
+        with tempfile.TemporaryDirectory() as root:
+            data_root = Path(root)
+            input_path = data_root / "cases.jsonl"
+            input_path.write_text("", encoding="utf-8")
+            task, passages = main.case_passages(
+                {"reference": {"text": "Official supplied paragraph", "language": "en"}},
+                input_path,
+                data_root,
+            )
+            self.assertEqual((task, passages[0].page), ("B", None))
+            self.assertEqual(passages[0].text, "Official supplied paragraph")
+
 
 if __name__ == "__main__":
     unittest.main()
