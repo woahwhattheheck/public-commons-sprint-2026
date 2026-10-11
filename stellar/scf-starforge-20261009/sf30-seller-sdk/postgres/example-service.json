@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "routes": [
+    {
+      "id": "catalog",
+      "path": "/catalog",
+      "handler": "catalogQuery",
+      "admit": "admitCatalog",
+      "definition": {
+        "method": "GET",
+        "serviceName": "PostgreSQL Catalog API",
+        "description": "A page of selected catalog data using explicit keyset pagination",
+        "queryParameters": [
+          { "name": "region", "type": "string", "description": "Approved catalog region", "required": true, "example": "north" },
+          { "name": "after_id", "type": "string", "description": "Last seen integer record ID, or zero for the first page", "required": false, "example": "0" }
+        ],
+        "payment": {
+          "scheme": "exact", "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000", "maxTimeoutSeconds": 60
+        }
+      }
+    }
+  ]
+}
