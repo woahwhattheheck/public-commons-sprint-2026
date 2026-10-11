@@ -82,7 +82,8 @@ export function createMerchantCases(imported, service, plan) {
       pathParams: structuredClone(offer.extensions.bazaar.info.input.pathParams ?? {}),
       ...(request.body !== undefined ? { body: JSON.parse(request.body) } : {}) };
     const decision = createLiveRequestAdmission(offer)(context);
-    if (decision !== true) fail(request.route.method + ' ' + plan.operations[index].path + ': request example violates the original input schema (' + decision.body.error + ')');
+    if (decision !== true) fail(request.route.method + ' ' + plan.operations[index].path + ': request example violates the original input schema (' +
+      [decision.body.error, ...(decision.body.issues ?? [])].join('; ') + ')');
     return { id: request.route.id, method: request.route.method, state: 'READY', path: request.path };
   });
   if (Buffer.byteLength(JSON.stringify(cases)) > 65536) fail('Combined route-check cases exceed the original 64 KiB limit');
