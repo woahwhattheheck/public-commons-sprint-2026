@@ -43,6 +43,7 @@
     "stellar/scf-starforge-20261009/sf33-failure-contract",
     "stellar/scf-starforge-20261009/merchant-fleet-gateway",
     "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops",
+    "stellar/scf-starforge-20261009/buyer-runbook",
     "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter"
   ],
   "supportFiles": [
@@ -117,6 +118,7 @@
     "python-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs",
     "revenue-report": "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
     "openapi-workspace": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+    "buyer-runbook": "stellar/scf-starforge-20261009/buyer-runbook/cli.mjs",
     "cube-workspace": "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/workspace/server.mjs",
     "cube-onboard": "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/onboarding/cli.mjs"
   },
@@ -128,6 +130,10 @@
     "./seller/asset-bundles": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/asset-cli.mjs",
     "./seller/http": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/resource-server.mjs",
     "./seller/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/native-factory.mjs",
+    "./seller/embedded": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.mjs"
+    },
     "./seller/operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/operations/server.mjs",
     "./buyer": {
       "types": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/buyer.d.ts",
@@ -187,6 +193,8 @@
     "./seller/python/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/config.mjs",
     "./merchant/revenue-report": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
     "./seller/openapi/workspace": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+    "./buyer/runbook": "./source/stellar/scf-starforge-20261009/buyer-runbook/runbook.mjs",
+    "./buyer/runbook-workspace": "./source/stellar/scf-starforge-20261009/buyer-runbook/workspace.mjs",
     "./seller/cube/workspace": "./source/stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/workspace/server.mjs"
   },
   "nativePeers": {

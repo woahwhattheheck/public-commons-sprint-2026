@@ -10,6 +10,8 @@ const USAGE = `Buyer runbook — compose original SF88 operations
   node cli.mjs execute --run /absolute/existing-run [--only JOB_ID]
   node cli.mjs recover --run /absolute/existing-run
   node cli.mjs unlock --run /absolute/existing-run --owner-pid PID
+  node cli.mjs workspace --state /absolute/private-workspace --configs /absolute/buyer-configs
+                        [--run /absolute/existing-run] [--port 8460]
 
 init snapshots explicit complete SF88 configs and request bodies without loading
 a signer or making a network call. Optional saveAs names reserve a download path
@@ -18,6 +20,9 @@ controlling-terminal approval. Only previously untouched jobs are executed.
 recover imports complete retained original output and never starts a buyer.
 status rewrites only derived status.json/report.html, not plans or attempts.
 unlock releases an exact dead local process lease; it preserves every attempt.
+workspace opens the private browser planner and original run controls. Start it
+in the same controlling terminal used for SF81 approval. Existing workspaces can
+omit --configs to reuse their saved source directory.
 `;
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 function options(args, names) {
@@ -39,6 +44,22 @@ function compact({state, reportPath, statusPath}) {
 export async function main(args = process.argv.slice(2)) {
   const [command, ...tail] = args;
   if (!command || command === '--help' || command === 'help') { process.stdout.write(USAGE); return; }
+  if (command === 'workspace') {
+    const opts = options(tail, ['--state','--configs','--run','--port']);
+    need(opts['--state'], 'WORKSPACE_STATE_DIRECTORY_REQUIRED');
+    const {startRunbookWorkspace} = await import('./workspace.mjs');
+    const service = await startRunbookWorkspace({directory:opts['--state'], configsDirectory:opts['--configs'],
+      runs:opts['--run'] ? [opts['--run']] : [], port:Number(opts['--port'] ?? 8460)});
+    const state = await service.model.state();
+    print({mode:'BUYER_RUNBOOK_WORKSPACE', url:service.url, directory:service.model.directory,
+      terminalAvailable:state.terminalAvailable});
+    let stopping;
+    const stop = code => { stopping ??= service.close().then(() => {process.exitCode = code;}, error => {
+      process.stderr.write(JSON.stringify({error:error.code ?? 'WORKSPACE_SHUTDOWN_FAILED'}) + '\n'); process.exitCode = 1;
+    }); };
+    process.once('SIGINT',() => stop(130)); process.once('SIGTERM',() => stop(143));
+    return;
+  }
   if (command === 'init') {
     const opts = options(tail, ['--manifest','--out']);
     need(opts['--manifest'] && opts['--out'], 'MANIFEST_AND_OUTPUT_REQUIRED');

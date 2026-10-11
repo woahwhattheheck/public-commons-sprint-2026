@@ -165,6 +165,7 @@ or automatically retry a request.
 | `starforge catalog-withdrawal` | Prepare, sign and apply an existing seller withdrawal |
 | `starforge checkout` / `purchase` | Enroll a private merchant file, prepare its order-bound purchase and retrieve delivery |
 | `starforge buyer-object` | Prepare an object acquisition, retain chunks, resume and assemble the complete file |
+| `starforge buyer-runbook` | Arrange revisioned acquisition plans, operate the original buyer and retain delivered resources |
 | `starforge merchant-fleet` / `merchant-fleet-control` | Serve multiple merchants and prepare, activate or roll back their routing |
 | `starforge merchant-fleet-workspace` | Review serving and proposed fleet configurations in a private browser |
 | `starforge revenue-workspace` / `revenue-report` | Review pricing, original merchant traffic and the existing native journal |
@@ -324,6 +325,66 @@ npx --no-install starforge paid-file-purchase inspect --handoff /private/custome
 The original checkout guide supplies the native facilitator, authenticated SF98
 delivery and existing receiver configuration for actual payment and file release.
 The desk's order view does not infer settlement or payment from enrollment.
+
+## Operate a multi-resource buyer runbook
+
+The installed runbook combines selected original SF88 configurations into one
+private acquisition. Keep the complete configurations in a dedicated private
+directory on the existing operator host, preserving their native policy, ledger,
+request-body, evidence and signer references. Each selected operation retains its
+own stable native intent ID. The state directory's parent and configuration
+directory must already exist at canonical absolute paths; private directories
+use `0700` on POSIX systems.
+
+Start the workspace from the controlling terminal used for native buyer approval:
+
+```sh
+npx --no-install starforge buyer-runbook workspace \
+  --state /private/acquisitions/workspace \
+  --configs /private/acquisitions/buyer-configs \
+  --port 8460
+```
+
+Open the printed loopback URL. Use **New acquisition plan** to select and order
+1–64 original configurations, assign operation IDs and optional saved filenames,
+then **Save and review draft**. Each saved revision retains the exact native
+request and terms, body hash and per-network/asset totals. **Initialize
+acquisition** freezes the reviewed plan and copies its original private inputs.
+If an input changes after review, save a new draft revision before initializing.
+
+**Execute untouched operations** runs the original native buyer serially. Continue
+its approval in the launching terminal. The workspace displays progress, original
+outcomes and delivered files. **Cancel current execution** drains the current
+owned native attempt and stops launching further work. **Recover retained
+output** imports the original saved result. The acquisition preserves earlier
+attempts when resumed. Saved resources, current state and the original HTML
+report are downloadable from the same page.
+
+Reopen using the same state directory; its configuration directory is retained.
+An existing original runbook can also be registered in that workspace:
+
+```sh
+npx --no-install starforge buyer-runbook workspace \
+  --state /private/acquisitions/workspace \
+  --run /private/acquisitions/earlier-run
+```
+
+The registered run remains at its original path and stays available on later
+restarts. Original terminal operations remain available through
+`starforge buyer-runbook init`, `status`, `execute`, `recover` and `unlock`.
+`starforge buyer-runbook --help` describes their exact options. Keep the private
+state and original native configuration outside the installed software so
+upgrading the package reopens the same acquisitions.
+
+Applications can import the original runbook API from
+`@tokenjunkielabs/starforge-merchant/buyer/runbook` and
+`startRunbookWorkspace` from
+`@tokenjunkielabs/starforge-merchant/buyer/runbook-workspace`. The workspace
+accepts `{directory, configsDirectory, runs, port}` and returns
+`{url, server, model, close}`. The packaged
+`source/stellar/scf-starforge-20261009/buyer-runbook/WORKSPACE.md` describes the
+complete native workflow and lifecycle. Its model, server and all browser assets
+are included at their original relative paths.
 
 ## Run a merchant-issued operation
 
@@ -775,6 +836,70 @@ preview interface. The `./seller/python` and `./seller/python/config` package
 subpaths expose the same runtime and configuration functions to applications.
 
 ## Embed in an application
+
+### Add a merchant to an existing Node or Express application
+
+The `@tokenjunkielabs/starforge-merchant/seller/embedded` package entry exposes
+the original SF30 seller as Node, Connect or Express middleware, with TypeScript
+declarations. The host application keeps its listener, authentication, free
+endpoints and process lifecycle. It uses the same compiled offers, original
+facilitator client and paid handlers as the standalone seller.
+
+```js
+import { createEmbeddedSeller } from
+  '@tokenjunkielabs/starforge-merchant/seller/embedded';
+import { createNativeSellerServer } from
+  '@tokenjunkielabs/starforge-merchant/seller/native';
+
+const merchant = await createEmbeddedSeller({
+  routes: applicationPaidRoutes,
+  nativeFactory: compiled => createNativeSellerServer(compiled, {
+    facilitatorClient: applicationFacilitatorClient,
+  }),
+  contextFromRequest: req => ({ account: req.account }),
+  maxInFlight: 32,
+  drainGraceMs: 60000,
+});
+
+app.use(existingAuthentication); // Complete authentication without parsing the body.
+app.use(merchant.middleware);
+app.use(express.json());
+app.use(existingApplicationRoutes);
+```
+
+`applicationPaidRoutes` is the application's original SF30 route list: each route
+has an `id`, a complete `offer` or `definition`, and its existing `handler` plus
+optional readiness `admit`. The original handler receives the request's method,
+URL, query, body, path parameters, headers, signal and deadline. It executes the
+application operation through the original native payment workflow. Existing
+API-key authentication, entitlements and current quote policy remain in the
+host's chosen request path. Mount the seller before body parsers for paid paths;
+unknown paths continue through the application's existing middleware.
+
+`getEmbeddedRequestContext()` from the same package entry returns the explicitly
+selected account/context throughout asynchronous admission and handler work.
+An Express mount preserves the complete `originalUrl`, including its query.
+Configured paid paths retain ownership across wrong-method and equivalent-path
+requests. The original merchant explorer, OpenAPI, client downloads, health,
+offers and readiness remain available under `/_seller`.
+
+A plain Node server can `await merchant.handle(req, res)` and continue to its
+existing handler when it returns `false`. `await merchant.close()` drains this
+merchant while the host's listener and other routes stay available. Observe its
+original drain error and close the host listener in the application's own
+shutdown handler when the entire application should exit.
+
+Run the packaged example without installing Express or another payment engine:
+
+```sh
+node ./node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/example-node.mjs
+```
+
+The example serves `/health`, the original `/api/dataset` challenge and
+`/_seller/docs` from one listener. The installed `sf30-seller-sdk/embedded/README.md`
+contains the complete native facilitator, mount-path, request-context and drain
+guide. Node 22.16+ is required; native execution uses the existing optional
+dependencies described above.
 
 ### Optional Python buyer applications
 
