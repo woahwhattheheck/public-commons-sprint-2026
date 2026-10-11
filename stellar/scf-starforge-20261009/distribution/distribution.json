@@ -281,7 +281,9 @@
     "research-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs",
     "webhook-feed": "stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/cli.mjs",
     "buyer-event-feed": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/cli.mjs",
-    "usgs-water": "stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/cli.mjs"
+    "usgs-water": "stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/cli.mjs",
+    "ckan": "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/cli.mjs",
+    "ckan-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -578,7 +580,14 @@
     "./seller/usgs-water/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/provider.mjs",
     "./seller/usgs-water/analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/analysis.mjs",
     "./seller/usgs-water/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/project.mjs",
-    "./seller/usgs-water/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/workspace.mjs"
+    "./seller/usgs-water/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/workspace.mjs",
+    "./seller/ckan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/source.mjs",
+    "./seller/ckan/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/capture.mjs",
+    "./seller/ckan/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/declaration.mjs",
+    "./seller/ckan/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/server.mjs",
+    "./seller/ckan/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/model.mjs",
+    "./seller/ckan/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/model.mjs",
+    "./seller/ckan/publisher/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/release.mjs"
   },
   "nativePeers": {
     "@x402/core": {

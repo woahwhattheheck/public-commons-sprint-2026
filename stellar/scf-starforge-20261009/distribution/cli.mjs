@@ -91,6 +91,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
   sheets-source                              Capture, inspect and prepare selected Google Sheets columns
   sheets-publisher                           Review and publish retained Sheet observations as datasets
+  ckan                                       Discover, capture and operate retained CKAN data merchants
+  ckan-publisher                             Review and publish complete DataStore editions and buyer handoffs
   mongodb                                    Inspect, author and operate fixed native BSON reports
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
   mongodb-publisher                          Publish complete reviewed BSON snapshots and retained refreshes
