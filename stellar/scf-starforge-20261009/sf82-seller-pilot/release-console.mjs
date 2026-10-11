@@ -8,6 +8,7 @@ import { readReleaseState, compareReleases, activateRelease, rollbackRelease,
 import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 import { releaseCatalogStatus, reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
 import { createReleaseDiscoveryConsole } from './release-discovery-console.mjs';
+import { reviewPostgresSelection, stageReviewedPostgresRelease } from './release-postgres-control.mjs';
 import { createReleaseFacilitatorControl } from './release-facilitator.mjs';
 import { createReleaseClientConsole } from './release-client.mjs';
 
@@ -37,6 +38,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
+    ['/postgres.mjs', 'postgres.mjs', 'text/javascript; charset=utf-8'],
     ['/facilitator.mjs', 'facilitator.mjs', 'text/javascript; charset=utf-8'],
     ['/client.mjs', 'client.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
@@ -115,7 +117,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       }
       if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate', '/api/catalog/review', '/api/catalog/apply',
         '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop',
-        '/api/facilitator/review', '/api/facilitator/stage', '/api/clients/generate', '/api/clients/adopt'].includes(target.pathname) || target.search)
+        '/api/postgres/review', '/api/postgres/stage', '/api/facilitator/review', '/api/facilitator/stage', '/api/clients/generate', '/api/clients/adopt'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
       if (!req.headers.origin || !origins.has(req.headers.origin)) throw failure('Same-origin operator action required.', 403);
       if (busy || stopping) throw failure('An operator action is already running. Refresh when it completes.', 409);
@@ -126,7 +128,12 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       actionDone = new Promise(done => { finishAction = done; });
       try {
         lastError = null;
-        if (target.pathname.startsWith('/api/facilitator/')) {
+        if (target.pathname === '/api/postgres/review') {
+          send(200, await reviewPostgresSelection(input)); return;
+        } else if (target.pathname === '/api/postgres/stage') {
+          const result = await stageReviewedPostgresRelease(root, input);
+          busy = false; send(200, { ...result, status: await status() }); return;
+        } else if (target.pathname.startsWith('/api/facilitator/')) {
           const action = target.pathname.slice('/api/facilitator/'.length);
           send(200, await facilitator[action](input)); return;
         } else if (target.pathname.startsWith('/api/clients/')) {
