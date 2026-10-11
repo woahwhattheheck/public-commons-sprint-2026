@@ -1,5 +1,7 @@
 // MIT. Local merchant workspace. Original modules own all diagnostic and workorder decisions.
 import {mountTermsEditor} from './terms-editor.mjs';
+import {mountWorkspaceFiles} from './workspace-files.mjs';
+import {decodeSource, sourceDigest} from './workspace-file.mjs';
 
 const $ = id => document.getElementById(id);
 const form = $('intake-form');
@@ -8,7 +10,7 @@ const files = [
   ['postBefore', 'post-before-source'], ['postAfter', 'post-after-source'],
 ];
 const retained = new Map();
-let latest = null, latestBytes = null, intakeRevision = 0;
+let latest = null, latestBytes = null, intakeRevision = 0, intakeOperation = 0;
 let postBytes = null, postRevision = 0, postAbort = null;
 let comparisonBytes = null, comparisonRevision = 0, comparisonAbort = null;
 let workorder = null, workorderRevision = 0, workorderAbort = null;
@@ -27,7 +29,7 @@ const titles = {
   POST_OPTIONS_READY_CHALLENGE_UNCHECKED: 'POST browser access is ready; checkout is unchecked',
   INCOMPLETE_EVIDENCE: 'More information is needed to review the repair',
 };
-const titleFor = code => titles[code] || 'Review the source result';
+const titleFor = code => Object.hasOwn(titles, code) ? titles[code] : 'Review the source result';
 const modeLabel = value => value === true ? 'Required' : value === false ? 'Not required' : 'Unconfirmed';
 const dateLabel = value => Number.isFinite(Date.parse(value))
   ? new Date(value).toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'medium'}) : 'Time not recorded';
@@ -86,9 +88,9 @@ async function request(path, payload, signal) {
   return data;
 }
 
-function showIntake(report) {
+function showIntake(report, originalText = JSON.stringify(report, null, 2) + '\n') {
   latest = report;
-  latestBytes = JSON.stringify(report, null, 2) + '\n';
+  latestBytes = originalText;
   $('output').hidden = false;
   $('raw-report').textContent = latestBytes;
   $('copy').disabled = false;
@@ -123,7 +125,7 @@ form.addEventListener('input', () => {
 });
 form.addEventListener('submit', async event => {
   event.preventDefault();
-  const revision = ++intakeRevision;
+  const revision = ++intakeRevision, operation = ++intakeOperation;
   clearPreflight();
   $('run').disabled = true;
   for (const id of ['copy', 'download-intake', 'use-before', 'use-after']) $(id).disabled = true;
@@ -144,7 +146,7 @@ form.addEventListener('submit', async event => {
   } catch (error) {
     if (revision !== intakeRevision) return;
     message('status', 'Diagnosis unavailable: ' + String(error.message).slice(0, 280), 'error');
-  } finally { $('run').disabled = false; }
+  } finally { if (operation === intakeOperation) $('run').disabled = false; }
 });
 $('copy').addEventListener('click', async () => {
   if (!latestBytes) return;
@@ -171,6 +173,16 @@ function preparePreflight(report) {
     report.scope.buyerOrigin + ' · Browser credentials: ' + modeLabel(report.scope.browserCredentialed);
   message('post-status', 'Review the captured target and authorize its separate OPTIONS-only check.');
 }
+function showPreflight(report, originalText = JSON.stringify(report, null, 2) + '\n') {
+    postBytes = originalText;
+    $('raw-post').textContent = postBytes;
+    $('post-outcome').textContent = titleFor(report.status);
+    findingList($('post-findings'), report.findings, report.eligibility.ok
+      ? 'No browser-policy findings. The POST payment challenge remains unchecked.' : report.eligibility.reason);
+    $('post-limits').textContent = report.limitations;
+    $('post-output').hidden = false;
+    $('download-post').disabled = false;
+}
 $('post-form').addEventListener('submit', async event => {
   event.preventDefault();
   if (!latestBytes || !$('post-permission').checked || $('post-run').disabled) return;
@@ -190,14 +202,7 @@ $('post-form').addEventListener('submit', async event => {
     if (revision !== postRevision || source !== latestBytes) return;
     const report = data.report;
     if (report?.schema !== 'stellar-forge.post-only-browser-preflight.v1') throw new Error('The original browser check was not returned');
-    postBytes = JSON.stringify(report, null, 2) + '\n';
-    $('raw-post').textContent = postBytes;
-    $('post-outcome').textContent = titleFor(report.status);
-    findingList($('post-findings'), report.findings, report.eligibility.ok
-      ? 'No browser-policy findings. The POST payment challenge remains unchecked.' : report.eligibility.reason);
-    $('post-limits').textContent = report.limitations;
-    $('post-output').hidden = false;
-    $('download-post').disabled = false;
+    showPreflight(report);
     message('post-status', 'Browser check complete · ' + report.operations.OPTIONS +
       ' OPTIONS request(s). Use this capture as before or after to include the check.', 'good');
   } catch (error) {
@@ -450,3 +455,115 @@ $('download-workorder-json').addEventListener('click', () => {
   if (workorder) download(JSON.stringify(workorder.packet, null, 2) + '\n', 'merchant-workorder.json');
 });
 syncSources();
+
+
+// Portable cases compose the current console; no new backend or diagnostic engine.
+const emptyTermsDraft = termsEditor.readDraft();
+const workspaceRoot = document.createElement('div');
+$('diagnose').before(workspaceRoot);
+const sourceText = value => new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(decodeSource(value));
+const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+function checkDisplayReport(report, kind) {
+  const text = value => typeof value === 'string';
+  if (!isRecord(report) || !Array.isArray(report.findings) ||
+      report.findings.some(item => !isRecord(item) || !['severity','code','action'].every(key => text(item[key]))))
+    throw new Error('The saved '+kind+' display is incomplete.');
+  if (kind === 'diagnosis') {
+    if (!isRecord(report.scope) || !text(report.state) || !text(report.observedAt) ||
+        !['resource','catalog','buyerOrigin','network','payTo','intendedRetryMethod'].every(key => text(report.scope[key])) ||
+        (report.scope.browserCredentialed !== undefined && typeof report.scope.browserCredentialed !== 'boolean') ||
+        (report.safeguards !== undefined && (!isRecord(report.safeguards) ||
+          ['paidRequests','walletCalls'].some(key => report.safeguards[key] !== undefined && typeof report.safeguards[key] !== 'number'))))
+      throw new Error('The saved diagnosis display is incomplete.');
+  } else if (!text(report.status) || !text(report.limitations) || !isRecord(report.eligibility) ||
+      typeof report.eligibility.ok !== 'boolean' || (report.eligibility.reason !== undefined && !text(report.eligibility.reason)) ||
+      !isRecord(report.operations) || !Number.isSafeInteger(report.operations.OPTIONS)) {
+    throw new Error('The saved browser check display is incomplete.');
+  }
+}
+
+async function readCase() {
+  if (termsImportPending) throw new Error('Finish importing the selected terms file before saving the case.');
+  // Snapshot everything before the first await; file selections may change during encoding.
+  const inputs = Object.fromEntries(new FormData(form).entries());
+  inputs.credentialed = $('credentialed').checked;
+  const termsText = JSON.stringify({schema: 'stellar-forge.merchant-terms-draft.v1', values: termsEditor.readDraft()});
+  const baselineOnly = $('workorder-baseline-only').checked;
+  const current = latestBytes, browser = postBytes;
+  const selected = files.map(([field]) => [field, selectedSource(field)]);
+  const sources = Object.fromEntries(await Promise.all(selected.map(async ([field, file]) =>
+    [field, file ? await encodedFile(file) : null])));
+  sources.intake = current ? encodeBytes(new TextEncoder().encode(current)) : null;
+  sources.preflight = browser ? encodeBytes(new TextEncoder().encode(browser)) : null;
+  return {inputs, sources, termsText, baselineOnly};
+}
+async function applyCase(state) {
+  // Complete structural/representability checks before touching the current editor.
+  const terms = state.termsText ? JSON.parse(state.termsText) :
+    {schema: 'stellar-forge.merchant-terms-draft.v1', values: emptyTermsDraft};
+  if (!isRecord(terms) || terms.schema !== 'stellar-forge.merchant-terms-draft.v1' ||
+      Object.keys(terms).some(key => !['schema', 'values'].includes(key))) throw new Error('Unsupported terms draft version.');
+  termsEditor.validateDraft(terms.values);
+  for (const [key, value] of Object.entries(state.inputs)) {
+    if (key === 'credentialed') continue;
+    const field = form.elements.namedItem(key), probe = field.cloneNode(true);
+    probe.value = value;
+    if (probe.value !== value || (field.maxLength > 0 && value.length > field.maxLength))
+      throw new Error('The saved '+key+' cannot be represented in this console.');
+  }
+  const currentText = state.sources.intake ? sourceText(state.sources.intake) : null;
+  const browserText = state.sources.preflight ? sourceText(state.sources.preflight) : null;
+  const current = currentText ? JSON.parse(currentText) : null;
+  const browser = browserText ? JSON.parse(browserText) : null;
+  if (current) checkDisplayReport(current, 'diagnosis');
+  if (browser) {
+    checkDisplayReport(browser, 'browser check');
+    if (!current || browser.source?.intakeSha256 !== await sourceDigest(decodeSource(state.sources.intake)))
+      throw new Error('The saved browser check is not bound to the current diagnosis bytes.');
+  }
+  const selections = files.map(([field]) => {
+    const encoded = state.sources[field];
+    if (!encoded) return [field, null];
+    const bytes = decodeSource(encoded), report = JSON.parse(sourceText(encoded));
+    if (report.observedAt !== undefined && typeof report.observedAt !== 'string')
+      throw new Error('The saved '+field+' observation time must be text.');
+    return [field, {file: new File([bytes], 'merchant-'+field+'.json', {type: 'application/json'}),
+      observedAt: report.observedAt}];
+  });
+  // Retire all previous result owners before replacing case state. No request is made here.
+  intakeRevision++; intakeOperation++; clearPreflight(); invalidateComparison(); invalidateWorkorder();
+  termsImportRevision++; termsImportPending = false; $('terms-file').value = '';
+  for (const [field] of files) clearSource(field);
+  latest = null; latestBytes = null; $('output').hidden = true;
+  $('raw-report').textContent = ''; $('raw-post').textContent = '';
+  for (const id of ['copy','download-intake','use-before','use-after']) $(id).disabled = true;
+  $('run').disabled = false;
+  for (const [key,value] of Object.entries(state.inputs)) {
+    if (key === 'credentialed') $('credentialed').checked = value;
+    else form.elements.namedItem(key).value = value;
+  }
+  $('permission').checked = false; $('post-permission').checked = false;
+  $('workorder-baseline-only').checked = state.baselineOnly;
+  termsEditor.loadDraft(terms.values);
+  for (const [field, value] of selections) if (value) retained.set(field, value);
+  if (current) {
+    showIntake(current, currentText);
+    if (browser) showPreflight(browser, browserText);
+    const scope = current.scope;
+    const matches = [['resource','resource'],['catalog','catalog'],['origin','buyerOrigin'],
+      ['network','network'],['payTo','payTo'],['method','intendedRetryMethod']]
+      .every(([input, source]) => state.inputs[input] === scope[source]) &&
+      state.inputs.credentialed === scope.browserCredentialed;
+    // A saved old capture must not be promoted to a fresh diagnosis of edited inputs.
+    for (const id of ['use-before','use-after','post-run']) $(id).disabled = !matches;
+    $('capture-selection-status').textContent = matches
+      ? 'Restored original capture. It may be selected as before or after; it was not recaptured.'
+      : 'Restored earlier capture. Route settings differ; selected saved sources remain available below.';
+  }
+  syncSources();
+  message('status', 'Saved case restored. Choose Run diagnosis only when you intend another probe.');
+  message('post-status', 'Saved browser results are historical. A new check needs its own explicit authorization.');
+  $('terms-file-status').textContent = 'Restored raw draft fields, including existing recorded terms. Original workorder validation still applies.';
+  document.querySelector('footer').textContent = 'Merchant workspace · Save case file retains this session for later. Downloads contain private business data.';
+}
+mountWorkspaceFiles({root: workspaceRoot, readState: readCase, applyState: applyCase});
