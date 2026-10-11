@@ -3,7 +3,9 @@
 Operate the existing Starforge merchant release system from an MCP client. This
 interface takes a prepared merchant API through staging, exact price and route
 comparison, activation, original seller startup, customer SDK export, rollback
-and graceful shutdown. The tools use the original SF82 release store, SF61
+and graceful shutdown. The same operator opens retained merchant incidents and
+support cases, records owner delivery terms, and exports the original workorder.
+The tools use the original SF82 release store, SF61
 OpenAPI compiler, original SF30 Python merchant, SF30 seller and customer SDK exporter. The MCP endpoint reuses
 the same authenticated HTTP transport as the existing SF32 buyer bridge.
 
@@ -11,8 +13,9 @@ The seller runs on the operator's Linux or POSIX host. This starts the configure
 merchant service; a reverse proxy or deployment remains the host's existing
 configuration. Native payments use the original seller's configured facilitator
 and trusted application. The MCP tools never request a paid resource or accept
-wallet keys, handler paths, arbitrary file paths, URLs or payment overrides as
-tool arguments.
+wallet keys, handler paths, arbitrary file paths, target URLs or payment overrides
+as tool arguments. Owner-entered support terms may reference their existing
+consent and proposal records; those URLs are retained as text and never fetched.
 
 ## Operate a retained merchant fleet
 
@@ -216,6 +219,18 @@ polling. The host keeps the command running and closes it with SIGINT/SIGTERM.
 The same command is available as `starforge merchant-mcp init ...` and
 `starforge merchant-mcp serve ...` in the distribution. The original buyer MCP
 workspace remains separate and uses its existing approval, budget and signer.
+
+## Retained merchant support
+
+Add the host's existing incident/case directories and retained input aliases through
+`--support SUPPORT_CONNECTION_JSON` at initialization, or `supportConnection` in
+the existing configuration. The original MCP provider then exposes incident
+inspection/acknowledgment, case import/reopening/history, owner terms, workorder
+preparation and private exports. These use the same original SF93/SF74/SF77 engines
+and case directory as the support console. Follow the complete
+[support and workorder workflow](./SUPPORT.md) for source/revision selection,
+console interoperability, export recovery and host setup. It starts no watcher,
+seller or payment run.
 
 ## Complete operator workflow
 

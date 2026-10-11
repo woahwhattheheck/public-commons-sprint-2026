@@ -9,6 +9,7 @@ import { exact, failure, identifier, line, writePrivate, readMerchantConfig, ins
 import { MerchantDiscovery, discoveryTools } from './discovery.mjs';
 import { cacheControlTools, merchantCacheStatus, merchantCacheInvalidate } from './controls.mjs';
 import { MerchantFleet, fleetControlTools } from './fleet.mjs';
+import { MerchantSupport, supportTools } from './support.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const idSchema = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
@@ -46,6 +47,7 @@ export const MERCHANT_TOOLS = [
   ...discoveryTools(tool),
   ...cacheControlTools(tool),
   ...fleetControlTools(tool),
+  ...supportTools(tool),
 ];
 const definitions = new Map(MERCHANT_TOOLS.map(value => [value.name, value]));
 const mutations = new Set(MERCHANT_TOOLS.filter(value => !value.annotations.readOnlyHint).map(value => value.name));
@@ -90,8 +92,8 @@ async function originalJson(url, maximum = 16 * 1024 * 1024) {
 }
 
 export class MerchantReleaseOperator {
-  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet;
-  constructor(config) { this.#config = config; this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); }
+  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #support;
+  constructor(config) { this.#config = config; this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#support = new MerchantSupport(config); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
@@ -99,7 +101,7 @@ export class MerchantReleaseOperator {
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary } };
+        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, support: this.#support.summary } };
   }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
@@ -148,6 +150,8 @@ export class MerchantReleaseOperator {
   async #execute(name, args) {
     if (name.startsWith('merchant_fleet_')) return this.#fleet.call(name, args);
     const root = this.#config.releaseStore;
+    if (name.startsWith('merchant_case') || name.startsWith('merchant_incident') || name.startsWith('merchant_support_'))
+      return this.#support.call(name, args);
     switch (name) {
       case 'merchant_status': return this.status();
       case 'merchant_sources': return this.#sources(args.source);
