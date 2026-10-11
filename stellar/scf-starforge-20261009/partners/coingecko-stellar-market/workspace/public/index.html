@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Starforge · CoinGecko market operations</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
+<body>
+<header class="masthead"><div class="brand"><strong>Starforge</strong><span>Market operations</span></div><div class="workspace-controls"><label><span>Operator</span><input id="operator-name" type="text" autocomplete="name" placeholder="Your name"></label><label><span>Project</span><select id="project-select"><option value="">Loading projects…</option></select></label><button type="button" data-action="new-project">New project</button><button type="button" data-action="restore">Restore project</button></div></header>
+<div class="app-layout"><aside><p class="eyebrow">CoinGecko data</p><nav id="navigation" aria-label="Workspace navigation"></nav><p id="project-context"></p></aside><main id="main" aria-live="polite"><p>Opening market operations…</p></main></div>
+<dialog id="dialog" aria-labelledby="dialog-title"></dialog><div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body></html>
