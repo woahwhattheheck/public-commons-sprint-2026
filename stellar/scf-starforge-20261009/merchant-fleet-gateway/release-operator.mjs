@@ -11,6 +11,7 @@ import { startMerchantFleet, loadMerchantFleet } from './gateway.mjs';
 import { fleetControl } from './control.mjs';
 import { acquireStateLease } from './state-lease.mjs';
 import { openRolloutState } from './rollout-state.mjs';
+import { describeFleetOperations, readFleetOperations, validateFleetNavigationOrigin } from './release-operations.mjs';
 
 const SCHEMA = 'stellar-forge.fleet-release-plan.v1';
 const JOURNAL = 'stellar-forge.fleet-release-links.v1';
@@ -181,7 +182,9 @@ function portUse(native, port) {
 }
 
 /** Same-process lifecycle object. Native modules retain their source and process ownership. */
-export async function openFleetReleaseOperator({ planFile, directory, gatewayStateDirectory, expectedPlanDigest } = {}) {
+export async function openFleetReleaseOperator({ planFile, directory, gatewayStateDirectory, expectedPlanDigest,
+  operationsNavigationOrigin } = {}) {
+  validateFleetNavigationOrigin(operationsNavigationOrigin);
   const plan = await readFleetReleasePlan(planFile);
   if (expectedPlanDigest !== undefined && (typeof expectedPlanDigest !== 'string' ||
       !HEX.test(expectedPlanDigest) || plan.digest !== expectedPlanDigest))
@@ -285,7 +288,8 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
     if (running && !running.ended) {
       running.selectionGeneration = selected.generation; return running;
     }
-    const session = await runActiveRelease(slot.store, { expectedGeneration: selected.generation, handleSignals: false });
+    const session = await runActiveRelease(slot.store, { expectedGeneration: selected.generation, handleSignals: false,
+      ...(operationsNavigationOrigin ? { operationsNavigationOrigin } : {}) });
     const runtime = { descriptor: structuredClone(row), session, selectionGeneration: selected.generation, ended: false };
     owned.set(key, runtime);
     void session.completion.then(() => { runtime.ended = true; }, () => { runtime.ended = true; });
@@ -365,6 +369,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
           owned: Boolean(runtime && !runtime.ended), instanceId: runtime && !runtime.ended ? runtime.session.observation.instanceId : null,
           runningReleaseId: runtime && !runtime.ended ? runtime.descriptor.releaseId : null,
           runningDigest: runtime && !runtime.ended ? runtime.descriptor.releaseDigest : null,
+          operations: describeFleetOperations(closing ? null : runtime),
           state: runtime ? runtime.ended ? 'STOPPED' : 'RUNNING' : 'NOT_OWNED',
           serving: use.current, candidate: use.candidate, drainingRequests: use.active,
           canRetire: Boolean(runtime && !runtime.ended && !use.current && !use.candidate && use.active === 0 && !native.busy) });
@@ -382,6 +387,11 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
   }
   const api = {
     planDigest: plan.digest, stateDirectory, gatewayStateDirectory: stateDirectory, get publicURL() { return gateway?.publicURL; }, status,
+    operations(input) {
+      assertOpen(); keys(input, ['tenant', 'slot', 'instanceId']);
+      const { key } = locate(input.tenant, input.slot);
+      return readFleetOperations(owned.get(key), input);
+    },
     async catalog({ tenant, slot }) {
       assertOpen(); const source = locate(tenant, slot).slot;
       const [selected, catalog] = await Promise.all([readReleaseState(source.store), listReleases(source.store)]);
