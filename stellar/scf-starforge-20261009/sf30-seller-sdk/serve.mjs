@@ -9,6 +9,7 @@ import { createConfiguredAdmission, validateInputOption } from './configured-adm
 import { compileServicePath } from './route-path.mjs';
 import { readJsonResponseFile, validateResponseFile } from './response-file.mjs';
 import { createSellerDeveloperPortal } from './developer-portal.mjs';
+import { createSellerLifecycle } from './lifecycle.mjs';
 
 const SCHEMA = 'stellar-forge.seller-service.v1';
 const HOST = '127.0.0.1';
@@ -16,6 +17,7 @@ const OWN = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const USAGE = `Usage: node serve.mjs --config FILE [--port 8423] [--handlers FILE]
                      [--facilitator HTTPS_URL] [--allow-local-facilitator]
+                     [--max-in-flight 64] [--drain-grace-ms 60000]
 
 Without --facilitator the server serves real SF30 payment challenges only.
 --handlers loads application functions from a trusted local ESM module.
@@ -96,7 +98,8 @@ function facilitatorEndpoint(raw, allowLocal) {
 }
 
 /** Start one service. An embedding app can supply a nativeFactory for its own facilitator. */
-export async function startSellerService({ config, port = 8423, handlers = {}, nativeFactory = null } = {}) {
+export async function startSellerService({ config, port = 8423, handlers = {},
+  nativeFactory = null, maxInFlight = 64, drainGraceMs = 60000 } = {}) {
   validateConfig(config);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('port must be 0–65535');
   if (!object(handlers) || nativeFactory !== null && typeof nativeFactory !== 'function') {
@@ -132,10 +135,8 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
   server.requestTimeout = 15000;
   server.headersTimeout = 10000;
   server.keepAliveTimeout = 5000;
-  const close = () => new Promise((done, fail) => {
-    server.close(error => error ? fail(error) : done());
-    server.closeIdleConnections?.();
-  });
+  const lifecycle = createSellerLifecycle(server, { maxInFlight, drainGraceMs });
+  const close = () => lifecycle.close();
   try {
     await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); });
     const url = `http://${HOST}:${server.address().port}`;
@@ -163,17 +164,31 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     })) };
     dispatch = (req, res) => {
       if (developerPortal(req, res)) return;
+      if (req.url === '/_seller/ready') {
+        if (!['GET', 'HEAD'].includes(req.method)) {
+          res.writeHead(405, { allow: 'GET, HEAD' }); res.end(); return;
+        }
+        const ready = lifecycle.snapshot();
+        const payload = JSON.stringify({ state: ready.state, accepting: ready.accepting });
+        res.writeHead(ready.accepting ? 200 : 503, {
+          'content-type': 'application/json', 'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff', 'content-length': String(Buffer.byteLength(payload)),
+        });
+        res.end(req.method === 'HEAD' ? undefined : payload);
+        return;
+      }
       if (req.url === '/_seller/health' || req.url === '/_seller/offers') {
         if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405, { allow: 'GET, HEAD' }); res.end(); return; }
-        const payload = req.url === '/_seller/health' ? info : compiled.routes.map(route => route.offer);
+        const payload = req.url === '/_seller/health' ?
+          { ...info, lifecycle: lifecycle.snapshot() } : compiled.routes.map(route => route.offer);
         res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store',
           'x-content-type-options': 'nosniff' });
         res.end(req.method === 'HEAD' ? '' : JSON.stringify(payload));
         return;
       }
-      return resources(req, res);
+      return lifecycle.handle(req, res, () => resources(req, res));
     };
-    return { server, url, mode, compiled, close };
+    return { server, url, mode, compiled, lifecycle, close };
   } catch (error) {
     if (server.listening) await close();
     throw error;
@@ -187,7 +202,7 @@ export async function main(args = process.argv.slice(2)) {
     const flag = args[i];
     if (options.has(flag)) throw new TypeError('Duplicate option: ' + flag);
     if (flag === '--allow-local-facilitator') { options.set(flag, true); continue; }
-    if (!['--config', '--port', '--handlers', '--facilitator'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--')) {
+    if (!['--config', '--port', '--handlers', '--facilitator', '--max-in-flight', '--drain-grace-ms'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--')) {
       throw new TypeError(USAGE);
     }
     options.set(flag, args[++i]);
@@ -209,9 +224,12 @@ export async function main(args = process.argv.slice(2)) {
       facilitatorClient: new HTTPFacilitatorClient({ url }),
     });
   }
-  const session = await startSellerService({ config, port: Number(portText), handlers, nativeFactory });
+  const session = await startSellerService({ config, port: Number(portText), handlers, nativeFactory,
+    maxInFlight: Number(options.get('--max-in-flight') ?? 64),
+    drainGraceMs: Number(options.get('--drain-grace-ms') ?? 60000) });
   process.stdout.write(JSON.stringify({ url: session.url, mode: session.mode,
-    health: session.url + '/_seller/health', offers: session.url + '/_seller/offers',
+    health: session.url + '/_seller/health', ready: session.url + '/_seller/ready',
+    offers: session.url + '/_seller/offers',
     docs: session.url + '/_seller/docs', openapi: session.url + '/_seller/openapi.json' }) + '\n');
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
     session.close().then(() => { process.exitCode = 0; }, () => { process.exitCode = 1; });

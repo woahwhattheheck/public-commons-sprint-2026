@@ -24,6 +24,40 @@ choose explicit atomic-unit prices, and set `publicOrigin` to the HTTPS origin
 served by your reverse proxy. The listener remains on `127.0.0.1`; incoming Host
 or forwarding headers cannot rewrite the configured payment identity.
 
+### Merchant capacity and graceful drain
+
+The same original seller runtime now provides bounded request capacity and a
+bounded drain for merchant deployments. Static and existing-API launchers use
+identical controls; this does not install a second payment runtime:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs \\
+  --config /path/to/seller.json --max-in-flight 64 --drain-grace-ms 60000
+```
+
+`--max-in-flight` (1–1024, default 64) limits simultaneous original **resource
+HTTP attempts**, covering admission, native verification, app handler and
+settlement. Saturation gets `503 SELLER_AT_CAPACITY` with `Retry-After: 1`
+**before** the original native payment path runs. The cap is a concurrency
+budget, not billing, per-buyer throttling or a promise that a retried request
+will be free. Metadata/docs endpoints are not metered. Applications must
+continue to make their own operations idempotent for retry-safe business work.
+
+`GET /_seller/health` includes `lifecycle` counters, active capacity and state;
+`GET /_seller/ready` is 200 while accepting, 503 when draining. A SIGTERM
+stops admissions immediately and allows current HTTP responses to finish within
+`--drain-grace-ms` (1000–300000, default 60000). Successful requests can
+complete the original payment settlement; the shutdown wrapper neither settles
+nor retries. Beyond the explicit deadline Node terminates remaining HTTP
+connections, the shutdown exits nonzero, and any uncertain payment must be
+reconciled through the original source-native payment/receipt tooling rather
+than retried blindly. Operators should allow time for their slowest legitimate
+merchant endpoint, and set their HTTPS proxy drain deadline accordingly.
+
+For embedded apps, `startSellerService({config, maxInFlight, drainGraceMs})`
+returns `lifecycle.snapshot()` and an idempotent `close()`. Snapshot counts are
+server response observations, **not** on-chain receipts or merchant revenue.
+
 ### Supply an application
 
 The JSON config has schema `stellar-forge.seller-service.v1` and a `routes` array.
