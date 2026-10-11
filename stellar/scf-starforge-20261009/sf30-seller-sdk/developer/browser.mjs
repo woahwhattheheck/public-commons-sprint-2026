@@ -3,6 +3,7 @@ import { buildUnpaidRequest, readLimitedResponse, decodePaymentRequired } from '
 const $ = id => document.getElementById(id);
 const text = (id, value) => { $(id).textContent = value; };
 const json = value => JSON.stringify(value, null, 2);
+const bodyMethods = new Set(['POST', 'PUT', 'PATCH']);
 let documentSpec, operations = [], current, request, controller, revision = 0;
 const setError = value => { text('input-error', value); $('input-error').hidden = !value; };
 function invalidate() {
@@ -18,20 +19,80 @@ function preview() {
   try {
     request = buildUnpaidRequest(current, values(), location.origin);
     text('curl', request.curl); text('target', request.url); setError('');
+    const inputs = values();
+    const clientInputs = { ...(Object.keys(inputs.path).length ? { path: inputs.path } : {}),
+      ...(Object.keys(inputs.query).length ? { query: inputs.query } : {}),
+      ...(bodyMethods.has(current['x-seller-route'].method) ? { body: JSON.parse(inputs.body) } : {}) };
+    const choice = $('client-payment-option').value;
+    if (choice === '') text('client-code', 'Choose an original payment option to generate client usage.');
+    else text('client-code', "import { buildRequest } from './seller-client.mjs';\n\n" +
+      'const request = buildRequest(' + JSON.stringify(current.operationId) + ', ' + json(clientInputs) + ', {\n' +
+      "  intentId: 'your-stable-business-operation-id',\n" +
+      '  acceptIndex: ' + Number(choice) + ',\n' +
+      '  maxAtomic: ' + JSON.stringify(current['x-x402-payment-required'].accepts[Number(choice)].amount) + ',\n});\n' +
+      '// Pass request to your configured buyer with your approval and signer.');
     $('copy').disabled = false; $('send').disabled = false;
   } catch (error) {
     request = null; text('curl', 'Complete valid request inputs to generate a command.'); text('target', '—');
+    text('client-code', 'Complete valid request inputs to generate client usage.');
     setError(error.message); $('copy').disabled = true; $('send').disabled = true;
   }
 }
+function renderPaymentOptions(target, accepts) {
+  const container = $(target); container.replaceChildren();
+  if (!Array.isArray(accepts) || !accepts.length) {
+    const empty = document.createElement('p'); empty.className = 'hint';
+    empty.textContent = 'No payment options were provided.'; container.append(empty); return 0;
+  }
+  const value = item => item === undefined ? 'Not provided' : typeof item === 'string' ? item : json(item);
+  const known = new Set(['scheme', 'network', 'amount', 'asset', 'payTo', 'maxTimeoutSeconds', 'extra']);
+  for (const [index, terms] of accepts.entries()) {
+    const option = document.createElement('section'); option.className = 'payment-option';
+    option.setAttribute('aria-label', `Payment option ${index + 1}`);
+    const heading = document.createElement('div'); heading.className = 'payment-option-heading';
+    const title = document.createElement('h4'); title.textContent = `Option ${index + 1}`;
+    heading.append(title); option.append(heading);
+    if (!terms || typeof terms !== 'object' || Array.isArray(terms)) {
+      const raw = document.createElement('pre'); raw.textContent = value(terms);
+      option.append(raw); container.append(option); continue;
+    }
+    const amount = document.createElement('strong'); amount.textContent = value(terms.amount);
+    const unit = document.createElement('small');
+    unit.textContent = terms.scheme === 'upto' ? 'atomic units · authorization ceiling' :
+      terms.scheme === 'exact' ? 'atomic units / request' : 'atomic units · advertised amount';
+    const price = document.createElement('div'); price.className = 'payment-option-price';
+    price.append(amount, unit); heading.append(price);
+    const fields = document.createElement('dl');
+    for (const [label, content] of [
+      ['Network', terms.network], ['Scheme', terms.scheme], ['Asset', terms.asset],
+      ['Recipient', terms.payTo], ['Timeout (seconds)', terms.maxTimeoutSeconds],
+    ]) {
+      const name = document.createElement('dt'); name.textContent = label;
+      const detail = document.createElement('dd'); detail.textContent = value(content);
+      fields.append(name, detail);
+    }
+    option.append(fields);
+    const additional = Object.fromEntries(Object.entries(terms).filter(([key]) => !known.has(key)));
+    for (const [label, content] of [
+      ['Additional terms (extra)', terms.extra],
+      ['Other original fields', Object.keys(additional).length ? additional : undefined],
+    ]) {
+      if (content === undefined) continue;
+      const name = document.createElement('p'); name.className = 'payment-option-extra-label'; name.textContent = label;
+      const raw = document.createElement('pre'); raw.className = 'payment-option-extra'; raw.textContent = json(content);
+      option.append(name, raw);
+    }
+    container.append(option);
+  }
+  return accepts.length;
+}
+function optionCount(count) { return `${count} option${count === 1 ? '' : 's'}`; }
 function choose(operation) {
   current = operation; invalidate();
   const route = operation['x-seller-route'], offer = operation['x-x402-payment-required'];
-  const input = offer.extensions.bazaar.info.input, terms = offer.accepts[0];
+  const input = offer.extensions.bazaar.info.input;
   text('method', route.method); text('path', route.path); text('description', operation.summary);
-  text('amount', terms.amount); text('network', `${terms.network} / ${terms.scheme}`);
-  text('timeout', `Payment timeout: ${terms.maxTimeoutSeconds} seconds`);
-  text('asset', terms.asset); text('recipient', terms.payTo);
+  text('payment-options-count', optionCount(renderPaymentOptions('payment-options', offer.accepts)));
   text('schema', json(offer.extensions.bazaar.schema)); text('offer', json(offer));
   text('projection-note', (documentSpec['x-schema-projection-notes'] ?? []).filter(note => note.startsWith(route.id + ':')).join('\n'));
   $('path-fields').replaceChildren();
@@ -42,7 +103,18 @@ function choose(operation) {
     field.addEventListener('input', preview); label.append(field); $('path-fields').append(label);
   }
   $('query').value = json(input.queryParams ?? {});
-  $('body').value = json(input.body ?? {}); $('body-field').hidden = route.method !== 'POST';
+  $('body').value = json(input.body ?? {}); $('body-field').hidden = !bodyMethods.has(route.method);
+  const choices = $('client-payment-option'); choices.replaceChildren();
+  if (offer.accepts.length > 1) {
+    const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = 'Choose a payment option';
+    choices.append(placeholder);
+  }
+  offer.accepts.forEach((payment, index) => {
+    const option = document.createElement('option'); option.value = String(index);
+    option.textContent = `${index + 1}: ${payment.network} · ${payment.amount} atomic · ${payment.asset}`;
+    choices.append(option);
+  });
+  choices.value = offer.accepts.length > 1 ? '' : '0';
   const required = (operation.parameters ?? []).filter(p => p.in === 'query' && p.required).map(p => p.name);
   text('required', required.length ? 'Required: ' + required.join(', ') : 'Omit unused optional parameters. Repeated values use JSON arrays of strings.');
   $('detail').hidden = false;
@@ -61,6 +133,7 @@ function renderRoutes() {
   if (!$('routes').children.length) { const empty = document.createElement('p'); empty.className = 'hint'; empty.textContent = 'No matching endpoints.'; $('routes').append(empty); }
 }
 $('query').addEventListener('input', preview); $('body').addEventListener('input', preview);
+$('client-payment-option').addEventListener('change', preview);
 $('filter').addEventListener('input', renderRoutes);
 const tabs = [...document.querySelectorAll('[data-tab]')];
 function selectTab(button) {
@@ -96,7 +169,15 @@ $('send').addEventListener('click', async () => {
     text('elapsed', `${Math.round(performance.now() - started)} ms`);
     text('headers', [...response.headers].map(([key, value]) => key + ': ' + value).join('\n'));
     text('response-body', body || '(empty response body)');
-    try { text('challenge', json(decodePaymentRequired(response.headers.get('payment-required')))); }
+    $('response-payment-options-panel').hidden = true;
+    try {
+      const challenge = decodePaymentRequired(response.headers.get('payment-required'));
+      text('challenge', json(challenge));
+      if (Array.isArray(challenge?.accepts) && challenge.accepts.length) {
+        text('response-payment-options-count', optionCount(renderPaymentOptions('response-payment-options', challenge.accepts)));
+        $('response-payment-options-panel').hidden = false;
+      }
+    }
     catch (error) { text('challenge', error.message); }
     text('result-note', response.status === 402 ? 'Payment requirements received. No payment was signed or sent. These are the actual request-specific terms.' : 'An unpaid response was received. This does not establish successful payment or delivery; inspect the status and body.');
     $('result').hidden = false;

@@ -1,0 +1,29 @@
+{
+  "schema": "stellar-forge.cube-paid-query.v1",
+  "origin": "http://127.0.0.1:8765",
+  "path": "/cubejs-api/v1/load",
+  "authEnv": "CUBE_API_AUTHORIZATION",
+  "timeoutMs": 10000,
+  "maxResponseBytes": 262144,
+  "maxInFlight": 8,
+  "maxRows": 1000,
+  "reports": {
+    "hourly-count": {
+      "query": {
+        "measures": ["logs.count"],
+        "timeDimensions": [{"dimension":"logs.time","granularity":"hour","dateRange":"last 1440 minutes"}],
+        "limit": 100
+      },
+      "inputs": {}
+    },
+    "date-window": {
+      "query": {
+        "measures": ["logs.count"],
+        "timeDimensions": [{"dimension":"logs.time","granularity":"day","dateRange":[{"$param":"start"},{"$param":"end"}]}],
+        "limit": 100
+      },
+      "inputs": {"start":{"type":"date"},"end":{"type":"date"}},
+      "range":{"start":"start","end":"end","maxDays":31}
+    }
+  }
+}

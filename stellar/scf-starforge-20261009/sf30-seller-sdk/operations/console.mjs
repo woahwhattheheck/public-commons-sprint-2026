@@ -28,6 +28,30 @@ function renderRows() {
   }
   $('routes').replaceChildren(fragment); $('empty').hidden = rows.length > 0;
 }
+function renderUpstreams(snapshot) {
+  const panel = $('upstream-panel');
+  if (!snapshot) { panel.hidden = true; return; }
+  if (snapshot.schema !== 'stellar-forge.seller-upstream-availability.v1' || !Array.isArray(snapshot.bindings))
+    throw new Error('Unsupported upstream snapshot');
+  panel.hidden = false;
+  const labels = { CLOSED: 'Requests allowed', OPEN: 'Cooling down',
+    RECOVERY_READY: 'Ready for one recovery call', RECOVERY_IN_FLIGHT: 'Recovery call in flight' };
+  const fragment = document.createDocumentFragment();
+  for (const row of snapshot.bindings) {
+    const tr = document.createElement('tr'), name = document.createElement('th');
+    name.scope = 'row'; name.textContent = `${row.name} · ${row.method}`; tr.append(name);
+    const gate = row.availability;
+    for (const value of [gate ? labels[gate.state] ?? gate.state : 'Protection not enabled',
+      fmt(row.inFlight), gate ? fmt(gate.maxInFlight) : '—', fmt(row.failed),
+      gate ? fmt(gate.admissionRejected) : '—', gate ? fmt(gate.recoveryCalls) : '—',
+      gate?.retryAfterMs ? `${fmt(Math.ceil(gate.retryAfterMs / 1000))} s` : '—',
+      gate?.lastStatus ?? 'Unobserved']) {
+      const td = document.createElement('td'); td.textContent = String(value); tr.append(td);
+    }
+    fragment.append(tr);
+  }
+  $('upstreams').replaceChildren(fragment);
+}
 function render(snapshot) {
   if (snapshot.schema !== 'stellar-forge.seller-traffic.v1') throw new Error('Unsupported snapshot');
   last = snapshot; receivedAt = Date.now();
@@ -64,7 +88,7 @@ function render(snapshot) {
   if (snapshot.attached && totals.started && !totals.serverError && !totals.disconnected) signals.push('No server errors or early disconnects observed in this session.');
   const fragment = document.createDocumentFragment();
   for (const signal of signals) { const p = document.createElement('p'); p.textContent = signal; fragment.append(p); }
-  $('signals').replaceChildren(fragment); renderRows(); renderRecentOutcomes(snapshot);
+  $('signals').replaceChildren(fragment); renderRows(); renderRecentOutcomes(snapshot); renderUpstreams(snapshot.upstreams);
   if (paused) text('connection', 'Updates paused · exports still request a fresh server snapshot');
 }
 async function refresh() {

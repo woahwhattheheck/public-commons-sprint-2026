@@ -1,6 +1,6 @@
 # Merchant workspace
 
-Diagnose a merchant route, review the repair, and prepare an internal workorder in one local workspace. The same original captures move through each stage, so you do not need to save and re-upload files between steps.
+Keep a merchant case queue, diagnose each route, review repairs, and prepare internal workorders in one local workspace. The same original captures move through each stage. The optional case desk retains multiple merchant drafts, follow-up ownership and dates, search, work status and saved versions across restarts.
 
 ## Open the workspace
 
@@ -10,7 +10,7 @@ From the repository root, with Node 22 or newer:
 node stellar/scf-starforge-20261009/sf74-merchant-support-console/server.mjs
 ```
 
-Open the printed `http://127.0.0.1:<port>/` address. No package installation, account, database or hosted service is required. Nothing is probed on page load. Stop the process to end the session.
+For a durable merchant queue, add `--cases-dir "$HOME/.local/share/stellar-forge/merchant-cases" --port 8784`. Open the printed `http://127.0.0.1:<port>/` address. No package installation, account, database or hosted service is required. Nothing is probed on page load. [Case desk operations](CASE_DESK.md) covers the complete save, reopen, follow-up, concurrent-tab and version-recovery flow.
 
 ## Diagnose → review → prepare
 
@@ -29,7 +29,7 @@ This is an unpaid diagnostic and internal workorder workflow. Seller acceptance,
 
 ## Save the source files
 
-All state lives in the current tab and local process. Save the captures, optional browser checks, owner terms and workorder documents you need before closing the tab. There is no localStorage, telemetry, upload persistence or automatic filesystem write.
+With `--cases-dir`, **Save case** explicitly stores the original workspace plus case metadata. Reopening resets transient probe authorization and regenerates derived comparison/workorder views from the retained inputs. Without that option, state lives in the current tab and process. Portable workspace files remain available in either mode. There is no localStorage, telemetry or automatic saving.
 
 Current captures use **Save diagnosis** and **Save browser check**. Retained selections have their own save buttons, so an earlier capture remains downloadable after a new diagnosis. These exact bytes also feed comparison and workorder generation. Do not reformat a diagnosis after generating its browser check: that check contains the SHA-256 of the original file.
 
@@ -47,6 +47,8 @@ SF74 is the local UI and HTTP adapter. It imports the existing engines without c
 | Workorder, HTML and checklist | SF77 `buildPacket`, `renderHtml`, `renderChecklist` |
 
 `server.mjs` serves the static native HTML/CSS/ES modules and same-origin API. `console.mjs` owns transient selections, cancellation and explicit downloads. `terms-editor.mjs` owns only the form fields; the original SF77 builder remains authoritative for terms, economics and acceptance.
+
+`case-desk.mjs` adds the original page's merchant queue and case lifecycle. `case-store.mjs` persists byte-exact v1 workspaces and compact workflow metadata under a process-selected private directory. It uses revision checks and atomic head selection to preserve concurrent edits; the original diagnostics remain unchanged.
 
 - The server binds to literal 127.0.0.1 and rejects unexpected Host or Origin. CSP blocks external page content. No third-party JavaScript, credentials, wallet or database is used.
 - Only **Run diagnosis** and the separately authorized browser check invoke diagnostic network operations. The network gate permits one intake or preflight at a time.

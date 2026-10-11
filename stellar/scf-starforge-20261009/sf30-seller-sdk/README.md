@@ -120,7 +120,7 @@ that config is kept beside `examples/application.mjs`.
 
 Handlers receive `{method, url, query, body, headers}` and return
 `{status, headers, body}`. `url` is a URL object, repeated query parameters are
-arrays, and JSON POST bodies are parsed once. Responses may contain JSON,
+arrays, and JSON POST/PUT/PATCH bodies are parsed once. Responses may contain JSON,
 strings or Buffers. Application payment headers are reserved for the native
 SDK. The adapter buffers the result and validates its encoding and headers
 before settlement; it releases successful content only after native success.
@@ -155,8 +155,9 @@ Embedding applications can import `compileSellerRoutes()` and
 an explicit native-compatible facilitator client, so operators can use their
 existing SDK client configuration without putting secrets in seller JSON.
 
-Supported runtime routes are exact-scheme GET, HEAD and JSON POST on fixed
-paths. Parameterized routes, other HTTP methods, response streaming and `upto`
+Supported runtime routes are exact-scheme GET, HEAD, DELETE and JSON POST/PUT/PATCH
+on fixed paths or imported whole-segment string path parameters. See
+[the complete REST method flow](REST_METHODS.md). Other HTTP methods, response streaming and `upto`
 execution are rejected by this adapter. The broader metadata compiler remains
 available unchanged for integrations supporting those shapes.
 

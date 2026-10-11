@@ -1,0 +1,10 @@
+{
+  "name": "@commons/sf30-s3-source",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Private S3 object delivery through the original SF30 x402 seller",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "dependencies": { "@aws-sdk/client-s3": "3.1149.0" }
+}

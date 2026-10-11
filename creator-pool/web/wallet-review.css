@@ -1,0 +1,15 @@
+
+/* Native wallet review. Responsive, low-contrast industrial operator surface. */
+.wallet-review-scrim{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(13,20,28,.7)}
+.wallet-review-card{box-sizing:border-box;width:min(100%,720px);max-height:92dvh;overflow:auto;padding:24px;background:var(--panel,#fff);color:var(--ink,#202833);border:1px solid var(--line,#cdd3d8);border-radius:7px}
+.wallet-review-card h2{font-size:20px;margin:0 0 14px}
+.wallet-review-step{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.wallet-review-grid{display:grid;grid-template-columns:140px minmax(0,1fr);gap:9px 15px;margin:18px 0;font-size:13px}
+.wallet-review-grid dt{font-weight:700}
+.wallet-review-grid dd{margin:0;overflow-wrap:anywhere}
+.wallet-review-card details{padding:12px 0;border-top:1px solid var(--line,#cdd3d8);border-bottom:1px solid var(--line,#cdd3d8)}
+.wallet-review-card summary{cursor:pointer;font-weight:600}
+.wallet-review-hex{max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;background:var(--panel-2,#f2f4f7);font-size:12px}
+.wallet-review-note{font-size:13px}
+.wallet-review-buttons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:18px}
+@media(max-width:600px){.wallet-review-card{padding:17px}.wallet-review-grid{grid-template-columns:1fr;gap:3px}.wallet-review-grid dt:not(:first-child){margin-top:8px}}
