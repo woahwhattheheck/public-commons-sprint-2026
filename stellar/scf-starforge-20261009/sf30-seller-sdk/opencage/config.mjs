@@ -1,4 +1,5 @@
 // MIT. OpenCage's public JSON request contract; payment remains in the original seller.
+import { compileUpstreamTransports } from '../upstream-transports.mjs';
 export const PLAN = 'stellar-forge.opencage-plan.v1';
 export const API_ORIGIN = 'https://api.opencagedata.com';
 export const API_PATH = '/geocode/v1/json';
@@ -91,7 +92,7 @@ export function bindGeocodeQuery(product, input) {
   return result;
 }
 export function compileGeocodePlan(raw) {
-  fields(raw,['schema','id','name','apiKeyEnv','minIntervalMs','timeoutMs','maxResponseBytes','products'],'geocoding plan');
+  fields(raw,['schema','id','name','apiKeyEnv','minIntervalMs','timeoutMs','maxResponseBytes','products','transport'],'geocoding plan');
   if (raw.schema !== PLAN) fail('GEOCODE_PLAN_SCHEMA');
   const plan = {
     schema: PLAN, id: identifier(raw.id), name: text(raw.name,'name',120),
@@ -102,6 +103,11 @@ export function compileGeocodePlan(raw) {
     products: [],
   };
   if (typeof plan.apiKeyEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,79}$/.test(plan.apiKeyEnv)) fail('GEOCODE_KEY_ENV_INVALID');
+  if (raw.transport !== undefined) {
+    const selected=compileUpstreamTransports({opencageHost:raw.transport},
+      {provider:{transport:'opencageHost'}}).opencageHost;
+    plan.transport={mode:selected.mode,...(selected.proxyEnv ? {proxyEnv:selected.proxyEnv} : {})};
+  }
   if (!Array.isArray(raw.products) || raw.products.length < 1 || raw.products.length > 8) fail('GEOCODE_PRODUCTS_INVALID');
   const ids = new Set(), paths = new Set();
   for (const value of raw.products) {

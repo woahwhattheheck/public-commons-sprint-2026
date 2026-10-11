@@ -1,5 +1,5 @@
 // MIT. Native provider bytes via the original SF30 upstream transport.
-import { createUpstreamHandlers } from '../upstream.mjs';
+import { createUpstreamHandlers,closeUpstreamHandlers } from '../upstream.mjs';
 import { UPSTREAM_ATTEMPT } from '../upstream-handler.mjs';
 import { compileGeocodePlan, productFor, bindGeocodeQuery, queryParameters,
   handlerName, API_ORIGIN, API_PATH, PARAMETERS, object, fail } from './config.mjs';
@@ -52,11 +52,20 @@ export function createOpenCageSource(raw,{env=process.env,lookup,clock=Date.now}
     origin:API_ORIGIN,path:API_PATH,method:'GET',query:[...PARAMETERS[product.mode],'key'],
     responseHeaders:['content-type'],
     responseMode:'json',timeoutMs:plan.timeoutMs,maxResponseBytes:plan.maxResponseBytes,maxInFlight:1,
+    ...(plan.transport ? {transport:'opencageHost'} : {}),
   };
-  const native=createUpstreamHandlers({schema:'stellar-forge.seller-upstreams.v1',bindings},
-    {...(lookup ? {lookup} : {}),env:{}});
+  const configuration={schema:'stellar-forge.seller-upstreams.v1',bindings,
+    ...(plan.transport ? {transports:{opencageHost:plan.transport}} : {})};
+  // Opening a retained workspace does not need provider or proxy credentials.
+  // Construct the original configured transport only for an admitted source use.
+  let native=null;
+  const initialize=()=>native??=createUpstreamHandlers(configuration,
+    {...(lookup ? {lookup} : {}),env:plan.transport?.mode==='environment-proxy'
+      ? {[plan.transport.proxyEnv]:env[plan.transport.proxyEnv]} : {}});
+  const pending=new Set();
+  const track=operation=>{pending.add(operation);operation.finally(()=>pending.delete(operation)).catch(()=>{});return operation;};
   const totals={started:0,completed:0,failed:0,inFlight:0};
-  let closed=false,lastStart=null,last=null;
+  let closed=false,closing,lastStart=null,last=null;
   const key = () => {
     const value=env[plan.apiKeyEnv];
     if (typeof value !== 'string' || !/^[a-zA-Z0-9]{32}$/.test(value)) fail('GEOCODE_API_KEY_REQUIRED');
@@ -69,6 +78,7 @@ export function createOpenCageSource(raw,{env=process.env,lookup,clock=Date.now}
     const remaining=lastStart === null ? 0 : lastStart+plan.minIntervalMs-clock();
     if (remaining>0) return failure(429,'GEOCODE_LOCAL_RATE_LIMIT',{},
       {'retry-after':String(Math.max(1,Math.ceil(remaining/1000)))});
+    try { initialize(); } catch { return failure(503,'GEOCODE_TRANSPORT_CONFIGURATION_UNAVAILABLE'); }
     return true;
   }
   function bindContext(product,context) {
@@ -123,19 +133,22 @@ export function createOpenCageSource(raw,{env=process.env,lookup,clock=Date.now}
       let query;
       try {query=bindContext(product,context);}
       catch(error){return failure(422,error.code ?? 'GEOCODE_REQUEST_INVALID');}
-      return (await perform(product,context,query)).response;
+      return (await track(perform(product,context,query))).response;
     };
-    handler.snapshot=()=>native[handlerName(product.id)].snapshot();
+    handler.snapshot=()=>native ? {...native[handlerName(product.id)].snapshot(),initialized:true} : {initialized:false};
     handlers[handlerName(product.id)]=handler;
   }
   return Object.freeze({plan,handlers:Object.freeze(handlers),
     inspect(){return {...totals,closed,keyConfigured:typeof env[plan.apiKeyEnv] === 'string' &&
-      /^[a-zA-Z0-9]{32}$/.test(env[plan.apiKeyEnv]),minIntervalMs:plan.minIntervalMs,last:last && {...last}};},
-    close(){closed=true;},
+      /^[a-zA-Z0-9]{32}$/.test(env[plan.apiKeyEnv]),minIntervalMs:plan.minIntervalMs,last:last && {...last},
+      transport:{...(plan.transport ?? {mode:'direct'}),initialized:Boolean(native)}};},
+    close(){closed=true;return closing??=(async()=>{
+      await Promise.allSettled([...pending]);if(native)await closeUpstreamHandlers(native);
+    })();},
     async capture(productId,input,{signal}={}) {
       const product=productFor(plan,productId),query=bindGeocodeQuery(product,input);
       const url=new URL(product.path,'https://operator.invalid');url.search=queryParameters(query).toString();
-      return perform(product,{method:'GET',url,headers:{},pathParams:{},bodyPresent:false,...(signal?{signal}:{})},query);
+      return track(perform(product,{method:'GET',url,headers:{},pathParams:{},bodyPresent:false,...(signal?{signal}:{})},query));
     },
   });
 }

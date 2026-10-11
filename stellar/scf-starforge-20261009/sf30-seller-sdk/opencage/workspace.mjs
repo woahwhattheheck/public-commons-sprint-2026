@@ -362,6 +362,10 @@ export class GeocodeWorkspace {
   async close() {
     if(this._closing)return this._closing;
     this.closing=true;
-    return this._closing=(async()=>{await this.queue;this.source.close();await this.runtime?.close();await this.lease.close();})();
+    return this._closing=(async()=>{
+      await this.queue;
+      try {await this.runtime?.close();}
+      finally {try {await this.source.close();} finally {await this.lease.close();}}
+    })();
   }
 }

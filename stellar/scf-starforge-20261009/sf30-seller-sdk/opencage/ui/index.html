@@ -11,7 +11,7 @@
 <label id="query-label">Address or coordinates<input id="query" required minlength="2" maxlength="2048" autocomplete="off"></label>
 <label>Native options <span class="hint">JSON object</span><textarea id="options" rows="4" spellcheck="false">{}</textarea></label>
 <details><summary>Review exact provider inputs</summary><pre id="query-preview"></pre></details>
-<p id="key-state" class="hint"></p><button class="primary full" type="submit" id="run-source">Run source request</button>
+<p id="key-state" class="hint"></p><p id="transport-state" class="hint"></p><button class="primary full" type="submit" id="run-source">Run source request</button>
 </form><details class="import"><summary>Import a retained HTTP result</summary><p class="hint">Choose its original observation and response files. The request and response hash must match.</p>
 <label>Observation JSON<input type="file" id="observation-file" accept=".json,application/json"></label><label>Response JSON<input type="file" id="response-file" accept=".json,application/json"></label>
 <button id="import-result">Import exact result</button></details></aside>

@@ -17,7 +17,7 @@ The source plan remains immutable within a workspace. Edited payment terms creat
 
 ## Installation and first use
 
-Use the maintained Starforge merchant distribution, or the public repository with its existing dependencies installed. The operator uses the original Linux `flock` workspace lease and original Node private-file primitives. Node 22 is the native execution target.
+Use the maintained Starforge merchant distribution, or the public repository with its existing dependencies installed. The operator uses the original Linux `flock` workspace lease and original Node private-file primitives. Use Node 22 or newer for direct connections. An explicitly selected environment proxy requires Node 22.21+ in the 22.x series, Node 24.5+, or Node 25+.
 
 The installed distribution exposes `starforge opencage-workbench` for the same CLI and `@tokenjunkielabs/starforge-merchant/seller/opencage` for the application API. The provider, configuration, merchant, customer, workspace and server modules also have corresponding `/seller/opencage/MODULE` exports.
 
@@ -57,6 +57,20 @@ The operator can read retained output while its provider key is absent. Source d
 Each product selects its allowed native options and explicit defaults. The example asks the provider not to record the query with `no_record=1`. An unsupported or duplicate parameter is rejected before dispatch. Bounds and coordinate inputs are validated against their native coordinate order; reverse products reject forward-only options.
 
 `minIntervalMs` is a local source-instance interval. It does not replace the provider's account-wide limits. `timeoutMs` and `maxResponseBytes` use the original upstream request bounds. One source instance dispatches one request at a time; the application records local admission refusals as such.
+
+### Select the merchant host transport
+
+An optional `transport` in the source plan selects the original SF30 named transport implementation:
+
+```json
+{"transport":{"mode":"environment-proxy","proxyEnv":"MERCHANT_HTTPS_PROXY"}}
+```
+
+Set that variable privately on the operator and merchant host. Its value is the host’s approved HTTP or HTTPS CONNECT proxy URL. The plan, browser and generated release retain only the variable name. The existing API key environment remains separate. A plan without `transport` uses direct HTTPS; `{"transport":{"mode":"direct"}}` explicitly retains that choice.
+
+The selected profile is part of the immutable plan and prepared merchant package. The generated original SF82 application uses that same plan. To choose a different profile, prepare a new source plan and workspace; existing captures and deliveries continue to reopen from their original source. Provider and proxy credentials are resolved only when source work is admitted, so importing and reopening completed output remains available without them. Closing the operator drains accepted source work before releasing its original transport and workspace lease.
+
+Only the selected proxy reference reaches the original per-profile Agent; unrelated ambient proxy or NO_PROXY variables do not change that route. The source-contract view shows the selection, and capture outcomes identify missing host transport configuration. See [the maintained SF30 transport guide](../UPSTREAM_TRANSPORT.md) for runtime support, TLS, proxy routing and secret rotation.
 
 ### Native semantics
 
@@ -266,7 +280,7 @@ Application callers should use a `finally` block to close a workspace or server 
 
 The component composes these existing maintained surfaces:
 
-- SF30 `upstream.mjs` and `upstream-handler.mjs` for provider HTTP and cancellation.
+- SF30 `upstream.mjs`, `upstream-transports.mjs` and `upstream-handler.mjs` for selected host egress, provider HTTP, cancellation and drain.
 - SF61 `importOpenApi` and `createSellerServiceConfig` for the original merchant contract.
 - SF30 developer-portal and client generator for the customer SDK.
 - SF82 release store, comparison, selection and original foreground seller.
