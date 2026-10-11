@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stellar Forge · Buyer workspace</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div><span class="wordmark">STELLAR FORGE</span><h1>Buyer workspace</h1></div>
+    <div class="connection-state"><span id="connection-label">Disconnected</span><button id="disconnect" hidden>Disconnect</button></div>
+  </header>
+  <main>
+    <section id="connection" class="panel connection-panel" aria-labelledby="connection-title">
+      <h2 id="connection-title">Connect to this workspace</h2>
+      <p>Use the operator access token configured for this local server. It stays in this tab’s memory.</p>
+      <form id="connect-form" class="inline-form">
+        <label class="grow">Operator access token<input id="access-token" type="password" autocomplete="off" spellcheck="false" required minlength="24" maxlength="4096"></label>
+        <button class="primary" type="submit">Connect</button>
+      </form>
+    </section>
+    <output id="notice" class="notice" role="status" aria-live="polite">Connect to browse resources, quotes and saved results.</output>
+    <div id="workspace" hidden>
+      <div class="workspace-bar">
+        <nav aria-label="Workspace views">
+          <button data-view="discover" aria-current="page">Discover</button>
+          <button data-view="history">Quote history</button>
+          <button data-view="results">Saved results</button>
+        </nav>
+        <span id="durability" class="muted"></span>
+      </div>
+      <section id="view-discover" class="view" aria-labelledby="discover-title">
+        <div class="section-heading"><div><h2 id="discover-title">Find a resource</h2><p>Inspect the original declaration, then review the exact request and payment choice.</p></div></div>
+        <form id="search-form" class="panel search-form">
+          <div class="inline-form"><label class="grow">Search<input id="search-query" type="search" placeholder="Resource, tool or dataset" required maxlength="1024"></label><button class="primary" type="submit">Search catalog</button></div>
+          <details><summary>Search filters</summary><div class="filter-grid">
+            <label>Network<input id="search-network" placeholder="Exact advertised network"></label>
+            <label>Asset<input id="search-asset" placeholder="Exact advertised asset"></label>
+            <label>Maximum amount<input id="search-amount" inputmode="numeric" pattern="0|[1-9][0-9]*" placeholder="Integer base units"></label>
+          </div></details>
+        </form>
+        <div id="search-results"></div>
+        <section id="resource-detail" class="panel" hidden aria-label="Resource declaration"></section>
+      </section>
+      <section id="view-history" class="view" hidden aria-labelledby="history-title">
+        <div class="section-heading"><div><h2 id="history-title">Quote history</h2><p>Continue the original quote, including operations recovered after a restart.</p></div><button id="refresh-history">Refresh history</button></div>
+        <form id="history-filter" class="inline-form compact"><label>Status<select id="history-status"><option value="">All statuses</option><option>PREVIEWED</option><option>APPROVAL_PENDING</option><option>EXECUTING</option><option>CONFIRMED_BY_SERVER</option><option>INDETERMINATE</option><option>FREE_SUCCESS</option><option>PROBE_REJECTED</option><option>CANCELLED</option><option>INTERRUPTED</option><option>EXPIRED</option><option>REJECTED</option><option>CONFIG_CHANGED</option></select></label><button type="submit">Apply</button></form>
+        <div id="history-list"></div>
+      </section>
+      <section id="view-results" class="view" hidden aria-labelledby="results-title">
+        <div class="section-heading"><div><h2 id="results-title">Saved results</h2><p>Read the complete native tool response attached to its original quote.</p></div><button id="refresh-results">Refresh results</button></div>
+        <div id="results-list"></div>
+      </section>
+      <section id="quote-detail" class="panel quote-panel" hidden aria-label="Selected quote"></section>
+      <section id="result-detail" class="panel result-panel" hidden aria-label="Complete saved result"></section>
+    </div>
+  </main>
+  <footer>Local operator workspace · Original quotes and results · Host approval controls execution</footer>
+</body>
+</html>
