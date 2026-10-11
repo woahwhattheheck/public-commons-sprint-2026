@@ -1,5 +1,7 @@
 # SF101 · Stellar merchant account receiving and reserve preflight
 
+For the complete original SF30 seller configuration and deployed StellarAssetContract receiving workflow, use [Merchant receiving setup](MERCHANT_READINESS.md). It connects this original account evaluator to exact contract derivation, native contract-instance reads, all configured payment choices and the original SF16 validator. The classic-only command below remains available.
+
 **Node 22+ · MIT · read-only official Horizon · no secrets, dependencies, wallet use, hosted Actions, or automated transactions.**
 
 This fills the **classic merchant account readiness** gap next to the existing SCF Starforge seller, merchant-support, exact asset normalization and independent chain-reconciliation modules. A merchant choosing a Stellar G-address to receive a classic issued asset needs to know whether that exact account exists, its **actual** XLM reserve and native selling liabilities, whether the **specific real issuer/code** trustline exists and is authorized, and whether that trustline's remaining inbound capacity meets the intended sale. Stellar's classic reserve minimum is not simply “1 XLM” when offers, trustlines, sponsorship and additional signers exist.

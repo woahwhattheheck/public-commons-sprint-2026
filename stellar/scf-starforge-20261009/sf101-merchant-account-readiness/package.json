@@ -1,0 +1,8 @@
+{
+  "name": "@tokenjunkielabs/starforge-sac-readiness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "dependencies": { "@stellar/stellar-sdk": "16.3.1" }
+}
