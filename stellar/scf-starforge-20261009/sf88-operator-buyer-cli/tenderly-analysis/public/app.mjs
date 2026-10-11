@@ -71,7 +71,7 @@ function renderOverview(main,a,record,c){
     element('div',{class:'context-item'},[element('label',{text:'Received through'}),element('code',{text:record.sourceKind==='NATIVE_BUYER_RESPONSE'?'Original Stellar Forge buyer':'Saved provider response'})]),
     element('div',{class:'context-item'},[element('label',{text:'Original buyer outcome'}),element('code',{text:record.buyer?fmt(record.buyer.status)+' · HTTP '+fmt(record.buyer.httpStatus):'Provider capture'})]),
     element('div',{class:'context-item wide'},[element('label',{text:'Response SHA-256'}),element('code',{text:record.binding.responseSha256})]) ,
-    action('Inspect provider object',()=>source(state.id,a.payloadPointer))));
+    action('Inspect provider object',()=>source(state.id,a.payloadPointer))])));
 }
 function simpleTable(headers,rows){const table=element('table',{},[element('thead',{},[element('tr',{},headers.map(h=>element('th',{text:h})))]),
   element('tbody',{},rows.map(row=>element('tr',{},row.map(value=>element('td',{text:value})))))]);return element('div',{class:'table-wrap'},[table]);}
