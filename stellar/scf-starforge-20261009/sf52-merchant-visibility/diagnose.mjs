@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const MAX_JSON_BYTES = 2_000_000;
 const MAX_HEADER_BYTES = 64_000;
 const URL_LIMIT = 2048;
+const HTTP_METHODS = new Set(['GET','HEAD','POST','PUT','PATCH','DELETE']);
 
 export function requireEndpoint(value, {allowLoopback = false} = {}) {
   if (typeof value !== 'string' || value.length > URL_LIMIT) throw new TypeError('Invalid endpoint URL');
@@ -88,6 +89,11 @@ export function inspectChallenge(status, header) {
 
 // Diagnostic classification only: never attempts payment, settlement, indexing or a paid retry.
 export function sellerDiscoveryReadiness(challenge) {
+  if (challenge.state === 'CATALOG_NON_GET_ONLY') return {
+    state: 'CATALOG_NON_GET_ONLY',
+    diagnosis: 'This catalog entry declares only non-GET HTTP operations or MCP tools. No seller-origin GET was made; this is not a failed unpaid payment challenge.',
+    nextAction: 'Use the documented method/tool and obtain seller permission before any real payment or invocation. Catalog visibility does not establish live origin readiness.'
+  };
   if (challenge.state === 'UNPAID_GET_HTTP_200') return {
     state: 'UNPAID_200_NO_402_DECLARATION',
     diagnosis: 'An unauthenticated GET returned HTTP 200, not a 402 payment declaration. A Bazaar crawler using the same route cannot observe the paid offer from that response.',
@@ -155,6 +161,9 @@ export async function inspectCatalog({catalogUrl, targetResource, payTo, network
     throw new TypeError('Invalid pagination options');
   }
   const matches = [], samePayToOtherResource = [];
+  // Read the original operation contract across every matching record, not just displayed samples.
+  const httpMethods = new Set();
+  let mcpToolCount = 0, unresolvedMethodCount = 0;
   // Keep a bounded sample for display, but classify using ALL matching records.
   let matchingResourceCount = 0;
   const matchEvidence = {network: false, payTo: false, paired: false};
@@ -195,12 +204,19 @@ export async function inspectCatalog({catalogUrl, targetResource, payTo, network
         x.payTo.toLowerCase() === payTo.toLowerCase()) : null;
       if (resource === target) {
         matchingResourceCount++;
+        const input = item?.extensions?.bazaar?.info?.input;
+        const kind = item?.type ?? input?.type;
+        const method = typeof input?.method === 'string' ? input.method.toUpperCase() : null;
+        if (kind === 'mcp' && input?.type === 'mcp') mcpToolCount++;
+        else if (kind === 'http' && HTTP_METHODS.has(method)) httpMethods.add(method);
+        else unresolvedMethodCount++;
         matchEvidence.network ||= Boolean(hasNetwork);
         matchEvidence.payTo ||= Boolean(related);
         matchEvidence.paired ||= Boolean(hasPair);
         if (matches.length < 50) matches.push({resource, type: item?.type ?? null,
           toolName: String(toolName), x402Version: item?.x402Version ?? null,
-          networks: networkSummary(item), desiredNetworkFound: hasNetwork,
+          networks: networkSummary(item), declaredMethod: kind === 'http' && HTTP_METHODS.has(method) ? method : null,
+          declaredType: kind ?? null, desiredNetworkFound: hasNetwork,
           desiredPayToFound: payTo ? related : null, desiredPaymentRouteFound: hasPair});
       } else if (related && samePayToOtherResource.length < 15) {
         samePayToOtherResource.push({resource, networks: networkSummary(item)});
@@ -249,6 +265,7 @@ export async function inspectCatalog({catalogUrl, targetResource, payTo, network
   return {endpoint: endpoint.toString(), pages, rawRows, uniqueKeys: seenKeys.size,
     declaredTotal: knownTotal, complete, incompleteReason: reason,
     matchingResourceCount,
+    operationEvidence: {httpMethods: [...httpMethods].sort(), mcpToolCount, unresolvedMethodCount},
     matchingEvidence: {
       desiredNetworkFound: network ? matchEvidence.network : null,
       desiredPayToFound: payTo ? matchEvidence.payTo : null,
@@ -261,14 +278,33 @@ export async function diagnose({resourceUrl, catalogUrl, payTo, network, extensi
   allowLoopback = false, pageLimit = 100, maxPages = 500, fetchImpl = fetch}) {
   const resource = requireEndpoint(resourceUrl, {allowLoopback});
   const catalog = requireEndpoint(catalogUrl, {allowLoopback});
-  let challenge;
-  try {
-    const result = await readEndpoint(fetchImpl, resource);
-    challenge = inspectChallenge(result.status, result.header.get('payment-required'));
-  } catch (error) { challenge = {state: 'FETCH_ERROR', error: String(error.message)}; }
+  async function probeUnpaidGet() {
+    try {
+      const result = await readEndpoint(fetchImpl, resource);
+      return inspectChallenge(result.status, result.header.get('payment-required'));
+    } catch (error) { return {state: 'FETCH_ERROR', error: String(error.message)}; }
+  }
+  const inspect = requestedPayTo => inspectCatalog({catalogUrl: catalog.toString(), targetResource: resource.toString(),
+    payTo: requestedPayTo, network, allowLoopback, pageLimit, maxPages, fetchImpl});
+  let challenge, summary;
+  if (payTo) {
+    // An explicit seller recipient permits one catalog pass before an origin probe.
+    // Skip GET only when COMPLETE source records all declare non-GET or MCP operations.
+    summary = await inspect(payTo);
+    const methods = summary.operationEvidence;
+    const skipGet = summary.complete && summary.matchingResourceCount > 0 &&
+      methods.unresolvedMethodCount === 0 && !methods.httpMethods.includes('GET') &&
+      (methods.httpMethods.length > 0 || methods.mcpToolCount > 0);
+    challenge = skipGet ? {state: 'CATALOG_NON_GET_ONLY', observedVia: 'COMPLETE_CATALOG',
+      declaredHttpMethods: methods.httpMethods, mcpToolCount: methods.mcpToolCount} : await probeUnpaidGet();
+  } else {
+    // Retain original single-offer payTo derivation when no recipient was given.
+    // In that case the genuine origin response must precede the indexed catalog comparison.
+    challenge = await probeUnpaidGet();
+    const discoveredPayTo = challenge.acceptsCount === 1 ? challenge.accepts?.[0]?.payTo : null;
+    summary = await inspect(discoveredPayTo);
+  }
   const derivedPayTo = payTo || (challenge.acceptsCount === 1 ? challenge.accepts?.[0]?.payTo : null);
-  const summary = await inspectCatalog({catalogUrl: catalog.toString(), targetResource: resource.toString(),
-    payTo: derivedPayTo, network, allowLoopback, pageLimit, maxPages, fetchImpl});
   const extension = bazaarExtensionOutcome(extensionResponses);
   let verdict = 'INCONCLUSIVE_CATALOG';
   if (summary.matchingResourceCount) {
