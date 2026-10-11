@@ -148,6 +148,8 @@ export class BuyerError extends Error {
   readonly destination?: string;
   readonly destinationPublished?: boolean;
   constructor(code: string, details?: Record<string, unknown>);
+  /** Public diagnostic fields; recovery handles remain directly accessible on the error. */
+  toJSON(): { name: string; code: string; exitCode?: number | null; destinationPublished?: boolean };
 }
 export class Buyer {
   readonly stateDirectory: string;

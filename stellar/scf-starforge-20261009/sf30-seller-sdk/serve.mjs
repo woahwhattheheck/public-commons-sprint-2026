@@ -92,17 +92,23 @@ function validateConfig(config) {
   return config;
 }
 
+export { validateConfig as validateSellerServiceConfig };
+
+export function resolveSellerConfigPaths(config, path) {
+  for (const route of config.routes) {
+    if (OWN(route, 'responseFile')) route.responseFile = resolve(dirname(resolve(path)), route.responseFile);
+    if (OWN(route, 'responseAsset')) route.responseAsset.file = resolve(dirname(resolve(path)), route.responseAsset.file);
+  }
+  return config;
+}
+
 export async function readSellerConfig(path) {
   const info = await stat(path);
   if (!info.isFile() || info.size > 1024 * 1024) throw new TypeError('Config must be a regular JSON file up to 1 MiB');
   const bytes = await readFile(path);
   if (bytes.length > 1024 * 1024) throw new RangeError('Config exceeds 1 MiB');
   const config = validateConfig(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
-  for (const route of config.routes) {
-    if (OWN(route, 'responseFile')) route.responseFile = resolve(dirname(resolve(path)), route.responseFile);
-    if (OWN(route, 'responseAsset')) route.responseAsset.file = resolve(dirname(resolve(path)), route.responseAsset.file);
-  }
-  return config;
+  return resolveSellerConfigPaths(config, path);
 }
 
 function facilitatorEndpoint(raw, allowLocal) {

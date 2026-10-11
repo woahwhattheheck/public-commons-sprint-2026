@@ -27,6 +27,50 @@ normally. This source-only installation omits optional packages. PostgreSQL
 drivers and native payment packages have their own setup below.
 Git and a Commons checkout are unnecessary on the merchant's machine.
 
+### Prepare a complete customer runtime
+
+The maintained installer selects dependencies from the original archive and keeps
+its package intact. It creates a private runtime with exact versions, an npm lock,
+and explicit source/dependency roots for the original host and container tools:
+
+```sh
+starforge runtime-install prepare --dir /srv/starforge/runtimes/merchant-01 \
+  --archive /srv/starforge/downloads/original-merchant.tgz \
+  --sha256 ORIGINAL_ARCHIVE_SHA256 --native --feature postgres --operator
+starforge runtime-install install --dir /srv/starforge/runtimes/merchant-01
+starforge runtime-install run --dir /srv/starforge/runtimes/merchant-01 -- source
+```
+
+Choose the native and feature options required by that merchant. The same command
+supports interrupted-install continuation, fresh-directory upgrades, recovery,
+and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
+for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
+
+### Versioned installation, upgrade and rollback
+
+Use `starforge installation` to put a selected maintained package into the
+original SF46 installation with durable `config/` and `state/` directories:
+
+```sh
+npx --no-install starforge installation inspect ./node_modules/@tokenjunkielabs/starforge-merchant
+npx --no-install starforge installation install ./node_modules/@tokenjunkielabs/starforge-merchant \
+  --home /absolute/private/starforge
+npx --no-install starforge installation status --home /absolute/private/starforge
+```
+
+The first release becomes active. Later package installs are staged for explicit
+activation, with the previous version available for rollback. The original
+package manifest, source paths, commands and package metadata travel together.
+The [managed package guide](../sf46-release/MANAGED_PACKAGE.md) covers manifest
+selection, direct Node usage, merchant launch, optional dependencies, retained
+portable preparation and interrupted-install recovery.
+
+For an existing completed original runtime, use `starforge installation
+adopt-runtime RUNTIME_DIRECTORY --home /absolute/private/starforge`. Its recorded
+profile and lockfile become part of the managed release identity, with dependencies
+retained at the original runtime location. The [runtime adoption guide](../sf46-release/MANAGED_PACKAGE.md#adopt-a-completed-runtime)
+covers profile-based staging, source-level runtime inspection and rollback.
+
 ### Schema pattern support
 
 Merchant request schemas that use regular-expression constraints load the
@@ -488,6 +532,50 @@ by the CLI and browser. Full source, pipeline, package, buyer and operating guid
 are included under `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/`.
 The optional driver pin is derived from that component's own `package.json`.
 
+## Operate a retained Allium data product
+
+The Allium commands package the original Explorer acquisition and the same
+retained dataset, publisher and buyer workflow. Prepare the approved product
+JSON using the included
+[Allium operating guide](../partners/allium-explorer-pilot/workspace/OPERATING.md),
+then create a new private workspace:
+
+```sh
+npx --no-install starforge allium-workspace create \
+  --workspace /private/allium-product \
+  --product /private/approved-allium-product.json --name "Allium Stellar data"
+npx --no-install starforge allium-workspace serve \
+  --workspace /private/allium-product --port 8447
+```
+
+Open the complete private URL printed by the command. Review product and
+projection revisions, import the original saved Allium result or explicitly
+start/collect its approved saved query, and explore the typed retained rows.
+A native query uses the environment variable named by the product's
+`apiKeyEnv`; imported results and local dataset operations work offline.
+
+Select a completed acquisition and actual public merchant terms, publish its
+original versioned dataset, and open the same publisher for source review and
+original buyer preparation. The workspace owns its merchant and publisher
+processes. Browser export stops them and retains the complete source,
+product/acquisition history, versions and buyer records. After closing the
+server, the equivalent offline handoff is:
+
+```sh
+npx --no-install starforge allium-workspace export \
+  --workspace /private/allium-product --out /private/allium-product.json
+npx --no-install starforge allium-workspace import \
+  --workspace /private/reopened-allium-product --bundle /private/allium-product.json
+npx --no-install starforge allium-workspace serve \
+  --workspace /private/reopened-allium-product --port 8447
+```
+
+The new receiving directory opens stopped and retains the original source and
+typed snapshots. `allium-explorer inspect/import/start/collect/status/recover`
+exposes the underlying saved-query operator for terminal use. Application
+imports use `./seller/allium`, `./seller/allium/workspace` and
+`./seller/allium/workspace/server`.
+
 ## Native payment dependencies
 
 For an actual payment-capable seller, install the native packages in the same
@@ -579,6 +667,8 @@ or automatically retry a request.
 | `starforge postgres-init` / `postgres-inspect` / `postgres` | Prepare a PostgreSQL source, inspect named queries and launch its seller/dashboard |
 | `starforge sqlite-init` / `sqlite-inspect` | Prepare and inspect an original SQLite named-query source |
 | `starforge dataset-refresh` | Publish, retain and activate CSV dataset versions while readers finish their pages |
+| `starforge allium-explorer` | Inspect an approved Allium product and import, run, collect or recover its original saved query |
+| `starforge allium-workspace` | Review retained Allium products/results, publish a versioned merchant, prepare its buyer and reopen a complete workspace |
 | `starforge dataset-publisher` | Upload and publish CSV versions, select the actual offer and export original buyer preparation |
 | `starforge buyer-dataset` | Acquire, pause, resume and deliver all pages of the selected original dataset |
 | `starforge buyer-dataset-workspace` | Review original offers, operate dataset acquisitions, open retained files and use the analysis workspace |
@@ -2692,6 +2782,35 @@ npx --no-install starforge revenue-report \
 For a session review, replace `--history` with that version's `--snapshot` file.
 The included [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
 describes history enablement, range selection, source retention and comparisons.
+
+### Turn a saved pricing review into a merchant price change
+
+In **Saved reviews**, choose **Prepare price change**, enter the explicit atomic
+amounts for the selected payment choices, and review every before-and-after term.
+Save a named decision to retain the new seller configuration, a local launch
+configuration with original file paths resolved, rebound merchant terms and the
+complete original pricing inputs. USD quotes and cost assumptions keep their
+entered values. Saved decisions reopen in the same pricing workspace.
+
+For an existing API merchant package, start the same command with
+`--source-package /private/merchant/original-api-package`. The decision then
+includes a complete updated package produced by the original compiler. Add
+`--release-store /private/merchant/releases` and, when configured,
+`--release-runtime /private/merchant/release-runtime.json` to **Stage retained
+release** from the saved decision. The original release console reviews,
+selects and starts that retained version. A repeated stage recovers its original
+release ID. The [pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md) covers
+the full source, export, staging and recovery workflow. Applications use
+`./merchant/revenue-model`, `./merchant/repricing` and
+`./merchant/repricing-source` for these same implementations.
+
+The original merchant MCP operator exposes this same workflow through its
+`merchant_pricing_*` tools. A host-declared pricing connection selects saved
+sources and release stores; `merchant-mcp init-pricing` connects an agent to the
+existing workspace. See the included
+[merchant pricing MCP guide](../../../stellar-forge/mcp-merchant-operator/PRICING.md)
+for commercial reviews, explicit amount decisions, retained downloads and
+release activation through the original operator.
 
 ## Operate merchant incidents and support cases
 
