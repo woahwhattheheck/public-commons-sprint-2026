@@ -89,7 +89,7 @@ its durable lifecycle history. Both preserve the original exact payment terms.
 ## Resume after a failed or interrupted response
 
 An apply consumes the host's pending review before sending its original command.
-That same ID cannot be submitted again. If the MCP response is interrupted,
+Another apply requires a fresh review. If the MCP response is interrupted,
 read `merchant_status` and `merchant_discovery_status` for the release. The
 host's `lastApply` retains its returned phase and receipt, or the original
 error code and transport facts. An error response and an observed listing are
