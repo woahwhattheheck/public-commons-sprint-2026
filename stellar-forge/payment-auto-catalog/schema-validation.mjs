@@ -124,9 +124,14 @@ function validateNode(value, schema, root, path = '$', refs = new Set()) {
   }
   if (schema.anyOf && !schema.anyOf.some(part => validateNode(value, part, root, path, refs).length === 0)) return [`${path}:anyOf`];
   if (schema.oneOf && schema.oneOf.filter(part => validateNode(value, part, root, path, refs).length === 0).length !== 1) return [`${path}:oneOf`];
-  if (typeof value === 'string') {
-    if (Number.isSafeInteger(schema.minLength) && value.length < schema.minLength) return [`${path}:minLength`];
-    if (Number.isSafeInteger(schema.maxLength) && value.length > schema.maxLength) return [`${path}:maxLength`];
+  if (typeof value === 'string' &&
+      (Number.isSafeInteger(schema.minLength) || Number.isSafeInteger(schema.maxLength))) {
+    // JSON Schema counts Unicode code points, not UTF-16 code units or graphemes.
+    // Iterate without allocating a second array proportional to the string size.
+    let length = 0;
+    for (const character of value) length++;
+    if (Number.isSafeInteger(schema.minLength) && length < schema.minLength) return [`${path}:minLength`];
+    if (Number.isSafeInteger(schema.maxLength) && length > schema.maxLength) return [`${path}:maxLength`];
   }
   if (typeof value === 'number') {
     if (typeof schema.minimum === 'number' && value < schema.minimum) return [`${path}:minimum`];
