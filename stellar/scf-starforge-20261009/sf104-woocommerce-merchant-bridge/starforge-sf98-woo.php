@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Starforge SF98 WooCommerce Merchant Bridge
- * Description: Receives authenticated native Stellar x402 SF98 settlement notices and binds them to WooCommerce orders for explicit merchant release.
- * Version: 0.2.0
+ * Description: Native Stellar x402 checkout, order-bound buyer handoff and authenticated SF98 settlement notices with explicit merchant release.
+ * Version: 0.3.0
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
  * License: MIT
@@ -199,7 +199,6 @@ final class Starforge_SF98_Woo {
         global $wpdb;
         self::admin_guard('sf98_bind_order');
         $order_id = absint($_POST['order_id'] ?? 0);
-        $order = wc_get_order($order_id);
         $route = sanitize_text_field(wp_unslash($_POST['route_id'] ?? ''));
         $method = sanitize_text_field(wp_unslash($_POST['method'] ?? ''));
         $network = sanitize_text_field(wp_unslash($_POST['network'] ?? ''));
@@ -208,27 +207,40 @@ final class Starforge_SF98_Woo {
         // Hash the exact advertised payTo bytes; text sanitization could silently
         // change the selected recipient. WordPress request slashes are removed.
         $pay_to = is_string($_POST['pay_to'] ?? null) ? wp_unslash($_POST['pay_to']) : null;
-        if (!$order || !in_array($order->get_status(), ['pending','on-hold'], true) ||
-            !preg_match('/^[A-Za-z0-9_-]{1,80}$/D', $route) ||
+        if ($order_id < 1 || !preg_match('/^[A-Za-z0-9_-]{1,80}$/D', $route) ||
             !in_array($method, self::METHODS, true) ||
             !in_array($network, ['stellar:testnet','stellar:pubnet'], true) ||
             !self::amount_ok($amount) || strlen($asset) < 3 || strlen($asset) > 128 ||
             preg_match('/[\x00-\x1f\x7f]/', $asset) ||
             !is_string($pay_to) || strlen($pay_to) < 1 || strlen($pay_to) > 128 ||
-            preg_match('/[\x00-\x20\x7f]/', $pay_to) || preg_match('/^S[A-Z2-7]{55}$/D', $pay_to) ||
-            $wpdb->get_var($wpdb->prepare('SELECT event_id FROM ' . self::table() . ' WHERE order_id=%d', $order_id))) {
+            preg_match('/[\x00-\x20\x7f]/', $pay_to) || preg_match('/^S[A-Z2-7]{55}$/D', $pay_to)) {
             self::admin_redirect('binding_rejected');
         }
-        $order->update_meta_data(self::META_READY, [
-            'approved' => 'YES', 'routeId' => $route, 'method' => $method,
-            'network' => $network, 'amountAtomic' => $amount,
-            'assetDigest' => hash('sha256', $asset),
-            'recipientDigest' => hash('sha256', $pay_to),
-            'approvedBy' => get_current_user_id(), 'approvedAt' => gmdate('c'),
-        ]);
-        $order->save();
-        $order->add_order_note('SF98 route, atomic Stellar payment terms and selected recipient digest explicitly prebound by store operator.');
-        self::admin_redirect('bound');
+        $bind = static function () use ($wpdb, $order_id, $route, $method, $network, $amount, $asset, $pay_to) {
+            // Reload under the same checkout lock: a legacy admin form must not
+            // overwrite a frozen handoff while native verification is underway.
+            $order = wc_get_order($order_id);
+            if (!$order || !in_array($order->get_status(), ['pending','on-hold'], true)) return 'binding_rejected';
+            if (class_exists('Starforge_SF104_Checkout') &&
+                $order->get_meta(Starforge_SF104_Checkout::SNAPSHOT_META, true)) return 'checkout_terms_already_frozen';
+            $event = $wpdb->get_var($wpdb->prepare('SELECT event_id FROM ' . self::table() . ' WHERE order_id=%d', $order_id));
+            if ($event || $wpdb->last_error) return 'binding_rejected';
+            $order->update_meta_data(self::META_READY, [
+                'approved' => 'YES', 'routeId' => $route, 'method' => $method,
+                'network' => $network, 'amountAtomic' => $amount,
+                'assetDigest' => hash('sha256', $asset),
+                'recipientDigest' => hash('sha256', $pay_to),
+                'approvedBy' => get_current_user_id(), 'approvedAt' => gmdate('c'),
+            ]);
+            $order->save();
+            $order->add_order_note('SF98 route, atomic Stellar payment terms and selected recipient digest explicitly prebound by store operator.');
+            return 'bound';
+        };
+        try {
+            $result = class_exists('Starforge_SF104_Checkout') ?
+                Starforge_SF104_Checkout::with_order_lock($order_id, $bind) : $bind();
+        } catch (Throwable $e) { $result = 'binding_unavailable'; }
+        self::admin_redirect($result);
     }
 
     static function release() {
@@ -345,3 +357,5 @@ final class Starforge_SF98_Woo {
 }
 register_activation_hook(__FILE__, ['Starforge_SF98_Woo', 'activate']);
 Starforge_SF98_Woo::boot();
+// Optional native checkout uses the same binding, receiver and merchant release.
+require_once __DIR__ . '/checkout-gateway.php';
