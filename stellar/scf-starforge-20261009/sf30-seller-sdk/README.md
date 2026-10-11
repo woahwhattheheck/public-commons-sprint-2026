@@ -24,6 +24,14 @@ choose explicit atomic-unit prices, and set `publicOrigin` to the HTTPS origin
 served by your reverse proxy. The listener remains on `127.0.0.1`; incoming Host
 or forwarding headers cannot rewrite the configured payment identity.
 
+### Deliver paid event streams and record streams
+
+The [streaming merchant guide](STREAMING.md) connects an existing SSE or NDJSON
+producer to this seller, its exported customer client and the original buyer's
+saved-output recovery. Authorization flow generates the complete response before
+settlement; explicitly selected upfront flow delivers live after native settlement.
+The guide includes a real HTTP producer, merchant configuration and application API.
+
 ### Offer several payment choices on one route
 
 Use `definition.paymentOptions` for 1–16 complete `exact` options, including

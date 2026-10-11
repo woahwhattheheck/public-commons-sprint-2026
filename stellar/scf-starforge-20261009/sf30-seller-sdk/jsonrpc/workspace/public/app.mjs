@@ -196,7 +196,7 @@ function renderRuntime() {
     if (!url) continue;
     const parsed=new URL(url);
     if (parsed.protocol==='http:' && parsed.hostname==='127.0.0.1')
-      $('runtime-links').append(node('a',label,{href:url,target:'_blank',rel:'noopener noreferrer',class:'link-button'}));
+      $('runtime-links').append(node('a',label,{href:url,target:'_blank',rel:'noopener',referrerpolicy:'origin',class:'link-button'}));
   }
   $('runtime-detail').textContent=json({state:value.state,instanceId:value.instanceId,version:value.revision,
     packageId:value.packageId,startedAt:value.startedAt,endedAt:value.endedAt,provider:value.snapshot?.rpc});

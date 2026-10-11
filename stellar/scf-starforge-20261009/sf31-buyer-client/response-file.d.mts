@@ -1,3 +1,5 @@
+import type { BuyerResponseStreamOptions, BuyerStreamRecord, BuyerStreamSummary } from './response-stream.mjs';
+
 /** Optional expectations selected locally before purchase, not response-header claims. */
 export interface BuyerResponseFileIntegrity {
   /** Expected lowercase SHA-256 of the actual response-stream bytes. */
@@ -15,7 +17,9 @@ export interface BuyerResponseFileOptions extends BuyerResponseFileIntegrity {
   maxBytes?: number;
   /** Total stream-reading deadline; default 30 seconds. */
   timeoutMs?: number;
-  /** Optional nonsecret owner generation recorded in the original reservation. */
+  /** Original finite response framing. Raw bytes remain the saved product. */
+  stream?: BuyerResponseStreamOptions;
+  /** Nonsecret owner tag retained in the existing private reservation file. */
   reservationTag?: string;
 }
 
@@ -32,6 +36,7 @@ export interface SavedBuyerResponse {
   bytes: number;
   sha256: string;
   contentType: string | null;
+  stream?: BuyerStreamSummary;
   /** Present only when at least one local expectation was checked successfully. */
   verifiedAgainst?: Readonly<BuyerResponseFileIntegrity>;
   /** Omitted when all four original object headers are absent. */
@@ -41,10 +46,14 @@ export interface SavedBuyerResponse {
 
 export interface PreparedBuyerResponseFile {
   readonly destination: string;
-  /** Original private partial path, available for an owning workflow's journal. */
+  /** Original private partial selected before the HTTP request. */
   readonly partialPath: string;
   /** Consumes the original successful response body once. Does not change payment metadata. */
-  save(result: { response: Response }, options?: { signal?: AbortSignal }): Promise<SavedBuyerResponse>;
+  save(result: { response: Response }, options?: {
+    signal?: AbortSignal;
+    /** Receives completed records after their raw bytes are written; await for backpressure. */
+    onRecord?: (record: BuyerStreamRecord) => void | Promise<void>;
+  }): Promise<SavedBuyerResponse>;
   /** Save an already-returned non-HTTP representation through the same reserved writer. */
   saveBytes(bytes: Uint8Array, options?: { contentType?: string; signal?: AbortSignal }): Promise<SavedBuyerResponse>;
   /** Release an unused destination, or cancel an active save. Never retries the buyer. */
@@ -61,6 +70,9 @@ export class BuyerResponseFileError extends Error {
   readonly code: string;
   readonly partialPath: string | null;
   readonly bytes: number;
+  readonly stream?: BuyerStreamSummary;
+  /** SHA-256 of the exact retained partial bytes when stream capture was selected. */
+  readonly partialSha256?: string;
   readonly cleanupWarnings: Array<{ path: string; code: string }>;
 }
 

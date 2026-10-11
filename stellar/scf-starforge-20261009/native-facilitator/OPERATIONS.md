@@ -82,6 +82,70 @@ failure releases the acquired locks. A competing process exits with
 the RPC while a service already owns its accounts; `--check` constructs an SDK
 instance and therefore participates in configured ownership.
 
+## Increase native settlement capacity
+
+The default `limits.maxSettleInFlight` is `1`. To admit two concurrent native
+settlements, add a second distinct existing source account to the same private
+configuration and set the explicit limit to `2`:
+
+```json
+{
+  "signers": [
+    {"address": "EXISTING_FIRST_G_ACCOUNT", "secretEnv": "SF_FACILITATOR_SECRET"},
+    {"address": "EXISTING_SECOND_G_ACCOUNT", "secretEnv": "SF_FACILITATOR_SECOND_SECRET"}
+  ],
+  "limits": {
+    "maxTransactionFeeStroops": 50000,
+    "inclusionFeeStroops": 100,
+    "maxVerifyInFlight": 16,
+    "maxSettleInFlight": 2,
+    "drainGraceMs": 60000
+  }
+}
+```
+
+Merge these fields into the existing complete configuration, retaining its network,
+RPC, payment policy and shared ownership directory. Use the named environment
+variables through the original service manager. Accounts must already exist on
+that network, be funded for their native role, and belong to this operator. Capacity
+must be an integer no larger than the count of distinct `signers`; the optional
+fee-bump account does not add a source-account slot. An invalid limit is refused
+as `SETTLEMENT_CAPACITY_INVALID` during the key-free review.
+
+Run `--review` on the proposed JSON and confirm `settlementConcurrency:2`. Run the
+existing `--probe` against its RPC. Drain the original running service with its
+normal SIGTERM shutdown, wait for accepted native work to finish, and start the
+same `--serve` or `--seller` command with the reviewed configuration. Signer keys
+and capacity are captured at construction; changing the JSON of a running process
+does not change them. To reduce capacity, repeat this drain-and-start procedure
+with the lower limit. Existing process-local configuration remains supported;
+use the shared ownership directory for cooperating services that could use the
+same accounts.
+
+Inspect the existing `/healthz` response, or `seller.facilitator.status()` for an
+in-process merchant. `settlementConcurrency` is the configured ceiling;
+`availableSettlementSlots` is remaining admission capacity and becomes zero while
+draining. `settlementAccounts` contains each public account's state and the start
+time of any admitted native call. An `AVAILABLE` account may still be unused when
+the configured ceiling is lower than the number of accounts. The self-facilitated
+seller's original lifecycle has the same `maxInFlight` as the settlement ceiling.
+
+Each accepted settlement reserves an account before entering the SDK and retains
+it through verification, signing, submission and the SDK's confirmation result.
+The next accepted call selects a free account, rotating across the complete list;
+it cannot select an account still used by an earlier call. A caller disconnect,
+HTTP deadline or expired drain grace does not release an active native account.
+The existing SDK still owns all transaction verification and construction, including
+its full facilitator-controlled address checks. Fee bump uses the original outer
+fee wrapper; its fee source does not supply an additional source sequence. The
+configured total fee ceiling continues to include that wrapper.
+
+At capacity the native backend returns `FACILITATOR_BUSY`; the merchant rejects
+excess resource requests through its existing SF30 admission. Neither path queues
+a charge. After an uncertain settlement, use the original returned transaction and
+buyer/accounting recovery workflow. Restarting the service does not replay an
+operation, resume a caller or change an uncertain payment into a successful one.
+
 ## Read the existing service's state
 
 The private listener has two distinct operating endpoints:

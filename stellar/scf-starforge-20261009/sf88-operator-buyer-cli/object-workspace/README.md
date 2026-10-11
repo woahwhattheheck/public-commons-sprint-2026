@@ -107,7 +107,9 @@ The browser workflow has six stages:
 5. **Assemble and download.** When every original part is verified, assemble
    through the existing streaming writer. Download opens the recorded file,
    checks its length and SHA-256 again, and streams it to the browser's normal
-   download destination. Large files are not buffered into a browser Blob.
+   download destination. The file panel shows verification and streaming byte
+   progress; **Stop file transfer** cancels that exact read. Large files are not
+   buffered into a browser Blob.
 6. **Complete purchase records.** Open **Purchase records** for the selected
    download. Review each original part's financial status, then explicitly
    **Finalize original purchases** to process every earlier attempt using the
@@ -187,6 +189,24 @@ ledger, not a separate balance or new source of financial authority.
 
 ## Retained files and restart
 
+A completed-file download owns one operation from its first saved-file read
+through the HTTP stream. A second link cannot start another verification while
+that operation is active. The same open file descriptor supplies both the
+recorded length/SHA-256 check and the bounded stream. The final block is retained
+until the streamed bytes and file identity still match the original assembly,
+so a changed file ends with an incomplete download rather than a successful
+replacement result.
+
+The file panel reports verification, streaming, completion or the latest failure
+for that session. **Stop file transfer**, a disconnected download request, and
+host shutdown cancel the owned read and close its file handle. The current read
+is bounded to 64 KiB; cancellation prevents the next read. HTTP backpressure
+bounds queued file data. A stopped or failed transfer leaves the original
+assembly, chunks, buyer attempts and purchase records in place. Request a new
+one-use link to download that same file again. The latest transfer status is
+kept in memory for eight sessions; reopening the private state recovers the
+original file and receipts without a new merchant request.
+
 The workspace creates this layout beneath its selected private state directory:
 
 ```text
@@ -228,9 +248,9 @@ Use the actual session name shown in the sidebar. **Download HTML report** and
 intent and local recovery references. These exports are operator files; retain
 them with the corresponding session.
 
-`Ctrl+C` or `SIGTERM` stops this server's owned run, waits for the original result
-and lease release, and closes the listener. Incomplete requests are closed after
-the buyer drains; active browser file streams receive a 15-second shutdown grace.
+`Ctrl+C` or `SIGTERM` stops this server's owned run or file transfer, waits for the
+original result, lease release and file-handle cleanup, and closes the listener.
+Incomplete HTTP requests are closed after the owned work drains.
 Closing only the browser leaves the
 host process running; reopen the printed URL to inspect it. An abrupt host or
 process interruption is handled by the original session recovery command.

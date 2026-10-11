@@ -5,7 +5,7 @@ import os
 import sys
 
 from .client import Buyer
-from .errors import BuyerError
+from .errors import BuyerError, DeliveryError
 
 
 def main():
@@ -27,6 +27,15 @@ def main():
     retrieve.add_argument("intent")
     retrieve.add_argument("--out")
     retrieve.add_argument("--claim-env", default="SF101_CLAIM_TOKEN")
+    retrieve.add_argument("--timeout-ms", type=int, default=30000)
+    retrieve.add_argument("--resume", action=argparse.BooleanOptionalAction, default=None,
+                          help="resume the original saved transfer (default: enabled on Linux)")
+    for name, help_text in (
+            ("inspect-file-transfer", "inspect retained transfer bytes locally"),
+            ("reset-file-transfer", "explicitly discard the retained partial; preserve final files")):
+        transfer = commands.add_parser(name, help=help_text)
+        transfer.add_argument("intent")
+        transfer.add_argument("--out")
     recovered_file = commands.add_parser("recover-file", help="read retained product outcome locally")
     recovered_file.add_argument("intent")
     finalized = commands.add_parser("finalize", help="finish original workspace accounting; never purchase")
@@ -86,7 +95,12 @@ def main():
                 result = op.recover()
                 output = result.record if result else op.inspect()
             elif args.command == "retrieve-file":
-                output = op.retrieve_file(destination=args.out, claim_env=args.claim_env).record
+                output = op.retrieve_file(destination=args.out, claim_env=args.claim_env,
+                    timeout_ms=args.timeout_ms, resume=args.resume).record
+            elif args.command == "inspect-file-transfer":
+                output = op.inspect_file_transfer(destination=args.out).record
+            elif args.command == "reset-file-transfer":
+                output = op.reset_file_transfer(destination=args.out).record
             elif args.command == "recover-file":
                 result = op.recover_file()
                 output = result.record if result else op.inspect()
@@ -102,8 +116,15 @@ def main():
         print(json.dumps(output, indent=2))
         return 0
     except BuyerError as error:
-        print(json.dumps({"error": error.code, "operationDirectory":
-            str(error.operation.directory) if error.operation else None}), file=sys.stderr)
+        result = {"error": error.code, "operationDirectory":
+            str(error.operation.directory) if error.operation else None}
+        if isinstance(error, DeliveryError):
+            result.update(retainedBytes=error.retained_bytes, resumable=error.resumable)
+            if error.partial_path:
+                result["partialPath"] = error.partial_path
+            if error.transfer_state_path:
+                result["transferState"] = error.transfer_state_path
+        print(json.dumps(result), file=sys.stderr)
         return 1
 
 

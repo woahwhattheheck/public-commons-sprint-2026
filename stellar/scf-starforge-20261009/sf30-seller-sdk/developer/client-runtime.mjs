@@ -5,7 +5,7 @@ const has = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const MAX_ATOMIC = '170141183460469231731687303715884105727';
 const requestKeys = new Set(['path', 'query', 'body']);
-const authorizationKeys = new Set(['intentId', 'maxAtomic', 'acceptIndex', 'approve', 'sign', 'signal']);
+const authorizationKeys = new Set(['intentId', 'maxAtomic', 'acceptIndex', 'paymentFlow', 'approve', 'sign', 'signal']);
 const clientJsonMethods = new Set(['POST', 'PUT', 'PATCH']);
 
 function freezeTree(value) {
@@ -60,7 +60,7 @@ function encodeJsonBody(value) {
 
 function validateAuthorization(authorization) {
   if (!isRecord(authorization) || Object.keys(authorization).some(key => !authorizationKeys.has(key)))
-    throw new TypeError('Use explicit intentId, maxAtomic, optional acceptIndex and buyer callbacks/signal');
+    throw new TypeError('Use explicit intentId, maxAtomic, optional acceptIndex/paymentFlow and buyer callbacks/signal');
   const { intentId, maxAtomic } = authorization;
   if (typeof intentId !== 'string' || !intentId.trim() || intentId.length > 160 || /[\x00-\x1f\x7f]/.test(intentId))
     throw new TypeError('A stable printable intentId of 1–160 characters is required');
@@ -72,6 +72,8 @@ function validateAuthorization(authorization) {
     if (has(authorization, key) && typeof authorization[key] !== 'function')
       throw new TypeError(`${key} must be an existing buyer callback`);
   }
+  if (has(authorization,'paymentFlow') && !['authorization','upfront'].includes(authorization.paymentFlow))
+    throw new TypeError('paymentFlow must be authorization or explicitly upfront');
   if (has(authorization, 'signal') && authorization.signal !== undefined &&
       (typeof authorization.signal?.aborted !== 'boolean' || typeof authorization.signal?.addEventListener !== 'function'))
     throw new TypeError('signal must be an AbortSignal');
@@ -116,6 +118,9 @@ export function createClientRuntime(originalSnapshot) {
       ...(bodyMethod ? { body: encodeJsonBody(inputs.body) } : {}),
     }, origin);
     const terms = options[index];
+    const paymentFlow = authorization.paymentFlow ?? 'authorization';
+    if ((terms.extra?.paymentFlow ?? 'authorization') !== paymentFlow)
+      throw new TypeError('Explicit buyer paymentFlow must match the selected original offer');
     const result = {
       intentId: authorization.intentId,
       url: request.publicUrl, method: operation.method,
@@ -123,7 +128,7 @@ export function createClientRuntime(originalSnapshot) {
       ...(has(request.init, 'body') ? { body: request.init.body } : {}),
       expect: Object.freeze({ scheme: terms.scheme, network: terms.network,
         asset: terms.asset, payTo: terms.payTo, maxAtomic: authorization.maxAtomic,
-        maxTimeoutSeconds: terms.maxTimeoutSeconds }),
+        maxTimeoutSeconds: terms.maxTimeoutSeconds, paymentFlow }),
     };
     for (const key of ['approve', 'sign', 'signal']) if (has(authorization, key)) result[key] = authorization[key];
     return Object.freeze(result);

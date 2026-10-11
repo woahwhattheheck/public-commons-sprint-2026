@@ -59,7 +59,7 @@ async function main(args) {
     running = await startSelfFacilitatedSeller({facilitatorConfig:c,config,port,handlers});
     ownedFacilitator = running.facilitator;
     print({mode:'NATIVE_SELF_FACILITATED_SELLER',url:running.url,network:c.network,
-      supported:await running.facilitator.getSupported()});
+      supported:await running.facilitator.getSupported(),operations:running.facilitator.status()});
   } else {
     const {startFacilitatorServer} = await import('./server.mjs');
     const facilitator = await createNativeFacilitator(c);

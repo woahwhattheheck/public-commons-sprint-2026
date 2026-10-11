@@ -1,0 +1,51 @@
+{
+  "schema": "tjl.sumter-issuer-source-inventory.v1",
+  "solicitation_id": "RFQ-2027-018",
+  "reviewed_date": "2026-10-11",
+  "purpose": "Manual reference for Library file upload and project Sources selection; not an application import schema. No approval, release or native transfer is pre-recorded.",
+  "files": [
+    {
+      "filename": "RFQ-2027-018.pdf",
+      "title": "Digital Procurement Solutions for Solicitations — original RFQ",
+      "media_type": "application/pdf",
+      "bytes": 545631,
+      "sha256": "90dbc9f5507696df56604185857f2b91709451a676ea486b1a659575e5a908c8",
+      "issued_date": "2026-10-02",
+      "pdf_pages": 20,
+      "source_url": "https://drive.google.com/file/d/1J_ubcwLrU-bdbGnvEHooerM4R7FrolVB/view",
+      "public_copy_selected": false,
+      "page_references": {
+        "1": "Identity, published contact, deadline and sealed hard-copy/USB instructions",
+        "12": "Document templates, clause library, per-user section locking, project attachments and broader platform scope",
+        "13": "Training, operational controls and support"
+      },
+      "initial_visibility": "internal",
+      "upload_surface": "Library / Original library source files",
+      "source_reference": "Issuer RFQ-2027-018; Digital Procurement Solutions for Solicitations — original RFQ; issued 2026-10-02; https://drive.google.com/file/d/1J_ubcwLrU-bdbGnvEHooerM4R7FrolVB/view",
+      "template_destinations": []
+    },
+    {
+      "filename": "Addendum-One-2026-10-09.pdf",
+      "title": "Addendum One — RFQ-2027-018",
+      "media_type": "application/pdf",
+      "bytes": 320924,
+      "sha256": "81c7b68cb1a071a746fdcee2dbd75a1b9648fa7ab49f08113f908ebcd36861b8",
+      "issued_date": "2026-10-09",
+      "pdf_pages": 7,
+      "source_url": "https://drive.google.com/file/d/1p7WwFwUvGP8BD4wDqRiMb22hVqRzaRHC/view",
+      "amends_source_sha256": "90dbc9f5507696df56604185857f2b91709451a676ea486b1a659575e5a908c8",
+      "public_copy_selected": false,
+      "page_references": {
+        "3": "Amendment effect; Q1–3 budget, hosting and access answers",
+        "4": "Q4–7 access, AI, test environment and current signature system",
+        "5": "Q8–10 unknown migration counts, attachments and unconfirmed API",
+        "6": "Q11–15 initial template configuration, workflow quantity and district-owned library",
+        "7": "Q16–19 bond answer, equivalent-feature response, unanswered form and closed-bid submission"
+      },
+      "initial_visibility": "internal",
+      "upload_surface": "Library / Original library source files",
+      "source_reference": "Issuer RFQ-2027-018; Addendum One — RFQ-2027-018; issued 2026-10-09; https://drive.google.com/file/d/1p7WwFwUvGP8BD4wDqRiMb22hVqRzaRHC/view",
+      "template_destinations": []
+    }
+  ]
+}

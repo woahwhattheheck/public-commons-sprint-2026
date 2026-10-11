@@ -6,6 +6,7 @@ import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
 import { compileResponseContract } from './response-contract.mjs';
 import { canonicalOperationJSON, operationRequestHash } from './upstream-idempotency.mjs';
 import { supportsSellerMethod, requiresJsonBody } from './http-methods.mjs';
+import { compileUpstreamStreamPolicy, openUpstreamStream } from './upstream-stream.mjs';
 
 // Private per-invocation metadata. Never serialized into a response or retained in
 // operation state; lets availability distinguish a real backend call from replay.
@@ -159,13 +160,13 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider']);
+    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'stream']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider } = options;
-  if (!supportsSellerMethod(method) || !['json', 'bytes'].includes(responseType) || typeof allowLocal !== 'boolean' ||
+    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream } = options;
+  if (!supportsSellerMethod(method) || !['json', 'bytes', 'sse', 'ndjson'].includes(responseType) || typeof allowLocal !== 'boolean' ||
       typeof cachePolicyMetadata !== 'boolean' ||
       onResult !== undefined && typeof onResult !== 'function' ||
       lookup !== undefined && typeof lookup !== 'function') throw new TypeError('Invalid upstream options');
@@ -173,6 +174,11 @@ export function createUpstreamHandler(options = {}) {
   integer(maxRequestBytes, 1, 16 * 1048576, 'maxRequestBytes');
   integer(maxResponseBytes, 1, 16 * 1048576, 'maxResponseBytes');
   integer(maxInFlight, 1, 256, 'maxInFlight');
+  const streaming = ['sse','ndjson'].includes(responseType);
+  if (streaming && (method === 'HEAD' || idempotency !== undefined || responseContract !== undefined || cachePolicyMetadata))
+    throw new TypeError('Streaming upstreams require a response body and cannot use buffered response replay, contracts or cache metadata');
+  if (!streaming && stream !== undefined) throw new TypeError('stream settings require sse or ndjson responseType');
+  const streamPolicy = streaming ? compileUpstreamStreamPolicy(stream,responseType) : null;
   const targetFor = compileTarget(baseUrl, path, allowLocal), queries = queryMapping(query);
   const forward = headerList(requestHeaders), expose = headerList(responseHeaders, true);
   if (responseContract !== undefined && (responseType !== 'json' || !expose.includes('content-type')))
@@ -202,6 +208,16 @@ export function createUpstreamHandler(options = {}) {
     }
   }
   const totals = { started: 0, completed: 0, inFlight: 0, failed: 0, timedOut: 0, responseBytes: 0 };
+  function recordResult(event) {
+    totals.inFlight--; totals.completed++;
+    if (event.status >= 400) totals.failed++;
+    if (event.error === 'UPSTREAM_TIMEOUT') totals.timedOut++;
+    totals.responseBytes += event.responseBytes;
+    if (onResult) {
+      try { Promise.resolve(onResult(Object.freeze({method,...event}))).catch(() => {}); }
+      catch { /* Telemetry cannot change delivery. */ }
+    }
+  }
   function prepare(context) {
     if (!object(context) || context.method !== method) throw new TypeError('Method mismatch');
     const target = targetFor(context);
@@ -371,14 +387,17 @@ export function createUpstreamHandler(options = {}) {
           throw new TypeError('Operation headers cannot be supplied as credentials');
         Object.assign(prepared.outgoing, trustedHeaders);
         prepared.outgoing['accept-encoding'] = 'gzip, deflate, br';
-        prepared.outgoing.accept ??= responseType === 'json' ? 'application/json' : '*/*';
+        prepared.outgoing.accept ??= responseType === 'json' ? 'application/json' :
+          responseType === 'sse' ? 'text/event-stream' : responseType === 'ndjson' ? 'application/x-ndjson' : '*/*';
         if (prepared.body !== undefined) {
           prepared.outgoing['content-type'] = 'application/json; charset=utf-8';
           prepared.outgoing['content-length'] = String(prepared.body.length);
         }
         if (backendKey !== undefined) prepared.outgoing[idempotency.backendHeader] = backendKey;
         startedExchange = true;
-        result = await exchange(prepared, lifetime.signal);
+        result = streaming ? await openUpstreamStream({...prepared,method,lookup,expose,
+          format:responseType,policy:streamPolicy,headerSignal:lifetime.signal,signal:context.signal}) :
+          await exchange(prepared, lifetime.signal);
         // Invalidate only the bearer actually rejected by this native call.
         // Never retry a GET or mutation here; 403 is not token expiry.
         if (credentialProvider && result.response.body?.upstreamStatus === 401) {
@@ -391,17 +410,14 @@ export function createUpstreamHandler(options = {}) {
       } finally { lifetime?.close(); }
       attempt = Object.freeze({dispatched:result.outcome !== 'NOT_DISPATCHED',
         status:result.response.status,error:result.response.body?.error ?? null,
-        upstreamStatus:result.response.body?.upstreamStatus ?? null});
-      totals.inFlight--; totals.completed++;
-      if (result.response.status >= 400) totals.failed++;
-      if (result.response.body?.error === 'UPSTREAM_TIMEOUT') totals.timedOut++;
-      const bytes = Buffer.isBuffer(result.response.body) ? result.response.body.length : 0;
-      totals.responseBytes += bytes;
-      if (onResult) {
-        const event = Object.freeze({ method, status: result.response.status, responseBytes: bytes,
-          durationMs: Math.round(performance.now() - began), error: result.response.body?.error ?? null });
-        try { Promise.resolve(onResult(event)).catch(() => {}); } catch { /* telemetry cannot change delivery */ }
-      }
+        upstreamStatus:result.response.body?.upstreamStatus ?? null,
+        ...(result.completion ? {completion:result.completion} : {})});
+      if (result.completion) {
+        result.completion.then(event => recordResult({status:event.status,responseBytes:event.responseBytes,
+          durationMs:Math.round(performance.now()-began),error:event.error}));
+      } else recordResult({status:result.response.status,
+        responseBytes:Buffer.isBuffer(result.response.body) ? result.response.body.length : 0,
+        durationMs:Math.round(performance.now()-began),error:result.response.body?.error ?? null});
       return result;
     }
     let result = idempotency ? await idempotency.operations.execute({...prepared.operation,signal:context.signal},perform) :
@@ -415,6 +431,7 @@ export function createUpstreamHandler(options = {}) {
   }
   // No URL, credential, request or response payload is retained in diagnostics.
   upstreamHandler.snapshot = () => Object.freeze({ ...totals,
+    ...(streamPolicy ? {stream:Object.freeze({format:responseType,...streamPolicy})} : {}),
     ...(credentialProvider ? {oauth2:credentialProvider.snapshot()} : {}),
     ...(idempotency ? {idempotency:idempotency.operations.snapshot()} : {}) });
   if (idempotency) {

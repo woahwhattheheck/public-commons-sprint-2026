@@ -10,6 +10,17 @@ import {McpResultStore, importRetainedMcpResult, recoverRetainedMcpResult, readP
 const need = (condition, code) => { if (!condition) throw Object.assign(new Error(code), {code}); };
 const privateOwned = stat => (stat.mode & 0o077) === 0 &&
   (typeof process.getuid !== 'function' || stat.uid === process.getuid());
+const HELP = `Usage: node result-cli.mjs COMMAND --state-dir ABSOLUTE_PRIVATE_DIRECTORY [OPTIONS]
+
+  list     [--limit N] [--cursor CURSOR]
+  read     --quote ID [--byte-offset N] [--max-bytes N]
+  export   --quote ID --out ABSOLUTE_PRIVATE_FILE
+  import   --quote ID --source ORIGINAL_RESULT_FILE [--completion ORIGINAL_STATUS_FILE]
+  recover  --quote ID
+
+List, read and export open the existing workspace read-only. Import and recover
+take the original writer lease. No command contacts a seller or signs a payment.
+Guide: RESULTS.md. Export creates a new file in an existing private directory.`;
 export async function runResultCommand(args) {
   const [command, ...rest] = args;
   const fields = {
@@ -59,6 +70,10 @@ export async function runResultCommand(args) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  try { process.stdout.write(JSON.stringify(await runResultCommand(process.argv.slice(2)), null, 2) + '\n'); }
+  try {
+    const args = process.argv.slice(2);
+    process.stdout.write(args.length === 1 && args[0] === '--help' ? HELP + '\n' :
+      JSON.stringify(await runResultCommand(args), null, 2) + '\n');
+  }
   catch (error) { process.stderr.write(`MCP result: ${error.code ?? 'OPERATION_FAILED'}: ${error.message}\n`); process.exitCode = 2; }
 }

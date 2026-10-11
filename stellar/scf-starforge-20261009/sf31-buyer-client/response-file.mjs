@@ -2,6 +2,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { open, lstat, realpath, link, unlink } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { createResponseStreamParser, normalizeResponseStream, responseStreamContentType,
+  BuyerResponseStreamError } from './response-stream.mjs';
 
 export class BuyerResponseFileError extends Error {
   constructor(code, detail = '', { cause, bytes = 0, partialPath = null, cleanupWarnings = [] } = {}) {
@@ -61,7 +63,7 @@ function readChunk(reader, signal) {
 /** Reserve a caller-chosen destination BEFORE calling the buyer. The parent
  * must be an existing, trusted directory on a hard-link-capable filesystem. */
 export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 1024 * 1024,
-  timeoutMs = 30_000, expectedSha256, expectedBytes, expectedContentType, reservationTag } = {}) {
+  timeoutMs = 30_000, expectedSha256, expectedBytes, expectedContentType, stream, reservationTag } = {}) {
   if (typeof destination !== 'string' || !isAbsolute(destination) || destination.includes('\0') ||
       /[\\/]$/.test(destination) || ['.', '..'].includes(basename(destination)))
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_DESTINATION', 'absolute file path required');
@@ -73,6 +75,10 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       !/^[A-Za-z0-9._:-]{1,96}$/.test(reservationTag)))
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_RESERVATION_TAG');
   const pins = validateResponseFileIntegrity({ expectedSha256, expectedBytes, expectedContentType }, maxBytes);
+  const streamOptions = stream === undefined ? null : normalizeResponseStream(stream);
+  if (streamOptions && pins.expectedContentType &&
+      !responseStreamContentType(streamOptions.format, pins.expectedContentType))
+    throw new BuyerResponseFileError('BAD_RESPONSE_STREAM_EXPECTED_TYPE');
 
   let finalPath, reservationPath, partialPath, probePath, reservation, file;
   let state = 'PREPARING', activeSave = null, bytes = 0;
@@ -113,7 +119,7 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
     file = await open(candidate, 'wx', 0o600);
     partialPath = candidate;
     await reservation.writeFile(JSON.stringify({ destination: finalPath, partialPath, pid: process.pid,
-      ...(reservationTag === undefined ? {} : {reservationTag}) }) + '\n');
+      ...(reservationTag === undefined ? {} : { reservationTag }) }) + '\n');
     await reservation.sync();
     // Discover unsupported hard links before the caller sends a paid request.
     const probe = join(parent, `.x402-link-${randomUUID()}`);
@@ -130,13 +136,31 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
     throw error;
   }
 
-  async function saveOnce(result, signal, byteSource = false) {
+  async function saveOnce(result, signal, onRecord, byteSource = false) {
     let reader = null, timer = null, onExternalAbort = null, complete = false;
+    const parser = streamOptions ? createResponseStreamParser(streamOptions) : null;
+    const hash = createHash('sha256');
+    let digest = null;
     const stop = () => { throw controller.signal.reason; };
     const check = () => { if (controller.signal.aborted) stop(); };
+    const emitRecords = async records => {
+      if (!onRecord) return;
+      for (const record of records) {
+        check();
+        try {
+          // Honor the same deadline even if a consumer never resolves.
+          await readChunk({ read: () => Promise.resolve().then(() => onRecord(record)) }, controller.signal);
+        } catch (cause) {
+          check();
+          throw new BuyerResponseFileError('RESPONSE_STREAM_CONSUMER_FAILED', '', { cause });
+        }
+      }
+    };
     try {
       if (signal !== undefined && !(signal instanceof AbortSignal))
         throw new BuyerResponseFileError('BAD_RESPONSE_FILE_SIGNAL');
+      if (onRecord !== undefined && (typeof onRecord !== 'function' || !parser))
+        throw new BuyerResponseFileError('BAD_RESPONSE_STREAM_CONSUMER');
       if (signal) {
         onExternalAbort = () => controller.abort(new BuyerResponseFileError('RESPONSE_FILE_ABORTED'));
         signal.addEventListener('abort', onExternalAbort, { once: true });
@@ -171,11 +195,12 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       }
       // Count the bytes Fetch exposes, not Content-Length: compression can make
       // that header describe a different representation than this stream.
-      const hash = createHash('sha256');
       if (body) reader = body.getReader();
       if (pins.expectedContentType !== undefined &&
           contentType?.split(';', 1)[0].trim().toLowerCase() !== pins.expectedContentType)
         throw new BuyerResponseFileError('RESPONSE_FILE_TYPE_MISMATCH');
+      if (parser && !responseStreamContentType(streamOptions.format, contentType))
+        throw new BuyerResponseFileError('RESPONSE_STREAM_TYPE_MISMATCH');
       while (reader) {
         check();
         let chunk;
@@ -200,13 +225,21 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
           bytes += bytesWritten;
           offset += bytesWritten;
         }
+        if (parser) await emitRecords(parser.push(value));
+      }
+      if (parser) {
+        await emitRecords(parser.finish());
+        if (!parser.summary().complete)
+          throw new BuyerResponseFileError('RESPONSE_STREAM_INCOMPLETE_RECORD');
       }
       check();
       await file.sync();
       await file.close();
       file = null;
       check();
-      const saved = { path: finalPath, bytes, sha256: hash.digest('hex'), contentType };
+      digest = hash.digest('hex');
+      const saved = { path: finalPath, bytes, sha256: digest, contentType,
+        ...(parser ? { stream: parser.summary() } : {}) };
       // A completed transfer is not yet an accepted product. Leave a mismatched
       // private partial for reconciliation; never publish it under the buyer's name.
       if (pins.expectedBytes !== undefined && bytes !== pins.expectedBytes)
@@ -231,10 +264,15 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       state = 'FAILED';
       if (reader) { try { void reader.cancel().catch(() => {}); } catch {} }
       const cleanupWarnings = await cleanup({ keepPartial: bytes > 0 });
-      const error = cause instanceof BuyerResponseFileError ? cause : new BuyerResponseFileError('RESPONSE_FILE_WRITE_FAILED', '', { cause });
+      const error = cause instanceof BuyerResponseFileError ? cause : new BuyerResponseFileError(
+        cause instanceof BuyerResponseStreamError ? cause.code : 'RESPONSE_FILE_WRITE_FAILED', '', { cause });
       error.bytes = bytes;
       error.partialPath = bytes > 0 ? partialPath : null;
       error.cleanupWarnings = cleanupWarnings;
+      if (parser) {
+        error.stream = { ...parser.summary(), complete: false };
+        error.partialSha256 = digest ?? hash.digest('hex');
+      }
       throw error;
     } finally {
       clearTimeout(timer);
@@ -249,14 +287,12 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
 
   return Object.freeze({
     destination: finalPath,
-    // The owner may journal this original path before consuming a response.
-    // This is a path reference, never a second writer or a publication lease.
     partialPath,
-    save(result, { signal } = {}) {
+    save(result, { signal, onRecord } = {}) {
       if (state !== 'PREPARED')
         return Promise.reject(new BuyerResponseFileError('RESPONSE_FILE_NOT_PREPARED', state));
       state = 'SAVING';
-      activeSave = saveOnce(result, signal);
+      activeSave = saveOnce(result, signal, onRecord);
       return activeSave;
     },
     /** Save already-returned non-HTTP bytes through the same reserved writer. */
@@ -264,7 +300,7 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       if (state !== 'PREPARED')
         return Promise.reject(new BuyerResponseFileError('RESPONSE_FILE_NOT_PREPARED', state));
       state = 'SAVING';
-      activeSave = saveOnce({ bytes, contentType }, signal, true);
+      activeSave = saveOnce({ bytes, contentType }, signal, undefined, true);
       return activeSave;
     },
     async abort() {

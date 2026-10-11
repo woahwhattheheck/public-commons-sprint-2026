@@ -44,6 +44,10 @@ Enter the operator or reviewer name in the sidebar. It is recorded with imports,
 
 Refresh preserves unsaved form text. If another operator saved the same review or changed the workspace revision, the interface retains the draft and offers an explicit reload and reapply action. Completed background work can also advance the workspace revision. A stale write is never silently substituted for the newer saved state.
 
+## Exchange an accountant handoff
+
+The **Accountant handoffs** area prepares a labeled CSV and offline packet from a completed original reconciliation or recorded-activity close. Preview a returned bookkeeping file, inspect exact source matches and conflicts, and save its references with inherited partial progress and immutable revision history. The original source amounts, networks, transfer classifications, and merchant quotes remain visible beside the accountant's returned fields. Follow the [accountant workflow guide](../accountant/README.md) for the complete exchange and integration routes.
+
 ## Collect verification in the same workspace
 
 The **RPC collections** area retains original reserved payment records and their read-only verification work alongside the accounting inputs. Use the merchant runtime's existing `@stellar/stellar-sdk` event decoder for network collection.
