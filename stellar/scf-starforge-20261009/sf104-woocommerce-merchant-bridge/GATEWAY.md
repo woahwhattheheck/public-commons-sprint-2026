@@ -11,6 +11,10 @@ The gateway is disabled by default. It supports the classic checkout and the
 Checkout Block through WooCommerce's documented gateway and payment-method
 registration APIs. It supplies no browser wallet and makes no payment in PHP.
 
+For independent chain review and the final selected-order release, use the
+[native merchant operator](NATIVE_REVIEW.md). It composes the original SF86
+verifier with this same gateway, accepted notice and Woo completion controller.
+
 ## Install and enable
 
 Keep these files together in the installed `starforge-sf98-woo` plugin folder:
@@ -23,8 +27,10 @@ Keep these files together in the installed `starforge-sf98-woo` plugin folder:
 - `merchant-console.php`, `merchant-console.js` and `merchant-console.css`:
   the joined native order, attempt, notice and review workspace.
 - `OPERATIONS.md`: the merchant's operating and recovery guide.
+- `merchant-operator.php`: authenticated native review and selected-order release.
+- `NATIVE_REVIEW.md`: the complete retained chain review and operator CLI guide.
 
-Keep all seven files when upgrading an existing installation; the original
+Keep all nine files when upgrading an existing installation; the original
 plugin loads the console PHP and its matching browser assets. The maintained
 [Site setup tool](../../../stellar-forge/developer-site/dist/woo.html) copies
 the complete plugin from its selected toolkit source.

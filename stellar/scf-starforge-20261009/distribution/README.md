@@ -696,6 +696,7 @@ or automatically retry a request.
 | `starforge graphql-workspace` | Review schemas, prepare query packages and operate the original merchant in its private browser |
 | `starforge graphql-deployment` | Prepare, inspect and stage an original GraphQL merchant or generate its existing Linux host installation |
 | `starforge woo-seller` / `woo-buyer` | Connect an existing WooCommerce product/order to original merchant and buyer checkout |
+| `starforge woo-operator` | Retain native chain review, release the selected Woo order, recover and export |
 
 For example, review an existing original buyer configuration without signing:
 
@@ -3394,11 +3395,13 @@ source alongside their SF30, SF61, SF82 and SF99 dependencies.
 
 The complete original bridge is included under
 `source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge`.
-Install its three PHP files together in one plugin directory on the merchant's
-existing WordPress/WooCommerce host: `starforge-sf98-woo.php`,
-`checkout-gateway.php` and `checkout-admission.php`. The plugin requires PHP 8.0+
-and the host's existing WordPress MySQL/MariaDB connection; it has no Composer
-or separate browser build dependency.
+Install its nine plugin files together on the merchant's existing
+WordPress/WooCommerce host: `starforge-sf98-woo.php`, `checkout-gateway.php`,
+`checkout-admission.php`, `merchant-console.php`, `merchant-console.js`,
+`merchant-console.css`, `merchant-operator.php`, `OPERATIONS.md` and
+`NATIVE_REVIEW.md`. The maintained Site packet copies this complete folder.
+The plugin requires PHP 8.0+ and the host's existing WordPress MySQL/MariaDB
+connection; it has no Composer or separate browser build dependency.
 
 Use its included `GATEWAY.md` to configure the original classic/Blocks checkout,
 map the actual product, and export that merchant route. Prepare and inspect it
@@ -3421,6 +3424,38 @@ into original SF88 review or its existing workspace. The original SF98 delivery
 worker and Woo merchant review remain the fulfillment flow. The full source
 guide includes those commands, retained order generations and recovery.
 `./seller/woocommerce` and `./buyer/woocommerce` expose the same original APIs.
+
+### Review the original transfer and complete the selected Woo order
+
+The installed `woo-operator` command joins a manager-authenticated WordPress
+order, its original SF98 outbox event, the successful native receipt and the
+existing SF86 Stellar transfer verifier. Save the operator config described in
+`sf104-woocommerce-merchant-bridge/NATIVE_REVIEW.md`, using the store's exact URL,
+private source outbox, review directory and existing Application Password
+environment names. Then run:
+
+```sh
+npx --no-install starforge woo-operator inspect \
+  --config /private/woo-operator.json --order 456
+npx --no-install starforge woo-operator review \
+  --config /private/woo-operator.json --id order-456-native --order 456 \
+  --record /private/original-native-record.json --payer G_TRUSTED_PAYER
+npx --no-install starforge woo-operator release \
+  --config /private/woo-operator.json --id order-456-native --confirm-order 456
+npx --no-install starforge woo-operator show \
+  --config /private/woo-operator.json --id order-456-native --live
+npx --no-install starforge woo-operator export \
+  --config /private/woo-operator.json --id order-456-native --out /private/order-456-handoff
+```
+
+Use the actual original native record and valid payer address. Review preserves
+the selected source before its read-only RPC work, so `resume` continues that
+same operation after interruption. Release rechecks the current order, invokes
+the original locked Woo controller and independently reads back the paid order,
+accepted event and retained review. `show`, `history` and `export` reopen saved
+work offline. The `./merchant/woocommerce` export exposes the same application
+functions. All nine plugin files, the CLI and their original dependencies ship
+from the selected package source.
 
 ## Embed in an application
 

@@ -119,7 +119,13 @@
     "stellar/scf-starforge-20261009/sf46-release/release-core.mjs",
     "stellar/scf-starforge-20261009/sf46-release/command-catalog.mjs",
     "stellar/scf-starforge-20261009/sf46-release/runtime-package.mjs",
-    "stellar/scf-starforge-20261009/sf46-release/MANAGED_PACKAGE.md"
+    "stellar/scf-starforge-20261009/sf46-release/MANAGED_PACKAGE.md",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-console.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-console.js",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-console.css",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/OPERATIONS.md",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-operator.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/NATIVE_REVIEW.md"
   ],
   "commands": {
     "installation": "stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
@@ -236,7 +242,8 @@
     "mcp-data": "stellar-forge/mcp-paid-agent/data-serve.mjs",
     "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
     "allium-explorer": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/cli.mjs",
-    "allium-workspace": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/cli.mjs"
+    "allium-workspace": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/cli.mjs",
+    "woo-operator": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-operator-cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -436,7 +443,8 @@
     "./seller/allium": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/explorer.mjs",
     "./seller/allium/workspace": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/model.mjs",
     "./seller/allium/workspace/server": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/server.mjs",
-    "./buyer/mcp/payment-reconciliation": "./source/stellar-forge/mcp-paid-agent/payment-reconciliation.mjs"
+    "./buyer/mcp/payment-reconciliation": "./source/stellar-forge/mcp-paid-agent/payment-reconciliation.mjs",
+    "./merchant/woocommerce": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-operator.mjs"
   },
   "nativePeers": {
     "@x402/core": {
