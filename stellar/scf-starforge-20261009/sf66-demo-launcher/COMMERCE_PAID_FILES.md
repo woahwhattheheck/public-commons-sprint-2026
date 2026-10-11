@@ -123,6 +123,71 @@ the same original SF101 function. Status refreshes do not request delivery,
 invoke a signer or pay. Retrieval errors can be retried explicitly after the
 merchant notification or token configuration is corrected.
 
+## Continue an interrupted download
+
+Use Linux with the `flock` utility available on the customer's host for retained
+transfer recovery. The same installed SF101 buyer handles the original private
+partial file, transfer record and process ownership. Other supported hosts keep
+the original complete-response retrieval path.
+
+After a timeout, lost connection or stopped process, select the same operation.
+**Purchased file** shows its retained byte count and **Resume download**. That
+action requests only the remaining bytes when the merchant supports the current
+SF101 range protocol. A full response from an older receiver starts a fresh
+verified stream while retaining the prior checkpoint until replacement is
+durable. The final file must match the original handoff's complete size and
+SHA-256. A complete private partial can instead show **Finish saved download**
+and publish through the original writer locally.
+
+Expand **Download progress and recovery** for the original state, retained and
+expected bytes, attempt count, and record location. Refresh uses
+`inspectFileTransfer` for an existing record. It can reconcile a previous
+process's interrupted original reservation after that process releases its
+file-description lock. While another process owns the download, the panel
+shows **Download in use** and keeps resume/reset unavailable. Orders that have
+never downloaded a file keep their original empty transfer state.
+
+If the record reports **Download needs restart**, the retained bytes failed the
+promised-file checks. Ask the merchant to verify the enrolled source in its
+existing merchant desk. **Discard retained download** then calls the original
+`resetFileTransfer` for this saved handoff and destination. It clears the
+unfinished local copy and returns without a delivery request. Choose
+**Retrieve entitled file** afterward to start a fresh download of that order.
+The same reset action is available for an idle interrupted prefix when the
+operator deliberately wants to start over.
+
+The foreground commands are:
+
+```text
+status
+retrieve ORIGINAL_INTENT
+reset-transfer ORIGINAL_INTENT
+retrieve ORIGINAL_INTENT
+```
+
+Use `reset-transfer` only for that deliberate fresh start. Ordinary interruption
+recovery needs only `retrieve` with the same intent. Status output includes
+`buyers[].paidFile.transfer`; applications can call the existing session's
+`retrieve(intentId)` and `resetTransfer(intentId)`. Both operations share the
+session's per-intent work tracking, shutdown drain and original handoff checks.
+Browser actions also bind the selected intent, frozen request hash and handoff
+hash before dispatching the original file operation.
+
+A merchant access denial preserves the retained prefix. In the existing
+merchant desk, inspect that exact order's entitlement, enabled state, expiry,
+current claim-token configuration and **File health**. Restore the original
+enrolled source when its hash changed. After a token rotation, load the current
+token into the configured variable and reopen the same commerce session before
+resuming. The original receiver evaluates access on each new range request.
+An already authorized response can finish while access changes; the next
+request uses the updated policy.
+
+For a source installation, see the maintained
+[receiver/proxy instructions](../sf101-merchant-receiver/TRANSFER_SERVER.md)
+and [buyer transfer guide](../sf101-merchant-receiver/RESUMABLE_TRANSFERS.md).
+The receiver needs the matching `receiver.py` and `access.py`, its retained
+state and secret, and an HTTPS proxy that preserves the transfer headers.
+
 ## Reopen and recover
 
 Restart the same session directory. The original inbox retains its attempt and

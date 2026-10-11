@@ -16,7 +16,7 @@ const HELP = `Original SCF commerce session (Node 22+, full checkout)
 
 The foreground console starts the original merchant and operations listeners.
 Commands: status | readiness | review INTENT | signer INTENT | execute INTENT |
-          cancel INTENT | recover INTENT | retrieve INTENT | quit
+          cancel INTENT | recover INTENT | retrieve INTENT | reset-transfer INTENT | quit
 The original SF88/SF81 terminal owns payment approval. Reopening uses the same
 original inbox, stable intents, reservations, results and saved resource files.
 Without a TTY, start prints readiness and stays running until SIGINT/SIGTERM.
@@ -108,7 +108,7 @@ export async function main(args = process.argv.slice(2)) {
       if (!stopped.signal.aborted) await new Promise(done => stopped.signal.addEventListener('abort', done, { once: true }));
       return;
     }
-    process.stdout.write('Commands: status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, quit\n');
+    process.stdout.write('Commands: status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, reset-transfer ID, quit\n');
     while (!stopped.signal.aborted) {
       // Release this reader before the original Python approval opens /dev/tty.
       reader = createInterface({ input: process.stdin, output: process.stdout });
@@ -127,7 +127,8 @@ export async function main(args = process.argv.slice(2)) {
         else if (words.length === 2 && words[0] === 'cancel') print(await session.cancel(words[1]));
         else if (words.length === 2 && words[0] === 'recover') print(await session.recover(words[1]));
         else if (words.length === 2 && words[0] === 'retrieve') print(await session.retrieve(words[1]));
-        else if (words[0]) process.stdout.write('Use status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, or quit.\n');
+        else if (words.length === 2 && words[0] === 'reset-transfer') print(await session.resetTransfer(words[1]));
+        else if (words[0]) process.stdout.write('Use status, readiness, review ID, signer ID, execute ID, cancel ID, recover ID, retrieve ID, reset-transfer ID, or quit.\n');
       } catch (error) { print({ error: commerceErrorCode(error) }); }
     }
   } finally {

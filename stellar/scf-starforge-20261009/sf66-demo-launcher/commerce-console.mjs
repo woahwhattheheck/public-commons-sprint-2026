@@ -169,7 +169,9 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         canCancel: runningSession && !action && !running && job?.state === 'QUEUED',
         canRecover: runningSession && !action && !work && ['RUNNING_OR_INTERRUPTED', 'REVIEW_REQUIRED'].includes(job?.state),
         canRetrieve: Boolean(job?.paidFile) && typeof session.retrieve === 'function' && runningSession && !action &&
-          !retrievals.get(id)?.running,
+          !retrievals.get(id)?.running && !['ACTIVE', 'REJECTED'].includes(job?.paidFile?.transfer?.status),
+        canResetTransfer: Boolean(job?.paidFile?.transfer?.canReset) && typeof session.resetTransfer === 'function' &&
+          runningSession && !action && !retrievals.get(id)?.running,
         canStop: runningSession },
       updatedAt: new Date().toISOString(),
     };
@@ -230,12 +232,12 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         } finally { await handle.close(); }
         return;
       }
-      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve', '/api/facilitator'].includes(target.pathname))
+      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve', '/api/reset-transfer', '/api/facilitator'].includes(target.pathname))
         throw problem('Unknown commerce workspace action.', 404);
       if (!origins.has(req.headers.origin)) throw problem('Same-origin operator action required.', 403);
       const value = await input(req);
       const allowed = target.pathname === '/api/execute' ? ['intent', 'reviewId'] :
-        target.pathname === '/api/retrieve' ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
+        ['/api/retrieve', '/api/reset-transfer'].includes(target.pathname) ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
       if (Object.keys(value).some(key => !allowed.includes(key))) throw problem('Unknown operator action field.');
       if (target.pathname === '/api/stop') {
         void stopSession().catch(() => {});
@@ -254,14 +256,21 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
       try {
         const { original, job } = await current(value.intent), intent = job.operation.intentId;
         if (original.state !== 'RUNNING') throw problem('The commerce session is not running.', 409);
-        if (target.pathname === '/api/retrieve') {
-          if (typeof session.retrieve !== 'function' || !job.paidFile) throw problem('This operation has no configured paid file.', 409);
+        if (['/api/retrieve', '/api/reset-transfer'].includes(target.pathname)) {
+          const method = target.pathname === '/api/retrieve' ? 'retrieve' : 'resetTransfer';
+          if (typeof session[method] !== 'function' || !job.paidFile) throw problem('This operation has no configured paid-file action.', 409);
           if (retrievals.get(intent)?.running) throw problem('This file is already being retrieved.', 409);
           if (value.configSha256 !== job.configSha256 || value.handoffSha256 !== job.paidFile.handoffSha256)
-            throw problem('The selected request or file handoff changed. Refresh before retrieving.', 409);
-          const file = { running: true }; retrievals.set(intent, file);
-          file.promise = Promise.resolve().then(() => session.retrieve(intent)).then(result => { file.result = result; },
-            error => { file.error = commerceErrorCode(error); }).finally(() => { file.running = false; });
+            throw problem('The selected request or file handoff changed. Refresh before changing its download.', 409);
+          if (method === 'resetTransfer') {
+            if (!job.paidFile.transfer?.canReset) throw problem('This order has no idle retained download to clear. Refresh its current state.', 409);
+            const result = await session.resetTransfer(intent);
+            retrievals.set(intent, { running: false, result });
+          } else {
+            const file = { running: true }; retrievals.set(intent, file);
+            file.promise = Promise.resolve().then(() => session.retrieve(intent)).then(result => { file.result = result; },
+              error => { file.error = commerceErrorCode(error); }).finally(() => { file.running = false; });
+          }
         } else if (target.pathname === '/api/review') {
           const result = await session.review(intent);
           if (result.exitCode !== 0 || result.original?.mode !== 'OFFLINE_REVIEW')
