@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { RetainedFileReads } from './retained-file-reads.mjs';
 import { adjustmentDefinitions, MerchantAdjustments } from './accounting-adjustments.mjs';
+import { platformDefinitions, platformFileNames, normalizePlatformConfig, platformSourceView, MerchantPlatforms } from './accounting-platforms.mjs';
 import { bitwaveDefinitions, normalizeBitwaveConfig, bitwaveSourceView, bitwavePathReferences, MerchantBitwave } from './bitwave.mjs';
 import { openAccountingWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/store.mjs';
 import { openAccountingMaintenance } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/recovery-controller.mjs';
@@ -36,14 +37,15 @@ const periodSelection = { anyOf: [{ type: 'object', properties: { id: uuid, vers
 const sourceIds = { type: 'array', items: uuid, minItems: 1, maxItems: 2000, uniqueItems: true };
 const optionLabel = { type: 'object', properties: { optionId: sha256, assetLabel: shortText, unitLabel: shortText, accountCode: shortText, accountName: shortText }, required: ['optionId'], additionalProperties: false };
 const views = ['runs', 'jobs', 'recovered', 'previews', 'proofs', 'terms', 'exports', 'history', 'collectionSources', 'collections', 'collectionJobs', 'pricing', 'periods', 'closes', 'handoffs'];
-const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns'];
+const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'platformInputs'];
 const reportNames = ['report.json', 'ledger.csv', 'options.csv', 'exceptions.csv', 'review.html', 'manifest.json'];
 const periodNames = ['period-close.json', 'review-notes.json', 'adjustments.json', 'adjustments.csv', 'adjustments.html'];
 const accountantNames = ['handoff.json', 'accountant.csv', 'review.html', 'original-report.json', 'original-manifest.json', 'input-manifest.json', 'packet-manifest.json', 'accountant-handoff.tar', 'period-close.json', 'review-notes.json', 'returned.csv', 'return.json', 'adjustments.json', 'adjustments.csv', 'adjustments.html'];
-const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'file'];
+const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'file'];
 const supportedMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].filter(supportsSellerMethod);
 
 const definitions = [
+  ...platformDefinitions,
   ...bitwaveDefinitions,
   ...adjustmentDefinitions,
   ['merchant_accounting_maintenance_status', 'Inspect the owned original maintenance state, selected source review, backup identities, retained jobs and recovery marker. Summary includes the newest 25 backups and 10 jobs; choose a paged backups, jobs or sources view for the retained inventory. Paths are host aliases.', { ...base, view: { type: 'string', enum: ['summary', 'backups', 'jobs', 'sources'] }, ...page }, ['workspace'], readOnly],
@@ -72,7 +74,10 @@ const definitions = [
   ['merchant_accounting_review', 'Retain a named review of an actual original exception using its current note version. Notes and assignments do not change native settlement classifications.', { ...base, runId: uuid, exceptionId: sha256, version: { type: 'integer', minimum: 0 }, status: { type: 'string', enum: ['open', 'investigating', 'reviewed'] }, note: { type: 'string', minLength: 1, maxLength: 4000 }, assignee: { type: 'string', maxLength: 160 }, actor }, ['workspace', 'runId', 'exceptionId', 'version', 'status', 'note', 'actor']],
   ['merchant_accounting_compare', 'Compare two retained original reconciliations, with event, exception and option deltas. Page changed, added, removed or option rows without reclassifying or contacting a merchant.', { ...base, runId: uuid, baselineId: uuid, view: { type: 'string', enum: ['changed', 'added', 'removed', 'options'] }, ...page }, ['workspace', 'runId', 'baselineId'], readOnly],
   ['merchant_accounting_export', 'Create the original retained review TAR from a completed run and current named notes. Explicit includeSources:true includes the captured private original input files and retained delivered responses; false includes the report, review notes and source identities.', { ...change, runId: uuid, includeSources: { type: 'boolean' } }, ['workspace', 'revision', 'actor', 'runId', 'includeSources']],
-  ['merchant_accounting_file', 'Read exact original response, report, export, collection result, pricing source, period close, accountant packet or adjustment request/proof bytes in bounded base64 chunks. Keep every source selector unchanged with readId/expectedSha256. The original owner verifies once per read; later chunks reuse its private snapshot. See the accounting guide for each kind and filename.', { ...base, kind: { type: 'string', enum: ['response', 'report', 'export', 'collection', 'pricing', 'period', 'accountant', 'adjustment'] }, recoveryId: sha256, runId: uuid, exportId: uuid, collectionId: uuid, sourceId: uuid, reviewId: uuid, closeId: uuid, handoffId: uuid, revisionId: returnSelection, adjustmentId: uuid, jobId: uuid, file: { type: 'string', enum: [...new Set([...reportNames, ...periodNames, ...accountantNames, 'report', 'terms', 'archive', 'request.json', 'proof.json'])] }, readId: uuid, offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 196608 }, expectedSha256: sha256 }, ['workspace', 'kind'], readOnly],
+  ['merchant_accounting_file', 'Read exact original response, report, export, collection result, pricing source, period close, accountant packet, adjustment request/proof or original QuickBooks/Xero retained bytes in bounded base64 chunks. Keep every source selector unchanged with readId/expectedSha256. The original owner verifies once per read; later chunks reuse its private snapshot. See the accounting guide for each kind and filename.', { ...base, kind: { type: 'string', enum: ['response', 'report', 'export', 'collection', 'pricing', 'period', 'accountant', 'adjustment', 'qbo', 'xero'] }, recoveryId: sha256, runId: uuid, exportId: uuid, collectionId: uuid, sourceId: uuid, reviewId: uuid, closeId: uuid, handoffId: uuid, revisionId: returnSelection, adjustmentId: uuid, jobId: uuid, planId: uuid, responseId: uuid, file: { anyOf: [
+    { type: 'string', enum: [...new Set([...reportNames, ...periodNames, ...accountantNames, ...platformFileNames, 'report', 'terms', 'archive', 'request.json', 'proof.json', 'xero-handoff.tar'])] },
+    { type: 'string', maxLength: 100, pattern: '^[A-Za-z0-9][A-Za-z0-9._/-]*$' }
+  ] }, readId: uuid, offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 196608 }, expectedSha256: sha256 }, ['workspace', 'kind'], readOnly],
   ['merchant_accounting_file_release', 'Release an unfinished process-owned file read by readId. Frees only its temporary verified snapshot; original recovered responses, reports, archives and workspace records remain retained.', { ...base, readId: uuid }, ['workspace', 'readId'], { idempotent: true }],
   ['merchant_accounting_collection_source', 'Retain one host-declared original SF81 payment record or SF82 evidence input with its configured payer, network endpoint and event-page limit. The original controller checks the source; no RPC or payment runs during import.', { ...change, source: alias, name }, ['workspace', 'revision', 'actor', 'source', 'name']],
   ['merchant_accounting_collection_prepare', 'Prepare an original RPC collection from explicit distinct retained sourceIds. Retains the original plan and source hashes; no verification runs until collection_start.', { ...change, name, sourceIds }, ['workspace', 'revision', 'actor', 'name', 'sourceIds']],
@@ -150,7 +155,7 @@ export function normalizeAccountingConfig(raw, base) {
   if (!plain(raw.workspaces) || Object.keys(raw.workspaces).length > 16) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare up to 16 original accounting workspaces.');
   const workspaces = Object.create(null), directories = new Set(), backupRoots = new Set();
   for (const [key, value] of Object.entries(raw.workspaces)) {
-    named(key); exact(value, ['label', 'directory', 'outboxDir', 'proofDir', 'termsFile', ...sourceKinds, 'collectionInputs', 'collectionHttpsProxyEnv', 'adjustmentHttpsProxyEnv', 'bitwave', 'recovery'], ['directory', 'outboxDir', 'proofDir', 'termsFile']);
+    named(key); exact(value, ['label', 'directory', 'outboxDir', 'proofDir', 'termsFile', ...sourceKinds, 'collectionInputs', 'collectionHttpsProxyEnv', 'adjustmentHttpsProxyEnv', 'bitwave', 'platforms', 'recovery'], ['directory', 'outboxDir', 'proofDir', 'termsFile']);
     if (value.label !== undefined && (!check(name, value.label) || !value.label.trim())) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Use a nonempty workspace label up to 160 characters.');
     const entry = { label: value.label ?? key };
     for (const field of ['directory', 'outboxDir', 'proofDir', 'termsFile']) entry[field] = hostPath(value[field], base);
@@ -159,6 +164,7 @@ export function normalizeAccountingConfig(raw, base) {
     for (const field of sourceKinds) entry[field] = sourceMap(value[field], base);
     entry.collectionInputs = collectionInputMap(value.collectionInputs, base);
     entry.bitwave = normalizeBitwaveConfig(value.bitwave, base);
+    entry.platforms = normalizePlatformConfig(value.platforms);
     if (value.recovery !== undefined) {
       exact(value.recovery, ['stateRoot', 'backupRoot', 'passEnv', 'startPaused'], ['stateRoot', 'backupRoot']);
       const recovery = value.recovery, passEnv = recovery.passEnv ?? 'STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE';
@@ -249,6 +255,7 @@ export class MerchantAccounting {
     return { workspace: key, label: value.label, ownership: session ? session.closing ? 'CLOSING' : mode && mode !== 'RUNNING' ? mode : session.workspace ? 'OPEN' : 'OPENING' : 'CLOSED',
       ...Object.fromEntries(sourceKinds.map(kind => [kind, Object.keys(value[kind] ?? {})])), collectionInputs: Object.keys(value.collectionInputs ?? {}),
       bitwave: bitwaveSourceView(value.bitwave),
+      platforms: platformSourceView(value.platforms),
       adjustments: { verification: 'ORIGINAL_NETWORK_RPC', httpsProxyConfigured: Boolean(value.adjustmentHttpsProxyEnv) },
       operatingRecovery: { configured: Boolean(value.recovery), startPaused: value.recovery?.startPaused ?? false, mode: mode ?? 'CLOSED' } };
   }
@@ -308,7 +315,7 @@ export class MerchantAccounting {
   async #openRuntime(key, record) {
     const definition = this.#definition(key), { directory, outboxDir, proofDir, termsFile } = definition;
     const workspace = await openAccountingWorkspace({ directory, outboxDir, proofDir, termsFile });
-    const runtime = { workspace, collection: null, accountant: null, bitwave: null, adjustments: null };
+    const runtime = { workspace, collection: null, accountant: null, bitwave: null, adjustments: null, platforms: null };
     try {
       const recovered = workspace.view().sources.recoveredDir;
       if (recovered && !Object.values(definition.recoveredSources).includes(recovered))
@@ -316,6 +323,9 @@ export class MerchantAccounting {
       runtime.collection = await openCollectionWorkspace(workspace, { httpsProxyEnv: definition.collectionHttpsProxyEnv });
       runtime.accountant = new AccountantWorkspace(workspace);
       runtime.adjustments = new MerchantAdjustments(workspace, { httpsProxyEnv: definition.adjustmentHttpsProxyEnv });
+      runtime.platforms = new MerchantPlatforms(workspace, runtime.accountant, { definition: definition.platforms,
+        readSource: (source, maximum) => sourceBytes(this.#source(key, 'platformInputs', source), maximum) });
+      await runtime.platforms.init();
       if (definition.bitwave) {
         runtime.bitwave = new MerchantBitwave(workspace, runtime.accountant, definition.bitwave, { scope: key, files: this.#files });
         await runtime.bitwave.recover();
@@ -326,12 +336,12 @@ export class MerchantAccounting {
   async #closeRuntime(key, record, runtime) {
     let problem;
     try { await this.#files.closeScope(key); } catch (error) { problem = error; }
-    for (const owner of [runtime.bitwave, runtime.collection, runtime.workspace]) {
+    for (const owner of [runtime.platforms, runtime.bitwave, runtime.collection, runtime.workspace]) {
       if (!owner) continue;
       try { await owner.close(); } catch (error) { problem ??= error; }
       finally { if (owner.tasks) await Promise.allSettled([...owner.tasks]); }
     }
-    if (record.workspace === runtime.workspace) Object.assign(record, { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null });
+    if (record.workspace === runtime.workspace) Object.assign(record, { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, platforms: null });
     if (problem) throw problem;
   }
   async #open(key) {
@@ -339,7 +349,7 @@ export class MerchantAccounting {
     const existing = this.#sessions.get(key);
     if (existing?.closing) throw fail('ACCOUNTING_CLOSING', 'This accounting workspace is closing.');
     if (existing) { await existing.opening; return this.#safe(this.#sessionState(key, existing)); }
-    const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, maintenance: null, closing: false, calls: new Set() };
+    const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, platforms: null, maintenance: null, closing: false, calls: new Set() };
     this.#sessions.set(key, record);
     record.opening = (async () => {
       record.maintenance = await openAccountingMaintenance({ directory: definition.directory, ...definition.recovery,
@@ -369,9 +379,10 @@ export class MerchantAccounting {
   async #originalFile(workspace, args) {
     const { kind, runId, recoveryId, exportId, collectionId, sourceId, reviewId, closeId, handoffId, revisionId, adjustmentId, file } = args;
     const selectors = { response: ['recoveryId', 'runId'], report: ['runId', 'file'], export: ['exportId'], collection: ['collectionId', 'sourceId'],
-      pricing: ['reviewId', 'runId', 'file'], period: ['closeId', 'file'], accountant: ['handoffId', 'revisionId', 'file'], adjustment: ['adjustmentId', 'jobId', 'file'] }[kind];
+      pricing: ['reviewId', 'runId', 'file'], period: ['closeId', 'file'], accountant: ['handoffId', 'revisionId', 'file'], adjustment: ['adjustmentId', 'jobId', 'file'], qbo: ['planId', 'responseId', 'file'], xero: ['planId', 'file'] }[kind];
     if (fileSelections.some(key => args[key] !== undefined && !selectors.includes(key))) throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Use only the original source selectors for this file kind.');
     const session = this.#sessions.get(args.workspace);
+    if (kind === 'qbo' || kind === 'xero') return session.platforms.file(args);
     if (kind === 'response') {
       if (!recoveryId) throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Response retrieval requires recoveryId and optionally a captured runId.');
       return workspace.recoveredResponse(recoveryId, runId);
@@ -412,6 +423,7 @@ export class MerchantAccounting {
   }
   async #execute(operation, args, workspace) {
     const key = args.workspace, session = this.#sessions.get(key);
+    if (operation.startsWith('merchant_accounting_qbo_') || operation.startsWith('merchant_accounting_xero_')) return session.platforms.call(operation, args);
     if (operation === 'merchant_accounting_adjustment' || operation.startsWith('merchant_accounting_adjustment_'))
       return session.adjustments.call(operation, args);
     if (operation.startsWith('merchant_accounting_bitwave_')) {

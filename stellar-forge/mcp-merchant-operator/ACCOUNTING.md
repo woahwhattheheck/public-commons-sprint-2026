@@ -19,6 +19,13 @@ original adjustment controller, retained verification jobs and workspace lifetim
 Its nine additional tools carry reviewed requests, native returned amounts and
 exact request/proof downloads through the original close and accountant history.
 
+The complete [QuickBooks and Xero workflow](./ACCOUNTING-PLATFORMS.md) uses those
+same original accountant and maintenance lifetimes. Its 29 tools carry native
+company/source review, retained journals, original provider operation and response
+reconciliation, accountant return recovery and exact files. The
+[shared customer SDK and durable CLI](./ACCOUNTING-PLATFORMS-CLIENT.md) preserve
+reviewed commands and original identities across an uncertain connection.
+
 The host selects files and directories. MCP arguments use declared aliases,
 retained object identities and current revisions. Payment signing and settlement
 remain in the original buyer, seller and facilitator.
