@@ -1,5 +1,8 @@
 import {fixtureInsights, validateCatalog, auditUtcDay} from './catalog.mjs';
 
+// Compare audited city labels only; no inferred geography or spelling aliases.
+function cityKey(city) { return city.normalize('NFC').trim().replace(/\s+/g,' ').toLowerCase(); }
+
 export function normalizeRequest(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('request body must be an object');
   const artist = body.artist;
@@ -10,7 +13,10 @@ export function normalizeRequest(body) {
   if (!Number.isSafeInteger(budgetUSD) || budgetUSD < 0 || budgetUSD > 20000) throw new Error('budget must be 0–20000 USD');
   const required = body.required;
   if (!Array.isArray(required) || required.length > 3 || required.some(x => !['step_free','low_sensory','accessible_toilet'].includes(x)) || new Set(required).size !== required.length) throw new Error('invalid accessibility requirements');
-  return {artist:artist.trim(),groupSize,budgetUSD,required};
+  const city = body.city === undefined ? '' : body.city;
+  if (typeof city !== 'string' || city.length > 180 || /[\x00-\x1f\x7f]/.test(city)) throw new Error('city must be at most 180 readable characters');
+  // Omitted or blank city preserves the original all-audited-cities behavior.
+  return {artist:artist.trim(),groupSize,budgetUSD,required,...(city.trim()?{city:city.normalize('NFC').trim()}: {})};
 }
 
 export function planAuditedVenues(rawCatalog, rawRequest, affinity,
@@ -26,6 +32,7 @@ export function planAuditedVenues(rawCatalog, rawRequest, affinity,
   const ranks = new Map(ids.map((id, index) => [id,index]).filter(([id], i, entries) => entries.findIndex(x=>x[0]===id)===i));
   const screened = catalog.map(v=>{
     const reasons=[];
+    if (request.city && cityKey(v.city) !== cityKey(request.city)) reasons.push('outside_requested_city');
     const ageDays = asOfDay - auditUtcDay(v.audit_date);
     if (ageDays < 0) reasons.push('audit_dated_in_future');
     else if (ageDays > maxAuditAgeDays) reasons.push('audit_older_than_policy_window');
@@ -48,6 +55,7 @@ export function planAuditedVenues(rawCatalog, rawRequest, affinity,
     schema:'accesslens-plan/v1',status:picks.length?'RECOMMENDATIONS':'ABSTAIN_NO_VERIFIED_FIT',
     providerEvidence:mode==='live'?'LIVE_QLOO_RESPONSE':'SYNTHETIC_OFFLINE_FIXTURE',
     artist:request.artist,artistEntityId:affinity.artist?.id??null,
+    ...(request.city?{city:request.city}:{}),
     hardRequirements:request.required,groupSize:request.groupSize,budgetUSD:request.budgetUSD,
     operatorAuditPolicy:{asOfUTC:auditAsOfUTC,maxAgeDays:maxAuditAgeDays},
     recommended:picks,shortlistCount:eligible.length,consideredCount:catalog.length,nearMisses,
@@ -64,3 +72,4 @@ export function planAuditedVenues(rawCatalog, rawRequest, affinity,
 export function fixturePlan(request, catalog) {
   return planAuditedVenues(catalog,request,{artist:{id:'demo-artist-id'},rankedPlaceIds:fixtureInsights},{mode:'fixture',auditAsOfUTC:'2026-10-09'});
 }
+
