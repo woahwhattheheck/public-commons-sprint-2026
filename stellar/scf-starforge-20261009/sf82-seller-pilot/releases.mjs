@@ -11,6 +11,7 @@ import { PYTHON_SOURCE_SCHEMA, stagePythonRelease, inspectPythonRelease } from '
 import { DUCKDB_SOURCE_SCHEMA, stageDuckdbRelease, inspectDuckdbRelease } from './release-duckdb.mjs';
 import { S3_SOURCE_SCHEMA, stageS3Release, inspectS3Release } from './release-s3.mjs';
 import { MYSQL_SOURCE_SCHEMA, stageMysqlRelease, inspectMysqlRelease } from './release-mysql.mjs';
+import { REDIS_SOURCE_SCHEMA, stageRedisRelease, inspectRedisRelease } from './release-redis.mjs';
 import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
 import { SQLITE_SOURCE_SCHEMA, stageSqliteRelease, inspectSqliteRelease } from './release-sqlite.mjs';
 import { CLICKHOUSE_SOURCE_SCHEMA, stageClickHouseRelease, inspectClickHouseRelease } from './release-clickhouse.mjs';
@@ -23,6 +24,7 @@ const PYTHON_PILOT = fileURLToPath(new URL('./release-python.mjs', import.meta.u
 const DUCKDB_PILOT = fileURLToPath(new URL('./release-duckdb.mjs', import.meta.url));
 const S3_PILOT = fileURLToPath(new URL('./release-s3.mjs', import.meta.url));
 const MYSQL_PILOT = fileURLToPath(new URL('./release-mysql.mjs', import.meta.url));
+const REDIS_PILOT = fileURLToPath(new URL('./release-redis.mjs', import.meta.url));
 const JSONRPC_PILOT = fileURLToPath(new URL('./release-jsonrpc.mjs', import.meta.url));
 const SQLITE_PILOT = fileURLToPath(new URL('./release-sqlite.mjs', import.meta.url));
 const CLICKHOUSE_PILOT = fileURLToPath(new URL('./release-clickhouse.mjs', import.meta.url));
@@ -193,6 +195,8 @@ function runtimeOptions(value = {}) {
   }
   return result;
 }
+export { runtimeOptions as normalizeReleaseRuntime };
+
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
   const manifest = JSON.parse(manifestBytes);
@@ -210,6 +214,13 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
     if (upstreams) throw new TypeError('An RPC package owns its original method and provider bindings.');
     const snapshot = await inspectJsonrpcRelease(path);
     return { ...snapshot, routes: sourceRoutes(snapshot.service, new Map(), null, null, null, null, snapshot.jsonrpc) };
+  }
+  if (manifest.schema === REDIS_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('A Redis package owns its original read command bindings.');
+    const snapshot = await inspectRedisRelease(path);
+    const routes = sourceRoutes(snapshot.service, new Map()).map(route => ({ ...route,
+      application: { ...route.application, redisExecutionSha256: snapshot.redis.executionSha256 } }));
+    return { ...snapshot, routes };
   }
   if (manifest.schema === MYSQL_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('A MySQL package owns its original query bindings.');
@@ -299,6 +310,7 @@ function publicRelease(record) {
     ...(record.python ? { python: record.python } : {}),
     ...(record.duckdb ? { duckdb: record.duckdb } : {}),
     ...(record.mysql ? { mysql: record.mysql } : {}),
+    ...(record.redis ? { redis: record.redis } : {}),
     ...(record.s3 ? { s3: record.s3 } : {}),
     ...(record.jsonrpc ? { jsonrpc: record.jsonrpc } : {}),
     ...(record.sqlite ? { sqlite: record.sqlite } : {}),
@@ -316,6 +328,7 @@ async function releaseRecord(root, releaseId, verify = false) {
         stable(snapshot.python ?? null) !== stable(record.python ?? null) ||
         stable(snapshot.duckdb ?? null) !== stable(record.duckdb ?? null) ||
         stable(snapshot.mysql ?? null) !== stable(record.mysql ?? null) ||
+        stable(snapshot.redis ?? null) !== stable(record.redis ?? null) ||
         stable(snapshot.s3 ?? null) !== stable(record.s3 ?? null) ||
         stable(snapshot.jsonrpc ?? null) !== stable(record.jsonrpc ?? null) ||
         stable(snapshot.sqlite ?? null) !== stable(record.sqlite ?? null) ||
@@ -335,6 +348,11 @@ export async function stageRelease(root, options) {
   const duckdbSource = options.duckdbPackage !== undefined;
   const s3Source = options.s3Package !== undefined;
   const mysqlSource = options.mysqlPackage !== undefined;
+  const redisSource = options.redisPackage !== undefined;
+  if (redisSource && (Object.keys(options).some(key =>
+      !['id', 'label', 'alias', 'runtime', 'redisPackage'].includes(key) && options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose the original prepared Redis package or another source; Redis owns its named read command bindings.');
   if (mysqlSource && (Object.keys(options).some(key =>
       !['id', 'label', 'alias', 'runtime', 'mysqlPackage'].includes(key) && options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
@@ -382,6 +400,7 @@ export async function stageRelease(root, options) {
   try {
     let stagedDuckdb, stagedSqlite;
     if (clickhouseSource) await stageClickHouseRelease(temp, options.clickhousePackage, { columnTypes: options.clickhouseColumnTypes });
+    else if (redisSource) await stageRedisRelease(temp, options.redisPackage);
     else if (mysqlSource) await stageMysqlRelease(temp, options.mysqlPackage);
     else if (sqliteSource) stagedSqlite = await stageSqliteRelease(temp, options.sqlitePackage,
       { maxBytes: options.sqliteSnapshotMaxBytes, timeoutMs: options.sqliteSnapshotTimeoutMs, signal: options.signal });
@@ -409,7 +428,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !source.python && !source.duckdb && !source.mysql && !source.s3 && !source.jsonrpc && !source.sqlite && !source.clickhouse && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !source.duckdb && !source.mysql && !source.redis && !source.s3 && !source.jsonrpc && !source.sqlite && !source.clickhouse && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -423,6 +442,7 @@ export async function stageRelease(root, options) {
       ...(source.python ? { python: source.python } : {}),
       ...(source.duckdb ? { duckdb: source.duckdb } : {}),
       ...(source.mysql ? { mysql: source.mysql } : {}),
+      ...(source.redis ? { redis: source.redis } : {}),
       ...(source.s3 ? { s3: source.s3 } : {}),
       ...(source.jsonrpc ? { jsonrpc: source.jsonrpc } : {}),
       ...(source.sqlite ? { sqlite: source.sqlite } : {}),
@@ -431,6 +451,9 @@ export async function stageRelease(root, options) {
         ...(source.clickhouse ? { kind: 'CLICKHOUSE_MERCHANT_PACKAGE', packageSha256: source.clickhouse.packageSha256,
           sourceConfigSha256: source.clickhouse.sourceConfigSha256, planSha256: source.clickhouse.planSha256,
           querySha256: source.clickhouse.querySha256, executionSha256: source.clickhouse.executionSha256 }
+          : source.redis ? { kind: 'REDIS_MERCHANT_PACKAGE', packageManifestSha256: source.redis.packageManifestSha256,
+          sourceConfigSha256: source.redis.sourceConfigSha256, planSha256: source.redis.planSha256,
+          executionSha256: source.redis.executionSha256 }
           : source.mysql ? { kind: 'MYSQL_MERCHANT_PACKAGE', packageManifestSha256: source.mysql.packageManifestSha256,
           sourceConfigSha256: source.mysql.sourceConfigSha256, planSha256: source.mysql.planSha256,
           executionSha256: source.mysql.executionSha256 }
@@ -504,6 +527,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'duckdb', before: before?.duckdb ?? null, after: after.duckdb ?? null });
   if (stable(before?.mysql ?? null) !== stable(after.mysql ?? null))
     runtimeChanges.push({ field: 'mysql', before: before?.mysql ?? null, after: after.mysql ?? null });
+  if (stable(before?.redis ?? null) !== stable(after.redis ?? null))
+    runtimeChanges.push({ field: 'redis', before: before?.redis ?? null, after: after.redis ?? null });
   if (stable(before?.s3 ?? null) !== stable(after.s3 ?? null))
     runtimeChanges.push({ field: 's3', before: before?.s3 ?? null, after: after.s3 ?? null });
   if (stable(before?.jsonrpc ?? null) !== stable(after.jsonrpc ?? null))
@@ -695,7 +720,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.clickhouse ? CLICKHOUSE_PILOT : record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
+    child = spawn(process.execPath, [CHILD, record.clickhouse ? CLICKHOUSE_PILOT : record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32', env: { ...env } });
     let readyResolve, readyReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });

@@ -19,9 +19,47 @@
       <div class="section-heading"><h2>Downloads</h2><button id="new-download" class="small">New</button></div>
       <div id="session-list" class="session-list" aria-label="Saved downloads"></div>
       <button id="refresh-list" class="quiet wide">Refresh saved sessions</button>
+      <button id="open-recovery" class="quiet wide">Backup and recovery</button>
       <p class="sidebar-note">Sessions and completed files remain available when you reopen this workspace.</p>
     </aside>
     <div class="content">
+      <section id="recovery-panel" class="panel recovery-panel" hidden>
+        <div class="section-heading"><div><p class="eyebrow">WORKSPACE RECOVERY</p><h2>Keep your files and purchase history together</h2></div><button id="close-recovery" class="quiet small">Close</button></div>
+        <p class="intro">Create an encrypted backup of this workspace, its received merchant files, original buyer settings and journals, saved responses and completed downloads. Restore reopens the same paths and original records.</p>
+        <form id="backup-review-form">
+          <label>Private state root<input id="backup-root" autocomplete="off" required><small>One existing directory containing this workspace and its local operator preset. The review lists the exact selected paths.</small></label>
+          <button id="backup-review" type="submit">Review backup contents</button>
+        </form>
+        <section id="backup-selection" class="review" hidden>
+          <h3>Reviewed state</h3><dl id="backup-selection-terms" class="detail-grid"></dl>
+          <details><summary>Selected paths and runtime requirements</summary><dl id="backup-selection-paths" class="detail-grid"></dl></details>
+          <div class="table-scroll"><table><thead><tr><th>Saved download</th><th>Delivery</th><th>Bytes</th><th>Original requests</th></tr></thead><tbody id="backup-session-rows"></tbody></table></div>
+        </section>
+        <form id="backup-form">
+          <div class="form-grid">
+            <label>New encrypted bundle directory<input id="backup-output" autocomplete="off" required><small>A new path outside the selected state root.</small></label>
+            <label>Passphrase environment name<input id="backup-pass-env" value="SF88_BACKUP_PASSPHRASE" pattern="[A-Z][A-Z0-9_]{4,63}" autocomplete="off" required><small>Set this separate secret in the launching terminal before opening the workspace. Enter its name here.</small></label>
+          </div>
+          <label class="checkbox-line"><input id="backup-quiesced" type="checkbox" required>I stopped other programs that write the selected state.</label>
+          <button id="backup-create" type="submit" class="primary">Create encrypted backup</button>
+        </form>
+        <div id="recovery-progress" class="accounting-progress" role="status" aria-live="polite" hidden></div>
+        <button id="recovery-stop" hidden>Stop recovery operation</button>
+        <section class="review">
+          <h3>Verify an existing backup</h3>
+          <p class="intro">Open and authenticate the encrypted bundle, original session plans and committed journals without changing the saved workspace.</p>
+          <form id="backup-verify-form">
+            <label>Bundle directory<input id="verify-bundle" autocomplete="off" required></label>
+            <label>Selected record SHA-256<input id="verify-record" pattern="[a-f0-9]{64}" autocomplete="off"><small>Use the record identity returned by capture, or select a retained backup below.</small></label>
+            <button id="backup-verify" type="submit">Verify backup</button>
+          </form>
+        </section>
+        <section class="review">
+          <h3>Saved recovery history</h3><div id="recovery-history"></div>
+          <p class="note">Restore runs from the existing buyer-object command after this browser is closed. It accepts only an absent or empty original state root. Keep the encrypted bundle and its separate passphrase available.</p>
+          <pre id="recovery-command" class="recovery-command"></pre>
+        </section>
+      </section>
       <section id="setup" class="panel" hidden>
         <div class="section-heading"><div><p class="eyebrow">NEW DOWNLOAD</p><h2>Select a merchant object</h2></div><button id="close-setup" class="quiet small">Close</button></div>
         <p class="intro">Receive the merchant's file description and offers, or choose an existing product. Review the complete byte plan and your spending limits before creating a download.</p>

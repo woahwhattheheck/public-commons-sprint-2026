@@ -18,6 +18,7 @@ import { readFleetReleasePlan } from '../../stellar/scf-starforge-20261009/merch
 import { readReceivingConfiguration } from './receiving.mjs';
 import { readPythonWorkspaceConfiguration } from './python-workspace.mjs';
 import { normalizeAccountingConfig, readAccountingConfig } from './accounting.mjs';
+import { readPricingConfiguration } from './pricing.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
 export const SUPPORT_CONFIG_SCHEMA = 'stellar-forge.merchant-support-connection.v1';
@@ -331,7 +332,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 'pricingConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -350,7 +351,9 @@ export async function readMerchantConfig(path) {
     pythonWorkspaces: raw.pythonWorkspaceConnection === undefined ? null
       : await readPythonWorkspaceConfiguration(hostPath(raw.pythonWorkspaceConnection, base)),
     publishers: raw.publisherConnection === undefined ? null
-      : await readPublisherConfiguration(hostPath(raw.publisherConnection, base)) };
+      : await readPublisherConfiguration(hostPath(raw.publisherConnection, base)),
+    pricing: raw.pricingConnection === undefined ? null
+      : await readPricingConfiguration(hostPath(raw.pricingConnection, base)) };
   await readReleaseState(config.releaseStore);
   config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
   config.accounting = normalizeAccountingConfig(raw.accounting, base);
@@ -358,7 +361,7 @@ export async function readMerchantConfig(path) {
   if (config.support || config.receiving || config.pythonWorkspaces) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, fleetPlan, accounting, support, receiving, pythonWorkspaces }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, fleetPlan, accounting, support, receiving, pythonWorkspaces, pricing, releaseStore }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
   const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime }, process.cwd(), 'initial');
@@ -381,17 +384,22 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   if (receivingConnection) await readReceivingConfiguration(receivingConnection);
   const pythonWorkspaceConnection = pythonWorkspaces === undefined ? undefined : hostPath(pythonWorkspaces, process.cwd());
   if (pythonWorkspaceConnection) await readPythonWorkspaceConfiguration(pythonWorkspaceConnection);
+  const pricingConnection = pricing === undefined ? undefined : hostPath(pricing, process.cwd());
+  if (pricingConnection) await readPricingConfiguration(pricingConnection);
+  const existingReleaseStore = releaseStore === undefined ? undefined : hostPath(releaseStore, process.cwd());
+  if (existingReleaseStore) await readReleaseState(existingReleaseStore);
   await mkdir(root, { mode: 0o700 });
-  await initReleaseStore(join(root, 'releases'));
+  if (!existingReleaseStore) await initReleaseStore(join(root, 'releases'));
   await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
   const path = join(root, 'merchant-mcp.json');
   await writePrivate(path, { schema: CONFIG_SCHEMA, name,
-    releaseStore: './releases', exportsDirectory: './customer-exports',
+    releaseStore: existingReleaseStore ?? './releases', exportsDirectory: './customer-exports',
     ...(catalogConnection ? { catalogConnection } : {}),
     ...(accountingConfig ? { accounting: accountingConfig } : {}),
     ...(supportConnection ? { supportConnection } : {}),
     ...(receivingConnection ? { receivingConnection } : {}),
     ...(pythonWorkspaceConnection ? { pythonWorkspaceConnection } : {}),
+    ...(pricingConnection ? { pricingConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
         ...(source.clickhousePackage ? { clickhousePackage: source.clickhousePackage,
@@ -408,9 +416,30 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     } });
   await readMerchantConfig(path);
   return { schema: CONFIG_SCHEMA, configuration: path, sourceAlias: 'initial', state: 'INITIALIZED',
-    catalogConfigured: Boolean(catalogConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection),
+    catalogConfigured: Boolean(catalogConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection), pricingConfigured: Boolean(pricingConnection),
     sourceType: preview.sourceType, sourceDigests: preview.sourceDigests, inputPackage: preview.inputPackage,
     environment: preview.environment, credentialValuesChecked: false };
+}
+
+/** Bind saved original pricing work to the same explicitly selected release store. */
+export async function initializePricingMerchant({ directory, pricing, releaseStore, name = 'Starforge merchant pricing' }) {
+  const root = resolve(directory), pricingConnection = hostPath(pricing, process.cwd());
+  const configured = await readPricingConfiguration(pricingConnection), stores = new Set();
+  for (const value of Object.values(configured.workspaces)) if (value.releaseStore) stores.add(await realpath(value.releaseStore));
+  let selected = releaseStore === undefined ? null : await realpath(hostPath(releaseStore, process.cwd()));
+  if (selected === null && stores.size === 1) selected = [...stores][0];
+  if (selected === null)
+    throw failure('CONFIGURATION_ERROR', 'Select an existing original --release-store when pricing aliases have multiple stores or no staging store.');
+  await readReleaseState(selected);
+  name = line(name, 'Merchant name');
+  await mkdir(root, { mode: 0o700 });
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const path = join(root, 'merchant-mcp.json');
+  await writePrivate(path, { schema: CONFIG_SCHEMA, name, releaseStore: selected,
+    exportsDirectory: './customer-exports', sources: {}, pricingConnection });
+  await readMerchantConfig(path);
+  return { schema: CONFIG_SCHEMA, configuration: path, state: 'INITIALIZED', pricingConfigured: true,
+    workspaces: Object.keys(configured.workspaces), releaseStore: selected };
 }
 
 /** Configure the same provider for an existing fleet without an individual source. */

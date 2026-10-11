@@ -1,5 +1,10 @@
 # Python applications for the Stellar Forge buyer
 
+The complete [acquisition workflow](ACQUISITIONS.md) joins private request intake,
+receiver-owned preparation, immutable runbooks, original execution/accounting,
+verified downloads and multi-operator recovery through `AcquisitionWorkspace`
+or `buyer.acquisitions(...)`. It shares the original bridge with the Node SDK.
+
 Version 0.5.0 completes original reservation accounting and retained receipt views
 for the paginated dataset and resumable object applications joined in 0.4.0.
 It retains 0.3.0's original single-operation reservation accounting

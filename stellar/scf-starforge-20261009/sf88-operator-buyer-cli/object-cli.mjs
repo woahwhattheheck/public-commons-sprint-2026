@@ -27,6 +27,11 @@ export --session ABS --out ABS
 accounting --session ABS [--offset 0] [--limit 100]
 finalize --session ABS [--workspace ABS] [--offset 0] [--limit 100]
          [--outbox ABS --merchant-route ABS]
+backup-review --state ABS --state-root ABS [--profile ABS]
+backup --state ABS --state-root ABS --out NEW_BUNDLE --review SHA256 --quiesced
+       [--profile ABS] [--pass-env SF88_BACKUP_PASSPHRASE]
+backup-verify --bundle ABS [--expect RECORD_SHA256] [--pass-env NAME] [--python ABS]
+backup-restore --bundle ABS [--expect RECORD_SHA256] [--pass-env NAME] [--python ABS]
 
 init selects one ORIGINAL SF30 S3 objects.json row, or explicit reviewed object facts.
 Whole products use one GET without a query, including an empty file; chunks use exact ranges.
@@ -35,6 +40,10 @@ Completed responses are reused. Previously attempted uncertain requests are neve
 status, recover, assemble, report and export work offline without signing keys.
 accounting reads saved native receipts; finalize reconciles original reservations without another purchase.
 Accounting ranges are zero-based. Continue range.nextOffset and inspect any unresolved entries.
+Workspace backup captures received files, native operators, original journals,
+saved parts and completed objects through the existing encrypted recovery engine.
+Restore publishes only to the original absent/empty state root and reopens saved
+purchase records. Set its separate passphrase environment in this terminal.
 All destinations are absolute and new. See OBJECTS.md for the complete journey.
 `;
 const common = ['session'];
@@ -98,6 +107,9 @@ export async function main(tokens = process.argv.slice(2)) {
   if (tokens.length === 0 || tokens.length === 1 && ['help','--help'].includes(tokens[0])) {
     process.stdout.write(HELP); return;
   }
+  if (['backup-review','backup','backup-verify','backup-restore'].includes(tokens[0])) {
+    await recoveryCommand(tokens); return;
+  }
   const {command,flags:f} = parse(tokens);
   let report;
   if (command === 'init') {
@@ -154,6 +166,50 @@ export async function main(tokens = process.argv.slice(2)) {
     !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','NOT_ATTEMPTED'].includes(entry.outcome)))
     process.exitCode=2;
   return report;
+}
+
+async function recoveryCommand([command,...tokens]) {
+  const quiesced=tokens.filter(value=>value==='--quiesced').length;
+  need(quiesced<2&&(command==='backup'||quiesced===0),'OBJECT_FLAG_INVALID_OR_REPEATED');
+  const args=tokens.filter(value=>value!=='--quiesced');
+  const names=command==='backup-review'?['state','state-root','profile']:
+    command==='backup'?['state','state-root','profile','out','review','pass-env']:
+      ['bundle','expect','pass-env','python'];
+  need(args.length%2===0,'OBJECT_FLAG_VALUE_REQUIRED');
+  const options={};
+  for(let index=0;index<args.length;index+=2) {
+    const name=args[index].startsWith('--')?args[index].slice(2):'';
+    need(names.includes(name)&&!Object.hasOwn(options,name)&&args[index+1]&&!args[index+1].startsWith('--'),
+      'OBJECT_FLAG_INVALID_OR_REPEATED');options[name]=args[index+1];
+  }
+  const controller=new AbortController();let interrupted,model;
+  const interrupt=()=>{interrupted??=130;controller.abort();};
+  const terminate=()=>{interrupted??=143;controller.abort();};
+  process.on('SIGINT',interrupt);process.on('SIGTERM',terminate);
+  const context={signal:controller.signal,onProgress:event=>process.stderr.write(JSON.stringify(event)+'\n')};
+  try {
+    let result;
+    if(command==='backup-review'||command==='backup') {
+      need(options.state&&options['state-root'],'OBJECT_RECOVERY_STATE_AND_ROOT_REQUIRED');
+      const {openObjectWorkspace}=await import('./object-workspace/model.mjs');
+      model=await openObjectWorkspace({stateDirectory:options.state,profilePath:options.profile??null});
+      const input={stateRoot:options['state-root'],output:options.out,expectedReviewSha256:options.review,
+        passEnv:options['pass-env'],quiesced:quiesced===1};
+      result=command==='backup-review'?await model.inspectRecovery(input):await model.snapshotRecovery(input,context);
+    } else {
+      need(options.bundle,'WORKSPACE_RECOVERY_BUNDLE_REQUIRED');
+      const recovery=await import('./object-workspace/recovery.mjs');
+      const action=command==='backup-verify'?recovery.verifyObjectWorkspaceRecovery:recovery.restoreObjectWorkspaceRecovery;
+      result=await action({bundle:options.bundle,expected:options.expect,
+        passEnv:options['pass-env'],python:options.python},context);
+    }
+    process.stdout.write(JSON.stringify(result,null,2)+'\n');
+    if(result.reopenError||result.publicationSyncError||result.cleanupErrors?.length||result.selectionRecordError||
+      result.leaseReleaseErrors?.length)process.exitCode=2;
+  } finally {
+    await model?.close();process.off('SIGINT',interrupt);process.off('SIGTERM',terminate);
+    if(interrupted)process.exitCode=interrupted;
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)

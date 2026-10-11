@@ -13,6 +13,7 @@
     <aside class="sidebar" aria-label="Runbook navigation">
       <button id="new-draft" class="primary full">New acquisition plan</button>
       <button id="open-requests" class="request-entry full">Receive merchant request <span id="request-count" class="badge">0</span></button>
+      <button id="open-paid-files" class="request-entry full">Receive paid file order <span id="file-order-count" class="badge">0</span></button>
       <button id="open-recovery" class="request-entry full">Back up acquisitions</button>
       <h2>Acquisitions</h2><nav id="run-list" aria-label="Saved acquisitions"></nav>
       <h2>Drafts</h2><nav id="draft-list" aria-label="Saved draft plans"></nav>
@@ -20,7 +21,26 @@
     </aside>
     <main id="main" tabindex="-1">
       <div id="notice" role="status" aria-live="polite" hidden></div>
-      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Receive a private merchant request or arrange existing buyer configurations. Review exact request ceilings and follow each acquisition from terminal approval to saved files.</p><div class="toolbar"><button id="welcome-new" class="primary">Create a plan</button><button id="welcome-requests">Receive merchant request</button></div><div id="source-summary" class="source-summary"></div></section>
+      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Receive a private merchant request or arrange existing buyer configurations. Review exact request ceilings and follow each acquisition from terminal approval to saved files.</p><div class="toolbar"><button id="welcome-new" class="primary">Create a plan</button><button id="welcome-requests">Receive merchant request</button><button id="welcome-paid-files">Receive paid file order</button></div><div id="source-summary" class="source-summary"></div></section>
+      <section id="paid-files-panel" hidden>
+        <div class="page-heading"><div><p class="eyebrow">CUSTOMER FILE ORDERS</p><h1>Receive and acquire a file</h1><p class="muted">Open the merchant’s file handoff, prepare your local buyer, then follow the order through the existing acquisition plan.</p></div></div>
+        <form id="file-upload-form" class="panel"><label>Merchant file-order handoff<input id="file-handoff-upload" type="file" accept=".json,.handoff,application/json" required></label><p class="muted">Choose the original purchase handoff from the merchant, up to 128 KiB. Your claim token stays in the environment of the process running this workspace.</p><button id="upload-file-order" class="primary" type="submit">Upload and inspect order</button></form>
+        <div id="file-operator" class="panel"></div><p id="file-order-errors" class="muted" role="status"></p>
+        <section><div class="section-heading"><h2>Retained file orders</h2></div><div id="file-order-list" class="received-requests"></div></section>
+        <article id="file-order-detail" hidden>
+          <div class="section-heading"><h2 id="file-order-title" class="wrap"></h2><span id="file-order-state" class="badge"></span></div>
+          <p id="file-order-url" class="operation-url"></p><dl id="file-order-summary" class="detail-grid"></dl>
+          <a id="file-handoff-download" class="button quiet">Download original handoff</a>
+          <form id="file-review-form" class="panel"><h3>Local purchase and delivery settings</h3><p class="muted">The original buyer reviews live merchant terms and asks for approval in the terminal when the acquisition runs.</p>
+            <div class="fields two request-budgets"><label>Total budget · atomic<input id="file-total" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label><label>Per UTC day · atomic<input id="file-daily" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label></div>
+            <label>Save customer file as<input id="file-save-name" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,127}" maxlength="128" required></label>
+            <label>Existing claim token environment<select id="file-claim-env" required></select></label>
+            <button type="submit">Save order review</button><p id="file-review-changed" class="muted" hidden>Your choices changed. Save the current review before preparing the buyer.</p>
+          </form>
+          <div id="file-review-saved" class="panel" hidden></div><button id="prepare-file-order" class="primary" disabled>Prepare local buyer</button>
+          <div id="file-prepared" class="panel" hidden><h3>Ready for acquisition</h3><p id="file-prepared-name" class="wrap muted"></p><p>The plan keeps the checkout acknowledgement and the separately delivered customer file.</p><button id="add-file-to-plan" class="primary">Add to acquisition plan</button></div>
+        </article>
+      </section>
       <section id="requests-panel" hidden>
         <div class="page-heading"><div><p class="eyebrow">MERCHANT REQUESTS</p><h1>Receive and prepare a request</h1><p class="muted">Retain the merchant’s exact request, choose its payment option, and prepare a buyer on this machine.</p></div></div>
         <form id="request-upload-form" class="panel"><label>Private merchant request file<input id="request-upload" type="file" accept=".json,.handoff,application/json" required></label><p class="muted">Use the complete buyer request downloaded by the merchant. Keep this file private; it contains the operation ticket. <span id="request-size-limit"></span></p><button id="upload-request" class="primary" type="submit">Upload and inspect request</button></form>

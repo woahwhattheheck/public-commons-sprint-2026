@@ -1,4 +1,5 @@
 import { bindDiscoveryControls } from './discovery.mjs';
+import { bindClientControls } from './client.mjs';
 const $ = selector => document.querySelector(selector);
 const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem('seller-release-token', fragment); history.replaceState(null, '', location.pathname); }
@@ -14,6 +15,7 @@ function stageCommand(release) {
   if (release?.clickhouse) return command + ' --clickhouse-package prepared-clickhouse-package';
   if (release?.sqlite) return command + ' --sqlite-package sqlite-workbench-export';
   if (release?.jsonrpc) return command + ' --jsonrpc-package prepared-rpc-package';
+  if (release?.redis) return command + ' --redis-package prepared-redis-package';
   if (release?.mysql) return command + ' --mysql-package prepared-mysql-package';
   if (release?.s3) return command + ' --s3-package configured-s3-package';
   if (release?.duckdb) return command + ' --duckdb-package prepared-duckdb-package --duckdb-python ' + quoted(release.duckdb.interpreter);
@@ -21,17 +23,18 @@ function stageCommand(release) {
   return command + ' --spec openapi.json --config selections.json --bindings bindings.json';
 }
 function notice(message = '', error = false) { $('#notice').textContent = message; $('#notice').classList.toggle('error', error); }
-async function request(path, payload) {
-  const options = { headers: { 'x-release-token': token }, cache: 'no-store' };
+async function request(path, payload, { raw = false, signal } = {}) {
+  const options = { headers: { 'x-release-token': token }, cache: 'no-store', ...(signal ? { signal } : {}) };
   if (payload !== undefined) { options.method = 'POST'; options.headers['content-type'] = 'application/json'; options.body = JSON.stringify(payload); }
-  const response = await fetch(path, options), value = await response.json();
-  if (!response.ok) throw new Error(value.message ?? 'Operator action failed.');
-  return value;
+  const response = await fetch(path, options);
+  if (!response.ok) { const value = await response.json().catch(() => ({})); throw new Error(value.message ?? 'Operator action failed.'); }
+  return raw ? response : response.json();
 }
 function buttons() {
   const blocked = busy || !snapshot || snapshot.console.busy;
   for (const button of document.querySelectorAll('button')) button.disabled = blocked;
   discovery.buttons(blocked);
+  clients.buttons(blocked);
   if (!snapshot || blocked) return;
   $('#activate').disabled = !comparison || selected === snapshot.state.active;
   $('#rollback').disabled = !snapshot.state.previous;
@@ -191,7 +194,7 @@ function renderStatus(value) {
   for (const release of value.releases) {
     const button = node('button', undefined, 'release-card'); button.dataset.id = release.id;
     button.setAttribute('aria-pressed', String(release.id === selected));
-    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.clickhouse ? 'ClickHouse · ' : release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
+    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.clickhouse ? 'ClickHouse · ' : release.redis ? 'Redis / Valkey · ' : release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
       node('span', date(release.createdAt)), node('span', release.id === value.state.active ? 'Selected for next start' : 'Prepared'));
     button.addEventListener('click', () => choose(release.id)); list.append(button);
   }
@@ -325,6 +328,7 @@ async function refresh() {
     const value = await request('/api/status'); renderStatus(value);
     await refreshCaches();
     await discovery.refresh();
+    await clients.refresh();
     if (selected && !value.releases.some(r => r.id === selected)) selected = null;
     selected ??= value.state.active ?? value.releases[0]?.id ?? null;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
@@ -343,6 +347,7 @@ async function act(action) {
   try {
     const value = await request('/api/' + action, payload); renderStatus(value);
     await refreshCaches();
+    await clients.refresh();
     if (action === 'rollback') selected = value.state.active;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
     await refreshCatalog();
@@ -351,6 +356,8 @@ async function act(action) {
   finally { busy = false; buttons(); }
 }
 const discovery = bindDiscoveryControls({ request, notice, refresh, isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); } });
+const clients = bindClientControls({ request, getSnapshot: () => snapshot, isBusy: () => busy || !snapshot || snapshot.console.busy,
   setBusy: value => { busy = value; buttons(); } });
 $('#refresh').addEventListener('click', () => { notice(); refresh(); });
 $('#activate').addEventListener('click', () => act('activate'));

@@ -2,7 +2,7 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Merchant pricing · Stellar Forge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/browser.mjs"></script></head>
 <body><main>
-<header><div><p class="eyebrow">Stellar Forge / Merchant operations</p><h1>Merchant pricing</h1><p class="subtitle">Review service economics from current operations or a retained period.</p></div><span class="badge">Local workspace</span></header>
+<header><div><p class="eyebrow">Stellar Forge / Merchant operations</p><h1>Merchant pricing</h1><p class="subtitle">Review service economics, compare saved periods and prepare exact seller price changes.</p></div><span class="badge">Local workspace</span></header>
 <p id="notice" role="status" aria-live="polite">Loading the current merchant configuration.</p>
 <section class="panel source-panel" aria-labelledby="source-title">
   <div class="section-head"><h2 id="source-title">Review source</h2><span id="source-kind-note" class="muted small"></span></div>
@@ -40,6 +40,31 @@
   <p class="muted small">Compare the original saved values and source coverage. Differences in configuration, commercial terms or observed period are shown alongside the reports.</p>
   <form id="comparison-form" class="comparison-controls"><label>First saved review<select id="compare-left"></select></label><label>Second saved review<select id="compare-right"></select></label><button id="compare" type="submit">Compare reviews</button></form>
   <div id="comparison-result" hidden><div id="comparison-compatibility" class="compatibility"></div><div id="comparison-reports" class="comparison-grid"></div></div>
+</section>
+<section id="repricing-panel" class="panel" aria-labelledby="repricing-title">
+  <div class="section-head"><h2 id="repricing-title">Prepare seller price change</h2><span id="repricing-state" class="muted small">Choose a saved review.</span></div>
+  <p class="muted small">Start with a saved review, enter the exact amount for each payment choice, then review and save the complete seller configuration.</p>
+  <form id="repricing-source-form" class="repricing-source-controls"><label>Saved pricing review<select id="repricing-source"></select></label><button id="repricing-load" type="submit">Load payment choices</button></form>
+  <div id="repricing-editor" hidden>
+    <div id="repricing-source-facts" class="source-facts"></div>
+    <div id="repricing-source-links" class="history-files"></div>
+    <p id="repricing-source-status" class="source-note"></p>
+    <details class="coverage-detail"><summary>Source configuration identity</summary><code id="repricing-source-hash" class="repricing-hash"></code></details>
+    <h3>Payment amounts</h3>
+    <p class="muted small">Enter positive whole numbers in the asset’s atomic units. Keep the current amount for any choice you want to retain. Each choice keeps its asset, recipient and payment terms.</p>
+    <div id="repricing-options"></div>
+    <div id="repricing-paging" class="table-paging" hidden><button id="repricing-previous" type="button">Previous services</button><span id="repricing-page-caption"></span><button id="repricing-next" type="button">Next services</button></div>
+    <div class="repricing-edit-actions"><span id="repricing-change-count" class="muted small">No amounts changed.</span><div class="button-row"><button id="repricing-reset" type="button">Reset amounts</button><button id="repricing-preview" type="button">Review price change</button></div></div>
+    <div id="repricing-review" class="repricing-review" hidden>
+      <div class="section-head"><h3>Reviewed price change</h3><span id="repricing-review-count" class="muted small"></span></div>
+      <div id="repricing-change-table"></div>
+      <div id="repricing-review-terms"></div>
+      <details class="coverage-detail"><summary>Prepared configuration identity</summary><code id="repricing-proposed-hash" class="repricing-hash"></code></details>
+      <div class="review-actions"><label>Price change name<input id="repricing-name" maxlength="100" placeholder="October service prices"></label><button id="repricing-save" class="primary" type="button">Save configuration</button></div>
+      <p class="muted small">The saved package includes the complete configuration and its reviewed changes. Use it with the merchant’s existing deployment and release workflow.</p>
+    </div>
+  </div>
+  <div class="repricing-history"><div class="section-head"><h3>Saved price changes</h3><span id="repricing-history-count" class="muted small"></span></div><div id="repricing-history"></div></div>
 </section>
 <footer><span id="native-status"></span><details><summary>Configuration identity</summary><code id="config-hash"></code><p class="small muted">Review files are stored privately on this operator host. The current seller configuration supplies the complete ordered payment choices.</p></details></footer>
 </main></body></html>

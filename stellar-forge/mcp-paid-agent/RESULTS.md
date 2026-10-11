@@ -151,3 +151,15 @@ invocation remain owned by the database, attempts cannot decrease, and a signed
 dispatch cannot become unsigned. A legacy preview digest covers only its bounded
 preview; the host supplies the original full result, and import records its
 complete hash. This command never creates a new purchase.
+
+## Failed settlement metadata
+
+The complete native result also retains failed `x402/payment-response` receipts.
+Compact quote metadata includes their failure code and detail as well as the
+original hash, network and payer. Local recovery checks existing receipt fields
+and restores additional failure details from the saved native result when an
+older quote snapshot omitted them. It preserves an existing independent
+transaction observation and never changes the original native file bytes.
+Use [payment recovery](PAYMENT_RECOVERY.md) to inspect the original transaction
+through Stellar from the same quote and console.
+

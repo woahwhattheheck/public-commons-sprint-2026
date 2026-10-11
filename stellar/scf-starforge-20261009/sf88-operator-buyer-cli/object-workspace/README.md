@@ -40,7 +40,7 @@ of the selected asset. The example amounts are limits to replace, not a product
 price. Keep this preset mode `0600` outside the installation. It supports the
 same optional `signerProvider`, `rpc` and `httpsProxyEnv` as the original runbook;
 choose either `secretEnv` or `signerProvider`. Values are read on the host.
-The browser does not accept a signer module, credential, executable or private path.
+The receiving form does not accept a signer module, credential, executable or private path.
 
 ```sh
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs \
@@ -99,6 +99,89 @@ session name is not overwritten.
 
 The trusted product profile below remains useful for installations that already
 have reviewed native operator workspaces.
+
+## Back up and restore the complete buyer workspace
+
+**Backup and recovery** in the sidebar captures this same receiving and download
+application through original SF88 collection recovery and SF101 authenticated
+encryption. It retains merchant inputs, prepared products and native operator
+generations, committed SQLite journals, original object plans, inbox history,
+response parts and completed files. Empty whole files keep their zero-byte
+contents and one original request. Queued chunked downloads keep their untouched
+jobs; restoring state does not start them.
+
+Place the workspace, private preset, optional profile and all referenced native
+operators, tickets, evidence and completed files beneath one existing private
+state root. For example, use `/private/buyer-state/workspace` and
+`/private/buyer-state/operator.json`. Review lists the exact selected paths;
+unrelated siblings are not automatically included. Directories must be owned
+mode `0700`, files `0600`, without symbolic or hard links. The original engine
+permits 64 native operators, 9,500 filesystem entries, 2 GiB per file and less
+than 4 GiB total. This application reviews up to 512 original sessions. External
+Python, source CLI and signer-provider executables remain listed installation
+requirements.
+
+Set the separate backup passphrase in the launching terminal before opening the
+browser. Only its environment name enters the browser, never its value:
+
+```sh
+read -rsp 'Backup passphrase: ' SF88_BACKUP_PASSPHRASE
+export SF88_BACKUP_PASSPHRASE
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs --state /private/buyer-state/workspace --port 8438
+```
+
+1. Open **Backup and recovery**, enter the common state root, and choose
+   **Review backup contents**. Review the original sessions, whole/chunk plans,
+   native operators, merchant sources, selected paths, missing optional outputs
+   and runtime requirements. A changed startup profile or preset-path reference
+   requires reopening the workspace before review.
+2. Choose a new encrypted bundle directory outside that root, for example
+   `/private/backups/buyer-20261011`, with an existing private parent. Stop other
+   programs that write the selected state, acknowledge that condition, then
+   choose **Create encrypted backup**. The application holds original workspace
+   and intake metadata leases, each selected object-session lease and native
+   SQLite checkpoint holders. Original source comparisons remain active.
+3. Follow capture and encryption progress. **Stop recovery operation** cancels
+   this owned operation and drains its workers. The encrypted copy carries a
+   release for only its captured lease generations; live source ownership stays
+   held until the capture finishes.
+4. Keep the bundle path and record SHA-256 outside the captured root.
+   **Select this backup → Verify backup** authenticates the archive, original
+   session/configuration bindings and committed journals, including when source
+   state is absent. It uses the host's `/usr/bin/python3`; the CLI can also select
+   an explicit existing Python.
+
+The original journal-authentication keys are encrypted inside the bundle.
+Wallet environment values are excluded. Keep the bundle and its separate
+passphrase available to the intended restoring operator.
+
+### Restore and reopen
+
+Close the browser launcher and other writers. The existing `buyer-object
+backup-restore` command is printed for the selected backup. Its destination is
+the **original absolute state root**, which must be absent or an empty private
+directory. Preserve a populated root before deliberately making that location
+available. Restore does not merge into it or rewrite original paths.
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs backup-restore --bundle /private/backups/buyer-20261011 --expect ORIGINAL_RECORD_SHA256 --pass-env SF88_BACKUP_PASSPHRASE
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs --state /private/buyer-state/workspace --port 8438
+```
+
+Restore authenticates before publishing, then reopens the original operators,
+session plans, accounting pages and received-product identities. Its
+`reopened.urlCommand` includes the original profile when applicable. The browser
+prints a fresh private URL. Open **File delivery** to obtain saved bytes or
+continue only untouched jobs; open **Purchase records** for the original
+outcomes and receipts. Capture, verify and restore run no purchase, signature,
+payment or finalization.
+
+A published bundle remains complete if writing its local history later fails;
+`selectionRecordError` reports that separate condition. Restore likewise returns
+`reopenError`, `nativeReopenErrors`, `publicationSyncError` and `cleanupErrors`
+separately after publication. Preserve that result and resolve the named local
+issue instead of blindly repeating a completed operation. The CLI exits `2` for
+these post-publication conditions.
 
 ## Prepare the existing operator inputs
 
