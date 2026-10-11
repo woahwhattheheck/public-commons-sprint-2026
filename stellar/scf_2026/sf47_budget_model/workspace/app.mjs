@@ -13,6 +13,8 @@ const label = value => String(value).replace(/_/g,' ').replace(/([a-z])([A-Z])/g
 const tabs = [['overview','Overview'],['work','Work packages'],['milestones','Milestones'],['staffing','Staffing'],['payments','Payment timing'],['delivery','Delivery plan'],['history','Saved versions'],['operations','Delivery operations']];
 const state = {token:null,plans:[],current:null,draft:null,tab:'overview',dirty:false,stale:false,busy:false,history:[],selectedHistory:null};
 let controlId = 0;
+let operationsView = null;
+function closeOperations() {operationsView?.dispose();operationsView=null;}
 let requestIds = {};
 try { requestIds = JSON.parse(sessionStorage.getItem('sf47.requests') || '{}'); } catch {}
 function inform(message, error = false) {
@@ -215,14 +217,16 @@ function history() {
       stat('Work packages',chosen.scenario.future_costs.length,chosen.planning.contributors.length+' contributors')+'</div><details class="json-details"><summary>Retained scenario and payment / staffing inputs</summary><pre>'+esc(JSON.stringify({scenario:chosen.scenario,planning:chosen.planning},null,2))+'</pre></details></section>':'<p class="help">Select a revision to review its complete saved inputs before restoring it.</p>');
 }
 function render(focus = false) {
+  closeOperations();
   if(!state.current) return;
   controlId=0;
   $('#plan-select').innerHTML=state.plans.map(row=>'<option value="'+esc(row.id)+'"'+(row.id===state.current.id?' selected':'')+'>'+esc(row.name)+'</option>').join('');
   $('#sections').innerHTML=tabs.map(([id,title])=>'<button type="button" data-tab="'+id+'"'+(state.tab===id?' aria-current="page"':'')+'>'+title+'</button>').join('');
   $('.savebar').hidden=state.tab==='operations';
   if(state.tab==='operations') {
-    mountOperations({container:$('#main-panel'),api,plan:state.current,inform,mutationId})
-      .catch(error=>inform(error.message,true));
+    const mounted=mountOperations({container:$('#main-panel'),api,plan:state.current,inform,mutationId});
+    operationsView=mounted;
+    mounted.ready.catch(error=>{if(operationsView===mounted&&mounted.root.isConnected)inform(error.message,true);});
   } else {
     $('#main-panel').innerHTML=({overview,work,milestones,staffing,payments,delivery,history}[state.tab])();
   }
@@ -371,6 +375,7 @@ async function openAccess(token) {
 $('#access-form').addEventListener('submit',event=>{event.preventDefault();run(()=>openAccess($('#access-key').value.trim()));});
 $('#sign-out').addEventListener('click',()=>{
   if(state.dirty && !confirm('Close access and discard this unsaved draft?'))return;
+  closeOperations();
   state.token=null;state.current=null;state.draft=null;state.plans=[];state.history=[];state.selectedHistory=null;state.dirty=false;
   sessionStorage.removeItem('sf47.access');$('#main-panel').replaceChildren();$('#plan-select').replaceChildren();$('#sections').replaceChildren();
   $('#workbench').hidden=true;$('#sign-out').hidden=true;$('#access-panel').hidden=false;$('#access-key').value='';inform('Workspace access closed. Saved revisions remain available.');

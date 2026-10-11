@@ -24,11 +24,24 @@ const button = (label, action, data='', disabled=false) => '<button type="button
 const table = (head, rows) => '<div class="ops-table"><table><thead><tr>'+head.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
 const empty = text => '<p class="ops-empty">'+esc(text)+'</p>';
 function b64(buffer) {let out='';const bytes=new Uint8Array(buffer);for(let n=0;n<bytes.length;n+=8192)out+=String.fromCharCode(...bytes.subarray(n,n+8192));return btoa(out);}
-function download(raw,filename,type='application/json') {const url=URL.createObjectURL(raw instanceof Blob?raw:new Blob([raw],{type}));const link=document.createElement('a');link.href=url;link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
+function downloadFile(raw,filename,type='application/json') {const url=URL.createObjectURL(raw instanceof Blob?raw:new Blob([raw],{type}));const link=document.createElement('a');link.href=url;link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
 
-export async function mountOperations({container,api,plan,inform,mutationId}) {
+export function mountOperations({container,api:transport,plan,inform:notify,mutationId}) {
   const root=document.createElement('section');root.className='operations';root.setAttribute('aria-label','Delivery and cash operations');container.replaceChildren(root);
   const view={cases:[],current:null,tab:'overview',busy:false,events:[],nextAfter:null,form:null};
+  let active=true;
+  const available=()=>active&&root.isConnected;
+  function requireActive() {if(!available()){const error=new Error('This operations view is closed. Reopen the retained case to continue.');error.code='OPERATIONS_VIEW_CLOSED';throw error;}}
+  function dispose() {active=false;const dialog=root.querySelector('dialog');if(dialog?.open)dialog.close();}
+  const inform=(...args)=>{if(available())notify(...args);};
+  const download=(...args)=>{if(available())downloadFile(...args);};
+  async function api(...args) {
+    requireActive();
+    // A dispatched mutation retains its original request/receipt on the server.
+    // Closing this view suppresses later UI work without issuing it again.
+    const value=await transport(...args);
+    requireActive();return value;
+  }
   let actor='';try{actor=sessionStorage.getItem('sf47.operations.actor')||'';}catch{}
   const $=selector=>root.querySelector(selector);
   const options=kind=>(view.current?.records[kind]||[]).map(row=>[row.id,row.name||row.number||row.description||row.id]);
@@ -54,9 +67,9 @@ export async function mountOperations({container,api,plan,inform,mutationId}) {
     view.busy=value;root.setAttribute('aria-busy',String(value));
     root.querySelectorAll('button,input,select,textarea').forEach(el=>el.disabled=value||el.dataset.opsFixed==='true');
   }
-  function alertError(error) {inform(error.message,true);const target=$('[data-ops-message]');if(target){target.textContent=error.message;target.setAttribute('role','alert');}}
-  async function run(action) {if(view.busy)return;setBusy(true);try{await action();}catch(error){alertError(error);}finally{if(root.isConnected)setBusy(false);}}
-  function recordingActor() {const value=($('[name=recordingActor]')?.value||actor).trim();if(!value)throw new Error('Enter the recording operator before saving.');actor=value;try{sessionStorage.setItem('sf47.operations.actor',value);}catch{}return value;}
+  function alertError(error) {if(!available())return;inform(error.message,true);const target=$('[data-ops-message]');if(target){target.textContent=error.message;target.setAttribute('role','alert');}}
+  async function run(action) {if(view.busy||!available())return;setBusy(true);try{await action();}catch(error){alertError(error);}finally{if(available())setBusy(false);}}
+  function recordingActor() {requireActive();const value=($('[name=recordingActor]')?.value||actor).trim();if(!value)throw new Error('Enter the recording operator before saving.');actor=value;try{sessionStorage.setItem('sf47.operations.actor',value);}catch{}return value;}
   async function loadCases(prefer) {
     view.cases=(await api('/api/operations')).cases;
     let retained;try{retained=sessionStorage.getItem('sf47.operations.case.'+plan.id);}catch{}
@@ -67,6 +80,7 @@ export async function mountOperations({container,api,plan,inform,mutationId}) {
   }
   async function refresh() {const current=view.current.program.id;view.current=await api('/api/operations/'+current);view.cases=(await api('/api/operations')).cases;view.events=[];view.nextAfter=null;render();}
   async function command(action,data={},note='') {
+    requireActive();
     const payload={expectedVersion:view.current.program.version,actor:recordingActor(),note,action,data};
     payload.requestId=await mutationId('operations:'+view.current.program.id,payload);
     const result=await api('/api/operations/'+view.current.program.id+'/command',payload);
@@ -111,7 +125,7 @@ export async function mountOperations({container,api,plan,inform,mutationId}) {
     +heading('Original event history','Paged changes retain the recording operator, reason and original before/after values.',button('Load history','history-more'))
     +(view.events.length?table(['Version / time','Operator','Action / note'],view.events.map(row=>[esc(row.version)+'<small>'+esc(row.at)+'</small>',esc(row.actor),esc(row.action)+'<p>'+esc(row.note)+'</p><details><summary>Record values</summary><pre>'+esc(JSON.stringify({before:row.before,after:row.after},null,2))+'</pre></details>'])):empty('Open the retained event history.'));}
   function render() {
-    if(!root.isConnected)return;
+    if(!available())return;
     const c=view.current;
     root.innerHTML='<div class="ops-heading"><div><h2>Delivery and cash operations</h2><p>New cases use saved plan '+esc(plan.name)+' · revision '+plan.revision+'</p></div><div class="ops-actions">'+button('Open case from saved plan','new-case')+button('Import complete case','import')+button('Import original source packet','intake')+'</div></div>'
       +'<div class="ops-toolbar">'+field('Recording operator','recordingActor',actor,{help:'Retained with every saved operation.'})+(view.cases.length?field('Retained case','caseSelect',c?.program.id,{options:view.cases.map(row=>[row.id,row.name+' · '+row.mode+' · v'+row.version])}):'')+'</div>'
@@ -125,6 +139,7 @@ export async function mountOperations({container,api,plan,inform,mutationId}) {
       +'<input type="file" data-ops-import hidden accept=".zip,application/zip"><input type="file" data-ops-intake hidden accept=".json,application/json">';
   }
   function showForm(kind, row={}, meta={}) {
+    requireActive();
     if(kind==='invoices'&&!view.current.records.contributors.length)throw new Error('Add the invoice contributor or supplier first.');
     if(kind==='work'&&!view.current.records.contributors.length)throw new Error('Add the contributor first.');
     if(kind==='purchases'&&!view.current.records.deployments.length)throw new Error('Add the original deployment first.');
@@ -227,6 +242,6 @@ export async function mountOperations({container,api,plan,inform,mutationId}) {
     });
   });
   root.innerHTML='<p>Opening retained delivery operations…</p>';
-  await loadCases();
-  return {refresh,root};
+  const ready=loadCases();
+  return {ready,refresh,dispose,root};
 }
