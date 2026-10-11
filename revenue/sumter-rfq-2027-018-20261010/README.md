@@ -1,86 +1,82 @@
-# Sumter SC school procurement software — qualified partner/paid UAT workshare
+# Sumter procurement implementation workshare
 
-**Operation ID:** `SUMTER-SC-RFQ-2027-018-OPENGOV-PARTNER-QA-20261010-GPT6CLOUD`  
-**Prepared:** October 10, 2026 (America/New_York)  
-**Owner lane:** original new nonbounty buyer → proven school-sector vendor/reseller → narrowly scoped paid subcontract conversation.  
-**Stage:** `SOURCE_MATCHED / PARTNER_NOT_CONTACTED / NO_BID / NO_SOW / NO_INVOICE / NO_PAYMENT`.
+Updated 2026-10-11 from the complete issuer RFQ and Addendum One. This replaces the earlier generic staging-QA concept. The deliverable is now a working offline template/configuration compiler and a practical vendor-side implementation proposal. It is not a district bid or a claim that any platform is fully responsive.
 
-## 1. Real active purchasing need, not a speculative product brief
+## What changed after reading the original source
 
-South Carolina's original public procurement advertising authority posted **RFQ-2027-018**, *Digital Procurement Solutions for Solicitations*, on **October 2, 2026**. The named purchaser is **Sumter School District**. The district is seeking a contract for software to modernize and streamline its procurement solicitations. **Quote/submittal deadline: Friday, October 23, 2026 at 11:00 a.m. Eastern** (local South Carolina time). The official ad identifies Carlos W. Burns at the district procurement office as the buyer of record; this is *not* an authorization for our team to contact the buyer.
+The 20-page RFQ, issued October 2, seeks an integrated sourcing, vendor and contract-management system. Its Section III (PDF page 12) includes document templates and a clause library, solicitation management, evaluation, contracts, insurance, public-works bidding, emergency-vendor information and a transparency portal. Training, security/privacy, support, incident reporting, logging and password policies appear on PDF page 13.
 
-- Official state-issued advertisement, including deadline and procurement contact: <https://scbo.sc.gov/printad?a=69282>
-- District's original source page listing the **RFQ-2027-018 Digital Procurement Solutions System** document: <https://finance.sumterschools.net/procurement/solicitations>
-- District-hosted original-document link, as exposed by its official site: <https://drive.google.com/file/d/1J_ubcwLrU-bdbGnvEHooerM4R7FrolVB/view?usp=drive_link>
+The seven-page **October 9 Addendum One** materially narrows the useful services pitch:
 
-**Document acquisition, assigned next step:** A logged-in local browser or approved browser connector must open the original district-linked PDF, capture its unchanged bytes and SHA-256, then extract: scope/functional requirements, administrative instructions, permitted vendor/partner roles, authorized submission channel, addenda, insurance/legal terms, questions deadline, scoring, price sheet, data/privacy obligations and earliest start. The public Google Drive viewer presented a loading page in this cloud web context; **we have NOT reviewed the PDF**. Until acquired, do not assert the solicitation *requires* the particular UAT checkpoints below. Preserve source-version and live-buyer deadline if the PDF supersedes the ad.
+| Source location | Issuer statement, paraphrased | Delivery consequence |
+|---|---|---|
+| Q11, printed p4 / PDF p6 | At least five to seven templates need configuration. | Offer actual template/clause configuration rather than a test-only report. The issuer did not specify the seven template names in this kit. |
+| Q15, printed p4 / PDF p6 | A library of the district's own past solicitations, templates and clauses is acceptable. | A district-owned reusable library is useful; a nationwide repository is not necessary to this workshare. |
+| Q3–4, printed p1–2 / PDF p3–4; Q6 | Several access categories are answered with two users; no test-environment requirement is stated. | Plan a small operator handover; do not assert two distinct total users or make a new test tenant a buyer requirement. |
+| Q5, printed p2 / PDF p4 | No AI features at this time. | Remove the AI upsell despite broader wording in the original specification. |
+| Q8–9, printed p3 / PDF p5 | This is new to the organization; file/record counts are not provided. | Do not price invented migration volumes. Inventory actual approved inputs first. |
+| Q10, printed p3 / PDF p5 | No third-party integration is required; attachments are needed; API availability is unconfirmed. | Use supported operator configuration; do not invent an API connector requirement. |
+| Q12, printed p4 / PDF p6 | Workflow quantities are unknown. | Proposed workflow mappings are scoping aids, not issuer-mandated counts. |
+| Q17, printed p5 / PDF p7 | A differently delivered equivalent feature is answered as nonresponsive. | Prime must establish exact platform fit; this kit is not a substitute for mandatory software capability. |
+| Q19, printed p5 / PDF p7 | Follow the original closed-bid submission instructions. | Preserve hard-copy/USB instructions; this outreach is to a potential partner, not a district submission. |
 
-## 2. Independently proven same-sector solution and legitimate channel
+Q1 does not supply a budget. Q2's answer to the hosting/pricing-options question is ambiguous and should not be interpreted as acceptance of a particular deployment model. Q16 does not unconditionally accept uploaded bid bonds; Q18 leaves the requested vendor-application form unanswered. These are source-specific facts, not new internal stop policies. Partner discovery and preparation can continue without pretending the issues are resolved.
 
-**Platform: OpenGov Procurement.** This is a concrete functional/sector fit, not a claim OpenGov plans to respond to the Sumter RFQ:
+## Run the working template library
 
-- **Greenville County School District** (also SC, K–12) states on its own live procurement website it has partnered with **OpenGov** and uses a web-based e-procurement portal for vendor registration, solicitation notifications, amendments/addenda, electronic response guidance and related functions: <https://www.greenville.k12.sc.us/Departments/main.asp?titleid=solicitations>.
-- The platform supplier independently describes the Greenville County Schools procurement program: <https://opengov.com/newsroom/greenville-county-school-district-streamlines-procurement-with-opengov/>. Vendor statements about future savings are marketing claims, not an observed Sumter deployment or an acceptance guarantee.
-- **Vertosoft** currently publishes a named OpenGov supplier/reseller listing, public-sector contract routes and contact **opengov@vertosoft.com**, phone **571-707-4130**: <https://vertosoft.com/opengov-2/>. OpenGov itself lists Vertosoft as a partner on <https://opengov.com/partners/> and <https://opengov.com/partner-list/>. A public government contract listing independently describes Vertosoft as a vendor of OpenGov products and related implementation services: <https://dir.texas.gov/contracts/vendors/vertosoft-llc>.
+Node 22; built-ins only. No installation, network, platform API, account, signature or paid resource.
 
-**Primary first contact after owner approval:** Vertosoft's named OpenGov channel (no send yet). **Alternative, not simultaneous cold outreach:** OpenGov's official partner application route; ask whichever channel is engaged whether an *independent acceptance/transition QA* specialist fits its proposal. Never imply we are an OpenGov/Vertosoft employee, certified partner, current supplier, awardee or incumbent. Do not solicit either organization twice through different swarm agents.
+```sh
+node template-library.mjs inspect
+node template-library.mjs render --context example-context.json --out /tmp/sumter-review-copy
+node test-template-library.mjs
+```
 
-## 3. Commercial wedge: separable, demonstrable *paid* workshare
+The example is visibly fictional and is not a ready-to-submit offer. The compiler produces seven editable Markdown review copies, `configuration-map.json` and `HANDOVER.md`. It escapes input Markdown/HTML, copies operator-supplied text literally and reports unresolved fields/clauses rather than manufacturing them. Output directories are create-only; existing output is not overwritten. Generated files use private file modes where supported.
 
-**Offer hypothesis:** A vendor-side, fixed-scope **five-business-day staging acceptance and evidence sprint** for K–12 procurement-system rollout. Our role is independent cutover, buyer-journey and vendor-journey QA—not replacing OpenGov procurement, rewriting its core platform, or advising the district to break RFQ communications rules. This can be subcontracted by the authorized prime/reseller **only if they want it and permit staging access**.
+`template-kit.json` contains seven **proposed** families: request for information, request for quotation, invitation for bid, request for proposal, addendum/Q&A, contract administrative record/renewal notice, and award/public summary. The count is grounded in Q11; these names are our initial configuration proposal. The contract record is not drafted legal contract language. Actual agency-selected templates can differ.
 
-**Owner-internal price hypothesis (not a customer quote):** **$3,500 fixed**, scope and margin subject to platform access, actual RFQ, vendor approval and paid SOW. Payment milestone model to negotiate: approved test plan and sandbox access → evidence report/defect replay/cutover decision. No accepted price, deposit, contract, or revenue exists as of this packet.
+For real preparation, copy the context, change `mode` to `operator`, populate its `fields`, and provide the actual selected clause `text`, `source_reference` and `approved_by` attribution. Remove unknown entries instead of inventing approval. Missing entries remain explicit in review copies and the configuration map. A zero unresolved count is **input completeness only**, not proof of authority, legal sufficiency or platform conformance.
 
-**Deliverables once there is a signed SOW and staging tenant:**
+The map connects each template to required fields, selected clause keys, attachment prompts, proposed operator workflow and content hash. All platform-configuration entries initially read `NOT_PERFORMED`; an authorized implementer transfers reviewed content through the chosen platform's supported interface and records the actual native template IDs separately. This tool does not claim an OpenGov import format or live deployment.
 
-1. A 1–2 page traceable acceptance plan mapped to the *original signed source and chosen platform release*.
-2. Executed role-distinct supplier registration/bidder workflow and procurement-officer workflow, with source input hashes, timestamps and screenshots or audit export.
-3. Reproducible scenarios for solicitation lifecycle, vendor notices, addenda, cutoff/time zones, restricted bid visibility, evaluation trail and accessible report export, *only where actual bidder/source scope warrants*.
-4. One defect ledger (repro steps, severity, vendor ownership, retest status), a final cutover recommendation and remaining risk signoff. No assertion of compliance certification or security audit beyond executed checks.
+## Paid implementation proposal
 
-**Why this is a credible separately purchasable service:** The buyer is actively purchasing procurement software; Greenville's public implementation shows a school-district workflow; the reseller has an authentic named commercial channel; launch correctness and buyer acceptance are naturally distinct from licensing/proposal writing. The above does **not** prove the vendor has need, funding or willingness to subcontract. Commercial validation is the next human response.
+**Commercial discussion basis: $3,500 fixed / five business days**, starting after the partner agrees the scope and provides its authorized platform access plus approved source text. This is our proposed services price, not the district budget, an accepted SOW or revenue.
 
-## 4. Proposed acceptance work items (design, NOT verified tender clauses)
+The work package covers selection and preparation of up to seven templates; a source-attributed clause/library map; hands-on configuration in the prime's selected platform using its supported interface; attachment and role mapping; a two-operator walkthrough; and editable handover/export material where supported. Confirm the final selected templates with the partner. No new test tenant is assumed or required by this proposal.
 
-See [`acceptance_matrix.csv`](./acceptance_matrix.csv). Each row has a pass/fail predicate and required first-party evidence. The selected vendor and PDF determine which are in scope. Never stage a fake ledger receipt or claim screenshots from unexecuted flows. Distinguish test data from actual source systems. Explicit `NO_ACCESS` and `NOT_IN_SCOPE` are honest workflow outcomes; the owner can request the actual logs using their logged-in local browser, rather than hand-waving them away.
+| Workday | Implementation output |
+|---|---|
+| 1 | Selected template inventory, approved-source register, field/role/attachment map; unresolved source inputs separated from completed content. |
+| 2–3 | Up to seven native templates configured in the agreed environment, linked to actual approved clauses and documents; preserve native template identifiers. |
+| 4 | Operator walkthrough of prepare/review/amend/archive/publish processes; correct practical permission and attachment problems encountered. |
+| 5 | Transfer editable source/configuration map, platform-supported exports, operator notes and remaining implementation items. |
 
-## 5. Exactly who does what next, with a deadline
+Excludes platform licensing, a replacement procurement platform, bidder representation, buyer submission, generative AI, third-party integrations, unquantified bulk migration, legal drafting, formal security certification, or guarantees that the selected vendor is responsive. The prime retains bid, pricing, licensing and vendor-representation decisions. Routine functional checks support the configured deliverable; they are not the whole product.
 
-**Local procurement-source operator / Oct 10–12:** Retrieve original buyer RFQ PDF and any addenda, calculate checksum, check actual terms and permissible channel; paste only sanitized requirements/URLs/metadata into original `#sales` claim thread. Stop any unsanctioned buyer communication.
+## Buyer / vendor / relationship facts
 
-**Named partner qualification / Oct 12–13:** Check whether Vertosoft already participates or has a protected government bid contact and if vendor-side subcontract is permissible. No assumption of participation. If this checks out, original relationship owner approves **one** outreach route. Avoid duplicate contact from another fleet seat; hold other contacts while awaiting partner reply.
+The district deadline remains **October 23, 2026 at 11:00 a.m. as stated in the issuer documents**. The question deadline was October 9 at 11:00 a.m. The cover and Addendum require one hard copy and one USB copy in the specified sealed-offer process; an emailed partner inquiry is not a bid. The estimated contract dates in the original are not a confirmed award/start date.
 
-**Vendor-positive path / Oct 13–20:** Ask for 20-minute commercial discovery on procurement bid scope and launch QA; offer scope at **hypothetical** $3,500 / 5 days; vendor may decline or negotiate. If interested, send an actual priced SOW for acceptance, confidentiality, scope, deliverables, billing and access. No work-for-fee without written acceptance. Vendor, not swarm, owns bidder registration, RFQ response and any customer representations.
+Greenville County Schools' own page documents an OpenGov procurement deployment, and Vertosoft publishes its OpenGov commercial contact. This supports a relevant partner inquiry, not a statement that Vertosoft/OpenGov is pursuing Sumter or that its current software meets every RFQ requirement. There was earlier outreach to that commercial channel on a different opportunity; keep the relationship context and do not treat it as a never-contacted organization. Current outbound custody and private message identifiers belong in the original internal sales thread, not public source.
 
-**Oct 23 11:00 a.m. EDT:** Original external procurement deadline, not our own submission unless separately approved and eligible. If a partner answers after the cutoff, consider a **post-award** QA service only with an actual awardee's permission, rather than backdating outreach.
+The old `acceptance_matrix.csv` is retained as historical design material, not the current commercial scope or a set of tender requirements. `lead_state.json` tracks source/product facts; delivery and responses must not be inferred from the existence of these files.
 
-## 6. Owner-ready *UNSENT* single-channel outreach draft
+## Original sources and reproducibility
 
-**Recipient:** Vertosoft OpenGov channel — `opengov@vertosoft.com`. **Status: UNSENT, awaiting original source terms and relationship-owner approval.** The information below is not a bidder-submitted proposal, and the user has not approved outbound transmission or a legal statement of capability.
+- Issuer advertisement: <https://scbo.sc.gov/printad?a=69282>
+- Issuer solicitation index: <https://finance.sumterschools.net/procurement/solicitations>
+- Original RFQ, 20 pages: <https://drive.google.com/file/d/1J_ubcwLrU-bdbGnvEHooerM4R7FrolVB/view>
+  - SHA-256 `90dbc9f5507696df56604185857f2b91709451a676ea486b1a659575e5a908c8`
+- Issuer addendum index: <https://finance.sumterschools.net/procurement/addendums>
+- Addendum One, October 9, seven pages: <https://drive.google.com/file/d/1p7WwFwUvGP8BD4wDqRiMb22hVqRzaRHC/view>
+  - SHA-256 `81c7b68cb1a071a746fdcee2dbd75a1b9648fa7ab49f08113f908ebcd36861b8`
+- Independent school-district platform example: <https://www.greenville.k12.sc.us/Departments/main.asp?titleid=solicitations>
+- Published supplier channel: <https://vertosoft.com/opengov-2/>
 
-**Subject:** Sumter Schools RFQ-2027-018 — small independent e-procurement acceptance QA workshare
+The complete PDFs were retrieved through the authenticated Drive connector, extracted without OCR and key original/addendum pages rendered for visual review. Recheck the issuer's addenda before a prime finalizes its bid; do not treat this dated snapshot as a perpetual deadline monitor.
 
-Hello Vertosoft OpenGov team,
+## Reusable revenue workflow
 
-I found Sumter School District's October 23 procurement-software solicitation, RFQ-2027-018. Greenville County Schools' publicly documented OpenGov Procurement rollout caught my attention because it is a useful same-state K–12 example of supplier onboarding, addenda and electronic solicitation management.
-
-Would your public-sector team consider a narrowly scoped independent staging acceptance/UAT workshare if you're involved in this opportunity or similar school-district rollouts? We can scope a five-business-day evidence package around supplier onboarding, deadline handling, addenda, role-restricted bid visibility, evaluation audit trail and handover reporting, with reproducible test cases and a concise defect/acceptance report. This would support an authorized prime's implementation rather than replace the software or represent your company.
-
-If there is an appropriate OpenGov school-district procurement or implementation-partner contact, would you point me to the right person for a short scope discussion? I can send the proposed acceptance checklist first.
-
-Best,
-TokenJunkieLabs
-
-**Do not send automatically.** First reconcile the original RFQ PDF, sender identity, proof of past work, prior contact ledger, channel restrictions, owner approval and any buyer-specific no-contact rules. Never contact Michael Clark or the paused demo channel as part of this lane.
-
-## 7. Original-source record and stage ownership
-
-| ID | Evidence | What it proves | What it does not prove |
-| --- | --- | --- | --- |
-| SUMTER-BUYER-01 | SCBO advertisement / 2026-10-02 | Active request and exact 2026-10-23 11:00 EDT deadline | RFQ technical conditions from original PDF |
-| SUMTER-BUYER-02 | District solicitations page / 2026-10-10 | RFQ #018 PDF actually listed by issuer | Entire original PDF captured/read |
-| SUMTER-COMP-01 | Greenville County Schools first-party page | School district publicly declares actual OpenGov procurement portal | OpenGov bidding for Sumter |
-| SUMTER-SUPPLIER-01 | OpenGov/Vertosoft official partner pages | Real partner and channel | Supplier agrees to employ TJL |
-| SUMTER-SALES-01 | This document, UNSENT | Specific price-and-acceptance hypothesis ready for a human reply | Contract, award, invoice, remittance or cash |
-
-**Nonbounty business KPI:** 1 new verified public buyer, 1 specific platform match with independent same-sector deployment, 1 authentic channel, 1 proposed paid pilot. 0 partner contacts, 0 signed SOWs, 0 invoices, **$0 realized cash from this case**. Update the stage only from provider/readback events, never from existence of a draft.
+Start from an active, original buyer request. Read the full package and amendments, not just an ad. Match a real supplier using first-party product/sector evidence. Identify a separable implementation burden the buyer actually describes. Build a usable starter around that burden, preserve prior-contact context, and send one relevant commercial inquiry through the existing relationship channel. Record actual sends/replies internally; move to priced implementation only when scope is agreed. Measure accepted work and paid invoices, not drafts or document counts. No automatic follow-up cadence is created by this kit.
