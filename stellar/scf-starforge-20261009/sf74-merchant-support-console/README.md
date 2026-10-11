@@ -1,64 +1,71 @@
-# SF74: Stellar merchant support console
+# Merchant workspace
 
-An original operator-facing browser layer for the **existing, published SF70 merchant intake**. It does not replace or fork SF52 source visibility, SF68 browser preflight or SF70's combined result. All real diagnostic network operations remain in that imported source. This is a sales-support workflow for the existing SF49 merchant pilot, not a grant application or checkout engine.
+Diagnose a merchant route, review the repair, and prepare an internal workorder in one local workspace. The same original captures move through each stage, so you do not need to save and re-upload files between steps.
 
-## Run
+## Open the workspace
 
-From the public sprint repository (Node 22+):
+From the repository root, with Node 22 or newer:
 
-```bash
+```sh
 node stellar/scf-starforge-20261009/sf74-merchant-support-console/server.mjs
 ```
 
-Open the printed `http://127.0.0.1:<port>/` locally. You need no package installation. Nothing is hosted or probed on page load. Fill an authorized seller resource HTTPS URL, facilitator catalog HTTPS URL, buyer origin, exact Stellar network, public `payTo`, and the advertised intended HTTP method. Confirm authorization, then run a single intake. The server validates input using the **current original SF70 `parseArgs`**, executes **current original SF70 `capture`**, renders the original report findings and full original nested source result as JSON, and supplies explicit copy/download actions for the one seller handoff. The server never writes uploaded files or results to disk; browser downloads happen only when selected. No browser localStorage, third-party JS or telemetry. Close the process to end the session.
+Open the printed `http://127.0.0.1:<port>/` address. No package installation, account, database or hosted service is required. Nothing is probed on page load. Stop the process to end the session.
 
-Select **The buyer requires credentialed browser requests** when the intended buyer uses cookies or other browser credentials. This forwards the existing SF70 `--credentialed` policy to its original CORS evaluator; the diagnostic itself sends no cookies or authorization. The choice is retained in the intake and shown in its scope. Keep it identical before and after the repair, including both SF72 preflights for POST-only routes. Omitting the API `credentialed` field preserves the previous noncredentialed behavior; a supplied field must be a boolean.
+## Diagnose → review → prepare
 
-For explicit local source fixtures only, `node .../server.mjs --allow-loopback` forwards the canonical SF70 `--allow-loopback` validation permission. It still binds the console to literal 127.0.0.1. Never set this switch to diagnose public or untrusted targets.
+1. **Diagnose a route.** Enter the actual seller resource, facilitator catalog, buyer origin, Stellar network, public payment recipient and advertised buyer method. Set the credentialed-browser option to match the intended buyer, confirm authorization, then choose **Run diagnosis**. Review the findings and captured scope.
+2. **Check browser access when needed.** A POST capture offers a separate **Check browser access** action. Review the displayed seller, origin and credential mode, then authorize its OPTIONS-only check. The original eligibility gate may decline an unsuitable capture without making a request. It never sends a POST.
+3. **Keep the before capture.** Choose **Use as before**. Its exact diagnosis bytes and any displayed browser check remain selected in the tab. After the separately agreed repair, run the same diagnosis and optional browser check, then choose **Use as after**. Selected captures survive the next diagnosis. **Save before**, **Save after** and **Save browser check** preserve these original files whenever you need them.
+4. **Review changes.** Choose **Compare changes**. The result explains remaining, new and no-longer-observed findings, including incomplete coverage and unconfirmed credential policy. Original CLI captures can instead be opened in the same file slots. Optional POST browser checks must be supplied as a pair, each bound to its unchanged diagnosis.
+5. **Prepare workorder.** The selected captures are already available here. Enter the actual workorder reference, seller and relationship owner. Record existing seller permission and owner-approved economics only when you have their records. Safe defaults leave permission unrecorded and price withheld. A before capture alone is sufficient; select **Use only the before diagnosis** to deliberately omit an available repair comparison.
+6. **Create and save.** Choose **Create workorder**, then download the readable HTML workorder, Markdown handoff checklist and JSON. Open the HTML locally for review. Nothing is sent. Use **Reuse saved owner terms** to import or save the form as JSON for another session.
 
-## Boundary and limitations
+The three stages also work with existing files: you can open a before capture and prepare a workorder without running a diagnosis or comparison first. A workorder with an after capture computes its review through the original comparator automatically.
 
-- Local HTTP server rejects non-loopback clients, unexpected Host and cross-origin form POST. Input capped to 8 KiB, one intake at a time. Browser CSP defaults to no external content. No cookies, credentials, wallet or database.
-- SF70 uses original catalog pagination and guarded unpaid seller GET / browser GET+OPTIONS only where appropriate. A POST/MCP-only listing remains marked not assessed for a paid checkout; use the original method-aware result. This console does not issue paid POST, sign or settle.
-- Original SF70 `state` and `findings` are displayed without reinterpretation. `INCONCLUSIVE` and `REMEDIATION_REQUIRED` are not an approved sale or payment. For any proposed paid remediation, SF49 owner still obtains real seller consent, commercial terms and buyer acceptance.
-- `payTo` is a PUBLIC recipient address, not a secret. Do not paste private keys, privileged resource URLs or tokens. The report is retained only in the current browser tab unless an operator explicitly copies or downloads it.
+Changing a selected capture clears any comparison and workorder made from it. Replacing a diagnosis also clears that side’s browser check. Changing owner terms, selecting an import, or changing baseline-only mode clears prior workorder downloads; failed imports leave the existing form values intact and require a fresh workorder. Late responses cannot restore outdated results.
 
-## Run the original POST-only preflight
+This is an unpaid diagnostic and internal workorder workflow. Seller acceptance, delivery approval, commercial contact, invoices and payments remain separate owner decisions. No consent, price or acceptance is inferred from a technical result.
 
-For an intake with intended method POST, the output offers **Run original OPTIONS-only preflight**. Review the displayed captured seller URL, buyer origin and credential mode, then explicitly authorize this separate check. The server calls the unchanged original SF72 eligibility gate and evaluator. Only a report proving the original complete POST-only HTTP payment route can trigger its one OPTIONS request; other reports return original `INCONCLUSIVE` with zero requests. No GET, POST, cookies, authorization or payment is sent by this action.
+## Save the source files
 
-Download **both** the intake JSON and the SF72 preflight JSON. The latter contains the SHA-256 of the exact intake bytes offered by **Download intake JSON**, plus its original scope and observation timestamp. It is directly usable as the optional SF72 input in section 4 or the existing SF76/SF77 CLI workflows. Do not reformat the intake after generating its preflight. Repeat the diagnosis and optional preflight after the repair, using identical scope and credential policy.
+All state lives in the current tab and local process. Save the captures, optional browser checks, owner terms and workorder documents you need before closing the tab. There is no localStorage, telemetry, upload persistence or automatic filesystem write.
 
-The server accepts only a current POST intake with explicit `scope.browserCredentialed`, validates it with original SF76, and forwards that mode to SF72. An older file without a retained mode needs a new capture. Intake and preflight share the existing single-network-diagnostic gate. Changing intake inputs or replacing a report invalidates the old preflight display/download and requires a new diagnosis; late responses cannot restore stale results. Cancelling a browser request cannot undo an OPTIONS request already sent. Page load and comparison remain free of provider calls.
+Current captures use **Save diagnosis** and **Save browser check**. Retained selections have their own save buttons, so an earlier capture remains downloadable after a new diagnosis. These exact bytes also feed comparison and workorder generation. Do not reformat a diagnosis after generating its browser check: that check contains the SHA-256 of the original file.
 
-## Compare a repair in the same console
+Human result titles appear in the workspace; original schema names, states, hashes, nested observations and limits remain in expandable **Source details** and downloaded JSON. A file hash identifies bytes; it does not independently authenticate an observation or establish seller permission.
 
-1. Run the authorized diagnosis before the repair and choose **Download intake JSON**. Keep this file unchanged. CLI-produced original SF70 JSON is accepted too.
-2. Apply the separately agreed merchant repair. Run the same original diagnosis after the change and download the new capture. The browser may append a filename suffix; choose the actual earlier/later files by their contents, not filename alone.
-3. In **Review a merchant repair**, select the original before and after SF70 files. For POST-only routes, also select both original SF72 preflight files, each bound to its corresponding unchanged SF70 file. Run SF72 against the downloaded file itself; copied or reformatted JSON may have different bytes.
-4. Choose **Compare repair captures**. The existing SF76 comparator validates the original state/findings, literal merchant scope, browser credential policy and chronological order. Different known credential modes are rejected. Legacy captures with no original credential-mode evidence remain explicitly unconfirmed; they cannot claim a completed technical milestone or cleared findings. The interface shows its original classification, source timestamps and SHA-256 digests, remaining/new findings, findings no longer observed, incomplete-coverage warnings, and severity changes. Expand the full JSON for all scope fields and optional SF72 source hashes.
-5. Choose **Download repair comparison JSON** to keep the result with the original captures. Changing any selected file clears the previous result; failed comparison never presents a prior success as the new result.
+## Existing modules and boundaries
 
-Comparison works without running a fresh diagnosis. It calls no merchant or provider endpoint, needs no network authorization checkbox, and accepts no server filesystem paths. Each file is limited to 2,000,000 bytes. The browser transfers the exact selected file bytes as base64 to same-origin `/api/compare`; the server decodes and hashes those bytes before parsing JSON and calls the **unchanged original SF76 `compare`**. Formatting, line endings and trailing newlines therefore remain part of file identity. Files and results stay in process/tab memory unless you explicitly download them.
+SF74 is the local UI and HTTP adapter. It imports the existing engines without copying their decision logic:
 
-The ordinary loopback/Host/Origin fences also apply to comparison. Uploaded JSON must be valid UTF-8 and original SF70/SF72 format. A hash binds the result to uploaded bytes; it does not independently establish that observations are authentic or that a seller authorized a commercial engagement. The original comparator's unpaid technical milestone is separate from a signed agreement, paid checkout, service delivery or Stellar settlement.
+| Operation | Original implementation |
+| --- | --- |
+| Route diagnosis | SF70 `parseArgs` / `capture`, using SF52 and SF68 |
+| POST browser check | SF72 `evaluate` and its original eligibility gate |
+| Before/after comparison | SF76 `compare` |
+| Workorder, HTML and checklist | SF77 `buildPacket`, `renderHtml`, `renderChecklist` |
 
-## Focused reproduction
+`server.mjs` serves the static native HTML/CSS/ES modules and same-origin API. `console.mjs` owns transient selections, cancellation and explicit downloads. `terms-editor.mjs` owns only the form fields; the original SF77 builder remains authoritative for terms, economics and acceptance.
 
-`server.mjs` exports `start({runCapture})` strictly for a local HTTP/API integration check. The default CLI mode always delegates to original SF70 capture; no fake result is shipped. The focused test verifies loopback-only host/origin gates, bounded type/schema validation with original `parseArgs`, POST→JSON→browser asset path and input-to-source configuration. It cannot establish live Vellar/Periplo network access, seller origin liveness, external user interest, or paid settlement; original Muse 1:1 corpus remains the separate accepted external evidence lane.
+- The server binds to literal 127.0.0.1 and rejects unexpected Host or Origin. CSP blocks external page content. No third-party JavaScript, credentials, wallet or database is used.
+- Only **Run diagnosis** and the separately authorized browser check invoke diagnostic network operations. The network gate permits one intake or preflight at a time.
+- The credentialed-browser option checks the stricter policy without sending cookies or authorization. Before and after must retain the same mode. Unknown legacy mode remains unconfirmed and cannot establish the technical milestone or cleared findings.
+- Comparison and workorder generation are offline and in memory. Each uploaded source or terms file is limited to 2,000,000 bytes. Exact file bytes are transported as base64, decoded and hashed before parsing; no server filesystem path is accepted.
+- `POST /api/workorder` takes `before`, `terms`, optional `after`, and optional paired `postBefore` / `postAfter` original file bytes. It returns the original `packet`, `html` and `checklist`. HTML is downloaded as a document, never inserted into the workspace DOM. A precomputed comparison verdict cannot substitute for source captures.
+- Workorders preserve the original HTTPS scope requirement. `--allow-loopback` exists only for explicit local diagnostic fixtures; HTTP fixture captures are not commercial workorder inputs.
+- Use public recipient addresses and authorized endpoints. Do not enter private keys or tokens.
 
-Run the original-module HTTP integration from repository root:
+For the original seller-side operation workflow, see [seller pilot](../sf82-seller-pilot/README.md). Commercial ownership and account submission remain with their existing owners.
+
+## Focused checks
+
+The workorder adapter has a focused composition check:
 
 ```sh
-node --test stellar/scf-starforge-20261009/sf74-merchant-support-console/test/comparison.test.mjs
+node --test stellar/scf-starforge-20261009/sf74-merchant-support-console/test/workorder.test.mjs
 ```
 
-The focused check runs the actual SF70/SF52/SF68 diagnostics against explicit local HTTP fixtures, then the actual SF72 preflight and unchanged SF76 comparator through the console API. It checks GET and POST repair paths, exact CRLF file hashes, malformed/oversized input, same-origin protection, changed scope, altered findings and SF72 byte-link rejection; comparison adds zero merchant requests. This is local software acceptance, not a live-provider or paid-checkout claim.
+It exercises the actual local HTTP API and original source modules with explicitly illustrative HTTPS observations: baseline export, GET repair review, paired POST preflight binding, legacy uncertainty, escaped HTML, original renderers, missing approvals and prohibited path input. It makes no merchant request and is not evidence of a live seller repair.
 
-The POST preflight integration can be checked separately with:
-
-```sh
-node --test stellar/scf-starforge-20261009/sf74-merchant-support-console/test/post-preflight.test.mjs
-```
-
-It uses original local HTTP captures, original SF72 OPTIONS and original SF76 comparison: explicit permission and Origin gates, zero calls on page load/ineligible input, one authorized OPTIONS, exact downloadable-intake hash, serialized network checks and end-to-end paired repair comparison. No rendered browser test or live-provider claim is implied.
+Existing `comparison.test.mjs`, `credentialed.test.mjs` and `post-preflight.test.mjs` cover the earlier native loopback diagnostic integrations. They are separate from this offline export check. Rendered browser click/download QA was not run in the delivery environment because its browser executable was unavailable.
