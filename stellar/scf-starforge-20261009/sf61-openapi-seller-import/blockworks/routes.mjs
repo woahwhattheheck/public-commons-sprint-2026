@@ -1,6 +1,7 @@
 // MIT. Routes use the original workspace's origin, token, request limits and serialization.
 import { inspectOpenApi } from '../workspace/model.mjs';
 import { openMigrationApplication } from './application.mjs';
+import { HANDOVER_MAX_ARCHIVE_BYTES } from './handover.mjs';
 
 export async function createMigrationRoutes(options) {
   const app = await openMigrationApplication(options);
@@ -53,6 +54,23 @@ export async function createMigrationRoutes(options) {
     if (action === 'releases') return send(200, await app.releases.status(id));
     return send(404, { error: 'Migration view not found.' });
   }
+  async function upload(req, url, send) {
+    if (url.pathname !== '/api/migrations/handover/import-file') return send(404, { error: 'Migration upload not found.' });
+    if (!/^application\/(?:gzip|octet-stream)(?:;|$)/i.test(req.headers['content-type'] ?? ''))
+      return send(415, { error: 'Select the original compressed migration handover.' });
+    const name = parameter(url, 'name'), expectedSha256 = parameter(url, 'sha256');
+    if (!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(name) || !/^[a-f0-9]{64}$/.test(expectedSha256))
+      return send(400, { error: 'Choose a workspace name and retain the complete handover identity.' });
+    const chunks = []; let size = 0;
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > HANDOVER_MAX_ARCHIVE_BYTES) {
+        const error = new Error('Migration handover exceeds 32 MiB.'); error.status = 413; throw error;
+      }
+      chunks.push(chunk);
+    }
+    return send(200, await app.importHandover({ name, expectedSha256, body: Buffer.concat(chunks) }));
+  }
   async function post(path, input, send) {
     const action = path.slice('/api/migrations/'.length); let result;
     if (action === 'create') result = { project: await app.projects.create(input) };
@@ -80,5 +98,5 @@ export async function createMigrationRoutes(options) {
     else return send(404, { error: 'Migration action not found.' });
     return send(action === 'acquisition/run' && result.running ? 202 : 200, result);
   }
-  return { app, get, post, close: app.close };
+  return { app, get, post, upload, close: app.close };
 }
