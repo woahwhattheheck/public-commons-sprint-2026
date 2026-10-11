@@ -11,6 +11,13 @@ JSON response snapshots together. Selecting a release does not rewrite a
 running seller. Status and the operator console show the selected and running
 release separately, including when a restart is needed.
 
+For prepared ClickHouse merchants, use
+[Retained ClickHouse merchant releases](CLICKHOUSE_RELEASES.md). The same release
+store, comparison, activation, process ownership and rollback work with the
+original private query package and generated client. Its existing operator
+workspace can stage directly into this lifecycle and retain the reviewed native
+schema with the selected source and full payment contract.
+
 ## First release
 
 From the repository root, with Node.js 22 or later:

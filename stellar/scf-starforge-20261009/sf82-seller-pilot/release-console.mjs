@@ -23,13 +23,14 @@ async function body(req) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw failure('JSON object required.');
   return value;
 }
-export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup } = {}) {
+export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup, env = process.env } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Console port must be 0–65535.');
   if (catalogConfig && discoverySetup !== undefined) throw new TypeError('Use either an existing catalog connection or a managed discovery setup.');
   const discovery = catalogConfig ? null : createReleaseDiscoveryConsole(root, { directory: discoverySetup ?? root + '.discovery' });
   const catalogConnection = () => catalogConfig ?? discovery?.catalogConfig;
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
+  const environment = { ...env };
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
@@ -145,7 +146,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
           if (target.pathname === '/api/run' || target.pathname === '/api/restart') {
             if (managed) throw failure('This console already owns a seller. Use Restart selected.', 409);
             if (!Number.isSafeInteger(input.expectedGeneration)) throw failure('Current selection generation required.');
-            const session = await runActiveRelease(root, { expectedGeneration: input.expectedGeneration, operationsNavigationOrigin: url }); managed = session;
+            const session = await runActiveRelease(root, { expectedGeneration: input.expectedGeneration, operationsNavigationOrigin: url, env: environment }); managed = session;
             session.completion.then(() => { if (managed === session) managed = null; }, error => {
               lastError = error.message; if (managed === session) managed = null;
             });

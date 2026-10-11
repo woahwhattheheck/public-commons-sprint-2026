@@ -12,6 +12,9 @@ import { compileClickHouseMerchantPlan, prepareClickHouseSeller, assertPrepared 
 import { startClickHouseMerchant } from '../start.mjs';
 import { readSellerConfig } from '../../serve.mjs';
 import { fields } from '../declaration.mjs';
+import { initReleaseStore, readReleaseState, stageRelease, inspectRelease, releaseStatus } from '../../../sf82-seller-pilot/releases.mjs';
+import { prepareClickHouseRelease, inspectClickHouseRelease } from '../../../sf82-seller-pilot/release-clickhouse.mjs';
+import { startReleaseConsole } from '../../../sf82-seller-pilot/release-console.mjs';
 
 const REVISION = /^[a-f0-9]{64}$/;
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
@@ -82,15 +85,35 @@ function customerArchive(directory) {
 
 export async function createClickHouseWorkspace({ stateDirectory, sourceFile, planFile,
   sellerPort = 0, operationsPort = 0, maxInFlight = 64, drainGraceMs = 60000,
-  nativeFactory = null, env = process.env } = {}) {
+  nativeFactory = null, releaseRuntime, env = process.env } = {}) {
   if (typeof stateDirectory !== 'string' || !isAbsolute(stateDirectory) || stateDirectory.length > 4096)
     throw new TypeError('WORKSPACE_ABSOLUTE_STATE_DIRECTORY_REQUIRED');
   if (Boolean(sourceFile) !== Boolean(planFile)) throw new TypeError('WORKSPACE_SOURCE_AND_PLAN_REQUIRED_TOGETHER');
   for (const port of [sellerPort, operationsPort])
     if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('WORKSPACE_PORT_INVALID');
+  let retainedRuntime = releaseRuntime === undefined ? (nativeFactory ? null : { port: sellerPort }) : structuredClone(releaseRuntime);
+  if (retainedRuntime !== null) {
+    fields(retainedRuntime, ['port', 'facilitator', 'allowLocalFacilitator'], 'WORKSPACE_RELEASE_RUNTIME_INVALID');
+    retainedRuntime.port ??= sellerPort;
+    if (!Number.isInteger(retainedRuntime.port) || retainedRuntime.port < 0 || retainedRuntime.port > 65535 ||
+        retainedRuntime.allowLocalFacilitator !== undefined && typeof retainedRuntime.allowLocalFacilitator !== 'boolean')
+      throw new TypeError('WORKSPACE_RELEASE_RUNTIME_INVALID');
+    if (retainedRuntime.facilitator !== undefined) {
+      const endpoint = new URL(retainedRuntime.facilitator);
+      const local = retainedRuntime.allowLocalFacilitator === true && endpoint.protocol === 'http:' && endpoint.hostname === '127.0.0.1';
+      if ((!local && endpoint.protocol !== 'https:') || endpoint.username || endpoint.password || endpoint.search || endpoint.hash)
+        throw new TypeError('WORKSPACE_RELEASE_RUNTIME_INVALID');
+      retainedRuntime.facilitator = endpoint.href.replace(/\/$/, '');
+    }
+    if (retainedRuntime.allowLocalFacilitator && !retainedRuntime.facilitator || Boolean(nativeFactory) !== Boolean(retainedRuntime.facilitator))
+      throw new TypeError('WORKSPACE_RELEASE_RUNTIME_MODE_MISMATCH');
+    if (!retainedRuntime.allowLocalFacilitator) delete retainedRuntime.allowLocalFacilitator;
+  }
   const root = await privateDirectory(resolve(stateDirectory), true), lease = await acquireStateLease(root);
   const environment = { ...env };
   let current = null, active = null, pending = null, closing = false, closePromise, previousRun, navigationOrigin = null;
+  let releaseConsole = null;
+  const releaseRoot = join(root, 'merchant-releases');
   const paths = Object.fromEntries(['revisions', 'prepared', 'staging'].map(name => [name, join(root, name)]));
   const task = operation => {
     if (closing) return Promise.reject(Object.assign(new Error('WORKSPACE_CLOSING'), { status: 503 }));
@@ -109,6 +132,27 @@ export async function createClickHouseWorkspace({ stateDirectory, sourceFile, pl
       availabilityControl: active.session.operations?.availabilityControlUrl } : {}),
   } : null;
   const revisionDirectory = id => join(paths.revisions, checkId(id, REVISION));
+  async function originalStore(create = false) {
+    try { await privateDirectory(releaseRoot); }
+    catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      if (!create) return null;
+      await initReleaseStore(releaseRoot);
+    }
+    await readReleaseState(releaseRoot);
+    return releaseRoot;
+  }
+  async function releaseInventory() {
+    const store = await originalStore();
+    return { directory: releaseRoot, runtime: retainedRuntime, configured: retainedRuntime !== null,
+      status: store ? await releaseStatus(store) : null,
+      console: releaseConsole ? { url: releaseConsole.operatorUrl } : null };
+  }
+  async function closeReleaseConsole() {
+    const owned = releaseConsole;
+    if (owned) { await owned.close(); if (releaseConsole === owned) releaseConsole = null; }
+    return releaseInventory();
+  }
   async function revisionMeta(id) {
     const directory = await privateDirectory(revisionDirectory(id));
     const meta = await optionalJSON(directory, 'revision.json', 8192);
@@ -226,7 +270,7 @@ export async function createClickHouseWorkspace({ stateDirectory, sourceFile, pl
     stateDirectory: root,
     bindOperationsNavigationOrigin(origin) {
       lease.assertHeld();
-      if (closing || pending || active) fail('WORKSPACE_NAVIGATION_BINDING_BUSY');
+      if (closing || pending || active || releaseConsole) fail('WORKSPACE_NAVIGATION_BINDING_BUSY');
       if (typeof origin !== 'string' || !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(origin) ||
           Number(new URL(origin).port) > 65535) throw new TypeError('WORKSPACE_LOOPBACK_ORIGIN_REQUIRED');
       if (navigationOrigin !== null && navigationOrigin !== origin) fail('WORKSPACE_ORIGIN_ALREADY_BOUND');
@@ -248,6 +292,7 @@ export async function createClickHouseWorkspace({ stateDirectory, sourceFile, pl
       prepared.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
       return { schema: 'stellar-forge.clickhouse-workspace.v1', stateDirectory: root, currentRevision: current,
         revisions, prepared, unfinished, runtime: currentRuntime(), previousRun,
+        releases: await releaseInventory(),
         busy: Boolean(pending), configuredMode: nativeFactory ? 'NATIVE_FACILITATOR' : 'CHALLENGE_ONLY' };
     },
     runtime() { return { runtime: currentRuntime(), busy: Boolean(pending), previousRun }; },
@@ -323,6 +368,9 @@ export async function createClickHouseWorkspace({ stateDirectory, sourceFile, pl
     run(input) { return task(async () => {
       fields(input, ['releaseId', 'acknowledged'], 'WORKSPACE_RUN_FIELDS_INVALID');
       if (input.acknowledged !== true) fail('WORKSPACE_START_ACKNOWLEDGMENT_REQUIRED', 422);
+      if (releaseConsole) fail('WORKSPACE_CLOSE_RELEASE_CONSOLE_FIRST');
+      const store = await originalStore();
+      if (store && (await releaseStatus(store)).runtime.state !== 'STOPPED') fail('WORKSPACE_RELEASE_MANAGER_RUNNING');
       if (active) {
         if (active.releaseId === input.releaseId && active.state === 'RUNNING') return { runtime: currentRuntime() };
         fail('WORKSPACE_STOP_CURRENT_MERCHANT_FIRST');
@@ -350,20 +398,69 @@ export async function createClickHouseWorkspace({ stateDirectory, sourceFile, pl
     stop(input) { return task(() => {
       fields(input, ['runId'], 'WORKSPACE_STOP_FIELDS_INVALID'); checkId(input.runId, UUID); return stopActive(input.runId);
     }); },
+    stageMerchantRelease(input) { return task(async () => {
+      fields(input, ['preparedId', 'id', 'label'], 'WORKSPACE_STAGE_RELEASE_FIELDS_INVALID');
+      if (!retainedRuntime) fail('WORKSPACE_RELEASE_FACILITATOR_REQUIRED', 422);
+      const id = checkId(input.id, /^[a-z0-9][a-z0-9_-]{0,63}$/);
+      const value = await readRelease(input.preparedId), columnTypes = value.review.inspection.columnTypes;
+      const prepared = await prepareClickHouseRelease(value.merchant, { columnTypes });
+      const label = input.label ?? value.meta.label;
+      if (typeof label !== 'string' || !label.trim() || label.length > 240 || /[\x00-\x1f\x7f]/.test(label))
+        fail('WORKSPACE_RELEASE_LABEL_INVALID', 422);
+      const store = await originalStore(true);
+      let existing;
+      try { existing = await inspectRelease(store, id); }
+      catch (error) { if (error.code !== 'ENOENT') throw error; }
+      if (existing) {
+        if (existing.source.packageSha256 !== prepared.clickhouse.packageSha256 ||
+            existing.source.executionSha256 !== prepared.clickhouse.executionSha256 ||
+            canonical(existing.runtime) !== canonical(retainedRuntime) || existing.label !== label.trim())
+          fail('WORKSPACE_RELEASE_ID_ALREADY_USED');
+        return { release: existing, reused: true, releases: await releaseInventory() };
+      }
+      const staged = await stageRelease(store, { id, label: label.trim(), clickhousePackage: value.merchant,
+        clickhouseColumnTypes: columnTypes, runtime: retainedRuntime });
+      return { release: staged, reused: false, releases: await releaseInventory() };
+    }); },
+    openReleaseConsole(input) { return task(async () => {
+      fields(input, [], 'WORKSPACE_RELEASE_CONSOLE_FIELDS_INVALID');
+      if (active) fail('WORKSPACE_STOP_CURRENT_MERCHANT_FIRST');
+      const store = await originalStore(true);
+      if (!releaseConsole) {
+        const owned = await startReleaseConsole(store, { port: 0, env: environment }); releaseConsole = owned;
+        owned.closed.then(() => { if (releaseConsole === owned) releaseConsole = null; }, () => {});
+      }
+      return releaseInventory();
+    }); },
+    closeReleaseConsole(input) { return task(() => {
+      fields(input, [], 'WORKSPACE_RELEASE_CONSOLE_FIELDS_INVALID'); return closeReleaseConsole();
+    }); },
     exportClient(input) { return task(async () => {
-      fields(input, ['releaseId', 'kind'], 'WORKSPACE_EXPORT_FIELDS_INVALID');
+      fields(input, ['releaseId', 'merchantReleaseId', 'kind'], 'WORKSPACE_EXPORT_FIELDS_INVALID');
       if (!['client', 'openapi'].includes(input.kind)) throw new TypeError('WORKSPACE_EXPORT_KIND_INVALID');
-      const value = await readRelease(input.releaseId);
-      const bytes = input.kind === 'client' ? await customerArchive(value.merchant)
-        : await boundedFile(value.merchant, 'openapi.json', CAPS['openapi.json']);
+      if (Boolean(input.releaseId) === Boolean(input.merchantReleaseId)) throw new TypeError('WORKSPACE_EXPORT_RELEASE_REQUIRED');
+      let merchant, name;
+      if (input.merchantReleaseId) {
+        const id = checkId(input.merchantReleaseId, /^[a-z0-9][a-z0-9_-]{0,63}$/);
+        await originalStore(); await inspectRelease(releaseRoot, id);
+        merchant = (await inspectClickHouseRelease(join(releaseRoot, 'releases', id))).packageDirectory;
+        name = id;
+      } else {
+        const value = await readRelease(input.releaseId); merchant = value.merchant; name = value.meta.revision.slice(0, 12);
+      }
+      const bytes = input.kind === 'client' ? await customerArchive(merchant)
+        : await boundedFile(merchant, 'openapi.json', CAPS['openapi.json']);
       return { bytes, sha256: sha256(bytes), contentType: input.kind === 'client' ? 'application/gzip' : 'application/json',
-        filename: 'clickhouse-' + value.meta.revision.slice(0, 12) + (input.kind === 'client' ? '-customer.tar.gz' : '-openapi.json') };
+        filename: 'clickhouse-' + name + (input.kind === 'client' ? '-customer.tar.gz' : '-openapi.json') };
     }); },
     close() {
       if (closePromise) return closePromise;
       closing = true;
       closePromise = (async () => {
-        try { await pending?.catch(() => {}); if (active) await stopActive(active.runId); }
+        try {
+          await pending?.catch(() => {});
+          try { await closeReleaseConsole(); } finally { if (active) await stopActive(active.runId); }
+        }
         finally { await lease.close(); }
       })();
       return closePromise;
