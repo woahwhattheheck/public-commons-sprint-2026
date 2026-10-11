@@ -5,6 +5,7 @@ import { createStreamCustomerPanel } from './stream-customer-browser.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
+$('migration-link').href='/migrations/#'+token;
 let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
@@ -301,6 +302,15 @@ $('stop').addEventListener('click',()=>act(async()=>{runtime(await api('stop',{}
 $('check-routes').addEventListener('click',()=>act(async()=>{const result=await api('accept',{});runtime(result);notice('Original route check completed and saved in this package.');}));
 $('refresh').addEventListener('click',()=>act(async()=>{await refresh();notice('Projects refreshed.');}));
 if(!/^[0-9a-f]{64}$/.test(token))notice('Open the complete local workspace URL, including its fragment, printed by the launcher.',true);
-else act(async()=>{await refresh();notice('Ready. Load an OpenAPI description or reopen a saved project.');});
+else act(async()=>{
+  await refresh();
+  const selected=new URLSearchParams(location.search), migration=selected.get('migration'), source=selected.get('source');
+  if(migration&&source) {
+    const retained=await api('migrations/source?project='+encodeURIComponent(migration)+'&ref='+encodeURIComponent(source));
+    await loadSource(retained.content);
+    notice('Loaded '+retained.metadata.name+' from migration '+migration+'. Select its routes and enter your merchant terms.');
+  } else notice('Ready. Load an OpenAPI description or reopen a saved project.');
+});
 setInterval(()=>{if(!busy&&token)api('status').then(runtime).catch(()=>{});},10000);
+
 
