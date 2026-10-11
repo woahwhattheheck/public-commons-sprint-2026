@@ -6,6 +6,8 @@ import { stageRelease, inspectRelease, compareReleases, activateRelease, rollbac
   readReleaseState, releaseStatus, runActiveRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
 import { exportSellerClient } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs';
 import { exact, failure, identifier, line, writePrivate, readMerchantConfig, inspectMerchantSource, pythonSourceView } from './config.mjs';
+import { MerchantDiscovery, discoveryTools } from './discovery.mjs';
+import { cacheControlTools, merchantCacheStatus, merchantCacheInvalidate } from './controls.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const idSchema = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
@@ -40,6 +42,8 @@ export const MERCHANT_TOOLS = [
     { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
   tool('merchant_client_export', 'Export the original JavaScript client, TypeScript declarations and OpenAPI for this running seller into a new named directory under the host-configured customer export root.',
     { instanceId: instanceSchema, id: idSchema }, ['instanceId', 'id']),
+  ...discoveryTools(tool),
+  ...cacheControlTools(tool),
 ];
 const definitions = new Map(MERCHANT_TOOLS.map(value => [value.name, value]));
 const mutations = new Set(MERCHANT_TOOLS.filter(value => !value.annotations.readOnlyHint).map(value => value.name));
@@ -83,8 +87,8 @@ async function originalJson(url, maximum = 16 * 1024 * 1024) {
 }
 
 export class MerchantReleaseOperator {
-  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null;
-  constructor(config) { this.#config = config; }
+  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery;
+  constructor(config) { this.#config = config; this.#discovery = new MerchantDiscovery(config); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
@@ -92,7 +96,7 @@ export class MerchantReleaseOperator {
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure } };
+        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary } };
   }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
@@ -143,6 +147,11 @@ export class MerchantReleaseOperator {
     switch (name) {
       case 'merchant_status': return this.status();
       case 'merchant_sources': return this.#sources(args.source);
+      case 'merchant_discovery_status': return this.#discovery.status(args);
+      case 'merchant_discovery_review': return this.#discovery.review(args);
+      case 'merchant_discovery_apply': return this.#discovery.apply(args);
+      case 'merchant_cache_status': return merchantCacheStatus(root);
+      case 'merchant_cache_invalidate': this.#owned(args.instanceId); return merchantCacheInvalidate(root, args);
       case 'merchant_inspect': return releaseView(await inspectRelease(root, identifier(args.id)));
       case 'merchant_stage': {
         const alias = identifier(args.source, 'Source alias'), source = this.#config.sources[alias];
