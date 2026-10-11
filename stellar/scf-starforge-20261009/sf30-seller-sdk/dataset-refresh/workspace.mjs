@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { loadDatasetConfig } from '../dataset-handler.mjs';
 import { datasetQueryParameters } from '../dataset-cli.mjs';
 import { datasetControl } from './service.mjs';
+import { datasetBuyerEndpoint, readDatasetBuyerOffer, prepareDatasetBuyer } from './buyer-handoff.mjs';
 
 const HASH = /^[a-f0-9]{64}$/;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -66,7 +67,7 @@ function revisionFields(input) {
 /** Attach to a running ORIGINAL versioned seller. This process owns only drafts;
  * it never opens a second version writer, edits state.json or touches payment. */
 export async function startDatasetPublishingWorkspace({ directory, port = 8431,
-  maxUploadBytes = 64 * 1024 * 1024, resource = null } = {}) {
+  maxUploadBytes = 64 * 1024 * 1024, resource = null, seller = null } = {}) {
   if (typeof directory !== 'string' || !isAbsolute(directory) || resolve(directory) !== directory || directory === '/')
     throw new TypeError('A normalized absolute dataset state directory is required');
   if (!Number.isInteger(port) || port < 0 || port > 65535 || !Number.isSafeInteger(maxUploadBytes) ||
@@ -77,6 +78,7 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
     if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || url.href !== resource)
       throw new TypeError('Resource must be a canonical public HTTPS URL without query or credentials');
   }
+  const buyerSource = seller === null ? null : datasetBuyerEndpoint(seller, resource);
   await privateDirectory(directory);
   let latest;
   const status = async () => {
@@ -179,6 +181,35 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
     return draft;
   }
 
+  async function buyerSelection(input) {
+    if (!buyerSource) throw fault('BUYER_SOURCE_REQUIRED', 'Start this workspace with --seller and --resource to prepare a buyer config.');
+    if (!HASH.test(input.target ?? '') || typeof input.query !== 'string' || input.query.length > 8192)
+      throw fault('BUYER_SELECTION_REQUIRED', 'Select a published version and run its query before preparing the buyer.');
+    const observed = await status(), record = observed.versions.find(v => v.snapshot === input.target);
+    if (!record || record.status === 'EXPIRED')
+      throw fault('VERSION_NOT_AVAILABLE', 'This version is no longer available to new buyers. Select a current or retained version.', 410);
+    const query = new URLSearchParams(input.query);
+    if (query.has('cursor') || query.has('snapshot'))
+      throw fault('BUYER_FIRST_PAGE_REQUIRED', 'Buyer acquisition starts at the first page of the selected version and query.');
+    const schema = await datasetControl(directory, 'schema');
+    if (!Array.isArray(schema.resources) || !schema.resources.some(route =>
+      route.resource === buyerSource.resource && route.snapshotSelection === true))
+      throw fault('SELLER_DATASET_OFFER_MISMATCH', 'This original dataset service must advertise the selected resource and snapshot selector.', 409);
+    const selectedQuery = new URLSearchParams(query); selectedQuery.set('snapshot', input.target);
+    // Use the original owner's private service preview: its actual generation,
+    // admission, retention, request pin and parsed-cache budget remain authoritative.
+    const response = await datasetControl(directory, 'preview', { query: selectedQuery.toString() });
+    if (response.dataset?.snapshot !== input.target)
+      throw fault('VERSION_CONTENT_CHANGED', 'The original service returned a different dataset snapshot.', 409);
+    const review = await readDatasetBuyerOffer({ ...buyerSource, snapshot: input.target, query: query.toString() });
+    const current = (await status()).versions.find(v => v.snapshot === input.target);
+    if (!current || current.status === 'EXPIRED')
+      throw fault('VERSION_NOT_AVAILABLE', 'This version expired while its offer was loaded. Select a current or retained version.', 410);
+    return { review, selection: { snapshot: input.target, query: query.toString(),
+      fields: response.fields, matchingRows: response.page.total,
+      rowsPerPage: response.page.limit, expiresAt: current.expiresAt } };
+  }
+
   const server = createServer({ maxHeaderSize: 16384, requestTimeout: 60000,
     headersTimeout: 10000, keepAliveTimeout: 1000 }, (req, res) => {
     const reply = (code, body, type = 'application/json; charset=utf-8') => {
@@ -201,13 +232,21 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
       if (req.method === 'GET' && req.url === '/api/status') {
         const observed = await status();
         return reply(200, { status: observed, draft: publicDraft(draft), resource,
-          maxUploadBytes, busy: Boolean(running) });
+          buyerSource, maxUploadBytes, busy: Boolean(running) });
       }
       if (req.method === 'PUT' && req.url === '/api/draft')
         return reply(200, await exclusive(() => upload(req)));
       if (req.method !== 'POST') throw fault('NOT_FOUND', 'Workspace action not found.', 404);
       const input = await smallBody(req);
       const result = await exclusive(async () => {
+        if (req.url === '/api/buyer-offer' || req.url === '/api/buyer-prepare') {
+          const preparing = req.url === '/api/buyer-prepare';
+          if (!exact(input, preparing ? ['target','query','intentId','acceptIndex','offerSha256'] : ['target','query']))
+            throw fault('BUYER_SELECTION_REQUIRED', 'Select the published query and an actual seller payment alternative.');
+          const { review, selection } = await buyerSelection(input);
+          return preparing ? { ...prepareDatasetBuyer(review, input), selection }
+            : { ...review, selection };
+        }
         if (req.url === '/api/preview') {
           if (!exact(input, ['target','query']) || typeof input.target !== 'string' || typeof input.query !== 'string' || input.query.length > 8192)
             throw fault('INVALID_PREVIEW', 'Select a draft or retained version and a query of at most 8192 characters.');
@@ -303,6 +342,7 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
 const HELP = `Dataset publishing workspace (Node 22+)
   node workspace.mjs --state DIR [--port 8431] [--max-upload-bytes 67108864]
                     [--resource https://merchant.example/data]
+                    [--seller http://127.0.0.1:8430]
 
 Attach to the running original versioned seller. Open the private local session
 URL, upload/review a CSV, then explicitly publish or activate a retained version.
@@ -312,7 +352,7 @@ export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { console.log(HELP); return; }
   const options = {};
   for (let i = 0; i < args.length; i += 2) {
-    if (!['--state','--port','--max-upload-bytes','--resource'].includes(args[i]) ||
+    if (!['--state','--port','--max-upload-bytes','--resource','--seller'].includes(args[i]) ||
         Object.hasOwn(options,args[i]) || !args[i+1] || args[i+1].startsWith('--'))
       throw new TypeError('Invalid options; use --help');
     options[args[i]] = args[i+1];
@@ -323,7 +363,7 @@ export async function main(args = process.argv.slice(2)) {
   const app = await startDatasetPublishingWorkspace({ directory: resolve(options['--state']),
     port: options['--port'] === undefined ? 8431 : Number(options['--port']),
     maxUploadBytes: options['--max-upload-bytes'] === undefined ? undefined : Number(options['--max-upload-bytes']),
-    resource: options['--resource'] ?? null });
+    resource: options['--resource'] ?? null, seller: options['--seller'] ?? null });
   console.log(`Dataset publishing workspace\n${app.url}\nKeep this session URL private. Ctrl+C closes unpublished drafts.`);
   const stop = () => app.close().catch(error => { console.error(error.message); process.exitCode = 1; });
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
