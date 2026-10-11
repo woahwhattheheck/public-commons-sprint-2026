@@ -251,9 +251,17 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
   let seller, operations, closing, active;
   let state = 'STARTING';
   const controller = new AbortController();
+  const pending = new Set();
+  const runOriginal = (script, args, options) => {
+    const promise = originalCommand(script, args, options);
+    pending.add(promise);
+    promise.then(() => pending.delete(promise), () => pending.delete(promise));
+    return promise;
+  };
   const close = () => closing ??= (async () => {
     state = 'STOPPING'; controller.abort();
     if (active) await active.catch(() => {});
+    await Promise.allSettled([...pending]);
     // Keep the original observer attached until merchant draining has finished.
     const failures = [];
     let shutdown;
@@ -299,7 +307,7 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     return Object.freeze({ seller, operations, status, close,
       async review(intentId) {
         const job = await jobFor(intentId);
-        return originalCommand(buyerCli, ['--review', '--config', join(queue.root, 'jobs', job.id, 'execution.json')],
+        return runOriginal(buyerCli, ['--review', '--config', join(queue.root, 'jobs', job.id, 'execution.json')],
           { signal: controller.signal });
       },
       async checkSigner(intentId) {
@@ -307,7 +315,7 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
         const entry = saved.buyers.find(item => item.intentId === intentId);
         need(entry.signerConfig, 'COMMERCE_USE_EXISTING_SIGNER_DIAGNOSTIC');
         const { env } = await signerEnvironment(saved, job, environment);
-        return originalCommand(signerCli, ['check-signer', '--config', entry.signerConfig],
+        return runOriginal(signerCli, ['check-signer', '--config', entry.signerConfig],
           { environment: env, signal: controller.signal });
       },
       async execute(intentId) {
@@ -319,7 +327,7 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
           const { env, workspace } = await signerEnvironment(saved, job, environment);
           const args = ['execute', '--root', queue.root, '--intent', intentId];
           if (workspace) args.push('--workspace', workspace);
-          return originalCommand(queueCli, args, { environment: env, signal: controller.signal });
+          return runOriginal(queueCli, args, { environment: env, signal: controller.signal });
         })();
         try {
           const original = await active;
