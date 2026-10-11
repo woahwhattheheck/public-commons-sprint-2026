@@ -208,6 +208,15 @@ required controls are ready; shutdown drains the original seller and closes its
 control transport. Process memory is discarded, while immutable configurations
 and the existing selection history remain.
 
+## Publish and retire catalog listings
+
+The existing console also connects a running retained release to its approved
+live catalog. Supply `console --catalog CONFIG_JSON` to review exact current
+offer differences, publish with the merchant's existing seller-proof key, and
+withdraw a selected listing. The original SF50/SF60/SF95 implementations retain
+signing, pinned admission, atomic publication and withdrawal. See the complete
+[merchant catalog workflow](./CATALOG.md) for configuration and CLI commands.
+
 ## Application code and native payment runtime
 
 For handler or admission exports, supply `--handlers /absolute/application.mjs`
