@@ -1,6 +1,7 @@
 // MIT. Connect original imported offers to the existing SF30 seller runtime.
 import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { validateResponseFile } from '../sf30-seller-sdk/response-file.mjs';
+import { createConfiguredAdmission } from '../sf30-seller-sdk/configured-admission.mjs';
 
 const own = (value, key) => Object.hasOwn(value, key);
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -21,6 +22,9 @@ export function createSellerServiceConfig(imported, bindings) {
           !/^[A-Za-z_$][\w$]{0,127}$/.test(binding.handler)))) {
       throw new TypeError('Each binding requires method, path, id and exactly one handler, response or responseFile');
     }
+    if (own(binding, 'validateInput') && typeof binding.validateInput !== 'boolean') {
+      throw new TypeError('validateInput must be a boolean');
+    }
     if (own(binding, 'responseFile')) validateResponseFile(binding.responseFile);
     if (own(binding, 'admit') && (typeof binding.admit !== 'string' ||
         !/^[A-Za-z_$][\w$]{0,127}$/.test(binding.admit))) {
@@ -38,6 +42,7 @@ export function createSellerServiceConfig(imported, bindings) {
     if (path.startsWith('/_seller/')) throw new TypeError('Imported path overlaps seller inspection endpoints');
     return { id: binding.id, path, offer: structuredClone(offer.seller),
       ...(own(binding, 'admit') ? { admit: binding.admit } : {}),
+      ...(own(binding, 'validateInput') ? { validateInput: binding.validateInput } : {}),
       ...(own(binding, 'handler') ? { handler: binding.handler } :
         own(binding, 'responseFile') ? { responseFile: binding.responseFile } :
         { response: structuredClone(binding.response) }) };
@@ -47,7 +52,8 @@ export function createSellerServiceConfig(imported, bindings) {
   const compiled = compileSellerRoutes(routes.map(route => ({ ...route, handler: async () => {},
     // Preflight only checks callback shape. Runtime resolves the named export;
     // never import or invoke application code while exporting a service config.
-    ...(own(route, 'admit') ? { admit: () => true } : {}) })));
+    admit: createConfiguredAdmission(route, own(route, 'admit') ? { [route.admit]: () => true } : {}),
+  })));
   return { schema: 'stellar-forge.seller-service.v1',
     publicOrigin: new URL(compiled.routes[0].offer.resource.url).origin, routes };
 }
