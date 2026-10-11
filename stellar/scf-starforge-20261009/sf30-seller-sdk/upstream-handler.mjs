@@ -35,6 +35,11 @@ function headerList(value, response = false) {
   }
   return Object.freeze([...result]);
 }
+function connectionTokens(headers) {
+  const value = headers.connection;
+  return new Set((Array.isArray(value) ? value.join(',') : typeof value === 'string' ? value : '')
+    .split(',').map(name => name.trim().toLowerCase()).filter(Boolean));
+}
 function serverHeaders(value) {
   if (!object(value)) throw new TypeError('Server headers must be a plain object');
   const result = Object.create(null);
@@ -136,7 +141,9 @@ export function createUpstreamHandler(options = {}) {
     if (target.href.length > 8192) throw new TypeError('Upstream target too long');
     const outgoing = Object.create(null);
     const incoming = object(context.headers) ? context.headers : {};
+    const incomingHop = connectionTokens(incoming);
     for (const key of forward) {
+      if (incomingHop.has(key)) continue;
       const value = incoming[key];
       if (value === undefined) continue;
       if (typeof value !== 'string' || value.length > 8192) throw new TypeError('Invalid forwarded header');
@@ -171,7 +178,7 @@ export function createUpstreamHandler(options = {}) {
           response = res;
           res.on('error', () => bad(502, 'UPSTREAM_RESPONSE_INCOMPLETE'));
           res.on('aborted', () => bad(502, 'UPSTREAM_RESPONSE_INCOMPLETE'));
-          const status = res.statusCode;
+          const status = res.statusCode, responseHop = connectionTokens(res.headers);
           if (status >= 300 && status < 400) return bad(502, 'UPSTREAM_REDIRECT_REFUSED', status);
           if (status === 402) return bad(502, 'UPSTREAM_PAYMENT_REQUIRED', status);
           if (status === 401 || status === 403) return bad(502, 'UPSTREAM_AUTH_FAILED', status);
@@ -179,12 +186,13 @@ export function createUpstreamHandler(options = {}) {
           if (status >= 400) {
             const result = failure(status, 'UPSTREAM_REQUEST_FAILED', status);
             const retryAfter = res.headers['retry-after'];
-            if ((status === 429 || status === 503) && typeof retryAfter === 'string' && retryAfter.length <= 128 &&
+            if ((status === 429 || status === 503) && !responseHop.has('retry-after') && typeof retryAfter === 'string' && retryAfter.length <= 128 &&
                 (/^\d+$/.test(retryAfter) || Number.isFinite(Date.parse(retryAfter)))) result.headers['retry-after'] = retryAfter;
             return finish(result);
           }
           const resultHeaders = Object.create(null);
           for (const key of expose) {
+            if (responseHop.has(key)) continue;
             const value = res.headers[key];
             if (typeof value === 'string' && value.length <= 8192) resultHeaders[key] = value;
           }
