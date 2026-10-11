@@ -276,8 +276,13 @@ export async function openTenderlyWorkspace({
       }
       return item.application.operations.recover(input);
     }
-    async function download({ profile, kind, id }) {
+    async function download({ profile, kind, id, observationId }) {
       await inspectProfile(profile);
+      if (kind === 'provider-response') {
+        const saved = await selected(profile).application.providerRecovery.response({ lookupId: id, observationId });
+        return { bytes: saved.bytes, mime: saved.contentType || 'application/octet-stream',
+          name: 'tenderly-saved-provider-result.json' };
+      }
       if (kind === 'plan') {
         const saved = await inspectProfile(profile);
         return { bytes: json(saved.plan), name: 'plan.json', mime: 'application/json' };
@@ -319,6 +324,11 @@ export async function openTenderlyWorkspace({
       audit: ({ profile, operationKey, ...options }) => serial(() => selected(profile).application.operations.audit(operationKey, options)),
       response: input => serial(() => response(input)),
       recover: input => serial(() => recover(input)),
+      lookupProvider: ({ profile, ...input }) => serial(() => selected(profile).application.providerRecovery.lookup(input)),
+      providerLookup: ({ profile, id }) => serial(() => selected(profile).application.providerRecovery.inspect(id)),
+      providerLookups: ({ profile, ...input }) => serial(() => selected(profile).application.providerRecovery.list(input)),
+      providerResponse: ({ profile, ...input }) => serial(() => selected(profile).application.providerRecovery.response(input)),
+      recoverProvider: ({ profile, ...input }) => serial(() => selected(profile).application.providerRecovery.complete(input)),
       download: input => serial(() => download(input)),
     };
   }

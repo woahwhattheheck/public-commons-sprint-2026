@@ -14,6 +14,8 @@ import { MerchantSupport, supportTools } from './support.mjs';
 import { MerchantReceiving, receivingTools } from './receiving.mjs';
 import { MerchantPythonWorkspaces, pythonWorkspaceTools } from './python-workspace.mjs';
 import { MerchantS3Workspaces, s3WorkspaceTools } from './s3-workspace.mjs';
+import { MerchantSheetsWorkspaces, sheetsWorkspaceTools } from './sheets-workspace.mjs';
+import { MerchantTenderlyWorkspaces, tenderlyWorkspaceTools } from './tenderly-workspace.mjs';
 import { MerchantPublisher, publisherTools } from './publisher.mjs';
 import { createReleaseFacilitatorControl } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs';
 import { MerchantPricing, pricingTools } from './pricing.mjs';
@@ -31,8 +33,8 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
 }
 export const MERCHANT_TOOLS = [
   tool('merchant_status', 'Inspect original release selection, retained history, seller readiness and this MCP process ownership. Makes only original loopback health/offer reads.', {}, [], { readOnly: true, idempotent: true }),
-  tool('merchant_sources', 'List configured aliases or inspect an original API package, OpenAPI files, Python merchant, SQLite workbench, prepared DuckDB, S3, Stellar RPC, PostgreSQL or MySQL package: exact source identities, public routes, payment choices and worker configuration. Reads configured local files without credential values, application imports or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
-  tool('merchant_stage', 'Retain a configured source alias as a new immutable original SF82 release: saved API workspace, upstream snapshot, Python application, original DuckDB datasets, S3 objects, Stellar RPC products, one native SQLite database snapshot, or original PostgreSQL/MySQL named-query merchant. PostgreSQL configuration is retained while database contents remain live. Does not activate, import application code, start a listener or make a payment.',
+  tool('merchant_sources', 'List configured aliases or inspect an original API package, OpenAPI files, Python merchant, SQLite workbench, prepared DuckDB, S3, Stellar RPC, PostgreSQL, MySQL or ClickHouse package: exact source identities, public routes, payment choices and worker configuration. Reads configured local files without credential values, application imports or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
+  tool('merchant_stage', 'Retain a configured source alias as a new immutable original SF82 release: saved API workspace, upstream snapshot, Python application, original DuckDB datasets, S3 objects, Stellar RPC products, one native SQLite database snapshot, or original PostgreSQL/MySQL/ClickHouse named-query merchant. PostgreSQL and ClickHouse configuration is retained while database contents remain live. Does not activate, import application code, start a listener or make a payment.',
     { source: idSchema, id: idSchema, label: textSchema }, ['source', 'id']),
   tool('merchant_inspect', 'Inspect and verify one retained original release including complete terms, application hashes and native/challenge mode.', { id: idSchema }, ['id'], { readOnly: true, idempotent: true }),
   tool('merchant_facilitators', 'List host-configured facilitator aliases for the retained merchant release. Reads the current host configuration without network requests.',
@@ -82,6 +84,8 @@ export const MERCHANT_TOOLS = [
   ...receivingTools(tool),
   ...pythonWorkspaceTools(tool),
   ...s3WorkspaceTools(tool),
+  ...sheetsWorkspaceTools(tool),
+  ...tenderlyWorkspaceTools(tool),
   ...publisherTools(tool),
   ...pricingTools(tool),
 ];
@@ -96,7 +100,7 @@ function releaseView(release) {
   const { handlers, ...options } = runtime;
   return { ...rest, ...(rest.python ? { python: pythonSourceView(rest.python) } : {}),
     ...(rest.duckdb ? { duckdb: duckdbSourceView(rest.duckdb) } : {}),
-    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite) },
+    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite || rest.clickhouse) },
     handlerEntry: handlerEntry ? { sha256: handlerEntry.sha256, bytes: handlerEntry.bytes, scope: handlerEntry.scope } : null };
 }
 function runtimeView(runtime) {
@@ -116,9 +120,9 @@ function expectedDigest(value) {
 }
 
 export class MerchantReleaseOperator {
-  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #s3Workspaces; #publishers; #pricing;
+  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #s3Workspaces; #sheetsWorkspaces; #tenderlyWorkspaces; #publishers; #pricing;
   #clientExports; #facilitators;
-  constructor(config) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); }
+  constructor(config) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#tenderlyWorkspaces = new MerchantTenderlyWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
@@ -126,7 +130,7 @@ export class MerchantReleaseOperator {
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, clientExports: this.#clientExports.summary } };
+        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, sheetsWorkspaces: this.#sheetsWorkspaces.summary, tenderlyWorkspaces: this.#tenderlyWorkspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, clientExports: this.#clientExports.summary } };
   }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
@@ -176,6 +180,8 @@ export class MerchantReleaseOperator {
     if (name.startsWith('merchant_receiving_')) return this.#receiving.call(name, args);
     if (name.startsWith('merchant_python_')) return this.#pythonWorkspaces.call(name, args);
     if (name.startsWith('merchant_s3_')) return this.#s3Workspaces.call(name, args);
+    if (name.startsWith('merchant_sheets_')) return this.#sheetsWorkspaces.call(name, args);
+    if (name.startsWith('merchant_tenderly_')) return this.#tenderlyWorkspaces.call(name, args);
     if (name === 'merchant_publishers' || name.startsWith('merchant_publisher_')) return this.#publishers.call(name, args);
     if (name.startsWith('merchant_fleet_')) return this.#fleet.call(name, args);
     const root = this.#config.releaseStore;
@@ -270,7 +276,7 @@ export class MerchantReleaseOperator {
     this.#fleet.cancelStaging();
     this.#close = (async () => {
       await this.#active;
-      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#clientExports.close(),
+      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#sheetsWorkspaces.close(), this.#tenderlyWorkspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#clientExports.close(),
         this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');

@@ -38,7 +38,7 @@ starforge runtime-install run \
 
 Preparation verifies the archive digest, original manifest, original package metadata, and every declared source file before selecting the runtime profile. The original source paths and package bytes are retained. The preparation result includes the source commit, package version, profile identity, selected dependencies, entrypoint, `sourceRoot`, and `dependencyRoot`.
 
-Installation uses npm's configured registry and cache. It installs the generated exact dependency selection with lifecycle scripts disabled, writes a dependency lock, and checks that the selected package versions can be resolved and imported from the original source locations. A populated npm cache can be used explicitly:
+Installation uses npm's configured registry and cache. It extracts the generated exact dependency selection with lifecycle scripts disabled, writes a dependency lock, and checks that the selected package versions resolve and import from the original source locations. A selected dependency with an explicit native preparation declaration then runs its supported original install hook under the same installation lock. Readiness includes an actual operation of that native binding. A populated npm cache can be used explicitly:
 
 ```sh
 starforge runtime-install install \
@@ -86,7 +86,54 @@ An original exact declaration keeps that exact version. For an original supporte
 }
 ```
 
-The resolver checks an explicit pin against every selected declaration for that package. It rejects an incompatible version or a pin for an unselected dependency. Native module import failures remain visible in inspection and must be resolved in the selected runtime before it becomes `READY`.
+The resolver checks an explicit pin against every selected declaration for that package. It rejects an incompatible version or a pin for an unselected dependency. Import and native operation failures remain visible in inspection and must be resolved in the selected runtime before it becomes `READY`.
+
+## Native SQLite preparation and restart
+
+The optional `node-agents` feature comes from the original [Node agent runtime manifest](../sf88-operator-buyer-cli/node/examples/agents/runtime-package.json). Its `better-sqlite3` dependency is explicitly marked `native: "sqlite"` in the maintained distribution. The runtime profile retains that declaration and exact version. Ordinary feature selection does not execute other packages' lifecycle scripts.
+
+```sh
+starforge runtime-install prepare \
+  --dir /srv/starforge/runtimes/node-agents-01 \
+  --archive /srv/starforge/downloads/original-merchant.tgz \
+  --sha256 REPLACE_WITH_ORIGINAL_ARCHIVE_SHA256 \
+  --feature node-agents --operator
+
+starforge runtime-install install --dir /srv/starforge/runtimes/node-agents-01
+starforge runtime-install inspect --dir /srv/starforge/runtimes/node-agents-01 --load
+starforge runtime-install run --dir /srv/starforge/runtimes/node-agents-01 -- buyer-agent --help
+```
+
+After the initial script-free npm install, the installer records the resolved dependency lock before native preparation. It checks the selected package's identity, exact version, original install hook and local installation path, then runs `npm rebuild better-sqlite3@EXACT_VERSION` with lifecycle execution enabled for that declared package. The generated package also carries its explicit npm lifecycle allowance. All npm operations keep the original private project scope and retained flock descriptor.
+
+The package's own hook selects a matching prebuilt binary or builds its bundled SQLite source with node-gyp. A source build needs Python, make and a C/C++ compiler; the existing installation log records their actual outcome. Native preparation leaves the dependency lock unchanged. The isolated readiness child opens SQLite, performs a transaction and read, obtains the SQLite version and closes the database. It records Node version, native module ABI, platform and architecture. This check also runs when `--load` is omitted; that option controls the other selected import probes. It uses an in-memory database and leaves customer stores outside the runtime untouched.
+
+A failed or interrupted native preparation retains `dependencyInstall`, `stage`, `nativePreparation` and the current log in `install-state.json`. Resume the same original directory:
+
+```sh
+starforge runtime-install resume --dir /srv/starforge/runtimes/node-agents-01
+```
+
+When the retained profile, lock and dependency imports still match, resume continues the native stage without running npm ci over that tree. If the binding already works, it adopts the completed attempt. A surviving npm child retains the original kernel lock until that child exits, so an interrupted parent cannot create a second writer.
+
+### Offline source preparation
+
+The prebuild downloader used by better-sqlite3 does not implement npm's offline mode. For an offline native build, the installer invokes the package's original `build-release` command directly and gives node-gyp verified local Node headers as explicit arguments. It validates that source command and its lifecycle hooks along with the package identity. The prebuild downloader is not invoked, so its configuration cannot override offline source preparation. A header prefix must contain `include/node/node_version.h`, `config.gypi`, `common.gypi`, `node.h` and `node_api.h`. The version and module ABI must match the Node executable running this installation.
+
+```sh
+starforge runtime-install resume \
+  --dir /srv/starforge/runtimes/node-agents-01 \
+  --offline --cache /srv/starforge/npm-cache \
+  --node-headers /srv/toolchains/node-24.19.0
+```
+
+The installer also checks the running Node prefix and the usual local node-gyp header caches when no prefix is supplied. Missing or mismatched headers leave a concrete native preparation error and the resolved dependency tree for the same resume command. An already working binding passes its native check without a rebuild. `--node-headers` can also select a matching local source build for an online install, upgrade or recovery.
+
+A completed runtime is checked again before an original command is launched. If the Node ABI, installed binding, selected source or lock changes, use the original fresh-directory `recover` workflow. The new directory installs the same transitive lock and prepares its binding for the current host; the previous runtime remains available to the original activation and rollback workflow.
+
+For the complete customer checkpoint, purchase recovery and tool workflow, continue with [NODE_AGENTS.md](NODE_AGENTS.md). The original engine and framework integration are in [PR1201](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1201); installed aliases and feature selection are in [PR1246](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1246).
+
+Native preparation uses the documented [npm rebuild lifecycle and exact package selector](https://docs.npmjs.com/cli/v11/commands/npm-rebuild/), the package's [prebuild source-mode option](https://github.com/prebuild/prebuild-install#help) and [node-gyp local header support](https://github.com/nodejs/node-gyp#command-options).
 
 ## Retained installation files
 
@@ -102,7 +149,7 @@ The resolver checks an explicit pin against every selected declaration for that 
 | `node_modules/` | Installed dependencies resolved through the ancestors of the original source files. |
 | `package-lock.json` | Resolved dependency lock; its digest is retained when the installation becomes ready. |
 | `runtime-install.json` | Archive, profile, directory, original entrypoint, and source/dependency root identities. |
-| `install-state.json` | Current installation phase, attempts, selected npm operation, log path, and completed lock digest. |
+| `install-state.json` | Current installation phase/stage, attempts, completed dependency lock, native preparation, selected npm operation, log path, and completed lock digest. |
 | `install-N-UUID.log` | A private log for one npm attempt, with a distinct filename for interruption recovery. |
 | `RUNBOOK.md` | Installation-specific source identity, paths, and operating commands. |
 
