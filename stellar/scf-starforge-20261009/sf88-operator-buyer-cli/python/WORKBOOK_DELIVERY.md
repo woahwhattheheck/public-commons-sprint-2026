@@ -91,6 +91,28 @@ The original `AnalysisReports` reader verifies the publication, complete report
 result and every section row. Its full original typed JSON export is included
 once per publication, even when several workbook sheets use it.
 
+Published report queries can return repeated column labels. Report selections
+therefore preserve each column's original position. The browser displays
+**Column 1**, **Column 2** and the original label; generated Excel headings are
+made unique and remain editable. The `Sources` sheet records the one-based
+input ordinal beside that label.
+
+A headless report projection uses a zero-based `source_index` together with the
+original `source` label. For example, two columns both labelled `amount` remain
+separate with these mappings:
+
+```json
+[
+  {"source": "amount", "source_index": 0, "header": "Principal", "type": "decimal-text"},
+  {"source": "amount", "source_index": 1, "header": "Fee", "type": "decimal-text"}
+]
+```
+
+A unique report label can still be selected by name. An ambiguous repeated
+label requires its position, and a changed label at that position produces a
+source error. Query-export recipes continue selecting their original named
+columns.
+
 The saved definition contains those bindings. Later changes to current views,
 saved SQL or other reports leave the selected retained results available. A
 changed source manifest or original report digest produces a source error.

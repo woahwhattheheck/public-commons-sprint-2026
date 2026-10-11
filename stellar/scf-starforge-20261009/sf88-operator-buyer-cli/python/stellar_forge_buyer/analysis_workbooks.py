@@ -93,6 +93,24 @@ def _page(before, limit):
         _error("PAGE_INVALID")
 
 
+def _source_key(source, column):
+    """Select report cells by position while preserving original column labels."""
+    if not isinstance(column, dict) or column.get("source") not in source["columns"]:
+        _error("SOURCE_COLUMN_CHANGED")
+    if source["kind"] != "report":
+        return column["source"]
+    index = column.get("source_index")
+    if index is None:
+        matches = [index for index, name in enumerate(source["columns"]) if name == column["source"]]
+        if len(matches) != 1:
+            _error("SOURCE_COLUMN_INDEX_REQUIRED")
+        return matches[0]
+    if (type(index) is not int or not 0 <= index < len(source["columns"])
+            or source["columns"][index] != column["source"]):
+        _error("SOURCE_COLUMN_CHANGED")
+    return index
+
+
 def _relative(value):
     if not isinstance(value, str) or "\\" in value or "\0" in value:
         _error("FILE_INVALID")
@@ -523,8 +541,7 @@ class AnalysisWorkbooks:
                 _error("COLUMNS_REQUIRED")
             projected, headers = [], set()
             for column in columns:
-                if not isinstance(column, dict) or column.get("source") not in source["columns"]:
-                    _error("SOURCE_COLUMN_CHANGED")
+                source_key = _source_key(source, column)
                 header = _literal(_text(column.get("header", column["source"]), 2000, required=True))
                 if header.casefold() in headers:
                     _error("COLUMN_HEADERS_MUST_BE_UNIQUE")
@@ -534,7 +551,8 @@ class AnalysisWorkbooks:
                 if kind not in _TYPES or null not in {"blank", "text"} or precision not in {"preserve", "excel-number"}:
                     _error("COLUMN_PROJECTION_INVALID")
                 projected.append({"source": column["source"], "header": header, "type": kind, "null": null,
-                                  "null_text": _literal(_text(column.get("null_text", "NULL"), 1000)), "precision": precision})
+                                  "null_text": _literal(_text(column.get("null_text", "NULL"), 1000)), "precision": precision,
+                                  **({"source_index": source_key} if source["kind"] == "report" and "source_index" in column else {})})
             result.append({"name": label, "source": source, "columns": projected})
         _sheet_layout(result)
         return {"schema": _DEFINITION, "name": name, "title": title, "notes": notes, "sheets": result}
@@ -608,7 +626,7 @@ class AnalysisWorkbooks:
                         for cell in cells:
                             kind, text = cell["type"], cell["text"]
                             result.append(None if kind == "null" else int(text) if kind == "integer" else float(text) if kind in {"number", "sqlite-real"} else base64.b64decode(text, validate=True) if kind == "blob" else text)
-                        yield dict(zip(selected["columns"], result))
+                        yield result
                 yield values()
 
     def preview(self, name, *, revision=None, sheet=0, limit=20):
@@ -617,11 +635,12 @@ class AnalysisWorkbooks:
         if type(sheet) is not int or not 0 <= sheet < len(sheets) or type(limit) is not int or not 1 <= limit <= 100:
             _error("PREVIEW_PAGE_INVALID")
         selected, rows = sheets[sheet], []
+        keys = [_source_key(selected["source"], column) for column in selected["columns"]]
         with self._rows(selected["source"]) as stream:
             for row in stream:
                 values = []
-                for column in selected["columns"]:
-                    value, number_format, conversion = project_cell(row[column["source"]], column)
+                for column, key in zip(selected["columns"], keys):
+                    value, number_format, conversion = project_cell(row[key], column)
                     values.append({"value": value.isoformat() if isinstance(value, (date, datetime)) else str(value) if type(value) is int and abs(value) >= 2**53 else value,
                                    "excel_type": "blank" if value is None else "text" if isinstance(value, str) else "date" if isinstance(value, (date, datetime)) else "boolean" if isinstance(value, bool) else "number",
                                    "format": number_format, "conversion": conversion})
@@ -707,6 +726,7 @@ class AnalysisWorkbooks:
             for ordinal, logical in enumerate(definition["sheets"]):
                 stopped()
                 source = logical["source"]
+                keys = [_source_key(source, column) for column in logical["columns"]]
                 if self.source(source) != source:
                     _error("SOURCE_CHANGED")
                 self._retain_source(source, target)
@@ -720,8 +740,8 @@ class AnalysisWorkbooks:
                             physical_index += 1
                             sheet = new_sheet(layout[ordinal][physical_index], logical["columns"], min(expected - row_count, _ROWS_PER_SHEET))
                         cells = []
-                        for index, column in enumerate(logical["columns"]):
-                            value, format, conversion = project_cell(values[column["source"]], column)
+                        for index, (column, key) in enumerate(zip(logical["columns"], keys)):
+                            value, format, conversion = project_cell(values[key], column)
                             cells.append(cell(sheet, value, format))
                             if conversion:
                                 key = str(index) + ":" + conversion
@@ -749,10 +769,10 @@ class AnalysisWorkbooks:
                                ("Complete rows", "Each data sheet includes every selected source row. Larger results continue on numbered sheets, with a header repeated on each sheet."),
                                ("Offline handoff", "Open manifest.json and the original source exports alongside this workbook to recover exact input types, query bindings, and projections.")]:
                 readme.append([cell(readme, key, heading=True), cell(readme, _literal(value))])
-            meta = new_sheet("Sources", [{"header": h} for h in ["Sheet", "Source kind", "Source ID", "Source SHA-256", "Rows", "Input column", "Excel heading", "Type", "Null", "Precision"]], sum(len(s["columns"]) for s in outputs))
+            meta = new_sheet("Sources", [{"header": h} for h in ["Sheet", "Source kind", "Source ID", "Source SHA-256", "Rows", "Input column", "Input ordinal", "Excel heading", "Type", "Null", "Precision"]], sum(len(s["columns"]) for s in outputs))
             for logical in outputs:
                 for column in logical["columns"]:
-                    values = [logical["name"], logical["source"]["kind"], logical["source"]["id"], logical["source"]["sha256"], logical["row_count"], column["source"], column["header"], column["type"], "blank" if column["null"] == "blank" else column["null_text"], column["precision"]]
+                    values = [logical["name"], logical["source"]["kind"], logical["source"]["id"], logical["source"]["sha256"], logical["row_count"], column["source"], _source_key(logical["source"], column) + 1 if logical["source"]["kind"] == "report" else "", column["header"], column["type"], "blank" if column["null"] == "blank" else column["null_text"], column["precision"]]
                     meta.append([cell(meta, value) for value in values])
             stopped()
             workbook_path = target / "workbook.xlsx"
