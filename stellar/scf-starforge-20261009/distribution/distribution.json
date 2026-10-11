@@ -21,6 +21,7 @@
     "stellar/scf-starforge-20261009/sf84-mpp-market-intake",
     "stellar/scf-starforge-20261009/sf85-live-402-capture",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli",
+    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter",
     "stellar/scf-starforge-20261009/sf89-live-request-admission",
     "stellar/scf-starforge-20261009/sf93-seller-support-bundle",
     "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff",
@@ -42,7 +43,9 @@
     "stellar-forge/mcp-merchant-operator",
     "stellar/scf-starforge-20261009/sf33-failure-contract",
     "stellar/scf-starforge-20261009/merchant-fleet-gateway",
-    "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops"
+    "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops",
+    "stellar/scf-starforge-20261009/buyer-runbook",
+    "stellar/scf-starforge-20261009/sf101-merchant-account-readiness"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -62,6 +65,8 @@
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-python.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_PAID_FILES.md",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/PYTHON_COMMERCE.md",
+    "stellar/scf-starforge-20261009/sf16-asset-engine/assets.mjs",
+    "stellar/scf-starforge-20261009/sf16-asset-engine/assets.d.ts",
     "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs"
   ],
   "commands": {
@@ -89,6 +94,8 @@
     "delivery": "stellar/scf-starforge-20261009/sf98-merchant-delivery/deliver.mjs",
     "dataset-delivery": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-dataset-cli.mjs",
     "postgres-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
+    "cube-workspace": "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/workspace/server.mjs",
+    "cube-onboard": "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/onboarding/cli.mjs",
     "inbox": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs",
     "native-signer": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/setup.mjs",
     "facilitator": "stellar/scf-starforge-20261009/native-facilitator/cli.mjs",
@@ -117,6 +124,8 @@
     "python-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs",
     "revenue-report": "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
     "openapi-workspace": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+    "buyer-runbook": "stellar/scf-starforge-20261009/buyer-runbook/cli.mjs",
+    "merchant-readiness": "stellar/scf-starforge-20261009/sf101-merchant-account-readiness/merchant-cli.mjs",
     "duckdb": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/start.mjs",
     "duckdb-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/inspect.mjs",
     "duckdb-prepare": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/prepare-cli.mjs",
@@ -161,6 +170,7 @@
     "./seller/delivery": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/outbox.mjs",
     "./buyer/dataset": "./source/stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery/deliver.mjs",
     "./seller/postgres/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
+    "./seller/cube/workspace": "./source/stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/workspace/server.mjs",
     "./commerce": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce.mjs",
     "./buyer/native-signer": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/adapter.mjs",
     "./facilitator": "./source/stellar/scf-starforge-20261009/native-facilitator/runtime.mjs",
@@ -193,6 +203,15 @@
     "./seller/python/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/config.mjs",
     "./merchant/revenue-report": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
     "./seller/openapi/workspace": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+    "./buyer/runbook": "./source/stellar/scf-starforge-20261009/buyer-runbook/runbook.mjs",
+    "./buyer/runbook-workspace": "./source/stellar/scf-starforge-20261009/buyer-runbook/workspace.mjs",
+    "./merchant/readiness": "./source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/merchant.mjs",
+    "./merchant/recipient-readiness": "./source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/sac.mjs",
+    "./merchant/assets": {
+      "types": "./source/stellar/scf-starforge-20261009/sf16-asset-engine/assets.d.ts",
+      "import": "./source/stellar/scf-starforge-20261009/sf16-asset-engine/assets.mjs"
+    },
+    "./facilitator/readiness": "./source/stellar/scf-starforge-20261009/native-facilitator/readiness.mjs",
     "./seller/duckdb": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/source.mjs",
     "./seller/duckdb/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/config.mjs",
     "./seller/duckdb/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/merchant.mjs",
@@ -222,6 +241,7 @@
   },
   "excludeFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/exercise.mjs",
+    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/check.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/demo-database.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/exercise.mjs",
     "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.journey.mjs",
