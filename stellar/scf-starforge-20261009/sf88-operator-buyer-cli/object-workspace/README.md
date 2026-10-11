@@ -1,12 +1,12 @@
 # Object buyer workspace
 
-Select a merchant's large file, review its request plan, operate the original
+Select a merchant's whole or chunked file, review its request plan, operate the original
 buyer, retain completed parts through interruption, and download the assembled
 file from one private browser workspace. Complete the original purchase records,
 retain their native receipts and reopen them independently of the delivered file.
 
 This workspace uses the original `object-session.mjs`, `object-description.mjs`
-and `object-report.mjs` APIs. Each range remains an original SF88 inbox job with
+and `object-report.mjs` APIs. Each request remains an original SF88 inbox job with
 its original SF31 transport, SF81 terminal approval, SF36 spending ledger and
 SF82 outcome record. The workspace keeps presentation state in memory; the
 original object session and inbox retain the durable work.
@@ -59,12 +59,12 @@ Open the complete printed URL and choose **New → Receive a merchant object**.
    S3 source configuration remains with the merchant.
 2. Choose the object and explicitly select its resource/payment alternative.
    The existing descriptor selector and `prepareReview` bind the exact HTTPS
-   route, method and payment terms. Whole-file-only entries remain unavailable
-   in this chunk acquisition application. Set the bytes per request, session
-   name, whole-download cap and daily cap. The total must cover every planned
-   chunk at its per-request maximum; both budgets must fit the local preset and
+   route, method and payment terms. A whole-file product uses one exact GET with
+   no range query; a chunked product exposes its bytes-per-request control.
+   Set the session name, whole-download cap and daily cap. The total must cover
+   every planned request at its per-request maximum; both budgets must fit the local preset and
    each request must fit the daily limit.
-3. **Review received download** shows the file, exact ranges, snapshot, optional
+3. **Review received download** shows the file, selected whole-response or exact-range plan, snapshot, optional
    whole-file hash, payer, network, asset, recipient and atomic limits. It retains
    the hashes of both original merchant files and the local preset. A changed
    preset or source invalidates an uncommitted review.
@@ -72,7 +72,7 @@ Open the complete printed URL and choose **New → Receive a merchant object**.
    and object-session constructor. It prepares every original inbox job and
    selects the saved session in the same browser. **Start download** remains the
    explicit next action, with the original terminal approval and spending checks
-   for each chunk. The existing File delivery, Purchase records, finalization
+   for each request. The existing File delivery, Purchase records, finalization
    and restart controls operate on that same session.
 
 The received source bytes remain unchanged in private state. The seller array
@@ -117,13 +117,40 @@ Each configured product needs these existing files:
 The base buyer request must be a GET for the descriptor's exact path, with no
 query, body, response destination or order ticket. Its normal `buyerTransport`
 setting is retained for explicit proxy environments. Every generated chunk gets
-the original `offset` and `length` query and its own private destination.
+the original `offset` and `length` query and its own private destination. A whole
+product keeps the exact base URL and one original response destination.
 
 The configured original operator workspace must be compatible with that request's
 signer, payment terms, spending ledger and evidence directory. The original
 object initializer checks this binding. Its total and daily spending limits also
-apply during execution. See [OBJECTS.md](../OBJECTS.md) for the existing byte-range
-and budget contract.
+apply during execution. See [OBJECTS.md](../OBJECTS.md) for the original whole-file,
+byte-range and budget contracts.
+
+## Buy a whole-file product
+
+The original S3 `whole` entries, including report and versioned-file products,
+use the same receiving screen and trusted profile. Review shows **Whole file ·
+one GET**, the complete expected bytes, exact URL, HTTP 200 contract, selected
+snapshot and optional complete digest. The chunk-size field is hidden because
+the merchant fixes the complete response length.
+
+Start the original buyer once. Its saved native response must have HTTP 200,
+no Content-Range, the selected object snapshot and total length, and matching
+returned/local hashes. The original writer checks the complete expected length
+and any selected SHA-256 before publishing the response. Purchase records use
+that same one original intent and spending-ledger record.
+
+After verification, **Save whole file** creates the original private assembled
+output and its receipt. **Download completed file** uses the existing bounded,
+cancellable file stream. Reopen the same workspace for that file, original
+request history, receipt export and accounting even if the output has moved.
+Neither save nor download sends another merchant request.
+
+Zero-byte whole products follow this same one-request flow. Their progress reaches
+complete only after the original empty response and digest are verified; the
+history shows **Whole file**, not an invented negative byte range. A zero-byte
+file retains the selected quoted price and normal native approval. Existing
+chunked sessions retain their original range contracts and resume behavior.
 
 Create a private JSON profile referencing the reviewed inputs. The profile
 contains paths and public product labels. Keep it outside the installed package.
