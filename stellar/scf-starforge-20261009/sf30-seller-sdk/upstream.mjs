@@ -6,6 +6,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { isPublicAddress } from '../sf31-buyer-client/public-transport.mjs';
 import { createUpstreamHandler } from './upstream-handler.mjs';
 import { compileAvailabilityPolicy, protectUpstream } from './upstream-readiness.mjs';
+import { compileResponseContract } from './response-contract.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
 const OWN = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
@@ -13,7 +14,7 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
 const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability','responseContract']);
 const bad = text => { throw new TypeError(text); };
 
 function integer(value,fallback,max,name) {
@@ -104,10 +105,13 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     }
     const method = raw.method ?? 'GET', responseMode = raw.responseMode ?? 'json';
     if (!['GET','HEAD','POST'].includes(method) || !['json','bytes'].includes(responseMode)) bad('Invalid upstream method or responseMode');
+    if (OWN(raw,'responseContract') && responseMode !== 'json') bad('Response contracts require JSON responseMode');
+    const responseContract = OWN(raw,'responseContract') ? compileResponseContract(raw.responseContract,{method}).contract : undefined;
     compiled[name] = Object.freeze({origin:url.origin,hostname:url.hostname,local:url.protocol === 'http:',
       path:raw.path,pathKeys:Object.freeze(keys),method,query:queryMapping(raw.query),
       requestHeaders:Object.freeze(requestHeaders),responseHeaders:Object.freeze(responseHeaders),
       credentials:Object.freeze(credentials),responseMode,
+      ...(responseContract === undefined ? {} : {responseContract}),
       timeoutMs:integer(raw.timeoutMs,10000,120000,'timeoutMs'),
       maxResponseBytes:integer(raw.maxResponseBytes,1_048_576,1_048_576,'maxResponseBytes'),
       maxInFlight:integer(raw.maxInFlight,16,256,'maxInFlight'),
@@ -160,6 +164,7 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
     const handler = createUpstreamHandler({baseUrl:binding.origin,path:binding.path,method:binding.method,
       query:binding.query,headers:binding.credentials,requestHeaders:binding.requestHeaders,
       responseHeaders:[...new Set(['content-type',...binding.responseHeaders])],responseType:binding.responseMode,
+      ...(binding.responseContract === undefined ? {} : {responseContract:binding.responseContract}),
       timeoutMs:binding.timeoutMs,maxResponseBytes:binding.maxResponseBytes,maxInFlight:binding.maxInFlight,
       allowLocal:binding.local,...(binding.local ? {} : {lookup:publicLookup(binding,lookup)})});
     handlers[name] = binding.availability ? protectUpstream(handler,binding.availability,

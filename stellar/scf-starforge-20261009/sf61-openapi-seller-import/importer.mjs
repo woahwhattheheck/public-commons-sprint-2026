@@ -83,6 +83,10 @@ function resolver(document) {
   return { reference, schema };
 }
 
+// The response compiler uses the same local-reference and 3.0 compatibility
+// rules as request import instead of maintaining a second OpenAPI resolver.
+export { resolver as createOpenApiResolver };
+
 function declaredExample(value, reference) {
   if (own(value, 'example') && own(value, 'examples')) fail('example and examples are mutually exclusive here');
   if (own(value, 'example')) return { found: true, value: clone(value.example) };
@@ -236,3 +240,4 @@ export function importOpenApi(document, selections) {
     title: document.info?.title ?? null, offers,
     paymentsInitiated: 0, resourcesRegistered: 0 };
 }
+

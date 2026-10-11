@@ -10,6 +10,12 @@ An API owner supplies two small files: its ordinary seller configuration and
 its upstream bindings. Existing OpenAPI-derived `offer` routes work too; the
 launcher does not replace their descriptions, schemas or payment terms.
 
+The optional `responseContract` binding connects an operation's original
+OpenAPI success status, JSON media type and result schema to the actual backend
+delivery path. A mismatch returns a sanitized failure before the seller's native
+post-handler settlement call. The existing importer now exports these runnable
+bindings directly; see [response contract setup](../sf61-openapi-seller-import/RESPONSE_CONTRACTS.md).
+
 ## Start the complete local example
 
 Use Node 22+ in the full repository checkout. The challenge-only example needs
