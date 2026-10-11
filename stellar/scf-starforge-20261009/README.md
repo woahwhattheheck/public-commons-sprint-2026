@@ -22,6 +22,7 @@ the numbered source directories identify implementation components.
 | Sell and deliver a separate private file | [Approved order and paid-file workflow](sf101-merchant-receiver/CHECKOUT.md) | Original order, native delivery event, entitlement and exact completed bytes |
 | Integrate an agent or customer application | [Durable MCP workspace](../../stellar-forge/mcp-paid-agent/DURABILITY.md), [customer SDK](sf30-seller-sdk/DEVELOPER.md), [Python buyer](sf88-operator-buyer-cli/python/README.md) | Original operation identity and the operator's configured payment authority |
 | Change a live product or recover an incident | [Seller releases](sf82-seller-pilot/RELEASES.md), [buyer inbox](sf88-operator-buyer-cli/QUEUE.md), [operations](sf30-seller-sdk/operations/README.md) | Reviewed versions, original attempts, retained output and operating history |
+| Review merchant pricing and operating costs | [Merchant pricing workspace](sf97-merchant-revenue-ops/WORKSPACE.md) | Every configured payment option, the original operating capture, saved cost assumptions and financial reports |
 
 ## Install and open the merchant workspace
 
@@ -82,6 +83,33 @@ covers the existing facilitator URL and self-facilitated seller paths. The
 [commerce plan](sf66-demo-launcher/COMMERCE.md) composes that configuration with
 the original merchant and operations service. Route the merchant's public HTTPS
 origin to its configured listener; keep its operator consoles private.
+
+## Review merchant pricing and operating costs
+
+Open the [merchant pricing workspace](sf97-merchant-revenue-ops/WORKSPACE.md)
+against the seller configuration and its original operations listener. From a
+repository checkout:
+
+```sh
+node stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/cli.mjs \
+  --config /absolute/private/merchant/seller-service.json \
+  --state /absolute/private/merchant/pricing-workspace \
+  --ops-url http://127.0.0.1:8424
+```
+
+Use the actual configuration path and listener printed by your seller. For a
+retained operating capture, replace `--ops-url` with
+`--snapshot /absolute/private/merchant/original-seller-traffic.json`.
+The optional `--native-outbox` points at the same merchant's existing private
+SF98 outbox and adds its native settlement companion.
+
+The private browser workspace presents every configured payment option. Enter
+your USD quote and basis, target request volume, fulfillment and challenge
+costs, and fixed operating costs. The original SF97 analyzer calculates the
+review; unspecified costs stay unknown. Save the review to retain its exact
+source snapshot and terms, reopen the saved version, and download reusable
+merchant terms and the original reports. Saved versions preserve the assumptions
+behind a pricing decision through service restart and concurrent editing.
 
 ## Prepare the buyer's real request
 
