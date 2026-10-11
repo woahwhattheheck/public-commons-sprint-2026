@@ -2,6 +2,7 @@
 // This adapter implements no payment scheme, signature verifier or chain client.
 import { compileHttpSellerOffer, paymentRequiredResponse } from './seller.mjs';
 import { validateHeaderName, validateHeaderValue } from 'node:http';
+import { evaluateAdmission, validateAdmissionTimeout } from './admission.mjs';
 import { compileServicePath, orderServiceRoutes, selectServiceRoute } from './route-path.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/auto-catalog.mjs';
 
@@ -63,12 +64,14 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
     throw new TypeError('One to 100 seller route definitions required');
   }
   const nativeRoutes = Object.create(null), ids = new Set(), origins = new Set();
-  const routes = definitions.map(({ id, definition, offer: originalOffer, handler } = {}) => {
+  const routes = definitions.map(({ id, definition, offer: originalOffer, handler, admit } = {}) => {
     if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(id) || ids.has(id)) {
       throw new TypeError('Unique printable route id required');
     }
     if ((definition === undefined) === (originalOffer === undefined) || typeof handler !== 'function')
       throw new TypeError('Choose one route definition or compiled offer, plus a handler');
+    if (admit !== undefined && typeof admit !== 'function')
+      throw new TypeError('Optional admission must be a function');
     if (definition !== undefined && (!plain(definition) || definition.routeTemplate !== undefined))
       throw new TypeError('Seller service requires a fixed-path definition');
     const offer = originalOffer === undefined ? compileHttpSellerOffer(definition, { allowLocalhost }) :
@@ -96,7 +99,8 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
       extensions: structuredClone(offer.extensions),
     };
     ids.add(id); origins.add(url.origin);
-    return Object.freeze({ id, path, method, binding, offer: freeze(offer), handler });
+    return Object.freeze({ id, path, method, binding, offer: freeze(offer), handler,
+      ...(admit === undefined ? {} : { admit }) });
   });
   if (origins.size !== 1) throw new TypeError('All seller routes must use one public origin');
   const ordered = orderServiceRoutes(routes);
@@ -196,7 +200,9 @@ function requestContext(req, route, target, body, pathParams) {
 
 /** Node handler; nativeServer must be the operator-configured canonical SDK. */
 export function createSellerResourceHandler({ compiled, nativeServer = null,
-  maxRequestBytes = 1024 * 1024, maxResponseBytes = 1024 * 1024 } = {}) {
+  maxRequestBytes = 1024 * 1024, maxResponseBytes = 1024 * 1024,
+  admissionTimeoutMs = 2000 } = {}) {
+  validateAdmissionTimeout(admissionTimeoutMs);
   if (!compiled?.routes?.length || !compiled.nativeRoutes) throw new TypeError('Compiled seller routes required');
   for (const limit of [maxRequestBytes, maxResponseBytes]) {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16 * 1024 * 1024) throw new TypeError('Invalid body limit');
@@ -237,6 +243,31 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       }
       const body = await readBody(req, maxRequestBytes);
       const context = requestContext(req, route, target, body, pathParams);
+      if (route.admit) {
+        const controller = new AbortController();
+        const disconnected = () => controller.abort();
+        res.once('close', disconnected);
+        try {
+          if (res.destroyed || req.aborted) controller.abort();
+          const decision = await evaluateAdmission(route.admit, context.application,
+            { timeoutMs: admissionTimeoutMs, signal: controller.signal });
+          if (res.destroyed || res.writableEnded || req.aborted) return;
+          if (decision !== true) {
+            const rejected = decision === false ?
+              { status: 422, body: { error: 'REQUEST_NOT_ADMITTED' } } : decision;
+            if (!plain(rejected) || !Number.isInteger(rejected.status) ||
+                rejected.status < 400 || rejected.status > 499 || rejected.status === 402) {
+              throw new TypeError('Admission requires true, false or a nonpayment 4xx response');
+            }
+            return send(req, res, encodeResponse(rejected, maxResponseBytes, true));
+          }
+        } catch {
+          // No native verification, cancellation or settlement has been invoked.
+          return simple(503, 'REQUEST_ADMISSION_UNAVAILABLE');
+        } finally {
+          res.removeListener('close', disconnected);
+        }
+      }
       payment = await nativeServer.processHTTPRequest(context.sdk);
       if (payment?.type === 'payment-error') {
         return send(req, res, encodeResponse(payment.response, maxResponseBytes));
