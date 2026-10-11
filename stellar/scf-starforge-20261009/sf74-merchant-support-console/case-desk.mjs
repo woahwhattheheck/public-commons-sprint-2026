@@ -144,7 +144,9 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
         const main=add(row,'td');
         button(main,entry.name,()=>transition(()=>openCase(entry.id),'open '+entry.name),'case-link');
         add(main,'small',entry.inputs.resource||entry.metadata.merchant||'Route not yet entered');
-        if(entry.runtimeSupport)add(main,'small',entry.runtimeSupport.captures+' runtime capture(s) · '+entry.runtimeSupport.nativeCaptures+' native reconciliation(s)');
+        if(entry.runtimeSupport)add(main,'small',entry.runtimeSupport.captures+' runtime capture(s)'+
+          (entry.runtimeSupport.periodCaptures?' · '+entry.runtimeSupport.periodCaptures+' retained period(s)':'')+
+          ' · '+entry.runtimeSupport.nativeCaptures+' native reconciliation(s)');
         add(row,'td',entry.metadata.owner||'Unassigned');
         add(row,'td',STATUS[entry.metadata.status]||entry.metadata.status);
         const day=add(row,'td',entry.metadata.followUpOn||'—');
