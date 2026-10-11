@@ -100,20 +100,34 @@ export async function openReceivingWorkspace({ directory, environment = process.
     need(inputs['seller.json'], 'SELLER_CONFIGURATION_REQUIRED');
     return { record, path, inputs };
   }
-  async function createProfile(input) {
+  async function createProfile(input, operation = {}, importRequestDigest) {
     admit(); keys(input, ['label', 'seller', 'assets', 'rpc', 'options']);
+    keys(operation, ['id']); if (operation.id !== undefined) checkId(operation.id);
     need(typeof input.label === 'string' && input.label.trim().length > 0 && input.label.length <= 120, 'PROFILE_LABEL_REQUIRED');
     const options = normalizedOptions(input.options), sourceFiles = [['seller.json', input.seller], ['input-assets.json', input.assets], ['input-rpc.json', input.rpc]].filter(([, file]) => file !== undefined && file !== null);
     need(sourceFiles.some(([name]) => name === 'seller.json'), 'SELLER_CONFIGURATION_REQUIRED');
     const buffers = sourceFiles.map(([name, file]) => ({ name, originalName: file.name, bytes: fileBytes(file) }));
-    const profileId = id(), path = join(profilesRoot, '.' + profileId + '.stage'), destination = profilePath(profileId);
+    const files = buffers.map(file => ({ name: file.name, originalName: file.originalName, bytes: file.bytes.length, sha256: sha256(file.bytes) }));
+    const requestDigest = sha256(encoded({ label: input.label.trim(), options, files, ...(importRequestDigest ? { importRequestDigest } : {}) }));
+    const profileId = operation.id ?? id(), destination = profilePath(profileId);
+    let exists = false; try { await lstat(destination); exists = true; } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (exists) {
+      const existing = await profile(profileId);
+      const fingerprint = existing.record.requestDigest ?? sha256(encoded({ label: existing.record.label, options: existing.record.options, files: existing.record.files }));
+      need(fingerprint === requestDigest, 'PROFILE_REQUEST_CONFLICT', 409); return existing.record;
+    }
+    const path = join(profilesRoot, '.' + profileId + '-' + randomBytes(4).toString('hex') + '.stage');
     await mkdir(path, { mode: 0o700 }); let published = false;
     try {
       for (const file of buffers) await writeNew(join(path, file.name), file.bytes);
-      const compiled = await readMerchantReceivingPlan(join(path, 'seller.json'), { origin: options.origin });
+      let compiled;
+      try { compiled = await readMerchantReceivingPlan(join(path, 'seller.json'), { origin: options.origin }); }
+      catch (error) {
+        if (/^[A-Z][A-Z0-9_]{1,100}$/.test(error?.code ?? '')) throw error;
+        throw workspaceFault(error?.message === 'Duplicate payment network, asset and payTo option' ? 'DUPLICATE_PAYMENT_OPTION' : 'SELLER_CONFIG_INVALID');
+      }
       const record = { schema: 'stellar-forge.receiving-workspace-profile.v1', id: profileId, label: input.label.trim(), createdAt: new Date().toISOString(),
-        options, plan: compiled.plan, planDigest: compiled.planDigest, configurationSha256: compiled.configuration.sha256,
-        files: buffers.map(file => ({ name: file.name, originalName: file.originalName, bytes: file.bytes.length, sha256: sha256(file.bytes) })) };
+        options, plan: compiled.plan, planDigest: compiled.planDigest, configurationSha256: compiled.configuration.sha256, requestDigest, files };
       await writeNew(join(path, 'profile.json'), encoded(record)); await syncDirectory(path);
       await rename(path, destination); published = true; await syncDirectory(profilesRoot); return record;
     } catch (error) { await rm(published ? destination : path, { recursive: true, force: true }); throw error; }
@@ -261,8 +275,9 @@ export async function openReceivingWorkspace({ directory, environment = process.
       review: checked.record, bundle: await bundleFiles(value) };
     return encoded(result);
   }
-  async function importReview(input) {
+  async function importReview(input, operation = {}) {
     admit(); keys(input, ['schema', 'exportedAt', 'profile', 'review', 'bundle']);
+    keys(operation, ['id']); if (operation.id !== undefined) checkId(operation.id);
     need(input.schema === 'stellar-forge.receiving-workspace-export.v1' && object(input.profile) && Array.isArray(input.profile.files) && Array.isArray(input.bundle) && input.bundle.length === 7, 'INVALID_RECEIVING_EXPORT');
     need(input.profile.files.length >= 1 && input.profile.files.length <= 3 && new Set(input.profile.files.map(file => file.name)).size === input.profile.files.length, 'PROFILE_FILES_INVALID');
     const sources = {};
@@ -284,9 +299,24 @@ export async function openReceivingWorkspace({ directory, environment = process.
     for (const entry of manifest.files) need(entry.name !== 'manifest.json' && buffers.has(entry.name) && buffers.get(entry.name).length === entry.bytes && sha256(buffers.get(entry.name)) === entry.sha256, 'MANIFEST_DIGEST_MISMATCH');
     const sourceReport = json(buffers.get('review.json')), capture = json(buffers.get('capture.json'));
     need(sourceReport.schema === 'stellar-forge.seller-sac-readiness.v1' && Array.isArray(sourceReport.options) && capture.schema === 'stellar-forge.sf101.merchant-capture.v1', 'INVALID_RECEIVING_REPORT');
+    const requestDigest = sha256(encoded({ label: input.profile.label, options: normalizedOptions(input.profile.options),
+      files: PROFILE_FILES.filter(name => sources[name]).map(name => ({ name, originalName: sources[name].name, bytes: sources[name].bytes, sha256: sources[name].sha256 })),
+      bundle: BUNDLE_FILES.map(name => ({ name, bytes: buffers.get(name).length, sha256: sha256(buffers.get(name)) })) }));
+    const reviewId = operation.id ?? id(), destination = reviewPath(reviewId);
+    let exists = false; try { await lstat(destination); exists = true; } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (exists) {
+      const existing = await state(reviewId);
+      need(existing.mode === 'imported' && existing.requestDigest === requestDigest, 'IMPORT_REQUEST_CONFLICT', 409);
+      await report(reviewId); return { profile: (await profile(existing.profileId)).record, review: existing };
+    }
+    // A retry after publishing the profile but before publishing its review reuses
+    // the same private source object. Its digest also binds the exact import work.
+    const importedProfileId = reviewId.split('-')[0] + '-' + sha256('receiving-import-profile:' + reviewId).slice(0, 16);
+    let existingProfile = false;
+    try { await lstat(profilePath(importedProfileId)); existingProfile = true; } catch (error) { if (error.code !== 'ENOENT') throw error; }
     const selected = await createProfile({ label: input.profile.label, options: input.profile.options,
-      seller: sources['seller.json'], assets: sources['input-assets.json'], rpc: sources['input-rpc.json'] });
-    const reviewId = id(), path = join(reviewsRoot, '.' + reviewId + '.stage'), destination = reviewPath(reviewId);
+      seller: sources['seller.json'], assets: sources['input-assets.json'], rpc: sources['input-rpc.json'] }, { id: importedProfileId }, requestDigest);
+    const path = join(reviewsRoot, '.' + reviewId + '-' + randomBytes(4).toString('hex') + '.stage');
     let owned = false, published = false;
     try {
       need(sourceReport.planDigest === selected.planDigest && capture.planDigest === selected.planDigest && manifest.planDigest === selected.planDigest &&
@@ -298,12 +328,13 @@ export async function openReceivingWorkspace({ directory, environment = process.
       await readMerchantBundle(join(path, 'bundle'), 'review.json'); await readMerchantBundle(join(path, 'bundle'), 'capture.json');
       await syncDirectory(join(path, 'bundle'));
       const record = { schema: 'stellar-forge.receiving-workspace-review.v1', id: reviewId, profileId: selected.id, profileLabel: selected.label,
-        createdAt: new Date().toISOString(), completedAt: sourceReport.completedAt, state: 'COMPLETED', mode: 'imported',
+        createdAt: new Date().toISOString(), completedAt: sourceReport.completedAt, state: 'COMPLETED', mode: 'imported', requestDigest,
         planDigest: selected.planDigest, observedMode: sourceReport.mode, summary: sourceReport.summary, status: sourceReport.status,
         readCount: sourceReport.readCount, manifestSha256: sha256(buffers.get('manifest.json')), importedAt: new Date().toISOString() };
       await writeNew(join(path, 'state.json'), encoded(record)); await syncDirectory(path);
       await rename(path, destination); published = true; await syncDirectory(reviewsRoot); return { profile: selected, review: record };
-    } catch (error) { if (owned) await rm(published ? destination : path, { recursive: true, force: true }); await rm(profilePath(selected.id), { recursive: true, force: true }); throw error; }
+    } catch (error) { if (owned) await rm(published ? destination : path, { recursive: true, force: true });
+      if (!existingProfile) await rm(profilePath(selected.id), { recursive: true, force: true }); throw error; }
   }
 
   try {
@@ -337,10 +368,10 @@ export async function openReceivingWorkspace({ directory, environment = process.
   } catch (error) { await lease.close(); throw error; }
   pump();
   return {
-    createProfile: input => mutate(() => createProfile(input)),
+    createProfile: (input, operation) => mutate(() => createProfile(input, operation)),
     startReview: input => mutate(() => startReview(input)),
     cancelReview: value => mutate(() => cancelReview(value)),
-    importReview: input => mutate(() => importReview(input)),
+    importReview: (input, operation) => mutate(() => importReview(input, operation)),
     exportReview,
     async listProfiles({ after, limit = 50 } = {}) { return listing(profilesRoot, after, limit, async value => (await profile(value)).record); },
     async listReviews({ profileId, after, limit = 50 } = {}) { if (profileId) checkId(profileId); return listing(reviewsRoot, after, limit, state, record => !profileId || record.profileId === profileId); },

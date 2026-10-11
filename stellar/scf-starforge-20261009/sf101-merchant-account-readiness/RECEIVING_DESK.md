@@ -108,6 +108,8 @@ Completed reviews retain their manifest digest in the durable state record. Reop
 
 `workspace/controller.mjs` exports `openReceivingWorkspace({directory, environment, sdk})`. It returns the original browser operations: create/list/get profiles, start/list/get/cancel reviews, compare, export, import, status and close. The controller calls `inspectMerchantReceiving`, `writeMerchantReview`, `readMerchantBundle` and `compareMerchantReadiness` directly. Its return values are the server’s JSON bodies.
 
+Agent integrations can call `createProfile(input, {id})` and `importReview(exportObject, {id})` with a retained ID in the same `timestamp-randomhex` format used by review requests. Equal input retries return the existing profile or imported review; conflicting work under the same ID is rejected. Import also gives its profile a stable derived identity, so retrying after a process interruption reuses the already retained original inputs. Browser calls may omit the second argument.
+
 `workspace/server.mjs` owns the loopback HTTP interface and composable handler. Its protected API uses the process-scoped `x-receiving-session` header, exact host and same-origin checks, private uncached responses and fixed browser assets. The existing merchant CLI starts that server for the `workspace` subcommand. See the exported functions in that module when mounting the desk inside an existing operator application.
 
 The complete SF101 source directory, including the browser assets and this guide, belongs to the maintained merchant distribution. The original `merchant-readiness` alias provides both the receiving CLI and its workspace subcommand.
