@@ -79,7 +79,20 @@ and its timestamp visible. Individual unavailable accounts remain visible while
 other configured accounts can still be reviewed. The account's safe error code
 appears in its detail panel.
 
-The same source includes a local operator command:
+The installed Starforge release provides the same operator command:
+
+~~~sh
+starforge supplier-quotas check --upstreams /private/seller-upstreams.json
+starforge supplier-quotas inspect --upstreams /private/seller-upstreams.json --account market-data
+~~~
+
+Application code can import **createSupplierQuotaRegistry** and
+**attachSupplierQuota** from
+**@tokenjunkielabs/starforge-merchant/seller/supplier-quotas**, and
+**compileSupplierAccounts** from its **/config** export. The same named functions
+are also available from the package root.
+
+The source checkout provides the corresponding local operator command:
 
 ~~~sh
 node sf30-seller-sdk/supplier-quota/cli.mjs check --upstreams /private/seller-upstreams.json

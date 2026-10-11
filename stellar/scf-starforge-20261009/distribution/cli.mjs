@@ -33,6 +33,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   chainstack-stellar  Install, observe and operate the original Chainstack merchant and buyer handoff
   chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
+  supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
@@ -50,12 +51,15 @@ Native commands (arguments pass unchanged to the maintained implementation):
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   merchant-host                             Install, observe and recover the original Linux merchant group
+  merchant-recovery                         Create, verify and cold-restore original encrypted merchant snapshots
+  merchant-recovery-remote                  Upload, list, retrieve and restore retained off-host snapshots
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   routescan-merchant  Configure, preview and operate the original Routescan gas-data merchant
   routescan-workspace Operate its saved project through the original local workspace
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations
@@ -113,6 +117,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-pricing                Import a saved original pricing report as accounting terms
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
+  merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases
