@@ -81,7 +81,12 @@ export async function createMigrationRoutes(options) {
     else if (action === 'acquisition/import') result = await app.importCapture(input);
     else if (action === 'mapping/save') result = await app.saveMapping(input);
     else if (action === 'mapping/review') result = await app.reviewSemanticMapping(input);
-    else if (action === 'mapping/compare') result = await app.compare(input);
+    else if (action === 'mapping/compare') {
+      const value = await app.compare(input), comparison = value.comparison;
+      result = { project: value.project, comparison: { comparisonId: comparison.comparisonId,
+        reviewId: comparison.reviewId, mappingId: comparison.mappingId, status: comparison.status,
+        ready: comparison.ready, equivalent: comparison.equivalent, summary: comparison.summary } };
+    }
     else if (action === 'source/review') result = await app.createSourceReview(input);
     else if (action === 'source/export') result = await app.exportMerchant(input);
     else if (action === 'receiver/open') result = await app.openReceiver(input);
