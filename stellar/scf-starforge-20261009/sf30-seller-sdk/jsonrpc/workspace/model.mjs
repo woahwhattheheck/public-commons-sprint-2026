@@ -86,7 +86,7 @@ function changes(before, after, prefix = '') {
 
 /** Host options and environment are fixed at launch; browser drafts contain public declarations. */
 export async function createRpcWorkspace({ directory, create = false, planFile,
-  env = process.env, runtimeOptions = null, allowLoopbackUpstream = false } = {}) {
+  env = process.env, runtimeOptions = null, allowLoopbackUpstream = false, navigationOrigin = null } = {}) {
   if (typeof directory !== 'string' || !directory || resolve(directory) === '/')
     throw new WorkspaceError('PRIVATE_WORKSPACE_DIRECTORY_REQUIRED');
   const root = resolve(directory);
@@ -269,7 +269,7 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
               ...(allowLoopbackUpstream ? { 'allow-loopback-upstream': true } : {}) };
             // Original CLI owns native factory/outbox, preflight, listeners, signals and drain.
             const packagePlan = JSON.parse((await privateFile(join(folder, 'plan.json'), TEXT_LIMIT)).toString('utf8'));
-            merchant = await startRpcCommand(packagePlan, options, { env,
+            merchant = await startRpcCommand(packagePlan, options, { env, navigationOrigin,
               stdout: { write() {} }, stderr: { write() {} } });
             return store.setRuntime({ state: 'RUNNING', instanceId, packageId: record.id,
               revision: record.revision, startedAt, mode: merchant.mode });

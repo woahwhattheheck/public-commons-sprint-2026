@@ -17,7 +17,9 @@ const modes = {
   'config-check':['--config','--ticket-sha'],
   'execute-config':['--config','--ticket-sha'],
   'prepare-file':['--config','--handoff','--out'],
-  'retrieve-file':['--handoff','--out','--claim-env'],
+  'retrieve-file':['--handoff','--out','--claim-env','--timeout-ms','--resume'],
+  'inspect-file-transfer':['--handoff','--out'],
+  'reset-file-transfer':['--handoff','--out'],
   'finalize-operation':['--operation-dir','--outbox','--merchant-route'],
 };
 const safeCode = error => /^[A-Z0-9_]{1,120}$/.test(error?.code ?? '')
@@ -80,7 +82,8 @@ export async function main(args = process.argv.slice(2)) {
       typeof args[index+1] === 'string' && !args[index+1].startsWith('--'), 'APPLICATION_OPTION_INVALID');
     options.set(args[index], args[index+1]);
   }
-  need(allowed.every(key => ['--claim-env','--ticket-sha','--outbox','--merchant-route'].includes(key) || options.has(key)), 'APPLICATION_OPTION_REQUIRED');
+  need(allowed.every(key => ['--claim-env','--ticket-sha','--outbox','--merchant-route',
+    '--timeout-ms','--resume'].includes(key) || options.has(key)), 'APPLICATION_OPTION_REQUIRED');
   if (action === 'workspace-read') {
     const workspace = await openWorkspace(['--dir', options.get('--dir')]);
     return print({mode:'ORIGINAL_PYTHON_WORKSPACE', directory:workspace.manifest.directory,
@@ -125,24 +128,46 @@ export async function main(args = process.argv.slice(2)) {
     } finally { process.off('SIGINT', interrupt); process.off('SIGTERM', terminate); }
   }
   const {readJson} = await import('../../sf101-merchant-receiver/checkout-config.mjs');
-  const {preparePurchase, retrieveFile} = await import('../../sf101-merchant-receiver/purchase.mjs');
+  const {preparePurchase, retrieveFile, inspectFileTransfer, resetFileTransfer} =
+    await import('../../sf101-merchant-receiver/purchase.mjs');
   const handoff = await readJson(options.get('--handoff'));
   if (action === 'prepare-file') {
     const result = await preparePurchase({handoff, configuration:await config(options.get('--config')),
       output:options.get('--out')});
     return print({mode:'ORIGINAL_PYTHON_PAID_FILE_PREPARED', ...result});
   }
+  if (action === 'inspect-file-transfer' || action === 'reset-file-transfer') {
+    const input = {handoff, destination:options.get('--out')};
+    const reset = action === 'reset-file-transfer' ? await resetFileTransfer(input) : null;
+    const result = await inspectFileTransfer(input);
+    return print({mode:'ORIGINAL_PYTHON_FILE_TRANSFER', action:reset ? 'RESET' : 'INSPECT',
+      orderReference:handoff.orderReference, ...result,
+      ...(reset ? {removedPartialBytes:reset.removedPartialBytes} : {})});
+  }
   const name = options.get('--claim-env') ?? 'SF101_CLAIM_TOKEN';
   need(/^[A-Z][A-Z0-9_]{1,64}$/.test(name), 'CLAIM_ENV_NAME_INVALID');
+  const timeoutMs = options.has('--timeout-ms') ? Number(options.get('--timeout-ms')) : 30000;
+  need(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 300000, 'DELIVERY_TIMEOUT_INVALID');
+  need(!options.has('--resume') || ['true','false'].includes(options.get('--resume')), 'DELIVERY_RESUME_INVALID');
+  const controller = new AbortController();
+  const interrupt = () => { process.exitCode=130; controller.abort(); };
+  const terminate = () => { process.exitCode=143; controller.abort(); };
+  process.once('SIGINT', interrupt); process.once('SIGTERM', terminate);
   try {
-    const result = await retrieveFile({handoff, destination:options.get('--out'), token:process.env[name]});
+    const result = await retrieveFile({handoff, destination:options.get('--out'), token:process.env[name],
+      timeoutMs, signal:controller.signal,
+      ...(options.has('--resume') ? {resume:options.get('--resume') === 'true'} : {})});
     return print({mode:'ORIGINAL_PYTHON_FILE_DELIVERY', ...result});
   } catch (error) {
-    // Preserve the original private partial-path recovery hint, never a token.
-    process.exitCode = 1;
+    process.exitCode ||= 1;
     return print({mode:'ORIGINAL_PYTHON_FILE_DELIVERY', status:'FILE_NOT_SAVED',
       error:safeCode(error), ...(typeof error.partialPath === 'string' ? {partialPath:error.partialPath} : {}),
+      ...(typeof error.transferState === 'string' ? {transferState:error.transferState} : {}),
+      ...(Number.isSafeInteger(error.retainedBytes) ? {retainedBytes:error.retainedBytes} : {}),
+      ...(typeof error.resumable === 'boolean' ? {resumable:error.resumable} : {}),
       automaticPaymentRetry:false});
+  } finally {
+    process.off('SIGINT', interrupt); process.off('SIGTERM', terminate);
   }
 }
 

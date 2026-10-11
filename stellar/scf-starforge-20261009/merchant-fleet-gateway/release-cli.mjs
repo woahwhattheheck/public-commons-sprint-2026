@@ -4,6 +4,7 @@ import { createInterface } from 'node:readline';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openFleetReleaseOperator } from './release-operator.mjs';
+import { bootstrapFleet, readFleetBootstrapStatus } from './release-bootstrap.mjs';
 
 const COMMANDS = `status
 catalog TENANT SLOT
@@ -15,10 +16,15 @@ review-rollback REVISION
 rollback REVIEW_ID
 retire TENANT SLOT INSTANCE_ID REVISION
 quit`;
-const USAGE = `Usage: node release-cli.mjs start --plan FILE --directory PRIVATE_DIRECTORY
+const USAGE = `Usage: node release-cli.mjs setup --declaration FILE --directory PRIVATE_DIRECTORY
+  [--plan OUTPUT_FILE]
+  node release-cli.mjs setup-status --directory PRIVATE_DIRECTORY
+  node release-cli.mjs start --plan FILE --directory PRIVATE_DIRECTORY
   [--state PRIVATE_GATEWAY_DIRECTORY]
 
 Runs the existing SF82 seller sessions and original fleet in this foreground process.
+Setup initializes the original stores and initial releases, then writes the original
+plan. Repeating setup resumes its retained progress. See BOOTSTRAP.md.
 The plan declares stores, ports and package aliases. See RELEASE_OPERATOR.md.
 
 Session commands:
@@ -47,15 +53,32 @@ export async function dispatchFleetCommand(operator, line) {
 
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { process.stdout.write(USAGE + '\n'); return; }
-  if (args[0] !== 'start') throw new TypeError(USAGE);
+  const action = args[0];
+  if (!['setup', 'setup-status', 'start'].includes(action)) throw new TypeError(USAGE);
+  const allowed = action === 'setup' ? ['--declaration', '--directory', '--plan'] :
+    action === 'setup-status' ? ['--directory'] : ['--plan', '--directory', '--state'];
   const flags = new Map();
   for (let index = 1; index < args.length; index += 2) {
     const name = args[index], value = args[index + 1];
-    if (!['--plan', '--directory', '--state'].includes(name) || flags.has(name) || !value || value.startsWith('--'))
+    if (!allowed.includes(name) || flags.has(name) || !value || value.startsWith('--'))
       throw new TypeError(USAGE);
     flags.set(name, value);
   }
-  if (!flags.has('--plan') || !flags.has('--directory')) throw new TypeError(USAGE);
+  if (!flags.has('--directory')) throw new TypeError(USAGE);
+  if (action === 'setup-status') { print(await readFleetBootstrapStatus({ directory: flags.get('--directory') })); return; }
+  if (action === 'setup') {
+    if (!flags.has('--declaration')) throw new TypeError(USAGE);
+    const controller = new AbortController();
+    const stop = () => controller.abort(new Error('Fleet setup interrupted; repeat the same setup command to resume.'));
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    try {
+      print(await bootstrapFleet({ declarationFile: flags.get('--declaration'), directory: flags.get('--directory'),
+        planFile: flags.get('--plan'), signal: controller.signal,
+        onProgress: event => process.stdout.write(JSON.stringify(event) + '\n') }));
+    } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
+    return;
+  }
+  if (!flags.has('--plan')) throw new TypeError(USAGE);
   let operator, lines, requestedClose = false;
   const requestClose = () => {
     requestedClose = true;

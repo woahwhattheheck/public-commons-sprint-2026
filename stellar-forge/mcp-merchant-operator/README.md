@@ -31,6 +31,21 @@ initialization can include the same fleet with `--fleet-plan`.
 
 ## Prepare a merchant
 
+For a prepared Stellar RPC product, initialize with
+`--jsonrpc-package /private/rpc/prepared-v1`. The same provider retains all ten
+original package files, compares the declared methods, prices, data network and
+limits, and starts the original merchant with private operations and persistent
+availability/history. `merchant_operations` returns those original operator
+links for the current owned instance. See
+[RPC releases](../../stellar/scf-starforge-20261009/sf82-seller-pilot/JSONRPC_RELEASES.md)
+for the complete package, release, buyer and restart workflow.
+
+For an existing S3 file product, initialize with
+`--s3-package /private/packages/products-v1`. The same provider then retains,
+compares, starts and rolls back the original pinned whole-file or chunk seller.
+See [S3 releases](../../stellar/scf-starforge-20261009/sf82-seller-pilot/S3_RELEASES.md)
+for private source handling, object version behavior and the original buyer handoff.
+
 Use Node 22+ and the complete source checkout, or the installed Starforge package
 containing the `merchant-mcp` command. The merchant's existing OpenAPI document,
 payment selections and service bindings use the original SF61 formats. Initialize
@@ -226,11 +241,14 @@ Add the host's existing incident/case directories and retained input aliases thr
 `--support SUPPORT_CONNECTION_JSON` at initialization, or `supportConnection` in
 the existing configuration. The original MCP provider then exposes incident
 inspection/acknowledgment, case import/reopening/history, owner terms, workorder
-preparation and private exports. These use the same original SF93/SF74/SF77 engines
+preparation and private exports. Agents can also inspect/apply declared observation
+profiles, start/stop an owned original watcher, and recover its existing incident
+notifications by their actual event/attempt identities. These use the same original SF93/SF74/SF77 engines
 and case directory as the support console. Follow the complete
 [support and workorder workflow](./SUPPORT.md) for source/revision selection,
-console interoperability, export recovery and host setup. It starts no watcher,
-seller or payment run.
+console interoperability, watcher ownership, notification and export recovery, and
+host setup. Observation begins only through the explicit watcher start operation;
+the configured seller and delivery services keep their existing owners.
 
 ## Complete operator workflow
 
@@ -338,3 +356,9 @@ Original integration sources:
 - [Shared authenticated MCP HTTP transport](../mcp-paid-agent/http-tools.mjs)
 - [MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
 - [MCP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+
+## Retained merchant accounting
+
+The same provider operates the original merchant accounting workspace, completed-receipt recovery, reconciliation tables, named exception reviews, comparison and exact retained response/report/TAR retrieval. Configure host-selected source aliases with `init-accounting --dir NEW_DIRECTORY --accounting ACCOUNTING_JSON`, attach `--accounting` to an existing source initializer, or add the optional accounting configuration to an existing private merchant host. The original workspace owns revisions, source capture, verification, reports and its lease; no new payment is required to recover a completed purchase.
+
+See [ACCOUNTING.md](ACCOUNTING.md) for the complete installed and subprocess workflow, asynchronous job status, original source selection, SHA-pinned file chunks and durable reopening. Existing release, Python, DuckDB, discovery and fleet operations use the same provider.

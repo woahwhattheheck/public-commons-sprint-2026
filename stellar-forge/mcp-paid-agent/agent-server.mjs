@@ -39,7 +39,7 @@ async function readData(response,max=64*1024){
 }
 const statOf=q=>({quoteId:q.quoteId,status:q.status,resource:q.resource,requestUrl:q.url,method:q.method,
   ...(q.invocation?{invocation:structuredClone(q.invocation)}:{}),
-  selected:sanitizedPrice(q.accepted),expiresAt:q.expiresAt,attempts:q.attempts,
+  selected:sanitizedPrice(q.accepted),acceptedTerms:structuredClone(q.accepted),expiresAt:q.expiresAt,attempts:q.attempts,
   createdAt:q.createdAt,updatedAt:q.updatedAt,phase:q.phase??null,
   signedRequestDispatched:q.signedRequestDispatched===true,
   result:structuredClone(q.result??null),failure:q.failure??null,

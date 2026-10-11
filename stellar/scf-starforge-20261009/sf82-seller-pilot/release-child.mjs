@@ -26,7 +26,11 @@ process.once('message', async message => {
     process.stdout.write(JSON.stringify({ releaseReady: true, instanceId,
       originalOffersSha256: report.originalOffersSha256,
       originalServiceConfigSha256: report.originalServiceConfigSha256,
-      listener: session.url, mode: session.mode, cacheControlAvailable: control !== null }) + '\n');
+      listener: session.url, mode: session.mode, cacheControlAvailable: control !== null,
+      ...(session.jsonrpc && session.operations ? { operations: {
+        url: session.operations.url, availability: session.operations.availabilityUrl,
+        availabilityControl: session.operations.availabilityControlUrl,
+      } } : {}) }) + '\n');
   } catch {
     await session?.close().catch(() => {}); await control?.close().catch(() => {});
     process.stderr.write('RELEASE_CHILD_START_FAILED\n'); process.exitCode = 1;

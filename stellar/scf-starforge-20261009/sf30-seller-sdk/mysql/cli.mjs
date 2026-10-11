@@ -16,6 +16,7 @@ const HELP = `MySQL/MariaDB merchant (Node 22.16+)
   query    --source source.json --query NAME --input input.json [--output NEW_FILE]
   prepare  --source source.json --plan merchant-plan.json --directory NEW_DIRECTORY
   verify   --directory PREPARED_DIRECTORY
+  publisher --help  Extract, review and publish a complete retained dataset
   workspace --source source.json --state PRIVATE_DIRECTORY [--port 8439]
            [--seller-port 0] [--operations-port 0] [--facilitator HTTPS_URL]
   run      --directory PREPARED_DIRECTORY [--port 8423] [--operations-port 8424]
@@ -52,6 +53,7 @@ export async function initMysqlWorkspace(directory) {
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'publisher') return (await import('./publisher/cli.mjs')).main(args.slice(1));
   if (args[0] === 'workspace') return (await import('./workspace/server.mjs')).main(args.slice(1));
   if (!args.length || args.includes('--help')) { process.stdout.write(HELP + '\n'); return; }
   const command = args[0], options = new Map();

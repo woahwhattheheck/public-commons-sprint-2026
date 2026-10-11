@@ -3,6 +3,7 @@ import { performance } from 'node:perf_hooks';
 import { compileMysqlQueries, bindMysqlParameters, describeMysqlQueries,
   projectedStatement, boundedStatement, QueryInputError } from './declaration.mjs';
 import { createMysqlPool, mysqlCall as call, mysqlDeadline } from './lifecycle.mjs';
+import { MysqlDatasetError, mysqlDatasetExtractionOptions, readMysqlDataset } from './publisher/stream.mjs';
 
 export class MysqlSourceError extends Error {
   constructor(code, query, sqlState) {
@@ -76,7 +77,7 @@ function readResult(connection, declaration, values, name, ensureActive) {
 }
 
 function safeError(issue, name) {
-  if (issue instanceof MysqlSourceError || issue instanceof QueryInputError) return issue;
+  if (issue instanceof MysqlSourceError || issue instanceof QueryInputError || issue instanceof MysqlDatasetError) return issue;
   if (issue?.errno === 1792 || issue?.sqlState === '25006') return error('QUERY_READ_ONLY_VIOLATION', name, '25006');
   if ([1205, 1317, 1969, 3024].includes(issue?.errno)) return error('QUERY_TIMEOUT', name, issue.sqlState);
   return error('QUERY_UNAVAILABLE', name, issue?.sqlState);
@@ -127,12 +128,13 @@ export async function createMysqlQuerySource({ connection, queries, maxConnectio
     const issue = error(code, job.name);
     finish(job, issue); job.interrupt?.(issue); release(job, true); pump();
   }
-  async function begin(client, wait) {
+  async function begin(client, wait, extraction = false) {
     await wait(call(client, 'query', 'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ'));
     await wait(call(client, 'query', "SET SESSION time_zone = '+00:00'"));
     // Pin parsing to ordinary quoted strings for the declaration lexer.
     await wait(call(client, 'query', "SET SESSION sql_mode = 'STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"));
-    await wait(call(client, 'query', 'START TRANSACTION READ ONLY'));
+    await wait(call(client, 'query', extraction ?
+      'START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY' : 'START TRANSACTION READ ONLY'));
   }
   async function execute(job) {
     try {
@@ -150,7 +152,7 @@ export async function createMysqlQuerySource({ connection, queries, maxConnectio
       const ensureActive = () => { if (job.done || closed) throw error(closed ? 'SOURCE_CLOSED' : 'QUERY_ABORTED', job.name); };
       if (version.toLowerCase().includes('mariadb')) await wait(call(client, 'query', 'SET SESSION max_statement_time = 0'));
       else await wait(call(client, 'query', 'SET SESSION max_execution_time = 0'));
-      await begin(client, wait); ensureActive();
+      await begin(client, wait, Boolean(job.extraction)); ensureActive();
       // The client deadline covers acquisition, transaction setup, execution and
       // result processing. Cancellation destroys this socket; it is never reused.
       const budget = Math.max(1, Math.floor(job.deadline - performance.now()));
@@ -158,8 +160,12 @@ export async function createMysqlQuerySource({ connection, queries, maxConnectio
         await wait(call(client, 'query', 'SET SESSION max_statement_time = ' + (budget / 1000).toFixed(3)));
       else await wait(call(client, 'query', 'SET SESSION max_execution_time = ' + budget));
       ensureActive();
-      const result = await wait(readResult(client, definition(job.name), job.values, job.name, ensureActive));
-      ensureActive(); await wait(call(client, 'query', 'ROLLBACK')); ensureActive();
+      const result = await wait(job.extraction ? readMysqlDataset(client, definition(job.name), {
+        name: job.name, values: job.values, options: job.extraction, onRow: job.onRow,
+        ensureActive, serverVersion: version, metadata: fieldMetadata, encodeScalar: scalar,
+      }) : readResult(client, definition(job.name), job.values, job.name, ensureActive));
+      ensureActive(); await wait(call(client, 'query', job.extraction ? 'COMMIT' : 'ROLLBACK')); ensureActive();
+      if (job.extraction) result.transaction.committed = true;
       release(job, false); finish(job, null, result);
     } catch (issue) {
       release(job, true); if (!job.done) finish(job, safeError(issue, job.name));
@@ -173,7 +179,7 @@ export async function createMysqlQuerySource({ connection, queries, maxConnectio
       task.finally(() => running.delete(task));
     }
   }
-  function query(name, input, { signal } = {}) {
+  function enqueue(name, input, { signal, extraction, onRow } = {}) {
     try {
       if (closed) throw error('SOURCE_CLOSED');
       if (signal !== undefined && (typeof signal.addEventListener !== 'function' || typeof signal.removeEventListener !== 'function'))
@@ -182,8 +188,8 @@ export async function createMysqlQuerySource({ connection, queries, maxConnectio
       const values = validate(name, input);
       if (pending.size >= maxPending) throw error('SOURCE_BUSY');
       return new Promise((resolve, reject) => {
-        const duration = definition(name).timeoutMs;
-        const job = { name, values, signal, resolve, reject, deadline: performance.now() + duration, done: false };
+        const duration = extraction?.timeoutMs ?? definition(name).timeoutMs;
+        const job = { name, values, signal, extraction, onRow, resolve, reject, deadline: performance.now() + duration, done: false };
         job.interrupted = new Promise((_, reject) => { job.interrupt = reject; });
         job.interrupted.catch(() => {});
         job.abort = () => cancel(job, 'QUERY_ABORTED');
@@ -192,6 +198,12 @@ export async function createMysqlQuerySource({ connection, queries, maxConnectio
         pending.add(job); queue.push(job); pump();
       });
     } catch (issue) { return Promise.reject(issue); }
+  }
+  const query = (name, input, { signal } = {}) => enqueue(name, input, { signal });
+  async function exportDataset(name, input, { signal, onRow, ...supplied } = {}) {
+    if (typeof onRow !== 'function') throw new MysqlDatasetError('DATASET_ROW_HANDLER_REQUIRED');
+    const extraction = mysqlDatasetExtractionOptions(definition(name), supplied);
+    return enqueue(name, input, { signal, extraction, onRow });
   }
   const invalid = issue => ({ status: 422, body: { error: 'QUERY_INPUT_INVALID', code: issue.code, field: issue.field } });
   function route(name, { input = 'query' } = {}) {
@@ -248,7 +260,7 @@ export async function createMysqlQuerySource({ connection, queries, maxConnectio
     if (startup) pool.retire(startup); await close();
     throw deadline.expired ? error('MYSQL_START_TIMEOUT') : issue instanceof MysqlSourceError ? issue : error('SOURCE_START_FAILED', undefined, issue?.sqlState);
   } finally { deadline.close(); }
-  return Object.freeze({ query, validate, route, close,
+  return Object.freeze({ query, exportDataset, validate, route, close,
     describe: () => describeMysqlQueries(compiled),
     inspect: () => ({ schema: 'stellar-forge.mysql-inspection.v1', serverVersion: version,
       transactionMode: 'REPEATABLE READ READ ONLY', queries: describeMysqlQueries(compiled), columnTypes: structuredClone(metadata) }),

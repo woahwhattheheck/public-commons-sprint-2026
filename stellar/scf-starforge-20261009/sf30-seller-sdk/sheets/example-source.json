@@ -1,0 +1,27 @@
+{
+  "schema": "stellar-forge.sheets-source.v1",
+  "spreadsheetId": "YOUR_SPREADSHEET_ID",
+  "connection": {
+    "kind": "google",
+    "accessTokenEnv": "GOOGLE_SHEETS_ACCESS_TOKEN",
+    "maxResponseBytes": 67108864,
+    "timeoutMs": 30000
+  },
+  "queries": {
+    "catalog": {
+      "sheetId": 0,
+      "sheetTitle": "Catalog",
+      "range": "A1:G500",
+      "columns": {
+        "sku": { "column": "A", "header": "sku", "type": "string" },
+        "label": { "column": "B", "header": "label", "type": "string" },
+        "units_available": { "column": "C", "header": "units_available", "type": "integer" },
+        "unit_price": { "column": "D", "header": "unit_price", "type": "number" },
+        "enabled": { "column": "E", "header": "enabled", "type": "boolean" },
+        "serial_id": { "column": "F", "header": "serial_id", "type": "string" },
+        "stock_value": { "column": "G", "header": "stock_value", "type": "number", "formula": "effective" }
+      },
+      "emptyRows": "skip"
+    }
+  }
+}
