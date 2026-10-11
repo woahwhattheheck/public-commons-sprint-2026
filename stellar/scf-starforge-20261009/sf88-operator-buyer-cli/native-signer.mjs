@@ -41,6 +41,8 @@ function pins(options) {
   if (typeof options.expectedPayer !== 'string' || !/^[GC][A-Z2-7]{55}$/.test(options.expectedPayer))
     fail('SIGNER_EXPECTED_PAYER_REQUIRED');
   atomic(options.maxAtomic);
+  const paymentFlow = options.paymentFlow === undefined ? 'authorization' : options.paymentFlow;
+  if (!['authorization','upfront'].includes(paymentFlow)) fail('SIGNER_UNSUPPORTED_PAYMENT_FLOW');
   let rpc;
   try { rpc = new URL(options.rpcUrl ?? NETWORKS[options.network].defaultRpc); }
   catch { fail('SIGNER_RPC_URL_INVALID'); }
@@ -50,7 +52,7 @@ function pins(options) {
       profile.rpcEndpoints.some(endpoint => new URL(endpoint).href === rpc.href)))
     fail('SIGNER_RPC_NETWORK_MISMATCH');
   return Object.freeze({ network: options.network, asset: options.asset, payTo: options.payTo,
-    maxAtomic: options.maxAtomic, expectedPayer: options.expectedPayer, rpcUrl:rpc.href });
+    maxAtomic: options.maxAtomic, expectedPayer: options.expectedPayer, rpcUrl:rpc.href, paymentFlow });
 }
 
 export function validateNativeSignerConfiguration(options) { return pins(options); }
@@ -71,7 +73,7 @@ export function validateNativeSignerInput(payload, configuration) {
       atomic(accepted.amount) > atomic(intent.maxAtomic)) fail('SIGNER_SPEND_CAP_EXCEEDED');
   if (!Number.isSafeInteger(accepted.maxTimeoutSeconds) || accepted.maxTimeoutSeconds < 1 ||
       accepted.maxTimeoutSeconds > 86400 || accepted.extra?.areFeesSponsored !== true ||
-      (accepted.extra?.paymentFlow !== undefined && accepted.extra.paymentFlow !== 'authorization'))
+      (accepted.extra?.paymentFlow === undefined ? 'authorization' : accepted.extra.paymentFlow) !== policy.paymentFlow)
     fail('SIGNER_UNSUPPORTED_STELLAR_TERMS');
   if (!same(intent.acceptedTerms, accepted) ||
       ['scheme', 'network', 'asset', 'payTo', 'amount', 'maxTimeoutSeconds'].some(key => intent[key] !== accepted[key]))
@@ -187,7 +189,7 @@ export async function createOfficialStellarSigner(options) {
           operation:{ intentId:input.intent.intentId, method:input.intent.method,
             url:input.intent.url, expect:{ scheme:'exact', network:policy.network,
               asset:policy.asset, payTo:policy.payTo, maxAtomic:input.intent.maxAtomic,
-              maxTimeoutSeconds:input.intent.maxTimeoutSeconds } },
+              maxTimeoutSeconds:input.intent.maxTimeoutSeconds, paymentFlow:policy.paymentFlow } },
           body:{ present:input.intent.bodyPresent, bytes:input.intent.bodyBytes,
             sha256:input.intent.bodySha256 } } });
         result = await adapter.sign(input);

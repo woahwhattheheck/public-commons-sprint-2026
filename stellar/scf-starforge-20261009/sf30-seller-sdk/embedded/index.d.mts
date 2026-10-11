@@ -11,10 +11,46 @@ export interface SellerApplicationRequest {
   signal: AbortSignal;
   deadlineEpochMillis: number;
 }
+export type SellerStreamFormat = 'sse' | 'ndjson';
+/** Original decoded UTF-8 bytes. The seller validates framing without rewriting records. */
+export interface SellerResponseStream {
+  format: SellerStreamFormat;
+  body: AsyncIterable<Uint8Array>;
+  /** 1 byte–1 GiB; capped by the application's maxStreamBytes. */
+  maxBytes?: number;
+  /** Maximum source chunk, default 1 MiB; maximum 16 MiB. */
+  maxChunkBytes?: number;
+  /** Maximum complete event/record, default 1 MiB; maximum 16 MiB. */
+  maxRecordBytes?: number;
+  /** Maximum complete records, default 100,000; maximum 1,000,000. */
+  maxRecords?: number;
+  /** Generation and delivery lifetime, default 120,000 ms; maximum one hour. */
+  maxDurationMs?: number;
+  /** Time awaiting the next requested chunk, default 30,000 ms; maximum five minutes. */
+  idleTimeoutMs?: number;
+  /**
+   * Called once by the seller, including before iteration and after natural EOF.
+   * Stop the actual producer and release its resources. Undefined means success;
+   * an Error carries cancellation, validation, settlement or delivery failure.
+   */
+  close?: (reason?: Error) => void | Promise<unknown>;
+}
 export interface SellerResponse {
   status?: number;
   headers?: Record<string, string>;
   body?: unknown;
+  stream?: SellerResponseStream;
+}
+export interface SellerStreamingResponse extends SellerResponse {
+  status: 200;
+  headers: Record<string, string>;
+  body?: never;
+  stream: SellerResponseStream;
+}
+export interface SellerStreamingResponseOptions extends SellerResponseStream {
+  status?: 200;
+  /** Defaults to the format's UTF-8 content type; custom headers must remain compatible. */
+  headers?: Record<string, string>;
 }
 export interface SellerRoute {
   id: string;
@@ -96,6 +132,8 @@ export type EmbeddedSellerOptions<Context = unknown> = {
   drainGraceMs?: number;
   maxRequestBytes?: number;
   maxResponseBytes?: number;
+  maxStreamBytes?: number;
+  streamSpoolDirectory?: string;
   admissionTimeoutMs?: number;
   handlerTimeoutMs?: number;
   requestTimeoutMs?: number;
@@ -116,4 +154,10 @@ export interface EmbeddedSeller {
 /** Returns only the value explicitly supplied by this request's host extractor. */
 export declare function getEmbeddedRequestContext<Context = unknown>(): Context | undefined;
 export declare function createEmbeddedSeller<Context = unknown>(options: EmbeddedSellerOptions<Context>): Promise<EmbeddedSeller>;
+/**
+ * Create an original seller response. Default authorization generates completely
+ * before native settlement; the route's explicitly advertised upfront flow can
+ * deliver live after the existing native before-handler receipt.
+ */
+export declare function streamingResponse(options: SellerStreamingResponseOptions): SellerStreamingResponse;
 

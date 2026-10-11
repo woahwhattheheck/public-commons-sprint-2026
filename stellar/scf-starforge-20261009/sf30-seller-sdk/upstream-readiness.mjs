@@ -89,26 +89,36 @@ export function protectUpstream(handler, policy, { maxInFlight, monotonic = () =
     catch { result = response(502, 'UPSTREAM_UNAVAILABLE', 1000); }
     const attempt = result?.[UPSTREAM_ATTEMPT];
     if (ticket.recovery && attempt?.dispatched !== false) totals.recoveryCalls++;
-    // Results from calls already active when the circuit opened cannot close it
-    // or extend it. The one recovery call owns the next availability decision.
-    if (ticket.generation === generation) {
-      const state = outcome(result);
-      if (attempt?.dispatched !== false) {
-        const status = attempt?.status ?? result?.status, code = attempt?.error ?? result?.body?.error;
-        lastStatus = Number.isInteger(status) ? status : null;
-        lastError = FAILURES.has(code) || code === 'UPSTREAM_REQUEST_FAILED' ? code : null;
-      }
-      if (state === 'failed') {
-        failures++;
-        if (ticket.recovery || failures >= policy.failureThreshold) trip(ticket.recovery);
-      } else if (state === 'healthy') {
-        failures = 0;
-        if (ticket.recovery) { open = false; openUntil = 0; cooldownMs = policy.resetAfterMs; generation++; totals.recovered++; }
+    const complete = observed => {
+      const observedAttempt = observed?.[UPSTREAM_ATTEMPT];
+      // Results from calls already active when the circuit opened cannot close
+      // it or extend it. The one recovery call owns the next decision.
+      if (ticket.generation === generation) {
+        const state = outcome(observed);
+        if (observedAttempt?.dispatched !== false) {
+          const status = observedAttempt?.status ?? observed?.status, code = observedAttempt?.error ?? observed?.body?.error;
+          lastStatus = Number.isInteger(status) ? status : null;
+          lastError = FAILURES.has(code) || code === 'UPSTREAM_REQUEST_FAILED' ? code : null;
+        }
+        if (state === 'failed') {
+          failures++;
+          if (ticket.recovery || failures >= policy.failureThreshold) trip(ticket.recovery);
+        } else if (state === 'healthy') {
+          failures = 0;
+          if (ticket.recovery) { open = false; openUntil = 0; cooldownMs = policy.resetAfterMs; generation++; totals.recovered++; }
+        }
       }
       // A locally invalid recovery request releases the trial without declaring
       // the backend healthy or starting another network request automatically.
-    }
-    if (trial === ticket) trial = null;
+      if (trial === ticket) trial = null;
+    };
+    // A stream's response headers do not prove the backend finished. Keep its
+    // capacity and recovery trial through the original source's terminal result.
+    if (attempt?.completion) attempt.completion.then(final => {
+      complete({status:final.status,body:final.error ? {error:final.error} : undefined,
+        [UPSTREAM_ATTEMPT]:final});
+    });
+    else complete(result);
     return result;
   }
   protectedHandler.admit = context => {
