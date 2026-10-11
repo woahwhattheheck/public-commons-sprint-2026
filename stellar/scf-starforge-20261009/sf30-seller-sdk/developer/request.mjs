@@ -2,11 +2,13 @@
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const quote = text => "'" + String(text).replace(/'/g, "'\\''") + "'";
+const supportedMethods = new Set(['GET', 'HEAD', 'DELETE', 'POST', 'PUT', 'PATCH']);
+const jsonBodyMethods = new Set(['POST', 'PUT', 'PATCH']);
 
 export function buildUnpaidRequest(operation, values, browserOrigin) {
   const route = operation['x-seller-route'];
   const offer = operation['x-x402-payment-required'];
-  if (!route || !['GET', 'HEAD', 'POST'].includes(route.method) || !object(values)) throw new TypeError('Seller operation and request inputs required');
+  if (!route || !supportedMethods.has(route.method) || !object(values)) throw new TypeError('Seller operation and request inputs required');
   let path = route.path.split('/').map(segment => {
     if (!segment.startsWith(':')) return segment;
     const name = segment.slice(1), value = values.path?.[name];
@@ -36,7 +38,7 @@ export function buildUnpaidRequest(operation, values, browserOrigin) {
   if (local.href.length > 2048 || publicUrl.href.length > 2048) throw new RangeError('Request URL exceeds the seller 2048-character limit');
   const init = { method: route.method, credentials: 'omit', redirect: 'error', cache: 'no-store', headers: { accept: 'application/json' } };
   let command = `curl --include --max-time 15${route.method === 'HEAD' ? ' --head' : ' --request ' + route.method} ` + quote(publicUrl.href);
-  if (route.method === 'POST') {
+  if (jsonBodyMethods.has(route.method)) {
     if (typeof values.body !== 'string') throw new TypeError('JSON body text required');
     JSON.parse(values.body);
     if (new TextEncoder().encode(values.body).length > 1024 * 1024) throw new RangeError('JSON body exceeds 1 MiB');

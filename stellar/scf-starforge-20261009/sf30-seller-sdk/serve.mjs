@@ -11,6 +11,9 @@ import { compileServicePath } from './route-path.mjs';
 import { readJsonResponseFile, validateResponseFile } from './response-file.mjs';
 import { createSellerDeveloperPortal } from './developer-portal.mjs';
 import { createSellerLifecycle } from './lifecycle.mjs';
+import { compileHttpSellerOffer } from './seller.mjs';
+import { responseAssetLimits, validateResponseAssetRoute, prepareResponseAssets,
+  composeAssetAdmission, compileAssetRouteOffer } from './response-asset.mjs';
 
 const SCHEMA = 'stellar-forge.seller-service.v1';
 const HOST = '127.0.0.1';
@@ -24,7 +27,8 @@ Without --facilitator the server serves real SF30 payment challenges only.
 --handlers loads application functions from a trusted local ESM module.
 The listener binds to 127.0.0.1. Use an operator-managed HTTPS proxy for deployment.
 Inspect GET /_seller/health and GET /_seller/offers to see the running configuration.
-Open /_seller/docs for the developer explorer or /_seller/openapi.json for OpenAPI.`;
+Open /_seller/docs for the developer explorer or /_seller/openapi.json for OpenAPI.
+File products: node asset-cli.mjs --help (operator guide: ASSETS.md).`;
 
 function validateConfig(config) {
   if (!object(config) || config.schema !== SCHEMA || !Array.isArray(config.routes) ||
@@ -33,6 +37,7 @@ function validateConfig(config) {
   }
   validateAdmissionTimeout(config.admissionTimeoutMs ?? 2000);
   validateHandlerTimeout(config.handlerTimeoutMs ?? 30000);
+  responseAssetLimits(config);
   const seen = new Set();
   for (const route of config.routes) {
     if (!object(route) || !/^[A-Za-z0-9_-]{1,64}$/.test(route.id ?? '') ||
@@ -55,10 +60,11 @@ function validateConfig(config) {
     } else if (route.path.includes(':')) {
       throw new TypeError('Dynamic service paths require an imported offer with pathParams schema');
     }
-    if (['handler', 'response', 'responseFile'].filter(key => OWN(route, key)).length !== 1) {
-      throw new TypeError('Each route must choose exactly one handler export, response or responseFile');
+    if (['handler', 'response', 'responseFile', 'responseAsset'].filter(key => OWN(route, key)).length !== 1) {
+      throw new TypeError('Each route must choose exactly one handler export, response, responseFile or responseAsset');
     }
     if (OWN(route, 'responseFile')) validateResponseFile(route.responseFile);
+    if (OWN(route, 'responseAsset')) validateResponseAssetRoute(route);
     if (OWN(route, 'handler') && !/^[A-Za-z_$][\w$]{0,127}$/.test(route.handler)) {
       throw new TypeError('Invalid application handler export name');
     }
@@ -86,6 +92,7 @@ export async function readSellerConfig(path) {
   const config = validateConfig(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
   for (const route of config.routes) {
     if (OWN(route, 'responseFile')) route.responseFile = resolve(dirname(resolve(path)), route.responseFile);
+    if (OWN(route, 'responseAsset')) route.responseAsset.file = resolve(dirname(resolve(path)), route.responseAsset.file);
   }
   return config;
 }
@@ -115,8 +122,11 @@ export async function startSellerService({ config, port = 8423, handlers = {},
       throw new TypeError(`Admission export missing: ${route.admit}`);
     }
   }
-  const admissions = new Map(config.routes.map(route =>
-    [route.id, createConfiguredAdmission(route, handlers)]));
+  const { assets, retainedBytes, maxResponseBytes } = await prepareResponseAssets(config);
+  const admissions = new Map(config.routes.map(route => {
+    const application = createConfiguredAdmission(route, handlers);
+    return [route.id, assets.has(route.id) ? composeAssetAdmission(application) : application];
+  }));
   const inputValidation = new Set(config.routes.filter(route => route.validateInput === true).map(route => route.id));
   const fileResponses = new Map();
   for (const route of config.routes) {
@@ -146,23 +156,28 @@ export async function startSellerService({ config, port = 8423, handlers = {},
     const compiled = compileSellerRoutes(config.routes.map(route => ({
       id: route.id,
       ...(admissions.get(route.id) ? { admit: admissions.get(route.id) } : {}),
-      ...(route.offer ? { offer: route.offer } : { definition: { ...route.definition, url: origin + route.path } }),
-      handler: route.handler ? handlers[route.handler] : async () => ({
+      ...(assets.has(route.id) ? { offer: compileAssetRouteOffer(route, origin,
+        compileHttpSellerOffer, !config.publicOrigin) } :
+        route.offer ? { offer: route.offer } : { definition: { ...route.definition, url: origin + route.path } }),
+      handler: assets.has(route.id) ? assets.get(route.id).handler : route.handler ? handlers[route.handler] : async () => ({
         status: 200, headers: { 'content-type': 'application/json' },
         body: fileResponses.has(route.id) ? Buffer.from(fileResponses.get(route.id)) : structuredClone(route.response),
       }),
     })), { allowLocalhost: !config.publicOrigin });
     const nativeServer = nativeFactory ? await nativeFactory(compiled) : null;
     if (nativeFactory && !nativeServer) throw new TypeError('Native factory did not return a resource server');
-    const resources = createSellerResourceHandler({ compiled, nativeServer,
+    const resources = createSellerResourceHandler({ compiled, nativeServer, maxResponseBytes,
       admissionTimeoutMs: config.admissionTimeoutMs ?? 2000,
       handlerTimeoutMs: config.handlerTimeoutMs ?? 30000 });
     const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
     const developerPortal = createSellerDeveloperPortal({ compiled, mode });
-    const info = { schema: SCHEMA, mode, routes: compiled.routes.map(route => ({
+    const info = { schema: SCHEMA, mode,
+      ...(assets.size ? { assetSnapshotBytes: retainedBytes, maxResponseBytes } : {}),
+      routes: compiled.routes.map(route => ({
       id: route.id, method: route.method, url: route.offer.resource.url,
       admission: typeof route.admit === 'function',
       inputValidation: inputValidation.has(route.id),
+      ...(assets.has(route.id) ? { asset: assets.get(route.id).metadata } : {}),
       ...(route.binding.dynamic ? { routeTemplate: route.path } : {}),
     })) };
     dispatch = (req, res) => {
