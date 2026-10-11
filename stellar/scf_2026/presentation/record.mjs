@@ -65,7 +65,9 @@ const moduleRoot = join(cfg.source, 'stellar-forge/mcp-paid-agent');
 const {SqliteQuoteStore} = await import(pathToFileURL(join(moduleRoot, 'quote-store.mjs')));
 const {McpResultStore, importRetainedMcpResult} = await import(pathToFileURL(join(moduleRoot, 'result-store.mjs')));
 const {startMcpWorkspace} = await import(pathToFileURL(join(moduleRoot, 'serve.mjs')));
-const {chromium} = await import(pathToFileURL(cfg.playwright));
+const playwrightModule = await import(pathToFileURL(cfg.playwright));
+const chromium = playwrightModule.chromium ?? playwrightModule.default?.chromium;
+check(typeof chromium?.launch === 'function', 'The configured Playwright module has no Chromium launcher.');
 
 let sourceStore;
 let sourceQuotes;
