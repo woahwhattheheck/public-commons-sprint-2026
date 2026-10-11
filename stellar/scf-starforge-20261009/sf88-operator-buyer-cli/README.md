@@ -100,3 +100,15 @@ indicates a file-save or file-cleanup problem when the buyer/evidence adapter di
 not return an error. An evidence-recording failure still reports any returned
 buyer status and available local-file outcome. Keep those results and reconcile
 the original operation; neither error code authorizes another purchase.
+
+## Interruptions and local cleanup
+
+SIGINT/SIGTERM now request cancellation through the original buyer and response writer. The command awaits local cleanup before exiting 130/143. A failed evidence pipeline also cancels an incomplete download immediately; an already published output remains saved. A rejected non-2xx response body is closed when the writer cannot consume it. These paths never make an additional buyer call.
+
+The output reservation is prepared before loading the trusted signer module. If setup fails, the CLI reports any response-writer partial path or cleanup warnings along with the original error code. Completed-file cleanup warnings retain exit code 3. Nonempty partial files remain private and incomplete at the reported path; inspect that path and the original evidence/reservation before considering any further operation.
+
+If evidence processing fails after a native buyer error, the summary now retains that original error's code, its known payment-sent state (or null when unknown), and the bounded original reservation metadata. `interrupted` and `retry:NO_AUTOMATIC_RETRY` accompany the original buyer status, independently produced outcome report and separate `responseFile.status`. Local file output is not payment proof, and a failed save does not undo an operation.
+
+This increment retains the original SF88 launcher (PR #767), response-output integration (PR #795), and unchanged SF31 writer (PR #774), SF81 approval bridge and SF82 evidence adapter.
+
+Focused local composition check (Node 22.3+ with module mocks): `node --experimental-test-module-mocks --test stellar/scf-starforge-20261009/sf88-operator-buyer-cli/test/response-delivery.test.mjs`. It uses original SF31 transport/writer and SF82 evidence with a substituted privileged SF81 constructor and local Response streams; it does not execute terminal approval, a signer, network or payment.
