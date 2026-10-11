@@ -4,6 +4,7 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { receiptTime, exactUsdMinor, reconcileCollections, collectionQueueCsv } from './collections.mjs';
+import { applyOutreachReview } from './outreach-board.mjs';
 
 const TYPES = new Set(['OPEN','CANCELLED','CLOSED','UNKNOWN']);
 const PROOF = new Set(['DOCUMENTED','SELF_REPORTED','UNKNOWN']);
@@ -119,7 +120,7 @@ export function evaluate(op, now = new Date()) {
 }
 
 // Use the batch entry point for totals: transaction conflicts span opportunities.
-export function evaluateAll(opportunities, now = new Date()) {
+export function evaluateAll(opportunities, now = new Date(), options = {}) {
   insist(Array.isArray(opportunities) && opportunities.length > 0, 'opportunities[] required');
   const decisions = opportunities.map(op => evaluate(op, now));
   insist(uniq(decisions.map(r=>r.key)).length === decisions.length, 'Duplicate buyer+opportunity+revision; merge ownership before proceeding');
@@ -133,7 +134,8 @@ export function evaluateAll(opportunities, now = new Date()) {
     if (decision.stage === 'PAYMENT_CONFIRMED' && !collection.currencies.some(c=>c.netMinor > 0)) decision.stage = 'INVOICE_SENT';
     if (collection.reviewRequired) decision.nextActions.unshift('Review quarantined collection receipts in collections.json; no automatic collection or contact');
   });
-  return { decisions, collections };
+  const outreach = applyOutreachReview(opportunities, decisions, options.outreachSnapshot, now);
+  return { decisions, collections, outreach };
 }
 
 export function renderMarkdown(rs,now){
@@ -142,6 +144,7 @@ export function renderMarkdown(rs,now){
     out+=`\n## ${r.buyer.name} · ${r.buyer.id} (${r.buyer.revision})\n\n`;
     out+=`**Owner:** ${r.owner} · **Stage:** ${r.stage} · **Decision:** ${r.readyForOwnerApproach?'OWNER_APPROACH_CANDIDATE':'HOLD'} · **Recorded net USD:** ${money(r.recordedNetUsd)} (${r.cashReconciliation})\n\n`;
     if (r.collections) out+=`**Collections:** ${r.collections.invoices.map(x=>`${x.invoiceId}: ${x.state}, ${x.outstandingMinor ?? 'unknown'} ${x.currency} minor units outstanding${x.overdue?' (overdue)':''}`).join('; ')||'No valid invoice recorded'}. Review required: ${r.collections.reviewRequired}.\n\n`;
+    if (r.outreachPreflight) out+=`**Outreach snapshot:** ${r.outreachPreflight.decision}; ${r.outreachPreflight.reasons.join('; ')||'no collision observed in supplied snapshot; this is not send authorization'}.\n\n`;
     out+=`Source: ${r.buyer.sourceUrl}\n\nDeadline: ${r.buyer.deadlineText} (${r.deadlineState}). Source review: ${r.sourceReview}.\n\n`;
     out+=`Proposed specialist slice: ${r.workshare.summary||'UNDEFINED'}; fee ${money(r.workshare.feeUsd)}, delivery cost ${money(r.workshare.costUsd)}, margin ${r.workshare.margin===null?'UNKNOWN':(100*r.workshare.margin).toFixed(1)+'%'}; ${r.workshare.feeStatus}.\n\n`;
     out+=`Prime fit: ${r.partners.map(p=>`${p.name} ${p.documented}/${p.required} documented requirements`).join('; ')||'UNASSIGNED'}\n\n`;
@@ -174,23 +177,26 @@ export function renderHtml(rs,now){
   const blocks=rs.map(r=>{
     const collectionRows=(r.collections?.invoices||[]).map(x=>`<tr><td>${safe(x.invoiceId)}</td><td>${safe(x.currency)}</td><td>${safe(x.netMinor)}</td><td>${safe(x.outstandingMinor??'Unknown')}</td><td>${safe(x.state)}${x.overdue?' · overdue':''}</td></tr>`).join('');
     const collectionView=r.collections?`<h3>Recorded collections</h3><p>Workflow stage is separate from invoice settlement. Integer minor units per stated currency; no currency conversion. ${r.collections.reviewRequired?'Review required: see collections.json for rejected or conflicting receipts.':'Receipts remain operator supplied; independently verify with the provider.'}</p><table><tr><th>Invoice</th><th>Currency</th><th>Net received</th><th>Outstanding</th><th>State</th></tr>${collectionRows||'<tr><td colspan="5">No valid invoice recorded</td></tr>'}</table>`:'';
+    const outreachView=r.outreachPreflight?`<h3>Outreach snapshot</h3><p>${safe(r.outreachPreflight.decision)}: ${safe(r.outreachPreflight.reasons.join('; ')||'No collision observed in supplied snapshot. Separate live checks, reservation and owner authorization still apply.')}</p>`:'';
     const issues=r.blockers.map(s=>`<li>${safe(s)}</li>`).join('');
     const partnerRows=r.partners.map(p=>`<tr><td>${safe(p.name)}</td><td>${p.documented}/${p.required}</td><td>${p.eligibleToConsider?'DOCUMENTED':'HOLD'}</td><td>${safe(p.gaps.map(g=>g.requirementId).join(', '))}</td></tr>`).join('');
-    return `<section><div class="top"><h2>${safe(r.buyer.name)}</h2><span class="status">${r.readyForOwnerApproach?'OWNER REVIEW':'HOLD'}</span></div><p>${safe(r.buyer.id)} · ${safe(r.buyer.revision)} · ${safe(r.owner)} · Workflow: ${safe(r.stage)}</p><p>Cash basis: ${safe(r.cashReconciliation)}; operator-recorded, not provider-verified.</p><p><a href="${safe(r.buyer.sourceUrl)}">First-party source</a> · ${safe(r.deadlineState)}</p><div class="metrics"><div><label>Documented prime</label><strong>${safe(r.selectedPrime||'Not qualified')}</strong></div><div><label>Price</label><strong>${safe(money(r.workshare.feeUsd))}</strong></div><div><label>Recorded net USD</label><strong>${safe(money(r.recordedNetUsd))}</strong></div></div>${collectionView}<h3>Mandatory prime requirements</h3><table><tr><th>Candidate</th><th>Documented</th><th>Gate</th><th>Missing</th></tr>${partnerRows}</table><h3>Blocking gates</h3><ul>${issues||'<li>None recorded; release remains with owner</li>'}</ul><h3>Next actions</h3><ol>${r.nextActions.map(s=>`<li>${safe(s)}</li>`).join('')}</ol></section>`;
+    return `<section><div class="top"><h2>${safe(r.buyer.name)}</h2><span class="status">${r.readyForOwnerApproach?'OWNER REVIEW':'HOLD'}</span></div><p>${safe(r.buyer.id)} · ${safe(r.buyer.revision)} · ${safe(r.owner)} · Workflow: ${safe(r.stage)}</p><p>Cash basis: ${safe(r.cashReconciliation)}; operator-recorded, not provider-verified.</p><p><a href="${safe(r.buyer.sourceUrl)}">First-party source</a> · ${safe(r.deadlineState)}</p><div class="metrics"><div><label>Documented prime</label><strong>${safe(r.selectedPrime||'Not qualified')}</strong></div><div><label>Price</label><strong>${safe(money(r.workshare.feeUsd))}</strong></div><div><label>Recorded net USD</label><strong>${safe(money(r.recordedNetUsd))}</strong></div></div>${collectionView}${outreachView}<h3>Mandatory prime requirements</h3><table><tr><th>Candidate</th><th>Documented</th><th>Gate</th><th>Missing</th></tr>${partnerRows}</table><h3>Blocking gates</h3><ul>${issues||'<li>None recorded; release remains with owner</li>'}</ul><h3>Next actions</h3><ol>${r.nextActions.map(s=>`<li>${safe(s)}</li>`).join('')}</ol></section>`;
   }).join('');
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Buyer-to-prime operator board</title><style>:root{font-family:system-ui,-apple-system,sans-serif;color:#19263c;background:#f4f6fa}body{max-width:1090px;margin:38px auto;padding:0 18px}h1{font-size:2rem}p{line-height:1.5;color:#44536a}section{background:#fff;padding:28px;border-radius:16px;box-shadow:0 8px 30px #15254112;margin:20px 0}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.top h2{margin:0}.status{font-weight:700;color:#763600;background:#ffefd7;padding:8px 12px;border-radius:9px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:22px 0}.metrics div{padding:16px;background:#f1f5fa;border-radius:10px}label{display:block;font-size:.8rem;color:#637085;margin-bottom:8px}strong{display:block;font-size:1.1rem;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;text-align:left}td,th{border-bottom:1px solid #dce2eb;padding:10px 6px;overflow-wrap:anywhere}th{color:#4b5a71}li{line-height:1.5;margin:7px 0}a{color:#075fba}.disclaimer{padding:16px;border-left:4px solid #59708a}</style><main><h1>Buyer → prime → paid work</h1><p class="disclaimer">Offline operator decision board, generated ${safe(now.toISOString())}. Documentation status is declared by inputs, not validated by this program. Nothing is submitted, contacted, purchased or paid.</p>${blocks}</main></html>`;
 }
 
 async function main(){
   const args=process.argv.slice(2);
-  if(args.includes('--help')||args.length===0){console.log('Usage: node pipeline.mjs <opportunities.json> <output-dir> [--now=ISO]');return;}
+  if(args.includes('--help')||args.length===0){console.log('Usage: node pipeline.mjs <opportunities.json> <output-dir> [--now=ISO] [--outreach-snapshot=path.json]');return;}
   insist(args.length>=2,'Provide input and output directory');
   const raw=JSON.parse(await readFile(args[0],'utf8'));
   insist(Array.isArray(raw.opportunities) && raw.opportunities.length>0,'opportunities[] required');
   const override=args.find(x=>x.startsWith('--now='));
   const now=new Date(override?override.slice(6):Date.now());
   insist(!Number.isNaN(now.getTime()),'Invalid --now');
-  const { decisions: rs, collections } = evaluateAll(raw.opportunities,now);
+  const snapshotArg=args.find(x=>x.startsWith('--outreach-snapshot='));
+  const outreachSnapshot=snapshotArg?JSON.parse(await readFile(snapshotArg.slice('--outreach-snapshot='.length),'utf8')):undefined;
+  const { decisions: rs, collections, outreach } = evaluateAll(raw.opportunities,now,{outreachSnapshot});
   const out=path.resolve(args[1]);
   await mkdir(out,{recursive:true});
   await writeFile(path.join(out,'decisions.json'),JSON.stringify({generatedAt:now.toISOString(),opportunities:rs},null,2)+'\n');
@@ -199,6 +205,7 @@ async function main(){
   await writeFile(path.join(out,'index.html'),renderHtml(rs,now));
   await writeFile(path.join(out,'collections.json'),JSON.stringify(collections,null,2)+'\n');
   await writeFile(path.join(out,'collection-queue.csv'),collectionQueueCsv(collections));
-  console.log(JSON.stringify({generatedAt:now.toISOString(),fileCount:6,opportunities:rs.length,hold:rs.filter(r=>!r.readyForOwnerApproach).length,ownerReview:rs.filter(r=>r.readyForOwnerApproach).length,recordedCash:(collections.currencies.find(c=>c.currency==='USD')?.netMinor??0)/100,recordedByCurrency:collections.currencies,collectionReviewItems:collections.issues.length,outputDir:out},null,2));
+  await writeFile(path.join(out,'outreach-preflight.json'),JSON.stringify(outreach??{generatedAt:now.toISOString(),decision:'NOT_EVALUATED',reason:'NO_MAILBOX_SNAPSHOT_SUPPLIED'},null,2)+'\n');
+  console.log(JSON.stringify({generatedAt:now.toISOString(),fileCount:7,opportunities:rs.length,hold:rs.filter(r=>!r.readyForOwnerApproach).length,ownerReview:rs.filter(r=>r.readyForOwnerApproach).length,recordedCash:(collections.currencies.find(c=>c.currency==='USD')?.netMinor??0)/100,recordedByCurrency:collections.currencies,collectionReviewItems:collections.issues.length,outputDir:out},null,2));
 }
 if(process.argv[1] && import.meta.url===new URL(`file://${path.resolve(process.argv[1])}`).href){main().catch(e=>{console.error(e.message);process.exitCode=1;});}
