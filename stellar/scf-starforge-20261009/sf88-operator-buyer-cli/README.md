@@ -16,6 +16,10 @@ For a merchant POST with an issued operation capability, use [private operation
 tickets](OPERATION_TICKETS.md). The existing prepare command accepts the body
 and ticket as private files; workspace and inbox imports preserve the exact
 ticket while review displays only its operation key, request hash and expiry.
+The merchant's **complete buyer request** download can be moved to another host
+and imported with `--import-operation --file ABS --dir NEW_PRIVATE_DIRECTORY
+--accept 0`. The original importer retains exact input bytes and creates the
+local review config; the buyer supplies its own operator settings afterward.
 
 Operator-side executable joining SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 checkout recording. The native operator workspace supplies the official Stellar SDK signer adapter and private local setup for the selected testnet or mainnet network. Existing operator-provided signer modules remain supported. The example below uses testnet; [MAINNET.md](MAINNET.md) covers the complete mainnet workspace and accounting workflow.
 
