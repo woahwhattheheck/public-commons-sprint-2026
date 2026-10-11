@@ -12,6 +12,7 @@ import {evaluate as postPreflight} from '../sf72-post-only-preflight/preflight.m
 import {buildPacket, buildRuntimePacket, renderHtml, renderChecklist} from '../sf77-merchant-workorder/workorder.mjs';
 import {openCaseStore, inspectCaseWriter, recoverCaseWriter, CASE_STATUSES, caseMetadata} from './case-store.mjs';
 import {MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
+import {openHandoffDesk, handoffProblem} from './handoff-store.mjs';
 import {inspectRuntimeFiles, reviewRuntime, exportRuntimeHandoff, importRuntimeHandoff,
   MAX_RUNTIME_BYTES, MAX_HANDOFF_BYTES} from './runtime-support.mjs';
 
@@ -23,6 +24,7 @@ const ASSETS = Object.freeze({
   '/workspace-files.mjs': ['workspace-files.mjs', 'text/javascript; charset=utf-8'],
   '/case-desk.mjs': ['case-desk.mjs', 'text/javascript; charset=utf-8'],
   '/runtime-desk.mjs': ['runtime-desk.mjs', 'text/javascript; charset=utf-8'],
+  '/handoff-desk.mjs': ['handoff-desk.mjs', 'text/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
 });
 const ROOT = new URL('.', import.meta.url);
@@ -139,7 +141,7 @@ export function workorderFromSources(input) {
 }
 
 // Injection is only for the focused loopback HTTP-contract check, not for deployed usage.
-export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null} = {}) {
+export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null} = {}) {
   let active = false;
   const server = createServer(async (req, res) => {
     for (const [key, value] of Object.entries(HEADERS)) res.setHeader(key, value);
@@ -153,7 +155,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
     }
     const route = (req.url || '').split('?')[0];
     if (req.method === 'GET' && route === '/health') {
-      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore)}); return;
+      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore),handoffsEnabled:Boolean(handoffDesk)}); return;
     }
     if (req.method === 'GET' && Object.hasOwn(ASSETS, route)) {
       try {
@@ -161,6 +163,52 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         const data = await readFile(new URL(filename, ROOT));
         res.writeHead(200, {'content-type': mime}); res.end(data);
       } catch { json(res, 500, {error: 'STATIC_ASSET_UNAVAILABLE'}); }
+      return;
+    }
+    if (route === '/api/handoffs' || route.startsWith('/api/handoffs/')) {
+      if ((req.headers.origin && req.headers.origin !== ownOrigin) ||
+          (req.headers['sec-fetch-site'] && !['same-origin','none'].includes(req.headers['sec-fetch-site'])) ||
+          (req.method !== 'GET' && req.headers.origin !== ownOrigin)) {
+        json(res,403,{error:'ORIGIN_MISMATCH'});return;
+      }
+      if (!handoffDesk) {
+        json(res,route==='/api/handoffs/profiles'&&req.method==='GET'?200:503,
+          {enabled:false,sources:[],error:'HANDOFF_SOURCES_DISABLED'});return;
+      }
+      try {
+        const url=new URL(req.url,ownOrigin);
+        if(route==='/api/handoffs/profiles'&&req.method==='GET') {
+          if(url.search)throw new TypeError('Unexpected handoff profile query');
+          json(res,200,handoffDesk.profiles());return;
+        }
+        if(route==='/api/handoffs'&&req.method==='GET') {
+          if([...url.searchParams.keys()].some(key=>!['source','offset','limit'].includes(key)))throw new TypeError('Unexpected handoff list filter');
+          json(res,200,await handoffDesk.list(url.searchParams.get('source'),{
+            offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??20)}));return;
+        }
+        if(url.search)throw new TypeError('Unexpected handoff query');
+        const match=/^\/api\/handoffs\/([a-z0-9][a-z0-9_-]{0,63})\/([a-z0-9][a-z0-9_-]{0,63})(?:\/(inspect|receive|stop|open|files\/([a-z0-9][a-z0-9_.-]{0,63})))?$/.exec(route);
+        if(!match){json(res,404,{error:'NOT_FOUND'});return;}
+        const [,source,exportId,action,name]=match;
+        if(req.method==='GET'&&!action){json(res,200,await handoffDesk.view(source,exportId));return;}
+        if(req.method==='GET'&&name){
+          const file=await handoffDesk.file(source,exportId,name);
+          res.writeHead(200,{'content-type':'application/octet-stream','content-length':file.bytes.length,
+            'content-disposition':'attachment; filename="'+file.name+'"','etag':'"'+file.sha256+'"'});res.end(file.bytes);return;
+        }
+        if(req.method==='POST'&&['inspect','receive','stop','open'].includes(action)){
+          const input=await boundedBody(req);
+          if(!input||typeof input!=='object'||Array.isArray(input)||action!=='receive'&&Object.keys(input).length)
+            throw new TypeError('Use the displayed handoff controls');
+          const result=action==='inspect'?await handoffDesk.inspect(source,exportId):action==='receive'?await handoffDesk.receive(source,exportId,input):
+            action==='stop'?await handoffDesk.stop(source,exportId):await handoffDesk.reopen(source,exportId);
+          json(res,action==='receive'?202:200,result);return;
+        }
+        json(res,405,{error:'METHOD_NOT_ALLOWED'});
+      }catch(error){
+        if(error instanceof TypeError){json(res,422,{error:'HANDOFF_INVALID_INPUT',detail:'Use the displayed source, export ID and handoff controls.'});return;}
+        const problem=handoffProblem(error);json(res,problem.status,{error:problem.error,detail:problem.detail});
+      }
       return;
     }
     if (route === '/api/cases' || route.startsWith('/api/cases/')) {
@@ -300,15 +348,21 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
   return server;
 }
 
-export async function start({port = 0, allowLoopback = false, runCapture = capture, casesDir = null} = {}) {
+export async function start({port = 0, allowLoopback = false, runCapture = capture, casesDir = null, handoffSources = null, environment = process.env} = {}) {
   if (!Number.isSafeInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid port');
   const caseStore = casesDir === null ? null : await openCaseStore(casesDir);
-  const server = createConsoleServer({allowLoopback, runCapture, caseStore});
-  await new Promise((resolveListen, reject) => {
-    server.once('error', reject);
-    server.listen(port, '127.0.0.1', resolveListen);
-  });
-  return {server, url: `http://127.0.0.1:${server.address().port}/`};
+  const handoffDesk = handoffSources === null ? null : await openHandoffDesk({configPath:handoffSources,casesDir,environment});
+  const server = createConsoleServer({allowLoopback, runCapture, caseStore,handoffDesk});
+  try {await new Promise((resolveListen, reject) => {
+    server.once('error', reject);server.listen(port, '127.0.0.1', resolveListen);
+  });}catch(error){await handoffDesk?.close();throw error;}
+  let closing;
+  const close=()=>closing??=(async()=>{
+    await handoffDesk?.close();
+    await new Promise((done,reject)=>{server.close(error=>error?reject(error):done());server.closeAllConnections();});
+  })();
+  server.once('close',()=>{void handoffDesk?.close();});
+  return {server, url: `http://127.0.0.1:${server.address().port}/`,close};
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -325,24 +379,27 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         if (writerAction) throw new TypeError('Choose one case writer operation');
         writerAction = flag; continue;
       }
-      if (!['--port','--cases-dir'].includes(flag)) throw new TypeError('Unknown option: ' + flag);
+      if (!['--port','--cases-dir','--handoff-sources'].includes(flag)) throw new TypeError('Unknown option: ' + flag);
       const value = separator < 0 ? args[++index] : token.slice(separator + 1);
       if (!value || value.startsWith('--')) throw new TypeError('Missing value for ' + flag);
       if (flag === '--port' && !/^\d+$/.test(value)) throw new TypeError('Invalid port');
-      options[flag === '--port' ? 'port' : 'casesDir'] = flag === '--port' ? Number(value) : value;
+      options[flag === '--port' ? 'port' : flag === '--cases-dir' ? 'casesDir' : 'handoffSources'] = flag === '--port' ? Number(value) : value;
     }
     if (writerAction) {
-      if (!options.casesDir || seen.has('--port') || seen.has('--allow-loopback'))
+      if (!options.casesDir || seen.has('--port') || seen.has('--allow-loopback') || seen.has('--handoff-sources'))
         throw new TypeError('A case writer operation requires --cases-dir and does not start a server');
       const action = writerAction === '--inspect-case-writer' ? inspectCaseWriter : recoverCaseWriter;
       process.stdout.write(JSON.stringify(await action(options.casesDir), null, 2) + '\n');
     } else {
-      const {url} = await start(options);
+      const {url,close} = await start(options);
+      let stopping=false;
+      const stop=()=>{if(stopping)return;stopping=true;void close().catch(()=>{process.stderr.write('SF74 shutdown could not finish. Retained work remains available.\n');process.exitCode=1;});};
+      process.once('SIGINT',stop);process.once('SIGTERM',stop);
       process.stdout.write('Open locally: '+url+'\n' +
         (options.casesDir ? 'Merchant case desk enabled.\n' : 'Session mode. Use --cases-dir /absolute/private/directory to retain merchant cases.\n'));
     }
   } catch (error) {
-    process.stderr.write('SF74: ' + String(error.message) + '\nUsage: node server.mjs [--cases-dir /absolute/private/directory] [--port 8784] [--allow-loopback]\n' +
+    process.stderr.write('SF74: ' + String(error.message) + '\nUsage: node server.mjs [--cases-dir /absolute/private/directory] [--handoff-sources PRIVATE_CONFIG.json] [--port 8784] [--allow-loopback]\n' +
       '       node server.mjs --cases-dir /absolute/private/directory --inspect-case-writer|--recover-case-writer\n');
     process.exitCode = 1;
   }
