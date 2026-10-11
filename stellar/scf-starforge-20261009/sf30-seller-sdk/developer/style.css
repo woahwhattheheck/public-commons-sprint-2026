@@ -80,6 +80,20 @@ pre{font:12px/1.7 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;margin
 .result h4{font-size:11px;letter-spacing:.03em;color:var(--muted);margin-top:20px}
 footer{font-size:11px;color:var(--muted);line-height:1.7;padding:27px 0 40px;display:flex;gap:18px;flex-wrap:wrap}
 footer a:first-of-type{margin-left:auto}
+.payment-options-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:18px 0 10px}
+.payment-options-heading h3{font-size:14px;font-weight:650;margin:0}
+.payment-options-heading>span{font:11px var(--mono);color:var(--muted);white-space:nowrap}
+.payment-options{display:grid;gap:12px;margin:12px 0}
+.payment-option{border:1px solid #d8dcdf;border-radius:4px;padding:15px;background:#fff;min-width:0}
+.payment-option-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-bottom:1px solid #e6e8ea;padding-bottom:12px;margin-bottom:12px}
+.payment-option-heading h4{font-size:12px;font-weight:650;margin:0;color:var(--ink)}
+.payment-option-price{display:flex;align-items:baseline;justify-content:flex-end;flex-wrap:wrap;gap:6px 10px;min-width:0;text-align:right}
+.payment-option-price strong{font:600 15px var(--mono);overflow-wrap:anywhere}
+.payment-option-price small{font-size:10px;color:var(--muted)}
+.payment-option dl{grid-template-columns:112px minmax(0,1fr);gap:9px 14px;padding:0;margin:0;font-size:11px;line-height:1.5}
+.payment-option dd{font-size:11px}
+.payment-option-extra-label{font-size:10px;font-weight:650;color:var(--muted);margin:13px 0 6px}
+.payment-option-extra{background:#f5f6f7;border-radius:3px;padding:10px;font-size:11px;max-height:none}
 @media(max-width:850px){main{padding:0 20px}
 .top{gap:10px;padding:18px 20px}
 .top>.eyebrow{display:none}
@@ -99,4 +113,5 @@ nav{grid-template-columns:repeat(auto-fit,minmax(175px,1fr));max-height:220px;ov
 .top .download{font-size:11px}
 footer a:first-of-type{margin-left:0}
 }
+@media(max-width:480px){.payment-option{padding:12px}.payment-option-heading{align-items:flex-start;gap:10px}.payment-option-price{display:block}.payment-option-price small{display:block;margin-top:4px}.payment-option dl{grid-template-columns:84px minmax(0,1fr);gap:8px 10px}.payment-option-price strong{font-size:13px}}
 
