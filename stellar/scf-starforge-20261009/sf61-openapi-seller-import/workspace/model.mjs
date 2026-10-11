@@ -17,6 +17,7 @@ import { openApiRequestBody, requestBodySummary } from '../request-body.mjs';
 import { openApiResponseStreams } from '../response-stream.mjs';
 import { merchantPaymentRequirements, merchantStreamPolicy } from './stream-plan.mjs';
 import { requirePostmanHeaderReferences } from '../postman/collection.mjs';
+import { queryParameterShape } from '../../sf30-seller-sdk/query-parameters.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -44,6 +45,48 @@ function operationAt(spec, method, path) {
   if (!plain(op)) fail('Selected operation is absent: ' + method + ' ' + path);
   return { item, op, servers: op.servers ?? item.servers ?? spec.servers };
 }
+/** Inspect the same merged path/operation declarations as the original importer. */
+function inspectQueryParameters(spec, item, operation) {
+  const refs = createOpenApiResolver(spec), merged = new Map(), errors = [];
+  const failed = (name, message) => ({ name, description: '', required: false,
+    kind: null, type: null, nullable: false, itemType: null,
+    style: 'form', explode: true, error: message });
+  for (const parameters of [item.parameters ?? [], operation.parameters ?? []]) {
+    if (!Array.isArray(parameters)) { errors.push(failed(null, 'parameters must be an array')); continue; }
+    const seen = new Set();
+    for (const raw of parameters) {
+      try {
+        const parameter = refs.reference(raw);
+        if (parameter.in !== 'query') continue;
+        if (typeof parameter.name !== 'string' || !parameter.name || forbidden.has(parameter.name) ||
+            /[\\x00-\\x1f\\x7f]/.test(parameter.name)) throw new TypeError('Invalid parameter name');
+        if (seen.has(parameter.name)) { errors.push(failed(parameter.name, 'Duplicate query parameter in one declaration')); continue; }
+        seen.add(parameter.name);
+        merged.set(parameter.name, parameter);
+      } catch (error) {
+        errors.push(failed(typeof raw?.name === 'string' ? raw.name : null, error.message));
+      }
+    }
+  }
+  return [...merged.values()].map(parameter => {
+    const style = typeof parameter.style === 'string' ? parameter.style : 'form';
+    const row = { name: parameter.name, description: typeof parameter.description === 'string' ? parameter.description : '',
+      required: parameter.required === true, kind: null, type: null, nullable: false, itemType: null,
+      style, explode: typeof parameter.explode === 'boolean' ? parameter.explode : style === 'form', error: null };
+    try {
+      if (parameter.content || !parameter.schema) throw new TypeError('Parameter content encodings are not supported');
+      const shape = queryParameterShape(refs.schema(parameter.schema), parameter.name);
+      row.type = shape.type; row.kind = shape.type === 'array' ? 'array' : 'scalar';
+      row.nullable = shape.nullable; row.itemType = shape.item?.type ?? null;
+      if (style !== 'form') throw new TypeError('Unsupported query parameter style');
+      if (parameter.explode !== undefined && typeof parameter.explode !== 'boolean') throw new TypeError('Parameter explode must be boolean');
+      if (parameter.allowReserved === true || parameter.allowEmptyValue === true)
+        throw new TypeError('Reserved or empty parameter serialization requires manual integration');
+    } catch (error) { row.error = error.message; }
+    return row;
+  }).concat(errors);
+}
+
 /** Inspection reads no network or environment and never imports document code. */
 export function inspectOpenApi(specText) {
   const spec = parse(specText), operations = [], backendSecurity = inspectBackendSecurity(spec);
@@ -58,6 +101,7 @@ export function inspectOpenApi(specText) {
       try { responseStreams=openApiResponseStreams(op,createOpenApiResolver(spec)); } catch(e) { streamError=e.message; }
       operations.push({ method:method.toUpperCase(), path, summary:op.summary ?? op.operationId ?? '',
         requestBody,bodyError,responseStreams,streamError,
+        queryParameters:inspectQueryParameters(spec,item,op),
         supported:supportsSellerMethod(method.toUpperCase()),
         publicDescription:String(op.summary ?? op.description ?? '').replace(/[\s\u0000-\u001f\u007f]+/g, ' ').trim(),
         servers:Array.isArray(servers) ? servers.map((s,i) => ({index:i, url:s?.url ?? '', variables:Boolean(s?.variables)})) : [],
