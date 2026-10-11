@@ -482,8 +482,25 @@ reopen an older version and save it as a new head. Reopen later with only
 `starforge mongodb-workspace --state /private/mongodb-workspace`.
 Prepared packages and exact GET/POST buyer requests remain attached to that state.
 
+The same workspace's **Dataset publisher** tab captures an entire approved
+aggregation into a reviewed typed dataset. Select a saved report and its exact
+inputs, set extraction limits and deterministic order, inspect the retained
+candidate, publish it and start the original versioned seller. The existing
+refresh policy retains its baseline, row bounds and cadence. Customers can
+prepare the original buyer request pinned to a retained snapshot while later
+editions are published. The publisher retains collection, pipeline and declared
+read concern with the source revision; large BSON integers and decimals can be
+projected as exact strings. Explicitly alias `_id` for a public dataset column.
+
+Use `starforge mongodb-publisher` for the same publisher through its standalone
+CLI or browser, and `./seller/mongodb/publisher` for the native factory. The
+merchant MCP connection accepts `kind: "mongodb"` for that original private
+workspace. Its original publisher and scheduler retain ownership across CLI,
+browser and MCP reopen. The installed full SF30 component includes the Mongo
+publisher guide, both browser modules and the shared schedules interface.
+
 The original application exports are `./seller/mongodb`, `/source`, `/prepare`,
-`/onboarding`, `/workspace` and `/buyer`. They expose the same implementations used
+`/onboarding`, `/workspace`, `/publisher` and `/buyer`. They expose the same implementations used
 by the CLI and browser. Full source, pipeline, package, buyer and operating guides
 are included under `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/`.
 The optional driver pin is derived from that component's own `package.json`.
@@ -541,6 +558,7 @@ or automatically retry a request.
 | `starforge mysql-workspace` | Select database fields, review typed endpoints and payment terms, operate releases and export the customer client |
 | `starforge mongodb` | Inspect native collections, prepare fixed BSON reports and operate the original MongoDB seller |
 | `starforge mongodb-workspace` | Author, review, save and run MongoDB reports; export merchant packages and exact buyer requests |
+| `starforge mongodb-publisher` | Capture complete native MongoDB snapshots, review and publish retained editions, and operate the original refresh policy |
 | `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
 | `starforge duckdb` / `duckdb-inspect` / `duckdb-prepare` | Launch or inspect the original local source; prepare, verify and reopen its merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |

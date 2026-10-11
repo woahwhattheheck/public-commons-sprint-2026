@@ -5,6 +5,7 @@ import { readFile, realpath } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { pipeline } from 'node:stream/promises';
 import { openMongoWorkbench } from './model.mjs';
 
 const HELP = [
@@ -12,13 +13,29 @@ const HELP = [
   '',
   '  node workspace/server.mjs --state NEW_DIRECTORY --source SOURCE.json --plan MERCHANT_PLAN.json [--port 0]',
   '  node workspace/server.mjs --state EXISTING_DIRECTORY [--port 0]',
+  '  Add --dataset-facilitator HTTPS_URL to use the original native x402 dataset seller.',
+  '  Local facilitator development also requires --allow-local-dataset-facilitator.',
   '',
   'Use the exact printed browser URL. Database credentials stay in the launch environment.',
   'Save native revisions, inspect BSON schemas, run fixed reports, prepare seller/client packages,',
-  'start the original local seller, open its operations console and prepare a buyer request.',
+  'start the original local seller, publish immutable datasets, schedule complete native refreshes,',
+  'and prepare original buyer requests for the selected retained snapshot.',
 ].join('\n');
 const assets = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
-  ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
+  ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']],
+  ['/publisher.mjs', ['publisher.mjs', 'text/javascript; charset=utf-8']],
+  ['/publisher-schedules.mjs', ['../../../postgres/publisher/public/schedules.mjs', 'text/javascript; charset=utf-8']]]);
+const publicationFields = {
+  plans: ['title', 'query', 'input', 'sourceHash', 'dataset', 'extraction'],
+  extract: ['id', 'plan'], cancel: ['id'], review: ['id', 'reviewer', 'note', 'initialize', 'expectedSnapshot', 'expectedRevision'],
+  publish: ['id', 'reviewId'], recover: ['id'], 'seller/start': [], 'seller/stop': [],
+  activate: ['snapshot', 'expectedSnapshot', 'expectedRevision'],
+  buyer: ['id', 'query', 'intentId', 'acceptIndex', 'offerSha256'],
+  'schedule/save': ['referenceRun', 'planDigest', 'expectedSnapshot', 'expectedRevision', 'revision',
+    'intervalSeconds', 'minimumRows', 'maximumRows', 'maximumDropPercent', 'onError', 'reviewer', 'note'],
+  'schedule/enable': ['revision', 'expectedSnapshot', 'expectedRevision'], 'schedule/pause': ['revision'],
+  'schedule/run': ['revision', 'requestId'], 'schedule/continue': ['revision'],
+};
 function json(res, status, value) {
   const body = Buffer.from(JSON.stringify(value));
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': body.length }); res.end(body);
@@ -71,6 +88,7 @@ export async function startMongoWorkbench(options = {}) {
       if (req.headers.origin && req.headers.origin !== origin || req.method !== 'GET' && req.headers.origin !== origin)
         return json(res, 403, { error: 'Workspace changes require its exact browser origin' });
       let result;
+      const publicationPath = /^\/api\/publications\/([a-z0-9-]+)(?:\/(.*))?$/.exec(url.pathname);
       if (req.method === 'GET') {
         if (url.pathname === '/api/bootstrap') result = await model.bootstrap();
         else if (url.pathname === '/api/history') result = await model.history({
@@ -79,6 +97,28 @@ export async function startMongoWorkbench(options = {}) {
         else if (url.pathname === '/api/packages') result = await model.packages();
         else if (/^\/api\/packages\/[a-z0-9-]+$/.test(url.pathname)) result = await model.inspectPackage(url.pathname.split('/').at(-1));
         else if (url.pathname === '/api/seller') result = model.seller();
+        else if (url.pathname === '/api/publications') result = await model.publications();
+        else if (publicationPath) {
+          const [, id, operation] = publicationPath;
+          if (!operation) {
+            const options = {};
+            for (const name of ['limit', 'plansOffset', 'runsOffset', 'historyOffset'])
+              if (url.searchParams.has(name)) options[name] = Number(url.searchParams.get(name));
+            result = await model.inspectPublication(id, options);
+          } else if (operation === 'run' || operation === 'buyer') {
+            result = await model.readPublication(id, operation, { id: url.searchParams.get('id'),
+              ...(url.searchParams.has('query') ? { query: url.searchParams.get('query') } : {}) });
+          } else if (/^plans\/\d+$/.test(operation)) result = await model.readPublication(id, 'plan', { id: Number(operation.split('/')[1]) });
+          else if (operation === 'schedule') result = await model.readPublication(id, 'schedule', {
+            ...(url.searchParams.has('limit') ? { limit: Number(url.searchParams.get('limit')) } : {}),
+            ...(url.searchParams.has('offset') ? { offset: Number(url.searchParams.get('offset')) } : {}) });
+          else if (/^files\/[a-f0-9-]+\/(?:data\.csv|dataset\.json|candidate\.json)$/.test(operation)) {
+            const [, runId, name] = operation.split('/'), file = await model.publicationDownload(id, runId, name);
+            res.writeHead(200, { 'content-type': file.mime, 'content-length': file.size,
+              'content-disposition': 'attachment; filename="' + file.name + '"' });
+            return pipeline(file.handle.createReadStream(), res);
+          } else return json(res, 404, { error: 'Not found' });
+        }
         else if (url.pathname.startsWith('/api/files/')) {
           const parts = url.pathname.split('/');
           if (parts.length < 6 || parts.length > 7) return json(res, 404, { error: 'Not found' });
@@ -97,6 +137,12 @@ export async function startMongoWorkbench(options = {}) {
         else if (url.pathname === '/api/seller/stop') { fields(value, []); result = await mutate(() => model.stopSeller()); }
         else if (url.pathname === '/api/buyer') {
           fields(value, ['packageId', 'routeId', 'input', 'acceptIndex', 'intentId']); result = await mutate(() => model.buyer(value));
+        } else if (url.pathname === '/api/publications') {
+          fields(value, ['expectedRevision', 'routeId', 'path']); revision(value.expectedRevision);
+          result = await mutate(() => model.createPublication(value));
+        } else if (publicationPath && Object.hasOwn(publicationFields, publicationPath[2])) {
+          const [, id, operation] = publicationPath; fields(value, publicationFields[operation]);
+          result = await mutate(() => model.changePublication(id, operation, value));
         } else return json(res, 404, { error: 'Not found' });
       } else return json(res, 405, { error: 'Use GET or POST' });
       json(res, 200, result);
@@ -120,14 +166,33 @@ export async function startMongoWorkbench(options = {}) {
 }
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && args[0] === '--help') { console.log(HELP); return; }
-  const options = {}, map = { '--state': 'directory', '--source': 'sourcePath', '--plan': 'planPath', '--port': 'port' };
-  for (let index = 0; index < args.length; index += 2) {
+  const options = {}, map = { '--state': 'directory', '--source': 'sourcePath', '--plan': 'planPath',
+    '--port': 'port', '--dataset-facilitator': 'datasetFacilitator' };
+  let allowLocalDatasetFacilitator = false;
+  for (let index = 0; index < args.length;) {
+    if (args[index] === '--allow-local-dataset-facilitator') {
+      if (allowLocalDatasetFacilitator) throw new TypeError(HELP);
+      allowLocalDatasetFacilitator = true; index++; continue;
+    }
     const name = map[args[index]], value = args[index + 1];
     if (!name || Object.hasOwn(options, name) || !value || value.startsWith('--')) throw new TypeError(HELP);
     if (name === 'port') {
       if (!/^(0|[1-9]\d{0,4})$/.test(value)) throw new TypeError('Port must be 0–65535');
       options[name] = Number(value);
-    } else options[name] = resolve(value);
+    } else options[name] = name === 'datasetFacilitator' ? value : resolve(value);
+    index += 2;
+  }
+  if (allowLocalDatasetFacilitator && !options.datasetFacilitator) throw new TypeError(HELP);
+  if (options.datasetFacilitator) {
+    const url = new URL(options.datasetFacilitator);
+    const local = allowLocalDatasetFacilitator && url.protocol === 'http:' && url.hostname === '127.0.0.1';
+    if ((!local && url.protocol !== 'https:') || url.username || url.password || url.search || url.hash)
+      throw new TypeError('Dataset facilitator requires HTTPS or explicitly enabled local HTTP');
+    const [{ HTTPFacilitatorClient }, { createNativeSellerServer }] = await Promise.all([
+      import('@x402/core/server'), import('../../native-factory.mjs') ]);
+    options.datasetNativeFactory = compiled => createNativeSellerServer(compiled, {
+      facilitatorClient: new HTTPFacilitatorClient({ url: url.href.replace(/\/$/, '') }) });
+    delete options.datasetFacilitator;
   }
   const session = await startMongoWorkbench(options);
   console.log(JSON.stringify({ mongodbWorkspace: session.url, directory: session.model.root }));

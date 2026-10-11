@@ -56,6 +56,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   sheets-publisher                           Review and publish retained Sheet observations as datasets
   mongodb                                    Inspect, author and operate fixed native BSON reports
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
+  mongodb-publisher                          Publish complete reviewed BSON snapshots and retained refreshes
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
