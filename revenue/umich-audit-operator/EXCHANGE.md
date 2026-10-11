@@ -273,7 +273,7 @@ adoption = prepare_adoption(current_snapshot, received, plan)
 
 A partial incoming projection cannot replace a fuller local record. Promotion from a matching projection to its exact full original returns the old projection separately for retention before canonical promotion.
 
-File-source collisions support `keep_local` or `retain_both`. The latter creates a stable bundle-derived retained ID and preserves `original_source_id` and the original bundle hash. Existing original file metadata and bytes remain intact. A review becomes stale if a pinned side changes.
+File-source collisions support `keep_local` or `retain_both`. The latter creates a stable bundle-derived retained ID and preserves `original_source_id` and the original bundle hash. Existing original file metadata and bytes remain intact. Evidence retrieval must bind its retained file ID to the exact evidence SHA256; after an ID collision, resolve the preserved alias by that hash, never by the old ID alone. A review becomes stale if a pinned side changes.
 
 ## Ordered target tables and complete returned-file comparison
 
@@ -331,3 +331,14 @@ CLI outputs use new paths and refuse to overwrite artifacts. Production adoption
 - Retained issuer event catalog — 109 original question IDs across 11 groups, with exact labels and source pages.
 
 The sample report's placeholders remain template examples. The included Practice journey uses marked records to exercise the operator; neither is represented as a live University audit or supplier response.
+
+
+## Run the complete Practice journey
+
+From the installed source root:
+
+~~~sh
+python -B examples/EXCHANGE_PRACTICE.py
+~~~
+
+The single journey normalizes 21 marked records, builds and rereads eight audience packages, preserves original source/evidence bytes, prepares and replays receiving, resolves one competing edit through the host-reviewed API, and rejects stale decisions and altered content. It also exports all seven declared native rows with duplicate and blank headers, then detects one changed returned summary. It opens no browser and contacts no provider.

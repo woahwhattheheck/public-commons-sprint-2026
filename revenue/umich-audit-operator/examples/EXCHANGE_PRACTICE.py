@@ -1,5 +1,7 @@
 """One complete, explicitly marked Practice interchange/receiving journey."""
 import copy, hashlib, io, json, pathlib, sys, zipfile
+if "__file__" in globals():
+    sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]))
 from audit_operator import exchange as ex
 from audit_operator.reporting import project_snapshot, project_for_access
 
@@ -103,7 +105,8 @@ def run():
             "current_sha256":conflicting["current_sha256"],"incoming_sha256":conflicting["incoming_sha256"],
             "bundle_sha256":received["bundle_sha256"],"reason":"Practice reviewed competing source revision",
             "reviewer_reference":"practice-auditor","reviewed_at":"2026-10-11T12:00:00Z"}
-    resolved=ex.resolve_receipt(conflicted,received,[choice])
+    host_choice={"id":choice["id"],"choice":"accept_incoming_as_next","current_sha256":choice["current_sha256"],"incoming_sha256":choice["incoming_sha256"],"reason":choice["reason"]}
+    resolved=ex.resolve_receipt(conflicted,received,conflict,[host_choice],reviewer_reference="practice-auditor",reviewed_at="2026-10-11T12:00:00Z")
     assert resolved["status"]=="ready",resolved
     corrected=ex.prepare_adoption(conflicted,received,resolved)
     adopted=next(r for r in corrected["snapshot"]["records"] if r["id"]==choice["id"])
