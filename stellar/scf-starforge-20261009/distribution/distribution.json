@@ -247,6 +247,7 @@
     "./seller/graphql": "./source/stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/adapter.mjs",
     "./seller/graphql/schema": "./source/stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/onboarding/schema.mjs",
     "./seller/graphql/onboarding": "./source/stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/onboarding/prepare.mjs",
+    "./seller/graphql/revisions": "./source/stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/onboarding/revisions.mjs",
     "./seller/graphql/workspace": "./source/stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/workspace/server.mjs",
     "./seller/woocommerce": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/seller.mjs",
     "./buyer/woocommerce": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/buyer.mjs",
