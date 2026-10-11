@@ -178,7 +178,7 @@ class AnalysisWorkspace:
             raise StateError("ANALYSIS_ORIGINAL_RUNTIME_CHECKOUT_REQUIRED")
         return DatasetAcquisition(checkout=self.checkout, session=source["session"], node=self.node)
 
-    def register_source(self, name, session, *, room=None, expected_revision=0):
+    def register_source(self, name, session, *, room=None, expected_revision=0, expected_native=None):
         """Declare a native session locally; the browser never supplies paths."""
         name = _name(name)
         if type(expected_revision) is not int or expected_revision < 0:
@@ -194,6 +194,9 @@ class AnalysisWorkspace:
                       configuration_sha256=report["configurationSha256"], session_id=report["sessionId"],
                       native_status=report["status"], rows=report.get("acquiredRows"),
                       snapshot=report.get("snapshot"), registered_at=_now())
+        if expected_native is not None:
+            from .analysis_native import verify_dataset_source
+            verify_dataset_source(self, source, report, expected_native)
         with self.database._connection() as db:
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute("SELECT * FROM sf_analysis_sources WHERE name=?", (name,)).fetchone()
@@ -201,6 +204,8 @@ class AnalysisWorkspace:
                 old = parse(existing["record"].encode())
                 if all(old.get(key) == source[key] for key in ("session", "room", "session_sha256")):
                     db.commit()
+                    if expected_native is not None:
+                        return {**old, "native_delivery": source["native_delivery"]}
                     return old
             revision = existing["revision"] if existing else 0
             if revision != expected_revision:
@@ -634,6 +639,9 @@ def serve(workspace, *, port=0):
                     if body:
                         raise StateError("ANALYSIS_EXPORT_CANCEL_FIELDS_INVALID")
                     return self._reply(200, workspace.exports.cancel(parts[2]))
+                if url.path == "/api/native-dataset-source":
+                    from .analysis_native import attach_dataset
+                    return self._reply(200, attach_dataset(workspace, body))
                 if url.path == "/api/activate":
                     return self._reply(200, workspace.database.activate(body.get("name"), body.get("version_id"), expected_revision=body.get("expected_revision")))
                 if len(parts) == 4 and parts[:2] == ["api", "changes"] and parts[3] == "select":
