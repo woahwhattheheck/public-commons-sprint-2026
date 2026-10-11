@@ -3,7 +3,7 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stellar Forge · Native MPP</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
 <body>
 <header><div><strong>STELLAR FORGE</strong><span>Native MPP Charge</span></div><p id="connection">Connecting</p></header>
-<nav aria-label="Workspace"><button data-tab="overview" class="selected">Activity</button><button data-tab="merchant">Merchant</button><button data-tab="buyer">Buyer</button></nav>
+<nav aria-label="Workspace"><button data-tab="overview" class="selected">Activity</button><button data-tab="merchant">Merchant</button><button data-tab="buyer">Buyer</button><button data-tab="customers">Customer handoff</button></nav>
 <main>
 <div id="notice" role="status" aria-live="polite"></div>
 <section id="overview" class="panel">
@@ -69,6 +69,19 @@
 <p class="hint">The host supplies the named signer and governor keys. Execute opens the controlling terminal for exact purchase approval.</p>
 <button type="submit" class="primary">Save buyer configuration</button>
 </form>
+</section>
+<section id="customers" class="panel" hidden>
+<div class="heading"><div><h1>Customer handoff</h1><p>Publish exact offer terms and deliver Node and Python clients for this merchant.</p></div><button id="customer-refresh">Refresh offers</button></div>
+<p id="customer-status" class="runtime">Save a merchant configuration to prepare its customer package.</p>
+<div class="actions"><button id="customer-package" class="primary">Download customer package</button><button id="customer-contract">Download contract</button><button id="customer-openapi">Download OpenAPI</button></div>
+<p id="customer-origin" class="mono"></p>
+<div class="scroll"><table><thead><tr><th>Offer</th><th>Method</th><th>Resource</th><th>Network</th><th>Amount</th><th>Terms</th></tr></thead><tbody id="customer-offers"></tbody></table></div>
+<details><summary>Selected offer terms</summary><pre id="customer-offer-details">Select an offer to inspect its public terms.</pre></details>
+<h2>Deliver the package</h2>
+<p>The download includes the merchant contract, OpenAPI, Node and TypeScript client, Python client, configuration template and working examples. The receiver creates a new customer directory with the maintained command:</p>
+<pre>starforge mpp customer-receive /path/to/mpp-package.json /private/merchant-customer</pre>
+<p>Customers configure their own payer, spending governor and limits. Each purchase captures the actual challenge and uses the original approval, signed request and recovery flow. The guide inside the package covers installation, first use and reopening an interrupted purchase.</p>
+<div class="actions"><a id="customer-public-contract" target="_blank" rel="noopener noreferrer">Public contract</a><a id="customer-public-openapi" target="_blank" rel="noopener noreferrer">Public OpenAPI</a></div>
 </section>
 </main>
 <footer><span>Private operator workspace</span><span id="versions"></span></footer>

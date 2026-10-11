@@ -166,7 +166,7 @@
       '<section class="sf104-order-heading"><div><span class="sf104-eyebrow">ORIGINAL ORDER / ' + esc(order.id) + '</span><h2>Order #' + esc(order.number) + '</h2>' +
       lifecycle(order) + '<p>' + esc(order.lifecycle.detail) + '</p></div><div class="sf104-actions">' + link(order.orderUrl, 'Open Woo order') +
       button('export-order', 'Download handoff', 'data-format="json"') + button('export-order', 'Print handoff', 'data-format="html"') + '</div></section>' +
-      '<nav class="sf104-subnav" aria-label="Order views">' + [['overview', 'Overview'], ['terms', 'Terms and source'], ['history', 'History and notes'], ['review', 'Review and recovery']].map(([tab, label]) =>
+      '<nav class="sf104-subnav" aria-label="Order views">' + [['overview', 'Overview'], ['terms', 'Terms and source'], ['history', 'History and notes'], ['review', 'Review and recovery'], ['refunds', 'Refunds']].map(([tab, label]) =>
         '<a href="#order=' + esc(order.id) + '&tab=' + tab + '"' + (state.route.tab === tab ? ' aria-current="page"' : '') + '>' + label + '</a>').join('') + '</nav>';
   }
   function overview(order) {
@@ -283,8 +283,9 @@
   }
   function orderView(order) {
     state.order = order;
-    const tab = ['overview', 'terms', 'history', 'review'].includes(state.route.tab) ? state.route.tab : 'overview';
-    workspace.innerHTML = orderHeader(order) + (tab === 'terms' ? termsView(order) : tab === 'history' ? historyView(order) : tab === 'review' ? reviewView(order) : overview(order));
+    const tab = ['overview', 'terms', 'history', 'review', 'refunds'].includes(state.route.tab) ? state.route.tab : 'overview';
+    workspace.innerHTML = orderHeader(order) + (tab === 'refunds' ? '<div id="sf104-refund-workspace"></div>' : tab === 'terms' ? termsView(order) : tab === 'history' ? historyView(order) : tab === 'review' ? reviewView(order) : overview(order));
+    if (tab === 'refunds') window.SF104Refunds.mount(document.getElementById('sf104-refund-workspace'), {orderId:order.id, config});
   }
   function productsView(data) {
     const route = state.route;
