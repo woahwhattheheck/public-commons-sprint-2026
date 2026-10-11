@@ -91,6 +91,51 @@ routes. A route with a handler or application admission export requires its
 trusted application module. Setup retains the same absolute module reference;
 the original commerce session checks its digest and loads it at startup.
 
+### Initialized Python applications
+
+For an existing [Python merchant](../sf30-seller-sdk/python/README.md), use
+`seller.python` instead of `seller.config` and omit JavaScript `handlers`:
+
+~~~json
+{
+  "python": "/private/merchant/python.json",
+  "facilitatorConfig": "/private/merchant/facilitator.json",
+  "port": 8423
+}
+~~~
+
+This object replaces only `seller` in the same setup file. Keep the explicit
+operator identity, original shared spending limits and purchase selections.
+Each selection's `routeId` is a public function name in that Python declaration;
+its method, input and payment-option index must match the original compiled
+offer. For a POST function, pass the actual private JSON input as `bodyFile`.
+The merchant declaration's `python` executable selects its application runtime;
+`operator.python` continues to select the existing buyer approval/governor
+runtime.
+
+The same `review` and `prepare` commands below accept this setup. They compile
+the original declaration without importing Python, show its actual module
+digest, lifecycle hooks and worker limits, and use the existing request builder
+and original SF88 workspace for every selected purchase. Preparation retains a
+normalized `python.json`, its derived `seller.json` for review, and an original
+commerce plan with `seller.python`. The session's retained application digest
+must still match the reviewed digest before the prepared workspace is published.
+No application startup hook or wallet signing occurs during preparation.
+
+Before serving, initialize and clean up the saved application deliberately:
+
+    node stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs diagnose --config /private/new-commerce/session/python.json
+
+Then use the same original session entry:
+
+    node stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs start --directory /private/new-commerce/session
+
+The native merchant initializes its persistent workers before readiness and
+closes their resources after its in-flight requests drain. Original inbox
+outcomes, the shared SF36 budget, saved response files and usage history retain
+their existing ownership. See [PYTHON_COMMERCE.md](PYTHON_COMMERCE.md) for
+application identity, shutdown diagnostics and reopening after a source change.
+
 For an existing external signer, replace secretEnv with signerProvider, an
 absolute path to the existing trusted module. This is the original SF88
 provider interface, using the same native SF103 adapter. The buyer RPC comes
@@ -139,6 +184,11 @@ The result includes ready-to-run command arrays with absolute paths:
 
     node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs --diagnose-workspace --dir /private/new-commerce/operator
     node stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs start --directory /private/new-commerce/session
+
+`commands.console` opens the same prepared `session` directory in the original
+browser workspace instead of the foreground terminal. For Python applications,
+`commands.diagnosePython` initializes and cleans up the saved application;
+`commands.diagnose` continues to inspect the original buyer workspace.
 
 Load the existing wallet and facilitator environment variables through the
 operator's normal private environment before starting. The original inbox's

@@ -7,7 +7,8 @@ import { hostname } from 'node:os';
 import { config, execution, need, InputError } from './config.mjs';
 import { aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
-import { selectTestnetEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
+import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
+import { checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, operationTicketView, requireCurrentOperationTicket } from './operation-ticket.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.buyer-inbox.v1';
@@ -109,7 +110,7 @@ async function workspaceExecution(cfg, path) {
   need(maximum > 0n && maximum <= BigInt(workspaceOp.expect.maxAtomic) &&
     maximum <= BigInt(signer.maxAtomic), 'INBOX_WORKSPACE_CAP_EXCEEDED');
   return {environment:workspace.operatorEnvironment,
-    evidenceRpcEndpoint:selectTestnetEvidenceEndpoint(workspace.manifest.signer.rpcUrl)};
+    evidenceRpcEndpoint:selectStellarEvidenceEndpoint(op.expect.network,workspace.manifest.signer.rpcUrl)};
 }
 // Preserve the finalizer's original environment-only interface.
 export async function workspaceEnvironment(cfg, path) {
@@ -297,6 +298,8 @@ export async function openQueue(path) {
     await privateDirectory(cfg.evidenceDir);
     await ensureAbsent(request.evidencePath, 'INBOX_ORIGINAL_EVIDENCE_ALREADY_EXISTS');
     if (request.responseDestination) await ensureAbsent(request.responseDestination, 'INBOX_RESPONSE_DESTINATION_EXISTS');
+    need(!signal?.aborted, 'OPERATOR_ABORTED');
+    await checkOperatorTerminal(intentId);
     need(!signal?.aborted, 'OPERATOR_ABORTED');
     requireCurrentOperationTicket(ticket);
     // Permanent single-attempt claim. It is never expired, stolen or retried.

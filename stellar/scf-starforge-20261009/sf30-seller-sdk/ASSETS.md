@@ -10,6 +10,35 @@ SHA-256, and retained as an immutable snapshot. The paid response contains the
 original bytes, an attachment filename, the configured MIME type and its digest.
 Editing the source file cannot change an already-running product.
 
+## Installed package
+
+After installing the generated merchant distribution archive, the same original
+commands are available without a repository checkout:
+
+```sh
+npx --no-install starforge assets inspect --file /private/export.zip --type application/zip
+npx --no-install starforge assets bundle --config /private/seller.json --out /private/release
+npx --no-install starforge assets verify --directory /private/release
+npx --no-install starforge assets catalog --directory /private/release --out /private/catalog.json
+npx --no-install starforge seller --config /private/release/seller.json
+npx --no-install starforge buyer --prepare --discovery /private/catalog.json --row 0 --accept 0 --intent-id export-v1 --url https://files.example/exports/october-v1.zip --method GET --out /private/review.json --response-out /private/purchased.zip
+npx --no-install starforge buyer --review --config /private/review.json
+```
+
+Use your own authorized source file, payment terms and matching public URL as
+explained below. These aliases pass arguments unchanged to the existing modules;
+`--facilitator` and ordinary trusted buyer execution configuration remain explicit.
+They do not download a package, provision a wallet or make a payment automatically.
+The catalog command writes a local file; it does not publish seller content.
+
+For JavaScript applications, the package exposes `./seller/assets` and
+`./seller/asset-bundles` as direct subpaths of `@tokenjunkielabs/starforge-merchant`.
+Its existing typed `./buyer/response-file` export includes
+`BuyerResponseFileIntegrity`, `validateResponseFileIntegrity`, the three optional
+expected-content fields, `SavedBuyerResponse.verifiedAgainst` and the original
+optional `objectMetadata`. The TypeScript types describe the same response writer;
+they do not introduce another download or payment implementation.
+
 ## Prepare the product
 
 Run from a full repository checkout with Node 22 or later. These commands require

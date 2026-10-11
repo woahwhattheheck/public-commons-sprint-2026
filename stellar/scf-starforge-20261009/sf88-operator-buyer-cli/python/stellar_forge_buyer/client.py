@@ -9,13 +9,15 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
+import uuid
 
 from .errors import DeliveryError, NativeError, StateError
-from .result import BuyerResult, FileDelivery
+from .result import AccountingResult, BuyerResult, FileDelivery
 from .runtime import Runtime
 from .storage import digest, dump, lock, parse, private_directory, read, sync_directory, write
 
 SCHEMA = "stellar-forge.python-buyer.v1"
+ACCOUNTING_SCHEMA = "stellar-forge.python-buyer-accounting.v1"
 
 
 def now():
@@ -154,6 +156,27 @@ class Buyer:
             if directory.is_dir() and re.fullmatch(r"[0-9a-f]{64}", directory.name):
                 meta = file_json(directory / "operation.json")
                 yield self.operation(meta["intentId"])
+
+    def history(self, *, destination=None):
+        """Private purchase/accounting/product history from retained local files."""
+        rows = []
+        for directory in sorted(self.state_dir.iterdir()):
+            if not re.fullmatch(r"[0-9a-f]{64}", directory.name):
+                continue
+            try:
+                private_directory(directory, create=False)
+                meta = file_json(directory / "operation.json")
+                op = self.operation(meta["intentId"])
+                if op.directory != directory:
+                    raise StateError("OPERATION_ID_MISMATCH")
+                rows.append(op.inspect())
+            except (StateError, KeyError, TypeError):
+                rows.append({"directory": str(directory), "state": "LOCAL_RECORD_UNAVAILABLE"})
+        result = {"schema": "stellar-forge.python-buyer-history.v1", "generatedAt": now(),
+                  "operations": rows, "source": "RETAINED_LOCAL_OPERATION_VIEWS"}
+        if destination is not None:
+            dump(Path(destination).expanduser().absolute(), result, exclusive=True)
+        return result
 
 
 class Operation:
@@ -386,6 +409,135 @@ class Operation:
                   "runtimeError": "PROCESS_EXIT_NOT_RECORDED", "native": native, "recovered": True}
         return self._result(record)
 
+    def _accounting_context(self):
+        meta = self._check()
+        workspace = meta.get("nativeWorkspace")
+        if not isinstance(workspace, str) or not Path(workspace).is_absolute():
+            raise StateError("ORIGINAL_ACCOUNTING_WORKSPACE_REQUIRED", operation=self)
+        if not (self.directory / "attempt.json").exists():
+            raise StateError("ORIGINAL_ACCOUNTING_ATTEMPT_REQUIRED", operation=self)
+        attempt = file_json(self.directory / "attempt.json")
+        config_sha, body_sha = self._fingerprints()
+        if (attempt.get("schema") != SCHEMA or attempt.get("intentId") != self.intent_id or
+                (attempt.get("configSha256"), attempt.get("bodySha256")) != (config_sha, body_sha) or
+                not isinstance(attempt.get("createdAt"), str)):
+            raise StateError("ORIGINAL_ACCOUNTING_ATTEMPT_CHANGED", operation=self)
+        return attempt, config_sha
+
+    def _accounting_result(self, record, attempt, config_sha):
+        if (record.get("schema") != ACCOUNTING_SCHEMA or record.get("intentId") != self.intent_id or
+                record.get("configSha256") != config_sha or
+                record.get("attemptCreatedAt") != attempt["createdAt"]):
+            raise StateError("ORIGINAL_ACCOUNTING_VIEW_MISMATCH", operation=self)
+        native = record.get("native")
+        if native is not None:
+            if (not isinstance(native, dict) or native.get("mode") != "ORIGINAL_PYTHON_FINALIZATION" or
+                    native.get("intentId") != self.intent_id or native.get("configSha256") != config_sha or
+                    not isinstance(native.get("result"), dict) or native["result"].get("outcome") not in
+                    ("FINALIZED", "IDEMPOTENT_FINALIZED", "NOT_FINALIZED", "WORKER_ERROR")):
+                raise StateError("ORIGINAL_ACCOUNTING_RESULT_MISMATCH", operation=self)
+            original = native["result"]
+            if original["outcome"] in ("FINALIZED", "IDEMPOTENT_FINALIZED") and (
+                    original.get("request_id") != self.intent_id or
+                    original.get("request_sha256") != native.get("approvedRequestSha256")):
+                raise StateError("ORIGINAL_ACCOUNTING_RESULT_MISMATCH", operation=self)
+        return AccountingResult(record)
+
+    def _saved_accounting(self, attempt, config_sha):
+        path = self.directory / "accounting.json"
+        if not path.exists():
+            return None
+        return self._accounting_result(file_json(path, self.buyer.runtime.output_limit), attempt, config_sha)
+
+    def finalize(self, *, outbox=None, merchant_route=None) -> AccountingResult:
+        """Finalize the SAME original reservation; never sign or repeat a purchase."""
+        if bool(outbox) != bool(merchant_route):
+            raise StateError("OUTBOX_AND_ORIGINAL_MERCHANT_ROUTE_REQUIRED_TOGETHER", operation=self)
+        with lock(self.directory):
+            attempt, config_sha = self._accounting_context()
+            try:
+                previous = self._saved_accounting(attempt, config_sha)
+            except StateError:
+                # A damaged display record must not prevent the original ledger
+                # from rebuilding its own result on an explicit accounting run.
+                previous = None
+            runs = private_directory(self.directory / "accounting-runs")
+            run_dir = private_directory(runs / uuid.uuid4().hex)
+            record = {"schema": ACCOUNTING_SCHEMA, "intentId": self.intent_id,
+                      "configSha256": config_sha, "attemptCreatedAt": attempt["createdAt"],
+                      "recordedAt": now(), "runDirectory": str(run_dir),
+                      "native": None, "returncode": None, "runtimeError": "PROCESS_RESULT_NOT_RECORDED"}
+            if previous is not None and previous.last_finalized:
+                record["lastFinalized"] = previous.last_finalized
+            dump(run_dir / "context.json", record, exclusive=True)
+            args = ["finalize-operation", "--operation-dir", self.directory]
+            if outbox:
+                args += ["--outbox", Path(outbox).expanduser().absolute(), "--merchant-route", merchant_route]
+            try:
+                run = self.buyer.runtime.run(args, target="application", logs=run_dir)
+                record.update(returncode=run.returncode, runtimeError=run.error, recordedAt=now())
+                candidate = {**record, "native": run.output}
+                try:
+                    result = self._accounting_result(candidate, attempt, config_sha)
+                    if run.output is not None:
+                        record = candidate
+                    if result.finalized:
+                        record["lastFinalized"] = {"recordedAt": record["recordedAt"], "native": run.output}
+                except StateError:
+                    record["runtimeError"] = "ORIGINAL_ACCOUNTING_RESULT_MISMATCH"
+            except NativeError as error:
+                record.update(runtimeError=error.code, returncode=error.returncode, recordedAt=now())
+            # A successful ledger result survives failure to save this local view.
+            # Its original workspace report and ledger can rebuild it on rerun.
+            record["viewStatus"] = "SAVED"
+            try:
+                dump(run_dir / "result.json", record)
+                dump(self.directory / "accounting.json", record)
+            except OSError:
+                record["viewStatus"] = "SAVE_FAILED"
+            return self._accounting_result(record, attempt, config_sha)
+
+    def recover_finalization(self) -> AccountingResult | None:
+        """Read original accounting views locally; never start a process or RPC."""
+        self._check()
+        if not (self.directory / "attempt.json").exists():
+            return None
+        with lock(self.directory):
+            attempt, config_sha = self._accounting_context()
+            saved = self._saved_accounting(attempt, config_sha)
+            runs = self.directory / "accounting-runs"
+            if not runs.exists():
+                return saved
+            # Recover output left by a completed native command if its parent
+            # stopped before saving accounting.json. No new finality is inferred.
+            candidates = [saved] if saved else []
+            for directory in runs.iterdir():
+                if not re.fullmatch(r"[0-9a-f]{32}", directory.name):
+                    continue
+                try:
+                    context = file_json(directory / "context.json")
+                    path = directory / "result.json"
+                    if path.exists():
+                        record = file_json(path, self.buyer.runtime.output_limit)
+                    else:
+                        native = file_json(directory / "stdout.json", self.buyer.runtime.output_limit)
+                        record = {**context, "native": native, "viewStatus": "RECOVERED_NATIVE_OUTPUT",
+                                  "runtimeError": "PROCESS_EXIT_NOT_RECORDED", "recovered": True}
+                    candidate = self._accounting_result(record, attempt, config_sha)
+                    if candidate.native:
+                        candidates.append(candidate)
+                except StateError:
+                    continue
+            if not candidates:
+                return None
+            latest = max(candidates, key=lambda result: result.record.get("recordedAt", ""))
+            earlier = [result for result in candidates if result.finalized]
+            if earlier and not latest.last_finalized:
+                prior = max(earlier, key=lambda result: result.record.get("recordedAt", ""))
+                latest = AccountingResult({**latest.record, "lastFinalized": {
+                    "recordedAt": prior.record["recordedAt"], "native": prior.native}})
+            return latest
+
     def _file_result(self, record, handoff_sha, handoff):
         native = record.get("native") or {}
         saved = native.get("file") or {}
@@ -447,6 +599,9 @@ class Operation:
     def inspect(self) -> dict:
         meta = self._check()
         record = {"intentId": self.intent_id, "directory": str(self.directory), "state": "PREPARED"}
+        config = file_json(self.config_path)
+        original = config.get("operation") or {}
+        record["request"] = {key: original.get(key) for key in ("url", "method", "expect", "orderReference")}
         if meta.get("nativeWorkspace"):
             record["nativeWorkspace"] = meta["nativeWorkspace"]
         if meta.get("handoffSha256"):
@@ -467,4 +622,8 @@ class Operation:
             record["nativeStatus"] = saved.status
             record["deliveryStatus"] = saved.delivery.get("status")
             record["resultRecoverable"] = True
+        if meta.get("nativeWorkspace") and attempt.exists():
+            accounting = self.recover_finalization()
+            if accounting:
+                record["accounting"] = accounting.record
         return record

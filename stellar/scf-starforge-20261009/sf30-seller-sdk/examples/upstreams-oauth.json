@@ -1,0 +1,30 @@
+{
+  "schema": "stellar-forge.seller-upstreams.v1",
+  "bindings": {
+    "existingDataset": {
+      "origin": "https://api.merchant.example",
+      "path": "/v1/dataset",
+      "query": [
+        "region"
+      ],
+      "requestHeaders": [
+        "accept-language"
+      ],
+      "responseHeaders": [
+        "etag"
+      ],
+      "responseMode": "json",
+      "timeoutMs": 10000,
+      "maxResponseBytes": 65536,
+      "maxInFlight": 32,
+      "oauth2": {
+        "tokenEndpoint": "https://identity.merchant.example/oauth/token",
+        "clientIdEnv": "MERCHANT_CLIENT_ID",
+        "clientSecretEnv": "MERCHANT_CLIENT_SECRET",
+        "authMethod": "client_secret_basic",
+        "scope": "dataset.read",
+        "timeoutMs": 5000
+      }
+    }
+  }
+}

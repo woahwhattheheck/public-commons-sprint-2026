@@ -6,7 +6,71 @@ and merchant changes, explicitly activate it, watch earlier requests drain, and
 restore a retained revision. Reopen the workspace to recover the gateway's actual
 state. The workspace calls `fleetControl` from the original `control.mjs`; the
 gateway remains responsible for original seller verification, routing, snapshots,
-revision checks, draining and rollback.
+revision checks, draining and rollback. Optional managed mode also composes the
+original SF82 release stores: stage a saved workspace, compare immutable releases,
+start a replacement, move traffic, retire its drained predecessor, and restart
+exact retained releases for rollback.
+
+## Start with managed merchant releases
+
+Use the [original release operator guide](../RELEASE_OPERATOR.md) to prepare a
+fleet release plan with independent SF82 stores and fixed
+loopback ports for each merchant's slots. Register saved-workspace package names
+in that plan. Each merchant starts from its selected release in `startupSlot`;
+replacement slots can initially be empty. The original operator validates that
+stores and ports are distinct and that release origins match their merchant.
+
+```bash
+node stellar/scf-starforge-20261009/merchant-fleet-gateway/workspace/server.mjs \
+  --releases /srv/stellar-fleet/plan.json \
+  --release-state /srv/stellar-fleet/operator \
+  --port 8402
+```
+
+This command owns the original SF82 sessions and gateway in the same process.
+The gateway's private control directory defaults to `operator/gateway`; an
+optional `--state` selects a separate private gateway directory. The release
+operator's own private journal must use a different directory from gateway state.
+Stop a separate gateway daemon before starting this managed mode. The existing
+state lease prevents two owners of the same original store or gateway state.
+Manifest aliases are for the independent gateway mode below; managed mode uses
+only its registered original release plan.
+
+1. Select a merchant and a replacement slot in **Prepare a seller release**.
+   Inspect its original release catalog. If needed, expand **Stage a new release
+   from a saved workspace**, choose a registered package and give it a new
+   immutable release ID. This calls the original SF82 staging operation with
+   that slot's fixed port; it leaves serving traffic unchanged.
+2. Choose **Compare releases**. Inspect the actual original serving and proposed
+   routes, exact atomic amount strings, asset, network, recipient, request and
+   application configuration, and runtime changes. Source digests bind the
+   comparison. The original comparison retains route and payment-option order.
+3. Confirm **Start and prepare reviewed release**. The original release manager
+   selects and starts that reviewed source on its own port. The original gateway
+   checks the running replacement and prepares its retained candidate. Review
+   that candidate and separately confirm **Activate reviewed candidate**.
+4. Watch admitted requests finish in **Draining generations**. In **Seller
+   processes**, use **Retire** when the old exact session is eligible. The native
+   gateway operation lock spans the original session close: a concurrent control
+   client cannot route traffic to the port between its final drain check and
+   shutdown. Current, prepared and still-draining ports cannot be retired.
+5. Choose **Review rollback** on a linked retained revision. Inspect original
+   before/after releases for every merchant and confirm **Restore reviewed
+   releases**. The original operator starts any stopped retained sessions before
+   the gateway rechecks and restores its snapshot as a new revision.
+6. Reopen the workspace after a normal shutdown. The original operator links its
+   retained release mapping to the original gateway snapshot and starts the
+   current exact release sessions. Shutdown drains the gateway before stopping
+   the original sessions it owns. The workspace does not stop unrelated processes.
+
+Every release review has an expiring ID and a fixed serving revision. The
+original operator also checks store generations and immutable source digests.
+Changing a selection, replacing a candidate or activating from another session
+requires a new review. Browser confirmation sends the reviewed IDs unchanged.
+An external native control change outside the retained plan is shown as
+**Fleet changed outside plan**; use original control history to restore a linked
+revision before managing releases. No browser-selected path, PID, command or
+credential reference becomes an operation argument.
 
 ## Start with the existing gateway
 
@@ -54,7 +118,10 @@ a replacement seller on a new port, as the original rollout engine enforces.
    requests and all-generation requests separately. The summary also includes
    requests draining for removed merchant authorities. Filter by ID or hostname.
    When original control summaries provide route details, expand the merchant to
-   inspect its original methods, URLs and public payment choices.
+   inspect its original methods, URLs and public payment choices. If a complete
+   original route list exceeds the control status limit, the page displays a
+   notice pointing to that seller's private `/_seller/offers` endpoint. Partial
+   payment-choice lists are not presented as complete.
 2. Select the named manifest and choose **Prepare for review**. The active fleet
    keeps serving while the original engine checks proposed sellers. A failed
    preparation leaves the active revision unchanged. The resulting candidate
@@ -71,7 +138,8 @@ a replacement seller on a new port, as the original rollout engine enforces.
    candidate checks even if a concurrent change occurs while confirmation is open.
 5. Watch **Draining generations**. Existing requests finish against their admitted
    original seller configuration. Keep those original processes available until
-   their in-flight counts reach zero; the workspace does not terminate them.
+   their in-flight counts reach zero. This independent gateway mode leaves their
+   process ownership with their existing launcher.
 6. Use **Review rollback** on a retained revision to inspect its source digest and
    the expected current revision. Restore the required original seller process
    first if it has stopped. The gateway rechecks that seller before selecting its
@@ -104,11 +172,15 @@ node stellar/scf-starforge-20261009/merchant-fleet-gateway/control.mjs status \
 **Export status** downloads the last observed original status, observation time,
 export time, connection state and registered manifest names as JSON. It includes
 original source digests, selected revision, retained history and observed counters.
-It excludes the gateway capability, source paths and workspace session key. Use
+Managed exports also include the observed original release mapping, slot status
+and exact owned-session identifiers. The export excludes the gateway capability,
+source paths and workspace session key. Use
 the existing SF93/SF74 support flow for a broader merchant support package; this
 export is a fleet observation, not a settlement or revenue report.
 
-The workspace is an additive consumer of the existing gateway release. It adds
-no dependencies, persistence engine, automatic seller restart, payment retry,
-chain simulation or hosted Actions. Its local operation uses only the original
-gateway's private status/prepare/activate/rollback API and original snapshots.
+The workspace adds no dependencies, payment retries, chain simulation or hosted
+Actions. Independent mode calls the original gateway's private control adapter.
+Managed mode delegates release storage, journal recovery and process lifecycle
+to the original fleet release operator and SF82 sessions. The browser keeps
+only its current review in memory; it never reconstructs an authoritative state
+from browser storage or replays a failed mutation automatically.

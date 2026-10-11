@@ -1,13 +1,17 @@
 // MIT. SF86: direct read-only Stellar RPC transfer reconciliation for original SF81 records.
 // Complements the original SF82 Stellar CLI verifier; never mutates the SF36 ledger.
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
-export const DEFAULT_RPC = 'https://soroban-testnet.stellar.org';
-// Public testnet providers listed by Stellar; selection is explicit and never
-// falls back to an arbitrary endpoint supplied by a seller or saved verdict.
-export const TESTNET_RPC_ENDPOINTS = Object.freeze([DEFAULT_RPC,
-  'https://soroban-rpc.testnet.stellar.gateway.fm']);
-export const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
+// One source also read by the original Python accounting worker. Public RPC
+// choices come from Stellar's provider directory, never a seller's receipt.
+export const NETWORKS = Object.freeze(Object.fromEntries(Object.entries(
+  JSON.parse(readFileSync(new URL('./networks.json', import.meta.url), 'utf8'))
+).map(([network, profile]) => [network, Object.freeze({...profile,
+  rpcEndpoints:Object.freeze(profile.rpcEndpoints)})])));
+export const DEFAULT_RPC = NETWORKS['stellar:testnet'].defaultRpc;
+export const TESTNET_RPC_ENDPOINTS = NETWORKS['stellar:testnet'].rpcEndpoints;
+export const TESTNET_PASSPHRASE = NETWORKS['stellar:testnet'].passphrase;
 const I128MAX = (1n << 127n) - 1n;
 const TX = /^[0-9a-f]{64}$/;
 const INTENT = /^[A-Za-z0-9._:-]{1,160}$/;
@@ -19,6 +23,21 @@ export class ReconciliationError extends Error {
 export const requireTruth = (value, code) => { if (!value) throw new ReconciliationError(code); };
 export const object = v => v && typeof v === 'object' && !Array.isArray(v);
 export const digest = v => createHash('sha256').update(JSON.stringify(v)).digest('hex');
+
+export function networkProfile(network) {
+  requireTruth(typeof network === 'string' && Object.hasOwn(NETWORKS, network), 'RPC_NETWORK_NOT_SUPPORTED');
+  return NETWORKS[network];
+}
+export function resolveRpcEndpoint(network, endpoint, {allowLocal = false} = {}) {
+  const profile = networkProfile(network);
+  const selected = endpoint ?? profile.defaultRpc;
+  if (allowLocal && typeof selected === 'string' && LOCAL_RPC.test(selected)) return selected;
+  let url;
+  try { url = new URL(selected); } catch { throw new ReconciliationError('RPC_ENDPOINT_NOT_ALLOWED'); }
+  const known = profile.rpcEndpoints.find(candidate => new URL(candidate).href === url.href);
+  requireTruth(known !== undefined, 'RPC_ENDPOINT_NOT_ALLOWED');
+  return known;
+}
 
 // Exactly the Stellar StrKey version/checksum convention; not only a regex.
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -56,7 +75,7 @@ export function checkOriginalTerms(record, payer) {
     p.outcome === 'FRESH_RESERVATION_APPROVED' && p.request_id === intentId,
   'NO_MATCHING_SF81_RESERVATION');
   requireTruth(q.scheme === 'exact', 'NOT_AN_EXACT_PAYMENT');
-  requireTruth(q.network === 'stellar:testnet', 'RPC_TESTNET_ONLY');
+  networkProfile(q.network);
   requireTruth(p.network === q.network && p.asset === q.asset &&
     p.reserved_atomic_units === q.amount, 'RESERVED_TERMS_MISMATCH');
   requireTruth(r.network === q.network && (r.success === true ||

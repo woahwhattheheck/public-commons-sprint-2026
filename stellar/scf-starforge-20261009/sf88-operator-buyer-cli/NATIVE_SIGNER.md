@@ -15,7 +15,7 @@ Node 22+ is required. The lockfile pins `@x402/core` 2.28.0, `@x402/stellar` 2.2
 
 ## Generated private signer module
 
-The operator workspace initializer generates a private module with the chosen network, asset contract, recipient, independent atomic cap and payer address. The operator supplies an existing testnet key through the named local environment variable. A module can follow this pattern; substitute the actual approved public values when generating it:
+The operator workspace initializer generates a private module with the chosen network, asset contract, recipient, independent atomic cap and payer address. The operator supplies the existing payer key through the named local environment variable. Both `stellar:testnet` and `stellar:pubnet` use the same original adapter. A module can follow this testnet pattern; substitute the actual approved public values when generating it:
 
 ```js
 import { createEnvironmentStellarSigner, validateNativeSignerInput }
@@ -63,9 +63,12 @@ have device or network setup of its own. Workspace initialization, review and
 `--diagnose-workspace` never import this provider. Approved execution invokes
 `createProviderStellarSigner` lazily through the generated module.
 
-An optional `--rpc` supplies an HTTPS testnet RPC URL without credentials,
-query parameters or fragments. The default remains
-`https://soroban-testnet.stellar.org`. Diagnostics show only its origin.
+An optional `--rpc` supplies an HTTPS RPC URL without credentials, query
+parameters or fragments. Testnet defaults to `https://soroban-testnet.stellar.org`;
+pubnet defaults to `https://soroban-rpc.mainnet.stellar.gateway.fm`. A known RPC
+for the opposite network is rejected. Diagnostics retain the selected network
+and show the RPC origin. See [MAINNET.md](MAINNET.md) for public-provider
+selection and the complete original inbox/accounting flow.
 
 ## Diagnose the same workspace
 
@@ -84,9 +87,9 @@ diagnostic does not assert successful RPC access or signer initialization.
 
 ## Signing behavior
 
-The adapter permits the configured `stellar:testnet` exact scheme only. It checks the complete accepted requirement against the original challenge and SF31 approved intent, including resource identity, fee sponsorship, atomic amount, asset, recipient and timeout. The operator cap and the intent cap are both enforced. The challenge must contain exactly one copy of the selected option.
+The adapter permits the configured `stellar:testnet` or `stellar:pubnet` exact scheme. It checks the complete accepted requirement against the original challenge and SF31 approved intent, including resource identity, fee sponsorship, atomic amount, asset, recipient and timeout. The operator cap and the intent cap are both enforced. The challenge must contain exactly one copy of the selected option.
 
-The shared SF103 engine configures the original `x402Client` with `ExactStellarScheme`, the exact testnet registration, an exact-option selector and the approved asset-specific atomic spend control. It passes the original challenge to `createPaymentPayload`. The SDK performs Stellar simulation and authorization signing when the operator executes; the adapter returns its unchanged canonical envelope. The same SF88 signer instance refuses a second signing attempt for the same intent ID, including after failure. Separate approved intents continue to use the original durable SF36 budget and reservations. No payment-aware fetch wrapper or additional merchant request is introduced.
+The shared SF103 engine configures the original `x402Client` with `ExactStellarScheme`, the exact approved network registration, an exact-option selector and the approved asset-specific atomic spend control. It passes the original challenge to `createPaymentPayload`. The SDK performs Stellar simulation and authorization signing when the operator executes; the adapter returns its unchanged canonical envelope. The same SF88 signer instance refuses a second signing attempt for the same intent ID, including after failure. Separate approved intents continue to use the original durable SF36 budget and reservations. No payment-aware fetch wrapper or additional merchant request is introduced.
 
 `SIGNER_*` errors identify invalid local configuration, provider initialization or quote drift. `OFFICIAL_STELLAR_SDK_UNAVAILABLE` means the dependencies cannot be imported from the source module. `OFFICIAL_STELLAR_SDK_VERSION_MISMATCH` reports a different installed version; `OFFICIAL_STELLAR_SDK_INCOMPATIBLE` means the installed API lacks the required exports. The shared engine's `NATIVE_PAYMENT_CREATION_FAILED` identifies simulation/signing failure without placing private account material or raw transaction data in the CLI error. Preserve the original SF81 reservation after any failure; use the existing reconciliation path before another operation.
 

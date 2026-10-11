@@ -13,7 +13,7 @@ tickets](OPERATION_TICKETS.md). The existing prepare command accepts the body
 and ticket as private files; workspace and inbox imports preserve the exact
 ticket while review displays only its operation key, request hash and expiry.
 
-Operator-side executable joining SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 checkout recording. The native testnet operator workspace below supplies the official Stellar SDK signer adapter and private local setup. Existing operator-provided signer modules remain supported.
+Operator-side executable joining SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 checkout recording. The native operator workspace supplies the official Stellar SDK signer adapter and private local setup for the selected testnet or mainnet network. Existing operator-provided signer modules remain supported. The example below uses testnet; [MAINNET.md](MAINNET.md) covers the complete mainnet workspace and accounting workflow.
 
 ## Set up a complete native testnet operator workspace
 
@@ -87,13 +87,31 @@ callback. An optional `--rpc https://operator-rpc.example` selects a testnet RPC
 the default is the official testnet endpoint. RPC credentials, query parameters
 and fragments are not accepted in the URL.
 
-`--diagnose-workspace` checks the existing workspace, pinned SDK versions and
-provider file or environment-variable presence. It never reads the SF36 key
+`--diagnose-workspace` checks the existing workspace, pinned SDK versions,
+provider file or environment-variable presence, and access to the controlling
+operator terminal at `/dev/tty`. It never reads the SF36 key
 file, opens a wallet, signs, reserves funds or calls RPC. `READY_TO_EXECUTE`
 means the setup requirements are present; actual wallet access, payer identity
 and network availability are checked during approved execution. An empty or
 invalid wallet variable is still rejected at that point. Existing environment
 workspaces keep the same generated signer and operator ledger.
+
+An allocated terminal stream can report `isTTY` while `/dev/tty` is unavailable.
+The original approval helper uses `/dev/tty`, so both direct execution and the
+inbox check that device before preparing output or recording a permanent
+attempt. `OPERATOR_CONTROLLING_TERMINAL_REQUIRED` leaves an unattempted inbox
+item queued. On a Linux host with util-linux `script`, run the same command in a
+controlling terminal:
+
+```sh
+script -q -e -c 'node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs --execute-workspace --dir /private/weather-operator' /dev/null
+```
+
+Keep the existing command, workspace, and intent. The wrapper provides the
+terminal for the original interactive review; it grants no approval. For an
+inbox operation, wrap that operation's existing `queue-cli.mjs execute`
+command. An intent with a recorded attempt remains recorded and is never
+reset by this setup check.
 
 Execution checks the configured provider file or wallet-variable presence, and
 loads the pinned local SDK before creating an inbox attempt or reserving budget.
@@ -122,7 +140,7 @@ From the complete public sprint checkout, using Node 22+ and Python 3.11+:
 1. Put an owner-reviewed config JSON in a private local directory. It contains only chosen public quote terms and paths to trusted operator files and the existing signer module. Keep the SF36 secret keys outside the config in the operator environment.
 2. Review the method, resource URL, base-unit spend cap and body digest without network via: node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs --review --config /private/pilot.json
 3. Optionally use --discover --config /private/pilot.json to read the ORIGINAL catalog without payment or signing. Save the result and use --prepare below to select its actual source terms without retyping them. Discovery is not approval.
-4. Execute with --execute --config /private/pilot.json from the trusted terminal. Original SF81 invokes SF62 terminal review and SF36 durable fresh reservation before the owner-provisioned signer. SF31 makes one unsigned request and at most one signed retry. Original SF82 persists one create-only evidence file and checks canonical testnet RPC when qualified.
+4. Execute with --execute --config /private/pilot.json from the trusted terminal. Original SF81 invokes SF62 terminal review and SF36 durable fresh reservation before the owner-provisioned signer. SF31 makes one unsigned request and at most one signed retry. Original SF82 persists one create-only evidence file and checks RPC for the approved Stellar network when qualified.
 
 The evidence directory must already exist with POSIX permissions 0700. Original SF36 policy and ledger paths are absolute. After any unknown payment outcome, reconcile the original SF36 ledger and chain before another attempt, never replace a stable operation ID to force retry.
 
@@ -158,7 +176,7 @@ The evidence directory must already exist with POSIX permissions 0700. Original 
 
 The trusted signer module exports an async sign({intent,challenge,accepted}) function. The native workspace generates this module using the official SDK adapter; an existing externally managed signer can supply the same interface. The shared [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) also connects an existing configured buyer to an account or trusted provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB). Only Content-Type and Accept request headers are configurable.
 
-Review makes no external calls. Discover returns original source catalog listings but cannot authorize payment. Execute emits a brief status and the original SF52 aggregate report plus local SF82 evidence file path. Seller-reported settlement, observed HTTP delivery, and independently verified testnet transfer event remain distinct. SCF grant and merchant adoption stay with the existing owners. No hosted GitHub Actions or testnet payment is triggered by publication of this code.
+Review makes no external calls. Discover returns original source catalog listings but cannot authorize payment. Execute emits a brief status and the original SF52 aggregate report plus local SF82 evidence file path. Seller-reported settlement, observed HTTP delivery, and independently verified transfer remain distinct and retain the approved network. Publication does not execute the buyer or start a hosted workflow.
 
 Source lineage: SF31 buyer, SF81 one operator-approved operation, SF82 independent evidence, SF36 existing budget journal.
 

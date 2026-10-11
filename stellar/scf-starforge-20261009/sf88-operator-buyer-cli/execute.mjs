@@ -1,11 +1,11 @@
 // MIT — SF88 privileged operator execution delegates to original source modules.
 import { stat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { OperatorApprovedBuyer } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import { OperatorApprovedBuyer, checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
-import { selectTestnetEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
+import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { execution, bytes, need } from './config.mjs';
 import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
   requireCurrentOperationTicket } from './operation-ticket.mjs';
@@ -31,7 +31,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof emitSummary === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
   const { op, owner, download:responseFile, transport } = execution(cfg);
-  const rpcEndpoint = selectTestnetEvidenceEndpoint(evidenceRpcEndpoint);
+  const rpcEndpoint = selectStellarEvidenceEndpoint(op.expect.network,evidenceRpcEndpoint);
   // Keep RPC and merchant origin pins separate while using the same explicitly
   // selected egress proxy. No wallet or merchant headers enter read-only RPC.
   const rpcTransport = transport === null ? null : createPublicHttpsFetch({trustedProxy:{
@@ -47,6 +47,8 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   need(signerFile.isFile(), 'SIGNER_MODULE_MUST_EXIST');
   const body = op.bodyFile === undefined ? undefined :
     Uint8Array.from(await bytes(op.bodyFile, 1048576, 'REQUEST_BODY_INVALID'));
+  need(!signal?.aborted, 'OPERATOR_ABORTED');
+  await checkOperatorTerminal(op.intentId);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
 
   let output, download, delivery, evidence, evidenceError, nativeResult, nativeError;
