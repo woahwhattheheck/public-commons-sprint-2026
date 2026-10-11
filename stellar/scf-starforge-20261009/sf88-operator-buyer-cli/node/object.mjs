@@ -22,7 +22,15 @@ function freeze(value) {
 }
 function binding(report) {
   need(report?.schema === REPORT, 'OBJECT_NATIVE_REPORT_INVALID');
-  return Object.fromEntries(BINDING_FIELDS.map(key => [key, report[key]]));
+  return normalizeBinding({...Object.fromEntries(BINDING_FIELDS.map(key => [key, report[key]])),
+    deliveryMode:report.deliveryMode === undefined ? 'chunks' : report.deliveryMode});
+}
+function normalizeBinding(value) {
+  // Older Node bindings predate whole-file support and describe chunk sessions.
+  need(object(value), 'OBJECT_APPLICATION_SESSION_CHANGED');
+  const deliveryMode = value.deliveryMode === undefined ? 'chunks' : value.deliveryMode;
+  need(['chunks','whole'].includes(deliveryMode), 'OBJECT_APPLICATION_DELIVERY_MODE_INVALID');
+  return {...value, deliveryMode};
 }
 const equal = (left, right) => jsonBytes(left).equals(jsonBytes(right));
 
@@ -82,7 +90,7 @@ export class ObjectAcquisition {
       need(allowUnbound && meta.source.kind === 'attached', 'OBJECT_INITIALIZE_OR_ATTACH_REQUIRED');
       return current;
     }
-    const saved = await readJson(bindingPath);
+    const saved = normalizeBinding(await readJson(bindingPath));
     need(equal(saved, current), 'OBJECT_APPLICATION_SESSION_CHANGED');
     return saved;
   }
@@ -128,7 +136,7 @@ export class ObjectAcquisition {
       try { await writeJson(path, current, {exclusive:true}); }
       catch (error) {
         if (error.code !== 'EEXIST') throw error;
-        need(equal(await readJson(path), current), 'OBJECT_APPLICATION_SESSION_CHANGED');
+        need(equal(normalizeBinding(await readJson(path)), current), 'OBJECT_APPLICATION_SESSION_CHANGED');
       }
     }
     await writeJson(join(this.directory, 'last-command.json'), {completedAt:now(),
@@ -194,7 +202,7 @@ export class ObjectAcquisition {
     try { await writeJson(path, proposed, {exclusive:true}); }
     catch (error) {
       if (error.code !== 'EEXIST') throw error;
-      need(equal(proposed, await readJson(path)), 'OBJECT_APPLICATION_SESSION_CHANGED');
+      need(equal(proposed, normalizeBinding(await readJson(path))), 'OBJECT_APPLICATION_SESSION_CHANGED');
     }
     return result;
   }
@@ -326,7 +334,7 @@ export class ObjectDelivery extends VerifiedFile {
       assembly.sessionId === native.sessionId && assembly.configurationSha256 === native.configurationSha256 &&
       assembly.snapshot === native.expectedSnapshot && assembly.destination === absolute(file.path) &&
       assembly.bytes === file.bytes && file.bytes === native.bytes &&
-      Number.isSafeInteger(file.bytes) && file.bytes > 0 &&
+      Number.isSafeInteger(file.bytes) && (file.bytes > 0 || file.bytes === 0 && native.deliveryMode === 'whole') &&
       assembly.sha256 === file.sha256 && file.sha256 === native.objectSha256 &&
       typeof file.sha256 === 'string' && /^[a-f0-9]{64}$/.test(file.sha256), 'OBJECT_ASSEMBLY_BINDING_INVALID');
     return file;
