@@ -30,6 +30,9 @@ The Node driver receives:
 | `OPENSEARCH_PLAYGROUND_ENDPOINT` | The same-process loopback endpoint. |
 | `OPENSEARCH_NATIVE_METADATA` | This attempt's native metadata directory. |
 | `OPENSEARCH_RECEIVING_DIRECTORY` | The retained original workspace and result directory. |
+| `OPENSEARCH_CAPTURE_REQUEST_ID` | Optional exact completed capture ID from a retained report; resume its handover in the same workspace. |
+
+If capture completed before a later handover failure, set `OPENSEARCH_CAPTURE_REQUEST_ID` to that report's exact `captureRequestId` and invoke the wrapper with the same directory. The driver requires the retained operation to be a completed capture and reuses its edition, then continues preparation, the seller/customer exchange and reopen. A fresh attempt still records its own current engine metadata.
 
 The wrapper returns the driver's exit code. Read the driver's actual result together with `receiver-state.json` and `native-requests.jsonl`; a ready transport alone does not establish a completed merchant journey. A failed bootstrap retains its own error and leaves the original workspace available. The wrapper closes only its own bridge and driver children.
 

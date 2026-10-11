@@ -8,7 +8,8 @@ import { startOpenSearchSeller } from '../start.mjs';
 const root=resolve(process.env.OPENSEARCH_RECEIVING_DIRECTORY ?? process.argv[2] ?? 'opensearch-native-receiving');
 await mkdir(root,{recursive:true,mode:0o700});
 const nativeRoot=resolve(process.env.OPENSEARCH_NATIVE_METADATA ?? root);
-const captureId='ee290-native-flights-capture-'+basename(nativeRoot);
+const resumeCaptureId=process.env.OPENSEARCH_CAPTURE_REQUEST_ID;
+const captureId=resumeCaptureId ?? 'ee290-native-flights-capture-'+basename(nativeRoot);
 const reportPath=root+'/native-merchant-journey.json', directory=root+'/workspace';
 const env={...process.env,OPENSEARCH_PLAYGROUND_ENDPOINT:process.env.OPENSEARCH_PLAYGROUND_ENDPOINT};
 const sourceFile=fileURLToPath(new URL('./playground-source.json',import.meta.url)), input={country:'US',minimum_price:0};
@@ -28,10 +29,11 @@ try {
  const selection={draftId:draft.id,expectedRevision:draft.revision};
  workspace.validate(draft.id,draft.revision);
  stage('draft',selection);
+ if(resumeCaptureId){const retained=workspace.operation(captureId);assert.equal(retained.kind,'capture');assert.equal(retained.state,'COMPLETE');}
  const capture=await workspace.run('capture',{requestId:captureId,...selection});
  if(capture.state!=='COMPLETE')throw Object.assign(new Error(JSON.stringify(capture.error)),{operation:capture});
  const editionId=capture.result.editionId,edition=workspace.edition(editionId);
- const result=edition.original.result;
+ const result=edition.result;
  assert.equal(result.schema,'stellar-forge.opensearch-result.v1');
  assert.equal(result.hitCount,7);assert.equal(result.hits.length,7);assert.equal(result.pages,3);assert.equal(result.truncated,true);
  assert.equal(result.total.relation,'gte');assert.equal(result.snapshotReleased,true);assert.equal(result.source.serverVersion,report.engine.version.number);
