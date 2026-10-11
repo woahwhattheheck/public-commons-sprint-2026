@@ -10,6 +10,7 @@ import { releaseCacheControlPath } from './release-cache.mjs';
 import { PYTHON_SOURCE_SCHEMA, stagePythonRelease, inspectPythonRelease } from './release-python.mjs';
 import { DUCKDB_SOURCE_SCHEMA, stageDuckdbRelease, inspectDuckdbRelease } from './release-duckdb.mjs';
 import { S3_SOURCE_SCHEMA, stageS3Release, inspectS3Release } from './release-s3.mjs';
+import { MYSQL_SOURCE_SCHEMA, stageMysqlRelease, inspectMysqlRelease } from './release-mysql.mjs';
 import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
 import { SQLITE_SOURCE_SCHEMA, stageSqliteRelease, inspectSqliteRelease } from './release-sqlite.mjs';
 
@@ -20,6 +21,7 @@ const PILOT = fileURLToPath(new URL('./pilot.mjs', import.meta.url));
 const PYTHON_PILOT = fileURLToPath(new URL('./release-python.mjs', import.meta.url));
 const DUCKDB_PILOT = fileURLToPath(new URL('./release-duckdb.mjs', import.meta.url));
 const S3_PILOT = fileURLToPath(new URL('./release-s3.mjs', import.meta.url));
+const MYSQL_PILOT = fileURLToPath(new URL('./release-mysql.mjs', import.meta.url));
 const JSONRPC_PILOT = fileURLToPath(new URL('./release-jsonrpc.mjs', import.meta.url));
 const SQLITE_PILOT = fileURLToPath(new URL('./release-sqlite.mjs', import.meta.url));
 const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
@@ -202,6 +204,13 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
     const snapshot = await inspectJsonrpcRelease(path);
     return { ...snapshot, routes: sourceRoutes(snapshot.service, new Map(), null, null, null, null, snapshot.jsonrpc) };
   }
+  if (manifest.schema === MYSQL_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('A MySQL package owns its original query bindings.');
+    const snapshot = await inspectMysqlRelease(path);
+    const routes = sourceRoutes(snapshot.service, new Map()).map(route => ({ ...route,
+      application: { ...route.application, mysqlExecutionSha256: snapshot.mysql.executionSha256 } }));
+    return { ...snapshot, routes };
+  }
   if (manifest.schema === S3_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('An S3 release owns its original object bindings.');
     const snapshot = await inspectS3Release(path);
@@ -281,6 +290,7 @@ function publicRelease(record) {
     source: record.source, ...(record.inputPackage ? { inputPackage: record.inputPackage } : {}),
     ...(record.python ? { python: record.python } : {}),
     ...(record.duckdb ? { duckdb: record.duckdb } : {}),
+    ...(record.mysql ? { mysql: record.mysql } : {}),
     ...(record.s3 ? { s3: record.s3 } : {}),
     ...(record.jsonrpc ? { jsonrpc: record.jsonrpc } : {}),
     ...(record.sqlite ? { sqlite: record.sqlite } : {}) };
@@ -296,6 +306,7 @@ async function releaseRecord(root, releaseId, verify = false) {
     if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes) ||
         stable(snapshot.python ?? null) !== stable(record.python ?? null) ||
         stable(snapshot.duckdb ?? null) !== stable(record.duckdb ?? null) ||
+        stable(snapshot.mysql ?? null) !== stable(record.mysql ?? null) ||
         stable(snapshot.s3 ?? null) !== stable(record.s3 ?? null) ||
         stable(snapshot.jsonrpc ?? null) !== stable(record.jsonrpc ?? null) ||
         stable(snapshot.sqlite ?? null) !== stable(record.sqlite ?? null))
@@ -313,6 +324,11 @@ export async function stageRelease(root, options) {
   const pythonSource = options.python !== undefined;
   const duckdbSource = options.duckdbPackage !== undefined;
   const s3Source = options.s3Package !== undefined;
+  const mysqlSource = options.mysqlPackage !== undefined;
+  if (mysqlSource && (Object.keys(options).some(key =>
+      !['id', 'label', 'alias', 'runtime', 'mysqlPackage'].includes(key) && options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose the original prepared MySQL package or another source; the package owns its original query bindings.');
   const jsonrpcSource = options.jsonrpcPackage !== undefined;
   const sqliteSource = options.sqlitePackage !== undefined;
   if (sqliteSource && (['workspace', 'spec', 'config', 'bindings', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage'].some(key => options[key] !== undefined) ||
@@ -349,7 +365,8 @@ export async function stageRelease(root, options) {
   let committed = false;
   try {
     let stagedDuckdb, stagedSqlite;
-    if (sqliteSource) stagedSqlite = await stageSqliteRelease(temp, options.sqlitePackage,
+    if (mysqlSource) await stageMysqlRelease(temp, options.mysqlPackage);
+    else if (sqliteSource) stagedSqlite = await stageSqliteRelease(temp, options.sqlitePackage,
       { maxBytes: options.sqliteSnapshotMaxBytes, timeoutMs: options.sqliteSnapshotTimeoutMs, signal: options.signal });
     else if (jsonrpcSource) await stageJsonrpcRelease(temp, options.jsonrpcPackage);
     else if (s3Source) await stageS3Release(temp, options.s3Package);
@@ -375,7 +392,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !source.python && !source.duckdb && !source.s3 && !source.jsonrpc && !source.sqlite && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !source.duckdb && !source.mysql && !source.s3 && !source.jsonrpc && !source.sqlite && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -388,11 +405,15 @@ export async function stageRelease(root, options) {
       ...(workspace ? { inputPackage: workspace.provenance } : {}),
       ...(source.python ? { python: source.python } : {}),
       ...(source.duckdb ? { duckdb: source.duckdb } : {}),
+      ...(source.mysql ? { mysql: source.mysql } : {}),
       ...(source.s3 ? { s3: source.s3 } : {}),
       ...(source.jsonrpc ? { jsonrpc: source.jsonrpc } : {}),
       ...(source.sqlite ? { sqlite: source.sqlite } : {}),
       source: { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256,
-        ...(source.sqlite ? { kind: 'SQLITE_MERCHANT_PACKAGE', packageManifestSha256: source.sqlite.packageManifestSha256,
+        ...(source.mysql ? { kind: 'MYSQL_MERCHANT_PACKAGE', packageManifestSha256: source.mysql.packageManifestSha256,
+          sourceConfigSha256: source.mysql.sourceConfigSha256, planSha256: source.mysql.planSha256,
+          executionSha256: source.mysql.executionSha256 }
+          : source.sqlite ? { kind: 'SQLITE_MERCHANT_PACKAGE', packageManifestSha256: source.sqlite.packageManifestSha256,
           sourceConfigSha256: source.sqlite.sourceConfigSha256, querySha256: source.sqlite.querySha256,
           databaseSha256: source.sqlite.databaseSha256, executionSha256: source.sqlite.executionSha256 } : source.jsonrpc ? { kind: 'JSONRPC_MERCHANT_PACKAGE', planSha256: source.jsonrpc.planSha256,
           packageManifestSha256: source.jsonrpc.packageManifestSha256, executionSha256: source.jsonrpc.executionSha256 }
@@ -460,6 +481,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'python', before: before?.python ?? null, after: after.python ?? null });
   if (stable(before?.duckdb ?? null) !== stable(after.duckdb ?? null))
     runtimeChanges.push({ field: 'duckdb', before: before?.duckdb ?? null, after: after.duckdb ?? null });
+  if (stable(before?.mysql ?? null) !== stable(after.mysql ?? null))
+    runtimeChanges.push({ field: 'mysql', before: before?.mysql ?? null, after: after.mysql ?? null });
   if (stable(before?.s3 ?? null) !== stable(after.s3 ?? null))
     runtimeChanges.push({ field: 's3', before: before?.s3 ?? null, after: after.s3 ?? null });
   if (stable(before?.jsonrpc ?? null) !== stable(after.jsonrpc ?? null))
@@ -649,7 +672,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
+    child = spawn(process.execPath, [CHILD, record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     let readyResolve, readyReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
