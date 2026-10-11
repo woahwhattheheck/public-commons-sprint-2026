@@ -15,6 +15,7 @@ files through the [native workspace](NATIVE_WORKSPACE.md).
 | --- | --- |
 | Connect a desktop, editor or agent host | [Stdio launcher and client configuration](STDIO.md) |
 | Run a private HTTP MCP workspace | `serve.mjs`, with the configuration below |
+| Browse, review quotes and use complete results in a local browser | [Buyer operator console](CONSOLE.md), on the same server at `/console/` |
 | Discover and purchase remote MCP tools | [Remote MCP buyer and native operator](REMOTE_MCP.md) |
 | Expose an existing merchant function as a paid MCP tool | [Native paid tool server](PAID_TOOLS.md) |
 | Use the existing SF88 native HTTP purchase and returned-file workflow | [Native workspace](NATIVE_WORKSPACE.md) |
@@ -77,9 +78,12 @@ export MCP_STATE_DIR=/private/operator/quotes
 node stellar-forge/mcp-paid-agent/serve.mjs
 ```
 
-The listener binds to `127.0.0.1:3210`; `MCP_PORT` selects another port. Configure
-`MCP_CLIENT_ORIGINS` when a client sends an `Origin` header. Every client request
-requires the bearer token. Paid endpoints must match `PAID_RESOURCE_ORIGINS`,
+The listener binds to `127.0.0.1:3210`; `MCP_PORT` selects another port. Open its
+`/console/` address and enter the same operator access token for the browser
+workflow. The static shell contains no quote data or token. Every MCP data
+request requires the bearer token; the server allows its exact loopback origin.
+Configure `MCP_CLIENT_ORIGINS` for other clients that send an `Origin` header.
+Paid endpoints must match `PAID_RESOURCE_ORIGINS`,
 and all discovery and HTTP merchant redirects are rejected.
 
 For paid execution, set an absolute `MCP_OPERATOR_MODULE` path and a durable
