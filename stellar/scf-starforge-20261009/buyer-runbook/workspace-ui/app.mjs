@@ -1,6 +1,7 @@
 // MIT. Browser presentation; the original server-side buyer owns execution.
 import {createHandoffIntakeUI} from './intake.mjs';
 import {createRunbookAccountingUI} from './accounting.mjs';
+import {createRunbookRecoveryUI} from './recovery.mjs';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const formatTime = value => value ? new Date(value).toLocaleString() : '—';
@@ -10,6 +11,7 @@ let navigation = 0, editorVersion = 0, sourceRefresh = 0;
 const resourcePreviews = new Map();
 const previewToOpen = new Set();
 const accountingUI=createRunbookAccountingUI({current:()=>currentRun,action,notice});
+const recoveryUI=createRunbookRecoveryUI({request,notice,refreshState,openPanel(){navigation++;show('recovery');}});
 const intakeUI = createHandoffIntakeUI({request,notice,refreshState,
   openPanel(){navigation++;show('requests');},
   async onPrepared(prepared,item){
@@ -39,7 +41,7 @@ async function request(path, data) {
 const handle = action => async event => { if (event?.type === 'submit') event.preventDefault(); try { await action(event); } catch (error) { notice(error.message,true); } };
 function show(name) {
   view = name;
-  for (const target of ['welcome','draft-panel','run-panel','requests-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
+  for (const target of ['welcome','draft-panel','run-panel','requests-panel','recovery-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
   renderNavigation();
 }
 async function refreshState() {
@@ -47,6 +49,7 @@ async function refreshState() {
   if (generation !== sourceRefresh) return;
   state = result; token = state.token; renderNavigation();
   intakeUI.update(state.intake);
+  recoveryUI.update(state.recovery);
   $('#terminal-state').textContent = state.terminalAvailable ? 'Operator terminal available' : 'Open in a terminal to execute';
   const valid = state.configurations.filter(item => item.valid).length;
   $('#source-summary').innerHTML = `<strong>${valid} ready buyer configuration${valid === 1 ? '' : 's'}</strong><p class="wrap">${escape(state.configsDirectory)}</p>`;
@@ -227,9 +230,12 @@ async function poll() {
   try { if (view === 'run' && currentRun) {
     const id = currentRun.id, generation = navigation, result = await request('/api/runs/' + id);
     if (generation === navigation && view === 'run' && currentRun?.id === id) { currentRun = result; renderRun(); }
-  } }
+  }
+    if(view==='recovery'||state?.recovery?.active&&!state.recovery.active.finishedAt)await refreshState();
+  }
   catch (error) { notice(error.message,true); }
-  timer = setTimeout(poll,currentRun?.active && !currentRun.active.finishedAt ? 1500 : 6000);
+  timer = setTimeout(poll,currentRun?.active && !currentRun.active.finishedAt ||
+    state?.recovery?.active&&!state.recovery.active.finishedAt ? 1500 : 6000);
 }
 
 $('#new-draft').addEventListener('click',handle(newDraft));

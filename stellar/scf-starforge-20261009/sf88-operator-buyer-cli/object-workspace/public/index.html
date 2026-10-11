@@ -43,7 +43,7 @@
             <div id="receive-object-summary" class="product-summary"></div>
             <div class="form-grid">
               <label>Session name<input id="receive-session" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_\-]{0,63}" autocomplete="off" required></label>
-              <label>Bytes per request<input id="receive-chunk" type="number" min="1" step="1" required></label>
+              <label id="receive-chunk-size-field">Bytes per request<input id="receive-chunk" type="number" min="1" step="1" required></label>
               <label>Whole-download cap<input id="receive-total" type="text" inputmode="numeric" pattern="[0-9]+" required><small>Atomic units of the selected asset.</small></label>
               <label>Daily cap<input id="receive-daily" type="text" inputmode="numeric" pattern="[0-9]+" required><small>Original operator limit per UTC day.</small></label>
             </div>
@@ -62,7 +62,7 @@
           <div id="product-summary" class="product-summary"></div>
           <div class="form-grid">
             <label>Session name<input id="session-name" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_\-]{0,63}" autocomplete="off" required><small>Letters, numbers, hyphens and underscores.</small></label>
-            <label>Bytes per request<input id="chunk-bytes" type="number" min="1" step="1" required></label>
+            <label id="chunk-size-field">Bytes per request<input id="chunk-bytes" type="number" min="1" step="1" required></label>
             <label>Whole-download cap<input id="total-cap" type="text" inputmode="numeric" pattern="[0-9]+" required><small>Atomic units of the selected asset.</small></label>
           </div>
           <button id="review-selection" class="primary" type="submit">Review download plan</button>
@@ -84,7 +84,7 @@
         <nav class="workspace-tabs" aria-label="Download views"><button id="delivery-tab" aria-current="page">File delivery</button><button id="accounting-tab">Purchase records</button></nav>
         <div id="delivery-view">
         <div class="metrics">
-          <div><span>Verified parts</span><strong id="parts-value">—</strong></div>
+          <div><span>Verified responses</span><strong id="parts-value">—</strong></div>
           <div><span>Delivered bytes</span><strong id="bytes-value">—</strong></div>
           <div><span>Whole-download cap</span><strong id="cap-value">—</strong><small>Atomic units</small></div>
           <div><span>Attempt allocations</span><strong id="allocated-value">—</strong><small>Maximum caps, by original attempt</small></div>

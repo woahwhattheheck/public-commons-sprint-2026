@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pipeline operations</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header><div><div class="brand">PIPELINE OPERATIONS</div><p>Deal monitoring, manager review and operating continuity</p></div><div class="operator"><label>Operator / reviewer<input id="operator" aria-label="Operator / reviewer" autocomplete="name" placeholder="Name for the work notes"></label><span class="saved" id="revision">Opening workspace</span><button type="button" id="refresh">Refresh</button></div></header>
+<div class="layout"><aside><nav id="nav" aria-label="Workspace sections"></nav><small id="workspace-label">Private manager workspace</small></aside><main><div class="notice" id="notice" role="status" hidden></div><div class="notice" id="incoming" hidden></div><div class="notice" id="conflict" hidden></div><div id="scope"></div><div id="content"><div class="empty">Opening retained work…</div></div></main></div>
+<dialog id="dialog" aria-labelledby="dialog-title"><div class="dialoghead"><h2 id="dialog-title"></h2><button type="button" data-act="close-dialog">Close</button></div><div class="dialogbody" id="dialog-body"></div></dialog>
+<script type="module" src="/app.mjs"></script>
+</body>
+</html>

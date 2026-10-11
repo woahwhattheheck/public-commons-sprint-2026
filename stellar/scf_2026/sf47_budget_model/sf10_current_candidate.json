@@ -15,7 +15,8 @@
     "capacity_required": "120 hours in days1-30; 120 in days31-90; 160 in days91-150. Actual contributor allocation remains to be recorded.",
     "preaward_exclusions": "All already delivered seller, catalog, approval, signer, ledger, finalizer, dataset adapters, buyer inbox, merchant outbox/receiver, recovery, monitoring and distribution source. Any further pre-award work also comes out.",
     "new_service_reserve_usd": "0",
-    "service_basis": "Use existing available fleet/container capacity. Add actual incremental units and sourced prices only when a real deployment needs them; no Actions spend."
+    "service_basis": "Use existing available fleet/container capacity. Add actual incremental units and sourced prices only when a real deployment needs them; no Actions spend.",
+    "outcome_plan_status": "PROPOSED_FOR_APPLICATION_REVIEW"
   },
   "milestones": [
     {
@@ -131,10 +132,186 @@
     "Participating merchant scope and production deployment requirements.",
     "Actual incremental infrastructure pricing only if existing capacity is insufficient.",
     "Actual invitation, accepted full-application terms and any award-specific milestone agreement.",
-    "Source of working capital for the modeled cash gap; no credit or funding receipt is assumed."
+    "Source of working capital for the modeled cash gap; no credit or funding receipt is assumed.",
+    "Review and agree the proposed external deployment cohort, observation windows and workload targets in deployment_acceptance_plan; record actual provider access and customer scope without treating targets as achieved adoption."
   ],
   "primary_sources": [
     "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines",
     "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria"
-  ]
+  ],
+  "deployment_acceptance_plan": {
+    "schema": "stellar-forge.scf-deployment-outcomes.v1",
+    "status": "PROPOSED_FOR_APPLICATION_REVIEW",
+    "prepared_on": "2026-10-11",
+    "source_baseline_commit": "7d2589c6b789bfaa7fe5dd8ba2a94c1cda81e3cc",
+    "relation_to_budget": "A proposed operating and adoption plan for the existing six prospective cost packages. No cost, hour, rate, payment share, modeled day or existing customer commitment is changed. These targets are not issuer-approved acceptance terms, contracted usage or achieved results.",
+    "timing": "Use the existing hypothetical day-zero award acceptance and milestone submissions on days 30, 90 and 150. Set actual calendar windows in the same merchant workorder after installation dates are agreed. The proposed seven-day and fourteen-day observations finish within tranches 2 and 3 respectively; they are workload windows, not new SCF payment or acceptance rules.",
+    "independence": {
+      "merchant": "One accountable external organization or person operating its own useful resource and its installation. Multiple routes, hosts, fleet seats, sessions or wallet addresses under the same operator count once.",
+      "buyer": "One accountable external organization or person directing its own buyer application and paid use. Multiple agents, sessions, wallets or retries under that operator count once.",
+      "facilitator": "A separately operated payment service with its own accountable operator; two endpoints or two self-hosted copies controlled by this project do not establish two independent operators.",
+      "rehearsal": "Project-operated merchants, buyers, test identities and team-funded rehearsals are reported separately from external adoption. Original testnet purchases remain the delivered engineering baseline."
+    },
+    "targets": [
+      {
+        "tranche": 1,
+        "cost_ids": [
+          "T1-merchant-resource-integration",
+          "T1-merchant-authority-handover"
+        ],
+        "proposed_window": {
+          "start_day": 1,
+          "end_day": 30
+        },
+        "outcome": "Two independent merchant operators each install one agreed useful operation from the maintained release. Each completes its own source/terms change or withdrawal and a handover to a second accountable operator.",
+        "target_counts": {
+          "external_merchant_operators": 2,
+          "usable_operations": 2,
+          "completed_operator_handovers": 2
+        },
+        "native_records": [
+          "Original merchant case and agreed workorder scope",
+          "Original installed release/configuration and selected complete payment terms",
+          "Source/offer revision or withdrawal and retained operator handover outcome"
+        ],
+        "timing_measurement": "Record active setup/support hours separately from elapsed calendar time, including access delays and unfinished installations. Compare the same operator's prior integration process where an actual baseline exists."
+      },
+      {
+        "tranche": 2,
+        "cost_ids": [
+          "T2-provider-and-ledger-deployment",
+          "T2-deployed-threat-response"
+        ],
+        "proposed_window": {
+          "consecutive_calendar_days": 7,
+          "finish_no_later_than_day": 90
+        },
+        "outcome": "One agreed merchant operation is used through two independently operated facilitators and two independently operated buyer applications. At least ten useful testnet purchases complete in the selected seven-day window. Exercise the deployed alert/acknowledgment/recovery path for an interrupted settled purchase and a merchant-delivery failure, retaining the original intent and actual financial outcome.",
+        "target_counts": {
+          "same_operation_facilitator_operators": 2,
+          "external_buyer_operators": 2,
+          "completed_testnet_purchases": 10,
+          "deployed_recovery_cases": 2
+        },
+        "native_records": [
+          "Same merchant operation/configuration and explicit provider-specific request/terms observations",
+          "Original SF88/SF36 intent/attempt/reservation and SF86 transfer result",
+          "Original response/output and SF98 event or merchant delivery record",
+          "Original support case with fault, alert, acknowledgment, recovery times and outcome"
+        ],
+        "timing_measurement": "Retain the actual observation interval and data coverage. Record recovery time and operator effort for each real case; report zero or incomplete outcomes without replacing them with a rehearsal.",
+        "required_work": "Complete the deployment-specific threat assessment and material remediation within this existing tranche."
+      },
+      {
+        "tranche": 3,
+        "cost_ids": [
+          "T3-mainnet-merchant-rollout",
+          "T3-production-recovery-and-handover"
+        ],
+        "proposed_window": {
+          "consecutive_calendar_days": 14,
+          "finish_no_later_than_day": 150
+        },
+        "outcome": "The two merchant installations operate on mainnet. Two independent buyer operators complete at least thirty useful purchases in the selected fourteen-day window, and both return for a distinct completed purchase on another calendar day. Complete controlled release/rollback, restore the original state to an authorized receiving host, reconcile operations after the backup point, and have an independent operator resolve a support case.",
+        "target_counts": {
+          "external_mainnet_merchant_operators": 2,
+          "external_buyer_operators": 2,
+          "completed_mainnet_purchases": 30,
+          "repeat_external_buyer_operators": 2,
+          "original_state_restore_and_cutover": 1,
+          "independent_operator_support_case": 1
+        },
+        "native_records": [
+          "Original mainnet installation, merchant scope and operator identity",
+          "Original request/intent, matching native amount and independently verified transfer, useful delivered output and agreed order completion",
+          "Retained release/rollback and original backup/restore/cutover history",
+          "Named maintainer handover and original support case resolution"
+        ],
+        "timing_measurement": "Report actual recovery time, retained-history coverage and setup/support effort. The purchase workload follows agreed useful customer demand and actual merchant pricing; it is not filler payment activity created to hit the target."
+      }
+    ],
+    "provider_feasibility": {
+      "assessment": "The existing seller accepts an explicit canonical facilitator client. Current first-party sources describe both the OpenZeppelin-hosted Stellar x402 v2 service and Vellar's canonical verify/settle/supported service. This makes a two-operator exact-testnet deployment a technically supported planning candidate, not a completed interoperability result or provider service commitment.",
+      "proposed_candidates": [
+        {
+          "operator": "OpenZeppelin-hosted Stellar relayer",
+          "source": "https://developers.stellar.org/docs/build/agentic-payments/x402",
+          "requirements": "Use the actual service API key and supported exact-testnet terms. Mainnet has its own credentials and endpoint; no credential or access agreement is implied."
+        },
+        {
+          "operator": "Vellar",
+          "source": "https://github.com/Vellar-Wallet/vellar-facilitator/blob/main/README.md",
+          "source_blob": "67eb604cf26b349f93eff3f1cea1e95b02cebebd",
+          "requirements": "Use the actual deployed supported exact-testnet configuration and resource ownership/discovery requirements. Provider source reports testnet and mainnet, while the older Stellar overview still labels it testnet-only; retain that dated source difference."
+        }
+      ],
+      "merchant_join": "Use one merchant-owned operation, its explicit source/contract version and complete terms through each selected provider. Separate provider catalogs currently containing different sellers are not the same-operation result. Record actual provider URLs/configuration revisions and preserve any material terms differences.",
+      "current_counterparties": "The existing Veridex and Nansen paid proposals retain their original owners and actual response state. Neither supplies a confirmed participating merchant, access agreement or committed volume for this plan.",
+      "revision_path": "Confirm provider access, supported terms and merchant scope in the original workorder before scheduling its observed window. If the actual provider pair differs or cannot be completed, retain the observed result and revise the same proposed plan with the application owner; do not invent a second provider or count a project-operated clone."
+    },
+    "record_joins": [
+      {
+        "measurement": "Operator and useful operation",
+        "source_paths": [
+          "stellar/scf-starforge-20261009/sf74-merchant-support-console/CASE_DESK.md"
+        ],
+        "join": "Original merchant/case and workorder scope identify the accountable operator, actual resource, chosen release and agreed output. A case status alone does not establish external adoption or commercial acceptance."
+      },
+      {
+        "measurement": "Approved intent, attempted payment and actual spending",
+        "source_paths": [
+          "stellar/scf-starforge-20261009/sf36-spend-governor/README.md",
+          "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/ACCOUNTING.md"
+        ],
+        "join": "Retain the original request_id/intentId, resource, method, body presence/bytes/hash and accepted_terms_sha256 with its native attempt/reservation. Read every accounting range using range.nextOffset. actualAtomicUnits and original receipts describe spending; allocation ceilings and NOT_ATTEMPTED entries do not."
+      },
+      {
+        "measurement": "Matched transfer and merchant event",
+        "source_paths": [
+          "stellar/scf-starforge-20261009/merchant-settlement-accounting/README.md"
+        ],
+        "join": "Join the selected network, asset, recipient and exact atomic amount to the original transaction/receipt and independently collected SF86 result. Preserve native versus recovered sources and original time bases. Deduplicate canonical transaction hashes within their network; conflicting/reused matches remain exceptions. A 2xx webhook acknowledgment does not establish order fulfillment."
+      },
+      {
+        "measurement": "Useful delivered output and final order",
+        "source_paths": [
+          "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/ACCOUNTING.md",
+          "stellar/scf-starforge-20261009/sf101-merchant-receiver/RESUMABLE_TRANSFERS.md"
+        ],
+        "join": "Use the original saved response/file or complete dataset/object/stream result, its exact digest and completion state, and the agreed merchant order/entitlement outcome when applicable. A paid part or page is a purchase intent; completion of the whole parent product is a separate reported outcome."
+      },
+      {
+        "measurement": "Observed window and operating effort",
+        "source_paths": [
+          "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/README.md",
+          "stellar/scf-starforge-20261009/sf74-merchant-support-console/CASE_DESK.md"
+        ],
+        "join": "Use original retained UTC history with requested/effective dates, session/day/route coverage, interruptions and retention truncation. Keep support case fault/acknowledgment/recovery times and actual operator hours. The envelope of session times does not prove continuous observation; HTTP counts do not identify distinct buyers or complete paid purchases."
+      }
+    ],
+    "reporting": {
+      "unit": "One distinct original approved intent, with its attempts and linked product/order, within the selected cohort and observation window.",
+      "completed_purchase": "The approved useful operation, actual settled amount with matching independent native transfer, and complete expected output all agree. For an order-dependent product, retain its separately agreed fulfillment outcome as well.",
+      "counts": [
+        "Approved unique intents",
+        "Intents with a payment attempt",
+        "Completed paid intents",
+        "Settled intents with partial or missing output",
+        "Attempted intents with no confirmed settlement, including unresolved attempts",
+        "Cancelled before payment",
+        "Cancelled or refunded after settlement",
+        "Unsigned/no-payment responses",
+        "Completed parent products and completed orders",
+        "Unique canonical transactions and exact amounts by network/asset",
+        "External operators, repeat external operators and separate internal rehearsals"
+      ],
+      "rates": "Completion rate uses completed paid intents divided by all distinct payment-attempted intents in the same selected cohort/window, including unresolved and partial outcomes. Also show attempted/approved, completed-parent-product/started-parent-product and fulfilled/ordered denominators. A zero denominator is not a zero-percent failure or 100-percent success.",
+      "attempts_and_adjustments": "Retries and original-state reopening remain attached to the same intent; an actual new intent and new transfer are recorded separately. Show gross completed purchases and any later cancellation/refund with its actual amount/status and date; do not erase the original payment or infer a refund from application cancellation.",
+      "clocks": "Retain original approval, attempt, native settlement, output completion and recovery-read times. Use the selected first-attempt cohort for purchase completion and separately report transactions settling during the window; a later recovery result must not be backdated to the original attempt.",
+      "amounts": "Keep actual integer atomic amounts by asset/network and actual payment fees separately. Merchant-entered USD valuation, forecast contribution, contracted service fees, invoices, receivables and collected cash retain distinct meanings.",
+      "missing_data": "Preserve unknown identities, missing joins, coverage gaps, partial exports and unresolved outcomes. Actual zero remains zero. Publish the numerator, denominator, window and covered source set; a partially retained history is not an assumed full window.",
+      "release_link": "Retain the exact installed release and source/input manifests with the private original workorder/case. Reuse the maintained exports and accepted component journeys; no additional benchmark suite, synthetic purchase generator or parallel ledger is introduced."
+    },
+    "actual_results": null
+  }
 }
