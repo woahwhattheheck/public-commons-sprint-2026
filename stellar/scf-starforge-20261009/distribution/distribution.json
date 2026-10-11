@@ -111,9 +111,17 @@
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery-controller.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/recovery.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/recovery.css",
-    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_RECOVERY.md"
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_RECOVERY.md",
+    "stellar/scf-starforge-20261009/sf46-release/merchant-package.mjs",
+    "stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
+    "stellar/scf-starforge-20261009/sf46-release/product.mjs",
+    "stellar/scf-starforge-20261009/sf46-release/release-core.mjs",
+    "stellar/scf-starforge-20261009/sf46-release/command-catalog.mjs",
+    "stellar/scf-starforge-20261009/sf46-release/runtime-package.mjs",
+    "stellar/scf-starforge-20261009/sf46-release/MANAGED_PACKAGE.md"
   ],
   "commands": {
+    "installation": "stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
     "runtime-profile": "stellar/scf-starforge-20261009/distribution/runtime-profile-cli.mjs",
     "runtime-install": "stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs",
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
@@ -228,6 +236,10 @@
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
+    "./installation": "./source/stellar/scf-starforge-20261009/sf46-release/merchant-package.mjs",
+    "./installation/cli": "./source/stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
+    "./installation/product": "./source/stellar/scf-starforge-20261009/sf46-release/product.mjs",
+    "./installation/runtime": "./source/stellar/scf-starforge-20261009/sf46-release/runtime-package.mjs",
     "./runtime-install": "./source/stellar/scf-starforge-20261009/distribution/runtime-install.mjs",
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
     "./seller": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
