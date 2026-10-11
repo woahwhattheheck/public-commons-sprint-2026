@@ -91,7 +91,8 @@ function createQuerySettings(op,previous) {
     bulk=selectField('Apply one format to this operation’s array parameters',
       [['','Choose a format'],['source','Use each source setting'],['repeat','Repeated keys'],['comma','Comma-separated']],'');
     bulk.container.className='wide';apply=make('button','Apply to array parameters');apply.type='button';
-    bulk.container.append(apply);element.insertBefore(bulk.container,fields);
+    const bulkControls=make('div',undefined,'fields wide');
+    bulkControls.append(bulk.container,apply);element.insertBefore(bulkControls,fields);
     bulk.input.addEventListener('change',()=>{apply.disabled=!enabled||!bulk.input.value;});
     apply.addEventListener('click',()=>{
       if(!enabled||!bulk.input.value)return;
