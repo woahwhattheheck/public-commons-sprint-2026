@@ -7,6 +7,7 @@ import {spawn} from 'node:child_process';
 import {compileTerms,indexOriginalVerifications,runOriginalAccounting} from '../reconcile.mjs';
 import {writeOriginalAccountingPack} from '../cli.mjs';
 import {acquireStateLease} from '../../merchant-fleet-gateway/state-lease.mjs';
+import {PricingWorkspace} from './pricing-workspace.mjs';
 
 const SCHEMA='stellar-forge.merchant-accounting-workspace.v1';
 const now=()=>new Date().toISOString();
@@ -117,7 +118,7 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
 }
 
 class AccountingWorkspace{
-  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.tail=Promise.resolve();this.tasks=new Set();this.cache=new Map();this.recoveryControllers=new Map();this.closing=false;this.closed=false;}
+  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.tail=Promise.resolve();this.tasks=new Set();this.cache=new Map();this.recoveryControllers=new Map();this.pricing=new PricingWorkspace(this);this.closing=false;this.closed=false;}
   async serial(work){check(!this.closed,'CLOSING','The workspace is closing.',503);const result=this.tail.then(async()=>{this.lease.assertHeld();const previous=structuredClone(this.state);try{return await work();}catch(error){this.state=previous;throw error;}});this.tail=result.catch(()=>{});return result;}
   async commit(action,actor,details={}){this.state.revision++;this.state.history.push({at:now(),actor,action,...details});check(this.state.history.length<=100_000&&Buffer.byteLength(json(this.state))<=32_000_000,'HISTORY_LIMIT','Archive this workspace and start a new one before adding further operator history.');await durableJson(join(this.directory,'workspace.json'),this.state);}
   expected(revision){check(Number.isSafeInteger(revision)&&revision===this.state.revision,'STALE_WORKSPACE','Saved workspace state changed. Refresh it before reapplying your retained draft.',409);}
@@ -130,6 +131,7 @@ class AccountingWorkspace{
       proofs:this.state.proofs,runs:this.state.runs,exports:this.state.exports,history:this.state.history.slice(-100).reverse(),
       recovery:{directory:this.state.sources.recoveredDir??null,capturedAt:this.state.recoveryCapturedAt,entries:this.state.recoveredEntries},
       recoveryPreviews:this.state.recoveryPreviews,recoveryJobs:this.state.recoveryJobs,
+      pricingImports:this.state.pricingImports??[],
       reviewCounts:Object.values(this.state.notes).reduce((result,note)=>{result[note.status]++;return result;},{open:0,investigating:0,reviewed:0})});
   }
   async connectRecovered({revision,directory,actor}){return this.serial(async()=>{
@@ -211,20 +213,27 @@ class AccountingWorkspace{
     if(proof.included!==included){proof.included=included;await this.commit('proof_selection_changed',actor,{proofId:id,included});}
     return this.view();
   });}
-  async importTerms({revision,name,content,actor}){return this.serial(async()=>{
-    this.expected(revision);actor=text(actor,'operator');name=text(name,'filename',150);
-    check(typeof content==='string'&&Buffer.byteLength(content)<=200_000,'TERMS_TOO_LARGE','Select merchant accounting terms up to 200 KB.');
-    const bytes=Buffer.from(content),data=parse(bytes,'merchant terms'),compiled=compileTerms(data),sha256=hash(bytes);
+  async retainTerms({name,bytes,actor}){
+    name=text(name,'filename',150);
+    check(Buffer.isBuffer(bytes)&&bytes.length<=200_000,'TERMS_TOO_LARGE','Select merchant accounting terms up to 200 KB.');
+    const data=parse(bytes,'merchant terms'),compiled=compileTerms(data),sha256=hash(bytes);
     let record=this.state.termsImports.find(item=>item.sha256===sha256);
     if(!record){record={id:identity(),name,sha256,bytes:bytes.length,options:compiled.size,createdAt:now(),actor};await writeNew(join(this.directory,'inputs',record.id+'.terms.json'),bytes);this.state.termsImports.push(record);}
-    this.state.termsSelection=record.id;await this.commit('terms_selected',actor,{termsId:record.id,sha256});return this.view();
+    return record;
+  }
+  async importTerms({revision,name,content,actor}){return this.serial(async()=>{
+    this.expected(revision);actor=text(actor,'operator');
+    check(typeof content==='string','TERMS_REQUIRED','Select merchant accounting terms JSON.');
+    const record=await this.retainTerms({name,bytes:Buffer.from(content),actor});
+    this.state.termsSelection=record.id;await this.commit('terms_selected',actor,{termsId:record.id,sha256:record.sha256});return this.view();
   });}
   async selectTerms({revision,selection,actor}){return this.serial(async()=>{
     this.expected(revision);actor=text(actor,'operator');check(selection==='source'||this.state.termsImports.some(item=>item.id===selection),'TERMS_NOT_FOUND','Choose original source terms or a retained terms file.');
     this.state.termsSelection=selection;await this.commit('terms_selected',actor,{termsId:selection});return this.view();
   });}
-  async begin({revision,name,actor}){return this.serial(async()=>{
+  async begin({revision,name,actor,expectedTermsSelection}){return this.serial(async()=>{
     this.expected(revision);actor=text(actor,'operator');name=text(name,'run name',160);
+    check(expectedTermsSelection===undefined||expectedTermsSelection===this.state.termsSelection,'TERMS_SELECTION_CHANGED','The selected accounting terms changed. Select the reviewed pricing terms before starting this reconciliation.',409);
     check(!this.state.runs.some(run=>['queued','running'].includes(run.status)),'RUN_IN_PROGRESS','A reconciliation is already queued or running.',409);
     check(this.state.runs.length<5000,'RUN_LIMIT','This workspace already retains 5,000 reconciliations.');
     const run={id:identity(),name,actor,status:'queued',createdAt:now(),sourceRevision:this.state.revision,termsSelection:this.state.termsSelection,
@@ -251,6 +260,7 @@ class AccountingWorkspace{
     if(selected)check(hash(terms)===selected.sha256,'TERMS_CHANGED','The retained merchant terms changed.',409);
     compileTerms(parse(terms,'merchant terms'));await writeNew(join(sources,'terms.json'),terms);
     manifest.files.push({source:selected?selected.name:basename(sourcePaths.termsFile),path:'sources/terms.json',bytes:terms.length,sha256:hash(terms)});
+    await this.pricing.capture(run,manifest,hash(terms));
     const names=(await readdir(sourcePaths.proofDir)).sort();check(names.length+run.proofIds.length<=2000,'PROOF_LIMIT','The combined verification sources exceed 2,000 files.');
     const hashes=new Set();
     for(const [index,name] of names.entries()){
@@ -308,9 +318,9 @@ class AccountingWorkspace{
     }
   }
   async run(id){
-    const run=this.runRow(id);if(run.status!=='complete')return {run};
+    const run=structuredClone(this.runRow(id));if(run.status!=='complete')return {run};
     const report=await this.report(id),notes=report.exceptions.map(row=>noteFor(this.state,row));
-    return {run,totals:report.totals,routes:report.routes,options:report.options,hashes:report.hashes,ignoredProofs:report.ignoredProofs,
+    return {run,totals:report.totals,routes:report.routes,options:report.options,hashes:report.hashes,ignoredProofs:report.ignoredProofs,pricing:(await this.inputManifest(id)).pricing??null,
       unmatchedOfficialProofCount:report.unmatchedOfficialProofCount,reviewCounts:notes.reduce((result,note)=>{result[note.status]++;return result;},{open:0,investigating:0,reviewed:0})};
   }
   async rows(id,kind,query={}){
@@ -364,9 +374,9 @@ class AccountingWorkspace{
       await privateDir(join(folder,'sources','proofs'),{create:true});
       const manifest=parse(inputManifest,'input manifest');
       if(manifest.recoveredSource)await privateDir(join(folder,'sources','recovered'),{create:true});
-      for(const file of manifest.files){if(!file.path)continue;check(file.path.startsWith('sources/')&&!file.path.includes('..'),'INVALID_RETAINED_PATH','A retained source path is invalid.');const raw=await readBytes(join(root,file.path),file.path.endsWith('/response.bin')?RECOVERY_RESPONSE_LIMIT:16_000_000,{empty:true});check(hash(raw)===file.sha256&&raw.length===file.bytes,'SOURCE_SNAPSHOT_CHANGED','A retained input changed.',409);await privateDir(resolve(join(folder,file.path),'..'),{create:true});await writeNew(join(folder,file.path),raw);}
+      for(const file of manifest.files){if(!file.path)continue;check(file.path.startsWith('sources/')&&!file.path.includes('..'),'INVALID_RETAINED_PATH','A retained source path is invalid.');const raw=await readBytes(join(root,file.path),file.path.endsWith('/response.bin')||file.path==='sources/pricing-report.json'?RECOVERY_RESPONSE_LIMIT:16_000_000,{empty:true});check(hash(raw)===file.sha256&&raw.length===file.bytes,'SOURCE_SNAPSHOT_CHANGED','A retained input changed.',409);await privateDir(resolve(join(folder,file.path),'..'),{create:true});await writeNew(join(folder,file.path),raw);}
     }
-    await writeNew(join(folder,'START.txt'),'Merchant settlement reconciliation\n\nOriginal accounting report/CSV/HTML and a snapshot of named operator exception notes. Review notes do not change native transfer classifications.\n'+(includeSources?'Includes private original journal, terms, verification files and any captured recovered entries with their retained response bytes. If sources/recovered is present, pass --recovered-dir /absolute/extracted/sources/recovered to the original accounting CLI when reproducing this report.\n':'Private original source bytes were not included.\n'));
+    await writeNew(join(folder,'START.txt'),'Merchant settlement reconciliation\n\nOriginal accounting report/CSV/HTML and a snapshot of named operator exception notes. Review notes do not change native transfer classifications.\n'+(includeSources?'Includes private original journal, terms, verification files, any captured original pricing report, and recovered entries with their retained response bytes. If sources/recovered is present, pass --recovered-dir /absolute/extracted/sources/recovered to the original accounting CLI when reproducing this report.\n':'Private original source bytes were not included.\n'));
     const handle=await open(archive,'wx',0o600);
     try{await new Promise((resolve,reject)=>{
       const child=spawn('tar',['-cf','-','-C',folder,'.'],{stdio:['ignore',handle.fd,'pipe']});let error='';child.stderr.on('data',chunk=>{if(error.length<4000)error+=chunk;});child.once('error',reject);child.once('exit',code=>code===0?resolve():reject(new Error('Archive export failed: '+error)));});await handle.sync();}
