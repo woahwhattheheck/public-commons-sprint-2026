@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Seller releases</title><link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header><div><span class="eyebrow">Stellar Forge · Merchant operations</span><h1>Seller releases</h1></div><button id="refresh">Refresh</button></header>
+  <main>
+    <section class="overview" aria-label="Deployment status">
+      <div><span class="label">Selected release</span><strong id="selected">—</strong><span id="generation">Loading</span></div>
+      <div><span class="label">Running release</span><strong id="running">—</strong><span id="runtime">Checking local seller</span></div>
+      <div><span class="label">Listener</span><strong id="listener">—</strong><span id="mode">—</span></div>
+    </section>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <div class="workspace">
+      <aside><h2>Prepared releases</h2><p>Compare route, price and application changes before selecting a release.</p><div id="release-list"></div><p class="help">Prepare a new release with the stage command. Inputs stay on this machine.</p><code id="stage-command"></code></aside>
+      <section class="review">
+        <div class="section-heading"><div><span class="eyebrow" id="comparison-caption">Release review</span><h2 id="review-title">Choose a prepared release</h2></div><span id="review-mode" class="badge"></span></div>
+        <p id="review-description">The selected release applies the next time the seller starts. An existing seller keeps its current configuration.</p>
+        <div id="review-summary" class="summary"></div>
+        <div id="route-changes"></div>
+        <div id="runtime-changes"></div>
+        <section id="selection-actions" hidden>
+          <label for="reason">Change note</label><input id="reason" maxlength="240" placeholder="Why this release is ready">
+          <div class="actions"><button id="activate" class="primary">Select this release</button><button id="rollback">Select previous release</button></div>
+        </section>
+      </section>
+    </div>
+    <section class="process">
+      <div><h2>Seller process</h2><p id="process-description">Start the selected seller release.</p></div>
+      <div class="actions"><button id="start">Start selected</button><button id="restart">Restart selected</button><button id="stop">Stop seller</button></div>
+    </section>
+    <section class="history"><h2>Selection history</h2><div class="table-scroll"><table><thead><tr><th>Time</th><th>Generation</th><th>Change</th><th>Reason</th></tr></thead><tbody id="history"></tbody></table></div></section>
+    <footer><span id="store"></span><span>Local operator interface · Exact atomic payment amounts</span></footer>
+  </main>
+  <script type="module" src="/app.mjs"></script>
+</body>
+</html>
