@@ -72,7 +72,12 @@
 <h2 data-i18n="story">The story so far</h2><ul id="insight" class="insight plain"></ul>
 <h2 data-i18n="numbers">Numbers</h2>
 <table><thead><tr><th scope="col"><span class="sr">Stat</span></th><th scope="col" id="thFocus">Harbor FC</th><th scope="col" id="thRival">Metro Rovers</th></tr></thead><tbody id="stats"></tbody></table>
-<h2 data-i18n="moments">Key moments</h2><ol id="moments" class="moments plain"></ol>
+<h2 data-i18n="moments">Key moments</h2>
+<div class="review-tools"><label for="reviewFilter" data-i18n="reviewFilter">Filter moments</label>
+<select id="reviewFilter"><option value="all" data-i18n="reviewAll">All outcomes</option><option value="success" data-i18n="reviewSuccess">Won back</option><option value="expired" data-i18n="reviewExpired">8s elapsed</option><option value="interrupted" data-i18n="reviewInterrupted">Unclear</option></select>
+<span id="reviewCount" class="note" aria-live="polite"></span></div>
+<ol id="moments" class="moments plain"></ol>
+<section id="review" class="review-panel" tabindex="-1" aria-label="Recorded tactical evidence"><p class="note">Select a recorded moment to inspect the event evidence.</p></section>
 <h2 data-i18n="feed">Live feed</h2><ol id="feed" class="feed plain" aria-label="Latest events"></ol>
 <div class="optional"><span data-i18n="aiTitle">Optional AI commentary (Microsoft Foundry)</span> <button id="foundry" type="button" disabled>Not configured</button><div id="foundryResult" aria-live="polite"></div></div>
 <div class="optional"><span data-i18n="opusTitle">AI match insight (optional)</span> <button id="opus" type="button" disabled>Not configured</button><div id="opusResult" aria-live="polite"></div></div>
