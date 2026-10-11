@@ -88,7 +88,7 @@
 <p id="cw-status" class="runtime">Import a customer contract or package to begin.</p>
 <details id="cw-intake" open><summary>Receive a merchant contract</summary>
 <form id="cw-fetch-form"><fieldset id="cw-fetch-fields">
-<div class="grid"><label>Merchant HTTPS origin<input name="origin" type="url" required placeholder="https://api.example.com"></label><label>Explicit CONNECT proxy environment variable<input name="proxyEnv" placeholder="Optional"></label></div>
+<div class="grid"><label>Merchant HTTPS origin<input name="origin" type="url" required placeholder="https://api.example.com"></label><label>Explicit CONNECT proxy environment variable<input name="proxyEnv" placeholder="Optional"></label><label>Explicit CONNECT proxy URL<input name="proxyUrl" type="url" placeholder="Optional; choose URL or environment variable"></label></div>
 <button type="submit">Fetch public contract</button></fieldset></form>
 <form id="cw-intake-form"><fieldset id="cw-intake-fields">
 <label>Customer package or contract file<input id="cw-document-file" type="file" accept=".json,application/json"></label>
@@ -111,7 +111,7 @@
 <label>Actor ID<input name="actor" required placeholder="operator"></label>
 <label>Service ID<input name="service" required placeholder="research"></label>
 <label>Trusted Stellar RPC URL<input name="rpcUrl" placeholder="Network default"></label>
-<label>Explicit CONNECT proxy environment variable<input name="proxyEnv" placeholder="Optional"></label>
+<label>Explicit CONNECT proxy environment variable<input name="proxyEnv" placeholder="Optional"></label><label>Explicit CONNECT proxy URL<input name="proxyUrl" type="url" placeholder="Optional; choose URL or environment variable"></label>
 </div>
 <h3>Per-purchase asset limits</h3>
 <p>Amounts use the token's smallest unit. The spending governor also applies its existing account and service budgets.</p>

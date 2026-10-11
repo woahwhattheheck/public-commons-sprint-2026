@@ -12,7 +12,7 @@ Open the private URL printed by the command. The console uses the existing works
 
 ## Receive and configure
 
-Open **Customer workbench → Receive a merchant contract**. Import either the merchant's public contract JSON or its complete customer package. The package's companion files are regenerated from the maintained client templates before acceptance. Alternatively, enter the merchant HTTPS origin and choose **Fetch public contract**. An explicit CONNECT proxy uses the named environment variable on the operator host.
+Open **Customer workbench → Receive a merchant contract**. Import either the merchant's public contract JSON or its complete customer package. The package's companion files are regenerated from the maintained client templates before acceptance. Alternatively, enter the merchant HTTPS origin and choose **Fetch public contract**. An explicit CONNECT proxy uses either a URL without credentials or a named environment variable on the operator host.
 
 Review the merchant name, origin, offer count and changes from the saved contract. Enter the payer account, signer environment variable, exact native runtime dependency directory, original spending governor ledger and policy, actor, service and Python executable. The host supplies the actual keys in the named environment variables.
 
