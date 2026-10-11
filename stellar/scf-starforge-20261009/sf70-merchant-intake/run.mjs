@@ -91,7 +91,8 @@ export function combine({seller,browser,error,config,observedAt}) {
   return {
     schema:'stellar-forge.merchant-intake.v1',state,observedAt,
     scope:{resource:config.resourceUrl,catalog:config.catalogUrl,buyerOrigin:config.origin,
-      network:config.network,payTo:config.payTo,intendedRetryMethod:config.method},
+      network:config.network,payTo:config.payTo,intendedRetryMethod:config.method,
+      browserCredentialed:config.credentialed===true},
     findings,
     originals:{sellerCatalog:seller,browserReadiness:browser??null,browserError:error??null},
     safeguards:{walletCalls:0,paidRequests:0,settlementConfirmed:false,
