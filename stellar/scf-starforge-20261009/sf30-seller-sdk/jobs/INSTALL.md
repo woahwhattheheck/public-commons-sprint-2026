@@ -17,13 +17,13 @@ starforge runtime-install prepare \
   --dir /srv/starforge/runtimes/paid-jobs-01 \
   --archive /srv/starforge/downloads/original-merchant.tgz \
   --sha256 REPLACE_WITH_COMPLETE_ORIGINAL_ARCHIVE_SHA256 \
-  --native --operator
+  --native --feature schema --operator
 
 starforge runtime-install install \
   --dir /srv/starforge/runtimes/paid-jobs-01
 ```
 
-`--native` selects the existing release's payment dependencies. `--operator` records its Linux, Python, and `flock` requirements. Paid jobs adds no optional dependency group. The installer retains the original package under `package/`, installs its selected dependencies under `node_modules/`, and keeps their source and lock identities together.
+`--native` selects the existing release's payment dependencies. `--feature schema` selects the original merchant schema engine, including `re2js` 2.8.6 from the [original schema runtime manifest](../../../../stellar-forge/payment-auto-catalog/package.json). The seller compiles the job input schemas through that engine, so select it for job preparation as well as native service startup. `--operator` records the Linux, Python, and `flock` requirements. The installer retains the original package under `package/`, installs its selected dependencies under `node_modules/`, and keeps their source and lock identities together.
 
 The complete installation and interruption workflow is documented in [RUNTIME_INSTALL.md](../../distribution/RUNTIME_INSTALL.md). A populated npm cache can be selected with the original `--offline --cache ABSOLUTE_DIRECTORY` installation options.
 
@@ -229,7 +229,9 @@ On restart, retain the same application, configuration, merchant directory, and 
 
 ## Upgrade the runtime while preserving merchant state
 
-Prepare a new original runtime through `runtime-install upgrade --from OLD_DIRECTORY --dir NEW_DIRECTORY --archive ORIGINAL_ARCHIVE --sha256 ORIGINAL_SHA256`. The installer inherits the selected native/operator profile unless explicitly changed and records the source and dependency comparison.
+Prepare a new original runtime through `runtime-install upgrade --from OLD_DIRECTORY --dir NEW_DIRECTORY --archive ORIGINAL_ARCHIVE --sha256 ORIGINAL_SHA256`. The installer inherits the native, feature, operator, and version-pin selections unless explicitly changed and records the source and dependency comparison. Keep the existing `schema` feature in that selected profile.
+
+For a runtime prepared before the schema feature was selected, use the same upgrade into a new directory with `--native --feature schema --operator`. Repeat `--feature NAME` for every additional feature the existing runtime needs; an explicit feature list replaces the inherited list. The new runtime's resolved lock will include the original schema dependency.
 
 Stop the owning service, select the new runtime in the existing process supervisor, and launch with the unchanged application/configuration/state paths. Preserve the previous runtime for the deployment workflow's rollback. If the retained dependency tree needs recovery, use the original `runtime-install recover` operation into a new directory.
 
