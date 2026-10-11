@@ -15,6 +15,30 @@ API endpoints:
 - `POST /api/events` — add one valid event object with `id`, `second`, `team`, `type`, `outcome`, `player`, and `duration` only for possession. Strict ordering, set membership and idempotent event IDs.
 - `POST /api/explain` — ONLY explicit opt-in Microsoft Foundry model-draft request if credentials and a nonzero demo budget are configured.
 
+## Compose a fictional match event
+
+Use the event composer to append a pass, shot, tackle, pressure or possession
+event to your current match. Choose one of the existing fictional clubs,
+an allowed outcome, a fictional player label and a whole match second at or
+after the latest ledger clock (0–5400). Possession also needs a duration of
+1–60 seconds. The original server validates every event and remains the
+source of truth for the scoreboard and explanations.
+
+Adding a new event changes the current replay to **custom** mode, so built-in
+**Next event** stepping stops. Existing accepted events stay in the ledger.
+Use **Export replay JSON** to keep the resulting match, or **Restart stream**
+to return to the built-in replay. The composer does not request narration.
+
+The unfinished draft and exact submitted event ID are retained in this tab's
+session storage when available. If a save response is lost, the app reads
+`/api/replay` to look for the same ID and normalized details. Reopening also
+checks read-only; it never resends automatically. An unresolved operation
+offers a read-only check and an explicit retry of the same ID and payload,
+preserving the existing server's idempotent intake. Match replacement and
+built-in stepping pause while that outcome is unresolved. Once saved, start
+another draft to enter the next event. A tab-local draft is not durable match
+storage; exported replay JSON remains the way to retain the full ledger.
+
 ## Microsoft Foundry optional enrichment
 
 Documentation: https://learn.microsoft.com/en-in/azure/foundry/openai/latest?view=foundry . Set `FOUNDRY_ENDPOINT` to your trusted Azure resource origin ending `.openai.azure.com` or `.services.ai.azure.com`, `FOUNDRY_DEPLOYMENT` to its deployed model name, and `FOUNDRY_API_KEY` in the server environment. Also set `FOUNDRY_DEMO_MAX_CALLS_PER_HOUR` to an authorized value from 1 to 24 (default 0 disables all demo calls). The click handler then invokes the published `POST /openai/v1/chat/completions` API. Default/replay mode makes **zero model calls** and **no costs**; the browser never receives the key. Model output is labeled unverified draft, not automatically inserted as facts. No real tenant/provider has been called or configured in this source run.
