@@ -131,6 +131,25 @@ merchant MCP client export below when a customer needs that exact running-instan
 document. The existing generated-client/native buyer workflow and independent
 customer spending cap remain unchanged.
 
+## Bring the reviewed merchant into a fleet
+
+Choose **Download fleet source** for a prepared merchant or **Download retained
+fleet source** for an existing release. Both read the original verified package.
+The retained form remains usable after the earlier prepared directory moves.
+
+In the existing `/fleet.html` setup workbench, open the intended merchant and
+registered source card, then choose **Import source JSON**. The source import
+preserves that card's alias, replaces its source settings, and displays the
+ordered native output-schema review. Review the original package path and
+merchant host before exporting the fleet launch packet.
+
+This private host file contains the existing native source alias fields:
+`clickhousePackage`, optional `clickhouseColumnTypes`, and the selected
+facilitator runtime. The fleet assigns its own fixed slot ports. Database
+credentials remain in the merchant host environment. The original fleet setup,
+stage, review, activation, operations, drain and rollback commands all consume
+the same registered source and retained stores.
+
 ## Existing merchant MCP
 
 Configure a new original MCP merchant against the host-selected package:

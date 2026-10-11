@@ -22,7 +22,8 @@ const ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const HEX = /^[a-f0-9]{64}$/;
 const PACKAGE_KINDS = Object.freeze({ workspace: 'OPENAPI_WORKSPACE', python: 'PYTHON_APPLICATION',
   duckdbPackage: 'DUCKDB_PACKAGE', s3Package: 'S3_OBJECT_PACKAGE', jsonrpcPackage: 'JSONRPC_MERCHANT_PACKAGE',
-  sqlitePackage: 'SQLITE_MERCHANT_PACKAGE', mysqlPackage: 'MYSQL_MERCHANT_PACKAGE' });
+  sqlitePackage: 'SQLITE_MERCHANT_PACKAGE', mysqlPackage: 'MYSQL_MERCHANT_PACKAGE',
+  clickhousePackage: 'CLICKHOUSE_MERCHANT_PACKAGE' });
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = (code, status = 409) => Object.assign(new Error(code), { status });
 const stable = value => JSON.stringify(normalize(value));
@@ -46,11 +47,12 @@ function pathValue(value, base) {
 /** Share original source selectors and path rules with retained fleet setup. */
 export function normalizeFleetPackageSource(source, base) {
   keys(source, [...Object.keys(PACKAGE_KINDS), 'pythonRoot', 'duckdbPython',
-    'sqliteSnapshotMaxBytes', 'sqliteSnapshotTimeoutMs', 'runtime']);
+    'sqliteSnapshotMaxBytes', 'sqliteSnapshotTimeoutMs', 'clickhouseColumnTypes', 'runtime']);
   const selected = Object.keys(PACKAGE_KINDS).filter(key => source[key] !== undefined);
   if (selected.length !== 1 || source.pythonRoot !== undefined && selected[0] !== 'python' ||
       source.duckdbPython !== undefined && selected[0] !== 'duckdbPackage' ||
-      selected[0] !== 'sqlitePackage' && (source.sqliteSnapshotMaxBytes !== undefined || source.sqliteSnapshotTimeoutMs !== undefined))
+      selected[0] !== 'sqlitePackage' && (source.sqliteSnapshotMaxBytes !== undefined || source.sqliteSnapshotTimeoutMs !== undefined) ||
+      source.clickhouseColumnTypes !== undefined && selected[0] !== 'clickhousePackage')
     throw fail('FLEET_RELEASE_PACKAGE_SOURCE_REQUIRED', 400);
   const runtime = source.runtime ?? {};
   keys(runtime, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
@@ -59,6 +61,12 @@ export function normalizeFleetPackageSource(source, base) {
   const value = { [selected[0]]: pathValue(source[selected[0]], base) };
   if (source.pythonRoot !== undefined) value.pythonRoot = pathValue(source.pythonRoot, base);
   if (source.duckdbPython !== undefined) value.duckdbPython = selectDuckdbInterpreter(source.duckdbPython, base);
+  if (source.clickhouseColumnTypes !== undefined) {
+    if (!object(source.clickhouseColumnTypes)) throw fail('FLEET_RELEASE_CLICKHOUSE_REVIEW_INVALID', 400);
+    // The original ClickHouse stage validates this review against every named
+    // query. Preserve its exact ordered map in the host-selected source.
+    value.clickhouseColumnTypes = structuredClone(source.clickhouseColumnTypes);
+  }
   if (selected[0] === 'sqlitePackage') {
     const limits = sqliteSnapshotOptions({ maxBytes: source.sqliteSnapshotMaxBytes, timeoutMs: source.sqliteSnapshotTimeoutMs });
     value.sqliteSnapshotMaxBytes = limits.maxBytes; value.sqliteSnapshotTimeoutMs = limits.timeoutMs;

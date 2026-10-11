@@ -72,6 +72,8 @@ Plan fields:
 | `packages.NAME.sqliteSnapshotMaxBytes` | Optional SQLite capture ceiling, 4096–1099511627776 bytes; default 1073741824 |
 | `packages.NAME.sqliteSnapshotTimeoutMs` | Optional SQLite capture deadline, 100–3600000 milliseconds; default 120000 |
 | `packages.NAME.mysqlPackage` | Original prepared MySQL or MariaDB package with its named queries and environment references |
+| `packages.NAME.clickhousePackage` | Original prepared ClickHouse directory with its source, plan, bindings and generated client |
+| `packages.NAME.clickhouseColumnTypes` | Optional original native review: query names mapped to ordered `{name,type}` output columns |
 | `packages.NAME.runtime` | Original facilitator/local-upstream runtime choices for future staging |
 | `limits` | Original gateway admission, body, response and timeout limits for this merchant |
 
@@ -81,12 +83,39 @@ and package names plus an original release ID. They never supply a path, handler
 module, executable, port override, credential or PID.
 
 Each package chooses exactly one of `workspace`, `python`, `duckdbPackage`,
-`s3Package`, `jsonrpcPackage`, `sqlitePackage`, or `mysqlPackage`.
+`s3Package`, `jsonrpcPackage`, `sqlitePackage`, `mysqlPackage`, or `clickhousePackage`.
 `pythonRoot` belongs to `python`; `duckdbPython` belongs to `duckdbPackage`.
 Both SQLite snapshot limits belong to `sqlitePackage`, at the package level.
+The reviewed `clickhouseColumnTypes` map belongs only to `clickhousePackage`.
+Its original release engine verifies the complete ordered map against the
+prepared named queries and checks the actual database types before every start.
 The native packages supply their original application bindings.
 Use `allowLoopbackUpstream` for an API workspace or Stellar RPC package with explicitly declared local upstreams.
 Existing workspace-only plans retain their normalized fields and plan digest.
+
+### Bring a reviewed ClickHouse merchant into the fleet
+
+Prepare the source through the original ClickHouse workspace. Import its source
+JSON into the intended source card at `/fleet.html`, retaining the existing alias
+such as `current` or `next`. The source definition carries `clickhousePackage`,
+its optional `clickhouseColumnTypes` review and the selected facilitator runtime.
+Review the package path on the target host, the ordered schema shown in the card,
+and that merchant's exact public host before exporting the launch packet.
+
+The original `fleet-release setup` or later `stage` operation retains all ten
+prepared files using the ClickHouse release adapter. Endpoint, user and password
+values come from the environment variables named by that source on the merchant
+host. The original engine owns query, memory, scan, concurrency and result limits.
+The fleet assigns each original seller its declared slot port and supplies the
+same runtime to its managed browser and MCP.
+
+ClickHouse reads the live database. A release rollback restores its retained query
+contracts, payment terms and generated client. The native output-schema review
+continues to be checked against the current database; a changed type requires a
+new native review and source package. Stage that new package under a new alias and
+release ID, then use the existing review, prepare, activate, drain and rollback
+commands. Already-staged releases survive relocation of the original prepared
+directory.
 
 ### Operate Python and DuckDB merchants together
 

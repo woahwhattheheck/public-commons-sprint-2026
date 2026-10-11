@@ -172,11 +172,19 @@ Open `/fleet.html` to prepare the first retained multi-merchant fleet. The
 workbench edits two to thirty-two merchants, two to four fixed slots per
 merchant, public hosts, current/later source aliases, initial releases and the
 original gateway limits. Registered sources use the original API workspace,
-Python application, DuckDB/Parquet, S3, Stellar RPC, SQLite and MySQL package selectors.
+Python application, DuckDB/Parquet, S3, Stellar RPC, SQLite, MySQL and ClickHouse package selectors.
 SQLite source cards expose the original snapshot byte ceiling and timeout; the
 export keeps those integer fields beside `sqlitePackage`. SQLite stages committed
 database snapshots, while MySQL and MariaDB retain the prepared named queries and
 read the live database through the merchant host's connection environment.
+
+Each source card also imports an original host source JSON definition while
+preserving that card's package alias and the rest of the fleet. ClickHouse source
+definitions retain the original `clickhouseColumnTypes` map. Its ordered columns
+are displayed for review and remain unchanged through draft reopen and native
+launch export. Changing to another source type clears that companion. The
+original ClickHouse release engine checks the retained review against the live
+database at startup and supplies its original merchant operations to the fleet.
 
 Review shows the exact sequential slot ports and retained store layout before
 export. Drafts can be downloaded while incomplete and reopened as portable JSON;

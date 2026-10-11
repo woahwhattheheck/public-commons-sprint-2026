@@ -435,6 +435,31 @@ export async function createClickHouseWorkspace({ stateDirectory, sourceFile, pl
     closeReleaseConsole(input) { return task(() => {
       fields(input, [], 'WORKSPACE_RELEASE_CONSOLE_FIELDS_INVALID'); return closeReleaseConsole();
     }); },
+    exportFleetSource(input) { return task(async () => {
+      fields(input, ['releaseId', 'merchantReleaseId'], 'WORKSPACE_FLEET_SOURCE_FIELDS_INVALID');
+      if (Boolean(input.releaseId) === Boolean(input.merchantReleaseId)) throw new TypeError('WORKSPACE_EXPORT_RELEASE_REQUIRED');
+      let merchant, columnTypes, runtime, name;
+      if (input.merchantReleaseId) {
+        const id = checkId(input.merchantReleaseId, /^[a-z0-9][a-z0-9_-]{0,63}$/);
+        await originalStore();
+        const release = await inspectRelease(releaseRoot, id);
+        const snapshot = await inspectClickHouseRelease(join(releaseRoot, 'releases', id));
+        merchant = snapshot.packageDirectory; columnTypes = snapshot.clickhouse.columnTypes;
+        runtime = release.runtime; name = id;
+      } else {
+        const value = await readRelease(input.releaseId);
+        const prepared = await prepareClickHouseRelease(value.merchant, { columnTypes: value.review.inspection.columnTypes });
+        merchant = prepared.directory; columnTypes = prepared.clickhouse.columnTypes;
+        runtime = retainedRuntime; name = value.meta.revision.slice(0, 12);
+      }
+      const selectedRuntime = {};
+      for (const key of ['facilitator', 'allowLocalFacilitator'])
+        if (runtime?.[key] !== undefined) selectedRuntime[key] = runtime[key];
+      const definition = { clickhousePackage: merchant,
+        ...(columnTypes === undefined ? {} : { clickhouseColumnTypes: columnTypes }), runtime: selectedRuntime };
+      const bytes = Buffer.from(JSON.stringify(definition, null, 2) + '\n');
+      return { bytes, sha256: sha256(bytes), contentType: 'application/json', filename: 'clickhouse-' + name + '-fleet-source.json' };
+    }); },
     exportClient(input) { return task(async () => {
       fields(input, ['releaseId', 'merchantReleaseId', 'kind'], 'WORKSPACE_EXPORT_FIELDS_INVALID');
       if (!['client', 'openapi'].includes(input.kind)) throw new TypeError('WORKSPACE_EXPORT_KIND_INVALID');
