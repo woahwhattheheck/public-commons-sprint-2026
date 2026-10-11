@@ -3,7 +3,7 @@
 if (!defined('ABSPATH')) { exit; }
 
 final class Starforge_SF104_Merchant_Console {
-    const VERSION = '0.4.0';
+    const VERSION = '0.5.0';
     const API = '/merchant-console';
     const HANDOFF_SCHEMA = 'stellar-forge.sf104.merchant-handoff.v1';
 
@@ -446,9 +446,12 @@ final class Starforge_SF104_Merchant_Console {
         $page = isset($_GET['page']) && is_string($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
         if (!in_array($page, ['sf98-woocommerce', 'sf104-checkout-attempts'], true) || !current_user_can('manage_woocommerce') || !function_exists('wc_get_order_statuses')) return;
         wp_enqueue_style('sf104-merchant-console', plugins_url('merchant-console.css', __FILE__), [], self::VERSION);
-        wp_enqueue_script('sf104-merchant-console', plugins_url('merchant-console.js', __FILE__), [], self::VERSION, true);
+        wp_enqueue_style('sf104-merchant-refunds', plugins_url('merchant-refunds.css', __FILE__), ['sf104-merchant-console'], self::VERSION);
+        wp_enqueue_script('sf104-merchant-refunds', plugins_url('merchant-refunds.js', __FILE__), [], self::VERSION, true);
+        wp_enqueue_script('sf104-merchant-console', plugins_url('merchant-console.js', __FILE__), ['sf104-merchant-refunds'], self::VERSION, true);
         wp_add_inline_script('sf104-merchant-console', 'window.SF104Console=' . wp_json_encode([
             'api' => rest_url('stellar-forge/v1/merchant-console'), 'nonce' => wp_create_nonce('wp_rest'),
+            'merchantApi' => rest_url('stellar-forge/v1/merchant/orders'),
             'adminPost' => admin_url('admin-post.php'), 'page' => $page,
             'nonces' => ['release' => wp_create_nonce('sf98_release_order'), 'reset' => wp_create_nonce('sf104_reset_attempt'), 'bind' => wp_create_nonce('sf98_bind_order')],
             'wooStatuses' => wc_get_order_statuses(),
