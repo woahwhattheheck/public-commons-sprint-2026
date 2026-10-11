@@ -61,7 +61,7 @@ A measure requires an explicit reported unit, positive decimal scale string and 
 
 Debt to the Penny is a stock measure observed at particular dates. Fiscal and calendar years are separate source fields; a date in October 2026 can carry fiscal year 2027. Review those original values instead of inferring a year from a display label.
 
-Native nullable CSV uses an empty cell for JSON null. If a field contains both a real empty string and JSON null, choose an explicit non-empty null marker. Build verifies that the marker does not collide with any original value. The literal source string "null" remains a string. No missing-value interpretation is guessed.
+Native nullable CSV uses an empty cell for JSON null. If a field contains both a real empty string and JSON null, choose an explicit non-empty null marker. Build verifies that the marker does not collide with any original value. A reviewed null marker remains unchanged in the rows and delivery and is excluded from all numerical calculations, even when the marker is itself numeric. The literal source string "null" remains a string. No missing-value interpretation is guessed.
 
 The original SF30 query engine supports up to eight equality, range and sort fields and a total of 32 advertised query parameters. Date ranges are useful on consistently formatted ISO date strings. Exact measure strings are not enabled for lexical sort/range by this workspace; use the exact comparison operation for numeric changes. Equality retains original string semantics.
 

@@ -232,6 +232,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     publisher=await openFiscalPublisher({directory:join(directory,'publisher'),buyerWorkspaces,
       resolveExport:async id=>{
         const record=get('exports',id);
+        if(record.status!=='READY')throw fault('EXPORT_NOT_READY','Complete this retained merchant export before preparing publication.',409);
         for(const item of record.files)await verified(pathFor('exports',id),item);
         return {...record,kind:record.exportKind,directory:pathFor('exports',id)};
       },
@@ -549,7 +550,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     });
     const record={id:randomUUID(),kind:'editions',revision:1,...found.pin,captureId:capture.id,captureSha256:capture.sha256,
       name:label(input.name,128),status:'DRAFT',createdAt:now(),updatedAt:now(),fields,keyFields:fields.some(f=>f.name==='record_date')?['record_date']:[],
-      notes:'',observations,filters:[],ranges:[],sorts:[],defaultLimit:50,maxLimit:250,
+      notes:'',observations,sourceFields:clone(fields),filters:[],ranges:[],sorts:[],defaultLimit:50,maxLimit:250,
       rowCount:capture.rows,sha256:null,dataset:null,files:[],merchant:null,buildIntent:null,reviewHistory:[]};
     await save('editions',record);return editionView(record);
   }
@@ -598,6 +599,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     const root=pathFor('editions',record.id);await privateDirectory(join(root,'reviews'),true);
     await immutable(join(root,'reviews',record.revision+'.json'),bytes(original));
     record.reviewHistory.push({revision:record.revision,sha256:identity(original),savedAt:original.savedAt});
+    record.sourceFields=(record.sourceFields??record.fields).map(field=>reviewed.fields.find(next=>next.source===field.source)??field);
     Object.assign(record,reviewed,{revision:record.revision+1,updatedAt:now(),buildIntent:null});
     await save('editions',record);return editionView(record);
   }
@@ -748,15 +750,20 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
   }
   function measureContext(record,name) {
     const field=record.fields.find(value=>value.name===name);
-    return field?.role==='measure'?{unit:field.unit,scale:field.scale,notes:field.notes,source:field.source,label:field.label}:null;
+    return field?.role==='measure'?{unit:field.unit,scale:field.scale,notes:field.notes,source:field.source,label:field.label,nullToken:field.nullToken}:null;
   }
+  function missingMeasure(record,name,value) {
+    const field=record.fields.find(item=>item.name===name);
+    return value===null||value===undefined||(field?.nullToken!==null&&field?.nullToken!==undefined&&value===field.nullToken);
+  }
+  function numericMeasure(record,name,value) {return !missingMeasure(record,name,value)&&decimalParts(value)!==null;}
   function dateObservations(record,rows,keys,measure) {
     const date=keys.find(name=>record.fields.find(field=>field.name===name)?.role==='date');
     if(!date)return {dateField:null,groups:[],incompatibleDates:rows.size};
     const groupFields=keys.filter(name=>name!==date),groups=new Map();let incompatibleDates=0;
     for(const row of rows.values()){
       const value=row.values[measure],at=row.values[date];
-      if(!decimalParts(value))continue;
+      if(!numericMeasure(record,measure,value))continue;
       const parsed=typeof at==='string'?new Date(at+'T00:00:00Z'):null;
       if(typeof at!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(at)||!Number.isFinite(parsed?.getTime())||parsed.toISOString().slice(0,10)!==at){incompatibleDates++;continue;}
       const key=JSON.stringify(groupFields.map(name=>row.values[name]));
@@ -784,7 +791,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
       throw fault('COMPARISON_MEASURE_ROLE','Choose measures reviewed explicitly in both editions.');
     let record=found.record??{id:randomUUID(),kind:'comparisons',revision:1,...found.pin,name:label(input.name),
       createdAt:now(),updatedAt:now(),leftEditionId:left.id,rightEditionId:right.id,leftSha256:left.sha256,rightSha256:right.sha256,
-      keyFields:keys,measureFields:measures,status:'BUILDING',sha256:null,summary:null,files:[]};
+      keyFields:keys,measureFields:measures,creation:{action:'comparisons.create',payload:clone(input)},status:'BUILDING',sha256:null,summary:null,files:[]};
     if(!found.record)await save('comparisons',record);
     const root=pathFor('comparisons',record.id);
     if(!await absent(join(root,'sealed.json'))){
@@ -799,14 +806,16 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
       const l=measureContext(left,name),r=measureContext(right,name),compatible=l.unit===r.unit&&equalDecimals(l.scale,r.scale);
       return [name,{field:name,compatible,unit:compatible?l.unit:null,scale:compatible?l.scale:null,
         left:l,right:r,leftSum:'0',rightSum:'0',delta:null,leftNumericRows:0,rightNumericRows:0,
-        leftNonNumericRows:0,rightNonNumericRows:0,participatingRows:0,comparedRows:0,incompatibleRows:0,
+        leftNonNumericRows:0,rightNonNumericRows:0,leftMissingRows:0,rightMissingRows:0,participatingRows:0,comparedRows:0,incompatibleRows:0,
+        unitIncompatibleRows:0,missingPairRows:0,nonNumericPairRows:0,
         leftObservations:dateObservations(left,leftRows,keys,name),rightObservations:dateObservations(right,rightRows,keys,name),
         aggregation:'Arithmetic sums of the numeric values in each selected row set; this is not a Treasury period total. For stock measures such as debt, use the dated first/last observation and change for the reviewed series.',
         contextNotes:[left.notes,right.notes,l.notes,r.notes].filter((value,index,all)=>value&&all.indexOf(value)===index)}];
     }));
     for(const side of ['left','right'])for(const row of (side==='left'?leftRows:rightRows).values())for(const [name,total] of Object.entries(totals)){
       const value=row.values[name];
-      if(decimalParts(value)){total[side+'Sum']=addDecimals(total[side+'Sum'],value);total[side+'NumericRows']++;}
+      if(missingMeasure(side==='left'?left:right,name,value))total[side+'MissingRows']++;
+      else if(numericMeasure(side==='left'?left:right,name,value)){total[side+'Sum']=addDecimals(total[side+'Sum'],value);total[side+'NumericRows']++;}
       else total[side+'NonNumericRows']++;
     }
     const summary={leftRows:leftRows.size,rightRows:rightRows.size,added:0,removed:0,changed:0,unchanged:0,
@@ -827,9 +836,13 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
         const deltas={};
         for(const name of measures){
           const total=totals[name],a=l?.values[name],b=r?.values[name];
-          if(l&&r){total.comparedRows++;if(total.compatible&&decimalParts(a)&&decimalParts(b)){
+          if(l&&r){total.comparedRows++;if(total.compatible&&numericMeasure(left,name,a)&&numericMeasure(right,name,b)){
             deltas[name]=subtractDecimals(b,a);total.participatingRows++;
-          }else{total.incompatibleRows++;deltas[name]=null;}}
+          }else{total.incompatibleRows++;deltas[name]=null;
+            if(!total.compatible)total.unitIncompatibleRows++;
+            else if(missingMeasure(left,name,a)||missingMeasure(right,name,b))total.missingPairRows++;
+            else total.nonNumericPairRows++;
+          }}
         }
         const keyValues=Object.fromEntries(keys.map((name,index)=>[name,JSON.parse(key)[index]]));
         const row={ordinal,key:keyValues,status,left:l?.values??null,right:r?.values??null,
@@ -856,7 +869,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
       'comparison.json retains both immutable edition identities, exact unit/context reviews, row-change counts, sums of selected numeric observations and date-ordered first/last observations. Sums across daily debt observations are not Treasury period totals. rows.jsonl preserves all pairs including unchanged rows. changes.csv is the field-level handoff. JSON preserves missing-field distinctions; CSV uses blank cells for absent values.\n'));
     const files=[];for(const [name,mime]of[['comparison.json','application/json'],['rows.jsonl','application/x-ndjson'],
       ['changes.csv','text/csv; charset=utf-8'],['README.md','text/markdown; charset=utf-8']])files.push(await fileDescriptor(root,name,mime));
-    record={...record,status:'READY',revision:record.revision+1,updatedAt:now(),summary,rowCount:allKeys.length,
+    record={...record,status:'READY',error:null,revision:record.revision+1,updatedAt:now(),summary,rowCount:allKeys.length,
       sha256:identity(files),files};
     await immutable(join(root,'sealed.json'),bytes(record));await syncDirectory(root);await save('comparisons',record);return record;
   }
@@ -976,7 +989,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     if(await absent(join(root,'delivery.tar.gz')))archiveFile=await archive(root,payload);
     else archiveFile=await fileDescriptor(root,'delivery.tar.gz','application/gzip',undefined,1024*MiB);
     // Flat original files can be downloaded directly; nested originals remain complete in the archive.
-    record={...record,status:'READY',revision:record.revision+1,updatedAt:now(),
+    record={...record,status:'READY',error:null,revision:record.revision+1,updatedAt:now(),
       sha256:identity({manifest:manifestFile.sha256,archive:archiveFile.sha256}),
       manifest:manifest.files,files:[...retained.filter(file=>!file.relative.includes('/')),manifestFile,overviewFile,archiveFile]};
     await immutable(join(root,'sealed.json'),bytes(record));await syncDirectory(root);await save('exports',record);return exportView(record);
@@ -989,7 +1002,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     if(found.record?.status==='READY')return exportView(found.record);
     if(!found.record&&records.exports.size>=limits.maxExports)throw fault('EXPORT_CAPACITY','Open another workspace for more retained exports.',409);
     let record=found.record??{id:randomUUID(),kind:'exports',exportKind:input.kind,revision:1,...found.pin,
-      sourceId:source.id,sourceSha256:source.sha256??identity(source),createdAt:now(),updatedAt:now(),status:'BUILDING',sha256:null,files:[]};
+      sourceId:source.id,sourceSha256:source.sha256??identity(source),creation:{action:'exports.create',payload:clone(input)},createdAt:now(),updatedAt:now(),status:'BUILDING',sha256:null,files:[]};
     if(!found.record)await save('exports',record);
     if(record.sourceSha256!==(source.sha256??identity(source)))
       throw fault('EXPORT_SOURCE_CHANGED','The selected partial source changed after this export intent. Use a new request ID for its new retained state.',409);
@@ -1005,7 +1018,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     const native=await nativeDataset(edition),{buildDatasetSellerConfig}=await import('../dataset-cli.mjs');
     const seller=await buildDatasetSellerConfig(native,{origin:input.origin,path:input.path,payment:input.payment});
     let record=found.record??{id:randomUUID(),kind:'exports',exportKind:'merchant',revision:1,...found.pin,
-      sourceId:edition.id,sourceSha256:edition.sha256,createdAt:now(),updatedAt:now(),status:'BUILDING',
+      sourceId:edition.id,sourceSha256:edition.sha256,creation:{action:'merchant.configure',payload:clone(input)},createdAt:now(),updatedAt:now(),status:'BUILDING',
       origin:input.origin,path:input.path,payment:clone(input.payment),sha256:null,files:[]};
     if(!found.record)await save('exports',record);
     const sources=await exportSources('editions',edition.id);sources.push({target:'seller.json',data:bytes(seller),mime:'application/json'});
@@ -1048,7 +1061,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     if(found.record?.status==='READY')return exportView(found.record);
     if(!found.record&&records.exports.size>=limits.maxExports)throw fault('EXPORT_CAPACITY','The original buyer delivery is retained; use a larger export capacity for its complete archive.',409);
     const record=found.record??{id:randomUUID(),kind:'exports',exportKind:'acquisition',revision:1,...found.pin,
-      sourceId:input.id,sourceSha256,createdAt:now(),updatedAt:now(),status:'BUILDING',sha256:null,files:[]};
+      sourceId:input.id,sourceSha256,creation:{action:'publisher.buyer.export',payload:{id:input.id}},createdAt:now(),updatedAt:now(),status:'BUILDING',sha256:null,files:[]};
     if(!found.record)await save('exports',record);
     return finishExport(record,sources,'Complete original SF88/SF100 buyer acquisition '+input.id+
       '. The native session manifest and every file in its delivered dataset are retained byte for byte. The original buyer engine remains responsible for acquisition, accounting and recovery.');
@@ -1080,7 +1093,10 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
       case 'editions.create':return createEdition(input);
       case 'editions.review':return reviewEdition(input);
       case 'editions.build':return buildEdition(input);
-      case 'editions.get':{only(input,['id']);const record=get('editions',input.id);return{...record,files:fileRecords(record)};}
+      case 'editions.get':{only(input,['id']);const record=get('editions',input.id);
+        const fields=record.status==='DRAFT'?(record.sourceFields??record.fields).map(field=>{
+          const selected=record.fields.find(value=>value.source===field.source);return{...(selected??field),included:!!selected};}):record.fields;
+        return{...record,fields,files:fileRecords(record)};}
       case 'editions.rows':return rowsPage('editions',input);
       case 'editions.query':return queryEdition(input);
       case 'comparisons.create':return createComparison(input);
@@ -1095,7 +1111,17 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
   async function dispatch(action,payload={}) {
     if(closing||closed)throw fault('WORKSPACE_CLOSED','The workspace is draining; reopen it before another action.',409);
     if(!object(payload))throw fault('ACTION_PAYLOAD','Use a JSON object for the action payload.');
-    const result=await serial(()=>dispatchAction(action,clone(payload)));
+    const result=await serial(async()=>{
+      try{return await dispatchAction(action,clone(payload));}
+      catch(error){
+        const group=action==='comparisons.create'?'comparisons':['exports.create','merchant.configure','publisher.buyer.export'].includes(action)?'exports':null;
+        if(group){
+          const failed=[...records[group].values()].find(value=>value.creation?.action===action&&identity(value.creation.payload)===identity(payload)&&value.status!=='READY');
+          if(failed){failed.status='FAILED';failed.error=errorView(error);failed.revision++;failed.updatedAt=now();await save(group,failed).catch(()=>{});}
+        }
+        throw error;
+      }
+    });
     return {result,state:await snapshot()};
   }
   async function startWorker() {
