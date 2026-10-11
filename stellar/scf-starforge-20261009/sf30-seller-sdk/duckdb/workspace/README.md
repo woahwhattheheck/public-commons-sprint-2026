@@ -54,8 +54,11 @@ node duckdb/workspace/cli.mjs \
   --python /private/duckdb-venv/bin/python
 ```
 
-`--plan` is used only when this workspace has no saved revision. Reopening uses the
-same source path and state directory. A workspace directory has one active process;
+`--plan` is used only when this workspace has no saved revision. Reopen with
+`--state PRIVATE_DIRECTORY --python PYTHON` to load the retained source selection;
+`--workspace` is a compatible spelling of `--state`. The installed toolkit exposes
+this same launcher as `starforge duckdb-workspace` and `starforge duckdb-workbench`.
+A workspace directory has one active process;
 a second launcher reports `WORKSPACE_ALREADY_OPEN`. SQLite holds the process lock,
 so the operating system releases it when the process exits or crashes.
 

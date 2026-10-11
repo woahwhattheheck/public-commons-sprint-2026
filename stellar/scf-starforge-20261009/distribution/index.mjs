@@ -28,3 +28,5 @@ export { startVersionedDatasetSeller, datasetControl } from '../sf30-seller-sdk/
 export { reviewCommerceSetup, prepareCommerceSetup, inspectCommerceSetup } from '../sf66-demo-launcher/commerce-setup.mjs';
 export { fleetControl } from '../merchant-fleet-gateway/control.mjs';
 export { startFleetWorkspace } from '../merchant-fleet-gateway/workspace/server.mjs';
+export { startDuckdbWorkspace } from '../sf30-seller-sdk/duckdb/workspace/server.mjs';
+export { createDuckdbWorkspace } from '../sf30-seller-sdk/duckdb/workspace/model.mjs';
