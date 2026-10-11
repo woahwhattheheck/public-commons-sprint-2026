@@ -132,6 +132,15 @@ discovery port; `--workspace-port 8798` fixes the existing browser port.
 browser listener. The local discovery origin is an operating address; the setup
 does not configure a public reverse proxy, DNS or merchant hosting.
 
+For a persistent Linux installation, the existing
+[merchant host deployment](../sf99-merchant-deploy/README.md#retained-release-and-signed-discovery)
+accepts this same retained store and discovery setup as `kind: "release"`.
+It generates the original seller and catalog services, exact public HTTPS
+discovery and offer-export routes, generation-pinned preflight and the existing
+encrypted maintenance flow. Its generated runbook carries the current identity,
+publication commands, restart and restored-store cutover. Stop the foreground
+console or writer before starting the installed service group.
+
 `Ctrl-C` first drains and closes this process's catalog browser, then drains and
 closes its original writer. It removes only its own generated browser launch file.
 A separately running merchant stays with the console or MCP that owns it. An

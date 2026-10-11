@@ -21,10 +21,10 @@ const canonical = value => Array.isArray(value) ? value.map(canonical) : plain(v
 const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 const fail = (code, message = code) => { throw Object.assign(new Error(message), { code }); };
 
-async function privateDirectory(path) {
+async function privateDirectory(path, ownerUid = process.getuid?.()) {
   const meta = await lstat(path);
   if (!meta.isDirectory() || meta.isSymbolicLink() || await realpath(path) !== path ||
-      (meta.mode & 0o077) !== 0 || (process.getuid && meta.uid !== process.getuid()))
+      (meta.mode & 0o077) !== 0 || (ownerUid !== undefined && meta.uid !== ownerUid))
     fail('DISCOVERY_PRIVATE_DIRECTORY_REQUIRED', 'Use a real private directory owned by the current operator.');
   return path;
 }
@@ -45,12 +45,12 @@ async function writeNew(path, bytes) {
   finally { await file.close(); }
 }
 
-async function ownedFile(path, limit = 1024 * 1024, read = true) {
+async function ownedFile(path, limit = 1024 * 1024, read = true, ownerUid = process.getuid?.()) {
   const file = await open(path, FS.O_RDONLY | (FS.O_NOFOLLOW ?? 0));
   try {
     const meta = await file.stat();
     if (!meta.isFile() || meta.nlink !== 1 || (meta.mode & 0o777) !== 0o600 ||
-        (process.getuid && meta.uid !== process.getuid()) || meta.size < 1 || meta.size > limit)
+        (ownerUid !== undefined && meta.uid !== ownerUid) || meta.size < 1 || meta.size > limit)
       fail('DISCOVERY_PRIVATE_FILE_REQUIRED', 'Use the intact private files created by discovery setup.');
     if (!read) return { bytes: meta.size, mode: '0600' };
     const buffer = Buffer.alloc(meta.size + 1); let used = 0;
@@ -152,13 +152,19 @@ export async function createReleaseDiscoverySetup(root, { directory, releaseId, 
 }
 
 /** Reopen exact public setup and original source without reading signing bytes. */
-export async function inspectReleaseDiscoverySetup(root, { directory, includeEnrollment = false } = {}) {
+export async function inspectReleaseDiscoverySetup(root, { directory, includeEnrollment = false,
+  ownerUid = process.getuid?.() } = {}) {
   if (typeof directory !== 'string' || !directory.trim()) fail('DISCOVERY_SETUP_DIRECTORY_REQUIRED');
   if (typeof includeEnrollment !== 'boolean') fail('DISCOVERY_INSPECTION_OPTIONS_INVALID');
+  // A trusted host administrator can inspect the declared service account's
+  // files without changing ownership or reading its signing key. Launch keeps
+  // the current-user default and never accepts this inspection-only option.
+  if (ownerUid !== undefined && (!Number.isSafeInteger(ownerUid) || ownerUid < 0))
+    fail('DISCOVERY_INSPECTION_OPTIONS_INVALID');
   root = resolve(root); directory = resolve(directory); separate(root, directory);
-  await privateDirectory(directory);
+  await privateDirectory(directory, ownerUid);
   let record;
-  try { record = parseJson(await ownedFile(join(directory, 'setup.json'), MAX_SETUP_BYTES)); }
+  try { record = parseJson(await ownedFile(join(directory, 'setup.json'), MAX_SETUP_BYTES, true, ownerUid)); }
   catch (error) {
     if (error.code === 'ENOENT') fail('DISCOVERY_SETUP_INCOMPLETE', 'Setup did not finish. Preserve this directory; create a new setup directory or restore its complete private backup.');
     throw error;
@@ -177,7 +183,7 @@ export async function inspectReleaseDiscoverySetup(root, { directory, includeEnr
     fail('DISCOVERY_SETUP_SOURCE_CHANGED', 'Use the retained release that created this discovery setup.');
   const documents = {};
   for (const key of PUBLIC_FILES) {
-    const bytes = await ownedFile(join(directory, FILES[key]), MAX_SETUP_BYTES);
+    const bytes = await ownedFile(join(directory, FILES[key]), MAX_SETUP_BYTES, true, ownerUid);
     if (sha(bytes) !== record.fingerprints[key]) fail('DISCOVERY_SETUP_FILE_CHANGED');
     documents[key] = key === 'publicKey' ? bytes : parseJson(bytes);
   }
@@ -194,8 +200,8 @@ export async function inspectReleaseDiscoverySetup(root, { directory, includeEnr
     fail('DISCOVERY_SETUP_BINDING_CHANGED');
   await readOperatorPolicy(join(directory, FILES.policy));
   const connection = await readReleaseCatalogConfig(join(directory, FILES.connection));
-  await ownedFile(connection.keyFile, 16384, false);
-  for (const child of ['catalog', 'workspace', 'launches']) await privateDirectory(join(directory, child));
+  await ownedFile(connection.keyFile, 16384, false, ownerUid);
+  for (const child of ['catalog', 'workspace', 'launches']) await privateDirectory(join(directory, child), ownerUid);
   return { state: 'CONFIGURED', directory, sellerId: record.sellerId,
     publicKeySha256: record.publicKeySha256, source: record.source, permissions: record.permissions,
     connectionFile: join(directory, FILES.connection), policyFile: join(directory, FILES.policy),
