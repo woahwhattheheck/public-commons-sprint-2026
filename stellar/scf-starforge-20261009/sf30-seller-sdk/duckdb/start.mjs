@@ -14,7 +14,7 @@ export function safeCode(issue) {
   const value = issue?.code ?? issue?.message;
   return typeof value === 'string' && /^[A-Z][A-Z0-9_]{2,100}$/.test(value) ? value : 'DUCKDB_OPERATION_FAILED';
 }
-export async function main(args = process.argv.slice(2)) {
+export async function main(args = process.argv.slice(2), constraints = {}) {
   if (args.length === 1 && args[0] === '--help') { console.log(HELP); return; }
   const flags = new Map();
   for (let i = 0; i < args.length; i++) {
@@ -40,6 +40,8 @@ export async function main(args = process.argv.slice(2)) {
       { facilitatorClient: new HTTPFacilitatorClient({ url: url.href.replace(/\/$/, '') }) });
   }
   const session = await startDuckdbSeller({ sourceFile: resolve(flags.get('--source')), configFile: resolve(flags.get('--config')),
+    expectedSourceSha256: constraints.expectedSourceSha256, expectedSourceConfig: constraints.expectedSourceConfig,
+    expectedServiceConfig: constraints.expectedServiceConfig,
     python: flags.get('--python') ?? 'python3', nativeFactory,
     port: Number(flags.get('--port') ?? 8423), operationsPort: flags.has('--no-operations') ? null : Number(flags.get('--operations-port') ?? 8424),
     maxInFlight: Number(flags.get('--max-in-flight') ?? 64), drainGraceMs: Number(flags.get('--drain-grace-ms') ?? 60000) });

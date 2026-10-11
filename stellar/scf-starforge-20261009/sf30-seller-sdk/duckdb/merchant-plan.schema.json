@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/merchant-plan.schema.json",
+  "title": "Original SF30 DuckDB merchant plan",
+  "description": "Public route metadata and deliberate examples for an existing private DuckDB source. Native compileDuckdbMerchantPlan and prepareDuckdbSeller validate the actual source, payment choices, request representation and real engine. This schema is an editor contract, not native preflight.",
+  "type": "object",
+  "required": ["schema", "publicOrigin", "routes"],
+  "additionalProperties": false,
+  "not": {"required": ["payment", "paymentOptions"]},
+  "properties": {
+    "schema": {"const": "stellar-forge.duckdb-merchant-plan.v1"},
+    "publicOrigin": {"type": "string", "format": "uri", "maxLength": 2048, "description": "Merchant canonical HTTPS origin without path, credentials, query or fragment. Native seller host rules also apply."},
+    "payment": {"$ref": "#/$defs/payment"},
+    "paymentOptions": {"$ref": "#/$defs/paymentOptions"},
+    "routes": {"type": "array", "minItems": 1, "maxItems": 64, "items": {"$ref": "#/$defs/route"}}
+  },
+  "$defs": {
+    "payment": {
+      "type": "object",
+      "required": ["scheme", "network", "asset", "payTo", "amount", "maxTimeoutSeconds"],
+      "additionalProperties": false,
+      "properties": {
+        "scheme": {"const": "exact"},
+        "network": {"enum": ["stellar:testnet", "stellar:pubnet"]},
+        "asset": {"type": "string", "minLength": 1, "maxLength": 128},
+        "payTo": {"type": "string", "minLength": 1, "maxLength": 128},
+        "amount": {"type": "string", "pattern": "^[1-9][0-9]*$", "maxLength": 39, "description": "Positive atomic units as decimal text, at most signed Soroban i128. Native compiler enforces the exact upper bound."},
+        "maxTimeoutSeconds": {"type": "integer", "minimum": 1, "maximum": 86400},
+        "extra": {"type": "object", "description": "Original seller JSON extra, subject to its 8192-byte and structure limits."}
+      }
+    },
+    "paymentOptions": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"$ref": "#/$defs/payment"}, "description": "Ordered complete choices. The original seller rejects repeated network/asset/recipient identities."},
+    "route": {
+      "type": "object",
+      "required": ["id", "path", "method", "query", "serviceName", "description", "example", "parameterDescriptions"],
+      "additionalProperties": false,
+      "not": {"required": ["payment", "paymentOptions"]},
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$"},
+        "path": {"type": "string", "pattern": "^/[A-Za-z0-9_.~/-]*$", "description": "Canonical fixed path outside /_seller. Native compiler rejects collisions, repeated slash and dot traversal."},
+        "method": {"enum": ["GET", "HEAD", "DELETE", "POST", "PUT", "PATCH"]},
+        "query": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,47}$", "description": "Exact existing approved query name in private source.json. SQL is never entered into this plan."},
+        "serviceName": {"type": "string", "pattern": "^[ -~]+$", "minLength": 1, "maxLength": 32},
+        "description": {"type": "string", "minLength": 1, "maxLength": 2048},
+        "tags": {"type": "array", "maxItems": 5, "uniqueItems": true, "items": {"type": "string", "pattern": "^[ -~]+$", "minLength": 1, "maxLength": 32}, "description": "Original seller also requires case-insensitive uniqueness."},
+        "example": {"type": "object", "maxProperties": 32, "additionalProperties": {"type": ["string", "number", "boolean", "null"]}, "description": "Intentionally public input accepted by the exact original source binder. GET/HEAD/DELETE values become query strings and cannot carry null. POST/PUT/PATCH use this JSON object. Omit defaulted fields to keep their values private."},
+        "parameterDescriptions": {"type": "object", "maxProperties": 32, "additionalProperties": {"type": "string", "minLength": 1, "maxLength": 512}, "description": "Every configured parameter needs a description, including defaulted parameters omitted from the example."},
+        "payment": {"$ref": "#/$defs/payment"},
+        "paymentOptions": {"$ref": "#/$defs/paymentOptions"}
+      }
+    }
+  }
+}

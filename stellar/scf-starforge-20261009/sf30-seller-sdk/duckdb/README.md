@@ -6,6 +6,11 @@ source, typed route bindings, local inspection and merchant launch. Payment
 challenges, native facilitator integration, draining, developer documentation and
 the operations console continue to come from the existing SF30 modules.
 
+For merchant route planning, copied data packages, native preflight, original
+OpenAPI/client exports and repeatable guarded launch, use [Prepare a DuckDB
+merchant](PREPARE.md). The [plan schema](merchant-plan.schema.json) can be consumed
+by the existing Stellar Forge front door; its authoritative compiler remains local.
+
 ## Start the complete local example
 
 Use Node 22 or newer and Python 3.10 or newer. Commands below start in
@@ -37,8 +42,11 @@ curl -i 'http://127.0.0.1:8423/catalog?region=north&after_id=0'
 ```
 
 Without `--facilitator`, this produces the original HTTP 402 challenge. The paid
-data handler is not executed. Input admission still runs first, so unknown or
-malformed parameters produce 422 before a data query or payment attempt.
+data handler is not executed. This challenge-only mode displays metadata and does
+not run application admission. In the configured native payment mode, unknown or
+malformed parameters produce 422 through the original admission path before a
+data query or payment attempt. Local `source.validate` and `source.route().admit`
+use that same source contract without needing a payment.
 
 Inspect the same approved query directly as the local operator:
 
