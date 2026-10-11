@@ -22,9 +22,13 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  webhook-feed                              Receive signed webhooks and sell reviewed event feeds
+  buyer-event-feed                          Collect, recover and export original paid event pages
   mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
   valyu-merchant                            Configure and operate the native research search merchant
   valyu-research                            Save queries, operate purchases, compare research and export editions
+  arcgis                                    Capture ArcGIS layers and receive native Esri FeatureSets
+  arcgis-publisher                          Publish reviewed ArcGIS data with original merchant and buyer handoff
   sftp                                      Inspect, capture and resume pinned private report files
   sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
   sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
@@ -69,12 +73,17 @@ Native commands (arguments pass unchanged to the maintained implementation):
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations
+  research-dossiers                         Retain research questions, evidence, findings and portable reports
+  research-workspace                        Open the private research dossier operator workspace
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
   delivery-destinations                      Route original events to independently operated receivers
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
+  merchant-order-recovery                    Snapshot and restore original orders, usage and paid files
   paid-file-purchase Prepare and retrieve an approved customer order
+  api-pass                                  Sell and operate purchased API allowances on original orders
+  api-pass-client                           Use an allowance, inspect usage and recover an original response
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current

@@ -153,7 +153,34 @@ const spatialReference = JSON.parse(row.spatial_reference_json);
 
 Retain the returned snapshot, field selection, source identifier and original `page.nextCursor`. Continue with the same filters, sort and fields through the existing dataset buyer. An Esri feature-set consumer can reuse the original geometry and spatial reference directly.
 
-The installed package exposes `starforge-merchant arcgis` (and `arcgis-publisher`) for these same CLI commands. JavaScript consumers use `@tokenjunkielabs/starforge-merchant/seller/arcgis`, `/seller/arcgis/publisher` and `/buyer/arcgis`. The existing merchant MCP accepts a host-declared `kind: "arcgis"` and opens this original publisher; see [the maintained MCP guide](../../../../stellar-forge/mcp-merchant-operator/PUBLISHERS.md).
+The installed package exposes `starforge arcgis` (and `arcgis-publisher`) for these same CLI commands. JavaScript consumers use `@tokenjunkielabs/starforge-merchant/seller/arcgis`, `/seller/arcgis/publisher` and `/buyer/arcgis`. The existing merchant MCP accepts a host-declared `kind: "arcgis"` and opens this original publisher; see [the maintained MCP guide](../../../../stellar-forge/mcp-merchant-operator/PUBLISHERS.md).
+
+## Completed native customer workflow
+
+On 2026-10-11, the original Node 24.19 runtime imported and independently
+retained the published UConn responses, moved the capture before continuation,
+and joined all 325 block groups. The existing publisher reopened its original
+saved plan and extraction, reviewed and published the 1,945,448-byte CSV, then
+reopened the same current version. Its immutable snapshot remained
+`5247913debf82f89397c07b2e609e33eb7bc92cf9d9d38b8605edbeb411e808a`.
+
+The same operation read the actual publisher source panel, seller health and
+payment offers, received an HTTP 402 challenge and prepared the original SF88
+buyer configuration. Two original private operator-preview pages selected the
+four Suffolk County records whose publisher class is `Not Predicted`. Original
+SF100 finalization and this receiving command produced a 26,751-byte Esri
+FeatureSet, SHA-256
+`b251023c6420dbf67186d1501e18036aea1e9db41f1732022d9738b5c7a551e8`.
+Every delivered attribute and polygon ring equaled the retained source; GEOIDs
+remained strings and spatial reference remained WKID 102100/latestWKID 3857.
+This execution covered the original challenge/preparation and private preview
+delivery paths; it did not sign or submit a payment.
+
+The native CSV parser now joins bounded character chunks when each field
+completes. This avoids retaining long per-character string chains for geometry
+and attributes. Its UTF-16 cell limits and original CSV grammar stay unchanged;
+the same complete continuation succeeded under a 96 MiB V8 heap and retained
+the original snapshot above.
 
 ## Source scope and receiving
 

@@ -86,6 +86,15 @@ selected database CA. Starting the fleet uses the original PostgreSQL adapter
 and the host's configured credential environment to read the live database.
 Each package's public HTTPS origin must match its declared merchant host.
 
+For ClickHouse, register `{ "clickhousePackage": "./packages/transfers" }` or
+import the original workspace's source definition in the fleet workbench. Keep
+its `clickhouseColumnTypes` companion to bind the original ordered native schema
+review to the initial retained release. Setup copies the original prepared
+package through its release engine. Starting the fleet performs the original
+live database preflight with the selected host environment, then starts the
+existing seller and operations tools. The endpoint values remain in that host's
+environment. Subsequent source packages use the same fleet stage and review flow.
+
 The declaration accepts 2–32 distinct tenant IDs and hosts, 1–32 package aliases
 per tenant, and 2–4 distinct common slots. The first slot is the startup slot.
 Slot ports are assigned consecutively in tenant order, then slot order: the
