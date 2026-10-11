@@ -175,3 +175,17 @@ Use one explicit timestep for an intake export; other returned timesteps remain 
 The maintained request and unit contracts are [Timeline](https://docs.tomorrow.io/reference/post-timelines), [map tiles](https://docs.tomorrow.io/reference/get-map-tile), [API formats](https://docs.tomorrow.io/reference/api-formats), [core fields](https://docs.tomorrow.io/reference/data-layers-core) and [solar fields](https://docs.tomorrow.io/reference/solar). Keyless evaluation is described in the [provider's API guide](https://support.tomorrow.io/hc/en-us/articles/31227543026708-How-to-Use-the-Tomorrow-io-API). Deployment and source handling follow the customer's actual agreement and [published terms](https://www.tomorrow.io/legal/terms-of-service/).
 
 [Powered by Tomorrow.io](https://www.tomorrow.io/)
+
+## Recover one failed resource
+
+A provider response can complete the Timeline while the map fails. The edition retains its successful source, staff decisions, HTTP status and provider error. Recovery reads saved attempt files without a provider request. A retry is an explicit, separately reviewed read of just the selected failed resource.
+
+```sh
+node cli.mjs recover --workspace ./operations --edition EDITION_ID
+node cli.mjs review-retry --workspace ./operations --edition EDITION_ID --kind tile --tile-time-format whole-seconds --out ./tile-retry-review.json
+node cli.mjs retry --workspace ./operations --edition EDITION_ID --kind tile --review ./tile-retry-review.json
+```
+
+The browser exposes the same review and retry actions. Its review shows the exact URL, previous failure, usage terms and one provider call. `whole-seconds` removes an all-zero fractional second from the map timestamp while preserving the exact instant, map point and field; `original` retains the original spelling. The adapter validates either request against the original work selection. It never substitutes a forecast window or field during a retry.
+
+Every retry has an immutable capture file and retained request history. A successfully captured resource cannot be retried through this action. An interrupted attempt can be recovered from its saved capture; another provider request requires a new review. Provider error JSON is read up to 64 KiB and only its code/type/message are retained, with a configured API key redacted. No automatic HTTP retry is performed.
