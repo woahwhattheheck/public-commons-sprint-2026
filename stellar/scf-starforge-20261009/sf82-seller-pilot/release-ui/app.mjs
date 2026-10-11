@@ -1,3 +1,4 @@
+import { bindDiscoveryControls } from './discovery.mjs';
 const $ = selector => document.querySelector(selector);
 const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem('seller-release-token', fragment); history.replaceState(null, '', location.pathname); }
@@ -25,6 +26,7 @@ async function request(path, payload) {
 function buttons() {
   const blocked = busy || !snapshot || snapshot.console.busy;
   for (const button of document.querySelectorAll('button')) button.disabled = blocked;
+  discovery.buttons(blocked);
   if (!snapshot || blocked) return;
   $('#activate').disabled = !comparison || selected === snapshot.state.active;
   $('#rollback').disabled = !snapshot.state.previous;
@@ -52,7 +54,7 @@ function renderCatalog(value) {
   catalogSnapshot = value; clearCatalogReview();
   const rows = $('#catalog-routes'); rows.replaceChildren();
   $('#catalog-state').textContent = value.configured === false
-    ? 'Start this console with --catalog CONFIG_JSON to use the merchant’s existing catalog operator and signing key.'
+    ? discovery.catalogHint()
     : 'Release ' + value.release.id + ' · catalog seller ' + value.catalog.sellerId +
       (value.runtime.running ? ' · this release is running in ' + value.release.mode + '.' : ' · start this release before publishing its offers.') +
       ' Refresh reads the original catalog; it sends no payment.';
@@ -226,6 +228,7 @@ function renderDiff(value) {
   if (value.after.handlerEntry) runtime.append(node('p', 'Handler entry module is pinned. Its imported files and installed package dependencies are managed separately by the operator.', 'section-note'));
   $('#selection-actions').hidden = false;
   for (const button of document.querySelectorAll('.release-card')) button.setAttribute('aria-pressed', String(button.dataset.id === selected));
+  discovery.selectRelease(value.after);
   buttons();
 }
 async function choose(releaseId) {
@@ -239,6 +242,7 @@ async function refresh() {
   try {
     const value = await request('/api/status'); renderStatus(value);
     await refreshCaches();
+    await discovery.refresh();
     if (selected && !value.releases.some(r => r.id === selected)) selected = null;
     selected ??= value.state.active ?? value.releases[0]?.id ?? null;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
@@ -264,6 +268,8 @@ async function act(action) {
   } catch (error) { notice(error.message, true); }
   finally { busy = false; buttons(); }
 }
+const discovery = bindDiscoveryControls({ request, notice, refresh, isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); } });
 $('#refresh').addEventListener('click', () => { notice(); refresh(); });
 $('#activate').addEventListener('click', () => act('activate'));
 $('#rollback').addEventListener('click', () => act('rollback'));

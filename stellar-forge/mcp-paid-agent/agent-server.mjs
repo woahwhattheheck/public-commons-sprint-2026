@@ -65,6 +65,15 @@ const schemas={
   bazaar_status:{name:'bazaar_status',description:'Inspect the exact state of a prior quote; no network call.',inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
   bazaar_history:{name:'bazaar_history',description:'List this operator workspace\'s quote history, including recovered interrupted operations. Read only; never resumes a payment.',annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},inputSchema:{type:'object',properties:{status:{type:'string'},limit:{type:'integer',minimum:1,maximum:100},cursor:{type:'string'}},additionalProperties:false}},
   bazaar_cancel:{name:'bazaar_cancel',description:'Cancel an unexecuted quote. Signed/unknown transactions require external reconciliation.',inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
+  bazaar_results:{name:'bazaar_results',description:'List complete saved MCP results in this quote inbox. Returns file metadata without response bodies or provider calls.',
+    annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},
+    inputSchema:{type:'object',properties:{limit:{type:'integer',minimum:1,maximum:100},cursor:{type:'string'}},additionalProperties:false}},
+  bazaar_read_result:{name:'bazaar_read_result',description:'Read a verified byte range from the complete saved native MCP result for this quote. Never purchases or fetches linked resources.',
+    annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},
+    inputSchema:{type:'object',properties:{quoteId:{type:'string'},byteOffset:{type:'integer',minimum:0},maxBytes:{type:'integer',minimum:1,maximum:65536}},required:['quoteId'],additionalProperties:false}},
+  bazaar_recover_result:{name:'bazaar_recover_result',description:'Recover a completed local result and its recorded server completion after an interrupted metadata update or older database snapshot. No seller, signer or ledger call.',
+    annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:true,openWorldHint:false},
+    inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
 };
 const TOOLS=[...Object.values(schemas),mcpAgentCommerceTool];
 if(new Set(TOOLS.map(tool=>tool.name)).size!==TOOLS.length)
@@ -79,10 +88,10 @@ export class McpPaidToolBroker {
   #catalogUrl;#trustedOrigins;#approve;#sign;#fetch;#records=new Map();#quotes=new Map();
   #timeLimit;#quoteTTL;#maxRecords;#agentCommerce;
   #store;#scope;#closing=false;#storeClosed=false;#closePromise;#active=new Set();#shutdown=new AbortController();
-  #mcpPolicies;#remoteControllers=new Map();
+  #mcpPolicies;#remoteControllers=new Map();#results;
   constructor({discoveryUrl,allowedResourceOrigins=[],approve=()=>false,signPayment=null,
     fetchImpl=defaultFetch,timeoutMs=8000,quoteTTL=10*60*1000,maxRecords=500,
-    agentCommerce=null,quoteStore=null,remoteMcpPolicies=[]}={}){
+    agentCommerce=null,quoteStore=null,remoteMcpPolicies=[],resultStore=null}={}){
     if(!discoveryUrl)throw new TypeError('Explicit configured discoveryUrl required');
     this.#catalogUrl=new URL(discoveryUrl);
     if(!['https:','http:'].includes(this.#catalogUrl.protocol)||this.#catalogUrl.username||this.#catalogUrl.password||
@@ -99,6 +108,9 @@ export class McpPaidToolBroker {
     if(quoteStore!==null&&['load','save','close'].some(name=>typeof quoteStore[name]!=='function'))
       throw new TypeError('Quote store must provide load/save/close');
     this.#store=quoteStore;
+    if(resultStore!==null&&['prepare','file','read','recover','close'].some(name=>typeof resultStore[name]!=='function'))
+      throw new TypeError('Result store must provide the native file lifecycle');
+    this.#results=resultStore;
     this.#scope=hash({discoveryUrl:this.#catalogUrl.href,origins:[...this.#trustedOrigins].sort(),
       ...(this.#mcpPolicies.length?{remoteMcpPolicies:this.#mcpPolicies}:{})});
     try{for(const saved of this.#store?.load()??[]){
@@ -241,6 +253,27 @@ export class McpPaidToolBroker {
   }
   status({quoteId}={}){const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');return statOf(q);}
   history(args={}){return {...historyPage(this.#quotes.values(),args,statOf),durable:this.#store!==null};}
+  results(args={}){
+    const page=historyPage([...this.#quotes.values()].filter(q=>q.result?.responseFile?.status==='SAVED'),args,q=>({
+      quoteId:q.quoteId,status:q.status,createdAt:q.createdAt,requestUrl:q.url,
+      toolName:q.invocation?.toolName??null,paymentResponse:structuredClone(q.result.paymentResponse??null),
+      responseFile:structuredClone(q.result.responseFile)}));
+    return {results:page.quotes,total:page.total,nextCursor:page.nextCursor,durable:this.#store!==null};
+  }
+  async readResult({quoteId,byteOffset,maxBytes}={}){
+    this.#running();
+    const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
+    if(!this.#results)fail('MCP_RESULT_STORAGE_NOT_CONFIGURED','Use a durable result workspace');
+    return this.#results.read(q,{byteOffset,maxBytes});
+  }
+  async recoverResult({quoteId}={}){
+    this.#running();
+    const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
+    if(!this.#results)fail('MCP_RESULT_STORAGE_NOT_CONFIGURED','Use a durable result workspace');
+    if(['APPROVAL_PENDING','EXECUTING','CANCEL_REQUESTED'].includes(q.status))fail('MCP_RESULT_NOT_READY','The original operation is still active');
+    const recovered=await this.#results.recover(q);this.#running();
+    Object.assign(q,recovered);this.#persist(q);return statOf(q);
+  }
   cancel({quoteId}={}){
     const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
     if(q.status==='PREVIEWED'||q.status==='APPROVAL_PENDING'){
@@ -349,8 +382,12 @@ export class McpPaidToolBroker {
   async #executeMcp(q){
     const controller=new AbortController();this.#remoteControllers.set(q.quoteId,controller);
     const signal=AbortSignal.any([controller.signal,this.#shutdown.signal]);
-    let remote;
+    let remote,capture,captured=false;
     try{
+      if(this.#results){
+        capture=await this.#results.prepare(q);
+        q.result={protocol:'mcp',responseFile:capture.reservation};q.phase='RESULT_RESERVED';this.#persist(q);
+      }
       q.phase='MCP_CONNECT';this.#persist(q);
       remote=await connectRemoteMcp({invocation:q.invocation,fetchImpl:this.#fetch,signal,timeoutMs:this.#timeLimit});
       if(this.#mcpStopped(q))return statOf(q);
@@ -359,9 +396,7 @@ export class McpPaidToolBroker {
       if(this.#mcpStopped(q))return statOf(q);
       const required=extractMcpChallenge(first);
       if(!required){
-        q.status=first.isError===true?'PROBE_REJECTED':'FREE_SUCCESS';q.phase='RESULT';
-        q.result={protocol:'mcp',paid:false,peer:remote.peer,content:mcpResultContent(first)};
-        this.#persist(q);return statOf(q);
+        const result=await this.#retainMcpResult(q,first,remote,capture,false);captured=true;return result;
       }
       requireMcpChallenge(required,q.invocation,q.accepted);
       q.phase='SIGNING';this.#persist(q);
@@ -372,20 +407,49 @@ export class McpPaidToolBroker {
       requireMcpPayload(payload,required,q.accepted);
       q.signedRequestDispatched=true;q.phase='SIGNED_DISPATCH';this.#persist(q);
       const second=await remote.call(payload);
-      if(this.#mcpStopped(q))return statOf(q);
-      const receipt=second?._meta?.['x402/payment-response'];
-      q.result={protocol:'mcp',paidAttempted:true,peer:remote.peer,content:mcpResultContent(second),
-        paymentResponse:plain(receipt)?{success:receipt.success===true,
-          network:receipt.network??null,transaction:receipt.transaction??null,payer:receipt.payer??null}:null};
-      const receiptMatches=receipt?.success===true&&receipt.network===q.accepted.network&&
-        typeof receipt.transaction==='string'&&/^[0-9a-f]{64}$/i.test(receipt.transaction);
-      q.status=second.isError!==true&&receiptMatches?'CONFIRMED_BY_SERVER':'INDETERMINATE';
-      if(q.status==='INDETERMINATE')q.failure='Signed MCP call dispatched; reconcile the original payment before any reattempt';
-      q.phase='RESULT';this.#persist(q);return statOf(q);
+      if(this.#storeClosed)return statOf(q);
+      const result=await this.#retainMcpResult(q,second,remote,capture,true);captured=true;return result;
     }finally{
-      await remote?.close().catch(()=>{});
-      controller.abort();this.#remoteControllers.delete(q.quoteId);
+      try{
+        if(capture&&!captured){
+          await capture.abort().catch(()=>{});
+          if(q.result?.responseFile?.status==='RESERVED'){
+            q.result.responseFile={...capture.reservation,status:q.result.content?'NOT_SAVED':'NOT_RECEIVED'};
+            if(!this.#storeClosed)this.#persist(q);
+          }
+        }
+      }finally{
+        await remote?.close().catch(()=>{});
+        controller.abort();this.#remoteControllers.delete(q.quoteId);
+      }
     }
+  }
+  async #retainMcpResult(q,result,remote,capture,paidAttempted){
+    const receipt=paidAttempted?result?._meta?.['x402/payment-response']:null;
+    q.result={protocol:'mcp',...(paidAttempted?{paidAttempted:true}:{paid:false}),peer:remote.peer,
+      content:mcpResultContent(result),...(capture?{responseFile:capture.reservation}:{}),
+      ...(paidAttempted?{paymentResponse:plain(receipt)?{success:receipt.success===true,
+        network:receipt.network??null,transaction:receipt.transaction??null,payer:receipt.payer??null}:null}:{})};
+    // Retain any actual late result after cancellation without silently changing
+    // the original uncertain payment state.
+    if(q.status==='EXECUTING'){
+      const matches=receipt?.success===true&&receipt.network===q.accepted.network&&
+        typeof receipt.transaction==='string'&&/^[0-9a-f]{64}$/i.test(receipt.transaction);
+      q.status=paidAttempted?(result.isError!==true&&matches?'CONFIRMED_BY_SERVER':'INDETERMINATE'):
+        result.isError===true?'PROBE_REJECTED':'FREE_SUCCESS';
+    }
+    if(paidAttempted&&q.status==='INDETERMINATE')q.failure='Signed MCP call dispatched; reconcile the original payment before any reattempt';
+    q.phase='RESULT';q.updatedAt=Date.now();
+    if(capture){
+      // The received result is local work. Retain it and its completion manifest
+      // before the final SQLite update, including during the shutdown grace.
+      // The result store owns its writer timeout and final close cancellation.
+      try{q.result.responseFile=await capture.save(result);}
+      catch(error){q.result.responseFile={...capture.reservation,status:'SAVE_FAILED',
+        error:error.code??'MCP_RESULT_SAVE_FAILED',bytes:error.bytes??0,partialPath:error.partialPath??null};}
+    }
+    if(!this.#storeClosed)this.#persist(q);
+    return statOf(q);
   }
   close({graceMs=5000}={}){
     if(this.#closePromise)return this.#closePromise;
@@ -399,7 +463,10 @@ export class McpPaidToolBroker {
         }
         this.#shutdown.abort();
         await Promise.race([Promise.allSettled([...this.#active]),new Promise(resolve=>{timer=setTimeout(resolve,graceMs);})]);
-      }finally{clearTimeout(timer);this.#shutdown.abort();this.#storeClosed=true;this.#store?.close();}
+      }finally{
+        clearTimeout(timer);this.#shutdown.abort();this.#storeClosed=true;
+        try{await this.#results?.close();}finally{this.#store?.close();}
+      }
       if(firstFailure)throw firstFailure;
     })();
     return this.#closePromise;
@@ -413,6 +480,9 @@ export class McpPaidToolBroker {
       case 'bazaar_status':return this.status(args);
       case 'bazaar_history':return this.history(args);
       case 'bazaar_cancel':return this.cancel(args);
+      case 'bazaar_results':return this.results(args);
+      case 'bazaar_read_result':return this.readResult(args);
+      case 'bazaar_recover_result':return this.recoverResult(args);
       case 'sf43_discover_review_and_pay':{
         this.#running();
         if(!this.#agentCommerce)fail('AGENT_COMMERCE_UNAVAILABLE','SF43 requires an explicitly injected approved adapter');

@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { pipeline } from 'node:stream/promises';
+import { Readable } from 'node:stream';
 import { openObjectWorkspace, workspaceError, fail } from './model.mjs';
 
 const HOST = '127.0.0.1';
@@ -81,6 +82,15 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
         downloads.add(req.socket);
         let saved;
         try {
+          if (ticket.kind === 'accounting') {
+            const output = await model.openAccountingExport(ticket.session);
+            try {
+              res.writeHead(200, { ...security, 'content-type': 'application/x-ndjson; charset=utf-8',
+                'content-disposition': 'attachment; filename="' + output.name + '"' });
+              await pipeline(Readable.from(output.body), res, { signal: output.signal });
+            } finally { output.finish(); }
+            return;
+          }
           saved = await model.openDownload(ticket.session);
           res.writeHead(200, { ...security, 'content-type': 'application/octet-stream',
             'content-length': String(saved.bytes), 'content-disposition': 'attachment; filename="' + saved.name + '"',
@@ -95,7 +105,7 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
       if (req.method === 'GET' && url.pathname === '/api/products' && !url.search)
         return send(200, { products: await model.products() });
       if (req.method === 'GET' && url.pathname === '/api/state') {
-        const values = params(url, ['session', 'page', 'filter', 'query']);
+        const values = params(url, ['session', 'page', 'filter', 'query', 'section']);
         if (values.page !== undefined && !/^(0|[1-9][0-9]{0,3})$/.test(values.page)) fail('OBJECT_WORKSPACE_PAGE_INVALID');
         return send(200, await model.view({ ...values, ...(values.page === undefined ? {} : { page: Number(values.page) }) }));
       }
@@ -106,28 +116,32 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
       }
       const actions = {
         '/api/review': ['productId', 'sessionName', 'chunkBytes', 'maxTotalAtomic'],
-        '/api/create': ['reviewId'], '/api/refresh': ['session'],
+        '/api/create': ['reviewId'], '/api/refresh': ['session', 'section'],
         '/api/run': ['session', 'expectedRevision', 'actionId'], '/api/stop': ['session', 'runId'],
+        '/api/finalize': ['session', 'expectedRevision', 'actionId'],
         '/api/recover': ['session', 'expectedRevision'], '/api/assemble': ['session', 'expectedRevision'],
-        '/api/download-ticket': ['session'],
+        '/api/download-ticket': ['session'], '/api/accounting-export-ticket': ['session'],
       };
       if (req.method !== 'POST' || url.search || !actions[url.pathname]) fail('OBJECT_WORKSPACE_ROUTE_NOT_FOUND', 404);
       if (req.headers.origin !== origin) fail('OBJECT_WORKSPACE_ORIGIN_REQUIRED', 403);
       const value = await input(req, actions[url.pathname]);
       if (url.pathname === '/api/review') return send(200, await model.reviewSelection(value));
       if (url.pathname === '/api/create') return send(201, await model.create(value));
-      if (url.pathname === '/api/refresh') { await model.refresh(value.session ?? null); return send(200, { refreshed: true }); }
+      if (url.pathname === '/api/refresh') { await model.refresh(value.session ?? null, value.section ?? 'delivery'); return send(200, { refreshed: true }); }
       if (url.pathname === '/api/run') return send(202, await model.run(value));
+      if (url.pathname === '/api/finalize') return send(202, await model.finalize(value));
       if (url.pathname === '/api/stop') return send(202, model.stop(value));
       if (url.pathname === '/api/recover') { await model.recover(value); return send(200, { recovered: true }); }
       if (url.pathname === '/api/assemble') { await model.assemble(value); return send(200, { assembled: true }); }
-      if (url.pathname === '/api/download-ticket') {
-        const state = await model.view({ session: value.session });
-        if (!state.selected?.controls.download) fail('OBJECT_WORKSPACE_ASSEMBLY_REQUIRED', 409);
+      if (url.pathname === '/api/download-ticket' || url.pathname === '/api/accounting-export-ticket') {
+        const accounting = url.pathname === '/api/accounting-export-ticket';
+        const state = await model.view({ session: value.session, section: accounting ? 'accounting' : 'delivery' });
+        if (!state.selected?.controls[accounting ? 'export' : 'download'])
+          fail(accounting ? 'OBJECT_WORKSPACE_BUSY' : 'OBJECT_WORKSPACE_ASSEMBLY_REQUIRED', 409);
         for (const [id, item] of tickets) if (item.expires < Date.now()) tickets.delete(id);
         if (tickets.size >= 32) tickets.delete(tickets.keys().next().value);
         const ticket = randomBytes(32).toString('hex');
-        tickets.set(ticket, { session: value.session, expires: Date.now() + 60000 });
+        tickets.set(ticket, { session: value.session, kind: accounting ? 'accounting' : 'file', expires: Date.now() + 60000 });
         return send(200, { url: '/download?ticket=' + ticket, expiresInSeconds: 60 });
       }
     } catch (error) {

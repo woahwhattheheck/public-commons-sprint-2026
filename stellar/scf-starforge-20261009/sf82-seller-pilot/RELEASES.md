@@ -287,8 +287,16 @@ and the existing selection history remain.
 
 ## Publish and retire catalog listings
 
-The existing console also connects a running retained release to its approved
-live catalog. Supply `console --catalog CONFIG_JSON` to review exact current
+The existing console includes first-run discovery setup from the selected retained
+release: review its exact public enrollment, create the private identity once,
+start the original writer, publish, download public enrollment, and reopen the
+same key and journal. `console --store DIR` selects `DIR.discovery` as its fixed
+setup destination; `--discovery-setup DIRECTORY` chooses another host destination.
+Closing the console drains its own seller and writer. See the complete
+[discovery setup workflow](./DISCOVERY_SETUP.md#complete-setup-in-the-merchant-console).
+
+For an existing catalog managed by another process, supply
+`console --catalog CONFIG_JSON` to review exact current
 offer differences, publish with the merchant's existing seller-proof key, and
 withdraw a selected listing. The original SF50/SF60/SF95 implementations retain
 signing, pinned admission, atomic publication and withdrawal. See the complete

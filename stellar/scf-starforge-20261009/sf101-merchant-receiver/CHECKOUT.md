@@ -197,6 +197,13 @@ purchase offer. The startup `deliveryControl` URL opens private
 [fulfillment recovery](../sf30-seller-sdk/operations/DELIVERY_OPERATIONS.md):
 complete journal history, exact order detail and revision-guarded requeue of
 the original exhausted notification after receiver repair.
+Add `--delivery-workspace /private/merchant/receiver-workspace` to open the original
+profile, owned-worker and maintenance application on this same operations listener.
+Add `--incident-state /private/operator/incidents --incident-merchant merchant-a`
+to attach the original SF93 monitor registered to these seller/operations ports.
+The same [recovery guide](../sf30-seller-sdk/operations/DELIVERY_OPERATIONS.md#connect-incident-monitoring-and-receiver-repair)
+covers acknowledgment, receiver revision repair, the original event, observed
+recovery and reopening. Each service uses its separate original private directory.
 SIGINT/SIGTERM drain the original seller, close the original
 operations observer, and then close the Python workers.
 

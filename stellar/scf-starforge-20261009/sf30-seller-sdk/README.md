@@ -83,6 +83,13 @@ Choose one response source per route:
   `--handlers`. Paths passed to `--handlers` are relative to the config file's
   directory, or may be absolute.
 
+### Use a ClickHouse analytical source
+
+For an existing analytical database, the [ClickHouse merchant](clickhouse/README.md)
+provides named typed queries, native schema preflight, exact integer/decimal/null
+results, a retained merchant folder and the original exported customer client.
+Its launcher uses this same seller, operations console and configured facilitator.
+
 ### Sell an existing JSON dataset
 
 Use `"responseFile":"./data/catalog.json"` in place of `response` or `handler`.
