@@ -4,6 +4,8 @@ A merchant can sell a defined allowance of API work through the existing SF101 c
 
 The enrolled plan is the purchased contract. Payment entitlement, token rotation, suspension, and expiry continue to come from the original merchant order and access implementation. The allowance ledger and saved responses live in the same merchant.sqlite3 database.
 
+For the customer lifecycle, use [Purchase and use an API allowance](PURCHASE.md): it retains the original buyer workspace, reviews the selected checkout, receives the purchased plan, and opens verified API results. For merchant application functions, use [Paid applications](../api-application/README.md): it connects these allowance reservations to the existing durable application executor and saved-result recovery.
+
 ## Quick start
 
 Run the commands below from this directory. Node.js launches the included Python implementation; Python 3.11 or later and the Python standard library are sufficient. Set STARFORGE_PYTHON to a Python executable when python3 is not the desired interpreter.

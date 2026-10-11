@@ -7,6 +7,8 @@ import { readSellerConfig } from '../sf30-seller-sdk/serve.mjs';
 import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { readCheckout } from '../sf101-merchant-receiver/checkout-config.mjs';
 import { prepareRetainedRelease, checkRetainedRelease } from './retained-release.mjs';
+import { oauthUpstreamRequirements, prepareOAuthHostDirectories, validateOAuthHostDirectories }
+  from '../sf30-seller-sdk/oauth-connections/deployment.mjs';
 
 export const SCHEMA = 'stellar-forge.merchant-host.v1';
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
@@ -64,7 +66,7 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
   planFile = path(resolve(planFile), 'plan'); sourceRoot = path(await realpath(sourceRoot), 'sourceRoot');
   const raw = await json(planFile);
   keys(raw, ['schema','merchant','serviceUser','serviceGroup','kind','mode','config','privateRoot',
-    'environmentFile','facilitator','handlers','upstreams','allowLoopbackUpstream','ports','runtime',
+    'environmentFile','oauthDirectories','facilitator','handlers','upstreams','allowLoopbackUpstream','ports','runtime',
     'delivery','maxInFlight','drainGraceMs','historyDays','release','discovery'], 'host plan');
   need(raw.schema === SCHEMA && /^[a-z][a-z0-9-]{0,39}$/.test(raw.merchant ?? ''), 'Host schema and merchant ID required');
   need(/^[a-z_][a-z0-9_-]{0,30}$/.test(raw.serviceUser ?? '') && raw.serviceUser !== 'root', 'Existing unprivileged serviceUser required');
@@ -147,6 +149,12 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
   need(!delivery || environmentFile, 'Signed delivery requires the private shared environmentFile path');
   need(!environmentFile || !inside(stateRoot, environmentFile) && !inside(sourceRoot, environmentFile) &&
     !inputs.includes(environmentFile), 'Keep environmentFile outside source, state and selected configuration files');
+  const oauthRequirements = retained?.oauthRequirements ??
+    (raw.upstreams ? oauthUpstreamRequirements(await json(raw.upstreams)) : []);
+  const oauthConnections = prepareOAuthHostDirectories(raw.oauthDirectories, oauthRequirements, {
+    sourceRoot, stateRoot, inputs: [planFile, ...inputs], environmentFile,
+    allowLoopback: retained?.allowLoopbackUpstream ?? raw.allowLoopbackUpstream === true,
+  });
   const prefix = 'stellar-forge-' + raw.merchant;
   const entry = name => join(sourceRoot, BASE + name);
   const sellerArgs = retained ? [node, entry('sf82-seller-pilot/release-cli.mjs'), 'run',
@@ -177,7 +185,11 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
       '--allow-host',delivery.allowHost,'--secret-env','SF98_WEBHOOK_SECRET','--limit',String(delivery.limit),
       '--concurrency',String(delivery.concurrency),'--poll-ms',String(delivery.pollMs),'--timeout-ms',String(delivery.timeoutMs)], stopSeconds: 20 });
   const sourceFiles = [...new Set([...services.flatMap(s => [s.args[1], ...(s.initialize ? [s.initialize[1]] : [])]),
-    ...(retained?.sourceFiles ?? [])])];
+    ...(retained?.sourceFiles ?? []), ...(oauthConnections.length ? [
+      entry('sf30-seller-sdk/oauth-connections/host-check.mjs'),
+      entry('sf30-seller-sdk/oauth-connections/deployment.mjs'),
+      entry('sf30-seller-sdk/oauth-connections/host.mjs'),
+    ] : [])])];
   const inputFiles = await Promise.all(inputs.map(async file => ({ path: file, sha256: hash(await bytes(file, 8 * 1024 * 1024)) })));
   const sourceEntries = await Promise.all(sourceFiles.map(async file => ({ path: file, sha256: hash(await bytes(file, 4 * 1024 * 1024)) })));
   const routes = compiled.routes.map(route => ({ id: route.id, method: route.method, path: route.path,
@@ -194,6 +206,7 @@ export async function prepare(planFile, { sourceRoot = ROOT } = {}) {
   }
   return { schema: SCHEMA, merchant: raw.merchant, kind: raw.kind, mode: raw.mode, sourceRoot,
     serviceUser: raw.serviceUser, serviceGroup: group, configPath, stateRoot, environmentFile,
+    ...(oauthConnections.length ? { oauthConnections } : {}),
     node, python, publicOrigin: publicUrl.origin, hostname: publicUrl.hostname, sellerPort, operationsPort,
     receiverPort: checkout ? receiverPort : null, outbox, receiverState, delivery: delivery ?? null,
     ...(retained ? { release: retained.release, discovery: retained.discovery, discoveryPort } : {}),
@@ -223,7 +236,12 @@ export function serviceUnit(p, s, bundle) {
     s.role === 'seller' && p.delivery ? p.services.find(x => x.role === 'delivery')?.unit :
     s.role === 'delivery' && p.receiverState ? p.services.find(x => x.role === 'receiver')?.unit : null;
   const check = [p.node, join(p.sourceRoot, BASE + 'sf99-merchant-deploy/cli.mjs'), 'check', '--bundle', bundle];
-  return `[Unit]\nDescription=Stellar Forge ${p.merchant} ${s.role}\nWants=network-online.target\nAfter=network-online.target${predecessor ? ' ' + predecessor : ''}\nPartOf=${p.target}\n\n[Service]\nType=exec\nUser=${p.serviceUser}\nGroup=${p.serviceGroup}\nWorkingDirectory=${(/\s$/.test(p.sourceRoot) ? p.sourceRoot + '/.' : p.sourceRoot).replaceAll('%', '%%')}\nUMask=0077\n${p.environmentFile ? 'EnvironmentFile=' + p.environmentFile.replaceAll('%', '%%') + '\n' : ''}Environment=PYTHONDONTWRITEBYTECODE=1\nExecStartPre=${commandLine(check)}\n${s.initialize ? 'ExecStartPre=' + commandLine(s.initialize) + '\n' : ''}ExecStart=${commandLine(s.args)}\nRestart=on-failure\nRestartSec=5\n${s.role === 'delivery' ? 'RestartPreventExitStatus=75\n' : ''}KillMode=mixed\nTimeoutStopSec=${s.stopSeconds}\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nProtectHome=read-only\nReadWritePaths=${unitWord(p.stateRoot)}\n\n[Install]\nWantedBy=${p.target}\n`;
+  const oauthStores = s.role === 'seller' ? (p.oauthConnections ?? []) : [];
+  const writable = [p.stateRoot, ...oauthStores.map(entry => entry.directory)];
+  const oauthPreflight = oauthStores.length ? 'ExecStartPre=' + commandLine([
+    p.node, join(p.sourceRoot, BASE + 'sf30-seller-sdk/oauth-connections/host-check.mjs'),
+    '--bundle', bundle]) + '\n' : '';
+  return `[Unit]\nDescription=Stellar Forge ${p.merchant} ${s.role}\nWants=network-online.target\nAfter=network-online.target${predecessor ? ' ' + predecessor : ''}\nPartOf=${p.target}\n\n[Service]\nType=exec\nUser=${p.serviceUser}\nGroup=${p.serviceGroup}\nWorkingDirectory=${(/\s$/.test(p.sourceRoot) ? p.sourceRoot + '/.' : p.sourceRoot).replaceAll('%', '%%')}\nUMask=0077\n${p.environmentFile ? 'EnvironmentFile=' + p.environmentFile.replaceAll('%', '%%') + '\n' : ''}Environment=PYTHONDONTWRITEBYTECODE=1\nExecStartPre=${commandLine(check)}\n${oauthPreflight}${s.initialize ? 'ExecStartPre=' + commandLine(s.initialize) + '\n' : ''}ExecStart=${commandLine(s.args)}\nRestart=on-failure\nRestartSec=5\n${s.role === 'delivery' ? 'RestartPreventExitStatus=75\n' : ''}KillMode=mixed\nTimeoutStopSec=${s.stopSeconds}\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nProtectHome=read-only\nReadWritePaths=${writable.map(value => unitWord(value)).join(' ')}\n\n[Install]\nWantedBy=${p.target}\n`;
 }
 export function recoveryPlan(p) {
   const roots = [{ name: 'merchantState', path: p.stateRoot }];
@@ -233,7 +251,9 @@ export function recoveryPlan(p) {
 export async function generate(planFile, output, options) {
   const p = await prepare(planFile, options), out = path(resolve(output), 'output');
   need(!inside(p.sourceRoot, out) && !inside(p.stateRoot, out) && !inside(out, p.stateRoot) &&
-    !p.inputFiles.some(f => inside(out, f.path)), 'Deployment bundle must be separate from code, inputs and merchant state');
+    !p.inputFiles.some(f => inside(out, f.path)) &&
+    !(p.oauthConnections ?? []).some(entry => inside(out, entry.directory) || inside(entry.directory, out)),
+    'Deployment bundle must be separate from code, inputs, merchant state and private OAuth stores');
   const artifacts = new Map([['Caddyfile', caddyfile(p)], [p.target,
     `[Unit]\nDescription=Stellar Forge ${p.merchant} merchant services\nWants=${p.services.map(s => s.unit).join(' ')}\nAfter=network-online.target\n\n[Install]\nWantedBy=multi-user.target\n`],
     ['recovery-plan.json', JSON.stringify(recoveryPlan(p), null, 2) + '\n']]);
@@ -269,6 +289,7 @@ export async function checkBundle(bundle) {
     need(env.isFile() && !env.isSymbolicLink() && (env.mode & 0o077) === 0,
       'Use a private regular environmentFile with no group or world access');
   }
+  validateOAuthHostDirectories(p, { bundle });
   if (p.kind === 'release') await checkRetainedRelease(p);
   return p;
 }
