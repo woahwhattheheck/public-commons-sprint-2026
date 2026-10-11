@@ -1,6 +1,5 @@
 import type { Operation, Review } from '../index.mjs';
-import type { CompiledStateGraph, Annotation } from '@langchain/langgraph';
-import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
+import type { CompiledStateGraph, Annotation, BaseCheckpointSaver } from '@langchain/langgraph';
 import type { OperationBinding, OutcomeSummary, ResponseArtifact, AgentReadOptions } from './operation.mjs';
 
 export type BuyerGraphNode = 'bind' | 'inspect' | 'review' | 'execute' | 'read';

@@ -1,0 +1,1368 @@
+{
+  "sourceUrl": "https://api.galaxydigital.com/docs/api.yml?v=1.9.2",
+  "sourceSha256": "a9d44ad64f28f033d88ef460e5af57a284c66cbf8599b9666d38cb8c75e63e57",
+  "openapi": "3.0.0",
+  "version": "1.9.2",
+  "servers": [
+    {
+      "description": "Production (US 1)",
+      "url": "https://api.galaxydigital.com/api"
+    },
+    {
+      "description": "Production (US 2)",
+      "url": "https://www.volunteerapi.com/api"
+    },
+    {
+      "description": "Production (Canada)",
+      "url": "https://ca.volunteerapi.com/api"
+    }
+  ],
+  "fields": [
+    {
+      "schema": "needObject",
+      "field": "id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/needObject/properties/id"
+    },
+    {
+      "schema": "needObject",
+      "field": "domain_id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/needObject/properties/domain_id"
+    },
+    {
+      "schema": "needObject",
+      "field": "agency",
+      "definition": {
+        "$ref": "#/components/schemas/agencyMiniObject"
+      },
+      "pointer": "#/components/schemas/needObject/properties/agency"
+    },
+    {
+      "schema": "needObject",
+      "field": "need_title",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/needObject/properties/need_title"
+    },
+    {
+      "schema": "needObject",
+      "field": "need_date",
+      "definition": {
+        "type": "string",
+        "example": "2021-10-28"
+      },
+      "pointer": "#/components/schemas/needObject/properties/need_date"
+    },
+    {
+      "schema": "needObject",
+      "field": "need_date_type",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/needObject/properties/need_date_type"
+    },
+    {
+      "schema": "needObject",
+      "field": "need_volunteers_needed",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/needObject/properties/need_volunteers_needed"
+    },
+    {
+      "schema": "needObject",
+      "field": "shifts",
+      "definition": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/shiftObject"
+        }
+      },
+      "pointer": "#/components/schemas/needObject/properties/shifts"
+    },
+    {
+      "schema": "needObject",
+      "field": "need_status",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/needObject/properties/need_status"
+    },
+    {
+      "schema": "needObject",
+      "field": "created_at",
+      "definition": {
+        "type": "string",
+        "format": "date-time",
+        "example": "2021-01-01 12:00:00"
+      },
+      "pointer": "#/components/schemas/needObject/properties/created_at"
+    },
+    {
+      "schema": "needObject",
+      "field": "updated_at",
+      "definition": {
+        "type": "string",
+        "format": "date-time",
+        "example": "2021-01-01 12:00:00"
+      },
+      "pointer": "#/components/schemas/needObject/properties/updated_at"
+    },
+    {
+      "schema": "shiftObject",
+      "field": "id",
+      "definition": {
+        "type": "string",
+        "format": "number",
+        "example": "1234567"
+      },
+      "pointer": "#/components/schemas/shiftObject/properties/id"
+    },
+    {
+      "schema": "shiftObject",
+      "field": "start",
+      "definition": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "pointer": "#/components/schemas/shiftObject/properties/start"
+    },
+    {
+      "schema": "shiftObject",
+      "field": "end",
+      "definition": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "pointer": "#/components/schemas/shiftObject/properties/end"
+    },
+    {
+      "schema": "shiftObject",
+      "field": "duration",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/shiftObject/properties/duration"
+    },
+    {
+      "schema": "shiftObject",
+      "field": "slots",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/shiftObject/properties/slots"
+    },
+    {
+      "schema": "responseObject",
+      "field": "id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/responseObject/properties/id"
+    },
+    {
+      "schema": "responseObject",
+      "field": "domain_id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/responseObject/properties/domain_id"
+    },
+    {
+      "schema": "responseObject",
+      "field": "shift",
+      "definition": {
+        "$ref": "#/components/schemas/shiftObject"
+      },
+      "pointer": "#/components/schemas/responseObject/properties/shift"
+    },
+    {
+      "schema": "responseObject",
+      "field": "need",
+      "definition": {
+        "$ref": "#/components/schemas/needMiniObject"
+      },
+      "pointer": "#/components/schemas/responseObject/properties/need"
+    },
+    {
+      "schema": "responseObject",
+      "field": "user",
+      "definition": {
+        "$ref": "#/components/schemas/userMiniObject"
+      },
+      "pointer": "#/components/schemas/responseObject/properties/user"
+    },
+    {
+      "schema": "responseObject",
+      "field": "team",
+      "definition": {
+        "$ref": "#/components/schemas/teamMiniObject"
+      },
+      "pointer": "#/components/schemas/responseObject/properties/team"
+    },
+    {
+      "schema": "responseObject",
+      "field": "response_date_added",
+      "definition": {
+        "type": "string",
+        "format": "date-time",
+        "example": "2021-01-01 12:00:00"
+      },
+      "pointer": "#/components/schemas/responseObject/properties/response_date_added"
+    },
+    {
+      "schema": "responseObject",
+      "field": "response_date_updated",
+      "definition": {
+        "type": "string",
+        "format": "date-time",
+        "example": "2021-01-01 12:00:00"
+      },
+      "pointer": "#/components/schemas/responseObject/properties/response_date_updated"
+    },
+    {
+      "schema": "responseObject",
+      "field": "response_status",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/responseObject/properties/response_status"
+    },
+    {
+      "schema": "responseObject",
+      "field": "answers",
+      "definition": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ResponseAnswerObject"
+        }
+      },
+      "pointer": "#/components/schemas/responseObject/properties/answers"
+    },
+    {
+      "schema": "userObject",
+      "field": "id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/userObject/properties/id"
+    },
+    {
+      "schema": "userObject",
+      "field": "domain_id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/userObject/properties/domain_id"
+    },
+    {
+      "schema": "userObject",
+      "field": "user_reference_id",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/userObject/properties/user_reference_id"
+    },
+    {
+      "schema": "userObject",
+      "field": "user_fname",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/userObject/properties/user_fname"
+    },
+    {
+      "schema": "userObject",
+      "field": "user_lname",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/userObject/properties/user_lname"
+    },
+    {
+      "schema": "userObject",
+      "field": "user_status",
+      "definition": {
+        "type": "string",
+        "example": "active",
+        "nullable": true,
+        "enum": [
+          "active",
+          "pending",
+          "imported",
+          "inactive"
+        ]
+      },
+      "pointer": "#/components/schemas/userObject/properties/user_status"
+    },
+    {
+      "schema": "userObject",
+      "field": "created_at",
+      "definition": {
+        "type": "string",
+        "format": "date-time",
+        "example": "2021-01-01 12:00:00"
+      },
+      "pointer": "#/components/schemas/userObject/properties/created_at"
+    },
+    {
+      "schema": "userObject",
+      "field": "updated_at",
+      "definition": {
+        "type": "string",
+        "format": "date-time",
+        "example": "2021-01-01 12:00:00"
+      },
+      "pointer": "#/components/schemas/userObject/properties/updated_at"
+    },
+    {
+      "schema": "userQualificationsObject",
+      "field": "id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/userQualificationsObject/properties/id"
+    },
+    {
+      "schema": "userQualificationsObject",
+      "field": "domain_id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/userQualificationsObject/properties/domain_id"
+    },
+    {
+      "schema": "userQualificationsObject",
+      "field": "qualification_id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/userQualificationsObject/properties/qualification_id"
+    },
+    {
+      "schema": "userQualificationsObject",
+      "field": "qualification_title",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/userQualificationsObject/properties/qualification_title"
+    },
+    {
+      "schema": "userQualificationsObject",
+      "field": "status",
+      "definition": {
+        "type": "string",
+        "enum": [
+          "active",
+          "pending",
+          "inactive",
+          "expired",
+          "rejected",
+          "resubmit"
+        ]
+      },
+      "pointer": "#/components/schemas/userQualificationsObject/properties/status"
+    },
+    {
+      "schema": "userQualificationsObject",
+      "field": "expires",
+      "definition": {
+        "type": "string",
+        "format": "date"
+      },
+      "pointer": "#/components/schemas/userQualificationsObject/properties/expires"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/id"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "domain_id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/domain_id"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_title",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_title"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_cat_id",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_cat_id"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_question",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_question"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_type",
+      "definition": {
+        "type": "string",
+        "enum": [
+          "select",
+          "radio",
+          "text",
+          "textarea"
+        ],
+        "example": "select"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_type"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_options",
+      "definition": {
+        "type": "array",
+        "example": [
+          "Option A",
+          "Option B"
+        ],
+        "items": {
+          "type": "string"
+        }
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_options"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_link_url",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_link_url"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_link_text",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_link_text"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_level",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_level"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_duration",
+      "definition": {
+        "type": "string",
+        "enum": [
+          "date",
+          "1month",
+          "6months",
+          "1year",
+          "2years",
+          "3years",
+          "forever",
+          "1week",
+          "2weeks",
+          "firstofyear"
+        ]
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_duration"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_approval",
+      "definition": {
+        "type": "string",
+        "enum": [
+          "manual",
+          "auto",
+          "ifCorrect"
+        ]
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_approval"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "qualification_status",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/qualification_status"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "created_at",
+      "definition": {
+        "type": "string",
+        "format": "date-time",
+        "example": "2021-01-01 12:00:00"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/created_at"
+    },
+    {
+      "schema": "qualificationObject",
+      "field": "updated_at",
+      "definition": {
+        "type": "string",
+        "format": "date-time",
+        "example": "2021-01-01 12:00:00"
+      },
+      "pointer": "#/components/schemas/qualificationObject/properties/updated_at"
+    },
+    {
+      "schema": "ResponseAnswerObject",
+      "field": "type",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/ResponseAnswerObject/properties/type"
+    },
+    {
+      "schema": "ResponseAnswerObject",
+      "field": "key",
+      "definition": {
+        "type": "string",
+        "format": "number"
+      },
+      "pointer": "#/components/schemas/ResponseAnswerObject/properties/key"
+    },
+    {
+      "schema": "ResponseAnswerObject",
+      "field": "area",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/ResponseAnswerObject/properties/area"
+    },
+    {
+      "schema": "ResponseAnswerObject",
+      "field": "question",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/ResponseAnswerObject/properties/question"
+    },
+    {
+      "schema": "ResponseAnswerObject",
+      "field": "answer",
+      "definition": {
+        "type": "string"
+      },
+      "pointer": "#/components/schemas/ResponseAnswerObject/properties/answer"
+    }
+  ],
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/needs",
+      "operationId": "listNeeds",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "per_page",
+          "required": false,
+          "schema": {
+            "title": "listNeedsParamPerPage",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 150
+          },
+          "description": "Define how many results are returned per page"
+        },
+        {
+          "name": "agency_id",
+          "in": "query",
+          "description": "Id of agency that created need",
+          "required": false,
+          "schema": {
+            "title": "listNeedsParamAgencyId",
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "name": "need_title",
+          "in": "query",
+          "description": "Name of need you are search.",
+          "required": false,
+          "schema": {
+            "title": "listNeedsParamNeedTitle",
+            "type": "string"
+          }
+        },
+        {
+          "name": "need_status",
+          "in": "query",
+          "description": "Status of needs you would like to find.",
+          "required": false,
+          "schema": {
+            "title": "listNeedsParamNeedStatus",
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          }
+        },
+        {
+          "in": "query",
+          "name": "since_id",
+          "required": false,
+          "schema": {
+            "title": "listNeedsParamSinceId",
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Filtering items that have been added since that ID"
+        },
+        {
+          "in": "query",
+          "name": "since_created",
+          "required": false,
+          "schema": {
+            "title": "listNeedsParamSinceCreated",
+            "type": "string",
+            "format": "datetime",
+            "example": "2021-11-01 15:00"
+          },
+          "description": "Filtering items that have been added since that date-time"
+        },
+        {
+          "in": "query",
+          "name": "since_updated",
+          "required": false,
+          "schema": {
+            "title": "listNeedsParamSinceUpdated",
+            "type": "string",
+            "format": "datetime",
+            "example": "2021-11-01 15:00"
+          },
+          "description": "Filtering items that have been updated since that date-time"
+        },
+        {
+          "in": "query",
+          "name": "show_inactive",
+          "required": false,
+          "schema": {
+            "title": "listNeedsParamShowInactive",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No"
+            ]
+          },
+          "description": "Default request will omit inactive records. Passing Yes will allow them to be returned."
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "listNeedsResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/needObject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/needs/{id}",
+      "operationId": "getNeed",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "ID of Need",
+          "required": true,
+          "schema": {
+            "title": "getNeedParamId",
+            "type": "integer"
+          }
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "getNeedResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/needObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/needs/{id}/responses",
+      "operationId": "listNeedResponses",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "ID of Need",
+          "required": true,
+          "schema": {
+            "title": "listNeedResponsesParamId",
+            "type": "integer"
+          }
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "listNeedResponsesResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/responseObject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/responses",
+      "operationId": "listResponses",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "per_page",
+          "required": false,
+          "schema": {
+            "title": "listResponsesParamPerPage",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 150
+          },
+          "description": "Define how many results are returned per page"
+        },
+        {
+          "in": "query",
+          "name": "since_id",
+          "required": false,
+          "schema": {
+            "title": "listResponsesParamSinceId",
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Filtering items that have been added since that ID"
+        },
+        {
+          "in": "query",
+          "name": "since_created",
+          "required": false,
+          "schema": {
+            "title": "listResponsesParamSinceCreated",
+            "type": "string",
+            "format": "datetime",
+            "example": "2021-11-01 15:00"
+          },
+          "description": "Filtering items that have been added since that date-time"
+        },
+        {
+          "in": "query",
+          "name": "since_updated",
+          "required": false,
+          "schema": {
+            "title": "listResponsesParamSinceUpdated",
+            "type": "string",
+            "format": "datetime",
+            "example": "2021-11-01 15:00"
+          },
+          "description": "Filtering items that have been updated since that date-time"
+        },
+        {
+          "in": "query",
+          "name": "show_inactive",
+          "required": false,
+          "schema": {
+            "title": "listResponsesParamShowInactive",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No"
+            ]
+          },
+          "description": "Default request will omit inactive records. Passing Yes will allow them to be returned."
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "listResponsesResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/responseObject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/responses/{id}",
+      "operationId": "getResponse",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "ID of",
+          "required": true,
+          "schema": {
+            "title": "getResponseParamId",
+            "type": "integer"
+          }
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "getResponseResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/responseObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "operationId": "listUsers",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "per_page",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamPerPage",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 150
+          },
+          "description": "Define how many results are returned per page"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamPage",
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "page number"
+        },
+        {
+          "name": "user_status",
+          "in": "query",
+          "description": "Status values that need to be considered for filter",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamUserArrayStatus",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "title": "listUsersParamUserStatus",
+              "enum": [
+                "active",
+                "pending",
+                "imported",
+                "inactive"
+              ],
+              "default": "active"
+            }
+          }
+        },
+        {
+          "name": "user_fname",
+          "in": "query",
+          "description": "User first name",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamUserFname",
+            "type": "string"
+          }
+        },
+        {
+          "name": "user_lname",
+          "in": "query",
+          "description": "User last name",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamUserLname",
+            "type": "string"
+          }
+        },
+        {
+          "name": "user_email",
+          "in": "query",
+          "description": "User email address",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamUserEmail",
+            "type": "string",
+            "format": "email"
+          }
+        },
+        {
+          "name": "user_fname_like",
+          "in": "query",
+          "description": "Filter by partial user first name",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamUserFnameLike",
+            "type": "string"
+          }
+        },
+        {
+          "name": "user_lname_like",
+          "in": "query",
+          "description": "Filter by partial user last name",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamUserLnameLike",
+            "type": "string"
+          }
+        },
+        {
+          "name": "user_email_like",
+          "in": "query",
+          "description": "Filter by partial user email address",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamUserEmailLike",
+            "type": "string",
+            "format": "email"
+          }
+        },
+        {
+          "in": "query",
+          "name": "since_id",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamSinceId",
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Filtering items that have been added since that ID"
+        },
+        {
+          "in": "query",
+          "name": "since_created",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamSinceCreated",
+            "type": "string",
+            "format": "datetime",
+            "example": "2021-11-01 15:00"
+          },
+          "description": "Filtering items that have been added since that date-time"
+        },
+        {
+          "in": "query",
+          "name": "since_updated",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamSinceUpdated",
+            "type": "string",
+            "format": "datetime",
+            "example": "2021-11-01 15:00"
+          },
+          "description": "Filtering items that have been updated since that date-time"
+        },
+        {
+          "in": "query",
+          "name": "show_inactive",
+          "required": false,
+          "schema": {
+            "title": "listUsersParamShowInactive",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No"
+            ]
+          },
+          "description": "Default request will omit inactive records. Passing Yes will allow them to be returned."
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "listUsersParamResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/userObject"
+                  }
+                },
+                "links": {
+                  "type": "object",
+                  "properties": {
+                    "first": {
+                      "type": "string"
+                    },
+                    "last": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "prev": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "next": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  }
+                },
+                "meta": {
+                  "type": "object",
+                  "properties": {
+                    "current_page": {
+                      "type": "integer"
+                    },
+                    "from": {
+                      "type": "integer"
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "to": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/{id}",
+      "operationId": "getUser",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "ID of user",
+          "required": true,
+          "schema": {
+            "title": "getUserParamId",
+            "type": "integer"
+          }
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "getUserResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/userObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/{id}/qualifications",
+      "operationId": "listUserQualifications",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "ID of user",
+          "required": true,
+          "schema": {
+            "title": "listUserQualificationsParamId",
+            "type": "integer"
+          }
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "listUserQualificationsResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/userQualificationsObject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/qualifications",
+      "operationId": "listQualifications",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "per_page",
+          "required": false,
+          "schema": {
+            "title": "listQualificationsParamPerPage",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 150
+          },
+          "description": "Define how many results are returned per page"
+        },
+        {
+          "in": "query",
+          "name": "since_id",
+          "required": false,
+          "schema": {
+            "title": "listQualificationsParamSinceId",
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Filtering items that have been added since that ID"
+        },
+        {
+          "in": "query",
+          "name": "since_created",
+          "required": false,
+          "schema": {
+            "title": "listQualificationsParamSinceCreated",
+            "type": "string",
+            "format": "datetime",
+            "example": "2021-11-01 15:00"
+          },
+          "description": "Filtering items that have been added since that date-time"
+        },
+        {
+          "in": "query",
+          "name": "since_updated",
+          "required": false,
+          "schema": {
+            "title": "listQualificationsParamSinceUpdated",
+            "type": "string",
+            "format": "datetime",
+            "example": "2021-11-01 15:00"
+          },
+          "description": "Filtering items that have been updated since that date-time"
+        },
+        {
+          "in": "query",
+          "name": "show_inactive",
+          "required": false,
+          "schema": {
+            "title": "listQualificationsParamShowInactive",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No"
+            ]
+          },
+          "description": "Default request will omit inactive records. Passing Yes will allow them to be returned."
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "listQualificationsResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/qualificationObject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/qualifications/{id}",
+      "operationId": "getQualification",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "ID of qualification",
+          "required": true,
+          "schema": {
+            "title": "getQualificationParamId",
+            "type": "integer"
+          }
+        }
+      ],
+      "response": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "title": "getQualificationResponse",
+              "type": "object",
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/qualificationObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "Bearer": []
+        }
+      ]
+    }
+  ]
+}

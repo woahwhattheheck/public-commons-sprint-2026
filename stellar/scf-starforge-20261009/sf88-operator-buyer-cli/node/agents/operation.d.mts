@@ -7,6 +7,8 @@ export interface OperationBinding {
   readonly configSha256: string;
   readonly bodySha256: string;
   readonly ticketSha256: string | null;
+  /** Original native workspace, when adopted through Buyer.fromWorkspace. */
+  readonly nativeWorkspace?: string | null;
 }
 export interface ResultSummary {
   intentId: string; nativeStatus: unknown; httpStatus: number | null; ok: boolean;

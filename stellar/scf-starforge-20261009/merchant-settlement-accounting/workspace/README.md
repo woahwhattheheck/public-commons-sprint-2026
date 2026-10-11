@@ -213,6 +213,71 @@ They invoke the existing SF101 encrypted recovery engine. The original
 workspace lease owns each backup and restore; the normal browser and merchant
 MCP continue to open the same directory after completion.
 
+### Operate backup and recovery in the browser
+
+The **Backup & recovery** area uses the same server, workspace, original SF101
+encryption and complete operating-source selection. Configure it on the
+existing launch command:
+
+```sh
+npx --no-install starforge merchant-accounting-workspace \
+  --workspace /private/merchant/accounting-workspace \
+  --recovery-state-root /private/merchant \
+  --recovery-backup-root /private/backups/accounting \
+  --recovery-pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE
+```
+
+The state root must contain the selected workspace and its original inputs.
+The backup root is a separate private directory outside those sources. Keep
+the recovery passphrase in the named host environment variable. The browser
+shows its availability and never accepts or receives the value. Its saved
+backup choices are children of this configured backup root.
+
+1. Enter the operator name and select **Pause accounting workspace**. The same
+   server remains open while accepted requests drain and the original
+   accounting, collection and Bitwave controllers close. The recovery area
+   stays available; accounting resumes through the original controllers.
+2. Stop other processes writing the merchant outbox and selected source
+   directories. Select **Review operating sources**, inspect the exact roots,
+   file count and retained workspace revision, then name the backup and
+   confirm that those external writers are stopped.
+3. Select **Create encrypted backup**. Source identity is checked again during
+   capture. Operation progress and the retained outcome appear in the history.
+   The completed backup remains in its displayed private host location; keep
+   its whole directory and separately retained recovery key together in the
+   merchant's established recovery process.
+4. Select a retained backup and **Verify encrypted files** to authenticate its
+   original manifest and contents. Verification is attached to that exact
+   retained manifest. Review the selected backup and original target before
+   **Restore selected backup**. Recovery creates missing files and reuses
+   matching files. Existing changed or additional files remain preserved and
+   are reported by the original engine.
+5. Use **Reopen accounting workspace** after successful recovery or a completed
+   backup. The same browser reloads original reconciliations, collections,
+   periods, accountant handoffs and reviews from the restored workspace.
+
+Every accepted command has a retained identity, named operator, progress and
+result. Disconnecting the browser leaves that operation running. If a response
+is lost, **Read saved command** finds the original operation and **Retry this
+same command** reuses its exact request identity and input. A changed command
+cannot reuse that identity. The original server owns cancellation and
+recovery; the browser does not launch a second worker.
+
+After a host interruption or when the original workspace is absent, add
+`--recovery-start-paused` to the same configured command. The recovery desk
+opens independently of the accounting files. Select the original backup,
+complete recovery at the same private paths, then reopen accounting. An
+interrupted restore displays **Continue recovery from this backup**; its
+original recovery marker and matching published files are reused. Capture
+and verification can be stopped through their owned operation controls;
+pausing and reopening finish their lifecycle transition before another
+operation begins.
+
+The latest 50 operations are retained in the desk's working view. The host
+keeps the complete operation history, and `/api/maintenance/jobs/:id` reads
+an earlier operation by its saved identity. Existing cold CLI backup and
+recovery commands below remain available.
+
 ### Capture the original operating sources
 
 Stop this workspace and the processes that write its native outbox, verification

@@ -110,7 +110,8 @@ const state = await session.graph.invoke(null, config);
 The pending node continues from SQLite. The original read options are included
 in the checkpoint, so a process restart retains its selected format and record
 page. Each resumed node checks the original intent, operation directory, config
-digest, body digest, and ticket digest. Reusing that graph thread for another
+digest, body digest, ticket digest, and original native workspace when present.
+Reusing that graph thread for another
 operation raises `AGENT_OPERATION_BINDING_MISMATCH`.
 
 For recovery after an ordinary process crash, open the same application state

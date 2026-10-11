@@ -1,0 +1,24 @@
+#area-maintenance {min-width:0}
+#area-maintenance .maintenance-grid {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+#area-maintenance .maintenance-grid>.panel {min-width:0}
+#maintenance-mode-description {font-size:13px;max-width:780px;margin-bottom:16px}
+#maintenance-config {font-size:12px;padding-bottom:18px;grid-template-columns:145px minmax(0,1fr)}
+#maintenance-setup p {margin-top:7px}
+#maintenance-review-detail {margin-top:14px}
+#area-maintenance form {margin-top:18px;padding-top:17px;border-top:1px solid var(--border)}
+#area-maintenance form h3 {margin-bottom:6px}
+#area-maintenance .record-values {font-size:12px;grid-template-columns:minmax(110px,32%) minmax(0,1fr)}
+#area-maintenance .record-values dd {font-variant-numeric:tabular-nums}
+#area-maintenance pre {font:11px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:360px;overflow:auto;padding:12px;background:var(--soft);border:1px solid var(--border)}
+#area-maintenance summary {font-size:12px;cursor:pointer;margin-top:12px}
+#area-maintenance td {overflow-wrap:anywhere;max-width:360px}
+#maintenance-roots td:last-child {font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+#maintenance-pending-description {margin:8px 0 13px;overflow-wrap:anywhere}
+#maintenance-progress {margin:16px 20px}
+#maintenance-progress p {margin-top:3px}
+#maintenance-job-detail {border-top:1px solid var(--border)}
+#maintenance-job-detail h3 {margin-bottom:10px}
+#maintenance-job-detail .actions {margin-top:12px}
+#maintenance-recovery-required p {margin-top:8px;font-size:12px;max-width:790px}
+@media(max-width:1120px) {#area-maintenance .maintenance-grid {grid-template-columns:minmax(0,1fr);gap:0}}
+@media(max-width:760px) {#maintenance-config,#area-maintenance .record-values {grid-template-columns:minmax(0,1fr);gap:4px}#maintenance-config dd,#area-maintenance .record-values dd {margin-bottom:9px}#maintenance-progress {margin:15px}#area-maintenance .panel-heading {flex-wrap:wrap}}
