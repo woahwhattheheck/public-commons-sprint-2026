@@ -8,6 +8,7 @@ const HELP = `node cli.mjs generate --plan PRIVATE_HOST.json --out NEW_PRIVATE_D
 node cli.mjs inspect --plan PRIVATE_HOST.json
 node cli.mjs check --bundle PRIVATE_DIRECTORY
 node cli.mjs smoke --bundle PRIVATE_DIRECTORY [--public]
+node cli.mjs maintenance --help
 
 Generate Caddy/systemd for original API sellers or the original paid-file checkout,
 receiver and continuous SF98 delivery. The bundle includes exact operating and
@@ -42,6 +43,7 @@ export async function smoke(bundle, { publicOrigin = false } = {}) {
 
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args[0] === '--help') { console.log(HELP); return 0; }
+  if (args[0] === 'maintenance') return (await import('./maintenance-cli.mjs')).main(args.slice(1));
   const [command, ...rest] = args;
   const allowed = { generate: ['--plan','--out'], inspect: ['--plan'], check: ['--bundle'], smoke: ['--bundle','--public'] }[command];
   if (!allowed) throw new Error(HELP);
