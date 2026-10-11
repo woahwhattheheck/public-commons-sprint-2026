@@ -66,7 +66,7 @@ starforge runtime-transfer export \
 
 Export uses the explicitly selected cache in offline mode by default. For each distinct locked public package it asks npm for that exact tarball, verifies the lock's integrity value, retains the original bytes, then streams the complete file payload into the declared parts. It does not repackage the installed dependency folders.
 
-If an approved connected sending host needs to fetch a missing public tarball, add `--online` to that same export. This enables the exact public-registry acquisition; it does not change the accepted lock or dependency versions. `--npm` selects an existing npm executable. `--part-bytes` can select smaller parts up to 8,388,608 bytes.
+If an approved connected sending host needs to fetch a missing public tarball, select `--online` when creating its export. This enables the exact public-registry acquisition; it does not change the accepted lock or dependency versions. An existing export binds its offline/online mode, cache path and part size. To change one of those selections, create a new transfer directory while retaining the prior incomplete export. `--npm` selects an existing npm executable. `--part-bytes` accepts 65,536 through 8,388,608 bytes.
 
 An interrupted export retains its source/profile/lock binding, completed package receipts and progress. Repeat the same export with the same final transfer directory and original inputs to continue it. A changed bound input is an explicit conflict.
 
@@ -210,7 +210,7 @@ The CLI and workspace call the same functions from `runtime-transfer.mjs`:
 | `completeRuntimeTransferReceive({ directory, npm, populateCache })` | Reconstruct, verify and populate the receiver's private cache. |
 | `installReceivedRuntime({ directory, runtimeDirectory, recoverFrom, ... })` | Original offline preparation, installation or new-directory recovery. |
 
-Use exact UTF-8 manifest bytes or the original manifest string for receiving, and the supplied SHA-256. Streaming operations accept an abort signal and progress callback. Keep the current returned `directory`, `manifestSha256`, `manifest.transferId`, `cacheDirectory` and `filesDirectory`; later requests should reopen that same state.
+Use exact UTF-8 manifest bytes or the original manifest string for receiving, and the supplied SHA-256. Export, completion and installation accept an abort signal and progress callback; part receiving accepts an abort signal. Keep the current returned `directory`, `manifestSha256`, `manifest.transferId`, `cacheDirectory` and `filesDirectory`; later requests should reopen that same state.
 
 The source carrier's immutable file set and the receiver's operating state have different lifetimes. Retain the manifest and source parts for receiving or rebuilding the explicit cache, plus the original runtime's installation records for operational recovery. Source transfer does not activate a managed release automatically.
 
