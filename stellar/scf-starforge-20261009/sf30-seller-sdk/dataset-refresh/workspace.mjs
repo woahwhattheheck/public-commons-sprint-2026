@@ -104,6 +104,8 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/workspace.js', 'workspace.js', 'text/javascript; charset=utf-8'],
     ['/workbook-ui.js', 'workbook-ui.js', 'text/javascript; charset=utf-8'],
+    ['/workbook-editions-ui.js', 'workbook-editions-ui.js', 'text/javascript; charset=utf-8'],
+    ['/workbook-editions.css', 'workbook-editions.css', 'text/css; charset=utf-8'],
     ['/workspace.css', 'workspace.css', 'text/css; charset=utf-8'],
   ].map(async ([route, file, type]) => [route, { bytes: await readFile(new URL('./workspace-ui/' + file, import.meta.url)), type }])));
   const drafts = await openPublisherDrafts({ datasetDirectory: directory, directory: workspaceDirectory,
@@ -267,8 +269,10 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
         const observed = await status();
         return reply(200, { status: observed, ...retained(), resource,
           buyerSource, maxUploadBytes, busy: Boolean(running), workbookRuntime: workbooks.runtime,
-          workbookSchema: await workbooks.schema(observed) });
+          workbookSchema: await workbooks.schema(observed), workbookComparisons: await workbooks.editions.list() });
       }
+      if (req.method === 'GET' && req.url === '/api/workbook/editions/list')
+        return reply(200, await workbooks.editions.list());
       if (req.method === 'PUT' && req.url === '/api/workbook')
         return reply(200, await exclusive(async () => ({ ...await workbooks.upload(req), ...retained(), status: await status() })));
       if (req.method === 'PUT' && req.url === '/api/draft')
@@ -276,6 +280,32 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
       if (req.method !== 'POST') throw fault('NOT_FOUND', 'Workspace action not found.', 404);
       const input = await smallBody(req, req.url.startsWith('/api/workbook/') ? 2 * 1024 * 1024 : 16384);
       const result = await exclusive(async () => {
+        if (req.url === '/api/workbook/editions/suggest') {
+          const allowed = ['sourceId','planId','planRevision','targetId','sheet','range','headerRow'];
+          if (!object(input) || Object.keys(input).some(key => !allowed.includes(key)))
+            throw fault('INVALID_WORKBOOK_COMPARISON');
+          return workbooks.editions.suggest(input);
+        }
+        if (req.url === '/api/workbook/editions/compare') {
+          if (!exact(input, ['id','sourceId','planId','planRevision','targetId','expectedTargetRevision','plan','keys','expectedSnapshot','expectedRevision']))
+            throw fault('INVALID_WORKBOOK_COMPARISON');
+          return { ...await workbooks.editions.compare(input), ...retained(), status: await status() };
+        }
+        if (req.url === '/api/workbook/editions/read') {
+          const allowed = ['id','offset','limit','kind'];
+          if (!object(input) || Object.keys(input).some(key => !allowed.includes(key)))
+            throw fault('INVALID_WORKBOOK_COMPARISON');
+          return workbooks.editions.read(input);
+        }
+        if (req.url === '/api/workbook/editions/apply') {
+          if (!exact(input, ['id','sha256','expectedTargetRevision','expectedSnapshot','expectedRevision']))
+            throw fault('INVALID_WORKBOOK_COMPARISON');
+          return { ...await workbooks.editions.apply(input), ...retained(), status: await status() };
+        }
+        if (req.url === '/api/workbook/editions/export') {
+          if (!exact(input, ['id'])) throw fault('INVALID_WORKBOOK_COMPARISON');
+          return workbooks.editions.export(input);
+        }
         if (req.url === '/api/workbook/inspect') {
           if (!exact(input, ['id','sheet','range','offset','limit'])) throw fault('INVALID_WORKBOOK_SELECTION');
           return { ...await workbooks.inspect(input), ...retained() };
@@ -417,7 +447,7 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
         throw fault('NOT_FOUND', 'Workspace action not found.', 404);
       });
       if (result.status && !result.workbookSchema) result.workbookSchema = await workbooks.schema(result.status);
-      if (req.url === '/api/workbook/download' || req.url === '/api/workbook/export') {
+      if (req.url === '/api/workbook/download' || req.url === '/api/workbook/export' || req.url === '/api/workbook/editions/export') {
         try {
           const filename = encodeURIComponent(result.filename).replace(/['()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
           res.writeHead(200, {'content-type':result.contentType,'content-length':result.length,

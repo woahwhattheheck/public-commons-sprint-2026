@@ -114,13 +114,34 @@ export async function openWorkbookSources({directory,getState,save,capacity,maxS
       await save(next=>next.workbookSources.push(record));
       return source(staged.id);
     },
-    async savePlan(id,{planId,expectedSourceRevision,expectedPlanRevision,plan:input,config,configHash,expectedSnapshot,expectedRevision}){
+    async savePlan(id,{planId,expectedSourceRevision,expectedPlanRevision,plan:input,config,configHash,expectedSnapshot,expectedRevision,migration}){
       const row=source(id);
-      if(!Number.isSafeInteger(expectedSourceRevision)||row.revision!==expectedSourceRevision)
-        throw fault('WORKBOOK_REVIEW_CHANGED','Another action changed this workbook’s saved mappings. Refresh before saving.',409);
       if(!HASH.test(configHash??'')||!HASH.test(expectedSnapshot??'')||!Number.isSafeInteger(expectedRevision)||expectedRevision<1)
         throw fault('WORKBOOK_NATIVE_REVIEW_REQUIRED','Review the actual current public schema and revision.');
       const normalized={...copy(input),name:label(input.name,160,true),notes:label(input.notes,2000)};
+      // Comparison adoption is a new original mapping, with its recovery identity
+      // inside this same state transaction. A lost reply must not create a second plan.
+      if(migration!==undefined){
+        const keys=['comparisonId','comparisonSha256','inputSha256','baselineSourceId','baselinePlanId','baselinePlanRevision'];
+        if(!migration||typeof migration!=='object'||Array.isArray(migration)||
+          Object.keys(migration).length!==keys.length||keys.some(key=>!(key in migration))||planId!==null||
+          !UUID.test(migration.comparisonId??'')||!HASH.test(migration.comparisonSha256??'')||
+          !HASH.test(migration.inputSha256??'')||!UUID.test(migration.baselineSourceId??'')||
+          !UUID.test(migration.baselinePlanId??'')||!Number.isSafeInteger(migration.baselinePlanRevision)||migration.baselinePlanRevision<1)
+          throw fault('INVALID_WORKBOOK_MIGRATION','Use the exact retained comparison as this mapping’s origin.');
+        for(const current of row.plans)for(const edition of [current,...(current.editions??[])]){
+          if(edition.migration?.comparisonId!==migration.comparisonId)continue;
+          if(identity(edition.migration)!==identity(migration)||identity(edition.plan)!==identity(normalized)||
+            edition.configHash!==configHash||identity(edition.config)!==identity(config)||
+            edition.expectedSnapshot!==expectedSnapshot||edition.expectedRevision!==expectedRevision||
+            edition.planSha256!==identity({plan:edition.plan,configHash,expectedSnapshot,expectedRevision}))
+            throw fault('WORKBOOK_COMPARISON_APPLY_CONFLICT','This comparison already belongs to another retained mapping operation.',409);
+          return {source:row,plan:copy(Object.fromEntries(Object.entries(edition).filter(([key])=>key!=='editions'))),
+            reused:true,currentPlanRevision:current.revision};
+        }
+      }
+      if(!Number.isSafeInteger(expectedSourceRevision)||row.revision!==expectedSourceRevision)
+        throw fault('WORKBOOK_REVIEW_CHANGED','Another action changed this workbook’s saved mappings. Refresh before saving.',409);
       let prior;
       if(planId!==null){
         if(!UUID.test(planId??''))throw fault('WORKBOOK_PLAN_NOT_FOUND');
@@ -129,6 +150,7 @@ export async function openWorkbookSources({directory,getState,save,capacity,maxS
       if(!prior&&row.plans.length>=128)throw fault('WORKBOOK_PLAN_CAPACITY','Keep up to 128 distinct mappings per workbook.');
       const current={id:prior?.id??randomUUID(),revision:(prior?.revision??0)+1,createdAt:prior?.createdAt??stamp(),
         updatedAt:stamp(),plan:normalized,config:copy(config),configHash,expectedSnapshot,expectedRevision};
+      if(migration!==undefined)current.migration=copy(migration);
       current.planSha256=identity({plan:current.plan,configHash,expectedSnapshot,expectedRevision});
       const editions=prior?[...(prior.editions??[]),Object.fromEntries(Object.entries(prior).filter(([k])=>k!=='editions'))]:[];
       if(editions.length>=256)throw fault('WORKBOOK_PLAN_CAPACITY','This mapping has 256 retained editions; create a separately named mapping for continued work.');
