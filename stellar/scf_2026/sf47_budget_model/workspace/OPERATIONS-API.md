@@ -60,3 +60,9 @@ The only existing browser/server files changed are server.py, app.mjs and index.
 The optional CLI registration already accepted by the original CLI owner remains unchanged. budget.py, sf10_current_candidate.json, model.py, native forecasting, original source bytes and original private process ownership are preserved.
 
 OPERATIONS.md describes the complete operator flow. operations_walkthrough.py attaches to the existing server and retains a private request checkpoint for the single receiving workflow; it creates no additional server or external payment.
+
+## Browser mount lifetime
+
+`mountOperations({container, api, plan, inform, mutationId})` returns `{ready, refresh, dispose, root}` immediately. Await `ready` for the initial retained-case read. The original app calls `dispose()` before replacing this view or closing access. A disposed view suppresses later messages, downloads and rendering, and checks its lifetime immediately before an API dispatch and after its response. File reading and hashing can finish privately after navigation, but cannot submit a new mutation from the old view.
+
+An already-dispatched mutation keeps its original request identity and native receipt. Disposal does not replay that request or infer that it was rejected. Reopening the case reads its retained version, records and history through the original workspace.
