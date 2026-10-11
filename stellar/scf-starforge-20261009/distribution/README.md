@@ -900,6 +900,65 @@ the complete client connection and host configuration, including trusted
 handlers and native facilitator options. Its source-only exercise is excluded
 from this installed runtime.
 
+### Buy and serve native paid MCP tools
+
+The installed toolkit includes the original remote MCP buyer and native Stellar
+paid-tool server. The buyer connects to an explicitly configured Streamable HTTP
+or SSE endpoint; the included seller uses Streamable HTTP. The exact MCP endpoint,
+tool name, argument schema and `mcp://tool/<name>` payment resource remain bound
+to the operator's reviewed quote.
+
+The source archive installs its pinned MCP runtime as optional dependencies.
+From the application directory where the archive is installed, check that feature:
+
+```sh
+npx --no-install starforge doctor --feature mcp
+```
+
+If optional dependencies were omitted, install the original component's pins in
+that same application directory so both the MCP and native Stellar modules can
+resolve them:
+
+```sh
+npm install @modelcontextprotocol/sdk@1.32.1 \
+  @x402/core@2.28.0 @x402/stellar@2.28.0 \
+  @x402/mcp@2.28.0 @x402/extensions@2.28.0
+```
+
+The feature check uses the SDK's actual exported client entry. The original
+component manifest remains the source for all five runtime versions.
+
+Use these public imports in the existing private operator or merchant module:
+
+```js
+import { connectRemoteMcp } from '@tokenjunkielabs/starforge-merchant/buyer/mcp/remote';
+import {
+  createNativeMcpOperator,
+  createTerminalMcpApproval,
+} from '@tokenjunkielabs/starforge-merchant/buyer/mcp/native-operator';
+import {
+  startNativePaidToolServer,
+  createMerchantRecordTool,
+} from '@tokenjunkielabs/starforge-merchant/merchant/mcp/paid-tools';
+```
+
+The complete original buyer setup is
+`source/stellar-forge/mcp-paid-agent/REMOTE_MCP.md`: create the private approval
+and signer adapter, configure the seller origin and discovery feed, then use the
+existing HTTP or stdio host's `bazaar_search` → `bazaar_describe` →
+`bazaar_preview` → `bazaar_execute_approved` tools. Preview binds explicit
+arguments without contacting the seller. The native call uses the existing
+durable quote store and original SF103 signer.
+
+The matching merchant setup is
+`source/stellar-forge/mcp-paid-agent/PAID_TOOLS.md`: supply the existing native
+facilitator configuration and an actual merchant tool, start its original server,
+then use the returned discovery URL and MCP endpoint. Its registered tools,
+full payment terms and input schemas come from that same running server.
+On shutdown, await the server's original `close()` to drain accepted work and
+release native signer ownership. Operator configuration, wallet material and
+retained purchase state stay in the operator's private directories.
+
 ### Connect native buying to an MCP host
 
 Create the native MCP workspace from the operator's existing SF88 workspace and
