@@ -23,6 +23,15 @@
 </fieldset></form>
 <p id="scenario-status" class="dim" role="status" aria-live="polite">Choose at least one load, then plan your scenario.</p>
 <div class="controls"><button id="plan" type="button">Plan this scenario</button><button id="cancel" class="secondary" type="button">Clear current plan</button></div>
+<section class="handoff" aria-labelledby="handoff-title">
+<h3 id="handoff-title">Keep or share a hypothetical scenario</h3>
+<p class="dim" id="handoff-help">Download the inputs and an illustrative summary as a portable JSON file. Import another person's inputs on this device to inspect them first, then plan anew. No approval, simulation receipt, or device authorization travels with a file.</p>
+<div class="controls"><button id="handoff-export" class="secondary" type="button">Download my scenario</button></div>
+<label class="handoff-picker" for="handoff-file">Open a GridKind scenario file (JSON)<input id="handoff-file" type="file" accept=".json,application/json" aria-describedby="handoff-help handoff-status"></label>
+<p id="handoff-status" class="dim" role="status" aria-live="polite">Choose a local JSON file to preview its scenario.</p>
+<p id="handoff-preview" class="dim"></p>
+<button id="handoff-apply" class="secondary" type="button" disabled>Apply imported assumptions</button>
+</section>
 <details class="voice"><summary>Ask with a natural-language command</summary><label for="cmd">Agent request</label><input id="cmd" maxlength="240" value="Find a cheaper schedule for tonight"><button id="ask" class="secondary" type="button">Ask GridKind</button><p class="dim">Planning commands use the settings above. “Explain the plan” is read-only; approval and execution use the separate controls below.</p></details>
 </section>
 <div id="error" role="alert" class="warn"></div>
