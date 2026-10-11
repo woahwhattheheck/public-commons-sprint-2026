@@ -34,8 +34,9 @@ async function file(path, limit, privateMode = true) {
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const info = await handle.stat();
-    need(info.isFile() && info.nlink === 1 && info.size <= limit &&
-      (!privateMode || (info.mode & 0o077) === 0), 'DATASET_DELIVERY_FILE_INVALID');
+    // Private customer files must have one link; installed public source may be shared.
+    need(info.isFile() && info.size <= limit &&
+      (!privateMode || (info.nlink === 1 && (info.mode & 0o077) === 0)), 'DATASET_DELIVERY_FILE_INVALID');
     return handle;
   } catch (error) { await handle.close(); throw error; }
 }
@@ -85,6 +86,8 @@ async function createMarker(path, value) {
 async function nativeFingerprint() {
   // Read the original CLI at its exact repository path. Its fingerprint records provenance;
   // compatible owner updates remain subject to the archive, native scan, and output contracts.
+  // A package manager or shared installation may hard-link this public file. The bounded
+  // read still requires its exact non-symlink path and a regular file of the original size limit.
   const source = await bounded(NATIVE, 256 * 1024, false);
   return createHash('sha1').update(`blob ${source.length}\0`).update(source).digest('hex');
 }
