@@ -216,6 +216,14 @@ Python workers.
 The [Python release guide](../../stellar/scf-starforge-20261009/sf82-seller-pilot/RELEASES.md#release-a-python-project)
 also describes direct terminal operation and the retained project layout.
 
+## Prepare a PostgreSQL merchant
+
+Use the original PostgreSQL prepare or browser-exported package with `--postgres-package` when initializing this provider. A configured source alias uses `postgresPackage` and the existing `runtime` selections. The package must declare its intended public HTTPS origin; host configuration selects the package path while MCP calls select its alias.
+
+`merchant_sources` returns the public query contract, exact offers, input/source/query/binding/connection-policy/CA hashes and credential environment names. It does not return SQL, database address/user fields, private defaults or credential values. Original `merchant_stage`, compare, exact digest/generation selection, owned start/restart/stop, Operations, catalog publication, retained customer SDK delivery and rollback all use the same controller.
+
+The [complete PostgreSQL release workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/POSTGRES_RELEASES.md) includes the direct workspace handoff and recovery. PostgreSQL contents remain live: reverting a configuration restores its named queries against the current database. Availability is durable for each retained release and starts with the default policy for a new release. Customer export and file download continue through the original [retained SDK delivery](CLIENT_EXPORTS.md).
+
 ## Prepare a MySQL merchant
 
 Initialize this same provider with a package from the original MySQL CLI or browser:
