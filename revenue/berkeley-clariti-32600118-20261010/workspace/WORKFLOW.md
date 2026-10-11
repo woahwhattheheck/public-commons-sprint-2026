@@ -189,3 +189,4 @@ The original Berkeley contract and RFP sources are linked in API.md, including t
 The optional case payment field compares a case-level value. Daily Tyler Munis ERMA receivables and settlement reconciliation needs a separate transaction export contract, including transaction identifiers, partial payments and correction rules. Record the commissioned financial population and source definition before extending that lane.
 
 See API.md for exact request/response contracts, limits, decision semantics and source links.
+

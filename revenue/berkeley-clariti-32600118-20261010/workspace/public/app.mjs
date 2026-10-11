@@ -519,3 +519,4 @@ window.addEventListener('beforeunload',event=>{
     await render(false);
   } catch(error) { main.innerHTML=empty('The local workspace could not be opened. Reload after the server is available.');notice(error.message,'error'); }
 })();
+
