@@ -1412,7 +1412,45 @@ no ClickHouse JavaScript driver. Source configuration, complete examples and the
 query contract are included at
 `source/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/README.md`.
 
-Start with its `examples/source.json` and `examples/merchant-plan.json`. In the
+For a retained browser workflow, set those source environment variables in the
+launching terminal and open a private workspace:
+
+    npx --no-install starforge clickhouse-workspace \
+      --state /private/clickhouse-workspace --port 8443
+
+Open the complete private URL printed by the original server. **Source & offers**
+loads the existing source and merchant-plan JSON files, edits approved SQL and
+typed input declarations, and retains both with every complete ordered payment
+option. Each save compares the revision actually opened by that editor; another
+window cannot silently replace current work. Actual connection values remain in
+the server environment.
+
+**Native review** displays the real ClickHouse version and zero-row result
+schema, the original typed parameter contract, bounded private previews and the
+compiled public offers. Review those queries and all payment terms, then choose
+**Prepare merchant**. The original preparer creates its normal service and
+generated client in an immutable retained folder attached to that revision and
+review. **Resume preparation** continues the same interrupted preparation.
+
+**Prepared merchants** starts and drains the original seller, opens its original
+customer API, operations and availability interfaces, and downloads the
+generated customer client or OpenAPI. The browser verifies each download's
+returned SHA-256. SQL, probe values, private source and credential references are
+excluded from the fixed customer archive. Restart the same workspace command to
+reopen saved revisions, reviews and prepared merchants; restarting does not
+automatically launch a seller.
+
+The existing native facilitator is selected with `--facilitator HTTPS_URL` and the
+same payment dependencies described below. The default serves the original
+402 challenges. The workspace needs the standard Linux flock and tar utilities;
+it adds no JavaScript driver or frontend build. Its complete guide is
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/workspace/README.md`.
+Embedding applications import `startClickHouseWorkspace` from
+`@tokenjunkielabs/starforge-merchant/seller/clickhouse/workspace`, or
+`createClickHouseWorkspace` from the adjacent `/model` package subpath.
+
+For direct command-line preparation, start with its `examples/source.json` and
+`examples/merchant-plan.json`. In the
 private source, select the database, approved named queries, public columns,
 typed parameters and actual preflight probes. The three `endpointEnv`, `userEnv`
 and `passwordEnv` names resolve through the host's existing secret setup.
