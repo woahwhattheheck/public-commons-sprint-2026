@@ -37,15 +37,40 @@ stored hash matches the hash the contract holds.
 Node.js ≥ 20 and npm. Backend dependencies: `ethers@6.13.4`,
 `solc@0.8.26`, `ganache@7.9.2` (dev). No other services.
 
-## Run the local demo
+## Run and resume the local app
 
-```
-cd backend
+From a clean checkout:
+
+```sh
+cd creator-pool/backend
 npm install
-npm run chain            # terminal 1: Ganache on 127.0.0.1:8545, chainId 1337
-npm run deploy:local     # terminal 2: compile + deploy + mint CPDEMO, writes data/
-npm start                # API + web app on http://127.0.0.1:8787
+npm run demo
 ```
+
+One terminal starts the persistent local Ganache chain, creates the initial
+CPDEMO deployment only when the data directory is empty, and serves the existing
+campaign workspace at `http://127.0.0.1:8787`. Wait for the ready URL, then open
+it. Stop with Ctrl+C; run `npm run demo` again to resume the same campaigns,
+submissions, token balances and payment history. It shuts down only child
+processes it started. A matching already-running workspace is reused.
+
+Keep the entire `backend/data/` directory together: `ganache-db/` is the saved
+chain, `deployment.json` and `abi.json` identify its contracts, and `state.json`
+stores the matching campaign descriptions and operation journal. If those files
+are incomplete or the saved contracts are absent from the selected chain, the
+launcher stops with a recovery message; it never erases data or redeploys over a
+saved campaign. Restore the original data/RPC instead of deleting files to make
+an error disappear. An unrelated process occupying either port is left running.
+
+`CP_DATA_DIR` selects another data directory, `PORT` changes the workspace port,
+and `RPC_URL` can select an existing loopback development chain. With an unused
+loopback RPC port the launcher starts Ganache there. `npm run demo` is local-only:
+chain 1337/31337, loopback binding and non-monetary CPDEMO. It does not run a
+public deployment, faucet or wallet connection.
+
+For manual operation, the original commands remain available: `npm run chain`,
+`npm run deploy:local` (an explicit new deployment), and `npm start`. Use the
+launcher for an ordinary restart; do not rerun deploy:local to resume campaigns.
 
 Open `http://127.0.0.1:8787`. The app calls `/api/...` same-origin; a
 `?api=` query override exists for pointing the static files at a different
@@ -120,3 +145,4 @@ The selected token symbol and decimal precision come from the backend state.
 Local mode uses valueless CPDEMO and unlocked demonstration accounts; public
 mode requires actual deployed contracts and wallet signatures, neither supplied
 by this source branch. These readouts do not claim any real deployment/payment.
+
