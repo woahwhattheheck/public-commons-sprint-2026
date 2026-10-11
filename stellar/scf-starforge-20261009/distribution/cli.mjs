@@ -14,7 +14,7 @@ const help = `Starforge merchant toolkit
 
   starforge init --dir DIRECTORY [--template dataset|application|upstream]
   starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]
-  starforge doctor [--native] [--feature postgres]
+  starforge doctor [--native] [--feature NAME]
   starforge source
 
 Native commands (arguments pass unchanged to the maintained implementation):
@@ -25,6 +25,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   import-headers  Import original operator HTTP headers
   handoff     Captured challenge -> review    support     Private seller support case
   commerce    Merchant + buyer session        inbox       Durable selected requests
+  merchant-mcp                               Operate native merchant releases from an MCP client
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
@@ -34,6 +35,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
+  openapi-workspace                          Prepare and operate a merchant from its API contract
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
@@ -41,6 +43,16 @@ Native commands (arguments pass unchanged to the maintained implementation):
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
+  commerce-setup                             Prepare shared operator budgets and merchant requests
+  upstream-operation                         Issue, inspect and reconcile merchant operation tickets
+  dataset-workspace                          Inspect, preview and operate the retained dataset
+  merchant-fleet / merchant-fleet-control     Host, prepare, activate and roll back a merchant fleet
+  merchant-fleet-workspace                    Review fleet changes in the private operator browser
+  revenue-workspace / revenue-report         Plan pricing from original merchant activity
+  s3                                         Inspect and configure selected object-store resources
+  python-merchant                            Inspect, diagnose and serve a Python application
+
+Optional feature groups: postgres, s3.
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
@@ -140,7 +152,7 @@ export async function main(args = process.argv.slice(2)) {
       if (rest[i] === '--native' && !requireNative) requireNative = true;
       else if (rest[i] === '--feature' && rest[i + 1] && !requiredFeatures.includes(rest[i + 1]))
         requiredFeatures.push(rest[++i]);
-      else throw new TypeError('doctor [--native] [--feature postgres]');
+      else throw new TypeError('doctor [--native] [--feature NAME]');
     }
     return print(await doctor({ requireNative, requiredFeatures }));
   }
