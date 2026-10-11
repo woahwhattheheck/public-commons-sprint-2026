@@ -171,7 +171,7 @@ export async function openMigrationApplication({ parent, origin, parentRuntime, 
     const { compareMappedResults } = await import('./mapping.mjs');
     const comparison = compareMappedResults({ mapping: selected.mapping, sources, reviewId: input.reviewId });
     if (saved.reviewId !== input.reviewId) throw conflict('The selected mapping review changed. Reload it.');
-    const retained = await projects.retainSource(project.id, { kind: 'comparison', name: input.id + '-comparison.json',
+    const retained = await projects.retainComparison(project.id, { name: input.id + '-comparison.json',
       content: JSON.stringify(comparison), provenance: { operator: input.actor } });
     state.comparisons[input.id] = { ref: retained.ref, comparisonId: comparison.comparisonId, reviewId: comparison.reviewId, status: comparison.status };
     return { project: await commit(project, input, 'Compare selected customer results', state), comparison };
