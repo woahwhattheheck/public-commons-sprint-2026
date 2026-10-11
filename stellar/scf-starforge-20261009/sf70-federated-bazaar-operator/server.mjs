@@ -143,6 +143,8 @@ function shapeListing(row) {
   const resource = plain(row.resource) ? row.resource : {};
   const ext = row.extensions?.bazaar?.info ?? {};
   const data = plain(ext) ? ext : {};
+  // The original v2 Bazaar operation declaration lives below info.input.
+  const input = plain(data.input) ? data.input : {};
   const rawAddress = typeof row.resource === 'string' ? row.resource : (resource.url ?? row.url);
   const url = asText(rawAddress);
   // These fields are displayed only, never used as fetch destinations.
@@ -153,8 +155,10 @@ function shapeListing(row) {
   return {
     url, label: asText(resource.serviceName ?? resource.name ?? row.serviceName ?? row.name, 200) || (url || 'Unnamed resource'),
     description: asText(resource.description ?? row.description ?? data.description, 500),
-    kind: asText(data.type ?? row.type, 40),
-    method: asText(data.method ?? row.method, 32), toolName: asText(data.toolName, 150),
+    kind: asText(input.type ?? data.type ?? row.type, 40),
+    method: asText(input.method ?? data.method ?? row.method, 32).trim().toUpperCase(),
+    toolName: asText(input.toolName ?? input.name ?? data.toolName, 150),
+    routeTemplate: asText(input.routeTemplate ?? data.routeTemplate, 240),
     paymentOptions: terms,
     hiddenPaymentOptions: Array.isArray(row.accepts) ? Math.max(0, row.accepts.length - terms.length) : 0,
   };
