@@ -46,6 +46,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
   mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
   mysql-workspace                            Build, review and run a database merchant in the browser
+  mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
