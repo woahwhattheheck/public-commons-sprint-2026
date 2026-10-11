@@ -160,8 +160,11 @@ function portUse(native, port) {
 }
 
 /** Same-process lifecycle object. Native modules retain their source and process ownership. */
-export async function openFleetReleaseOperator({ planFile, directory, gatewayStateDirectory } = {}) {
+export async function openFleetReleaseOperator({ planFile, directory, gatewayStateDirectory, expectedPlanDigest } = {}) {
   const plan = await readFleetReleasePlan(planFile);
+  if (expectedPlanDigest !== undefined && (typeof expectedPlanDigest !== 'string' ||
+      !HEX.test(expectedPlanDigest) || plan.digest !== expectedPlanDigest))
+    throw fail('FLEET_RELEASE_PLAN_CHANGED');
   if (typeof directory !== 'string' || !directory.trim()) throw fail('FLEET_RELEASE_DIRECTORY_REQUIRED', 400);
   directory = resolve(directory); privateDirectory(directory);
   const stateDirectory = gatewayStateDirectory ? resolve(gatewayStateDirectory) : join(directory, 'gateway');
@@ -356,7 +359,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
           digest: item.releaseDigest, port: item.port })) })) };
   }
   const api = {
-    stateDirectory, gatewayStateDirectory: stateDirectory, get publicURL() { return gateway?.publicURL; }, status,
+    planDigest: plan.digest, stateDirectory, gatewayStateDirectory: stateDirectory, get publicURL() { return gateway?.publicURL; }, status,
     async catalog({ tenant, slot }) {
       assertOpen(); const source = locate(tenant, slot).slot;
       const [selected, catalog] = await Promise.all([readReleaseState(source.store), listReleases(source.store)]);
