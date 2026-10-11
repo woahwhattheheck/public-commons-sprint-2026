@@ -51,7 +51,7 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
   catalog-apply --store DIR --catalog CONFIG_JSON --review REVIEW_JSON
   run      --store DIR [--expect GENERATION]
   console  --store DIR [--port 8425] [--client-exports PRIVATE_DIRECTORY]
-           [--discovery-setup DIRECTORY | --catalog CONFIG_JSON]
+           [--discovery-setup DIRECTORY | --catalog CONFIG_JSON] [--receiving-config PRIVATE_JSON]
            [--facilitators PROVIDERS_JSON]
 
 Run with: node release-cli.mjs COMMAND OPTIONS
@@ -61,6 +61,8 @@ Run starts the original foreground seller; Ctrl-C stops this process's seller.
 Console opens a private loopback interface to compare, activate, start, stop and roll back.
 Customer handover retains DIR.clients by default; --client-exports reuses an existing customer root.
 Its discovery controls create/reopen DIR.discovery by default, or the host's --discovery-setup directory.
+Receiving opens the original workspace explicitly, binding reviews to exact retained seller source.
+Its default directory is DIR.receiving; --receiving-config selects the existing private workspace and native read options.
 Facilitator review reads actual native capabilities and generated terms for a retained release.
 Facilitator stage retains that exact source with the reviewed endpoint. Compare and select it normally.
 Catalog-init creates a private identity, source-derived seller policy and existing release connection.
@@ -70,7 +72,7 @@ const COMMANDS = {
   init: ['store'], stage: ['store', 'id', 'workspace', 'python', 'python-root', 'duckdb-package', 'duckdb-python', 's3-package', 'mysql-package', 'redis-package', 'jsonrpc-package', 'sqlite-package', 'sqlite-snapshot-max-bytes', 'sqlite-snapshot-timeout-ms', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
   list: ['store'], inspect: ['store', 'id'], diff: ['store', 'from', 'to'],
   activate: ['store', 'id', 'expect', 'reason'], rollback: ['store', 'expect', 'to', 'reason'],
-  status: ['store'], run: ['store', 'expect'], console: ['store', 'port', 'catalog', 'discovery-setup', 'facilitators', 'client-exports'],
+  status: ['store'], run: ['store', 'expect'], console: ['store', 'port', 'catalog', 'discovery-setup', 'facilitators', 'client-exports', 'receiving-config'],
   'cache-status': ['store'], 'cache-invalidate': ['store', 'instance', 'route', 'all'],
   facilitators: ['store', 'facilitators'],
   'facilitator-review': ['store', 'facilitators', 'from', 'id', 'provider', 'out', 'label'],
@@ -216,12 +218,14 @@ export async function main(args = process.argv.slice(2)) {
     }
     case 'console': {
       const { startReleaseConsole } = await import('./release-console.mjs');
+      const { readReleaseReceivingConfig } = await import('./release-receiving.mjs');
       const session = await startReleaseConsole(root, { port: o.port ?? 8425,
         ...(o.facilitators ? { facilitators: await readFacilitatorProfiles(o.facilitators) } : {}),
         ...(o['discovery-setup'] ? { discoverySetup: o['discovery-setup'] } : {}),
         ...(o['client-exports'] ? { clientExportsDirectory: o['client-exports'] } : {}),
+        ...(o['receiving-config'] ? { receivingConfig: await readReleaseReceivingConfig(o['receiving-config']) } : {}),
         ...(o.catalog ? { catalogConfig: await readReleaseCatalogConfig(o.catalog) } : {}) });
-      print({ operatorConsole: session.operatorUrl, store: root, stop: 'Ctrl-C stops this console and its own seller and discovery writer.' });
+      print({ operatorConsole: session.operatorUrl, store: root, stop: 'Ctrl-C stops this console, its seller and discovery writer, and closes its receiving workspace.' });
       let stopping = false;
       const stop = () => {
         if (stopping) return; stopping = true;
