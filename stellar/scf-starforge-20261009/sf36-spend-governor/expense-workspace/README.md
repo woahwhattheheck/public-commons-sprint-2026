@@ -107,3 +107,9 @@ The whole source lives inside SF36, so the maintained distribution's existing SF
 | `public/` | Operator source review, expense coding and period UI |
 
 The original source contract is documented in [STATEMENTS.md](../STATEMENTS.md). The native buyer ledger remains authoritative for payment and finality.
+
+## Completed native operator journey
+
+The original retained Stellar testnet buyer statement was exercised through this whole workspace on 2026-10-11. Its two original intents retained a finalized 10,000-base-unit actual and a separate unsent 10,000-base-unit reservation. The operator accepted the capture, allocated the actual 6,000 / 4,000, carried the unresolved reservation, reviewed and issued the period, reopened it, accepted an unchanged original-ledger capture, and issued a 7,000 / 3,000 successor. Both issued editions and both source captures remained available after restart.
+
+The included-source receiving project reopened the same workspace at revision 15 with the original exact amounts and native projection unchanged. Receiving created no source capture or payment. The desktop and mobile operator views completed with no browser page errors. An initial exact-control lookup exposed a combined label/help accessible name; the shared field renderer now separates the accessible name from its description, and the same retained case continued successfully. This is an internal operator workflow over an existing testnet purchase; it does not count as an independent external adoption.
