@@ -35,7 +35,7 @@ const { validateFleetDraft, importFleetDraft, importFleetSource } = await import
 const { startMerchantMcp } = await import(join(repo, 'stellar-forge/mcp-merchant-operator/serve.mjs'));
 const { MCP_VERSION } = await import(join(repo, 'stellar-forge/mcp-paid-agent/agent-server.mjs'));
 const { encodePaymentSignatureHeader } = require('@x402/core/http');
-const { Client } = require('pg');
+const { Client } = createRequire(join(postgres, 'demo-database.mjs'))('pg');
 
 await mkdir(work, { recursive: true, mode: 0o700 });
 let receipt;
