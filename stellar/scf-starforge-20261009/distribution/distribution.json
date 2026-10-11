@@ -631,7 +631,8 @@
     "./mpp/customer": {
       "types": "./source/stellar/scf-starforge-20261009/mpp-charge/customer/index.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/mpp-charge/customer/index.mjs"
-    }
+    },
+    "./merchant/qbo/http": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-http.mjs"
   },
   "nativePeers": {
     "@x402/core": {
