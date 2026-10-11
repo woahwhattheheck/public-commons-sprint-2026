@@ -127,6 +127,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
 async function processToken(pid) {
   if (process.platform !== 'linux') return null;
   try {
+    const self = await readFile('/proc/self/stat', 'utf8');
+    if (Number(self.slice(0, self.indexOf(' '))) !== process.pid) return null;
     const [boot, stat] = await Promise.all([readFile('/proc/sys/kernel/random/boot_id', 'utf8'),
       readFile('/proc/' + pid + '/stat', 'utf8')]);
     const start = stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19];
