@@ -3,14 +3,16 @@ import { createServer } from 'node:http';
 import { constants } from 'node:fs';
 import { lstat, open, readFile, rm } from 'node:fs/promises';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import { isAbsolute, join, resolve } from 'node:path';
+import { isAbsolute, join, resolve, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { loadDatasetConfig } from '../dataset-handler.mjs';
 import { datasetQueryParameters } from '../dataset-cli.mjs';
 import { datasetControl } from './service.mjs';
 import { datasetBuyerEndpoint, readDatasetBuyerOffer, prepareDatasetBuyer } from './buyer-handoff.mjs';
 import { openPublisherDrafts, pendingDraftPublication } from './workspace-state.mjs';
-import { hashPrivate } from '../postgres/publisher/files.mjs';
+import { hashPrivate, readPrivate, privateDirectory as privateSessionDirectory } from '../postgres/publisher/files.mjs';
+import { openWorkbookBridge } from './workbook/bridge.mjs';
+import { pipeline } from 'node:stream/promises';
 
 const HASH = /^[a-f0-9]{64}$/;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -21,7 +23,7 @@ const jsonBytes = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const publicDraft = draft => draft ? { id: draft.id, filename: draft.filename,
   name: draft.name, notes: draft.notes, revision: draft.revision, createdAt: draft.createdAt,
   publications: draft.publications, publicationNeedsReview: pendingDraftPublication(draft),
-  sourceBytes: draft.sourceBytes, csvHash: draft.csvHash, dataset: draft.dataset.describe(),
+  sourceBytes: draft.sourceBytes, csvHash: draft.csvHash, workbookSource: draft.workbookSource, dataset: draft.dataset.describe(),
   expectedSnapshot: draft.expectedSnapshot, expectedRevision: draft.expectedRevision } : null;
 
 async function privateDirectory(path) {
@@ -48,14 +50,14 @@ async function savePrivate(path, bytes) {
   try { await file.writeFile(bytes); await file.sync(); } finally { await file.close(); }
 }
 
-async function smallBody(req) {
+async function smallBody(req, maximum = 16384) {
   if (req.headers['content-type'] !== 'application/json')
     throw fault('JSON_REQUIRED', 'Send an application/json request.', 415);
   let size = 0;
   const chunks = [];
   for await (const chunk of req.iterator({ destroyOnReturn: false })) {
     size += chunk.length;
-    if (size > 16384) { req.resume(); throw fault('REQUEST_TOO_LARGE', 'The request exceeds 16 KiB.', 413); }
+    if (size > maximum) { req.resume(); throw fault('REQUEST_TOO_LARGE', 'The request exceeds its action size limit.', 413); }
     chunks.push(chunk);
   }
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
@@ -72,7 +74,7 @@ function revisionFields(input) {
  * it never opens a second version writer, edits state.json or touches payment. */
 export async function startDatasetPublishingWorkspace({ directory, port = 8431,
   maxUploadBytes = 64 * 1024 * 1024, resource = null, seller = null,
-  workspaceDirectory, maxDrafts = 32, maxDraftBytes = 256 * 1024 * 1024 } = {}) {
+  workspaceDirectory, maxDrafts = 32, maxDraftBytes = 256 * 1024 * 1024, workbookPython = 'python3' } = {}) {
   if (typeof directory !== 'string' || !isAbsolute(directory) || resolve(directory) !== directory || directory === '/')
     throw new TypeError('A normalized absolute dataset state directory is required');
   if (!Number.isInteger(port) || port < 0 || port > 65535 || !Number.isSafeInteger(maxUploadBytes) ||
@@ -101,6 +103,7 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/workspace.js', 'workspace.js', 'text/javascript; charset=utf-8'],
+    ['/workbook-ui.js', 'workbook-ui.js', 'text/javascript; charset=utf-8'],
     ['/workspace.css', 'workspace.css', 'text/css; charset=utf-8'],
   ].map(async ([route, file, type]) => [route, { bytes: await readFile(new URL('./workspace-ui/' + file, import.meta.url)), type }])));
   const drafts = await openPublisherDrafts({ datasetDirectory: directory, directory: workspaceDirectory,
@@ -126,8 +129,10 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
     catch (error) { draft = null; draftError = { id, code: error.code ?? 'SAVED_CANDIDATE_UNAVAILABLE',
       message: 'The selected candidate needs repair. Its saved files and other candidates remain available.' }; }
   }
+  let workbooks;
   const retained = () => ({ draft: publicDraft(draft), draftError, workspace: drafts.view() });
-  try { await drafts.reconcile(latest); await syncDraft(); }
+  try { workbooks = await openWorkbookBridge({ drafts, status, generation, python: workbookPython, maxUploadBytes });
+    await drafts.reconcile(latest); await syncDraft(); }
   catch (error) { await drafts.close(); throw error; }
 
   async function exclusive(operation) {
@@ -261,13 +266,42 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
       if (req.method === 'GET' && req.url === '/api/status') {
         const observed = await status();
         return reply(200, { status: observed, ...retained(), resource,
-          buyerSource, maxUploadBytes, busy: Boolean(running) });
+          buyerSource, maxUploadBytes, busy: Boolean(running), workbookRuntime: workbooks.runtime,
+          workbookSchema: await workbooks.schema(observed) });
       }
+      if (req.method === 'PUT' && req.url === '/api/workbook')
+        return reply(200, await exclusive(async () => ({ ...await workbooks.upload(req), ...retained(), status: await status() })));
       if (req.method === 'PUT' && req.url === '/api/draft')
         return reply(200, await exclusive(() => upload(req)));
       if (req.method !== 'POST') throw fault('NOT_FOUND', 'Workspace action not found.', 404);
-      const input = await smallBody(req);
+      const input = await smallBody(req, req.url.startsWith('/api/workbook/') ? 2 * 1024 * 1024 : 16384);
       const result = await exclusive(async () => {
+        if (req.url === '/api/workbook/inspect') {
+          if (!exact(input, ['id','sheet','range','offset','limit'])) throw fault('INVALID_WORKBOOK_SELECTION');
+          return { ...await workbooks.inspect(input), ...retained() };
+        }
+        if (req.url === '/api/workbook/plan') {
+          if (!exact(input, ['id','planId','expectedSourceRevision','expectedPlanRevision','plan','expectedSnapshot','expectedRevision']))
+            throw fault('INVALID_WORKBOOK_PLAN');
+          return { ...await workbooks.savePlan(input), ...retained() };
+        }
+        if (req.url === '/api/workbook/prepare') {
+          if (!exact(input, ['id','planId','expectedPlanRevision'])) throw fault('INVALID_WORKBOOK_PLAN');
+          const prepared = await workbooks.prepare(input); await syncDraft();
+          return { ...prepared, ...retained(), status: await status() };
+        }
+        if (req.url === '/api/workbook/remove') {
+          if (!exact(input, ['id','expectedSourceRevision'])) throw fault('INVALID_WORKBOOK_SELECTION');
+          await workbooks.remove(input); return retained();
+        }
+        if (req.url === '/api/workbook/download') {
+          if (!exact(input, ['id'])) throw fault('INVALID_WORKBOOK_SELECTION');
+          return workbooks.download(input);
+        }
+        if (req.url === '/api/workbook/export') {
+          if (!exact(input, ['candidateId'])) throw fault('INVALID_WORKBOOK_SELECTION');
+          return workbooks.export(input);
+        }
         if (req.url === '/api/draft/select') {
           if (!exact(input, ['id'])) throw fault('INVALID_DRAFT', 'Choose a saved candidate.');
           const selected = await loadDraft(input.id);
@@ -382,14 +416,24 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
         }
         throw fault('NOT_FOUND', 'Workspace action not found.', 404);
       });
-      if (req.url === '/api/draft/csv') reply(200, result.csv, 'text/csv; charset=utf-8');
+      if (result.status && !result.workbookSchema) result.workbookSchema = await workbooks.schema(result.status);
+      if (req.url === '/api/workbook/download' || req.url === '/api/workbook/export') {
+        try {
+          const filename = encodeURIComponent(result.filename).replace(/['()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+          res.writeHead(200, {'content-type':result.contentType,'content-length':result.length,
+            'content-disposition':"attachment; filename*=UTF-8''"+filename,
+            'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'});
+          await pipeline(result.file.createReadStream({autoClose:false,start:0}),res);
+        } finally { await result.dispose(); }
+      }
+      else if (req.url === '/api/draft/csv') reply(200, result.csv, 'text/csv; charset=utf-8');
       else reply(200, result);
     };
     run().catch(error => {
       if (res.headersSent || res.destroyed) return;
       const known = typeof error.code === 'string' && /^[A-Z][A-Z0-9_]+$/.test(error.code) && Number.isInteger(error.status);
       reply(known && error.status >= 400 && error.status <= 599 ? error.status : 503,
-        { error: known ? error.code : 'WORKSPACE_ACTION_FAILED', message: known ? error.message :
+        { error: known ? error.code : 'WORKSPACE_ACTION_FAILED', ...(known && error.details ? {details:error.details} : {}), message: known ? error.message :
           'The action could not complete. Keep the draft, check the original seller, and refresh status before retrying.' });
     });
   });
@@ -424,17 +468,21 @@ const HELP = `Dataset publishing workspace (Node 22+)
                     [--seller http://127.0.0.1:8430]
                     [--workspace ABS_PRIVATE_DIRECTORY]
                     [--max-drafts 32] [--max-draft-bytes 268435456]
+                    [--workbook-python python3] [--session-file ABS_UNUSED_PRIVATE_FILE]
+  node workspace.mjs workbook --help
 
 Attach to the running original versioned seller. Open the private local session
-URL, upload/review a CSV, then explicitly publish or activate a retained version.
+URL, upload/review a CSV or original XLSX, then explicitly publish or activate a
+retained version. XLSX extraction alone uses Python 3.10+ standard-library code.
 Validated candidates, review notes, selected query and prepared buyer files are
 retained across restart. Linux util-linux flock holds the original kernel-owned
 workspace lock. Ctrl+C closes the local session and releases that lock.`;
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'workbook') return (await import('./workbook/cli.mjs')).main(args.slice(1));
   if (args.length === 1 && args[0] === '--help') { console.log(HELP); return; }
   const options = {};
   for (let i = 0; i < args.length; i += 2) {
-    if (!['--state','--port','--max-upload-bytes','--resource','--seller','--workspace','--max-drafts','--max-draft-bytes'].includes(args[i]) ||
+    if (!['--state','--port','--max-upload-bytes','--resource','--seller','--workspace','--max-drafts','--max-draft-bytes','--workbook-python','--session-file'].includes(args[i]) ||
         Object.hasOwn(options,args[i]) || !args[i+1] || args[i+1].startsWith('--'))
       throw new TypeError('Invalid options; use --help');
     options[args[i]] = args[i+1];
@@ -448,7 +496,25 @@ export async function main(args = process.argv.slice(2)) {
     workspaceDirectory: options['--workspace'] === undefined ? undefined : resolve(options['--workspace']),
     maxDrafts: options['--max-drafts'] === undefined ? undefined : Number(options['--max-drafts']),
     maxDraftBytes: options['--max-draft-bytes'] === undefined ? undefined : Number(options['--max-draft-bytes']),
+    workbookPython: options['--workbook-python'] ?? 'python3',
     resource: options['--resource'] ?? null, seller: options['--seller'] ?? null });
+  if (options['--session-file']) {
+    const sessionPath = resolve(options['--session-file']);
+    const sessionBytes = jsonBytes({schema:'stellar-forge.dataset-publisher-session.v1',origin:app.origin,token:app.token});
+    try { await privateSessionDirectory(dirname(sessionPath)); await savePrivate(sessionPath,sessionBytes); }
+    catch (error) { await app.close(); throw error; }
+    const originalClose = app.close.bind(app); let cleanup;
+    app.close = () => {
+      if (!cleanup) cleanup = (async () => {
+        await originalClose();
+        try {
+          const retained = await readPrivate(sessionPath,16384);
+          if (hash(retained) === hash(sessionBytes)) await rm(sessionPath);
+        } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      })();
+      return cleanup;
+    };
+  }
   console.log(`Dataset publishing workspace\n${app.url}\nKeep this session URL private. Saved work remains available after Ctrl+C.`);
   const stop = () => app.close().catch(error => { console.error(error.message); process.exitCode = 1; });
   process.once('SIGINT', stop); process.once('SIGTERM', stop);

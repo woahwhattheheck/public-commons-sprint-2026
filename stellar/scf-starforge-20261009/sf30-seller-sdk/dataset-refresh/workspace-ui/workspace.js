@@ -1,6 +1,7 @@
 // MIT. Same-origin controls; all merchant/source text is rendered as text.
 const $ = id => document.getElementById(id);
 const key = 'sf30-dataset-publisher-session';
+let workbookUI = null;
 let token = location.hash.slice(1);
 if (/^[A-Za-z0-9_-]{43}$/.test(token)) { sessionStorage.setItem(key,token); history.replaceState(null,'',location.pathname); }
 else token = sessionStorage.getItem(key) || '';
@@ -20,7 +21,7 @@ async function api(path,body,method='POST',extra={}) {
     ...(body===undefined?{}:{'content-type':body instanceof File?'text/csv':'application/json'}),...extra},
     ...(body===undefined?{}:{body:body instanceof File?body:JSON.stringify(body)}),redirect:'error',credentials:'omit'});
   const value=await response.json();
-  if(!response.ok)throw Object.assign(new Error(value.message||value.error||'Action failed'),{code:value.error,status:response.status});
+  if(!response.ok)throw Object.assign(new Error(value.message||value.error||'Action failed'),{code:value.error,status:response.status,details:value.details});
   return value;
 }
 function controls() {
@@ -43,12 +44,14 @@ function controls() {
   for(const id of ['buyer-accept','buyer-intent'])$(id).disabled=busy||!state.buyerReview;
   $('prepare-buyer').disabled=busy||!state.buyerReview||state.dirty;
   $('download-buyer').disabled=busy||!state.buyerPrepared||state.dirty;
+  workbookUI?.controls();
 }
 async function action(message,fn) {
   if(state.busy)return;
   state.busy=true; controls(); notice(message);
   try { await fn(); }
   catch(error) {
+    workbookUI?.error(error);
     if(/^(SELLER_|SNAPSHOT_SELECTION_|VERSION_NOT_AVAILABLE)/.test(error.code||''))clearBuyer();
     // Show a concurrent operator's new revision without silently re-reviewing
     // this draft or changing the saved activation expectation.
@@ -66,12 +69,12 @@ function accept(data) {
   if(data.resource){$('resource-link').href=data.resource;$('resource-link').hidden=false;}
   if(Object.hasOwn(data,'buyerSource'))state.buyerSource=data.buyerSource;
   $('buyer-setup').textContent=state.buyerSource?'Inspect a published version and run the query, then load its current seller offer.':'Connect the existing seller with the workspace’s --seller and --resource options.';
-  renderStatus(); renderSaved();
+  renderStatus(); renderSaved(); workbookUI?.accept(data);
 }
 function renderSaved() {
   const workspace=state.workspace;if(!workspace)return;
   const cap=workspace.capacity;
-  $('draft-capacity').textContent=`${fmt(cap.candidateCount)} / ${fmt(cap.maxCandidates)} candidates · ${bytes(cap.sourceBytes)} / ${bytes(cap.maxSourceBytes)} CSV capacity`;
+  $('draft-capacity').textContent=`${fmt(cap.candidateCount)} / ${fmt(cap.maxCandidates)} candidates · ${bytes(cap.sourceBytes)} / ${bytes(cap.maxSourceBytes)} retained source capacity`;
   const candidates=$('saved-candidates').tBodies[0];candidates.replaceChildren();
   for(const item of [...workspace.candidates].reverse()){
     const row=el('tr',undefined,item.id===state.draft?.id?'candidate-selected':undefined);
@@ -296,6 +299,7 @@ $('copy-query').addEventListener('click',()=>action('Copying the selected query�
 $('export-page').addEventListener('click',()=>{
   if(!state.result)return;download(JSON.stringify(state.result,null,2)+'\n','dataset-'+short(state.dataset.snapshot)+'-page-'+(state.page+1)+'.json');notice('Current preview page exported.');
 });
+workbookUI = createWorkbookControls({getState:()=>state,api,action,accept,select,draftTarget,savedQuery,notice,download,token:()=>token});
 action('Connecting to the running seller…',async()=>{
   const data=await api('status',undefined,'GET');accept(data);const saved=state.workspace?.selection;
   if(saved){try{await select(saved.target,saved.query);notice('Saved work reopened. The retained query starts at its first page.');return;}
