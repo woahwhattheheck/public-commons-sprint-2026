@@ -35,6 +35,9 @@ The browser supports:
 
 - source and four-street baseline inspection;
 - explicit relationship decisions for dated observations;
+- sourced per-street reviews for access/time windows, vehicle criteria, loading
+  spaces, hub/locker concepts and replication/governance;
+- supplied 2026–2030 milestones with explicit derogation criteria;
 - assumptions with provenance and reviewer ownership;
 - qualitative scenario criteria without invented numeric outcomes;
 - consent-marked, non-identifying Italian/English survey response intake;
@@ -58,8 +61,9 @@ python3 workspace/server.py restore \
   --archive /private/bologna-backup.zip --state /private/bologna-restored
 ```
 
-Exports include the four-street CSV, GeoJSON, bilingual HTML report, complete
-report JSON and a manifest with exact byte counts and SHA-256 digests. Restore is
+Exports include the four-street CSV, GeoJSON, structured street/roadmap CSV,
+bilingual HTML report, complete report JSON and a manifest with exact byte
+counts and SHA-256 digests. Restore is
 create-only and verifies the archived state digest before publishing it.
 
 ## Source contract
