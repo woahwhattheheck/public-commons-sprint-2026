@@ -1,0 +1,31 @@
+{
+  "schema": "stellar-forge.postgres-source.v1",
+  "connection": {
+    "host": "database.merchant.example",
+    "port": 5432,
+    "database": "merchant",
+    "user": "seller_reader",
+    "passwordEnv": "SF30_POSTGRES_PASSWORD",
+    "tls": "verify-full"
+  },
+  "poolSize": 4,
+  "maxPending": 32,
+  "connectTimeoutMs": 5000,
+  "queries": {
+    "catalog": {
+      "sql": "SELECT id, title, region, price_cents FROM merchant.catalog WHERE region = $1::text AND id > $2::bigint ORDER BY id",
+      "parameterOrder": ["region", "after_id"],
+      "parameters": {
+        "region": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "after_id": { "type": "integer", "minimum": "0", "default": "0" }
+      },
+      "columns": ["id", "title", "region", "price_cents"],
+      "maxRows": 100,
+      "maxBytes": 524288,
+      "timeoutMs": 3000
+    }
+  },
+  "bindings": {
+    "catalog": { "query": "catalog", "input": "query" }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "routes": [{
+    "id": "catalog",
+    "path": "/catalog",
+    "handler": "catalogQuery",
+    "admit": "admitCatalog",
+    "definition": {
+      "method": "GET",
+      "serviceName": "PostgreSQL catalog API",
+      "description": "Named read-only catalog query. region is required; after_id is an exclusive integer cursor. All non-null database values are exact PostgreSQL text strings. Up to 100 rows per paid request.",
+      "tags": ["postgresql", "dataset", "example"],
+      "payment": {
+        "scheme": "exact", "network": "stellar:testnet",
+        "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+        "amount": "10000", "maxTimeoutSeconds": 60
+      },
+      "queryParameters": [
+        { "name": "region", "type": "string", "required": true, "description": "Exact region name, bound as database text.", "example": "north" },
+        { "name": "after_id", "type": "string", "required": false, "description": "Exclusive bigint id cursor; defaults to zero.", "example": "0" }
+      ],
+      "outputExample": {
+        "schema": "stellar-forge.postgres-result.v1", "query": "catalog",
+        "columns": ["id", "title", "region", "price_cents"],
+        "rows": [{ "id": "1", "title": "Example item", "region": "north", "price_cents": "499" }],
+        "rowCount": 1, "truncated": false,
+        "valueEncoding": "postgres-text", "nullEncoding": "json-null"
+      }
+    }
+  }]
+}
