@@ -8,7 +8,9 @@ export async function main(args = process.argv.slice(2)) {
     stdio: 'inherit', shell: false, env: { ...process.env, SF30_XML_NODE: process.execPath },
   });
   const interrupt = () => child.kill('SIGINT');
+  const terminate = () => child.kill('SIGTERM');
   process.on('SIGINT', interrupt);
+  process.on('SIGTERM', terminate);
   try {
     const code = await new Promise((yes, no) => {
       child.once('error', () => no(new Error('Python 3.11+ is required; set SF30_XML_PYTHON to its executable')));
@@ -17,6 +19,7 @@ export async function main(args = process.argv.slice(2)) {
     process.exitCode = code;
   } finally {
     process.off('SIGINT', interrupt);
+    process.off('SIGTERM', terminate);
   }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
