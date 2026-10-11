@@ -1,6 +1,7 @@
 // MIT. Offline bridge to the ORIGINAL generated SF30 request implementation.
 import { createHash } from 'node:crypto';
-import { buildRequest, source, operations } from './seller-client.mjs';
+// This companion is generated into the customer directory, not present in source.
+const { buildRequest, source, operations } = await import(new URL('./seller-client.mjs', import.meta.url).href);
 
 const MAX_INPUT = 64 * 1024 * 1024;
 const MAX_BODY = 16 * 1024 * 1024;
