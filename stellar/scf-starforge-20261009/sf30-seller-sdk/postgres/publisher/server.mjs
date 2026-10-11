@@ -24,6 +24,10 @@ export async function startPostgresPublisherServer({ publisher, port = 8442 } = 
     ['/schedules.mjs', 'schedules.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([url, file, type]) => [url, { bytes: await readFile(new URL('./public/' + file, import.meta.url)), type }])));
+  if (publisher.sourceName && publisher.sourceName !== 'PostgreSQL') {
+    const page = assets.get('/');
+    page.bytes = Buffer.from(page.bytes.toString('utf8').replaceAll('PostgreSQL', publisher.sourceName));
+  }
   const schedule = await openPostgresSchedule({ publisher });
   let origin, closing;
   const server = createServer((req, res) => {
