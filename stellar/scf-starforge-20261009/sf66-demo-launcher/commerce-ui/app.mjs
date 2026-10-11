@@ -1,4 +1,5 @@
 // MIT. Presentation and explicit operator actions over the original commerce session.
+import { createRequestView } from './request.mjs';
 import { createStreamPanel } from './stream.mjs';
 const byId = id => document.getElementById(id);
 const tokenKey = 'stellar-forge-commerce-token';
@@ -8,6 +9,7 @@ if (/^[a-f0-9]{64}$/.test(supplied)) {
   history.replaceState(null, '', location.pathname);
 }
 const token = sessionStorage.getItem(tokenKey) ?? '';
+const requestView = createRequestView({ request, notice });
 let view, selectedIntent = '', previewIdentity, productIdentity, pending = false, selectionLoading = false, lastRequest = 0, refreshTimer;
 const selectionPath = path => path + (selectedIntent ? '?intent=' + encodeURIComponent(selectedIntent) : '');
 const readable = value => value === null || value === undefined ? '—' : String(value);
@@ -116,6 +118,7 @@ function render(next) {
   ]);
   text('request-headers', JSON.stringify(op?.headers ?? {}, null, 2));
   byId('request-details').hidden = !op;
+  requestView.render(op, controls);
   byId('review').disabled = pending || !controls.canReview;
   text('review-note', review ? 'The displayed operation is the current reviewed request.' : 'The operation comes from the prepared buyer configuration.');
   text('execution-state', attempt ? label(attempt.state) : review ? 'Ready to execute' : 'Awaiting review');
@@ -139,7 +142,7 @@ function render(next) {
     ['Reservation', outcome.operatorReservation?.outcome],
     ['Error', outcome.error?.code ?? outcome.evidenceError?.code],
   ] : []);
-  text('outcome-message', attempt?.error ?? outcome?.error?.code ??
+  text('outcome-message', attempt?.error ?? outcome?.error?.operatorReason ?? outcome?.error?.code ??
     (outcome?.responseFile?.status === 'SAVED' ? 'The buyer saved the response. It is available in Delivery.' :
       outcome?.interrupted ? 'The buyer recorded an interrupted operation. Its recorded status appears above.' :
       'The recorded operation result is shown above.'));

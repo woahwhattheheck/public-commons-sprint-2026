@@ -1,0 +1,9 @@
+/* MIT. Retained input inside the original commerce workspace. */
+.retained-request { border-top: 1px solid #ddd; margin-top: 18px; padding-top: 16px; min-width: 0; }
+.retained-request h3 { margin: 0 0 8px; font-size: 14px; }
+#request-input-view { margin-top: 16px; }
+#request-input-files { display: grid; gap: 10px; margin: 14px 0; }
+.request-file { border: 1px solid #ddd; border-radius: 3px; padding: 12px; min-width: 0; }
+.request-file h4 { font-size: 13px; margin: 0 0 10px; overflow-wrap: anywhere; }
+.request-file dl { margin-bottom: 0; }
+#request-input-fields { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
