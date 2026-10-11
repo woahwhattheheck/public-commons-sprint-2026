@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 
 from .errors import DeliveryError, NativeError, StateError
-from .result import FileDelivery
+from .result import FileDelivery, SessionAccountingResult
 from .runtime import Runtime
 
 MODE = "ORIGINAL_PYTHON_OBJECT"
@@ -150,9 +150,11 @@ class ObjectBuyer:
         self.runtime = Runtime(checkout, node=node, environment=environment,
                                timeout=timeout, output_limit=output_limit)
 
-    def open(self, directory):
+    def open(self, directory, *, inspect=True):
+        """Reopen the original session; inspect=False permits metadata-only accounting."""
         session = ObjectSession(self.runtime, directory)
-        session.inspect()
+        if inspect:
+            session.inspect()
         return session
 
     def _prepare(self, action, directory, *, config_file, workspace, arguments):
@@ -206,6 +208,7 @@ class ObjectSession:
         self.directory = _path(directory)
         self.session_id = None
         self.last_report = None
+        self.last_accounting = None
 
     def _invoke(self, action, arguments=(), *, chunk_offset=0, chunk_limit=50):
         _integer(chunk_offset, minimum=0)
@@ -247,6 +250,57 @@ class ObjectSession:
     def recover(self) -> ObjectReport:
         """Native offline recovery; never issue an HTTP request or repeat payment."""
         return self._invoke("recover")
+
+    def _accounting(self, *, finalize=False, workspace=None, offset=0, limit=100,
+                    outbox=None, merchant_route=None):
+        _integer(offset, minimum=0)
+        _integer(limit, maximum=250)
+        if (outbox is None) != (merchant_route is None):
+            raise StateError("OUTBOX_AND_ORIGINAL_MERCHANT_ROUTE_REQUIRED_TOGETHER")
+        action = "finalize" if finalize else "accounting"
+        arguments = [action, "--session", self.directory, "--offset", offset, "--limit", limit]
+        if workspace is not None:
+            arguments += ["--workspace", _path(workspace)]
+        if outbox is not None:
+            arguments += ["--outbox", _path(outbox), "--merchant-route", _path(merchant_route)]
+        run = self.runtime.run(arguments, target="object")
+        output = run.output
+        if (not isinstance(output, dict) or output.get("mode") != MODE
+                or output.get("action") != action or not isinstance(output.get("report"), dict)):
+            raise NativeError(run.error or "ORIGINAL_OBJECT_ACCOUNTING_FAILED",
+                              returncode=run.returncode, operation=self)
+        view = SessionAccountingResult.from_native(output["report"], kind="object", directory=self.directory,
+            returncode=run.returncode, runtime_error=run.error, interrupted=run.interrupted)
+        if self.session_id is not None and self.session_id != view.native["sessionId"]:
+            raise StateError("ORIGINAL_OBJECT_ACCOUNTING_SESSION_CHANGED", operation=self)
+        self.session_id = view.native["sessionId"]
+        self.last_accounting = view
+        return view
+
+    def accounting(self, *, offset=0, limit=100) -> SessionAccountingResult:
+        """Read the original chunk-inbox receipts without wallet or RPC."""
+        return self._accounting(offset=offset, limit=limit)
+
+    def finalize(self, *, workspace=None, offset=0, limit=100,
+                 outbox=None, merchant_route=None) -> SessionAccountingResult:
+        """Finish these existing native reservations without downloading again."""
+        return self._accounting(finalize=True, workspace=workspace, offset=offset, limit=limit,
+                                outbox=outbox, merchant_route=merchant_route)
+
+    def finalize_all(self, *, workspace=None, page_size=25, outbox=None, merchant_route=None):
+        """Yield original accounting progress over every retained chunk.
+
+        Review attention entries even when other chunks finalize successfully.
+        Accounting reads metadata and evidence, not the delivered product bytes.
+        """
+        offset = 0
+        while True:
+            view = self.finalize(workspace=workspace, offset=offset, limit=page_size,
+                                 outbox=outbox, merchant_route=merchant_route)
+            yield view
+            if view.interrupted or view.next_offset is None:
+                return
+            offset = view.next_offset
 
     def _delivery(self, result) -> ObjectDelivery:
         if not result.complete:
