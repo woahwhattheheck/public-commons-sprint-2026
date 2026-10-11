@@ -49,6 +49,12 @@ const call = (intentId, path = '/' + intentId, extra = {}, client = buyer) =>
   client.call({ intentId, url: 'https://merchant.example' + path, method: 'POST',
     body: '{"city":"Zürich"}', expect: { ...terms, maxAtomic: '9' }, sign, ...extra });
 try {
+  // Exercise the actual peer transport selected by the new default: reject a
+  // non-443 destination before DNS, reservation or signing. No external call.
+  const publicBuyer = new OperatorApprovedBuyer({ operator });
+  await assert.rejects(publicBuyer.call({ intentId: 'bad-port',
+    url: 'https://merchant.example:8443/resource', expect: { ...terms, maxAtomic: '9' }, sign }),
+    e => e.code === 'INITIAL_TRANSPORT_FAILED' && e.cause?.code === 'PUBLIC_HTTPS_PORT_REQUIRED');
   if (process.argv.includes('--no-tty')) {
     await assert.rejects(call('no-tty'), e => e.code === 'OPERATOR_NO_APPROVAL');
     assert.equal(signatures.length, 0); assert.equal(sends.length, 1);
@@ -85,8 +91,8 @@ try {
     assert.equal(sends.filter(x => x.path === '/approved').length, 3);
     assert.equal(sends.filter(x => x.path === '/lost').length, 2);
     assert.ok(sends.every(x => x.method === 'POST' && x.body === '{"city":"Zürich"}'));
-    const result = { status: 'PASS', nativeModuleClosure: ['SF31', 'SF62', 'SF54', 'SF59', 'SF36'],
-      scenarios: ['free', 'denied', 'fresh', 'duplicate', 'lost response', 'concurrent review', 'cancel', 'timeout'],
+    const result = { status: 'PASS', nativeModuleClosure: ['SF31', 'SF62', 'SF54', 'SF59', 'SF36', 'SF31 public transport'],
+      scenarios: ['public transport default', 'free', 'denied', 'fresh', 'duplicate', 'lost response', 'concurrent review', 'cancel', 'timeout'],
       fixtureSignedRequests: 2, realPayments: 0, signatures, sends };
     writeFileSync(join(dir, 'result.json'), JSON.stringify(result, null, 2), { mode: 0o600 });
     console.log('NATIVE_BRIDGE_PASS');
