@@ -30,6 +30,8 @@ import webbrowser
 from . import _analysis_ui
 from .datasets import DatasetAcquisition
 from .dataset_changes import DatasetChanges
+from .analysis_reports import AnalysisReports
+from .response_tables import AnalysisResponses
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
 from .storage import digest, dump, parse, private_directory, read
@@ -151,6 +153,8 @@ class AnalysisWorkspace:
                 db.execute("UPDATE sf_analysis_jobs SET status='INTERRUPTED',finished_at=?,error='WORKSPACE_PROCESS_INTERRUPTED' WHERE status='RUNNING'", (_now(),))
                 db.commit()
             self.changes = DatasetChanges(self.database)
+            self.reports = AnalysisReports(self.database, encode_cell=_cell, parse_parameters=_parameters, changes=self.changes)
+            self.responses = AnalysisResponses(self.database, checkout=self.checkout, node=self.node, encode_cell=_cell)
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
         except BaseException:
             os.close(self._owner)
@@ -190,7 +194,7 @@ class AnalysisWorkspace:
             existing = db.execute("SELECT * FROM sf_analysis_sources WHERE name=?", (name,)).fetchone()
             if existing:
                 old = parse(existing["record"].encode())
-                if all(old[key] == source[key] for key in ("session", "room", "session_sha256")):
+                if all(old.get(key) == source[key] for key in ("session", "room", "session_sha256")):
                     db.commit()
                     return old
             revision = existing["revision"] if existing else 0
@@ -225,8 +229,9 @@ class AnalysisWorkspace:
             queries = [dict(row) for row in db.execute("SELECT name,revision FROM sf_analysis_queries ORDER BY name")]
             jobs = [dict(row) for row in db.execute("SELECT sequence,id,kind,status,created_at,finished_at,error FROM sf_analysis_jobs ORDER BY sequence DESC LIMIT 30")]
             views = database._views(db)
+            reports = AnalysisReports.state(db)
         return {"schema": _SCHEMA, "workspace_id": identity, "database": str(database.path),
-                "can_import": can_import, "sources": sources, "queries": queries, "views": views, "jobs": jobs}
+                "can_import": can_import, "sources": sources, "queries": queries, "views": views, "jobs": jobs, "reports": reports}
 
     def save_query(self, name, value, *, expected_revision):
         name, spec = _name(name), _query(value)
@@ -262,17 +267,23 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "backup", "compare", "change-export"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "backup", "compare", "change-export", "report", "report-export", "response-preview", "response-import"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
             raise StateError("ANALYSIS_REQUEST_ID_REQUIRED")
         spec = {"id": job_id}
-        if kind == "query":
+        if kind in {"response-preview", "response-import"}:
+            spec.update(self.responses.prepare(kind, request))
+        elif kind == "query":
             spec.update(_query(request))
             if not isinstance(request.get("expected_views"), list):
                 raise StateError("ANALYSIS_REVIEWED_VIEWS_REQUIRED")
             spec["expected_views"] = request["expected_views"]
+        elif kind == "report":
+            spec.update(self.reports.prepare(request))
+        elif kind == "report-export":
+            spec.update(self.reports.prepare_export(request))
         elif kind == "compare":
             spec.update(self.changes.prepare(request, check=False))
         elif kind == "change-export":
@@ -287,6 +298,8 @@ class AnalysisWorkspace:
             if row is None:
                 raise StateError("ANALYSIS_SOURCE_NOT_FOUND")
             source = parse(row[0].encode())
+            if source.get("kind") == "response":
+                raise StateError("ANALYSIS_USE_RESPONSE_MAPPING_WORKFLOW")
             if request.get("source_revision") != source["revision"]:
                 raise StateError("ANALYSIS_SOURCE_CHANGED")
             spec.update(source=source, columns=mapping)
@@ -304,10 +317,16 @@ class AnalysisWorkspace:
                     return self.job(job_id)
                 if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                     raise StateError("ANALYSIS_JOB_RUNNING")
-                if kind == "compare":
+                if kind in {"response-preview", "response-import"}:
+                    self.responses.validate(db, kind, spec)
+                elif kind == "compare":
                     self.changes._inputs(db, spec)
                 elif kind == "change-export":
                     self.changes._export_input(db, spec)
+                elif kind == "report":
+                    self.reports._input(db, spec)
+                elif kind == "report-export":
+                    self.reports._export_input(db, spec)
                 db.execute("INSERT INTO sf_analysis_jobs(id,kind,status,created_at,request) VALUES(?,?,'RUNNING',?,?)", (job_id, kind, _now(), raw))
                 db.commit()
             self._executor.submit(self._execute, job_id, kind, spec)
@@ -315,7 +334,9 @@ class AnalysisWorkspace:
 
     def _execute(self, job_id, kind, spec):
         try:
-            if kind == "import":
+            if kind in {"response-preview", "response-import"}:
+                result = self.responses.execute(kind, spec)
+            elif kind == "import":
                 source = spec["source"]
                 path = Path(source["session"]) / "session.json"
                 if digest(read(path, 4 * 1024 * 1024)) != source["session_sha256"]:
@@ -331,10 +352,19 @@ class AnalysisWorkspace:
                 result = {"version": result, "source": source["name"], "source_revision": source["revision"],
                           "native_delivery": {"status": delivery.status, "appended_pages": delivery.native.get("appendedPages"), "payment_status": delivery.payment_status}}
             elif kind == "query":
-                result = self.database.query(spec["sql"], _parameters(spec["parameters_text"]), max_rows=spec["max_rows"],
-                    max_result_bytes=4 * 1024 * 1024, timeout=20, expected_views=spec["expected_views"])
+                with self.database._connection(readonly=True) as db:
+                    db.execute("BEGIN")
+                    result = self.database._query(db, spec["sql"], _parameters(spec["parameters_text"]), max_rows=spec["max_rows"],
+                        max_result_bytes=4 * 1024 * 1024, timeout=20, expected_views=spec["expected_views"])
+                    sources = []
+                    for table in result.read_tables:
+                        if table.startswith("sf_dataset_rows_") and re.fullmatch(r"[a-f0-9]{64}", table[16:]):
+                            version = self.database._version(db, table[16:])
+                            sources.append({key: value for key, value in version.items()
+                                            if key not in {"sourceDirectory", "sequence", "created_at"}})
                 result = {"columns": list(result.columns), "rows": [[_cell(v) for v in row] for row in result.rows],
-                          "truncated": result.truncated, "views": list(result.views), "read_tables": list(result.read_tables)}
+                          "truncated": result.truncated, "views": list(result.views), "read_tables": list(result.read_tables),
+                          "source_versions": sources}
                 result["result_sha256"] = digest(_json(result).encode())
             elif kind == "compare":
                 # Difference rows and the COMPLETE job become visible together.
@@ -342,6 +372,11 @@ class AnalysisWorkspace:
                 return
             elif kind == "change-export":
                 result = self.changes.export({key: value for key, value in spec.items() if key != "id"})
+            elif kind == "report":
+                self.reports.run(job_id, {key: value for key, value in spec.items() if key != "id"})
+                return
+            elif kind == "report-export":
+                result = self.reports.export({key: value for key, value in spec.items() if key != "id"})
             else:
                 target = self.database.backup(self.database.directory / "analysis-backups" / job_id)
                 with target.open("rb") as stream:
@@ -374,6 +409,9 @@ class AnalysisWorkspace:
         elif job["kind"] == "compare" and job["result"] is not None:
             with self.database._connection(readonly=True) as db:
                 job["result"] = self.changes._report(db, job_id)
+        elif job["kind"] == "report" and job["result"] is not None:
+            with self.database._connection(readonly=True) as db:
+                job["result"] = self.reports._report(db, job_id)
         return job
 
     def job(self, job_id, *, offset=0, limit=100):
@@ -396,7 +434,8 @@ class AnalysisWorkspace:
             data = {"schema": _SCHEMA, "id": job_id, "executed_at": job["finished_at"], "request": job["request"],
                     "columns": result["columns"], "rows": [[_value(v) for v in row] for row in result["rows"]],
                     "truncated": result["truncated"], "views": result["views"], "read_tables": result["read_tables"],
-                    "result_sha256": result["result_sha256"]}
+                    "result_sha256": result["result_sha256"],
+                    "source_versions": result.get("source_versions", [])}
             return (_json(data) + "\n").encode(), "application/json", "analysis-" + job_id + ".json"
         if format != "csv":
             raise StateError("ANALYSIS_EXPORT_FORMAT_INVALID")
@@ -426,6 +465,18 @@ class AnalysisWorkspace:
         path = self.database.directory / "analysis-exports" / result["filename"]
         if str(path) != result["path"]:
             raise StateError("ANALYSIS_CHANGE_EXPORT_REGENERATE_AFTER_RECOVERY")
+        return path, result
+
+    def report_export_file(self, job_id):
+        job = self._job(job_id)
+        if job["kind"] != "report-export" or job["status"] != "COMPLETE":
+            raise StateError("ANALYSIS_COMPLETE_REPORT_EXPORT_REQUIRED")
+        result = job["result"]
+        if not re.fullmatch(r"report-[a-f0-9]{64}\.(html|json|zip)", result["filename"]):
+            raise StateError("ANALYSIS_REPORT_EXPORT_LOCATION_CHANGED")
+        path = self.database.directory / "analysis-exports" / result["filename"]
+        if str(path) != result["path"]:
+            raise StateError("ANALYSIS_REPORT_EXPORT_REGENERATE_AFTER_RECOVERY")
         return path, result
 
 
@@ -503,8 +554,22 @@ def serve(workspace, *, port=0):
             if self.command == "GET":
                 if url.path == "/api/state":
                     return self._reply(200, workspace.state())
+                if len(parts) == 3 and parts[:2] == ["api", "response-source"]:
+                    return self._reply(200, workspace.responses.describe(parts[2], int(get("revision", "0")),
+                        collection=get("collection"), sse_data=get("sse_data", "text")))
                 if url.path == "/api/versions":
                     return self._reply(200, workspace.database.versions(before=int(get("before")) if get("before") else None, limit=25))
+                if len(parts) == 3 and parts[:2] == ["api", "reports"]:
+                    return self._reply(200, workspace.reports.definition(parts[2], revision=int(get("revision")) if get("revision") else None))
+                if url.path == "/api/report-runs":
+                    return self._reply(200, workspace.reports.history(name=get("name"), before=int(get("before")) if get("before") else None))
+                if len(parts) == 3 and parts[:2] == ["api", "report-runs"]:
+                    return self._reply(200, workspace.reports.result(parts[2], section=int(get("section", "0")), offset=int(get("offset", "0"))))
+                if url.path == "/api/report-publications":
+                    return self._reply(200, workspace.reports.publications(name=get("name"), before=int(get("before")) if get("before") else None))
+                if len(parts) == 3 and parts[:2] == ["api", "report-export"]:
+                    path, record = workspace.report_export_file(parts[2])
+                    return self._file_reply(path, record)
                 if url.path == "/api/changes":
                     return self._reply(200, workspace.changes.history(before=int(get("before")) if get("before") else None))
                 if len(parts) == 3 and parts[:2] == ["api", "changes"]:
@@ -515,7 +580,7 @@ def serve(workspace, *, port=0):
                 if len(parts) == 3 and parts[:2] == ["api", "version"]:
                     return self._reply(200, workspace.database.version(parts[2]))
                 if len(parts) == 3 and parts[:2] == ["api", "manifest"]:
-                    return self._reply(200, workspace.database.manifest_bytes(parts[2]), "application/json", "delivery-manifest.json")
+                    return self._reply(200, workspace.database.manifest_bytes(parts[2]), "application/json", "source-manifest.json")
                 if len(parts) == 3 and parts[:2] == ["api", "queries"]:
                     return self._reply(200, workspace.saved_query(parts[2], revision=int(get("revision")) if get("revision") else None))
                 if len(parts) == 3 and parts[:2] == ["api", "jobs"]:
@@ -545,6 +610,10 @@ def serve(workspace, *, port=0):
                     return self._reply(200, workspace.database.activate(body.get("name"), body.get("version_id"), expected_revision=body.get("expected_revision")))
                 if len(parts) == 4 and parts[:2] == ["api", "changes"] and parts[3] == "select":
                     return self._reply(200, workspace.changes.select(parts[2], body))
+                if len(parts) == 3 and parts[:2] == ["api", "reports"]:
+                    return self._reply(200, workspace.reports.save(parts[2], body))
+                if len(parts) == 4 and parts[:2] == ["api", "report-runs"] and parts[3] == "publish":
+                    return self._reply(200, workspace.reports.publish(parts[2], body))
                 if len(parts) == 3 and parts[:2] == ["api", "queries"]:
                     return self._reply(200, workspace.save_query(parts[2], body, expected_revision=body.get("expected_revision")))
                 if len(parts) == 3 and parts[:2] == ["api", "start"]:
@@ -586,6 +655,15 @@ def main():
     source.add_argument("--session", required=True)
     source.add_argument("--room", help="Existing SF100 room, or a new private destination")
     source.add_argument("--expected-revision", type=int, default=0)
+    response = commands.add_parser("response", help="Register a retained native API response or original typed stream export")
+    response.add_argument("--name", required=True)
+    response.add_argument("--input-kind", required=True, choices=["buyer", "sf31", "stream", "mcp"])
+    response.add_argument("--config", help="Original SF88 configuration or SF31 response-file writer options")
+    response.add_argument("--result", help="Original SF88 result record or SF31 response-file receipt")
+    response.add_argument("--stream-export", help="Original Python StreamDelivery directory")
+    response.add_argument("--manifest", help="Original native MCP result .meta.json file")
+    response.add_argument("--format", choices=["json", "csv"], default="json")
+    response.add_argument("--expected-revision", type=int, default=0)
     commands.add_parser("status", help="Read saved sources, queries, views and work")
     args = parser.parse_args()
     if args.command == "status":
@@ -595,6 +673,9 @@ def main():
     try:
         if args.command == "source":
             print(_json(workspace.register_source(args.name, args.session, room=args.room, expected_revision=args.expected_revision)))
+        elif args.command == "response":
+            print(_json(workspace.responses.register(args.name, args.input_kind, config=args.config, result=args.result,
+                stream=args.stream_export, manifest=args.manifest, format=args.format, expected_revision=args.expected_revision)))
         else:
             server, control, url = serve(workspace, port=args.port)
             print(_json({"status": "LISTENING", "address": url.split("#", 1)[0], "private_launch": str(control)}), flush=True)

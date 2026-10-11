@@ -5,6 +5,9 @@ import { isAbsolute, resolve, join, basename } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { merchantRoutes, merchantTerms, analyze, createReport, readJson, liveSnapshot } from '../analyze.mjs';
 import { normalizeTrafficHistoryReport } from '../../sf30-seller-sdk/operations/history.mjs';
+import { resolveSellerConfigPaths, validateSellerServiceConfig } from '../../sf30-seller-sdk/serve.mjs';
+import { createRepricingReview } from './repricing.mjs';
+import { prepareRepricingSource, writeRepricingSource, stageRepricingSource } from './repricing-source.mjs';
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const REVISION = /^[a-f0-9]{64}$/;
@@ -88,12 +91,18 @@ function calendarDay(value) {
     new Date(value+'T00:00:00.000Z').toISOString().slice(0,10) === value;
 }
 
-export async function openWorkspace({config, directory, snapshot, history:historyFile, opsUrl, nativeOutbox} = {}) {
+export async function openWorkspace({config, directory, snapshot, history:historyFile, opsUrl, nativeOutbox,
+  sourcePackage, releaseStore, releaseRuntime = {}} = {}) {
   if (!isAbsolute(directory ?? '') || resolve(directory) !== directory || directory === '/')
     throw fault('ABSOLUTE_WORKSPACE_REQUIRED', 'Workspace must be an absolute, normalized private directory.');
   if (!config || !(snapshot || historyFile || opsUrl) || (opsUrl && (snapshot || historyFile)))
     throw fault('SOURCE_REQUIRED', 'Supply a seller configuration and original snapshot/history files, or one live operations URL.');
   const configPath = resolve(config);
+  if (releaseStore && !sourcePackage)
+    throw fault('RELEASE_SOURCE_REQUIRED', 'Configure the original API merchant source package before staging price releases.');
+  if (!releaseRuntime || typeof releaseRuntime !== 'object' || Array.isArray(releaseRuntime))
+    throw fault('RELEASE_RUNTIME_REQUIRED', 'Use an original release runtime object.');
+  const stageRuntime = structuredClone(releaseRuntime);
   let liveOrigin, defaultSelection = {kind:snapshot ? SESSION : PERIOD,from:null,to:null,routeId:null};
   let sessionEndpoint = '/api/snapshot', historyEndpoint = '/api/history';
   if (opsUrl) {
@@ -142,7 +151,8 @@ export async function openWorkspace({config, directory, snapshot, history:histor
   }
   await seller();
   await privateDirectory(directory, true);
-  for (const name of ['versions','successors','pending']) await privateDirectory(join(directory,name), true);
+  for (const name of ['versions','successors','pending','decisions','decision-successors','staged-releases'])
+    await privateDirectory(join(directory,name), true);
   const captures = new Map();
   async function capture(selection) {
     let result;
@@ -214,7 +224,8 @@ export async function openWorkspace({config, directory, snapshot, history:histor
       sellerChanged:Boolean(latest && latest.value.sellerSha256 !== source.hash),
       commercial:commercialInputs(terms,source.routes), snapshot:observed, sourceError,
       sourceCapabilities,selection,
-      nativeAttached:Boolean(nativeOutbox), history:entries.slice(-100).reverse().map(summary)};
+      nativeAttached:Boolean(nativeOutbox), history:entries.slice(-100).reverse().map(summary),
+      repricing:await repricingState()};
   }
   async function prepared(input) {
     const source = await seller();
@@ -329,5 +340,196 @@ export async function openWorkspace({config, directory, snapshot, history:histor
       sameObservationKind:left.value.observationKind === right.value.observationKind,
       sameRange:canonical(range(left)) === canonical(range(right))}};
   }
-  return {state,preview,save,download,loadVersion,compare};
+  function decisionSummary(entry) {
+    const value = entry.value;
+    return {decision:value.decision,revision:entry.revision,requestId:value.requestId,label:value.label,savedAt:value.savedAt,
+      sourceVersion:value.sourceVersion,sourceLabel:value.sourceLabel,sourceRevision:value.sourceRevision,
+      sellerSha256:value.sellerSha256,proposedSellerSha256:value.proposedSellerSha256,
+      reviewSha256:value.reviewSha256,changes:value.changes,sourcePackageAvailable:Boolean(value.sourcePackage),
+      sourcePackage:value.sourcePackage,files:[...Object.keys(value.files),'manifest.json']};
+  }
+  async function decisionHistory() {
+    const entries = []; let previous = null;
+    for (;;) {
+      let bytes;
+      try { bytes = await privateBytes(join(directory,'decision-successors',(previous ?? 'root')+'.json')); }
+      catch (error) { if (error.code === 'ENOENT') return entries; throw error; }
+      const revision = digest(bytes), value = JSON.parse(bytes.toString('utf8'));
+      if (value.schema !== 'stellar-forge.merchant-repricing-decision.v1' ||
+          value.previousRevision !== previous || !VERSION.test(value.decision) ||
+          !VERSION.test(value.sourceVersion) || !REVISION.test(value.reviewSha256) ||
+          !value.files || typeof value.files !== 'object')
+        throw fault('INVALID_PRICE_DECISION','A saved price decision has an invalid predecessor or manifest.');
+      await privateDirectory(join(directory,'decisions',value.decision));
+      const original = await privateBytes(join(directory,'decisions',value.decision,'manifest.json'));
+      if (!original.equals(bytes)) throw fault('PRICE_MANIFEST_CHANGED','The saved price decision manifest has changed.');
+      entries.push({revision,value}); previous = revision;
+    }
+  }
+  async function decisionFile(entry,name) {
+    const expected = entry.value.files[name];
+    if (!expected || name.split('/').some(part => !part || part === '.' || part === '..'))
+      throw fault('FILE_NOT_FOUND','This file is not part of the saved price decision.',404);
+    const path = join(directory,'decisions',entry.value.decision,...name.split('/'));
+    if (await realpath(path) !== path) throw fault('PRICE_FILE_CHANGED','Saved price decision path has changed.');
+    const bytes = await privateBytes(path);
+    if (bytes.length !== expected.bytes || digest(bytes) !== expected.sha256)
+      throw fault('PRICE_FILE_CHANGED','Saved price decision bytes differ from its committed manifest.');
+    return bytes;
+  }
+  async function stageReceipt(decision) {
+    try { return JSON.parse((await privateBytes(join(directory,'staged-releases',decision+'.json'))).toString('utf8')); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  }
+  async function repricingState() {
+    const entries = await decisionHistory();
+    return {revision:entries.at(-1)?.revision ?? null,sourcePackageAvailable:Boolean(sourcePackage),
+      releaseAvailable:Boolean(sourcePackage && releaseStore),
+      history:await Promise.all(entries.slice(-100).reverse().map(async entry => {
+        const {changes,...saved} = decisionSummary(entry);
+        return {...saved,changedPaymentOptions:changes.length,
+          changedRoutes:new Set(changes.map(change => change.routeId)).size,
+          release:(await stageReceipt(entry.value.decision))?.release ?? null};
+      }))};
+  }
+  async function originalPricing(version) {
+    if (!VERSION.test(version)) throw fault('VERSION_NOT_FOUND','Choose a saved pricing review.',404);
+    const entry = (await history()).find(item => item.value.version === version);
+    if (!entry) throw fault('VERSION_NOT_FOUND','The selected saved pricing review is unavailable.',404);
+    const [sellerBytes,termsBytes] = await Promise.all([savedFile(entry,'seller.json'),savedFile(entry,'terms.json')]);
+    return {entry,sellerBytes,termsBytes,sellerValue:JSON.parse(sellerBytes.toString('utf8')),
+      termsValue:JSON.parse(termsBytes.toString('utf8'))};
+  }
+  async function repricingSource(version) {
+    const [original,current,decisions] = await Promise.all([originalPricing(version),seller(),decisionHistory()]);
+    const routes = merchantRoutes(validateSellerServiceConfig(original.sellerValue));
+    return {version,label:original.entry.value.label,sellerSha256:digest(original.sellerBytes),routes,
+      commercial:commercialInputs(original.termsValue,routes),
+      sellerChanged:current.hash !== digest(original.sellerBytes),
+      repricingRevision:decisions.at(-1)?.revision ?? null,sourcePackageAvailable:Boolean(sourcePackage),
+      releaseAvailable:Boolean(sourcePackage && releaseStore)};
+  }
+  async function preparedRepricing(input) {
+    if (!input || !REVISION.test(input.sellerSha256))
+      throw fault('PRICE_SOURCE_REQUIRED','Choose the saved seller source before reviewing new prices.');
+    const original = await originalPricing(input.version), current = await seller();
+    const sellerSha256 = digest(original.sellerBytes);
+    if (input.sellerSha256 !== sellerSha256 || current.hash !== sellerSha256)
+      throw fault('SELLER_CHANGED','The configured seller differs from this saved pricing review. Save a review of its current configuration before preparing new prices.',409);
+    const core = createRepricingReview({seller:original.sellerValue,edits:input.edits});
+    const proposedBytes = encode(core.proposedSeller);
+    const launchBytes = encode(resolveSellerConfigPaths(structuredClone(core.proposedSeller),configPath));
+    if (proposedBytes.length > 1024*1024 || launchBytes.length > 1024*1024)
+      throw fault('SELLER_CONFIG_TOO_LARGE','The repriced seller exceeds its original 1 MiB configuration limit.');
+    const termsBytes = encode(merchantTerms(core.proposedSeller,
+      commercialInputs(original.termsValue,merchantRoutes(core.proposedSeller))));
+    const source = sourcePackage ? await prepareRepricingSource(resolve(sourcePackage),core) : null;
+    const review = {schema:'stellar-forge.merchant-repricing-preview.v1',sourceVersion:input.version,
+      sourceRevision:original.entry.revision,sourceLabel:original.entry.value.label,
+      sellerSha256,proposedSellerSha256:digest(proposedBytes),launchSellerSha256:digest(launchBytes),
+      termsSha256:digest(termsBytes),edits:core.edits,changes:core.changes,routes:core.routes,
+      changedRoutes:core.changedRoutes,changedPaymentOptions:core.changedPaymentOptions,
+      sourcePackage:source?.review ?? null};
+    return {original,core,proposedBytes,launchBytes,termsBytes,source,
+      review:{...review,reviewSha256:digest(canonical(review))}};
+  }
+  async function previewRepricing(input) { return (await preparedRepricing(input)).review; }
+  async function saveRepricing(input) {
+    if (!input || !VERSION.test(input.requestId) || !REVISION.test(input.reviewSha256) ||
+        !(input.expectedRevision === null || REVISION.test(input.expectedRevision)) ||
+        typeof input.label !== 'string' || !input.label.trim() || input.label.length > 100)
+      throw fault('PRICE_SAVE_DETAILS_REQUIRED','Use a decision name, reviewed changes, request ID and current price decision revision.');
+    const requestSha256 = digest(canonical(input)), entries = await decisionHistory();
+    const existing = entries.find(entry => entry.value.requestId === input.requestId);
+    if (existing) {
+      if (existing.value.requestSha256 !== requestSha256)
+        throw fault('REQUEST_CHANGED','This price decision request was already used for different inputs.',409);
+      return {status:'PRICE_DECISION_SAVED',...decisionSummary(existing),recovered:true};
+    }
+    if ((entries.at(-1)?.revision ?? null) !== input.expectedRevision)
+      throw fault('PRICE_REVISION_CHANGED','Another tab saved a price decision. Reload the saved decisions and review your changes.',409);
+    const prepared = await preparedRepricing(input);
+    if (prepared.review.reviewSha256 !== input.reviewSha256)
+      throw fault('PRICE_REVIEW_CHANGED','The selected prices or source package differ from the displayed review. Review them again before saving.',409);
+    const {original,core,review,source} = prepared;
+    const reportBytes = await savedFile(original.entry,'report/report.json');
+    const decision = randomUUID(), pending = join(directory,'pending',decision), final = join(directory,'decisions',decision);
+    await privateDirectory(pending,true); let published = false, moved = false;
+    try {
+      for (const [name,bytes] of [['seller.json',prepared.proposedBytes],['launch-seller.json',prepared.launchBytes],
+        ['source-seller.json',original.sellerBytes],['terms.json',prepared.termsBytes],
+        ['source-terms.json',original.termsBytes],['pricing-report.json',reportBytes],
+        ['decision.json',encode({...review,coreReview:core})]]) await writeOnce(join(pending,name),bytes);
+      if (source) await writeRepricingSource(source,pending,final);
+      const files = await filesIn(pending);
+      const value = {schema:'stellar-forge.merchant-repricing-decision.v1',decision,
+        previousRevision:input.expectedRevision,requestId:input.requestId,requestSha256,
+        label:input.label.trim(),savedAt:new Date().toISOString(),sourceVersion:input.version,
+        sourceRevision:original.entry.revision,sourceLabel:original.entry.value.label,
+        sellerSha256:review.sellerSha256,proposedSellerSha256:review.proposedSellerSha256,
+        reviewSha256:review.reviewSha256,changes:review.changes,sourcePackage:source?.review ?? null,files};
+      const manifest = encode(value), revision = digest(manifest);
+      await writeOnce(join(pending,'manifest.json'),manifest); await syncDirectory(pending);
+      await rename(pending,final); moved = true; await syncDirectory(join(directory,'decisions'));
+      try { await link(join(final,'manifest.json'),join(directory,'decision-successors',(input.expectedRevision ?? 'root')+'.json')); }
+      catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        const winner = (await decisionHistory()).find(entry => entry.value.requestId === input.requestId);
+        if (winner?.value.requestSha256 === requestSha256)
+          return {status:'PRICE_DECISION_SAVED',...decisionSummary(winner),recovered:true};
+        throw fault('PRICE_REVISION_CHANGED','Another price decision saved first. Reload the decisions and review your retained form.',409);
+      }
+      published = true; await syncDirectory(join(directory,'decision-successors'));
+      return {status:'PRICE_DECISION_SAVED',...decisionSummary({revision,value}),recovered:false};
+    } finally {
+      if (!published) await rm(moved ? final : pending,{recursive:true,force:true}).catch(()=>{});
+    }
+  }
+  async function findDecision(decision) {
+    if (!VERSION.test(decision)) throw fault('PRICE_DECISION_NOT_FOUND','Saved price decision not found.',404);
+    const entry = (await decisionHistory()).find(item => item.value.decision === decision);
+    if (!entry) throw fault('PRICE_DECISION_NOT_FOUND','Saved price decision not found.',404);
+    return entry;
+  }
+  async function downloadRepricing(decision,name) {
+    const entry = await findDecision(decision);
+    if (name === 'manifest.json') return encode(entry.value);
+    return decisionFile(entry,name);
+  }
+  async function stageRepricing({decision,reviewSha256} = {}) {
+    if (!releaseStore) throw fault('RELEASE_STORE_REQUIRED','Configure the original seller release store to stage this saved decision.');
+    const entry = await findDecision(decision);
+    if (!entry.value.sourcePackage) throw fault('RELEASE_SOURCE_REQUIRED','This decision has no retained original API merchant package.');
+    if (reviewSha256 !== entry.value.reviewSha256)
+      throw fault('PRICE_REVIEW_CHANGED','Reload the saved price decision before staging its release.',409);
+    const previous = await stageReceipt(decision);
+    if (previous && previous.releaseStore !== resolve(releaseStore))
+      throw fault('STAGED_RELEASE_CHANGED','This saved decision is already staged in a different configured release store.',409);
+    // Verify the committed package and its complete files before original SF82
+    // reads it. Staging always uses this retained decision, never authoring paths.
+    for (const name of Object.keys(entry.value.files)) await decisionFile(entry,name);
+    const result = await stageRepricingSource({directory:join(directory,'decisions',decision),
+      releaseStore:resolve(releaseStore),runtime:stageRuntime,id:'pricing-'+decision,label:entry.value.label});
+    const value = {schema:'stellar-forge.merchant-repricing-stage.v1',decision,reviewSha256,
+      releaseStore:resolve(releaseStore),release:result.release};
+    if (previous) {
+      if (canonical(previous) !== canonical(value))
+        throw fault('STAGED_RELEASE_CHANGED','The retained staging result differs from this configured original release.',409);
+      return {...result,recovered:true};
+    }
+    const pending = join(directory,'pending','stage-'+randomUUID()+'.json');
+    try {
+      await writeOnce(pending,encode(value));
+      try { await link(pending,join(directory,'staged-releases',decision+'.json')); }
+      catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        if (canonical(await stageReceipt(decision)) !== canonical(value))
+          throw fault('STAGED_RELEASE_CHANGED','Another staging result is already retained for this decision.',409);
+      }
+      await syncDirectory(join(directory,'staged-releases'));
+    } finally { await rm(pending,{force:true}).catch(()=>{}); }
+    return result;
+  }
+  return {state,preview,save,download,loadVersion,compare,repricingSource,previewRepricing,
+    saveRepricing,downloadRepricing,stageRepricing};
 }

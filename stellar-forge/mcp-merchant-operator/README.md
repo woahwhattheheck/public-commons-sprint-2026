@@ -17,10 +17,24 @@ the same authenticated HTTP transport as the existing SF32 buyer bridge.
 The seller runs on the operator's Linux or POSIX host. This starts the configured
 merchant service; a reverse proxy or deployment remains the host's existing
 configuration. Native payments use the original seller's configured facilitator
-and trusted application. The MCP tools never request a paid resource or accept
-wallet keys, handler paths, arbitrary file paths, target URLs or payment overrides
-as tool arguments. Owner-entered support terms may reference their existing
-consent and proposal records; those URLs are retained as text and never fetched.
+and trusted application. The host selects filesystem directories, executable
+modules, credentials and seller runtime settings. The S3 authoring tools edit
+the original source object selection, payment terms and public origin as saved
+revisions; the original source and offer compilers validate those fields.
+Other release operations select host-declared source aliases and retained IDs.
+Owner-entered support terms may reference their existing consent and proposal
+records; those URLs are retained as text.
+
+## Review pricing and retain seller changes
+
+Attach an original SF97 workspace with `init-pricing --dir NEW_HOST --pricing
+CONNECTION_JSON`, or add `--pricing` to ordinary initialization. The same MCP
+can capture native observations, save commercial pricing reviews, compare saved
+versions, review explicit atomic payment changes, and download the retained
+seller/source files. Original API packages stage directly into their existing
+SF82 release store, ready for the existing inspect/compare/activate workflow.
+See [PRICING.md](PRICING.md) for host aliases, exact revision and review hashes,
+capture paging, release-store selection and resumed file delivery.
 
 ## Operate a retained merchant fleet
 
@@ -50,6 +64,17 @@ For an existing S3 file product, initialize with
 compares, starts and rolls back the original pinned whole-file or chunk seller.
 See [S3 releases](../../stellar/scf-starforge-20261009/sf82-seller-pilot/S3_RELEASES.md)
 for private source handling, object version behavior and the original buyer handoff.
+
+For a new or changing S3 product, use
+`init-s3-workspaces --dir NEW_OPERATOR_DIRECTORY --connection S3_CONNECTION.json`.
+The same MCP provider opens the original saved browser workspace, edits complete
+revisions, selects actual object metadata, prepares the native seller and stages
+it into the same SF82 release store. The existing compare, activate, start and
+rollback operations then apply. `download-s3` retrieves that release's exact
+`objects.json` and `offers.json` for the original object buyer, with file hashes
+checked before publication and complete files reused after interruption.
+See [S3_WORKSPACE.md](S3_WORKSPACE.md) for host setup, all 13 authoring tools,
+browser handoff and customer delivery.
 
 Use Node 22+ and the complete source checkout, or the installed Starforge package
 containing the `merchant-mcp` command. The merchant's existing OpenAPI document,
@@ -413,6 +438,8 @@ The same provider operates the original merchant accounting workspace, completed
 
 See [ACCOUNTING.md](ACCOUNTING.md) for the complete installed and subprocess workflow, asynchronous job status, original source selection, SHA-pinned file chunks and durable reopening. Existing release, Python, DuckDB, discovery and fleet operations use the same provider.
 
+[Bitwave Data Fusion](BITWAVE.md) extends that same accounting session with declared customer/table inputs, retained native delivery and capture, missing-row repair, concurrent-bookkeeping return review and complete original file handoff. Its thirteen tools share the original browser workspace, accountant engine and native client.
+
 ## Prepare merchant receiving accounts
 
 The same MCP operator can manage the original receiving workspace before or
@@ -432,3 +459,4 @@ tools, host configuration, replay, comparison, export and browser handoff.
 ## Retained data publication
 
 The same provider now operates original PostgreSQL, SQLite and MySQL publisher workspaces: approved saved query and typed candidate, native review/publication, recurring maintenance, retained buyer configuration and restart recovery. Use `init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json` or add the host `publisherConnection` to an existing merchant. [PUBLISHERS.md](PUBLISHERS.md) gives complete setup, agent operations, seller/customer handoff and shutdown.
+

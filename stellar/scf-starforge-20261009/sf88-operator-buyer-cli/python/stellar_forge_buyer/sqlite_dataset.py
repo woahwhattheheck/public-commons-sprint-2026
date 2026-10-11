@@ -191,9 +191,49 @@ class DatasetDatabase:
             raise StateError("DATASET_SQL_ROW_BINDING_INVALID")
         identity = {"schema": _FORMAT, "manifestSha256": manifest_sha, "sourceBindingSha256": binding,
                     "columns": list(zip(fields, mapped))}
+        return self._import_rows(manifest_bytes=manifest_bytes, identity=identity, fields=fields,
+            mapped=mapped, total=total, source=source, opener=delivery.file("dataset.jsonl").open,
+            details={"dataset": dataset, "sourceDirectory": native.get("sourceDirectory"),
+                     "source_pages": len(source_pages), "originalPaymentStatus": native.get("paymentStatus")})
+
+    def import_response(self, projection, *, allow_incomplete=False):
+        """Commit a complete analytical projection with its distinct source manifest.
+
+        This consumes retained response records only. It neither fabricates an
+        SF100 delivery nor changes the original source's payment/completion state.
+        """
+        from .response_tables import ResponseProjection, SCHEMA
+        if not isinstance(projection, ResponseProjection) or projection.manifest.get("schema") != SCHEMA:
+            raise StateError("DATASET_SQL_RESPONSE_PROJECTION_REQUIRED")
+        manifest = parse(projection.manifest_bytes)
+        if type(allow_incomplete) is not bool:
+            raise StateError("ANALYSIS_INCOMPLETE_ACKNOWLEDGEMENT_INVALID")
+        if manifest["completion"]["requiresIncompleteAcknowledgement"] and not allow_incomplete:
+            raise StateError("ANALYSIS_ACKNOWLEDGE_INCOMPLETE_RESPONSE")
+        manifest["completion"]["incompleteAcknowledged"] = allow_incomplete
+        manifest_bytes = _json(manifest).encode()
+        fields, source = manifest["projectedFields"], manifest["outputs"]["mapped.jsonl"]
+        identity = {"schema": _FORMAT, "manifestSha256": digest(manifest_bytes),
+                    "sourceBindingSha256": manifest["sourceBindingSha256"], "columns": list(zip(fields, fields))}
+        dataset = {"kind": "retained-response", "name": manifest["name"], "rows": manifest["rows"],
+                   "projectedFields": fields, "response": manifest["source"],
+                   "completion": manifest["completion"], "mapping": manifest["mapping"],
+                   "missingAsNull": manifest["missingAsNull"]}
+        from .result import FileDelivery
+        file = FileDelivery({"native": {"file": {**source, "path": str(projection.path)}}},
+                            projection.path, 128 * 1024 * 1024)
+        return self._import_rows(manifest_bytes=manifest_bytes, identity=identity, fields=fields,
+            mapped=fields, total=manifest["rows"], source=source, opener=file.open,
+            details={"dataset": dataset, "source_pages": None,
+                     "row_representation": "explicit-response-projection",
+                     "originalPaymentStatus": manifest["source"]["original"].get("paymentStatus")})
+
+    def _import_rows(self, *, manifest_bytes, identity, fields, mapped, total, source, opener, details):
+        """One original transaction and scalar/type policy for both native inputs."""
         version_id = digest(_json(identity).encode())
         table = "sf_dataset_rows_" + version_id
-        with self._connection() as db, delivery.file("dataset.jsonl").open() as stream:
+        quoted = [_identifier(column) for column in mapped]
+        with self._connection() as db, opener() as stream:
             db.execute("BEGIN IMMEDIATE")
             try:
                 existing = db.execute(f"SELECT version_id FROM {_META} WHERE version_id=?", (version_id,)).fetchone()
@@ -229,8 +269,7 @@ class DatasetDatabase:
                     raise StateError("DATASET_SQL_ROWS_CHANGED")
                 record = {**identity, "version_id": version_id, "table": table,
                           "created_at": datetime.now(timezone.utc).isoformat(), "row_count": count,
-                          "dataset": dataset, "sourceDirectory": native.get("sourceDirectory"),
-                          "source_pages": len(source_pages), "originalPaymentStatus": native.get("paymentStatus"),
+                          **details,
                           "jsonl": {key: source[key] for key in ("bytes", "sha256")},
                           "column_types": [{"source": field, "column": mapped[index], "json_types": sorted(observed[index])}
                                            for index, field in enumerate(fields)], "row_order_column": _ORDINAL}
@@ -329,40 +368,56 @@ class DatasetDatabase:
         analytical selection. The view snapshot and rows share one read
         transaction; immutable physical table names are also retained.
         """
-        if not isinstance(sql, str) or type(max_rows) is not int or not 1 <= max_rows <= 100_000 or type(max_result_bytes) is not int or not 1 <= max_result_bytes <= 256 * 1024 * 1024 or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= 300:
-            raise StateError("DATASET_SQL_QUERY_OPTIONS_INVALID")
-        permitted = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_RECURSIVE}
-        tables = set()
-        def authorize(action, first, second, database, trigger):
-            if action not in permitted or action == sqlite3.SQLITE_FUNCTION and (second or first or "").lower() in {"load_extension", "writefile", "readfile"}:
-                return sqlite3.SQLITE_DENY
-            if action == sqlite3.SQLITE_READ and first:
-                tables.add(first)
-            return sqlite3.SQLITE_OK
         with self._connection(readonly=True) as db:
             db.execute("BEGIN")
-            views = self._views(db)
-            if expected_views is not None and (not isinstance(expected_views, list) or views != expected_views):
-                raise StateError("DATASET_SQL_VIEWS_CHANGED")
-            deadline = time.monotonic() + timeout
-            db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, 16 * 1024 * 1024)
-            db.set_authorizer(authorize)
-            db.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
-            try:
-                cursor = db.execute(sql, parameters)
-                columns = tuple(column[0] for column in cursor.description or ())
+            return self._query(db, sql, parameters, max_rows=max_rows,
+                               max_result_bytes=max_result_bytes, timeout=timeout,
+                               expected_views=expected_views)
+
+    def _query(self, db, sql, parameters=(), *, max_rows=1000, max_result_bytes=16 * 1024 * 1024, timeout=10, expected_views=None):
+        """Use the original SQL reader inside an already opened transaction."""
+        if not db.in_transaction:
+            raise StateError("DATASET_SQL_TRANSACTION_REQUIRED")
+        if not isinstance(sql, str) or type(max_rows) is not int or not 1 <= max_rows <= 100_000 or type(max_result_bytes) is not int or not 1 <= max_result_bytes <= 256 * 1024 * 1024 or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= 300:
+            raise StateError("DATASET_SQL_QUERY_OPTIONS_INVALID")
+        from .query_stream import open_query, row_bytes
+        try:
+            with open_query(self, db, sql, parameters, timeout=timeout,
+                            expected_views=expected_views) as stream:
                 rows, size, truncated = [], 0, False
-                for row in cursor:
-                    values = tuple(row)
-                    row_bytes = sum(len(value.encode("utf-8")) if isinstance(value, str) else len(value) if isinstance(value, bytes) else 8 for value in values)
-                    if len(rows) == max_rows or size + row_bytes > max_result_bytes:
+                for values in stream:
+                    length = row_bytes(values)
+                    if len(rows) == max_rows or size + length > max_result_bytes:
                         truncated = True
                         break
                     rows.append(values)
-                    size += row_bytes
-                return QueryResult(columns, tuple(rows), truncated, tuple(views), tuple(sorted(tables)))
-            except sqlite3.Error as exc:
+                    size += length
+                return QueryResult(stream.columns, tuple(rows), truncated,
+                                   tuple(stream.views), stream.read_tables)
+        except StateError as exc:
+            # Keep the existing preview/report error contract.
+            if exc.code == "DATASET_SQL_QUERY_TIMEOUT":
                 raise StateError("DATASET_SQL_QUERY_FAILED") from exc
+            raise
+
+    @contextmanager
+    def stream_query(self, sql, parameters=(), *, timeout=300, expected_views=None, cancel=None):
+        """Yield every row from one reviewed snapshot without materializing it.
+
+        Use as a context manager so an early break closes the cursor and read
+        transaction. cancel is an optional callable such as Event.is_set.
+        """
+        from .query_stream import open_query
+        with self._connection(readonly=True) as db:
+            db.execute("BEGIN")
+            with open_query(self, db, sql, parameters, timeout=timeout,
+                            expected_views=expected_views, cancel=cancel) as stream:
+                yield stream
+
+    def export_query(self, sql, parameters=(), *, destination, **options):
+        """Write a complete private JSONL/CSV/SQLite result from the same reader."""
+        from .query_export import export_query
+        return export_query(self, sql, parameters, destination=destination, **options)
 
     def backup(self, destination):
         """Publish a consistent, create-only database copy that reopens normally."""

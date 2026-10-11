@@ -11,6 +11,26 @@ For the complete host operating workflow, see [RPC readiness and shared signer
 ownership](OPERATIONS.md): review and probe the configured RPC, start the same
 service with private account ownership, inspect `/readyz`, then drain and restart.
 
+## Operate from the local browser
+
+The [native facilitator operator workspace](workspace/README.md) brings the original
+configuration review, immutable named profile files, SDK startup, account capacity,
+RPC observations and drain/reopen workflow into one local screen. It uses the same
+native configuration and shared signer ownership as the CLI. The saved file can also
+be selected in the existing SF66 merchant/customer setup.
+
+```sh
+node stellar/scf-starforge-20261009/native-facilitator/workspace/server.mjs \
+  --directory /private/facilitator-operator \
+  --ownership-directory /private/stellar-signer-ownership \
+  --create --port 0
+```
+
+Open the complete local URL printed by the launcher. The host selects the shared
+ownership directory and supplies its existing key environment; the form receives
+public account references and policy. Saved profiles reopen with the backend stopped.
+Use **Drain and stop** before changing the active profile or listener.
+
 ## Install and configure
 
 Use Node 22+ and install these pinned packages from the repository root so the
@@ -213,3 +233,26 @@ Native API references: [x402 facilitator](https://github.com/x402-foundation/x40
 [exact Stellar facilitator](https://github.com/x402-foundation/x402/blob/main/typescript/packages/mechanisms/stellar/src/exact/facilitator/scheme.ts),
 and [Stellar signer](https://github.com/x402-foundation/x402/blob/main/typescript/packages/mechanisms/stellar/src/signer.ts).
 
+
+## Choose the merchant payment timing
+
+The operator profile now has an optional `payments.paymentFlows` allowlist. Omitting it retains the existing authorization profile. Select either native timing or enable both explicitly:
+
+```json
+"payments": {
+  "assets": ["YOUR_EXISTING_ASSET_CONTRACT"],
+  "recipients": ["YOUR_EXISTING_MERCHANT_ADDRESS"],
+  "maxAtomic": "10000",
+  "paymentFlows": ["authorization", "upfront"]
+}
+```
+
+Keep the original asset, recipient and amount for the deployment. The example placeholders must be replaced by the operator's existing configured addresses. The list must contain one or two distinct values from `authorization` and `upfront`; an empty list, `null`, duplicates and other values are rejected during offline review.
+
+With authorization, the native merchant verifies the buyer authorization, prepares the complete permitted result, then settles and releases it. With upfront, the native merchant settles before starting fulfillment, so it can deliver a finite stream as it arrives. An interrupted upfront response can retain a successful payment and partial output; the buyer's existing payment and output views show those separately. The choice changes when the same original SDK transfer is settled. Native payload validation, amount, recipient, network, signer safety, fees and receipts remain in the SDK.
+
+The existing `review` command exposes `payments.paymentFlows`. Current status exposes `paymentFlows`. The existing `/supported` response preserves its original SDK kinds, sponsored-fee setting, signer addresses and extensions and adds `kinds[*].extra.paymentFlows` for this backend's supported Stellar kind. That array is advisory Starforge operator policy; the native quote still carries one `extra.paymentFlow`. Clients and external merchants should choose a declared timing. The runtime enforces the allowlist before SDK work is admitted.
+
+The in-process merchant refuses an advertised quote outside this profile at startup with `SELLER_FLOW_OUTSIDE_FACILITATOR_POLICY`. The original SF66 customer setup rejects the same mismatch during offline review with `COMMERCE_SETUP_PAYMENT_FLOW_OUTSIDE_FACILITATOR`, before a workspace or listener is created. All advertised options must fit the backend, including options the current customer did not select. An upfront customer selection must also explicitly select `paymentFlow: "upfront"` in the existing setup purchase; the original signer pins preserve that choice.
+
+To change a running profile, complete the existing drain and original payment reconciliation, edit the trusted configuration, review it, and reopen the same deployment through its normal startup. Use the operating procedure in [OPERATIONS.md](OPERATIONS.md#change-the-allowed-payment-timing).

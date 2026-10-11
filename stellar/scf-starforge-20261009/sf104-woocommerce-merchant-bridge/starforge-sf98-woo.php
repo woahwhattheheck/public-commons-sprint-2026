@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Starforge SF98 WooCommerce Merchant Bridge
  * Description: Native Stellar x402 checkout, order-bound buyer handoff and authenticated SF98 settlement notices with explicit merchant release.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
  * License: MIT
@@ -180,7 +180,7 @@ final class Starforge_SF98_Woo {
     }
 
     static function menu() {
-        add_submenu_page('woocommerce', 'Stellar x402 Orders', 'Stellar x402 Orders',
+        add_submenu_page('woocommerce', 'Stellar merchant operations', 'Stellar merchant operations',
             'manage_woocommerce', 'sf98-woocommerce', [__CLASS__, 'page']);
     }
 
@@ -244,61 +244,101 @@ final class Starforge_SF98_Woo {
     }
 
     static function release() {
-        global $wpdb;
         self::admin_guard('sf98_release_order');
         $id = sanitize_text_field(wp_unslash($_POST['event_id'] ?? ''));
         $tx = strtolower(sanitize_text_field(wp_unslash($_POST['transaction_hash'] ?? '')));
         if (empty($_POST['independently_verified']) || !preg_match('/^[a-f0-9]{64}$/D', $id) ||
             !preg_match('/^[a-f0-9]{64}$/D', $tx)) self::admin_redirect('review_rejected');
+        // Redirect after the shared controller releases the original order lock.
+        self::admin_redirect(self::release_order($id, $tx));
+    }
+
+    /** Original release/recovery controller shared by the manager console and
+     * native review API. Both optional callbacks run under the same order lock. */
+    static function release_order($id, $tx, $guard = null, $after_release = null) {
+        global $wpdb;
+        if (!is_string($id) || !preg_match('/^[a-f0-9]{64}$/D', $id) ||
+            !is_string($tx) || !preg_match('/^[a-f0-9]{64}$/D', $tx)) return 'review_rejected';
         $table = self::table();
+        $selected = $wpdb->get_row($wpdb->prepare("SELECT order_id FROM {$table} WHERE event_id=%s", $id));
+        if ($wpdb->last_error) return 'journal_unavailable';
+        if (!$selected) return 'missing_order';
+        try {
+            return Starforge_SF104_Checkout::with_order_lock((int) $selected->order_id,
+                static function () use ($table, $selected, $id, $tx, $guard, $after_release) {
+                    $result = self::release_locked($table, $selected, $id, $tx, $guard);
+                    if ($after_release && in_array($result, ['released', 'already_released', 'recovered_release'], true)) {
+                        return $after_release($result, (int) $selected->order_id);
+                    }
+                    return $result;
+                });
+        } catch (Throwable $e) { return 'review_busy_or_unavailable'; }
+    }
+
+    private static function release_locked($table, $selected, $id, $tx, $guard) {
+        global $wpdb;
         $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE event_id=%s", $id));
+        if ($wpdb->last_error) return 'journal_unavailable';
         $order = $row ? wc_get_order((int) $row->order_id) : null;
-        if (!$row || !$order) self::admin_redirect('missing_order');
-        if ($row->state === 'RELEASED') self::admin_redirect($row->tx_hash === $tx ? 'already_released' : 'transaction_conflict');
-        // Crash recovery: if Woo already completed this EXACT tx, finalize journal, never pay twice.
+        if (!$row || !$order || (string) $row->order_id !== (string) $selected->order_id) return 'missing_order';
+        if ($guard) {
+            $refusal = $guard($row, $order);
+            if ($refusal !== null) return $refusal;
+        }
+        $woo_tx = strtolower((string) $order->get_transaction_id());
+        if ($row->state === 'RELEASED') {
+            if ($row->tx_hash !== $tx) return 'transaction_conflict';
+            return $order->is_paid() && $woo_tx === $tx ? 'already_released' : 'released_state_requires_reconciliation';
+        }
         if ($row->state === 'REVIEWING') {
-            if (strtolower((string) $order->get_transaction_id()) === $tx && $order->is_paid()) {
-                $wpdb->update($table, ['state'=>'RELEASED','reviewed_at'=>current_time('mysql', true)],
-                    ['event_id'=>$id,'state'=>'REVIEWING'], ['%s','%s'], ['%s','%s']);
-                self::admin_redirect('recovered_release');
+            // Every original identity must agree; a later external Woo
+            // payment cannot complete an earlier SF98 transaction.
+            if ($row->tx_hash !== $tx) return 'transaction_conflict';
+            if ($woo_tx === $tx && $order->is_paid()) {
+                $saved = $wpdb->update($table, ['state'=>'RELEASED','reviewed_at'=>current_time('mysql', true)],
+                    ['event_id'=>$id,'state'=>'REVIEWING','tx_hash'=>$tx], ['%s','%s'], ['%s','%s','%s']);
+                return $saved === 1 ? 'recovered_release' : 'released_journal_needs_recovery';
             }
-            // The previous request may have died before payment_complete. A stale,
-            // still-unpaid lock can be cleared only with the same operator tx hash.
-            $started = strtotime((string) $row->review_started_at);
-            if ($row->tx_hash === $tx && $started && time() - $started > 120 &&
-                in_array($order->get_status(), ['pending','on-hold'], true) &&
-                !$order->get_transaction_id()) {
+            if ($order->is_paid() || $woo_tx !== '') return 'review_needs_recovery';
+            try {
+                if ($order->get_payment_method() === Starforge_SF104_Checkout::ID || $order->get_meta(Starforge_SF104_Checkout::SNAPSHOT_META, true)) Starforge_SF104_Checkout::snapshot($order);
+            } catch (Throwable $e) { return 'order_binding_changed'; }
+            $started = strtotime((string) $row->review_started_at . ' UTC');
+            if ($started && time() - $started > 120 && in_array($order->get_status(), ['pending','on-hold'], true)) {
                 $reset = $wpdb->update($table,
                     ['state'=>'RECEIVED','tx_hash'=>null,'review_started_at'=>null],
                     ['event_id'=>$id,'state'=>'REVIEWING','tx_hash'=>$tx],
                     ['%s','%s','%s'], ['%s','%s','%s']);
-                self::admin_redirect($reset === 1 ? 'stale_review_reset_retry' : 'review_race');
+                return $reset === 1 ? 'stale_review_reset_retry' : 'review_race';
             }
-            self::admin_redirect('review_in_progress');
+            return 'review_in_progress';
         }
-        if ($row->state !== 'RECEIVED' || !in_array($order->get_status(), ['pending','on-hold'], true))
-            self::admin_redirect('order_not_releasable');
-        // Compare-and-swap to stop concurrent admin requests invoking payment_complete twice.
+        if ($row->state !== 'RECEIVED' || !in_array($order->get_status(), ['pending','on-hold'], true) ||
+            $order->is_paid() || $woo_tx !== '') return 'order_not_releasable';
+        if ($row->tx_hash !== null && $row->tx_hash !== '') return 'transaction_conflict';
+        try {
+            if ($order->get_payment_method() === Starforge_SF104_Checkout::ID || $order->get_meta(Starforge_SF104_Checkout::SNAPSHOT_META, true)) Starforge_SF104_Checkout::snapshot($order);
+        } catch (Throwable $e) { return 'order_binding_changed'; }
         $won = $wpdb->update($table,
             ['state'=>'REVIEWING', 'tx_hash'=>$tx, 'reviewed_by'=>get_current_user_id(),
              'review_started_at'=>current_time('mysql', true)],
             ['event_id'=>$id, 'state'=>'RECEIVED'], ['%s','%s','%d','%s'], ['%s','%s']);
-        if ($won !== 1) self::admin_redirect('review_race');
+        if ($won !== 1) return 'review_race';
         try {
             $order->payment_complete($tx);
             $order->save();
         } catch (Throwable $e) {
-            // Retain REVIEWING for reconciliation rather than silently allow a second fulfillment.
-            self::admin_redirect('review_needs_recovery');
+            return 'review_needs_recovery';
         }
-        if (!$order->is_paid() || strtolower((string) $order->get_transaction_id()) !== $tx)
-            self::admin_redirect('review_needs_recovery');
+        $order = wc_get_order((int) $row->order_id);
+        if (!$order || !$order->is_paid() || strtolower((string) $order->get_transaction_id()) !== $tx) return 'review_needs_recovery';
         $saved = $wpdb->update($table, ['state'=>'RELEASED','reviewed_at'=>current_time('mysql', true)],
-            ['event_id'=>$id,'state'=>'REVIEWING'], ['%s','%s'], ['%s','%s']);
-        self::admin_redirect($saved === 1 ? 'released' : 'released_journal_needs_recovery');
+            ['event_id'=>$id,'state'=>'REVIEWING','tx_hash'=>$tx], ['%s','%s'], ['%s','%s','%s']);
+        return $saved === 1 ? 'released' : 'released_journal_needs_recovery';
     }
 
     static function page() {
+        if (class_exists('Starforge_SF104_Merchant_Console')) { Starforge_SF104_Merchant_Console::page(); return; }
         global $wpdb;
         if (!current_user_can('manage_woocommerce')) return;
         $table = self::table();
@@ -359,3 +399,6 @@ register_activation_hook(__FILE__, ['Starforge_SF98_Woo', 'activate']);
 Starforge_SF98_Woo::boot();
 // Optional native checkout uses the same binding, receiver and merchant release.
 require_once __DIR__ . '/checkout-gateway.php';
+
+require_once __DIR__ . '/merchant-console.php';
+require_once __DIR__ . '/merchant-operator.php';

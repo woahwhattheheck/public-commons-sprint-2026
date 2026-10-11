@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 import { openCommerce, completeCommerceShutdown, commerceErrorCode } from './commerce.mjs';
+import { readCommerceRecoveryConfig } from './commerce-recovery.mjs';
+import { createCommerceRecoveryController } from './commerce-recovery-controller.mjs';
 
 const HOST = '127.0.0.1';
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
@@ -101,9 +103,16 @@ async function download(delivery, res) {
 }
 
 /** Present the original commerce session; the original inbox owns durable state. */
-export async function startCommerceConsole(session, { port = 8426 } = {}) {
-  for (const method of ['status', 'review', 'execute', 'cancel', 'recover', 'close'])
-    if (typeof session?.[method] !== 'function') throw new TypeError('Original commerce session must provide ' + method + '().');
+export async function startCommerceConsole(session, { port = 8426, recoveryProfile,
+  environment = process.env, reopen, finalityNode = process.execPath } = {}) {
+  function validateSession(value) {
+    for (const method of ['status', 'review', 'execute', 'cancel', 'recover', 'close'])
+      if (typeof value?.[method] !== 'function') throw new TypeError('Original commerce session must provide ' + method + '().');
+  }
+  if (session) validateSession(session);
+  else if (!recoveryProfile) throw new TypeError('A retained recovery configuration is required without a session.');
+  if (session && recoveryProfile && (await session.status()).directory !== recoveryProfile.directory)
+    throw problem('Recovery must use this original commerce session directory.', 409);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Console port must be 0–65535.');
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map(await Promise.all([
@@ -114,6 +123,8 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
     ['/request.css', 'request.css', 'text/css; charset=utf-8'],
     ['/stream.mjs', 'stream.mjs', 'text/javascript; charset=utf-8'],
     ['/stream.css', 'stream.css', 'text/css; charset=utf-8'],
+    ['/recovery.mjs', 'recovery.mjs', 'text/javascript; charset=utf-8'],
+    ['/recovery.css', 'recovery.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, {
     bytes: await readFile(new URL('./commerce-ui/' + file, import.meta.url)), type,
   }])));
@@ -122,6 +133,17 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
   // Terminal results, replay prevention and files are always read from SF88.
   const reviews = new Map(), dispatches = new Map(), retrievals = new Map(), rpcActions = new Map();
   let work = null, action = null, stopping = false, stopPromise, shutdown, shutdownError, closing;
+  let recoveryController;
+  const offlineSnapshot = () => ({
+    session: { id: 'Retained commerce recovery', state: stopping ? 'STOPPING' : 'OFFLINE',
+      directory: recoveryProfile.directory, shutdown, shutdownError },
+    seller: { publicOrigin: null, listener: null, mode: 'OFFLINE', routes: [] },
+    facilitator: { mode: 'NOT_CONFIGURED' }, operations: [], operation: null,
+    review: null, attempt: null, delivery: { available: false }, stream: null,
+    rpcRecovery: null, rpcAction: null, purchase: null, retrieval: null, activeIntent: null,
+    controls: {}, recoveryEnabled: true, recoveryBusy: recoveryController?.busy ?? false,
+    updatedAt: new Date().toISOString(),
+  });
   const fingerprint = job => createHash('sha256').update(JSON.stringify([
     job.configSha256, job.bodySha256, job.bodyBytes, job.operation, job.merchant,
   ])).digest('hex');
@@ -132,10 +154,12 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
     return job;
   }
   async function current(intent) {
+    if (!session) throw problem('Restore and reopen the original commerce session first.', 409);
     const original = await session.status();
     return { original, job: choose(original, intent) };
   }
   async function snapshot(intent) {
+    if (!session) return offlineSnapshot();
     const original = await session.status();
     const job = intent ? choose(original, intent) : original.buyers[0];
     const id = job?.operation?.intentId;
@@ -151,7 +175,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
       exitCode: local?.exitCode,
       recovery: job.recovery ?? null,
     } : null;
-    const runningSession = original.state === 'RUNNING' && !stopping;
+    const runningSession = original.state === 'RUNNING' && !stopping && !recoveryController?.busy;
     return {
       session: { id: original.operations.traffic.sessionId, state: stopping ? 'STOPPING' : original.state,
         startedAt: original.operations.traffic.startedAt, directory: original.directory,
@@ -206,10 +230,12 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         canResetTransfer: Boolean(job?.paidFile?.transfer?.canReset) && typeof session.resetTransfer === 'function' &&
           runningSession && !action && !retrievals.get(id)?.running,
         canStop: runningSession },
+      recoveryEnabled: Boolean(recoveryController), recoveryBusy: recoveryController?.busy ?? false,
       updatedAt: new Date().toISOString(),
     };
   }
   async function stopSession() {
+    if (!session) return shutdown ?? { state: 'STOPPED', drained: true };
     if (stopPromise) return stopPromise;
     stopping = true; reviews.clear();
     stopPromise = (async () => {
@@ -223,6 +249,33 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
     })();
     return stopPromise;
   }
+  if (recoveryProfile) recoveryController = createCommerceRecoveryController(recoveryProfile, {
+    environment,
+    state: async () => session ? (await session.status()).state : 'OFFLINE',
+    pause: async () => {
+      if (!session) return;
+      await stopSession();
+      // Also wait for a host-provided native factory's accepted work. Source
+      // capture begins only after every original owner has become quiescent.
+      const completed = await session.waitForIdle?.();
+      if (completed) shutdown = { ...shutdown, nativeCompletion: completed };
+      session = null;
+    },
+    reopen: async () => {
+      if (closing) throw problem('This commerce console is closing.', 409);
+      const opened = await (reopen ? reopen(recoveryProfile.directory) :
+        openCommerce(recoveryProfile.directory, { environment, finalityNode }));
+      try {
+        validateSession(opened);
+        if ((await opened.status()).directory !== recoveryProfile.directory)
+          throw problem('Reopening must retain the original commerce directory.', 409);
+      } catch (error) {
+        await completeCommerceShutdown(opened, opened.close()).catch(() => {}); throw error;
+      }
+      session = opened; stopPromise = null; shutdown = null; shutdownError = null; stopping = false;
+      reviews.clear(); dispatches.clear(); retrievals.clear(); rpcActions.clear();
+    },
+  });
   const server = createServer(async (req, res) => {
     const reply = (code, type, value, extra = {}) => {
       if (res.destroyed || res.headersSent) return;
@@ -246,6 +299,19 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
       const supplied = Buffer.from(req.headers['x-commerce-token'] ?? '');
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes))
         throw problem('Reopen the complete operator URL printed by the commerce console command.', 401);
+      if (req.method === 'GET' && target.pathname === '/api/recovery' && !target.search)
+        return send(200, recoveryController ? await recoveryController.status() : { enabled: false });
+      if (target.pathname.startsWith('/api/recovery/')) {
+        if (!recoveryController) throw problem('Start this console with a recovery configuration.', 409);
+        const command = target.pathname.slice('/api/recovery/'.length);
+        if (target.search || req.method !== 'POST' ||
+            !['review', 'capture', 'verify', 'restore', 'reopen', 'cancel'].includes(command))
+          throw problem('Unknown commerce recovery action.', 404);
+        if (!origins.has(req.headers.origin)) throw problem('Same-origin operator action required.', 403);
+        if (action || closing) throw problem('Wait for the current operator action.', 409);
+        const id = recoveryController.dispatch(command, await input(req));
+        return send(202, { jobId: id });
+      }
       if (req.method === 'GET' && ['/api/stream-records', '/api/stream-answer', '/api/stream-file'].includes(target.pathname)) {
         const fields = target.pathname === '/api/stream-records' ? ['intent','partial','offset','limit','query'] : ['intent','partial'];
         if ([...target.searchParams.keys()].some(key => !fields.includes(key) || target.searchParams.getAll(key).length !== 1) ||
@@ -306,6 +372,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
           ['intent', 'transaction', 'expectedRequestSha256', 'expectedAttemptId', 'expectedConfigSha256'] :
         ['/api/retrieve', '/api/reset-transfer'].includes(target.pathname) ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
       if (Object.keys(value).some(key => !allowed.includes(key))) throw problem('Unknown operator action field.');
+      if (!session || recoveryController?.busy) throw problem('Wait for state recovery, then reopen this commerce session.', 409);
       if (target.pathname === '/api/stop') {
         void stopSession().catch(() => {});
         return send(202, await snapshot(value.intent));
@@ -412,42 +479,54 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
   hosts = new Set([HOST + ':' + assigned, 'localhost:' + assigned]);
   origins = new Set([...hosts].map(host => 'http://' + host)); url = 'http://' + HOST + ':' + assigned;
   const close = () => closing ??= (async () => {
-    try { return await stopSession(); }
+    try { await recoveryController?.close(); return await stopSession(); }
     finally {
       await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); });
     }
   })();
-  return { server, url, token, operatorUrl: url + '/#' + token, close };
+  return { server, url, token, operatorUrl: url + '/#' + token, close,
+    recovery: recoveryController ?? null };
 }
 
 const HELP = `StellarForge commerce browser workspace
 
   node commerce-console.mjs start --directory /private/merchant-session [--port 8426]
                             [--finality-node /absolute/trusted-node]
+                            [--recovery-config /private/host/recovery.json]
+  node commerce-console.mjs recover --recovery-config /private/host/recovery.json [--port 8426]
 
 Initialize the session with commerce-cli.mjs init first.
 Open the complete local operator URL printed here. Review and select requests
 in the browser; payment approval remains in this terminal.
 Stop session drains this process's seller and buyer. Saved inbox results remain.
-SIGINT/SIGTERM closes the browser server and its owned session.
+Recovery pauses this original session, checkpoints its operators and encrypts
+its retained state. The recover command starts with the source state absent.
+See COMMERCE_RECOVERY.md for private configuration and original-path restore.
+SIGINT/SIGTERM finishes any accepted recovery job, then closes the browser server
+and its current owned session.
 `;
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && ['help', '--help'].includes(args[0])) { process.stdout.write(HELP); return; }
   const [command, ...rest] = args, opts = {};
-  if (command !== 'start' || rest.length % 2) throw new Error(HELP);
+  if (!['start', 'recover'].includes(command) || rest.length % 2) throw new Error(HELP);
   for (let i = 0; i < rest.length; i += 2) {
-    if (!['--directory', '--port', '--finality-node'].includes(rest[i]) || Object.hasOwn(opts, rest[i]) || !rest[i + 1]) throw new Error(HELP);
+    if (!['--directory', '--port', '--finality-node', '--recovery-config'].includes(rest[i]) || Object.hasOwn(opts, rest[i]) || !rest[i + 1]) throw new Error(HELP);
     opts[rest[i]] = rest[i + 1];
   }
-  if (!opts['--directory'] || opts['--port'] !== undefined && !/^[0-9]{1,5}$/.test(opts['--port'])) throw new Error(HELP);
+  if (command === 'start' && !opts['--directory'] || command === 'recover' && !opts['--recovery-config'] ||
+      opts['--port'] !== undefined && !/^[0-9]{1,5}$/.test(opts['--port'])) throw new Error(HELP);
   const port = opts['--port'] === undefined ? 8426 : Number(opts['--port']);
   if (port > 65535) throw new Error(HELP);
-  const session = await openCommerce(resolve(opts['--directory']),
-    { finalityNode: opts['--finality-node'] });
+  const recoveryProfile = opts['--recovery-config'] ?
+    await readCommerceRecoveryConfig(resolve(opts['--recovery-config'])) : undefined;
+  if (opts['--directory'] && recoveryProfile && resolve(opts['--directory']) !== recoveryProfile.directory)
+    throw problem('The session directory must match the retained recovery configuration.', 409);
+  const session = command === 'start' ? await openCommerce(resolve(opts['--directory']),
+    { finalityNode: opts['--finality-node'] }) : null;
   let consoleSession, ending;
   const stop = () => ending ??= (async () => {
-    const result = await completeCommerceShutdown(session,
-      consoleSession ? consoleSession.close() : session.close());
+    const result = consoleSession ? await consoleSession.close() : session ?
+      await completeCommerceShutdown(session, session.close()) : { state: 'STOPPED', drained: true };
     if (result?.drained === false) { process.exitCode = 2; setTimeout(() => process.exit(2), 20); }
     return result;
   })();
@@ -456,7 +535,8 @@ export async function main(args = process.argv.slice(2)) {
   const interrupt = () => { resolveSignal(); void stop().catch(() => {}); };
   process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
   try {
-    consoleSession = await startCommerceConsole(session, { port });
+    consoleSession = await startCommerceConsole(session, { port, recoveryProfile,
+      finalityNode: opts['--finality-node'] });
     process.stdout.write('Commerce workspace: ' + consoleSession.operatorUrl + '\n' +
       'Payment approval remains in this terminal. Keep it open.\n');
     await signalled;

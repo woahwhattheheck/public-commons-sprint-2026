@@ -1,5 +1,11 @@
 # Native buyer for Node applications
 
+The complete [acquisition workflow](ACQUISITIONS.md) joins private merchant
+requests, explicit receiver review, original operator preparation, immutable
+runbooks, native execution/accounting, verified downloads and recovery of every
+original operator journal. Use `AcquisitionWorkspace` directly or
+`buyer.acquisitions(...)`; Node and Python share the same original bridge.
+
 This package connects an application to the **existing SF88 operator buyer**. It
 also fits the original SF30 generated client's `createSellerClient({ buyer })`
 interface. It does not implement a signer, approve payments, decide settlement,
@@ -414,6 +420,14 @@ Private native logs are never embedded in application error messages. Configure
 `environment` explicitly when the application should pass a reduced environment.
 The default preserves the caller's original signer/operator environment.
 
+`BuyerError` and its subclasses format as an error code, stack, and the public
+`exitCode` and `destinationPublished` fields when available. `JSON.stringify`
+uses the same public fields through `error.toJSON()`. Recovery objects, saved
+results, paths and other private details remain directly accessible through
+`error.operation`, `error.dataset`, `error.acquisition` and their existing
+properties, but are non-enumerable and excluded from default diagnostic output.
+Use those handles to reopen the existing operation after handling the error.
+
 ## Data consumption and integrity
 
 A `BuyerResult` preserves the native summary, exit status, recovery marker and
@@ -444,6 +458,22 @@ attempt markers must not be interchanged. Filesystem durability assumes a local
 filesystem supporting atomic hard links and fsync; network/distributed filesystems
 require their own validation.
 
+## Use an existing native operator workspace
+
+`buyer.fromWorkspace(directory, { configuration, intentId, responseFile, requestTimeoutMs })`
+adopts the original SF88 workspace directly. Its operator, private evidence, signer,
+transport and payment limits remain bound by the original inbox checks; workspace
+keys are loaded only inside the original native child. An optional authored
+configuration selects another explicit request under that same operator and budget.
+The default Buyer profile does not replace workspace authority.
+
+Preparation and review remain offline. Execute checks current native setup and the
+controlling terminal before recording an attempt, then uses the original workspace
+execution and manifest-selected evidence RPC. Recovery only reads the retained
+result, including when the workspace is temporarily absent. For full setup, request
+adoption, inbox/accounting handoff and original recovery, see [WORKSPACE.md](WORKSPACE.md)
+and [examples/workspace_customer.mjs](examples/workspace_customer.mjs).
+
 ## Whole customer workspace backup and restore
 
 `buyer.workspaceRecovery()` includes the existing Node application state alongside
@@ -456,3 +486,7 @@ existing SF88/SF101/SF36 implementation through the same native Runtime.
 See [the complete customer recovery workflow](RECOVERY.md) for passphrase-variable
 selection, quiescing writers, expected-record binding, typed interruption results
 and reopening the same Node and Python applications without repeating purchases.
+
+## LangGraph and LangChain applications
+
+[FRAMEWORKS.md](FRAMEWORKS.md) provides the optional persistent graph, standard LangChain tools, TypeScript customer program, and executable operator CLI. Select one existing `buyer.operation(intentId)` and retain its original state. Graph checkpoints and ToolMessages refer to that same operation, native attempt, and verified response. The base package remains dependency-free; install the optional frameworks only for their corresponding subpath imports.

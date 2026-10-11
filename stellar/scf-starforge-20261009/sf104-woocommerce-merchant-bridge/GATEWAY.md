@@ -11,6 +11,10 @@ The gateway is disabled by default. It supports the classic checkout and the
 Checkout Block through WooCommerce's documented gateway and payment-method
 registration APIs. It supplies no browser wallet and makes no payment in PHP.
 
+For independent chain review and the final selected-order release, use the
+[native merchant operator](NATIVE_REVIEW.md). It composes the original SF86
+verifier with this same gateway, accepted notice and Woo completion controller.
+
 ## Install and enable
 
 Keep these files together in the installed `starforge-sf98-woo` plugin folder:
@@ -20,6 +24,16 @@ Keep these files together in the installed `starforge-sf98-woo` plugin folder:
 - `checkout-gateway.php`: product mapping, gateway registration, frozen order
   handoff and customer download.
 - `checkout-admission.php`: signed live order admission and merchant recovery.
+- `merchant-console.php`, `merchant-console.js` and `merchant-console.css`:
+  the joined native order, attempt, notice and review workspace.
+- `OPERATIONS.md`: the merchant's operating and recovery guide.
+- `merchant-operator.php`: authenticated native review and selected-order release.
+- `NATIVE_REVIEW.md`: the complete retained chain review and operator CLI guide.
+
+Keep all nine files when upgrading an existing installation; the original
+plugin loads the console PHP and its matching browser assets. The maintained
+[Site setup tool](../../../stellar-forge/developer-site/dist/woo.html) copies
+the complete plugin from its selected toolkit source.
 
 Activate the plugin normally. Activation creates the original event table and
 the new `sf104_checkout_attempts` table using the site's table prefix. An
@@ -316,11 +330,15 @@ node stellar/scf-starforge-20261009/sf98-merchant-delivery/worker.mjs run \
 Include the actual WordPress subdirectory when applicable. The original native
 seller records success into that outbox and the original sender authenticates
 its selected-recipient notice. WordPress accepts it into the existing merchant
-review queue. The store verifies the original Stellar settlement, then uses
-the existing **Release order** action and its original transaction-hash
+review queue. Open **WooCommerce → Stellar merchant operations**, select the original order,
+and inspect its frozen terms, current Woo state and accepted notice. The
+store verifies the original Stellar settlement, then uses the existing
+**Release order** action and its original transaction-hash
 recovery. That original action calls WooCommerce `payment_complete`, allowing
 the store's configured download and fulfillment lifecycle to run. Neither
-checkout nor admission does that release.
+checkout nor admission does that release. The [merchant operating guide](OPERATIONS.md)
+covers paged queues, private order notes, selected-order handoffs, changed-order
+review and the original locked transaction recovery.
 
 This source integration does not assert a deployed store, a funded network
 transaction, a received sale or a customer contract. It provides the complete

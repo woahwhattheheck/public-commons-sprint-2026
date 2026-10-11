@@ -1,0 +1,369 @@
+{
+  "schema": "getconnected.coverage-snapshot.v1",
+  "domain_id": "42",
+  "captured_at": "2026-10-11T19:40:00Z",
+  "needs": [
+    {
+      "id": "6001",
+      "domain_id": "42",
+      "need_title": "Community service coverage",
+      "need_status": "active",
+      "shifts": [
+        {
+          "id": "7001",
+          "start": "2026-10-12T09:00:00-06:00",
+          "end": "2026-10-12T12:00:00-06:00",
+          "duration": "3",
+          "slots": "4"
+        },
+        {
+          "id": "7002",
+          "start": "2026-10-12T10:00:00-06:00",
+          "end": "2026-10-12T11:00:00-06:00",
+          "duration": "1",
+          "slots": "1"
+        },
+        {
+          "id": "7003",
+          "start": "2026-10-13T09:00:00-06:00",
+          "end": "2026-10-13T11:00:00-06:00",
+          "duration": "2",
+          "slots": "1"
+        }
+      ]
+    }
+  ],
+  "responses": [
+    {
+      "id": "9001",
+      "domain_id": "42",
+      "shift": {
+        "id": "7001"
+      },
+      "need": {
+        "id": "6001",
+        "domain_id": "42"
+      },
+      "user": {
+        "id": "1001",
+        "domain_id": "42"
+      },
+      "team": {
+        "id": "8001"
+      },
+      "response_status": "Active",
+      "response_date_added": "2026-10-10T12:00:00Z",
+      "answers": [
+        {
+          "type": "text",
+          "key": "role_interest",
+          "area": "response",
+          "question": "Coordinator role preference",
+          "answer": "Welcome"
+        }
+      ]
+    },
+    {
+      "id": "9002",
+      "domain_id": "42",
+      "shift": {
+        "id": "7002"
+      },
+      "need": {
+        "id": "6001",
+        "domain_id": "42"
+      },
+      "user": {
+        "id": "1004",
+        "domain_id": "42"
+      },
+      "team": null,
+      "response_status": "Active",
+      "response_date_added": "2026-10-10T12:00:00Z",
+      "answers": [
+        {
+          "type": "text",
+          "key": "role_interest",
+          "area": "response",
+          "question": "Coordinator role preference",
+          "answer": "Welcome"
+        }
+      ]
+    },
+    {
+      "id": "9003",
+      "domain_id": "42",
+      "shift": {
+        "id": "7003"
+      },
+      "need": {
+        "id": "6001",
+        "domain_id": "42"
+      },
+      "user": {
+        "id": "1005",
+        "domain_id": "42"
+      },
+      "team": null,
+      "response_status": "Active",
+      "response_date_added": "2026-10-10T12:00:00Z",
+      "answers": [
+        {
+          "type": "text",
+          "key": "role_interest",
+          "area": "response",
+          "question": "Coordinator role preference",
+          "answer": "Welcome"
+        }
+      ]
+    },
+    {
+      "id": "9004",
+      "domain_id": "42",
+      "shift": {
+        "id": "7001"
+      },
+      "need": {
+        "id": "6001",
+        "domain_id": "42"
+      },
+      "user": {
+        "id": "1003",
+        "domain_id": "42"
+      },
+      "team": null,
+      "response_status": "Cancelled",
+      "response_date_added": "2026-10-10T12:00:00Z",
+      "answers": [
+        {
+          "type": "text",
+          "key": "role_interest",
+          "area": "response",
+          "question": "Coordinator role preference",
+          "answer": "Welcome"
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "1001",
+      "domain_id": "42",
+      "user_fname": "Morgan",
+      "user_lname": "Lee",
+      "user_status": "active"
+    },
+    {
+      "id": "1002",
+      "domain_id": "42",
+      "user_fname": "Avery",
+      "user_lname": "Chen",
+      "user_status": "active"
+    },
+    {
+      "id": "1003",
+      "domain_id": "42",
+      "user_fname": "Blake",
+      "user_lname": "Rivera",
+      "user_status": "active"
+    },
+    {
+      "id": "1004",
+      "domain_id": "42",
+      "user_fname": "Casey",
+      "user_lname": "Shah",
+      "user_status": "active"
+    },
+    {
+      "id": "1005",
+      "domain_id": "42",
+      "user_fname": "Devon",
+      "user_lname": "Patel",
+      "user_status": "active"
+    },
+    {
+      "id": "1006",
+      "domain_id": "42",
+      "user_fname": "Ellis",
+      "user_lname": "Kim",
+      "user_status": "inactive"
+    },
+    {
+      "id": "1007",
+      "domain_id": "42",
+      "user_fname": "Frankie",
+      "user_lname": "Stone",
+      "user_status": "active"
+    },
+    {
+      "id": "1008",
+      "domain_id": "42",
+      "user_fname": "Gray",
+      "user_lname": "Reed",
+      "user_status": "active"
+    },
+    {
+      "id": "1009",
+      "domain_id": "42",
+      "user_fname": "Harper",
+      "user_lname": "Quinn",
+      "user_status": "active"
+    },
+    {
+      "id": "1010",
+      "domain_id": "42",
+      "user_fname": "Jordan",
+      "user_lname": "Cruz",
+      "user_status": "active"
+    }
+  ],
+  "qualifications": [
+    {
+      "user_id": "1001",
+      "data": [
+        {
+          "id": "30001",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "active",
+          "expires": "2031-10-11",
+          "duration": "5 years"
+        }
+      ]
+    },
+    {
+      "user_id": "1002",
+      "data": [
+        {
+          "id": "30002",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "active",
+          "expires": "2026-10-12",
+          "duration": "1 day"
+        }
+      ]
+    },
+    {
+      "user_id": "1003",
+      "data": [
+        {
+          "id": "30003",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "active",
+          "expires": "2026-10-11",
+          "duration": "1 day"
+        }
+      ]
+    },
+    {
+      "user_id": "1004",
+      "data": [
+        {
+          "id": "30004",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "active",
+          "expires": "2031-10-11",
+          "duration": "5 years"
+        }
+      ]
+    },
+    {
+      "user_id": "1005",
+      "data": [
+        {
+          "id": "30005",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "active",
+          "expires": "2031-10-11",
+          "duration": "5 years"
+        }
+      ]
+    },
+    {
+      "user_id": "1006",
+      "data": [
+        {
+          "id": "30006",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "active",
+          "expires": "2031-10-11",
+          "duration": "5 years"
+        }
+      ]
+    },
+    {
+      "user_id": "1007",
+      "data": [
+        {
+          "id": "30007",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "active",
+          "expires": "2031-10-11",
+          "duration": "5 years"
+        }
+      ]
+    },
+    {
+      "user_id": "1008",
+      "data": [
+        {
+          "id": "30008",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "pending",
+          "expires": "2031-10-11",
+          "duration": "5 years"
+        }
+      ]
+    },
+    {
+      "user_id": "1009",
+      "data": [
+        {
+          "id": "30009",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "active",
+          "expires": "2031-10-11",
+          "duration": "5 years"
+        }
+      ]
+    },
+    {
+      "user_id": "1010",
+      "data": [
+        {
+          "id": "30010",
+          "domain_id": "42",
+          "qualification_id": "501",
+          "qualification_title": "Required role orientation",
+          "status": "active",
+          "expires": "2031-10-11",
+          "duration": "5 years"
+        }
+      ]
+    }
+  ],
+  "capture": {
+    "complete": true,
+    "source": "Worked source-native example; coordinator-owned inputs are supplied separately.",
+    "selected_need_ids": [
+      "6001"
+    ]
+  }
+}
