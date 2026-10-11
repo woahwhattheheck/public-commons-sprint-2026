@@ -1,0 +1,31 @@
+{
+  "schema": "stellar-forge.goldrush-source.v1",
+  "sources": [
+    {
+      "id": "balances",
+      "url": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-token-balances-for-address.md",
+      "rawResponseSha256": "784da65f44b8c2860ffa5db6120461db3e1503cc17057dfced466433a83b272b",
+      "rawResponseBytes": 10885,
+      "schemaFile": "balances-source.openapi.json",
+      "schemaSha256": "bedb10c09277beabec8f1a5ad38e8e9a5a3d3b3b4cc42c2bc80e94c1acddf36a",
+      "conversion": "Published YAML OpenAPI block parsed as YAML and serialized to JSON; no schema edit",
+      "retainedAt": "2026-10-11T18:59:31.290016+00:00",
+      "timeBasis": "Local response-file completion time; no server response date was retained for this documentation fetch",
+      "originalConvertedSchemaSha256": "bc5dffa9cb69ade42f67617d6d507795695549364f2a7df097652d8fd2420aa4",
+      "projection": "All schema assertions retained; descriptive prose and examples omitted. Provider source document SHA remains the original receipt."
+    },
+    {
+      "id": "transfers",
+      "url": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-erc20-token-transfers-for-address.md",
+      "rawResponseSha256": "7527d980cd107076fbd65dfa82710e6726b2227f0d49a50daa43bec861bad5cf",
+      "rawResponseBytes": 17541,
+      "schemaFile": "transfers-source.openapi.json",
+      "schemaSha256": "9cf28b9b9a55a07c9bf0ca273acf71670b42acfba2cdefa7db5cac1fd15d75c6",
+      "conversion": "Published YAML OpenAPI block parsed as YAML and serialized to JSON; no schema edit",
+      "retainedAt": "2026-10-11T18:59:30.730005+00:00",
+      "timeBasis": "Local response-file completion time; no server response date was retained for this documentation fetch",
+      "originalConvertedSchemaSha256": "7a0d9c1dcfd64116408fdc9653bc903c73a32f62d394f37b4cacba19aeaf8a87",
+      "projection": "All schema assertions retained; descriptive prose and examples omitted. Provider source document SHA remains the original receipt."
+    }
+  ]
+}

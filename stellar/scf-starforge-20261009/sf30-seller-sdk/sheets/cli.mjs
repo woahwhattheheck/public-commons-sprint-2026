@@ -8,6 +8,8 @@ import { inspectSheetsSource } from './source.mjs';
 
 const HELP = `Google Sheets merchant source (Node 22.16+; publisher also requires Linux flock)
 
+  auth connect|status|refresh|disconnect --directory PRIVATE_CONNECTION [AUTH_OPTIONS]
+  use-connection --source REVIEWED_SOURCE.json --connection PRIVATE_CONNECTION --out NEW_LIVE_SOURCE.json
   import --resource PRIVATE_SPREADSHEET_RESOURCE.json --range "'Catalog'!A1:G500" --directory NEW_CAPTURE_DIR
   headers --capture CAPTURE_DIR/capture.json
   prepare --capture CAPTURE_DIR/capture.json --projection REVIEWED_PROJECTION.json --query NAME --out NEW_SOURCE.json
@@ -18,12 +20,13 @@ const HELP = `Google Sheets merchant source (Node 22.16+; publisher also require
 Import accepts the original JSON Spreadsheet resource from one connected
 spreadsheets.get CellData read, not a values-only array or formatted CSV.
 The declared range must be the exact range requested from that provider read.
-Capture makes one read-only Google GET using the configured access-token ENV name.
+Capture reads Google with the selected environment token or renewable private connection.
 Prepare binds the reviewed letter/header/type/formula projection to exact capture bytes.
 Plan writes a correctly typed input template for the original publisher save command.
 All files must be private (0600) inside operator-owned private directories (0700).
 Existing files and capture directories are never replaced. See sheets/README.md.`;
 const OPTIONS = {
+  'use-connection': ['--source', '--connection', '--out'],
   import: ['--resource', '--range', '--directory'], headers: ['--capture'],
   prepare: ['--capture', '--projection', '--query', '--out'], describe: ['--source'],
   capture: ['--source', '--query', '--directory'], plan: ['--source', '--query', '--out', '--name'],
@@ -37,6 +40,7 @@ function letters(index) {
   return text;
 }
 export async function main(argv = process.argv.slice(2)) {
+  if (argv[0] === 'auth') return (await import('./auth/cli.mjs')).main(argv.slice(1));
   if (argv.length === 1 && argv[0] === '--help') { process.stdout.write(HELP + '\n'); return; }
   const [command, ...args] = argv, options = {};
   if (!OPTIONS[command]) throw fault('COMMAND_REQUIRED', HELP);
@@ -46,6 +50,19 @@ export async function main(argv = process.argv.slice(2)) {
     options[key] = value;
   }
   let result;
+  if (command === 'use-connection') {
+    const selected = await readSheetsSourceFile(path(options, '--source'));
+    const directory = path(options, '--connection');
+    const { googleConnectionStatus } = await import('./auth/oauth.mjs');
+    const status = await googleConnectionStatus(directory);
+    if (status.state !== 'connected') throw fault('SHEETS_OAUTH_RECONNECT_REQUIRED', 'Connect and approve an account before binding it to this reviewed source.');
+    const config = structuredClone(selected.config);
+    config.connection = { kind: 'google', oauthDirectory: directory,
+      ...(selected.config.connection.maxResponseBytes ? { maxResponseBytes: selected.config.connection.maxResponseBytes } : {}),
+      ...(selected.config.connection.timeoutMs ? { timeoutMs: selected.config.connection.timeoutMs } : {}) };
+    const output = path(options, '--out'); await createFile(output, bytes(config));
+    result = { sourceFile: output, account: status.account, ...await inspectSheetsSource(output) };
+  }
   if (command === 'import') result = receipt(await importSheetsCapture(path(options, '--resource'), path(options, '--directory'), { range: required(options, '--range') }));
   if (command === 'headers') {
     const capture = await readSheetsCapture(path(options, '--capture')), { bounds, cell } = capture.grid;

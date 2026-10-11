@@ -4,6 +4,7 @@ import { open } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { RetainedFileReads } from './retained-file-reads.mjs';
+import { bitwaveDefinitions, normalizeBitwaveConfig, bitwaveSourceView, bitwavePathReferences, MerchantBitwave } from './bitwave.mjs';
 import { openAccountingWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/store.mjs';
 import { openCollectionWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/collection-workspace.mjs';
 import { AccountantWorkspace, ACCOUNTANT_CSV_BYTES } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/accountant-workspace.mjs';
@@ -39,7 +40,8 @@ const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sour
 const supportedMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].filter(supportsSellerMethod);
 
 const definitions = [
-  ['merchant_accounting_sources', 'List host-configured accounting workspaces and named recovery, verification, collection, pricing and accountant-return inputs. Returns aliases and ownership without local paths or source bytes.', { workspace: alias }, [], readOnly],
+  ...bitwaveDefinitions,
+  ['merchant_accounting_sources', 'List host-configured accounting workspaces and named recovery, verification, collection, pricing, accountant-return and Bitwave inputs. Returns aliases and ownership without local paths or source bytes.', { workspace: alias }, [], readOnly],
   ['merchant_accounting_open', 'Open or initialize a declared original accounting workspace and acquire its existing exclusive lease. Reopens its retained reconciliations, recovery jobs and reviews; does not call RPC or purchase a resource.', base, ['workspace'], { idempotent: true }],
   ['merchant_accounting_close', 'Release only this MCP process-owned accounting workspace. Stops its pending read-only recovery verification and waits for retained reconciliation and current reads to finish before releasing the lease.', base, ['workspace'], { destructive: true, idempotent: true }],
   ['merchant_accounting_status', 'Read the current workspace revision, retained job/run status and source aliases. Choose a paged view for jobs, recovery reviews, recovered entries, reconciliations, proofs, terms, exports or history.', { ...base, view: { type: 'string', enum: ['summary', ...views] }, ...page }, ['workspace'], readOnly],
@@ -134,7 +136,7 @@ export function normalizeAccountingConfig(raw, base) {
   if (!plain(raw.workspaces) || Object.keys(raw.workspaces).length > 16) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare up to 16 original accounting workspaces.');
   const workspaces = Object.create(null), directories = new Set();
   for (const [key, value] of Object.entries(raw.workspaces)) {
-    named(key); exact(value, ['label', 'directory', 'outboxDir', 'proofDir', 'termsFile', ...sourceKinds, 'collectionInputs', 'collectionHttpsProxyEnv'], ['directory', 'outboxDir', 'proofDir', 'termsFile']);
+    named(key); exact(value, ['label', 'directory', 'outboxDir', 'proofDir', 'termsFile', ...sourceKinds, 'collectionInputs', 'collectionHttpsProxyEnv', 'bitwave'], ['directory', 'outboxDir', 'proofDir', 'termsFile']);
     if (value.label !== undefined && (!check(name, value.label) || !value.label.trim())) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Use a nonempty workspace label up to 160 characters.');
     const entry = { label: value.label ?? key };
     for (const field of ['directory', 'outboxDir', 'proofDir', 'termsFile']) entry[field] = hostPath(value[field], base);
@@ -142,6 +144,7 @@ export function normalizeAccountingConfig(raw, base) {
     directories.add(entry.directory);
     for (const field of sourceKinds) entry[field] = sourceMap(value[field], base);
     entry.collectionInputs = collectionInputMap(value.collectionInputs, base);
+    entry.bitwave = normalizeBitwaveConfig(value.bitwave, base);
     if (value.collectionHttpsProxyEnv !== undefined) {
       if (!check({ type: 'string', pattern: '^[A-Za-z_][A-Za-z0-9_]{0,127}$' }, value.collectionHttpsProxyEnv)) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Choose the environment-variable name containing the configured collection HTTPS proxy.');
       entry.collectionHttpsProxyEnv = value.collectionHttpsProxyEnv;
@@ -193,6 +196,7 @@ export class MerchantAccounting {
       ...['directory', 'outboxDir', 'proofDir', 'termsFile'].map(field => [value[field], 'accounting://' + key + '/' + field]),
       ...sourceKinds.flatMap(kind => Object.entries(value[kind] ?? {}).map(([alias, path]) => [path, 'accounting://' + key + '/' + kind + '/' + alias])),
       ...Object.entries(value.collectionInputs ?? {}).map(([alias, input]) => [input.file, 'accounting://' + key + '/collectionInputs/' + alias]),
+      ...bitwavePathReferences(value.bitwave, key),
     ]).sort((a, b) => b[0].length - a[0].length);
   }
   get summary() { return { configured: Object.keys(this.#config.workspaces), owned: [...this.#sessions.keys()], closing: this.#closing,
@@ -214,7 +218,8 @@ export class MerchantAccounting {
   #sources(key) {
     const value = this.#definition(key), session = this.#sessions.get(key);
     return { workspace: key, label: value.label, ownership: session ? session.closing ? 'CLOSING' : session.workspace ? 'OPEN' : 'OPENING' : 'CLOSED',
-      ...Object.fromEntries(sourceKinds.map(kind => [kind, Object.keys(value[kind] ?? {})])), collectionInputs: Object.keys(value.collectionInputs ?? {}) };
+      ...Object.fromEntries(sourceKinds.map(kind => [kind, Object.keys(value[kind] ?? {})])), collectionInputs: Object.keys(value.collectionInputs ?? {}),
+      bitwave: bitwaveSourceView(value.bitwave) };
   }
   #state(key, state) {
     const definition = this.#definition(key), retained = this.#sessions.get(key)?.workspace?.state;
@@ -244,7 +249,7 @@ export class MerchantAccounting {
     const existing = this.#sessions.get(key);
     if (existing?.closing) throw fail('ACCOUNTING_CLOSING', 'This accounting workspace is closing.');
     if (existing) { await existing.opening; return this.#safe(this.#state(key, existing.workspace.view())); }
-    const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, closing: false, calls: new Set() };
+    const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, bitwave: null, closing: false, calls: new Set() };
     this.#sessions.set(key, record);
     record.opening = (async () => {
       const { directory, outboxDir, proofDir, termsFile } = definition;
@@ -255,9 +260,14 @@ export class MerchantAccounting {
           throw fail('ACCOUNTING_SOURCE_NOT_CONFIGURED', 'Declare the existing recovered collection in this workspace’s recoveredSources before reopening it through MCP.');
         record.collection = await openCollectionWorkspace(workspace, { httpsProxyEnv: definition.collectionHttpsProxyEnv });
         record.accountant = new AccountantWorkspace(workspace);
+        if (definition.bitwave) {
+          record.bitwave = new MerchantBitwave(workspace, record.accountant, definition.bitwave, { scope: key, files: this.#files });
+          await record.bitwave.recover();
+        }
         record.workspace = workspace;
       } catch (error) {
-        try { await record.collection?.close(); } finally { await workspace.close(); record.workspace = null; }
+        try { await record.bitwave?.close(); }
+        finally { try { await record.collection?.close(); } finally { await workspace.close(); record.workspace = null; } }
         throw error;
       }
     })();
@@ -274,7 +284,8 @@ export class MerchantAccounting {
         try {
           await record.opening; await Promise.allSettled([...record.calls]);
           await this.#files.closeScope(key);
-          try { await record.collection?.close(); } finally { await record.workspace?.close(); }
+          try { await record.bitwave?.close(); }
+          finally { try { await record.collection?.close(); } finally { await record.workspace?.close(); } }
         }
         finally { if (this.#sessions.get(key) === record) this.#sessions.delete(key); }
       })();
@@ -325,6 +336,10 @@ export class MerchantAccounting {
   }
   async #execute(operation, args, workspace) {
     const key = args.workspace, session = this.#sessions.get(key);
+    if (operation.startsWith('merchant_accounting_bitwave_')) {
+      if (!session.bitwave) throw fail('BITWAVE_NOT_CONFIGURED', 'Declare Bitwave organizations and optional native page sets in this accounting workspace’s host configuration.');
+      return session.bitwave.call(operation, args);
+    }
     switch (operation) {
       case 'merchant_accounting_status': {
         const state = workspace.view(), result = this.#state(key, state), view = args.view ?? 'summary';

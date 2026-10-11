@@ -18,22 +18,25 @@ export function renderObjectReport(report) {
   const completed = report.completeChunks ?? report.completedChunks ?? 0;
   const downloaded = report.downloadedBytes ?? 0;
   const total = report.bytes ?? 0;
-  const percentage = total > 0 ? Math.min(100, Math.floor(downloaded * 100 / total)) : 0;
+  const whole = report.deliveryMode === 'whole';
+  const percentage = total > 0 ? Math.min(100, Math.floor(downloaded * 100 / total)) :
+    report.status === 'COMPLETE' ? 100 : 0;
   const command = verb => 'node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs ' +
     verb + ' --session ' + shell(report.directory);
   const payload = JSON.stringify(report).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   const assembly = report.assembly;
-  const source = [item('Seller route', report.sourceUrl), item('Snapshot', report.expectedSnapshot),
+  const source = [item('Delivery', whole ? 'Whole file · one GET · HTTP 200' : 'Byte chunks · HTTP 206'),
+    item('Seller route', report.sourceUrl), item('Snapshot', report.expectedSnapshot),
     item('Content type', report.expectedContentType), item('Object bytes', bytes(total)),
-    item('Requested chunk size', bytes(report.chunkBytes)),
+    ...(whole ? [] : [item('Requested chunk size', bytes(report.chunkBytes))]),
     item('Expected complete SHA-256', report.expectedSha256 || 'Not supplied by the selected descriptor'),
     item('Merchant object', report.selection?.objectId), item('Description SHA-256', report.selection?.descriptionSha256)].join('');
   const session = [item('Session', report.directory), item('Stable session ID', report.sessionId),
     item('Original buyer inbox', report.queueRoot), item('Network', report.network ?? report.terms?.network),
     item('Asset', report.asset ?? report.terms?.asset),
-    item('Maximum units per chunk', report.maxAtomic ?? report.limits?.maxAtomic),
+    item('Maximum units per request', report.maxAtomic ?? report.limits?.maxAtomic),
     item('Whole-download limit, atomic units', report.maxTotalAtomic ?? report.limits?.maxTotalAtomic),
-    item('Allocated chunk caps, atomic units', report.capAllocatedAtomic ?? '0')].join('');
+    item('Allocated request caps, atomic units', report.capAllocatedAtomic ?? '0')].join('');
   const assemblyHTML = assembly ? `<section><h2>Recorded assembly</h2><dl>${
     item('Destination', assembly.destination) + item('Bytes', bytes(assembly.bytes)) +
     item('SHA-256', assembly.sha256)}</dl><p class="note">${assembly.fileRevalidated === true
@@ -56,21 +59,21 @@ section{border:1px solid #c6c6c6;background:#fff;padding:22px;margin-top:20px}dl
 <header><div><div class="eyebrow">Starforge / Buyer operations</div><h1>${esc(title(report))}</h1>
 <p class="subtle">Pinned object download through the original buyer.</p></div><span class="status">${esc(labels[report.status] || report.status || 'Unknown')}</span></header>
 <div class="metrics"><div class="metric"><strong>${esc(bytes(downloaded))}</strong><span>Verified locally of ${esc(bytes(total))}</span><div class="progress" aria-label="${percentage}% of bytes verified"><div style="width:${percentage}%"></div></div></div>
-<div class="metric"><strong>${esc(completed)} / ${esc(report.chunkCount ?? chunks.length)}</strong><span>Complete chunks</span></div>
+<div class="metric"><strong>${esc(completed)} / ${esc(report.chunkCount ?? chunks.length)}</strong><span>Complete responses</span></div>
 <div class="metric"><strong>${percentage}%</strong><span>Download progress</span></div></div>
 ${assemblyHTML}
 <section><h2>Selected object</h2><dl>${source}</dl></section>
-<section><h2>Download queue</h2><p class="note">Each chunk keeps its original intent, attempt and saved response. Completed chunks are reused when the download continues.</p>
+<section><h2>Download queue</h2><p class="note">Each request keeps its original intent, attempt and saved response. Completed responses are reused when the download continues.</p>
 <div class="toolbar"><label for="query">Find</label><input id="query" type="search" placeholder="Intent, offset, state or response hash" autocomplete="off"><label for="state">State</label><select id="state"><option value="">All states</option></select><button id="export" type="button">Export state JSON</button></div>
-<div class="table-scroll"><table><thead><tr><th>Chunk</th><th>Byte range</th><th>State</th><th>Original intent</th><th>Saved response</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="table-scroll"><table><thead><tr><th>Request</th><th>Delivered bytes</th><th>State</th><th>Original intent</th><th>Saved response</th></tr></thead><tbody id="rows"></tbody></table></div>
 <div class="page"><span id="page-label" class="note" aria-live="polite"></span><div class="page-controls"><button id="previous" type="button">Previous</button><button id="next" type="button">Next</button></div></div>
-<noscript><p>This view uses local JavaScript to display and filter the saved chunk records. Use the status command below for the complete JSON record.</p></noscript></section>
-<section><h2>Operator commands</h2><p class="note">Run these commands in the trusted terminal. Run obtains the original per-chunk approval and uses the configured ledger. Recover and assemble only inspect or process saved local files.</p>
+<noscript><p>This view uses local JavaScript to display and filter the saved request records. Use the status command below for the complete JSON record.</p></noscript></section>
+<section><h2>Operator commands</h2><p class="note">Run these commands in the trusted terminal. Run obtains the original per-request approval and uses the configured ledger. Recover and assemble only inspect or process saved local files.</p>
 <div class="commands"><div><h3>Refresh current state</h3><pre>${esc(command('status'))}</pre></div><div><h3>Continue download</h3><pre>${esc(command('run'))}${report.workspace ? ' --workspace ' + esc(shell(report.workspace)) : ''}</pre></div>
-<div><h3>Recover interrupted state</h3><pre>${esc(command('recover'))}</pre></div><div><h3>Assemble completed chunks</h3><pre>${esc(command('assemble'))} --out '/absolute/new-file.bin'</pre></div></div>
+<div><h3>Recover interrupted state</h3><pre>${esc(command('recover'))}</pre></div><div><h3>Save the complete file</h3><pre>${esc(command('assemble'))} --out '/absolute/new-file.bin'</pre></div></div>
 ${report.stoppedChunk ? `<details open><summary>Attempt to inspect</summary><pre>${esc(JSON.stringify(report.stoppedChunk,null,2))}</pre></details>` : ''}
-<p class="note">An uncertain attempted chunk is retained for reconciliation; this workflow does not send it again. A newly assembled file must use a new destination.</p></section>
-<section><h2>Original operator session</h2><dl>${session}</dl><p class="note">Allocated caps describe the maximum authorized units for attempted chunks. Original ledger reservations and chain observations retain their own accounting meanings.</p></section>
+<p class="note">An uncertain attempted request is retained for reconciliation; this workflow does not send it again. A newly assembled file must use a new destination.</p></section>
+<section><h2>Original operator session</h2><dl>${session}</dl><p class="note">Allocated caps describe the maximum authorized units for attempted requests. Original ledger reservations and chain observations retain their own accounting meanings.</p></section>
 <p class="footer">Offline report. It uses only the saved state embedded in this file; reload current state with the status or report command.</p>
 </main><script id="object-state" type="application/json">${payload}</script>
 <script nonce="object-report-v1">
@@ -96,9 +99,9 @@ ${report.stoppedChunk ? `<details open><summary>Attempt to inspect</summary><pre
     byId('rows').innerHTML = selected.length ? selected.map(chunk => {
       const end = Number.isSafeInteger(chunk.offset) && Number.isSafeInteger(chunk.length) ? chunk.offset + chunk.length - 1 : null;
       const outcome = chunk.originalOutcome?.status || chunk.nativeBuyerStatus || '';
-      return '<tr><td class="number">'+safe(chunk.index)+'</td><td class="number">'+size(chunk.offset)+'–'+size(end)+'<div class="row-detail">'+size(chunk.length)+' bytes</div></td><td>'+safe(stateOf(chunk))+'<div class="row-detail">'+safe(chunk.code || outcome)+'</div></td><td class="mono">'+safe(chunk.intentId)+'</td><td class="mono">'+safe(chunk.sha256 || 'Not saved')+'<div class="row-detail">'+safe(chunk.contentType || '')+'</div></td></tr>';
-    }).join('') : '<tr><td colspan="5" class="empty">No matching chunks</td></tr>';
-    byId('page-label').textContent = rows.length ? (page * pageSize + 1)+'–'+Math.min((page + 1) * pageSize,rows.length)+' of '+rows.length+' chunks' : '0 matching chunks';
+      return '<tr><td class="number">'+safe(chunk.index)+'</td><td class="number">'+(report.deliveryMode === 'whole' ? 'Whole file' : size(chunk.offset)+'–'+size(end))+'<div class="row-detail">'+size(chunk.length)+' bytes</div></td><td>'+safe(stateOf(chunk))+'<div class="row-detail">'+safe(chunk.code || outcome)+'</div></td><td class="mono">'+safe(chunk.intentId)+'</td><td class="mono">'+safe(chunk.sha256 || 'Not saved')+'<div class="row-detail">'+safe(chunk.contentType || '')+'</div></td></tr>';
+    }).join('') : '<tr><td colspan="5" class="empty">No matching requests</td></tr>';
+    byId('page-label').textContent = rows.length ? (page * pageSize + 1)+'–'+Math.min((page + 1) * pageSize,rows.length)+' of '+rows.length+' requests' : '0 matching requests';
     byId('previous').disabled = page === 0; byId('next').disabled = (page + 1) * pageSize >= rows.length;
   }
   byId('query').addEventListener('input', () => {page = 0; render();});

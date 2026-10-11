@@ -326,3 +326,9 @@ releases that lease, acquires a new one and resumes both old unlocks. It also
 contends for the next generation and recovers a complete legacy v1 owner record.
 Original attempt bytes remain intact; the existing recovery function reports its
 retained incomplete result. This check performs no native buyer execution.
+
+## Complete acquisition recovery
+
+The existing browser workspace and installed `starforge buyer-runbook` command can review and back up a complete acquisition workspace with all its original buyer operators. Every native ledger receives an authenticated checkpoint; exact run plans, request inputs, retained files, attempts and accounting survive together. Verification checks the archive and all original journals. Restore keeps the original canonical paths and reopens the saved acquisitions without executing purchases.
+
+See [Acquisition backup and restore](RECOVERY.md) for the complete browser and installed command workflow, source closure, passphrase handling and recovery procedure.

@@ -31,17 +31,43 @@ edits only the environment variable name. It has no credential-value field.
 
 ## Complete an operator project
 
-1. **Load the actual query service schema.** Choose served SDL, raw introspection
-   JSON, or the original captured-source envelope. Inspect the query roots,
-   argument types and searchable named types. The original GraphQL reference
-   implementation validates it. Entity-only indexer SDL requires the actual
-   query-service schema, as explained in the onboarding guide.
-2. **Load or author approved queries.** The guided editor retains the original
+1. **Connect to the actual query service schema.** Enter its backend origin,
+   exact path and optional authorization environment name, then choose **Capture
+   served schema**. This calls the existing onboarding capture once, retaining
+   its exact source envelope in the schema editor. For an explicitly selected
+   same-host backend, check the local-development option. You can also load
+   served SDL, raw introspection JSON or an existing source envelope. Inspect
+   roots, argument types, defaults and searchable named types. The original
+   GraphQL reference implementation validates them. Entity-only indexer SDL
+   requires the actual query-service schema, as explained in the onboarding guide.
+2. **Load or author approved queries.** Add an operation and choose **Edit fields
+   from schema**. Select an actual object-valued query root and its nested result
+   fields, add result aliases, and enter fixed arguments using GraphQL literal
+   syntax. Field and argument descriptions, enum values, input-object fields
+   and source defaults come from the loaded schema. **Bind an argument to a buyer
+   variable** creates its compatible native declaration. Set its explicit bounds,
+   required/default behavior and JSON example; Int, String, ID and Boolean use
+   the original variable contract. Keep enums, lists and input-object structure
+   as fixed query literals. **Apply query selection** invokes the existing full
+   schema and native-variable validator and updates the canonical query JSON.
+   Existing route paths, payment choices and overrides remain intact; operation
+   renames and bounded examples are applied to those same routes. The raw
+   guided editor retains the original
    `stellar-forge.subquery-merchant.v1` shape: fixed query, response root, named
    native handler/admission, buyer variable types and bounds, defaults, node
    cap, backend origin/path, timeout and capacity. The full original JSON is
    also editable. Use **Apply JSON to editors** after changing raw JSON.
-3. **Load or author the merchant plan.** Use the original
+3. **Preview the selected source operation.** Enter its intended variables and
+   choose **Save and preview selected query**. The workspace applies pending
+   field selections, saves the exact draft, then makes one request through the
+   existing merchant handler using the server's configured backend credentials.
+   Inspect its actual HTTP status, returned rows and complete JSON. **Download
+   exact returned JSON** retains the original handler output, including decimal
+   values represented as strings. The record includes the served-schema/source
+   identity, fixed query, bound variables, response bytes and hashes. It is a
+   private provider read, subject to the backend's actual access and usage terms;
+   the merchant's customer payment route is configured separately below.
+4. **Load or author the merchant plan.** Use the original
    `stellar-forge.subquery-merchant-plan.v1` format. Create one public POST route
    per approved operation, enter its service name and description, and provide
    public example variables and descriptions. Shared ordered payment choices
@@ -49,29 +75,59 @@ edits only the environment variable name. It has no credential-value field.
    Existing per-route payment overrides remain in the plan; edit those complete
    declarations in its JSON view. Changing an operation name updates its route
    reference; removing an operation removes its corresponding route.
-4. **Save and review.** An unfinished draft can be saved before its schema or
+5. **Save and review.** An unfinished raw draft can be saved before its schema or
    terms are valid. Review calls the original `compileSchemaSource`,
    `inspectSchema` and `compileSubQueryMerchantPlan`; it displays exact compiled
    routes, payment alternatives and native source review. Draft changes clear
    that review. Save the reviewed contents before export.
-5. **Export the current project.** The maintained `prepareSubQuerySeller`
+6. **Export the current project.** The maintained `prepareSubQuerySeller`
    creates a new private package containing the original source, approved
    queries, merchant plan, exact seller-service and query files, readable review,
    original generated buyer JavaScript/TypeScript client and request examples.
    The workspace displays the actual returned file paths and launch command.
-6. **Start the original merchant.** Select an export matching the current draft.
+7. **Start the original merchant.** Select an export matching the current draft.
    Leave the facilitator blank to start its original challenge-only mode, or
    supply the deployment's configured HTTPS facilitator for its native mode.
    A same-host HTTP backend needs the explicit local-development checkbox.
    Status links point to the original offers and readiness endpoints. **Stop
    managed merchant** uses the original runtime's drain/close operation.
 
-The browser does not automatically capture a remote schema, execute a buyer
-purchase or send a partner message. The original onboarding CLI performs
-explicit schema capture, and the original buyer client performs customer
-purchases with its existing authorization and recovery behavior. A successful
-offline review and HTTP 402 show the setup path; actual indexed-data delivery
-and Stellar settlement use the configured original runtime.
+Saving and reopening a project perform no source requests. Capture and preview
+each require their explicit browser action. The original buyer client performs
+customer purchases with its existing authorization and recovery behavior. A
+successful source preview shows the original handler's indexed-data result; a
+merchant HTTP 402 shows its declared offer. Stellar settlement uses the configured
+original runtime and buyer workflow.
+
+### Reopen authoring and recover source results
+
+The field editor reconstructs its selection from the original saved query;
+there is no second query format to keep in sync. Queries with fragments,
+directives or other unsupported field-editor structure remain editable in
+their original JSON/text view. Opening the field editor explains when it starts
+a replacement selection, and the old query changes only when that selection is
+explicitly applied. Save, review and schema comparison apply pending field edits
+first. Export and runtime preparation require saved canonical inputs.
+
+The **Retained source requests and results** section lists completed previews
+and started requests in this same private workspace. **Open returned result**
+reads existing result bytes; it never queries the provider. Historical results
+keep their original input digest and source revision after later draft edits.
+Refresh the retained list after an interrupted browser connection or process.
+If a complete result exists but its project reference was not saved, **Attach
+completed result** attaches that exact record without another provider request.
+An interrupted request without a completed result stays marked as started; a
+new backend request requires a new explicit preview action.
+
+Each preview request is assigned a create-only UUID before the original handler
+runs. Complete results are atomically published and then attached through the
+existing revision store. The `previews/` directory belongs in the same private
+workspace backup as `projects/`, exports and deployments. It contains selected
+query variables and returned provider data, so it follows the workspace's
+existing private file permissions. Credential values and request authorization
+headers are not part of these retained records. Source previews do not change
+the existing draft input or export digest format, and existing projects reopen
+with an empty preview history until a preview is explicitly requested.
 
 ## Revise a merchant as its schema and products change
 

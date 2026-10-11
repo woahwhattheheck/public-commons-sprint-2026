@@ -164,6 +164,22 @@ mechanism, stop the owned seller, and relaunch MCP with the updated environment.
 Start the same selected release. A new origin, path, header mapping or payment
 term is a configuration change: stage, compare and select a new release.
 
+### Author a saved Python workspace
+
+Attach an existing native Python workspace to the merchant MCP host with
+`init-python-workspaces --dir NEW_HOST --python-workspaces CONNECTION_JSON`,
+or add `--python-workspaces CONNECTION_JSON` to an ordinary initialization.
+The host connection selects private workspace directories and runtime settings.
+Agents can inspect and edit immutable source revisions, run explicit native
+previews, stage/review/activate/roll back SF82 releases, manage their owned seller,
+and export the original customer SDK or the whole saved application.
+
+The 22 `merchant_python_*` tools share the browser and CLI's original model.
+`download-python` resumes SHA-pinned source/client handoffs through the existing
+MCP reader; `reopen-python` imports a completed portable archive into a new
+native workspace offline. See [PYTHON_WORKSPACES.md](PYTHON_WORKSPACES.md) for
+configuration, complete authoring/release/delivery instructions and every tool.
+
 ### Use an existing Python merchant
 
 The original SF30 Python declaration can use the same release workflow:
@@ -397,6 +413,8 @@ The same provider operates the original merchant accounting workspace, completed
 
 See [ACCOUNTING.md](ACCOUNTING.md) for the complete installed and subprocess workflow, asynchronous job status, original source selection, SHA-pinned file chunks and durable reopening. Existing release, Python, DuckDB, discovery and fleet operations use the same provider.
 
+[Bitwave Data Fusion](BITWAVE.md) extends that same accounting session with declared customer/table inputs, retained native delivery and capture, missing-row repair, concurrent-bookkeeping return review and complete original file handoff. Its thirteen tools share the original browser workspace, accountant engine and native client.
+
 ## Prepare merchant receiving accounts
 
 The same MCP operator can manage the original receiving workspace before or
@@ -412,3 +430,7 @@ explicitly with `merchant_receiving_open`; `merchant_receiving_close` drains the
 original controller and releases its lease for browser or CLI use.
 [Receiving setup and complete workflows](./RECEIVING.md) document all thirteen
 tools, host configuration, replay, comparison, export and browser handoff.
+
+## Retained data publication
+
+The same provider now operates original PostgreSQL, SQLite and MySQL publisher workspaces: approved saved query and typed candidate, native review/publication, recurring maintenance, retained buyer configuration and restart recovery. Use `init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json` or add the host `publisherConnection` to an existing merchant. [PUBLISHERS.md](PUBLISHERS.md) gives complete setup, agent operations, seller/customer handoff and shutdown.
