@@ -30,6 +30,7 @@ const HELP = `Starforge merchant MCP
        [--catalog CATALOG_CONNECTION_JSON] [--support SUPPORT_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   init --dir NEW_DIRECTORY --duckdb-package PREPARED_DIRECTORY [--duckdb-python EXECUTABLE]
   init --dir NEW_DIRECTORY --s3-package CONFIGURED_DIRECTORY
+  init --dir NEW_DIRECTORY --postgres-package PREPARED_DIRECTORY
   init --dir NEW_DIRECTORY --mysql-package PREPARED_DIRECTORY
   init --dir NEW_DIRECTORY --jsonrpc-package PREPARED_RPC_DIRECTORY [--allow-loopback-upstream]
   init --dir NEW_DIRECTORY --sqlite-package ORIGINAL_WORKBENCH_EXPORT
@@ -37,6 +38,7 @@ const HELP = `Starforge merchant MCP
        [--catalog CATALOG_CONNECTION_JSON] [--support SUPPORT_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   serve --config MERCHANT_MCP.json [--port PORT] [--token-env ENVIRONMENT_NAME]
   maintenance open|close|status|job|prepare|execute|reconcile|download ...
+  adjustments open|status|events|event|detail|job|preview|prepare|execute|reconcile|download|close ...
   inspect-support|inspect-client --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
   download-support --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
        [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST] [--cases-dir PRIVATE_CASES]
@@ -126,6 +128,7 @@ export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
   const [command, ...rest] = args;
   if (command === 'maintenance') return (await import('./accounting-maintenance-cli.mjs')).main(rest);
+  if (command === 'adjustments') return (await import('./accounting-adjustment-cli.mjs')).main(rest);
   if (command === 'download-s3' || command === 'inspect-s3') {
     const { downloadS3Customer, inspectS3Customer } = await import('./s3-workspace-download.mjs');
     const download = command === 'download-s3';
@@ -255,8 +258,8 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
   if (command === 'init') {
-    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--duckdb-package', '--duckdb-python', '--s3-package', '--mysql-package', '--jsonrpc-package', '--sqlite-package', '--sqlite-snapshot-max-bytes', '--sqlite-snapshot-timeout-ms', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--facilitators', '--fleet-plan', '--accounting', '--support', '--receiving', '--python-workspaces', '--pricing', '--release-store'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
-    for (const key of options.has('--workspace') || options.has('--python') || options.has('--duckdb-package') || options.has('--s3-package') || options.has('--mysql-package') || options.has('--jsonrpc-package') || options.has('--sqlite-package') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
+    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--duckdb-package', '--duckdb-python', '--s3-package', '--postgres-package', '--mysql-package', '--jsonrpc-package', '--sqlite-package', '--sqlite-snapshot-max-bytes', '--sqlite-snapshot-timeout-ms', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--facilitators', '--fleet-plan', '--accounting', '--support', '--receiving', '--python-workspaces', '--pricing', '--release-store'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
+    for (const key of options.has('--workspace') || options.has('--python') || options.has('--duckdb-package') || options.has('--s3-package') || options.has('--postgres-package') || options.has('--mysql-package') || options.has('--jsonrpc-package') || options.has('--sqlite-package') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
       if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Missing ' + key);
     const runtime = { port: portNumber(options.get('--seller-port'), 0) };
     if (options.has('--handlers')) runtime.handlers = options.get('--handlers');
@@ -268,7 +271,7 @@ export async function main(args = process.argv.slice(2)) {
       workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'), facilitators: options.get('--facilitators'), fleetPlan: options.get('--fleet-plan'), accounting: options.get('--accounting'), support: options.get('--support'), receiving: options.get('--receiving'), pythonWorkspaces: options.get('--python-workspaces'), pricing: options.get('--pricing'), releaseStore: options.get('--release-store'),
       python: options.get('--python'), pythonRoot: options.get('--python-root'),
       duckdbPackage: options.get('--duckdb-package'), duckdbPython: options.get('--duckdb-python'),
-      s3Package: options.get('--s3-package'), mysqlPackage: options.get('--mysql-package'),
+      s3Package: options.get('--s3-package'), postgresPackage: options.get('--postgres-package'), mysqlPackage: options.get('--mysql-package'),
       jsonrpcPackage: options.get('--jsonrpc-package'),
       sqlitePackage: options.get('--sqlite-package'),
       sqliteSnapshotMaxBytes: options.has('--sqlite-snapshot-max-bytes') ? Number(options.get('--sqlite-snapshot-max-bytes')) : undefined,
@@ -276,7 +279,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-s3-workspaces, init-publishers, serve, maintenance, inspect-support, inspect-client, inspect-s3, download-support, download-client, download-s3, reopen-support, download-python or reopen-python.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-s3-workspaces, init-publishers, serve, maintenance, adjustments, inspect-support, inspect-client, inspect-s3, download-support, download-client, download-s3, reopen-support, download-python or reopen-python.');
   const options = pairs(rest, ['--config', '--port', '--token-env']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),

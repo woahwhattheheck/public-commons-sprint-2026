@@ -478,6 +478,9 @@ async function acquireLock(directory) {
   fail('History directory ownership changed during startup; retry startup', 'HISTORY_LOCK_RACE');
 }
 
+/** Reuse this lifetime for an already validated private directory; no usage session is created. */
+export { acquireLock as acquirePrivateDirectoryWriter };
+
 /** One writer, many saved sessions. Call only with snapshots from observeSellerTraffic(). */
 export async function createTrafficHistory({ directory, retentionDays = 90, now = Date.now } = {}) {
   if (typeof directory !== 'string' || !directory.trim() || directory.includes('\0') ||
