@@ -1,4 +1,4 @@
-import {checkOriginalTerms, requireTruth, digest, DEFAULT_RPC, LOCAL_RPC, object} from './terms.mjs';
+import {checkOriginalTerms, requireTruth, digest, DEFAULT_RPC, LOCAL_RPC, object, ReconciliationError} from './terms.mjs';
 import {rpc} from './rpc-transport.mjs';
 export {validStrKey,ReconciliationError,DEFAULT_RPC} from './terms.mjs';
 export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractEvent,
