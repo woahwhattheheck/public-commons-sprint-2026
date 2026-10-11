@@ -4490,3 +4490,20 @@ entry exports `startDossierWorkspace` for applications that need only the
 operator server. Use `openDossierStore(directory, {providers})` for the same
 research engine in an existing application. Source and installed usage share
 the original dossier, revision and edition identities.
+
+## Allocate buyer expenses and issue accountant periods
+
+Use the original SF36 expense workspace with Python 3.11 or later:
+
+```sh
+starforge buyer-expenses --state /absolute/private/buyer-expenses --port 0
+```
+
+Register the existing buyer ledger, review its retained statement capture, assign
+recognition dates and exact cost-center/project allocations, and close a period
+under its named reviewer. Outstanding reservations keep their native maximum;
+amounts stay separate by network and asset. Reopening preserves issued editions.
+The workspace downloads semantic accountant packets and a complete private project
+with included source for receiving. Its fixed command starts the original Python
+server. See the [buyer expense operating guide](../sf36-spend-governor/expense-workspace/README.md)
+for source continuity, coding, review and recovery.
