@@ -1,0 +1,43 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "routes": [
+    {
+      "id": "dataset",
+      "path": "/dataset",
+      "definition": {
+        "method": "GET",
+        "description": "Demonstration dataset with three independent payment choices",
+        "serviceName": "Multi-option Dataset",
+        "tags": ["dataset"],
+        "paymentOptions": [
+          {
+            "scheme": "exact",
+            "network": "stellar:testnet",
+            "asset": "REPLACE_WITH_TESTNET_ASSET_A_CONTRACT",
+            "amount": "10000",
+            "payTo": "REPLACE_WITH_TESTNET_RECEIVING_ACCOUNT",
+            "maxTimeoutSeconds": 60
+          },
+          {
+            "scheme": "exact",
+            "network": "stellar:testnet",
+            "asset": "REPLACE_WITH_TESTNET_ASSET_B_CONTRACT",
+            "amount": "5000",
+            "payTo": "REPLACE_WITH_TESTNET_RECEIVING_ACCOUNT",
+            "maxTimeoutSeconds": 60
+          },
+          {
+            "scheme": "exact",
+            "network": "stellar:pubnet",
+            "asset": "REPLACE_WITH_PUBNET_ASSET_CONTRACT",
+            "amount": "2500",
+            "payTo": "REPLACE_WITH_PUBNET_RECEIVING_ACCOUNT",
+            "maxTimeoutSeconds": 60
+          }
+        ],
+        "outputExample": { "dataset": "example", "version": 1 }
+      },
+      "response": { "dataset": "example", "version": 1 }
+    }
+  ]
+}
