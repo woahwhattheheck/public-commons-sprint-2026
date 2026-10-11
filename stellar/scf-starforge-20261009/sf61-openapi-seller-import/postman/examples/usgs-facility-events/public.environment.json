@@ -1,0 +1,55 @@
+{
+  "id": "5b83-usgs-public-facility-watch",
+  "name": "Public Napa-area historical example",
+  "values": [
+    {
+      "key": "startTime",
+      "value": "2014-08-24T00:00:00Z",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "endTime",
+      "value": "2014-08-25T00:00:00Z",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "minimumMagnitude",
+      "value": "4",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "minimumLatitude",
+      "value": "37",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "maximumLatitude",
+      "value": "39",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "minimumLongitude",
+      "value": "-123",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "maximumLongitude",
+      "value": "-121",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "resultLimit",
+      "value": "20000",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}
