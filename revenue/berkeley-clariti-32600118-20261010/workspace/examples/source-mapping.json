@@ -1,0 +1,24 @@
+{
+  "fields": {
+    "id": "CaseNumber",
+    "type": "Kind",
+    "department": "Department",
+    "status": "State",
+    "relatedIds": "LinkedCases",
+    "reviewStates": "ReviewsJSON",
+    "reviewAssignments": "ReviewersJSON",
+    "reviewDueAt": "ReviewDueJSON",
+    "attachments": "DocumentCount",
+    "paymentMinor": "CollectedUSD"
+  },
+  "related_separator": "|",
+  "reviews": {},
+  "reviewers": {},
+  "review_due_dates": {},
+  "type_aliases": {},
+  "department_aliases": {},
+  "status_aliases": {},
+  "review_aliases": {},
+  "reviewer_aliases": {},
+  "payment_format": "decimal"
+}
