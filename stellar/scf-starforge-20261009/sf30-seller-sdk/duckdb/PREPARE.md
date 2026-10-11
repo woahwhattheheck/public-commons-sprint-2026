@@ -6,6 +6,10 @@ original SF30 service and customer SDK, then start or reopen the original seller
 The source reader, SQL admission, native payment integration, operations console
 and shutdown behavior remain the existing implementations.
 
+For browser authoring directly from existing database or Parquet files, start
+with the [DuckDB merchant workbench](workbench/README.md). It generates the
+original source and plan declarations and uses this same package preparation.
+
 ## Complete local workflow
 
 Use the Node and Python setup in [README.md](README.md). The following commands
