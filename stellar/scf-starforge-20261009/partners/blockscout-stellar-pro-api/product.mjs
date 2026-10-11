@@ -91,7 +91,8 @@ export function prepareProduct(input) {
         example: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' }],
       responses: { '200': { description: 'Original successful Blockscout response bytes.',
         content: { 'application/json': { schema: tokenSchema() } } },
-      '422': { description: 'Invalid address or unsupported request fields, rejected before payment.' },
+      '400': { description: 'Request fails the original route input schema, rejected before payment.' },
+      '422': { description: 'Invalid token identity or request semantics, rejected before payment.' },
       '429': { description: 'Merchant or provider capacity is exhausted.' },
       '502': { description: 'Provider request or token response contract failed.' },
       '503': { description: 'Merchant paused, storage unavailable or provider recovery pending.' } } } };
