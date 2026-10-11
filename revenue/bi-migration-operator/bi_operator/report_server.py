@@ -212,6 +212,10 @@ class ReportServer:
         exports = request.get("paginated_exports", [])
         if not isinstance(exports, list) or len(exports) > 100:
             raise ValueError("Choose at most 100 explicit paginated exports for a job.")
+        review = report["payload"].get("report_review", {})
+        if not exports and native["kind"] == "Report" and review.get("null_token") is not None:
+            exports = [{"report_path": target["report_path"], "parameters": parameters(request.get("parameters", {})),
+                "file": "report.csv", "null_token": review["null_token"]}]
         seen = set()
         for item in exports:
             report_path(item.get("report_path", ""))
@@ -253,55 +257,99 @@ class ReportServer:
         data, filename = file_input(request)
         result, files = read_result_archive(data)
         job = self.store.get("server_job", identifier(result["job_id"]))
-        if result.get("job_sha256") != job["payload"]["job_sha256"]:
-            raise Conflict("The native result belongs to a different original job.")
+        job_hash = job["payload"]["job_sha256"]
+        original_job = files.get("job.json")
+        if (result.get("job_sha256") != job_hash or original_job is None
+                or digest(original_job) != job_hash):
+            raise Conflict("The native result must retain the exact original job.json.")
         if not isinstance(result.get("files"), list) or not isinstance(result.get("events", []), list):
             raise ValueError("The native result must include its original file manifest and event history.")
-        attachments, captures = [], []
-        manifest_names = set()
+
+        # Fully validate the package and all existing capture identities before
+        # any blob or record is saved. Store.put commits individual records.
+        manifest_names, embedded_names, capture_ids = set(), set(), set()
+        prepared = []
         for item in result["files"]:
+            if not isinstance(item, dict):
+                raise ValueError("Every native result file needs a manifest object.")
             name = item.get("path")
             if (
                 not isinstance(name, str) or not name or name in manifest_names
-                or PurePosixPath(name).is_absolute()
+                or name == "result.json" or PurePosixPath(name).is_absolute()
                 or ".." in PurePosixPath(name).parts or chr(92) in name
+                or PurePosixPath(name).as_posix() != name
+                or any(ord(c) < 32 for c in name)
             ):
-                raise ValueError("The native result repeats or omits a file path.")
+                raise ValueError("The native result repeats or omits a portable relative file path.")
             manifest_names.add(name)
-            if item.get("embedded", True) is False:
-                if not re.fullmatch(r"[a-f0-9]{64}", item.get("sha256", "")) or type(item.get("bytes")) is not int or item["bytes"] < 0:
-                    raise ValueError("An external original file needs its complete size and SHA-256: " + name)
-                attachments.append({**item, "retained_externally": True})
+            size, checksum = item.get("bytes"), item.get("sha256")
+            if (type(size) is not int or size < 0 or not isinstance(checksum, str)
+                    or not re.fullmatch(r"[a-f0-9]{64}", checksum)):
+                raise ValueError("Every original file needs its complete size and SHA-256: " + name)
+            embedded = item.get("embedded", True)
+            if type(embedded) is not bool:
+                raise ValueError("The embedded flag must be a Boolean: " + name)
+            entry = {"item": item, "name": name, "embedded": embedded}
+            if not embedded:
+                if name in files:
+                    raise ValueError("An external file also occurs inside the native result: " + name)
+                prepared.append(entry)
                 continue
+            embedded_names.add(name)
             raw = files.get(name)
-            if raw is None or len(raw) != item.get("bytes") or digest(raw) != item.get("sha256"):
+            if raw is None or len(raw) != size or digest(raw) != checksum:
                 raise ValueError("A native result file differs from its manifest: " + name)
-            blob = self.store.blob(raw, Path(name).name, "text/csv" if name.lower().endswith(".csv") else "application/octet-stream")
-            attachments.append({**item, "object": blob})
+            entry["raw"] = raw
             if item.get("role") == "capture" and name.lower().endswith(".csv"):
                 headers, rows = read_csv(raw)
+                row_count = len(rows)
+                del rows
                 entity_id = self.service.operation_id[:60] + "-capture-" + digest(name.encode())[:12]
-                payload = {"label": job["payload"]["label"] + " · native " + Path(name).name, "file": blob,
-                    "columns": headers, "rows": len(rows), "null_token": item.get("null_token"),
-                    "source_url": job["payload"]["job"]["target"]["report_server_url"],
-                    "scope": str(item.get("scope", job["payload"]["job"].get("scope", ""))),
-                    "parameters": item.get("parameters", {}), "source_report": item.get("report_path"),
-                    "server_job": self.service.reference(job), "native_result_state": result.get("state"),
-                    "capture_kind": item.get("capture_kind"), "native_definition": item.get("native_definition"),
-                    "imported": now(), "description": ("Original paginated CSV returned by Report Server." if item.get("capture_kind") == "paginated_csv"
-                        else "Original CSV retained with the native receiving operation; its capture kind remains attached.")}
+                if entity_id in capture_ids:
+                    raise Conflict("Two native captures resolve to the same retained identity.")
+                capture_ids.add(entity_id)
                 try:
                     record = self.store.get("dataset", entity_id)
-                    if record["payload"]["file"]["digest"] != blob["digest"]:
-                        raise Conflict("The original native capture changed.")
                 except KeyError:
-                    record = self.store.put("dataset", payload, entity_id, 0, self.service.actor)
+                    record = None
+                if record is not None and record["payload"]["file"]["digest"] != checksum:
+                    raise Conflict("The original native capture changed.")
+                entry.update({"capture_id": entity_id, "headers": headers,
+                    "row_count": row_count, "existing_record": record})
+            prepared.append(entry)
+
+        if "job.json" not in embedded_names:
+            raise ValueError("The original job.json must be retained in the embedded file manifest.")
+        if set(files) - {"result.json"} != embedded_names:
+            raise ValueError("Every embedded native result file must occur in its complete manifest.")
+
+        attachments, captures = [], []
+        for entry in prepared:
+            item, name = entry["item"], entry["name"]
+            if not entry["embedded"]:
+                attachments.append({**item, "retained_externally": True})
+                continue
+            blob = self.store.blob(entry["raw"], Path(name).name,
+                "text/csv" if name.lower().endswith(".csv") else "application/octet-stream")
+            attachments.append({**item, "object": blob})
+            if "capture_id" in entry:
+                record = entry["existing_record"]
+                if record is None:
+                    payload = {"label": job["payload"]["label"] + " · native " + Path(name).name, "file": blob,
+                        "columns": entry["headers"], "rows": entry["row_count"], "null_token": item.get("null_token"),
+                        "source_url": job["payload"]["job"]["target"].get("report_server_url", ""),
+                        "scope": str(item.get("scope", job["payload"]["job"].get("scope", ""))),
+                        "parameters": item.get("parameters", {}), "source_report": item.get("report_path"),
+                        "server_job": self.service.reference(job), "native_result_state": result.get("state"),
+                        "capture_kind": item.get("capture_kind"), "native_definition": item.get("native_definition"),
+                        "imported": now(), "description": ("Original paginated CSV returned by Report Server." if item.get("capture_kind") == "paginated_csv"
+                            else "Original CSV retained with the native receiving operation; its capture kind remains attached.")}
+                    record = self.store.put("dataset", payload, entry["capture_id"], 0, self.service.actor)
                 captures.append(self.service.reference(record))
         package = self.store.blob(data, filename, "application/zip")
         return self.service.write("server_result", {"label": job["payload"]["label"] + " · " + str(result.get("state", "returned")),
             "job": self.service.reference(job), "native_result": result, "state": result.get("state", "returned"),
             "attachments": attachments, "captures": captures, "package": package, "received": now()})
-
     def handoff(self, request):
         job = self.store.get("server_job", request["job_id"])
         report = self.store.get("server_report", job["payload"]["report"]["id"], job["payload"]["report"]["revision"])
