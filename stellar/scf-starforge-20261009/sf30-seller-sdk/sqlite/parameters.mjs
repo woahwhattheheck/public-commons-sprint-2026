@@ -91,6 +91,33 @@ function limit(value, minimum, maximum, label) {
   if (!Number.isInteger(value) || value < minimum || value > maximum) throw new RangeError(label);
   return value;
 }
+/** Compile the shared scalar declaration without requiring a SQL source. */
+export function compileParameterSchema(input, name = "query") {
+  const parameters = structuredClone(input ?? {});
+  if (!record(parameters) || Object.keys(parameters).length > 64) throw new TypeError('At most 64 parameters per query');
+  for (const [field, spec] of Object.entries(parameters)) {
+    if (!NAME.test(field) || field.startsWith('__sf30_') || !record(spec) ||
+        !['string', 'integer', 'number', 'boolean'].includes(spec.type)) throw new TypeError(`Invalid parameter in ${name}`);
+    if (own(spec, 'nullable') && typeof spec.nullable !== 'boolean') throw new TypeError('nullable must be boolean');
+    if (own(spec, 'enum') && (!Array.isArray(spec.enum) || !spec.enum.length || spec.enum.length > 128)) throw new TypeError('enum requires 1–128 scalar values');
+    if (spec.type === 'string') {
+      const low = limit(spec.minLength ?? 0, 0, 65536, 'minLength out of range');
+      limit(spec.maxLength ?? 4096, low, 65536, 'maxLength out of range');
+    }
+    for (const key of ['minimum', 'maximum']) if (own(spec, key)) {
+      if (!['integer', 'number'].includes(spec.type)) throw new TypeError('Only numeric parameters have numeric bounds');
+      if (spec.type === 'integer') integer(spec[key], field);
+      else if (typeof spec[key] !== 'number' || !Number.isFinite(spec[key])) throw new TypeError('Finite numeric bounds required');
+    }
+    if (own(spec, 'minimum') && own(spec, 'maximum') &&
+        (spec.type === 'integer' ? integer(spec.minimum, field) > integer(spec.maximum, field) : spec.minimum > spec.maximum))
+      throw new TypeError('minimum exceeds maximum');
+    if (spec.enum) for (const candidate of spec.enum) scalar(candidate, spec, field);
+    if (own(spec, 'default')) parse(spec.default, spec, field);
+  }
+  return parameters;
+}
+
 export function compileQueries(input) {
   if (!record(input) || Object.keys(input).length < 1 || Object.keys(input).length > 64) throw new TypeError('Expected 1–64 named queries');
   const result = Object.create(null);
@@ -100,28 +127,7 @@ export function compileQueries(input) {
     if (!Array.isArray(raw.columns) || !raw.columns.length || raw.columns.length > 64 ||
         raw.columns.some(column => typeof column !== 'string' || !NAME.test(column)) || new Set(raw.columns).size !== raw.columns.length)
       throw new TypeError(`Explicit unique projected columns required for ${name}`);
-    const parameters = structuredClone(raw.parameters ?? {});
-    if (!record(parameters) || Object.keys(parameters).length > 64) throw new TypeError('At most 64 parameters per query');
-    for (const [field, spec] of Object.entries(parameters)) {
-      if (!NAME.test(field) || field.startsWith('__sf30_') || !record(spec) ||
-          !['string', 'integer', 'number', 'boolean'].includes(spec.type)) throw new TypeError(`Invalid parameter in ${name}`);
-      if (own(spec, 'nullable') && typeof spec.nullable !== 'boolean') throw new TypeError('nullable must be boolean');
-      if (own(spec, 'enum') && (!Array.isArray(spec.enum) || !spec.enum.length || spec.enum.length > 128)) throw new TypeError('enum requires 1–128 scalar values');
-      if (spec.type === 'string') {
-        const low = limit(spec.minLength ?? 0, 0, 65536, 'minLength out of range');
-        limit(spec.maxLength ?? 4096, low, 65536, 'maxLength out of range');
-      }
-      for (const key of ['minimum', 'maximum']) if (own(spec, key)) {
-        if (!['integer', 'number'].includes(spec.type)) throw new TypeError('Only numeric parameters have numeric bounds');
-        if (spec.type === 'integer') integer(spec[key], field);
-        else if (typeof spec[key] !== 'number' || !Number.isFinite(spec[key])) throw new TypeError('Finite numeric bounds required');
-      }
-      if (own(spec, 'minimum') && own(spec, 'maximum') &&
-          (spec.type === 'integer' ? integer(spec.minimum, field) > integer(spec.maximum, field) : spec.minimum > spec.maximum))
-        throw new TypeError('minimum exceeds maximum');
-      if (spec.enum) for (const candidate of spec.enum) scalar(candidate, spec, field);
-      if (own(spec, 'default')) parse(spec.default, spec, field);
-    }
+    const parameters = compileParameterSchema(raw.parameters, name);
     const sql = raw.sql.trim().replace(/;\s*$/, '');
     const used = sqlParameters(sql);
     if (used.size !== Object.keys(parameters).length || [...used].some(field => !own(parameters, field)))
