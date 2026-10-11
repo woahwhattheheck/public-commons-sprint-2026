@@ -134,3 +134,43 @@ The publisher directory contains original draft metadata in drafts/, prepared da
 To move to another host directory, import the source workspace's complete portable package, export its selected edition and prepare a publisher at the new location. Stage its original dataset release against that new location. Retained customer acquisitions continue through their original configuration and workspace; their completed SF100 data room is a portable delivery artifact.
 
 The source workspace's Socrata export preserves capture and edition history. Publisher preparation retains the selected export and original commercial operating state in its own directory, so source capture and the running seller can continue independently.
+
+## Continue an unpaid page after a local interruption
+
+The buyer keeps each completed page and its original native accounting. When the
+original attempt stopped before signature, the session can show
+`unpaidContinuation` with the page index, intent, original error, and the SHA-256
+of its retained attempt. Review that same record, then use **Continue unpaid
+page** in the Publisher customer section. The corresponding host action is:
+
+```json
+{
+  "action": "publisher.buyer.run",
+  "payload": {
+    "id": "ORIGINAL_BUYER_SESSION_UUID",
+    "retryUnpaid": true,
+    "expectedAttemptSha256": "ORIGINAL_ATTEMPT_SHA256"
+  }
+}
+```
+
+The original SF88 dataset command exposes the same operation with
+`run --session /private/session --workspace /private/existing-buyer
+--retry-unpaid true --expect-attempt ORIGINAL_ATTEMPT_SHA256`. The selected hash
+must match the attempt shown in the current session.
+
+Continuation requires the original saved result and SF82 observation to agree
+that the signer was never called, no reservation returned, and no response file
+was delivered. A fixed local worker then authenticates the existing SF36 journal
+under its original SF81 approval lock and checks that this intent has no row of
+any state. The normal SF81 quote review, consent and fresh atomic reservation run
+again for the same request, cursor, page cap and intent. The first completed pages
+remain available throughout.
+
+Before the original page files are cleared for that continuation, their exact
+bytes are saved in `pages/NNNNNN/unpaid-history/ATTEMPT_SHA256/`, along with the
+original config, result, evidence, native ledger check and cleanup checkpoint.
+If interruption occurs during this handoff, status shows `PREPARED`; the same
+explicit action and attempt hash finish the handoff. Each new refusal retains a
+separate attempt hash. The ordinary Recover action reads retained files; final
+accounting still uses the original SF36/SF82 workers and completed page receipts.

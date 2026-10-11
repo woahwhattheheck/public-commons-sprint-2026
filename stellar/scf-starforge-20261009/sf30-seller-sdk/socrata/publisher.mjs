@@ -335,13 +335,14 @@ export async function openSocrataPublisher({ directory } = {}) {
     return { id: saved.record.id, binding, report };
   }
   async function sessionAction(action, input) {
-    only(input, ['id']);
+    only(input, action === 'publisher.buyer.run' ? ['id','retryUnpaid','expectedAttemptSha256'] : ['id']);
     if (!UUID.test(input.id ?? '')) throw fault('SOCRATA_BUYER_SESSION', 'Select the original buyer session.', 400);
     const root = join(sessionsDirectory, input.id), binding = await readJson(join(root, 'binding.json'));
     if (binding.buyerId !== input.id) throw fault('SOCRATA_BUYER_SESSION_CHANGED', 'The original session identity differs.');
     const acquisition = join(root, 'acquisition'), native = await import('../../sf88-operator-buyer-cli/dataset-session.mjs');
     if (action === 'publisher.buyer.run') return native.runDatasetSession(acquisition, {
-      workspace: binding.workspaceDirectory, emitPageSummaries: false });
+      workspace: binding.workspaceDirectory, emitPageSummaries: false,
+      retryUnpaid: input.retryUnpaid ?? false, expectedAttemptSha256: input.expectedAttemptSha256 });
     if (action === 'publisher.buyer.recover') return native.recoverDatasetSession(acquisition);
     if (action === 'publisher.buyer.account') return native.accountDatasetSession(acquisition, { workspace: binding.workspaceDirectory, finalize: true });
     if (action === 'publisher.buyer.export') {
