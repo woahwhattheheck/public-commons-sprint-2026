@@ -1,5 +1,9 @@
 # SF88: One-command approved Stellar buyer pilot
 
+For complete large-file downloads, use [object acquisition](OBJECTS.md): select
+the original merchant object description, approve each chunk through this buyer,
+resume saved progress, and assemble the complete private file.
+
 For several prepared operations and restart recovery, use the [durable buyer
 inbox](QUEUE.md). It adds private request snapshots, a permanent attempt record,
 original-evidence recovery and an offline history report to this same buyer.

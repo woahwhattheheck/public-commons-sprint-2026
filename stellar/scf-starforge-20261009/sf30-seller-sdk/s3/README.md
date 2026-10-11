@@ -153,13 +153,16 @@ include:
 - `X-SF30-Object-Snapshot`, the selected object identity fingerprint.
 - `X-SF30-Object-Bytes`, the complete object's byte count.
 
-A buyer saving chunks should require the same snapshot and total size, verify
-each returned byte count and digest, and write contiguous nonoverlapping ranges.
-The existing SF88 `--response-out` saves each original paid response; the buyer
-owns its normal intent approval, spend reservation and payment recovery. A
-missing response never authorizes an automatic paid retry. This adapter does not
-grant a free re-download entitlement after payment or combine several paid
-requests into one transaction.
+Use the original [SF88 object acquisition workflow](../../sf88-operator-buyer-cli/OBJECTS.md)
+to deliver a complete large file. Its initializer selects one row from this
+release's original `objects.json` and the buyer's existing approved-route config.
+It verifies snapshot, total size, byte ranges and hashes; saves each response in
+the original buyer inbox; continues unattempted chunks after restart; and streams
+the complete private file to a new destination. The existing SF88 `--response-out`
+also remains available for individual responses. Every chunk retains normal intent
+approval, spend reservation and payment recovery. A missing response never
+authorizes an automatic paid retry. This adapter does not grant a free re-download
+entitlement after payment or combine several paid requests into one transaction.
 
 Default `maxBytes` is 900 KiB and the hard ceiling is 1 MiB per response, matching
 the original SF30 default. Large underlying objects work through chunks. Bytes
