@@ -11,8 +11,11 @@ The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
 install hooks, test suites or GitHub Actions configuration.
 
-Browser modules served under shared URLs use the same [asset contracts](BROWSER_ASSETS.md)
-in their original HTTP servers and the source collector.
+Browser modules served under shared URLs use the same
+[asset contracts](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/c26eee9e80fe4bccfd9faa5d79b4464742d8d95f/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md)
+in their original HTTP servers and the source collector. The same guide is included
+at `source/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md` inside the
+installed package.
 
 ## Install the source archive
 
@@ -4510,3 +4513,15 @@ The workspace downloads semantic accountant packets and a complete private proje
 with included source for receiving. Its fixed command starts the original Python
 server. See the [buyer expense operating guide](../sf36-spend-governor/expense-workspace/README.md)
 for source continuity, coding, review and recovery.
+
+## Open-Meteo weather merchant and operations
+
+The complete `weather-operations` command uses the original SF30 seller and generated client, original SF88 operator/buyer, and original encrypted workspace recovery. It covers explicit forecast/reanalysis/ensemble requests, retained source bytes, UTC/local/member analysis, attributed operating decision revisions, frozen JSON/CSV/HTML/ZIP reports, and same-root restore.
+
+```sh
+npx --no-install starforge weather-operations --help
+npx --no-install starforge weather-operations serve \
+  --settings /private/weather/settings.json
+```
+
+The [complete original product guide](../partners/open-meteo-operations/README.md) includes merchant compilation, receiving-operator initialization, controlling-terminal execution, provider mode/attribution, exact weather semantics and full recovery commands. Installed imports are `./partners/open-meteo` plus `/application`, `/workspace`, `/server`, `/analysis`, and `/reports`. The new component adds no dependency group; it retains the maintained native SDK/Python implementations and built-in Node SQLite. Evaluation data and commercial provider configuration remain explicit choices.
