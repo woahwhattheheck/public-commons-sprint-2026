@@ -201,6 +201,133 @@ values printed in the archive's `START.txt`. The captured source remains complet
 the original engine selects the interval after full-source verification. A period
 close additionally includes `period-close.json` and its immutable review snapshot.
 
-Workspace state is atomically replaced and fsynced under the existing Linux filesystem lease. One server owns a given workspace directory. Stopping and reopening preserves completed runs, imported files, recovery reviews and attempts, review history, and exports. If the process stops during a run, reopening marks that run interrupted and retains any captured files; the operator can capture current sources as a new run. An interrupted recovery import can be retried from its saved review, including a native entry completed immediately before the interruption. Earlier completed results and downloads stay available. Stop the server before copying the entire private workspace for an operating-system backup.
+Workspace state is atomically replaced and fsynced under the existing Linux filesystem lease. One server owns a given workspace directory. Stopping and reopening preserves completed runs, imported files, recovery reviews and attempts, review history, and exports. If the process stops during a run, reopening marks that run interrupted and retains any captured files; the operator can capture current sources as a new run. An interrupted recovery import can be retried from its saved review, including a native entry completed immediately before the interruption. Earlier completed results and downloads stay available. The operating backup below also retains the external sources required to continue this workspace.
 
 Limits follow the original accounting engine: up to 20,000 native events, 16 MB per source journal, 200 payment options, and 2,000 combined verification files. An imported SF86 file is limited to 80 KB and terms to 200 KB. The original recovered collection supports up to 2,000 entries, 200 KB per source JSON, and 64 MiB per saved response. The workspace retains up to 2,000 recovery reviews and 5,000 import attempts. Input manifests are limited to 16 MB, individual review archives to 256 MB, and workspace history to 32 MB with up to 5,000 runs. Archive a completed workspace and start another when those retention limits are reached.
+
+## Back up and restore the complete accounting operation
+
+The original `merchant-accounting-workspace` command has `backup`,
+`inspect-backup`, `verify-backup`, `restore` and `recovery-status` subcommands.
+They invoke the existing SF101 encrypted recovery engine. The original
+workspace lease owns each backup and restore; the normal browser and merchant
+MCP continue to open the same directory after completion.
+
+### Capture the original operating sources
+
+Stop this workspace and the processes that write its native outbox, verification
+directory and recovered-settlement collection. Supply `--quiesced` after they
+have stopped. A competing workspace process is rejected by the original Linux
+lease. A source file, directory or filename changing during capture makes the
+backup fail and removes only that newly created backup directory.
+
+Use a private `--state-root` that contains the workspace and all its configured
+inputs. The command selects these exact sources; it does not copy the whole
+state root:
+
+| Retained source | What reopening preserves |
+| --- | --- |
+| Complete original accounting workspace | Reconciliations and their captured inputs, collection sources/plans/results/attempts, pricing imports, period definitions/closes, accountant handoffs/returns, review history and downloads |
+| Configured outbox, proof directory and original terms | Native inputs for the next reconciliation |
+| Connected original recovered-settlement collection | Existing transfer proofs, receipt identities and exact delivered response bytes |
+| Files explicitly referenced by saved original recovery requests | The outcome, approved request, terms and optional response required to reuse a retained recovery review |
+
+Other files elsewhere under the state root are not scanned. Keep signer keys
+and host credentials outside these accounting source paths and preserve their
+established private operational backup separately. A
+source configured outside the selected state root is reported before capture;
+select the correct common private ancestor instead of rewriting its saved path.
+
+Set a private passphrase of at least 16 bytes in the named host environment
+variable. Obtain it through the host's existing secret manager or an interactive
+hidden prompt. Keep it recoverable separately from the encrypted backup. The
+command accepts the variable name and never prints the value.
+
+```sh
+npx --no-install starforge merchant-accounting-workspace backup \
+  --workspace /private/merchant/accounting-workspace \
+  --state-root /private/merchant \
+  --out /private/backups/accounting-2026-10-11 \
+  --pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE \
+  --quiesced
+```
+
+The output parent must already be private, and the output directory must be
+new and outside all captured sources. In a source checkout, replace
+`npx --no-install starforge merchant-accounting-workspace` with
+`node stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/server.mjs`.
+The existing installed package includes the same source and recovery engine.
+
+Successful capture returns `ACCOUNTING_BACKUP_CREATED`, the encrypted manifest
+SHA256, original workspace revision/hash and captured counts. `backup.json`
+marks completion; `encrypted/` is the original SF101 bundle. Its authenticated
+encryption contains the source mapping and original files. The outer receipt
+contains counts and a manifest digest. Preserve the whole completed directory.
+
+```sh
+npx --no-install starforge merchant-accounting-workspace inspect-backup \
+  --bundle /private/backups/accounting-2026-10-11
+
+npx --no-install starforge merchant-accounting-workspace verify-backup \
+  --bundle /private/backups/accounting-2026-10-11 \
+  --pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE
+```
+
+Inspection reports the completion receipt and manifest identity. Verification
+authenticates the original manifest and every encrypted file with the private
+passphrase, returning `ACCOUNTING_BACKUP_VERIFIED`. Supply
+`--expected-sha256` with the saved manifest digest to pin a specific backup in
+either command or in restore.
+
+### Restore at the original private paths
+
+Prepare the same absolute state-root path on the merchant host, owned by the
+operating account with mode 0700. Stop the original input writers and workspace.
+Preserve any surviving original directories until recovery is complete.
+
+```sh
+npx --no-install starforge merchant-accounting-workspace restore \
+  --workspace /private/merchant/accounting-workspace \
+  --state-root /private/merchant \
+  --bundle /private/backups/accounting-2026-10-11 \
+  --pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE \
+  --quiesced
+```
+
+Restore authenticates the full original SF101 bundle into private staging before
+publishing any operating file. It checks the encrypted mapping against the
+original workspace state and its saved recovery requests. The command creates
+missing files and reuses existing files only when their exact bytes match.
+A changed or additional existing operating file produces
+`ACCOUNTING_RECOVERY_DESTINATION_CHANGED`; that data is preserved. Choose the
+appropriate retained backup or preserve the surviving state separately before
+recovering into its original empty path.
+
+Original absolute paths remain unchanged because collection plans and completed
+batch operations retain those paths in their identities. This command does not
+rebase completed plans, generate a payment, replay a purchase or call an RPC.
+
+During publication, `recovery-restore.json` records the selected manifest under
+the original workspace lease. A signal or crash leaves that record and any
+fully published files for the next attempt. Repeating the **same restore
+command** authenticates the same backup, clears only its own unfinished file
+staging, reuses completed matching files and finishes the remaining work.
+The workspace state file is published last. Normal browser/MCP opening reports
+`WORKSPACE_RESTORE_INCOMPLETE` until this operation completes.
+
+```sh
+npx --no-install starforge merchant-accounting-workspace recovery-status \
+  --workspace /private/merchant/accounting-workspace
+```
+
+Success returns `ACCOUNTING_WORKSPACE_RESTORED` with original revision/hash,
+restored/reused file counts and the manifest identity. Reopen the original
+workspace command or existing merchant MCP configuration. Original report,
+period-close, accountant packet and recovered-response APIs then read their
+same retained IDs and verify their same file hashes.
+
+The recovery engine supports up to 10,000 entries, four GiB of plaintext, two
+GiB per file and 16 directory levels; this operating wrapper reserves space for
+its encrypted source mapping. Reads and encryption stream file contents.
+Staging and restored files are private. No dependency installation, hosted job,
+payment or network request is part of this operation.
