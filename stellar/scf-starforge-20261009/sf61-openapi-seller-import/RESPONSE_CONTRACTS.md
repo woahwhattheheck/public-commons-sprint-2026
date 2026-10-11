@@ -79,7 +79,7 @@ Response validation occurs after the one backend invocation and before the
 original seller's post-handler settlement call. Some native payment schemes may
 have already performed a pre-handler settlement; cancellation/refund handling
 remains the native SDK's responsibility. This feature does not promise that every
-failure avoids every network payment, nor does it undo a mutating backend POST.
+failure avoids every network payment, nor does it undo a mutating backend request.
 Use the existing [backend side-effect contract](../sf30-seller-sdk/UPSTREAM.md#failure-and-side-effect-contract).
 
 Failures expose a stable error code and upstream status only. They do not return
