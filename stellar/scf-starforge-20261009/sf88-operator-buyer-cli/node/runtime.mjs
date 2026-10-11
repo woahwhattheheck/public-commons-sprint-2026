@@ -1,7 +1,7 @@
 // MIT — One native SF88 subprocess, never a shell or replacement payment engine.
 import { spawn } from 'node:child_process';
 import { open, lstat, mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { absolute, privateDirectory, readBytes, parseJson, object, need, BuyerError, safeCode } from './store.mjs';
 
 export class NativeRuntime {
@@ -16,12 +16,16 @@ export class NativeRuntime {
     Object.assign(this, { timeoutMs, cleanupGraceMs, outputLimit });
   }
 
-  async run(args, { directory, signal, started } = {}) {
+  async run(args, { directory, signal, started, entryFile = this.cli, resultFile, resultLimit = this.outputLimit } = {}) {
     need(Array.isArray(args) && args.every(value => typeof value === 'string' && !value.includes('\0')), 'NATIVE_ARGUMENTS_INVALID');
     need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
+    need(Number.isSafeInteger(resultLimit) && resultLimit > 0 && resultLimit <= 268435456, 'NATIVE_RESULT_LIMIT_INVALID');
     need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
-    need((await lstat(this.cli)).isFile(), 'NATIVE_CLI_REQUIRED');
+    entryFile = absolute(entryFile);
+    need((await lstat(entryFile)).isFile(), 'NATIVE_CLI_REQUIRED');
     directory = await privateDirectory(directory, { create: false });
+    resultFile = resultFile === undefined ? join(directory, 'stdout.json') : absolute(resultFile);
+    need(dirname(resultFile) === directory, 'NATIVE_RESULT_PATH_INVALID');
     // Native writes directly to private descriptors. A parent crash does not
     // discard a later complete native summary, which recover() can read.
     const stdout = await open(join(directory, 'stdout.json'), 'wx', 0o600);
@@ -48,7 +52,7 @@ export class NativeRuntime {
     try {
       await new Promise(resolveClose => {
         try {
-          child = spawn(this.node, [this.cli, ...args], {
+          child = spawn(this.node, [entryFile, ...args], {
             cwd: this.directory, env: this.environment, shell: false,
             stdio: ['inherit', stdout.fd, stderr.fd], windowsHide: true,
           });
@@ -91,16 +95,16 @@ export class NativeRuntime {
       signal?.removeEventListener('abort', abort);
       await Promise.all([stdout.close(), stderr.close()]);
     }
-    let output = null, nativeError = null;
-    try { const value = parseJson(await readBytes(join(directory, 'stdout.json'), this.outputLimit)); if (object(value)) output = value; }
-    catch { localError ??= 'NATIVE_RESULT_UNAVAILABLE'; }
+    let output = null, nativeError = null, unavailable = false;
+    try { const value = parseJson(await readBytes(resultFile, resultLimit)); if (object(value)) output = value; }
+    catch { unavailable = true; }
     try {
       const raw = await readBytes(join(directory, 'stderr.log'), this.outputLimit);
       const line = raw.toString('utf8').trim().split('\n').at(-1);
       const parsed = JSON.parse(line);
       nativeError = safeCode(parsed?.error, null);
     } catch { /* Raw stderr is private, never an exception message. */ }
-    return { exitCode, exitSignal, errorCode: localError ?? nativeError, output };
+    return { exitCode, exitSignal, errorCode: localError ?? nativeError ?? (unavailable ? 'NATIVE_RESULT_UNAVAILABLE' : null), output };
   }
 
   async checked(args, { stateDirectory, mode, signal } = {}) {
