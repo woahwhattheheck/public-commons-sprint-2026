@@ -84,6 +84,13 @@ async function snapshot({ backend, explorer, config, starting }) {
         JSON.stringify(rows) !== JSON.stringify(displayed)) {
       throw new Error(`Native backend vs Atlas proxy mismatch at offset ${offset}`);
     }
+    // Matching rows alone cannot certify Atlas pagination or filtered coverage.
+    // Compare every original page, not just the unfiltered first page sampled
+    // by launch.mjs; an altered total/cursor/limit must never export COMPLETE.
+    if (JSON.stringify(native.data.pagination) !==
+        JSON.stringify(viewer.data?.pagination)) {
+      throw new Error(`Native backend vs Atlas pagination mismatch at offset ${offset}`);
+    }
     if (total !== null && total !== declaredTotal) throw new Error('Catalog changed while capturing; retry from a stable original journal');
     if (total === null) total = declaredTotal;
     if (offset + rows.length > total || rows.length > config.limit || (offset < total && rows.length === 0)) {
