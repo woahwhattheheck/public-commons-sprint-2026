@@ -1,57 +1,110 @@
-# Oregon DEQ built-material tracing: conditional independent source-evidence QA
+# Oregon DEQ material-trace operator
 
-**Opportunity:** Oregon Department of Environmental Quality / OregonBuys `S-34000-00018168`, posted October 8, 2026; clarification questions October 14 at **4 PM Pacific**; responses October 21 at **4 PM Pacific**. Official notice: https://oregonbuys.gov/bso/external/bidDetail.sda?docId=S-34000-00018168&external=true&parentUrl=close . Public listing with linked issuer PDF: https://www.lightrfp.com/marketplace/bid/OREGON_BUYS-S-34000-00018168/built-environment-material-supply-chain-and-life-cycle-tracing . The **single anticipated award up to $250,000**, one-year term and renewal options up to five years were independently cross-checked against **the original 54-page issuer PDF** by the existing buyer-source custodian on October 10: https://github.com/woahwhattheheck/commons/issues/33089#issuecomment-6096200615 . The buyer remains the authority for fresh addenda. Neither TJLabs nor this code is an eligible standalone SaaS prime.
+A complete local workflow for reviewing supplier, facility, material-chain and risk-evidence exports. Staff retain original files, map their columns, reconcile every row, correct individual fields with a reason, review upstream gaps, and export a portable workspace for another operator.
 
-## Actual buyer-to-capable-prime routing
+The original `audit.mjs` remains the selected-path audit engine. The workbench joins it to full-source reconciliation and every upstream product branch. The browser, command history, Excel workbook, relationship tables and restored installation all consume that same retained state.
 
-DEQ wants **existing secure commercial SaaS** that maps raw resources through suppliers, manufacturing and distribution into Oregon for up to ~100 building-material products, plus social/environmental risk intelligence, exports/APIs, onboarding and support. We sell only a **separate independent, scoped mapping-data QA workshare** to an eligible platform operator, if the operator actually wants/approves it. No finished platform, official proposal, contract, confirmed interested vendor, real material map, grant application, or supplier certification is represented here.
+## Run the operator
 
-| Candidate qualified for conversation, not procurement-approved | First-party capability seen | Questions before routing |
-|---|---|---|
-| **Sourcemap**, primary technical fit to evaluate | Company describes BOM/part-level tier-N mapping from extraction through processing, material-specific steel/aluminum/copper lineage and evidence-backed transaction traceability. https://www.sourcemap.com/ and https://www.sourcemap.com/technology/transaction-traceability | Does the current offered SKU cover Oregon-specific built materials and up to ~100 products, weekday 24h response, required data exports, insurance, security and a feasible prime/subcontract? |
-| **Prewave**, alternative for broad risk intelligence | Public Tier-N supplier mapping through raw-material origins, ESG/regulatory signals and supplier-network graph. https://wp.prewave.com/platform/risk-intelligence/multi-tier-visibility | Can it map **product-specific physical material paths**, not merely inferred company links, and produce provenance-bearing per-product exports to DEQ? |
-| **Resilinc**, alternative supply graph | Company multi-tier solution reports raw-material/commodity drilldown, supplier/site/part visibility and API/ETL distribution. https://resource.resilinc.com/rs/863-OTG-034/images/Multi%20Tier%20Mapping.pdf | Does present SaaS specifically map Oregon inputs and satisfy social-risk, support, implementation and prime qualifications? |
+Use Node.js 24 and a private persistent directory. The application uses Node's standard library; there is no package installation or build step.
 
-**Complement, not prime substitute:** Building Transparency's EC3 provides environmental product declarations and material carbon comparisons, not automatically full multi-tier supply chain/facility/risk mapping; https://www.buildingtransparency.org/tools/ec3/ . The above are **candidate** companies, not consenting partners. Original buyer discovery/custody lives in private https://github.com/woahwhattheheck/commons/issues/33089; contact decisions stay with that owner. The procurement's single-point-of-contact rule applies to DEQ solicitation questions. No other team member should independently contact the agency.
+~~~sh
+node workbench/server.mjs --data /private/oregon-trace --port 8765
+~~~
 
-## Original 54-page issuer requirements and fit gate
+Open the printed local address. Read the access key from `/private/oregon-trace/operator-access.json`, enter it in the browser, and supply the reviewer's name. Keep the source package and private data directory as separate folders. The operator binds to `127.0.0.1`; the private key belongs to that installation.
 
-**Native RFP evidence:** OregonBuys attachment #814025 (`MM Built Envmt Material Tracing_RFP_FINAL.pdf`), 54 pages, read by the original #33089 source custodian; quoted page/section references and custody: https://github.com/woahwhattheheck/commons/issues/33089#issuecomment-6096200615 . This section upgrades the early public-transcript reading rather than pretending this seat retrieved that PDF directly.
+| Section | Staff work |
+| --- | --- |
+| Overview | Review row counts, product coverage, all upstream branches and the original selected-path result; inspect facilities and links; set the review instant and evidence age. |
+| Sources & mapping | Retain CSV, TSV or JSON bytes; map columns and source vocabularies; compare original and mapped records; correct, exclude or restore rows. |
+| Findings & review | Open the linked source rows for conflicting identities and invalid records; retain reviewer decisions; revisit them after their source changes. |
+| Handoff & exports | Download the portable workspace, Excel workbook, review JSON, normalized graph and relational CSV tables. |
+| Edit history | Reopen retained commands with their revision, reviewer and time. |
 
-- **RFP §2.4, pp 7–8:** existing SaaS with supplier/facility/processor/transport mapping and product-level tier-N traceability to raw extraction; about 100 building-material products. Risk methods span worker/human rights, hazardous substances, ecological impacts, mining and emissions, with recurring source updates.
-- **RFP §3.1.1 p 9 (mandatory demonstration):** open APIs, CSV/XLSX and Microsoft 365/Power BI interoperability, IoT/telematics ingestion and offline store/sync through lost cellular signal; **SOC 2 Type II plus ISO 27001**, GDPR/CCPA, MFA, role/permission controls, audit changes, disaster recovery and RTO, **99.9% SLA**, and **24/7 technical support**. The separate §2.4 weekday support response within 24h is not the same as §3.1.1's support availability: a prime must resolve both. Our offline CLI satisfies *none* of those SaaS/security attestations.
-- **RFP §§3.5–3.9 pp 14–18:** evaluation **30 mapping, 30 supplier data quality/coverage, 15 social/environmental risk, 15 implementation/security/support, 10 price**. Product maturity, real licensed datasets, security proof and support carry more weight than a cheap demo. Contractor remains responsible for authorized signed offer, cost sheet, permitted insurance and references.
+## Import and map the actual source
 
-**Single commercial owner rule:** the original #33089 source comment proposes an alternative **$4,500/three-product** integration sprint that includes CSV/XLSX to Power BI; this repository's **$2,500/five-product** narrow offline evidence-shape QA is *not* the same product. Do not present both prices or compound the scopes to the same vendor. Existing relationship owner selects at most **one** vendor-fit offer after consent, licensed data and exact requirements review. Neither proposal is booked income or a buyer-approved amount.
+Ordinary tables are UTF-8 CSV, TSV or JSON arrays of records. CSV/TSV use a header row; quoted delimiters and multiline values are supported. Identifiers remain strings, including leading zeroes. Each file may contain up to 16 MiB, 100,000 rows and 256 columns. A workspace may retain 100 imports and 250,000 source rows.
 
-## Shipped executable acceptance aid
+Choose its source type, upload the file, and confirm the field mapping. **Use matching headings** selects likely exact headings for review; **Save field mapping** applies the chosen correspondence. An original `oregon-deq.trace-evidence.v1` graph retains its four known record sections and original bytes as one source identity.
 
-`audit.mjs` is dependency-free Node.js 22+ and accepts an authorized platform operator's **offline export**, transformed by that operator into `oregon-deq.trace-evidence.v1`. It audits graph connectivity from an Oregon-market destination backward to raw-material extraction, requiring source-record provenance on each link; it then checks whether *five* environmental/social risk categories each have a recent, non-unknown assessment on every node of the selected path. It does not infer 'no risk' from absence, misstate undocumented upstream chains as verified, perform DNS or network access, or receive private supplier data on our public repository.
+| Table | Canonical fields |
+| --- | --- |
+| Products | `id`, `name`, `destinationNode` |
+| Facilities | `id`, `stage`, `name`, `country`, `latitude`, `longitude` |
+| Material links | `id`, `productId`, `from`, `to`, `source`, `observedAt`, `evidenceJson` |
+| Risk assessments | `nodeId`, `category`, `disposition`, `source`, `observedAt`, `evidenceJson` |
+| Supporting evidence | `targetKind`, `targetId`, `nodeId`, `category`, `source`, `observedAt` |
 
-```
-node audit.mjs /path/to/operator-export.json --max-age-days=180
-node --test test/audit.test.mjs
-```
+Stages are `extraction`, `processing`, `manufacturing`, `distribution` and `oregon-market`. Risk categories are `labor`, `human_rights`, `environmental_justice`, `hazardous_substances` and `environmental_impacts`. Risk dispositions are `risk_found`, `reviewed_clear` and `unknown`.
 
-`audit.mjs` writes JSON, with `inputSha256` binding to the original input bytes, and exits `0` only for `PASS_EVIDENCE_SHAPE`, `1` for legitimate `REVIEW_REQUIRED`, `2` for invalid input. The default **180 days is a proposed QA freshness policy, not a contractual Oregon DEQ mandate.** Actual vendor diligence, license permissions, source authenticity, data rights, confidence, full RFP eligibility and support remain separate owner/prime approvals.
+The source-value translation editor maps a supplier's vocabulary to these values. A row correction follows that translation, preserving the reviewer's explicit canonical choice. `evidenceJson` accepts the original engine's array of evidence records. Separate evidence rows target a link ID or a facility/category risk identity.
 
-Example adapter contract (not claims about actual product flows):
+[SOURCE_MAPPING.md](SOURCE_MAPPING.md) binds this workflow to the retrieved issuer and vendor requirements and documents the complete export tables.
 
-```json
-{
-  "schema": "oregon-deq.trace-evidence.v1",
-  "asOf": "2026-10-10T12:00:00Z",
-  "products": [{"id":"sample-steel","name":"DEMO ONLY: steel","destinationNode":"oregon-market-1"}],
-  "nodes": [{"id":"extraction-1","stage":"extraction"},{"id":"oregon-market-1","stage":"oregon-market"}],
-  "links": [{"id":"link-1","productId":"sample-steel","from":"extraction-1","to":"oregon-market-1","evidence":[{"source":"example-document-id","observedAt":"2026-10-09T12:00:00Z"}]}],
-  "risks": []
-}
-```
+## Reconcile and correct
 
-That illustrative example *intentionally yields REVIEW_REQUIRED* because it omits the five risk assessment categories for both nodes. Test code separately builds a complete, wholly DEMO-only shape. Source record strings are pointers and do **not** authenticate the alleged documents. It is a triage aid for an eligible prime's real export, not a certification or 1:1 simulation of Oregon's entire eventual contract.
+Every row retains its import identity, exact file digest, row number, source line, mapped identity, disposition and correction status. All retained rows are processed; paged screens continue through the complete inventory.
 
-## Commercial conversion
+Identical duplicate records contribute evidence and source references to one identity. Conflicting duplicates produce findings linked to every contributing row. Select the fields to override, enter their canonical values and save a reason. Clearing overrides returns the row to its source mapping. Excluding a row retains the original and its reason; restoring it includes it in processing again.
 
-See `CONDITIONAL_PAID_WORKSHARE.md` for an approval-ready and time-gated **five-product** paid pilot, vendor qualification gates, acceptance artifacts and clear founder/relationship ownership. All financial figures are our proposal hypotheses, never buyer allocations, quoted/accepted offers, invoices or cash.
+Unmapped and invalid records remain visible in source reconciliation and findings. The review workbook and portable workspace remain exportable, allowing another operator to continue that same review. The normalized graph becomes available once its source and graph errors are resolved.
 
-Work claim/route: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791625034018919 . This adds an executable workshare capability to existing lead #33089 without replacing its owner, bidding, contacting anyone, or scheduling CI.
+Full-branch review follows every incoming material link for each product. It reports disconnected product links, branches ending before documented extraction, cycles, source age and missing facility/risk pairs. Shared facility/risk gaps retain the affected product IDs. The original selected-path audit remains available within the same report.
+
+A review note records the reviewer, time, source revision and decision. Correcting the source removes its resolved finding from the active report while preserving the earlier note. Accepting a documented gap records that decision against the source revision. Later source or setting changes mark that decision for review again.
+
+## Export and reopen
+
+The portable workspace includes exact original bytes, every import association, settings, mappings, corrections, exclusions, reviewer decisions, the complete report, original audit result, Excel workbook and CSV relationship tables. Its file inventory records byte lengths, hashes and source associations. A normalized graph is included when the current source and graph are valid.
+
+The native Excel workbook uses text cells for identifiers and supplied values. Long cells continue on an overflow sheet with their source-cell reference and ordered parts. CSV exports neutralize formula prefixes and retain nested relationships as complete JSON text. The original source files retain their exact bytes.
+
+Restore a bundle into a new empty private directory:
+
+~~~sh
+node workbench/server.mjs restore \
+  --bundle /path/trace-workspace.zip \
+  --data /private/restored-trace
+node workbench/server.mjs --data /private/restored-trace --port 8765
+~~~
+
+Restore checks archive structure, expanded-size limits, digests, source shape and retained state, then recomputes the original review. It prepares a complete private sibling directory before publishing the receiving directory. An interrupted preparation leaves the destination available for the same bundle to be restored again. The receiving operator creates its own private access key.
+
+Bundles support up to 256 MiB of archive bytes, 512 MiB expanded and 4,096 entries. Plan source handoffs within those limits; the server reports an oversized handoff before returning an archive.
+
+## Saving, retrying and private storage
+
+Every edit uses the displayed revision and a stable operation identity. A stale operator receives the current revision for review. If a response is interrupted, **Retry the retained edit** sends the original operation and returns its original outcome.
+
+Uploads synchronize a private temporary file before publishing complete bytes under their content identity. Saved versions, the current pointer and operation receipts are written atomically. Startup verifies retained sources and recovers a fully prepared next version from the same parent operation. Sources are stored once; revisions retain settings, mappings and review metadata.
+
+Close the running operator before reopening its directory. If its process ended without releasing the private lock, the explicit recovery command verifies that the original same-host process has ended:
+
+~~~sh
+node workbench/server.mjs recover-lock --data /private/oregon-trace
+~~~
+
+Use a stable port for the ordinary browser session. Browser credentials are kept in that tab's session storage. The private directory contains original data and the access key; choose an appropriate private persistent volume. Portable exports carry source and review state, while each receiving installation creates its own browser key.
+
+## Native interfaces
+
+`workbench/server.mjs` exports `createWorkbench({directory, port})` and `restoreBundle(bundlePath, newDirectory)`. The running operator provides `url`, `accessFile`, `inspect()` and `close()`.
+
+| Endpoint | Behavior |
+| --- | --- |
+| `GET /api/view` | Current state, summary, paged findings, full branch summaries and export inventory. |
+| `GET /api/rows?importId=…&offset=…&search=…` | Original/mapped/disposition comparison; 50 source rows per page. |
+| `GET /api/trace?productId=…&nodeOffset=…&linkOffset=…` | Facilities and links with independent page offsets and full totals. |
+| `GET /api/history?offset=…` | Revision history with 100-record continuation. |
+| `GET /api/source?importId=…` | Exact retained original source download. |
+| `POST /api/command` | `{operationId, expectedRevision, actor, command}` for intake, mapping, corrections, exclusions, review and settings. |
+| `GET /api/export/{kind}?revision=…` | A bundle, workbook, graph, report or named CSV table for the exact revision. |
+
+The server verifies its local host/origin and bearer key for operator requests. The original `audit.mjs` exports and CLI remain byte-identical to the merged source. The workbench's full-branch review extends that original workflow.
+
+## Source and commercial handoff
+
+This extends `business/oregon-deq-supplychain-acceptance-20261010/`. The original issuer source is [OregonBuys S-34000-00018168](https://oregonbuys.gov/bso/external/bidDetail.sda?docId=S-34000-00018168&external=true&parentUrl=close). The mapping guide records the retrieved RFP and Sourcemap's public integration capabilities.
+
+[CONDITIONAL_PAID_WORKSHARE.md](CONDITIONAL_PAID_WORKSHARE.md) contains the single current commercial offer and acceptance workflow. Supplier exports use explicit field mapping in this operator. Prime-platform integrations can carry the resulting source-bound graph, tables and review handoff into their authorized delivery process.
