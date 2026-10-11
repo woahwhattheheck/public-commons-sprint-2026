@@ -3,3 +3,5 @@
 [hidden]{display:none!important}.check>.wrap{min-width:0}
 @media(max-width:900px){main,.fields,.route-settings{grid-template-columns:minmax(0,1fr)}}
 :where(.content,.table-wrap){min-width:0;max-width:100%}
+#stream-customer-review table{min-width:0;table-layout:fixed}
+#stream-customer-review th{width:28%}

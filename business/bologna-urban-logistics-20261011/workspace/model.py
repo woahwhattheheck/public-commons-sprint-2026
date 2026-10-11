@@ -223,6 +223,9 @@ def apply_action(root: Path, payload: dict):
     action = payload.get("action")
 
     def operation(state):
+        if isinstance(action, str) and action.startswith("interviews."):
+            from interviews import apply_interview_action
+            return apply_interview_action(state, payload)
         delivery_result = apply_delivery_action(state, payload)
         if delivery_result is not None:
             return delivery_result
@@ -307,6 +310,7 @@ def apply_action(root: Path, payload: dict):
             name = checked_text(payload.get("name"), "Publication name", 200)
             frozen = report_payload(state)
             frozen["workspaceRevision"] = state["revision"] + 1
+            frozen["interviews"]["workspaceRevision"] = frozen["workspaceRevision"]
             frozen["snapshotAt"] = utc_now()
             publication = {"id": str(uuid.uuid4()), "name": name, "createdAt": frozen["snapshotAt"],
                            "workspaceRevision": state["revision"] + 1, "reportSha256": sha256(canonical(frozen)), "report": frozen}
@@ -335,6 +339,7 @@ def report_payload(state: dict) -> dict:
             "baseline": copy.deepcopy(state["baseline"]), "datedObservations": copy.deepcopy(state["datedObservations"]),
             "decisions": copy.deepcopy(state["decisions"]), "assumptions": copy.deepcopy(state["assumptions"]),
             "scenarios": copy.deepcopy(state["scenarios"]), "survey": survey_summary(state),
+            "interviews": __import__("interviews").analyze(state),
             "streetPlans": copy.deepcopy(state["streetPlans"]), "roadmap": copy.deepcopy(state["roadmap"]),
             "workspaceRevision": state["revision"], "snapshotAt": state["updatedAt"], "delivery": delivery,
             "boundary": "Source-linked analytical material with separate analyst review and municipal decision records."}
@@ -393,6 +398,10 @@ def export_parts(root: Path, publication_id: str | None = None):
              "report.json": canonical(report), **delivery_files(report)}
     if "streetPlans" in report and "roadmap" in report:
         files["roadmap.csv"] = roadmap_csv(report)
+    if "interviews" in report:
+        analysis = report["interviews"]
+        frozen_state = {"revision": analysis["workspaceRevision"], "baseline": report["baseline"], "scenarios": report["scenarios"]}
+        files.update(__import__("interviews").export_files(frozen_state, analysis))
     manifest = file_manifest(report, files, publication_id)
     files["manifest.json"] = canonical(manifest)
     return manifest, files

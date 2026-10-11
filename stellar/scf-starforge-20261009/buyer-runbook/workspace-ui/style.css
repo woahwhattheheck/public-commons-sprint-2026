@@ -13,5 +13,7 @@
 #recovery-result>h3:first-child{margin-top:0}
 
 #recovery-panel .page-heading{flex-wrap:wrap}
+.operation-paid-file{margin-top:20px;padding-top:17px;border-top:1px solid var(--line)}.operation-paid-file h4{font-size:13px;margin:0}.operation-paid-file p{font-size:12px}.operation-paid-file .toolbar{margin-top:14px}#file-review-form>label{margin:16px 0}#file-order-detail{scroll-margin-top:20px}#file-order-summary code{overflow-wrap:anywhere}#paid-files-panel button,#paid-files-panel .button{max-width:100%;white-space:normal}
 #recovery-panel .page-heading .badge{max-width:100%;white-space:normal}
 @media(max-width:690px){.sidebar #open-requests{grid-row:2}.sidebar #open-recovery{grid-row:3}.sidebar h2{grid-row:4}.sidebar nav{grid-row:5}#recovery-panel button{max-width:100%;white-space:normal}}
+@media(max-width:690px){.sidebar #open-paid-files{grid-row:3}.sidebar #open-recovery{grid-row:4}.sidebar h2{grid-row:5}.sidebar nav{grid-row:6}.operation-paid-file .toolbar{align-items:stretch;flex-direction:column}}
