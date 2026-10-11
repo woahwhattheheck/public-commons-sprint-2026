@@ -1,15 +1,15 @@
 # SF30 seller operations
 
-For a one-command original native seller with the SAME SF98 fulfillment journal and live local operations, see [merchant launch](MERCHANT_LAUNCH.md). The ordinary challenge-only launcher below remains unchanged.
+A live, read-only operator surface for the **existing SF30 seller service**, with optional private aggregate history across restarts. See which API routes receive traffic, return payment challenges, fail or disconnect, compare observed UTC days and export a selected period without collecting customers or turning HTTP codes into revenue. Node 22+, no additional packages or hosted services.
+
+For a one-command original native seller with the same SF98 fulfillment journal and live local operations, see [merchant launch](MERCHANT_LAUNCH.md).
 
 Upstream-backed sessions also expose optional [backend availability and recovery](../UPSTREAM_AVAILABILITY.md)
 in this same console. The original `/api/snapshot` and JSON export include an
 `upstreams` object; read-only `/api/upstreams` serves it separately. Binding names,
 capacity, failure counters and circuit state contain no backend address,
 credentials, request data or payment outcomes. Ordinary seller sessions retain
-their existing snapshot shape.
-
-A live, read-only operator surface for the **existing SF30 seller service**. See which API routes receive traffic, return payment challenges, fail or disconnect, without collecting customers or turning HTTP codes into revenue. Node 22+, no additional packages or hosted services.
+their existing traffic data and optional usage history without an upstream object.
 
 ## Run
 
@@ -67,8 +67,8 @@ import { startSellerOperations } from './operations/server.mjs';
 const operations = await startSellerOperations(existingSellerSession, { port: 8424 });
 console.log(operations.url);
 // At shutdown:
-await operations.close();
 await existingSellerSession.close();
+await operations.close();
 ```
 
 `existingSellerSession` is the original `{server, compiled, mode, ...}`. All new source is in `operations/`; no modifications to seller compilation, admission, routing or payment code are needed. `observeSellerTraffic(session)` from `traffic.mjs` also provides `snapshot()` and `detach()` without a browser listener.
@@ -88,7 +88,55 @@ reports HTTP traffic only, not successful payment settlement.
 
 **Failures:** rows sort by server errors/disconnects, then traffic. HTTP 402, other 4xx, 5xx and early disconnects have separate columns. Finish/close reconcile in-flight without double-counting. Unknown paths, unsupported methods and invalid targets enter fixed aggregate buckets, not arbitrary labels.
 
-**Handoff:** download current route CSV or JSON. Exports remain fresh even when display updates are paused. CSV cells are quoted and formula-like strings neutralized. JSON carries session/capture/start times, totals, routes, 60 minute buckets and the latest metadata-only outcomes. No request contents or persistent request log are generated.
+**Handoff:** download current route CSV or JSON. Exports remain fresh even when display updates are paused. CSV cells are quoted and formula-like strings neutralized. JSON carries session/capture/start times, totals, routes, 60 minute buckets and the latest metadata-only outcomes. The separate History JSON and Daily CSV links export the applied date range and route from retained aggregate history. No request contents or persistent individual request log are generated.
+
+## Retain and compare daily usage
+
+Use a **different private directory for each merchant/seller service**. Keep that directory outside the public seller assets, reverse proxy, repository and shared download folders. History is off unless a directory is supplied:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs \
+  --history-dir /private/merchant-a/seller-usage --history-days 90 -- \
+  --config /private/merchant-a/seller.json
+```
+
+These options belong before `--`, alongside `--operations-port` and optional `--upstream`. Original seller options remain after it. The active session checkpoints its aggregate counters every five seconds. Normal shutdown first closes the original seller, then flushes its final observations and closes operations. Reusing the same history directory on restart preserves prior daily usage and creates a separate session; it does not add the same cumulative checkpoint twice.
+
+The same integration API accepts `historyDirectory`, `historyRetentionDays` (default 90; 1–365) and `historyCheckpointMs` (default 5000; 1000–60000):
+
+```js
+const operations = await startSellerOperations(existingSellerSession, {
+  port: 8424,
+  historyDirectory: '/private/merchant-a/seller-usage',
+  historyRetentionDays: 90,
+  historyCheckpointMs: 5000,
+});
+// Let existing requests finish before the final history checkpoint.
+await existingSellerSession.close();
+await operations.close();
+```
+
+Calling `operations.close()` alone detaches observation and saves the outstanding count at that moment; it does not turn unresolved requests into completed outcomes.
+
+The **Usage over time** panel opens on the latest seven UTC days. Select an inclusive From/Through range and optional route, then **Apply range**. Seven-day and thirty-day shortcuts apply immediately. The table shows each retained day's attempts, HTTP outcomes, disconnects and duration histogram p95 upper bound. Its change column compares attempts with the preceding **adjacent retained calendar day inside the selected range**. Missing days remain absent rather than being invented as zero traffic. Today and a session's first observed day can have partial coverage; the comparison measures observations, not full-day demand, buyers or payment conversion.
+
+Totals and exports follow the applied selection. Changing the controls does not silently change the table or its export selection until Apply is pressed. JSON and CSV are requested fresh from the server even if display polling is paused. A retention-clipped range is identified in the panel. History updates alongside the existing live view, at most once every fifteen seconds; hidden or paused pages stop automatic history polling.
+
+The same protected operations listener provides:
+
+```text
+GET /api/history?from=2026-10-01&to=2026-10-11&routeId=example-route
+GET /history.json?from=2026-10-01&to=2026-10-11&routeId=example-route
+GET /history.csv?from=2026-10-01&to=2026-10-11&routeId=example-route
+```
+
+Omit `routeId` for all routes. History JSON uses `stellar-forge.seller-usage-history.v1` and includes the effective range, native totals/routes, retained daily counters, contributing sessions and storage status. `GET /api/snapshot` keeps the original live traffic schema and adds `usageHistory` storage metadata. History-disabled responses identify that state; they do not imply a zero-traffic saved history.
+
+Expand **Retained sessions** to see active, finalized and interrupted checkpoint state, start/save times and the saved in-flight count. A saved in-flight value belongs to that checkpoint and is never presented as the current live balance. An interrupted session has no confirmed final flush and may omit activity after its last checkpoint. The panel also reports failed checkpoints and unreadable sessions so an incomplete history is visible. Runtime checkpoint failures do not interrupt the live seller or its payment handling. An invalid explicitly configured history directory or a directory in use causes launcher startup to fail and closes the newly started seller; correct that startup configuration before launching again.
+
+Daily starts and terminal outcomes use each event's own UTC date. A request crossing midnight can start in one day and finish in the next. Daily aggregation therefore has **no in-flight field**, and daily starts need not equal that day's completions. Recent individual outcome metadata, request targets, headers, bodies, wallets, receipts and credentials are not persisted. History exports have their own operator-managed lifetime.
+
+Unchanged idle snapshots do not rewrite the saved session file. The next UTC day still applies retention, and failed checkpoints are retried on the normal cadence. Graceful shutdown always writes a final checkpoint.
 
 ## Semantics
 
@@ -100,9 +148,9 @@ Totals begin at observer attachment, not before the seller starts. Starts/comple
 
 ## Privacy and deployment
 
-Memory is bounded by configured route count, 60 aggregate buckets and a recent-outcome ring (160 by default, maximum 2000). No request URL, query, parameter value, body, header, token, wallet, IP or receipt is retained. Only configured route metadata becomes a label. Observation does no disk/network I/O, payment call or retry. Observer errors do not enter the seller path; `observerErrors` identifies incomplete counts.
+Memory is bounded by configured route count, rolling aggregate buckets and a recent-outcome ring (160 by default, maximum 2000). No request URL, query, parameter value, body, header, token, wallet, IP or receipt is retained. Only configured route metadata becomes a label. The request observer does no disk/network I/O, payment call or retry. Optional history checkpoints write aggregate snapshots outside the request path. Observer errors do not enter the seller path; `observerErrors` identifies incomplete counts.
 
-Restart begins a new in-memory session; export before stopping when a record is needed. Detach stops new observation while already observed requests may finish.
+Restart begins a new in-memory session. Optional history retains daily aggregate checkpoints across restarts; without it, export before stopping when a record is needed. Detach stops new observation while already observed requests may finish.
 
 The separate operator listener binds `127.0.0.1`. Keep it outside the public seller reverse proxy. It accepts only its own loopback Host/Origin and GET/HEAD, rejects browser cross-origin access, grants no CORS permission, and serves local assets with a restrictive CSP. Display strings use text nodes. There are no arbitrary-file, network or mutation endpoints.
 
