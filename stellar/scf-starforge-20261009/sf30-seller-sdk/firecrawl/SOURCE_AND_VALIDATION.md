@@ -80,6 +80,14 @@ Independent review identified and resolved three material integration seams: rec
 
 The frozen JSON retains original response bytes as Base64 with their hashes. Metadata paging does not decode every response; the complete frozen edition has an explicit encoded-size bound.
 
-## Browser journey
+## Completed browser journey
 
-The private operator browser walkthrough was selected on the same restored actual-source dataset. Its first execution request returned `environment_offline` before a browser process was created. The nine completed native stages above are the verified runtime result. The separate browser walkthrough remains attached to the original implementation work.
+The same restored actual-source dataset completed the five-stage browser walkthrough at 2026-10-11 21:48 UTC. No additional provider call or purchase was made.
+
+- Web/news/image filters displayed exactly one retained result in each group.
+- Source selection, notes and tags saved and survived refresh. The earlier accepted edition kept its original SHA.
+- Duplicating the selected request created only a new draft and retained its source-domain configuration. The original prepared request was inspected and collected under the same intent.
+- Collection membership changed from three responses to two, then froze as a new edition. The downloaded complete JSON was 30,816 bytes, SHA-256 `05df6e5d12dac924f01211369a72bbe18eb48504c75a497eee70c89b053cd179`; both embedded original responses matched their retained hashes. Earlier editions remained unchanged.
+- Comparison displayed the one actual response-content change. The 1,360-pixel desktop and 390-pixel mobile layouts were visually inspected; there was no horizontal overflow. Reload reopened five saved requests.
+
+There were zero browser exceptions and zero failed API responses. The journey closed its own browser and private service normally. The initial pre-process executor interruption was resolved by continuing the original dataset and source; no separate browser or provider run was substituted.
