@@ -13,32 +13,7 @@ function freeze(value) {
   return value;
 }
 
-export class BuyerResult {
-  constructor(record, responseFile) {
-    this.record = freeze(structuredClone(record));
-    this.responseFile = freeze(structuredClone(responseFile));
-  }
-  get native() { return this.record.native; }
-  get status() { return this.native.status; }
-  get delivery() { return this.native.responseFile ?? { status: 'NOT_REQUESTED' }; }
-  get ok() {
-    return this.record.exitCode === 0 && !this.record.runtimeError &&
-      Number.isInteger(this.native.httpStatus) && this.native.httpStatus >= 200 && this.native.httpStatus < 300 &&
-      !this.native.error && !this.native.evidenceError && !this.native.responseCleanupError;
-  }
-  raiseForStatus() {
-    if (!this.ok) throw new BuyerError(this.record.runtimeError ?? 'NATIVE_ATTEMPT_NOT_SUCCESSFUL', { exitCode: this.record.exitCode });
-    return this;
-  }
-  _metadata() {
-    const saved = this.delivery;
-    need(saved.status === 'SAVED', 'RESPONSE_NOT_SAVED');
-    need(this.responseFile && typeof saved.path === 'string' &&
-      absolute(saved.path) === absolute(this.responseFile.destination) &&
-      Number.isSafeInteger(saved.bytes) && saved.bytes >= 0 && saved.bytes <= this.responseFile.maxBytes &&
-      typeof saved.sha256 === 'string' && /^[a-f0-9]{64}$/.test(saved.sha256), 'RESPONSE_FILE_METADATA_INVALID');
-    return saved;
-  }
+export class VerifiedFile {
   async *_read({ chunkSize = 65536, signal } = {}) {
     need(Number.isSafeInteger(chunkSize) && chunkSize > 0 && chunkSize <= 1048576, 'CHUNK_SIZE_INVALID');
     need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
@@ -65,7 +40,8 @@ export class BuyerResult {
   }
   async verify(options) {
     for await (const _chunk of this._read(options)) { /* Hash without buffering. */ }
-    return { bytes: this.delivery.bytes, sha256: this.delivery.sha256 };
+    const saved = this._metadata();
+    return { bytes: saved.bytes, sha256: saved.sha256 };
   }
   async *chunks(options) {
     // First validate the saved object, then stream with a second complete check.
@@ -140,5 +116,34 @@ export class BuyerResult {
       if (!closed) await target.close();
       await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
     }
+  }
+}
+
+export class BuyerResult extends VerifiedFile {
+  constructor(record, responseFile) {
+    super();
+    this.record = freeze(structuredClone(record));
+    this.responseFile = freeze(structuredClone(responseFile));
+  }
+  get native() { return this.record.native; }
+  get status() { return this.native.status; }
+  get delivery() { return this.native.responseFile ?? { status: 'NOT_REQUESTED' }; }
+  get ok() {
+    return this.record.exitCode === 0 && !this.record.runtimeError &&
+      Number.isInteger(this.native.httpStatus) && this.native.httpStatus >= 200 && this.native.httpStatus < 300 &&
+      !this.native.error && !this.native.evidenceError && !this.native.responseCleanupError;
+  }
+  raiseForStatus() {
+    if (!this.ok) throw new BuyerError(this.record.runtimeError ?? 'NATIVE_ATTEMPT_NOT_SUCCESSFUL', { exitCode: this.record.exitCode });
+    return this;
+  }
+  _metadata() {
+    const saved = this.delivery;
+    need(saved.status === 'SAVED', 'RESPONSE_NOT_SAVED');
+    need(this.responseFile && typeof saved.path === 'string' &&
+      absolute(saved.path) === absolute(this.responseFile.destination) &&
+      Number.isSafeInteger(saved.bytes) && saved.bytes >= 0 && saved.bytes <= this.responseFile.maxBytes &&
+      typeof saved.sha256 === 'string' && /^[a-f0-9]{64}$/.test(saved.sha256), 'RESPONSE_FILE_METADATA_INVALID');
+    return saved;
   }
 }

@@ -129,10 +129,27 @@ imported offers and supported response types keep their original SF30 contracts.
 Use the existing seller deployment tooling for HTTPS exposure.
 
 The module API also exports `createNativeFacilitator(config)` and
-`startSelfFacilitatedSeller({facilitatorConfig,config,handlers,port})`. The native
-client has async `getSupported`, `verify`, `settle`, `drain`, plus `status()`.
+`startSelfFacilitatedSeller({facilitatorConfig,config,handlers,port,availabilityDirectory})`.
+The native client has async `getSupported`, `verify`, `settle`, `drain`, plus `status()`.
 The seller returns the original server, URL, compiled routes and lifecycle,
 along with `facilitator` and an idempotent combined `close()`.
+
+Applications can opt into durable product pause and resume by passing an explicit
+private absolute `availabilityDirectory`, such as `/srv/merchant/private/availability`.
+The original SF30 validator checks this value before facilitator acquisition;
+the original seller owns the directory, lease and policy for its configured service
+origin. Keep a stable `publicOrigin` and reuse the same directory across restart.
+The selected directory requires Linux `flock` and private filesystem permissions.
+
+The returned `seller.availability` is the original controller. Compose that same
+seller with `startSellerOperations` from `../sf30-seller-sdk/operations/server.mjs`
+to open the existing private availability desk and CLI. A pause rejects new requests
+for the selected product before payment while admitted work finishes; offers and
+public product metadata stay available. Use the displayed revision when changing
+policy, and retain the existing combined `seller.close()` ownership so seller work
+finishes before the facilitator drains. The complete [availability operator guide](../sf30-seller-sdk/availability/README.md)
+provides startup, private control URLs, revision-guarded CLI commands and restart
+instructions.
 
 ## Capacity, shutdown and operations
 

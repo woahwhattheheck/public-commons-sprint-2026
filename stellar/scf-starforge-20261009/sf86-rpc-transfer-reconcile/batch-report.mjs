@@ -47,17 +47,20 @@ async function completedReport(path) {
   }
   return true;
 }
-export async function reportBatch({directory,output,outboxDir,termsFile,resume=false}) {
-  for(const path of [directory,output,outboxDir,termsFile])requireTruth(typeof path==='string'&&
+export async function reportBatch({directory,output,outboxDir,termsFile,recoveredDir,resume=false}) {
+  const paths=[directory,output,outboxDir,termsFile,...(recoveredDir===undefined?[]:[recoveredDir])];
+  for(const path of paths)requireTruth(typeof path==='string'&&
     isAbsolute(path)&&resolve(path)===path&&path!=='/','ABSOLUTE_NORMALIZED_PATH_REQUIRED');
-  requireTruth(new Set([directory,output,outboxDir,termsFile]).size===4&&
-    !output.startsWith(outboxDir+'/'),'COLLECTION_REPORT_INPUT_OUTPUT_OVERLAP');
+  requireTruth(new Set(paths).size===paths.length&&!output.startsWith(outboxDir+'/')&&
+    (recoveredDir===undefined||!output.startsWith(recoveredDir+'/')),
+  'COLLECTION_REPORT_INPUT_OUTPUT_OVERLAP');
   if(!resume)await exportBatch({directory,output});
   const exported=await inspectBatchExport({directory,output});
   return withDeliveryLease(output,async()=>{
     const requestFile=join(output,'report-request.json');
     const request={schema:'stellar-forge.sf86.collection-report.v1',
-      exportManifestSha256:exported.manifestSha256,outboxDir,termsFile};
+      exportManifestSha256:exported.manifestSha256,outboxDir,termsFile,
+      ...(recoveredDir===undefined?{}:{recoveredDir})};
     let existing;
     try{existing=JSON.parse(await read(requestFile,100_000));}
     catch(error){if(error.code!=='ENOENT')throw error;}
@@ -81,7 +84,7 @@ export async function reportBatch({directory,output,outboxDir,termsFile,resume=f
       await privateDirectory(retained);
       await rename(reportDirectory,join(retained,'accounting-'+randomUUID()));
     }
-    const result=await runOriginalAccounting({outboxDir,proofDir:exported.proofDirectory,termsFile});
+    const result=await runOriginalAccounting({outboxDir,proofDir:exported.proofDirectory,termsFile,recoveredDir});
     await writeOriginalAccountingPack(result,reportDirectory);
     requireTruth(await completedReport(reportDirectory),'COLLECTION_ACCOUNTING_REPORT_INCOMPLETE');
     return {...exported,reportDirectory,reused:false};
