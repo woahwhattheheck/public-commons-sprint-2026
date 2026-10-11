@@ -113,7 +113,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   sqlite-publisher                           Review and publish retained SQLite data products
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
-  dataset-publisher                          Publish CSV versions and prepare original buyer acquisition
+  dataset-publisher                          Publish retained CSV/workbook selections and prepare buyer acquisition
+  workbook                                   Inspect sources, review mappings and adopt complete workbook editions
+  workbook-customer                          Receive published workbooks through the original buyer and Analysis
+  workbook-receive                            Complete retained workbook receiving and full SQL export
   buyer-dataset                              Acquire, resume and deliver a complete selected dataset
   buyer-dataset-workspace                    Review and operate original datasets in the browser
   catalog-serve / catalog                     Host and operate live seller discovery

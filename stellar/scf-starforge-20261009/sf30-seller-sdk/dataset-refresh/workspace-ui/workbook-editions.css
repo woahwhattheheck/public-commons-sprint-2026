@@ -1,0 +1,40 @@
+/* MIT. Workbook edition review uses the publisher's grayscale interface. */
+#workbook-editions-panel h3{margin:0;font-size:14px}
+#workbook-editions-panel>.section-head{gap:20px}
+#workbook-editions-panel summary{cursor:pointer;font-weight:600;font-size:12px}
+#workbook-editions-panel summary:focus-visible{outline:2px solid #171717;outline-offset:3px}
+.we-source-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:14px;align-items:end;margin-top:20px}
+.we-source-grid>div,.we-selection-grid>div,.we-plan-grid>div{min-width:0}
+.we-section{border-top:1px solid #ddd;margin-top:20px;padding-top:18px}
+.we-selection-grid{display:grid;grid-template-columns:1.3fr 1fr .6fr auto;gap:14px;align-items:end;padding:14px;background:#f6f6f6;border:1px solid #ddd;margin-top:14px}
+.we-change-notes:empty{display:none}
+.we-change-notes{margin-top:12px}
+.we-field{border:1px solid #ccc;margin-top:14px;padding:14px}
+.we-field>.section-head{align-items:center}
+.we-field>.section-head label{margin:0;white-space:nowrap}
+.we-field-map{display:grid;grid-template-columns:1fr 160px 1fr;gap:16px;align-items:center;margin:12px 0}
+.we-field-map>label{font-size:12px;margin:0}
+.we-field-map input{margin-top:6px}
+.we-policy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.we-policy-grid label{font-size:12px}
+.we-policy-grid select{margin-top:6px}
+.we-plan-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:14px;margin:20px 0 14px}
+.we-counts{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;border:1px solid #ccc;background:#ccc;margin:16px 0}
+.we-counts>div{background:#f7f7f7;padding:12px}
+.we-counts span{display:block;font-size:11px;color:#666}
+.we-counts strong{display:block;font-weight:600;font-size:21px;margin-top:4px}
+.we-result-tools{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-top:18px}
+.we-result-tools>div:first-child{max-width:320px;flex:1}
+.we-result-tools label{font-size:12px}
+#we-rows td:nth-child(2){min-width:180px;max-width:350px}
+#we-rows th:nth-child(3),#we-rows th:nth-child(4){min-width:100px}
+#we-cell-body>details{margin-top:14px}
+#we-cell-body td{white-space:pre-wrap;word-break:break-word}
+#we-cell-body tbody th{position:static;white-space:normal;max-width:180px}
+#we-history td:first-child{min-width:200px}
+#we-error{white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto}
+#we-pending{overflow-wrap:anywhere}
+#we-pending button{margin-top:10px}
+#we-form-status{overflow-wrap:anywhere}
+@media(max-width:1050px){.we-source-grid{grid-template-columns:1fr 1fr}.we-source-grid>button{justify-self:start}.we-selection-grid{grid-template-columns:1fr 1fr}.we-plan-grid{grid-template-columns:1fr 1fr}.we-counts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.we-source-grid,.we-selection-grid,.we-plan-grid,.we-policy-grid,.we-field-map{grid-template-columns:1fr;gap:12px}.we-field-map{gap:8px}.we-field{padding:12px}.we-selection-grid>button{justify-self:start}.we-result-tools{align-items:stretch;flex-direction:column;gap:10px}.we-result-tools>div:first-child{max-width:100%}.we-counts>div{padding:10px}.we-counts strong{font-size:18px}#workbook-editions-panel>.section-head{flex-wrap:wrap}.we-field>.section-head{align-items:flex-start;gap:10px}.we-field>.section-head .wb-check{white-space:normal;flex-shrink:0}.we-counts span{font-size:10px}}
