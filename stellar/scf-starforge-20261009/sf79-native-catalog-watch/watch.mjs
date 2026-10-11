@@ -86,6 +86,16 @@ function formatDelta(comparison) {
     changes, counts:{added:counts.added,removed:counts.removed,changed:counts.changed}};
 }
 
+export function classifyAlert(delta, state) {
+  // The first observation cannot establish that listings stayed unchanged.
+  if (delta.status === 'BASELINE_CAPTURE') {
+    return state === 'BOTH_SOURCES_COMPLETE' ? 'FIRST_OBSERVATION' : 'FIRST_OBSERVATION_PARTIAL';
+  }
+  if (delta.status === 'NOT_COMPARABLE') return 'COMPARISON_UNAVAILABLE';
+  if (delta.counts.added + delta.counts.removed + delta.counts.changed > 0) return 'OBSERVED_ADVERTISEMENT_CHANGED';
+  return state !== 'BOTH_SOURCES_COMPLETE' ? 'SOURCE_COVERAGE_INCOMPLETE' : 'NO_OBSERVED_CHANGE';
+}
+
 function makeRecord(snapshot, sequence, previousRecordHash, basisSequence, payloadHash, delta) {
   const current = {
     schema:WATCH_SCHEMA, sequence, captureFile:captureName(sequence), captureSha256:payloadHash,
@@ -246,8 +256,7 @@ export async function main(args=process.argv.slice(2)) {
       process.stdout.write(canonical({schema:WATCH_SCHEMA,sequence:entry.sequence,observedAt:entry.observedAt,
         state:entry.state,rows:entry.rows,providers:entry.providers.map(s=>({id:s.id,status:s.status,rows:s.rows})),
         baselineSequence:entry.baselineSequence,comparedSources:d.comparedSources,skippedSources:d.skippedSources,
-        changed:d.counts,alert:d.status==='COMPARED' && (d.counts.added+d.counts.removed+d.counts.changed>0)
-          ?'OBSERVED_ADVERTISEMENT_CHANGED':entry.state!=='BOTH_SOURCES_COMPLETE'?'SOURCE_COVERAGE_INCOMPLETE':'NO_OBSERVED_CHANGE',
+        changed:d.counts,alert:classifyAlert(d,entry.state),
         snapshotSha256:entry.captureSha256,recordSha256:entry.recordSha256})+'\n');
       if(stopped || (o.samples!==0 && done>=o.samples))break;
       try{await delay(o.intervalSeconds*1000,undefined,{signal:controller.signal});}
