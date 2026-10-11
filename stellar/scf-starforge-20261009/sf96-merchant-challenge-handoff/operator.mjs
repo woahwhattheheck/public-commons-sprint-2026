@@ -1,5 +1,6 @@
 // MIT — Direct merchant onboarding composed from the original capture, handoff and buyer.
 import { spawn } from 'node:child_process';
+import { withPilotLock } from './operator-lock.mjs';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, realpath, rm, unlink } from 'node:fs/promises';
@@ -99,7 +100,7 @@ export async function observe(args) {
 }
 
 /** Prepare a new private pilot; this performs no HTTP, approval, signing or payment. */
-export async function prepare(args, {environment = process.env} = {}) {
+async function prepareUnlocked(args, {environment = process.env} = {}) {
   const workspaceFlags = ['--actor','--service','--payer','--python','--secret-env',
     '--total-atomic','--daily-atomic','--signer-provider','--rpc','--https-proxy','--https-proxy-env'];
   const opt = flags(args, ['--capture','--handoff','--offer-index','--intent-id','--max-atomic',
@@ -268,7 +269,7 @@ export async function diagnose(directory, {environment = process.env} = {}) {
 }
 
 /** Execute through the existing queue in a fresh process with its native workspace prerequisite. */
-export async function execute(directory, {environment = process.env, signal} = {}) {
+async function executeUnlocked(directory, {environment = process.env, signal} = {}) {
   const pilot = await openPilot(directory);
   need(pilot.job.state === 'QUEUED', 'PILOT_ORIGINAL_ATTEMPT_ALREADY_RECORDED');
   // Original --workspace binds custody and checks prerequisites before attempt.json.
@@ -281,7 +282,7 @@ export async function execute(directory, {environment = process.env, signal} = {
 }
 
 /** Finish the existing request's original accounting; the shared finalizer owns all effects. */
-export async function finalize(directory, {environment = process.env, signal} = {}) {
+async function finalizeUnlocked(directory, {environment = process.env, signal} = {}) {
   const pilot = await openPilot(directory);
   need(pilot.job.attempt?.kind === 'EXECUTE', 'PILOT_ORIGINAL_EXECUTION_REQUIRED');
   const command = await runChild([queueCli, 'finalize', '--root', pilot.queue.root,
@@ -290,19 +291,19 @@ export async function finalize(directory, {environment = process.env, signal} = 
   return {...await show(directory), originalCommand:command};
 }
 
-export async function recover(directory) {
+async function recoverUnlocked(directory) {
   const pilot = await openPilot(directory);
   await pilot.queue.recover(pilot.manifest.intentId);
   return show(directory);
 }
-export async function cancel(directory) {
+async function cancelUnlocked(directory) {
   const pilot = await openPilot(directory);
   await pilot.queue.cancel(pilot.manifest.intentId);
   return show(directory);
 }
 
 /** Reuse the existing offline report and its outcome meanings; add the original handoff source. */
-export async function report(directory, destination) {
+export async function renderReport(directory) {
   const pilot = await openPilot(directory);
   const original = renderQueueReport({jobs:[pilot.job], queueRoot:pilot.queue.root,
     accountingWorkspace:join(pilot.directory, 'operator'),
@@ -313,6 +314,28 @@ export async function report(directory, destination) {
   const introduction = `<section class="section"><h2>Direct merchant source</h2><dl>${rows}</dl>` +
     '<p class="note">The saved original challenge was re-derived and matched to the current workspace and queue. ' +
     'A local hash detects changes; it is not a merchant signature. Execution still requires fresh native terms and operator approval.</p></section>';
-  return {...await saveQueueReport(path(destination), original.replace('</header>', '</header>\n' + introduction)),
-    source, state:pilot.job.state};
+  return {html:original.replace('</header>', '</header>\n' + introduction), source, state:pilot.job.state};
 }
+async function reportUnlocked(directory, destination) {
+  const rendered = await renderReport(directory);
+  return {...await saveQueueReport(path(destination), rendered.html), source:rendered.source, state:rendered.state};
+}
+
+
+// Coordinate the original entry points with the complete-case recovery writer.
+// The original SF88 queue and SF36 ledger retain their own permanent decisions.
+export async function prepare(args, options = {}) {
+  const index = Array.isArray(args) ? args.indexOf('--dir') : -1;
+  need(index >= 0 && typeof args[index + 1] === 'string', 'PILOT_REQUIRED_ARGUMENT_MISSING');
+  return withPilotLock(path(args[index + 1]), 'PREPARE', () => prepareUnlocked(args, options));
+}
+export const execute = (directory, options = {}) =>
+  withPilotLock(path(directory), 'EXECUTE', () => executeUnlocked(directory, options));
+export const finalize = (directory, options = {}) =>
+  withPilotLock(path(directory), 'FINALIZE', () => finalizeUnlocked(directory, options));
+export const recover = directory =>
+  withPilotLock(path(directory), 'RECOVER', () => recoverUnlocked(directory));
+export const cancel = directory =>
+  withPilotLock(path(directory), 'CANCEL', () => cancelUnlocked(directory));
+export const report = (directory, destination) =>
+  withPilotLock(path(directory), 'REPORT', () => reportUnlocked(directory, destination));

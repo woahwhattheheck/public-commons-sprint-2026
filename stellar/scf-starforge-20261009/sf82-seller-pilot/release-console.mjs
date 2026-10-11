@@ -8,6 +8,7 @@ import { readReleaseState, compareReleases, activateRelease, rollbackRelease,
 import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 import { releaseCatalogStatus, reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
 import { createReleaseDiscoveryConsole } from './release-discovery-console.mjs';
+import { reviewPostgresSelection, stageReviewedPostgresRelease } from './release-postgres-control.mjs';
 import { createReleaseFacilitatorControl } from './release-facilitator.mjs';
 import { createReleaseClientConsole } from './release-client.mjs';
 import { createReleaseReceivingConsole } from './release-receiving.mjs';
@@ -40,6 +41,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
+    ['/postgres.mjs', 'postgres.mjs', 'text/javascript; charset=utf-8'],
     ['/facilitator.mjs', 'facilitator.mjs', 'text/javascript; charset=utf-8'],
     ['/client.mjs', 'client.mjs', 'text/javascript; charset=utf-8'],
     ['/receiving.mjs', 'receiving.mjs', 'text/javascript; charset=utf-8'],
@@ -142,7 +144,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       }
       if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate', '/api/catalog/review', '/api/catalog/apply',
         '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop',
-        '/api/facilitator/review', '/api/facilitator/stage', '/api/clients/generate', '/api/clients/adopt',
+        '/api/postgres/review', '/api/postgres/stage', '/api/facilitator/review', '/api/facilitator/stage', '/api/clients/generate', '/api/clients/adopt',
         '/api/receiving/open', '/api/receiving/close', '/api/receiving/prepare', '/api/receiving/attach',
         '/api/receiving/start', '/api/receiving/cancel'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
@@ -173,6 +175,11 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
             throw failure('The receiving workspace path is configured by the console command.');
           send(200, await receiving[action === 'close' ? 'closeWorkspace' : action](input)); return;
 
+        } else if (target.pathname === '/api/postgres/review') {
+          send(200, await reviewPostgresSelection(input)); return;
+        } else if (target.pathname === '/api/postgres/stage') {
+          const result = await stageReviewedPostgresRelease(root, input);
+          busy = false; send(200, { ...result, status: await status() }); return;
         } else if (target.pathname.startsWith('/api/facilitator/')) {
           const action = target.pathname.slice('/api/facilitator/'.length);
           send(200, await facilitator[action](input)); return;
