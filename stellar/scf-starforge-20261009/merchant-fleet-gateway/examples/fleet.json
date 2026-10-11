@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.merchant-fleet.v1",
+  "tenants": [
+    {
+      "id": "merchant-alpha",
+      "host": "alpha.example.com",
+      "sellerConfig": "/srv/scf/sellers/alpha/service.json",
+      "upstreamPort": 8423,
+      "maxInFlight": 12,
+      "maxRequestBytes": 1048576,
+      "maxResponseBytes": 8388608,
+      "timeoutMs": 15000
+    },
+    {
+      "id": "merchant-bravo",
+      "host": "bravo.example.com",
+      "sellerConfig": "/srv/scf/sellers/bravo/service.json",
+      "upstreamPort": 8424,
+      "maxInFlight": 12,
+      "maxRequestBytes": 1048576,
+      "maxResponseBytes": 8388608,
+      "timeoutMs": 15000
+    }
+  ]
+}
