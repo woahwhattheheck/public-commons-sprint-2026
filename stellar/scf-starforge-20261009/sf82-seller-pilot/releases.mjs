@@ -5,11 +5,14 @@ import { join, resolve, dirname } from 'node:path';
 import { hostname } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { upstreamReleaseSnapshot, stageReleaseUpstreams, inspectReleaseUpstreams } from './release-upstreams.mjs';
+import { releaseCacheControlPath } from './release-cache.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
 const RUN = 'stellar-forge.seller-release-process.v1';
 const PILOT = fileURLToPath(new URL('./pilot.mjs', import.meta.url));
+const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
 const LIMIT = 4 * 1024 * 1024;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const stable = value => JSON.stringify(normalize(value));
@@ -149,13 +152,18 @@ export async function readReleaseState(root) {
   return state;
 }
 function runtimeOptions(value = {}) {
-  const known = new Set(['port', 'handlers', 'facilitator', 'allowLocalFacilitator']);
+  const known = new Set(['port', 'handlers', 'facilitator', 'allowLocalFacilitator', 'upstreams', 'allowLoopbackUpstream']);
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(k => !known.has(k)))
     throw new TypeError('Unknown release runtime option.');
   const port = value.port ?? 8423;
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Port must be 0–65535.');
   const result = { port };
   if (value.handlers !== undefined) result.handlers = resolve(text(value.handlers, 'Handler entry path', 4096));
+  if (value.upstreams !== undefined) result.upstreams = upstreamReleaseSnapshot(value.upstreams);
+  if (result.handlers && result.upstreams) throw new TypeError('Choose a trusted handler module or upstream bindings for the release.');
+  if (value.allowLoopbackUpstream !== undefined && typeof value.allowLoopbackUpstream !== 'boolean')
+    throw new TypeError('allowLoopbackUpstream must be a boolean.');
+  if (value.allowLoopbackUpstream) result.allowLoopbackUpstream = true;
   if (value.facilitator !== undefined) {
     const endpoint = new URL(value.facilitator);
     const local = value.allowLocalFacilitator === true && endpoint.protocol === 'http:' && endpoint.hostname === '127.0.0.1';
@@ -171,7 +179,7 @@ function runtimeOptions(value = {}) {
   }
   return result;
 }
-async function sourceSnapshot(path) {
+async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 65536);
   const manifest = JSON.parse(manifestBytes);
   const offersBytes = await regular(join(path, 'offers.json'));
@@ -187,6 +195,8 @@ async function sourceSnapshot(path) {
     { file: 'offers.json', sha256: hash(offersBytes), bytes: offersBytes.length },
     { file: 'seller-service.json', sha256: hash(serviceBytes), bytes: serviceBytes.length }];
   const snapshots = new Map();
+  const upstream = upstreams ? await inspectReleaseUpstreams(path, upstreams, service, { allowLoopback }) : null;
+  if (upstream) files.push({ file: upstream.file, sha256: upstream.sha256, bytes: upstream.bytes });
   for (const asset of manifest.responseFiles ?? []) {
     if (!/^responses\/[A-Za-z0-9_-]{1,64}\.json$/.test(asset.file) || snapshots.has(asset.file))
       throw new TypeError('Unexpected original response snapshot path.');
@@ -206,6 +216,7 @@ async function sourceSnapshot(path) {
     // importer fields, without copying protected static response values into UI.
     const configuration = Object.fromEntries(Object.entries(route).filter(([key]) => key !== 'offer' && key !== 'response'));
     return { id: route.id, method, path: route.path, url: route.offer.resource.url,
+      ...(upstream ? { upstream: upstream.bindings[route.handler] ?? null } : {}),
       payment: structuredClone(route.offer.accepts),
       requestContractSha256: hash(stable(route.offer.extensions.bazaar)),
       application: { handler: route.handler ?? null, admit: route.admit ?? null, validateInput: route.validateInput ?? false,
@@ -230,7 +241,7 @@ async function releaseRecord(root, releaseId, verify = false) {
   if (record.schema !== RELEASE || record.id !== releaseId || hash(stable(content)) !== digest)
     throw new Error('Release metadata changed or belongs to a different release.');
   if (verify) {
-    const snapshot = await sourceSnapshot(path);
+    const snapshot = await sourceSnapshot(path, record.runtime.upstreams, record.runtime.allowLoopbackUpstream === true);
     if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes))
       throw new Error('Release files changed after staging. Restore the selected immutable release.');
     if (record.handlerEntry && hash(await regular(record.handlerEntry.path)) !== record.handlerEntry.sha256)
@@ -244,14 +255,23 @@ export async function stageRelease(root, options) {
   root = resolve(root); await readReleaseState(root);
   const releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
   const runtime = runtimeOptions(options.runtime);
+  if (runtime.upstreams) throw new TypeError('Stage takes --upstreams FILE, not an existing release snapshot.');
+  if (options.upstreams && runtime.handlers) throw new TypeError('Choose --upstreams or --handlers for this release.');
+  if (runtime.allowLoopbackUpstream && !options.upstreams) throw new TypeError('Loopback upstream permission requires --upstreams.');
   const temp = join(root, 'releases', '.stage-' + randomUUID());
   let committed = false;
   try {
     const compile = (await import('../sf61-openapi-seller-import/cli.mjs')).run;
     await compile(['--spec', resolve(options.spec), '--config', resolve(options.config),
       '--service-bindings', resolve(options.bindings), '--out', temp]);
-    const source = await sourceSnapshot(temp);
-    if (source.hasApplication && !runtime.handlers) throw new Error('This release uses application/admission exports. Supply its trusted --handlers entry.');
+    let source = await sourceSnapshot(temp);
+    if (options.upstreams) {
+      runtime.upstreams = await stageReleaseUpstreams(temp, resolve(options.upstreams), source.service,
+        { allowLoopback: runtime.allowLoopbackUpstream === true });
+      source = await sourceSnapshot(temp, runtime.upstreams, runtime.allowLoopbackUpstream === true);
+    }
+    if (source.hasApplication && !runtime.handlers && !runtime.upstreams)
+      throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
       const bytes = await regular(runtime.handlers);
@@ -303,13 +323,13 @@ export async function compareReleases(root, beforeId, afterId) {
     const from = previous.get(key), to = current.get(key);
     if (!from || !to) { changes.push({ route: key, state: from ? 'REMOVED' : 'ADDED', before: from ?? null, after: to ?? null, fields: [] }); continue; }
     const fields = [];
-    for (const field of ['id', 'url', 'payment', 'requestContractSha256', 'application']) {
+    for (const field of ['id', 'url', 'payment', 'requestContractSha256', 'application', 'upstream']) {
       if (stable(from[field]) !== stable(to[field])) fields.push({ field, before: from[field], after: to[field] });
     }
     if (fields.length) changes.push({ route: key, state: 'CHANGED', fields, before: from, after: to });
   }
   const runtimeChanges = [];
-  for (const field of ['port', 'handlers', 'facilitator', 'allowLocalFacilitator']) {
+  for (const field of ['port', 'handlers', 'facilitator', 'allowLocalFacilitator', 'upstreams', 'allowLoopbackUpstream']) {
     if (stable(before?.runtime[field] ?? null) !== stable(after.runtime[field] ?? null))
       runtimeChanges.push({ field, before: before?.runtime[field] ?? null, after: after.runtime[field] ?? null });
   }
@@ -405,22 +425,8 @@ export async function releaseStatus(root) {
 
 // The child cannot import handlers or open a listener until its PID is durably
 // registered. If the parent dies before granting startup, IPC disconnect ends
-// this waiting child. After the grant, the unchanged original pilot owns serving.
-const CHILD_LAUNCH = `
-import { pathToFileURL } from 'node:url';
-const [pilot, directory, instanceId] = process.argv.slice(1);
-let started = false;
-process.once('disconnect', () => { if (!started) process.exit(0); });
-process.once('message', message => {
-  if (message?.type !== 'sf82-start' || message.instanceId !== instanceId) process.exit(1);
-  started = true;
-  process.disconnect();
-  process.argv = [process.execPath, pilot, '--resume', directory];
-  import(pathToFileURL(pilot).href).catch(error => {
-    process.stderr.write(String(error?.message ?? error) + '\\n'); process.exitCode = 1;
-  });
-});
-`;
+// this waiting child. After the grant, the unchanged original pilot owns serving;
+// its private cache controls attach before the release reports readiness.
 
 /** Spawn the ORIGINAL foreground launcher so each run gets fresh application imports. */
 export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs = 70000, expectedGeneration } = {}) {
@@ -489,8 +495,10 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       source: { offersSha256: record.source.offersSha256, serviceConfigSha256: record.source.serviceConfigSha256 },
       options: originalOptions });
     const instanceId = randomUUID(), mode = record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
+    const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
+      id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, ['--input-type=module', '--eval', CHILD_LAUNCH, PILOT, path, instanceId],
+    child = spawn(process.execPath, [CHILD, PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     let readyResolve, readyReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
@@ -511,7 +519,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       if (stdout.length > 1024 * 1024) { readyReject(new Error('Original seller startup output exceeded its limit.')); stdout = ''; return; }
       while (stdout.includes('\n')) {
         const newline = stdout.indexOf('\n'), line = stdout.slice(0, newline); stdout = stdout.slice(newline + 1);
-        try { const value = JSON.parse(line); if (value.pilotReady === true) readyResolve(value); } catch {}
+        try { const value = JSON.parse(line); if (value.releaseReady === true && value.instanceId === instanceId) readyResolve(value); } catch {}
       }
     });
     startupTimer = setTimeout(() => readyReject(new Error('Original seller startup timed out.')), startupTimeoutMs);
@@ -521,15 +529,17 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       selectionGeneration: state.generation, listener: null, mode, phase: 'STARTING', startedAt: new Date().toISOString() };
     await atomic(join(root, 'runtime.json'), observation);
     if (exitSettled || shutdownRequested) throw new Error(failure ?? 'Original seller stopped before launch.');
-    await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId }, error => error ? fail(error) : done()));
+    await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId, cacheRoutes }, error => error ? fail(error) : done()));
     let report;
     try { report = await ready; } finally { clearTimeout(startupTimer); }
     if (report.originalOffersSha256 !== record.source.offersSha256 ||
-        report.originalServiceConfigSha256 !== record.source.serviceConfigSha256)
+        report.originalServiceConfigSha256 !== record.source.serviceConfigSha256 ||
+        report.cacheControlAvailable !== Boolean(cacheRoutes.length))
       throw new Error('Original pilot reported a different release source.');
     await originalReadback(report.listener, record, mode);
     if (exitSettled || shutdownRequested) throw new Error('Original seller stopped during startup.');
-    Object.assign(observation, { listener: report.listener, phase: 'RUNNING', readyAt: new Date().toISOString() });
+    Object.assign(observation, { listener: report.listener, phase: 'RUNNING', readyAt: new Date().toISOString(),
+      cacheControlAvailable: report.cacheControlAvailable });
     await atomic(join(root, 'runtime.json'), observation);
     completion = exited.then(finish);
     void completion.catch(() => {});
