@@ -1,4 +1,4 @@
-// MIT. Version original SF61 exports and SF30 Python projects through SF82.
+// MIT. Version original SF61 exports and SF30 native merchant sources through SF82.
 import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { join, resolve, dirname } from 'node:path';
@@ -8,12 +8,14 @@ import { spawn } from 'node:child_process';
 import { upstreamReleaseSnapshot, stageReleaseUpstreams, inspectReleaseUpstreams, readReleaseWorkspace } from './release-upstreams.mjs';
 import { releaseCacheControlPath } from './release-cache.mjs';
 import { PYTHON_SOURCE_SCHEMA, stagePythonRelease, inspectPythonRelease } from './release-python.mjs';
+import { DUCKDB_SOURCE_SCHEMA, stageDuckdbRelease, inspectDuckdbRelease } from './release-duckdb.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
 const RUN = 'stellar-forge.seller-release-process.v1';
 const PILOT = fileURLToPath(new URL('./pilot.mjs', import.meta.url));
 const PYTHON_PILOT = fileURLToPath(new URL('./release-python.mjs', import.meta.url));
+const DUCKDB_PILOT = fileURLToPath(new URL('./release-duckdb.mjs', import.meta.url));
 const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
 const LIMIT = 4 * 1024 * 1024;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -184,6 +186,11 @@ function runtimeOptions(value = {}) {
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
   const manifest = JSON.parse(manifestBytes);
+  if (manifest.schema === DUCKDB_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('A DuckDB package owns its original query bindings.');
+    const snapshot = await inspectDuckdbRelease(path);
+    return { ...snapshot, routes: sourceRoutes(snapshot.service, new Map(), null, null, snapshot.duckdb) };
+  }
   if (manifest.schema === PYTHON_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('A Python release owns its original application bindings.');
     const snapshot = await inspectPythonRelease(path);
@@ -217,7 +224,7 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const hasApplication = service.routes.some(route => route.handler || route.admit);
   return { manifest, offers, service, files: files.sort((a, b) => a.file.localeCompare(b.file)), routes, hasApplication };
 }
-function sourceRoutes(service, snapshots, upstream = null, python = null) {
+function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb = null) {
   return service.routes.map(route => {
     if (route.responseFile && !snapshots.has(route.responseFile)) throw new Error('Unpinned response file: ' + route.id);
     if (!route.offer || typeof route.offer.extensions?.bazaar?.info?.input?.method !== 'string')
@@ -235,6 +242,7 @@ function sourceRoutes(service, snapshots, upstream = null, python = null) {
       application: { handler: route.handler ?? null, admit: route.admit ?? null, validateInput: route.validateInput ?? false,
         configurationSha256: hash(stable(configuration)),
         ...(python ? { pythonExecutionSha256: python.executionSha256 } : {}),
+        ...(duckdb ? { duckdbExecutionSha256: duckdb.executionSha256 } : {}),
         responseSha256: route.responseFile ? snapshots.get(route.responseFile) :
           Object.hasOwn(route, 'response') ? hash(stable(route.response)) : null } };
   });
@@ -245,7 +253,8 @@ function publicRelease(record) {
     runtime: record.runtime, handlerEntry: record.handlerEntry,
     mode: record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
     source: record.source, ...(record.inputPackage ? { inputPackage: record.inputPackage } : {}),
-    ...(record.python ? { python: record.python } : {}) };
+    ...(record.python ? { python: record.python } : {}),
+    ...(record.duckdb ? { duckdb: record.duckdb } : {}) };
 }
 async function releaseRecord(root, releaseId, verify = false) {
   const path = join(resolve(root), 'releases', id(releaseId)); await directory(path);
@@ -256,7 +265,8 @@ async function releaseRecord(root, releaseId, verify = false) {
   if (verify) {
     const snapshot = await sourceSnapshot(path, record.runtime.upstreams, record.runtime.allowLoopbackUpstream === true);
     if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes) ||
-        stable(snapshot.python ?? null) !== stable(record.python ?? null))
+        stable(snapshot.python ?? null) !== stable(record.python ?? null) ||
+        stable(snapshot.duckdb ?? null) !== stable(record.duckdb ?? null))
       throw new Error('Release files changed after staging. Restore the selected immutable release.');
     if (record.handlerEntry && hash(await regular(record.handlerEntry.path)) !== record.handlerEntry.sha256)
       throw new Error('Trusted handler entry changed after staging. Restore it or stage a new release.');
@@ -269,6 +279,12 @@ export async function stageRelease(root, options) {
   root = resolve(root); await readReleaseState(root);
   const releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
   const pythonSource = options.python !== undefined;
+  const duckdbSource = options.duckdbPackage !== undefined;
+  if (duckdbSource && (['workspace', 'spec', 'config', 'bindings', 'upstreams', 'python', 'pythonRoot'].some(key => options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose the original prepared DuckDB package or another source; the package owns its native query bindings.');
+  if (options.duckdbPython !== undefined && !duckdbSource)
+    throw new TypeError('duckdbPython requires a prepared DuckDB package.');
   if (pythonSource && (['workspace', 'spec', 'config', 'bindings', 'upstreams'].some(key => options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
     throw new TypeError('Choose a Python merchant declaration or an OpenAPI source; Python owns its original application bindings.');
@@ -285,13 +301,17 @@ export async function stageRelease(root, options) {
   const temp = join(root, 'releases', '.stage-' + randomUUID());
   let committed = false;
   try {
-    if (pythonSource) await stagePythonRelease(temp, options.python, { sourceRoot: options.pythonRoot });
+    let stagedDuckdb;
+    if (duckdbSource) stagedDuckdb = await stageDuckdbRelease(temp, options.duckdbPackage, { python: options.duckdbPython });
+    else if (pythonSource) await stagePythonRelease(temp, options.python, { sourceRoot: options.pythonRoot });
     else {
       const compile = (await import('../sf61-openapi-seller-import/cli.mjs')).run;
       await compile(['--spec', resolve(inputs.spec), '--config', resolve(inputs.config),
         '--service-bindings', resolve(inputs.bindings), '--out', temp]);
     }
-    let source = await sourceSnapshot(temp);
+    let source = stagedDuckdb
+      ? { ...stagedDuckdb, routes: sourceRoutes(stagedDuckdb.service, new Map(), null, null, stagedDuckdb.duckdb) }
+      : await sourceSnapshot(temp);
     if (inputs.upstreams) {
       runtime.upstreams = await stageReleaseUpstreams(temp, resolve(inputs.upstreams), source.service,
         { allowLoopback: runtime.allowLoopbackUpstream === true });
@@ -302,7 +322,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !source.python && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !source.duckdb && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -314,8 +334,11 @@ export async function stageRelease(root, options) {
       publicOrigin: source.service.publicOrigin, runtime, handlerEntry, files: source.files, routes: source.routes,
       ...(workspace ? { inputPackage: workspace.provenance } : {}),
       ...(source.python ? { python: source.python } : {}),
+      ...(source.duckdb ? { duckdb: source.duckdb } : {}),
       source: { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256,
-        ...(source.python ? { kind: 'PYTHON_APPLICATION', declarationSha256: source.python.configSha256,
+        ...(source.duckdb ? { kind: 'DUCKDB_PACKAGE', packageManifestSha256: source.duckdb.packageManifestSha256,
+          sourceConfigSha256: source.duckdb.sourceConfigSha256, planSha256: source.duckdb.planSha256,
+          datasetSha256: source.duckdb.datasetSha256 } : source.python ? { kind: 'PYTHON_APPLICATION', declarationSha256: source.python.configSha256,
           applicationSha256: source.python.applicationSha256, sourceSha256: source.python.sourceSha256 }
           : { specSha256: source.manifest.specSha256, selectionsSha256: source.manifest.selectionsSha256,
             serviceBindingsSha256: source.manifest.serviceBindingsSha256 }) } };
@@ -373,6 +396,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'handlerEntrySha256', before: before?.handlerEntry?.sha256 ?? null, after: after.handlerEntry?.sha256 ?? null });
   if (stable(before?.python ?? null) !== stable(after.python ?? null))
     runtimeChanges.push({ field: 'python', before: before?.python ?? null, after: after.python ?? null });
+  if (stable(before?.duckdb ?? null) !== stable(after.duckdb ?? null))
+    runtimeChanges.push({ field: 'duckdb', before: before?.duckdb ?? null, after: after.duckdb ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
     summary: { added: changes.filter(c => c.state === 'ADDED').length,
       removed: changes.filter(c => c.state === 'REMOVED').length,
@@ -477,17 +502,17 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
   if (typeof handleSignals !== 'boolean') throw new TypeError('handleSignals must be a boolean.');
   const releaseLock = await lock(root, 'run.lock');
   let child, observation, closing, finishing, stopping, completion, startupTimer, failure;
-  let ownsPythonGroup = false, effectiveShutdownGraceMs = shutdownGraceMs ?? 70000;
+  let ownsWorkerGroup = false, effectiveShutdownGraceMs = shutdownGraceMs ?? 70000;
   let exited = Promise.resolve(), exitSettled = true, shutdownRequested = null, rejectReady = () => {};
   let exitCode = null, exitSignal = null;
   const forceOwnedChild = () => {
     if (!child?.pid) return;
-    // Python workers inherit this specifically owned detached process group.
+    // Python application and DuckDB query workers inherit this owned process group.
     // Keep graceful SIGTERM on its leader so the seller can drain first; a hard
     // deadline or failed leader must not leave those workers serving in limbo.
-    if (ownsPythonGroup && process.platform !== 'win32') {
+    if (ownsWorkerGroup && process.platform !== 'win32') {
       try { process.kill(-child.pid, 'SIGKILL'); }
-      catch (error) { if (error.code !== 'ESRCH') failure ??= 'Could not stop the owned Python process group.'; }
+      catch (error) { if (error.code !== 'ESRCH') failure ??= 'Could not stop the owned merchant worker group.'; }
     } else if (!exitSettled) child.kill('SIGKILL');
   };
   const stopChild = (signal = 'SIGTERM') => {
@@ -538,8 +563,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
         (previous.host === undefined || previous.host === hostname()) && alive(previous.pid))
       throw Object.assign(new Error('The previously recorded seller process is still present. This manager cannot start a duplicate or stop a process it does not own.'), { code: 'RELEASE_BUSY' });
     const { record, path } = await releaseRecord(root, state.active, true);
-    ownsPythonGroup = Boolean(record.python);
-    if (ownsPythonGroup && shutdownGraceMs === undefined)
+    ownsWorkerGroup = Boolean(record.python || record.duckdb);
+    if (record.python && shutdownGraceMs === undefined)
       effectiveShutdownGraceMs = Math.max(70000, 60000 + record.python.shutdownTimeoutMs + 5000);
     // Replace only original mutable runtime settings, never compiled source. This
     // prevents a previous manual resume override from leaking into the release.
@@ -551,7 +576,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
+    child = spawn(process.execPath, [CHILD, record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     let readyResolve, readyReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
@@ -562,7 +587,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       const settle = () => { if (!exitSettled) { exitSettled = true; done(); } };
       child.on('error', error => { failure ??= error.message; readyReject(error); if (!child.pid) settle(); });
       child.once('exit', (code, signal) => { exitCode = code; exitSignal = signal;
-        if (ownsPythonGroup && (signal || code !== 0)) forceOwnedChild();
+        if (ownsWorkerGroup && (signal || code !== 0)) forceOwnedChild();
         readyReject(new Error('Original seller exited before startup (code ' + code + ', signal ' + signal + '). ' + stderr.slice(-2000))); settle(); });
     });
     if (handleSignals) { process.on('SIGINT', onInterrupt); process.on('SIGTERM', onTerminate); }

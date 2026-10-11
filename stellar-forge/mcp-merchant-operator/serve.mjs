@@ -21,6 +21,9 @@ const HELP = `Starforge merchant MCP
   init --dir NEW_DIRECTORY --python PYTHON_MERCHANT.json [--python-root SOURCE_DIR]
        [--name NAME] [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
        [--catalog CATALOG_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
+  init --dir NEW_DIRECTORY --duckdb-package PREPARED_DIRECTORY [--duckdb-python EXECUTABLE]
+       [--name NAME] [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
+       [--catalog CATALOG_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   serve --config MERCHANT_MCP.json [--port PORT] [--token-env ENVIRONMENT_NAME]
 
 Supply the bearer token through MCP_ACCESS_TOKEN (or --token-env). It is never
@@ -86,8 +89,8 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
   if (command === 'init') {
-    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--fleet-plan'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
-    for (const key of options.has('--workspace') || options.has('--python') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
+    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--duckdb-package', '--duckdb-python', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--fleet-plan'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
+    for (const key of options.has('--workspace') || options.has('--python') || options.has('--duckdb-package') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
       if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Missing ' + key);
     const runtime = { port: portNumber(options.get('--seller-port'), 0) };
     if (options.has('--handlers')) runtime.handlers = options.get('--handlers');
@@ -98,6 +101,7 @@ export async function main(args = process.argv.slice(2)) {
       selections: options.get('--selections'), bindings: options.get('--bindings'),
       workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'), fleetPlan: options.get('--fleet-plan'),
       python: options.get('--python'), pythonRoot: options.get('--python-root'),
+      duckdbPackage: options.get('--duckdb-package'), duckdbPython: options.get('--duckdb-python'),
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
