@@ -30,21 +30,21 @@ async function body(request,limit=600_000){
   let value;try{value=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{throw new WorkspaceError('INVALID_JSON','The request is not valid JSON.');}
   check(value&&typeof value==='object'&&!Array.isArray(value),'INVALID_REQUEST','Send an object.');return value;
 }
-export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,xeroClient,
+export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,xeroClient,qboClient,
   recoveryStateRoot,recoveryBackupRoot,recoveryPassEnv,recoveryStartPaused=false,...options}){
   check(host==='127.0.0.1'||host==='localhost','LOOPBACK_REQUIRED','This operator workspace binds to loopback.');
   check(Number.isInteger(port)&&port>=0&&port<=65535,'INVALID_PORT','Choose a valid port.');
   const hosts=new Set();
-  const closeRuntime=async({workspace,bitwave,xero,collection})=>{
-    const errors=[];for(const owned of [xero,bitwave,collection,workspace]){try{await owned?.close();}catch(error){errors.push(error);}await Promise.allSettled([...(owned?.tasks??[])]);}
+  const closeRuntime=async({workspace,bitwave,qbo,xero,collection})=>{
+    const errors=[];for(const owned of [qbo,xero,bitwave,collection,workspace]){try{await owned?.close();}catch(error){errors.push(error);}await Promise.allSettled([...(owned?.tasks??[])]);}
     if(errors.length)throw Object.assign(new AggregateError(errors,'The original accounting controllers did not all close cleanly.'),{code:'ACCOUNTING_RUNTIME_CLOSE_FAILED'});
   };
   const openRuntime=async()=>{
     const workspace=await openAccountingWorkspace(options),accountant=new AccountantWorkspace(workspace);
     const bitwave=new BitwaveWorkspace(workspace,accountant,bitwaveClient?{client:bitwaveClient}:{}),xero=new XeroWorkspace(workspace,accountant,xeroClient?{client:xeroClient}:{});let collection;
-    const qbo=new QboWorkspace(workspace,accountant);
+    const qbo=new QboWorkspace(workspace,accountant,qboClient?{client:qboClient}:{});
     try{const statements=new CustomerStatementWorkspace(workspace);await statements.init();workspace.adjustments.configureTransport({httpsProxyEnv:rpcProxyEnv});collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();await qbo.recover();await xero.init();return {workspace,accountant,bitwave,qbo,xero,collection,statements};}
-    catch(error){await closeRuntime({workspace,bitwave,xero,collection}).catch(()=>{});throw error;}
+    catch(error){await closeRuntime({workspace,bitwave,qbo,xero,collection}).catch(()=>{});throw error;}
   };
   const maintenance=await openAccountingMaintenance({directory:options.directory,stateRoot:recoveryStateRoot,backupRoot:recoveryBackupRoot,
     passEnv:recoveryPassEnv,startPaused:recoveryStartPaused,openRuntime,closeRuntime});
@@ -171,6 +171,9 @@ Add --recovery-start-paused to restore an absent or unfinished original workspac
 For an explicitly configured cloud HTTPS proxy, add --rpc-proxy-env HTTPS_PROXY.
 Requires Node22+, Linux flock, and tar for review downloads.
 Uses the original accounting engine and report writer; all serving is loopback.
+QuickBooks journals: open /qbo.html to fetch the configured company and post reviewed journals.
+Native QuickBooks calls use STARFORGE_QBO_ACCESS_TOKEN, STARFORGE_QBO_REALM_ID,
+and STARFORGE_QBO_ENVIRONMENT (sandbox by default) in this process environment.
 Xero journals: open /xero.html or use the xero subcommand.
 Native Xero calls use STARFORGE_XERO_ACCESS_TOKEN from this process environment.
 Operating backup and recovery: backup | inspect-backup | verify-backup | restore | recovery-status.

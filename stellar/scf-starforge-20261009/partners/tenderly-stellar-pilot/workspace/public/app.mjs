@@ -9,6 +9,7 @@ if (encoded) {
 let template, selected = null, selectedRequest = null, selectedOperation = null;
 let runtime = { state: 'CLOSED', profile: null }, profilesNext = null, requestsNext = null, operationsNext = null, auditNext = null;
 let busy = false;
+let selectedLookup = null, selectedObservation = null, providerLookupsNext = null;
 const pretty = value => JSON.stringify(value, null, 2);
 const text = (id, value) => { $(id).textContent = String(value ?? '—'); };
 const query = values => new URLSearchParams(Object.entries(values).filter(([, value]) => value !== null && value !== undefined && value !== '')).toString();
@@ -26,18 +27,18 @@ async function api(path, value) {
     headers: { authorization: 'Bearer ' + token, ...(value === undefined ? {} : { 'content-type': 'application/json' }) },
     ...(value === undefined ? {} : { body: JSON.stringify(value) }), cache: 'no-store' });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || 'Workspace request failed');
+  if (!response.ok) throw new Error((data.error || 'Workspace request failed') + (data.retryAt ? ' · retry after ' + new Date(data.retryAt).toLocaleString() : ''));
   return data;
 }
-async function download(kind, id) {
+async function download(kind, id, observationId) {
   if (!selected) throw new Error('Choose a saved profile');
-  const response = await fetch('/api/download?' + query({ profile: selected.id, kind, id }), {
+  const response = await fetch('/api/download?' + query({ profile: selected.id, kind, id, observationId }), {
     headers: { authorization: 'Bearer ' + token }, cache: 'no-store',
   });
   if (!response.ok) { const error = await response.json(); throw new Error(error.error || 'Download failed'); }
   const objectUrl = URL.createObjectURL(await response.blob()), anchor = document.createElement('a');
   anchor.href = objectUrl;
-  anchor.download = kind === 'plan' ? 'plan.json' : kind === 'request' ? 'tenderly-request.json' : 'response.json';
+  anchor.download = kind === 'plan' ? 'plan.json' : kind === 'request' ? 'tenderly-request.json' : kind === 'provider-response' ? 'tenderly-saved-provider-result.json' : 'response.json';
   document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 function controls() {
@@ -48,6 +49,12 @@ function controls() {
   $('download-request').disabled = busy || !selectedRequest;
   $('download-response').disabled = busy || selectedOperation?.state !== 'COMPLETE';
   $('apply-recovery').disabled = busy || !['UNCERTAIN', 'IN_FLIGHT'].includes(selectedOperation?.state);
+  const selectedOpen = selectedOperation && selected && runtime.profile === selected.id;
+  $('fetch-provider-result').disabled = busy || !selectedOpen;
+  $('refresh-provider-result').disabled = busy || !selectedOpen;
+  $('download-provider-result').disabled = busy || !selectedObservation?.responseSha256;
+  $('apply-provider-recovery').disabled = busy || selectedObservation?.state !== 'MATCHED' ||
+    !['UNCERTAIN', 'IN_FLIGHT', 'COMPLETE'].includes(selectedLookup?.operation?.state);
 }
 async function run(operation, success) {
   if (busy) return;
@@ -88,6 +95,7 @@ function formPlan() {
     operations: { ...advanced.operations, keyEnv: $('operation-key-env').value.trim() }, limits: advanced.limits };
 }
 function clearSelection() {
+  clearProviderSelection();
   selectedRequest = null; selectedOperation = null; requestsNext = null; operationsNext = null; auditNext = null;
   for (const id of ['request-list', 'operation-list', 'result-summary', 'operation-audit', 'operation-totals']) $(id).replaceChildren();
   text('request-detail', 'No request selected.'); text('selected-operation', 'Select an operation above.');
@@ -202,6 +210,7 @@ async function loadAudit(append = false) {
   auditNext = page?.nextAfter; $('more-audit').hidden = !auditNext;
 }
 async function showOperation(operationKey) {
+  if (selectedOperation?.operationKey !== operationKey) clearProviderSelection();
   selectedOperation = await api('operation?' + query({ profile: selectedId(), operationKey }));
   if (!selectedOperation) throw new Error('This operation is no longer available');
   for (const row of $('operation-list').children) row.classList.toggle('selected', row.dataset.operation === operationKey);
@@ -214,7 +223,61 @@ async function showOperation(operationKey) {
     text('result-preview', result.preview + (result.previewTruncated ? '\n\nPreview ends here. Download the complete response above.' : ''));
   }
   text('recovery-selection', 'Selected ' + selectedOperation.state + ' operation, generation ' + selectedOperation.generation);
-  await loadAudit(); controls();
+  await loadAudit(); await loadProviderLookups(); controls();
+}
+function clearProviderSelection() {
+  selectedLookup = null; selectedObservation = null; providerLookupsNext = null;
+  $('provider-lookup-list').replaceChildren(); $('provider-observation-list').replaceChildren();
+  $('provider-review').hidden = true; $('more-provider-lookups').hidden = true;
+  $('provider-simulation-id').value = ''; $('provider-recovery-reference').value = '';
+}
+async function loadProviderLookups(append = false) {
+  if (!selectedOperation) return;
+  const page = await api('provider-lookups?' + query({ profile: selectedId(),
+    operationKey: selectedOperation.operationKey, before: append ? providerLookupsNext : '', limit: 25 }));
+  if (!append) $('provider-lookup-list').replaceChildren();
+  for (const row of page.records) $('provider-lookup-list').append(record(
+    row.simulationId, (row.latest?.state ?? 'No response') + ' · ' + row.observationCount + ' saved lookups',
+    () => showProviderLookup(row.id)));
+  providerLookupsNext = page.nextCursor; $('more-provider-lookups').hidden = !providerLookupsNext;
+}
+async function showProviderLookup(id, observationId) {
+  const result = await api('provider-lookup?' + query({ profile: selectedId(), id }));
+  if (result.binding.operationKey !== selectedOperation?.operationKey) throw new Error('Select this lookup’s original merchant operation');
+  selectedLookup = result;
+  selectedObservation = result.observations.find(row => row.observationId === observationId) ?? result.latest;
+  $('provider-review').hidden = false; $('provider-simulation-id').value = result.binding.simulationId;
+  $('provider-observation-list').replaceChildren();
+  for (const row of result.observations) $('provider-observation-list').append(record(
+    row.state, new Date(row.requestedAt).toLocaleString(), () => showProviderLookup(id, row.observationId)));
+  pairs($('provider-result-summary'), [
+    ['Simulation', result.binding.simulationId], ['Request network', result.request.network_id],
+    ['Block / position', result.request.block_number + ' / ' + result.request.transaction_index],
+    ['From', result.request.from], ['To', result.request.to], ['Input', result.request.input],
+    ['Gas / value', result.request.gas + ' / ' + result.request.value],
+    ['Lookup state', selectedObservation?.state ?? 'No response'],
+    ['HTTP status / bytes', (selectedObservation?.httpStatus ?? '—') + ' / ' + (selectedObservation?.responseBytes ?? '—')],
+    ['Retry after', selectedObservation?.retryAt ?? '—'],
+    ['Response SHA-256', selectedObservation?.responseSha256 ?? ''],
+    ...Object.entries(selectedObservation?.result ?? {}),
+  ]);
+  text('provider-result-status', selectedObservation?.code ?? selectedObservation?.description ??
+    (selectedObservation?.state === 'MATCHED' ? 'The saved response matches the selected request.' : 'Review the retained provider response.'));
+  text('provider-apply-selection', 'Original merchant ' + result.operation.state + ', reviewed generation ' + result.operation.generation +
+    '. The reference connects this saved simulation to that merchant request.');
+  text('provider-result-preview', '');
+  if (selectedObservation?.responseSha256) {
+    const saved = await api('provider-response?' + query({ profile: selectedId(), lookupId: id,
+      observationId: selectedObservation.observationId }));
+    text('provider-result-preview', saved.preview + (saved.previewTruncated ? '\n\nDownload the complete response above.' : ''));
+  }
+  controls();
+}
+async function fetchProviderResult(refresh) {
+  if (!selectedOperation) throw new Error('Select the original merchant operation');
+  const result = await api('provider-lookup', { profile: selectedId(), operationKey: selectedOperation.operationKey,
+    simulationId: $('provider-simulation-id').value.trim(), refresh });
+  await loadProviderLookups(); await showProviderLookup(result.id);
 }
 function base64(bytes) {
   let text = '';
@@ -282,6 +345,23 @@ $('state-filter').addEventListener('change', () => run(() => loadOperations()));
 $('more-operations').addEventListener('click', () => run(() => loadOperations(true)));
 $('more-audit').addEventListener('click', () => run(() => loadAudit(true)));
 $('download-response').addEventListener('click', () => run(() => download('response', selectedOperation.operationKey)));
+$('provider-lookup-form').addEventListener('submit', event => {
+  event.preventDefault(); run(() => fetchProviderResult(false), 'Saved provider lookup opened.');
+});
+$('refresh-provider-result').addEventListener('click', () => run(() => fetchProviderResult(true), 'Provider response retained.'));
+$('more-provider-lookups').addEventListener('click', () => run(() => loadProviderLookups(true)));
+$('download-provider-result').addEventListener('click', () => run(() =>
+  download('provider-response', selectedLookup.id, selectedObservation.observationId)));
+$('provider-apply-form').addEventListener('submit', event => {
+  event.preventDefault(); run(async () => {
+    if (!selectedLookup || selectedObservation?.state !== 'MATCHED') throw new Error('Review a matching saved provider result');
+    const id = selectedLookup.id, observationId = selectedObservation.observationId;
+    const operationKey = selectedLookup.binding.operationKey;
+    await api('provider-recover', { profile: selectedId(), lookupId: id, observationId,
+      expectedGeneration: selectedLookup.operation.generation, reference: $('provider-recovery-reference').value.trim() });
+    await loadOperations(); await showOperation(operationKey); await showProviderLookup(id, observationId);
+  }, 'Saved provider result applied to the original merchant operation.');
+});
 $('recovery-action').addEventListener('change', () => { $('recovery-response-fields').hidden = $('recovery-action').value !== 'complete'; });
 $('recovery-form').addEventListener('submit', event => {
   event.preventDefault(); run(async () => {

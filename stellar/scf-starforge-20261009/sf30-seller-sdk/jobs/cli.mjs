@@ -19,6 +19,8 @@ const help = [
   '  jobs show --config FILE --state DIR --id JOB',
   '  jobs create --config FILE --state DIR --function ID --input FILE',
   '       [--label TEXT] [--reference TEXT] [--out NEW_TICKET_FILE]',
+  '  jobs renew-claim --config FILE --state DIR --id JOB --revision N --reason TEXT',
+  '       [--out NEW_TICKET_FILE]',
   '  jobs reconcile --config FILE --state DIR',
   '  jobs work --config FILE --state DIR [--once]',
   '  jobs retry --config FILE --state DIR --id JOB --revision N --reason TEXT',
@@ -33,7 +35,9 @@ const help = [
   'work starts the durable worker in this foreground process; --once drains the',
   'currently available paid jobs. SIGINT/SIGTERM retain interrupted job state.',
   'create writes a private purchase ticket. Keep its retrieval capability with',
-  'the buyer. An existing output file is never overwritten.', '',
+  'the buyer. An existing output file is never overwritten.',
+  'renew-claim replaces a lost, unsubmitted purchase ticket for the same PREPARED',
+  'job. Its earlier claim stops working; save the returned private ticket.', '',
 ].join('\n');
 const problem = message => Object.assign(new Error(message), { code: 'JOBS_COMMAND_INVALID' });
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -43,6 +47,7 @@ const allowed = {
   status: [], show: ['--id'], create: ['--function', '--input', '--label', '--reference', '--out'],
   reconcile: [], work: ['--once'], retry: ['--id', '--revision', '--reason'],
   cancel: ['--id', '--revision', '--reason'], result: ['--id', '--out'],
+  'renew-claim': ['--id', '--revision', '--reason', '--out'],
 };
 function options(argv) {
   const command = argv[0];
@@ -91,7 +96,7 @@ async function publishNew(destination, bytes) {
 export async function runJobCommand(argv = process.argv.slice(2), { print = value => console.log(value) } = {}) {
   if (!argv.length || argv.length === 1 && ['--help', '-h', 'help'].includes(argv[0])) { print(help); return; }
   const { command, out } = options(argv);
-  if (['retry', 'cancel'].includes(command)) required(out, '--revision');
+  if (['retry', 'cancel', 'renew-claim'].includes(command)) required(out, '--revision');
   const model = await openJobMerchant({ configPath: resolve(out.get('--config')), directory: resolve(out.get('--state')) });
   const sessions = []; let stopped = false, shutdownPromise;
   const close = () => shutdownPromise ??= (async () => {
@@ -139,6 +144,12 @@ export async function runJobCommand(argv = process.argv.slice(2), { print = valu
         input: await readJSON(required(out, '--input')),
         ...(out.has('--label') ? { label: out.get('--label') } : {}),
         ...(out.has('--reference') ? { reference: out.get('--reference') } : {}) });
+      if (out.has('--out')) return emit(await publishNew(out.get('--out'), Buffer.from(JSON.stringify(ticket, null, 2) + '\n')));
+      return emit(ticket);
+    }
+    if (command === 'renew-claim') {
+      const ticket = await model.renewClaim({ id: required(out, '--id'),
+        expectedRevision: integer(out, '--revision', undefined), reason: required(out, '--reason') });
       if (out.has('--out')) return emit(await publishNew(out.get('--out'), Buffer.from(JSON.stringify(ticket, null, 2) + '\n')));
       return emit(ticket);
     }

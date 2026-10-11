@@ -148,6 +148,32 @@
         <section class="panel">
           <h2>Reconcile an interrupted operation</h2>
           <p class="help">Use the selected operation's current generation and the actual provider outcome. A retained response file completes that same operation.</p>
+          <h3>Retrieve a saved simulation</h3>
+          <p class="help">Use its Tenderly simulation ID to retrieve the full saved result. Review its original request before applying recovery.</p>
+          <form id="provider-lookup-form">
+            <label>Saved simulation ID<input id="provider-simulation-id" required maxlength="128" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,127}" autocomplete="off" spellcheck="false"></label>
+            <div class="actions">
+              <button type="submit" id="fetch-provider-result" disabled>Open saved result</button>
+              <button type="button" id="refresh-provider-result" disabled>Fetch again</button>
+            </div>
+          </form>
+          <div id="provider-lookup-list" class="record-list"></div>
+          <button type="button" id="more-provider-lookups" hidden>More saved lookups</button>
+          <section id="provider-review" class="review" hidden aria-label="Saved provider result review">
+            <h3>Provider result</h3>
+            <dl id="provider-result-summary" class="key-values"></dl>
+            <p id="provider-result-status" class="help"></p>
+            <div id="provider-observation-list" class="record-list"></div>
+            <pre id="provider-result-preview" class="output"></pre>
+            <button type="button" id="download-provider-result" disabled>Download original provider response</button>
+            <form id="provider-apply-form">
+              <label>Original provider reference<input id="provider-recovery-reference" required minlength="8" maxlength="240" placeholder="Account activity or support record linking this simulation to the operation"></label>
+              <p id="provider-apply-selection" class="help"></p>
+              <button type="submit" id="apply-provider-recovery" class="primary" disabled>Apply reviewed saved result</button>
+            </form>
+          </section>
+          <hr>
+          <h3>Record another provider outcome</h3>
           <form id="recovery-form">
             <label>Provider outcome<select id="recovery-action"><option value="complete">Saved simulation result recovered</option><option value="retry">Provider confirmed no simulation was dispatched</option></select></label>
             <label>Provider reference<input id="recovery-reference" minlength="8" maxlength="512" required placeholder="Saved simulation ID or original support reference"></label>
