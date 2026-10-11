@@ -21,7 +21,7 @@
         <label>Buyer browser origin<small>Origin only, different from the seller</small><input required name="origin" type="url" maxlength="2048" placeholder="https://buyer.example" autocomplete="off"></label>
         <label>Stellar network<small>Use the merchant's exact network</small><select required name="network"><option value="stellar:testnet">Testnet</option><option value="stellar:pubnet">Public network</option></select></label>
         <label class="full">Public payment recipient<small>The merchant's public payTo address</small><input required name="payTo" type="text" maxlength="256" placeholder="Stellar public recipient address" autocomplete="off" spellcheck="false"></label>
-        <label>Intended buyer operation<small>The method advertised by the merchant</small><select name="method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select></label>
+        <label>Intended buyer operation<small>The method advertised by the merchant</small><select name="method"><option>GET</option><option>HEAD</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select></label>
       </div>
       <label class="approval"><input type="checkbox" id="credentialed"><span>The buyer needs credentialed browser requests, such as cookies.<small>Check the stricter browser policy. The diagnosis itself sends no credentials.</small></span></label>
       <label class="approval"><input type="checkbox" id="permission" required><span>I am authorized to assess these seller and facilitator endpoints.</span></label>

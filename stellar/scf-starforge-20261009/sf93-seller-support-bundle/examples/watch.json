@@ -1,0 +1,35 @@
+{
+  "schema": "stellar-forge.seller-watch-config.v1",
+  "pollMs": 10000,
+  "failurePolls": 2,
+  "recoveryPolls": 2,
+  "windowMinutes": 5,
+  "captureEveryMs": 60000,
+  "httpErrors": {"minimum": 3, "percent": 10},
+  "disconnects": {"minimum": 3, "percent": 10},
+  "retention": {
+    "closedDays": 30,
+    "closedIncidents": 200,
+    "notifications": 400,
+    "captureBytes": 134217728
+  },
+  "merchants": [
+    {
+      "id": "primary-merchant",
+      "label": "Primary merchant",
+      "seller": "http://127.0.0.1:8423",
+      "ops": "http://127.0.0.1:8424",
+      "delivery": {"required": false, "oldestPendingSeconds": 300, "exhausted": 1}
+    }
+  ],
+  "notification": {
+    "id": "merchant-operations",
+    "urlEnv": "SF93_NOTIFICATION_URL",
+    "secretEnv": "SF93_NOTIFICATION_SECRET",
+    "allowLoopback": false,
+    "timeoutMs": 5000,
+    "maxAttempts": 8,
+    "retryMs": 1000,
+    "maxRetryMs": 3600000
+  }
+}

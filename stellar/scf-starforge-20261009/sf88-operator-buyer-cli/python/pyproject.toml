@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stellar-forge-buyer"
-version = "0.3.0"
+version = "0.4.0"
 description = "Durable Python applications on the original Stellar Forge buyer runtime"
 requires-python = ">=3.11"
 license = {text = "MIT"}
