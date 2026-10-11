@@ -36,13 +36,13 @@ for the three MCP tools, console and CLI commands.
 
 Connect the current SF104 merchant operator using
 `init-woocommerce --dir NEW_HOST --connection WOO_CONNECTION_JSON`,
-or attach `--woocommerce` to ordinary merchant initialization. The 18
+or attach `--woocommerce` to ordinary merchant initialization. The 20
 `merchant_woo_*` tools use its original Application Password client,
 native receipt review, selected-order completion and verified refund operators.
 Agents retain the inspected source and review hashes, confirm the exact order,
 recover interrupted results from the same native records, and retrieve complete
 original exports through the existing file reader. The host connection names
-receipt aliases and the original accounting export roots; B537's accounting
+receipt aliases and the original accounting export roots; The original accounting
 adjustment workflow supplies the verified return export.
 
 See [WOO_COMMERCE.md](WOO_COMMERCE.md) for configuration, the full order and refund
