@@ -1134,32 +1134,89 @@ embedding `./merchant/checkout` can read and compile its configuration through
 `./merchant/checkout/config`. Node native payment dependencies and the operator's
 actual settings are supplied as described above.
 
-Large object acquisition uses `starforge buyer-object --help` and the bundled
-`source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/OBJECTS.md` guide.
-The operator selects an object from its description, reviews a whole-download
-atomic cap, and uses the existing buyer for each prepared range. Saved chunks,
-snapshot identity and attempts survive reopening; assembly streams the retained
-contiguous bytes into a new destination. The same command provides the offline
-report and exports. Application APIs are available through `./buyer/object` and
-`./buyer/object-description`.
+### Receive and buy merchant files
 
-### Operate large-file acquisition in the browser
+The installed Object Buyer receives the merchant's public `objects.json` and
+offers, prepares the customer's private native buyer, and operates the resulting
+whole-file or chunked acquisition. Obtain `s3/objects.json` and `offers.json`
+from the same selected S3 merchant release. The original seller's saved
+`/_seller/offers` array and native saved-discovery envelopes are also accepted.
 
-The original object workspace uses the existing merchant `objects.json`, exact
-buyer configuration and private SF88 workspace. Prepare the profile described
-in `sf88-operator-buyer-cli/object-workspace/README.md`, then launch:
+Use Node 22.16+, Python 3.11+ and util-linux `flock` on the operator's Linux host.
+Install the original [native payment dependencies](#native-payment-dependencies)
+in the same application directory. Declare the actual receiver in a private
+`0600` file using the existing `stellar-forge.buyer-runbook-operator.v1` preset
+from the installed
+`source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/README.md`.
+It records the actor, service, public payer, absolute Python executable, total
+and daily atomic limits, and wallet environment name or trusted signer-provider
+path. The preset can also retain the original RPC and managed-proxy settings.
+Keep this file and the buyer state outside `node_modules`.
+
+Create the private parent in the installed application:
+
+```sh
+STARFORGE_OBJECT_PRIVATE="$PWD/private-objects"
+install -d -m 700 "$STARFORGE_OBJECT_PRIVATE"
+```
+
+Save the completed preset as `private-objects/operator.json` with mode `0600`,
+then launch the existing command:
 
 ```sh
 npx --no-install starforge buyer-object-workspace \
-  --state /private/download-workspace --profile /private/object-products.json --port 8438
+  --state "$STARFORGE_OBJECT_PRIVATE/workspace" \
+  --operator-settings "$STARFORGE_OBJECT_PRIVATE/operator.json" --port 8438
 ```
 
-Select the original product, review its range requests and spending limits,
-operate the retained acquisition, and preview/download the assembled file.
-Every range remains an original inbox job with its existing approval, ledger
-and native outcome. Restart uses the same state and original acquisition;
-completed parts remain available. The `./buyer/object-workspace` subpath exposes
-the original `startObjectWorkspace` API.
+Open the complete printed loopback URL and keep the terminal open. Choose
+**New → Receive a merchant object**, load the two public merchant files, and
+select the object and its exact offer. Review the recipient, network, asset,
+per-request maximum, complete request count, snapshot and total/daily limits.
+The selected limits must fit the receiver's preset.
+
+| Merchant delivery mode | Original request and saved result |
+| --- | --- |
+| Whole file, including an empty file | One exact GET with no range query; HTTP 200 without Content-Range; complete expected length, selected snapshot and SHA-256 |
+| Chunked file | Exact `offset`/`length` requests within the merchant's limit; retained contiguous ranges and original whole-object assembly |
+
+**Review received download** binds the original merchant files and local preset.
+**Create buyer and download** prepares the original operator, spending ledger,
+native request configurations and saved session. **Start download** then runs
+that session with the original terminal approval, live quote and payment
+workflow. Load the selected wallet or signer through the operator's normal
+private process environment before starting it. Whole-file mode uses the
+merchant's original whole-response limit; an empty file still has one reviewed
+request and its selected price.
+
+After native completion, use **Save whole file** or **Assemble file**, then
+**Download completed file**. The original response and final file retain their
+length, snapshot and digest checks. **Purchase records** shows each original
+request's financial status. **Finalize original purchases** operates those
+existing attempts; **Download all purchase records** streams their native
+accounting and receipts. Delivery and financial status remain separately visible.
+
+Stop the launcher with Ctrl+C and reopen the same state from the installed
+application, including after a package upgrade:
+
+```sh
+npx --no-install starforge buyer-object-workspace \
+  --state "$PWD/private-objects/workspace" --port 8438
+```
+
+The saved preset path, received files, prepared products, completed parts,
+original requests and purchase records reopen in place. Use the new printed
+browser URL after each launch. A completed file can be downloaded again from its
+retained assembly; its purchase records remain available if the delivered file
+has moved. A changed preset requires a fresh review for new preparation.
+
+For an already configured native buyer, the same command accepts
+`--profile /absolute/private/object-products.json` with the original product
+profile documented in `object-workspace/README.md`. Terminal acquisition,
+resume, assembly and exports remain available through
+`npx --no-install starforge buyer-object --help` and the installed `OBJECTS.md`.
+Applications use the maintained `./buyer/object`, `./buyer/object-description`
+and `./buyer/object-workspace` exports.
 
 ## Operate merchant delivery in the browser
 
