@@ -99,8 +99,11 @@ def build_table(table, binding, store, *, columns=None, title=None, description=
     exported = set()
     for index, column in enumerate(chosen):
         export_name = safe_name(column.get("source_column") or column["name"], "Column_" + str(index + 1))
-        if export_name in exported:
-            export_name += "_" + str(index + 1)
+        base_export_name = export_name
+        suffix = 2
+        while export_name in exported:
+            export_name = base_export_name + "_" + str(suffix)
+            suffix += 1
         exported.add(export_name)
         fields.append({"name": "F" + str(index + 1), "display": column["name"],
             "source_column": column.get("source_column") or column["name"], "export_name": export_name})
@@ -157,6 +160,8 @@ def build_table(table, binding, store, *, columns=None, title=None, description=
             for index, (name, value) in enumerate(parameters.items()):
                 if not re.fullmatch(r"@?[A-Za-z_][A-Za-z0-9_]*", name):
                     raise ValueError("Use a SQL parameter name containing letters, numbers and underscores.")
+                if isinstance(value, (dict, list)):
+                    raise ValueError("Paginated SQL parameters must be scalar values or null.")
                 parameter_name = name.lstrip("@")
                 query_parameter = element(query_parameters, "QueryParameter", Name="@" + parameter_name)
                 element(query_parameter, "Value", "=Parameters!" + parameter_name + ".Value")
@@ -164,8 +169,10 @@ def build_table(table, binding, store, *, columns=None, title=None, description=
                 data_type = "Boolean" if isinstance(value, bool) else "Integer" if isinstance(value, int) else \
                     "Float" if isinstance(value, float) else "String"
                 element(report_parameter, "DataType", data_type)
+                if value is None:
+                    element(report_parameter, "Nullable", "true")
                 element(element(element(report_parameter, "DefaultValue"), "Values"), "Value",
-                    str(value).lower() if isinstance(value, bool) else value)
+                    "=Nothing" if value is None else str(value).lower() if isinstance(value, bool) else value)
                 element(report_parameter, "Prompt", parameter_name)
     else:
         raise ValueError("Paginated generation requires a reviewed CSV or SQL Server binding for " + table["name"] + ".")
