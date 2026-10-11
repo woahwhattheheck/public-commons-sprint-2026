@@ -142,6 +142,8 @@ export async function reviewCommerceSetup({ configFile, directory }) {
       /^[1-9][0-9]{0,38}$/.test(terms.amount) &&
       BigInt(terms.amount) <= BigInt(facilitator.payments.maxAtomic),
     'COMMERCE_SETUP_ADVERTISED_TERMS_OUTSIDE_FACILITATOR');
+    need(facilitator.payments.paymentFlows.includes(terms.extra?.paymentFlow ?? 'authorization'),
+      'COMMERCE_SETUP_PAYMENT_FLOW_OUTSIDE_FACILITATOR');
   }
   const handlers = seller.handlers === undefined ? null : await regularSource(seller.handlers);
   need(python || upstream || jsonrpc || handlers || !merchant.routes.some(route => route.handler || route.admit),

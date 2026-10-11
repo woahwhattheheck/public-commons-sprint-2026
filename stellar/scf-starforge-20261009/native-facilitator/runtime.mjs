@@ -66,7 +66,7 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
       BigInt(requirements.amount) <= BigInt(c.payments.maxAtomic), 'PAYMENT_AMOUNT_DENIED');
     requireValue(Number.isInteger(requirements.maxTimeoutSeconds) && requirements.maxTimeoutSeconds >= 1 &&
       requirements.maxTimeoutSeconds <= 86400 && requirements.extra?.areFeesSponsored === true &&
-      [undefined, null, 'authorization'].includes(requirements.extra?.paymentFlow), 'PAYMENT_PROFILE_DENIED');
+      c.payments.paymentFlows.includes(requirements.extra?.paymentFlow ?? 'authorization'), 'PAYMENT_PROFILE_DENIED');
   }
   async function call(kind, payload, requirements) {
     if (closing) throw new FacilitatorError('FACILITATOR_DRAINING', 503);
@@ -107,9 +107,19 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
       if (closing && active.size === 0) { slots.close(); await ownership.release(); }
     }
   }
-  const getSupported = async () => structuredClone(native.getSupported());
+  const getSupported = async () => {
+    const supported = structuredClone(native.getSupported());
+    // Advisory operator policy alongside the original SDK kind. Native payment
+    // requirements still select one extra.paymentFlow; the SDK owns settlement.
+    for (const kind of supported.kinds) if (kind.x402Version === 2 &&
+        kind.scheme === 'exact' && kind.network === c.network) {
+      kind.extra = {...kind.extra, paymentFlows:[...c.payments.paymentFlows]};
+    }
+    return supported;
+  };
   const status = () => ({ mode:'NATIVE_X402_FACILITATOR', network:c.network,
     state:closing ? 'DRAINING' : 'ACCEPTING', activeVerify:verifying, activeSettle:settling,
+    paymentFlows:[...c.payments.paymentFlows],
     settlementConcurrency:c.limits.maxSettleInFlight,
     availableSettlementSlots:closing ? 0 : c.limits.maxSettleInFlight - settling,
     settlementAccounts:slots.status(),
@@ -159,6 +169,8 @@ export async function startSelfFacilitatedSeller({ facilitatorConfig, config, po
             policy.payments.assets.includes(terms.asset) && policy.payments.recipients.includes(terms.payTo) &&
             /^[1-9][0-9]{0,38}$/.test(terms.amount) && BigInt(terms.amount) <= BigInt(policy.payments.maxAtomic),
             'SELLER_TERMS_OUTSIDE_FACILITATOR_POLICY');
+          requireValue(policy.payments.paymentFlows.includes(terms.extra?.paymentFlow ?? 'authorization'),
+            'SELLER_FLOW_OUTSIDE_FACILITATOR_POLICY');
         }
         return createNativeSellerServer(compiled,{facilitatorClient:facilitator});
       }});

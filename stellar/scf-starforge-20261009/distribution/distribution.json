@@ -214,7 +214,8 @@
     "availability": "stellar/scf-starforge-20261009/sf30-seller-sdk/availability/cli.mjs",
     "mcp-buyer": "stellar-forge/mcp-paid-agent/serve.mjs",
     "mcp-results": "stellar-forge/mcp-paid-agent/result-cli.mjs",
-    "mcp-data": "stellar-forge/mcp-paid-agent/data-serve.mjs"
+    "mcp-data": "stellar-forge/mcp-paid-agent/data-serve.mjs",
+    "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs"
   },
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
@@ -389,7 +390,8 @@
     "./buyer/mcp/result-cli": "./source/stellar-forge/mcp-paid-agent/result-cli.mjs",
     "./merchant/mcp/data-tools": "./source/stellar-forge/mcp-paid-agent/data-tools.mjs",
     "./merchant/mcp/data-server": "./source/stellar-forge/mcp-paid-agent/data-serve.mjs",
-    "./merchant/mcp/mysql-package": "./source/stellar-forge/mcp-paid-agent/mysql-package.mjs"
+    "./merchant/mcp/mysql-package": "./source/stellar-forge/mcp-paid-agent/mysql-package.mjs",
+    "./buyer/dataset-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
