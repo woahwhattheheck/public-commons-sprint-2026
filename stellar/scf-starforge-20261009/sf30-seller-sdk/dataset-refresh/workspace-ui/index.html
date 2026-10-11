@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dataset publisher</title><link rel="stylesheet" href="/workspace.css">
-  <script src="/workspace.js" defer></script>
+  <script src="/workbook-ui.js" defer></script><script src="/workspace.js" defer></script>
 </head>
 <body>
   <header class="topbar"><div><span class="eyebrow">STELLAR FORGE / MERCHANT OPERATIONS</span><h1>Dataset publisher</h1></div><span class="tag">Local workspace</span></header>
@@ -16,6 +16,41 @@
       <div><span>Published rows</span><strong id="row-count">—</strong></div>
       <div><span>Retained CSV bytes</span><strong id="retained-bytes">—</strong></div>
       <div><span>Version capacity</span><strong id="version-capacity">—</strong></div>
+    </section>
+
+
+    <section id="workbook-panel" class="panel" aria-labelledby="workbook-title">
+      <div class="section-head"><div><h2 id="workbook-title">Workbook sources</h2><p>Retain an original XLSX, inspect its cells, and map only the columns this dataset publishes.</p></div><a href="#saved-candidates-title">Saved candidates</a></div>
+      <form id="wb-upload-form" class="wb-upload"><div><label for="wb-file">Original XLSX file</label><input id="wb-file" name="file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required></div><button id="wb-upload" type="submit">Retain workbook</button></form>
+      <p id="wb-runtime" class="small muted">Workbook extraction uses the configured Python reader. CSV and publication keep the original runtime.</p>
+      <div class="table-scroll" tabindex="0" aria-label="Retained original workbooks"><table id="wb-sources"><thead><tr><th>Original / SHA-256</th><th>Sheets / size</th><th>Saved mappings</th><th>Action</th></tr></thead><tbody></tbody></table><p id="wb-empty" class="empty">Upload a workbook to begin. The original bytes remain private.</p></div>
+      <div id="wb-editor" hidden>
+        <div class="section-head wb-section"><div><h3 id="wb-source-title">Original workbook</h3><p id="wb-source-id" class="small mono wrap"></p></div><div class="actions"><button id="wb-original" type="button">Download original</button><button id="wb-remove" type="button">Remove unused source</button></div></div>
+        <dl id="wb-source-details" class="details"></dl>
+        <div class="wb-plans"><div><label for="wb-plan-select">Saved mapping</label><select id="wb-plan-select"><option value="">New mapping</option></select></div><div><label for="wb-copy-select">Use another saved mapping as a starting point</label><select id="wb-copy-select"><option value="">Choose a source and mapping</option></select></div><button id="wb-copy" type="button">Copy for this source</button></div>
+        <form id="wb-selection-form" class="wb-selection">
+          <div><label for="wb-sheet">Original worksheet</label><select id="wb-sheet" required></select></div>
+          <div><label for="wb-range">Selected source range</label><input id="wb-range" required placeholder="A1:G40" pattern="[A-Z]{1,3}[1-9][0-9]*(:[A-Z]{1,3}[1-9][0-9]*)?"></div>
+          <div><label for="wb-header">Header row</label><input id="wb-header" type="number" min="1" max="1048576" placeholder="No header"><span class="small muted">Leave empty for no header.</span></div>
+          <button id="wb-inspect" type="submit">Inspect original cells</button>
+        </form>
+        <p id="wb-inspection-summary" class="small muted">Select the original range to inspect.</p>
+        <div class="table-scroll wb-cell-table" tabindex="0" aria-label="Original worksheet cells"><table id="wb-cells"><thead></thead><tbody></tbody></table></div>
+        <nav class="pagination" aria-label="Original worksheet pages"><button id="wb-previous" type="button">Previous source rows</button><span id="wb-page" class="small muted"></span><button id="wb-next" type="button">Next source rows</button></nav>
+        <details id="wb-cell-detail" class="wb-section"><summary>Selected original cell</summary><div id="wb-cell-content" class="wb-cell-content"><p class="small muted">Choose a cell to see its original value, formula, saved cache and format.</p></div></details>
+        <form id="wb-plan-form">
+          <div class="section-head wb-section"><div><h3>Public column mapping</h3><p id="wb-schema-label" class="small muted"></p></div><span id="wb-plan-state" class="tag">Not saved</span></div>
+          <div class="wb-plan-heading"><div><label for="wb-plan-name">Mapping name</label><input id="wb-plan-name" maxlength="160" required></div><div><label for="wb-hidden">Hidden rows</label><select id="wb-hidden"><option value="include">Include original hidden rows</option><option value="exclude">Exclude original hidden rows</option></select></div><div><label for="wb-blank-rows">Rows empty in selected columns</label><select id="wb-blank-rows"><option value="skip">Skip empty rows</option><option value="keep">Keep empty rows</option></select></div><div><label for="wb-merged">Merged data cells</label><select id="wb-merged"><option value="reject">Require an unmerged selection</option><option value="anchor">Keep original top-left cell only</option></select></div></div>
+          <div id="wb-mappings"></div>
+          <label for="wb-notes">Mapping review notes</label><textarea id="wb-notes" rows="3" maxlength="2000" placeholder="Record the source selection and your public projection decisions."></textarea>
+          <p id="wb-plan-warning" class="small"></p>
+          <div id="wb-errors" class="notice small" role="status" hidden></div>
+          <div class="actions"><button id="wb-save-plan" type="submit" class="primary">Save reviewed mapping</button><button id="wb-prepare" type="button">Prepare native CSV candidate</button><button id="wb-new-plan" type="button">Start another mapping</button><button id="wb-copy-edition" type="button" hidden>Copy this retained edition</button></div>
+          <p class="small muted">Preparing retains the exact CSV and original row coordinates. Inspect and publish it through the existing working-draft controls below.</p>
+        </form>
+        <details id="wb-history" class="wb-section"><summary>Retained mapping editions</summary><div id="wb-history-content"></div></details>
+      </div>
+      <div id="wb-candidate-origin" class="wb-section" hidden><h3>Selected candidate’s workbook origin</h3><p id="wb-candidate-summary" class="small mono wrap"></p><div class="actions"><button id="wb-candidate-source" type="button">Open original mapping</button><button id="wb-private-export" type="button">Export private source bundle</button></div><p class="small muted">This private ZIP includes the original workbook, reviewed mapping, exact CSV and source-row map. The public seller exposes only the selected dataset columns.</p></div>
     </section>
 
     <div class="publishing-grid">
