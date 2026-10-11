@@ -294,23 +294,38 @@ function renderComparisons() {
 }
 async function openComparison(ref) {
   const retained = await api('source?' + query('&ref=' + ref)), value = parse(retained.content, 'Comparison');
-  const binding = current.project.state.mappings[value.mappingId]?.binding;
+  const frozenBinding = retained.metadata.provenance?.binding;
   comparisonView?.dispose();
   comparisonView = renderComparison($('comparison-detail'), value, { sourceText: retained.content,
     onOpenSource: ({ side, source, location: recordLocation }) => act(async () => {
-      const selected = binding?.[side];
-      if (!selected) throw new Error('Open the mapping edition that retained this comparison source.');
-      if (selected.type === 'acquisition') {
-        await openAcquisition(selected.id); showTab('acquire');
-        $('acquisition-detail').append(make('h4', 'Selected comparison record'), pre({ side, source: source.id, location: recordLocation }));
-      } else {
-        const original = await api('source?' + query('&ref=' + encodeURIComponent(selected.ref)));
-        const details = make('details'); details.append(make('summary', 'Complete original response'), pre(original.content));
-        $('source-inspection').replaceChildren(make('h3', original.metadata.name),
-          pre({ source: original.metadata, location: recordLocation }),
-          button('Download original response', () => download('source-download?' + query('&ref=' + selected.ref), original.metadata.name)), details);
-        showTab('sources');
+      const expected = source.captures?.find(capture => capture.id === recordLocation.captureId);
+      if (!expected) throw new Error('The saved comparison does not identify this original capture.');
+      const acquisition = current.acquisitions.find(row => row.id === source.id && row.manifest?.schema === source.schema);
+      if (acquisition) {
+        const original = await api('acquisition?' + query('&run=' + encodeURIComponent(source.id)));
+        const capture = original.manifest.captures.find(row => row.id === expected.id);
+        if (!capture || capture.sha256 !== expected.sha256 || capture.bytes !== expected.bytes)
+          throw new Error('The retained acquisition differs from this comparison capture.');
+        await openAcquisition(source.id); showTab('acquire');
+        $('acquisition-detail').append(make('h4', 'Selected comparison record'), pre({ side, capture: expected, location: recordLocation }));
+        return;
       }
+      const frozen = frozenBinding?.[side];
+      let matches = current.project.state.sources.filter(row => row.kind === 'legacy-response' && row.sha256 === expected.sha256 &&
+        (!frozen || frozen.type !== 'source' || row.ref === frozen.ref));
+      if (matches.length > 1 && expected.provenance) {
+        matches = matches.filter(row => row.provenance?.name === expected.provenance.name &&
+          row.provenance?.importedAt === expected.provenance.importedAt);
+      }
+      if (matches.length !== 1) throw new Error('Choose the project edition retaining the original comparison source.');
+      const original = await api('source?' + query('&ref=' + encodeURIComponent(matches[0].ref)));
+      if (original.metadata.sha256 !== expected.sha256 || original.metadata.bytes !== expected.bytes)
+        throw new Error('The retained file differs from this comparison capture.');
+      const details = make('details'); details.append(make('summary', 'Complete original response'), pre(original.content));
+      $('source-inspection').replaceChildren(make('h3', original.metadata.name),
+        pre({ source: original.metadata, comparisonCapture: expected, location: recordLocation }),
+        button('Download original response', () => download('source-download?' + query('&ref=' + original.ref), original.metadata.name)), details);
+      showTab('sources');
     }) });
   showTab('results');
 }
