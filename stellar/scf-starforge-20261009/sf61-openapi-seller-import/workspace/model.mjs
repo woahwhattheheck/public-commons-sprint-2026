@@ -16,6 +16,7 @@ import { parseOpenApiSource } from '../source-document.mjs';
 import { openApiRequestBody, requestBodySummary } from '../request-body.mjs';
 import { openApiResponseStreams } from '../response-stream.mjs';
 import { merchantPaymentRequirements, merchantStreamPolicy } from './stream-plan.mjs';
+import { requirePostmanHeaderReferences } from '../postman/collection.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -111,6 +112,7 @@ export function prepareMerchant(specText, plan) {
       if (typeof name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) fail(key + ': use environment names, never credential values');
       envNames.add(name);
     }
+    requirePostmanHeaderReferences(op,headers);
     let authentication;
     try { authentication = prepareBackendAuthentication(spec,op,row,backend,{allowLoopback:plan.allowLoopbackUpstream===true}); }
     catch(e) { fail(key + ': ' + e.message); }
@@ -209,6 +211,19 @@ export async function privateParent(path) {
   if (!info.isDirectory() || process.platform !== 'win32' && (info.mode & 0o077) !== 0) fail('Use an existing private output directory (mode 0700)');
   return full;
 }
+function sourceRevisionRecord(value, sourceSha256, planSha256) {
+  if (!plain(value) || value.schema !== 'stellar-forge.api-merchant-revision.v1' ||
+      !/^[a-f0-9]{64}$/.test(value.reviewSha256 ?? '') || !/^[a-f0-9]{64}$/.test(value.refreshReviewId ?? '') ||
+      !plain(value.base) || !plain(value.candidate) ||
+      value.candidate.sourceSha256 !== sourceSha256 || value.candidate.planSha256 !== planSha256 ||
+      !/^[a-f0-9]{64}$/.test(value.candidate.compiledSha256 ?? '') ||
+      !['manifestSha256','sourceSha256','planSha256'].every(key=>/^[a-f0-9]{64}$/.test(value.base[key] ?? '')) ||
+      typeof value.base.id !== 'string' || !Array.isArray(value.decisions) || !value.decisions.length || value.decisions.length>64)
+    fail('Source revision must match this exact original source and merchant plan');
+  packageName(value.base.name);
+  if (Buffer.byteLength(json(value))>MANIFEST_LIMIT) fail('Source revision record exceeds 1 MiB');
+  return value;
+}
 export async function readPackage(parent, name) {
   const folder = join(await privateParent(parent), packageName(name)), entry = await lstat(folder);
   if (!entry.isDirectory()) fail('Package must be a regular directory');
@@ -221,12 +236,18 @@ export async function readPackage(parent, name) {
   }
   if (own(manifest.files,'operator-cases.json') && sha(await regular(join(folder,'operator-cases.json'),65536)) !== manifest.files['operator-cases.json'])
     fail('Saved route cases changed. Save changes under a new package name.');
+  let sourceRevision;
+  if (own(manifest.files,'source-revision.json')) {
+    const bytes=await regular(join(folder,'source-revision.json'),MANIFEST_LIMIT);
+    if (sha(bytes)!==manifest.files['source-revision.json']) fail('Saved source revision changed. Reopen the original candidate.');
+    sourceRevision=sourceRevisionRecord(JSON.parse(bytes),manifest.files[sourceFile],manifest.files['merchant-plan.json']);
+  }
   return {folder, name, manifest, specText:(await regular(join(folder,sourceFile))).toString('utf8'),
-    plan:JSON.parse(await regular(join(folder,'merchant-plan.json')))};
+    plan:JSON.parse(await regular(join(folder,'merchant-plan.json'))),...(sourceRevision?{sourceRevision}:{})};
 }
 
 /** Create a portable private package and the actual original compiler output. */
-export async function savePackage({specText, plan, parent, name}) {
+export async function savePackage({specText, plan, parent, name, sourceRevision}) {
   const prepared = prepareMerchant(specText, plan), base = await privateParent(parent);
   const folder = join(base, packageName(name));
   const sourceFile='original-openapi.'+parseOpenApiSource(specText).format;
@@ -235,6 +256,7 @@ export async function savePackage({specText, plan, parent, name}) {
     'facade-openapi.json':json(prepared.facade), 'selections.json':json(prepared.selections),
     'route-bindings.json':json(prepared.bindings), 'upstreams.json':json(prepared.upstreams),
     'operator-cases.json':json(prepared.cases),
+    ...(sourceRevision===undefined?{}:{'source-revision.json':json(sourceRevisionRecord(sourceRevision,sha(specText),sha(json(plan))))}),
   };
   for (const [file,content] of Object.entries(files)) {
     if (Buffer.byteLength(content) > (file==='upstreams.json' ? 1024*1024 : LIMIT))
@@ -249,7 +271,7 @@ export async function savePackage({specText, plan, parent, name}) {
   await mkdir(folder, {mode:0o700});
   for (const [file,content] of Object.entries(files)) await writeFile(join(folder,file), content, {flag:'wx',mode:0o600});
   await compileSeller(['--spec',join(folder,'facade-openapi.json'),'--config',join(folder,'selections.json'),
-    '--service-bindings',join(folder,'route-bindings.json'),'--out',join(folder,'compiled')]);
+    '--service-bindings',join(folder,'route-bindings.json'),'--out',join(folder,'compiled')],{report:false});
   await mkdir(join(folder,'support'), {mode:0o700});
   await writeFile(join(folder,'merchant-package.json'), manifestBytes, {flag:'wx',mode:0o600});
   const args = ['node',join(sourceRoot,'sf96-seller-pilot-ops/pilot-ops.mjs'),'start','--ops-port','0','--support-parent',join(folder,'support'),'--',
@@ -259,12 +281,13 @@ export async function savePackage({specText, plan, parent, name}) {
   const guide = [
     '# API merchant package', '', 'Created from the original API description with an explicit public paid facade.',
     'Source and transformation hashes are in merchant-package.json. Prices are atomic-unit strings.',
+    ...(sourceRevision===undefined?[]:['The reviewed source revision is retained in source-revision.json, including the original package, exact source/plan pins and explicit route decisions.']),
     '', '## Start the original seller and operations dashboard', '', 'Node 22+ and the full current source checkout are required.',
     '', '~~~sh', command, '~~~', '',
     'For native facilitator mode, replace --challenge-only with --facilitator YOUR_AUTHORIZED_HTTPS_FACILITATOR.',
     'Supply environment variables in the launcher process: ' + (prepared.preview.environment.join(', ') || '(none)') + '.',
     'Authorization variables contain the complete header value, including Bearer or Basic when required.',
-    'Environment values are never stored in this package. After moving the package, adjust command paths.',
+    'The compiler adds environment-variable references only. Supplied source files may already contain private values; keep the complete package private. After moving the package, adjust command paths.',
     '', 'The seller listens on loopback. Route your HTTPS gateway to it while preserving the public paths.',
     'Challenge-only mode returns native payment challenges but does not verify or settle payments.',
     'Inspect the operations URL printed at startup. Stop with Ctrl-C. Resume the same compiled directory.',

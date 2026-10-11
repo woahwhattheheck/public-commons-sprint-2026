@@ -1,0 +1,206 @@
+{
+  "schema": "asheville.public-billing-rules.v1",
+  "retrieved_at": "2026-10-11 19:40:12 UTC",
+  "source_method": "First-party City page text returned by web search; direct website opens returned HTTP403. These are published rule inputs, not customer/account data.",
+  "currency": "USD",
+  "water": {
+    "source_url": "https://www.ashevillenc.gov/service/rates-fees/",
+    "source_ref": "turn130search3",
+    "page_reviewed": "2026-08-03",
+    "consumption_effective_bill_issue_date": "2026-09-01",
+    "base_fee_effective_date": "2026-07-01",
+    "unit": "ccf",
+    "gallons_per_ccf": "748",
+    "flat_consumption_rates": [
+      {
+        "customer_class": "single_family_residential",
+        "amount_per_ccf": "6.02"
+      },
+      {
+        "customer_class": "multi_family_residential",
+        "amount_per_ccf": "5.72"
+      },
+      {
+        "customer_class": "irrigation",
+        "amount_per_ccf": "8.32"
+      }
+    ],
+    "threshold_rates": [
+      {
+        "customer_class": "commercial",
+        "cycle": "monthly",
+        "source_condition": "less than or equal to 1,000 ccf monthly",
+        "amount_per_ccf": "5.72"
+      },
+      {
+        "customer_class": "commercial",
+        "cycle": "monthly",
+        "source_condition": "over 1,000 ccf monthly",
+        "amount_per_ccf": "4.51"
+      },
+      {
+        "customer_class": "commercial",
+        "cycle": "bimonthly",
+        "source_condition": "less than or equal to 2,000 ccf bimonthly",
+        "amount_per_ccf": "5.72"
+      },
+      {
+        "customer_class": "commercial",
+        "cycle": "bimonthly",
+        "source_condition": "over 2,000 ccf bimonthly",
+        "amount_per_ccf": "4.51"
+      },
+      {
+        "customer_class": "manufacturer",
+        "cycle": "monthly",
+        "source_condition": "less than or equal to 1,000 ccf monthly",
+        "amount_per_ccf": "5.72"
+      },
+      {
+        "customer_class": "manufacturer",
+        "cycle": "monthly",
+        "source_condition": "over 1,000 ccf monthly",
+        "amount_per_ccf": "4.51"
+      },
+      {
+        "customer_class": "manufacturer",
+        "cycle": "bimonthly",
+        "source_condition": "less than or equal to 2,000 ccf bimonthly",
+        "amount_per_ccf": "5.72"
+      },
+      {
+        "customer_class": "manufacturer",
+        "cycle": "bimonthly",
+        "source_condition": "over or equal to 2,000 ccf bimonthly",
+        "amount_per_ccf": "4.51"
+      }
+    ],
+    "wholesale": {
+      "volume_rate_per_ccf": "2.89",
+      "contract_may_override": true,
+      "fixed_capacity_monthly_charge": "184",
+      "capacity_unit": "10,000 gallons per day of committed capacity"
+    },
+    "meter_base_fees": [
+      {
+        "meter_size_inches": "5/8",
+        "monthly": "7.89",
+        "bimonthly": "15.41"
+      },
+      {
+        "meter_size_inches": "3/4",
+        "monthly": "11.10",
+        "bimonthly": "21.68"
+      },
+      {
+        "meter_size_inches": "1",
+        "monthly": "17.99",
+        "bimonthly": "35.13"
+      },
+      {
+        "meter_size_inches": "1 1/2",
+        "monthly": "35.19",
+        "bimonthly": "68.74"
+      },
+      {
+        "meter_size_inches": "2",
+        "monthly": "55.84",
+        "bimonthly": "109.07"
+      },
+      {
+        "meter_size_inches": "3",
+        "monthly": "110.91",
+        "bimonthly": "216.63"
+      },
+      {
+        "meter_size_inches": "4",
+        "monthly": "172.87",
+        "bimonthly": "337.63"
+      },
+      {
+        "meter_size_inches": "6",
+        "monthly": "344.95",
+        "bimonthly": "673.74"
+      },
+      {
+        "meter_size_inches": "8",
+        "monthly": "551.46",
+        "bimonthly": "1077.08"
+      },
+      {
+        "meter_size_inches": "10",
+        "monthly": "1446.33",
+        "bimonthly": "2824.87"
+      }
+    ],
+    "other_published_amounts": {
+      "delinquent_fee": "15",
+      "second_delinquent_fee": "50",
+      "refundable_deposit_without_established_good_credit": "100"
+    },
+    "interpretation_notes": [
+      "Use exact published monthly and bimonthly base fees; monthly values are not simply half of bimonthly values.",
+      "The page lists a consumption threshold and per-ccf charge but does not explicitly say progressive-block pricing versus applying one rate to the entire consumption. Retain an explicit reviewed tariff interpretation before calculating these classes.",
+      "The manufacturer bimonthly labels overlap at exactly 2,000 ccf. Preserve the original labels; do not silently choose one row.",
+      "These sources do not define proration, final-bill rounding, credit calculation, delinquency timing, tax applicability, or previous-period tariff rules."
+    ]
+  },
+  "leak_adjustments": {
+    "source_url": "https://www.ashevillenc.gov/service/higher-than-expected-bills/",
+    "source_ref": "turn130search1",
+    "page_reviewed": "2026-03-12",
+    "repair_within_days_of_first_high_bill": 30,
+    "written_request_within_days_of_repair": 45,
+    "proof_of_repair_required": true,
+    "max_adjustments": 2,
+    "rolling_period_months": 24,
+    "calculation_formula": null
+  },
+  "stormwater": {
+    "source_url": "https://www.ashevillenc.gov/department/public-works/stormwater-services-utility/stormwater-fees/",
+    "source_ref": "turn130search2",
+    "page_reviewed": "2026-08-03",
+    "fiscal_period_start": "2026-07-01",
+    "fiscal_period_end": "2027-06-30",
+    "fee_basis": "monthly",
+    "single_family": [
+      {
+        "tier": 1,
+        "source_condition": "up to 2,000 square feet",
+        "monthly_fee": "4.87"
+      },
+      {
+        "tier": 2,
+        "source_condition": "2,001 to 4,000 square feet",
+        "monthly_fee": "7.76"
+      },
+      {
+        "tier": 3,
+        "source_condition": "over 4,001 square feet",
+        "monthly_fee": "10.69"
+      }
+    ],
+    "non_single_family": {
+      "monthly_fee_per_eru": "7.76",
+      "square_feet_per_eru": "2442",
+      "eru_rounding_rule": null
+    },
+    "assignment": "Published page assigns the fee to property owners; commercial tenant assignment is allowed in certain circumstances, which are not defined on this page.",
+    "interpretation_notes": [
+      "Tier3 is printed as over4,001 square feet, leaving exactly4,001 unstated. Do not silently infer its boundary.",
+      "Some accounts bill bimonthly and others semiannually; displayed amounts are monthly comparators.",
+      "No ERU fractional/rounding rule is specified by this page."
+    ]
+  },
+  "rfi_board": {
+    "source_url": "https://www.ashevillenc.gov/department/purchasing/bids/",
+    "source_ref": "turn128search2",
+    "crawl_age_at_retrieval": "2 days",
+    "posted_date": "2026-10-09",
+    "solicitation": "298-FY27-ITS-RFI-OnPremisesTylerMunisSaaSReplace",
+    "questions_due_local": "2026-10-20 16:00",
+    "information_due_local": "2026-10-22 16:00",
+    "addendum_in_returned_solicitation_row": false,
+    "scope_note": "This is a snapshot of the exact returned row, not a claim that no subsequent addendum can exist."
+  }
+}

@@ -220,6 +220,22 @@ export async function runWorkbookReceiver(ready,{buyer,signal,progress=()=>{}}={
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
+  if(process.argv.length===2 || process.argv.length===3 && ['--help','-h','help'].includes(process.argv[2])) {
+    process.stdout.write(`Complete workbook customer receiving
+
+  starforge workbook-receive --ready /absolute/customer/ready.json
+  node examples/run-workbook-receiver.mjs --ready /absolute/customer/ready.json
+
+The private ready file uses stellar-forge.workbook-customer-ready.v1 and absolute
+paths to the reviewed publisher/config, original completed dataset session,
+native runtime, receiving rooms, and original Analysis workspace.
+The workflow retains the acquisition, portable dataset, Analysis intake,
+complete JSONL/CSV/SQLite query export, and offline receiving result.
+Repeat the same ready file to reopen its retained completed result.
+
+See workbook-customer/README.md for the full ready-file and installed API.
+`);
+  } else {
   try {
     check(process.argv.length===4&&process.argv[2]==='--ready','WORKBOOK_READY_ARGUMENT_REQUIRED');
     const raw=await readFile(process.argv[3]);
@@ -234,5 +250,6 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
   } catch(error) {
     process.stderr.write(JSON.stringify({error:error.code??error.name})+'\n');
     process.exitCode=1;
+  }
   }
 }
