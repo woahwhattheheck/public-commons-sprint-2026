@@ -11,8 +11,11 @@ import { inspectDraftSchema, reviewDraft, exportDraft, readExport, exportView, s
 import { prepareDeployment, readDeployment, deploymentView, inspectDeployment, stageDeployment,
   prepareHost, readHostRunbook, recoverDeployment, ensureDeploymentStore } from './deployment.mjs';
 import { startReleaseConsole } from '../../sf82-seller-pilot/release-console.mjs';
+import { authoringCatalog, captureAuthoringSchema, describeAuthoredOperation, compileAuthoredOperation,
+  previewAuthoredOperation, readPreview, previewView, listPreviewOperations, recoverPreview } from './authoring.mjs';
 
 const STATIC = new Map([['/', ['index.html', 'text/html']], ['/app.mjs', ['app.mjs', 'text/javascript']],
+  ['/authoring-ui.mjs', ['authoring-ui.mjs', 'text/javascript']],
   ['/style.css', ['style.css', 'text/css']]]);
 const HELP = 'node workspace/server.mjs --workspace PRIVATE_DIRECTORY [--port 0]';
 const equal = (a, b) => typeof a === 'string' && Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -42,6 +45,7 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
   if (!Number.isInteger(port) || port < 0 || port > 65535) fail('Port must be 0–65535.');
   const store = await openWorkspaceStore(workspace), token = randomBytes(32).toString('hex');
   const releaseConsoles = new Map();
+  const connections = new Set();
   let origin, active = null, stopping = false, busy = false, pending = Promise.resolve();
   const runtime = () => active ? { project: active.project, exportId: active.exportId,
     mode: active.session.mode, url: active.session.url,
@@ -65,6 +69,19 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
     const updated = await store.save({ id: saved.id, input: saved.input,
       expectedRevision: saved.revision, deploymentRecord: result.reference });
     return { project: await publicDraft(updated), deployment: deploymentView(result.record) };
+  }
+  async function attachPreview(saved, result) {
+    const previous = (saved.previews ?? []).find(item => item.id === result.reference.id);
+    const updated = previous ? saved : await store.save({ id: saved.id, input: saved.input,
+      expectedRevision: saved.revision, previewRecord: result.reference });
+    return { project: await publicDraft(updated), preview: result.record, recovered: Boolean(previous) };
+  }
+  async function connected(req, res, operation) {
+    const controller = new AbortController(); connections.add(controller);
+    const abort = () => { if (!res.writableEnded) controller.abort(); };
+    req.once('aborted', abort); res.once('close', abort);
+    try { return await operation(controller.signal); }
+    finally { req.off('aborted', abort); res.off('close', abort); connections.delete(controller); }
   }
   async function mutate(operation) {
     if (busy) fail('A workspace operation is already in progress.', 409);
@@ -101,6 +118,13 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
           return send(200, await publicDraft(await store.read(url.searchParams.get('id'), rev === null ? undefined : Number(rev))));
         }
         if (url.pathname === '/api/history') return send(200, await store.history(url.searchParams.get('id')));
+        if (url.pathname === '/api/authoring/previews' || url.pathname === '/api/authoring/preview') {
+          const saved = await store.read(url.searchParams.get('id'));
+          if (url.pathname.endsWith('/previews')) return send(200, { operations: await listPreviewOperations(store, saved) });
+          const id = url.searchParams.get('previewId');
+          const reference = (saved.previews ?? []).find(item => item.id === id) ?? { id, project: saved.id };
+          return send(200, await readPreview(store, reference));
+        }
         if (url.pathname === '/api/evolution/report') {
           const saved = await store.read(url.searchParams.get('id'));
           return send(200, await readRevisionReport(savedExport(saved, url.searchParams.get('exportId'))));
@@ -117,6 +141,20 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] ?? '')) return send(415, { error: 'Use application/json.' });
       const body = await bodyOf(req);
       if (url.pathname === '/api/schema') return send(200, await inspectDraftSchema(body.schemaText));
+      if (url.pathname === '/api/authoring/catalog') return send(200, authoringCatalog(body.schemaText));
+      if (url.pathname === '/api/authoring/open') return send(200, describeAuthoredOperation(body));
+      if (url.pathname === '/api/authoring/compile') return send(200, compileAuthoredOperation(body));
+      if (url.pathname === '/api/authoring/capture') return send(200, await mutate(() =>
+        connected(req, res, signal => captureAuthoringSchema({ ...body, signal }))));
+      if (url.pathname === '/api/authoring/preview' || url.pathname === '/api/authoring/recover') {
+        return send(201, await mutate(async () => {
+          const saved = await current(body);
+          const result = url.pathname.endsWith('/recover') ? await recoverPreview(store, saved, body.previewId)
+            : await connected(req, res, signal => previewAuthoredOperation(store, saved,
+              { id: body.previewId, operation: body.operation, variables: body.variables, allowLoopback: body.allowLoopback, signal }));
+          return attachPreview(saved, result);
+        }));
+      }
       if (url.pathname === '/api/review') return send(200, await reviewDraft(body.input));
       if (url.pathname === '/api/evolution/compare') {
         const saved = await current(body);
@@ -202,6 +240,7 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
   const signals = [];
   const close = () => closing ??= (async () => {
     stopping = true;
+    for (const connection of connections) connection.abort();
     for (const [name, handler] of signals) process.off(name, handler);
     const closed = new Promise((yes, no) => server.close(error => error ? no(error) : yes()));
     await pending;
