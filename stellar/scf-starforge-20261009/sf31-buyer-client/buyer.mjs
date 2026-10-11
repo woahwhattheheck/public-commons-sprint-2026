@@ -211,8 +211,18 @@ export class X402BuyerClient {
     noRedirect(res,false);
     if(!res.ok)throw new BuyerError('DISCOVERY_HTTP_'+res.status);
     const body=await readDiscoveryJSON(res);
-    if(!Array.isArray(body?.resources)||!object(body?.pagination))throw new BuyerError('BAD_DISCOVERY_RESPONSE');
-    return {source:u.href,resources:body.resources,pagination:body.pagination};
+    if(!object(body) || !object(body.pagination))throw new BuyerError('BAD_DISCOVERY_RESPONSE');
+    // Our own catalog advertises "resources"; observed native facilitators can
+    // advertise "items" on the same discovery route. Preserve each original row,
+    // payment option and pagination without constructing or authorizing a quote.
+    const hasResources=Object.hasOwn(body,'resources');
+    const hasItems=Object.hasOwn(body,'items');
+    if(hasResources===hasItems)throw new BuyerError('BAD_DISCOVERY_RESPONSE');
+    const sourceEnvelope=hasResources?'resources':'items';
+    const resources=body[sourceEnvelope];
+    if(!Array.isArray(resources) || (hasItems && !resources.every(object)))
+      throw new BuyerError('BAD_DISCOVERY_RESPONSE');
+    return {source:u.href,resources,pagination:body.pagination,sourceEnvelope};
   }
   /** Call protected HTTP resource. The first unsigned request and one signed retry are the ONLY sends. */
   async call({url,method='GET',body,headers={},expect,approve,sign,signal,intentId=randomUUID()}={}){
