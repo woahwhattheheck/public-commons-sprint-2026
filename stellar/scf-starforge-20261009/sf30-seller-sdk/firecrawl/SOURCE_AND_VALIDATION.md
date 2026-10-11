@@ -82,4 +82,4 @@ The frozen JSON retains original response bytes as Base64 with their hashes. Met
 
 ## Browser journey
 
-The private operator browser journey is being completed on the same restored actual-source dataset. Its result will be recorded here before final delivery.
+The private operator browser walkthrough was selected on the same restored actual-source dataset. Its first execution request returned `environment_offline` before a browser process was created. The nine completed native stages above are the verified runtime result. The separate browser walkthrough remains attached to the original implementation work.
