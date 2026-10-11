@@ -5,6 +5,8 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { openDossierStore } from './dossier.mjs';
+import { receiveOpenAlexEdition } from './openalex.mjs';
+import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 
 const PUBLIC = fileURLToPath(new URL('./public/', import.meta.url));
 const TYPES = Object.freeze({
@@ -86,11 +88,13 @@ export async function loadEditionAdapters(modulePath) {
 }
 
 /** Reuses the existing SF88 loopback / fragment-token operator convention. */
-export async function startDossierWorkspace({directory, port = 0, providers = {}} = {}) {
+export async function startDossierWorkspace({directory, port = 0, providers = {}, openalexWorkspace = null} = {}) {
   requireValue(typeof directory === 'string' && isAbsolute(directory) && resolve(directory) === directory,
     'WORKSPACE_ABSOLUTE_PATH_REQUIRED');
   requireValue(Number.isInteger(port) && port >= 0 && port <= 65535, 'WORKSPACE_PORT_INVALID');
   providerRegistry(providers);
+  requireValue(openalexWorkspace === null || typeof openalexWorkspace?.listEditions === 'function' &&
+    typeof openalexWorkspace?.exportFiles === 'function', 'OPENALEX_WORKSPACE_API_REQUIRED');
   const store = await openDossierStore(directory, {providers});
   await store.list();
   const token = randomBytes(32).toString('hex');
@@ -126,7 +130,14 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       requireValue(auth.length === expectedAuthorization.length && timingSafeEqual(auth, expectedAuthorization),
         'AUTH_REQUIRED');
       if (req.method === 'GET' && path === '/api/state') {
-        send(200, {dossiers: await store.list(), providers: Object.keys(providers)}); return;
+        send(200, {dossiers: await store.list(), providers: Object.keys(providers),
+          openalex: {configured:openalexWorkspace !== null}}); return;
+      }
+      if (req.method === 'GET' && path === '/api/openalex/editions') {
+        requireValue(openalexWorkspace !== null, 'OPENALEX_WORKSPACE_NOT_CONFIGURED');
+        const editions = await openalexWorkspace.listEditions();
+        requireValue(Array.isArray(editions), 'OPENALEX_EDITION_LIST_INVALID');
+        send(200, {editions:editions.filter(edition => edition?.query?.entity === 'works')}); return;
       }
       if (req.method === 'POST' && path === '/api/dossiers') {
         const data = await readJson(req, MAX_CONTROL_BODY);
@@ -176,6 +187,18 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         send(201, await store.receive(id, {...selectedFields(data,
           ['questionId', 'label', 'provider', 'rawText', 'sourceReference']), expectedRevision})); return;
       }
+      if (action === 'openalex') {
+        requireValue(openalexWorkspace !== null, 'OPENALEX_WORKSPACE_NOT_CONFIGURED');
+        const controller = new AbortController();
+        const disconnected = () => {if (!res.writableEnded) controller.abort();};
+        res.once('close', disconnected);
+        try {
+          const imported = await receiveOpenAlexEdition(store, id, {workspace:openalexWorkspace,
+            ...selectedFields(data, ['questionId', 'editionId', 'label']), expectedRevision,
+            signal:controller.signal});
+          send(201, imported); return;
+        } finally {res.removeListener('close', disconnected);}
+      }
       if (action === 'reference') {
         requireValue(typeof data.provider === 'string' && /^[a-z][a-z0-9_-]{0,79}$/.test(data.provider),
           'PROVIDER_INVALID');
@@ -207,7 +230,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       const status = code === 'AUTH_REQUIRED' ? 401 : ['HOST_REFUSED', 'ORIGIN_REFUSED'].includes(code) ? 403 :
         code === 'REVISION_CONFLICT' ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
           code === 'UPLOAD_SIZE_LIMIT' ? 413 : 400;
-      send(status, {error: code});
+      send(status, {error: code, ...(error.openAlexImport ? {openAlexImport:error.openAlexImport} : {})});
     }
   });
   server.requestTimeout = 60000;
@@ -229,25 +252,35 @@ function parseOptions(args) {
   const options = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
-    requireValue(['--dir', '--port', '--edition-adapter'].includes(key) && !Object.hasOwn(options, key) &&
+    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module'].includes(key) && !Object.hasOwn(options, key) &&
       typeof args[index + 1] === 'string' && args[index + 1].length > 0, 'ARGUMENT_INVALID_OR_REPEATED');
     options[key] = args[index + 1];
   }
   const rawPort = options['--port'] ?? '0';
   requireValue(/^[0-9]{1,5}$/.test(rawPort), 'WORKSPACE_PORT_INVALID');
-  return {directory: options['--dir'], port: Number(rawPort), adapter: options['--edition-adapter']};
+  requireValue(!options['--openalex-module'] || options['--openalex-workspace'], 'OPENALEX_WORKSPACE_REQUIRED');
+  return {directory: options['--dir'], port: Number(rawPort), adapter: options['--edition-adapter'],
+    openalexDirectory:options['--openalex-workspace'], openalexModule:options['--openalex-module']};
 }
 async function main(args) {
   if (args.length === 0 || args.length === 1 && ['--help', '-h'].includes(args[0])) {
-    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs]\n');
+    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs]\n');
     return;
   }
   const options = parseOptions(args);
   const providers = options.adapter ? await loadEditionAdapters(options.adapter) : {};
-  const app = await startDossierWorkspace({...options, providers});
+  const openalexWorkspace = options.openalexDirectory ? await openSavedOpenAlexWorkspace({
+    directory:options.openalexDirectory, modulePath:options.openalexModule,
+  }) : null;
+  let app;
+  try {app = await startDossierWorkspace({...options, providers, openalexWorkspace});}
+  catch (error) {await openalexWorkspace?.close(); throw error;}
   process.stdout.write(JSON.stringify({mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
-    url: app.url, providers: Object.keys(providers)}, null, 2) + '\n');
-  const stop = async () => {try {await app.close();} finally {process.exitCode = 0;}};
+    url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null}, null, 2) + '\n');
+  let closing;
+  const stop = () => closing ??= (async () => {
+    try {await app.close();} finally {await openalexWorkspace?.close(); process.exitCode = 0;}
+  })();
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

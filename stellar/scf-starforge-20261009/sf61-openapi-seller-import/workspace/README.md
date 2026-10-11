@@ -39,6 +39,15 @@ For a walkthrough: **Load example**, **Validate configuration**, **Save new
 package**, **Start challenge preview**, **Check unpaid routes**, then open operations. The example
 reuses the SF82 description with explicitly nonpayable demonstration terms.
 
+## Authorization-code providers
+
+The same workspace now supports declared OpenAPI authorizationCode flows through
+configured host aliases, PKCE, explicit returned-grant review and private durable
+connections. Use the [authorization connection operator guide](AUTHORIZATION_CONNECTIONS.md)
+for registration, source/profile checks, route binding, renewal, disconnect, retained
+remote cleanup and the existing seller/release handoff. The original clientCredentials
+provider and separate Google Sheets workflow retain their current interfaces.
+
 ## Configure a merchant
 
 1. Load the merchant's original OpenAPI 3.0 or 3.1 JSON or YAML description.
@@ -49,7 +58,7 @@ reuses the SF82 description with explicitly nonpayable demonstration terms.
 4. Select a declared backend security alternative and map header API keys or
    HTTP bearer/basic to **environment-variable names**. Set the complete header
    value in the launch environment. For a declared OAuth `clientCredentials`
-   flow, open **OAuth client credentials**, review its resolved token endpoint
+   flow, open **Backend OAuth authorization**, select **Client credentials**, and review its resolved token endpoint
    and required scopes, then enter client ID/secret environment references and
    the provider's token authentication method. The original provider owns
    renewal and cache credential identity. Follow the complete
@@ -285,7 +294,7 @@ defines the discriminator as a hint that cannot change validation results. The
 original source and generated facade keep it. Unsupported assertion keywords
 still produce the original validator's error.
 
-Cookie/query authentication, interactive OAuth/OIDC, custom header parameter schemas,
+Cookie/query authentication, implicit/password OAuth and OpenID Connect login, custom header parameter schemas,
 unsupported HTTP methods, unresolved server variables and unsupported schema
 features use the original trusted-handler integration. The workspace reports
 the source compiler's error.

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>API merchant workspace</title><link rel="stylesheet" href="/style.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>API merchant workspace</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/oauth.css"></head>
 <body>
 <header><div><p class="eyebrow">STELLAR / MERCHANT TOOLS</p><h1>API merchant workspace</h1><p class="lede">Configure a paid facade for your existing API. Save a reusable project, then run the seller and its operations dashboard.</p></div><span class="badge">LOCAL WORKSPACE</span></header>
 <div id="notice" role="status" aria-live="polite">Connecting to the local workspace…</div>
@@ -8,6 +8,7 @@
 <aside><h2>Saved projects</h2><p class="muted">Projects stay in the private output folder selected at launch.</p><button id="refresh" type="button">Refresh projects</button><div id="packages" class="project-list"></div><p id="output" class="small wrap"></p></aside>
 <div class="content">
 <section id="source"><div class="section-heading"><span class="step">1</span><div><h2>Load your API description</h2><p class="muted">OpenAPI 3.0 or 3.1 JSON or YAML, or a retained Postman source packet, up to 4 MiB. Original source bytes are preserved.</p></div></div><div class="inline"><label class="file-label">API description or retained source packet<input id="file" type="file" accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"></label><button id="example" type="button">Load example</button><button id="stream-example" type="button">Load stream example</button></div><div id="source-summary" class="small"></div><div id="postman-intake"></div></section>
+<section id="oauth-connections" aria-label="Provider authorization connections"></section>
 <section id="configuration"><div class="section-heading"><span class="step">2</span><div><h2>Set the public offer</h2><p class="muted">Enter the public address of your paid seller and your payment terms.</p></div></div>
 <div class="fields">
 <label class="wide">Public seller server<input id="seller-server" type="url" placeholder="https://merchant.example.com/api"><span class="hint">Your HTTPS gateway address, with its public path prefix.</span></label>

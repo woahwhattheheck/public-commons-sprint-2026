@@ -4,7 +4,24 @@ The QuickBooks workflow takes a frozen handoff from the existing merchant accoun
 
 Open **QuickBooks** from the private accounting workspace described in [the workspace guide](./README.md). The application uses the original workspace lease, revision control, serialization and accountant engine. The browser and HTTP API below operate on the same records.
 
-The maintained implementation is [the journal engine](../accountant/qbo.mjs), [native company import](../accountant/qbo-company.mjs) and [workspace integration](./qbo-workspace.mjs).
+The maintained implementation is [the journal engine](../accountant/qbo.mjs), [native company import](../accountant/qbo-company.mjs), [QuickBooks HTTP client](../accountant/qbo-http.mjs) and [workspace integration](./qbo-workspace.mjs).
+
+## Configure the native company connection
+
+Configure the existing private accounting server for the authorized QuickBooks company. Its native client reads the following server settings:
+
+| Setting | Purpose |
+| --- | --- |
+| STARFORGE_QBO_ACCESS_TOKEN | Current access token for the company's authorized accounting scope |
+| STARFORGE_QBO_REALM_ID | Exact company realm ID, retained as a numeric string |
+| STARFORGE_QBO_ENVIRONMENT | sandbox or production; sandbox is the default |
+| STARFORGE_QBO_MINOR_VERSION | Optional native minor-version query value; the original value is frozen with a posting request |
+
+Open **Connected QuickBooks company** to read the configured realm, environment and minor version. **Configured** means the server has its target and token source; **Load company and accounts** performs the actual authorized company reads. The browser receives configuration metadata and company documents. Token values stay in the server's existing credential provider.
+
+An embedding host can give QboWorkspace a QboHttpClient through its client option. QboHttpClient accepts an async tokenProvider receiving {realmId,environment,signal} and returning a current access-token string. The maintained OAuth connection owner can supply that provider and perform token refresh and rotation behind this boundary.
+
+The configured target must equal the retained plan's realm and environment. A resumed posting also uses its original minor version, endpoint, request UUID and exact request bytes. Restore the original connection settings when reopening a retained operation under a differently configured server.
 
 ## Complete operating journey
 
@@ -22,7 +39,11 @@ Rows already reported as BOOKED or EXCLUDED require the original accountant work
 
 Choose the actual QuickBooks environment, explicit company realm ID, company name and home currency. This profile supports USD, CAD, EUR, GBP, AUD and NZD, with two decimal places.
 
-**Importing native company documents is the recommended mapping route.** Obtain the following successful JSON responses from the authorized QuickBooks client connected to that company:
+**Load company and accounts** reads the configured company's current CompanyInfo, Preferences and complete account chart. The page fills the explicit company realm, name, home currency and environment, then offers selectable native Account.Id values in each mapping field. Entered amounts and existing mappings remain available for review. The source capture time and source digests appear alongside the loaded company.
+
+The native account reader requests active and inactive records using SELECT * FROM Account WHERE Active IN (true, false) STARTPOSITION 1 MAXRESULTS 1000, continuing its one-based pages until complete. It checks page position and repeated account IDs. Each original native page is retained with the normalized source snapshot.
+
+**Load company setup from saved QuickBooks exports** provides the same company normalization for documents obtained through the company's existing authorized client. Use the following successful native JSON responses:
 
 | Source | Native operation |
 | --- | --- |
@@ -30,7 +51,7 @@ Choose the actual QuickBooks environment, explicit company realm ID, company nam
 | Preferences | GET /v3/company/{realmId}/preferences?minorversion={version} |
 | Chart selection | POST /v3/company/{realmId}/query?minorversion={version}, with the text body SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 1000 |
 
-The company and preference paths are published in Intuit's [CompanyInfo read request][company-read] and [Preferences read request][preferences-read]. The account query and paging structure appear in Intuit's [accounting collection][native-collection] and [SDK query guide][quickstart]. Retain every original page needed to include the intended account mappings. For multiple account pages, import a JSON array of those original QueryResponse objects.
+The company and preference paths are published in Intuit's [CompanyInfo read request][company-read] and [Preferences read request][preferences-read]. The account query and paging structure appear in Intuit's [accounting collection][native-collection] and [SDK query guide][quickstart]. Retain every original page needed to include the intended account mappings. For multiple account pages, import a JSON array of those original QueryResponse objects. The browser's Account JSON input accepts that array.
 
 The import accepts:
 
@@ -74,13 +95,13 @@ A document number can be provided up to 21 characters. Otherwise the engine deri
 
 The environment is part of the plan. Production requires the selected original events to be on stellar:pubnet with OFFICIAL_TRANSFER_MATCHED. The sandbox workflow carries the original testnet context through its review and later accountant note.
 
-### 4. Retain, review and export
+### 4. Retain and approve the journal
 
 The preview is read-only. Saving its exact previewSha256 creates a DRAFT journal and freezes its request, source, mappings and original accountant revision. A stable request UUID identifies that operation; repeating it with the same content reopens the original result.
 
 Open the retained draft and review its actual company, date, source, account directions, home amounts and totals. The review operation records the reviewer, note and retained plan digest. It changes the journal to REVIEWED and reserves the selected events for that company/environment.
 
-Download journal-entry.json from the reviewed plan. It is the native JournalEntry create body. Also retain plan.json and review.html with the accountant's working papers.
+The reviewed plan enables **Review native posting** and its exact journal-entry.json download. That file is the native JournalEntry create body used by the connected-company workflow. Also retain plan.json and review.html with the accountant's working papers.
 
 The packet includes:
 
@@ -93,23 +114,41 @@ The packet includes:
 | accountant-return.json | The existing parent accountant return, when one was present |
 | review.html | Standalone human review of the selected source and journal |
 
-### 5. Complete the native QuickBooks posting
+### 5. Post to the connected QuickBooks company
 
-Use the authorized QuickBooks accounting client for the selected company and environment to submit the retained journal-entry.json:
+In **Journal review**, select **Review native posting**. The preview shows the actual company realm and environment, document number, journal date, operator, debits and credits, original accountant parent, native request UUID and exact request/plan digests. Review the retained lines, confirm that displayed target and choose **Post reviewed journal**.
 
-POST /v3/company/{realmId}/journalentry?minorversion={version}
+The preview is read-only. Posting first saves intent.json and the exact request.json under the original plan, then continues one durable native operation. Its UUID is the requestid query parameter on:
 
-The production API host is https://quickbooks.api.intuit.com and the sandbox host is https://sandbox-quickbooks.api.intuit.com. Intuit publishes the [native JournalEntry request][journal-create] and the corresponding environment configuration in its [current sample application][batch-sample].
+POST /v3/company/{realmId}/journalentry?requestid={originalOperationId}&minorversion={originalVersion}
 
-Retain the client's original request identity, endpoint, environment, exact body and complete JSON response. The document number is a human reference. Use the client's existing idempotent operation handling when it supplies requestid, preserving the same request/body on retry.
+The minorversion parameter is present when it was configured. The production host is https://quickbooks.api.intuit.com and the sandbox host is https://sandbox-quickbooks.api.intuit.com. The native payload follows Intuit's [JournalEntry create request][journal-create]. The persisted request identity is also visible in the file and attempt history; Intuit's [request field definitions][request-fields] and [retry guidance][batch-retry] describe the provider's request-identity convention.
 
-If the provider completed a posting while the client lost its response, retrieve that original posting through the client's retained operation or its JournalEntry.Id. Bring back the full native JournalEntry JSON for this same plan. Preserve the existing provider operation during recovery.
+Before a create or a resumed uncertain write, the workspace pages through the exact DocNumber query, selects the retained private plan identity and reads a matching native JournalEntry.Id. The original response matcher checks the full journal. When an original journal is found, it receives that posting into the same plan. If the lookup finds no matching original journal, the operation continues with its same requestid, original URL and exact reviewed body.
+
+The successful native response passes through the existing accountant response preview, saved response intent and original accountant apply/link. The page opens **Accountant return** when that linked result is BOOKED. The native JournalEntry.Id, SyncToken and original saved return remain attached to the same plan.
+
+Each query, read and create attempt retains its complete response bytes and receipt. **Native request and response history** shows the actual HTTP status, received time, request realm/environment, Intuit trace ID when provided, response size and digests, with exact file downloads. The list is paginated for repeated recovery.
+
+#### Continue an interrupted native operation
+
+Refresh saved state to reopen the retained operation. **Resume original posting** keeps its UUID and reviewed request. A RECEIVED operation uses its saved response to finish the original accountant return locally. Workspace startup also finishes retained native responses and pending accountant returns where their original source still matches.
+
+After a timeout, transport interruption or incomplete response, the operation records the uncertain outcome and resumes the original query/read reconciliation before any repeat of the same create. When the provider requests a pause, the retained retry time remains visible. Refresh at or after that time, then resume the original operation. The client observes the later of its minimum 60-second pause and the provider's Retry-After value, consistent with Intuit's [throttle guidance][native-throttles].
+
+A response showing multiple original journals or changed journal economics appears as a reconciliation state with the actual provider source retained. Inspect that source and the original accountant history, resolve the reported issue, then use **Recheck original journal**. A pending manual response already owns its original accountant return; continue that saved response before starting native posting.
+
+The page keeps the actual native status visible throughout this process. A successful local request that returns RETRYABLE, UNCERTAIN, RECEIVED, FAULT or CONFLICT displays that saved state and its next operation. BOOKED appears when the original accountant return has been saved and linked.
+
+#### Use an existing authorized QuickBooks client
+
+The reviewed request download and original response import remain available for work performed through the company's existing client. Submit the same retained journal-entry.json to the selected company/environment, preserve that client's original request identity and complete native result, then follow step 6 below. A native operation already retained in this workspace continues through its own posting and response history.
 
 The simple journal profile uses explicit home-currency values and reviewed no-tax journal treatment. Currency conversion, tax-code classification, classes, departments, counterparty subledgers and additional fee/reclassification lines belong in the accountant's full journal treatment when required. The original handoff and return remain available for that work.
 
 ### 6. Preview the original response and save the return
 
-Open the same reviewed plan, select the original response JSON, retain its company realm and preview it. The application reads either a native JournalEntry or a native Fault.
+Native posting runs this step with the retained provider bytes. For a response received through the company's existing authorized client, open the same reviewed plan, select the original response JSON, retain its company realm and preview it. The application reads either a native JournalEntry or a native Fault.
 
 For a successful return, it checks the posting date, document number, retained private plan reference, currency, amounts, account IDs, posting sides and source descriptions. Provider-generated line IDs and display names can vary. Line order is compared by its full semantic composition.
 
@@ -149,7 +188,7 @@ A saved response carries these files:
 
 The workspace retains the final saved accountant return ID and digest in the response record. Download the plan and response files from the same plan detail. The original accounting workspace export and backup should include its qbo directory and workspace state.
 
-A DRAFT or REVIEWED plan can be cancelled after the operator confirms that its native journal is unused. Cancellation records the operator's reason and releases the event reservation. A matched pending/saved response continues through its existing accountant record.
+A DRAFT or REVIEWED plan can be cancelled after the operator confirms that it has no saved QuickBooks posting and its request will remain unused. Cancellation records the operator's reason and releases the event reservation. For a native operation, cancellation also requires no active run, no observed original journal and no retained matched response; it must be undispatched or have one definite failed first write. An earlier uncertain write remains attached to its original recovery. A matched pending/saved response continues through its existing accountant record.
 
 ## State and recovery reference
 
@@ -162,16 +201,26 @@ A DRAFT or REVIEWED plan can be cancelled after the operator confirms that its n
 | Response | FAULT | Exact native provider error retained |
 | Response | PENDING | Matched response and original return intent retained; application/link pending |
 | Response | SAVED | Original accountant return linked to this response |
+| Native posting | PREPARED | Exact intent and native request packet saved |
+| Native posting | RUNNING | Original query, read or posting is in progress |
+| Native posting | RETRYABLE | Original operation can resume after its reported issue or retry time |
+| Native posting | UNCERTAIN | An earlier write is being reconciled with its original provider identity |
+| Native posting | RECEIVED | Exact native response retained; original local accountant completion remains |
+| Native posting | BOOKED | Original saved response and accountant return linked |
+| Native posting | FAULT | A definite native fault is retained with its attempt files |
+| Native posting | CONFLICT | Original journal/source requires the recorded reconciliation |
 
 The workspace revision protects writes against concurrent changes. expectedParentId protects the selected accountant revision. Preview digests bind the actual source and values that were reviewed. Stable IDs support interruption recovery.
 
 ## HTTP API
 
-All paths are mounted on the existing private accounting server and use that server's established authentication. GET and preview operations inspect source. The remaining POST operations change the original workspace or accountant history.
+All paths are mounted on the existing private accounting server and use that server's established authentication. GET, company fetch and preview operations inspect source. Record-changing POST operations use the original workspace revision and retained identities; native posting additionally performs the reviewed QuickBooks request.
 
 | Method | Path | Result |
 | --- | --- | --- |
 | GET | /api/qbo | Current workspace revision, handoffs, plans, currencies and source links |
+| GET | /api/qbo/connection | Configured realm, environment, token-source name, minor version and availability |
+| POST | /api/qbo/company/fetch | Fetch all original company/account source pages and return company, connection, capturedAt and sourceRequests |
 | POST | /api/qbo/company/preview | Normalized original company/account snapshot in company |
 | GET | /api/qbo/handoffs/{handoffId} | Frozen source rows and current expectedParentId |
 | POST | /api/qbo/preview | Exact proposed plan, previewSha256 and revision |
@@ -179,6 +228,11 @@ All paths are mounted on the existing private accounting server and use that ser
 | GET | /api/qbo/plans/{planId} | Retained plan, responses and current accountant parent |
 | POST | /api/qbo/plans/{planId}/review | Record review and reserve its events |
 | POST | /api/qbo/plans/{planId}/cancel | Record unused-plan cancellation |
+| POST | /api/qbo/plans/{planId}/post/preview | Review the native target, exact request digest and original operation identity |
+| POST | /api/qbo/plans/{planId}/post | Save the native intent and perform its original posting/return journey |
+| POST | /api/qbo/plans/{planId}/post/resume | Continue the retained native operation |
+| GET | /api/qbo/plans/{planId}/post/download/{filename} | Download original native intent.json or request.json |
+| GET | /api/qbo/plans/{planId}/post/attempts/{attemptId}/download/{filename} | Download exact response.json or receipt.json for one native attempt |
 | POST | /api/qbo/plans/{planId}/responses/preview | Inspect original response and preview the original accountant return |
 | POST | /api/qbo/plans/{planId}/responses | Retain response and apply/link its original accountant return |
 | POST | /api/qbo/plans/{planId}/responses/{responseId}/resume | Continue the retained pending return |
@@ -277,6 +331,50 @@ To review the retained plan, POST:
 
 Use the current workspace revision. A cancellation request uses its own stable id, actor, required note, planSha256, revision and unusedConfirmed:true.
 
+### Native company fetch and posting
+
+POST /api/qbo/company/fetch with {realmId,environment} matching the configured connection. Save the returned company as companySnapshot with a prepared journal; the source snapshot is then bound to the retained plan.
+
+For a reviewed journal, read its current detail and send:
+
+~~~json
+{
+  "id": "<new original native-operation UUID>",
+  "createdAt": "2026-10-11T23:00:00.000Z",
+  "actor": "Accountant name",
+  "expectedParentId": "<current accountant parent UUID or null>",
+  "revision": 42
+}
+~~~
+
+POST that object to /api/qbo/plans/{planId}/post/preview. The response contains preview, previewSha256 and revision. The preview binds the plan digest, exact request digest, company, environment, original native request URL, document number, totals and operation identity.
+
+After reviewing it, POST the same object to /api/qbo/plans/{planId}/post with its returned revision and previewSha256. Repeating that saved operation retains its original id, actor, createdAt and preview digest. The result contains record, nativePost and the current revision.
+
+Read record.nativePost from plan detail to reopen the saved operation. Resume with:
+
+~~~json
+{
+  "id": "<the existing nativePost.id>",
+  "actor": "Accountant name",
+  "revision": 43
+}
+~~~
+
+The resume endpoint is /api/qbo/plans/{planId}/post/resume. Its current record carries status, lastError, retryAt, responseId, journalEntryId, observedJournalId, writeAttempts, dispatched, sourceAttemptId and the original identities. The server uses the retained source and full journal matcher to decide whether the next work is a native lookup, the same create, or a local accountant return.
+
+Native posting files and attempts use these inventories:
+
+| Inventory | Content |
+| --- | --- |
+| nativePost.files | intent.json and exact request.json, each with bytes and sha256 |
+| nativePost.attempts | id, kind (query/read/post), receivedAt, actual status, ok, retained headers, request identity, responseSha256, responseBytes and files |
+| attempt.files | response.json and receipt.json, each with bytes and sha256 |
+| attempt.request | method, exact url, realmId, environment and requestId when applicable |
+| attempt.headers | Intuit trace identifier, Retry-After and provider date when supplied |
+
+The download endpoints verify each original file against its retained digest. Keep the plan's native-post directory with the existing qbo plan and accounting workspace backup.
+
 ### Response preview, save and recovery
 
 The response request contains the exact native JSON text:
@@ -301,6 +399,11 @@ The resume endpoint takes actor and the current revision. It uses the already re
 
 | Result | Concrete correction |
 | --- | --- |
+| QBO_CONNECTION_REQUIRED | Configure the current authorized server token or token provider and original realm, then refresh the connection |
+| QBO_CONNECTION_CHANGED / QBO_NATIVE_CONNECTION_CHANGED | Restore the retained plan's company, environment and original minor version |
+| QBO_NATIVE_POST_EXISTS | Reopen record.nativePost and resume that original operation |
+| QBO_NATIVE_THROTTLED | Refresh at or after the retained retryAt, then resume the same operation |
+| QBO_NATIVE_MULTIPLE_JOURNALS | Inspect the retained exact query/read responses and reconcile the original native journals |
 | QBO_COMPANY_SOURCE_FAULT | Open the provider error and obtain the successful CompanyInfo, Preferences or Account response |
 | QBO_COMPANY_ACCOUNT_ACTIVE / REFERENCE / DUPLICATE | Correct the original account source; preserve string IDs and boolean Active, with one record per account |
 | Account is visible but unselectable | Read its reason and choose a suitable actual account, or complete the required currency/counterparty treatment in the original accounting workflow |
@@ -330,6 +433,9 @@ Regional tax, class, department and counterparty fields are separate native conc
 [account-types]: https://static.developer.intuit.com/sdkdocs/qbv3doc/ipp-v3-java-devkit-javadoc/com/intuit/ipp/data/AccountTypeEnum.html
 [journal-line]: https://static.developer.intuit.com/sdkdocs/qbv3doc/ippdotnetdevkitv3/html/62627c63-90a3-c87a-ef9b-8b4b06daee08.htm
 [batch-sample]: https://github.com/IntuitDeveloper/SampleApp-Batch-Java
+[request-fields]: https://developer.intuit.com/app/developer/qbo/docs/learn/learn-basic-field-definitions#request-id
+[batch-retry]: https://github.com/IntuitDeveloper/SampleApp-Batch-Java/blob/main/docs/building-smarter-batch.md
+[native-throttles]: https://static.developer.intuit.com/output_html/qbo/docs/learn/limits-and-throttles.html
 
 ### Existing accountant notes
 
