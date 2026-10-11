@@ -61,19 +61,14 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
     ['/browser.mjs', 'browser.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL(file, import.meta.url)) }])));
-  const releases = managed ? await (await import('../release-operator.mjs')).openFleetReleaseOperator({
-    planFile: releasePlan, directory: releaseDirectory, gatewayStateDirectory: stateDirectory,
-  }) : null;
-  const directory = releases ? releases.stateDirectory : resolve(stateDirectory);
+  let releases = null, directory = managed ? null : resolve(stateDirectory);
   const snapshot = async () => {
     const releaseStatus = releases ? await releases.status() : undefined;
     return { status: releaseStatus ? releaseStatus.native : await fleetControl(directory, 'status'),
       ...(releaseStatus ? { releaseStatus } : {}), capturedAt: new Date().toISOString() };
   };
-  // Use original private control and lifecycle ownership in both modes.
-  try { await snapshot(); } catch (error) { await releases?.close(); throw error; }
   const sessionKey = randomBytes(32).toString('base64url');
-  let url, closing = false, closingPromise;
+  let url, starting = true, closing = false, closingPromise;
   const headers = {
     'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
     'referrer-policy': 'no-referrer', 'cross-origin-resource-policy': 'same-origin',
@@ -98,6 +93,7 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
           (req.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(req.headers['sec-fetch-site'])))
         return send(res, 403, { error: 'WORKSPACE_SAME_ORIGIN_REQUIRED' });
       if (closing) return send(res, 503, { error: 'WORKSPACE_CLOSING' });
+      if (starting) return send(res, 503, { error: 'WORKSPACE_STARTING' });
       const asset = assets.get(req.url);
       if (req.method === 'GET' && asset) return send(res, 200, asset.bytes, asset.type);
       if (req.method === 'GET' && req.url === '/api/session')
@@ -105,6 +101,13 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
       if (!sameSession(req)) return send(res, 403, { error: 'WORKSPACE_SESSION_REQUIRED' });
       if (req.method === 'GET' && req.url === '/api/status')
         return send(res, 200, await snapshot());
+      if (releases && req.method === 'GET' && req.url.startsWith('/api/releases/operations?')) {
+        const params = new URL(req.url, url).searchParams;
+        if ([...params.keys()].length !== 3 || !['tenant', 'slot', 'instanceId'].every(key => params.has(key)))
+          throw failure('WORKSPACE_REQUEST_INVALID');
+        return send(res, 200, await releases.operations({ tenant: params.get('tenant'),
+          slot: params.get('slot'), instanceId: params.get('instanceId') }));
+      }
       if (releases && req.method === 'GET' && req.url.startsWith('/api/releases/catalog?')) {
         const params = new URL(req.url, url).searchParams;
         if ([...params.keys()].length !== 2 || !params.has('tenant') || !params.has('slot'))
@@ -155,22 +158,39 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
     });
   });
   server.requestTimeout = 45000; server.headersTimeout = 10000; server.keepAliveTimeout = 5000;
-  try { await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); }); }
-  catch (error) { await releases?.close(); throw error; }
-  url = 'http://' + HOST + ':' + server.address().port;
-  return {
-    url, ...(releases ? { publicURL: releases.publicURL } : {}),
-    close() {
-      if (closingPromise) return closingPromise;
-      closing = true;
-      closingPromise = (async () => {
-        try {
-          await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections(); });
-        } finally { await releases?.close(); }
-      })();
-      return closingPromise;
-    },
+  const close = () => {
+    if (closingPromise) return closingPromise;
+    closing = true;
+    closingPromise = (async () => {
+      try {
+        // An in-flight native stage may own an HTTP response. Signal its original
+        // capture before waiting for that response and the listener to drain.
+        releases?.cancelStaging?.();
+        if (server.listening) await new Promise((done, fail) => {
+          server.close(error => error ? fail(error) : done()); server.closeIdleConnections();
+        });
+      } finally { await releases?.close(); }
+    })();
+    return closingPromise;
   };
+  try {
+    await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); });
+    url = 'http://' + HOST + ':' + server.address().port;
+    // The original merchant authorizes this actual navigation origin, including
+    // an automatically allocated workspace port. Requests wait for native startup.
+    if (managed) {
+      releases = await (await import('../release-operator.mjs')).openFleetReleaseOperator({
+        planFile: releasePlan, directory: releaseDirectory, gatewayStateDirectory: stateDirectory,
+        operationsNavigationOrigin: url,
+      });
+      directory = releases.stateDirectory;
+    }
+    await snapshot(); starting = false;
+    return { url, ...(releases ? { publicURL: releases.publicURL } : {}), close };
+  } catch (error) {
+    try { await close(); } catch (cleanup) { error.cleanupError = nativeError(cleanup); }
+    throw error;
+  }
 }
 
 export async function main(args = process.argv.slice(2)) {
