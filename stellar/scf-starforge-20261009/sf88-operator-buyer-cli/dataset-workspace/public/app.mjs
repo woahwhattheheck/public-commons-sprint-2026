@@ -71,11 +71,13 @@ async function chooseSession(id) {
 }
 function field(label, key, { type = 'text', help = '', span = false, min, max, step } = {}) {
   const input = el(type === 'textarea' ? 'textarea' : 'input', { ...(type === 'textarea' ? { rows: 3 } : { type }),
-    value: draft[key], name: key, disabled: busy,
+    value: draft[key], name: key, disabled: busy, 'aria-label': label,
+    ...(help ? { 'aria-describedby': 'dataset-' + key + '-help' } : {}),
     ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }), ...(step === undefined ? {} : { step }),
     onInput: event => { draft[key] = type === 'number' ? Number(event.target.value) : event.target.value; review = null; $('#reviewed-plan')?.remove(); },
   });
-  return el('label', { class: 'field' + (span ? ' span-all' : '') }, text('span', label), input, help ? text('small', help, 'help') : null);
+  return el('label', { class: 'field' + (span ? ' span-all' : '') }, text('span', label), input,
+    help ? el('small', { id: 'dataset-' + key + '-help', class: 'help', text: help }) : null);
 }
 function chooseSource(value) {
   source = value; draft.choice = 0; review = null;
@@ -235,7 +237,7 @@ function accounting() {
     text('p', selected.canFinalizePurchases ? 'This continues existing native attempts. It does not create another page purchase.' : 'This attached session has no original operator workspace for purchase continuation.', 'help'));
   return [result];
 }
-function history() {
+function operationHistory() {
   const jobs = saved.jobs.filter(item => item.session === selectedId);
   const result = card(text('h3', 'Customer operation history'));
   let pending; try { pending = JSON.parse(sessionStorage.getItem(pendingKey()) || 'null'); } catch {}
@@ -258,7 +260,7 @@ function renderSession() {
     .map(([label, value]) => el('div', { class: 'metric' }, text('strong', statusText(value)), text('span', label))));
   const tabs = el('nav', { class: 'tabs', 'aria-label': 'Acquisition sections' }, [['progress', 'Progress'], ['data', 'Data & analysis'], ['purchases', 'Purchases'], ['history', 'History']]
     .map(([key, label]) => button(label, async () => { tab = key; if (key === 'data' && selected.delivery && !preview) await loadPreview(); if (key === 'purchases' && !purchases && !saved.active) await loadPurchases(); }, { class: key === tab ? 'selected' : '', 'aria-pressed': String(key === tab) })));
-  const content = tab === 'progress' ? progress() : tab === 'data' ? delivered() : tab === 'purchases' ? accounting() : history();
+  const content = tab === 'progress' ? progress() : tab === 'data' ? delivered() : tab === 'purchases' ? accounting() : operationHistory();
   $('#main').replaceChildren(heading, metrics, tabs, ...content);
 }
 function render() {
