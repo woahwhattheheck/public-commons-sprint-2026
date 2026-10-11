@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GraphQL merchant workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar"><div><strong>Stellar Forge</strong><span>GraphQL merchant workspace</span></div><div id="connection">Opening workspace…</div></header>
+  <div class="layout">
+    <aside>
+      <div class="aside-heading"><h2>Projects</h2><button id="new-project" type="button">New</button></div>
+      <button id="refresh" type="button" class="secondary">Refresh projects</button>
+      <div id="projects" class="projects"></div>
+      <p class="directory-label">Private workspace</p><code id="directory"></code>
+    </aside>
+    <main>
+      <div id="notice" role="status" aria-live="polite"></div>
+      <section class="project-header">
+        <div class="eyebrow">Merchant onboarding</div><h1 id="heading">New GraphQL merchant</h1>
+        <p>Prepare declared data queries, review merchant terms, and launch the original seller from a saved package.</p>
+        <div class="grid two"><label>Project name<input id="project-id" autocomplete="off" placeholder="stellar-data"></label><label>Project title<input id="project-title" autocomplete="off" placeholder="Stellar indexed data"></label></div>
+        <div class="toolbar"><button id="save" type="button">Save draft</button><button id="review" type="button">Review merchant</button><button id="export" type="button" disabled>Export current project</button><span id="revision">Unsaved project</span></div>
+      </section>
+
+      <section class="panel" id="schema-panel">
+        <div class="panel-heading"><div><span class="step">01</span><h2>Query service schema</h2></div><label class="file-button">Load schema<input type="file" id="schema-file" accept=".graphql,.gql,.json,.txt"></label></div>
+        <p>Load the actual query service SDL, an introspection response, or its captured source envelope.</p>
+        <label class="sr-only" for="schema-text">Original schema source</label><textarea id="schema-text" class="code" rows="8" spellcheck="false" placeholder="Paste the actual GraphQL query service schema"></textarea>
+        <div class="toolbar"><button id="inspect-schema" type="button">Inspect schema</button><span id="schema-status"></span></div>
+        <div id="schema-summary"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading"><div><span class="step">02</span><h2>Approved queries</h2></div><label class="file-button">Load queries<input type="file" id="queries-file" accept=".json"></label></div>
+        <div class="grid three"><label>GraphQL backend origin<input id="backend-origin" placeholder="https://indexer.example"></label><label>Backend path<input id="backend-path" placeholder="/graphql"></label><label>Authorization environment name<input id="backend-auth" placeholder="Optional environment reference"></label></div>
+        <div class="grid three compact"><label>Timeout (ms)<input id="backend-timeout" type="number" min="1" max="120000"></label><label>Maximum response bytes<input id="backend-bytes" type="number" min="1" max="1048576"></label><label>Maximum concurrent requests<input id="backend-concurrency" type="number" min="1" max="256"></label></div>
+        <div class="operation-toolbar"><label>Approved operation<select id="operation-select"></select></label><button id="add-operation" type="button">Add operation</button><button id="remove-operation" type="button" class="secondary">Remove operation</button></div>
+        <div id="operation-editor"></div>
+        <details><summary>Original approved-queries JSON</summary><textarea id="queries-text" class="code" rows="14" spellcheck="false"></textarea><button id="apply-queries" type="button">Apply JSON to editors</button></details>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading"><div><span class="step">03</span><h2>Merchant routes and terms</h2></div><label class="file-button">Load merchant plan<input type="file" id="plan-file" accept=".json"></label></div>
+        <label>Public merchant origin<input id="public-origin" placeholder="https://merchant.example"></label>
+        <div class="subheading"><h3>Shared payment choices</h3><button id="add-payment" type="button">Add payment choice</button></div>
+        <p>Enter the merchant's actual asset, recipient, atomic price and network. Routes can retain their own choices in the plan JSON.</p>
+        <div id="payments"></div>
+        <div class="subheading"><h3>Route for the selected operation</h3><button id="add-route" type="button">Create route</button></div>
+        <div id="route-editor"></div>
+        <details><summary>Original merchant-plan JSON</summary><textarea id="plan-text" class="code" rows="14" spellcheck="false"></textarea><button id="apply-plan" type="button">Apply JSON to editors</button></details>
+      </section>
+
+      <section class="panel" id="review-panel">
+        <div class="panel-heading"><div><span class="step">04</span><h2>Merchant review</h2></div></div>
+        <p id="review-status">Review the complete draft using its original schema and merchant compiler.</p>
+        <div id="review-summary"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading"><h2>Saved exports and runtime</h2></div>
+        <div id="exports"></div>
+        <div class="runtime-controls"><label>Facilitator HTTPS URL<input id="facilitator" type="url" placeholder="Optional; blank starts challenge-only mode"></label><label class="checkbox"><input id="allow-loopback" type="checkbox">Allow a backend on 127.0.0.1 for local development</label></div>
+        <div class="toolbar"><button id="start" type="button" disabled>Start selected export</button><button id="stop" type="button">Stop managed merchant</button><button id="runtime-refresh" type="button" class="secondary">Refresh runtime</button></div>
+        <div id="runtime"></div>
+      </section>
+
+      <section class="panel"><div class="panel-heading"><h2>Project revisions</h2><button id="history-refresh" type="button" class="secondary">Refresh history</button></div><div id="history"></div></section>
+    </main>
+  </div>
+</body>
+</html>
