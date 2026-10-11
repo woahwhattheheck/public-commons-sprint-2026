@@ -581,6 +581,7 @@ or automatically retry a request.
 | `starforge dataset-refresh` | Publish, retain and activate CSV dataset versions while readers finish their pages |
 | `starforge dataset-publisher` | Upload and publish CSV versions, select the actual offer and export original buyer preparation |
 | `starforge buyer-dataset` | Acquire, pause, resume and deliver all pages of the selected original dataset |
+| `starforge buyer-dataset-workspace` | Review original offers, operate dataset acquisitions, open retained files and use the analysis workspace |
 | `starforge dataset-workspace` | Preview, refresh and select the retained dataset in its private browser workspace |
 | `starforge catalog-serve` / `catalog` | Host live seller discovery and operate its existing single writer |
 | `starforge catalog-withdrawal` | Prepare, sign and apply an existing seller withdrawal |
@@ -1045,6 +1046,47 @@ command. The packaged `sf30-seller-sdk/dataset-refresh/WORKSPACE.md` and
 `sf88-operator-buyer-cli/DATASETS.md` contain the full original configuration,
 publication, acquisition and recovery flow. The `./seller/dataset-publisher`
 and `./buyer/dataset-acquisition` imports expose those original APIs.
+
+### Receive datasets in the browser
+
+The dataset customer workspace connects the original acquisition and data-room
+commands to a local browser. Use the original private buyer operator preset
+described in the bundled
+[dataset customer guide](../sf88-operator-buyer-cli/dataset-workspace/README.md).
+The preset supplies the payer, signer configuration, Python runtime and
+total/daily atomic ceilings. Launch the same maintained source with:
+
+```sh
+npx --no-install starforge buyer-dataset-workspace \
+  --state /private/customer-datasets \
+  --operator-settings /private/dataset-operator.json \
+  --analysis-python /absolute/path/to/python3 \
+  --analysis-checkout "$PWD/node_modules/@tokenjunkielabs/starforge-merchant/source" \
+  --analysis-directory /private/customer-analysis \
+  --port 8439
+```
+
+Open the private local URL, upload the merchant's original offer JSON, choose
+its dataset query and review the exact terms and page/row/spend limits. Create
+the native acquisition, then continue it through the original terminal purchase
+approval. Progress, stopped-page recovery and purchase continuation use that
+same native session.
+
+After completion, open the original SF100 data room to preview typed rows and
+download its retained JSONL, CSV, review and manifest files. **Open analysis
+workspace** registers that exact completed session and room with the existing
+Python workspace before starting its server. Import the original delivery there
+to select editions, run saved SQL and publish the maintained reports. The
+launcher stops only its own analysis server before changing the registered
+source; it does not open a second owner against another live database.
+
+An existing completed acquisition can be attached with `--profile` using the
+guide's session/room profile. Restart with the same `--state` to retain reviews,
+acquisitions, delivered files and browser operation history. Keep the customer
+and analysis directories outside the installed package during upgrades. The
+three analysis options are optional as a group; file delivery works without
+them. The `./buyer/dataset-workspace` public import exposes
+`startDatasetWorkspace` from this same original server.
 
 ## Run live seller discovery
 
