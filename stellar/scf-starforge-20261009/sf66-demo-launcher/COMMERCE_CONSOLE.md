@@ -21,6 +21,11 @@ request/evidence association, explicit retrieval, verified preview/download
 and local receipt recovery. The immediate paid HTTP response remains in the
 original **Delivery** panel.
 
+For a finite SSE or NDJSON purchase, use [Streamed purchases](./COMMERCE_STREAMS.md).
+The same **Delivery** panel shows the reviewed capture settings, observed bytes,
+original payment status, retained record search and paging, partial-prefix
+reopening, and the original Exa answer/citation reader.
+
 ## Start the prepared session
 
 Complete the merchant, facilitator, operator and buyer setup in
@@ -94,6 +99,11 @@ own order. The browser stays open so its retained results can still be read.
 It cannot stop an unrelated process. SIGINT or SIGTERM in the terminal also
 closes the browser listener. A reported incomplete drain remains visible.
 
+For an active streamed purchase, **Interrupt this buyer** signals that original
+inbox command and waits for its retained result while the merchant continues
+running. The stream panel opens the captured complete prefix after an explicit
+partial-content selection.
+
 If an intent is recorded as running or interrupted after reopening, **Recover
 recorded result** invokes the original inbox recovery from its existing SF82
 evidence. It reads that result without replaying the purchase. Any missing
@@ -118,8 +128,9 @@ Both actions select a path solely from that intent's original saved result.
 The server opens the existing regular file without following a final symlink,
 and checks its exact size and SHA-256 before reading or downloading it. The
 browser cannot supply a path or overwrite a destination. A missing or changed
-file is reported as unavailable. A `FAILED` or `NOT_STARTED` file result remains
-that original result and has no download button.
+file is reported as unavailable. A stream's `FAILED` result with a retained
+partial path and digest can be opened through the explicitly selected partial
+reader described in [COMMERCE_STREAMS.md](./COMMERCE_STREAMS.md).
 
 Run the same start command to reopen the session. The original inbox supplies
 the retained attempts and outcomes, and saved files remain at their configured
