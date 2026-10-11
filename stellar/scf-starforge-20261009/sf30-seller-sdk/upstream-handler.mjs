@@ -1,6 +1,6 @@
 // MIT. Node 22+. Existing-API application handler for the original SF30 runtime.
 // This module performs no payment verification, settlement, signature or retry.
-import { request as httpRequest, validateHeaderName, validateHeaderValue } from 'node:http';
+import { request as httpRequest, Agent as HttpAgent, validateHeaderName, validateHeaderValue } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
 import { compileResponseContract } from './response-contract.mjs';
@@ -160,12 +160,12 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'bodyType', 'stream']);
+    'maxInFlight', 'allowLocal', 'lookup', 'agent', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'bodyType', 'stream']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream, bodyType='json' } = options;
+    maxInFlight = 16, allowLocal = false, lookup, agent, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream, bodyType='json' } = options;
   if (!['json','form-data'].includes(bodyType) || bodyType==='form-data'&&!requiresJsonBody(method)) throw new TypeError('Invalid upstream bodyType');
   if (!supportsSellerMethod(method) || !['json', 'bytes', 'sse', 'ndjson'].includes(responseType) || typeof allowLocal !== 'boolean' ||
       typeof cachePolicyMetadata !== 'boolean' ||
@@ -176,11 +176,17 @@ export function createUpstreamHandler(options = {}) {
   integer(maxResponseBytes, 1, 16 * 1048576, 'maxResponseBytes');
   integer(maxInFlight, 1, 256, 'maxInFlight');
   const streaming = ['sse','ndjson'].includes(responseType);
+  if (streaming && agent !== undefined) throw new TypeError('Explicit upstream agents currently support buffered response modes');
   if (streaming && (method === 'HEAD' || idempotency !== undefined || responseContract !== undefined || cachePolicyMetadata))
     throw new TypeError('Streaming upstreams require a response body and cannot use buffered response replay, contracts or cache metadata');
   if (!streaming && stream !== undefined) throw new TypeError('stream settings require sse or ndjson responseType');
   const streamPolicy = streaming ? compileUpstreamStreamPolicy(stream,responseType) : null;
   const targetFor = compileTarget(baseUrl, path, allowLocal), queries = queryMapping(query);
+  // Trusted host transport selection keeps the original exchange and deadline.
+  // Explicit agents can use Node's configured egress proxy. Default callers keep
+  // their existing unpooled sockets and original DNS lookup behavior.
+  if (agent !== undefined && (!(agent instanceof HttpAgent) || agent.protocol !== new URL(baseUrl).protocol))
+    throw new TypeError('Upstream agent must be a Node Agent for the configured protocol');
   const forward = headerList(requestHeaders), expose = headerList(responseHeaders, true);
   if (responseContract !== undefined && (responseType !== 'json' || !expose.includes('content-type')))
     throw new TypeError('A response contract requires JSON mode and exposed content-type');
@@ -284,7 +290,7 @@ export function createUpstreamHandler(options = {}) {
         signal?.addEventListener('abort', aborted, {once:true});
         dispatched = true;
         request = (target.protocol === 'https:' ? httpsRequest : httpRequest)(target, {
-          method, headers: outgoing, maxHeaderSize: 16384, agent: false,
+          method, headers: outgoing, maxHeaderSize: 16384, agent: agent ?? false,
           ...(lookup === undefined ? {} : { lookup }),
         }, res => {
           response = res;
