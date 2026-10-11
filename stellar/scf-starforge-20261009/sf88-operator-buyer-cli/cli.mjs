@@ -43,9 +43,16 @@ async function main(args) {
       '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json [--response-out /absolute/product] [--body-file /absolute/request.json] [--content-type application/json] [--headers-file /absolute/request.headers.json] [--ticket-file /absolute/merchant-ticket.json] [--ticket-header x-merchant-operation]\n');
     process.stdout.write('       node cli.mjs --init-workspace --config /absolute/review.json --dir /absolute/new-workspace --actor operator-id --service seller-id --payer G... --python /usr/bin/python3 [--secret-env STELLAR_SECRET | --signer-provider /absolute/wallet.mjs] [--rpc https://rpc.example] [--https-proxy http://proxy.example:8080 | --https-proxy-env HTTPS_PROXY] [--total-atomic 1000] [--daily-atomic 1000]\n' +
       '       node cli.mjs --review-workspace|--diagnose-workspace|--execute-workspace --dir /absolute/workspace\n');
+    process.stdout.write('       node cli.mjs --import-operation --file /private/merchant-operation.json --dir /private/new-request --accept 0\n' +
+      '       node cli.mjs --export-operation --config /private/review.json --discovery /private/offers.json --out /private/merchant-operation.json\n');
     process.stdout.write('       node cli.mjs --inspect-workspace-backup|--backup-workspace --dir /private/buyer/operator --state-root /private/buyer [--inbox /private/buyer/inbox] [--include /private/buyer/session] [--out /private/backups/selected --quiesced --pass-env SF88_BACKUP_PASSPHRASE]\n' +
       '       node cli.mjs --verify-workspace-backup|--restore-workspace --bundle /private/backups/selected [--pass-env SF88_BACKUP_PASSPHRASE] [--python /usr/bin/python3] [--expect RECORD_SHA256]\n');
     return;
+  }
+  if (args[0] === '--import-operation' || args[0] === '--export-operation') {
+    const {importOperationHandoff,exportOperationHandoff,handoffArguments}=await import('./operation-handoff.mjs');
+    const direction=args[0]==='--import-operation'?'import':'export';
+    return print(await (direction==='import'?importOperationHandoff:exportOperationHandoff)(handoffArguments(args.slice(1),direction)));
   }
   if (['--inspect-workspace-backup','--backup-workspace','--verify-workspace-backup','--restore-workspace'].includes(args[0])) {
     const {workspaceRecoveryCommand} = await import('./workspace-recovery.mjs');

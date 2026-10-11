@@ -107,6 +107,20 @@ export class Buyer {
     return this._create(config, options);
   }
 
+  async fromOperationHandoff(file, { accept, operatorProfile, signal } = {}) {
+    need(Number.isSafeInteger(accept) && accept >= 0, 'EXPLICIT_SELECTION_INDEX_REQUIRED');
+    await this.ready();
+    const temporary=await mkdtemp(join(this.stateDirectory,'.operation-import-'));
+    try {
+      const imported=await this.runtime.checked(['--import-operation','--file',absolute(file),
+        '--dir',join(temporary,'request'),'--accept',String(accept)],
+      {stateDirectory:this.stateDirectory,mode:'OFFLINE_OPERATION_IMPORTED',signal});
+      // _create retains the exact body and original validated ticket before
+      // removing the import directory. Operator settings come from this buyer.
+      return await this._create(await readJson(imported.configPath),{operatorProfile});
+    } finally { await rm(temporary,{recursive:true,force:true}); }
+  }
+
   async fromRequest(request, options) {
     need(object(request) && Object.keys(request).every(key =>
       ['intentId', 'url', 'method', 'expect', 'headers', 'body', 'signal', 'approve', 'sign', 'orderReference', 'ticketFile', 'ticketHeader'].includes(key)),

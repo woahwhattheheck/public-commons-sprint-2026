@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inspectOpenApi, prepareMerchant, savePackage, readPackage, privateParent, packageName } from './model.mjs';
 import { prepareMerchantOperationDirectories } from './operation-plan.mjs';
-import { createMerchantTicketIssuer, saveMerchantTicket, readMerchantTicket } from './operation-ticket.mjs';
+import { createMerchantTicketIssuer, saveMerchantTicket, readMerchantTicket, readMerchantOperationHandoff } from './operation-ticket.mjs';
 import { readSellerConfig } from '../../sf30-seller-sdk/serve.mjs';
 import { readUpstreamBindings } from '../../sf30-seller-sdk/upstream.mjs';
 
@@ -95,7 +95,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
-      if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download'].includes(pathname)) return send(404,{error:'Not found'});
+      if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/handoff'].includes(pathname)) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
@@ -128,14 +128,14 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           active.session.session.invalidateUpstreamCache(body.binding);
           return send(200,view());
         }
-        if (pathname==='/api/operations/issue' || pathname==='/api/operations/download') {
+        if (['/api/operations/issue','/api/operations/download','/api/operations/handoff'].includes(pathname)) {
           if (typeof body.runtimeId!=='string' || !active || body.runtimeId!==active.runtimeId)
             return send(409,{error:'The managed runtime changed. Reopen its operation form.'});
           const {runtimeId,...request}=body;
-          if (pathname==='/api/operations/download') {
+          if (pathname!=='/api/operations/issue') {
             if (Object.keys(request).length!==1 || typeof request.fileId!=='string')
               return send(400,{error:'Select a ticket file issued by the current runtime'});
-            return send(200,await readMerchantTicket(active.project,runtimeId,request.fileId));
+            return send(200,await (pathname==='/api/operations/handoff'?readMerchantOperationHandoff:readMerchantTicket)(active.project,runtimeId,request.fileId));
           }
           const document=active.tickets.issue(request);
           return send(201,await saveMerchantTicket(active.project,runtimeId,document));
