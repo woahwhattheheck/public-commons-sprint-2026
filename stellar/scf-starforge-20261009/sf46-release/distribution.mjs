@@ -7,21 +7,13 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { RELEASE_SCHEMA, MANIFEST, MAX_BYTES, canonical, sha256, relativePath,
   putFile, verifyRelease } from './release-core.mjs';
+import { compileCommandCatalog } from './command-catalog.mjs';
 
 const exec = promisify(execFile);
 const BASE = 'stellar/scf-starforge-20261009/';
 const SCOPES = ['scf46-stellar-bazaar', 'stellar-forge', BASE.slice(0, -1), 'LICENSE'];
 const CATALOG = BASE + 'distribution/distribution.json';
 const DOCTOR = BASE + 'distribution/cli.mjs';
-// Preserve the existing portable meanings that differ from, or supplement, the
-// maintained catalog. All other command names come from that catalog directly.
-const PORTABLE_ALIASES = {
-  pilot: ['sf82-seller-pilot/pilot.mjs', 'Create or resume an OpenAPI seller pilot'],
-  'pilot-ops': ['sf96-seller-pilot-ops/pilot-ops.mjs', 'Run the same pilot with operations and support capture'],
-  'seller-check': ['sf96-seller-acceptance/audit.mjs', 'Inspect configured seller challenge routes'],
-  'catalog-operator': ['sf60-durable-catalog-transaction/operator-cli.mjs', 'Operate the original live catalog'],
-  deploy: ['sf99-merchant-deploy/cli.mjs', 'Generate the original HTTPS host deployment'],
-};
 const USAGE = 'node distribution.mjs pack --source REPOSITORY --out NEW_DIRECTORY [--ref COMMIT] [--version 0.1.0]';
 
 async function git(root, args) {
@@ -74,25 +66,7 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
   if (!nativeVersion) throw new Error('Native seller has no explicit SDK version');
   const catalogBytes = sourceBytes.get(CATALOG);
   if (!catalogBytes || !sourceBytes.has(DOCTOR)) throw new Error('Original command catalog and doctor are required');
-  const catalog = JSON.parse(catalogBytes);
-  if (catalog.schema !== 'stellar-forge.merchant-distribution.v1' || !catalog.commands ||
-      typeof catalog.commands !== 'object' || Array.isArray(catalog.commands) || !Object.keys(catalog.commands).length)
-    throw new Error('Invalid original command catalog');
-  const commands = Object.create(null), aliases = [], preservedMappings = [];
-  for (const [name, path] of Object.entries(catalog.commands)) {
-    if (!/^[a-z][a-z0-9-]*$/.test(name) || !sourceBytes.has(relativePath(path)) || !path.endsWith('.mjs'))
-      throw new Error('Original catalog command is not packaged: ' + name);
-    commands[name] = { path, summary: 'Original native ' + name + ' command' };
-  }
-  for (const [name, [path, summary]] of Object.entries(PORTABLE_ALIASES)) {
-    if (!sourceBytes.has(BASE + path)) continue;
-    if (commands[name] && commands[name].path !== BASE + path)
-      preservedMappings.push({ name, catalogPath: commands[name].path, portablePath: BASE + path });
-    else if (!commands[name]) aliases.push(name);
-    commands[name] = { path: BASE + path, summary };
-  }
-  const commandCatalog = { path: CATALOG, sha256: sha256(catalogBytes),
-    commands: Object.keys(catalog.commands).length, aliases, preservedMappings };
+  const { catalog, commands, commandCatalog } = compileCommandCatalog(catalogBytes, path => sourceBytes.has(path));
   const launcher = sourceBytes.get(BASE + 'sf46-release/product.mjs');
   const core = sourceBytes.get(BASE + 'sf46-release/release-core.mjs');
   if (!launcher || !core) throw new Error('Commit the product release source before packaging');

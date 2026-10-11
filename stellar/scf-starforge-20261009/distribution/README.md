@@ -46,6 +46,31 @@ supports interrupted-install continuation, fresh-directory upgrades, recovery,
 and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
 for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
 
+### Versioned installation, upgrade and rollback
+
+Use `starforge installation` to put a selected maintained package into the
+original SF46 installation with durable `config/` and `state/` directories:
+
+```sh
+npx --no-install starforge installation inspect ./node_modules/@tokenjunkielabs/starforge-merchant
+npx --no-install starforge installation install ./node_modules/@tokenjunkielabs/starforge-merchant \
+  --home /absolute/private/starforge
+npx --no-install starforge installation status --home /absolute/private/starforge
+```
+
+The first release becomes active. Later package installs are staged for explicit
+activation, with the previous version available for rollback. The original
+package manifest, source paths, commands and package metadata travel together.
+The [managed package guide](../sf46-release/MANAGED_PACKAGE.md) covers manifest
+selection, direct Node usage, merchant launch, optional dependencies, retained
+portable preparation and interrupted-install recovery.
+
+For an existing completed original runtime, use `starforge installation
+adopt-runtime RUNTIME_DIRECTORY --home /absolute/private/starforge`. Its recorded
+profile and lockfile become part of the managed release identity, with dependencies
+retained at the original runtime location. The [runtime adoption guide](../sf46-release/MANAGED_PACKAGE.md#adopt-a-completed-runtime)
+covers profile-based staging, source-level runtime inspection and rollback.
+
 ### Schema pattern support
 
 Merchant request schemas that use regular-expression constraints load the
