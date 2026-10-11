@@ -10,7 +10,9 @@ import { renderQueueReport } from '../../stellar/scf-starforge-20261009/sf88-ope
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 const fail = code => { throw Object.assign(new Error(code), {code}); };
 const commands = {init:['--workspace','--catalog','--max-response-bytes','--response-timeout-ms'],
-  call:['--input'], serve:['--port'], report:['--out'], inspect:[], 'objects-register':['--description']};
+  call:['--input'], serve:['--port'], report:['--out'], inspect:[],
+  'objects-register':['--description'], 'datasets-register':['--description'],
+  'analysis-register':['--name','--database']};
 function parse(args) {
   const [command, ...rest] = args;
   if (!Object.hasOwn(commands, command) || rest.length % 2) fail('MCP_NATIVE_CLI_ARGUMENTS_INVALID');
@@ -43,6 +45,8 @@ async function main(args) {
       'serve --dir ABS [--port N] (requires existing MCP_ACCESS_TOKEN)\n' +
       'call --dir ABS --input REQUEST_JSON\n' +
       'objects-register --dir ABS --description ORIGINAL_S3_OBJECTS_JSON\n' +
+      'datasets-register --dir ABS --description ORIGINAL_SF30_DATASET_DESCRIPTION_JSON\n' +
+      'analysis-register --dir ABS --name ALIAS --database RUNNING_ORIGINAL_ANALYSIS_DIRECTORY\n' +
       'inspect --dir ABS\nreport --dir ABS --out NEW_HTML\n');
     return;
   }
@@ -62,10 +66,17 @@ async function main(args) {
     } finally { await native.close(); }
   }
   const native = await openNativeWorkspace(directory);
-  if (command === 'objects-register') {
+  if (command === 'analysis-register') {
+    try {
+      if (!v['--name'] || !v['--database']) fail('MCP_NATIVE_ANALYSIS_REGISTRATION_REQUIRED');
+      return print(await native.registerAnalysis({name:v['--name'],database:v['--database']}));
+    } finally {await native.close();}
+  }
+  if (command === 'objects-register' || command === 'datasets-register') {
     try {
       if(!v['--description'])fail('MCP_NATIVE_INPUT_FILE_REQUIRED');
-      return print(await native.registerObjects(v['--description']));
+      return print(await (command === 'datasets-register' ? native.registerDatasets(v['--description']) :
+        native.registerObjects(v['--description'])));
     } finally {await native.close();}
   }
   if (command === 'inspect') {
@@ -74,7 +85,9 @@ async function main(args) {
       network:native.manifest.workspaceBinding.network, response:native.manifest.response,
       history:await native.call({action:'history', limit:25}),
       objectSources:await native.call({action:'object-sources',limit:25}),
-      objectAcquisitions:await native.call({action:'object-history',limit:25})}); }
+      objectAcquisitions:await native.call({action:'object-history',limit:25}),
+      datasetSources:await native.call({action:'dataset-sources',limit:25}),
+      datasetAcquisitions:await native.call({action:'dataset-history',limit:25})}); }
     finally { await native.close(); }
   }
   if (command === 'call') {
