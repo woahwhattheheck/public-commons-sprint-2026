@@ -86,6 +86,10 @@ If the native atomic rename could not complete, the error includes the private p
 
 The CLI's --python option selects the trusted local Python 3 executable. It is passed as an executable argument without a shell. The receiving command requires Linux renameat2 support for atomic publication.
 
+## Receive earlier terminal-page exports
+
+The receiving receipt retains the sending edition's original coverage and also records the coverage derived by the current workspace reader. Earlier exports that labeled a non-empty terminal page as `TERMINAL_PAGE`, or as `TERMINAL_CURSOR_WITH_RECORDS`, can be received when the verified page chain reaches its terminal null cursor. All other measured coverage fields must agree. The original manifest, source bytes and review decisions remain available with the received edition.
+
 ## Capacity and file handling
 
 The default total source-data ceiling is 512 MiB across the selected exports; a source file can be at most 64 MiB, matching the original research page ceiling. Up to 128 distinct editions and 50,000 declared files can be selected. --max-bytes sets a lower or higher total ceiling for a reviewed delivery; the per-file and file-count ceilings remain explicit.
