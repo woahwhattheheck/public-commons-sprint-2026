@@ -4,8 +4,6 @@ import { inspectOpenApi } from '../workspace/model.mjs';
 import { openMigrationProjects, canonical, sha256 } from './project-store.mjs';
 import { openMigrationReleases } from './release-operations.mjs';
 import { openAcquisitions } from './acquisition.mjs';
-import { reviewMapping, compareMappedResults } from './mapping.mjs';
-import { legacyCaptureSource } from './customer.mjs';
 
 const clean = value => JSON.parse(JSON.stringify(value));
 const conflict = message => Object.assign(new Error(message), { status: 409 });
@@ -127,6 +125,7 @@ export async function openMigrationApplication({ parent, origin, parentRuntime, 
     }
     if (selector?.type === 'source') {
       const source = await projects.readSource(projectId, selector.ref);
+      const { legacyCaptureSource } = await import('./customer.mjs');
       return legacyCaptureSource({ body: source.body, metadata: source.metadata, selection: selector.selection });
     }
     throw new TypeError('Choose an actual retained acquisition or imported response for each side.');
@@ -150,6 +149,7 @@ export async function openMigrationApplication({ parent, origin, parentRuntime, 
     const project = await projects.get(input.projectId); const state = changed(project, input);
     const selected = state.mappings[input.id]; if (!selected) throw new TypeError('Save this mapping before reviewing it.');
     const sources = await mappingSources(project.id, selected.binding);
+    const { reviewMapping } = await import('./mapping.mjs');
     const review = reviewMapping({ mapping: selected.mapping, sources });
     const retained = await projects.retainSource(project.id, { kind: 'review', name: input.id + '-mapping-review.json',
       content: JSON.stringify({ mapping: selected.mapping, binding: selected.binding, review }), provenance: { operator: input.actor } });
@@ -162,6 +162,7 @@ export async function openMigrationApplication({ parent, origin, parentRuntime, 
     const selected = state.mappings[input.id]; const saved = state.mappingReviews[input.id];
     if (!selected || !saved) throw new TypeError('Save and review this mapping before comparing its results.');
     const sources = await mappingSources(project.id, selected.binding);
+    const { compareMappedResults } = await import('./mapping.mjs');
     const comparison = compareMappedResults({ mapping: selected.mapping, sources, reviewId: input.reviewId });
     if (saved.reviewId !== input.reviewId) throw conflict('The selected mapping review changed. Reload it.');
     const retained = await projects.retainSource(project.id, { kind: 'comparison', name: input.id + '-comparison.json',
