@@ -73,10 +73,14 @@ test('explicit source decisions and retained identities reject ambiguous or chan
   const reused=structuredClone(review);reused.operations[1].enabled=true;reused.operations[1].reviewed=true;assert.throws(()=>buildDocument(inventory,reused),/reused/);
   const repeated=structuredClone(har);repeated.log.entries[0].request.url+='&region=second';repeated.log.entries[0].request.queryString.push({name:'region',value:'second'});
   const ri=inspectHar(repeated,digest(j(repeated)));assert.throws(()=>buildDocument(ri,reviewed(ri)),/repeated query/);
-  const named=structuredClone(har);for(const e of named.log.entries){e.request.url+='&session_length=60';e.request.queryString.push({name:'session_length',value:'60'});}
+  const named=structuredClone(har);for(const e of named.log.entries){e.request.url+='&session_length=60&toString=public';e.request.queryString.push({name:'session_length',value:'60'},{name:'toString',value:'public'});}
+  named.log.entries[0].response.content.text=JSON.stringify({toString:'recorded property'});
   const ni=inspectHar(named,digest(j(named))), nr=reviewed(ni);
+  nr.operations[0].query.toString={mode:'parameter',example:'example'};
   nr.operations[0].credentials['query:session_length']={mode:'parameter',reason:'Public requested duration, not a credential',schema:{type:'integer'},example:60};
   assert.equal(buildDocument(ni,nr).paths['/items/{id}'].get.parameters.find(p=>p.name==='session_length').example,60);
+  assert.equal(buildDocument(ni,nr).paths['/items/{id}'].get.parameters.find(p=>p.name==='toString').example,'example');
+  assert.equal(buildDocument(ni,nr).paths['/items/{id}'].get.responses['200'].content['application/json'].schema.properties.toString.type,'string');
   const missing=structuredClone(har);delete missing.log.entries[0].response.content.text;
   const mi=inspectHar(missing,digest(j(missing)));const doc=buildDocument(mi,reviewed(mi));
   assert.equal(doc.paths['/items/{id}'].get['x-har-observation'].responseObservations[0].recordedJsonBodies,1);
