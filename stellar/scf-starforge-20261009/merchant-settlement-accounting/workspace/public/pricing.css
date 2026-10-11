@@ -1,0 +1,34 @@
+.pricing-upload {display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pricing-upload-file,.pricing-upload-action {grid-column:1/-1}
+.pricing-review-layout {display:grid;grid-template-columns:minmax(190px,25%) minmax(0,1fr)}
+.pricing-history {padding:17px 14px;background:var(--soft);border-right:1px solid var(--border);min-width:0}
+.pricing-history input {font-size:12px}
+#pricing-review-list {display:grid;gap:8px;margin:13px 0}
+#pricing-review-list button {display:block;text-align:left;min-width:0;width:100%;font-size:12px;overflow-wrap:anywhere}
+#pricing-review-list button strong,#pricing-review-list button span {display:block}
+#pricing-review-list button span {margin-top:5px;font-size:10px;color:var(--muted)}
+#pricing-review-list button.selected {border-left:3px solid var(--ink);padding-left:10px;background:#fff}
+.pricing-review-main {min-width:0}
+.pricing-selected {display:flex;align-items:start;justify-content:space-between;gap:14px;padding-bottom:0}
+.pricing-selected h3 {font-size:15px;overflow-wrap:anywhere}
+#pricing-metrics {grid-template-columns:repeat(3,minmax(0,1fr))}
+.pricing-source-summary {padding-top:0}
+.pricing-source-summary .record-values {grid-template-columns:135px minmax(0,1fr)}
+.pricing-source-summary .actions .button,.pricing-source-summary .actions button {font-size:11px}
+#pricing-options td,#pricing-comparison-rows td {overflow-wrap:anywhere}
+.pricing-option-detail {border-top:1px solid var(--border);background:var(--soft)}
+.pricing-option-detail .record-values {grid-template-columns:150px minmax(0,1fr);margin-bottom:0}
+.pricing-provenance {border-top:1px solid var(--border)}
+.pricing-provenance pre {max-height:320px;margin:12px 0 0;line-height:1.65}
+.pricing-run-form {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;border-top:1px solid var(--border)}
+.pricing-run-form button {margin-top:23px}
+.pricing-compare-form {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;max-width:950px}
+.pricing-compare-form select {font-size:12px}
+#pricing-comparison-title {padding-top:0;padding-bottom:12px}
+#pricing-comparison-rows .changes {min-width:150px}
+#run-pricing {border:1px solid var(--border);background:#fff;margin:0 0 20px;padding:16px 18px}
+#run-pricing .actions {margin-top:12px}
+#run-pricing .actions .button {font-size:11px}
+#run-pricing .record-values {margin:12px 0;font-size:11px;grid-template-columns:150px minmax(0,1fr)}
+@media(max-width:1150px) {.pricing-review-layout {grid-template-columns:1fr}.pricing-history {border-right:0;border-bottom:1px solid var(--border)}#pricing-review-list {display:flex;overflow:auto;max-width:100%;padding-bottom:5px}#pricing-review-list button {flex:0 0 230px}.pricing-run-form {grid-template-columns:1fr}.pricing-run-form button {margin:0}}
+@media(max-width:760px) {.pricing-upload,.pricing-compare-form {grid-template-columns:1fr}.pricing-selected {flex-direction:column}#pricing-metrics {grid-template-columns:1fr}.pricing-source-summary .record-values,.pricing-option-detail .record-values,#run-pricing .record-values {grid-template-columns:1fr;gap:4px}.pricing-source-summary dd,.pricing-option-detail dd,#run-pricing dd {margin-bottom:8px}.pricing-compare-form button {width:100%}.pricing-source-summary .actions>* {width:100%}}

@@ -44,6 +44,16 @@ Enter the operator or reviewer name in the sidebar. It is recorded with imports,
 
 Refresh preserves unsaved form text. If another operator saved the same review or changed the workspace revision, the interface retains the draft and offers an explicit reload and reapply action. Completed background work can also advance the workspace revision. A stale write is never silently substituted for the newer saved state.
 
+## Use a saved pricing decision
+
+Open **Pricing decisions** to upload an original saved SF97 pricing report.
+The existing converter retains every payment alternative, exact amount, unknown
+cost, original quote description, and observation source. Review and compare
+its accounting terms, select the approved choice, and capture a reconciliation
+that retains both original files. Earlier runs keep their own pricing sources.
+The [complete pricing workflow](PRICING.md) covers original downloads, selected
+terms, source-inclusive export, revision conflicts, and reopening.
+
 ## Recover an already completed purchase
 
 The original recovery module handles a completed SF31 purchase whose native request, outcome, and optional delivered response were retained outside SF98. Its input and source-binding format is documented in [the original recovery guide](../RECOVERY.md). It keeps that origin explicit and uses the original network-specific SF86 verifier.
@@ -93,6 +103,7 @@ Each completed run contains:
 | `sources/outbox/` | Captured native event and delivery journal bytes |
 | `sources/proofs/` | Included original verification result bytes |
 | `sources/terms.json` | The selected original merchant accounting terms |
+| `sources/pricing-report.json` | Original uploaded pricing report for the selected reviewed terms, when present |
 | `sources/recovered/` | Connected original recovery entries, proofs, source files, and any saved response bytes |
 | `input-manifest.json` | Captured file paths, SHA256 values, original filenames, and verification descriptions |
 | `report/` | The original six create-only accounting outputs |
