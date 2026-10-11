@@ -423,8 +423,10 @@ export async function openWorkbookEditions({drafts,sources,python,parserSource,p
       let file,success=false;
       try{
         file=await open(join(directory,'comparison.json'),'wx+',0o600);
-        const document=await publicReport(comparison);
-        await file.writeFile('{"comparison":'+JSON.stringify(document)+',"rows":[');
+        // The downloadable comparison stays byte-identifiable by its saved
+        // digest; the later adoption receipt is a separate document field.
+        const adoption=await applied(comparison);
+        await file.writeFile('{"comparison":'+JSON.stringify(comparison)+',"applied":'+JSON.stringify(adoption)+',"rows":[');
         const stream=rowFile.createReadStream({autoClose:false,start:0});
         const lines=createInterface({input:stream,crlfDelay:Infinity});let count=0;
         try{for await(const line of lines){
