@@ -1,0 +1,133 @@
+{
+  "schema": "mercury-ops.native-journey.v1",
+  "state": "passed",
+  "input_origin": "controlled local provider implementing the published Mercury Classic wire contract",
+  "native_components": [
+    "CLI init",
+    "production HTTP operator",
+    "raw-body webhook authentication",
+    "durable SQLite operations store",
+    "Mercury REST client",
+    "customer signed HTTP adapter",
+    "customer SQLite transaction",
+    "CLI export"
+  ],
+  "notification_reused": true,
+  "restart_after_intake": true,
+  "provider_requests": [
+    {
+      "path": "/rest/events/by-tx/00a5b8ce6d1c680d0f2bf50a5e66bec875b5119d6082131a8d8bc40ebecad67c",
+      "row_ids": [
+        4201,
+        4202
+      ]
+    },
+    {
+      "path": "/rest/events/by-ledger/contracts?contracts=CDVNV4HBU5WBEQO5K7YZW7NULFLHOTYMUMYUGSPAU2QOADZRIJYTYMM6&from=400000&to=400003&limit=2",
+      "row_ids": [
+        4201,
+        4202
+      ]
+    },
+    {
+      "path": "/rest/events/by-ledger/contracts?contracts=CDVNV4HBU5WBEQO5K7YZW7NULFLHOTYMUMYUGSPAU2QOADZRIJYTYMM6&from=400000&to=400003&limit=2&cursor=4202",
+      "row_ids": [
+        4203,
+        4204
+      ]
+    },
+    {
+      "path": "/rest/events/by-ledger/contracts?contracts=CDVNV4HBU5WBEQO5K7YZW7NULFLHOTYMUMYUGSPAU2QOADZRIJYTYMM6&from=400000&to=400003&limit=2&cursor=4204",
+      "row_ids": []
+    }
+  ],
+  "canonical_rows": 3,
+  "same_transaction_events": 2,
+  "customer_http_attempts": 4,
+  "customer_insertions": 3,
+  "customer_replayed_after_commit": 1,
+  "topic_family": {
+    "observed_rows": 4,
+    "retained_events": 3,
+    "excluded_provider_row": 4204
+  },
+  "catchup": {
+    "seq": 1,
+    "job_id": "native-cursor-catchup",
+    "contracts": [
+      "CDVNV4HBU5WBEQO5K7YZW7NULFLHOTYMUMYUGSPAU2QOADZRIJYTYMM6"
+    ],
+    "topic_filters": {
+      "topic1": "AAAADwAAAAdkZXBvc2l0AA=="
+    },
+    "ledger_from": 400000,
+    "ledger_to": 400003,
+    "page_size": 2,
+    "cursor": 4204,
+    "pages": 3,
+    "events_seen": 4,
+    "state": "completed",
+    "created_at": 1791743391.5308726,
+    "updated_at": 1791743391.6083388,
+    "error": null
+  },
+  "recovery": {
+    "recovered": [],
+    "worker_busy": false
+  },
+  "operations_export": {
+    "bytes": 23865,
+    "sha256": "ad7b2a7d2186c76e66539c09294ba4cd97e452f0ecf72c61a2c286bb1a27af82",
+    "records": 38
+  },
+  "cli_export": {
+    "path": "/workspace/scratch/a66ca27a7443/mercury-event-operations/native-output/cli-operations.ndjson",
+    "bytes": 23865,
+    "sha256": "bd6220aab4d1bc92b8e0b0c3503a00da145a33eac0a195e7e77ad9f8e180e623",
+    "kind": "operations"
+  },
+  "event_pagination": [
+    2,
+    1
+  ],
+  "backup": {
+    "path": "/workspace/scratch/a66ca27a7443/mercury-event-operations/native-output/operations-backup.zip",
+    "bytes": 8586,
+    "sha256": "d11d8ff042cf9cc0d34947b8347e6c256e6c8569d95d7fefc9c1336d725da4e2",
+    "local_customer_included": false,
+    "files": [
+      "config.json",
+      "operations.sqlite3"
+    ]
+  },
+  "restore": {
+    "workspace": "/workspace/scratch/a66ca27a7443/mercury-event-operations/native-output/restored",
+    "config_path": "/workspace/scratch/a66ca27a7443/mercury-event-operations/native-output/restored/config.json",
+    "archive_sha256": "d11d8ff042cf9cc0d34947b8347e6c256e6c8569d95d7fefc9c1336d725da4e2",
+    "local_customer_included": false,
+    "credential_variables": [
+      "MERCURY_NATIVE_PROVIDER",
+      "MERCURY_NATIVE_WEBHOOK",
+      "MERCURY_NATIVE_OPERATOR"
+    ]
+  },
+  "restored_event_bytes_identical": true,
+  "elapsed_seconds": 0.597,
+  "peak_rss_bytes": 23130112,
+  "source_sha256": {
+    "mercury_ops/__init__.py": "7acd973b5f4a33dd93f86066140f3ebc496238413c40a047edc334a5b0c12737",
+    "mercury_ops/__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+    "mercury_ops/cli.py": "0248a8c83b07ee74e320dfa64e8421ed317ffbb5a5c791b757a2197d9fdb451c",
+    "mercury_ops/config.py": "dfba076cd604d412871abb614c15f34ce68f3917e1f9aaa341503b0c0474108b",
+    "mercury_ops/delivery.py": "4df81a1a8d8b6b78afe2b16f750e217fb84f3f29a0aa3614abd16afe3e4e65cf",
+    "mercury_ops/delivery_postgres.py": "ec92109a5910f6ba4604fc1495f83222d981f190195e9117df3602682f773df3",
+    "mercury_ops/engine.py": "fc6deaed305f55bd35eafb2fa2c60c81a69754e46c5b4d05d6dcd1f1c51a38ae",
+    "mercury_ops/maintenance.py": "c70696f596ebc72a3da0234f37197954bd1af63fbe4fbc774c026e8ae0468995",
+    "mercury_ops/provider.py": "dade5fdf66debd44b996674f9402214bfb70eed78511fab28fb03b5b044aa59f",
+    "mercury_ops/static/app.js": "89b6c521a9588486e3836893263a92c944f1b3c1d0d04c61b043f964c33a36b9",
+    "mercury_ops/static/index.html": "fdc9747667a768a80595ca32edcb136c02ca2f90cf528108910d8b42878da99f",
+    "mercury_ops/static/style.css": "379991ffca48b77d296f648e3b5be1f14f60ba48939a18e0962ca7fafc0d1a72",
+    "mercury_ops/store.py": "c95067ed12f1d4f397504f4da4dc15667b8e362d5288662439508393119b58c3",
+    "mercury_ops/web.py": "a2a65c4734b95348428886e4895b48e2cb7e792a02a6e24c4bc49c3830decfa5"
+  }
+}

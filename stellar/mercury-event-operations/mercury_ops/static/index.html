@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Mercury event operations</title>
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<header class="masthead">
+  <div class="identity"><span class="mark" aria-hidden="true">M</span><div><strong>Mercury event operations</strong><span class="caption">Customer ingestion, reconciliation and delivery</span></div></div>
+  <div class="connection"><span id="connection-state">Operator access</span><button id="disconnect" type="button" hidden>Disconnect</button></div>
+</header>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<main id="login" class="login-panel">
+  <p class="eyebrow">Private operator workspace</p>
+  <h1>Connect to this workspace</h1>
+  <p>Enter the operator token created by <code>mercury-ops init</code>, or the value of the configured operator environment variable.</p>
+  <form id="connect-form">
+    <label for="operator-token">Operator token</label>
+    <input id="operator-token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+    <button type="submit" class="primary">Connect</button>
+  </form>
+  <p class="caption">The token stays in this page's memory. Reloading or disconnecting clears access. Provider credentials are configured on the service host.</p>
+</main>
+<div id="application" class="application" hidden>
+  <nav id="navigation" aria-label="Operations">
+    <button type="button" data-view="overview" aria-current="page">Overview</button>
+    <button type="button" data-view="notifications">Notifications</button>
+    <button type="button" data-view="events">Canonical events</button>
+    <button type="button" data-view="catchups">Catch-up ranges</button>
+    <button type="button" data-view="deliveries">Customer delivery</button>
+    <button type="button" data-view="tasks">Worker tasks</button>
+    <button type="button" data-view="exports">Export and recovery</button>
+  </nav>
+  <main class="workspace">
+    <div class="page-heading"><div><p id="page-kicker" class="eyebrow">Retained operations</p><h1 id="page-title">Overview</h1><p id="page-description" class="caption"></p></div>
+      <div class="refresh-controls"><label class="check"><input id="auto-refresh" type="checkbox" checked>Auto refresh</label><button id="refresh" type="button">Refresh</button><span id="refreshed-at" class="caption"></span></div>
+    </div>
+    <div id="content" aria-live="polite"></div>
+  </main>
+</div>
+<dialog id="record-dialog" aria-labelledby="record-title">
+  <div class="dialog-heading"><div><p id="record-kind" class="eyebrow"></p><h2 id="record-title">Record details</h2></div><button id="close-record" type="button">Close</button></div>
+  <div id="record-content"></div>
+</dialog>
+</body>
+</html>
