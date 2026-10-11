@@ -168,6 +168,8 @@ from the previous review. Verify and restore select only a retained backup ID
 under the host-configured backup directory. Neither command accepts a browser
 supplied arbitrary file path or changes original transaction identity.
 
+The installed package exports `@tokenjunkielabs/starforge-merchant/commerce-recovery`
+and `@tokenjunkielabs/starforge-merchant/commerce-recovery-controller`.
 The exported embedding interface is
 `createCommerceRecoveryController(profile, {environment, pause, reopen, state})`.
 Trusted hosts may pass `recoveryProfile` and a `reopen(directory)` callback to
