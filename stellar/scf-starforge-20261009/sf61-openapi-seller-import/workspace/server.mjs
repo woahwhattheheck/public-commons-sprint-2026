@@ -16,10 +16,17 @@ import { describeMerchantStreamCustomers, createMerchantStreamCustomer, readMerc
   prepareMerchantStreamCustomer } from './stream-customer.mjs';
 import { openCommerce, completeCommerceShutdown } from '../../sf66-demo-launcher/commerce.mjs';
 import { startCommerceConsole } from '../../sf66-demo-launcher/commerce-console.mjs';
+import { inspectPostman, preparePostmanSource } from '../postman/collection.mjs';
 import { createMigrationRoutes } from '../blockworks/routes.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css'],['/migrations','../blockworks/index.html'],['/migrations/','../blockworks/index.html'],['/migrations/browser.mjs','../blockworks/browser.mjs'],['/migrations/style.css','../blockworks/style.css']]);
+const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
+STATIC.set('/postman-browser.mjs','../postman/browser.mjs');
+STATIC.set('/migrations','../blockworks/index.html');
+STATIC.set('/migrations/','../blockworks/index.html');
+STATIC.set('/migrations/browser.mjs','../blockworks/browser.mjs');
+STATIC.set('/migrations/style.css','../blockworks/style.css');
+STATIC.set('/migrations/comparison-view.mjs','../blockworks/comparison-view.mjs');
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
@@ -164,6 +171,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type']??'')) return send(415,{error:'Use application/json'});
       const body=await limited(req);
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
+      if (pathname==='/api/postman/inspect') return send(200,inspectPostman(body));
+      if (pathname==='/api/postman/prepare') return send(200,preparePostmanSource(body));
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
@@ -311,12 +320,19 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
   let closing;
   const close=()=>closing??=(async()=>{
     shuttingDown=true;
-    const closed=new Promise((yes,no)=>server.close(e=>e?no(e):yes()));
+    const errors=[];
+    const attempt=async action=>{try{await action();}catch(error){errors.push(error);}};
+    // Observe server closure immediately while preserving each original owner's
+    // drain order. One failed optional application must not skip the others.
+    const closed=new Promise((yes,no)=>server.close(e=>e?no(e):yes())).catch(error=>{errors.push(error);});
     await mutationDone;
-    if (migrationPromise) await (await migrationPromise).close();
-    await closeCustomer();
-    if (active) {await active.session.close();active=null;}
+    const migration=migrationPromise;
+    if (migration) await attempt(async()=>{await (await migration).close();});
+    await attempt(closeCustomer);
+    await attempt(async()=>{if (active) {await active.session.close();active=null;}});
     await closed;
+    if (errors.length===1) throw errors[0];
+    if (errors.length>1) throw new AggregateError(errors,'Workspace sessions did not finish stopping.');
   })();
   if (!noSignals) for (const signal of ['SIGINT','SIGTERM']) process.once(signal,()=>close().catch(()=>{process.exitCode=1;}));
   return {url:origin+'/#'+token,origin,token,close,output};
@@ -335,5 +351,4 @@ export async function main(args=process.argv.slice(2)) {
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href)
   main().catch(e=>{console.error(e.message);process.exitCode=1;});
-
 
