@@ -1,5 +1,14 @@
 # SF46 — original-source release assembly
 
+## Portable product distribution
+
+The [portable release guide](DISTRIBUTION.md) provides committed-source packaging,
+one native command launcher, versioned local installation, staged upgrades and
+rollback. It includes the original seller, operations, OpenAPI pilot, buyer and
+capture workflows while keeping merchant configuration and state outside the
+release. Start with `distribution.mjs pack`; no test runner or hosted CI is part
+of installation or launch.
+
 This is an additive, offline-first composition of the current public Stellar Forge source, separate from the SF51 commerce smoke and independently owned protocol engines.
 
 ## Delivery
