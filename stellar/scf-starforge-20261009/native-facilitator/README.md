@@ -42,6 +42,7 @@ variable name, never the signing secret itself.
     "maxTransactionFeeStroops": 50000,
     "inclusionFeeStroops": 100,
     "maxVerifyInFlight": 16,
+    "maxSettleInFlight": 1,
     "drainGraceMs": 60000
   }
 }
@@ -153,10 +154,24 @@ instructions.
 
 ## Capacity, shutdown and operations
 
-Settlement admission is one operation at a time, with no automatic retry or
-payment queue. This avoids concurrently constructing transactions with the same
-source account sequence. The composed seller also admits one resource operation
-at a time through the original SF30 lifecycle, before executing an application.
+Settlement capacity defaults to one operation. To serve concurrent purchases,
+configure distinct existing source accounts and set `limits.maxSettleInFlight`
+to an integer from `1` through the number of those accounts (at most `32`). Each
+accepted native settlement reserves one available account until its original SDK
+call finishes. Selection rotates through the configured accounts and skips those
+already in flight. The SDK receives that call's reserved account after its awaited
+verification; it still checks every configured signer and fee-bump address through
+one complete native safety set. There is no automatic retry or payment queue.
+
+The composed seller uses the same capacity in its original SF30 lifecycle before
+executing an application. A long-running request therefore occupies one merchant
+request slot; its signing-account slot is reserved when native settlement starts.
+Verification keeps its separate `maxVerifyInFlight` limit. Configure that limit
+for the merchant workload as well. Raising capacity does not change a transaction's
+amount or fee ceiling, and actual throughput still depends on the RPC, ledger,
+account balances and application. See the [complete account-capacity rollout](OPERATIONS.md#increase-native-settlement-capacity)
+for review, startup, observation, drain and restart.
+
 Use the shared ownership directory in [OPERATIONS.md](OPERATIONS.md) for native
 facilitators on the same host. Overlapping configured signing accounts then have
 one active process per network, including a fee-bump account. Distinct fee accounts
@@ -173,7 +188,10 @@ accounting against that original operation before another payment attempt.
 
 Status counters distinguish native calls, verification refusals, settlement
 refusals and thrown SDK errors. They are process-local operational counts, not
-payment or revenue totals. Adapter HTTP errors omit raw provider exceptions;
+payment or revenue totals. `/healthz`, `status()` and CLI startup expose the
+configured `settlementConcurrency`, currently available admission slots and each
+public source account's `AVAILABLE` or `IN_FLIGHT` state. In-flight accounts include
+their admission time; request contents and signing material stay private. Adapter HTTP errors omit raw provider exceptions;
 upstream SDK stderr remains the upstream SDK's logging behavior and should be
 handled by the operator's existing private log collection.
 
