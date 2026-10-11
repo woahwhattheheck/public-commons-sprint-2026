@@ -25,6 +25,12 @@ Choose the runtime mode in its launcher to start the same original merchant
 and operations desk from the selected saved review, then drain and reopen the
 retained workspace.
 
+Use the same prepared package in the [native release lifecycle](../../sf82-seller-pilot/JSONRPC_RELEASES.md)
+with `starforge releases stage --store PRIVATE_STORE --id RELEASE --jsonrpc-package PREPARED_PACKAGE`.
+That path retains the complete original package, compares versions, selects and
+rolls back releases, and opens this merchant's original operations controls from
+the existing release console or merchant MCP client.
+
 ## 1. Choose the product and payment terms
 
 Run these commands from the source checkout with its existing Node and native

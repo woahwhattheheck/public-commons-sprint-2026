@@ -95,7 +95,7 @@ export async function startRpcWorkspace({ port = 8447, ...options } = {}) {
     server.listen(port,'127.0.0.1',() => { server.removeListener('error',fail); done(); });
   });
   origin = 'http://127.0.0.1:'+server.address().port;
-  try { model = await createRpcWorkspace(options); }
+  try { model = await createRpcWorkspace({ ...options, navigationOrigin: origin }); }
   catch (cause) { server.closeAllConnections(); await new Promise(done => server.close(done)); throw cause; }
   return { origin, url:origin+'/#key='+key, model,
     close() {

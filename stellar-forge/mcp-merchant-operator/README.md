@@ -31,6 +31,15 @@ initialization can include the same fleet with `--fleet-plan`.
 
 ## Prepare a merchant
 
+For a prepared Stellar RPC product, initialize with
+`--jsonrpc-package /private/rpc/prepared-v1`. The same provider retains all ten
+original package files, compares the declared methods, prices, data network and
+limits, and starts the original merchant with private operations and persistent
+availability/history. `merchant_operations` returns those original operator
+links for the current owned instance. See
+[RPC releases](../../stellar/scf-starforge-20261009/sf82-seller-pilot/JSONRPC_RELEASES.md)
+for the complete package, release, buyer and restart workflow.
+
 For an existing S3 file product, initialize with
 `--s3-package /private/packages/products-v1`. The same provider then retains,
 compares, starts and rolls back the original pinned whole-file or chunk seller.
