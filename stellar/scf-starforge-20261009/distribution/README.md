@@ -362,6 +362,30 @@ provider, request, recovery and embedding guide. `./seller/jsonrpc` exports
 source and original `partners/getblock-stellar/product.mjs` request helper ship
 together. This product uses the existing upstream and native dependencies.
 
+## Chainstack installed merchant and buyer
+
+The complete Chainstack partner installation is available through
+`starforge chainstack-stellar`. It composes the original three Stellar RPC
+products, private retained releases, actual provider observations, exact buyer
+requests, portable SDK handoff and native host export.
+
+```sh
+npx --no-install starforge chainstack-buyer paths
+npx --no-install starforge chainstack-stellar create \
+  --file /private/chainstack/installation.json \
+  --root /private/chainstack/merchant --release v1
+npx --no-install starforge chainstack-stellar activate \
+  --root /private/chainstack/merchant --release v1 --generation 0
+```
+
+The installed `chainstack-buyer node` and `chainstack-buyer python` commands
+locate the original SF88 runtime from this same package and forward review,
+execute, inspect and recover to the retained buyer adapters. Public APIs are
+`./partners/chainstack-stellar` and `./partners/chainstack-stellar/installed`.
+Follow [the complete installed Chainstack workflow](../partners/chainstack-stellar/INSTALLED.md)
+for selected provider configuration, method inputs, retained provider results,
+customer handoff, both buyer languages, release rollback and native host setup.
+
 ## GetBlock Stellar merchant
 
 The installed `getblock-stellar` command includes the complete original partner
