@@ -1,15 +1,71 @@
 # Set up a merchant's signed discovery
 
-The existing release CLI can prepare and operate a merchant's first signed
-catalog. It reads an already retained API or Python release, creates a private
-Ed25519 signing identity, derives the original catalog policy from that release's
-actual offers, and writes the connection used by the release console and merchant
+The existing release console and CLI prepare and operate a merchant's first signed
+catalog. They read an already retained merchant release, create a private
+Ed25519 signing identity, derive the original catalog policy from that release's
+actual offers, and write the connection used by the release console and merchant
 MCP. The original SF60 writer and catalog browser provide the running catalog.
 
 Use Node 22+ on the same POSIX host as the merchant release store. The maintained
 package exposes these commands as `starforge releases`. From a source checkout,
 replace that prefix with
 `node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs`.
+
+## Complete setup in the merchant console
+
+Open the same console used to compare, select and run retained merchant releases:
+
+```sh
+starforge releases console --store /srv/merchant/releases
+```
+
+The **Discovery setup** section uses `/srv/merchant/releases.discovery` by
+default. The host can select another fixed destination with
+`--discovery-setup /srv/merchant/discovery`. No directory is created simply by
+opening the console, and browser requests cannot choose a filesystem path. The
+destination remains visible in the interface so it can be backed up with the
+merchant's retained releases.
+
+1. Choose the intended retained release. Enter a seller identity and, if needed,
+   its exact public offer-export URL. Select **Review enrollment from selected
+   release**. The console shows every resource and complete payment alternative,
+   including exact atomic amounts, assets, recipients, networks and schemes.
+2. Select **Create reviewed identity**. The original setup creates its private
+   key and public policy once from those reviewed offers. Changing the release or
+   enrollment fields requires a new review. Existing or incomplete identity files
+   are preserved; setup never replaces them.
+3. Select **Start discovery**. The console starts the original catalog writer on
+   an available loopback port and opens its existing publication controls below.
+   It keeps all discovery operations in this console and starts no additional
+   catalog browser. The running discovery origin is displayed.
+4. Select and start the seller using the original release controls. Under
+   **Catalog publication**, review and publish its offers. Later release updates
+   and withdrawals use the same review, signing and original journal operations.
+5. Use **Download public enrollment** to export the original public seller pin,
+   exact permissions and resource offers. The download contains no private key,
+   browser capability or local filesystem path. An existing catalog operator can
+   use this enrollment through its original policy configuration.
+
+**Stop discovery** closes only the writer owned by this console; the running
+seller remains active. A stale browser action cannot stop a replacement discovery
+instance. Starting discovery again reopens the same identity and original journal.
+Closing the console waits for its admitted operator action, stops its own seller,
+then closes its own discovery writer. The retained identity and catalog survive.
+
+Reopen the console with the same store and optional setup destination, then select
+**Start discovery** and **Start selected**. Existing listings reconcile through
+the original catalog. Reviewing an unchanged release shows no publication changes;
+the Apply button remains disabled and no new signature or journal write occurs.
+
+An existing writer started elsewhere keeps its original exclusive lock. To use
+that running service from this console, pass its existing
+`--catalog /srv/merchant/discovery/connection.json`; its process remains responsible
+for starting and stopping the writer. `--catalog` and `--discovery-setup` are
+alternative host configurations. A configured external connection retains all
+existing catalog operations and exposes no managed setup controls.
+
+The following sections describe the corresponding CLI and original catalog-browser
+workflow when a separate foreground discovery process is useful.
 
 ## Prepare from the retained merchant
 
@@ -159,11 +215,14 @@ procedure, including checking the old process before handling an orphan lock.
 `release-discovery-setup.mjs` exports:
 
 ```js
+const enrollmentReview = await reviewReleaseDiscoverySetup(releaseRoot, {
+  releaseId: 'first', sellerId: 'merchant-1',
+});
 const setup = await createReleaseDiscoverySetup(releaseRoot, {
   directory: '/srv/merchant/discovery', releaseId: 'first', sellerId: 'merchant-1',
 });
 const inspected = await inspectReleaseDiscoverySetup(releaseRoot, {
-  directory: setup.directory,
+  directory: setup.directory, includeEnrollment: true,
 });
 const running = await openReleaseDiscoverySetup(releaseRoot, {
   directory: setup.directory, port: 0, workspace: true, workspacePort: 0,
@@ -176,3 +235,9 @@ await running.closed;
 The returned setup and session metadata contain no private key or browser token.
 The `closed` promise completes after the original owned services have stopped;
 `close()` is idempotent and retains a shutdown error for its caller.
+
+`startReleaseConsole(releaseRoot, { port: 0, discoverySetup: '/srv/merchant/discovery' })`
+uses the same managed workflow. Omitting `discoverySetup` chooses the resolved
+release-store path plus `.discovery`; supplying `catalogConfig` instead preserves
+the external-writer mode. `inspectReleaseDiscoverySetup` returns the already
+validated public enrollment only when `includeEnrollment: true` is requested.
