@@ -14,6 +14,7 @@ Use the installed `merchant-mcp` command to initialize a provider for that fleet
 merchant-mcp init-fleet \
   --dir /private/fleet-mcp \
   --plan /private/merchant-fleet/fleet-plan.json \
+  --fleet-directory /private/merchant-fleet \
   --name "Merchant fleet"
 ```
 
@@ -22,10 +23,13 @@ From a complete source checkout, the equivalent is:
 ```sh
 node stellar-forge/mcp-merchant-operator/serve.mjs init-fleet \
   --dir /private/fleet-mcp \
-  --plan /private/merchant-fleet/fleet-plan.json
+  --plan /private/merchant-fleet/fleet-plan.json \
+  --fleet-directory /private/merchant-fleet
 ```
 
 This checks the original plan and stores, creates a new private MCP configuration, and leaves the fleet stopped. It initializes an empty individual release store and export directory so the same provider remains compatible with existing merchant operations. No individual source alias is required for a fleet-only host.
+
+For a fleet prepared with the original [retained setup command](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/BOOTSTRAP.md), pass its setup directory through `--fleet-directory`. This reuses its published plan, selected releases, routing history and state leases. The explicit directory resolves from the invoking host's working directory. Omitting the option preserves the existing initialization behavior: the new MCP configuration uses its own `./fleet` subdirectory.
 
 To initialize both a normal merchant source and a fleet, add `--fleet-plan ORIGINAL_PLAN.json` to the existing `init` command. Existing configurations can declare the same optional connection directly:
 
