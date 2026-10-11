@@ -9,6 +9,7 @@ import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs'
 import { readReleaseCatalogConfig, readReleaseCatalogReview, releaseCatalogStatus,
   reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
 import { createReleaseDiscoverySetup, inspectReleaseDiscoverySetup, openReleaseDiscoverySetup } from './release-discovery-setup.mjs';
+import { readFacilitatorProfiles, readFacilitatorReview, reviewReleaseFacilitator, stageReleaseFacilitator } from './release-facilitator.mjs';
 
 const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 launcher
 
@@ -37,6 +38,10 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
   status   --store DIR
   cache-status --store DIR
   cache-invalidate --store DIR --instance INSTANCE [--route ROUTE_ID | --all]
+  facilitators --store DIR --facilitators PROVIDERS_JSON
+  facilitator-review --store DIR --from RELEASE --id NEW_RELEASE --provider ALIAS
+                     --facilitators PROVIDERS_JSON --out NEW_REVIEW_JSON [--label TEXT]
+  facilitator-stage --store DIR --facilitators PROVIDERS_JSON --review REVIEW_JSON
   catalog-init --store DIR --id RELEASE --setup NEW_DIRECTORY --seller SELLER_ID
                [--source-url HTTPS_OFFER_EXPORT]
   catalog-inspect --store DIR --setup DIRECTORY
@@ -47,7 +52,8 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
   catalog-apply --store DIR --catalog CONFIG_JSON --review REVIEW_JSON
   run      --store DIR [--expect GENERATION]
   console  --store DIR [--port 8425] [--client-exports PRIVATE_DIRECTORY]
-           [--discovery-setup DIRECTORY | --catalog CONFIG_JSON]
+           [--discovery-setup DIRECTORY | --catalog CONFIG_JSON] [--receiving-config PRIVATE_JSON]
+           [--facilitators PROVIDERS_JSON]
 
 Run with: node release-cli.mjs COMMAND OPTIONS
 Stage compiles immutable original source and response snapshots. No server starts.
@@ -56,6 +62,10 @@ Run starts the original foreground seller; Ctrl-C stops this process's seller.
 Console opens a private loopback interface to compare, activate, start, stop and roll back.
 Customer handover retains DIR.clients by default; --client-exports reuses an existing customer root.
 Its discovery controls create/reopen DIR.discovery by default, or the host's --discovery-setup directory.
+Receiving opens the original workspace explicitly, binding reviews to exact retained seller source.
+Its default directory is DIR.receiving; --receiving-config selects the existing private workspace and native read options.
+Facilitator review reads actual native capabilities and generated terms for a retained release.
+Facilitator stage retains that exact source with the reviewed endpoint. Compare and select it normally.
 Catalog-init creates a private identity, source-derived seller policy and existing release connection.
 Catalog-run owns the original catalog writer and optional original browser until Ctrl-C.
 Application entry modules are pinned; their external dependencies remain operator-managed.`;
@@ -63,8 +73,11 @@ const COMMANDS = {
   init: ['store'], stage: ['store', 'id', 'workspace', 'python', 'python-root', 'duckdb-package', 'duckdb-python', 's3-package', 'mysql-package', 'clickhouse-package', 'redis-package', 'jsonrpc-package', 'sqlite-package', 'sqlite-snapshot-max-bytes', 'sqlite-snapshot-timeout-ms', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
   list: ['store'], inspect: ['store', 'id'], diff: ['store', 'from', 'to'],
   activate: ['store', 'id', 'expect', 'reason'], rollback: ['store', 'expect', 'to', 'reason'],
-  status: ['store'], run: ['store', 'expect'], console: ['store', 'port', 'catalog', 'discovery-setup', 'client-exports'],
+  status: ['store'], run: ['store', 'expect'], console: ['store', 'port', 'catalog', 'discovery-setup', 'facilitators', 'client-exports', 'receiving-config'],
   'cache-status': ['store'], 'cache-invalidate': ['store', 'instance', 'route', 'all'],
+  facilitators: ['store', 'facilitators'],
+  'facilitator-review': ['store', 'facilitators', 'from', 'id', 'provider', 'out', 'label'],
+  'facilitator-stage': ['store', 'facilitators', 'review'],
   'catalog-init': ['store', 'id', 'setup', 'seller', 'source-url'],
   'catalog-inspect': ['store', 'setup'],
   'catalog-run': ['store', 'setup', 'port', 'workspace-port', 'no-workspace'],
@@ -129,6 +142,24 @@ export async function main(args = process.argv.slice(2)) {
       if (!o.instance || Boolean(o.route) === Boolean(o.all)) throw new Error('Supply --instance and exactly one of --route ROUTE_ID or --all.');
       result = await invalidateReleaseCache(root, { instanceId: o.instance, routeId: o.route }); break;
     }
+    case 'facilitators':
+    case 'facilitator-review':
+    case 'facilitator-stage': {
+      if (!o.facilitators) throw new Error('Supply --facilitators PROVIDERS_JSON.');
+      const profiles = await readFacilitatorProfiles(o.facilitators);
+      if (command === 'facilitators') result = profiles;
+      else if (command === 'facilitator-stage') {
+        if (!o.review) throw new Error('Supply --review REVIEW_JSON.');
+        result = await stageReleaseFacilitator(root, { profiles, review: await readFacilitatorReview(o.review) });
+      } else {
+        for (const key of ['from', 'id', 'provider', 'out']) if (!o[key]) throw new Error('Facilitator review requires --' + key + '.');
+        result = await reviewReleaseFacilitator(root, { profiles, provider: o.provider, releaseId: o.from, id: o.id, label: o.label });
+        const file = await open(resolve(o.out), 'wx', 0o600);
+        try { await file.writeFile(JSON.stringify(result, null, 2) + '\n'); await file.sync(); }
+        finally { await file.close(); }
+      }
+      break;
+    }
     case 'catalog-init': {
       if (!o.setup || !o.id || !o.seller) throw new Error('Supply --setup NEW_DIRECTORY, --id RELEASE and --seller SELLER_ID.');
       result = await createReleaseDiscoverySetup(root, { directory: o.setup, releaseId: o.id,
@@ -189,11 +220,14 @@ export async function main(args = process.argv.slice(2)) {
     }
     case 'console': {
       const { startReleaseConsole } = await import('./release-console.mjs');
+      const { readReleaseReceivingConfig } = await import('./release-receiving.mjs');
       const session = await startReleaseConsole(root, { port: o.port ?? 8425,
+        ...(o.facilitators ? { facilitators: await readFacilitatorProfiles(o.facilitators) } : {}),
         ...(o['discovery-setup'] ? { discoverySetup: o['discovery-setup'] } : {}),
         ...(o['client-exports'] ? { clientExportsDirectory: o['client-exports'] } : {}),
+        ...(o['receiving-config'] ? { receivingConfig: await readReleaseReceivingConfig(o['receiving-config']) } : {}),
         ...(o.catalog ? { catalogConfig: await readReleaseCatalogConfig(o.catalog) } : {}) });
-      print({ operatorConsole: session.operatorUrl, store: root, stop: 'Ctrl-C stops this console and its own seller and discovery writer.' });
+      print({ operatorConsole: session.operatorUrl, store: root, stop: 'Ctrl-C stops this console, its seller and discovery writer, and closes its receiving workspace.' });
       let stopping = false;
       const stop = () => {
         if (stopping) return; stopping = true;

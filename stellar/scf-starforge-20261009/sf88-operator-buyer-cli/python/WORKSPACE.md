@@ -1,5 +1,10 @@
 # Customer data-analysis workspace
 
+For complete query files beyond an analysis preview, use the **Exports** tab
+and the [complete query export workflow](WORKSPACE_EXPORTS.md). It joins the
+original reviewed query, native streaming writer, cancellation, retained file
+downloads and portable reopen in this same workspace.
+
 Use an acquired dataset in a local browser, keep saved analyses and their actual results, and reopen the complete analytical database after restart. The workspace uses the original Python `DatasetAcquisition`, `DatasetDelivery` and `DatasetDatabase`. It imports completed native deliveries; it does not execute an acquisition or financial operation.
 
 The Data tab selects original deliveries, reviews retained versions and scalar types, downloads the original manifest, and selects the version served by a named SQL view. The Changes tab compares acquired versions, retains complete row/schema differences and applies an explicitly reviewed candidate. The Analysis tab saves parameterized SQL and its revisions, executes it against a reviewed selection, pages retained results and exports JSON or CSV. Activity reopens imports, analyses and consistent database backups.

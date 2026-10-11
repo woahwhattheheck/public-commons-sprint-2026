@@ -1,10 +1,12 @@
 // MIT. The editor authors the original merchant-plan format; all compilation stays on the original server path.
+import { attachSchemaRefresh } from './schema-refresh.mjs';
 const $ = id => document.getElementById(id);
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const clone = value => structuredClone(value);
 const stringify = value => JSON.stringify(value, null, 2);
 const state = { plan: null, selected: null, dirty: false, saved: null, exported: null,
-  reviewed: null, members: [], memberNext: null, versions: [], versionNext: null, advancedChanged: false };
+  reviewed: null, members: [], memberNext: null, versions: [], versionNext: null, advancedChanged: false, metadataId: 'original' };
+let schemaRefresh, running = false;
 const tokenKey = 'cube-workspace-token:' + location.origin;
 let token = location.hash.slice(1) || sessionStorage.getItem(tokenKey);
 if (token) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', location.pathname); }
@@ -20,11 +22,13 @@ async function api(path, body) {
   return result;
 }
 async function run(operation) {
-  const elements = [...document.querySelectorAll('button,input,select,textarea')].map(element => [element, element.disabled]);
-  elements.forEach(([element]) => { element.disabled = true; }); document.body.setAttribute('aria-busy', 'true');
+  if (running) return;
+  running = true;
+  const regions = [...document.querySelectorAll('main,header')];
+  regions.forEach(region => { region.inert = true; }); document.body.setAttribute('aria-busy', 'true');
   try { await operation(); }
   catch (error) { notice(error.message, true); }
-  finally { elements.forEach(([element, disabled]) => { element.disabled = disabled; }); document.body.removeAttribute('aria-busy'); }
+  finally { regions.forEach(region => { region.inert = false; }); document.body.removeAttribute('aria-busy'); running = false; }
 }
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -45,6 +49,7 @@ function field(labelText, value, update, { type = 'text', area = false, classNam
 function cache() {
   if (!state.bootstrap) return;
   sessionStorage.setItem('cube-plan:' + state.bootstrap.id, JSON.stringify({ plan: state.plan,
+    metadataId: state.metadataId,
     selected: state.selected, dirty: state.dirty, version: state.saved?.id ?? null, exported: state.exported?.id ?? null,
     reportDraft: state.advancedChanged ? { id: state.selected, json: $('report-json').value } : null }));
 }
@@ -58,9 +63,18 @@ function dirty() {
 }
 function current() { return state.plan?.reports?.[state.selected]; }
 function showTab(name) {
-  for (const id of ['compose', 'review', 'handoff']) $(id + '-panel').hidden = id !== name;
+  for (const id of ['compose', 'review', 'handoff', 'schema']) $(id + '-panel').hidden = id !== name;
   for (const tab of document.querySelectorAll('[data-tab]')) tab.classList.toggle('active', tab.dataset.tab === name);
   if (name === 'handoff') renderHandoff();
+}
+async function selectMetadata(metadataId) {
+  const source = await api('metadata/' + metadataId); state.metadataId = source.id;
+  $('source-counts').textContent = `${source.source.cubeCount} cubes / views · ${source.source.memberCount} public members`;
+  $('source-edition').textContent = source.label + ' · ' + source.id;
+  $('source-digest').textContent = 'Metadata SHA-256 ' + source.metadataSha256;
+  $('member-cube').replaceChildren(element('option', 'All cubes and views')); $('member-cube').firstChild.value = '';
+  for (const cube of source.cubes) { const option = element('option', cube.title + ' · ' + cube.name); option.value = cube.name; $('member-cube').append(option); }
+  state.members = []; state.memberNext = null;
 }
 function requireSaved() {
   if (!state.saved) throw new Error('Save or open a version first');
@@ -191,6 +205,7 @@ function renderMembers() {
 let searchSequence = 0;
 async function searchMembers(append = false) {
   const sequence = ++searchSequence, params = new URLSearchParams({ query: $('member-search').value,
+    metadataId: state.metadataId,
     kind: $('member-kind').value, cube: $('member-cube').value, offset: String(append ? state.memberNext ?? 0 : 0) });
   const page = await api('members?' + params);
   if (sequence !== searchSequence) return;
@@ -235,7 +250,7 @@ function renderReview() {
   }
 }
 async function review() {
-  applyPendingJson(); state.reviewed = await api('review', { plan: state.plan }); renderReview(); showTab('review');
+  applyPendingJson(); state.reviewed = await api('review', { plan: state.plan, metadataId: state.metadataId }); renderReview(); showTab('review');
   notice(`Compiled ${state.reviewed.reportCount} report${state.reviewed.reportCount === 1 ? '' : 's'} through the original Cube and seller functions.`);
 }
 async function refreshVersions(append = false) {
@@ -252,17 +267,18 @@ async function refreshVersions(append = false) {
 async function loadVersion(id, restoring = false) {
   if (!restoring && (state.dirty || state.advancedChanged) && !confirm('Open the saved version and replace this tab’s current edits?')) return;
   const saved = await api('versions/' + id); state.saved = saved; state.plan = clone(saved.plan);
+  await selectMetadata(saved.metadataId);
   state.selected = Object.keys(state.plan.reports)[0] ?? null; state.dirty = false; state.advancedChanged = false;
   state.reviewed = null; state.exported = null;
   const latest = [...saved.view.exports].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).at(-1), exportId = latest?.destination?.split('/').at(-1);
   if (exportId && /^package-[a-z0-9-]+$/.test(exportId)) {
     try { state.exported = await api('exports/' + exportId); } catch (error) { notice(error.message, true); }
   }
-  renderBasics(); renderReports(); renderEditor(); renderReview(); renderHandoff(); badge(); cache(); await refreshVersions();
+  renderBasics(); renderReports(); renderEditor(); renderReview(); renderHandoff(); badge(); cache(); await Promise.all([refreshVersions(), searchMembers()]);
   if (!restoring) notice('Opened the saved native merchant plan.');
 }
 async function saveVersion() {
-  applyPendingJson(); const saved = await api('versions', { plan: state.plan });
+  applyPendingJson(); const saved = await api('versions', { plan: state.plan, metadataId: state.metadataId });
   state.saved = saved; state.dirty = false; state.exported = null; badge(); cache(); await refreshVersions(); renderHandoff();
   notice(`Saved ${saved.view.reportCount} reports as a new immutable merchant version.`); showTab('handoff');
 }
@@ -339,7 +355,9 @@ async function prepareBuyer() {
 }
 
 for (const node of document.querySelectorAll('[data-tab]')) node.addEventListener('click', () => {
-  if (node.dataset.tab === 'review') run(review); else showTab(node.dataset.tab);
+  if (node.dataset.tab === 'review') run(review);
+  else if (node.dataset.tab === 'schema') run(async () => { showTab('schema'); await schemaRefresh.refresh(); });
+  else showTab(node.dataset.tab);
 });
 for (const id of ['review-top', 'review-again']) $(id).addEventListener('click', () => run(review));
 $('save-version').addEventListener('click', () => run(saveVersion));
@@ -437,7 +455,7 @@ $('plan-file').addEventListener('change', () => run(async () => {
   if (file.size > 1024 * 1024) throw new Error('Merchant plan exceeds 1 MiB');
   const value = JSON.parse(await file.text());
   if (value.schema !== 'stellar-forge.cube-merchant-plan.v1' || !value.reports || typeof value.reports !== 'object' || Array.isArray(value.reports)) throw new Error('Select an original Cube merchant-plan.v1 JSON file');
-  await api('review', { plan: value });
+  await api('review', { plan: value, metadataId: state.metadataId });
   state.plan = value; state.selected = Object.keys(value.reports)[0] ?? null; state.saved = null; state.exported = null;
   state.advancedChanged = false; dirty(); renderBasics(); renderReports(); renderEditor(); renderHandoff(); showTab('compose');
   $('plan-file').value = ''; notice('Imported the original plan. Review it against this workspace’s saved metadata.');
@@ -447,13 +465,15 @@ $('export-package').addEventListener('click', () => run(exportPackage));
 $('probe-report').addEventListener('click', () => run(probeReport));
 $('buyer-report').addEventListener('change', renderBuyerInputs);
 $('prepare-buyer').addEventListener('click', () => run(prepareBuyer));
+addEventListener('beforeunload', event => {
+  if (state.dirty || state.advancedChanged || schemaRefresh?.hasPending()) { event.preventDefault(); event.returnValue = ''; }
+});
 
 await run(async () => {
   if (!token) throw new Error('Open the complete browser URL printed by the workspace command.');
   state.bootstrap = await api('bootstrap'); state.plan = state.bootstrap.plan;
-  $('source-counts').textContent = `${state.bootstrap.source.cubeCount} cubes / views · ${state.bootstrap.source.memberCount} public members`;
-  $('source-path').textContent = state.bootstrap.directory; $('source-digest').textContent = 'Metadata SHA-256 ' + state.bootstrap.metadataSha256;
-  for (const cube of state.bootstrap.cubes) { const option = element('option', cube.title + ' · ' + cube.name); option.value = cube.name; $('member-cube').append(option); }
+  $('source-path').textContent = state.bootstrap.directory;
+  if (state.bootstrap.version) state.saved = await api('versions/' + state.bootstrap.version);
   let cached;
   try { cached = JSON.parse(sessionStorage.getItem('cube-plan:' + state.bootstrap.id) ?? 'null'); } catch {}
   if (cached?.plan?.schema === 'stellar-forge.cube-merchant-plan.v1') {
@@ -464,10 +484,16 @@ await run(async () => {
     }
     if (cached.exported) { try { state.exported = await api('exports/' + cached.exported); } catch {} }
   }
+  await selectMetadata(cached?.metadataId ?? state.saved?.metadataId ?? state.bootstrap.metadataId ?? 'original');
   if (!own(state.plan.reports, state.selected)) state.selected = Object.keys(state.plan.reports)[0] ?? null;
   renderBasics(); renderReports(); renderEditor(); renderReview(); renderHandoff(); badge();
   if (cached?.reportDraft?.id === state.selected && typeof cached.reportDraft.json === 'string') {
     $('report-json').value = cached.reportDraft.json; state.advancedChanged = true; badge();
   }
   await Promise.all([searchMembers(), refreshVersions()]);
+  schemaRefresh = attachSchemaRefresh({ api, run, notice, element, button, downloadButton,
+    selectedVersion: () => state.saved, openVersion: loadVersion,
+    canReplacePlan: () => !(state.dirty || state.advancedChanged) || confirm('Select the applied schema version and replace this tab’s unsaved report edits?'),
+    cacheId: state.bootstrap.id });
+  await schemaRefresh.restore();
 });

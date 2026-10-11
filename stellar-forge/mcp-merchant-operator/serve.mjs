@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, initializePricingMerchant, failure } from './config.mjs';
+import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, initializeS3WorkspaceMerchant, initializePricingMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
@@ -16,6 +16,7 @@ const HELP = `Starforge merchant MCP
   init-receiving --dir NEW_DIRECTORY --receiving RECEIVING_CONNECTION_JSON [--name NAME]
   init-python-workspaces --dir NEW_DIRECTORY --python-workspaces CONNECTION_JSON [--name NAME]
   init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json [--name NAME]
+  init-s3-workspaces --dir NEW_DIRECTORY --connection S3_WORKSPACE_CONNECTION.json [--name NAME]
   init --dir NEW_DIRECTORY --spec OPENAPI.json --selections SELECTIONS.json
        --bindings BINDINGS.json [--name NAME] [--seller-port PORT]
        [--handlers TRUSTED_MODULE.mjs | --upstreams UPSTREAMS.json]
@@ -46,6 +47,10 @@ const HELP = `Starforge merchant MCP
   download-python --url MCP_ENDPOINT --workspace ALIAS --export-id EXPORT_ID --out PRIVATE_DIRECTORY
        [--kind export|customer] [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES]
   reopen-python --dir DOWNLOADED_DIRECTORY --workspace-dir NEW_WORKSPACE
+  inspect-s3 --url MCP_ENDPOINT --workspace ALIAS --release-id RELEASE_ID
+       [--token-env ENVIRONMENT_NAME] [--release-digest REVIEWED_DIGEST]
+  download-s3 --url MCP_ENDPOINT --workspace ALIAS --release-id RELEASE_ID --out PRIVATE_DIRECTORY
+       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--release-digest REVIEWED_DIGEST]
 
 Every init source form also accepts --accounting ACCOUNTING_JSON to attach the
 original accounting workspaces and host-selected source aliases. See ACCOUNTING.md.
@@ -58,8 +63,12 @@ Supply the bearer token through MCP_ACCESS_TOKEN (or --token-env). It is never
 stored in the merchant configuration or printed. MCP_CLIENT_ORIGINS is an
 optional comma-separated allowlist. The listener binds only to 127.0.0.1.
 Every ordinary init form also accepts --receiving RECEIVING_CONNECTION_JSON
-and --python-workspaces CONNECTION_JSON. PYTHON_WORKSPACES.md explains original
+and --python-workspaces CONNECTION_JSON. Add --facilitators PROVIDERS_JSON for
+reviewed provider changes from a retained release; see the SF82 FACILITATORS.md guide.
+PYTHON_WORKSPACES.md explains original
 saved application editing, native preview/release and complete client handoff.
+S3_WORKSPACE.md covers original S3 object authoring, reviewed source pins,
+native merchant activation and exact original customer file delivery.
 Open receiving work explicitly with merchant_receiving_open. RECEIVING.md
 describes saved profiles, live reviews, captured replay and private exports.
 Download resumes its original verified files on another invocation. Reopen uses
@@ -92,7 +101,7 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
     const handler = createMcpToolHandler(operator, { bearerToken: environment[tokenEnv],
       allowedClientOrigins: String(environment.MCP_CLIENT_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean),
       serverName: 'starforge-merchant-operator', serverVersion: '0.1.0',
-      instructions: 'Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. For a configured fleet, inspect merchant_fleet_plan and start with its digest; stage/review/prepare/activate uses the original exact candidate and revision. Keep draining sessions until fleet_status reports canRetire, then retire their exact child instance. Rollback uses a fresh retained-revision review; stop/restart uses this process-owned managerId. After a lost response inspect current status before another change. Only this MCP process can stop its owned runtimes. For support observation, inspect host profiles and the current configuration revision, start explicitly and retain the owned watcher instance. Recover notifications using their original event IDs and attempt counts. With a configured support connection, inspect source aliases or incidents, import exact original captures, and reopen the original case before changing owner terms. Case writes use its current revision; workorder and export use that exact saved revision. Inspect support export status after an interrupted reply. For Python authoring, list declared aliases and explicitly open the original saved model. Read revision/declaration/source before editing with the expected head. Retain preview operationId and inspect the same original job after an interrupted reply. Stage a saved revision, review its native digest and current generation, and explicitly activate/start/restart. Only this model handle can cancel its previews or stop its managed seller. Customer exports reuse original saved files; portable exports retain source, native release history and clients. Resume chunk downloads with the same file SHA256 and offset. For receiving, inspect host source aliases, open the original saved workspace, and retain prepare/import/review IDs with exact source and plan digests. Read saved review status before retrying; replay uses the original capture. Close receiving to hand the same directory to its browser. Customer client export reads original metadata and retains its completion receipt. After a lost response, inspect merchant_client_export_status; legacy exports require explicit adoption of the inspected complete files digest. File delivery reads the original five payloads and receipt without running the seller or generated code. For accounting, list declared sources and explicitly open their original workspace. Review a recovery request before importing its retained preview, follow jobs and refresh the current revision, then capture and inspect the original report. File retrieval returns SHA-pinned chunks of the saved response or original report/archive; it never purchases again. Close the accounting workspace to release its original lease. For a publisher connection, list merchant_publishers and explicitly open its declared workspace; saved enabled refreshes resume. Inspect native source, plan, candidate and target before review/publication. Use original run UUIDs, review IDs and schedule revisions; reopen buyer files by the recorded handoff UUID. Close only the exact owned publisher instance. For pricing, inspect declared aliases and open the original SF97 model. Capture seller and native observations through merchant_pricing_source; use captureSha256 to page the same source. Save merchant pricing reviews with the current original revision and a stable requestId. Repricing starts from a saved version and complete ordered options: preview explicit atomic edits, retain its exact reviewSha256, and save with the current price-decision revision. Inspect the saved manifest after an interrupted reply. Stage a retained original API package by its decision and review hash, then use the original release digest/generation controls for activation and startup. Each alias reports whether its staging store is this operator release store. Download original files through SHA-pinned chunks. Payment verification and settlement remain in the original seller and configured facilitator.' });
+      instructions: 'For a retained facilitator change, use merchant_facilitators and merchant_facilitator_review, inspect every generated native payment alternative, then stage the exact reviewId. Its complete review remains in merchant_inspect/compare and must match at native startup. After a lost stage reply inspect the proposed release ID. Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. For a configured fleet, inspect merchant_fleet_plan and start with its digest; stage/review/prepare/activate uses the original exact candidate and revision. Keep draining sessions until fleet_status reports canRetire, then retire their exact child instance. Rollback uses a fresh retained-revision review; stop/restart uses this process-owned managerId. After a lost response inspect current status before another change. Only this MCP process can stop its owned runtimes. For support observation, inspect host profiles and the current configuration revision, start explicitly and retain the owned watcher instance. Recover notifications using their original event IDs and attempt counts. With a configured support connection, inspect source aliases or incidents, import exact original captures, and reopen the original case before changing owner terms. Case writes use its current revision; workorder and export use that exact saved revision. Inspect support export status after an interrupted reply. For Python authoring, list declared aliases and explicitly open the original saved model. Read revision/declaration/source before editing with the expected head. Retain preview operationId and inspect the same original job after an interrupted reply. Stage a saved revision, review its native digest and current generation, and explicitly activate/start/restart. Only this model handle can cancel its previews or stop its managed seller. Customer exports reuse original saved files; portable exports retain source, native release history and clients. Resume chunk downloads with the same file SHA256 and offset. For receiving, inspect host source aliases, open the original saved workspace, and retain prepare/import/review IDs with exact source and plan digests. Read saved review status before retrying; replay uses the original capture. Close receiving to hand the same directory to its browser. Customer client export reads original metadata and retains its completion receipt. After a lost response, inspect merchant_client_export_status; legacy exports require explicit adoption of the inspected complete files digest. File delivery reads the original five payloads and receipt without running the seller or generated code. For accounting, list declared sources and explicitly open their original workspace. Review a recovery request before importing its retained preview, follow jobs and refresh the current revision, then capture and inspect the original report. File retrieval returns SHA-pinned chunks of the saved response or original report/archive; it never purchases again. Close the accounting workspace to release its original lease. For a publisher connection, list merchant_publishers and explicitly open its declared workspace; saved enabled refreshes resume. Inspect native source, plan, candidate and target before review/publication. Use original run UUIDs, review IDs and schedule revisions; reopen buyer files by the recorded handoff UUID. Close only the exact owned publisher instance. For pricing, inspect declared aliases and open the original SF97 model. Capture seller and native observations through merchant_pricing_source; use captureSha256 to page the same source. Save merchant pricing reviews with the current original revision and a stable requestId. Repricing starts from a saved version and complete ordered options: preview explicit atomic edits, retain its exact reviewSha256, and save with the current price-decision revision. Inspect the saved manifest after an interrupted reply. Stage a retained original API package by its decision and review hash, then use the original release digest/generation controls for activation and startup. Each alias reports whether its staging store is this operator release store. Download original files through SHA-pinned chunks. Payment verification and settlement remain in the original seller and configured facilitator.' });
     server = createServer(handler);
     server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
     await new Promise((done, reject) => {
@@ -118,6 +127,36 @@ export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
   const [command, ...rest] = args;
   if (command === 'maintenance') return (await import('./accounting-maintenance-cli.mjs')).main(rest);
+  if (command === 'download-s3' || command === 'inspect-s3') {
+    const { downloadS3Customer, inspectS3Customer } = await import('./s3-workspace-download.mjs');
+    const download = command === 'download-s3';
+    const options = pairs(rest, ['--url', '--workspace', '--release-id', '--token-env', '--release-digest',
+      ...(download ? ['--out', '--chunk-bytes'] : [])]);
+    for (const key of ['--url', '--workspace', '--release-id', ...(download ? ['--out'] : [])])
+      if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
+    const rawChunk = options.get('--chunk-bytes');
+    if (rawChunk !== undefined && (!/^[1-9][0-9]{0,4}$/.test(rawChunk) || Number(rawChunk) > 65536))
+      throw failure('CONFIGURATION_ERROR', 'Use a whole chunk byte count from 1 to 65536.');
+    const controller = new AbortController();
+    const stop = () => controller.abort(failure('S3_DOWNLOAD_INTERRUPTED',
+      'Download interrupted. Run the same command to retain completed files and finish the customer inputs.'));
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    try {
+      const args = { url: options.get('--url'), workspace: options.get('--workspace'), releaseId: options.get('--release-id'),
+        tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', signal: controller.signal,
+        ...(options.has('--release-digest') ? { expectedReleaseDigest: options.get('--release-digest') } : {}) };
+      const result = download ? await downloadS3Customer({ ...args, directory: options.get('--out'),
+        ...(rawChunk === undefined ? {} : { chunkSize: Number(rawChunk) }),
+        onProgress: progress => process.stderr.write(JSON.stringify(progress) + '\n') }) : await inspectS3Customer(args);
+      process.stdout.write(JSON.stringify(result) + '\n'); return result;
+    } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
+  }
+  if (command === 'init-s3-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeS3WorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
   if (command === 'download-python' || command === 'reopen-python') {
     const { downloadPythonWorkspace, reopenDownloadedPythonWorkspace } = await import('./python-workspace-download.mjs');
     if (command === 'reopen-python') {
@@ -217,7 +256,7 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
   if (command === 'init') {
-    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--duckdb-package', '--duckdb-python', '--s3-package', '--mysql-package', '--clickhouse-package', '--jsonrpc-package', '--sqlite-package', '--sqlite-snapshot-max-bytes', '--sqlite-snapshot-timeout-ms', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--fleet-plan', '--accounting', '--support', '--receiving', '--python-workspaces', '--pricing', '--release-store'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
+    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--duckdb-package', '--duckdb-python', '--s3-package', '--mysql-package', '--clickhouse-package', '--jsonrpc-package', '--sqlite-package', '--sqlite-snapshot-max-bytes', '--sqlite-snapshot-timeout-ms', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--facilitators', '--fleet-plan', '--accounting', '--support', '--receiving', '--python-workspaces', '--pricing', '--release-store'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
     for (const key of options.has('--workspace') || options.has('--python') || options.has('--duckdb-package') || options.has('--s3-package') || options.has('--mysql-package') || options.has('--jsonrpc-package') || options.has('--sqlite-package') || options.has('--clickhouse-package') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
       if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Missing ' + key);
     const runtime = { port: portNumber(options.get('--seller-port'), 0) };
@@ -227,7 +266,7 @@ export async function main(args = process.argv.slice(2)) {
     if (options.has('--allow-loopback-upstream')) runtime.allowLoopbackUpstream = true;
     const result = await initializeMerchant({ directory: options.get('--dir'), spec: options.get('--spec'),
       selections: options.get('--selections'), bindings: options.get('--bindings'),
-      workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'), fleetPlan: options.get('--fleet-plan'), accounting: options.get('--accounting'), support: options.get('--support'), receiving: options.get('--receiving'), pythonWorkspaces: options.get('--python-workspaces'), pricing: options.get('--pricing'), releaseStore: options.get('--release-store'),
+      workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'), facilitators: options.get('--facilitators'), fleetPlan: options.get('--fleet-plan'), accounting: options.get('--accounting'), support: options.get('--support'), receiving: options.get('--receiving'), pythonWorkspaces: options.get('--python-workspaces'), pricing: options.get('--pricing'), releaseStore: options.get('--release-store'),
       python: options.get('--python'), pythonRoot: options.get('--python-root'),
       duckdbPackage: options.get('--duckdb-package'), duckdbPython: options.get('--duckdb-python'),
       s3Package: options.get('--s3-package'), mysqlPackage: options.get('--mysql-package'),
@@ -239,7 +278,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-publishers, serve, maintenance, inspect-support, inspect-client, download-support, download-client, reopen-support, download-python or reopen-python.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-s3-workspaces, init-publishers, serve, maintenance, inspect-support, inspect-client, inspect-s3, download-support, download-client, download-s3, reopen-support, download-python or reopen-python.');
   const options = pairs(rest, ['--config', '--port', '--token-env']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),

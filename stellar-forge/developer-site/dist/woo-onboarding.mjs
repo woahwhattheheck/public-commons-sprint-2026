@@ -135,8 +135,8 @@ configuration and outbox. Keep this packet for normal startup and recovery.
 ## 2. Install and configure the original Woo plugin
 
 The prepared directory contains wordpress-plugin/starforge-sf98-woo/ with
-the original receiver, checkout/admission, merchant-console PHP/JS/CSS and
-OPERATIONS.md. Copy that whole folder to the shop's wp-content/plugins using its ordinary deployment
+the original receiver, checkout/admission, merchant-console PHP/JS/CSS,
+merchant-operator.php, OPERATIONS.md and NATIVE_REVIEW.md. Copy that whole folder to the shop's wp-content/plugins using its ordinary deployment
 process. Alternatively zip that single folder and use WordPress Upload Plugin.
 Activate Starforge SF98 WooCommerce Merchant Bridge. PHP 8.0+, WooCommerce and
 real MySQL/MariaDB named locks are required. HPOS is supported.
@@ -360,13 +360,13 @@ node merchant.mjs plugin --toolkit "$TOOLKIT" --out /private/new-plugin-files
 \`\`\`
 
 The command copies the exact original receiver, checkout/admission files,
-merchant-console PHP/JS/CSS and OPERATIONS.md into the new output directory's
+merchant-console PHP/JS/CSS, merchant-operator.php and both operating guides into the new output directory's
 starforge-sf98-woo folder. It makes no network request or store change.
 Copy that folder to WordPress wp-content/plugins using the shop's normal
 deployment process, or zip the folder and use WordPress Upload Plugin.
 Activate Starforge SF98 WooCommerce Merchant Bridge. Open WooCommerce → Stellar
 merchant operations for the native order, attempt and release console. Retain
-all seven delivered files when upgrading an existing plugin.
+all nine delivered files when upgrading an existing plugin.
 
 The original plugin requires WooCommerce, PHP 8.0+ and actual MySQL/MariaDB
 named locks. Define SF98_WEBHOOK_SECRET as a PHP constant in wp-config.php from
