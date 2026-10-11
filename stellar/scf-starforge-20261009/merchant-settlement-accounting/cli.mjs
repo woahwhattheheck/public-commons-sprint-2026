@@ -28,28 +28,28 @@ function page(r) {
       ['Merchant USD quote',option.merchantQuoteUsd??'Unknown'],['Merchant variable cost USD',option.merchantVariableCostUsd??'Unknown'],
       ['Merchant price basis',option.merchantPriceBasis??'Unconfigured']];
     return '<section class="option" id="option-'+esc(option.optionId)+'"><h3>'+esc(option.method)+' '+esc(option.routeId)+'</h3><div class="muted">'+(option.configuredOption?'Configured payment option':'Unconfigured or unresolved native option')+'</div><dl class="terms">'+values.map(([label,value])=>'<dt>'+esc(label)+'</dt><dd><code>'+esc(value)+'</code></dd>').join('')+'</dl>'+
-      table([option],[['nativeSuccessEvents','Native events'],['officialTransferMatches','Official matches'],['missingTransferEvidence','Unmatched'],['webhookAccepted','Webhook accepted'],['legacyRecipientEvents','Recipient not recorded'],['unresolvedTermsEvents','Terms unresolved']])+
-      table([option],[['nativeAmountAtomic','Native reported atomic total'],['officialMatchedAmountAtomic','Official matched atomic total'],['verifiedQuotedValueUsd','Owner-quoted USD, verified-tier only']])+'</section>';
+      table([option],[['nativeSuccessEvents','Native events'],['recoveredSettlements','Recovered settlements'],['officialTransferMatches','Official matches'],['missingTransferEvidence','Unmatched'],['webhookAccepted','Webhook accepted'],['legacyRecipientEvents','Recipient not recorded'],['unresolvedTermsEvents','Terms unresolved']])+
+      table([option],[['nativeAmountAtomic','Native reported atomic total'],['recoveredAmountAtomic','Recovered atomic total'],['officialMatchedAmountAtomic','Official matched atomic total'],['verifiedQuotedValueUsd','Owner-quoted USD, verified-tier only']])+'</section>';
   }).join('');
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>Merchant Reconciliation</title><style>'+style+optionStyle+'</style></head><body><main><header><div class="kicker">Private owner operations · Stellar x402</div><h1>Merchant settlement reconciliation</h1><div class="muted">Original native SF98 events joined to original SF86 network-specific RPC proof files. Generated '+esc(r.createdAt)+'</div></header>'+
-  '<section class="stats"><div class="stat"><strong>'+t.nativeSuccessEvents+'</strong><span>Native seller successes</span></div><div class="stat"><strong>'+t.officialTransferMatches+'</strong><span>Official transfer matches</span></div><div class="stat"><strong>'+t.requiringReconciliation+'</strong><span>Require reconciliation</span></div><div class="stat"><strong>'+t.webhookAccepted+'</strong><span>Webhook acknowledgments, not fulfillment</span></div></section>'+
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>Merchant Reconciliation</title><style>'+style+optionStyle+'</style></head><body><main><header><div class="kicker">Private owner operations · Stellar x402</div><h1>Merchant settlement reconciliation</h1><div class="muted">Original native SF98 events and explicitly recovered SF31 outcomes joined to original SF86 network-specific RPC proof files. Generated '+esc(r.createdAt)+'</div></header>'+
+  '<section class="stats"><div class="stat"><strong>'+t.nativeSuccessEvents+'</strong><span>Native seller successes</span></div><div class="stat"><strong>'+(t.recoveredSettlements??0)+'</strong><span>Recovered original settlements</span></div><div class="stat"><strong>'+t.officialTransferMatches+'</strong><span>Official transfer matches</span></div><div class="stat"><strong>'+t.requiringReconciliation+'</strong><span>Require reconciliation</span></div></section>'+
   '<div class="foot"><b>Accounting boundary.</b> The official transfer column follows the original SF86 verifier and accounting engine for each recorded network. Eligible proof must match that network and the original payment option; each event retains its verification scope. A matched transfer for a seller-reported hash does not independently prove buyer entitlement, final accounting recognition, net revenue, tax, fiat conversion, refund status, invoices, or bank settlement. The merchant-supplied USD quote is NOT cash booked. Challenge-only HTTP 402 or 2xx are excluded entirely.</div>'+
-  '<h2>Route reconciliation</h2>'+table(routes,[['routeId','Route'],['method','Method'],['nativeSuccessEvents','Native successes'],['officialTransferMatches','RPC transfer matches'],['missingTransferEvidence','Unmatched'],['webhookAccepted','Webhook accepted'],['verifiedQuotedValueUsd','Owner-quoted USD, verified-tier only']])+
+  '<h2>Route reconciliation</h2>'+table(routes,[['routeId','Route'],['method','Method'],['nativeSuccessEvents','Native successes'],['recoveredSettlements','Recovered settlements'],['officialTransferMatches','RPC transfer matches'],['missingTransferEvidence','Unmatched'],['webhookAccepted','Webhook accepted'],['verifiedQuotedValueUsd','Owner-quoted USD, verified-tier only']])+
   '<h2>Payment option reconciliation</h2><p class="muted">Every configured option and every unresolved native option group appears below. Atomic totals stay within one route, method, network, asset, amount and recipient. Public-network events pending verification: '+t.publicNetworkPending+'. Legacy events matching multiple recipient options: '+t.ambiguousLegacyEvents+'. Events with unresolved merchant terms: '+t.unresolvedTermsEvents+'.</p>'+optionCards+
-  '<h2>Event ledger</h2>'+table(ledgerView,[['at','Timestamp UTC'],['eventId','Event'],['routeId','Route'],['method','Method'],['network','Network'],['amountAtomic','Atomic amount'],['optionId','Payment option'],['termsMatch','Terms mapping'],['transfer','Transfer evidence'],['delivery','Webhook state'],['quoted','USD quote, not revenue']])+
+  '<h2>Event ledger</h2><p class="muted">Each row retains its original source and time basis. A recovered row uses its import time and saved-response status; it does not imply a native SF98 capture or webhook acknowledgment.</p>'+table(ledgerView,[['at','Timestamp UTC'],['eventId','Event or recovery'],['origin','Original source'],['timeBasis','Time basis'],['routeId','Route'],['method','Method'],['network','Network'],['amountAtomic','Atomic amount'],['optionId','Payment option'],['termsMatch','Terms mapping'],['transfer','Transfer evidence'],['delivery','Delivery or saved response'],['quoted','USD quote, not revenue']])+
   '<h2>Operator exceptions ('+exceptions.length+')</h2>'+table(exceptionsView,[['eventId','Event'],['routeId','Route'],['method','Method'],['network','Network'],['optionId','Payment option'],['reason','Reason']])+
-  '<h2>Source lineage</h2><div class="panel"><p>Original SF98 events SHA-256: <code>'+esc(hashes.originalSf98EventsSha256??'NO_EVENT_FILE')+'</code></p><p>Original SF98 delivery journal SHA-256: <code>'+esc(hashes.originalSf98DeliveriesSha256??'NO_DELIVERY_FILE')+'</code></p><p>Owner terms SHA-256: <code>'+esc(hashes.termsSha256)+'</code></p><p>Original SF86 evidence result files: '+r.hashes.originalSf86ProofSha256.length+'; ignored/not-live: '+r.ignoredProofs.length+'; official proofs without counted matched event: '+r.unmatchedOfficialProofCount+'</p></div>'+
+  '<h2>Source lineage</h2><div class="panel"><p>Original SF98 events SHA-256: <code>'+esc(hashes.originalSf98EventsSha256??'NO_EVENT_FILE')+'</code></p><p>Original SF98 delivery journal SHA-256: <code>'+esc(hashes.originalSf98DeliveriesSha256??'NO_DELIVERY_FILE')+'</code></p><p>Owner terms SHA-256: <code>'+esc(hashes.termsSha256)+'</code></p><p>Original SF86 evidence result files: '+r.hashes.originalSf86ProofSha256.length+'; ignored/not-live: '+r.ignoredProofs.length+'; official proofs without counted matched event: '+r.unmatchedOfficialProofCount+'</p><p>Explicit recovered entries: '+(hashes.recoveredSettlementSha256?.length??0)+'; original recovered proof files: '+(hashes.recoveredSf86ProofSha256?.length??0)+'; retained response files: '+(t.recoveredResponseFiles??0)+'. Their exact entry, proof and response identities are retained in report.json and ledger.csv.</p></div>'+
   '<p class="muted"><small>No scripts, webfonts, tracking, remote requests, raw wallets, order references or purchaser details. Keep this directory private.</small></p></main></body></html>';
 }
 function argsOf(argv) {
-  if(argv.length!==8) throw new Error('Usage: node cli.mjs --outbox /private/sf98 --proof-dir /private/sf86-results --terms /private/prices.json --out /private/new-accounting-pack');
-  const valid=new Set(['--outbox','--proof-dir','--terms','--out']),opts={};
+  if(![8,10].includes(argv.length)) throw new Error('Usage: node cli.mjs --outbox /private/sf98 --proof-dir /private/sf86-results --terms /private/prices.json --out /private/new-accounting-pack [--recovered-dir /private/original-recovered-settlements]');
+  const valid=new Set(['--outbox','--proof-dir','--terms','--out','--recovered-dir']),opts={};
   for(let i=0;i<argv.length;i+=2){if(!valid.has(argv[i])||opts[argv[i]]!==undefined||!argv[i+1])throw new Error('INVALID_OR_DUPLICATE_CLI_OPTION');opts[argv[i]]=argv[i+1];}
-  if(Object.keys(opts).length!==4)throw new Error('MISSING_REQUIRED_OPTION');
+  if(!['--outbox','--proof-dir','--terms','--out'].every(key=>opts[key]))throw new Error('MISSING_REQUIRED_OPTION');
   for(const v of Object.values(opts)) if(!isAbsolute(v)||resolve(v)!==v||v==='/')throw new Error('ABSOLUTE_NORMALIZED_PATHS_REQUIRED');
-  if(new Set([opts['--outbox'],opts['--proof-dir'],opts['--out'],opts['--terms']]).size!==4)throw new Error('INPUT_OUTPUT_MUST_BE_DISTINCT');
-  for(const key of ['--outbox','--proof-dir']){
-    const root=opts[key];if(opts['--out'].startsWith(root+'/'))throw new Error('OUTPUT_CANNOT_BE_INSIDE_PRIVATE_INPUTS');
+  if(new Set(Object.values(opts)).size!==Object.keys(opts).length)throw new Error('INPUT_OUTPUT_MUST_BE_DISTINCT');
+  for(const key of ['--outbox','--proof-dir','--recovered-dir']){
+    const root=opts[key];if(root&&opts['--out'].startsWith(root+'/'))throw new Error('OUTPUT_CANNOT_BE_INSIDE_PRIVATE_INPUTS');
   }
   return opts;
 }
@@ -64,10 +64,12 @@ export async function writeOriginalAccountingPack(result,out){
   await mkdir(out,{recursive:false,mode:0o700});
   const info=await stat(out);if((info.mode&0o077)!==0)throw new Error('OUTPUT_DIRECTORY_NOT_PRIVATE');
   const fields=['eventId','at','routeId','method','network','amountAtomic','assetDigest','receiptFingerprint','transactionFingerprint','orderReferenceDigest','transferEvidenceDigest','ledger','matchingEventDigest','transfer','delivery','exception','merchantQuoteUsd','merchantVariableCostUsd','verifiedQuotedValueUsd',
-    'recipientDigest','termsRecipientDigest','optionId','termsMatch','termsCandidateCount','merchantPriceBasis','verificationScope'];
+    'recipientDigest','termsRecipientDigest','optionId','termsMatch','termsCandidateCount','merchantPriceBasis','verificationScope',
+    'origin','timeBasis','recoveryId','recoveredEntryDigest','recoveredResponseSha256','recoveredResponseBytes'];
   const optionFields=['optionId','routeId','method','network','assetDigest','amountAtomic','recipientDigest','configuredOption',
     'merchantQuoteUsd','merchantVariableCostUsd','merchantPriceBasis','nativeSuccessEvents','officialTransferMatches',
-    'missingTransferEvidence','webhookAccepted','legacyRecipientEvents','unresolvedTermsEvents','nativeAmountAtomic','officialMatchedAmountAtomic','verifiedQuotedValueUsd'];
+    'missingTransferEvidence','webhookAccepted','legacyRecipientEvents','unresolvedTermsEvents','nativeAmountAtomic','officialMatchedAmountAtomic','verifiedQuotedValueUsd',
+    'recoveredSettlements','recoveredAmountAtomic'];
   const files=new Map([
     ['report.json',JSON.stringify(result,null,2)+'\n'],
     ['ledger.csv',csv(result.ledger,fields)],
@@ -83,7 +85,7 @@ export async function writeOriginalAccountingPack(result,out){
 }
 export async function main(argv=process.argv.slice(2)){
   const a=argsOf(argv);
-  const result=await runOriginalAccounting({outboxDir:a['--outbox'],proofDir:a['--proof-dir'],termsFile:a['--terms']});
+  const result=await runOriginalAccounting({outboxDir:a['--outbox'],proofDir:a['--proof-dir'],termsFile:a['--terms'],...(a['--recovered-dir']?{recoveredDir:a['--recovered-dir']}:{})});
   const output=await writeOriginalAccountingPack(result,a['--out']);
   process.stdout.write(JSON.stringify(output)+'\n');
   return 0;

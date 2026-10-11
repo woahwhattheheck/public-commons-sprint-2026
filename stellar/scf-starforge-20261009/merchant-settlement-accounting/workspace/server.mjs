@@ -42,6 +42,14 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',...op
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
       let result;
       if(path==='/api/state'&&request.method==='GET')result=workspace.view();
+      else if(path==='/api/recovered/source'&&request.method==='POST')result=await workspace.connectRecovered(value);
+      else if(path==='/api/recovered/refresh'&&request.method==='POST')result=await workspace.refreshRecovered(value);
+      else if(path==='/api/recovered/review'&&request.method==='POST')result=await workspace.reviewRecovery(value);
+      else if(path==='/api/recovered/import'&&request.method==='POST')result=await workspace.importRecovery(value);
+      else if(parts.length===5&&parts[0]==='api'&&parts[1]==='recovered'&&parts[2]==='jobs'&&parts[4]==='cancel'&&request.method==='POST')result=await workspace.cancelRecovery(parts[3],value);
+      else if(parts.length===4&&parts[0]==='api'&&parts[1]==='recovered'&&parts[3]==='response'&&request.method==='GET'){
+        const file=await workspace.recoveredResponse(parts[2]);send(response,200,file.bytes,{type:file.type,name:file.name});return;
+      }
       else if(path==='/api/proofs'&&request.method==='POST')result=await workspace.importProof(value);
       else if(parts.length===4&&parts[0]==='api'&&parts[1]==='proofs'&&parts[3]==='selection'&&request.method==='POST')result=await workspace.selectProof(parts[2],value);
       else if(path==='/api/terms'&&request.method==='POST')result=await workspace.importTerms(value);
@@ -50,12 +58,15 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',...op
       else if(parts[0]==='api'&&parts[1]==='runs'&&parts[2]){
         const id=parts[2];
         if(parts.length===3&&request.method==='GET')result=await workspace.run(id);
-        else if(parts.length===4&&['ledger','options','exceptions','proofs'].includes(parts[3])&&request.method==='GET')result=await workspace.rows(id,parts[3],query);
+        else if(parts.length===4&&['ledger','options','exceptions','proofs','recovered'].includes(parts[3])&&request.method==='GET')result=await workspace.rows(id,parts[3],query);
         else if(parts.length===4&&parts[3]==='compare'&&request.method==='GET')result=await workspace.compare(id,query.baseline,query);
         else if(parts.length===6&&parts[3]==='exceptions'&&parts[5]==='review'&&request.method==='POST')result=await workspace.review(id,parts[4],value);
         else if(parts.length===4&&parts[3]==='exports'&&request.method==='POST')result=await workspace.exportRun(id,value);
         else if(parts.length===5&&parts[3]==='download'&&request.method==='GET'){
           const file=await workspace.download(id,parts[4]);send(response,200,file.bytes,{type:TYPES[file.name.slice(file.name.lastIndexOf('.'))]??'application/octet-stream',name:file.name});return;
+        }
+        else if(parts.length===6&&parts[3]==='recovered'&&parts[5]==='response'&&request.method==='GET'){
+          const file=await workspace.recoveredResponse(parts[4],id);send(response,200,file.bytes,{type:file.type,name:file.name});return;
         }
       }else if(parts.length===4&&parts[0]==='api'&&parts[1]==='exports'&&parts[3]==='download'&&request.method==='GET'){
         const file=await workspace.archive(parts[2]);send(response,200,file.bytes,{type:TYPES['.tar'],name:file.name});return;
@@ -81,16 +92,18 @@ Create:
 Reopen:
   node workspace/server.mjs --workspace /private/accounting-workspace
 
-Optional: --port 8446. Requires Node22+, Linux flock, and tar for review downloads.
+Optional: --port 8446 and --recovered-dir /private/original-recovered-settlements.
+Requires Node22+, Linux flock, and tar for review downloads.
 Uses the original accounting engine and report writer; all serving is loopback.
 `;
 export async function main(argv=process.argv.slice(2)){
   if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP);return;}
-  const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port']),values={};
+  const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port','--recovered-dir']),values={};
   for(let i=0;i<argv.length;i+=2){check(keys.has(argv[i])&&argv[i+1]&&!Object.hasOwn(values,argv[i]),'INVALID_ARGUMENTS',HELP);values[argv[i]]=argv[i+1];}
   check(values['--workspace'],'WORKSPACE_REQUIRED',HELP);
   const app=await startAccountingWorkspace({directory:resolve(values['--workspace']),
     outboxDir:values['--outbox']&&resolve(values['--outbox']),proofDir:values['--proof-dir']&&resolve(values['--proof-dir']),termsFile:values['--terms']&&resolve(values['--terms']),
+    recoveredDir:values['--recovered-dir']&&resolve(values['--recovered-dir']),
     port:values['--port']===undefined?8446:Number(values['--port'])});
   process.stdout.write('Merchant accounting workspace: '+app.url+'\n');
   const close=()=>app.close().then(()=>process.exit(0),error=>{console.error(error.message);process.exit(1);});
