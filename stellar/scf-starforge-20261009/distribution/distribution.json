@@ -54,7 +54,8 @@
     "stellar-forge/mcp-paid-agent",
     "stellar/scf-starforge-20261009/partners/getblock-stellar",
     "stellar/scf-starforge-20261009/merchant-settlement-accounting",
-    "stellar/scf-starforge-20261009/partners/allium-explorer-pilot"
+    "stellar/scf-starforge-20261009/partners/allium-explorer-pilot",
+    "stellar/scf_2026/sf47_budget_model"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -236,7 +237,8 @@
     "mcp-data": "stellar-forge/mcp-paid-agent/data-serve.mjs",
     "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
     "allium-explorer": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/cli.mjs",
-    "allium-workspace": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/cli.mjs"
+    "allium-workspace": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/cli.mjs",
+    "grant-workspace": "stellar/scf_2026/sf47_budget_model/workspace/launcher.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",

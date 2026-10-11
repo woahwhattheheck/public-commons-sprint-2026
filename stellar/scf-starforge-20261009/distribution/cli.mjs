@@ -109,6 +109,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
+  grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
 
 Optional feature groups: ${[...new Set([
   ...Object.keys(specification.featurePeers ?? {}),
