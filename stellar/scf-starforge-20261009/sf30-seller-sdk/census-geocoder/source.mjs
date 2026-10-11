@@ -169,5 +169,5 @@ export async function censusRequest(path, { method = 'GET', submitted, benchmark
     lastModified: response.headers.get('last-modified'), retryAfter: response.headers.get('retry-after'),
     startedAt, receivedAt: new Date().toISOString(), bytes: output.length, sha256: digest(output),
     submittedSha256: submitted ? digest(submitted) : null,
-    benchmark: benchmark === undefined ? null : String(benchmark), vintage: vintage === undefined ? null : String(vintage) } };
+    benchmark: benchmark == null ? null : String(benchmark), vintage: vintage == null ? null : String(vintage) } };
 }

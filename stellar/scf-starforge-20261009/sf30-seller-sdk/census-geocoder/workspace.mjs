@@ -140,14 +140,12 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     try { publisher = await publisherOpening; return publisher; } finally { publisherOpening = null; }
   }
   async function status({ includePublisher = true } = {}) {
-    ensureOpen();
     return { ...clone(state), directory, columns: clone(COLUMNS), coordinateMeaning: COORDINATE_MEANING,
       limits: { inputBytes: MAX_INPUT_BYTES, addresses: 10000, responseBytes: MAX_RESPONSE_BYTES },
       active: active ? { action: active.action, id: active.id, startedAt: active.startedAt } : null,
       publisher: includePublisher && publisher ? await publisher.state() : null };
   }
   async function inspectBatch(id, { attemptId, status: matchStatus = 'all', offset = 0, limit = 100 } = {}) {
-    ensureOpen();
     if (!Number.isInteger(offset) || offset < 0 || !Number.isInteger(limit) || limit < 1 || limit > 250 ||
         !['all', 'Match', 'No_Match', 'Tie', 'Exact', 'Non_Exact'].includes(matchStatus)) throw fault('GEOCODER_REVIEW_PAGE');
     const batch = selected('batches', id, 'batch'), chosen = attemptId ?? batch.currentAttempt ?? batch.attempts.at(-1)?.id;
@@ -402,7 +400,6 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     throw fault('GEOCODER_ACTION_UNKNOWN', 'Choose an available workspace action.', 404);
   }
   async function act(action, input = {}) {
-    ensureOpen();
     if (action === 'operation.cancel') {
       only(input, []); if (!active || !['discovery.benchmarks', 'discovery.vintages', 'batch.capture'].includes(active.action))
         throw fault('GEOCODER_CAPTURE_NOT_ACTIVE');
@@ -415,7 +412,6 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     return operation.promise;
   }
   async function download(kind, id) {
-    ensureOpen();
     if (kind.startsWith('publisher:')) return (await getPublisher()).readExport(kind.slice(10), id);
     if (['input', 'response'].includes(kind)) {
       const batch = selected('batches', id, 'batch');
