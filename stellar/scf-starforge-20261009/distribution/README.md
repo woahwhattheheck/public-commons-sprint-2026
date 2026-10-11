@@ -991,3 +991,47 @@ Generated code examples in template strings therefore remain ordinary text.
 Dynamic runtime families and browser assets are retained through the explicit
 component inventory; operator-selected application and signer modules remain
 external inputs. This parser adds no package dependency.
+
+## Receiving readiness and native operations
+
+Review every payment option in the original seller configuration before starting
+the merchant. This command binds the exact advertised SAC, network, recipient
+and amount to native contract state and the original account evaluator:
+
+```sh
+starforge merchant-readiness \
+  --config /private/merchant/seller-service.json \
+  --asset-map /private/merchant/sac-assets.json \
+  --out /private/merchant/receiving-review
+```
+
+Use the installed `source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/asset-map.example.json`
+as the starting map for the actual configured assets. The complete
+`MERCHANT_READINESS.md` in that directory explains RPC selection, the explicit
+`--https-proxy-env` option, exact option-level statuses, private output and
+reopening saved reports. The component uses the existing Stellar SDK; its
+accepted native journey and declared component dependency use version 16.3.1.
+
+Embedding applications can import `./merchant/readiness` for the original
+configuration review, `./merchant/recipient-readiness` for
+`createSacRecipientReviewer`, and `./merchant/assets` for the original SF16
+`AssetRegistry`. The reviewer evaluates the exact amount on every call and its
+`validate(terms, registry)` method returns the original SF16 accepted terms with
+the corresponding receiving result.
+
+The existing facilitator command also provides RPC readiness and shared signer
+ownership from the same native implementation:
+
+```sh
+starforge facilitator --probe --config /private/facilitator.json
+starforge facilitator --serve --config /private/facilitator.json --port 5101 \
+  --state /srv/starforge/facilitator-owners --require-ready
+```
+
+Use the same private state directory and operating-system user for cooperating
+processes on one Linux host. The original `OPERATIONS.md` under the installed
+`source/stellar/scf-starforge-20261009/native-facilitator` directory covers
+`flock`, key-free probing, `/readyz`, admission, graceful drain and retained
+ownership while already accepted SDK work completes. The existing
+`./facilitator` API retains its runtime entrypoints; `./facilitator/readiness`
+exposes the original RPC probe directly.
