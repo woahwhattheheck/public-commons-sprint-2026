@@ -329,7 +329,7 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
     if (req.method === 'POST' && url.pathname === '/api/prepare-withdrawal') {
       const input = await body(req); fields(input, ['sellerId', 'catalogKey', 'sourceURL', 'reason']);
       privateKeyGuard(input);
-      for (const key of Object.keys(input)) text(input[key], key === 'reason' ? 512 : 4096);
+      for (const key of Object.keys(input)) text(input[key], key === 'reason' ? 256 : 4096);
       return send(res, 200, await call('prepare-withdrawal', input));
     }
     fail('NOT_FOUND', 404);
