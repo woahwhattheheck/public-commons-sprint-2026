@@ -112,7 +112,7 @@ function compareUploadedSources(input) {
     postBefore: pb?.data, postAfter: pa?.data, postBeforeSha: pb?.sha, postAfterSha: pa?.sha});
 }
 
-function workorderFromSources(input) {
+export function workorderFromSources(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw new TypeError('Expected original capture files and owner terms');
   const fields = ['before', 'after', 'postBefore', 'postAfter', 'terms', 'supportText', 'inputs'];
