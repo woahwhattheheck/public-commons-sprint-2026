@@ -349,6 +349,13 @@ starforge merchant-mcp download-support \
   --out /private/received/recovered-incident
 ```
 
+Before delivery, `starforge merchant-mcp inspect-support --url MCP_ENDPOINT
+--export-id EXPORT_ID` returns `{manifest,manifestSha256}`. Pass the reviewed
+digest to `download-support --manifest-sha256 REVIEWED_DIGEST` to require that
+exact receipt before the client creates or changes local output. The embedding
+API is `inspectSupportExport({url,exportId,tokenEnv,environment,signal})`;
+`downloadSupportExport` accepts the optional `expectedManifestSha256`.
+
 The source equivalent begins with
 `node stellar-forge/mcp-merchant-operator/serve.mjs download-support` and takes
 the same options. The output's parent directory must already exist. The command
@@ -367,7 +374,8 @@ complete file SHA-256, byte count and offset. The default chunk is 196,608 bytes
 transport. Progress is a JSON line on stderr. The final JSON on stdout reports
 `COMPLETE`, the original case identity, exact manifest digest and completed file
 counts. `support-export.json` appears at the output root only after all original
-files have been checked and published there. The files remain directly usable by
+files have been checked and published there. Its publication is atomic, preserving
+resume after a stopped completion write. The files remain directly usable by
 the existing console and private business delivery workflow.
 
 ### Continue after a lost connection or process exit
@@ -407,7 +415,10 @@ Reopening verifies the saved files, invokes the original SF74 handoff importer
 and saves through its original case writer. Diagnostic-only exports reuse their
 original workspace and case metadata. A new local case UUID is recorded before
 the save, so an interrupted reply resumes the same import. Subsequent invocations
-reopen that local case and preserve later browser/MCP edits. The result identifies
+reopen that local case and preserve later browser/MCP edits. If the initial save
+completed before its download checkpoint and the local case was subsequently
+edited, reopening traverses the original case history, verifies its first imported
+revision and keeps the current edited head. The result identifies
 both the original exported case and the local case/revision; it does not overwrite
 an existing case using the remote UUID. One download retains one local case-directory
 binding, while the original files remain portable through the normal console
@@ -449,7 +460,8 @@ After `SUPPORT_READ_NOT_FOUND`, omit the old read ID and retain the original
 digests/offset. `merchant_support_export_file_release` takes the `exportId` and
 `readId` when the client deliberately abandons a read.
 
-Support and accounting share the original accounting reader implementation; each
+Support, accounting and customer SDK exports share the original accounting reader
+implementation; each
 native owner retains its own lifecycle. Each owner permits four concurrent
 verified snapshots totaling 256,000,000 bytes, retains up to 32 KiB in memory per
 small file, and uses an immediately unlinked private descriptor for larger files.
