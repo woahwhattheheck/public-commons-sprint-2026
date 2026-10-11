@@ -66,8 +66,10 @@ try {
  assert.equal(challenge.resource.url,request.url);assert.equal(challenge.accepts[0].amount,'10000');assert.equal(challenge.accepts[0].asset,request.expect.asset);
  const openapi=await (await fetch(seller.url+'/_seller/openapi.json')).json();assert.ok(openapi.paths['/search/flights'].post);
  const invalid=await fetch(seller.url+'/search/flights',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({country:'USA',minimum_price:0})});
- assert.equal(invalid.status,422);await invalid.text();
- stage('original-seller-http',{mode:seller.mode,status:response.status,invalidInputStatus:invalid.status,advertisedUrl:challenge.resource.url,openapiOperation:openapi.paths['/search/flights'].post.operationId,sourceStatus:seller.source.status()});
+ assert.equal(invalid.status,402);await invalid.text();
+ const invalidAdmission=seller.source.route('flights',{input:'body'}).admit({method:'POST',body:{country:'USA',minimum_price:0}});
+ assert.equal(invalidAdmission.status,422);
+ stage('original-seller-http',{mode:seller.mode,status:response.status,invalidUnsignedStatus:invalid.status,invalidSourceAdmission:invalidAdmission,advertisedUrl:challenge.resource.url,openapiOperation:openapi.paths['/search/flights'].post.operationId,sourceStatus:seller.source.status()});
  await seller.close();seller=null;
  await workspace.close();workspace=null;
  workspace=await createOpenSearchWorkspace({sourceFile,planFile,directory,env});
