@@ -45,6 +45,41 @@ Run the focused original-engine and browser-script flow check with:
 node --test test-scenario-flow.focused.mjs
 ```
 
+## Portable household scenario: real cross-session handoff
+
+The original browser now has **Download my scenario**, **Open a GridKind scenario
+file**, a human-readable preview and **Apply imported assumptions** directly
+below the editable household loads. This is not a new simulator or agent.
+
+1. On the original running page, choose/edit loads, constraints and three-band
+   hypothetical tariff. Download `gridkind-hypothetical-scenario.json`; a valid
+   unplanned draft is exportable, and a current proposal may contribute an
+   **illustrative, non-authoritative** baseline/optimized cost summary.
+2. On another browser/computer, open the JSON file locally. The first step only
+   reads and previews the scenario. The UI accepts one of the three original load
+   identities with correct labels, whole-hour windows and duration, the 24-hour
+   three-band tariff, finite costs and circuit power. It rejects duplicate loads,
+   unknown fields, bad bounds, receipt/approval fields and files over 40 KB.
+3. **Apply imported assumptions** invokes the original HTTP `cancel` first,
+   clearing server-held proposal, approval and simulated receipt. If that call
+   fails the imported inputs are not applied. The browser then updates the
+   *existing* editor, invalidates any tariff comparison and requires the
+   original `propose -> approve -> execute` sequence. Previously approved IDs
+   and receipts from either browser cannot be imported or used.
+
+This is a user-owned **hypothetical input artifact**, not a shared trusted
+authorization, tariff feed, utility bill, smart-device command or cross-account
+session transfer. No scenario is uploaded or transmitted to an external server.
+The browser creates and opens JSON locally; the original GridKind server still
+performs planning in the active browser session. The file carries explicit
+`kind='gridkind/hypothetical-scenario'` and `version=1`; plan ID in the optional
+illustrative summary is informative only, never passed to the original agent.
+
+To inspect the exact portable format or run the focused pure source exercise
+from the original `scenario-handoff.js` module, import
+`makeScenarioHandoff`, `readScenarioHandoff` and
+`validatePortableScenario` directly in Node >=22. No npm or hosted CI.
+
 ## Compare a changed tariff
 
 After planning, **What if the tariff changed?** compares the current optimized schedule
