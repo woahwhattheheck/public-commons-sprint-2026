@@ -8,6 +8,7 @@ import { readReleaseState, compareReleases, activateRelease, rollbackRelease,
 import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 import { releaseCatalogStatus, reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
 import { createReleaseDiscoveryConsole } from './release-discovery-console.mjs';
+import { reviewPostgresSelection, stageReviewedPostgresRelease } from './release-postgres-control.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 function failure(message, status = 400) { return Object.assign(new Error(message), { status }); }
@@ -34,6 +35,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
+    ['/postgres.mjs', 'postgres.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { bytes: await readFile(new URL('./release-ui/' + file, import.meta.url)), type }])));
   let hosts = new Set(), origins = new Set(), url, managed = null, busy = false, stopping = false;
@@ -93,7 +95,8 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
         send(200, { generation: state.generation, ...await compareReleases(root, target.searchParams.get('from') ?? state.active, target.searchParams.get('to')) }); return;
       }
       if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate', '/api/catalog/review', '/api/catalog/apply',
-        '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop'].includes(target.pathname) || target.search)
+        '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop',
+        '/api/postgres/review', '/api/postgres/stage'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
       if (!req.headers.origin || !origins.has(req.headers.origin)) throw failure('Same-origin operator action required.', 403);
       if (busy || stopping) throw failure('An operator action is already running. Refresh when it completes.', 409);
@@ -104,7 +107,12 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       actionDone = new Promise(done => { finishAction = done; });
       try {
         lastError = null;
-        if (target.pathname.startsWith('/api/discovery/')) {
+        if (target.pathname === '/api/postgres/review') {
+          send(200, await reviewPostgresSelection(input)); return;
+        } else if (target.pathname === '/api/postgres/stage') {
+          const result = await stageReviewedPostgresRelease(root, input);
+          busy = false; send(200, { ...result, status: await status() }); return;
+        } else if (target.pathname.startsWith('/api/discovery/')) {
           if (!discovery) throw failure('This console uses an existing external catalog connection.', 409);
           const action = target.pathname.slice('/api/discovery/'.length);
           const allowed = { review: ['id', 'sellerId', 'sourceURL'], create: ['reviewId'], start: [], stop: ['instanceId'] }[action];
