@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SF36 · Spend policy</title>
+<style>
+:root{color-scheme:light;--ink:#19382f;--muted:#62726b;--line:#d9e1d9;--paper:#fff;--canvas:#f4f6f0;--green:#215e48;--tint:#e8f2e8;--amber:#79571c;--red:#9b3737;--radius:16px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font-size:14px;line-height:1.5}button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:10px 14px;background:white;color:var(--ink);font-weight:650;transition:background .15s}button:hover:not(:disabled){background:#eff4eb}button:disabled{opacity:.48;cursor:default}.primary{color:white;background:var(--green);border-color:var(--green)}.primary:hover:not(:disabled){background:#174b37}.danger{color:var(--red)}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #9da944;outline-offset:3px}input,select{width:100%;border:1px solid #bfcfc2;border-radius:8px;padding:11px 12px;background:#fff;color:var(--ink)}input[readonly]{background:var(--canvas)}input.mono,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}input:disabled,select:disabled{color:var(--muted);background:#f5f6f3}label{font-weight:650;display:block;margin-bottom:6px}small,.muted{color:var(--muted)}small{display:block;font-size:12px;margin-top:5px}h1,h2,h3,p{margin:0}h1{font-size:clamp(30px,4vw,44px);line-height:1.1;letter-spacing:-1.5px;font-weight:650}h2{font-size:20px;letter-spacing:-.4px}h3{font-size:15px}a{color:var(--green)}header{background:#17372c;color:#eef5e9;padding:18px max(24px,calc((100vw - 1320px)/2));display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{font-size:15px;letter-spacing:.04em;font-weight:750}.brand b{display:inline-block;padding:3px 7px;background:#cfdf98;color:#17372c;border-radius:4px;margin-right:10px;font-size:12px}.header-note{font-size:12px;color:#c4d6c7}.wrap{max-width:1368px;margin:auto;padding:38px 24px 32px}.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:26px}.eyebrow{text-transform:uppercase;font-weight:700;letter-spacing:.12em;font-size:11px;color:var(--green);margin-bottom:9px}.hero p{max-width:650px;font-size:15px;color:var(--muted);margin-top:12px}.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;white-space:nowrap;font-size:12px;font-weight:650}.badge:before{content:"";width:7px;height:7px;border-radius:50%;background:#a2aca5}.badge.ok{color:var(--green);border-color:#b7d2b8;background:#ecf5e9}.badge.ok:before{background:var(--green)}.layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:22px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}.pad{padding:22px}.panel + .panel{margin-top:18px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.count{border-radius:6px;background:#eef2e9;font-size:12px;padding:2px 7px;color:var(--green);font-weight:750}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{font-size:12px}.source-name{font-weight:650;overflow-wrap:anywhere;margin:12px 0 4px}.source-hash{font-size:10px;overflow-wrap:anywhere;color:var(--muted);padding:9px 10px;border-radius:6px;background:var(--canvas);margin:10px 0}.full{width:100%}.input-file{font-size:12px;padding:8px}.source-divider{height:1px;background:var(--line);margin:16px 0}.asset-toolbar{padding:18px 20px 12px;display:flex;align-items:center;justify-content:space-between}.asset-list{list-style:none;padding:0 8px 8px;margin:0;max-height:420px;overflow:auto}.asset-list li{margin:4px 0}.asset-button{width:100%;text-align:left;display:block;padding:13px 12px;border-color:transparent;background:transparent}.asset-button[aria-current=true]{background:var(--tint);border-color:#bfd4ba}.asset-title{display:flex;justify-content:space-between;gap:8px;font-size:12px}.asset-id{display:block;font-size:11px;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace;opacity:.8}.asset-footer{padding:12px 20px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}.editor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:24px 26px;border-bottom:1px solid var(--line)}.editor-head p{font-size:12px;color:var(--muted);margin-top:4px}.editor-body{padding:26px}.row{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px}.limits-title{margin-top:30px;margin-bottom:16px}.limits-title p{color:var(--muted);font-size:12px;margin-top:4px}.limits{display:grid;grid-template-columns:1fr 1fr;gap:20px}.limit:last-child{grid-column:1/-1;max-width:calc(50% - 10px)}.limit label{font-size:13px}.limit input{font-family:ui-monospace,monospace;font-size:16px;letter-spacing:.02em}.field-note{padding:13px 15px;border:1px solid #dce7d6;border-radius:9px;background:#f6f9f2;font-size:12px;color:var(--muted);margin-top:24px}.empty{padding:70px 28px;text-align:center}.empty-symbol{font-size:22px;color:var(--green);width:52px;height:52px;display:grid;place-items:center;background:var(--tint);border-radius:15px;margin:0 auto 16px}.empty p{max-width:390px;margin:9px auto 20px;color:var(--muted)}.bottom-bar{border-top:1px solid var(--line);padding:20px 26px;display:flex;align-items:center;justify-content:space-between;gap:18px}.bottom-bar p{font-size:12px;color:var(--muted);max-width:355px}.status{padding:14px 16px;background:#edf2e8;border:1px solid #d7e1cf;border-radius:10px;margin-top:18px;color:#38533b;overflow-wrap:anywhere}.status.error{background:#fff0ee;border-color:#efc5bf;color:#89362c}.status.busy{background:#fff7e6;border-color:#e6d6a8;color:var(--amber)}.output{margin-top:18px}.output-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px}.output pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.7;max-height:330px;overflow:auto;padding:22px;margin:0;border-top:1px solid var(--line);background:#fafbf7}.output summary{padding:14px 24px;cursor:pointer;border-top:1px solid var(--line);font-size:12px}.output-sha{font-size:11px;overflow-wrap:anywhere;color:var(--muted);padding:0 24px 18px}footer{display:flex;justify-content:space-between;gap:24px;color:var(--muted);font-size:11px;padding:22px 0}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}
+@media(max-width:1000px){.layout{grid-template-columns:260px minmax(0,1fr)}.row{grid-template-columns:1fr}.limits{grid-template-columns:1fr}.limit:last-child{grid-column:auto;max-width:none}.bottom-bar{align-items:flex-start;flex-direction:column}.hero{align-items:flex-start}.editor-body{padding:22px}}
+@media(max-width:720px){header{padding:16px 20px}.header-note{display:none}.wrap{padding:26px 16px}.hero{display:block}.hero .badge{margin-top:18px}.layout{grid-template-columns:1fr}.asset-list{max-height:230px}.editor-head{padding:20px}.editor-body{padding:20px}.bottom-bar{padding:20px}.output-heading{align-items:flex-start;flex-direction:column}.source-hash{font-size:11px}footer{display:block}footer span{display:block;margin-top:8px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><b>SF36</b> Spend governor</div><div class="header-note">Local policy workbench · configuration only</div></header>
+<main class="wrap">
+ <div class="hero"><div><div class="eyebrow">Operator workspace</div><h1>Spend policy</h1><p>Set explicit limits for each network and asset. Use the original governor validator, then download a separate policy file for your workflow.</p></div><span class="badge" id="validationBadge">Not validated</span></div>
+ <div class="layout">
+  <aside aria-label="Policy source and assets">
+   <section class="panel pad"><div class="section-head"><h3>Policy source</h3><span class="count">01</span></div><label class="sr-only" for="sourceFile">Open an existing policy JSON file</label><input class="input-file" id="sourceFile" type="file" accept=".json,application/json"><p class="source-name" id="sourceName">New policy</p><small id="sourceInfo">No values are selected for you.</small><p class="source-hash" id="sourceHash" hidden></p><div class="actions"><button id="newPolicy" type="button">New policy</button><button id="saveDraft" type="button">Save draft</button></div><div class="source-divider"></div><label for="draftFile">Resume an editor draft</label><input class="input-file" id="draftFile" type="file" accept=".json,application/json"><small>Opening a source or draft replaces this workspace. Save your draft first to retain unfinished edits.</small></section>
+   <section class="panel"><div class="asset-toolbar"><h3>Assets <span class="count" id="assetCount">0</span></h3><button id="addAsset" type="button" aria-label="Add asset policy">+ Add</button></div><ul class="asset-list" id="assetList"></ul><p class="asset-footer" id="assetListNote">Choose an explicit network and asset for every set of limits.</p></section>
+  </aside>
+  <div>
+   <section class="panel" aria-label="Policy editor">
+    <div class="editor-head"><div><h2 id="editorTitle">Asset limits</h2><p id="editorSubtitle">Each asset has five independent limits.</p></div><button id="removeAsset" class="danger" type="button" hidden>Remove asset</button></div>
+    <div class="empty" id="emptyState"><div class="empty-symbol" aria-hidden="true">＋</div><h2>Start with an asset</h2><p>Open your existing policy or add an asset. Network, contract and every limit remain your explicit choices.</p><button id="emptyAdd" class="primary" type="button">Add asset policy</button></div>
+    <form id="assetForm" class="editor-body" hidden autocomplete="off">
+     <div class="row"><div><label for="network">Network</label><select id="network"><option value="">Choose a network</option></select></div><div><label for="asset">Asset contract</label><input id="asset" class="mono" type="text" spellcheck="false" autocomplete="off" maxlength="56" placeholder="Enter the exact contract identifier"><small>56-character Soroban SEP-41 contract identifier.</small></div></div>
+     <div class="limits-title"><h3>Limits in integer base units</h3><p>Enter positive whole-number strings. Use the asset's base unit; this editor does not convert token or currency amounts.</p></div>
+     <div class="limits" id="limitFields"></div>
+     <p class="field-note">All five limits are required. The supported ceiling is <span class="mono" id="ceiling">—</span> base units per limit. No limit is inferred from another.</p>
+    </form>
+    <div class="bottom-bar"><p>Validation checks policy configuration. It does not activate the file, check a balance, reserve funds, or authorize a purchase.</p><div class="actions"><button id="undoRemove" type="button" hidden>Undo removal</button><button id="validate" class="primary" type="button">Validate policy</button></div></div>
+   </section>
+   <div id="status" class="status" role="status" aria-live="polite">Loading the local workbench…</div>
+   <section id="output" class="panel output" hidden><div class="output-heading"><div><h3>Validated configuration</h3><p class="muted" id="outputInfo"></p></div><button id="download" class="primary" type="button">Download policy JSON</button></div><p class="output-sha" id="outputSha"></p><details><summary>Inspect the exact JSON to download</summary><pre id="policyPreview"></pre></details></section>
+  </div>
+ </div>
+ <footer><span>Original extra policy and asset metadata is retained when editing an existing source.</span><span>Source files and the governor ledger stay unchanged.</span></footer>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const FIELDS = ['max_single','max_total','max_per_utc_day','max_per_actor_utc_day','max_per_service_utc_day'];
+const LABELS = {
+ max_single:['Per purchase','Maximum reserved for one request.'],
+ max_total:['Total','Maximum across all governed purchases.'],
+ max_per_utc_day:['Per UTC day','Combined spending for a UTC calendar day.'],
+ max_per_actor_utc_day:['Per actor / UTC day','One actor’s spending during a UTC day.'],
+ max_per_service_utc_day:['Per service / UTC day','One service’s spending during a UTC day.']
+};
+const MAX_FILE = 1048576, MAX_DRAFT = 3 * MAX_FILE, MAX_ROWS = 256;
+const DRAFT_SCHEMA = 'sf36-policy-editor-draft/v1';
+let source = null, rows = [], selected = -1, result = null, busy = false, ready = false, removed = null, revision = 0;
+let networks = [], policySchema = '', maxAmount = '';
+function say(message, kind='') { $('status').textContent = message; $('status').className = 'status' + (kind ? ' ' + kind : ''); }
+function sameShape(row) { return row && typeof row === 'object' && !Array.isArray(row) && (row.sourceIndex === null || Number.isInteger(row.sourceIndex) && row.sourceIndex >= 0) && ['network','asset',...FIELDS].every(k => typeof row[k] === 'string'); }
+function copyRows(value) { return value.map(r => Object.fromEntries(['sourceIndex','network','asset',...FIELDS].map(k => [k,r[k]]))); }
+function setBusy(value) { busy=value; updateControls(); }
+function updateControls() {
+ document.querySelectorAll('button,input,select').forEach(el => {el.disabled = busy || !ready;});
+ $('validate').disabled = busy || !ready || !rows.length;
+ $('addAsset').disabled = $('emptyAdd').disabled = busy || !ready || rows.length >= MAX_ROWS;
+ $('download').disabled = busy || !result;
+ $('removeAsset').hidden = selected < 0;
+ $('undoRemove').hidden = !removed; $('undoRemove').disabled = busy || !ready || rows.length >= MAX_ROWS;
+ $('saveDraft').disabled = busy || !ready;
+}
+function invalidate(message) { revision++; result=null; $('output').hidden=true; $('policyPreview').textContent=''; $('validationBadge').textContent='Not validated'; $('validationBadge').className='badge'; if(message)say(message); updateControls(); }
+function shortAsset(asset) { return asset ? (asset.length>30 ? asset.slice(0,16)+'…'+asset.slice(-8) : asset) : 'Contract not entered'; }
+function renderList() {
+ $('assetCount').textContent=String(rows.length); $('assetList').replaceChildren();
+ rows.forEach((row,index) => { const li=document.createElement('li'), button=document.createElement('button'), title=document.createElement('span'), network=document.createElement('span'), ordinal=document.createElement('span'), asset=document.createElement('span'); button.type='button'; button.className='asset-button'; button.setAttribute('aria-current',String(index===selected)); button.setAttribute('aria-label','Edit asset '+(index+1)+': '+(row.network||'network not selected')+', '+(row.asset||'contract not entered')); title.className='asset-title'; network.textContent=row.network||'Network not selected'; ordinal.textContent=String(index+1).padStart(2,'0'); title.append(network,ordinal); asset.className='asset-id'; asset.textContent=shortAsset(row.asset); button.append(title,asset); button.addEventListener('click',()=>{if(busy)return;selected=index;render();}); li.append(button); $('assetList').append(li); });
+ $('assetListNote').textContent=rows.length ? rows.length+' of '+MAX_ROWS+' asset policies. Each network / contract pair must be unique.' : 'Choose an explicit network and asset for every set of limits.';
+}
+function render() {
+ renderList(); $('emptyState').hidden=selected>=0; $('assetForm').hidden=selected<0;
+ $('sourceName').textContent=source?.name||'New policy'; $('sourceInfo').textContent=source ? 'Editing a copy. Extra source metadata is retained.' : 'No values are selected for you.';
+ $('sourceHash').hidden=!source; $('sourceHash').textContent=source ? 'Original SHA-256 · '+source.sha256 : '';
+ $('editorTitle').textContent=selected<0 ? 'Asset limits' : 'Asset '+(selected+1)+' limits';
+ $('editorSubtitle').textContent=selected<0 ? 'Each asset has five independent limits.' : (rows[selected].sourceIndex===null ? 'New asset policy · all values are explicit.' : 'Original source row '+(rows[selected].sourceIndex+1)+' · extra metadata retained.');
+ if(selected>=0){ const row=rows[selected]; $('network').replaceChildren(); const empty=document.createElement('option');empty.value='';empty.textContent='Choose a network';$('network').append(empty); for(const n of networks){const opt=document.createElement('option');opt.value=n;opt.textContent=n;$('network').append(opt);} if(row.network && !networks.includes(row.network)){const opt=document.createElement('option');opt.value=row.network;opt.textContent=row.network+' (unsupported source value)';$('network').append(opt);} $('network').value=row.network; $('asset').value=row.asset; for(const key of FIELDS)$(key).value=row[key]; }
+ updateControls();
+}
+async function request(path, body) {
+ const response=await fetch(path, body===undefined ? {cache:'no-store'} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});
+ let data; try {data=await response.json();} catch {throw new Error('The service returned an unreadable response. Your current draft is retained.');}
+ if(!response.ok || data.valid===false && path==='/api/validate')throw new Error(data.error||'The local service could not complete this request.');
+ return data;
+}
+function assertLoaded(data) {
+ if(!data || !Array.isArray(data.rows) || data.rows.length>MAX_ROWS || !data.rows.every(sameShape) || !Array.isArray(data.networks) || !data.networks.every(x=>typeof x==='string') || typeof data.schema!=='string' || typeof data.maxAmount!=='string' || JSON.stringify(data.fields)!==JSON.stringify(FIELDS))throw new Error('The local service returned an unsupported policy editor contract.');
+ if(data.source!==null && (!data.source || typeof data.source.base64!=='string' || typeof data.source.name!=='string' || !/^[a-f0-9]{64}$/.test(data.source.sha256)))throw new Error('The local service did not identify the original source.');
+}
+function adopt(data, draftRows) {
+ assertLoaded(data); source=data.source;rows=copyRows(draftRows||data.rows);selected=rows.length?0:-1;networks=data.networks;policySchema=data.schema;maxAmount=data.maxAmount;removed=null;ready=true;$('ceiling').textContent=maxAmount;invalidate();render();
+}
+async function inAction(operation) {
+ if(busy)return;setBusy(true);
+ try {await operation();}catch(error){say(error.message||String(error),'error');}finally{setBusy(false);}
+}
+async function readFile(file,max=MAX_FILE) {
+ if(!file || file.size>max)throw new Error('Choose a file no larger than '+(max/MAX_FILE)+' MiB.');
+ const data=new Uint8Array(await file.arrayBuffer()); let binary='';
+ for(let i=0;i<data.length;i+=32768)binary+=String.fromCharCode(...data.subarray(i,i+32768));
+ return btoa(binary);
+}
+function downloadFile(name,text) { const blob=new Blob([text],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000); }
+function addRow() { if(busy||!ready||rows.length>=MAX_ROWS)return; rows.push({sourceIndex:null,network:'',asset:'',...Object.fromEntries(FIELDS.map(k=>[k,'']))});selected=rows.length-1;invalidate('New asset added. Enter the network, contract and all five limits.');render();$('network').focus(); }
+for(const key of FIELDS){const box=document.createElement('div');box.className='limit';const label=document.createElement('label');label.htmlFor=key;label.textContent=LABELS[key][0];const input=document.createElement('input');input.id=key;input.type='text';input.inputMode='numeric';input.autocomplete='off';input.spellcheck=false;input.placeholder='Enter base units';const hint=document.createElement('small');hint.id=key+'Hint';hint.textContent=LABELS[key][1];input.setAttribute('aria-describedby',hint.id);box.append(label,input,hint);$('limitFields').append(box);}
+for(const key of ['network','asset',...FIELDS])$(key).addEventListener(key==='network'?'change':'input',()=>{if(busy||selected<0)return;rows[selected][key]=$(key).value;invalidate('Draft changed. Validate again before downloading a policy.');if(key==='network'||key==='asset')renderList();updateControls();});
+$('assetForm').addEventListener('submit',event=>event.preventDefault());
+$('addAsset').addEventListener('click',addRow);$('emptyAdd').addEventListener('click',addRow);
+$('removeAsset').addEventListener('click',()=>{if(busy||selected<0)return;removed={row:copyRows([rows[selected]])[0],index:selected};rows.splice(selected,1);selected=Math.min(selected,rows.length-1);invalidate('Asset removed from this draft. Undo is available; the original source is unchanged.');render();});
+$('undoRemove').addEventListener('click',()=>{if(busy||!removed||rows.length>=MAX_ROWS)return;selected=Math.min(removed.index,rows.length);rows.splice(selected,0,removed.row);removed=null;invalidate('Removal undone. Other current edits are retained; validate before downloading.');render();});
+$('newPolicy').addEventListener('click',()=>{if(busy||!ready)return;source=null;rows=[];selected=-1;removed=null;$('sourceFile').value='';$('draftFile').value='';invalidate('New policy started. Add an asset and enter all values explicitly.');render();});
+$('sourceFile').addEventListener('change',()=>{const file=$('sourceFile').files[0];if(!file)return;inAction(async()=>{say('Reading the selected policy…','busy');const base64=await readFile(file);const data=await request('/api/load',{name:file.name,base64});adopt(data);say(data.validation?.valid ? 'Original policy loaded. Review or edit its values, then validate to create a separate download.' : 'Original policy loaded with invalid or missing fields: '+(data.validation?.error||'review every asset.'),'');}).finally(()=>{$('sourceFile').value='';});});
+$('saveDraft').addEventListener('click',()=>{if(busy||!ready)return;const draft={schema:DRAFT_SCHEMA,policySchema,source,rows:copyRows(rows)};downloadFile('sf36-policy-draft.json',JSON.stringify(draft,null,2)+'\n');say('Editor draft downloaded. It includes the original source and your current edits; it is not a governor policy.');});
+$('draftFile').addEventListener('change',()=>{const file=$('draftFile').files[0];if(!file)return;inAction(async()=>{
+ say('Opening the saved editor draft…','busy');if(file.size>MAX_DRAFT)throw new Error('Editor drafts must be no larger than 3 MiB.');
+ let draft;try{draft=JSON.parse(await file.text());}catch{throw new Error('This file is not a readable editor draft.');}
+ if(!draft||draft.schema!==DRAFT_SCHEMA||draft.policySchema!==policySchema||!Array.isArray(draft.rows)||draft.rows.length>MAX_ROWS||!draft.rows.every(sameShape))throw new Error('Unsupported editor draft. Open a saved SF36 policy editor draft.');
+ let loaded;
+ if(draft.source===null){loaded={schema:policySchema,networks,fields:FIELDS,maxAmount,source:null,rows:[],validation:{valid:false}};if(draft.rows.some(r=>r.sourceIndex!==null))throw new Error('A new-policy draft cannot refer to original source rows.');}
+ else {if(!draft.source||typeof draft.source.name!=='string'||typeof draft.source.base64!=='string'||draft.source.base64.length>Math.ceil(MAX_FILE/3)*4||!/^[a-f0-9]{64}$/.test(draft.source.sha256))throw new Error('Saved draft source is missing or too large.');loaded=await request('/api/load',{name:draft.source.name,base64:draft.source.base64});assertLoaded(loaded);if(loaded.source.sha256!==draft.source.sha256)throw new Error('Saved source bytes do not match the draft’s original hash.');}
+ const seen=new Set();for(const row of draft.rows){if(row.sourceIndex!==null){if(row.sourceIndex>=loaded.rows.length||seen.has(row.sourceIndex))throw new Error('Saved draft has an invalid or repeated original row reference.');seen.add(row.sourceIndex);}}
+ adopt(loaded,draft.rows);say('Draft resumed against its original source. Review the values and validate before downloading a policy.');
+ }).finally(()=>{$('draftFile').value='';});});
+$('validate').addEventListener('click',()=>inAction(async()=>{invalidate();const current=revision;say('Validating with the original spend governor…','busy');const data=await request('/api/validate',{base64:source?.base64??null,rows:copyRows(rows)});if(current!==revision)throw new Error('The draft changed during validation. Validate again.');if(data.valid!==true||typeof data.policyText!=='string'||!/^[a-f0-9]{64}$/.test(data.sha256)||data.sourceSha256!==(source?.sha256??null)||data.assetCount!==rows.length)throw new Error('The service returned an incomplete or mismatched validation result.');result=data;$('output').hidden=false;$('policyPreview').textContent=data.policyText;$('outputInfo').textContent=data.assetCount+' asset '+(data.assetCount===1?'policy':'policies')+' · exact strings retained';$('outputSha').textContent='Download SHA-256 · '+data.sha256;$('validationBadge').textContent='Configuration valid';$('validationBadge').className='badge ok';say('Configuration accepted by the original validator. Download it for your existing operator workflow. Nothing has been activated.');}));
+$('download').addEventListener('click',()=>{if(busy||!result)return;downloadFile('policy-reviewed.json',result.policyText);say('Validated policy downloaded. Use this separate file in your existing operator workflow when ready.');});
+inAction(async()=>{const data=await request('/api/bootstrap');adopt(data);say(source ? (data.validation?.valid ? 'Original policy loaded. Review values and validate to prepare a download.' : 'Source loaded with fields needing attention: '+(data.validation?.error||'review every asset.')) : 'Start a new policy or open your existing JSON. Every network, asset and limit is your explicit choice.');});
+</script>
+</body>
+</html>
