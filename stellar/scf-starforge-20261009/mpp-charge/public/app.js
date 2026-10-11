@@ -1,7 +1,7 @@
 const $=selector=>document.querySelector(selector);
 const token=location.hash.slice(1)||sessionStorage.getItem('mpp-session');
 if(location.hash){sessionStorage.setItem('mpp-session',token);history.replaceState(null,'',location.pathname);}
-let state,loaded=false,busy=false;
+let state,loaded=false,busy=false,customerDocument=null,customerVersion=null,customerLoading=false;
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const notify=text=>{$('#notice').textContent=text;};
 async function api(path,body) {
@@ -62,6 +62,45 @@ function render() {
   $('#merchant-runtime').textContent=state.merchant?'Running on 127.0.0.1:'+state.merchant.port+' · profile '+cut(state.merchant.profileId):'Merchant listener stopped';
   $('#merchant-start').disabled=!!state.merchant;$('#merchant-stop').disabled=!state.merchant;
   $('#prepare').disabled=!state.profiles.buyer;
+  const selectedCustomer=state.merchant?.profileId??state.metadata.merchant;
+  for(const selector of ['#customer-package','#customer-contract','#customer-openapi'])$(selector).disabled=!selectedCustomer;
+  if(selectedCustomer!==customerVersion && !customerLoading)loadCustomer().catch(error=>notify(error.message));
+}
+async function loadCustomer() {
+  if(customerLoading)return;customerLoading=true;
+  try {
+    if(!state.profiles.merchant) {
+      customerDocument=null;customerVersion=null;
+      $('#customer-status').textContent='Save a merchant configuration to prepare its customer package.';
+      renderTable('#customer-offers',[],()=>[]);return;
+    }
+    customerDocument=await api('/api/customer');customerVersion=customerDocument.contract.profileId;
+    const contract=customerDocument.contract;
+    $('#customer-status').textContent=(customerDocument.profileSource==='active'?'Active merchant':'Saved merchant')+
+      ' · '+contract.offers.length+' offers · contract '+cut(contract.sha256);
+    $('#customer-origin').textContent=contract.title+' · '+contract.origin;
+    $('#customer-public-contract').href=customerDocument.publicContract;
+    $('#customer-public-openapi').href=customerDocument.publicOpenAPI;
+    renderTable('#customer-offers',contract.offers,offer=>{
+      const payment=offer.payment,digits=payment.amountAtomic.padStart(payment.decimals+1,'0');
+      const amount=payment.decimals?digits.slice(0,-payment.decimals)+'.'+digits.slice(-payment.decimals):digits;
+      return [offer.id,offer.method,offer.path,payment.network,amount+' ('+payment.amountAtomic+' atomic)',
+        button('Inspect',()=>{$('#customer-offer-details').textContent=JSON.stringify(offer,null,2);
+          $('#customer-offer-details').parentElement.open=true;})];
+    });
+  } finally {customerLoading=false;}
+}
+async function downloadCustomer(kind) {
+  if(!customerDocument)await loadCustomer();
+  if(!customerDocument)throw new Error('Save a merchant configuration first.');
+  const contract=customerDocument.contract;
+  const response=await fetch('/api/customer/'+kind+'?profileId='+encodeURIComponent(contract.profileId),
+    {headers:{authorization:'Bearer '+token}});
+  if(!response.ok)throw new Error((await response.json()).error);
+  const url=URL.createObjectURL(await response.blob()),link=node('a');
+  link.href=url;link.download='mpp-'+kind+'-'+contract.sha256.slice(0,12)+'.json';link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  notify(kind==='package'?'Customer package downloaded with its contract, clients and guide.':'Customer document downloaded.');
 }
 function field(name,label,value='',type='text') {
   const wrap=node('label',label),input=node('input');input.name=name;input.type=type;input.value=value;wrap.append(input);return wrap;
@@ -134,4 +173,6 @@ $('#merchant-start').addEventListener('click',()=>action('/api/merchant/start',{
 $('#merchant-stop').addEventListener('click',()=>action('/api/merchant/stop',{}));
 $('#prepare').addEventListener('click',()=>action('/api/purchase/prepare',{}));
 $('#refresh').addEventListener('click',refresh);
+$('#customer-refresh').addEventListener('click',()=>loadCustomer().catch(error=>notify(error.message)));
+for(const kind of ['package','contract','openapi'])$('#customer-'+kind).addEventListener('click',()=>downloadCustomer(kind).catch(error=>notify(error.message)));
 await refresh();setInterval(()=>{if(!document.hidden)refresh();},3000);

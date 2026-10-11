@@ -314,13 +314,13 @@ function renderResourceRetry(edition){
   if(edition.state==='RETRYING')return element('p',{class:'small'},'A reviewed map retry is in progress. Recover this edition to read its saved outcome.');
   if(resource?.state!=='FAILED')return null;
   const section=element('section',{class:'form-section'},element('h3',{},'Retry a failed map request'));
-  const failure=resource?.providerError?.message||resource?.error||'The map request did not return an available image.';
+  const failure=resource?.providerError?.message||resource?.providerDiagnostic?.text||resource?.error||'The map request did not return an available image.';
   section.append(element('p',{class:'small'},failure+(resource?.status?' · HTTP '+resource.status:'')),
     element('p',{class:'help'},'Review one map request for this existing edition. The saved Timeline and staff decisions stay attached to their original source.'));
-  const format=select('tileTimeFormat',[['original','Original timestamp spelling'],['whole-seconds','Equivalent whole-second timestamp']],state.retryReview?.format||state.retryTimeFormat||'whole-seconds',{onChange:event=>{state.retryTimeFormat=event.target.value;state.retryReview=null;render();}});
-  section.append(field('Map timestamp format',format,'The equivalent option removes only an all-zero fractional second. The requested instant, map point and layer remain the same.'));
+  const format=select('tileTimeFormat',[['iso-path','Provider ISO timestamp'],['original','Exact saved request'],['whole-seconds','Legacy whole-second spelling']],state.retryReview?.format||state.retryTimeFormat||'iso-path',{onChange:event=>{state.retryTimeFormat=event.target.value;state.retryReview=null;render();}});
+  section.append(field('Map timestamp format',format,'Provider format keeps the requested instant, map point and layer. Original reuses the exact saved request; the legacy option removes an all-zero fractional second.'));
   section.append(element('div',{class:'toolbar spaced'},button('Review failed map request',async()=>{
-    const editionId=edition.id,body=format.value==='whole-seconds'?{tileTimeFormat:'whole-seconds'}:{};
+    const editionId=edition.id,body={tileTimeFormat:format.value};
     const review=await mutate('/api/editions/'+encodeURIComponent(editionId)+'/resources/tile/review',body,{label:'Reviewing the single saved map request…'});
     state.retryReview={editionId,format:format.value,review};state.detail=await api('/api/editions/'+encodeURIComponent(editionId));state.workspace=await api('/api/workspace');render();
   },{mutate:true})));
