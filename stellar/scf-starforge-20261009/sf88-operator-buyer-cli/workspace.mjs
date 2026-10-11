@@ -237,18 +237,24 @@ export async function initializeWorkspace(args, { environment = process.env } = 
 }
 
 /** Review never opens the operator-key file or loads the signer/SDK. */
-export async function openWorkspace(args, { execute = false, accounting = false, environment = process.env } = {}) {
+export async function openWorkspace(args, { execute = false, accounting = false,
+  environment = process.env, storageDirectory } = {}) {
   need(typeof execute === 'boolean' && typeof accounting === 'boolean' && !(execute && accounting),
     'WORKSPACE_ONE_OPERATION_MODE_REQUIRED');
   need(process.platform !== 'win32', 'WORKSPACE_POSIX_OPERATOR_REQUIRED');
   const opt = options(args, ['--dir']);
   const directory = resolve(abs(opt['--dir'], 'WORKSPACE_PATH_NOT_ABSOLUTE'));
-  await privateDirectory(directory);
-  const manifest = await privateJson(join(directory, 'workspace.json'));
+  // Recovery reviews an authenticated staged copy against its ORIGINAL paths.
+  // It never relocates those identities or permits execution from staged bytes.
+  need(storageDirectory===undefined||!execute,'WORKSPACE_STAGED_REVIEW_ONLY');
+  const storage=storageDirectory===undefined?directory:
+    resolve(abs(storageDirectory,'WORKSPACE_PATH_NOT_ABSOLUTE'));
+  await privateDirectory(storage);
+  const manifest = await privateJson(join(storage, 'workspace.json'));
   need(manifest.schema === SCHEMA && manifest.directory === directory &&
     manifest.config === 'operator.json' && manifest.keys === 'operator-keys.json',
     'WORKSPACE_MANIFEST_INVALID');
-  const configPath = join(directory, manifest.config);
+  const configPath = join(storage, manifest.config);
   await privateJson(configPath);
   const cfg = await config(configPath);
   const {op, owner, transport} = execution(cfg);
@@ -266,7 +272,7 @@ export async function openWorkspace(args, { execute = false, accounting = false,
     BigInt(amount(op.expect.maxAtomic, 'WORKSPACE_SINGLE_AMOUNT_INVALID')) <=
       BigInt(amount(manifest.signer.maxAtomic, 'WORKSPACE_SIGNER_CAP_INVALID')),
     'WORKSPACE_SIGNER_BINDING_CHANGED');
-  await privateDirectory(cfg.evidenceDir);
+  await privateDirectory(join(storage,'evidence'));
   let operatorEnvironment;
   if (execute || accounting) {
     // Surface missing local setup before an inbox attempt or SF36 reservation.
@@ -277,7 +283,7 @@ export async function openWorkspace(args, { execute = false, accounting = false,
       const {checkNativeSignerPrerequisites} = await import('./native-signer.mjs');
       await checkNativeSignerPrerequisites({...manifest.signer, environment});
     }
-    const stored = await privateJson(join(directory, manifest.keys), 16384);
+    const stored = await privateJson(join(storage, manifest.keys), 16384);
     need(stored.schema === SCHEMA && schemaObject(stored.keys) &&
       Object.keys(stored.keys).length === KEY_NAMES.length, 'WORKSPACE_KEY_FILE_INVALID');
     // SF81 accepts only these three values; do not copy unrelated credentials.
