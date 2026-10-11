@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Valyu Research</title><link rel="stylesheet" href="/app.css"><script defer src="/app.js"></script></head>
+<body>
+<header><div class="brand"><span class="mark" aria-hidden="true">V</span><div><strong>Valyu Research</strong><span class="muted">Stellar Forge operator workspace</span></div></div><button id="refresh" type="button">Refresh</button></header>
+<div id="status" role="status" aria-live="polite">Opening workspace…</div>
+<nav aria-label="Workspace"><button data-tab="queries" class="active">Saved queries</button><button data-tab="editions">Research editions</button><button data-tab="compare">Compare editions</button></nav>
+<main>
+<section id="queries" class="tab">
+<div class="workspace-grid">
+<aside><div class="section-title"><h1>Queries</h1><button id="new-query" class="primary">New query</button></div><div id="query-list"></div><div class="paging"><button id="queries-prev">Previous</button><span id="queries-page"></span><button id="queries-next">Next</button></div></aside>
+<div id="query-main">
+<form id="query-form" class="panel">
+<div class="section-title"><h2 id="form-title">New research query</h2><span id="edit-state" class="badge">Draft</span></div>
+<label>Title<input id="title" maxlength="200" required placeholder="A short name for this research"></label>
+<label>Research question<textarea id="question" rows="3" maxlength="16000" required placeholder="What do you want to investigate?"></textarea></label>
+<div class="form-grid"><label>Search sources<select id="search-type"><option value="all">All permitted sources</option><option value="web">Web</option><option value="news">News</option><option value="proprietary">Proprietary</option></select></label><label>Maximum results<input id="max-results" type="number" min="1" max="100" value="5" required></label><label>Provider CPM allowance<input id="max-price" type="number" min="0" step="any" placeholder="Merchant default"></label><label>Response length<select id="response-length"><option value="short">Short</option><option value="medium">Medium</option><option value="large">Large</option><option value="max">Maximum</option></select></label></div>
+<div class="form-grid"><label>Include sources<textarea id="include-sources" rows="2" placeholder="One source identifier per line"></textarea></label><label>Exclude sources<textarea id="exclude-sources" rows="2" placeholder="One source identifier per line"></textarea></label><label>Start date<input id="start-date" type="text" placeholder="YYYY-MM-DD or ISO timestamp"></label><label>End date<input id="end-date" type="text" placeholder="YYYY-MM-DD or ISO timestamp"></label></div>
+<details><summary>Additional request options</summary><label>Provider options (JSON object)<textarea id="extra-options" rows="6" class="code">{}</textarea></label><p class="muted">Additional provider options join the fields above. The exact normalized request appears after saving.</p></details>
+<div class="actions"><button class="primary" type="submit">Save query</button><button id="reset-query" type="button">Clear</button></div>
+</form>
+<div id="query-detail" hidden></div>
+</div></div>
+</section>
+<section id="editions" class="tab" hidden>
+<div class="section-title"><div><h1>Research editions</h1><p class="muted">Frozen source deliveries and your saved research notes.</p></div><label class="file-button">Import edition<input type="file" id="import-edition" accept=".json,application/json"></label></div>
+<div id="edition-list" class="panel"></div><div class="paging"><button id="editions-prev">Previous</button><span id="editions-page"></span><button id="editions-next">Next</button></div><div id="edition-detail"></div>
+</section>
+<section id="compare" class="tab" hidden>
+<div class="section-title"><div><h1>Compare research editions</h1><p class="muted">Review source, content and usage changes between two saved deliveries.</p></div></div>
+<form id="compare-form" class="panel"><div class="form-grid"><label>Earlier edition ID<input id="compare-left" required placeholder="Choose an edition or paste its ID"></label><label>Later edition ID<input id="compare-right" required placeholder="Choose an edition or paste its ID"></label></div><button class="primary">Compare editions</button></form><div id="comparison"></div>
+</section>
+</main>
+<footer>Original SF30 merchant · SF88 buyer · private research state</footer>
+</body></html>
