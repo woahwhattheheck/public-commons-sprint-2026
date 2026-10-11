@@ -36,9 +36,39 @@ The browser offers a clearly labeled hard category cap (1, 2, 3) or the backward
 
 The demo fixture is deliberately synthetic; it cannot be used as proof of integration, model accuracy or live provider output. Live behavior needs an authenticated key, authorized Qloo quota and direct end-to-end rehearsal before an external submission. Qloo API failures fail closed rather than silently replacing actual data with fixture results.
 
+## Organizer review desk
+
+After designing a lineup, review every original recommended and alternative row,
+including its source ID, position, observed category, signal kind and rationale.
+Mark rows **Priority**, **Undecided** or **Defer**, and record an organizer note
+of up to 1,000 characters. These are human planning decisions; they do not change
+the ranking, imply vendor consent or availability, contact anyone, or book anything.
+Filter the review by decision to work through the list.
+
+The review belongs to the exact submitted brief and returned plan. Changing any
+brief field marks it stale and disables annotation and export. **Restore saved
+brief** restores those request fields locally so the same notes can be reviewed
+and downloaded; it makes no API request. Designing another lineup is a deliberate
+request: a successful result replaces the old review, while a failed request
+retains it. There is no automatic provider retry.
+
+Download JSON to retain the complete original plan, submitted brief, and separate
+organizer decisions. Download CSV for an organizer worksheet with source/rationale
+and notes on each row; spreadsheet formula prefixes are neutralized and fields
+are quoted. Both downloads include every candidate row, even rows hidden by the
+current filter. Reviews bind each annotation to its original group, position and
+source ID, preserving aliases without changing provider identities. The source
+label, including synthetic-only status, remains in both formats.
+
+This desk holds one review in tab memory, not a server database. Download your
+work before a new successful plan or page reload; this version does not import
+saved reviews. Notes remain local until you explicitly share a downloaded file.
+JSON and CSV are planning records, not contact, booking or live integration receipts.
+
 ## Interfaces and guardrails
 
 - `GET /` — responsive zero-dependency UI.
+- `GET /review.js`, `GET /style.css` — local review desk assets; no external browser dependencies.
 - `GET /api/health` — readiness and *boolean* key configuration; never emits the key.
 - `POST /api/plan` — validated JSON `location`, `seeds`, `slots`, `mode`, `source`, `exclusions`, optional numeric `categoryCap`; returns lineup, alternatives, signal provenance, any honest shortfall and warnings.
 - Server caps request size (8 KiB), up to six sequential upstream GET calls per live plan (five `/search`, one `/v2/insights`), each with a 12-second timeout and 250 KiB bounded response, and only accepts the hackathon API origin. Browser receives normalized output, never credentials.
