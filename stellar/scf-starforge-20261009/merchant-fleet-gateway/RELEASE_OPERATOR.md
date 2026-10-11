@@ -68,6 +68,10 @@ Plan fields:
 | `packages.NAME.duckdbPython` | Optional executable with DuckDB installed; a pathful relative value resolves from this plan |
 | `packages.NAME.s3Package` | Original configured S3 merchant directory with its source, service and object selection |
 | `packages.NAME.jsonrpcPackage` | Original prepared Stellar RPC package with its declared methods, networks and provider references |
+| `packages.NAME.sqlitePackage` | Original six-file SQLite workbench export referencing the database to snapshot at staging |
+| `packages.NAME.sqliteSnapshotMaxBytes` | Optional SQLite capture ceiling, 4096–1099511627776 bytes; default 1073741824 |
+| `packages.NAME.sqliteSnapshotTimeoutMs` | Optional SQLite capture deadline, 100–3600000 milliseconds; default 120000 |
+| `packages.NAME.mysqlPackage` | Original prepared MySQL or MariaDB package with its named queries and environment references |
 | `packages.NAME.runtime` | Original facilitator/local-upstream runtime choices for future staging |
 | `limits` | Original gateway admission, body, response and timeout limits for this merchant |
 
@@ -76,9 +80,11 @@ the actual store directories. Browser actions supply only registered tenant, slo
 and package names plus an original release ID. They never supply a path, handler
 module, executable, port override, credential or PID.
 
-Each package chooses exactly one of `workspace`, `python`, `duckdbPackage`, `s3Package`, or `jsonrpcPackage`.
+Each package chooses exactly one of `workspace`, `python`, `duckdbPackage`,
+`s3Package`, `jsonrpcPackage`, `sqlitePackage`, or `mysqlPackage`.
 `pythonRoot` belongs to `python`; `duckdbPython` belongs to `duckdbPackage`.
-The Python, DuckDB and S3 packages supply their original application bindings.
+Both SQLite snapshot limits belong to `sqlitePackage`, at the package level.
+The native packages supply their original application bindings.
 Use `allowLoopbackUpstream` for an API workspace or Stellar RPC package with explicitly declared local upstreams.
 Existing workspace-only plans retain their normalized fields and plan digest.
 
@@ -126,8 +132,51 @@ For the existing merchant MCP provider, configure this same fleet plan through
 `merchant_fleet_plan` and live fleet status include `packageSources` with each
 alias and source kind; the existing `packages` alias list stays compatible.
 `merchant_fleet_stage` accepts the same tenant, slot, package and release ID for
-all five source types. The host plan owns their source paths, interpreter choices,
+all seven source types. The host plan owns their source paths, interpreter choices,
 fixed ports and runtime settings throughout the lifecycle.
+
+### SQLite snapshots and live MySQL sources
+
+Register original database packages in each merchant's `packages` map:
+
+```json
+{
+  "snapshot": {
+    "sqlitePackage": "./packages/inventory-export",
+    "sqliteSnapshotMaxBytes": 268435456,
+    "sqliteSnapshotTimeoutMs": 120000,
+    "runtime": { "facilitator": "https://facilitator.example" }
+  },
+  "live": {
+    "mysqlPackage": "./packages/catalog-prepared",
+    "runtime": { "facilitator": "https://facilitator.example" }
+  }
+}
+```
+
+A SQLite package is the original workbench's six-file export: `manifest.json`,
+`source.json`, `service.json`, `handlers.mjs`, `launch.mjs`, and `RUN.md`. Its
+referenced database must remain readable until staging finishes. The original
+SF82 engine captures one committed view, including committed WAL changes, and
+retains that snapshot with the compiled named queries and payment terms. Later
+database writes become visible only after staging and activating a new release.
+The two capture limits use the original `sqliteSnapshotOptions` validator; the
+normalized plan retains their effective values. They do not change request-time
+gateway limits. SQLite uses the original Node `node:sqlite` worker.
+
+MySQL uses the original prepared source, named queries, payment terms, generated
+client, and package-local CA if configured. Staging retains those package bytes.
+At runtime the original MySQL adapter resolves the declared connection references
+from the host environment and reads live MySQL or MariaDB data. Provide its
+existing `mysql2` dependency and declared password environment variable to every
+foreground owner. Credentials stay outside the declaration and retained release.
+Moving the prepared source directory after staging preserves the retained release;
+the running MySQL service still requires its configured database to be available.
+
+Browser source cards and `merchant_fleet_plan.packageSources` distinguish
+`SQLITE_MERCHANT_PACKAGE` from `MYSQL_MERCHANT_PACKAGE`. Stage either alias through
+the ordinary fleet action, review its exact source and offer changes, then use
+the same prepare, activate, drain, retire, and rollback controls.
 
 Native payment mode is selected by the original release runtime. To stage native
 releases from a registered package, configure that package's runtime:
@@ -271,6 +320,12 @@ shows that distinction instead of guessing a store from a shared host or port.
 
 `quit`, end of input, SIGINT and SIGTERM close gateway admission and await its
 existing drain, then call each retained original SF82 session's `close()`.
+When a SQLite stage is capturing data, shutdown first cancels that owned stage
+through the original `AbortSignal`. The native capture worker exits and removes
+its uncommitted output before the operator closes its release stores and lease.
+Merchant MCP forwards this cancellation before awaiting its serialized call.
+After reopening, retry the same package and release ID; an already committed
+release remains in the original catalog and an interrupted stage can run again.
 `handleSignals: false` delegates the original per-seller signal handling to this
 composed owner. No PID file is used as permission to stop a process.
 

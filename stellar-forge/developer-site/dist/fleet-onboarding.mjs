@@ -2,7 +2,8 @@
 export const FLEET_DRAFT_SCHEMA = 'stellar-forge.frontdoor-fleet.v1';
 export const FLEET_BOOTSTRAP_SCHEMA = 'stellar-forge.fleet-bootstrap.v1';
 export const SOURCE_LABELS = Object.freeze({ workspace: 'API workspace', python: 'Python application',
-  duckdbPackage: 'DuckDB / Parquet', s3Package: 'S3 objects', jsonrpcPackage: 'Stellar RPC' });
+  duckdbPackage: 'DuckDB / Parquet', s3Package: 'S3 objects', jsonrpcPackage: 'Stellar RPC',
+  sqlitePackage: 'SQLite snapshot', mysqlPackage: 'MySQL / MariaDB' });
 const SOURCE_KEYS = Object.keys(SOURCE_LABELS);
 const GUIDE = 'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/merchant-fleet-gateway/';
 const NAME = /^[a-z][a-z0-9-]{0,39}$/;
@@ -10,6 +11,10 @@ const TENANT = /^[a-z][a-z0-9-]{1,39}$/;
 const HOST = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 export const LIMIT_RANGES = Object.freeze({ maxInFlight: [1, 512], maxRequestBytes: [1024, 4194304],
   maxResponseBytes: [1024, 16777216], timeoutMs: [1000, 60000] });
+export const SQLITE_SNAPSHOT_OPTIONS = Object.freeze({
+  sqliteSnapshotMaxBytes: Object.freeze({ min: 4096, max: 1099511627776, default: 1073741824 }),
+  sqliteSnapshotTimeoutMs: Object.freeze({ min: 100, max: 3600000, default: 120000 }),
+});
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const bytes = value => new TextEncoder().encode(value).length;
 const json = value => JSON.stringify(value, null, 2) + '\n';
@@ -36,7 +41,7 @@ function draftShape(input) {
     if (!Array.isArray(tenant.sources) || tenant.sources.length > 32)
       throw new FleetSetupError([{ field, message: 'Each merchant supports at most 32 registered sources.' }]);
     keys(tenant.limits ?? {}, Object.keys(LIMIT_RANGES), field + '.limits');
-    tenant.sources.forEach((source, n) => keys(source, ['name', 'kind', 'path', 'pythonRoot', 'duckdbPython',
+    tenant.sources.forEach((source, n) => keys(source, ['name', 'kind', 'path', 'pythonRoot', 'duckdbPython', ...Object.keys(SQLITE_SNAPSHOT_OPTIONS),
       'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream'], field + '.sources.' + n));
   });
 }
@@ -107,6 +112,12 @@ export function validateFleetDraft(input) {
           native[key] = source[key];
         }
       }
+      for (const [key, range] of Object.entries(SQLITE_SNAPSHOT_OPTIONS)) {
+        if (source[key] !== undefined && source[key] !== '') {
+          if (source.kind !== 'sqlitePackage') add(at + '.' + key, `${display}: snapshot limits require a SQLite source.`);
+          native[key] = integer(source[key], range.min, range.max, at + '.' + key);
+        }
+      }
       for (const key of ['allowLocalFacilitator', 'allowLoopbackUpstream']) {
         if (source[key] !== undefined) {
           if (typeof source[key] !== 'boolean') add(at + '.' + key, `${display}: ${key} must be true or false.`);
@@ -174,13 +185,16 @@ function importNative(input) {
     if (!object(tenant.packages) || Object.keys(tenant.packages).length > 32)
       throw new FleetSetupError([{ field: 'sources', message: 'Register at most 32 packages per merchant.' }]);
     const sources = Object.entries(tenant.packages).map(([name, native]) => {
-      keys(native, [...SOURCE_KEYS, 'pythonRoot', 'duckdbPython', 'runtime'], 'package ' + name);
+      keys(native, [...SOURCE_KEYS, 'pythonRoot', 'duckdbPython', ...Object.keys(SQLITE_SNAPSHOT_OPTIONS), 'runtime'], 'package ' + name);
       keys(native.runtime ?? {}, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream'], 'runtime');
       const selected = SOURCE_KEYS.filter(key => Object.hasOwn(native, key));
       if (selected.length !== 1) throw new FleetSetupError([{ field: 'sources', message: 'Each registered package must select one source type.' }]);
-      return { ...newFleetSource(name, selected[0]), path: native[selected[0]],
+      const source = { ...newFleetSource(name, selected[0]), path: native[selected[0]],
         ...(native.pythonRoot !== undefined ? { pythonRoot: native.pythonRoot } : {}),
         ...(native.duckdbPython !== undefined ? { duckdbPython: native.duckdbPython } : {}), ...native.runtime };
+      for (const key of Object.keys(SQLITE_SNAPSHOT_OPTIONS))
+        if (native[key] !== undefined) source[key] = native[key];
+      return source;
     });
     return { id: tenant.id, host: tenant.host, sources, initialPackage: tenant.initial.package,
       releaseId: tenant.initial.releaseId, label: tenant.initial.label ?? '', limits: tenant.limits ?? {} };
@@ -216,10 +230,11 @@ function guide(input, result, commands) {
   return `# Merchant fleet launch\n\n` +
     `Prepare ${input.tenants.length} merchants with ${result.assignments.length} original release stores.\n\n` +
     `## Prepare the host\n\nUse the current complete Stellar Forge toolkit on Linux with Node.js 22.16 or later and the native flock utility. Follow its [distribution instructions](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/distribution/README.md). The commands below use the installed starforge executable; when installed in a local npm application, invoke it as npx --no-install starforge. Install the native requirements for the selected source types.\n\n` +
-    `Prepare sources through the original API workspace, Python, DuckDB/Parquet, S3 or Stellar RPC authoring commands. Each source must declare its merchant's public HTTPS origin. Keep payment and provider credentials in the original host environment. For Python, provide the application description and its source root; interpreter and input paths use the original package rules. RPC packages retain their separate data and payment network selections.\n\n` +
+    `Prepare sources through the original API workspace, Python, DuckDB/Parquet, S3, Stellar RPC, SQLite or MySQL authoring commands. Each source must declare its merchant's public HTTPS origin. Keep payment and provider credentials in the original host environment. For Python, provide the application description and its source root; interpreter and input paths use the original package rules. RPC packages retain their separate data and payment network selections.\n\n` +
+    `SQLite sources use the original six-file workbench export and its referenced database. Staging captures a committed snapshot, including committed WAL changes, into each immutable release. Optional sqliteSnapshotMaxBytes (4096–1099511627776; default 1073741824) and sqliteSnapshotTimeoutMs (100–3600000; default 120000) belong to that package alias. They are separate from gateway request limits. The original snapshot worker requires Node's node:sqlite support. MySQL sources use the original prepared package and installed mysql2 dependency; the running release resolves its passwordEnv and other connection references from the host environment and reads the live database.\n\n` +
     `Extract this packet and run the commands from its folder. Relative source paths resolve from fleet-setup.json. Keep that declaration at the same location for setup recovery. Review the absolute fleet and MCP paths for your host.\n\n` +
     `## Prepare the retained stores\n\n${command('setup')}\n\n` +
-    `Repeat this same command to resume interrupted setup. It retains staging and initial activation progress in bootstrap.json, validates the original source packages, then publishes fleet-plan.json. Each merchant starts in the first declared slot. A completed setup preserves later release selections.\n\n` +
+    `Repeat this same command to resume interrupted setup. It retains staging and initial activation progress in bootstrap.json, validates the original source packages, then publishes fleet-plan.json. Each merchant starts in the first declared slot. A completed setup preserves later release selections. Setup and fleet shutdown forward cancellation to a pending native SQLite capture; committed releases remain available and an uncommitted capture can be retried with the same command or release ID after reopening.\n\n` +
     `## Open the fleet\n\nChoose a foreground interface and close it before opening another. Every interface below uses the same plan and retained directory.\n\n### Browser workspace\n\n${command('workspace')}\n\nOpen the loopback URL printed by the original workspace.\n\n### Terminal operator\n\n${command('terminal')}\n\n### Merchant MCP\n\n${command('mcp-init')}\n\nRun MCP initialization once in its new configuration directory; its parent directory must already exist on the host. Its fleet reference points to the retained setup directory. Then create the original stdio host registration:\n\n${command('mcp-host')}\n\nUse mcp-host.json in your MCP client. The native registration command also supports --merge EXISTING_JSON with --output NEW_JSON to preserve other named servers. Starting a host connection loads the tools; the original fleet start tool starts the merchant processes explicitly.\n\n` +
     `## Host and port map\n\nGateway ingress: ${result.declaration.gateway.port}. Private gateway control: ${result.declaration.gateway.adminPort}. Browser workspace: ${result.workspacePort || 'automatically allocated'}.\n\n` +
     `| Merchant | Public host | Slot | Port | Initial |\n|---|---|---|---:|---|\n` +
