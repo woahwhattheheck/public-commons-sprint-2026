@@ -41,7 +41,7 @@ await existingSellerSession.close();
 
 **Failures:** rows sort by server errors/disconnects, then traffic. HTTP 402, other 4xx, 5xx and early disconnects have separate columns. Finish/close reconcile in-flight without double-counting. Unknown paths, unsupported methods and invalid targets enter fixed aggregate buckets, not arbitrary labels.
 
-**Handoff:** download current route CSV or JSON. Exports remain fresh even when display updates are paused. CSV cells are quoted and formula-like strings neutralized. JSON carries session/capture/start times, totals, routes and 60 minute buckets. No request log is generated.
+**Handoff:** download current route CSV or JSON. Exports remain fresh even when display updates are paused. CSV cells are quoted and formula-like strings neutralized. JSON carries session/capture/start times, totals, routes, 60 minute buckets and the latest metadata-only outcomes. No request contents or persistent request log are generated.
 
 ## Semantics
 
@@ -53,7 +53,7 @@ Totals begin at observer attachment, not before the seller starts. Starts/comple
 
 ## Privacy and deployment
 
-Memory is bounded by configured route count and 60 aggregate buckets. No request URL, query, parameter value, body, header, token, wallet, IP or receipt is retained. Only configured route metadata becomes a label. Observation does no disk/network I/O, payment call or retry. Observer errors do not enter the seller path; `observerErrors` identifies incomplete counts.
+Memory is bounded by configured route count, 60 aggregate buckets and a recent-outcome ring (160 by default, maximum 2000). No request URL, query, parameter value, body, header, token, wallet, IP or receipt is retained. Only configured route metadata becomes a label. Observation does no disk/network I/O, payment call or retry. Observer errors do not enter the seller path; `observerErrors` identifies incomplete counts.
 
 Restart begins a new in-memory session; export before stopping when a record is needed. Detach stops new observation while already observed requests may finish.
 
@@ -70,3 +70,52 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/operations/acceptance.mjs
 One actual Node HTTP exercise with controlled outcomes imports unchanged SF30 path compilation/selection. It covers attribution, outcomes, disconnects, noncollection, exports, origin/method controls, detach and rolling aggregates. It does not exercise a facilitator or assert settlement. The launcher above uses maintained `serve.mjs` directly.
 
 Node semantics: [ServerResponse finish/close](https://nodejs.org/docs/latest-v22.x/api/http.html#class-httpserverresponse); `finish` does not establish client receipt. No additional test framework, npm install or Actions run is required.
+
+## Recent outcomes and Prometheus
+
+The existing dashboard now includes a searchable **Recent request outcomes**
+view. It keeps only a session sequence number, completion time, configured route
+ID, normalized HTTP method, outcome category, status (when sent) and duration.
+Dynamic customer values, request targets, bodies and headers are never retained.
+An early disconnect before headers has `status: null`, displayed as **Not sent**,
+not a misleading default HTTP 200. Completed status counts exclude disconnects.
+
+`recentLimit` is an optional setting on `startSellerOperations(session, options)`
+and `observeSellerTraffic(session, options)`: 0 disables individual outcomes;
+160 is the default; 2000 is the maximum. The newest terminal outcomes are returned
+first. Pausing the page does not stop observation. JSON export includes this
+bounded history; CSV stays route aggregates only. Downloaded exports have their
+own operator-managed lifetime. Snapshot objects do not expose mutable counters.
+
+`GET /metrics` on the SAME existing operator listener exports classic Prometheus
+text, protected by its existing Host/Origin/read-only controls. No second observer,
+server, collector, external call or background service is installed. Configure an
+existing Prometheus instance on the operator host, when needed:
+
+```yaml
+scrape_configs:
+  - job_name: sf30_seller
+    static_configs:
+      - targets: ['127.0.0.1:8424']
+```
+
+```promql
+sum(rate(sf30_http_requests_total[5m])) by (route_id)
+sum(rate(sf30_http_responses_total{status=~"5.."}[5m])) by (route_id)
+sum(sf30_http_active_requests) by (route_id)
+histogram_quantile(0.95, sum(rate(sf30_http_request_duration_seconds_bucket[5m])) by (le, route_id))
+```
+
+Duration keeps the original population: **arrival to finish OR disconnect**.
+`sf30_http_request_duration_seconds` includes cancelled/disconnected attempts;
+it is not a completed-response-only histogram. JSON `durationHistogram` contains
+noncumulative bins in milliseconds, count and unrounded sum. Prometheus bins are
+cumulative in seconds, with `+Inf` equal to `_count`. Exact HTTP status counts are
+only finished responses. Route/method labels come from fixed original route
+metadata; unknown targets retain fixed aggregate labels. No buyer, currency,
+wallet, transaction or request parameter becomes a label.
+
+This extends the already merged operations application rather than introducing
+an alternative dashboard or changing its minute chart, CSV, route matcher,
+launcher, mobile sticky columns or payment handling. The existing acceptance
+exercise covers the extension as well; it requires no new test suite or CI.

@@ -1,4 +1,5 @@
 // MIT. Local-only read-only interface. All server strings enter the DOM as text, never markup.
+import { renderRecentOutcomes } from './recent.mjs';
 const $ = id => document.getElementById(id);
 const number = new Intl.NumberFormat();
 let last = null, paused = false, timer = null, busy = false, receivedAt = 0;
@@ -63,7 +64,7 @@ function render(snapshot) {
   if (snapshot.attached && totals.started && !totals.serverError && !totals.disconnected) signals.push('No server errors or early disconnects observed in this session.');
   const fragment = document.createDocumentFragment();
   for (const signal of signals) { const p = document.createElement('p'); p.textContent = signal; fragment.append(p); }
-  $('signals').replaceChildren(fragment); renderRows();
+  $('signals').replaceChildren(fragment); renderRows(); renderRecentOutcomes(snapshot);
   if (paused) text('connection', 'Updates paused · exports still request a fresh server snapshot');
 }
 async function refresh() {
