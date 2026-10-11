@@ -7,6 +7,7 @@ import { hostname } from 'node:os';
 import { config, execution, need, InputError } from './config.mjs';
 import { aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
+import { selectTestnetEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { loadOperationTicket, operationTicketView, requireCurrentOperationTicket } from './operation-ticket.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.buyer-inbox.v1';
@@ -86,7 +87,7 @@ async function dependencySame(dependency, limit) {
   const current = await fingerprint(dependency.path, limit);
   need(current.sha256 === dependency.sha256 && current.bytes === dependency.bytes, 'INBOX_DEPENDENCY_CHANGED_REVIEW_REQUIRED');
 }
-export async function workspaceEnvironment(cfg, path) {
+async function workspaceExecution(cfg, path) {
   const {openWorkspace} = await import('./workspace.mjs');
   const workspace = await openWorkspace(['--dir', rootPath(path)], {execute:true});
   const {op, owner, transport} = execution(cfg);
@@ -107,7 +108,12 @@ export async function workspaceEnvironment(cfg, path) {
   const maximum = BigInt(op.expect.maxAtomic);
   need(maximum > 0n && maximum <= BigInt(workspaceOp.expect.maxAtomic) &&
     maximum <= BigInt(signer.maxAtomic), 'INBOX_WORKSPACE_CAP_EXCEEDED');
-  return workspace.operatorEnvironment;
+  return {environment:workspace.operatorEnvironment,
+    evidenceRpcEndpoint:selectTestnetEvidenceEndpoint(workspace.manifest.signer.rpcUrl)};
+}
+// Preserve the finalizer's original environment-only interface.
+export async function workspaceEnvironment(cfg, path) {
+  return (await workspaceExecution(cfg, path)).environment;
 }
 async function ensureAbsent(path, code) {
   try { await lstat(path); fail(code); }
@@ -284,7 +290,7 @@ export async function openQueue(path) {
       'INBOX_SIGNER_CHANGED_START_FRESH_PROCESS');
     // Resolve/bind the actual operator workspace before claiming this attempt.
     // A wrong workspace or unavailable key file must leave the job QUEUED.
-    const environment = workspace === undefined ? undefined : await workspaceEnvironment(cfg, workspace);
+    const workspaceOptions = workspace === undefined ? {} : await workspaceExecution(cfg, workspace);
     // A named managed proxy may change between processes; resolve it now,
     // before the permanent attempt, without changing the saved origin/profile.
     if (cfg.buyerTransport !== undefined) resolveBuyerProxy(cfg.buyerTransport);
@@ -304,7 +310,7 @@ export async function openQueue(path) {
       loadedSigners.set(cfg.signerModule, request.dependencies.signer.sha256);
       summary = await execute(cfg, {signal, emitSummary:false,
         operationTicketSha256:ticket?.sha256 ?? null,
-        ...(environment === undefined ? {} : {environment})});
+        ...workspaceOptions});
       need(object(summary) && summary.intentId === intentId &&
         summary.mode === 'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT', 'INBOX_ORIGINAL_SUMMARY_INVALID');
     } catch (e) {
