@@ -1,0 +1,76 @@
+{
+  "schema": "stellar-forge.opensearch-source.v1",
+  "endpointEnv": "OPENSEARCH_PLAYGROUND_ENDPOINT",
+  "auth": {
+    "type": "none"
+  },
+  "allowLocal": true,
+  "maxInFlight": 1,
+  "queries": {
+    "flights": {
+      "indices": [
+        "opensearch_dashboards_sample_data_flights"
+      ],
+      "query": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "OriginCountry": {
+                  "$param": "country"
+                }
+              }
+            },
+            {
+              "range": {
+                "AvgTicketPrice": {
+                  "gte": {
+                    "$param": "minimum_price"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "parameters": {
+        "country": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2
+        },
+        "minimum_price": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "fields": [
+        "FlightNum",
+        "Origin",
+        "Dest",
+        "OriginCountry",
+        "DestCountry",
+        "AvgTicketPrice",
+        "timestamp",
+        "FlightDelay",
+        "Cancelled"
+      ],
+      "sort": [
+        {
+          "timestamp": "asc"
+        },
+        {
+          "FlightNum": "asc"
+        }
+      ],
+      "pageSize": 3,
+      "maxHits": 7,
+      "maxBytes": 917504,
+      "timeoutMs": 30000,
+      "probe": {
+        "country": "US",
+        "minimum_price": 0
+      }
+    }
+  }
+}
