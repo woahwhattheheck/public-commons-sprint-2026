@@ -4,9 +4,9 @@ use std::{
     collections::BTreeMap, ffi::OsString, fmt, fs::{self, File, OpenOptions},
     io::{self, Read, Write}, os::unix::{
         fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt},
-        io::AsRawFd, process::CommandExt,
+        io::{AsRawFd, FromRawFd}, process::CommandExt,
     }, path::{Path, PathBuf}, process::{Child, Command, ExitStatus, Stdio},
-    sync::{Arc, atomic::{AtomicBool, Ordering}}, thread, time::{Duration, Instant},
+    sync::{Arc, Mutex, MutexGuard, TryLockError, atomic::{AtomicBool, Ordering}}, thread, time::{Duration, Instant},
 };
 
 const SCHEMA: &str = "stellar-forge.go-buyer-call.v1";
@@ -39,7 +39,14 @@ impl Error {
         self.invocation_directory = Some(directory.to_owned()); self
     }
     pub(crate) fn decode<T: DeserializeOwned>(value: Value) -> Result<T> {
-        serde_json::from_value(value).map_err(|e| Self::caused("RUST_RESPONSE_DECODE_FAILED", e))
+        match T::deserialize(&value) {
+            Ok(decoded) => Ok(decoded),
+            Err(cause) => {
+                let mut error=Self::caused("RUST_RESPONSE_DECODE_FAILED",cause);
+                error.partial_result=Some(value);
+                Err(error)
+            }
+        }
     }
 }
 impl fmt::Display for Error {
@@ -68,7 +75,8 @@ pub struct Context {
 impl Context {
     pub fn background() -> Self { Self::default() }
     pub fn with_timeout(duration: Duration) -> Self {
-        Self { deadline: Instant::now().checked_add(duration), ..Self::default() }
+        let now=Instant::now();
+        Self { deadline: Some(now.checked_add(duration).unwrap_or(now)), ..Self::default() }
     }
     /// A CLI may supply its own async-signal-safe atomic flag.
     pub fn interrupted_by(mut self, flag: &'static AtomicBool) -> Self { self.external = Some(flag); self }
@@ -159,6 +167,8 @@ impl Client {
     {
         ctx.check().map_err(|e| Error::caused("RUST_CALL_CANCELLED", e))?;
         let o = &self.options;
+        let mut terminal=ForegroundTerminal::acquire(o.approval_stdin,ctx)
+            .map_err(|e| Error::caused("RUST_APPROVAL_TERMINAL_UNAVAILABLE",e))?;
         private_directory(&o.state_directory).map_err(|e| Error::caused("RUST_STATE_UNAVAILABLE", e))?;
         let calls = o.state_directory.join(".rust-calls");
         private_directory(&calls).map_err(|e| Error::caused("RUST_STATE_UNAVAILABLE", e))?;
@@ -191,11 +201,19 @@ impl Client {
         if let Some(environment) = &o.environment { command.env_clear().envs(environment); }
         let child = command.spawn().map_err(|e| fail("RUST_BRIDGE_START_FAILED", e))?;
         let mut owned = OwnedChild { child: Some(child), grace: o.cleanup_grace + Duration::from_secs(5) };
+        if let Some(terminal)=terminal.as_mut() {
+            if let Err(cause)=terminal.grant(owned.child.as_ref().unwrap().id() as libc::pid_t) {
+                let _=owned.finish(true,ctx);
+                let _=terminal.restore();
+                return Err(fail("RUST_APPROVAL_TERMINAL_UNAVAILABLE",cause));
+            }
+        }
         let stdout = owned.child.as_mut().unwrap().stdout.take().unwrap();
         let mut reader = CancellableReader { source: stdout, ctx };
         let consumed = consume(&mut reader);
         drop(reader);
         let waited = owned.finish(consumed.is_err() || ctx.stopped(), ctx);
+        let terminal_error=terminal.as_mut().and_then(|terminal|terminal.restore().err());
         let _ = log.sync_all();
         let response = read_private_json(&directory.join("response.json"), o.result_limit)
             .map_err(|e| fail("RUST_BRIDGE_RESULT_UNAVAILABLE", e))?;
@@ -217,7 +235,7 @@ impl Client {
                 .unwrap_or("RUST_BRIDGE_OPERATION_FAILED"), io::Error::new(io::ErrorKind::Other, "original bridge operation failed")))
         } else {
             match waited {
-                Ok(status) if status.success() => None,
+                Ok(status) if status.success() => terminal_error.map(|cause|fail("RUST_APPROVAL_TERMINAL_RESTORE_FAILED",cause)),
                 Ok(status) => Some(fail("RUST_BRIDGE_PROCESS_FAILED", io::Error::new(io::ErrorKind::Other, format!("bridge exited {status}")))),
                 Err(e) => Some(fail("RUST_BRIDGE_PROCESS_FAILED", e)),
             }
@@ -228,7 +246,11 @@ impl Client {
             return Err(error);
         }
         drop(log);
-        fs::remove_dir_all(&directory).map_err(|e| fail("RUST_CALL_CLEANUP_FAILED", e))?;
+        if let Err(cause)=fs::remove_dir_all(&directory) {
+            let mut error=fail("RUST_CALL_CLEANUP_FAILED",cause);
+            error.partial_result=Some(result);
+            return Err(error);
+        }
         Ok(result)
     }
 }
@@ -280,6 +302,83 @@ pub(crate) fn read_private_json(path: &Path, limit: usize) -> io::Result<Value> 
     let mut bytes = Vec::new(); file.take(limit as u64 + 1).read_to_end(&mut bytes)?;
     if bytes.len() > limit { return Err(io::Error::new(io::ErrorKind::InvalidData, "response exceeds limit")); }
     serde_json::from_slice(&bytes).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+}
+
+// Only explicitly opted-in calls share this terminal lease. Other library calls
+// retain independent cancellation and can execute concurrently.
+static APPROVAL_TERMINAL:Mutex<()>=Mutex::new(());
+struct ForegroundTerminal {
+    file:File, original_group:libc::pid_t, child_group:Option<libc::pid_t>,
+    _guard:MutexGuard<'static,()>,
+}
+impl ForegroundTerminal {
+    fn acquire(enabled:bool,ctx:&Context)->io::Result<Option<Self>> {
+        if !enabled || unsafe {libc::isatty(libc::STDIN_FILENO)}!=1 {return Ok(None);}
+        let guard=loop {
+            ctx.check()?;
+            match APPROVAL_TERMINAL.try_lock() {
+                Ok(guard)=>break guard,
+                Err(TryLockError::Poisoned(error))=>break error.into_inner(),
+                Err(TryLockError::WouldBlock)=>thread::sleep(Duration::from_millis(20)),
+            }
+        };
+        let original_group=unsafe {libc::tcgetpgrp(libc::STDIN_FILENO)};
+        if original_group<0 {return Err(io::Error::last_os_error());}
+        if original_group!=unsafe {libc::getpgrp()} {
+            return Err(io::Error::new(io::ErrorKind::PermissionDenied,
+                "interactive approval requires the caller to own the foreground terminal"));
+        }
+        let descriptor=unsafe {libc::fcntl(libc::STDIN_FILENO,libc::F_DUPFD_CLOEXEC,3)};
+        if descriptor<0 {return Err(io::Error::last_os_error());}
+        // The newly duplicated descriptor is exclusively owned by this File.
+        let file=unsafe {File::from_raw_fd(descriptor)};
+        Ok(Some(Self {file,original_group,child_group:None,_guard:guard}))
+    }
+    fn grant(&mut self,group:libc::pid_t)->io::Result<()> {
+        if unsafe {libc::tcgetpgrp(self.file.as_raw_fd())}!=self.original_group {
+            return Err(io::Error::new(io::ErrorKind::PermissionDenied,"foreground terminal ownership changed before approval"));
+        }
+        self.child_group=Some(group);
+        set_terminal_group(self.file.as_raw_fd(),group)?;
+        // The just-created group may have reached stdin before the parent granted
+        // its foreground lease and stopped with SIGTTIN. It is still our group.
+        if unsafe {libc::kill(-group,libc::SIGCONT)}!=0 {
+            let error=io::Error::last_os_error();
+            if error.raw_os_error()!=Some(libc::ESRCH) {return Err(error);}
+        }
+        Ok(())
+    }
+    fn restore(&mut self)->io::Result<()> {
+        let Some(group)=self.child_group else {return Ok(());};
+        let current=unsafe {libc::tcgetpgrp(self.file.as_raw_fd())};
+        if current==self.original_group {self.child_group=None;return Ok(());}
+        if current<0 {return Err(io::Error::last_os_error());}
+        if current!=group {
+            return Err(io::Error::new(io::ErrorKind::PermissionDenied,"foreground terminal was reassigned externally"));
+        }
+        set_terminal_group(self.file.as_raw_fd(),self.original_group)?;
+        self.child_group=None;Ok(())
+    }
+}
+impl Drop for ForegroundTerminal {
+    fn drop(&mut self) {let _=self.restore();}
+}
+fn set_terminal_group(descriptor:libc::c_int,group:libc::pid_t)->io::Result<()> {
+    // tcsetpgrp can be called after this thread's group became background.
+    // Block SIGTTOU only in this thread, preserving the application's handlers.
+    unsafe {
+        let mut mask:libc::sigset_t=std::mem::zeroed();
+        let mut previous:libc::sigset_t=std::mem::zeroed();
+        libc::sigemptyset(&mut mask);libc::sigaddset(&mut mask,libc::SIGTTOU);
+        let blocked=libc::pthread_sigmask(libc::SIG_BLOCK,&mask,&mut previous);
+        if blocked!=0 {return Err(io::Error::from_raw_os_error(blocked));}
+        let changed=libc::tcsetpgrp(descriptor,group);
+        let change_error=if changed==0 {None} else {Some(io::Error::last_os_error())};
+        let restored=libc::pthread_sigmask(libc::SIG_SETMASK,&previous,std::ptr::null_mut());
+        if let Some(error)=change_error {return Err(error);}
+        if restored!=0 {return Err(io::Error::from_raw_os_error(restored));}
+    }
+    Ok(())
 }
 
 struct CancellableReader<'a> { source: std::process::ChildStdout, ctx: &'a Context }

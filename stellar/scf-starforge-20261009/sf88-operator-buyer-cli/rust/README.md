@@ -66,7 +66,11 @@ starforge-buyer-rust --runtime /absolute/sf88 --state /absolute/customer \
 ~~~
 
 Review the saved native object before executing it. `--approval-stdin` passes the
-real terminal descriptor to the original approval flow. The SDK supplies no
+real terminal descriptor to the original approval flow. On an actual terminal,
+the caller must own its foreground process group; the SDK leases that terminal
+to its owned child group and restores the caller after native cleanup. Opted-in
+terminal calls serialize within the process, with cancellation-aware waiting.
+Piped input retains its original descriptor behavior. The SDK supplies no
 approval answers. The default leaves stdin closed, which suits offline review,
 recovery and verified delivery.
 
@@ -250,13 +254,18 @@ cargo run --locked --example received-dataset -- \
   /absolute/original-delivery /absolute/exports/inventory.csv
 ~~~
 
+An optional final absolute bridge filename selects the same original bridge when
+consuming a retained installed runtime that predates the `go/` source directory.
+
 ## Cancellation, ownership and reopening
 
 Every call gets a private `STATE/.rust-calls/call-…` directory containing its
 request, bridge stderr and final response. Successful calls remove their own
 transient directory. Failed calls retain it, while durable native state remains
 at its original paths. Errors expose the action, intent ID, invocation directory,
-original safe error code and any original progress/result.
+original safe error code and any original progress/result. Typed decoding and
+local call-directory cleanup errors retain a successful native JSON result in
+`Error.partial_result`, preserving its completed operation and delivery handles.
 
 The child runs in an owned Unix process group. Context cancellation or a CLI
 signal reaches the original bridge's AbortSignal. The call closes its output
