@@ -77,7 +77,7 @@ export function catalog(x) {
   return x;
 }
 export function operation(x) {
-  shape(x, ['intentId','url','method','expect','bodyFile','headers'], 'INVALID_OPERATION');
+  shape(x, ['intentId','url','method','expect','bodyFile','headers','orderReference'], 'INVALID_OPERATION');
   need(typeof x.intentId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(x.intentId),
     'STABLE_INTENT_ID_REQUIRED');
   let u;
@@ -103,10 +103,22 @@ export function operation(x) {
     abs(x.bodyFile, 'BODY_PATH_MUST_BE_ABSOLUTE');
     need(!['GET','HEAD'].includes(method), 'BODY_DISALLOWED_FOR_METHOD');
   }
-  const headers = x.headers ?? {};
-  shape(headers, ['Content-Type','Accept'], 'INVALID_HEADERS');
+  const headers = {...(x.headers ?? {})};
+  shape(x.headers ?? {}, ['Content-Type','Accept','X-SF98-Order-ID'], 'INVALID_HEADERS');
   need(Object.values(headers).every(v => typeof v === 'string' && v.length <= 256 &&
     !/[\r\n]/.test(v)), 'INVALID_HEADERS');
+  if (x.orderReference !== undefined) {
+    need(typeof x.orderReference === 'string' && /^[A-Za-z0-9._:-]{1,80}$/.test(x.orderReference),
+      'INVALID_ORDER_REFERENCE');
+    // The native SF31/SF54/SF36 approval already binds the complete resource URL.
+    // Derive this one fulfillment header from the SAME visible, approved value.
+    const references = u.searchParams.getAll('sf98_order');
+    need(references.length === 1 && references[0] === x.orderReference,
+      'ORDER_REFERENCE_MUST_MATCH_APPROVED_RESOURCE');
+    need(headers['X-SF98-Order-ID'] === undefined || headers['X-SF98-Order-ID'] === x.orderReference,
+      'ORDER_HEADER_MISMATCH');
+    headers['X-SF98-Order-ID'] = x.orderReference;
+  } else need(headers['X-SF98-Order-ID'] === undefined, 'ORDER_REFERENCE_REQUIRED');
   return { ...x, method, headers };
 }
 export function operator(x) {
