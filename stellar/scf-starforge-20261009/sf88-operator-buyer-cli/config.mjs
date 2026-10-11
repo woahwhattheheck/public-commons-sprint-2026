@@ -1,6 +1,7 @@
 // MIT — SF88 trusted local operator input, consumed only by original SF31/SF81/SF82.
 import { stat, readFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
+import { validateResponseFileIntegrity } from '../sf31-buyer-client/response-file.mjs';
 
 export class InputError extends Error {
   constructor(code) { super(code); this.code = code; this.name = 'InputError'; }
@@ -49,7 +50,8 @@ export function preparedFrom(x) {
 }
 export function responseFile(c) {
   if (c.responseFile === undefined) return null;
-  const x = shape(c.responseFile, ['destination','maxBytes','timeoutMs'], 'INVALID_RESPONSE_FILE');
+  const x = shape(c.responseFile, ['destination','maxBytes','timeoutMs',
+    'expectedSha256','expectedBytes','expectedContentType'], 'INVALID_RESPONSE_FILE');
   abs(x.destination, 'RESPONSE_FILE_PATH_NOT_ABSOLUTE');
   need(c.captureBody === undefined || c.captureBody === false,
     'RESPONSE_FILE_REQUIRES_CAPTURE_BODY_FALSE');
@@ -58,7 +60,8 @@ export function responseFile(c) {
   need(Number.isSafeInteger(maxBytes) && maxBytes >= 1, 'RESPONSE_FILE_LIMIT_INVALID');
   need(Number.isInteger(timeoutMs) && timeoutMs >= 1 && timeoutMs <= 2147483647,
     'RESPONSE_FILE_TIMEOUT_INVALID');
-  return { destination:x.destination, maxBytes, timeoutMs };
+  const pins = validateResponseFileIntegrity(x, maxBytes);
+  return { destination:x.destination, maxBytes, timeoutMs, ...pins };
 }
 export function catalog(x) {
   shape(x, ['origin','query','filters','limit','offset','sandboxGatewayIPv4'], 'INVALID_CATALOG');

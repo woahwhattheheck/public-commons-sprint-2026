@@ -1,7 +1,7 @@
 // MIT — Offline saved-catalog selection for the existing SF88 review command.
 import { createHash } from 'node:crypto';
 import { open, unlink } from 'node:fs/promises';
-import { abs, bytes, InputError, need, operation, preparedFrom } from './config.mjs';
+import { abs, bytes, InputError, need, operation, preparedFrom, responseFile } from './config.mjs';
 
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const required = ['--discovery','--row','--accept','--intent-id','--url','--method','--out'];
@@ -22,7 +22,7 @@ function https(value) {
 export function prepareReview(raw, selection) {
   need(raw instanceof Uint8Array && raw.byteLength <= 1048576, 'INVALID_DISCOVERY_FILE');
   need(object(selection) && Object.keys(selection).every(key =>
-    ['rowIndex','acceptIndex','intentId','url','method','bodyFile','headers'].includes(key)),
+    ['rowIndex','acceptIndex','intentId','url','method','bodyFile','headers','responseOut'].includes(key)),
     'PREPARE_EXPLICIT_SELECTION_REQUIRED');
   const {rowIndex, acceptIndex, intentId, url, method, bodyFile, headers} = selection;
   need(typeof method === 'string' && ['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(method),
@@ -80,6 +80,25 @@ export function prepareReview(raw, selection) {
     discoveryFileSha256:createHash('sha256').update(raw).digest('hex'), source, sourceEnvelope,
     rowIndex, acceptIndex, originalListing:structuredClone(row)});
   const draft = {operation:op, captureBody:false, preparedFrom:origin};
+  const asset = row.extensions?.['stellar-forge-asset'];
+  if (asset !== undefined) {
+    need(object(asset) && asset.schema === 'stellar-forge.asset-product.v1' &&
+      Object.keys(asset).every(key => ['schema','sha256','bytes','contentType','downloadName'].includes(key)) &&
+      method === 'GET' && bodyFile === undefined && requested.href === advertised.href &&
+      typeof asset.downloadName === 'string' && asset.downloadName.length > 0 &&
+      typeof asset.contentType === 'string' && asset.contentType === row.resource?.mimeType,
+      'INVALID_ASSET_PRODUCT');
+    need(selection.responseOut !== undefined, 'ASSET_RESPONSE_DESTINATION_REQUIRED');
+    need(typeof asset.sha256 === 'string' && typeof asset.bytes === 'number', 'INVALID_ASSET_PRODUCT');
+    // The output filename remains the buyer's explicit choice, never a path
+    // obtained from Content-Disposition or a merchant-controlled downloadName.
+    draft.responseFile = {destination:selection.responseOut, maxBytes:Math.max(1,asset.bytes),
+      expectedSha256:asset.sha256, expectedBytes:asset.bytes, expectedContentType:asset.contentType};
+    responseFile(draft);
+  } else if (selection.responseOut !== undefined) {
+    draft.responseFile = {destination:selection.responseOut};
+    responseFile(draft);
+  }
   const data = Buffer.from(JSON.stringify(draft, null, 2) + '\n');
   need(data.length <= 65536, 'PREPARED_CONFIG_EXCEEDS_CONFIG_LIMIT');
   return {draft, data, configSha256:createHash('sha256').update(data).digest('hex')};
@@ -87,10 +106,12 @@ export function prepareReview(raw, selection) {
 
 /** Original file-based CLI; output remains private, create-only and fsynced. */
 export async function prepare(args) {
-  need(args.length === required.length * 2, 'PREPARE_EXPLICIT_SELECTION_REQUIRED');
+  need(args.length === required.length * 2 || args.length === required.length * 2 + 2,
+    'PREPARE_EXPLICIT_SELECTION_REQUIRED');
   const flags = new Map();
   for (let i = 0; i < args.length; i += 2) {
-    need(required.includes(args[i]) && !flags.has(args[i]), 'INVALID_PREPARE_FLAGS');
+    need((required.includes(args[i]) || args[i] === '--response-out') && !flags.has(args[i]) &&
+      typeof args[i+1] === 'string' && args[i+1].length > 0, 'INVALID_PREPARE_FLAGS');
     flags.set(args[i], args[i+1]);
   }
   need(required.every(key => flags.has(key)), 'PREPARE_EXPLICIT_SELECTION_REQUIRED');
@@ -98,7 +119,8 @@ export async function prepare(args) {
   const destination = abs(flags.get('--out'), 'DRAFT_PATH_MUST_BE_ABSOLUTE');
   const raw = await bytes(flags.get('--discovery'), 1048576, 'INVALID_DISCOVERY_FILE');
   const {draft, data, configSha256} = prepareReview(raw, {rowIndex,acceptIndex,
-    intentId:flags.get('--intent-id'),url:flags.get('--url'),method:flags.get('--method')});
+    intentId:flags.get('--intent-id'),url:flags.get('--url'),method:flags.get('--method'),
+    ...(flags.has('--response-out') ? {responseOut:flags.get('--response-out')} : {})});
   const op = draft.operation, origin = draft.preparedFrom;
   let file;
   try { file = await open(destination, 'wx', 0o600); }
@@ -114,6 +136,7 @@ export async function prepare(args) {
     configSha256,
     sourceFileSha256:origin.discoveryFileSha256, rowIndex, acceptIndex,
     intentId:op.intentId, sellerUrl:op.url, method:op.method, acceptedTerms:op.expect,
+    ...(draft.responseFile ? {responseFile:draft.responseFile} : {}),
     sourceStatus:'SAVED_UNVERIFIED_DISCOVERY',
     next:'Review this config with --review; add trusted operator settings separately before execution'};
 }
