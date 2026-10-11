@@ -71,9 +71,23 @@ async function atomic(path, value) {
   try { await writeNew(temporary, formatted(value)); await rename(temporary, path); await syncDirectory(dirname(path)); }
   finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
 }
+function reviewedColumns(value, description) {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      stable(Object.keys(value).sort()) !== stable(Object.keys(description).sort()))
+    throw new TypeError('The reviewed ClickHouse column types must cover every original named query.');
+  for (const [name, contract] of Object.entries(description)) {
+    const columns = value[name];
+    if (!Array.isArray(columns) || columns.length !== contract.columns.length || columns.some((column, index) =>
+      !column || typeof column !== 'object' || Array.isArray(column) || Object.keys(column).some(key => !['name', 'type'].includes(key)) ||
+      column.name !== contract.columns[index] || typeof column.type !== 'string' || !column.type || column.type.length > 2048 || /[\x00-\x1f\x7f]/.test(column.type)))
+      throw new TypeError('The reviewed ClickHouse column types must match the original ordered columns.');
+  }
+  return structuredClone(value);
+}
 
 /** Static original compiler/client verification. No credentials, database or listener are opened. */
-export async function prepareClickHouseRelease(packageDirectory) {
+export async function prepareClickHouseRelease(packageDirectory, { columnTypes } = {}) {
   try {
     const directory = resolve(packageDirectory);
     if (!(await lstat(directory)).isDirectory() || await realpath(directory) !== directory)
@@ -86,8 +100,10 @@ export async function prepareClickHouseRelease(packageDirectory) {
     }
     const original = await readClickHouseSourceFile(join(directory, 'source.json'));
     const config = parse(retained['source.json']), plan = parse(retained['merchant-plan.json']);
-    if (stable(config) !== stable(original.config)) fail('ClickHouse source changed during original validation.');
+    if (!isDeepStrictEqual(config, original.config)) fail('ClickHouse source changed during original validation.');
     const bundle = compileClickHouseMerchantPlan(config.queries, plan);
+    // The original compiler intentionally uses null-prototype binding maps;
+    // compare their JSON contract with retained JSON, not JS object prototypes.
     if (stable(config.bindings) !== stable(bundle.bindings) ||
         stable(parse(retained['bindings.json'])) !== stable(bundle.bindings) ||
         stable(parse(retained['service.json'])) !== stable(bundle.service) ||
@@ -96,11 +112,12 @@ export async function prepareClickHouseRelease(packageDirectory) {
     const routes = compileSellerRoutes(bundle.service.routes.map(route => ({ id: route.id, offer: route.offer,
       handler() { throw new Error('Release inspection never executes a query.'); }, admit() { return true; } })));
     if (stable(parse(retained['openapi.json'])) !== stable(compileSellerOpenApi(routes, { mode: 'CHALLENGE_ONLY' })))
-      fail('The prepared public OpenAPI differs from the original source and merchant plan.');
+      fail('The prepared OpenAPI differs from this installed original compiler. Prepare a new directory from the retained source and plan with this installation.');
     const client = generateSellerClient(retained['openapi.json']);
     for (const [file, expected] of [['seller-client.mjs', client.javascript], ['seller-client.d.mts', client.declarations],
       ['seller-openapi.json', retained['openapi.json']], ['package.json', client.packageJson], ['README.md', client.readme]])
-      if (!retained['client/' + file].equals(Buffer.from(expected))) fail('The customer files differ from the original generated client.');
+      if (!retained['client/' + file].equals(Buffer.from(expected)))
+        fail('The customer files differ from this installed original generator. Prepare a new directory from the retained source and plan with this installation.');
     const files = ordered(Object.keys(CAPS).map(file => descriptor(PACKAGE + '/' + file, retained[file])));
     const content = { schema: 'stellar-forge.clickhouse-release-source.v1', packageSha256: hash(stable(files)),
       sourceConfigSha256: hash(retained['source.json']), planSha256: hash(retained['merchant-plan.json']),
@@ -111,6 +128,7 @@ export async function prepareClickHouseRelease(packageDirectory) {
       limits: { maxInFlight: config.maxInFlight ?? 8, maxThreads: config.maxThreads ?? 2,
         maxMemoryBytes: config.maxMemoryBytes ?? 268435456, maxRowsToRead: config.maxRowsToRead ?? 1000000,
         maxBytesToRead: config.maxBytesToRead ?? 67108864 },
+      ...(columnTypes === undefined ? {} : { columnTypes: reviewedColumns(columnTypes, original.description) }),
     };
     const clickhouse = { ...content, executionSha256: hash(stable(content)) };
     const offers = { schema: 'stellar-forge.clickhouse-seller-offers.v1',
@@ -121,8 +139,8 @@ export async function prepareClickHouseRelease(packageDirectory) {
 }
 
 /** Capture exactly the original ten files; later runs no longer depend on their former directory. */
-export async function stageClickHouseRelease(directory, packageDirectory) {
-  const target = resolve(directory), prepared = await prepareClickHouseRelease(packageDirectory);
+export async function stageClickHouseRelease(directory, packageDirectory, options = {}) {
+  const target = resolve(directory), prepared = await prepareClickHouseRelease(packageDirectory, options);
   if (join(await realpath(dirname(target)), basename(target)) !== target)
     fail('Use a canonical parent directory for the ClickHouse release store.');
   const within = relative(prepared.directory, target);
@@ -148,7 +166,7 @@ export async function inspectClickHouseRelease(directory) {
   const manifestBytes = await bytes(join(root, 'manifest.json'), 2 * 1024 * 1024), manifest = parse(manifestBytes);
   if (manifest.schema !== CLICKHOUSE_SOURCE_SCHEMA || manifest.packagePath !== PACKAGE || !manifest.clickhouse || !Array.isArray(manifest.files))
     fail('Expected an original retained ClickHouse merchant release.');
-  const prepared = await prepareClickHouseRelease(join(root, PACKAGE));
+  const prepared = await prepareClickHouseRelease(join(root, PACKAGE), { columnTypes: manifest.clickhouse.columnTypes });
   if (!isDeepStrictEqual(manifest.files, prepared.files) || !isDeepStrictEqual(manifest.clickhouse, prepared.clickhouse))
     fail('The retained ClickHouse source, parameters, limits, client or payment plan changed. Stage a new release.');
   const offersBytes = await bytes(join(root, 'offers.json')), serviceBytes = await bytes(join(root, 'seller-service.json'), 1048576);
@@ -186,7 +204,8 @@ export async function startClickHouseRelease(directory, { runtime = { port: 0 },
     '--availability-dir', join(state, 'availability'),
     ...(options.facilitator ? ['--facilitator', options.facilitator] : []),
     ...(options.allowLocalFacilitator ? ['--allow-local-facilitator'] : [])],
-  { env, stdout: { write() {} }, navigationOrigin: options.operationsNavigationOrigin ?? null });
+  { env, stdout: { write() {} }, navigationOrigin: options.operationsNavigationOrigin ?? null,
+    expectedColumnTypes: snapshot.clickhouse.columnTypes });
   return { ...session, clickhouse: snapshot.clickhouse, snapshot };
 }
 
