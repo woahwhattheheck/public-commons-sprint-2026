@@ -110,6 +110,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
+  woo-operator                              Review original Stellar transfers and complete selected Woo orders
 
 Optional feature groups: ${[...new Set([
   ...Object.keys(specification.featurePeers ?? {}),
