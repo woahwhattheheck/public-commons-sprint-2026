@@ -158,6 +158,13 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         return send(404,{error:'Not found'});
       }
       if (req.method!=='POST') return send(405,{error:'Use GET or POST'});
+      if (pathname==='/api/migrations/handover/import-file') {
+        if (busy) return send(409,{error:'A workspace operation is in progress'});
+        busy=true; let finishMutation;
+        mutationDone=new Promise(yes=>{finishMutation=yes;});
+        try { return await (await migrations()).upload(req,url,send); }
+        finally {busy=false;finishMutation();}
+      }
       if (pathname==='/api/operations/stage') {
         if (busy) return send(409,{error:'A workspace operation is in progress'});
         busy=true; let finishMutation;
