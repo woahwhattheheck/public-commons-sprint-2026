@@ -71,9 +71,8 @@ export function createMerchantClient(config, {env = process.env, fetchImpl} = {}
   need(fetchImpl === undefined || typeof fetchImpl === 'function', 'WOO_OPERATOR_FETCH_INVALID');
   const transport = fetchImpl ?? (config.allowLocal ? fetch : createPublicHttpsFetch({timeoutMs:config.timeoutMs}));
   const authorization = 'Basic ' + Buffer.from(username + ':' + password).toString('base64');
-  const request = async (order, body, suffix = body ? '/release' : '', validate = validateOrder) => {
-    need(reference(order), 'WOO_OPERATOR_ORDER_REQUIRED');
-    const response = await transport(config.restUrl + order + suffix, {
+  const requestUrl = async (url, body) => {
+    const response = await transport(url, {
       method:body ? 'POST' : 'GET', redirect:'manual', signal:AbortSignal.timeout(config.timeoutMs),
       headers:{authorization, accept:'application/json', ...(body ? {'content-type':'application/json'} : {})},
       ...(body ? {body:JSON.stringify(body)} : {}),
@@ -83,9 +82,45 @@ export function createMerchantClient(config, {env = process.env, fetchImpl} = {}
     if (response.status === 401 || response.status === 403) need(false, 'WOO_OPERATOR_AUTH_REFUSED');
     if (body) return {httpStatus:response.status, response:value};
     need(response.status === 200, safeCode(value.status, 'WOO_OPERATOR_ORDER_READ_FAILED'));
-    return validate(value, config, order);
+    return value;
+  };
+  const request = async (order, body, suffix = body ? '/release' : '', validate = validateOrder) => {
+    need(reference(order), 'WOO_OPERATOR_ORDER_REQUIRED');
+    const value = await requestUrl(config.restUrl + order + suffix, body);
+    return body ? value : validate(value, config, order);
+  };
+  const consoleUrl = config.siteUrl + '/wp-json/stellar-forge/v1/merchant-console';
+  const orders = async (options = {}) => {
+    fields(options, ['scope', 'page', 'limit', 'state', 'sort', 'orderId'], 'WOO_QUEUE_FIELDS_INVALID');
+    const scope = options.scope ?? 'checkout', page = options.page ?? 1, limit = options.limit ?? 25;
+    const sort = options.sort ?? 'newest', state = options.state ?? '';
+    need(['checkout', 'bound', 'notices', 'attempts'].includes(scope) &&
+      Number.isSafeInteger(page) && page >= 1 && page <= 1000000 &&
+      Number.isSafeInteger(limit) && limit >= 1 && limit <= 100 &&
+      ['oldest', 'newest'].includes(sort) && typeof state === 'string' && /^[A-Za-z0-9_-]{0,64}$/.test(state),
+      'WOO_QUEUE_SELECTION_INVALID');
+    need(options.orderId === undefined || typeof options.orderId === 'string' &&
+      /^[1-9][0-9]{0,17}$/.test(options.orderId) && page === 1, 'WOO_QUEUE_ORDER_SELECTION_INVALID');
+    const query = new URLSearchParams({scope, page:String(page), limit:String(limit), sort, state});
+    if (options.orderId !== undefined) query.set('orderId', options.orderId);
+    const value = await requestUrl(consoleUrl + '/orders?' + query);
+    need(object(value) && value.scope === scope && value.page === page && value.limit === limit &&
+      Number.isSafeInteger(value.total) && value.total >= 0 &&
+      Number.isSafeInteger(value.pages) && value.pages >= 0 && value.pages === Math.ceil(value.total / limit) &&
+      Array.isArray(value.orders) && value.orders.length <= limit && value.orders.every(row =>
+        object(row) && typeof row.id === 'string' && /^[1-9][0-9]{0,17}$/.test(row.id)),
+      'WOO_QUEUE_RESPONSE_INVALID');
+    return {schema:'stellar-forge.sf104.merchant-order-queue.v1', siteUrl:config.siteUrl, ...value,
+      nextPage:value.page < value.pages ? value.page + 1 : null};
+  };
+  const consoleStatus = async () => {
+    const value = await requestUrl(consoleUrl);
+    need(object(value) && typeof value.version === 'string' && typeof value.observedAt === 'string' &&
+      Array.isArray(value.health) && object(value.counts) && object(value.operator), 'WOO_CONSOLE_RESPONSE_INVALID');
+    return {schema:'stellar-forge.sf104.merchant-console-status.v1', siteUrl:config.siteUrl, ...value};
   };
   return Object.freeze({
+    consoleStatus, orders,
     inspect:order => request(order), release:(order, body) => request(order, body),
     inspectRefunds:order => request(order, undefined, '/refunds', validateRefundOrder),
     prepareRefund:(order, body) => request(order, body, '/refunds/prepare'),
@@ -193,8 +228,9 @@ async function loadReview(config, id) {
 }
 
 export async function reviewOrder(config, {id, order, recordPath, payer, rpcEndpoint, maxEventPages = 24,
-  signal, client, decodeContractEvent, fetchRpc} = {}) {
+  signal, client, decodeContractEvent, fetchRpc, expectedRecordSha256} = {}) {
   need(reference(order) && typeof payer === 'string', 'WOO_ORDER_AND_TRUSTED_PAYER_REQUIRED');
+  need(expectedRecordSha256 === undefined || HASH.test(expectedRecordSha256), 'WOO_REVIEW_SOURCE_HASH_REQUIRED');
   need(Number.isSafeInteger(maxEventPages) && maxEventPages >= 1 && maxEventPages <= 100, 'WOO_EVENT_PAGE_LIMIT_INVALID');
   await workspace(config);
   const directory = await privateDirectory(reviewPath(config, id));
@@ -202,6 +238,7 @@ export async function reviewOrder(config, {id, order, recordPath, payer, rpcEndp
   if (!await exists(inputPath)) {
     need(typeof recordPath === 'string', 'WOO_ORIGINAL_NATIVE_RECORD_REQUIRED');
     const raw = await readBytes(absolute(recordPath), MAX_RECORD), record = recordFromOriginal(parseJson(raw));
+    need(expectedRecordSha256 === undefined || digest(raw) === expectedRecordSha256, 'WOO_REVIEW_SOURCE_CHANGED');
     const observed = await (client ?? createMerchantClient(config)).inspect(order);
     await privateDirectory(config.outbox, {create:false});
     const outbox = await openOutbox(config.outbox);
@@ -221,6 +258,8 @@ export async function reviewOrder(config, {id, order, recordPath, payer, rpcEndp
       source:{...source, sha256:digest(jsonBytes(source))}});
   }
   const loaded = await loadInput(config, id), input = loaded.input;
+  need(expectedRecordSha256 === undefined || input.source.nativeRecordSha256 === expectedRecordSha256,
+    'WOO_REVIEW_SOURCE_CHANGED');
   need(input.orderReference === order && input.payer === payer && input.rpcEndpoint === (rpcEndpoint ?? null) &&
     input.maxEventPages === maxEventPages, 'WOO_REVIEW_ID_CONFLICT');
   if (await exists(join(directory, 'review.json'))) return (await loadReview(config, id)).review;
@@ -267,9 +306,11 @@ function completion(snapshot, payload) {
     native?.transactionHash === payload.transactionHash;
 }
 
-export async function releaseOrder(config, id, {confirmOrder, client} = {}) {
+export async function releaseOrder(config, id, {confirmOrder, client, expectedReviewSha256} = {}) {
   const {directory, input, review} = await loadReview(config, id);
   need(confirmOrder === review.orderReference, 'WOO_EXPLICIT_ORDER_CONFIRMATION_REQUIRED');
+  need(expectedReviewSha256 === undefined || HASH.test(expectedReviewSha256) && review.sha256 === expectedReviewSha256,
+    'WOO_RETAINED_REVIEW_CHANGED');
   const payload = releasePayload(input, review), api = client ?? createMerchantClient(config);
   const before = await api.inspect(review.orderReference);
   if (completion(before, payload)) return {schema:RELEASE_SCHEMA, status:'RELEASE_CONFIRMED',
