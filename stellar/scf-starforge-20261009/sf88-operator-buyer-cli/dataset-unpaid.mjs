@@ -1,7 +1,7 @@
 // MIT. Explicit continuation of an original unsigned dataset page.
 import {spawn} from 'node:child_process';
 import {constants} from 'node:fs';
-import {open,mkdir,lstat,realpath,readdir,unlink,link} from 'node:fs/promises';
+import {open,mkdir,lstat,realpath,readdir,unlink,rename} from 'node:fs/promises';
 import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
@@ -50,8 +50,11 @@ async function createAtomic(path,value) {
   const handle=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|F,0o600);
   try {
     try{await handle.writeFile(raw);await handle.sync();}finally{await handle.close();}
-    await link(temporary,path);
-    await unlink(temporary);
+    // All callers hold the original dataset run lock. Publish a complete
+    // single-link file atomically; a crash cannot strand a second hard link.
+    const raced=await bytes(path,Math.max(raw.length,262144),true);
+    if(raced!==null){need(raced.equals(raw),'DATASET_UNPAID_HISTORY_CHANGED');return;}
+    await rename(temporary,path);
     await sync(dirname(path));
   } finally {await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
 }
