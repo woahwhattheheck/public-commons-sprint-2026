@@ -1,6 +1,7 @@
 import { compareSnapshots } from './offer-delta.mjs';
 import { rankFederatedListings } from './federated-query.mjs';
 import { buildOfferCsv } from './offer-csv.mjs';
+import { parseShortlistFile, SHORTLIST_FILE_MAX_BYTES } from './shortlist-file.mjs';
 import { SHORTLIST_LIMIT, selectionKey, selectOffer, selectionStatus, shortlistDocument } from './shortlist.mjs';
 // MIT. Browser uses DOM textContent exclusively for external native provider data.
 const $ = id => document.getElementById(id);
@@ -337,13 +338,14 @@ function renderShortlist() {
     });
     body.append(tr);
   };
+  row('Selection origin', selected => selected.imported ? 'Opened local review file · not independently authenticated' : 'Selected in this page from provider capture');
   row('Observation status', selected => {
     const current = selectionStatus(selected, state.data, state.refreshFailed);
     const node = elem('div', 'observation-state ' + current.kind);
     node.append(elem('strong', '', current.label), elem('p', '', current.detail));
     return node;
   });
-  row('Provider', selected => selected.source.name + ' · row ' + selected.listing.sourceRow + ', option ' + (selected.optionIndex + 1));
+  row('Provider', selected => show(selected.source.name, selected.source.provider) + ' · row ' + selected.listing.sourceRow + ', option ' + (selected.optionIndex + 1));
   row('Captured at (UTC)', selected => selected.source.observedAt);
   row('Source endpoint', selected => selected.source.endpoint);
   row('Capture network filter', selected => selected.capturedNetwork);
@@ -403,6 +405,27 @@ async function load(manual = false) {
     if(!state.data)results.replaceChildren(elem('p','empty','No current original-source observations.'));
   } finally {state.loading=false;$('refresh').disabled=false;}
 }
+$('shortlist-open').addEventListener('click', () => $('shortlist-file').click());
+$('shortlist-file').addEventListener('change', async () => {
+  const file = $('shortlist-file').files?.[0];
+  if (!file) return;
+  $('shortlist-open').disabled = true;
+  announceSelection('Opening saved comparison…');
+  try {
+    if (file.size >= SHORTLIST_FILE_MAX_BYTES) throw new Error('Choose a review JSON file smaller than 1 MiB.');
+    const imported = parseShortlistFile(await file.text());
+    state.undo = state.shortlist.length ? [...state.shortlist] : null;
+    state.shortlist = imported;
+    renderShortlist();
+    $('shortlist-heading').focus();
+    announceSelection('Opened ' + imported.length + ' saved option(s). Local-file observations are labeled; no source was fetched.' + (state.undo ? ' Undo restores your previous comparison.' : ''));
+  } catch (error) {
+    announceSelection('Comparison was not changed. ' + String(error?.message ?? error).slice(0, 200));
+  } finally {
+    $('shortlist-file').value = '';
+    $('shortlist-open').disabled = false;
+  }
+});
 $('shortlist-clear').addEventListener('click', () => {
   if (!state.shortlist.length) return;
   state.undo = [...state.shortlist];
