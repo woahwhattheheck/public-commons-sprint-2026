@@ -600,3 +600,36 @@ stellar-forge-buyer --state /private/data-buyer history --out /private/customer/
 - Workspace and approved-file applications additionally require the original `python/bridge.mjs`, its shared queue/workspace source, and original `sf101-merchant-receiver/` checkout/retrieval source. Accounting consumes the same original `finalization.mjs`, SF36 worker and SF86 observer as the inbox. The current complete source distribution supplies these; the Python wheel still does not bundle Node or a signer.
 - Local state includes source/configuration, request body, original evidence and downloaded data. Store it outside public repositories and supply the existing operator's policy/signer configuration.
 - Original settlement and merchant limits are preserved. This integration performs no grant submission, production-wallet provisioning, outbound customer contact or new remote hosting.
+
+## Whole customer workspace recovery
+
+`buyer.workspace_recovery()` captures the existing Python application state with
+its explicitly selected original operator, inboxes and other application roots.
+The standalone `WorkspaceRecovery(checkout=...)` constructor creates no state;
+use it before constructing a Buyer when restoring an absent canonical root.
+
+```python
+from stellar_forge_buyer import WorkspaceRecovery
+
+recovery = WorkspaceRecovery(checkout="/srv/forge")
+verified = recovery.verify(
+    bundle="/private/backups/customer-2026-10-11",
+    expected_record_sha256=selected_digest_from_your_backup_inventory,
+    python="/usr/bin/python3",
+)
+# Only after the original canonical root is absent or empty and writers stopped:
+restored = recovery.restore(
+    bundle="/private/backups/customer-2026-10-11",
+    expected_record_sha256=verified.record_sha256,
+    python="/usr/bin/python3",
+)
+```
+
+The passphrase is supplied through the selected environment variable name
+`passphrase_env` (default `SF88_BACKUP_PASSPHRASE`), never as a value argument.
+The original SF88/SF101 encryption and SF36 authenticated checkpoint remain the
+implementations. `inspect`, `snapshot(quiesced=True)`, `verify` and `restore`
+return typed recovery/process results; `WorkspaceRecoveryError.result` retains
+completion metadata and interruption outcomes without raw stderr. No restore
+exception deletes state or retries a purchase. See [RECOVERY.md](RECOVERY.md) for
+the full capture, selected-checkpoint and same-application reopen workflow.
