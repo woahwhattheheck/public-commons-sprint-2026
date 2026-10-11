@@ -84,6 +84,24 @@ Only advertised query keys are accepted. The existing bridge still supports
 HTTP GET/HEAD previews; describing an MCP tool, POST operation, additional input
 container or unapproved origin does not enable its execution.
 
+Before creating a quote, preview checks the direct required query names at
+`bazaar.schema.properties.input.properties.queryParams.required`. Each name
+must be present in the **final request URL**: an existing fixed URL parameter
+counts, or supply an explicit string under `input.query`. Missing names return
+`INPUT_REQUIRED` with the names to supply. Neither examples nor schema defaults
+are copied into the request. An empty string is present; this check does not
+enforce types, `minLength`, refs or conditional schema requirements.
+
+Describe exposes the same names under `preview.input.requiredKeys`. A malformed
+direct declaration (including duplicate names or requirements beyond the existing
+30-key/100-code-unit limits) returns `requiredKeys: null` with
+`requiredKeysError`; preview rejects it with `INPUT_SCHEMA_UNSUPPORTED`. The
+full original metadata remains inspectable and other search results remain
+usable. An absent direct declaration gives an empty list, not assurance that a
+request meets every seller constraint. Required names absent from the advertised
+query key list can only be satisfied by an existing fixed URL parameter; the
+existing allowed-query-key restriction remains in force.
+
 Descriptions use the original observation and the same handle lifetime as
 preview. They do not refresh the provider, create a quote or inspect a merchant.
 An expired or evicted handle returns `RESOURCE_STALE`: search again to obtain a
@@ -92,7 +110,7 @@ the bridge's cached resource or terms.
 
 The advertised schema helps construct the request; describing it is not schema
 validation, seller authentication, payment approval or settlement verification.
-The original preview, approval, signing and recovery behavior remains in place.
+The original origin, payment-term, approval, signing and recovery boundaries remain in place.
 
 Preview and status keep `resource` as the original catalog URL for source
 traceability. `requestUrl` is the concrete normalized URL after the chosen query
@@ -190,3 +208,4 @@ fixtures, not real Stellar payments.
 `McpPaidToolBroker.search()` appends `discovery/search` to the operator-configured `discoveryUrl` path. A base of `https://facilitator.example/x402` or `https://facilitator.example/x402/` searches `https://facilitator.example/x402/discovery/search`. A root base still resolves to `/discovery/search`. Leading-slash absolute construction is not used, so a configured prefix is never discarded. Existing query filters, origin guards, redirect policy, and constructor rejection of credentials/query/fragment remain unchanged.
 
 Focused regression: `node --test stellar-forge/mcp-paid-agent/discovery-prefix.test.mjs`
+
