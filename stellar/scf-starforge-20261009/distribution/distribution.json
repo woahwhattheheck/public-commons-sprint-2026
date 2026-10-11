@@ -538,6 +538,7 @@
     },
     "./seller/openapi/merchant": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/model.mjs",
     "./seller/openapi/source": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/source-document.mjs",
+    "./seller/linkup-search": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/linkup-search.mjs",
     "./seller/valyu": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/adapter.mjs",
     "./seller/valyu/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/config.mjs",
     "./seller/valyu/delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/delivery.mjs",
