@@ -61,11 +61,15 @@ export function responseFile(c) {
   return { destination:x.destination, maxBytes, timeoutMs };
 }
 export function catalog(x) {
-  shape(x, ['origin','query','filters','limit','offset'], 'INVALID_CATALOG');
+  shape(x, ['origin','query','filters','limit','offset','sandboxGatewayIPv4'], 'INVALID_CATALOG');
   need(typeof x.origin === 'string' && x.origin.startsWith('https://'), 'CATALOG_HTTPS_REQUIRED');
   if (x.query !== undefined) need(typeof x.query === 'string' && x.query.length < 257, 'INVALID_QUERY');
   if (x.limit !== undefined) need(Number.isInteger(x.limit) && x.limit >= 1 && x.limit <= 100, 'INVALID_LIMIT');
   if (x.offset !== undefined) need(Number.isSafeInteger(x.offset) && x.offset >= 0, 'INVALID_OFFSET');
+  if (x.sandboxGatewayIPv4 !== undefined)
+    need(typeof x.sandboxGatewayIPv4 === 'string' &&
+      x.sandboxGatewayIPv4.length >= 7 && x.sandboxGatewayIPv4.length <= 15,
+      'CATALOG_SANDBOX_GATEWAY_INVALID');
   if (x.filters !== undefined) {
     shape(x.filters, ['network','scheme','payTo','type','extensions'], 'INVALID_FILTERS');
     need(Object.values(x.filters).every(v => typeof v === 'string'), 'INVALID_FILTERS');
