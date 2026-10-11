@@ -273,7 +273,9 @@
     "sftp-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/server.mjs",
     "valyu-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/merchant-cli.mjs",
     "valyu-research": "stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/run.mjs",
-    "mpp": "stellar/scf-starforge-20261009/mpp-charge/cli.mjs"
+    "mpp": "stellar/scf-starforge-20261009/mpp-charge/cli.mjs",
+    "research-dossiers": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/cli.mjs",
+    "research-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -558,7 +560,9 @@
     "./mpp": "./source/stellar/scf-starforge-20261009/mpp-charge/index.mjs",
     "./mpp/merchant": "./source/stellar/scf-starforge-20261009/mpp-charge/merchant.mjs",
     "./mpp/buyer": "./source/stellar/scf-starforge-20261009/mpp-charge/buyer.mjs",
-    "./mpp/workspace": "./source/stellar/scf-starforge-20261009/mpp-charge/server.mjs"
+    "./mpp/workspace": "./source/stellar/scf-starforge-20261009/mpp-charge/server.mjs",
+    "./buyer/research-dossiers": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/index.mjs",
+    "./buyer/research-dossiers/server": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
