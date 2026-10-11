@@ -30,7 +30,8 @@ const CONFLICTS = new Set([
   'ACCESS_ALREADY_SUSPENDED', 'ACCESS_ALREADY_ENABLED', 'EXPIRY_UNCHANGED', 'NO_EXPIRY_CONFIGURED',
   'TOKEN_UNCHANGED', 'ORDER_NOT_ENTITLED', 'ORDER_ALREADY_ENROLLED', 'MERCHANT_STORE_NOT_INITIALIZED',
   'ORIGINAL_STORE_CONFLICT', 'EXPORT_ALREADY_EXISTS', 'SAVED_HANDOFF_DOES_NOT_MATCH_ORDER',
-  'EXPORT_CHANGED',
+  'EXPORT_CHANGED', 'MERCHANT_SNAPSHOT_INCOMPLETE', 'RECOVERY_MERCHANT_MISMATCH',
+  'RECOVERY_DESTINATION_EXISTS',
 ]);
 
 export class MerchantDeskError extends Error {
@@ -117,7 +118,7 @@ function errorCode(error) {
 function statusFor(error) {
   const code = errorCode(error);
   if (CONFLICTS.has(code)) return 409;
-  if (code === 'ORDER_NOT_FOUND' || code === 'EXPORT_NOT_FOUND') return 404;
+  if (code === 'ORDER_NOT_FOUND' || code === 'EXPORT_NOT_FOUND' || code === 'MERCHANT_SNAPSHOT_NOT_FOUND') return 404;
   if (Number.isInteger(error?.status)) return error.status;
   if (/UNAVAILABLE|OUTCOME_UNKNOWN|TIMED_OUT|WORKER|START_FAILED|OPERATION_FAILED|SOURCE_REQUIRED/.test(code)) return 503;
   return 422;
@@ -200,7 +201,7 @@ export async function startMerchantDesk({ config, filesRoot, outputRoot, claimEn
           env: environment(provided, claimEnv), stdio: ['pipe', 'pipe', 'ignore'], shell: false, windowsHide: true,
         });
       } catch { settle(new MerchantDeskError('ORIGINAL_ACCESS_START_FAILED', 503)); return; }
-      timer = setTimeout(() => { timedOut = true; child.kill('SIGKILL'); }, action === 'support' ? 60000 : 15000);
+      timer = setTimeout(() => { timedOut = true; child.kill('SIGKILL'); }, action.startsWith('recovery-') ? 300000 : action === 'support' ? 60000 : 15000);
       child.once('error', () => settle(new MerchantDeskError('ORIGINAL_ACCESS_START_FAILED', 503)));
       child.stdout.on('data', bytes => {
         size += bytes.length;
@@ -249,6 +250,52 @@ export async function startMerchantDesk({ config, filesRoot, outputRoot, claimEn
       return metadata;
     } finally { await handle.close(); }
   }
+
+  function recoveryId(value) {
+    need(typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(value),
+      'RECOVERY_NAME_INVALID');
+    return value;
+  }
+  const recoveryPath = id => join(outputRoot, 'merchant-snapshot-' + recoveryId(id));
+  async function listRecovery(after, limit) {
+    await privateDirectory(outputRoot);
+    if (after !== undefined) recoveryId(after);
+    const names = [];
+    const directory = await opendir(outputRoot);
+    let scanned = 0;
+    for await (const entry of directory) {
+      need(++scanned <= 10000, 'EXPORT_ROOT_TOO_LARGE');
+      if (!entry.isDirectory() || !entry.name.startsWith('merchant-snapshot-')) continue;
+      const id = entry.name.slice('merchant-snapshot-'.length);
+      try { recoveryId(id); } catch { continue; }
+      if (after === undefined || id > after) names.push(id);
+    }
+    names.sort();
+    const snapshots = [];
+    for (const id of names.slice(0, limit)) {
+      const path = recoveryPath(id);
+      await privateDirectory(path);
+      let saved;
+      try { saved = await privateFile(join(path, 'snapshot.json'), 16 * 1024 * 1024); }
+      catch (error) {
+        if (error.code === 'ENOENT') { snapshots.push({id, status: 'INCOMPLETE', snapshot: path}); continue; }
+        throw error;
+      }
+      try {
+        const bytes = await saved.handle.readFile();
+        need(sameFile(saved.info, await saved.handle.stat()), 'EXPORT_CHANGED', 409);
+        const manifest = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes));
+        need(manifest?.schema === 'stellar-forge.sf101.merchant-snapshot.v1' &&
+          manifest.sourceStateDigest === hash(compiled.state) && Array.isArray(manifest.orders),
+          'RECOVERY_MERCHANT_MISMATCH', 409);
+        snapshots.push({id, status:'SAVED', snapshot:path, createdAt:manifest.createdAt,
+          orders:manifest.orders.length, manifestSha256:hash(bytes), databaseSha256:manifest.database?.sha256});
+      } finally { await saved.handle.close(); }
+    }
+    return {schema:'stellar-forge.sf101.merchant-recovery-index.v1', snapshots,
+      nextAfter:names.length > limit ? names[limit-1] : null};
+  }
+
   async function listFiles(after, limit) {
     await privateDirectory(filesRoot);
     if (after !== undefined) relativeFileName(after);
@@ -371,6 +418,15 @@ export async function startMerchantDesk({ config, filesRoot, outputRoot, claimEn
           roots: { filesRoot, outputRoot }, actor,
           claimEnvs: allowedEnvs.map(name => ({ name, available: claimAvailable(name) })) });
       }
+      if (url.pathname === '/api/recovery') {
+        const q = query(url, ['after', 'limit']);
+        return reply(req, res, 200, await listRecovery(q.after, pageLimit(q.limit, 25)));
+      }
+      if (url.pathname.startsWith('/api/recovery/')) {
+        query(url, []);
+        const id = recoveryId(decodeURIComponent(url.pathname.slice('/api/recovery/'.length)));
+        return reply(req, res, 200, await worker('recovery-inspect', {output:recoveryPath(id)}));
+      }
       if (url.pathname === '/api/files') {
         const q = query(url, ['after', 'limit']);
         return reply(req, res, 200, await listFiles(q.after, pageLimit(q.limit)));
@@ -394,6 +450,23 @@ export async function startMerchantDesk({ config, filesRoot, outputRoot, claimEn
     need(req.method === 'POST', 'DESK_METHOD_NOT_ALLOWED', 405);
     query(url, []);
     const input = await requestBody(req);
+    if (url.pathname === '/api/recovery') {
+      fields(input, ['operationId']);
+      const output = recoveryPath(input.operationId);
+      return reply(req, res, 200, await mutate(async () => {
+        await requireStore(); await privateDirectory(outputRoot);
+        return worker('recovery-create', {output}, {mutation:true});
+      }));
+    }
+    if (url.pathname === '/api/recovery/restore') {
+      fields(input, ['operationId', 'restoreId']);
+      const output = recoveryPath(input.operationId);
+      const destination = join(outputRoot, 'restored-merchant-' + recoveryId(input.restoreId));
+      return reply(req, res, 200, await mutate(async () => {
+        await privateDirectory(outputRoot);
+        return worker('recovery-restore', {output, destination}, {mutation:true});
+      }));
+    }
     if (url.pathname === '/api/initialize') {
       fields(input);
       return reply(req, res, 200, await mutate(async () => {
