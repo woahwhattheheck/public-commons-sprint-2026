@@ -32,7 +32,7 @@ async function readData(response,max=64*1024){
   const body=Buffer.concat(chunks).toString('utf8');
   return {body,contentType:response.headers.get('content-type')??null,truncated};
 }
-const statOf=q=>({quoteId:q.quoteId,status:q.status,resource:q.resource,method:q.method,
+const statOf=q=>({quoteId:q.quoteId,status:q.status,resource:q.resource,requestUrl:q.url,method:q.method,
   selected:sanitizedPrice(q.accepted),expiresAt:q.expiresAt,attempts:q.attempts,
   result:q.result??null,failure:q.failure??null,
   ...(q.status==='INDETERMINATE'?{recovery:explainFailure({stage:'settle',
@@ -227,12 +227,13 @@ export class McpPaidToolBroker {
       }
       const header=first.headers.get('payment-required');
       const required=strictBytes(header);
-      if(required?.x402Version!==2||required?.resource?.url!==q.resource||!Array.isArray(required.accepts)||
+      // The catalog URL is provenance; payment binds to the concrete previewed request.
+      if(required?.x402Version!==2||required?.resource?.url!==q.url||!Array.isArray(required.accepts)||
         !required.accepts.some(a=>sameTerms(a,q.accepted)))fail('CHALLENGE_MISMATCH','402 payment terms differ from quoted catalog');
       if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';return statOf(q);}
       const payload=await this.#sign(Object.freeze({quoteId,resource:structuredClone(required.resource),
         accepted:structuredClone(q.accepted),paymentRequired:structuredClone(required)}));
-      if(payload?.x402Version!==2||payload?.resource?.url!==q.resource||!sameTerms(payload?.accepted,q.accepted)||
+      if(payload?.x402Version!==2||payload?.resource?.url!==q.url||!sameTerms(payload?.accepted,q.accepted)||
         !plain(payload?.payload))fail('SIGNER_INVALID','Signer returned mismatched x402 v2 payload');
       if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';return statOf(q);}
       q.signedRequestDispatched=true;
