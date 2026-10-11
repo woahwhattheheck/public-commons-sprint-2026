@@ -836,6 +836,28 @@ subpaths in `package.json`. The main import exports the original client, release
 and inbox functions for applications that manage their own UI and lifecycle.
 Optional database drivers load only when their original source is opened.
 
+## Cube report workspace
+
+Open the browser workspace on the merchant's retained Cube member catalog:
+
+```sh
+npx --no-install starforge cube-workspace --state /private/cube-browser \
+  --metadata /private/cube-meta.json --plan /private/merchant-plan.json
+```
+
+Omit `--plan` to compose a new merchant plan, or use the same `--state` alone to
+reopen saved versions and exported packages after restart. The browser selects
+actual Cube members, authors fixed reports and typed inputs, reviews every
+complete payment option, and saves through the original onboarding compiler.
+Atomic amounts stay exact strings.
+
+The selected saved version can run its native backend read, export the runnable
+merchant package and customer files, and prepare the original SF88 buyer review
+for a chosen report and payment option. The operator URL remains on loopback.
+Use `npx --no-install starforge cube-onboard` for the underlying capture, inspection and package
+workflow. See [Cube workspace](../sf102-cube-paid-query-adapter/workspace/README.md)
+for the full authoring and handoff flow.
+
 ## Maintainers: produce an immutable distribution
 
 Commit the distribution sources in a current public sprint checkout, then run:

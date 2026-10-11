@@ -42,7 +42,8 @@
     "stellar-forge/mcp-merchant-operator",
     "stellar/scf-starforge-20261009/sf33-failure-contract",
     "stellar/scf-starforge-20261009/merchant-fleet-gateway",
-    "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops"
+    "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops",
+    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -115,7 +116,9 @@
     "s3": "stellar/scf-starforge-20261009/sf30-seller-sdk/s3/cli.mjs",
     "python-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs",
     "revenue-report": "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
-    "openapi-workspace": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs"
+    "openapi-workspace": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+    "cube-workspace": "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/workspace/server.mjs",
+    "cube-onboard": "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/onboarding/cli.mjs"
   },
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
@@ -183,7 +186,8 @@
     "./seller/python": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs",
     "./seller/python/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/config.mjs",
     "./merchant/revenue-report": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
-    "./seller/openapi/workspace": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs"
+    "./seller/openapi/workspace": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+    "./seller/cube/workspace": "./source/stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/workspace/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -208,7 +212,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/demo-database.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/exercise.mjs",
     "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.journey.mjs",
-    "stellar-forge/mcp-merchant-operator/exercise.mjs"
+    "stellar-forge/mcp-merchant-operator/exercise.mjs",
+    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/check.mjs"
   ],
   "featurePeers": {
     "postgres": {

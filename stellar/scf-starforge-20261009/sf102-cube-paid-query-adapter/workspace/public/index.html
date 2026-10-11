@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cube merchant workspace · Stellar Forge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="wordmark">STELLAR FORGE</span><span class="product">Cube merchant workspace</span></div>
+    <div class="top-actions"><span id="draft-status">Opening workspace</span><button id="import-plan">Import plan</button><button id="download-plan">Download plan</button></div>
+  </header>
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+  <main>
+    <aside class="sidebar">
+      <section class="source-summary"><h2>Source catalog</h2><p id="source-counts"></p><details><summary>Source details</summary><p id="source-path" class="mono break"></p><p id="source-digest" class="mono break"></p></details></section>
+      <nav class="tabs" aria-label="Workspace steps">
+        <button data-tab="compose" class="active">1. Compose reports</button>
+        <button data-tab="review">2. Review and save</button>
+        <button data-tab="handoff">3. Merchant handoff</button>
+      </nav>
+      <section><div class="section-title"><h2>Reports</h2><button id="add-report">Add</button></div><div id="report-list" class="item-list"></div></section>
+      <section><div class="section-title"><h2>Saved versions</h2><button id="refresh-versions">Refresh</button></div><div id="version-list" class="item-list"></div><button id="more-versions" hidden>Load older versions</button></section>
+    </aside>
+    <div class="content">
+      <section id="compose-panel" class="panel">
+        <div class="heading"><div><h1>Configure the merchant</h1><p>Use the saved Cube catalog to define fixed reports and the exact terms each customer will see.</p></div><button id="review-top" class="primary">Review plan</button></div>
+        <details class="card" open>
+          <summary>Service, backend and payment terms</summary>
+          <div class="form-grid">
+            <label>Service name<input id="service-name" maxlength="32" autocomplete="off"></label>
+            <label>Public HTTPS origin<input id="public-origin" type="url" placeholder="https://reports.your-domain.com"></label>
+            <label>Cube API origin<input id="cube-origin" type="url" placeholder="https://cube.your-domain.com"></label>
+            <label>Authorization environment variable<input id="auth-env" autocomplete="off" spellcheck="false"></label>
+            <label>Fixed load path<input id="cube-path" spellcheck="false"></label>
+            <label>Tags, comma separated<input id="tags"></label>
+          </div>
+          <details><summary>Backend limits</summary><div class="form-grid compact">
+            <label>Timeout, ms<input id="timeout" type="number" min="1"></label>
+            <label>Maximum response bytes<input id="response-limit" type="number" min="1"></label>
+            <label>Concurrent backend requests<input id="concurrency" type="number" min="1"></label>
+            <label>Maximum result rows<input id="max-rows" type="number" min="1" max="10000"></label>
+            <label class="check"><input id="allow-loopback" type="checkbox">Use an owned loopback Cube backend</label>
+          </div></details>
+          <div class="section-title"><h3>Default payment choices</h3><button id="add-default-payment">Add choice</button></div>
+          <div id="default-payments"></div>
+          <p class="help">Amounts are exact atomic decimal strings. Each choice keeps its network, token, recipient and timeout together.</p>
+        </details>
+        <div id="empty-report" class="empty card"><h2>Add a report to begin</h2><p>Select actual catalog members, describe the result, and set the public input contract.</p></div>
+        <div id="report-editor" hidden>
+          <div class="heading report-heading"><div><h2 id="report-heading">Report</h2><p id="report-path" class="mono"></p></div><div><button id="duplicate-report">Duplicate</button><button id="remove-report">Remove</button></div></div>
+          <div class="form-grid card">
+            <label>Report ID<input id="report-id" pattern="[a-z][a-z0-9-]{0,39}" maxlength="40"></label>
+            <label>Maximum rows per response<input id="report-limit" type="number" min="1" max="1000"></label>
+            <label class="wide">Public description<textarea id="report-description" rows="2" maxlength="2048"></textarea></label>
+          </div>
+          <div class="builder-grid">
+            <section class="card"><h3>Choose catalog members</h3><div class="form-grid compact">
+              <label>Search<input id="member-search" type="search" placeholder="Name or title"></label>
+              <label>Member kind<select id="member-kind"><option value="">All kinds</option value="measures">Measures</option><option value="dimensions">Dimensions</option><option value="segments">Segments</option></select></label>
+              <label class="wide">Cube or view<select id="member-cube"><option value="">All cubes and views</option></select></label>
+            </div><div id="member-list" class="member-list"></div><div class="section-title"><span id="member-count" class="help"></span><button id="more-members" hidden>Load more</button></div></section>
+            <section class="card"><h3>Selected query</h3><div id="selected-members" class="selected-members"></div>
+              <div class="form-grid compact">
+                <label class="wide">Time dimension<input id="time-member" list="time-members" placeholder="Choose a time member below"><datalist id="time-members"></datalist></label>
+                <label>Granularity<input id="granularity" list="granularities" placeholder="day"><datalist id="granularities"></datalist></label>
+                <label>Timezone<input id="timezone" placeholder="UTC"></label>
+              </div><div class="button-row"><button id="apply-time">Set time grouping</button><button id="add-date-window">Expose date window</button></div>
+              <p class="help">Time-member rows in the catalog have a “Use for time” action. Public date windows use the original start/end guard.</p>
+              <div class="button-row"><button id="add-offset">Expose row offset</button><button id="open-filter">Add enum filter</button></div>
+              <div id="filter-form" class="inset" hidden><h4>Fixed member, public enum</h4><label>Filter member<input id="filter-member" list="filter-members"><datalist id="filter-members"></datalist></label><div class="form-grid compact"><label>Input name<input id="filter-name" placeholder="status"></label><label>Public description<input id="filter-description"></label></div><label>Allowed values, one per line<textarea id="filter-values" rows="3"></textarea></label><button id="apply-filter">Add filter and input</button></div>
+            </section>
+          </div>
+          <section class="card"><h3>Public inputs and exact examples</h3><div id="input-list"></div><div id="range-fields" class="form-grid compact" hidden><label>Start input<input id="range-start"></label><label>End input<input id="range-end"></label><label>Maximum date difference, days<input id="range-days" type="number" min="1" max="366"></label></div><p class="help">Every declared input must be used in the query. HTTP query values are strings; integer examples are entered as whole numbers.</p></section>
+          <section class="card"><label class="check"><input id="override-payment" type="checkbox">Set this report’s own payment choices</label><div id="report-payment-section" hidden><div class="section-title"><h3>Report payment choices</h3><button id="add-report-payment">Add choice</button></div><div id="report-payments"></div></div></section>
+          <details class="card"><summary>Original report JSON</summary><p class="help">Edit the full original query, input definitions, ordering and other supported fields. Applying it keeps the original onboarding compiler as the validator.</p><textarea id="report-json" class="code-editor" rows="22" spellcheck="false"></textarea><button id="apply-report-json">Apply report JSON</button></details>
+        </div>
+      </section>
+      <section id="review-panel" class="panel" hidden>
+        <div class="heading"><div><h1>Review the native report plan</h1><p>Inspect selected members, rendered examples and every original payment choice before saving a reusable version.</p></div><div class="button-row"><button id="review-again">Refresh review</button><button id="save-version" class="primary">Save version</button></div></div>
+        <div id="review-content" class="empty card">Review the current plan to see its compiled requests.</div>
+      </section>
+      <section id="handoff-panel" class="panel" hidden>
+        <div class="heading"><div><h1>Merchant and customer handoff</h1><p>Use a saved version to produce the original seller package and a customer’s exact operation.</p></div><button id="export-package" class="primary">Export selected version</button></div>
+        <section class="card"><h2>Selected saved version</h2><div id="selected-version">Save or open a version first.</div></section>
+        <section class="card"><div class="section-title"><h2>Read one report example</h2><button id="probe-report">Run backend read</button></div><label>Saved report<select id="probe-report-id"></select></label><p class="help">Reads the selected saved example from the merchant’s Cube backend using its configured environment authorization. The complete response remains in this private workspace.</p><div id="probe-result"></div></section>
+        <section class="card"><h2>Runnable merchant package</h2><div id="export-result">Export a saved version to create its package.</div></section>
+        <section class="card"><h2>Prepare the customer operation</h2><p class="help">Select a report and its exact payment option from the exported package. The original buyer workflow produces the review configuration.</p><div class="form-grid"><label>Report<select id="buyer-report"></select></label><label>Payment choice<select id="buyer-option"></select></label><label class="wide">Stable intent ID<input id="buyer-intent" placeholder="october-first-report"></label><label class="wide">Concrete query inputs, JSON strings<textarea id="buyer-inputs" rows="5" spellcheck="false"></textarea></label></div><button id="prepare-buyer">Prepare buyer review</button><div id="buyer-result"></div></section>
+      </section>
+    </div>
+  </main>
+  <input id="plan-file" type="file" accept="application/json,.json" hidden>
+</body>
+</html>
