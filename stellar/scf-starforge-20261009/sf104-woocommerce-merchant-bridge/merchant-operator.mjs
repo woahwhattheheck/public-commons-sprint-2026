@@ -193,8 +193,9 @@ async function loadReview(config, id) {
 }
 
 export async function reviewOrder(config, {id, order, recordPath, payer, rpcEndpoint, maxEventPages = 24,
-  signal, client, decodeContractEvent, fetchRpc} = {}) {
+  signal, client, decodeContractEvent, fetchRpc, expectedRecordSha256} = {}) {
   need(reference(order) && typeof payer === 'string', 'WOO_ORDER_AND_TRUSTED_PAYER_REQUIRED');
+  need(expectedRecordSha256 === undefined || HASH.test(expectedRecordSha256), 'WOO_REVIEW_SOURCE_HASH_REQUIRED');
   need(Number.isSafeInteger(maxEventPages) && maxEventPages >= 1 && maxEventPages <= 100, 'WOO_EVENT_PAGE_LIMIT_INVALID');
   await workspace(config);
   const directory = await privateDirectory(reviewPath(config, id));
@@ -202,6 +203,7 @@ export async function reviewOrder(config, {id, order, recordPath, payer, rpcEndp
   if (!await exists(inputPath)) {
     need(typeof recordPath === 'string', 'WOO_ORIGINAL_NATIVE_RECORD_REQUIRED');
     const raw = await readBytes(absolute(recordPath), MAX_RECORD), record = recordFromOriginal(parseJson(raw));
+    need(expectedRecordSha256 === undefined || digest(raw) === expectedRecordSha256, 'WOO_REVIEW_SOURCE_CHANGED');
     const observed = await (client ?? createMerchantClient(config)).inspect(order);
     await privateDirectory(config.outbox, {create:false});
     const outbox = await openOutbox(config.outbox);
@@ -221,6 +223,8 @@ export async function reviewOrder(config, {id, order, recordPath, payer, rpcEndp
       source:{...source, sha256:digest(jsonBytes(source))}});
   }
   const loaded = await loadInput(config, id), input = loaded.input;
+  need(expectedRecordSha256 === undefined || input.source.nativeRecordSha256 === expectedRecordSha256,
+    'WOO_REVIEW_SOURCE_CHANGED');
   need(input.orderReference === order && input.payer === payer && input.rpcEndpoint === (rpcEndpoint ?? null) &&
     input.maxEventPages === maxEventPages, 'WOO_REVIEW_ID_CONFLICT');
   if (await exists(join(directory, 'review.json'))) return (await loadReview(config, id)).review;
@@ -267,9 +271,11 @@ function completion(snapshot, payload) {
     native?.transactionHash === payload.transactionHash;
 }
 
-export async function releaseOrder(config, id, {confirmOrder, client} = {}) {
+export async function releaseOrder(config, id, {confirmOrder, client, expectedReviewSha256} = {}) {
   const {directory, input, review} = await loadReview(config, id);
   need(confirmOrder === review.orderReference, 'WOO_EXPLICIT_ORDER_CONFIRMATION_REQUIRED');
+  need(expectedReviewSha256 === undefined || HASH.test(expectedReviewSha256) && review.sha256 === expectedReviewSha256,
+    'WOO_RETAINED_REVIEW_CHANGED');
   const payload = releasePayload(input, review), api = client ?? createMerchantClient(config);
   const before = await api.inspect(review.orderReference);
   if (completion(before, payload)) return {schema:RELEASE_SCHEMA, status:'RELEASE_CONFIRMED',
