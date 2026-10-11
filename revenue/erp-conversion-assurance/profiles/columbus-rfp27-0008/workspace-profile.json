@@ -1,0 +1,239 @@
+{
+  "id": "columbus-rfp27-0008",
+  "title": "Columbus ERP conversion and phase acceptance",
+  "source": {
+    "url": "https://columbusga.gov/Portals/finance/Resources/bid-opportunities/2027/Heather%20FY27/RFP27-0008Add2.pdf?ver=wbOYnkUWs-BsSJZBX9578g%3D%3D",
+    "label": "Columbus RFP 27-0008, Addendum 2",
+    "sections": [
+      "11(G)",
+      "11(H)",
+      "11(I)",
+      "11(K)",
+      "11(L)",
+      "11(Q)"
+    ]
+  },
+  "cohorts": [
+    {
+      "id": "gl",
+      "title": "General ledger by fund and period",
+      "purpose": "Compare each declared journal line, signed debit/credit and fund/period aggregate; retain the independent trial-balance reference in the phase plan.",
+      "keys": [
+        "fiscal_year",
+        "fund",
+        "posting_period",
+        "document_id",
+        "line_id",
+        "account_class",
+        "account_code"
+      ],
+      "attributes": [],
+      "amounts": [
+        {
+          "name": "debits",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "credits",
+          "scale": 2,
+          "tolerance": "0.00"
+        }
+      ],
+      "groupBy": [
+        "fiscal_year",
+        "fund",
+        "posting_period"
+      ]
+    },
+    {
+      "id": "parallel_payroll",
+      "title": "Parallel payroll",
+      "purpose": "Compare the complete selected pay-run population and exact gross, net, tax, deductions and employer fringe under the reviewed mapping.",
+      "keys": [
+        "pay_period_end",
+        "pay_cycle",
+        "employee_token",
+        "check_sequence"
+      ],
+      "attributes": [],
+      "amounts": [
+        {
+          "name": "gross_pay",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "net_pay",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "employee_tax",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "deductions",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "employer_fringe",
+          "scale": 2,
+          "tolerance": "0.00"
+        }
+      ],
+      "groupBy": [
+        "pay_period_end",
+        "pay_cycle"
+      ]
+    },
+    {
+      "id": "vendor_master",
+      "title": "Vendor master",
+      "purpose": "Key coverage and exact declared vendor attributes.",
+      "keys": [
+        "vendor_id"
+      ],
+      "attributes": [
+        "vendor_name",
+        "payment_status"
+      ],
+      "amounts": [],
+      "groupBy": []
+    },
+    {
+      "id": "procurement",
+      "title": "Procurement commitments",
+      "purpose": "Open and historical purchase-order lines and their declared commitment amounts.",
+      "keys": [
+        "fund",
+        "purchase_order",
+        "line_id"
+      ],
+      "attributes": [
+        "status"
+      ],
+      "amounts": [
+        {
+          "name": "committed_amount",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "liquidated_amount",
+          "scale": 2,
+          "tolerance": "0.00"
+        }
+      ],
+      "groupBy": [
+        "fund"
+      ]
+    },
+    {
+      "id": "employee_master",
+      "title": "Employee and position master",
+      "purpose": "Pseudonymous employee key coverage and declared employment/position attributes.",
+      "keys": [
+        "employee_token"
+      ],
+      "attributes": [
+        "position_code",
+        "employment_status"
+      ],
+      "amounts": [],
+      "groupBy": []
+    },
+    {
+      "id": "assets",
+      "title": "Fixed asset register",
+      "purpose": "Asset coverage, declared classifications and exact cost/depreciation balances.",
+      "keys": [
+        "fund",
+        "asset_id"
+      ],
+      "attributes": [
+        "asset_class",
+        "status"
+      ],
+      "amounts": [
+        {
+          "name": "cost",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "accumulated_depreciation",
+          "scale": 2,
+          "tolerance": "0.00"
+        }
+      ],
+      "groupBy": [
+        "fund"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "financial_controls",
+      "title": "Independent fund/period balances and source-to-target financial continuity",
+      "cohorts": [
+        "gl",
+        "procurement",
+        "assets"
+      ]
+    },
+    {
+      "id": "payroll_controls",
+      "title": "Parallel gross-to-net, void/off-cycle and payroll-to-finance control review",
+      "cohorts": [
+        "parallel_payroll"
+      ]
+    },
+    {
+      "id": "history_coverage",
+      "title": "Agreed active and historical population, periods and original identifiers",
+      "cohorts": [
+        "gl",
+        "parallel_payroll",
+        "vendor_master",
+        "procurement",
+        "employee_master",
+        "assets"
+      ]
+    },
+    {
+      "id": "interfaces",
+      "title": "Recorded application, banking, benefit-provider and reporting interface results",
+      "cohorts": [
+        "gl",
+        "parallel_payroll",
+        "vendor_master",
+        "procurement",
+        "employee_master",
+        "assets"
+      ]
+    },
+    {
+      "id": "cutover_rollback",
+      "title": "Source freeze, cutover support and usable rollback contingency",
+      "cohorts": [
+        "gl",
+        "parallel_payroll",
+        "vendor_master",
+        "procurement",
+        "employee_master",
+        "assets"
+      ]
+    },
+    {
+      "id": "year_end",
+      "title": "First fiscal close and first payroll/tax year-end continuation",
+      "cohorts": [
+        "gl",
+        "parallel_payroll"
+      ]
+    }
+  ]
+}

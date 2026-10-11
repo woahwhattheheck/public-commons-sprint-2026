@@ -8,6 +8,7 @@ const state = { profile: null, configuration: null, draft: null, files: {}, head
   baseBundleId: null, baseSpec: null, previousJobId: null, staged: null, stagedJobId: null,
   crosswalkOffset: 0, jobs: [], jobCursor: null, bundles: [], bundleCursor: null,
   selectedJob: null, detail: null, page: { kind: 'records', filter: '', offset: 0 }, busy: false, poll: null, jobSequence: 0, epoch: 0 };
+let profileModule = null, profilePanel = null;
 let token = '';
 try {
   const fragment = location.hash.slice(1);
@@ -71,7 +72,9 @@ async function perform(action) {
 }
 
 function view(name) {
-  for (const key of ['intake', 'runs', 'bundles']) $(`${key}View`).hidden = key !== name;
+  for (const key of ['intake', 'runs', 'bundles', 'profile']) {
+    const section = $(`${key}View`); if (section) section.hidden = key !== name;
+  }
   for (const item of document.querySelectorAll('[data-view]')) {
     if (item.dataset.view === name) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
   }
@@ -111,6 +114,27 @@ function renderEditor() {
   for (const side of ['source', 'target']) { $(`${side}File`).value = ''; renderInput(side); }
   $('crosswalkEnabled').checked = !!draft.crosswalk; $('mappingPreview').hidden = true;
   renderFields(); renderCrosswalk(); renderExecution();
+  renderProfilePanel();
+}
+
+function renderProfilePanel() {
+  if (!profileModule) return;
+  if (profilePanel) { profilePanel.updateDraft(state.draft); return; }
+  const section = element('section', { id: 'profileView', hidden: true, 'aria-label': profileModule.panelTitle ?? 'Project' });
+  document.querySelector('main').append(section);
+  const nav = element('button', { type: 'button', text: profileModule.panelTitle ?? 'Project', 'data-view': 'profile',
+    onClick: () => { if (!state.busy) view('profile'); } });
+  document.querySelector('.tabs').append(nav);
+  profilePanel = profileModule.mountProfilePanel({ element: section, api, draft: state.draft,
+    onDraftChange: plan => { state.draft = profileModule.applyPlan(state.draft, plan); touch(); },
+    onOpenJob: jobId => perform(() => selectJob(jobId)),
+    onOpenBundle: (bundleId, jobId) => perform(() => openBundle(bundleId, jobId)),
+    download: async path => {
+      const artifact = await api(path, undefined, { raw: true });
+      const name = /^attachment; filename="([A-Za-z0-9._-]+)"$/.exec(artifact.headers.get('content-disposition') ?? '')?.[1];
+      if (!name) throw new Error('The original handoff returned an invalid download name.');
+      download(artifact.blob, name);
+    } });
 }
 
 function retainedSpec() { return state.staged?.spec ?? state.baseSpec; }
@@ -208,11 +232,13 @@ function renderCrosswalk() {
 }
 
 function compiledMapping() {
+  if (profilePanel) state.draft = profileModule.applyPlan(state.draft, profilePanel.currentPlan());
   if (state.staged) return state.staged.spec;
   if (Object.keys(state.inputErrors).length) throw new Error('Resolve the selected CSV errors before staging.');
-  return compileDraft(state.draft, { profile: state.draft.profile, headers: state.headers,
+  const compiled = compileDraft(state.draft, { profile: state.draft.profile, headers: state.headers,
     inputs: Object.fromEntries(['source', 'target'].map(side => [side, { name: state.files[side]?.name ?? state.baseSpec?.workspace?.inputs?.[side]?.name ?? (state.baseSpec ? state.draft.inputs?.[side]?.name : '') }])),
     previous: state.baseBundleId ? { bundleId: state.baseBundleId, ...(state.previousJobId ? { jobId: state.previousJobId } : {}), revision: state.baseSpec?.workspace?.revision ?? 0 } : null });
+  return profileModule?.decorateSpec ? profileModule.decorateSpec(compiled, state.draft) : compiled;
 }
 
 function download(blob, filename) {
@@ -416,7 +442,9 @@ $('newMapping').addEventListener('click', () => { if (!state.busy && state.profi
 $('refreshAll').addEventListener('click', () => perform(async () => { await Promise.all([loadJobs(false), loadBundles(false)]); if (state.selectedJob) await loadDetail(); notice('Retained inputs and runs refreshed.'); }));
 $('cohort').addEventListener('change', event => {
   touch(); const fresh = newDraft(state.draft.profile, event.target.value);
-  state.draft = { ...fresh, scope: state.draft.scope, correctionReason: state.draft.correctionReason }; state.crosswalkOffset = 0; renderEditor();
+  state.draft = profileModule?.changeCohort ? profileModule.changeCohort(fresh, state.draft)
+    : { ...fresh, scope: state.draft.scope, correctionReason: state.draft.correctionReason };
+  state.crosswalkOffset = 0; renderEditor();
 });
 $('dataset').addEventListener('input', event => { touch(); state.draft.dataset = event.target.value; });
 for (const key of scopeKeys) $(key).addEventListener('input', event => { touch(); state.draft.scope[key] = event.target.value; });
@@ -456,6 +484,14 @@ $('moreBundles').addEventListener('click', () => perform(() => loadBundles(true)
 
 await perform(async () => {
   const bootstrap = await api('/api/bootstrap'); state.profile = bootstrap.profile; state.configuration = bootstrap.configuration;
+  if (bootstrap.extension) {
+    const path = bootstrap.extension.browserModule;
+    if (typeof path !== 'string' || !/^\/[A-Za-z0-9_.\/-]+$/.test(path) || path.startsWith('//') || path.includes('..'))
+      throw new Error('The local profile extension returned an invalid module path.');
+    profileModule = await import(path);
+    if (typeof profileModule.mountProfilePanel !== 'function' || typeof profileModule.applyPlan !== 'function')
+      throw new Error('The local profile extension needs its panel mount and draft adapter.');
+  }
   $('profileTitle').textContent = state.profile.title; document.title = state.profile.title;
   $('sourceLink').textContent = state.profile.source.label; $('sourceLink').href = state.profile.source.url;
   $('inputLimit').textContent = `UTF-8 CSV with a header row. Input limit ${size(state.configuration.maxInputBytes)} per export; original worker deadline ${state.configuration.timeoutMs / 1000} seconds.`;
