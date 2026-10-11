@@ -18,9 +18,13 @@ const document = { openapi: '3.1.1', info: { title: 'Admission export fixture' }
       schema: { type: 'string', examples: ['Louisville'] } }], responses: { 200: { description: 'Data' } } } },
     '/static': { get: { responses: { 200: { description: 'Data' } } } },
   } };
+for (const item of Object.values(document.paths)) {
+  (item.get.parameters ??= []).push({ name: 'ok', in: 'query',
+    schema: { type: 'string', enum: ['0', '1'], examples: ['1'] } });
+}
 const selections = Object.keys(document.paths).map(path => ({ method: 'GET', path, accepts: [payment] }));
-const bindings = [{ method: 'GET', path: '/forecast/{city}', id: 'forecast', handler: 'forecast', admit: 'checkCity' },
-  { method: 'GET', path: '/static', id: 'static', response: { protected: 'static' }, admit: 'checkCity' }];
+const bindings = [{ validateInput: true, method: 'GET', path: '/forecast/{city}', id: 'forecast', handler: 'forecast', admit: 'checkCity' },
+  { validateInput: true, method: 'GET', path: '/static', id: 'static', response: { protected: 'static' }, admit: 'checkCity' }];
 
 test('exported admission executes before native payment for dynamic and static applications', async t => {
   const dir = await mkdtemp(join(tmpdir(), 'sf61-admission-'));
@@ -32,6 +36,7 @@ test('exported admission executes before native payment for dynamic and static a
   assert.equal(manifest.serviceConfigSha256.length, 64);
   const config = await readSellerConfig(join(dir, 'out', 'seller-service.json'));
   assert.deepEqual(config.routes.map(r => r.admit), ['checkCity', 'checkCity']);
+  assert.deepEqual(config.routes.map(r => r.validateInput), [true, true]);
   assert.deepEqual(config.routes.map(r => r.offer), importOpenApi(document, selections).offers.map(o => o.seller));
   const calls = [];
   const handlers = {
@@ -53,8 +58,14 @@ test('exported admission executes before native payment for dynamic and static a
   await assert.rejects(startSellerService({ config, port: 0, handlers: { forecast: handlers.forecast }, nativeFactory }), /Admission export missing/);
   const session = await startSellerService({ config, port: 0, handlers, nativeFactory });
   t.after(() => session.close());
+  const health = await fetch(session.url + '/_seller/health').then(r => r.json());
+  assert.ok(health.routes.every(r => r.inputValidation && r.admission));
   for (const path of ['/v1/forecast/New%20York', '/v1/static']) {
     calls.length = 0;
+    const invalid = await fetch(session.url + path + '?ok=INVALID');
+    assert.equal(invalid.status, 422);
+    assert.equal((await invalid.json()).error, 'LIVE_REQUEST_SCHEMA_REJECTED');
+    assert.deepEqual(calls, []); // Schema rejection never enters business or payment.
     const denied = await fetch(session.url + path);
     assert.equal(denied.status, 422);
     assert.deepEqual(await denied.json(), { error: 'FIXTURE_NOT_ADMITTED' });
@@ -70,7 +81,7 @@ test('exported admission executes before native payment for dynamic and static a
   const challenge = await startSellerService({ config, port: 0,
     handlers: { forecast: handlers.forecast, checkCity() { throw new Error('must not execute in challenge-only mode'); } } });
   t.after(() => challenge.close());
-  assert.equal((await fetch(challenge.url + '/v1/forecast/New%20York')).status, 402);
+  assert.equal((await fetch(challenge.url + '/v1/forecast/New%20York?ok=INVALID')).status, 402);
 });
 
 test('invalid admission names fail export; omitted admission preserves existing bindings', () => {
@@ -78,8 +89,12 @@ test('invalid admission names fail export; omitted admission preserves existing 
   for (const admit of [undefined, null, false, '', [], ['checkCity'], {}, 'object.method', 'bad-name', 'x'.repeat(129)]) {
     assert.throws(() => createSellerServiceConfig(imported, [{ ...bindings[0], admit }, bindings[1]]), /admission binding/);
   }
-  const plain = bindings.map(({ admit, ...binding }) => binding);
-  assert.ok(createSellerServiceConfig(imported, plain).routes.every(r => !Object.hasOwn(r, 'admit')));
+  for (const validateInput of [undefined, null, 'true', 1, [], {}]) {
+    assert.throws(() => createSellerServiceConfig(imported, [{ ...bindings[0], validateInput }, bindings[1]]), /validateInput/);
+  }
+  const plain = bindings.map(({ admit, validateInput, ...binding }) => binding);
+  assert.ok(createSellerServiceConfig(imported, plain).routes.every(r => !Object.hasOwn(r, 'admit') && !Object.hasOwn(r, 'validateInput')));
+  assert.ok(createSellerServiceConfig(imported, plain.map(r => ({...r, validateInput: false}))).routes.every(r => r.validateInput === false));
   assert.throws(() => createSellerServiceConfig(imported, [{ ...bindings[0], handler: ['forecast'] }, bindings[1]]), /handler/);
   assert.deepEqual(bindings.map(r => r.admit), ['checkCity', 'checkCity']);
 });
