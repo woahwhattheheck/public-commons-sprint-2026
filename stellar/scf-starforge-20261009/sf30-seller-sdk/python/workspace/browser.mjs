@@ -79,6 +79,14 @@ const sessionToken = (() => { try { return sessionStorage.getItem(storageKey + '
 let token = fragment.get('token') || bareToken || sessionToken || '';
 if (token) { try { sessionStorage.setItem(storageKey + ':token', token); } catch {} }
 if (fragment.has('token') || bareToken) history.replaceState(null, '', location.pathname + location.search);
+window.addEventListener('hashchange', () => {
+  const nextFragment = new URLSearchParams(location.hash.slice(1));
+  const nextBare = /^[0-9a-f]{64}$/.test(location.hash.slice(1)) ? location.hash.slice(1) : '';
+  const nextToken = nextFragment.get('token') || nextBare;
+  if (!nextToken) return;
+  if (nextToken === token) history.replaceState(null, '', location.pathname + location.search);
+  else location.reload();
+});
 let state = null, draft = null, busy = false, tab = 'overview', sourcePath = null, functionName = null;
 let historical = null, previewDetail = null, selectedRelease = null, compareResult = null, customerExport = null;
 let editVersion = 0, previewTimer = null, noticeTimer = null, draftStorageFailure = false;
