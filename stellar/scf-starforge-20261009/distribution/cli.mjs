@@ -22,6 +22,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   handoff     Captured challenge -> review    support     Private seller support case
+  commerce    Merchant + buyer session        inbox       Durable selected requests
+  native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator

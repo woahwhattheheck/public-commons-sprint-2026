@@ -24,9 +24,17 @@
     "stellar/scf-starforge-20261009/sf89-live-request-admission",
     "stellar/scf-starforge-20261009/sf93-seller-support-bundle",
     "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff",
-    "stellar/scf-starforge-20261009/sf96-seller-pilot-ops"
+    "stellar/scf-starforge-20261009/sf96-seller-pilot-ops",
+    "stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery",
+    "stellar/scf-starforge-20261009/sf103-native-buyer-signer",
+    "stellar/scf-starforge-20261009/native-facilitator"
   ],
-  "supportFiles": ["stellar-forge/payment-auto-catalog/schema-validation.mjs"],
+  "supportFiles": [
+    "stellar-forge/payment-auto-catalog/schema-validation.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE.md"
+  ],
   "commands": {
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
@@ -35,6 +43,10 @@
     "openapi": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/cli.mjs",
     "pilot": "stellar/scf-starforge-20261009/sf96-seller-pilot-ops/pilot-ops.mjs",
     "buyer": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs",
+    "inbox": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs",
+    "native-signer": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/setup.mjs",
+    "facilitator": "stellar/scf-starforge-20261009/native-facilitator/cli.mjs",
+    "commerce": "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs",
     "capture": "stellar/scf-starforge-20261009/sf85-live-402-capture/capture.mjs",
     "handoff": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/handoff.mjs",
     "support": "stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs"
@@ -56,6 +68,10 @@
       "import": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/response-file.mjs"
     },
     "./operator": "./source/stellar/scf-starforge-20261009/sf81-buyer-operator-bridge/bridge.mjs",
+    "./commerce": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce.mjs",
+    "./buyer/native-signer": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/adapter.mjs",
+    "./buyer/inbox": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs",
+    "./facilitator": "./source/stellar/scf-starforge-20261009/native-facilitator/runtime.mjs",
     "./support": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs",
     "./package.json": "./package.json",
     "./manifest.json": "./manifest.json"
