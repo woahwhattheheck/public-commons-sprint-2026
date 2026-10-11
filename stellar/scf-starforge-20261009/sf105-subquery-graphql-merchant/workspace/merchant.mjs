@@ -5,6 +5,7 @@ import { join, relative, isAbsolute, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compileSchemaSource, inspectSchema } from '../onboarding/schema.mjs';
 import { compileSubQueryMerchantPlan, prepareSubQuerySeller } from '../onboarding/prepare.mjs';
+import { readSubQueryMerchantBundle, compareSubQueryMerchantSchemas, prepareSubQueryRevision } from '../onboarding/revisions.mjs';
 import { createSubQueryMerchantHandlers } from '../adapter.mjs';
 import { startSellerService } from '../../sf30-seller-sdk/serve.mjs';
 import { digest, draftInput, inputDigest, plain } from './store.mjs';
@@ -12,6 +13,7 @@ import { digest, draftInput, inputDigest, plain } from './store.mjs';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
 const launcher = fileURLToPath(new URL('../launch.mjs', import.meta.url));
+const conflict = message => { throw Object.assign(new Error(message), { status: 409 }); };
 function parseObject(text, label) {
   let value;
   try { value = JSON.parse(text); } catch { throw new TypeError(label + ' must be valid JSON.'); }
@@ -25,15 +27,21 @@ export async function inspectDraftSchema(schemaText) {
   return { sourceSha256: compiled.sourceSha256, format: compiled.format,
     provenance: compiled.provenance, inspection: await inspectSchema(compiled) };
 }
-export async function reviewDraft(value) {
+function draftSources(value) {
   const input = draftInput(value);
-  const schemaSource = await compileSchemaSource(input.schemaText);
+  const schemaSource = compileSchemaSource(input.schemaText);
   const queries = parseObject(input.queriesText, 'Approved queries');
   const plan = parseObject(input.planText, 'Merchant plan');
-  const compiled = await compileSubQueryMerchantPlan({ schemaSource, queries, plan });
+  return { input, schemaSource, queries, plan };
+}
+function merchantReview(input, schemaSource, compiled) {
   return { inputDigest: inputDigest(input), sourceSha256: schemaSource.sourceSha256,
     format: schemaSource.format, review: compiled.review, service: compiled.service,
-    queries: compiled.queries, inspection: await inspectSchema(schemaSource) };
+    queries: compiled.queries };
+}
+export async function reviewDraft(value) {
+  const source = draftSources(value), compiled = compileSubQueryMerchantPlan(source);
+  return { ...merchantReview(source.input, source.schemaSource, compiled), inspection: inspectSchema(source.schemaSource) };
 }
 async function fingerprints(folder, prefix = '') {
   const files = [];
@@ -49,9 +57,7 @@ async function fingerprints(folder, prefix = '') {
   }
   return files.sort((a, b) => a.name.localeCompare(b.name));
 }
-/** The original exporter remains the only source of merchant package files. */
-export async function exportDraft(store, saved) {
-  const reviewed = await reviewDraft(saved.input);
+async function freezeDraft(store, saved) {
   const exportId = randomUUID(), task = join(store.packages, saved.id + '-r' + saved.revision + '-' + exportId.slice(0, 8));
   await mkdir(task, { mode: 0o700 });
   const source = join(task, 'input');
@@ -60,18 +66,27 @@ export async function exportDraft(store, saved) {
   const queriesFile = join(source, 'queries.json'), planFile = join(source, 'plan.json');
   for (const [path, text] of [[schemaFile, saved.input.schemaText], [queriesFile, saved.input.queriesText], [planFile, saved.input.planText]])
     await writeFile(path, text, { flag: 'wx', mode: 0o600 });
-  const directory = join(task, 'merchant');
-  const prepared = await prepareSubQuerySeller({ schemaFile, queriesFile, planFile, directory });
-  const files = await fingerprints(directory);
+  return { exportId, task, schemaFile, queriesFile, planFile };
+}
+async function retainExport({ exportId, saved, prepared, reviewed, evolution }) {
+  const directory = prepared.directory, files = await fingerprints(directory);
   // These are original exporter results, retained separately from the editable draft.
   const record = { id: exportId, createdAt: new Date().toISOString(), draftRevision: saved.revision,
     inputDigest: saved.inputDigest, directory, files, prepared,
-    service: reviewed.service, queries: reviewed.queries, review: reviewed.review };
+    service: reviewed.service, queries: reviewed.queries, review: reviewed.review,
+    ...(evolution ? { evolution } : {}) };
   const retained = json(record);
-  await writeFile(join(task, 'workspace-export.json'), retained, { flag: 'wx', mode: 0o600 });
+  if (Buffer.byteLength(retained) > 8 * 1024 * 1024) throw new TypeError('Saved export record exceeds 8 MiB.');
+  await writeFile(join(dirname(directory), 'workspace-export.json'), retained, { flag: 'wx', mode: 0o600 });
   return { record, reference: { id: record.id, createdAt: record.createdAt,
     draftRevision: record.draftRevision, inputDigest: record.inputDigest,
     directory: record.directory, recordSha256: digest(retained) } };
+}
+/** The original exporter remains the only source of merchant package files. */
+export async function exportDraft(store, saved) {
+  const reviewed = await reviewDraft(saved.input), frozen = await freezeDraft(store, saved);
+  const prepared = await prepareSubQuerySeller({ ...frozen, directory: join(frozen.task, 'merchant') });
+  return retainExport({ exportId: frozen.exportId, saved, prepared, reviewed });
 }
 export async function readExport(reference) {
   const path = join(dirname(reference.directory), 'workspace-export.json'), stat = await lstat(path);
@@ -86,18 +101,69 @@ export async function readExport(reference) {
 export function exportView(record) {
   return { id: record.id, createdAt: record.createdAt, draftRevision: record.draftRevision,
     inputDigest: record.inputDigest, directory: record.directory, files: record.files,
-    prepared: record.prepared, review: record.review,
+    prepared: record.prepared, review: record.review, ...(record.evolution ? { evolution: record.evolution } : {}),
     command: `node ${quote(record.prepared.launcher ?? launcher)} --seller ${quote(record.prepared.service)} --queries ${quote(record.prepared.queries)}` };
 }
-export async function startDraftMerchant(record, { allowLoopback = false, facilitator } = {}) {
-  if (!plain(record) || !isAbsolute(record.directory) || !Array.isArray(record.files)) throw new TypeError('Choose a saved merchant export.');
-  for (const expected of record.files) {
-    const path = join(record.directory, expected.name), rel = relative(record.directory, path);
+async function verifyFiles(directory, files) {
+  if (!isAbsolute(directory) || !Array.isArray(files)) throw new TypeError('Choose a saved merchant export.');
+  if (!(await lstat(directory)).isDirectory()) throw new TypeError('Saved package must remain a regular directory.');
+  for (const expected of files) {
+    const path = join(directory, expected.name), rel = relative(directory, path);
     if (isAbsolute(rel) || rel.startsWith('..')) throw new TypeError('Invalid exported file path.');
     const stat = await lstat(path);
     if (!stat.isFile() || stat.size !== expected.bytes || digest(await readFile(path)) !== expected.sha256)
       throw new TypeError('Exported merchant files changed. Create a fresh reviewed export.');
   }
+}
+async function verifyExport(record) {
+  if (!plain(record)) throw new TypeError('Choose a saved merchant export.');
+  await verifyFiles(record.directory, record.files);
+  if (record.evolution) await verifyFiles(record.evolution.directory, record.evolution.files);
+}
+/** Compare only a project's retained package, using the original revision API. */
+export async function compareDraft(value, baselineReference) {
+  const baseline = await readExport(baselineReference);
+  await verifyExport(baseline);
+  const previous = await readSubQueryMerchantBundle(baseline.directory), candidate = draftSources(value);
+  const { review, prepared } = compareSubQueryMerchantSchemas({ previous, candidate });
+  const candidateDigest = inputDigest(candidate.input);
+  return { inputDigest: candidateDigest,
+    baseline: { id: baseline.id, draftRevision: baseline.draftRevision, directory: baseline.directory },
+    comparisonDigest: digest(json({ baseline: baselineReference.recordSha256, inputDigest: candidateDigest, review })),
+    review, merchant: prepared ? merchantReview(candidate.input, candidate.schemaSource, prepared) : null };
+}
+/** Keep the revised merchant, exact baseline copy and native review together. */
+export async function reviseDraft(store, saved, baselineReference, expectedComparisonDigest) {
+  const compared = await compareDraft(saved.input, baselineReference);
+  if (typeof expectedComparisonDigest !== 'string' || compared.comparisonDigest !== expectedComparisonDigest)
+    conflict('The revision comparison changed. Compare this saved draft and baseline again.');
+  if (!compared.review.ready) throw new TypeError(compared.review.candidateValidation.error.message);
+  const frozen = await freezeDraft(store, saved);
+  const revision = await prepareSubQueryRevision({ ...frozen,
+    previousDirectory: baselineReference.directory, directory: join(frozen.task, 'revised') });
+  const report = JSON.parse(await readFile(revision.report, 'utf8'));
+  if (json(report) !== json(compared.review)) conflict('Prepared revision differs from its reviewed inputs. Compare again.');
+  const evolution = { schema: 'stellar-forge.graphql-workspace-evolution.v1',
+    baselineExportId: baselineReference.id, baselineDraftRevision: baselineReference.draftRevision,
+    baselineDirectory: baselineReference.directory, comparisonDigest: compared.comparisonDigest,
+    directory: revision.directory, previousDirectory: revision.previousDirectory,
+    review: revision.review, report: revision.report, manifest: revision.manifest,
+    summary: revision.summary, previous: report.previous, candidate: report.candidate,
+    files: await fingerprints(revision.directory) };
+  return retainExport({ exportId: frozen.exportId, saved, prepared: revision.prepared,
+    reviewed: compared.merchant, evolution });
+}
+export async function readRevisionReport(reference) {
+  const record = await readExport(reference);
+  if (!record.evolution) throw new TypeError('This export has no retained schema revision report.');
+  await verifyExport(record);
+  return { retained: true, exportId: record.id, draftRevision: record.draftRevision, inputDigest: record.inputDigest,
+    baseline: { id: record.evolution.baselineExportId, draftRevision: record.evolution.baselineDraftRevision,
+      directory: record.evolution.baselineDirectory },
+    review: JSON.parse(await readFile(record.evolution.report, 'utf8')) };
+}
+export async function startDraftMerchant(record, { allowLoopback = false, facilitator } = {}) {
+  await verifyExport(record);
   const handlers = createSubQueryMerchantHandlers(record.queries, { allowLoopback, env: { ...process.env } });
   let nativeFactory = null;
   if (facilitator) {

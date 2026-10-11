@@ -6,9 +6,13 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inspectOpenApi, prepareMerchant, savePackage, readPackage, privateParent, packageName } from './model.mjs';
+import { prepareMerchantOperationDirectories } from './operation-plan.mjs';
+import { createMerchantTicketIssuer, saveMerchantTicket, readMerchantTicket } from './operation-ticket.mjs';
+import { readSellerConfig } from '../../sf30-seller-sdk/serve.mjs';
+import { readUpstreamBindings } from '../../sf30-seller-sdk/upstream.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/style.css','style.css']]);
+const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/style.css','style.css']]);
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
@@ -35,6 +39,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
   };
   const view = () => active ? {name:active.name, mode:active.session.mode, seller:active.session.seller,
     operations:active.session.operationsDashboard, state:'RUNNING',runtimeId:active.runtimeId,caches:cacheView(),
+    operationBindings:active.tickets.bindings,
+    ...(active.tickets.bindings.length ? {operationConsole:active.session.operations.operationControlUrl ?? active.session.operations.merchantOperationsUrl} : {}),
     ...(active.acceptance?{acceptance:active.acceptance}:{})} : {state:'STOPPED'};
   async function list() {
     const entries = (await readdir(output,{withFileTypes:true})).filter(e=>e.isDirectory()).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,200);
@@ -82,7 +88,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
-      if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate'].includes(pathname)) return send(404,{error:'Not found'});
+      if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download'].includes(pathname)) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
@@ -115,12 +121,29 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           active.session.session.invalidateUpstreamCache(body.binding);
           return send(200,view());
         }
+        if (pathname==='/api/operations/issue' || pathname==='/api/operations/download') {
+          if (typeof body.runtimeId!=='string' || !active || body.runtimeId!==active.runtimeId)
+            return send(409,{error:'The managed runtime changed. Reopen its operation form.'});
+          const {runtimeId,...request}=body;
+          if (pathname==='/api/operations/download') {
+            if (Object.keys(request).length!==1 || typeof request.fileId!=='string')
+              return send(400,{error:'Select a ticket file issued by the current runtime'});
+            return send(200,await readMerchantTicket(active.project,runtimeId,request.fileId));
+          }
+          const document=active.tickets.issue(request);
+          return send(201,await saveMerchantTicket(active.project,runtimeId,document));
+        }
         packageName(body.name);
         if (active) return send(409,{error:'Stop the current managed seller before starting another package'});
         const project=await readPackage(output,body.name);
+        const [service,upstreams]=await Promise.all([
+          readSellerConfig(join(project.folder,'compiled','seller-service.json')),
+          readUpstreamBindings(join(project.folder,'upstreams.json')),
+        ]);
         const {launch}=await import('../../sf82-seller-pilot/pilot.mjs');
         const status=await launch(['--status',join(project.folder,'compiled')]);
         if (status.state==='RUNNING') return send(409,{error:'This saved seller is already running at '+status.listener+'. Stop its existing process before starting another.'});
+        await prepareMerchantOperationDirectories(upstreams);
         const args=['--ops-port','0','--support-parent',join(project.folder,'support'),'--',
           '--resume',join(project.folder,'compiled'),'--upstreams',join(project.folder,'upstreams.json'),'--port','0'];
         if (project.plan.allowLoopbackUpstream===true) args.push('--allow-loopback-upstream');
@@ -133,7 +156,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         const {start}=await import('../../sf96-seller-pilot-ops/pilot-ops.mjs');
         const {startSellerOperations}=await import('../../sf30-seller-sdk/operations/server.mjs');
         const session=await start(args,{noSignals:true,
-          startSellerOperations:(seller,options)=>startSellerOperations(seller,{...options,navigationOrigin:origin}),
+          startSellerOperations:(seller,options)=>startSellerOperations(seller,{...options,navigationOrigin:origin,
+            operationControls:Object.values(upstreams.bindings).some(binding=>binding.idempotency)}),
           launchSeller:async forwarded=>{
           const original=await launch(forwarded), nativeClose=original.close.bind(original);
           let closed;
@@ -141,7 +165,15 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           return original;
         }});
         if (shuttingDown) {await session.close();return send(503,{error:'Workspace stopped during startup'});}
-        active={name:body.name,session,runtimeId:randomUUID()};
+        let tickets;
+        try {
+          // Validate against the exact public offers of the active original
+          // seller, while retaining its configured upstream binding names.
+          const offers=new Map(session.session.compiled.routes.map(route=>[route.id,route.offer]));
+          const served={...service,routes:service.routes.map(route=>({...route,offer:offers.get(route.id)}))};
+          tickets=createMerchantTicketIssuer({service:served,upstreams,control:session.session.operationControl});
+        } catch(error) {await session.close();throw error;}
+        active={name:body.name,project,session,runtimeId:randomUUID(),tickets};
         return send(200,view());
       } finally {busy=false;finishMutation();}
     } catch(error) {

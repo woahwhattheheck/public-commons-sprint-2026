@@ -7,10 +7,11 @@ import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { InputError, need } from './config.mjs';
 import { canonical, digest, inspectDatasetPage, nativeDatasetContract, object } from './dataset-page.mjs';
+import { MAX_DATASET_PAGE_BYTES, MAX_DATASET_PAGES } from '../sf100-buyer-dataset-delivery/deliver.mjs';
 
 const NATIVE = fileURLToPath(new URL('../sf100-buyer-dataset-delivery/deliver.mjs', import.meta.url));
 const WORKER = fileURLToPath(new URL('./dataset-export-worker.mjs', import.meta.url));
-const MAX_INPUT = 2 * 1024 * 1024, MAX_PAGES = 4096, MAX_EXPORT = 256 * 1024 * 1024;
+const MAX_INPUT = MAX_DATASET_PAGE_BYTES, MAX_PAGES = MAX_DATASET_PAGES, MAX_EXPORT = 256 * 1024 * 1024;
 const HEX = /^[a-f0-9]{64}$/;
 const exactPath = value => typeof value === 'string' && isAbsolute(value) && resolve(value) === value && !value.includes('\0');
 const integer = (n, min, max) => Number.isSafeInteger(n) && n >= min && n <= max;

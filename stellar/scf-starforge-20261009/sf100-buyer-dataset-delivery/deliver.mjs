@@ -432,7 +432,8 @@ async function finalize(out) {
   }
 }
 
-export { init, append, appendMany, scan, finalize, checkPage, checkCursor };
+export { init, append, appendMany, scan, finalize, checkPage, checkCursor,
+  MAX_INPUT as MAX_DATASET_PAGE_BYTES, MAX_PAGES as MAX_DATASET_PAGES };
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   try {
     const args = argumentsOf(process.argv.slice(2));

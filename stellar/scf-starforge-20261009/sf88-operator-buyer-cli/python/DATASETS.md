@@ -58,6 +58,13 @@ configuration. Native acquisition allocates those caps conservatively; an
 allocated cap is not a payment or revenue amount. All real reservations and
 financial classification remain in the original SF36/SF82 path.
 
+New sessions accept `max_pages` from 1 through 4,096 and `max_page_bytes` from
+1,024 through 2,097,152, matching the original SF100 import limits. Native
+initialization rejects incompatible configured ceilings before creating a
+session or attempt. The original aggregate archive/export limits still apply;
+choose a selection and row ceiling that fit the native delivery workflow.
+Existing session definitions remain available to original status and recovery.
+
 The selected `snapshot` query parameter binds the native session automatically.
 An optional `snapshot="64-character-sha256"` also pins a reviewed version; a
 conflicting selection is refused. Subsequent pages retain the same query and
