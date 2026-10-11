@@ -61,7 +61,10 @@ compares any two retained releases. It reports:
   asset, recipient, network, scheme and timeout;
 - changed request metadata and input contracts;
 - handler/admission bindings, input-validation settings and response digests;
-- facilitator, port and handler-entry changes.
+- facilitator, port and handler-entry changes;
+- backend origin/path/query, credential environment references, response-contract
+  digest, availability, durable-operation configuration and source limits for
+  upstream routes.
 
 It does not print static customer response contents. Amounts remain their
 original atomic strings. The tool does not infer token decimals or convert
@@ -124,6 +127,57 @@ specific instance. A seller owned by another terminal remains visible, with
 instructions to stop it there. Closing the console command stops its own
 seller; closing the browser tab leaves the command running. A separate
 `run` process can be used when the operator UI is not needed.
+
+## Release an existing API merchant
+
+An API package saved by the original SF61 workspace can now become a retained
+release directly:
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs stage \
+  --store /private/merchant-releases --id api-first \
+  --workspace /private/api-project --port 0
+```
+
+The original workspace reader verifies its saved package before staging. The
+release records the package identity and original OpenAPI digest, and checks the
+actual staged compiler inputs against those saved hashes. Its original loopback
+choice is retained. This command does not reopen or import the package's backend.
+
+For separately prepared inputs, use the original files together:
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs stage \
+  --store /private/merchant-releases --id api-first \
+  --spec /private/api-project/facade-openapi.json \
+  --config /private/api-project/selections.json \
+  --bindings /private/api-project/route-bindings.json \
+  --upstreams /private/api-project/upstreams.json --port 0
+```
+
+Supply the existing facilitator to stage a native runtime. The same command
+also accepts an original `seller-upstreams.v1` file prepared outside the workspace.
+`--handlers` and `--upstreams` select distinct original runtime configurations;
+choose one. A development source on `http://127.0.0.1` additionally requires
+`--allow-loopback-upstream`, which is retained with that release.
+
+Staging validates the original upstream schema and route bindings, then retains
+the exact JSON bytes in a private digest-named snapshot. Environment names are
+validated without reading credential values. The snapshot includes the source's
+configured response contract, availability, source limits and original POST
+idempotency references.
+Inspect, comparison, selection and startup verify the retained digest. Editing
+the input file later has no effect on an existing release; stage a new version
+to change its origin, policy, mapping or limits. Existing response files and
+handler-based releases keep their original workflow.
+
+Each start resumes the original SF82 pilot using that exact upstream snapshot
+and fresh launch environment. Update the manager's environment and restart to
+apply a credential rotation; change a credential reference by staging a new
+release. An upgrade or rollback starts the selected source with current credentials.
+The original source-health state starts fresh; durable merchant-operation state
+uses the selected original state directory and key reference. Original payment
+terms and every request's native lifecycle remain in the seller.
 
 ## Application code and native payment runtime
 
