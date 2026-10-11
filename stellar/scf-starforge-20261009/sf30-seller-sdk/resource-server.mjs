@@ -5,6 +5,7 @@ import { validateHeaderName, validateHeaderValue } from 'node:http';
 import { isDeepStrictEqual } from 'node:util';
 import { evaluateAdmission, validateAdmissionTimeout } from './admission.mjs';
 import { createHandlerExecution, validateHandlerTimeout } from './handler-execution.mjs';
+import { createRequestLifetime, validateRequestTimeout, DEFAULT_REQUEST_TIMEOUT_MS } from './request-lifetime.mjs';
 import { compileServicePath, orderServiceRoutes, selectServiceRoute } from './route-path.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 import { supportsSellerMethod, requiresJsonBody } from './http-methods.mjs';
@@ -205,8 +206,10 @@ function requestContext(req, route, target, body, pathParams, signal) {
 /** Node handler; nativeServer must be the operator-configured canonical SDK. */
 export function createSellerResourceHandler({ compiled, nativeServer = null,
   maxRequestBytes = 1024 * 1024, maxResponseBytes = 1024 * 1024,
-  admissionTimeoutMs = 2000, handlerTimeoutMs = 30000 } = {}) {
+  admissionTimeoutMs = 2000, handlerTimeoutMs = 30000,
+  requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS } = {}) {
   validateAdmissionTimeout(admissionTimeoutMs);
+  validateRequestTimeout(requestTimeoutMs);
   validateHandlerTimeout(handlerTimeoutMs);
   if (!compiled?.routes?.length || !compiled.nativeRoutes) throw new TypeError('Compiled seller routes required');
   for (const limit of [maxRequestBytes, maxResponseBytes]) {
@@ -214,10 +217,26 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
   }
   if (nativeServer !== null && ['processHTTPRequest', 'processSettlement', 'createFailurePathSettlementHeaders']
       .some(key => typeof nativeServer[key] !== 'function')) throw new TypeError('Native x402 HTTP server required');
-  return async function sellerResourceHandler(req, res) {
+  let activeWork = 0;
+  const counters = { deadlineExceeded: 0, clientDisconnects: 0, lateVerifiedResults: 0,
+    cancellationRequests: 0, cancellationErrors: 0, interruptedSettlements: 0 };
+  const handler = async function sellerResourceHandler(req, res) {
     const simple = (status, error, extra = {}) => send(req, res,
       encodeResponse({ status, headers: extra, body: { error } }, maxResponseBytes));
-    let payment, execution;
+    let payment, lifetime, execution, cancellation;
+    let phase = 'routing', verificationStarted = false, settlementStarted = false;
+    // Original dispatcher, one invocation per verified attempt. A rejected cleanup
+    // is observed and counted, never retried and never described as a refund.
+    const cancelVerified = (verified, options) => {
+      if (settlementStarted || verified?.type !== 'payment-verified' ||
+          typeof verified.cancellationDispatcher?.cancel !== 'function') return Promise.resolve();
+      if (!cancellation) {
+        counters.cancellationRequests++;
+        cancellation = lifetime.track(() => execution.cancel(verified, options));
+        cancellation.catch(() => { counters.cancellationErrors++; });
+      }
+      return cancellation;
+    };
     try {
       // Never derive advertised payment/resource identity from the Host header.
       if (typeof req.url !== 'string' || !req.url.startsWith('/') || req.url.startsWith('//')) {
@@ -248,14 +267,25 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
         return send(req, res, encodeResponse({ status: challenge.statusCode,
           headers: challenge.headers, body: challenge.body }, maxResponseBytes));
       }
-      execution = createHandlerExecution(req, res, { timeoutMs: handlerTimeoutMs });
-      const body = await readBody(req, maxRequestBytes);
+      activeWork++;
+      lifetime = createRequestLifetime(req, res, { timeoutMs: requestTimeoutMs,
+        onRetire(reason) {
+        if (reason.code === 'REQUEST_DEADLINE_EXCEEDED') counters.deadlineExceeded++;
+        else counters.clientDisconnects++;
+        if (settlementStarted) counters.interruptedSettlements++;
+      } });
+      execution = createHandlerExecution(req, res, { timeoutMs: handlerTimeoutMs, signal: lifetime.signal });
+      phase = 'body';
+      const body = await lifetime.run(() => readBody(req, maxRequestBytes));
+      lifetime.assertOpen();
       const context = requestContext(req, route, target, body, pathParams, execution.signal);
+      context.application.deadlineEpochMillis = lifetime.deadlineEpochMillis;
       if (route.admit) {
+        phase = 'admission';
         try {
-          const decision = await evaluateAdmission(route.admit, context.application,
-            { timeoutMs: admissionTimeoutMs, signal: execution.signal });
-          if (res.destroyed || res.writableEnded || req.aborted) return;
+          const decision = await lifetime.run(() => evaluateAdmission(route.admit, context.application,
+            { timeoutMs: admissionTimeoutMs, signal: lifetime.signal }));
+          lifetime.assertOpen();
           if (decision !== true) {
             const rejected = decision === false ?
               { status: 422, body: { error: 'REQUEST_NOT_ADMITTED' } } : decision;
@@ -265,14 +295,23 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
             }
             return send(req, res, encodeResponse(rejected, maxResponseBytes, true));
           }
-        } catch {
+        } catch (error) {
+          if (lifetime.signal.aborted) throw error;
           // No native verification, cancellation or settlement has been invoked.
           return simple(503, 'REQUEST_ADMISSION_UNAVAILABLE');
         }
       }
-      // No native verification for a request already abandoned during input/admission.
       execution.check();
-      payment = await nativeServer.processHTTPRequest(context.sdk);
+      phase = 'verification';
+      payment = await lifetime.run(() => {
+        verificationStarted = true;
+        return nativeServer.processHTTPRequest(context.sdk);
+      }, { onLateValue: verified => {
+        if (verified?.type !== 'payment-verified') return;
+        counters.lateVerifiedResults++;
+        return cancelVerified(verified, { reason: 'after_verify_aborted', error: lifetime.signal.reason });
+      } });
+      lifetime.assertOpen();
       if (payment?.type === 'payment-error') {
         return send(req, res, encodeResponse(payment.response, maxResponseBytes));
       }
@@ -282,34 +321,45 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
         return simple(503, 'NATIVE_PAYMENT_GATE_NOT_VERIFIED');
       }
       let response;
+      phase = 'application';
       try {
-        // A verification that finished after disconnect must still use the native
-        // cancellation path, but must not invoke the merchant's application.
-        response = encodeResponse(await execution.run(route.handler, context.application), maxResponseBytes, true);
+        response = encodeResponse(await lifetime.run(() => execution.run(route.handler, context.application)), maxResponseBytes, true);
+        lifetime.assertOpen();
         execution.check();
-        if (response.status < 400) execution.beginSettlement();
       } catch (error) {
         const reason = execution.interruption;
-        const cancelled = await execution.cancel(payment, {
-          reason: 'handler_threw', error: reason ? execution.signal.reason : error,
-        });
+        const cleanup = cancelVerified(payment, { reason: 'handler_threw',
+          error: reason ? execution.signal.reason : error });
+        if (lifetime.signal.aborted) throw error;
+        phase = 'cancellation';
+        const cancelled = await lifetime.run(() => cleanup);
+        lifetime.assertOpen();
         const receiptHeaders = nativeServer.createFailurePathSettlementHeaders(cancelled,
           payment.beforeHandlerSettlement, payment.paymentPayload, 'private, no-store') ?? {};
         return simple(reason === 'handler_timeout' ? 504 : 500,
           reason === 'handler_timeout' ? 'APPLICATION_TIMEOUT' : 'APPLICATION_FAILED', headers(receiptHeaders));
       }
       if (response.status >= 400) {
-        const cancelled = await execution.cancel(payment, { reason: 'handler_failed', responseStatus: response.status });
+        const cleanup = cancelVerified(payment, { reason: 'handler_failed', responseStatus: response.status });
+        phase = 'cancellation';
+        const cancelled = await lifetime.run(() => cleanup);
+        lifetime.assertOpen();
         const receiptHeaders = nativeServer.createFailurePathSettlementHeaders(cancelled,
           payment.beforeHandlerSettlement, payment.paymentPayload, 'private, no-store') ?? {};
         response.headers = { ...response.headers, ...headers(receiptHeaders) };
         return send(req, res, response);
       }
-      // Once started, native settlement is awaited without timeout, cancellation,
-      // or retry even if the peer disconnects. The native result remains authoritative.
-      const settled = await nativeServer.processSettlement(payment.paymentPayload, payment.paymentRequirements,
-        payment.declaredExtensions, { request: context.sdk, responseBody: response.body,
-          responseHeaders: response.headers }, undefined, payment.beforeHandlerSettlement);
+      const settled = await lifetime.run(() => {
+        // No await between the final liveness check and committing to this one
+        // native call. From this point retirement MUST NOT race it with cancel.
+        execution.beginSettlement();
+        phase = 'settlement';
+        settlementStarted = true;
+        return nativeServer.processSettlement(payment.paymentPayload, payment.paymentRequirements,
+          payment.declaredExtensions, { request: context.sdk, responseBody: response.body,
+            responseHeaders: response.headers }, undefined, payment.beforeHandlerSettlement);
+      });
+      lifetime.assertOpen();
       if (settled?.success !== true) {
         if (!settled?.response) return simple(502, 'SETTLEMENT_RESULT_UNAVAILABLE');
         return send(req, res, encodeResponse(settled.response, maxResponseBytes));
@@ -317,13 +367,51 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       response.headers = { ...response.headers, ...headers(settled.headers) };
       return send(req, res, response);
     } catch (error) {
-      // Never retry an uncertain settlement or send an application body after
-      // a native exception. Raw SDK/handler errors may contain private data.
-      return simple(error?.status ?? (payment ? 502 : 500),
-        error?.status ? error.message : payment ? 'PAYMENT_PROCESSING_UNAVAILABLE' : 'SELLER_REQUEST_FAILED');
+      // Catch the final pre-settlement liveness/encoding edge as well. The existing
+      // latch prevents a second cancellation if the application branch already ran it.
+      if (payment?.type === 'payment-verified' && !settlementStarted && !cancellation) {
+        const cleanup = cancelVerified(payment, { reason: 'after_verify_aborted', error });
+        if (!lifetime.signal.aborted) {
+          try { await lifetime.run(() => cleanup); } catch { /* Retirement/error below owns the response. */ }
+        }
+      }
+      if (lifetime?.signal.aborted) {
+        // A verification can complete after this response is retired; run() owns
+        // that late result. Already-verified work is cleaned up here exactly once.
+        if (!settlementStarted) cancelVerified(payment,
+          { reason: 'after_verify_aborted', error: lifetime.signal.reason });
+        if (res.destroyed || res.writableEnded) return;
+        // An incomplete request must not leave a body reader attached to a reused
+        // connection after the HTTP attempt has ended. Finish the error then close.
+        if (!req.complete) {
+          res.shouldKeepAlive = false;
+          res.once('finish', () => { if (!req.complete) req.destroy(); });
+        }
+        return send(req, res, encodeResponse({ status: lifetime.signal.reason.status,
+          body: { error: lifetime.signal.reason.code, stage: phase,
+            ...(verificationStarted ? { paymentOutcome: 'unconfirmed', retrySafe: false } : {}) },
+        }, maxResponseBytes));
+      }
+      if (!settlementStarted && execution?.interruption === 'handler_timeout')
+        return simple(504, 'APPLICATION_TIMEOUT');
+      // Only our request parsing/path errors may supply a public error message.
+      // Native SDK errors can have status/message fields containing private data.
+      const requestFault = ['routing', 'body'].includes(phase) &&
+        Number.isInteger(error?.status) && error.status >= 400 && error.status < 500;
+      return simple(requestFault ? error.status : verificationStarted ? 502 : 500,
+        requestFault ? error.message : verificationStarted ? 'PAYMENT_PROCESSING_UNAVAILABLE' : 'SELLER_REQUEST_FAILED');
     } finally {
+      lifetime?.close();
+      // Sending a 504 or losing the peer does not release the existing lifecycle
+      // slot. Wait for real native work, its cleanup, and noncooperative handlers.
+      await Promise.all([lifetime?.settled(), execution?.settled()]);
       execution?.dispose();
-      await execution?.settled();
+      if (lifetime) activeWork--;
     }
   };
+  Object.defineProperty(handler, 'lifetimeSnapshot', {
+    value: () => Object.freeze({ requestTimeoutMs, handlerTimeoutMs, activeWork, ...counters }),
+  });
+  return handler;
 }
+

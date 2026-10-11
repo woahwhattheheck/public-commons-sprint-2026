@@ -154,6 +154,14 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       file = null;
       check();
       const saved = { path: finalPath, bytes, sha256: hash.digest('hex'), contentType: response.headers.get('content-type') };
+      const objectMetadata = {
+        contentRange: response.headers.get('content-range'),
+        contentSha256: response.headers.get('x-content-sha256'),
+        snapshot: response.headers.get('x-sf30-object-snapshot'),
+        totalBytes: response.headers.get('x-sf30-object-bytes'),
+      };
+      if (Object.values(objectMetadata).some(value => value !== null))
+        saved.objectMetadata = objectMetadata;
       // link is atomic and fails when the destination exists; rename would
       // silently overwrite a file created after the original preflight.
       try { await link(partialPath, finalPath); }

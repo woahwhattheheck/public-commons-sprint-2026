@@ -1,6 +1,6 @@
 # Merchant workspace
 
-Keep a merchant case queue, diagnose each route, review repairs, and prepare internal workorders in one local workspace. The same original captures move through each stage. The optional case desk retains multiple merchant drafts, follow-up ownership and dates, search, work status and saved versions across restarts.
+Keep a merchant case queue, diagnose each route, inspect its runtime and delivery outcomes, review repairs, and prepare internal workorders in one local workspace. The same original captures move through each stage. The optional case desk retains multiple merchant drafts, follow-up ownership and dates, original runtime support files, search, work status and saved versions across restarts.
 
 ## Open the workspace
 
@@ -59,6 +59,12 @@ SF74 is the local UI and HTTP adapter. It imports the existing engines without c
 - Use public recipient addresses and authorized endpoints. Do not enter private keys or tokens.
 
 For the original seller-side operation workflow, see [seller pilot](../sf82-seller-pilot/README.md). Commercial ownership and account submission remain with their existing owners.
+
+## Continue a live merchant support case
+
+The **Runtime** stage imports the existing SF93 four-file support packet into this same case. Select its actual route and attach a baseline or follow-up capture. Optional original SF97 reports and copied SF98 journals run through the original native reconciler, retaining the report's own observation window and payment-option assignments. [Runtime support operations](RUNTIME_SUPPORT.md) covers collection, intake, comparison, saved versions, recovery and complete handoff.
+
+**Save case** retains runtime source bytes under the same revision as the route, diagnosis and owner notes. **Prepare support handoff** produces a readable offline report and an importable complete case containing the original files. The original portable `.merchant-workspace.json` format continues to transfer diagnostics and unfinished terms; use `.merchant-support.json` when transferring runtime files and follow-up metadata too.
 
 ## Focused checks
 
