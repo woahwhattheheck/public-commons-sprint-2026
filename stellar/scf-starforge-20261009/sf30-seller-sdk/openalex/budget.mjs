@@ -22,17 +22,35 @@ export async function openOpenAlexBudget({directory,account,policy}){
     ledger.recent=ledger.recent.filter(t=>Number.isSafeInteger(t)&&t>now-1000);
     return {day,name,ledger,provider,held,remaining:Math.max(0,policy.creditsPerDay-ledger.settledCredits-held),now};
   }
+  function providerBasis(s){
+    const p=s.provider,observed=Date.parse(p.observedAt??'');
+    if(!Number.isFinite(observed)||observed>s.now||dayAt(observed)!==s.day||!finite(p.remaining))return null;
+    const until=finite(p.resetAt)?Math.min(resetAt(s.now),p.resetAt):resetAt(s.now);
+    if(until<=s.now)return null;
+    const hasWatermark=p.settledCreditsDay===s.day&&finite(p.settledCreditsAtObservation)&&p.settledCreditsAtObservation<=s.ledger.settledCredits;
+    // Older observations have no settlement watermark. Charge all retained
+    // settlements until a genuine response establishes the new observation.
+    const watermark=hasWatermark?p.settledCreditsAtObservation:0;
+    const observedCeiling=hasWatermark&&finite(p.admissionRemaining)?Math.min(p.remaining,p.admissionRemaining):p.remaining;
+    const settledSince=Math.max(0,s.ledger.settledCredits-watermark);
+    const beforeReservations=Math.max(0,observedCeiling-settledSince);
+    return {reported:p.remaining,beforeReservations,remaining:Math.max(0,beforeReservations-s.held),settledSince,hasWatermark,resetAt:until};
+  }
   function view(s,credits=1){
-    const limitRetry=s.remaining<credits?Math.ceil((resetAt(s.now)-s.now)/1000):0;
+    const observed=providerBasis(s),remaining=observed?Math.min(s.remaining,observed.remaining):s.remaining;
+    const localRetry=s.remaining<credits?Math.ceil((resetAt(s.now)-s.now)/1000):0;
+    const observedRetry=observed&&observed.remaining<credits?Math.ceil((observed.resetAt-s.now)/1000):0;
     const rateRetry=s.ledger.recent.length>=policy.requestsPerSecond?1:0;
     const providerRetry=s.provider.blockedUntil>s.now?Math.ceil((s.provider.blockedUntil-s.now)/1000):0;
-    const retryAfterSeconds=Math.max(limitRetry,rateRetry,providerRetry);
-    return {account,day:s.day,creditsPerDay:policy.creditsPerDay,remainingCredits:s.remaining,reservedCredits:s.held,
+    const retryAfterSeconds=Math.max(localRetry,observedRetry,rateRetry,providerRetry);
+    return {account,day:s.day,creditsPerDay:policy.creditsPerDay,remainingCredits:remaining,
+      localRemainingCredits:s.remaining,providerRemainingCredits:observed?.remaining??null,
+      observedProviderRemainingCredits:observed?.reported??null,reservedCredits:s.held,
       settledCredits:s.ledger.settledCredits,calls:s.ledger.calls,settledCalls:s.ledger.settledCalls,
       provider:s.provider,allowed:retryAfterSeconds===0,retryAfterSeconds};
   }
   async function snapshot(credits=1){
-    if(closed)fail('The research budget is closed.',503);
+    if(closed||!finite(credits))fail('The research budget snapshot is invalid.',503);
     return transact(async()=>view(await state(),credits));
   }
   async function reserve(credits){
@@ -64,9 +82,20 @@ export async function openOpenAlexBudget({directory,account,policy}){
       if(charged===null){charged=dispatched?reservation.credits:0;basis=dispatched?'reservation-estimate':'not-dispatched';}
       ledger.settledCredits+=charged;ledger.settledCalls++;delete ledger.reservations[reservation.id];
       await atomicJson(root,file,ledger);
-      const now=Date.now(),provider=await optional(join(root,'provider.json'),{blockedUntil:0});
+      const now=Date.now(),current=await state(now),provider=current.provider,previous=providerBasis(current);
       const remaining=numberHeader('x-ratelimit-remaining'),limit=numberHeader('x-ratelimit-limit'),reset=numberHeader('x-ratelimit-reset');
-      if(remaining!==null||limit!==null)Object.assign(provider,{observedAt:new Date(now).toISOString(),remaining,limit,resetAt:reset===null?resetAt(now):now+reset*1000});
+      provider.lastResponseAt=new Date(now).toISOString();
+      provider.rawHeaders=Object.fromEntries(['x-ratelimit-remaining','x-ratelimit-limit','x-ratelimit-reset','x-ratelimit-credits-used','retry-after']
+        .filter(name=>Object.hasOwn(headers,name)).map(name=>[name,headers[name]]));
+      if(limit!==null)provider.limit=limit;
+      if(remaining!==null){
+        // A late response can report an older, higher balance. Retain that raw
+        // value while the admission ceiling also accounts for later settlements.
+        const ceiling=previous?.hasWatermark?Math.min(remaining,previous.beforeReservations):remaining;
+        Object.assign(provider,{observedAt:new Date(now).toISOString(),remaining,
+          resetAt:reset===null?resetAt(now):now+reset*1000,admissionRemaining:ceiling,
+          settledCreditsDay:current.day,settledCreditsAtObservation:current.ledger.settledCredits});
+      }
       if(response.status===429){
         const value=headers['retry-after'],seconds=/^\d+$/.test(value??'')?Number(value):Number.isFinite(Date.parse(value??''))?Math.max(0,(Date.parse(value)-now)/1000):null;
         provider.blockedUntil=Math.max(provider.blockedUntil??0,now+(seconds??(remaining===0?Math.ceil(((provider.resetAt??resetAt(now))-now)/1000):1))*1000);

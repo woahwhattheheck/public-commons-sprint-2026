@@ -5,10 +5,10 @@ const state = { source: null, snapshot: null, target: null, plan: null, dirty: f
   detail: null, detailVersion: null, editorHash: null, query: null, offer: null, busy: false, refreshing: false,
   pageSize: 25, offsets: { plans: 0, runs: 0, history: 0 } };
 const friendly = {
-  DATASET_INTEGER_REQUIRES_EXACT_STRING: 'A database integer exceeds the exact range of a JSON number. Use Text for that public column.',
-  DATASET_COLUMN_TYPE_MISMATCH: 'A selected dataset type does not match the native database column. Decimal values and timestamps should remain Text.',
+  DATASET_INTEGER_REQUIRES_EXACT_STRING: 'An Integer column contains a fractional value or exceeds the exact integer range. Review the source type or use Text for exact identifiers.',
+  DATASET_COLUMN_TYPE_MISMATCH: 'A selected dataset type does not match the declared source column. Exact decimals, large identifiers and timestamps can remain Text.',
   DATASET_EMPTY_NULL_CONFLICT: 'This nullable column contains a real empty string. The existing CSV format uses empty nullable cells for NULL. Review the approved source projection or choose a non-nullable text column.',
-  DATASET_NULL_NOT_ALLOWED: 'A database NULL reached a column declared non-nullable. Review the column mapping.',
+  DATASET_NULL_NOT_ALLOWED: 'A source NULL reached a column declared non-nullable. Review the column mapping.',
   DATASET_EXTRACTION_TOO_MANY_ROWS: 'The complete query exceeds the reviewed row limit. No candidate was published.',
   QUERY_TIMEOUT: 'The extraction reached its deadline. Review the query and limits before starting a new extraction.',
   EXTRACTION_INTERRUPTED: 'The prior process stopped during extraction. Recover a complete retained candidate if one exists, or start a new extraction.',
@@ -56,9 +56,10 @@ function buttons() {
 function inputChanged() { state.dirty = true; buttons(); }
 function renderQuery(definition, saved) {
   state.query = definition;
-  $('source-sql').textContent = typeof definition.sql === 'string' ? definition.sql : JSON.stringify({
-    collection: definition.collection, pipeline: definition.pipeline, readConcern: definition.readConcern,
-  }, null, 2);
+  $('source-sql').textContent = typeof definition.sql === 'string' ? definition.sql : JSON.stringify(definition.serviceQuery && typeof definition.serviceQuery === 'object' && !Array.isArray(definition.serviceQuery) ? definition.serviceQuery : definition.path ? {
+    path: definition.path, format: definition.format, recordsPointer: definition.recordsPointer,
+    expectedSha256: definition.expectedSha256, mapping: definition.mapping, where: definition.where,
+  } : { collection: definition.collection, pipeline: definition.pipeline, readConcern: definition.readConcern }, null, 2);
   $('source-hash').textContent = 'Source ' + short(state.editorHash);
   clear($('parameters'));
   for (const [name, spec] of Object.entries(definition.parameters)) {
@@ -72,11 +73,21 @@ function renderQuery(definition, saved) {
     const value = saved?.input && Object.hasOwn(saved.input, name) ? saved.input[name] : spec.default;
     input.value = value === null || value === undefined ? '' : String(value);
     label.append(input); wrapper.append(label);
+    if (spec.required === false) {
+      const useLabel = node('label', 'Use parameter '), use = document.createElement('input');
+      use.type = 'checkbox'; use.dataset.useParameter = name; use.checked = value !== undefined;
+      input.disabled = !use.checked;
+      use.addEventListener('change', () => {
+        const nullBox = wrapper.querySelector('[data-null-parameter]');
+        input.disabled = !use.checked || Boolean(nullBox?.checked); inputChanged();
+      });
+      useLabel.append(use); wrapper.append(useLabel);
+    }
     if (spec.nullable) {
       const nullLabel = node('label', 'Use NULL '), box = document.createElement('input');
       box.type = 'checkbox'; box.dataset.nullParameter = name; box.checked = value === null;
-      box.addEventListener('change', () => { input.disabled = box.checked; inputChanged(); });
-      input.disabled = box.checked; nullLabel.append(box); wrapper.append(nullLabel);
+      box.addEventListener('change', () => { input.disabled = box.checked || wrapper.querySelector('[data-use-parameter]')?.checked === false; inputChanged(); });
+      input.disabled = box.checked || wrapper.querySelector('[data-use-parameter]')?.checked === false; nullLabel.append(box); wrapper.append(nullLabel);
     }
     $('parameters').append(wrapper);
   }
@@ -114,6 +125,8 @@ async function freshPlan() {
 function planInput() {
   const input = {};
   for (const element of $('parameters').querySelectorAll('[data-parameter]')) {
+    const useBox = [...$('parameters').querySelectorAll('[data-use-parameter]')].find(box => box.dataset.useParameter === element.dataset.parameter);
+    if (useBox && !useBox.checked) continue;
     const nullBox = [...$('parameters').querySelectorAll('[data-null-parameter]')].find(box => box.dataset.nullParameter === element.dataset.parameter);
     input[element.dataset.parameter] = nullBox?.checked ? null : element.dataset.type === 'boolean' ? element.value === 'true' : element.value;
   }
@@ -188,14 +201,15 @@ function renderDetail(detail) {
   clear($('run-summary'));
   if (candidate) {
     const observationMetric = candidate.extraction.transaction ? ['Transaction', 'Read only'] :
-      ['Observation', candidate.extraction.observation?.kind === 'SINGLE_SPREADSHEET_RESPONSE' ? 'Single response' : 'Retained'];
+      ['Observation', candidate.extraction.capture ? 'Complete file' : candidate.extraction.observation?.kind === 'SINGLE_SPREADSHEET_RESPONSE' ? 'Single response' : 'Retained'];
     for (const [label, value] of [['Rows', candidate.dataset.rowCount.toLocaleString()], ['CSV MiB', (candidate.csvBytes / 1048576).toFixed(3)],
       ['Dataset version', short(candidate.dataset.snapshot)], observationMetric]) {
       const item = node('div', '', { class: 'metric' }); item.append(node('span', label), node('strong', value)); $('run-summary').append(item);
     }
     $('candidate-source').textContent = JSON.stringify({ sourceHash: candidate.sourceHash, queryHash: candidate.queryHash,
       csvHash: candidate.csvHash, transaction: candidate.extraction.transaction,
-      observation: candidate.extraction.observation, columnTypes: candidate.extraction.columnTypes }, null, 2);
+      observation: candidate.extraction.observation, capture: candidate.extraction.capture,
+      sourceQuery: candidate.extraction.sourceQuery, columnTypes: candidate.extraction.columnTypes }, null, 2);
   }
   $('source-details').hidden = !candidate; $('preview-form').hidden = !candidate; table(detail.preview);
   $('review-panel').hidden = !candidate; $('buyer-panel').hidden = !candidate || !state.snapshot?.buyer;

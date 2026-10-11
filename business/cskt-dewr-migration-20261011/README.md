@@ -1,37 +1,66 @@
-# CSKT DEWR first-party content migration preflight
+# CSKT DEWR content and GIS migration workspace
 
-**Non-bounty, independent source-based work for the public October 2026 CSKT DEWR website redesign RFP.** This is an initial **seven-resource observed slice**, not a full crawl, customer staging deployment, accepted content inventory, functional ArcGIS site, customer proposal or tribal certification assertion.
+A complete source-review and WordPress delivery product extending the original CSKT preflight. It connects the published WordPress inventory to named editorial revisions, document versions, original ArcGIS resources, immutable migration releases and native destination recovery.
 
-Official buyer procurement and controlling RFP:
-- https://csktwatercompact.com/documents-and-links/
-- https://csktwatercompact.com/wp-content/uploads/2026/10/DEWR_Website_RFP_Final.pdf
+The project is grounded in the [CSKT DEWR website RFP](https://csktwatercompact.com/wp-content/uploads/2026/10/DEWR_Website_RFP_Final.pdf) and the [original procurement page](https://csktwatercompact.com/documents-and-links/). The RFP permits a recommended CMS. This implementation retains WordPress and provides the content/GIS migration arm described in `commercial/WORKSHARE.md`.
 
-## What is in the tool
+## Product
 
-- `observed-public-content.json`: seven observed *real current buyer-published page/PDF URLs* and one resolved first-party StoryMap link, with dated evidence sections and **proposed, not applied** destination paths.
-- `preflight.mjs`: pure Node.js 22, dependency-free, offline transformation of first-party source observations into a machine-readable inventory, requested redirect queue, GIS integration queue, source status discrepancies and approval gates.
-- `preflight-report.json`: executed output with 7 inventoried URLs, 7 pending proposed redirects, one source-status conflict and one existing StoryMap integration item.
+- **Source intake:** complete original WordPress pages, posts and public media records, paginated provider totals, source identities, retained source versions and changed/absent-source review.
+- **Staff review:** named administrator, reviewer and editor roles; side-by-side original content and draft; retain, revise, archive, remove and consolidate dispositions; version history and individual or batch review.
+- **Documents:** original file and media identities, download metadata, version labels, shared document families, category search and editorial history.
+- **GIS:** original published ArcGIS item and app records, source-page lineage, native map/layer information, published-resource selection and a reviewed text equivalent for each attached map.
+- **Releases:** exact approved revisions, source capture identities, named reviewer decisions, destination paths and validated 301/410 routes.
+- **WordPress delivery:** native destination preview, original target bindings, per-item journal, actual media transfer, apply/readback and rollback that preserves later staff edits. Native WordPress content controls let staff select document files and edit version details, map descriptions, notices and archive status.
+- **Operations:** grayscale responsive UI, stable request recovery, operating export, native SQLite backup/restore and complete staff and destination guides.
 
-## Exact observed content inconsistency
+The application runs on Node.js 24 or later and uses built-in HTTP, SQLite, cryptography and compression. Its `package.json` has no external application dependencies. The included destination plugin extends the selected WordPress CMS.
 
-The [current homepage](https://csktwatercompact.com/) lists Jocko Valley Canal Pipeline Phases 1–4 among **Completed** projects. The [project detail](https://csktwatercompact.com/jocko-pipelines/) currently still describes Phases 1–2 and 3–4 as under construction, with substantial completion due April 2026. The buyer's [July project PDF](https://csktwatercompact.com/wp-content/uploads/2026/07/Pipeline_poster_final_May12_JPEG.pdf) independently says Phases 1–4 completed in spring 2026. Thus migrating whichever text is most convenient will carry a real content-status inconsistency into the rebuild. **The official DEWR content owner must decide which text is current before migrating.** No automated overwrite/redirect is performed.
+## Start
 
-The [Jocko Pipeline story](https://csktwatercompact.com/jocko-pipelines/) already links to an existing [ArcGIS StoryMap](https://storymaps.arcgis.com/stories/2255c33442fd4f349aef25cba515ed78). The workshare is to integrate the **already published buyer-owned GIS content**, not build unrelated new mapping, and to confirm content rights, access and text equivalents. The [environmental documents hub](https://csktwatercompact.com/north-fork-jocko-tabor-diversion/) already has five named source attachments, requiring a lossless document migration/redirect plan.
-
-## Run (one focused first-party observation pass)
+Prepare a private password file and source capture, then:
 
 ```bash
-node preflight.mjs observed-public-content.json preflight-report.json
+node cli.mjs user --database /private/dewr/workspace.sqlite --id migration-admin --name "Migration Administrator" --role admin --password-file /private/dewr/admin-password
+node cli.mjs import --database /private/dewr/workspace.sqlite --actor migration-admin --input /private/dewr-source/corpus.json
+node cli.mjs serve --database /private/dewr/workspace.sqlite --sources /private/dewr-source --host 127.0.0.1 --port 33219
 ```
 
-This command ran on local Linux Node 22.16.0: `observedPages=7; proposedRedirects=7; inconsistencies=1; knownGISLinks=1`. **No hosted Actions or billable network services.** The script never issues an HTTP request, changes the original website or publishes a redirect. To consume a true full-site scrape later, replace the JSON observations from the customer-approved WordPress CMS export and rerun without changing the contract.
+Open the reported URL, sign in, review content and prepare the first release. [OPERATIONS.md](OPERATIONS.md) covers the complete source-to-destination workflow, production origin configuration, staff access, file versions, GIS review and recovery. [source/CONTRACT.md](source/CONTRACT.md) describes the repeatable capture and original response contracts. [destination/DEPLOYMENT.md](destination/DEPLOYMENT.md) covers the native WordPress installation and delivery commands.
 
-## Actual path to production
+## Original source basis
 
-1. Get from the owner a complete original URL/PDF/GIS-public-item export with source timestamps and content approval rights, not a hypothetical item count.
-2. Reconcile the one observed status conflict and all original URL disposition choices. Preserve procurement PDFs and historical links.
-3. Qualified prime confirms staff roles, actual three recent customer references, scope, budget and any **CSKT IPO certification**, if asserting preference (self-described Native ownership is not equivalent).
-4. In a permissioned CMS staging site, build importer, backups, accessible document remediation, approved redirects and StoryMap interactions with accessible fallback.
-5. Return source/evidence and acceptance record to owner. Buyer retains domain, admin accounts, content, analytics and source, per RFP §5.13. Price/warranty via real prime agreement, not assumed RFP dollars.
+The October 11, 2026 public capture contains 33 WordPress pages, no posts and 353 unique public media objects. The media breakdown is 130 PDFs, three DOCX files, two ZIP files, 201 images and 17 videos. Both ascending ID-only and descending full-record pagination returned the same 353 IDs; the provider reports 359 in its header. The source catalog preserves both values and the complete observed records.
 
-This source is an engineering handoff to the qualified commercial owner. No contact has been made with the buyer, partners or Michael Clark.
+The original site references three accessible StoryMaps and a legacy MapSeries app whose native provider returns an error. The working source bundle includes the original app outcomes and actual Jocko WebMap/FeatureServer metadata so content review can use the existing resources and real project layers.
+
+The maintained source package includes the capture implementation, contracts, URL/hash catalog and RFP requirement mapping. Run the capture into a private source directory for the full original page, GIS and media records. Keep that directory with the working database and the selected original asset files.
+
+## Maintained source
+
+| Path | Purpose |
+| --- | --- |
+| `cli.mjs`, `src/` | Authenticated service, original source/revision store, review and release operations, CLI and backup/restore. |
+| `public/` | Responsive staff review, document, GIS, release and operating screens. |
+| `destination/` | Native WordPress plugin, transport, media transfer, preview, apply, readback and rollback. |
+| `source/` | Repeatable capture, native contracts, RFP mapping and original source lineage. |
+| `commercial/` | Ten-day priced migration workshare, acceptance sequence and proposal. |
+| `capture-source.py`, `assemble-source.py` | Original provider capture and verified corpus assembly. |
+| `package-source.py` | Reproducible source delivery with an explicit file list and per-file hashes. |
+| `preflight.mjs`, `observed-public-content.json`, `preflight-report.json` | Original seven-resource preflight preserved as the initial source history. |
+
+The original preflight was introduced in PR 676 at commit `9e66ce5a090d0c2fb60d5af2730cfcea08562c6f`. The source lineage file identifies the exact original Git blobs used for this implementation. Current content review, release and delivery use the complete operating product above.
+
+## Commercial delivery
+
+The prepared workshare covers one WordPress source and destination, up to 40 source pages, 400 media/document records and four GIS app references, with two correction cycles, training and operating handover. The fixed implementation fee is $8,400 over ten business days, with a 30-day implementation warranty. The complete scope, acceptance and optional ongoing care appear in `commercial/`.
+
+## Export the maintained delivery
+
+Build the receiving team’s ZIP from this maintained directory:
+
+```bash
+python3 package-source.py --output /private/delivery/CSKT_DEWR_Migration_Workspace.zip --commit GIT_COMMIT_SHA
+```
+
+Replace `GIT_COMMIT_SHA` with the complete commit containing the selected source. The archive contains the application, WordPress plugin, capture tools and public source catalogs, staff and destination guides, priced workshare and proposal. Its `DELIVERY.json` records the selected source files and their SHA-256 values. Capture the original site into the private source directory described in `source/CONTRACT.md`, then import that corpus into the receiving workspace.

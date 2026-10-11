@@ -1,0 +1,52 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "maxRequestBytes": 65536,
+  "handlerTimeoutMs": 65000,
+  "requestTimeoutMs": 90000,
+  "routes": [
+    {
+      "id": "linkup-search",
+      "path": "/research/linkup/search",
+      "handler": "linkupSearch",
+      "admit": "admitLinkupSearch",
+      "definition": {
+        "method": "POST",
+        "responseFormat": "json",
+        "serviceName": "Linkup search results",
+        "description": "One standard-depth Linkup search returning its original ranked text sources, at the operator's configured Stellar price",
+        "tags": ["research", "sources"],
+        "bodyType": "json",
+        "body": {"query": "How do Stellar smart contracts work?", "maxResults": 5},
+        "outputExample": {"results": [{"type": "text", "name": "Source title", "url": "https://developers.stellar.org/", "content": "Source excerpt"}]},
+        "payment": {
+          "scheme": "exact", "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000", "maxTimeoutSeconds": 180,
+          "extra": {"paymentFlow": "authorization"}
+        }
+      }
+    },
+    {
+      "id": "linkup-answer",
+      "path": "/research/linkup/answer",
+      "handler": "linkupAnswer",
+      "admit": "admitLinkupAnswer",
+      "definition": {
+        "method": "POST",
+        "responseFormat": "json",
+        "serviceName": "Linkup sourced answers",
+        "description": "One standard-depth Linkup sourced answer with original inline citations and source snippets, at the operator's configured Stellar price",
+        "tags": ["research", "citations"],
+        "bodyType": "json",
+        "body": {"query": "How do Stellar smart contracts work?", "maxResults": 5},
+        "outputExample": {"answer": "Answer text with the provider's inline citations", "sources": [{"name": "Source title", "url": "https://developers.stellar.org/", "snippet": "Source excerpt"}]},
+        "payment": {
+          "scheme": "exact", "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000", "maxTimeoutSeconds": 180,
+          "extra": {"paymentFlow": "authorization"}
+        }
+      }
+    }
+  ]
+}

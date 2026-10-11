@@ -94,6 +94,14 @@ export async function operationLease(path) {
     return handle;
   } catch (error) { await handle.close(); throw error; }
 }
+// The existing kernel lease remains authoritative when a container's mounted
+// /proc does not expose its inner PID namespace.
+export async function operationRunning(path) {
+  let lease;
+  try { lease = await operationLease(path); return false; }
+  catch (error) { if (error.code === 'RUNTIME_WORKSPACE_OPERATION_RUNNING') return true; throw error; }
+  finally { if (lease) await lease.close(); }
+}
 export async function tailFile(path, maximum = 65536) {
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {

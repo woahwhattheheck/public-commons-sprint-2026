@@ -108,13 +108,25 @@ function stateName(m,name){
   if(name==='edition.json'||name==='decisions.json'||name.startsWith('pages/'))return join('editions',m.edition.id,name);
   return null;
 }
+// Earlier readers used two labels for a valid non-empty terminal page.
+// Preserve their original coverage in the receipt while re-deriving its state
+// from the same verified source pages. All other measured fields must match.
+function sameCoverage(current,original,pages){
+  if(canonical(current)===canonical(original))return true;
+  const terminal=current.state==='COMPLETE'&&current.nextCursor===null&&
+    current.reason==='TERMINAL_CURSOR'&&pages.at(-1)?.records>0;
+  const legacy=original.state==='COMPLETE'&&original.reason==='TERMINAL_PAGE'||
+    original.state==='INTERRUPTED'&&original.reason==='TERMINAL_CURSOR_WITH_RECORDS';
+  return terminal&&legacy&&canonical(current)===canonical({...original,
+    state:current.state,reason:current.reason,warnings:current.warnings});
+}
 async function validateWorkspace(root,m){
   const workspace=await openResearchWorkspace(root);
   try{
     const query=await workspace.query(m.query.id,m.query.revision),e=await workspace.edition(m.edition.id);
     check(canonical(query)===canonical(m.query)&&canonical(e.record)===canonical(m.edition)&&
       canonical(e.query)===canonical(m.query)&&canonical(e.pages)===canonical(m.pages),'RECEIVE_NATIVE_IDENTITIES_CHANGED');
-    check(canonical(e.coverage)===canonical(m.coverage),'RECEIVE_NATIVE_COVERAGE_CHANGED');
+    check(sameCoverage(e.coverage,m.coverage,e.pages),'RECEIVE_NATIVE_COVERAGE_CHANGED');
     const ids=new Set(e.records.map(x=>x.id));
     for(const [id,d] of Object.entries(m.decisions.items)){
       check(ids.has(id)&&object(d)&&['include','exclude','undecided'].includes(d.status)&&

@@ -1,4 +1,4 @@
-import { renderPostgresContract, postgresRuntimeInputs } from './postgres.mjs';
+import { renderPostgresContract, postgresRuntimeInputs, downloadPostgresFleetSource } from './postgres.mjs';
 const byId = id => document.getElementById(id);
 const state = { session: null, catalog: [], relation: null, filters: [], preview: null, releaseBusy: false, releaseReview: null, releaseExport: null, pendingStage: null, exportCursors: [''], exportsNext: null };
 const element = (tag, text, props = {}) => Object.assign(document.createElement(tag), { textContent: text, ...props });
@@ -152,6 +152,7 @@ function releaseButtons() {
   byId('exports-next').disabled = blocked || !state.exportsNext;
   byId('release-console').disabled = blocked || !state.session?.releases?.enabled;
   byId('release-stage').disabled = blocked || !state.releaseReview || !state.session?.releases?.enabled;
+  byId('release-fleet-source').disabled = blocked || pending || !state.releaseReview;
   byId('release-stage').textContent = pending ? 'Recover same stage' : 'Stage saved package';
   for (const control of byId('release-stage-form').querySelectorAll('input')) control.disabled = blocked || pending;
   for (const button of document.querySelectorAll('[data-export-id]')) button.disabled = blocked || pending;
@@ -194,7 +195,7 @@ async function reviewExport(exportId) {
     byId('release-id').value = 'postgres-' + exportId.slice(0, 12); byId('release-label').value = '';
     byId('release-result').textContent = '';
     byId('release-selection').hidden = false;
-    notice('Saved package verified. Review its query and payment contract, choose launch settings, then stage this exact export.');
+    notice('Saved package verified. Review its query and payment contract, then stage this exact export or download its fleet source.');
   } catch (cause) { byId('release-selection').hidden = true; notice(humanError(cause), true); }
   finally { state.releaseBusy = false; releaseButtons(); }
 }
@@ -242,6 +243,13 @@ byId('release-console').addEventListener('click', async () => {
     byId('release-console-link').focus();
   } catch (cause) { notice(humanError(cause), true); }
   finally { state.releaseBusy = false; releaseButtons(); }
+});
+byId('release-fleet-source').addEventListener('click', () => {
+  if (state.releaseBusy || state.pendingStage || !state.releaseReview) return;
+  try {
+    downloadPostgresFleetSource(state.releaseReview, postgresRuntimeInputs('release', { includePort: false }));
+    notice('Fleet source downloaded. Import it into the intended source card in Fleet setup; the fleet assigns each seller port.');
+  } catch (cause) { notice(humanError(cause), true); }
 });
 try { state.session = await api('/api/session'); await refreshExports(); await refresh(); }
 catch (error) { notice(humanError(error), true); }
