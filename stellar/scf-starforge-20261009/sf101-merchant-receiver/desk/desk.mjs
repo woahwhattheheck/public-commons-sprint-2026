@@ -105,7 +105,7 @@ async function responseFor(path, body) {
       headers: {Authorization: `Bearer ${state.token}`, ...(body === undefined ? {} : {'Content-Type': 'application/json'})},
       ...(body === undefined ? {} : {body: JSON.stringify(body)}),
       cache: 'no-store', credentials: 'omit', redirect: 'error', mode: 'same-origin',
-      signal: AbortSignal.timeout(90000),
+      signal: AbortSignal.timeout(path.startsWith('/api/recovery') ? 310000 : 90000),
     });
   } catch (error) {
     if (error instanceof DeskError) throw error;
@@ -188,6 +188,7 @@ function setDisabled(id, disabled) {
 }
 
 function refreshControls() {
+  refreshRecoveryControls();
   document.querySelectorAll('[data-needs-init]').forEach((node) => {
     node.disabled = !canUse() || busy(node);
   });
@@ -808,9 +809,117 @@ async function changeAccess(event) {
   }
 }
 
+
+const recovery = {selected:null, nextAfter:null, loading:false};
+function recoveryName() { return 'desk-' + new Date().toISOString().replace(/[-:.]/g, '') + '-' + operationId().slice(-8); }
+function recoveryBusy() { return busy($('recovery-create')) || busy($('recovery-restore')); }
+function refreshRecoveryControls() {
+  const ready = Boolean(state.session && state.token);
+  const working = recoveryBusy();
+  setDisabled('recovery-open', !ready);
+  setDisabled('recovery-create', !canUse() || working);
+  setDisabled('recovery-new-name', !ready || working);
+  setDisabled('recovery-name', !ready || working);
+  setDisabled('recovery-restore-name', !ready || working);
+  setDisabled('recovery-restore', !ready || !recovery.selected || working);
+  setDisabled('recovery-refresh', !ready || recovery.loading || working);
+  setDisabled('recovery-more', !ready || recovery.loading || working || !recovery.nextAfter);
+}
+function recoveryMessage(message, error=false) { formMessage('recovery-feedback', message, error); }
+function recoveryFailure(error) {
+  const messages = {
+    MERCHANT_SNAPSHOT_INCOMPLETE:'This name contains an unfinished image. A completed snapshot has snapshot.json; inspect the private directory before choosing a new name.',
+    RECOVERY_MERCHANT_MISMATCH:'This snapshot belongs to another merchant state path. Open it through that merchant’s configuration or the installed recovery command.',
+    RECOVERY_DESTINATION_EXISTS:'This restoration name belongs to another destination. Review the saved directory and choose a different restoration name.',
+    MERCHANT_SNAPSHOT_NOT_FOUND:'This saved image is no longer in the private export directory. Refresh the snapshot list.',
+  };
+  recoveryMessage(messages[error.code] || friendly(error), true);
+}
+function selectedRecovery(id, result) {
+  recovery.selected = id;
+  $('recovery-selected').hidden = false;
+  if (!$('recovery-restore-name').value) $('recovery-restore-name').value = recoveryName();
+  facts('recovery-facts', [
+    ['Name',id,true], ['Orders',result.orders], ['Paid files',result.uniquePaidFiles],
+    ['Saved',when(result.createdAt,{utc:true})], ['Image',result.snapshot,true],
+    ['Manifest SHA-256',result.manifestSha256,true], ['Database SHA-256',result.databaseSha256,true],
+  ]);
+  refreshRecoveryControls();
+}
+async function loadRecovery(after) {
+  if (recovery.loading) return;
+  recovery.loading = true;
+  refreshRecoveryControls();
+  try {
+    const suffix = after ? '?limit=25&after=' + encodeURIComponent(after) : '?limit=25';
+    const result = await api('/api/recovery' + suffix);
+    recovery.nextAfter = result.nextAfter;
+    $('recovery-rows').replaceChildren();
+    for (const item of result.snapshots) {
+      const row = el('tr'), name = el('td'), open = el('button','text-button',item.id);
+      open.type = 'button';
+      open.disabled = item.status !== 'SAVED';
+      open.addEventListener('click',() => {
+        if (recoveryBusy()) return;
+        void buttonTask(open,'Verifying…',async () => {
+          const inspected = await api('/api/recovery/' + encodeURIComponent(item.id));
+          selectedRecovery(item.id,inspected);
+          recoveryMessage('Snapshot database and enrolled files verified.');
+        },recoveryFailure);
+      });
+      name.append(open);
+      row.append(name,el('td','muted',when(item.createdAt)),el('td','numeric',item.orders ?? '—'),
+        el('td','',item.status === 'SAVED' ? 'Saved' : 'Incomplete'));
+      $('recovery-rows').append(row);
+    }
+    $('recovery-empty').hidden = result.snapshots.length !== 0;
+    $('recovery-more').hidden = !result.nextAfter;
+  } catch(error) { recoveryFailure(error); }
+  finally { recovery.loading = false; refreshRecoveryControls(); }
+}
+async function openRecovery() {
+  if (!$('recovery-name').value) $('recovery-name').value = recoveryName();
+  $('recovery-dialog').showModal();
+  await loadRecovery();
+}
+async function createRecovery(event) {
+  event.preventDefault();
+  if (recoveryBusy() || !$('recovery-create-form').reportValidity()) return;
+  const id = $('recovery-name').value.trim();
+  await buttonTask($('recovery-create'),'Saving…',async () => {
+    recoveryMessage('Saving a consistent merchant database and its enrolled files…');
+    const result = await api('/api/recovery',{operationId:id});
+    selectedRecovery(id,result);
+    recoveryMessage('Recovery image saved. Keep this name to reopen the same result.');
+    await loadRecovery();
+  },(error) => {
+    recoveryFailure(error);
+    if (!error.status || error.status >= 500) recoveryMessage('Keep snapshot name ' + id + ' and reopen it to recover the same operation. ' + friendly(error),true);
+  });
+}
+async function restoreRecovery(event) {
+  event.preventDefault();
+  if (recoveryBusy() || !recovery.selected || !$('recovery-restore-form').reportValidity()) return;
+  const id = recovery.selected, restoreId = $('recovery-restore-name').value.trim();
+  await buttonTask($('recovery-restore'),'Restoring…',async () => {
+    recoveryMessage('Restoring the saved database and paid files into a new private state directory…');
+    const result = await api('/api/recovery/restore',{operationId:id,restoreId});
+    facts('recovery-result',[
+      ['Restored merchant state',result.state,true],['Orders',result.orders],
+      ['Restored',when(result.restoredAt,{utc:true})],['Snapshot SHA-256',result.snapshotManifestSha256,true],
+    ]);
+    $('recovery-result').hidden = false;
+    recoveryMessage('Restoration ready. Point the existing receiver and checkout at the displayed state directory. To open its merchant desk, use a separate approved product directory and an export directory outside this restored state and its parent export directory. The installed merchant-order-recovery guide covers the host configuration.');
+  },(error) => {
+    recoveryFailure(error);
+    if (!error.status || error.status >= 500) recoveryMessage('Keep restoration name ' + restoreId + ' and reopen the same snapshot result. ' + friendly(error),true);
+  });
+}
+
 for (const button of document.querySelectorAll('[data-close]')) {
   button.addEventListener('click', () => {
     const dialog = $(button.dataset.close);
+    if (dialog.id === 'recovery-dialog' && recoveryBusy()) return;
     if (dialog.id === 'access-dialog' && state.action?.sending) return;
     if (dialog.id === 'enroll-dialog' && busy($('enroll-submit'))) return;
     dialog.close();
@@ -876,5 +985,13 @@ $('support-export').addEventListener('click', () => {
   });
 });
 $('reconnect').addEventListener('click', () => { void buttonTask($('reconnect'), 'Connecting…', start); });
+
+$('recovery-open').addEventListener('click',()=>{ void openRecovery(); });
+$('recovery-create-form').addEventListener('submit',(event)=>{ void createRecovery(event); });
+$('recovery-restore-form').addEventListener('submit',(event)=>{ void restoreRecovery(event); });
+$('recovery-refresh').addEventListener('click',()=>{ void loadRecovery(); });
+$('recovery-more').addEventListener('click',()=>{ if (recovery.nextAfter) void loadRecovery(recovery.nextAfter); });
+$('recovery-new-name').addEventListener('click',()=>{ $('recovery-name').value = recoveryName(); });
+$('recovery-dialog').addEventListener('cancel',(event)=>{ if (recoveryBusy()) event.preventDefault(); });
 
 void start();
