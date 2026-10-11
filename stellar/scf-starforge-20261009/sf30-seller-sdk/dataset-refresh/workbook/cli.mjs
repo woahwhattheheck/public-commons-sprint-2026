@@ -7,14 +7,18 @@ import { createHash } from 'node:crypto';
 import { readPrivate, privateDirectory, createFile, bytes, fault } from '../../postgres/publisher/files.mjs';
 
 const PATHS={
+  editions:['GET','workbook/editions/list'],
+  'edition-suggest':['POST','workbook/editions/suggest'],'edition-compare':['POST','workbook/editions/compare'],
+  'edition-read':['POST','workbook/editions/read'],'edition-apply':['POST','workbook/editions/apply'],
+  'edition-export':['POST','workbook/editions/export'],
   status:['GET','status'],upload:['PUT','workbook'],inspect:['POST','workbook/inspect'],
   plan:['POST','workbook/plan'],prepare:['POST','workbook/prepare'],remove:['POST','workbook/remove'],
   download:['POST','workbook/download'],export:['POST','workbook/export'],
   review:['POST','draft/export'],select:['POST','draft/select'],preview:['POST','preview'],
   publish:['POST','publish'],activate:['POST','activate'],'buyer-offer':['POST','buyer-offer'],
   'buyer-prepare':['POST','buyer-prepare'],buyer:['POST','buyer-saved']};
-const BINARY=new Set(['download','export']);
-const JSON_INPUT=new Set(['plan','publish','activate','buyer-prepare']);
+const BINARY=new Set(['download','export','edition-export']);
+const JSON_INPUT=new Set(['plan','publish','activate','buyer-prepare','edition-suggest','edition-compare','edition-apply']);
 const json=raw=>JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));
 async function sessionFrom(path){
   let value;
@@ -82,7 +86,7 @@ export async function callWorkbookWorkspace({sessionFile,action,payload,file,out
     }finally{await destination.close();if(!success)await rm(pathOut,{force:true});}
   }finally{await handle?.close();}
 }
-const HELP="Workbook intake in the running dataset publisher\n\nStart the existing merchant workspace with an unused private session filename:\n  starforge dataset-publisher --state /private/dataset --port 8431 \\\n    --workspace /private/publisher --session-file /private/publisher-session.json \\\n    --workbook-python python3\n\nThe session file is mode0600 and removed on owned shutdown. Reopen the original\nworkspace to retain sources/plans/candidates; each local session gets a new token.\nWorkbook CLI never opens another publisher or writes the dataset version store.\n\n  starforge dataset-publisher workbook status --session-file FILE\n  starforge dataset-publisher workbook upload --session-file FILE --file original.xlsx\n  starforge dataset-publisher workbook inspect --session-file FILE --source UUID \\\n    --sheet \"Sheet name\" --range A1:G40 [--offset 0] [--limit 25]\n  starforge dataset-publisher workbook plan --session-file FILE --input review.json\n  starforge dataset-publisher workbook prepare --session-file FILE --source UUID \\\n    --plan UUID --plan-revision 1\n  starforge dataset-publisher workbook review --session-file FILE --candidate UUID\n  starforge dataset-publisher workbook preview --session-file FILE \\\n    --target draft:UUID --query \"limit=5\"\n  starforge dataset-publisher workbook publish --session-file FILE --input publication.json\n  starforge dataset-publisher workbook activate --session-file FILE --input rollback.json\n  starforge dataset-publisher workbook buyer-offer --session-file FILE \\\n    --target SNAPSHOT --query \"limit=5\"\n  starforge dataset-publisher workbook buyer-prepare --session-file FILE --input buyer.json\n  starforge dataset-publisher workbook buyer --session-file FILE --id UUID\n  starforge dataset-publisher workbook download --session-file FILE --source UUID --out FILE\n  starforge dataset-publisher workbook export --session-file FILE --candidate UUID --out FILE\n  starforge dataset-publisher workbook remove --session-file FILE --source UUID --source-revision N\n\n--input files contain the exact documented API object, including captured source,\nplan and native revision pins. JSON outputs may use --out FILE. Existing files are\nnever overwritten. Source bundle/download and JSON outputs use private directories.\nOnly inspect/source selection reads original workbook cells. The native dataset,\npublication and buyer preparation retain their existing authority and results.";
+const HELP="Workbook intake in the running dataset publisher\n\nStart the existing merchant workspace with an unused private session filename:\n  starforge dataset-publisher --state /private/dataset --port 8431 \\\n    --workspace /private/publisher --session-file /private/publisher-session.json \\\n    --workbook-python python3\n\nThe session file is mode0600 and removed on owned shutdown. Reopen the original\nworkspace to retain sources/plans/candidates; each local session gets a new token.\nWorkbook CLI never opens another publisher or writes the dataset version store.\n\n  starforge dataset-publisher workbook status --session-file FILE\n  starforge dataset-publisher workbook upload --session-file FILE --file original.xlsx\n  starforge dataset-publisher workbook inspect --session-file FILE --source UUID \\\n    --sheet \"Sheet name\" --range A1:G40 [--offset 0] [--limit 25]\n  starforge dataset-publisher workbook plan --session-file FILE --input review.json\n  starforge dataset-publisher workbook prepare --session-file FILE --source UUID \\\n    --plan UUID --plan-revision 1\n  starforge dataset-publisher workbook review --session-file FILE --candidate UUID\n  starforge dataset-publisher workbook preview --session-file FILE \\\n    --target draft:UUID --query \"limit=5\"\n  starforge dataset-publisher workbook publish --session-file FILE --input publication.json\n  starforge dataset-publisher workbook activate --session-file FILE --input rollback.json\n  starforge dataset-publisher workbook buyer-offer --session-file FILE \\\n    --target SNAPSHOT --query \"limit=5\"\n  starforge dataset-publisher workbook buyer-prepare --session-file FILE --input buyer.json\n  starforge dataset-publisher workbook buyer --session-file FILE --id UUID\n  starforge dataset-publisher workbook download --session-file FILE --source UUID --out FILE\n  starforge dataset-publisher workbook export --session-file FILE --candidate UUID --out FILE\n  starforge dataset-publisher workbook remove --session-file FILE --source UUID --source-revision N\n\nWorkbook updates in this same retained workspace:\n  starforge dataset-publisher workbook editions --session-file FILE\n  starforge dataset-publisher workbook edition-suggest --session-file FILE --input selection.json\n  starforge dataset-publisher workbook edition-compare --session-file FILE --input comparison.json\n  starforge dataset-publisher workbook edition-read --session-file FILE --id UUID \\\n    [--offset 0] [--limit 50] [--kind all]\n  starforge dataset-publisher workbook edition-apply --session-file FILE --input adoption.json\n  starforge dataset-publisher workbook edition-export --session-file FILE --id UUID --out FILE\n\nComparisons read both complete original projections, retain every row and reopen\nby their original ID. Row kinds: all, added, removed, changed, source, unchanged,\nmoved. Apply the displayed comparison identity and captured revisions, then use\nthe original prepare/review/publish/buyer commands above.\n\n--input files contain the exact documented API object, including captured source,\nplan and native revision pins. JSON outputs may use --out FILE. Existing files are\nnever overwritten. Source bundle/download and JSON outputs use private directories.\nOnly inspect/source selection reads original workbook cells. The native dataset,\npublication and buyer preparation retain their existing authority and results.";
 export async function main(args=process.argv.slice(2)){
   if(args.length===0||args.length===1&&args[0]==='--help'){console.log(HELP);return;}
   const command=args[0],options={};
@@ -92,7 +96,8 @@ export async function main(args=process.argv.slice(2)){
     ...(command==='inspect'?['--sheet','--range','--offset','--limit']:[]),
     ...(command==='prepare'?['--plan','--plan-revision']:[]),...(command==='remove'?['--source-revision']:[]),
     ...(['review','select','export'].includes(command)?['--candidate']:[]),
-    ...(['preview','buyer-offer'].includes(command)?['--target','--query']:[]),...(command==='buyer'?['--id']:[])]);
+    ...(['preview','buyer-offer'].includes(command)?['--target','--query']:[]),...(['buyer','edition-read','edition-export'].includes(command)?['--id']:[]),
+    ...(command==='edition-read'?['--offset','--limit','--kind']:[])]);
   for(let i=1;i<args.length;i+=2){
     if(!permitted.has(args[i])||Object.hasOwn(options,args[i])||args[i+1]===undefined||args[i+1].startsWith('--'))
       throw fault('INVALID_WORKBOOK_OPTIONS','Use the exact options shown by workbook --help.');
@@ -115,7 +120,8 @@ export async function main(args=process.argv.slice(2)){
   else if(command==='export')payload={candidateId:required('--candidate')};
   else if(command==='review'||command==='select')payload={id:required('--candidate')};
   else if(command==='preview'||command==='buyer-offer')payload={target:required('--target'),query:options['--query']??''};
-  else if(command==='buyer')payload={id:required('--id')};
+  else if(command==='buyer'||command==='edition-export')payload={id:required('--id')};
+  else if(command==='edition-read')payload={id:required('--id'),offset:integer('--offset',0),limit:integer('--limit',50),kind:options['--kind']??'all'};
   if(command==='upload')required('--file');
   if(BINARY.has(command))required('--out');
   const result=await callWorkbookWorkspace({sessionFile,action:command,payload,file:options['--file'],output:options['--out']});

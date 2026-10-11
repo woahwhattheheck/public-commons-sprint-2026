@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { loadDatasetConfig } from '../../dataset-handler.mjs';
+import { openWorkbookEditions } from '../workbook-comparison/model.mjs';
 import { privateDirectory, readPrivate, readJson, createFile, bytes, digest,
   identity, hashPrivate, fault } from '../../postgres/publisher/files.mjs';
 
@@ -106,7 +107,7 @@ export async function openWorkbookBridge({drafts,status,generation,python='pytho
       configHash:current.record.configHash,columns,maxBytes:current.config.maxBytes??64*1024**2,
       maxRows:current.config.maxRows??250000,maxCellChars:current.config.maxCellChars??65536}};
   }
-  return {
+  const bridge={
     runtime:{python,parser:'stellar-forge.xlsx-reader.v1',parserSha256,
       limits:{...LIMITS,sourceBytes:Math.min(LIMITS.sourceBytes,maxUploadBytes)}},
     async schema(observed){return (await native(observed)).summary;},
@@ -153,13 +154,13 @@ export async function openWorkbookBridge({drafts,status,generation,python='pytho
       const result=await invoke(input.id,{action:'inspect',sheet:input.sheet,range:input.range,offset:input.offset,limit:input.limit});
       return {source:sources.source(input.id),inspection:result};
     },
-    async savePlan(input){
+    async savePlan(input,migration){
       available();
       const {state,current,summary}=await native();
       if(input.expectedSnapshot!==state.current||input.expectedRevision!==state.revision)
         throw fault('WORKBOOK_NATIVE_REVIEW_CHANGED','The running publication changed. Review its current schema and save this mapping again.',409);
       await invoke(input.id,{action:'validate',plan:input.plan,config:current.config});
-      const saved=await sources.savePlan(input.id,{...input,config:current.config,configHash:summary.configHash});
+      const saved=await sources.savePlan(input.id,{...input,migration,config:current.config,configHash:summary.configHash});
       return {...saved,workbookSchema:summary,status:state};
     },
     async prepare(input){
@@ -275,4 +276,7 @@ export async function openWorkbookBridge({drafts,status,generation,python='pytho
       }
     },
   };
+  bridge.editions=await openWorkbookEditions({drafts,sources,python,parserSource:sourceCode,parserSha256,
+    readNative:native,savePlan:(input,migration)=>bridge.savePlan(input,migration)});
+  return bridge;
 }
