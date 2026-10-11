@@ -12,10 +12,19 @@ export function cacheControlTools(tool) {
       ['instanceId'], { destructive: true }),
   ];
 }
-export const merchantCacheStatus = root => releaseCacheStatus(root);
+function publicFailure(error) {
+  const code = typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]{1,127}$/.test(error.code)
+    ? error.code : error instanceof TypeError ? 'INVALID_PARAMS' : 'MERCHANT_CACHE_UNAVAILABLE';
+  return Object.assign(new Error(`Original cache control returned ${code}. Refresh merchant_cache_status and use its current instance and route IDs.`), { code });
+}
+export async function merchantCacheStatus(root) {
+  try { return await releaseCacheStatus(root); }
+  catch (error) { throw publicFailure(error); }
+}
 export async function merchantCacheInvalidate(root, args) {
   if ((args.routeId === undefined) === (args.all !== true) ||
       (args.all !== undefined && args.all !== true))
     throw Object.assign(new TypeError('Choose a routeId or all:true, exclusively.'), { code: 'INVALID_PARAMS' });
-  return invalidateReleaseCache(root, { instanceId: args.instanceId, routeId: args.routeId });
+  try { return await invalidateReleaseCache(root, { instanceId: args.instanceId, routeId: args.routeId }); }
+  catch (error) { throw publicFailure(error); }
 }

@@ -22,7 +22,10 @@ node stellar-forge/mcp-merchant-operator/serve.mjs init \
   --catalog /private/catalog-connection.json
 ~~~
 
-The same `--catalog` option works with the original OpenAPI file inputs. An
+Installed distributions expose the same arguments through `starforge merchant-mcp init`.
+
+The same `--catalog` option works with original OpenAPI files or a retained
+Python merchant declaration and source root. An
 existing `merchant-mcp.json` can include this optional field:
 
 ~~~json

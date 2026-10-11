@@ -5,7 +5,7 @@ const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem(tokenKey, fragment); history.replaceState(null, '', location.pathname); }
 const token = fragment || sessionStorage.getItem(tokenKey) || '';
 const state = { saved: null, revision: 0, dirty: false, review: null, operation: 0, exportId: null,
-  queries: null, plan: null, busy: false };
+  queries: null, plan: null, busy: false, baselineId: null, evolution: null };
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function node(tag, text, className) {
@@ -65,9 +65,14 @@ function buttons() {
   }
   $('export').disabled = state.busy || !state.saved || state.dirty || !state.review;
   $('start').disabled = state.busy || state.dirty || !state.saved || !state.exportId;
+  $('baseline-export').disabled = state.busy || !state.baselineId;
+  $('compare-evolution').disabled = state.busy || !state.saved || !state.baselineId;
+  $('prepare-evolution').disabled = state.busy || state.dirty || !state.saved || !state.evolution?.review.ready ||
+    state.evolution.inputDigest !== state.saved.inputDigest || state.evolution.baseline.id !== state.baselineId;
 }
 function changed() {
   state.dirty = true; state.review = null;
+  resetEvolution('The draft changed. Compare its current source and terms with the selected export.');
   $('review-status').textContent = 'The draft changed. Review its current source and terms before export.';
   $('review-summary').replaceChildren();
   $('revision').textContent = state.saved ? 'Revision ' + state.revision + ' · unsaved changes' : 'Unsaved project';
@@ -228,6 +233,7 @@ function loadDraft(saved) {
   $('revision').textContent = saved.revision === saved.currentRevision ? 'Saved revision ' + saved.revision : 'Viewing revision ' + saved.revision + ' · current revision ' + saved.currentRevision;
   $('schema-summary').replaceChildren(); $('schema-status').textContent = '';
   $('review-summary').replaceChildren(); $('review-status').textContent = 'Review this saved project against its retained schema and current compiler.';
+  state.baselineId = null; resetEvolution();
   if (saved.revision !== saved.currentRevision) { state.dirty = true; state.exportId = null; }
   loadEditors(); renderExports(); buttons();
 }
@@ -240,6 +246,7 @@ function fresh() {
   $('plan-text').value = json({ schema: 'stellar-forge.subquery-merchant-plan.v1', publicOrigin: '', paymentOptions: [], routes: [] });
   $('revision').textContent = 'Unsaved project'; $('review-summary').replaceChildren();
   $('review-status').textContent = 'Review the complete draft using its original schema and merchant compiler.';
+  state.baselineId = null; resetEvolution();
   $('history').replaceChildren(); loadEditors(); renderExports(); buttons();
 }
 function discard() { return !state.dirty || confirm('Open another project and discard these unsaved edits?'); }
@@ -271,6 +278,7 @@ function renderRuntime(value) {
 function renderExports() {
   const target = $('exports'); target.replaceChildren();
   const records = state.saved?.exports ?? [];
+  renderBaselines();
   if (!records.length) { empty(target, 'Save and review the project to export its launchable merchant package.'); return; }
   for (const record of records.slice().reverse()) {
     const card = node('div', undefined, 'export-card'), label = node('label'), radio = node('input');
@@ -284,8 +292,102 @@ function renderExports() {
     card.append(node('pre', record.command));
     const tools = node('div', undefined, 'toolbar');
     tools.append(button('Copy launch command', () => action('Copying command…', async () => { await navigator.clipboard.writeText(record.command); notice('Launch command copied.'); }), true));
-    card.append(tools, detail('Exported files', record.files)); target.append(card);
+    tools.append(button('Copy buyer client path', () => action('Copying buyer client path…', async () => {
+      await navigator.clipboard.writeText(record.prepared.client); notice('Original generated buyer client path copied.');
+    }), true));
+    if (record.evolution) {
+      const lineage = node('div', undefined, 'lineage');
+      lineage.append(node('strong', 'Revised from draft ' + record.evolution.baselineDraftRevision),
+        node('p', record.evolution.previousDirectory, 'code'),
+        node('p', 'Previous merchant, candidate sources, new merchant and original change report are retained in this revision package.', 'subtle'));
+      tools.append(button('Open saved change report', () => action('Opening the retained change report…', async () => {
+        const compared = await api('/api/evolution/report?id=' + encodeURIComponent(state.saved.id) + '&exportId=' + encodeURIComponent(record.id));
+        state.evolution = null; state.baselineId = compared.baseline.id; renderBaselines(); renderEvolution(compared);
+        notice('Opened the saved report for draft revision ' + record.draftRevision + '.');
+        $('evolution-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }), true));
+      card.append(lineage, detail('Revision package paths and lineage', record.evolution));
+    }
+    card.append(tools, detail('Buyer and operator files', record.prepared), detail('Exported files', record.files)); target.append(card);
   }
+}
+function resetEvolution(message) {
+  state.evolution = null; $('evolution-summary').replaceChildren();
+  $('evolution-status').textContent = message || (state.saved?.exports.some(item => !item.unavailable)
+    ? 'Select a retained export and compare the current draft. Earlier exports remain available as baselines.'
+    : 'Export a merchant to create a baseline for future revisions.');
+}
+function renderBaselines() {
+  const select = $('baseline-export'), records = (state.saved?.exports ?? []).filter(item => !item.unavailable);
+  select.replaceChildren();
+  if (!records.some(item => item.id === state.baselineId)) state.baselineId = records.at(-1)?.id ?? null;
+  if (!records.length) { const option = node('option', 'No retained merchant exports'); option.value = ''; select.append(option); }
+  for (const record of records.slice().reverse()) {
+    const option = node('option', 'Draft ' + record.draftRevision + ' · ' + new Date(record.createdAt).toLocaleString() +
+      (record.evolution ? ' · revised package' : ' · initial package'));
+    option.value = record.id; select.append(option);
+  }
+  select.value = state.baselineId ?? '';
+}
+function routeVersion(title, route) {
+  const box = node('div', undefined, 'revision-side'); box.append(node('h3', title));
+  if (!route) { box.append(node('p', 'No route in this version.', 'subtle')); return box; }
+  box.append(node('p', route.method + ' ' + route.url, 'code'), node('p', route.description),
+    table(['Binding', 'Value'], [['Service', route.serviceName ?? ''], ['Tags', (route.tags ?? []).join(', ')],
+      ['Operation', route.operation], ['Handler', route.handler], ['Admission', route.admission]]));
+  box.append(node('h3', 'Ordered payment choices'), table(['Choice', 'Network / scheme', 'Atomic amount', 'Asset / recipient'],
+    (route.accepts ?? []).map((choice, index) => [index + 1, choice.network + ' / ' + choice.scheme, choice.amount,
+      choice.asset + '\n' + choice.payTo])));
+  box.append(detail('Exact payment terms', route.accepts), detail('Buyer variable contract', route.input),
+    detail('Public request example', route.example));
+  return box;
+}
+function renderEvolution(compared) {
+  const report = compared.review, target = $('evolution-summary'); target.replaceChildren();
+  $('evolution-status').textContent = compared.retained
+    ? 'Saved change report for draft ' + compared.draftRevision + '. Compare again to prepare another revision.'
+    : report.ready ? 'Candidate accepted by the original compiler. Review the changes below, then save and prepare this revision.'
+    : 'Candidate needs changes: ' + (report.candidateValidation.error?.message ?? 'The original compiler rejected the candidate.');
+  target.append(node('p', 'Baseline: draft ' + compared.baseline.draftRevision + ' · ' + compared.baseline.directory, 'code'));
+  const metrics = node('div', undefined, 'review-metrics');
+  for (const [label, value] of [['Original queries affected', report.summary.affectedOperations],
+    ['Approved operations changed', report.summary.changedOperations], ['Routes changed', report.summary.changedRoutes ?? 'Pending']]) {
+    const item = node('div'); item.append(node('strong', value), node('span', label)); metrics.append(item);
+  }
+  target.append(metrics, node('h3', 'Approved operations'), table(['Operation', 'Original query with candidate schema', 'Candidate operation'],
+    report.operations.map(item => [item.name,
+      (item.originalAgainstCandidate?.status ?? 'NEW') + (item.originalAgainstCandidate?.error ? '\n' + item.originalAgainstCandidate.error.message : ''),
+      item.candidate.status + (item.candidate.error ? '\n' + item.candidate.error.message : '')])));
+  for (const item of report.operations) {
+    if (item.originalAgainstCandidate?.status === 'COMPATIBLE' && item.candidate.status === 'UNCHANGED') continue;
+    const details = node('details'), pair = node('div', undefined, 'grid two');
+    details.append(node('summary', item.name + ' · query, variables and selected schema contract'));
+    for (const [label, operation, contract] of [['Previous', item.previousOperation, item.originalAgainstCandidate?.previousContract],
+      ['Candidate', item.candidate.operation, item.originalAgainstCandidate?.candidateContract]]) {
+      const side = node('div', undefined, 'revision-side'); side.append(node('h3', label), node('pre', json(operation ?? null)));
+      if (contract) side.append(detail('Selected schema contract', contract)); pair.append(side);
+    }
+    details.append(pair); target.append(details);
+  }
+  target.append(node('h3', 'GraphQL endpoint'), table(['Version', 'Origin', 'Path'],
+    [['Previous', report.endpoint.previous.origin, report.endpoint.previous.path],
+      ['Candidate' + (report.endpoint.changed ? ' · changed' : ''), report.endpoint.candidate.origin, report.endpoint.candidate.path]]));
+  const changes = [...report.schemaChanges.breaking.map(change => ['Breaking', change.type, change.description]),
+    ...report.schemaChanges.dangerous.map(change => ['Dangerous', change.type, change.description])];
+  target.append(node('h3', 'Provider schema changes'), node('p', 'The original compiler assesses the selected products. Changes elsewhere in the schema remain visible here.', 'subtle'));
+  if (changes.length) target.append(table(['Category', 'Change', 'Description'], changes));
+  else target.append(node('p', 'No breaking or dangerous schema changes reported.', 'subtle'));
+  target.append(node('h3', 'Route, input and payment changes'));
+  if (report.routes === null) target.append(node('p', 'Correct the candidate validation error to compile its complete route and payment comparison.', 'subtle'));
+  else if (!report.routes.some(route => route.status !== 'UNCHANGED')) target.append(node('p', 'All compiled routes and terms are unchanged.', 'subtle'));
+  for (const route of report.routes ?? []) {
+    if (route.status === 'UNCHANGED') continue;
+    const card = node('section', undefined, 'revision-route'), pair = node('div', undefined, 'grid two');
+    card.append(node('h3', route.id + ' · ' + route.status), node('p', route.changed.length ? 'Changed: ' + route.changed.join(', ') : route.status, 'subtle'));
+    pair.append(routeVersion('Previous', route.previous), routeVersion('Candidate', route.candidate));
+    card.append(pair); target.append(card);
+  }
+  target.append(detail('Original change report and source identities', report));
 }
 function renderReview(review) {
   $('review-status').textContent = 'Current draft accepted by the original GraphQL schema and merchant compiler.';
@@ -408,7 +510,11 @@ $('new-project').addEventListener('click', () => { if (discard()) { fresh(); not
 $('refresh').addEventListener('click', () => action('Refreshing projects…', async () => { await projects(); notice('Projects refreshed.'); }));
 $('save').addEventListener('click', () => action('Saving private project revision…', async () => {
   const saved = await api('/api/save', { id: $('project-id').value, input: input(), expectedRevision: state.revision });
-  const reviewed = state.review; loadDraft(saved); state.review = reviewed; if (reviewed) renderReview(reviewed);
+  const reviewed = state.review, compared = state.evolution; loadDraft(saved);
+  if (reviewed?.inputDigest === saved.inputDigest) { state.review = reviewed; renderReview(reviewed); }
+  if (compared?.inputDigest === saved.inputDigest) {
+    state.evolution = compared; state.baselineId = compared.baseline.id; renderBaselines(); renderEvolution(compared);
+  }
   await projects(); await historyList(); notice('Saved revision ' + saved.revision + '.');
 }));
 $('inspect-schema').addEventListener('click', () => action('Inspecting the original query service schema…', async () => {
@@ -426,6 +532,30 @@ $('export').addEventListener('click', () => action('Exporting through the origin
   const result = await api('/api/export', { id: state.saved.id, expectedRevision: state.revision });
   const reviewed = state.review; loadDraft(result.project); state.review = reviewed; state.exportId = result.exported.id;
   if (reviewed) renderReview(reviewed); renderExports(); await projects(); await historyList(); notice('Merchant package exported to ' + result.exported.directory + '.');
+}));
+$('baseline-export').addEventListener('change', () => {
+  state.baselineId = $('baseline-export').value || null;
+  resetEvolution('Baseline changed. Compare the current draft with this retained merchant.'); buttons();
+});
+$('compare-evolution').addEventListener('click', () => action('Comparing the draft with the retained original merchant…', async () => {
+  resetEvolution('Comparing current source and merchant terms…');
+  const compared = await api('/api/evolution/compare', { id: state.saved.id, expectedRevision: state.revision,
+    baselineExportId: state.baselineId, input: input() });
+  state.evolution = compared; state.review = compared.merchant; renderEvolution(compared);
+  if (compared.merchant) renderReview(compared.merchant);
+  else { $('review-summary').replaceChildren(); $('review-status').textContent = 'Correct the candidate error shown in its schema revision report.'; }
+  notice(compared.review.ready ? state.dirty ? 'Changes compared. Save this draft to prepare its reviewed revision.'
+    : 'Changes compared. The saved candidate is ready to prepare.' : 'Changes compared. Correct the reported candidate validation error.');
+}));
+$('prepare-evolution').addEventListener('click', () => action('Preparing the original merchant revision and retained baseline…', async () => {
+  const compared = state.evolution;
+  const result = await api('/api/evolution/prepare', { id: state.saved.id, expectedRevision: state.revision,
+    baselineExportId: compared.baseline.id, comparisonDigest: compared.comparisonDigest });
+  loadDraft(result.project); state.exportId = result.exported.id; state.review = compared.merchant;
+  state.baselineId = compared.baseline.id; renderExports(); renderReview(compared.merchant);
+  renderEvolution({ ...compared, retained: true, draftRevision: result.exported.draftRevision });
+  await projects(); await historyList();
+  notice('Revised merchant, previous package and buyer handoff prepared in ' + result.exported.evolution.directory + '.');
 }));
 $('start').addEventListener('click', () => action('Starting the original merchant runtime…', async () => {
   const result = await api('/api/start', { id: state.saved.id, expectedRevision: state.revision, exportId: state.exportId,

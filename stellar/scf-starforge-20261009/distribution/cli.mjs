@@ -26,6 +26,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   handoff     Captured challenge -> review    support     Private seller support case
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
+  mcp-native                                Prepare and operate the original native buyer MCP workspace
+  mcp-stdio / mcp-client-config              Run and register that buyer with a local MCP host
+  merchant-mcp-stdio / merchant-mcp-client-config  Run and register original merchant MCP tools locally
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
@@ -36,26 +39,39 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
+  cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Prepare and operate a merchant from its API contract
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
+  dataset-publisher                          Publish CSV versions and prepare original buyer acquisition
+  buyer-dataset                              Acquire, resume and deliver a complete selected dataset
   catalog-serve / catalog                     Host and operate live seller discovery
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
+  catalog-workspace                          Review signed declarations and retained catalog operations
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
   buyer-runbook                              Plan, run and recover multi-resource acquisitions
+  buyer-object-workspace                     Review and operate original file acquisitions in the browser
   assets                                     Inspect, package and catalog immutable file products
   commerce-setup                             Prepare shared operator budgets and merchant requests
   upstream-operation                         Issue, inspect and reconcile merchant operation tickets
   dataset-workspace                          Inspect, preview and operate the retained dataset
   merchant-fleet / merchant-fleet-control     Host, prepare, activate and roll back a merchant fleet
   merchant-fleet-workspace                    Review fleet changes in the private operator browser
+  fleet-release                              Stage, compare and operate original releases across a fleet
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
+  merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
+  merchant-readiness                         Review every configured Stellar receiving account
+  availability                              Review, pause and resume a running seller's selected routes
+  cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant
+  graphql-onboarding / graphql-merchant      Prepare approved queries and run the original GraphQL seller
+  graphql-workspace                          Review schemas, query packages and merchant lifecycle
+  woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
 
-Optional feature groups: postgres, s3.
+Optional feature groups: postgres, s3, graphql.
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
