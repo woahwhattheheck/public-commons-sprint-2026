@@ -3,9 +3,10 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { attachReleaseCacheControls } from './release-cache.mjs';
+import { releaseProcessOwner, inheritedReleaseLease } from './release-process.mjs';
 import { withNativePaymentReview } from '../sf30-seller-sdk/native-factory.mjs';
 
-const [pilot, directory, instanceId, controlFile] = process.argv.slice(2);
+const [pilot, directory, instanceId, controlFile, lifetimeDescriptor = '-'] = process.argv.slice(2);
 function nativeFailureCode(error) {
   // Original pilot families preserve their startup error as Error.cause.
   // Report only these public codes; never expose arbitrary nested messages.
@@ -41,7 +42,7 @@ process.once('message', async message => {
       originalOffersSha256: report.originalOffersSha256,
       originalServiceConfigSha256: report.originalServiceConfigSha256,
       listener: session.url, mode: session.mode, cacheControlAvailable: control !== null,
-      ...(session.jsonrpc && session.operations ? { operations: {
+      ...((session.jsonrpc || session.postgres) && session.operations ? { operations: {
         url: session.operations.url, availability: session.operations.availabilityUrl,
         availabilityControl: session.operations.availabilityControlUrl,
       } } : {}) }) + '\n');
@@ -55,3 +56,9 @@ process.once('message', async message => {
       : 'RELEASE_CHILD_START_FAILED\n'); process.exitCode = 1;
   }
 });
+// No application import or listener is permitted before the original manager
+// durably records this exact worker identity and grants startup over this IPC.
+const owner = await releaseProcessOwner();
+const kernelLease = inheritedReleaseLease(lifetimeDescriptor);
+process.send({ type: 'sf82-owner', instanceId, pid: owner.pid,
+  processIdentity: owner.processIdentity, kernelLease }, error => { if (error) process.exit(1); });

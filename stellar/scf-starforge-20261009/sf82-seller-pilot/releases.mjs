@@ -15,6 +15,8 @@ import { MYSQL_SOURCE_SCHEMA, stageMysqlRelease, inspectMysqlRelease } from './r
 import { REDIS_SOURCE_SCHEMA, stageRedisRelease, inspectRedisRelease } from './release-redis.mjs';
 import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
 import { SQLITE_SOURCE_SCHEMA, stageSqliteRelease, inspectSqliteRelease } from './release-sqlite.mjs';
+import { acquireReleaseLease, releaseProcessOwner, releaseOwnerLiveness, recordedSellerAlive,
+  validProcessIdentity, validReleaseLease, sameReleaseLease } from './release-process.mjs';
 import { NATIVE_SDK_VERSION } from '../sf30-seller-sdk/native-factory.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
@@ -79,10 +81,6 @@ async function atomic(path, value) {
   try { await writeNew(temp, value); await rename(temp, path); await syncDirectory(dirname(path)); }
   finally { await unlink(temp).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
 }
-function alive(pid) {
-  if (!Number.isSafeInteger(pid) || pid < 1) return false;
-  try { process.kill(pid, 0); return true; } catch (error) { return error.code === 'EPERM'; }
-}
 const OWNER_FILE = /^owner-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.json$/;
 async function lockOwner(root, name) {
   const path = join(root, name);
@@ -93,7 +91,9 @@ async function lockOwner(root, name) {
     const file = owners[0], owner = await optional(join(path, file));
     if (!owner || owner.token !== OWNER_FILE.exec(file)[1] || typeof owner.host !== 'string' ||
         !Number.isSafeInteger(owner.pid) || owner.pid < 1 ||
-        owner.childPid !== undefined && (!Number.isSafeInteger(owner.childPid) || owner.childPid < 1))
+        owner.childPid !== undefined && (!Number.isSafeInteger(owner.childPid) || owner.childPid < 1) ||
+        !validProcessIdentity(owner.processIdentity) || !validProcessIdentity(owner.childProcessIdentity) ||
+        !validReleaseLease(owner.kernelLease))
       return { present: true, path, owner: null };
     return { present: true, path, file, owner };
   } catch (error) {
@@ -112,8 +112,11 @@ async function removeOwner(path, file) {
 }
 async function lock(root, name) {
   const path = join(root, name), token = randomUUID();
-  const owner = { pid: process.pid, host: hostname(), token, createdAt: new Date().toISOString() };
+  const lifetime = await acquireReleaseLease(root, name);
+  const owner = { ...await releaseProcessOwner(), token, createdAt: new Date().toISOString(),
+    ...(lifetime ? { kernelLease: lifetime.identity } : {}) };
   const file = 'owner-' + token + '.json';
+  try {
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
       await mkdir(path, { mode: 0o700 });
@@ -121,9 +124,12 @@ async function lock(root, name) {
       if (error.code !== 'EEXIST') throw error;
       const current = await lockOwner(root, name);
       if (!current.present) continue;
-      if (current.owner?.host === hostname() && !alive(current.owner.pid) && !alive(current.owner.childPid)) {
-        await removeOwner(path, current.file);
-        continue;
+      if (current.owner) {
+        const { managerAlive, childAlive } = await releaseOwnerLiveness(root, current.owner, owner, lifetime);
+        if (!managerAlive && !childAlive) {
+          await removeOwner(path, current.file);
+          continue;
+        }
       }
       const busy = new Error(name === 'run.lock' ? 'A release manager already owns the running seller. Stop it in its own terminal or console.' : 'Another release change is being saved. Refresh and retry.');
       busy.code = 'RELEASE_BUSY'; throw busy;
@@ -135,15 +141,20 @@ async function lock(root, name) {
       await rmdir(path).catch(() => {});
       throw error;
     }
-    const release = () => removeOwner(path, file);
+    const release = async () => {
+      try { await removeOwner(path, file); } finally { await lifetime?.close(); }
+    };
     release.owner = owner;
+    release.lifetime = lifetime;
     release.update = async fields => {
+      await lifetime?.assert();
       Object.assign(owner, fields);
       await atomic(join(path, file), owner);
     };
     return release;
   }
   throw Object.assign(new Error('Release store lock changed; refresh and retry.'), { code: 'RELEASE_BUSY' });
+  } catch (error) { await lifetime?.close(); throw error; }
 }
 async function mutate(root, action) {
   const release = await lock(root, 'state.lock');
@@ -728,17 +739,18 @@ export async function releaseStatus(root) {
   const catalog = await listReleases(root);
   const observed = await optional(join(root, 'runtime.json'));
   const claim = await lockOwner(root, 'run.lock'), owner = claim.owner;
+  const processOwner = await releaseProcessOwner();
   let runtime = { state: 'STOPPED', observed };
   if (claim.present && !owner) {
     runtime = { state: 'STARTING', observed, message: 'A manager is establishing its release-store ownership.' };
-  } else if (owner?.host && owner.host !== hostname()) {
-    runtime = { state: 'OTHER_HOST', observed, message: 'The release-store owner is on another host.' };
   } else if (owner) {
-    const managerAlive = alive(owner.pid), childAlive = alive(owner.childPid);
+    const { managerAlive, childAlive } = await releaseOwnerLiveness(root, owner, processOwner);
     const current = observed?.schema === RUN && observed.lockToken === owner.token &&
       observed.instanceId === owner.instanceId && observed.pid === owner.childPid && !observed.endedAt;
     runtime = { state: managerAlive ? 'STARTING' : 'STOPPED', observed, managerAlive, childAlive };
-    if (!managerAlive && childAlive) {
+    if (owner.host !== processOwner.host && (managerAlive || childAlive)) {
+      runtime.state = 'OTHER_HOST'; runtime.message = 'The release-store owner is on another host.';
+    } else if (!managerAlive && childAlive) {
       runtime.state = 'ORPHANED';
       runtime.message = 'The manager ended while its recorded seller process is still present. Start remains unavailable until that process ends.';
     } else if (managerAlive && owner.childPid && !childAlive) {
@@ -752,15 +764,16 @@ export async function releaseStatus(root) {
       } catch (error) { runtime.state = 'UNAVAILABLE'; runtime.message = error.message; }
     }
   } else if (observed?.schema === RUN && !observed.endedAt &&
-      (observed.host === undefined || observed.host === hostname()) && alive(observed.pid)) {
+      (observed.host === undefined || observed.host === hostname()) &&
+      await recordedSellerAlive(root, observed, processOwner)) {
     runtime = { state: 'ORPHANED', observed,
       message: 'The recorded seller process is still present without its owner file. This console does not own that process.' };
   }
   return { schema: 'stellar-forge.seller-release-status.v1', root, state, ...catalog, runtime };
 }
 
-// The child cannot import handlers or open a listener until its PID is durably
-// registered. If the parent dies before granting startup, IPC disconnect ends
+// The child cannot import handlers or open a listener until its process birth
+// identity and inherited lifetime are durably registered. IPC disconnect ends
 // this waiting child. After the grant, the unchanged original pilot owns serving;
 // its private cache controls attach before the release reports readiness.
 
@@ -837,7 +850,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     if (!state.active) throw new Error('Activate a staged release before running a seller.');
     const previous = await optional(join(root, 'runtime.json'));
     if (previous?.schema === RUN && !previous.endedAt &&
-        (previous.host === undefined || previous.host === hostname()) && alive(previous.pid))
+        (previous.host === undefined || previous.host === hostname()) &&
+        await recordedSellerAlive(root, previous, releaseLock.owner, releaseLock.lifetime))
       throw Object.assign(new Error('The previously recorded seller process is still present. This manager cannot start a duplicate or stop a process it does not own.'), { code: 'RELEASE_BUSY' });
     const { record, path } = await releaseRecord(root, state.active, true);
     const selection = state.history.at(-1);
@@ -859,35 +873,51 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
-      { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
-    let readyResolve, readyReject, stdout = '', stderr = '';
+    child = spawn(process.execPath, [CHILD, record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId), releaseLock.lifetime ? '4' : '-'],
+      { stdio: ['ignore', 'pipe', 'pipe', 'ipc', ...(releaseLock.lifetime ? [releaseLock.lifetime.fd] : [])],
+        windowsHide: true, detached: process.platform !== 'win32' });
+    let readyResolve, readyReject, ownerResolve, ownerReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
+    const childOwner = new Promise((done, fail) => { ownerResolve = done; ownerReject = fail; });
+    const rejectStartup = error => { readyReject(error); ownerReject(error); };
     // A spawn error can arrive during the durable owner write, before await ready.
     // Observe rejection now and retain one exit promise for all cleanup paths.
-    void ready.catch(() => {}); rejectReady = readyReject; exitSettled = false;
+    void ready.catch(() => {}); void childOwner.catch(() => {});
+    rejectReady = rejectStartup; exitSettled = false;
+    child.once('message', message => {
+      if (message?.type !== 'sf82-owner' || message.instanceId !== instanceId || message.pid !== child.pid ||
+          !validProcessIdentity(message.processIdentity) ||
+          !sameReleaseLease(message.kernelLease, releaseLock.owner.kernelLease)) {
+        rejectStartup(new Error('Original seller reported a different process owner.')); return;
+      }
+      ownerResolve(message);
+    });
     exited = new Promise(done => {
       const settle = () => { if (!exitSettled) { exitSettled = true; done(); } };
-      child.on('error', error => { failure ??= error.message; readyReject(error); if (!child.pid) settle(); });
+      child.on('error', error => { failure ??= error.message; rejectStartup(error); if (!child.pid) settle(); });
       child.once('exit', (code, signal) => { exitCode = code; exitSignal = signal;
         if (ownsWorkerGroup && (signal || code !== 0)) forceOwnedChild();
-        readyReject(new Error('Original seller exited before startup (code ' + code + ', signal ' + signal + '). ' + stderr.slice(-2000))); settle(); });
+        rejectStartup(new Error('Original seller exited before startup (code ' + code + ', signal ' + signal + '). ' + stderr.slice(-2000))); settle(); });
     });
     if (handleSignals) { process.on('SIGINT', onInterrupt); process.on('SIGTERM', onTerminate); }
     child.stderr.setEncoding('utf8'); child.stdout.setEncoding('utf8');
     child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-8192); });
     child.stdout.on('data', chunk => {
       stdout += chunk;
-      if (stdout.length > 1024 * 1024) { readyReject(new Error('Original seller startup output exceeded its limit.')); stdout = ''; return; }
+      if (stdout.length > 1024 * 1024) { rejectStartup(new Error('Original seller startup output exceeded its limit.')); stdout = ''; return; }
       while (stdout.includes('\n')) {
         const newline = stdout.indexOf('\n'), line = stdout.slice(0, newline); stdout = stdout.slice(newline + 1);
         try { const value = JSON.parse(line); if (value.releaseReady === true && value.instanceId === instanceId) readyResolve(value); } catch {}
       }
     });
-    startupTimer = setTimeout(() => readyReject(new Error('Original seller startup timed out.')), startupTimeoutMs);
-    if (Number.isSafeInteger(child.pid)) await releaseLock.update({ childPid: child.pid });
+    startupTimer = setTimeout(() => rejectStartup(new Error('Original seller startup timed out.')), startupTimeoutMs);
+    const workerOwner = await childOwner;
+    await releaseLock.update({ childPid: child.pid, childProcessIdentity: workerOwner.processIdentity });
     observation = { schema: RUN, instanceId, lockToken: releaseLock.owner.token, host: hostname(),
-      managerPid: process.pid, pid: child.pid ?? null, releaseId: record.id, releaseDigest: record.digest,
+      managerPid: process.pid, managerProcessIdentity: releaseLock.owner.processIdentity,
+      pid: child.pid ?? null, processIdentity: workerOwner.processIdentity,
+      ...(releaseLock.owner.kernelLease ? { kernelLease: releaseLock.owner.kernelLease } : {}),
+      releaseId: record.id, releaseDigest: record.digest,
       selectionGeneration: state.generation, listener: null, mode, phase: 'STARTING', startedAt: new Date().toISOString(),
       ...(receiving ? { receivingReview: receiving } : {}) };
     await atomic(join(root, 'runtime.json'), observation);
