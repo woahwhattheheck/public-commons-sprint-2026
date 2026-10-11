@@ -5,7 +5,7 @@ import { OperatorApprovedBuyer, checkOperatorTerminal } from '../sf81-buyer-oper
 import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
-import { selectTestnetEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
+import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { execution, bytes, need } from './config.mjs';
 import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
   requireCurrentOperationTicket } from './operation-ticket.mjs';
@@ -31,7 +31,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof emitSummary === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
   const { op, owner, download:responseFile, transport } = execution(cfg);
-  const rpcEndpoint = selectTestnetEvidenceEndpoint(evidenceRpcEndpoint);
+  const rpcEndpoint = selectStellarEvidenceEndpoint(op.expect.network,evidenceRpcEndpoint);
   // Keep RPC and merchant origin pins separate while using the same explicitly
   // selected egress proxy. No wallet or merchant headers enter read-only RPC.
   const rpcTransport = transport === null ? null : createPublicHttpsFetch({trustedProxy:{

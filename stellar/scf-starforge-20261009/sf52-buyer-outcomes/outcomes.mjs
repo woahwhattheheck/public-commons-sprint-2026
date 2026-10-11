@@ -78,7 +78,7 @@ export function captureBuyerError({ intentId, error, observedAt = new Date().toI
 }
 
 /** Interpret normalized outcomes. A positive seller HTTP/receipt is NOT an on-chain
- * transfer; SF43 proves only exact Stellar testnet transfer, not resource usefulness.
+ * transfer; SF43 observes an exact transfer on the approved Stellar network.
  */
 export function analyzeOne(record) {
   requireOk(obj(record) && tag(record.intentId) && date(record.observedAt), 'RECORD_INVALID');
@@ -104,15 +104,17 @@ export function analyzeOne(record) {
     const receipt=b.receipt;
     const receiptValid=obj(receipt) && receipt.success===true &&
       receipt.network===t.network && hash(receipt.transaction);
-    const chainPositive=obj(c) && c.status==='TOKEN_TRANSFER_MATCHED_TESTNET';
-    const consistent=chainPositive && t.network==='stellar:testnet' && receiptValid &&
+    const chainPositive=obj(c) && ['TOKEN_TRANSFER_MATCHED_TESTNET','TOKEN_TRANSFER_MATCHED_PUBNET'].includes(c.status);
+    const expectedStatus=t.network==='stellar:testnet'?'TOKEN_TRANSFER_MATCHED_TESTNET':'TOKEN_TRANSFER_MATCHED_PUBNET';
+    const consistent=chainPositive && c.status===expectedStatus && receiptValid &&
       c.proof==='RPC_TX_AND_SEP41_TRANSFER_EVENT_MATCH' &&
       c.network===t.network && c.transaction===receipt.transaction &&
       c.contractId===t.asset && c.recipient===t.payTo &&
       c.amountAtomic===t.amount && Number.isSafeInteger(c.ledger) && c.ledger>0;
     if (chainPositive && !consistent) state='PROOF_CONFLICT';
     else if (consistent) {
-      evidence='MATCHED_SF43_TESTNET_TRANSFER'; ledger=c.ledger;
+      evidence=t.network==='stellar:testnet'?'MATCHED_SF43_TESTNET_TRANSFER':'MATCHED_SF43_PUBNET_TRANSFER';
+      ledger=c.ledger;
       const delivered=reported && obj(d) && d.status==='HTTP_BODY_OBSERVED' &&
         Number.isInteger(d.httpStatus) && d.httpStatus>=200 && d.httpStatus<300 &&
         hash(d.bodySha256);
@@ -127,7 +129,7 @@ export function analyzeOne(record) {
   return Object.freeze({ intentId:record.intentId, observedAt:record.observedAt,
     status:state, network:t?.network??null, asset:t?.asset??null,
     amountAtomic:t?.amount??null, signedAttempt:paid, sellerReportedSuccess:reported,
-    independentlyVerifiedTransfer:evidence==='MATCHED_SF43_TESTNET_TRANSFER',
+    independentlyVerifiedTransfer:['MATCHED_SF43_TESTNET_TRANSFER','MATCHED_SF43_PUBNET_TRANSFER'].includes(evidence),
     observedHttpBody:state==='TRANSFER_AND_HTTP_BODY_OBSERVED',
     chainEvidence:evidence, ledger });
 }

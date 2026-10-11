@@ -5,10 +5,10 @@ import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createNativeBuyerSigner } from '../sf103-native-buyer-signer/adapter.mjs';
+import { NETWORKS } from '../sf86-rpc-transfer-reconcile/terms.mjs';
 
 const NETWORK = 'stellar:testnet';
 const SDK_VERSION = '2.28.0';
-const DEFAULT_RPC = 'https://soroban-testnet.stellar.org';
 const require = createRequire(import.meta.url);
 const I128_MAX = 170141183460469231731687303715884105727n;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -33,7 +33,7 @@ function atomic(value) {
 }
 
 function pins(options) {
-  if (!object(options) || options.network !== NETWORK) fail('SIGNER_TESTNET_REQUIRED');
+  if (!object(options) || !Object.hasOwn(NETWORKS, options.network)) fail('SIGNER_STELLAR_NETWORK_REQUIRED');
   if (typeof options.asset !== 'string' || !/^C[A-Z2-7]{55}$/.test(options.asset))
     fail('SIGNER_INVALID_ASSET');
   if (typeof options.payTo !== 'string' || !/^[GC][A-Z2-7]{55}$/.test(options.payTo))
@@ -42,11 +42,14 @@ function pins(options) {
     fail('SIGNER_EXPECTED_PAYER_REQUIRED');
   atomic(options.maxAtomic);
   let rpc;
-  try { rpc = new URL(options.rpcUrl ?? DEFAULT_RPC); }
+  try { rpc = new URL(options.rpcUrl ?? NETWORKS[options.network].defaultRpc); }
   catch { fail('SIGNER_RPC_URL_INVALID'); }
   if (rpc.protocol !== 'https:' || rpc.username || rpc.password || rpc.search || rpc.hash)
     fail('SIGNER_RPC_HTTPS_REQUIRED');
-  return Object.freeze({ network: NETWORK, asset: options.asset, payTo: options.payTo,
+  if (Object.entries(NETWORKS).some(([network, profile]) => network !== options.network &&
+      profile.rpcEndpoints.some(endpoint => new URL(endpoint).href === rpc.href)))
+    fail('SIGNER_RPC_NETWORK_MISMATCH');
+  return Object.freeze({ network: options.network, asset: options.asset, payTo: options.payTo,
     maxAtomic: options.maxAtomic, expectedPayer: options.expectedPayer, rpcUrl:rpc.href });
 }
 
@@ -132,9 +135,10 @@ async function officialSdk() {
 }
 
 /** Package availability only: no provider import, key access, RPC or signature. */
-export async function inspectNativeSignerRuntime() {
+export async function inspectNativeSignerRuntime(network = NETWORK) {
+  if (!Object.hasOwn(NETWORKS, network)) fail('SIGNER_STELLAR_NETWORK_REQUIRED');
   const sdk = await officialSdk();
-  return { sdkVersion:SDK_VERSION, versions:sdk.versions, network:NETWORK,
+  return { sdkVersion:SDK_VERSION, versions:sdk.versions, network, networks:Object.keys(NETWORKS),
     scheme:'exact', payloadEngine:'SF103_ORIGINAL_X402_STELLAR', feesSponsoredRequired:true };
 }
 
@@ -150,7 +154,7 @@ export async function checkNativeSignerPrerequisites(options) {
     if (typeof secretEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,127}$/.test(secretEnv))
       fail('SIGNER_INVALID_SECRET_ENV_NAME');
     if (!object(environment) || !Object.hasOwn(environment, secretEnv))
-      fail('SIGNER_LOCAL_TESTNET_KEY_REQUIRED');
+      fail(options.network === NETWORK ? 'SIGNER_LOCAL_TESTNET_KEY_REQUIRED' : 'SIGNER_LOCAL_KEY_REQUIRED');
   }
   await officialSdk();
 }
@@ -200,7 +204,7 @@ export async function createOfficialStellarSigner(options) {
   });
 }
 
-/** Existing local testnet key -> official SDK signer; never read a key on import/review. */
+/** Existing local key -> network-bound official SDK signer; no key read on review. */
 export async function createEnvironmentStellarSigner(options) {
   const policy = pins(options);
   const environment = options.environment ?? process.env;
@@ -209,11 +213,11 @@ export async function createEnvironmentStellarSigner(options) {
     fail('SIGNER_INVALID_SECRET_ENV_NAME');
   const secret = environment?.[secretEnv];
   if (typeof secret !== 'string' || !/^S[A-Z2-7]{55}$/.test(secret))
-    fail('SIGNER_LOCAL_TESTNET_KEY_REQUIRED');
+    fail(policy.network === NETWORK ? 'SIGNER_LOCAL_TESTNET_KEY_REQUIRED' : 'SIGNER_LOCAL_KEY_REQUIRED');
   const sdk = await officialSdk();
   let signer;
   try { signer = sdk.createEd25519Signer(secret, policy.network); }
-  catch { fail('SIGNER_INVALID_LOCAL_TESTNET_KEY'); }
+  catch { fail(policy.network === NETWORK ? 'SIGNER_INVALID_LOCAL_TESTNET_KEY' : 'SIGNER_INVALID_LOCAL_KEY'); }
   return createOfficialStellarSigner({ ...policy, signer });
 }
 
