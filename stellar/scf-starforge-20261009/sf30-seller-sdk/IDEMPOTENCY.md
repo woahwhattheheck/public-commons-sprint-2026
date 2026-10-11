@@ -152,11 +152,30 @@ conflicts even if the merchant issues a second valid ticket for it. The ticket
 is not forwarded upstream; the transport sends only the stable `sf30_...` backend
 key through the configured backend header, alongside original backend credentials.
 
-Existing native HTTP clients can carry the ticket as an ordinary merchant header.
-The programmatic SF31 client supports ordinary request headers; the narrower
-SF88 configuration currently admits only Content-Type/Accept and does not yet
-provide an operation-ticket field. Do not place a ticket in a URL or reinterpret
-it as `PAYMENT-SIGNATURE`.
+The original SF88 buyer now imports this ticket through a private
+`operation.ticketFile`. Its `--prepare --ticket-file` option takes the received
+file; `--ticket-header` selects the merchant's configured header when it differs
+from the default `x-merchant-operation`. The corresponding optional config field
+is `operation.ticketHeader`. Follow the maintained
+[SF88 merchant-ticket workflow](../sf88-operator-buyer-cli/OPERATION_TICKETS.md)
+for preparation, review, workspace import and queued execution.
+
+The buyer's `--body-file` contains the HTTP JSON body alone, such as
+`{"sku":"item-17","quantity":2}` above. It does not contain the issuer's larger
+method/URL/path/header/body description. The real source URL, query order, body
+and merchant-forwarded headers must match the issued request.
+
+SF88 keeps the received file private, copies its exact bytes into the existing
+workspace and queue, and passes its bearer through the original SF31 ordinary
+request-header path on the unsigned request and approved paid retry. Review and
+queue output show only ticket metadata. The merchant HMAC key remains with the
+merchant. Do not place the ticket in a URL or reinterpret it as
+`PAYMENT-SIGNATURE`.
+
+Use the buyer's reviewed `operationKey` to find the same record in the
+[merchant operations console](operations/MERCHANT_OPERATIONS.md#join-the-original-buyer-workflow).
+Keep its original buyer intent and payment evidence when reconciling a result;
+merchant operation recovery does not authorize another paid retry.
 
 ## Execution and recovery
 

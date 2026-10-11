@@ -6,12 +6,37 @@ const summary = tenant => ({ id: tenant.id, host: tenant.host, mode: tenant.mode
   upstreamPort: tenant.upstreamPort, routes: tenant.compiled.routes.length,
   active: tenant.active, maxInFlight: tenant.maxInFlight, accepted: tenant.accepted,
   completed: tenant.completed, refused: tenant.refused, errors: tenant.errors });
+const PUBLIC_ROUTE_BUDGET = 256 * 1024;
+const CONTROL_RESPONSE_LIMIT = 1024 * 1024;
+
+function publicRouteDetails(status, merchants) {
+  // Budget the added public projection against the existing client's response
+  // limit. Each merchant is complete or explicitly omitted, never half a quote.
+  let remaining = Math.max(0, Math.min(PUBLIC_ROUTE_BUDGET,
+    CONTROL_RESPONSE_LIMIT - Buffer.byteLength(JSON.stringify(status)) - 1024));
+  for (const { view, tenant } of merchants.sort((a, b) => a.priority - b.priority)) {
+    if (!remaining) break;
+    const routeDetails = tenant.compiled.routes.map(route => ({ id: route.id,
+      method: route.method, url: route.offer.resource.url,
+      ...(route.binding.dynamic ? { routeTemplate: route.path } : {}),
+      ...(route.offer.resource.mimeType ? { mimeType: route.offer.resource.mimeType } : {}),
+      paymentChoices: route.offer.accepts }));
+    const complete = { ...view, routeDetailsState: 'COMPLETE', routeDetails };
+    const bytes = Buffer.byteLength(JSON.stringify(complete)) - Buffer.byteLength(JSON.stringify(view));
+    if (bytes <= remaining) {
+      Object.assign(view, complete, { routeDetails: structuredClone(routeDetails) });
+      remaining -= bytes;
+    }
+  }
+  return status;
+}
 
 export function createFleetRollout(fleet, { store = null, record = null,
   load, check, ports = () => [] } = {}) {
   let current = { ...(record ?? { revision: 1 }), fleet,
     byHost: new Map(fleet.tenants.map(tenant => [tenant.host, tenant])) };
   let prepared = null, busy = false, closing = false, retired = [];
+  let operationDone = Promise.resolve();
   let storage = null;
   const activeByHost = new Map();
   const requireRevision = revision => {
@@ -22,8 +47,11 @@ export function createFleetRollout(fleet, { store = null, record = null,
     if (!store) throw rejected('FLEET_LIVE_CONTROL_DISABLED', 404);
     if (closing) throw rejected('FLEET_CLOSING', 503);
     if (busy) throw rejected('FLEET_OPERATION_IN_PROGRESS');
+    store.assertHeld();
     busy = true;
-    try { return await work(); } finally { busy = false; }
+    let finish;
+    operationDone = new Promise(done => { finish = done; });
+    try { return await work(); } finally { busy = false; finish(); }
   };
   const changes = next => ({
     added: next.tenants.filter(t => !current.byHost.has(t.host)).map(t => t.host),
@@ -60,20 +88,27 @@ export function createFleetRollout(fleet, { store = null, record = null,
   const status = () => {
     prune();
     const selection = store?.read();
-    return { schema: fleet.schema, mode: store ? 'LIVE_ROLLOUT' : 'STATIC',
+    const merchants = [];
+    const view = (tenant, priority = 0) => {
+      const result = { ...summary(tenant), routeDetailsState: 'STATUS_LIMIT' };
+      merchants.push({ view: result, tenant, priority });
+      return result;
+    };
+    const result = { schema: fleet.schema, mode: store ? 'LIVE_ROLLOUT' : 'STATIC',
       revision: current.revision, snapshotId: current.snapshotId ?? null,
       digest: current.digest ?? null, at: current.at ?? null, closing, busy,
       storage,
-      merchants: current.fleet.tenants.map(t => ({ ...summary(t),
+      merchants: current.fleet.tenants.map(t => Object.assign(view(t), {
         totalActive: activeByHost.get(t.host) ?? 0 })),
       candidate: prepared ? { id: prepared.id, baseRevision: prepared.baseRevision,
         expiresAt: new Date(prepared.expiresAt).toISOString(), changes: prepared.changes,
-        merchants: prepared.fleet.tenants.map(summary), digest: prepared.record.digest } : null,
+        merchants: prepared.fleet.tenants.map(t => view(t)), digest: prepared.record.digest } : null,
       retired: retired.map(g => ({ revision: g.revision, snapshotId: g.snapshotId ?? null,
         state: g.fleet.tenants.some(t => t.active) ? 'DRAINING' : 'DRAINED',
-        merchants: g.fleet.tenants.map(summary) })),
+        merchants: g.fleet.tenants.map(t => view(t, g.fleet.tenants.some(t => t.active) ? 1 : 2)) })),
       history: selection?.history ?? [],
     };
+    return publicRouteDetails(result, merchants);
   };
   const promote = (next, saved, expectedRevision) => {
     requireRevision(expectedRevision);
@@ -146,6 +181,23 @@ export function createFleetRollout(fleet, { store = null, record = null,
         return promote(next, { snapshotId: saved.snapshotId, digest: saved.digest }, expectedRevision);
       });
     },
-    shutdown() { closing = true; },
+    withRetiredPort(port, expectedRevision, closeOwnedSession) {
+      return exclusive(async () => {
+        requireRevision(expectedRevision);
+        if (!Number.isSafeInteger(port) || port < 1 || port > 65535)
+          throw rejected('FLEET_RETIRED_PORT_REQUIRED', 400);
+        if (typeof closeOwnedSession !== 'function')
+          throw rejected('FLEET_CLOSE_CALLBACK_REQUIRED', 400);
+        if (current.fleet.tenants.some(t => t.upstreamPort === port) ||
+            prepared?.fleet.tenants.some(t => t.upstreamPort === port) ||
+            retired.some(g => g.fleet.tenants.some(t => t.upstreamPort === port && t.active > 0)))
+          throw rejected('FLEET_PORT_STILL_REFERENCED');
+        // A native caller retains its own original session handle. Holding the
+        // same mutation guard closes the status-to-stop race with activation.
+        await closeOwnedSession();
+        return status();
+      });
+    },
+    shutdown() { closing = true; return operationDone; },
   };
 }

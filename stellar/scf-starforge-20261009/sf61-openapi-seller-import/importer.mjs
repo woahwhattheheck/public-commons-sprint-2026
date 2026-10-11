@@ -1,6 +1,6 @@
 // MIT. Offline OpenAPI 3.0/3.1 adapter for the original SF30 seller compiler.
 import { createSellerDiscovery, makePaymentRequiredResponse } from '../sf30-seller-discovery/index.mjs';
-import { adaptOpenApi30Schema } from './schema-compat.mjs';
+import { adaptOpenApi30Schema, adaptOpenApi31Schema } from './schema-compat.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -63,7 +63,7 @@ function resolver(document) {
         ...Object.fromEntries(extras.map(k => [k, clone(value[k])])) };
     }
     if (['$id', '$dynamicRef', '$dynamicAnchor', '$anchor'].some(k => own(value, k))) fail('Schema resource and dynamic references are not supported');
-    const result = legacy ? adaptOpenApi30Schema(value) : clone(value);
+    const result = legacy ? adaptOpenApi30Schema(value) : adaptOpenApi31Schema(value);
     if (own(result, 'example')) {
       if (!own(result, 'examples')) result.examples = [result.example];
       delete result.example;

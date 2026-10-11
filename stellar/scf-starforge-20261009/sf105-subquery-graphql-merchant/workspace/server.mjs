@@ -1,0 +1,157 @@
+#!/usr/bin/env node
+// MIT. One private operator workspace using the original SF105 compiler/runtime.
+import { createServer } from 'node:http';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { openWorkspaceStore, plain } from './store.mjs';
+import { inspectDraftSchema, reviewDraft, exportDraft, readExport, exportView, startDraftMerchant } from './merchant.mjs';
+
+const STATIC = new Map([['/', ['index.html', 'text/html']], ['/app.mjs', ['app.mjs', 'text/javascript']],
+  ['/style.css', ['style.css', 'text/css']]]);
+const HELP = 'node workspace/server.mjs --workspace PRIVATE_DIRECTORY [--port 0]';
+const equal = (a, b) => typeof a === 'string' && Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
+async function bodyOf(req) {
+  const chunks = []; let bytes = 0;
+  for await (const chunk of req) {
+    bytes += chunk.length;
+    if (bytes > 7 * 1024 * 1024) fail('Project input exceeds 7 MiB.', 413);
+    chunks.push(chunk);
+  }
+  let body;
+  try { body = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
+  catch { fail('Send a UTF-8 JSON object.'); }
+  if (!plain(body)) fail('Send a JSON object.');
+  return body;
+}
+const publicDraft = async value => ({ ...value, exports: await Promise.all(value.exports.map(async reference => {
+  try { return exportView(await readExport(reference)); }
+  catch (error) { return { ...reference, unavailable: true, error: error.message, files: [] }; }
+})) });
+
+export async function startWorkspace({ workspace, port = 0, noSignals = false } = {}) {
+  if (!Number.isInteger(port) || port < 0 || port > 65535) fail('Port must be 0–65535.');
+  const store = await openWorkspaceStore(workspace), token = randomBytes(32).toString('hex');
+  let origin, active = null, stopping = false, busy = false, pending = Promise.resolve();
+  const runtime = () => active ? { project: active.project, exportId: active.exportId,
+    mode: active.session.mode, url: active.session.url,
+    offers: active.session.url + '/_seller/offers', readiness: active.session.url + '/_seller/ready', state: 'RUNNING' } : { state: 'STOPPED' };
+  async function current(body) {
+    const saved = await store.read(body.id);
+    if (body.expectedRevision !== saved.revision) fail('The saved project changed. Reopen it before continuing.', 409);
+    return saved;
+  }
+  async function mutate(operation) {
+    if (busy) fail('A workspace operation is already in progress.', 409);
+    busy = true;
+    let finish;
+    pending = new Promise(yes => { finish = yes; });
+    try { return await operation(); } finally { busy = false; finish(); }
+  }
+  const server = createServer(async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+    const send = (status, value) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); };
+    try {
+      if (stopping) return send(503, { error: 'Workspace is closing.' });
+      if (req.headers.host !== new URL(origin).host || req.headers.origin && req.headers.origin !== origin)
+        return send(403, { error: 'Use the exact local workspace address.' });
+      const url = new URL(req.url, origin);
+      if (url.origin !== origin) return send(403, { error: 'Use the local workspace address.' });
+      if (req.method === 'GET' && STATIC.has(url.pathname)) {
+        const [name, type] = STATIC.get(url.pathname);
+        res.writeHead(200, { 'Content-Type': type + '; charset=utf-8' });
+        res.end(await readFile(new URL(name, import.meta.url))); return;
+      }
+      if (!url.pathname.startsWith('/api/')) return send(404, { error: 'Not found.' });
+      if (!equal(req.headers['x-workspace-token'], token)) return send(401, { error: 'Open the complete private URL printed by the launcher.' });
+      if (req.method === 'GET') {
+        if (url.pathname === '/api/projects') return send(200, { projects: await store.list(), directory: store.root, runtime: runtime() });
+        if (url.pathname === '/api/runtime') return send(200, runtime());
+        if (url.pathname === '/api/project') {
+          const rev = url.searchParams.get('revision');
+          if (rev !== null && !/^[1-9]\d*$/.test(rev)) fail('Invalid revision.');
+          return send(200, await publicDraft(await store.read(url.searchParams.get('id'), rev === null ? undefined : Number(rev))));
+        }
+        if (url.pathname === '/api/history') return send(200, await store.history(url.searchParams.get('id')));
+        return send(404, { error: 'Not found.' });
+      }
+      if (req.method !== 'POST') return send(405, { error: 'Use GET or POST.' });
+      if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] ?? '')) return send(415, { error: 'Use application/json.' });
+      const body = await bodyOf(req);
+      if (url.pathname === '/api/schema') return send(200, await inspectDraftSchema(body.schemaText));
+      if (url.pathname === '/api/review') return send(200, await reviewDraft(body.input));
+      if (url.pathname === '/api/save') return send(200, await publicDraft(await mutate(() => store.save(body))));
+      if (url.pathname === '/api/export') {
+        const result = await mutate(async () => {
+          const saved = await current(body), { record, reference } = await exportDraft(store, saved);
+          const updated = await store.save({ id: saved.id, input: saved.input,
+            expectedRevision: saved.revision, exportRecord: reference });
+          return { project: await publicDraft(updated), exported: exportView(record) };
+        });
+        return send(201, result);
+      }
+      if (url.pathname === '/api/start') {
+        const result = await mutate(async () => {
+          if (active) fail('Stop the current managed merchant before starting another.', 409);
+          const saved = await current(body), reference = saved.exports.find(value => value.id === body.exportId);
+          if (!reference || reference.inputDigest !== saved.inputDigest) fail('Export the current reviewed project before starting it.', 409);
+          const record = await readExport(reference);
+          if (body.allowLoopback !== undefined && typeof body.allowLoopback !== 'boolean') fail('Invalid local-backend option.');
+          if (body.facilitator !== undefined && (typeof body.facilitator !== 'string' || body.facilitator.length > 2048)) fail('Invalid facilitator URL.');
+          const session = await startDraftMerchant(record, { allowLoopback: body.allowLoopback === true, facilitator: body.facilitator || undefined });
+          if (stopping) { await session.close(); fail('Workspace closed during merchant startup.', 503); }
+          active = { project: saved.id, exportId: record.id, session };
+          return runtime();
+        });
+        return send(200, result);
+      }
+      if (url.pathname === '/api/stop') return send(200, await mutate(async () => {
+        if (active) { await active.session.close(); active = null; }
+        return runtime();
+      }));
+      return send(404, { error: 'Not found.' });
+    } catch (error) {
+      if (!res.headersSent) send(error.code === 'ENOENT' ? 404 : error.code === 'EEXIST' ? 409 : error.status ?? 400,
+        { error: error.message ?? 'The workspace operation failed.' });
+      else res.end();
+    }
+  });
+  server.requestTimeout = 30000; server.headersTimeout = 15000; server.maxHeadersCount = 40;
+  try { await new Promise((yes, no) => { server.once('error', no); server.listen(port, '127.0.0.1', () => { server.off('error', no); yes(); }); }); }
+  catch (error) { await store.close(); throw error; }
+  origin = 'http://127.0.0.1:' + server.address().port;
+  let closing;
+  const signals = [];
+  const close = () => closing ??= (async () => {
+    stopping = true;
+    for (const [name, handler] of signals) process.off(name, handler);
+    const closed = new Promise((yes, no) => server.close(error => error ? no(error) : yes()));
+    await pending;
+    try { if (active) await active.session.close(); }
+    finally { active = null; await closed; await store.close(); }
+  })();
+  if (!noSignals) for (const name of ['SIGINT', 'SIGTERM']) {
+    const handler = () => close().catch(() => { process.exitCode = 1; });
+    signals.push([name, handler]); process.once(name, handler);
+  }
+  return { url: origin + '/#' + token, origin, token, directory: store.root, close };
+}
+export async function main(args = process.argv.slice(2)) {
+  if (args.length === 1 && args[0] === '--help') { console.log(HELP); return; }
+  const values = new Map();
+  for (let i = 0; i < args.length; i += 2) {
+    if (!['--workspace', '--port'].includes(args[i]) || values.has(args[i]) || !args[i + 1] || args[i + 1].startsWith('--')) fail(HELP);
+    values.set(args[i], args[i + 1]);
+  }
+  if (!values.has('--workspace') || values.has('--port') && !/^\d{1,5}$/.test(values.get('--port'))) fail(HELP);
+  const session = await startWorkspace({ workspace: resolve(values.get('--workspace')), port: Number(values.get('--port') ?? 0) });
+  console.log('GraphQL merchant workspace: ' + session.url + '\nProjects: ' + session.directory + '\nCtrl-C stops this workspace and its managed merchant.');
+  return session;
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
+  main().catch(error => { console.error(error.message); process.exitCode = 1; });

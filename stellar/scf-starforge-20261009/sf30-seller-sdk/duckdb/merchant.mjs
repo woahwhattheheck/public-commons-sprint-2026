@@ -2,6 +2,7 @@
 import { startSellerService, readSellerConfig } from '../serve.mjs';
 import { startSellerOperations } from '../operations/server.mjs';
 import { openDuckdbSourceFile } from './source.mjs';
+import { isDeepStrictEqual } from 'node:util';
 
 export function bindDuckdbSeller(config, source, bindings) {
   if (!Array.isArray(config?.routes) || !source?.route || !bindings || typeof bindings !== 'object' ||
@@ -42,9 +43,16 @@ export async function startDuckdbMerchant({ source, config, bindings, port = 842
 }
 
 export async function startDuckdbSeller({ sourceFile, configFile, python = 'python3', environment = process.env,
+  expectedSourceSha256, expectedSourceConfig, expectedServiceConfig,
   ...options } = {}) {
   const config = await readSellerConfig(configFile);
   const { source, config: declaration } = await openDuckdbSourceFile(sourceFile, { python, environment });
-  try { return await startDuckdbMerchant({ source, config, bindings: declaration.bindings, ...options }); }
+  try {
+    if (expectedSourceSha256 !== undefined && source.describe().sourceSha256 !== expectedSourceSha256 ||
+        expectedSourceConfig !== undefined && !isDeepStrictEqual(declaration, expectedSourceConfig) ||
+        expectedServiceConfig !== undefined && !isDeepStrictEqual(config, expectedServiceConfig))
+      throw new TypeError('DUCKDB_PREPARED_SOURCE_CHANGED');
+    return await startDuckdbMerchant({ source, config, bindings: declaration.bindings, ...options });
+  }
   catch (issue) { await source.close(); throw issue; }
 }
