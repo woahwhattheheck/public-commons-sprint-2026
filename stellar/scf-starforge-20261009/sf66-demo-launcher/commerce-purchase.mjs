@@ -7,6 +7,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { readPrivateFile, parseJson } from '../sf103-native-buyer-signer/operator.mjs';
 import { validateHandoff, privatePath } from '../sf101-merchant-receiver/checkout-config.mjs';
 import { retrieveFile, inspectFileTransfer, resetFileTransfer } from '../sf101-merchant-receiver/purchase.mjs';
+import { retainInitializationFile } from '../sf88-operator-buyer-cli/initialization.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const need = (ok, code) => { if (!ok) throw Object.assign(new Error(code), { code }); };
@@ -46,9 +47,8 @@ export async function readPurchaseInput(value, op, responseDestination) {
   return { bytes, sha256: sha(bytes), destination: value.destination, claimEnv };
 }
 
-export async function freezePurchase(input, path) {
-  const handle = await open(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
-  try { await handle.writeFile(input.bytes); await handle.sync(); } finally { await handle.close(); }
+export async function freezePurchase(input, path, { resume = false } = {}) {
+  await retainInitializationFile(path, input.bytes, { resume });
   return { handoff: path, handoffSha256: input.sha256, destination: input.destination, claimEnv: input.claimEnv };
 }
 
@@ -163,3 +163,4 @@ export async function resetCommercePurchase(entry, job) {
   need(original, 'COMMERCE_PAID_FILE_NOT_CONFIGURED');
   return resetFileTransfer({ handoff: original.handoff, destination: original.source.destination });
 }
+
