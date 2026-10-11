@@ -177,6 +177,14 @@ purchase, retain the existing approved buyer workflow and original receiver proo
 
 ## Recovery and upgrades
 
+Use the integrated [merchant maintenance and restored-host cutover](MAINTENANCE.md)
+for an existing systemd/Caddy installation. `cli.mjs maintenance` pauses the
+selected merchant, stops its owned writers, takes and verifies the original
+encrypted snapshot, prepares original state and file paths at a new destination,
+and activates the restored services. Its private operation journal supports
+interruption recovery, automatic precommit rollback and subsequent maintenance
+of the promoted generation. The direct engine commands below remain available.
+
 The generated recovery plan names the selected state root and configuration
 files. Stop public ingress and all listed services, plus separately operated
 database/catalog writers, before the original encrypted snapshot command's
