@@ -21,6 +21,13 @@ For an existing initialized Python application, use
 [Python applications in commerce](./PYTHON_COMMERCE.md). Choose its
 `seller.python` declaration as the session's single merchant source.
 
+For an existing HTTP API, use
+[HTTP backends in the commerce session](./UPSTREAM_COMMERCE.md). Add its private
+`seller.upstreams` declaration beside `seller.config` to use the original SF30
+upstream application, including configured credentials, availability, response
+contracts, read caching and durable POST operations. The same session retains
+the selected buyers and optionally mounts the existing merchant recovery controls.
+
 ## 1. Use the existing merchant and operator configurations
 
 Use Node 22.16+ and Python 3.11+ on the operator's POSIX host. Install the same

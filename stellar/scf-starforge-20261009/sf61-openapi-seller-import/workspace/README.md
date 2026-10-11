@@ -219,10 +219,24 @@ Run the displayed **complete buyer review command** on the same host. The review
 is ready for the maintained [buyer workspace and inbox](../../sf88-operator-buyer-cli/OPERATION_TICKETS.md)
 with its actual operator, budget and signer. Its stable buyer intent derives
 from the original operation key, so issuing another ticket for the same merchant
-operation does not silently invent another buyer intent. A browser download
-contains only the original ticket envelope. On Linux or macOS, run `chmod 600`
-on that download before importing it; when transferring hosts, move the matching
-body/headers/offer privately and prepare with the destination's actual paths.
+operation does not silently invent another buyer intent.
+
+For another host, choose **Download complete buyer request**. The one private
+file retains the original ticket, exact body bytes, headers and concrete offer.
+Run `chmod 600` on the download, then use the displayed original
+`starforge buyer --import-operation --file ABS --dir NEW_PRIVATE_DIRECTORY --accept 0`
+command. The buyer chooses the actual payment option; import creates local input
+files and the original review config without carrying merchant machine paths or
+operator/signing settings. Review, then use the existing buyer workspace, inbox
+or Node `fromOperationHandoff` / Python `from_operation_handoff` application.
+The original runbook accepts the resulting operator workspace's `operator.json`
+under its configured local sources directory. All source ticket/input files may
+then be archived without breaking the buyer's retained private copies.
+
+**Download ticket only** preserves the smaller original envelope workflow.
+On Linux or macOS, run `chmod 600` on that download before importing it; when
+transferring hosts, move the matching body/headers/offer privately and prepare
+with the destination's actual paths.
 Pass the supplied ordinary JSON file as `--headers-file`, the exact body as
 `--body-file`, and the separate ticket as `--ticket-file`. The original buyer
 stores those header values in its prepared config, so later file changes do not

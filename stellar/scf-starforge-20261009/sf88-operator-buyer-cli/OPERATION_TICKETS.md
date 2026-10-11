@@ -5,6 +5,69 @@ The merchant issues the capability for the exact POST request; SF88 imports
 its private file and sends the configured ordinary header through SF31.
 SF81 terminal approval and SF36 reservation still govern any paid request.
 
+## Move a complete request to the buyer's machine
+
+In the running SF61 merchant workspace, issue the request and choose **Download
+complete buyer request**. The one private JSON file contains the exact original
+ticket envelope, opaque body bytes, ordinary headers and saved concrete offer.
+It contains no merchant machine paths, operator profile or signer settings.
+Transfer it through the merchant's existing authenticated customer channel.
+
+On the buyer's Linux or macOS machine, use the matching current merchant release:
+
+```sh
+chmod 600 /private/merchant-operation.handoff.json
+starforge buyer --import-operation \
+  --file /private/merchant-operation.handoff.json \
+  --dir /private/order-request --accept 0
+starforge buyer --review --config /private/order-request/review.json
+```
+
+The directory must be new. Choose the actual zero-based payment option explicitly;
+review prints its original asset, recipient, maximum amount and timeout. The
+same stable merchant intent, URL/query, ticket header and exact body survive
+import. Body bytes are never decoded or reserialized by this transfer, including
+multipart boundaries or binary fields supplied by an applicable original producer.
+The original merchant still determines which request formats it supports.
+
+Import validates the original ticket envelope and expiry, original header rules,
+saved source and selected terms before creating the private directory. It writes
+`operation-ticket.json`, `request.body`, `offers.json`, `request.headers.json` and
+the original `review.json`, all `0600` inside a `0700` directory. The ready review
+is written after its inputs. Repeated import refuses an existing destination;
+reopen the original config or workspace to continue that operation.
+
+Continue with **Import into the existing private operator workspace** below,
+using `/private/order-request/review.json` as its `--config`. Then enqueue the
+resulting `operator.json`. For the original buyer runbook, create that operator
+workspace under its configured private `configsDirectory`; choose **Refresh local
+sources** and select its `operator.json`. The imported review itself has no trusted
+operator configuration until the original workspace initializer supplies yours.
+
+Node applications can use `buyer.fromOperationHandoff(file, {accept:0})`; Python
+applications can use `buyer.from_operation_handoff(file, accept=0)`. Both call this
+same native importer and retain their own ticket/body copies before removing
+temporary files. Configure the buyer's own operator profile and review before
+execution. Existing intents must be reopened with `buyer.operation(intent)`.
+
+For the original headless issuer, export an already prepared request and its
+exact saved discovery without opening the workspace:
+
+```sh
+starforge buyer --export-operation --config /private/order-review.json \
+  --discovery /private/merchant-offers.json \
+  --out /private/merchant-operation.handoff.json
+```
+
+Export requires the exact saved discovery used by preparation, the original
+private ticket and body, and a new output in an existing private directory. The
+packet is bounded at 4 MiB; the original body and discovery limits remain 1 MiB
+each. File hashes detect changed transfer bytes; they are not authentication or
+payment approval. The merchant's original HMAC/request verification and buyer's
+original approval still happen in their existing execution paths. Keep the whole
+packet private: it contains the ticket bearer, unlike the metadata printed by
+import, export and review.
+
 ## Prepare the request without copying a bearer into JSON or commands
 
 Receive the merchant's ticket file through its existing authenticated customer
