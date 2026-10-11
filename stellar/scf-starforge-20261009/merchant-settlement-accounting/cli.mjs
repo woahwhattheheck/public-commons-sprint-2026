@@ -31,9 +31,9 @@ function page(r) {
       table([option],[['nativeSuccessEvents','Native events'],['officialTransferMatches','Official matches'],['missingTransferEvidence','Unmatched'],['webhookAccepted','Webhook accepted'],['legacyRecipientEvents','Recipient not recorded'],['unresolvedTermsEvents','Terms unresolved']])+
       table([option],[['nativeAmountAtomic','Native reported atomic total'],['officialMatchedAmountAtomic','Official matched atomic total'],['verifiedQuotedValueUsd','Owner-quoted USD, verified-tier only']])+'</section>';
   }).join('');
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>Merchant Reconciliation</title><style>'+style+optionStyle+'</style></head><body><main><header><div class="kicker">Private owner operations · Stellar x402</div><h1>Merchant settlement reconciliation</h1><div class="muted">Original native SF98 events joined to original SF86 official testnet RPC proof files. Generated '+esc(r.createdAt)+'</div></header>'+
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>Merchant Reconciliation</title><style>'+style+optionStyle+'</style></head><body><main><header><div class="kicker">Private owner operations · Stellar x402</div><h1>Merchant settlement reconciliation</h1><div class="muted">Original native SF98 events joined to original SF86 network-specific RPC proof files. Generated '+esc(r.createdAt)+'</div></header>'+
   '<section class="stats"><div class="stat"><strong>'+t.nativeSuccessEvents+'</strong><span>Native seller successes</span></div><div class="stat"><strong>'+t.officialTransferMatches+'</strong><span>Official transfer matches</span></div><div class="stat"><strong>'+t.requiringReconciliation+'</strong><span>Require reconciliation</span></div><div class="stat"><strong>'+t.webhookAccepted+'</strong><span>Webhook acknowledgments, not fulfillment</span></div></section>'+
-  '<div class="foot"><b>Accounting boundary.</b> Only original SF86 <code>CHAIN_TRANSFER_MATCHED_RPC_TESTNET</code> results are eligible for the official transfer column. These verify a matching testnet transfer for a seller-reported hash. They do not independently prove buyer entitlement, final accounting recognition, net revenue, tax, fiat conversion, refund status, invoices, or bank settlement. The merchant-supplied USD quote is NOT cash booked. Challenge-only HTTP 402 or 2xx are excluded entirely.</div>'+
+  '<div class="foot"><b>Accounting boundary.</b> The official transfer column follows the original SF86 verifier and accounting engine for each recorded network. Eligible proof must match that network and the original payment option; each event retains its verification scope. A matched transfer for a seller-reported hash does not independently prove buyer entitlement, final accounting recognition, net revenue, tax, fiat conversion, refund status, invoices, or bank settlement. The merchant-supplied USD quote is NOT cash booked. Challenge-only HTTP 402 or 2xx are excluded entirely.</div>'+
   '<h2>Route reconciliation</h2>'+table(routes,[['routeId','Route'],['method','Method'],['nativeSuccessEvents','Native successes'],['officialTransferMatches','RPC transfer matches'],['missingTransferEvidence','Unmatched'],['webhookAccepted','Webhook accepted'],['verifiedQuotedValueUsd','Owner-quoted USD, verified-tier only']])+
   '<h2>Payment option reconciliation</h2><p class="muted">Every configured option and every unresolved native option group appears below. Atomic totals stay within one route, method, network, asset, amount and recipient. Public-network events pending verification: '+t.publicNetworkPending+'. Legacy events matching multiple recipient options: '+t.ambiguousLegacyEvents+'. Events with unresolved merchant terms: '+t.unresolvedTermsEvents+'.</p>'+optionCards+
   '<h2>Event ledger</h2>'+table(ledgerView,[['at','Timestamp UTC'],['eventId','Event'],['routeId','Route'],['method','Method'],['network','Network'],['amountAtomic','Atomic amount'],['optionId','Payment option'],['termsMatch','Terms mapping'],['transfer','Transfer evidence'],['delivery','Webhook state'],['quoted','USD quote, not revenue']])+
@@ -58,10 +58,8 @@ async function writePrivate(path,data){
   try{await handle.writeFile(data,'utf8');await handle.sync();}
   finally{await handle.close();}
 }
-export async function main(argv=process.argv.slice(2)){
-  const a=argsOf(argv);
-  const result=await runOriginalAccounting({outboxDir:a['--outbox'],proofDir:a['--proof-dir'],termsFile:a['--terms']});
-  const out=a['--out'];
+export async function writeOriginalAccountingPack(result,out){
+  if(!isAbsolute(out)||resolve(out)!==out||out==='/')throw new Error('ABSOLUTE_NORMALIZED_OUTPUT_REQUIRED');
   // No replacing or filling pre-existing directories; owner chooses a fresh path.
   await mkdir(out,{recursive:false,mode:0o700});
   const info=await stat(out);if((info.mode&0o077)!==0)throw new Error('OUTPUT_DIRECTORY_NOT_PRIVATE');
@@ -81,7 +79,13 @@ export async function main(argv=process.argv.slice(2)){
   const manifest={schema:'stellar-forge.merchant-accounting-manifest.v1',sourceHashes:result.hashes,
     outputs:[...files].map(([name,content])=>({name,sha256:sha(content),bytes:Buffer.byteLength(content)}))};
   await writePrivate(join(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
-  process.stdout.write(JSON.stringify({schema:result.schema,output:out,totals:result.totals,exceptions:result.exceptions.length,manifestSha256:sha(JSON.stringify(manifest,null,2)+'\n')})+'\n');
+  return {schema:result.schema,output:out,totals:result.totals,exceptions:result.exceptions.length,manifestSha256:sha(JSON.stringify(manifest,null,2)+'\n')};
+}
+export async function main(argv=process.argv.slice(2)){
+  const a=argsOf(argv);
+  const result=await runOriginalAccounting({outboxDir:a['--outbox'],proofDir:a['--proof-dir'],termsFile:a['--terms']});
+  const output=await writeOriginalAccountingPack(result,a['--out']);
+  process.stdout.write(JSON.stringify(output)+'\n');
   return 0;
 }
 if(process.argv[1] && import.meta.url===new URL('file://'+process.argv[1]).href)main().catch(e=>{console.error(e?.message??String(e));process.exitCode=1;});
