@@ -1,4 +1,5 @@
 import { bindDiscoveryControls } from './discovery.mjs';
+import { bindFacilitatorControls, renderFacilitatorChange } from './facilitator.mjs';
 const $ = selector => document.querySelector(selector);
 const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem('seller-release-token', fragment); history.replaceState(null, '', location.pathname); }
@@ -32,6 +33,7 @@ function buttons() {
   const blocked = busy || !snapshot || snapshot.console.busy;
   for (const button of document.querySelectorAll('button')) button.disabled = blocked;
   discovery.buttons(blocked);
+  facilitator.buttons(blocked);
   if (!snapshot || blocked) return;
   $('#activate').disabled = !comparison || selected === snapshot.state.active;
   $('#rollback').disabled = !snapshot.state.previous;
@@ -280,11 +282,15 @@ function renderDiff(value) {
   const runtime = $('#runtime-changes'); runtime.replaceChildren();
   for (const change of value.runtimeChanges) runtime.append(change.field === 'jsonrpc'
     ? rpcRuntimeChange(change.before, change.after) : change.field === 'sqlite'
-      ? sqliteRuntimeChange(change.before, change.after) : fieldPair('Runtime · ' + change.field, change.before, change.after));
+      ? sqliteRuntimeChange(change.before, change.after) : change.field === 'facilitatorReview'
+        ? renderFacilitatorChange(change.before, change.after) : fieldPair('Runtime · ' + change.field, change.before, change.after));
+  if (value.after.facilitatorReview && !value.runtimeChanges.some(change => change.field === 'facilitatorReview'))
+    runtime.append(renderFacilitatorChange(null, value.after.facilitatorReview));
   if (value.after.handlerEntry) runtime.append(node('p', 'Handler entry module is pinned. Its imported files and installed package dependencies are managed separately by the operator.', 'section-note'));
   $('#selection-actions').hidden = false;
   for (const button of document.querySelectorAll('.release-card')) button.setAttribute('aria-pressed', String(button.dataset.id === selected));
   discovery.selectRelease(value.after);
+  facilitator.selectRelease(value.after);
   buttons();
 }
 async function choose(releaseId) {
@@ -299,6 +305,7 @@ async function refresh() {
     const value = await request('/api/status'); renderStatus(value);
     await refreshCaches();
     await discovery.refresh();
+    await facilitator.refresh();
     if (selected && !value.releases.some(r => r.id === selected)) selected = null;
     selected ??= value.state.active ?? value.releases[0]?.id ?? null;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
@@ -325,6 +332,9 @@ async function act(action) {
   finally { busy = false; buttons(); }
 }
 const discovery = bindDiscoveryControls({ request, notice, refresh, isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); } });
+const facilitator = bindFacilitatorControls({ request, notice, refresh, choose,
+  isBusy: () => busy || !snapshot || snapshot.console.busy,
   setBusy: value => { busy = value; buttons(); } });
 $('#refresh').addEventListener('click', () => { notice(); refresh(); });
 $('#activate').addEventListener('click', () => act('activate'));

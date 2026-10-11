@@ -31,6 +31,22 @@
       <div><h2>Seller process</h2><p id="process-description">Start the selected seller release.</p></div>
       <div class="actions"><button id="start">Start selected</button><button id="restart">Restart selected</button><button id="stop">Stop seller</button></div>
     </section>
+    <section class="facilitator-operations" aria-labelledby="facilitator-title">
+      <div class="section-heading"><h2 id="facilitator-title">Payment facilitator</h2></div>
+      <p id="facilitator-source">Choose a retained release to prepare a provider change.</p>
+      <p id="facilitator-setup">Open this console with <code>--facilitators PROVIDERS_JSON</code> to select your configured providers. Setup and commands are in FACILITATORS.md.</p>
+      <div id="facilitator-form" hidden>
+        <label for="facilitator-provider">Configured provider</label><select id="facilitator-provider"></select>
+        <div class="fields"><div><label for="facilitator-id">New release ID</label><input id="facilitator-id" maxlength="64" autocomplete="off" spellcheck="false"></div><div><label for="facilitator-label">Release label (optional)</label><input id="facilitator-label" maxlength="240" autocomplete="off"></div></div>
+        <button id="facilitator-review">Review provider and native terms</button>
+      </div>
+      <section id="facilitator-review-panel" hidden>
+        <h3 id="facilitator-review-state">Provider review</h3><p id="facilitator-review-description"></p>
+        <div class="table-scroll"><table><thead><tr><th>Retained resource</th><th>Stored payment declarations</th><th>Native provider requirements</th></tr></thead><tbody id="facilitator-payments"></tbody></table></div>
+        <details><summary>Provider capabilities</summary><pre id="facilitator-supported"></pre></details>
+        <div class="actions"><button id="facilitator-stage" class="primary">Stage reviewed release</button><button id="facilitator-download">Download review</button></div>
+      </section>
+    </section>
     <section class="cache-operations" aria-labelledby="cache-title">
       <div class="section-heading"><div><h2 id="cache-title">Running source cache</h2><p id="cache-state">Start a release with a shared read policy to inspect its source cache.</p></div><div class="actions"><button id="cache-refresh">Refresh cache</button><button id="cache-invalidate-all">Invalidate all cached routes</button></div></div>
       <div class="table-scroll"><table><thead><tr><th>Route / binding</th><th>Sharing policy</th><th>Source activity</th><th>Action</th></tr></thead><tbody id="cache-routes"></tbody></table></div>
