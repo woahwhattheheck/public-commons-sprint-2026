@@ -6,11 +6,12 @@ import { lstat, open, readdir, readFile, stat } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { openOutbox } from '../sf98-merchant-delivery/outbox.mjs';
 import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
+import { RPC_NETWORKS, validStrKey } from '../sf86-rpc-transfer-reconcile/terms.mjs';
 
 export const SCHEMA = 'stellar-forge.merchant-reconciliation.v1';
 const sha = x => createHash('sha256').update(x).digest('hex');
 const hex64 = x => typeof x === 'string' && /^[a-f0-9]{64}$/.test(x);
-const paymentDecimal = x => typeof x === 'string' && /^[1-9][0-9]{0,38}$/.test(x);
+const paymentDecimal = x => typeof x === 'string' && /^[1-9][0-9]{0,38}$/.test(x)&&BigInt(x)<(1n<<127n);
 const routeId = x => typeof x === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(x);
 const knownNetwork = x => x === 'stellar:testnet' || x === 'stellar:pubnet';
 const routeKey = x => x.routeId+'\n'+x.method;
@@ -73,7 +74,7 @@ export function compileTerms(raw) {
   for (const r of raw.routes) {
     if (!strictObject(r) || !routeId(r.routeId) || !supportsSellerMethod(r.method) ||
         !knownNetwork(r.network) || !paymentDecimal(r.amountAtomic) ||
-        !/^[CG][A-Z2-7]{55}$/.test(r.asset) || !/^G[A-Z2-7]{55}$/.test(r.payTo) ||
+        !validStrKey(r.asset,'C') || !(validStrKey(r.payTo,'G')||validStrKey(r.payTo,'C')) ||
         typeof r.priceBasis!=='string' || !/^[A-Za-z0-9 _.:/-]{3,100}$/.test(r.priceBasis) ||
         r.unitPriceUsd===undefined || r.unitCostUsd===undefined)
       throw new Error('INVALID_MERCHANT_ROUTE_TERMS');
@@ -113,8 +114,8 @@ function resolveTerms(event,terms,{routes,byObservedTerms}) {
     candidateCount:candidates.length,reason:candidates.length?REASON.ambiguousTerms:REASON.mappingMismatch};
 }
 
-// Only the existing SF86's exact official testnet RPC verdict can count as an
-// independently matched transfer. Local loopback and generic receipt JSON never do.
+// Network and provider authority travel together; a transaction fingerprint on
+// another ledger cannot consume or invalidate this ledger's verification.
 export function indexOriginalVerifications(documents) {
   if (!Array.isArray(documents) || documents.length>2000) throw new Error('TOO_MANY_PROOF_FILES');
   const index=new Map();
@@ -127,8 +128,12 @@ export function indexOriginalVerifications(documents) {
     if (p.verdict==='NOT_RECONCILED' || p.verdict==='LOCAL_RPC_REPLAY_MATCHED') {
       ignored.push({fileDigest:doc.fileDigest,reason:p.verdict}); continue;
     }
-    if (p.verdict!=='CHAIN_TRANSFER_MATCHED_RPC_TESTNET' ||
-        p.source!=='official-stellar-testnet-rpc' || p.network!=='stellar:testnet' ||
+    const profile=Object.hasOwn(RPC_NETWORKS,p.network)?RPC_NETWORKS[p.network]:null;
+    const pubnetAuthority=p.network!=='stellar:pubnet' || (profile?.endpoints.includes(p.rpcEndpoint) &&
+      p.networkPassphrase===profile.passphrase && hex64(p.networkResultSha256) &&
+      hex64(p.transactionResultSha256) && Array.isArray(p.eventPageSha256) &&
+      p.eventPageSha256.length>0 && p.eventPageSha256.every(hex64));
+    if (!profile || p.verdict!==profile.verdict || p.source!==profile.source || !pubnetAuthority ||
         p.reservation!=='UNCHANGED_VERIFY_SEPARATELY' || p.matchingTransfers!==1 ||
         p.sellerReport!=='REPORTED_SUCCESS' ||
         !hex64(p.transaction) || typeof p.intentId!=='string' || !p.intentId ||
@@ -138,7 +143,7 @@ export function indexOriginalVerifications(documents) {
         typeof p.recipient!=='string') {
       ignored.push({fileDigest:doc.fileDigest,reason:'INVALID_OFFICIAL_PROOF_FIELDS'}); continue;
     }
-    const fingerprint=sha(p.transaction);
+    const fingerprint=p.network+'\n'+sha(p.transaction);
     const proof={data:p,fileDigest:doc.fileDigest};
     const prior=index.get(fingerprint) || [];
     prior.push(proof);
@@ -180,7 +185,8 @@ const publicRow = (e,proof,resolution,delivery,classification,reason) => {
   optionId:optionId({...e,recipientDigest:e.recipientDigest ?? terms?.recipientDigest ?? null}),
   termsMatch:resolution.match,termsCandidateCount:resolution.candidateCount,
   merchantPriceBasis:terms?.priceBasis ?? null,
-  verificationScope:e.network==='stellar:testnet'?'OFFICIAL_TESTNET_ONLY':'PUBLIC_NETWORK_PENDING',
+  verificationScope:e.network==='stellar:testnet'?'OFFICIAL_TESTNET_ONLY':
+    classification==='OFFICIAL_TRANSFER_MATCHED'?'OFFICIAL_PUBNET_RPC':'PUBLIC_NETWORK_PENDING',
   };
 };
 const exceptionRow = (row,reason) => ({eventId:row.eventId,routeId:row.routeId,reason,
@@ -233,14 +239,13 @@ export function compileLedger(rows,termsRaw,proofDocs) {
     if(seen.has(e.id)) throw new Error('DUPLICATE_OUTBOX_EVENT_ID');
     seen.add(e.id);
     const resolution=resolveTerms(e,terms,termsIndex),term=resolution.term;
-    const proofs=e.network==='stellar:testnet' && e.transactionFingerprint?index.get(e.transactionFingerprint)||[]:[];
+    const proofs=e.transactionFingerprint?index.get(transactionKey(e))||[]:[];
     if (e.transactionFingerprint) refCount.set(transactionKey(e),
       (refCount.get(transactionKey(e))||0)+1);
     let proof=null,reason=null,kind='NATIVE_SUCCESS_UNVERIFIED';
     if (resolution.reason) reason=resolution.reason;
-    else if (e.network==='stellar:pubnet') reason=REASON.publicNetwork;
     else if (!e.transactionFingerprint) reason=REASON.noTx;
-    else if (!proofs.length) reason=REASON.noProof;
+    else if (!proofs.length) reason=e.network==='stellar:pubnet'?REASON.publicNetwork:REASON.noProof;
     else if (proofs.length!==1) reason=REASON.conflict;
     else {
       const p=proofs[0].data;
@@ -261,6 +266,7 @@ export function compileLedger(rows,termsRaw,proofDocs) {
     if(r.transfer==='OFFICIAL_TRANSFER_MATCHED' && refCount.get(transactionKey(r))>1){
       r.transfer='REUSED_TRANSACTION_UNVERIFIED'; r.exception=REASON.conflict;
       r.verifiedQuotedValueUsd=null;r.ledger=null;r.matchingEventDigest=null;
+      if(r.network==='stellar:pubnet')r.verificationScope='PUBLIC_NETWORK_PENDING';
       exceptions.push(exceptionRow(r,REASON.conflict));
     }
   }
@@ -289,7 +295,7 @@ export function compileLedger(rows,termsRaw,proofDocs) {
         missingTransferEvidence:x.missingTransferEvidence,webhookAccepted:x.webhookAccepted,
         verifiedQuotedValueUsd:x.withQuote?toUsd(x.verifiedQuotedValueMicro):null};
     });
-  const used=new Set(results.filter(x=>x.transfer==='OFFICIAL_TRANSFER_MATCHED').map(x=>x.transactionFingerprint));
+  const used=new Set(results.filter(x=>x.transfer==='OFFICIAL_TRANSFER_MATCHED').map(transactionKey));
   const unmatched=[...index.entries()].filter(([digest])=>!used.has(digest));
   return {
     ledger:results.sort((a,b)=>a.at.localeCompare(b.at)||a.eventId.localeCompare(b.eventId)),
@@ -304,7 +310,7 @@ export function compileLedger(rows,termsRaw,proofDocs) {
       webhookAccepted:results.filter(x=>x.delivery==='WEBHOOK_ACCEPTED_NOT_FULFILLED').length,
       exhaustedDelivery:results.filter(x=>x.delivery==='DELIVERY_EXHAUSTED').length,
       verifiedQuotedValueUsd:hasAllQuote?toUsd(totalQuote):null,
-      publicNetworkPending:results.filter(x=>x.network==='stellar:pubnet').length,
+      publicNetworkPending:results.filter(x=>x.network==='stellar:pubnet'&&x.transfer!=='OFFICIAL_TRANSFER_MATCHED').length,
       ambiguousLegacyEvents:results.filter(x=>x.termsMatch==='AMBIGUOUS_LEGACY_OPTIONS').length,
       unresolvedTermsEvents:results.filter(x=>!['EXACT_OPTION','LEGACY_UNIQUE_OPTION'].includes(x.termsMatch)).length},
   };

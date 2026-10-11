@@ -3,6 +3,7 @@ const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem('seller-release-token', fragment); history.replaceState(null, '', location.pathname); }
 const token = sessionStorage.getItem('seller-release-token') ?? '';
 let snapshot = null, selected = null, comparison = null, cacheSnapshot = null, busy = false;
+let catalogSnapshot = null, catalogReview = null;
 const node = (tag, text, className) => { const result = document.createElement(tag); if (text !== undefined) result.textContent = text; if (className) result.className = className; return result; };
 const date = value => value ? new Date(value).toLocaleString() : '—';
 const literal = value => value === null || value === undefined ? '—' : typeof value === 'string' ? value : JSON.stringify(value, null, 2);
@@ -28,6 +29,89 @@ function buttons() {
   $('#cache-invalidate-all').disabled = !owns || !cacheSnapshot?.available ||
     cacheSnapshot.instanceId !== snapshot.console.instanceId;
   for (const button of document.querySelectorAll('[data-cache-route]')) button.disabled = $('#cache-invalidate-all').disabled;
+  const catalogReady = snapshot.console.catalogConfigured && selected;
+  $('#catalog-refresh').disabled = !catalogReady;
+  $('#catalog-review').disabled = !catalogReady || !catalogSnapshot?.runtime?.running;
+  $('#catalog-apply').disabled = !catalogReview?.changes.length;
+  for (const button of document.querySelectorAll('[data-catalog-route]'))
+    button.disabled = !catalogReady || !$('#catalog-reason').value.trim();
+}
+function terms(values) {
+  return values?.map(term => term.amount + ' atomic · ' + term.asset + ' · ' + term.network + '\n' + term.scheme + ' → ' + term.payTo).join('\n\n') ?? 'Not listed';
+}
+function clearCatalogReview() {
+  catalogReview = null; $('#catalog-review-panel').hidden = true;
+}
+function renderCatalog(value) {
+  catalogSnapshot = value; clearCatalogReview();
+  const rows = $('#catalog-routes'); rows.replaceChildren();
+  $('#catalog-state').textContent = value.configured === false
+    ? 'Start this console with --catalog CONFIG_JSON to use the merchant’s existing catalog operator and signing key.'
+    : 'Release ' + value.release.id + ' · catalog seller ' + value.catalog.sellerId +
+      (value.runtime.running ? ' · this release is running in ' + value.release.mode + '.' : ' · start this release before publishing its offers.') +
+      ' Refresh reads the original catalog; it sends no payment.';
+  for (const item of value.rows ?? []) {
+    const row = node('tr'), route = node('td');
+    route.append(node('strong', item.method + ' · ' + item.routeId), node('div', item.url));
+    const state = node('td', item.state.replaceAll('_', ' '));
+    if (item.before) state.append(node('div', 'Sequence ' + item.before.sequence));
+    const before = node('td'), after = node('td');
+    before.append(node('pre', terms(item.before?.payment))); after.append(node('pre', terms(item.payment)));
+    const action = node('td');
+    if (item.before && !item.before.retired && !['OTHER_SELLER', 'SIGNER_CHANGED'].includes(item.state)) {
+      const button = node('button', 'Review withdrawal'); button.dataset.catalogRoute = item.routeId;
+      button.addEventListener('click', () => reviewCatalog('withdraw', item.routeId)); action.append(button);
+    }
+    row.append(route, state, before, after, action); rows.append(row);
+  }
+  buttons();
+}
+async function refreshCatalog() {
+  clearCatalogReview();
+  if (!snapshot?.console.catalogConfigured || !selected) { renderCatalog({ configured: false }); return; }
+  try { renderCatalog(await request('/api/catalog?id=' + encodeURIComponent(selected))); }
+  catch (error) {
+    catalogSnapshot = null; $('#catalog-routes').replaceChildren();
+    $('#catalog-state').textContent = error.message; buttons();
+  }
+}
+async function reviewCatalog(action = 'publish', routeId) {
+  if (busy || !selected) return;
+  busy = true; clearCatalogReview(); buttons();
+  try {
+    catalogReview = await request('/api/catalog/review', { id: selected, action,
+      ...(action === 'withdraw' ? { routeId, reason: $('#catalog-reason').value.trim() } : {}) });
+    $('#catalog-review-title').textContent = action === 'publish'
+      ? 'Publish ' + catalogReview.changes.length + ' changed offers from release ' + selected
+      : 'Withdraw the selected catalog listing';
+    const changes = $('#catalog-changes'); changes.replaceChildren();
+    for (const row of catalogReview.changes) {
+      changes.append(fieldPair(row.method + ' ' + row.url,
+        { sequence: row.before?.sequence ?? null, payment: row.before?.payment ?? null,
+          sourceURL: row.before?.sourceURL ?? null, sourceSha256: row.before?.sourceSha256 ?? null },
+        { sequence: row.nextSequence, payment: action === 'withdraw' ? null : row.payment,
+          sourceURL: catalogReview.catalog.sourceURL,
+          ...(action === 'publish' ? { sourceSha256: row.sourceSha256 } : {}),
+          ...(action === 'withdraw' ? { reason: catalogReview.reason } : {}) }));
+    }
+    if (!catalogReview.changes.length) changes.append(node('p', 'The catalog already contains these exact release offers.'));
+    $('#catalog-apply').textContent = action === 'publish' ? 'Publish reviewed offers' : 'Withdraw reviewed listing';
+    $('#catalog-review-panel').hidden = false;
+    notice('Review the exact catalog changes. Signing occurs when you apply them.');
+  } catch (error) { notice(error.message, true); }
+  finally { busy = false; buttons(); }
+}
+async function applyCatalog() {
+  if (busy || !catalogReview) return;
+  busy = true; buttons();
+  try {
+    const result = await request('/api/catalog/apply', { reviewId: catalogReview.id });
+    clearCatalogReview();
+    await refreshCatalog();
+    notice(result.decision === 'UNCHANGED' ? 'The exact offers are already published.'
+      : 'Catalog ' + (result.action === 'withdraw' ? 'withdrawal' : 'publication') + ' committed. The original catalog history retains the result.');
+  } catch (error) { clearCatalogReview(); await refreshCatalog(); notice(error.message, true); }
+  finally { busy = false; buttons(); }
 }
 function renderCaches(value) {
   cacheSnapshot = value;
@@ -139,7 +223,7 @@ function renderDiff(value) {
 }
 async function choose(releaseId) {
   selected = releaseId; comparison = null; busy = true; buttons();
-  try { renderDiff(await request('/api/diff?to=' + encodeURIComponent(releaseId))); notice(); }
+  try { renderDiff(await request('/api/diff?to=' + encodeURIComponent(releaseId))); await refreshCatalog(); notice(); }
   catch (error) { notice(error.message, true); }
   finally { busy = false; buttons(); }
 }
@@ -151,6 +235,7 @@ async function refresh() {
     if (selected && !value.releases.some(r => r.id === selected)) selected = null;
     selected ??= value.state.active ?? value.releases[0]?.id ?? null;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
+    await refreshCatalog();
     if (value.console.lastError) notice(value.console.lastError, true);
   } catch (error) { notice(error.message, true); }
   finally { busy = false; buttons(); }
@@ -167,6 +252,7 @@ async function act(action) {
     await refreshCaches();
     if (action === 'rollback') selected = value.state.active;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
+    await refreshCatalog();
     notice(action === 'activate' || action === 'rollback' ? 'Selection saved. Use Start or Restart selected to run it.' : 'Operator action completed.');
   } catch (error) { notice(error.message, true); }
   finally { busy = false; buttons(); }
@@ -177,6 +263,13 @@ $('#rollback').addEventListener('click', () => act('rollback'));
 $('#start').addEventListener('click', () => act('run'));
 $('#restart').addEventListener('click', () => act('restart'));
 $('#stop').addEventListener('click', () => act('stop'));
+$('#catalog-refresh').addEventListener('click', async () => {
+  if (busy) return; busy = true; buttons();
+  try { await refreshCatalog(); } finally { busy = false; buttons(); }
+});
+$('#catalog-review').addEventListener('click', () => reviewCatalog());
+$('#catalog-apply').addEventListener('click', () => applyCatalog());
+$('#catalog-reason').addEventListener('input', buttons);
 $('#cache-refresh').addEventListener('click', async () => {
   if (busy) return; busy = true; buttons();
   try { await refreshCaches(); notice(); } catch (error) { notice(error.message, true); }

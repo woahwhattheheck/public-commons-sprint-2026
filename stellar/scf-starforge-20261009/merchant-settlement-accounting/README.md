@@ -1,8 +1,8 @@
 # Merchant settlement accounting
 
-This Node 22+ operator CLI and local workspace integrate the ORIGINAL native SF98 merchant delivery outbox and independently collected ORIGINAL SF86 Stellar testnet transfer-verification results.
+This Node 22+ operator CLI and local workspace integrate the original native SF98 merchant delivery outbox and independently collected original SF86 testnet and public-network transfer-verification results. The [retained SF86 collection workflow](../sf86-rpc-transfer-reconcile/BATCH.md) prepares original checkout files, collects and resumes network reads, and produces this same report end to end.
 
-It does not sign, purchase, authorize, retry payments, create invoices, or move assets. Existing SF30/SF98 native processSettlement success events come from `../sf98-merchant-delivery/outbox.mjs`, which is imported directly at runtime. Existing SF86 operator outputs retain the actual `stellar-forge.sf86.rpc-reconciliation.v1` schema and verified official testnet RPC response details.
+It does not sign, purchase, authorize, retry payments, create invoices, or move assets. Existing SF30/SF98 native processSettlement success events come from `../sf98-merchant-delivery/outbox.mjs`, which is imported directly at runtime. Existing SF86 operator outputs retain the actual `stellar-forge.sf86.rpc-reconciliation.v1` schema and verified network-specific RPC response details.
 
 ## Operator workflow
 
@@ -20,7 +20,7 @@ Prepare a private merchant terms JSON (schema `stellar-forge.merchant-accounting
 | `unitPriceUsd`, `unitCostUsd` | Merchant-provided USD values, decimal strings to six places or `null` for unknown |
 | `priceBasis` | The merchant's description of the approved quote basis |
 
-Both `stellar:testnet` and `stellar:pubnet` terms are accepted. The `asset` is the actual 56-character C-contract address or G-address; `payTo` is the actual 56-character G-address. No automatic currency conversion occurs. The complete key is route ID, method, network, asset digest, atomic amount and recipient digest. Duplicate complete keys are rejected, including duplicates with conflicting prices. Different actual options on the same resource are retained independently.
+Both `stellar:testnet` and `stellar:pubnet` terms are accepted. The `asset` is the actual checked C-contract StrKey; `payTo` is the actual checked G-account or C-contract StrKey. Atomic amounts are positive signed-i128 decimal strings, matching the original verifier. No automatic currency conversion occurs. The complete key is route ID, method, network, asset digest, atomic amount and recipient digest. Duplicate complete keys are rejected, including duplicates with conflicting prices. Different actual options on the same resource are retained independently.
 
 From the current original repository root:
 
@@ -69,9 +69,9 @@ Each option group reports `nativeAmountAtomic` and `officialMatchedAmountAtomic`
 
 `NATIVE_SUCCESS_UNVERIFIED` means the original native SDK reported a settlement success, but no matching independent SF86 official transfer proof was provided. It is not financial recognition.
 
-A valid `stellar:pubnet` native event is retained in a mixed-network journal without preventing testnet reconciliation. Its `verificationScope` is `PUBLIC_NETWORK_PENDING`; when merchant terms match, its exception is `PUBLIC_NETWORK_VERIFICATION_PENDING`. The original SF86 verifier currently supplies only official testnet proof, so no public-network event is classified as an official transfer by this report. Testnet rows retain `OFFICIAL_TESTNET_ONLY`. Transaction reuse is checked within the same network, so an identical fingerprint on another network cannot consume a testnet proof or suppress its otherwise valid match.
+A valid `stellar:pubnet` native event joins its own matching original SF86 public-network proof and receives `verificationScope: OFFICIAL_PUBNET_RPC`. Without matching proof it retains `PUBLIC_NETWORK_PENDING` and the corresponding exception. Testnet rows retain `OFFICIAL_TESTNET_ONLY`. Proof lookup, transaction reuse and unused-proof counts all include the network, so identical fingerprints on different networks remain independent.
 
-`OFFICIAL_TRANSFER_MATCHED` requires original SF86 `CHAIN_TRANSFER_MATCHED_RPC_TESTNET`, official RPC source, one exact SEP-41 transfer, the same transaction fingerprint, network, asset, recipient and atomic amount as the selected original option. A recorded native recipient digest must also agree. `LOCAL_RPC_REPLAY_MATCHED` from a loopback exercise is explicitly excluded. Reused native transaction fingerprints and conflicting proof rows downgrade rather than double count. The official transfer is still bound to a seller-reported transaction hash, not automatically to customer delivery, invoices, cash, finality or refunds.
+`OFFICIAL_TRANSFER_MATCHED` requires the original SF86 network-specific verdict (`CHAIN_TRANSFER_MATCHED_RPC_TESTNET` or `CHAIN_TRANSFER_MATCHED_RPC_PUBNET`), its matching RPC source, one exact SEP-41 transfer, and the same transaction fingerprint, network, asset, recipient and atomic amount as the selected original option. Public-network proof additionally binds the listed provider, canonical passphrase, network/transaction response hashes and event-page hashes. A recorded native recipient digest must agree. The [network contract](../sf86-rpc-transfer-reconcile/NETWORKS.md) describes these fields and legacy testnet compatibility. `LOCAL_RPC_REPLAY_MATCHED` remains excluded. Reused native transaction fingerprints and conflicting proof rows downgrade rather than double count. The transfer stays bound to a seller-reported transaction hash; delivery and financial recognition use the merchant's original records.
 
 `WEBHOOK_ACCEPTED_NOT_FULFILLED` means SF98 received a 2xx webhook acknowledgment, not proof of merchant order fulfillment. Exhausted deliveries are exceptions even if the original transfer matched.
 

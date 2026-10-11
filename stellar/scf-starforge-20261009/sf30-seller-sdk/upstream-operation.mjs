@@ -55,7 +55,7 @@ async function privateJSON(path, maxBytes=2097152) {
     return JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(bytes));
   } finally {await file.close();}
 }
-async function writeTicket(path,value) {
+export async function writeTicket(path,value) {
   const absolute=resolve(path), parent=dirname(absolute), info=await lstat(parent);
   if(!info.isDirectory()||info.isSymbolicLink()||(info.mode&0o077)!==0||await realpath(parent)!==parent) {
     throw new TypeError('Ticket parent must be a private existing directory');
