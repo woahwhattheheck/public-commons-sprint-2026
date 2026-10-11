@@ -1,0 +1,31 @@
+[Unit]
+Description=Stellar Forge merchant delivery
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=stellar-merchant
+Group=stellar-merchant
+WorkingDirectory=/opt/stellar-forge
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=/etc/stellar-merchant/delivery.env
+ExecStartPre=/usr/bin/test -x /usr/bin/flock
+ExecStart=/usr/bin/node /opt/stellar-forge/stellar/scf-starforge-20261009/sf98-merchant-delivery/worker.mjs run --state /var/lib/stellar-merchant/sf98 --url ${SF98_WEBHOOK_URL} --allow-host ${SF98_WEBHOOK_HOST} --secret-env SF98_WEBHOOK_SECRET --limit 20 --concurrency 1 --poll-ms 5000 --timeout-ms 7000
+Restart=on-failure
+RestartPreventExitStatus=75
+RestartSec=5
+TimeoutStopSec=20
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/stellar-merchant/sf98
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

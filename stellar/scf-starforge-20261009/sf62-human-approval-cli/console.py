@@ -138,6 +138,9 @@ def reserve_interactive(intent: dict, request: dict, *, policy_path: Path,
             'outcome': 'FRESH_RESERVATION_APPROVED',
             'request_id': request['request_id'],
             'request_sha256': digest,
+            # Retain the exact non-secret intent whose digest is in SF36. A
+            # smaller network/amount summary cannot authorize reconciliation.
+            'approved_request': request.copy(),
             'reserved_atomic_units': request['max_amount'],
             'network': request['network'],
             'asset': request['asset'],

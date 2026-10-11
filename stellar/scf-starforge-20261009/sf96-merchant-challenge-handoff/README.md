@@ -97,9 +97,9 @@ re-derives their original selected offer; retaining a hash alone is insufficient
 | `buyer-review.json` | Original SF88-compatible operator review draft with chosen intent, URL, method and complete selected exact Stellar terms. No operator, signer or authorization. |
 | `selection.json` | Original capture SHA-256, raw encoded challenge SHA-256, original accepted-offer SHA-256, quote/cap, exact resource URL and selected alternative. |
 | `review.txt` | Human-readable handoff card, including instructions for the unchanged SF88 reviewer. |
-| `manifest.json` | SHA-256 and byte counts for all four files. |
+| `manifest.json` | SHA-256 and byte counts for every retained file: four for direct captures, five for imports. |
 
-`--verify` re-reads the persisted original capture, reruns the **real SF84 inspector**, checks all four files and derives the same **real SF88 validated** operation. It never trusts the manifest alone and will reject changes to the capture, selected index, terms, budget, config or handoff card. The hashes are locally computed change detection, **not source authentication or signatures**. Compare the printed source SHA to your independently retained operator original if custody matters.
+`--verify` re-reads the persisted original capture, reruns the **real SF84 inspector**, checks every retained file and derives the same **real SF88 validated** operation. It never trusts the manifest alone and will reject changes to the capture, selected index, terms, budget, config or handoff card. The hashes are locally computed change detection, **not source authentication or signatures**. Compare the printed source SHA to your independently retained operator original if custody matters.
 
 The source must be an SF85-shaped, actual 402 GET or HEAD capture; a non-402, missing/duplicate/ambiguous x402 challenge or malformed MPP companion is refused. The selected option must be native `exact` on `stellar:testnet` or `stellar:pubnet`, with source-provided asset, recipient, integer amount and timeout. The captured merchant URL must match the advertised HTTPS resource origin and path (and any declared query). A payment flow other than supported `authorization` is rejected; nothing is silently coerced. Source classification cannot prove merchant identity, customer consent or onchain settlement.
 

@@ -3,7 +3,8 @@
 An installable distribution of the maintained Stellar x402 seller, buyer and
 operator workflows. One local package supplies a merchant workspace, the original
 seller and operations dashboard, OpenAPI import, buyer review and execution,
-response downloads, challenge capture, and private support export.
+response downloads, generated customer clients, seller configuration releases,
+database sources, challenge capture, and private support export.
 
 The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
@@ -117,6 +118,13 @@ or automatically retry a request.
 | `starforge import-headers` | SF85 original operator HTTP header-file importer |
 | `starforge handoff` | SF96 captured challenge to original buyer review files |
 | `starforge support` | SF93 private seller and operations support export |
+| `starforge client` | Export a standalone JavaScript client, TypeScript declarations and original OpenAPI |
+| `starforge releases` | Stage, compare, select, run and roll back seller configurations; local operator console |
+| `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
+| `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
+| `starforge merchant` / `delivery` | Original native seller with its retained fulfillment journal and event delivery |
+| `starforge postgres-init` / `postgres-inspect` / `postgres` | Prepare a PostgreSQL source, inspect named queries and launch its seller/dashboard |
+| `starforge sqlite-init` / `sqlite-inspect` | Prepare and inspect an original SQLite named-query source |
 
 For example, review an existing original buyer configuration without signing:
 
@@ -137,7 +145,111 @@ packaged file, component inventory, archive version and optional dependency
 declarations. It does not infer a grant submission, merchant onboarding, customer
 payment, or settlement from installation or an HTTP response.
 
+## Give customers a usable client
+
+Save the running seller's OpenAPI document using its printed listener address,
+then export the client into a new directory:
+
+```sh
+curl --fail "$SELLER_URL/_seller/openapi.json" --output seller-openapi.json
+npx --no-install starforge client \
+  --openapi ./seller-openapi.json --out ./customer-client
+```
+
+The output includes `seller-client.mjs`, `seller-client.d.mts`, the unchanged
+`seller-openapi.json`, `package.json` and an integration guide. It builds exact
+requests for the advertised operations and supplies an application adapter for
+the original buyer. The customer chooses a payment alternative when several are
+advertised, and supplies the original buyer, explicit intent and atomic spend
+ceiling. The generated guide explains these inputs with the exact exported
+operation names and types. The seller's browser explorer also serves the client
+downloads and generates usage from the operator's current inputs.
+
+## Operate retained seller configurations
+
+Use the same installed command to prepare the merchant's existing OpenAPI,
+payment selections and application bindings:
+
+```sh
+npx --no-install starforge releases init --store ./seller-releases
+npx --no-install starforge releases stage \
+  --store ./seller-releases --id first \
+  --spec ./api/openapi.json --config ./api/selections.json \
+  --bindings ./api/bindings.json --port 0
+npx --no-install starforge releases diff --store ./seller-releases --to first
+npx --no-install starforge releases activate \
+  --store ./seller-releases --id first --expect 0 --reason "Initial release"
+npx --no-install starforge releases console --store ./seller-releases --port 0
+```
+
+Open the printed private operator URL. It shows prepared versions, exact price
+and application changes, the selected configuration and the actually running
+seller. Start or restart the selected version there. Selecting another version
+keeps the current process running until restart; rollback selects a retained
+version through the same generation check. The store stays in the merchant's
+workspace when the toolkit package is upgraded.
+
+For a terminal-only deployment, use `starforge releases run --store DIRECTORY`.
+For application handlers, facilitator configuration, versioned entry paths,
+shutdown and retained history, use the packaged
+`source/stellar/scf-starforge-20261009/sf82-seller-pilot/RELEASES.md` guide.
+
+## Use existing database sources
+
+PostgreSQL support uses the original named-query integration. Install its
+optional driver in the application directory; it is independent of the native
+payment packages:
+
+```sh
+npm install --ignore-scripts pg@8.23.1
+npx --no-install starforge doctor --feature postgres
+npx --no-install starforge postgres-init --directory ./postgres-merchant
+npx --no-install starforge postgres-inspect \
+  --source ./postgres-merchant/source.json --describe
+```
+
+Edit the generated declaration and environment-variable name for the actual
+database. `--describe` reads the local declaration; `--preflight` connects to that
+database and checks the configured query projections. `starforge postgres --help`
+shows the original source, seller, facilitator and dashboard options. Connection
+values stay in the chosen environment variable. The original parameter binding,
+read-only queries, projection, result limits and pool behavior remain in force.
+Development-only PostgreSQL exercise and emulator sources are omitted from the
+installed runtime.
+
+SQLite uses Node's built-in database module and requires no PostgreSQL driver.
+`starforge sqlite-init --directory NEW_DIRECTORY` creates the original example;
+`starforge sqlite-inspect --help` exposes declaration/query inspection. The
+bundled source guides cover application bindings and current Node requirements.
+
+`doctor` reports optional feature availability and fails only for the requested
+feature or native dependency group. It resolves modules without importing them
+or opening a database connection.
+
 ## Embed in an application
+
+### Optional Python buyer applications
+
+The original Python 3.11+ buyer adapter and its install metadata are included.
+Its runtime root is the installed package's `source` directory, so no separate
+Git checkout is needed:
+
+```sh
+python3 -m pip install \
+  ./node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python
+export STELLAR_FORGE_CHECKOUT="$PWD/node_modules/@tokenjunkielabs/starforge-merchant/source"
+stellar-forge-buyer --state /absolute/private/data-buyer list
+```
+
+The Python guide covers original configuration import, review, explicit
+operator execution, restart recovery, JSON/CSV streaming and verified file
+exports. It uses the same installed Node buyer and operator modules. Keep its
+private application state outside `node_modules` so it survives package updates.
+
+### JavaScript applications
+
+The installed package exposes complete customer and operator workflows as well
+as the original seller primitives:
 
 ```js
 import { readSellerConfig, startSellerService, startSellerOperations }
@@ -153,8 +265,11 @@ console.log({ seller: seller.url, dashboard: operations.url });
 Public subpaths expose the original seller compiler, HTTP adapter, native
 factory, operations server, buyer client and its TypeScript declarations,
 public buyer transport, response-file writer, operator bridge and support
-capture. See `package.json` exports. No global configuration or source rewrite
-is needed.
+capture. The developer portal, client generator/exporter, release manager,
+release console, SQLite/PostgreSQL sources and buyer inbox also have explicit
+subpaths in `package.json`. The main import exports the original client, release
+and inbox functions for applications that manage their own UI and lifecycle.
+Optional database drivers load only when their original source is opened.
 
 ## Maintainers: produce an immutable distribution
 
@@ -168,21 +283,21 @@ node stellar/scf-starforge-20261009/distribution/build.mjs \
 This packaging command needs Node, npm and Git. It reads only the chosen commit
 through Git, independently of modified or untracked worktree files. It copies
 explicit product components and their required shared schema/Python modules,
-checks declared entrypoints and parsed static relative ESM dependencies, and runs
+checks declared entrypoints and static relative ESM dependencies, and runs
 `npm pack --ignore-scripts`. The source commit determines the package version.
 The new output directory contains the archive, its SHA-256/SRI receipt, and the
 inspectable staged package. The builder never runs a suite, contacts a merchant,
 publishes to npm, changes the source checkout, or enables hosted CI.
 
-Static dependency inspection uses Node's built-in V8 module parser in a child
-process with `--experimental-vm-modules`. It never links or evaluates the selected
-source. This distinguishes real module dependencies from client-code examples
-rendered by the merchant portal. The API is available in the required
-[Node 22.16 runtime](https://nodejs.org/download/release/v22.16.0/docs/api/vm.html#moduledependencyspecifiers).
-Known dynamic command families remain explicitly included by the distribution
-specification; caller-supplied application and signer modules remain local inputs.
-
 Concurrent source work is preserved: choose the merged commit you intend to
 distribute. A later native component release becomes a new archive and source
 manifest; an existing archive is not silently rewritten. The package preserves
 all included native licensing and the repository's MIT license.
+
+Static imports and re-exports are parsed with Node's native
+[`vm.SourceTextModule`](https://nodejs.org/api/vm.html#class-vmsourcetextmodule)
+in a separate parse-only process. It does not link or evaluate application code.
+Generated code examples in template strings therefore remain ordinary text.
+Dynamic runtime families and browser assets are retained through the explicit
+component inventory; operator-selected application and signer modules remain
+external inputs. This parser adds no package dependency.

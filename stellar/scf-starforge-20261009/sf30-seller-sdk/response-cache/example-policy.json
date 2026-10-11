@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.response-cache.v1",
+  "routes": {
+    "dataset": {
+      "shareAcrossBuyers": true,
+      "ttlMs": 1000,
+      "maxEntries": 128,
+      "maxBytes": 8388608,
+      "maxEntryBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "maxSourceInFlight": 8,
+      "maxWaiters": 64,
+      "sourceTimeoutMs": 10000,
+      "varyHeaders": []
+    }
+  }
+}

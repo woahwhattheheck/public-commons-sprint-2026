@@ -1,6 +1,7 @@
 // MIT. Read-only SF30 runtime evidence packaging; does not call paid routes or a wallet.
 import { request } from 'node:http';
 import { createHash } from 'node:crypto';
+import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -109,7 +110,7 @@ export function compileBundle({ sellerHealth, sellerOffers, opsSnapshot, metrics
   if (JSON.stringify(special) !== JSON.stringify(['@invalid','@method','@unmatched'])) invalid('original traffic special buckets');
   const healthKeys = new Set();
   for (const h of sellerHealth.routes) {
-    if (!object(h) || !/^[A-Za-z0-9_-]{1,80}$/.test(h.id) || !['GET','HEAD','POST'].includes(h.method) ||
+    if (!object(h) || !/^[A-Za-z0-9_-]{1,80}$/.test(h.id) || !supportsSellerMethod(h.method) ||
         healthKeys.has(keyOf(h))) invalid('health route declaration');
     healthKeys.add(keyOf(h));
   }
