@@ -13,6 +13,7 @@
  *   --headful                         Show Chromium on the receiving host.
  *   --single-process                  Use an existing compact cloud Chromium build.
  *   --keep-open                       Keep the same source process for inspection.
+ *   --extension /absolute/module.mjs  Optional same-process integration, run by extension command.
  *   --pause-after handover            Preserve live source memory before restart.
  *   --capture-layout /absolute/layout.png  Capture the configuration before acquisition.
  *
@@ -26,6 +27,7 @@ import {mkdir,readFile,writeFile,stat} from 'node:fs/promises';
 import {resolve,join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
 import {fork} from 'node:child_process';
 import {createInterface} from 'node:readline';
 import {WeatherWorkspace} from '../workspace.mjs';
@@ -151,7 +153,7 @@ if(has('--child')){
     requireValue(csrf===403,'An authenticated mutation without the CSRF token must be rejected.');
     workId=journal.workId||(view.workOrders||[])[0]?.id;
     await record('ready',{workspaceId:view.workspaceId,sessionRequired:unauthorized.status,csrfRequired:csrf,
-      commands:['setup','edition1','decision1','edition2','decision2','compare','handover','restart','receive','reconnect','run','status','quit']});
+      commands:['setup','edition1','decision1','retry1','edition2','decision2','retry2','compare','operations','handover','restart','receive','reconnect','extension','run','status','quit']});
   }
   async function setup(){
     let view=await workspace.view();
@@ -172,6 +174,7 @@ if(has('--child')){
     for(const[name,value]of Object.entries(values))await page.locator('[name="'+name+'"]').fill(value);
     await page.locator('select[name="units"]').selectOption('metric');
     const fields=new Set(['temperature','windGust','precipitationIntensity']);
+    if(view.plan?.fieldUnits?.solarGHI)fields.add('solarGHI');
     for(const input of await page.locator('input[name="nativeField"]').all())await input.setChecked(fields.has(await input.inputValue()));
     for(const input of await page.locator('input[name="timestep"]').all())await input.setChecked(await input.inputValue()==='1h');
     while(await page.locator('.rule-row').count())await page.locator('.rule-row').first().getByRole('button',{name:'Remove',exact:true}).click();
@@ -244,6 +247,29 @@ if(has('--child')){
       tileSha256:detail.edition.resources?.tile?.sha256,
       tile:{width:detail.tile.width,height:detail.tile.height}});
   }
+  async function retryMap(number){
+    const id=journal.editions[number-1];requireValue(id,'Prepare the original edition first.');
+    const before=await pickEdition(id,'Request review');
+    if(before.tile?.available){await record('map-already-available',{number,id});return;}
+    requireValue(before.edition.resources?.tile?.state==='FAILED','The original map resource does not have a failed request to review.');
+    await page.locator('[name="tileTimeFormat"]').selectOption('whole-seconds');
+    const review=await act(page.getByRole('button',{name:'Review failed map request',exact:true}),'/api/editions/'+encodeURIComponent(id)+'/resources/tile/review');
+    requireValue(review.providerCalls===1&&review.request?.kind==='tile','The retry must review one original map resource.');
+    const timePath=decodeURIComponent(new URL(review.request.url).pathname.split('/').at(-1)).replace(/\.png$/,'');
+    requireValue(Date.parse(timePath)===Date.parse(before.work.tile.time),'The map retry changed the requested instant.');
+    await record('map-retry-review',{number,id,reviewSha256:review.reviewSha256,providerCalls:review.providerCalls,request:review.request});
+    await act(page.getByRole('button',{name:'Retry reviewed map request',exact:true}),'/api/editions/'+encodeURIComponent(id)+'/resources/tile/retry');
+    const after=await workspace.editionView(id),resource=after.edition.resources?.tile;
+    journal.resourceRetries??=[];journal.resourceRetries.push({editionId:id,reviewSha256:review.reviewSha256,status:resource?.status,sha256:resource?.sha256});
+    await record('map-retry-outcome',{number,id,status:resource?.status,sha256:resource?.sha256,error:resource?.providerError?.message||resource?.error||null});
+    requireValue(after.edition.resources?.timeline?.sha256===before.edition.resources?.timeline?.sha256,'The map-only retry changed the Timeline reference.');
+    requireValue(JSON.stringify(after.decisions)===JSON.stringify(before.decisions),'The map-only retry changed the saved staff decisions.');
+    requireValue(after.tile?.available===true,'The reviewed map resource did not return an available PNG. Inspect its original provider outcome.');
+    await pickEdition(id,'Work plan');
+    await page.waitForFunction(()=>{const image=document.querySelector('img.map-tile');return image?.complete&&image.naturalWidth===256&&image.naturalHeight===256;});
+    await record('map-retry-visible',{number,id,width:after.tile.width,height:after.tile.height,originalTimelineSha256:before.edition.resources?.timeline?.sha256});
+  }
+
   async function decide(number){
     const id=journal.editions[number-1];
     requireValue(id,'Acquire edition '+number+' first.');
@@ -282,6 +308,39 @@ if(has('--child')){
       missingBefore:comparison.rows.filter(row=>row.beforePresent===false).length,
       missingAfter:comparison.rows.filter(row=>row.afterPresent===false).length});
   }
+  async function operationsReport(label='live'){
+    const responsePromise=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/operations');
+    await page.getByRole('tab',{name:'Operations',exact:true}).click();
+    const response=await responsePromise;const review=await response.json();
+    requireValue(response.ok()&&review.schema==='stellar-forge.tomorrow.operations-review.v1','The original operations projection did not load.');
+    requireValue(review.editions?.length===2&&review.decisions?.length>=2,'Operations review lost an original edition or staff decision.');
+    requireValue(review.assignments?.some(row=>row.assignee==='Internal operations reviewer'),'The operations queue lost its staff assignment.');
+    await page.getByRole('heading',{name:'Staff review queue',exact:true}).waitFor();
+    if(label!=='live')requireValue(review.intervals?.some(row=>row.observationAvailability==='RETAINED_DECISION_ONLY'),
+      'Reopened operations should show original retained staff interval identities.');
+    memory['operations-'+label]=review;
+    const files=[];
+    for(const format of label==='live'?['html','csv','json']:['json']){
+      const downloadPromise=page.waitForEvent('download');
+      await page.getByRole('button',{name:'Download '+format.toUpperCase()+' report',exact:true}).click();
+      const download=await downloadPromise,path=join(directory,'operations-'+label+'.'+format);
+      await download.saveAs(path);
+      const bytes=await readFile(path);
+      requireValue(bytes.length>0,'The operations report is empty.');
+      if(format==='json'){
+        const retained=JSON.parse(bytes);
+        requireValue(retained.report?.licensedEditionsWithValues===0&&retained.report?.derivedOnlyEditions===2,
+          'The evaluation report did not apply the original retention projection.');
+        requireValue((retained.intervals||[]).every(row=>(row.fields||[]).every(field=>field.value===null&&field.valueState==='NOT_RETAINABLE')),
+          'The evaluation report retained native provider values.');
+      }
+      files.push({path,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});
+    }
+    journal.reports??={};journal.reports[label]=files;
+    await record('operations-reviewed',{label,reviewId:review.id,summary:review.summary,
+      assignments:review.assignments.map(row=>({assignee:row.assignee,needsReview:row.needsReview,intervals:row.intervals})),reports:files});
+  }
+
   async function handover(){
     requireValue(journal.editions.length===2,'Prepare both source-linked operating editions first.');
     await pickEdition(journal.editions[1],'Handover');
@@ -349,6 +408,7 @@ if(has('--child')){
     await page.getByRole('heading',{name:'Saved staff work instructions',exact:true}).waitFor();
     requireValue(await page.getByText('Internal operations reviewer',{exact:true}).count()>0,'Staff instructions are not visible after evaluation source memory expires.');
     await record('original-process-reopened',summary(view));
+    await operationsReport('reopened');
   }
   async function receive(){
     requireValue(journal.handover,'Download the operating handover before opening the receiving workspace.');
@@ -370,8 +430,9 @@ if(has('--child')){
     await pickEdition(journal.editions[1],'Work plan');
     await page.getByRole('heading',{name:'Saved staff work instructions',exact:true}).waitFor();
     await record('receiving-workspace-imported',{...summary(view),sourceWorkspaceId:journal.workspaceId});
+    await operationsReport('receiving');
   }
-  const phases={setup,edition1:()=>edition(1),decision1:()=>decide(1),edition2:()=>edition(2),decision2:()=>decide(2),compare,handover,restart,receive};
+  const phases={setup,edition1:()=>edition(1),decision1:()=>decide(1),edition2:()=>edition(2),decision2:()=>decide(2),compare,operations:()=>operationsReport('live'),handover,restart,receive};
   async function phase(name){
     requireValue(phases[name],'Unknown phase '+name+'.');
     await phases[name]();journal.phases[name]={completedAt:new Date().toISOString()};
@@ -382,7 +443,7 @@ if(has('--child')){
       await phase(name);
       if(option('--pause-after')===name){await record('paused-with-original-process',{after:name});return;}
     }
-    await record('workflow-complete',{workspaceId:journal.workspaceId,editions:journal.editions,plannedProviderCalls:4,handover:journal.handover});
+    await record('workflow-complete',{workspaceId:journal.workspaceId,editions:journal.editions,plannedProviderCalls:4,resourceRetries:journal.resourceRetries||[],handover:journal.handover});
   }
   async function close(){
     if(closed)return;closed=true;
@@ -402,7 +463,17 @@ if(has('--child')){
     if(command==='reconnect'&&!working){await page.goto((receiver||restored||running).url,{waitUntil:'networkidle'});await record('browser-reconnected');return;}
     if(working){emit({event:'busy',command});return;}
     working=true;
-    try{if(command==='run')await run();else await phase(command);}
+    try{
+      if(command==='run')await run();
+      else if(command==='extension'){
+        const path=option('--extension');
+        requireValue(path,'Configure --extension /absolute/module.mjs for this original operation.');
+        const extension=await import('file://'+resolve(path)+'?loaded='+Date.now());
+        requireValue(typeof extension.run==='function','The integration must export async run({workspace,page,context,journal,memory,directory,record}).');
+        await extension.run({workspace,page,context,running,journal,memory,directory,record});
+      }else if(command==='retry1'||command==='retry2')await retryMap(Number(command.at(-1)));
+      else await phase(command);
+    }
     catch(error){await record('phase-error',{phase:command,message:error.message});}
     finally{working=false;}
   });

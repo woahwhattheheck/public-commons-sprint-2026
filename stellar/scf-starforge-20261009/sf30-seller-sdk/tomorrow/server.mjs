@@ -3,6 +3,8 @@ import {randomBytes, timingSafeEqual} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
+import {buildOperationsReview} from './operations-analysis.mjs';
+import {createOperationsReport} from './operations-report.mjs';
 
 const ASSETS=new Map([['/',['ui.html','text/html; charset=utf-8']],['/ui.html',['ui.html','text/html; charset=utf-8']],['/ui.mjs',['ui.mjs','text/javascript; charset=utf-8']],['/ui.css',['ui.css','text/css; charset=utf-8']]]);
 const token=()=>randomBytes(32).toString('base64url');
@@ -68,11 +70,34 @@ export async function startWeatherServer({workspace,host='127.0.0.1',port=0}={})
     if(!session||session.expiresAt<Date.now())throw failure(401,'Open the private server URL to reconnect this browser.','SESSION');
     return session;
   }
+  async function operationsReview(workId){
+    const state=await workspace.view();
+    if(workId&&!state.workOrders.some(work=>work.id===workId))throw failure(404,'This work plan is not in the workspace.','WORK_NOT_FOUND');
+    const editions=state.editions.filter(edition=>(!workId||edition.workId===workId)&&edition.resources?.timeline?.sha256);
+    const views=[],groups=new Map(),comparisons=[];
+    for(const edition of editions){
+      const view=await workspace.editionView(edition.id);views.push(view);
+      if(!groups.has(edition.workId))groups.set(edition.workId,[]);
+      groups.get(edition.workId).push(edition);
+    }
+    for(const values of groups.values()){
+      values.sort((a,b)=>Date.parse(a.resources.timeline.receivedAt)-Date.parse(b.resources.timeline.receivedAt));
+      for(let index=1;index<values.length;index++)comparisons.push(await workspace.compare(values[index-1].id,values[index].id));
+    }
+    return buildOperationsReview({editionViews:views,comparisons});
+  }
+  async function editionAction(id,action,perform){
+    const pending=active.get(id);
+    if(pending){
+      if(pending.action!==action)throw failure(409,'Another native action is running for this edition.','EDITION_BUSY');
+      return pending.promise;
+    }
+    const promise=Promise.resolve().then(perform),record={action,promise};
+    active.set(id,record);
+    try{return await promise;}finally{if(active.get(id)===record)active.delete(id);}
+  }
   async function onceEdition(id,method,input){
-    if(active.has(id))return active.get(id);
-    const promise=Promise.resolve().then(()=>workspace[method](id,input));
-    active.set(id,promise);
-    try{return await promise;}finally{if(active.get(id)===promise)active.delete(id);}
+    return editionAction(id,method+':'+(input?.reviewSha256||''),()=>workspace[method](id,input));
   }
   const server=http.createServer(async(req,res)=>{
     res.setHeader('Cache-Control','no-store');
@@ -100,6 +125,7 @@ export async function startWeatherServer({workspace,host='127.0.0.1',port=0}={})
       if(method==='GET'){
         if(path==='/api/session')return json(res,200,{csrfToken:session.csrfToken});
         if(path==='/api/workspace')return json(res,200,await workspace.view());
+        if(path==='/api/operations')return json(res,200,await operationsReview(url.searchParams.has('workId')?identifier(url.searchParams.get('workId')):undefined));
         let match=path.match(/^\/api\/editions\/([^/]+)$/);
         if(match)return json(res,200,await workspace.editionView(identifier(match[1])));
         match=path.match(/^\/api\/editions\/([^/]+)\/tile$/);
@@ -122,9 +148,26 @@ export async function startWeatherServer({workspace,host='127.0.0.1',port=0}={})
         if(cookie)sessions.delete(cookie.slice(COOKIE.length+1));
         return json(res,200,{closed:true},{'Set-Cookie':COOKIE+'=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'});
       }
+      if(path==='/api/operations/report'){
+        const workId=body.workId?identifier(body.workId):undefined;
+        const report=createOperationsReport(await operationsReview(workId),{format:body.format||'html'});
+        const bytes=Buffer.from(report.bytes),filename=report.filename.replace(/[^A-Za-z0-9_.-]/g,'_');
+        res.writeHead(200,{'Content-Type':report.mime,'Content-Length':bytes.length,'Content-Disposition':'attachment; filename="'+filename+'"'});
+        return res.end(bytes);
+      }
       if(path==='/api/work')return json(res,200,await workspace.saveWork(body));
       let match=path.match(/^\/api\/work\/([^/]+)\/editions$/);
       if(match)return json(res,200,await workspace.prepareEdition(identifier(match[1]),{label:body.label,requestId:body.requestId}));
+      match=path.match(/^\/api\/editions\/([^/]+)\/resources\/(tile)\/(review|retry)$/);
+      if(match){
+        const id=identifier(match[1]),kind=match[2];
+        if(match[3]==='review'){
+          if(body.tileTimeFormat!==undefined&&body.tileTimeFormat!=='whole-seconds')throw failure(400,'Select the original timestamp or an equivalent whole-second timestamp.','TILE_TIME_FORMAT');
+          return json(res,200,await workspace.reviewResourceRetry(id,kind,body.tileTimeFormat?{tileTimeFormat:body.tileTimeFormat}:{}));
+        }
+        if(typeof body.reviewSha256!=='string'||!/^[a-f0-9]{64}$/i.test(body.reviewSha256))throw failure(400,'Review the exact resource request before retrying.','REVIEW_REQUIRED');
+        return json(res,200,await editionAction(id,'retryResource:'+kind+':'+body.reviewSha256,()=>workspace.retryResource(id,kind,{reviewSha256:body.reviewSha256})));
+      }
       match=path.match(/^\/api\/editions\/([^/]+)\/(review|acquire|recover)$/);
       if(match){
         const id=identifier(match[1]);

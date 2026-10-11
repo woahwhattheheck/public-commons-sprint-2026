@@ -39,10 +39,7 @@ export function readPng(bytes, mime) {
 }
 export function createTomorrowSource(raw, { env = process.env, lookup, clock = Date.now } = {}) {
   const plan = compileWeatherPlan(raw), licensed = plan.usage.mode === 'licensed-service';
-  const responseHeaders = ['content-type', 'retry-after', 'ratelimit-limit', 'ratelimit-remaining', 'ratelimit-reset',
-    'x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset',
-    'x-ratelimit-limit-day', 'x-ratelimit-remaining-day', 'x-ratelimit-limit-hour', 'x-ratelimit-remaining-hour',
-    'x-ratelimit-limit-second', 'x-ratelimit-remaining-second'];
+  const responseHeaders = ['content-type'];
   const common = { origin: API_ORIGIN, responseHeaders, timeoutMs: plan.timeoutMs,
     maxResponseBytes: plan.maxResponseBytes, maxInFlight: plan.maxInFlight,
     ...(licensed ? { headerEnv: { apikey: plan.apiKeyEnv } } : {}) };
@@ -57,7 +54,28 @@ export function createTomorrowSource(raw, { env = process.env, lookup, clock = D
         ...(request.body ? { 'content-type': 'application/json' } : {}), ...(licensed ? { apikey: env[plan.apiKeyEnv] } : {}) },
       ...(request.body ? { body: JSON.stringify(request.body) } : {}) });
     const headers = Object.fromEntries([...response.headers].filter(([name]) => name === 'content-type' || name === 'retry-after' || /^(?:x-)?rate-?limit(?:-|$)/i.test(name)));
-    if (response.status !== 200) { await response.body?.cancel(); return { status: response.status, headers, body: { error: 'WEATHER_PROVIDER_HTTP_STATUS', upstreamStatus: response.status } }; }
+    if (response.status !== 200) {
+      let providerError = null;
+      try {
+        const reader = response.body?.getReader(), parts = []; let size = 0;
+        if (reader) try { for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.length;
+          if (size > 65536) break; parts.push(Buffer.from(value)); } }
+        finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+        if (size <= 65536) {
+          const body = JSON.parse(Buffer.concat(parts).toString('utf8'));
+          const safe = value => {
+            if (!['string', 'number'].includes(typeof value)) return null;
+            let text = String(value).slice(0, 1200);
+            if (licensed && env[plan.apiKeyEnv]) text = text.replaceAll(env[plan.apiKeyEnv], '[redacted]');
+            return text;
+          };
+          providerError = { code: safe(body.code ?? body.error?.code), type: safe(body.type),
+            message: safe(body.message ?? body.error?.message ?? body.error) };
+        }
+      } catch {}
+      return { status: response.status, headers, body: { error: 'WEATHER_PROVIDER_HTTP_STATUS',
+        upstreamStatus: response.status, providerError } };
+    }
     const chunks = []; let size = 0; const reader = response.body.getReader();
     try { for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.length;
       need(size <= plan.maxResponseBytes, 'WEATHER_RESPONSE_LIMIT'); chunks.push(Buffer.from(value)); } }
@@ -69,9 +87,12 @@ export function createTomorrowSource(raw, { env = process.env, lookup, clock = D
     plan,
     inspect: () => ({ inFlight, completed, callsInWindow: starts.filter(t => t > clock() - 60000).length, closed }),
     async close() { closed = true; await closeUpstreamHandlers(native); },
-    async capture(kind, work, { signal } = {}) {
+    async capture(kind, work, { signal, request: selectedRequest } = {}) {
       need(['timeline', 'tile'].includes(kind), 'WEATHER_CAPTURE_KIND_INVALID');
-      const request = requestsFor(work).find(value => value.kind === kind); need(request, 'WEATHER_REQUEST_NOT_SELECTED');
+      const originalRequest = requestsFor(work).find(value => value.kind === kind); need(originalRequest, 'WEATHER_REQUEST_NOT_SELECTED');
+      const request = selectedRequest ?? originalRequest;
+      const allowed = [originalRequest, requestsFor(work, { tileTimeFormat: 'whole-seconds' }).find(value => value.kind === kind)];
+      need(allowed.some(value => JSON.stringify(value) === JSON.stringify(request)), 'WEATHER_REQUEST_CHANGED');
       if (plan.usage.expiresAt) need(clock() < Date.parse(plan.usage.expiresAt), 'WEATHER_LICENSE_EXPIRED');
       while (starts.length && starts[0] <= clock() - 60000) starts.shift();
       need(!closed, 'WEATHER_SOURCE_CLOSED'); need(inFlight < plan.maxInFlight, 'WEATHER_SOURCE_BUSY');
@@ -86,6 +107,7 @@ export function createTomorrowSource(raw, { env = process.env, lookup, clock = D
         const bytes = response.body instanceof Uint8Array ? Buffer.from(response.body) : null;
         const observation = { kind, method: request.method, url: request.url, startedAt, receivedAt: new Date(clock()).toISOString(),
           status: response.status, upstreamStatus: response.body?.upstreamStatus ?? (response.status === 200 ? 200 : null),
+          providerError: response.body?.providerError ?? null,
           contentType: response.headers?.['content-type'] ?? null, retryAfter: response.headers?.['retry-after'] ?? null,
           transport: proxyFetch ? 'ORIGINAL_SF31_EXPLICIT_CONNECT' : 'ORIGINAL_SF30_UPSTREAM',
           quota: Object.fromEntries(Object.entries(response.headers ?? {}).filter(([name]) => /^(?:x-)?rate-?limit(?:-|$)/i.test(name))),

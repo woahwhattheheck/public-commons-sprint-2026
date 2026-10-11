@@ -11,7 +11,10 @@ export const WORKSPACE_SCHEMA = 'stellar-forge.tomorrow-workspace.v1';
 export const HANDOVER_SCHEMA = 'stellar-forge.tomorrow-handover.v1';
 const copy = value => structuredClone(value);
 const freshId = prefix => prefix + '-' + randomUUID().replaceAll('-', '').slice(0, 16);
-const filename = kind => kind === 'timeline' ? 'timeline.json' : 'map.png';
+const filename = (kind, resource) => resource?.attemptId
+  ? (kind === 'timeline' ? 'timeline-' : 'map-') + id(resource.attemptId) + (kind === 'timeline' ? '.json' : '.png')
+  : kind === 'timeline' ? 'timeline.json' : 'map.png';
+const captureName = (kind, attemptId) => kind + '-capture' + (attemptId ? '-' + id(attemptId) : '') + '.json';
 const clean = value => JSON.parse(JSON.stringify(value));
 const operators = { gte: (a,b) => a >= b, gt: (a,b) => a > b, lte: (a,b) => a <= b, lt: (a,b) => a < b };
 
@@ -69,7 +72,7 @@ export class WeatherWorkspace {
     if (edition.rawExpiresAt && Date.now() >= this._expiry(edition)) return 'RETENTION_EXPIRED';
     if (!this.memory.has(edition.id + '/' + kind)) {
       if (edition.usage.mode === 'keyless-evaluation') return 'EPHEMERAL_EXPIRED';
-      if (!existsSync(join(this.directory, 'editions', edition.id, filename(kind)))) return 'METADATA_ONLY';
+      if (!existsSync(join(this.directory, 'editions', edition.id, filename(kind, edition.resources[kind])))) return 'METADATA_ONLY';
     }
     return 'AVAILABLE';
   }
@@ -118,30 +121,94 @@ export class WeatherWorkspace {
     });
     return { ...review, reviewSha256 };
   }
-  async _retain(edition, kind, result) {
+  async _recordCapture(editionId, kind, resource, attemptId = null) {
+    return this._change('record-capture', { editionId, kind, attemptId }, state => {
+      const target = this._edition(state, editionId);
+      if (attemptId) {
+        const attempt = target.resourceAttempts?.find(value => value.id === attemptId);
+        need(attempt?.kind === kind && attempt.state === 'ACQUIRING' &&
+          resource.requestSha256 === digest(jsonBytes(attempt.request)), 'WEATHER_RETRY_IDENTITY_CHANGED');
+        attempt.state = resource.state; attempt.finishedAt = resource.receivedAt;
+        attempt.resource = copy(resource);
+      }
+      target.resources[kind] = resource;
+      if (resource.state === 'COMPLETE' && target.usage.mode === 'licensed-service') {
+        const expiry = Math.min(Date.parse(resource.receivedAt) + target.usage.retentionSeconds * 1000,
+          target.usage.expiresAt ? Date.parse(target.usage.expiresAt) : Infinity,
+          target.rawExpiresAt ? Date.parse(target.rawExpiresAt) : Infinity);
+        target.rawExpiresAt = new Date(expiry).toISOString();
+      }
+      return resource;
+    });
+  }
+  async _retain(edition, kind, result, { attemptId = null, request } = {}) {
     const directory = await privateDirectory(join(this.directory, 'editions', edition.id));
-    const requestSha256 = digest(jsonBytes(edition.requests.find(request => request.kind === kind)));
+    request ??= edition.requests.find(value => value.kind === kind);
+    const requestSha256 = digest(jsonBytes(request));
     const resource = { ...result.observation, requestSha256, state: result.bytes ? 'COMPLETE' : 'FAILED',
-      error: result.error ?? null, ...(kind === 'timeline' && result.interpreted ? {
+      ...(attemptId ? { attemptId } : {}), error: result.error ?? null,
+      ...(kind === 'timeline' && result.interpreted ? {
         returnedIntervals: result.interpreted.returnedIntervals, returnedExtent: result.interpreted.returnedExtent,
         requestedTimestepsAbsent: result.interpreted.requestedTimestepsAbsent,
       } : {}), ...(kind === 'tile' && result.interpreted ? result.interpreted : {}) };
     if (result.bytes) {
       this.memory.set(edition.id + '/' + kind, Buffer.from(result.bytes));
       if (edition.usage.mode === 'licensed-service')
-        await writeBytes(join(directory, filename(kind)), result.bytes, { exclusive: true });
+        await writeBytes(join(directory, filename(kind, resource)), result.bytes, { exclusive: true });
     }
-    await writeJson(join(directory, kind + '-capture.json'), { editionId: edition.id, kind, resource }, { exclusive: true });
-    await this._change('record-capture', { editionId: edition.id, kind }, state => {
-      const target = this._edition(state, edition.id); target.resources[kind] = resource;
-      if (result.bytes && target.usage.mode === 'licensed-service') {
-        const retention = Date.parse(resource.receivedAt) + target.usage.retentionSeconds * 1000;
-        const expiry = target.usage.expiresAt ? Math.min(retention, Date.parse(target.usage.expiresAt)) : retention;
-        const previous = target.rawExpiresAt ? Date.parse(target.rawExpiresAt) : Infinity;
-        target.rawExpiresAt = new Date(Math.min(expiry, previous)).toISOString();
-      }
-      return resource;
+    await writeJson(join(directory, captureName(kind, attemptId)), { editionId: edition.id, kind, resource }, { exclusive: true });
+    await this._recordCapture(edition.id, kind, resource, attemptId);
+  }
+  /** Prepare one explicit read of a failed resource, retaining the successful resources and staff decisions. */
+  async reviewResourceRetry(editionId, kind, { tileTimeFormat = 'original' } = {}) {
+    const state = await this._state(), edition = this._edition(state, editionId);
+    need(['PARTIAL', 'FAILED', 'INTERRUPTED', 'COMPLETE'].includes(edition.state), 'WEATHER_RECOVERY_REQUIRED');
+    need(['timeline', 'tile'].includes(kind) && edition.requests.some(value => value.kind === kind), 'WEATHER_REQUEST_NOT_SELECTED');
+    need(edition.resources[kind]?.state !== 'COMPLETE', 'WEATHER_RESOURCE_ALREADY_COMPLETE');
+    const request = requestsFor(edition.work, { tileTimeFormat }).find(value => value.kind === kind);
+    const review = { editionId, kind, request, usage: edition.usage, tileTimeFormat, providerCalls: 1,
+      previousFailure: edition.resources[kind] ?? null,
+      priorAttempts: (edition.resourceAttempts ?? []).filter(value => value.kind === kind).map(value => ({ id: value.id, state: value.state })),
+      attribution: ATTRIBUTION };
+    const reviewSha256 = digest(jsonBytes(review));
+    await this._change('review-resource-retry', { editionId, kind, reviewSha256 }, current => {
+      const target = this._edition(current, editionId);
+      need(!['ACQUIRING', 'RETRYING'].includes(target.state) &&
+        digest(jsonBytes(target.resources[kind] ?? null)) === digest(jsonBytes(review.previousFailure)), 'WEATHER_RESOURCE_CHANGED');
+      target.retryReviews ??= {}; target.retryReviews[kind] = { ...copy(review), reviewSha256 };
+      return { editionId, kind, reviewSha256 };
     });
+    return { ...review, reviewSha256 };
+  }
+  async retryResource(editionId, kind, { reviewSha256, signal } = {}) {
+    const configuration = await this._state();
+    this.source ??= this.options.source ?? createTomorrowSource(configuration.plan, this.options);
+    const attemptId = freshId('retry');
+    const edition = await this._change('start-resource-retry', { editionId, kind, reviewSha256 }, state => {
+      const target = this._edition(state, editionId), review = target.retryReviews?.[kind];
+      need(review && review.reviewSha256 === reviewSha256 && !['ACQUIRING', 'RETRYING'].includes(target.state), 'WEATHER_RETRY_REVIEW_REQUIRED');
+      const { reviewSha256: ignored, ...reviewBody } = review;
+      need(digest(jsonBytes(reviewBody)) === reviewSha256 &&
+        digest(jsonBytes(target.resources[kind] ?? null)) === digest(jsonBytes(review.previousFailure)), 'WEATHER_RESOURCE_CHANGED');
+      need(target.resources[kind]?.state !== 'COMPLETE', 'WEATHER_RESOURCE_ALREADY_COMPLETE');
+      if (target.usage.expiresAt) need(Date.now() < Date.parse(target.usage.expiresAt), 'WEATHER_LICENSE_EXPIRED');
+      target.resourceAttempts ??= [];
+      target.resourceAttempts.push({ id: attemptId, kind, request: copy(review.request), reviewSha256,
+        previousResource: copy(target.resources[kind] ?? null), state: 'ACQUIRING', startedAt: new Date().toISOString() });
+      delete target.retryReviews[kind]; target.state = 'RETRYING'; return target;
+    });
+    const attempt = edition.resourceAttempts.find(value => value.id === attemptId);
+    let result;
+    try {
+      need(!signal?.aborted, 'WEATHER_ACQUISITION_CANCELLED');
+      result = await this.source.capture(kind, edition.work, { signal, request: attempt.request });
+    } catch (error) {
+      result = { observation: { kind, method: attempt.request.method, url: attempt.request.url, status: null,
+        receivedAt: new Date().toISOString(), contentType: null, sha256: null, bytes: 0 }, bytes: null,
+        error: /^[A-Z0-9_]+$/.test(error.code ?? '') ? error.code : 'WEATHER_SOURCE_FAILED' };
+    }
+    await this._retain(edition, kind, result, { attemptId, request: attempt.request });
+    await this._finish(editionId); return this.editionView(editionId);
   }
   async acquireEdition(editionId, { reviewSha256, signal } = {}) {
     const configuration = await this._state();
@@ -175,24 +242,28 @@ export class WeatherWorkspace {
   }
   async recoverEdition(editionId) {
     const state = await this._state(), edition = this._edition(state, editionId);
-    for (const request of edition.requests) {
-      if (edition.resources[request.kind]) continue;
-      const path = join(this.directory, 'editions', edition.id, request.kind + '-capture.json');
+    const pending = edition.requests.filter(request => !edition.resources[request.kind])
+      .map(request => ({ kind: request.kind, request, attemptId: null }));
+    pending.push(...(edition.resourceAttempts ?? []).filter(attempt => attempt.state === 'ACQUIRING')
+      .map(attempt => ({ kind: attempt.kind, request: attempt.request, attemptId: attempt.id })));
+    for (const { kind, request, attemptId } of pending) {
+      const path = join(this.directory, 'editions', edition.id, captureName(kind, attemptId));
       if (!await exists(path)) continue;
       const capture = await readJson(path, 1048576);
-      need(capture.editionId === editionId && capture.kind === request.kind && capture.resource.requestSha256 === digest(jsonBytes(request)), 'WEATHER_CAPTURE_IDENTITY_CHANGED');
-      await this._change('recover-capture', { editionId, kind: request.kind }, current => {
-        const target = this._edition(current, editionId); target.resources[request.kind] = capture.resource;
-        if (target.usage.mode === 'licensed-service' && capture.resource.sha256) {
-          const expiry = Math.min(Date.parse(capture.resource.receivedAt) + target.usage.retentionSeconds * 1000,
-            target.usage.expiresAt ? Date.parse(target.usage.expiresAt) : Infinity,
-            target.rawExpiresAt ? Date.parse(target.rawExpiresAt) : Infinity);
-          target.rawExpiresAt = new Date(expiry).toISOString();
-        }
-        return capture.resource;
-      });
+      need(capture.editionId === editionId && capture.kind === kind && (capture.resource.attemptId ?? null) === attemptId &&
+        capture.resource.requestSha256 === digest(jsonBytes(request)), 'WEATHER_CAPTURE_IDENTITY_CHANGED');
+      await this._recordCapture(editionId, kind, capture.resource, attemptId);
     }
-    if (edition.state === 'ACQUIRING') await this._finish(editionId, true);
+    if (['ACQUIRING', 'RETRYING'].includes(edition.state)) {
+      await this._change('recover-interrupted-retries', { editionId }, current => {
+        const target = this._edition(current, editionId);
+        for (const attempt of target.resourceAttempts ?? []) if (attempt.state === 'ACQUIRING') {
+          attempt.state = 'INTERRUPTED'; attempt.finishedAt = new Date().toISOString();
+        }
+        return { editionId };
+      });
+      await this._finish(editionId, true);
+    }
     return this.editionView(editionId);
   }
   async _asset(edition, kind) {
@@ -200,7 +271,7 @@ export class WeatherWorkspace {
     const expected = edition.resources[kind]; need(expected?.state === 'COMPLETE', 'WEATHER_RESOURCE_UNAVAILABLE');
     let bytes = this.memory.get(edition.id + '/' + kind);
     if (!bytes && edition.usage.mode === 'licensed-service')
-      bytes = await readBytes(join(this.directory, 'editions', edition.id, filename(kind)), 1048576);
+      bytes = await readBytes(join(this.directory, 'editions', edition.id, filename(kind, expected)), 1048576);
     need(bytes, 'WEATHER_EPHEMERAL_SOURCE_EXPIRED');
     need(bytes.length === expected.bytes && digest(bytes) === expected.sha256, 'WEATHER_SOURCE_BYTES_CHANGED');
     return Buffer.from(bytes);
@@ -308,6 +379,14 @@ export class WeatherWorkspace {
       const existing = currentState.editions.find(value => value.id === edition.id);
       if (existing) need(digest(jsonBytes(existing)) === digest(jsonBytes(edition)), 'WEATHER_IMPORT_COLLISION');
       need(digest(jsonBytes(requestsFor(edition.work))) === digest(jsonBytes(edition.requests)), 'WEATHER_HANDOVER_REQUEST_CHANGED');
+      for (const [kind, resource] of Object.entries(edition.resources)) if (resource.attemptId) {
+        id(resource.attemptId);
+        const attempt = edition.resourceAttempts?.find(value => value.id === resource.attemptId);
+        const allowed = [requestsFor(edition.work), requestsFor(edition.work, { tileTimeFormat: 'whole-seconds' })]
+          .flat().filter(value => value.kind === kind);
+        need(attempt?.kind === kind && allowed.some(value => digest(jsonBytes(value)) === digest(jsonBytes(attempt.request))) &&
+          resource.requestSha256 === digest(jsonBytes(attempt.request)), 'WEATHER_HANDOVER_RETRY_CHANGED');
+      }
       return copy(edition);
     });
     for (const entry of incoming.raw) {
@@ -322,7 +401,7 @@ export class WeatherWorkspace {
       if (entry.kind === 'timeline') readTimeline(bytes, edition.requests.find(request => request.kind === 'timeline').body);
       else readPng(bytes, expected.contentType);
       await privateDirectory(join(this.directory, 'editions', edition.id));
-      const path = join(this.directory, 'editions', edition.id, filename(entry.kind));
+      const path = join(this.directory, 'editions', edition.id, filename(entry.kind, expected));
       if (await exists(path)) need(digest(await readBytes(path, 1048576)) === expected.sha256, 'WEATHER_IMPORT_COLLISION');
       else await writeBytes(path, bytes, { exclusive: true });
     }
@@ -358,7 +437,7 @@ export class WeatherWorkspace {
       result.delivery.sha256 === expected.sha256, 'WEATHER_BUYER_SOURCE_CHANGED');
     if (kind === 'timeline') readTimeline(bytes, edition.requests.find(request => request.kind === kind).body);
     else readPng(bytes, result.delivery.contentType);
-    const directory = await privateDirectory(join(this.directory, 'editions', edition.id)), path = join(directory, filename(kind));
+    const directory = await privateDirectory(join(this.directory, 'editions', edition.id)), path = join(directory, filename(kind, expected));
     if (await exists(path)) need(digest(await readBytes(path, 1048576)) === expected.sha256, 'WEATHER_IMPORT_COLLISION');
     else await writeBytes(path, bytes, { exclusive: true });
     const delivery = { kind: 'ORIGINAL_SF88_BUYER_RESULT', intentId: id(intentId), editionId, resourceKind: kind,
@@ -375,7 +454,7 @@ export class WeatherWorkspace {
     const assets = [];
     for (const request of edition.requests) {
       await this._asset(edition, request.kind);
-      assets.push({ kind: request.kind, file: join(this.directory, 'editions', edition.id, filename(request.kind)),
+      assets.push({ kind: request.kind, file: join(this.directory, 'editions', edition.id, filename(request.kind, edition.resources[request.kind])),
         ...edition.resources[request.kind] });
     }
     return { edition: copy(edition), assets };
@@ -394,7 +473,9 @@ export class WeatherWorkspace {
     for (const edition of state.editions) if (edition.rawExpiresAt && Date.now() >= this._expiry(edition)) {
       for (const kind of ['timeline', 'tile']) {
         this.memory.delete(edition.id + '/' + kind);
-        await unlink(join(this.directory, 'editions', edition.id, filename(kind))).catch(error => { if (error.code !== 'ENOENT') throw error; });
+        const paths = new Set([filename(kind), filename(kind, edition.resources[kind]),
+          ...(edition.resourceAttempts ?? []).filter(attempt => attempt.kind === kind).map(attempt => filename(kind, { attemptId: attempt.id }))]);
+        for (const path of paths) await unlink(join(this.directory, 'editions', edition.id, path)).catch(error => { if (error.code !== 'ENOENT') throw error; });
       }
     }
   }

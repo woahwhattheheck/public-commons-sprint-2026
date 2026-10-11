@@ -1,6 +1,6 @@
 const $=id=>document.getElementById(id);
 const arr=value=>Array.isArray(value)?value:(value&&typeof value==='object'?Object.values(value):[]);
-const state={workspace:null,workId:null,editionId:null,detail:null,tab:'plan',review:null,comparison:null,busy:false,csrf:null,intervalId:null,page:0,filter:'ALL',printing:false};
+const state={workspace:null,workId:null,editionId:null,detail:null,tab:'plan',review:null,retryReview:null,comparison:null,busy:false,csrf:null,intervalId:null,page:0,filter:'ALL',printing:false,operations:null,operationsKey:null,operationsScope:'workspace',operationsFilter:'ALL',operationsAssignee:'ALL'};
 const PREFIX='sf-tomorrow-operator:';
 const volatileDrafts=new Map();
 const storageScope=()=>state.workspace?.workspaceId||state.workspace?.id||null;
@@ -135,6 +135,7 @@ async function refresh({loadDetail=true}={}){
   if(!state.editionId&&editions.length)state.editionId=editions.at(-1).id;
   if(loadDetail&&state.editionId)state.detail=await api('/api/editions/'+encodeURIComponent(state.editionId));
   else if(!state.editionId)state.detail=null;
+  if(state.tab==='operations'&&state.workId){state.operations=await api(operationsPath());state.operationsKey=operationsKey();}
   renderSidebar();render();
 }
 function renderSidebar(){
@@ -151,7 +152,7 @@ function renderSidebar(){
 }
 function pendingPanel(){
   const saved=pending();if(!saved)return null;
-  const native=/\/(acquire|recover)$/.test(saved.path);
+  const native=/\/(acquire|recover|retry)$/.test(saved.path);
   return element('section',{class:'panel no-print'},element('h2',{},'Saved browser action'),element('p',{class:'small'},saved.label+' Started '+saved.at+'.'),
     button(native?'Open and recover the same edition':'Resume saved action',async()=>{
       state.workId=saved.workId;state.editionId=saved.editionId;
@@ -180,9 +181,9 @@ function render(){
   })});
   const header=element('section',{class:'page-heading'},element('div',{},element('h1',{},work.title),element('p',{class:'small muted'},(work.location?.label||'Selected point')+' · '+work.location?.latitude+', '+work.location?.longitude)),
     element('div',{class:'toolbar no-print'},editions.length?field('Forecast edition',editionSelect):null));
-  const tabs=[['plan','Work plan'],['request','Request review'],['compare','Edition changes'],['history','History'],['handover','Handover'],['setup','Configuration']];
-  const nav=element('nav',{class:'tabs no-print','aria-label':'Work plan views'},tabs.map(([key,label])=>element('button',{type:'button',class:'tab',role:'tab','aria-selected':String(state.tab===key),onClick:()=>{state.tab=key;render();}},label)));
-  const panels={plan:renderPlan,request:renderRequest,compare:renderComparison,history:renderHistory,handover:renderHandover,setup:()=>renderWorkForm(work)};
+  const tabs=[['plan','Work plan'],['request','Request review'],['compare','Edition changes'],['history','History'],['operations','Operations'],['handover','Handover'],['setup','Configuration']];
+  const nav=element('nav',{class:'tabs no-print','aria-label':'Work plan views'},tabs.map(([key,label])=>element('button',{type:'button',class:'tab',role:'tab','aria-selected':String(state.tab===key),onClick:()=>{state.tab=key;render();if(key==='operations')guard(loadOperations);}},label)));
+  const panels={plan:renderPlan,request:renderRequest,compare:renderComparison,history:renderHistory,operations:renderOperations,handover:renderHandover,setup:()=>renderWorkForm(work)};
   const content=(panels[state.tab]||renderPlan)();
   replaceContents(main,pendingPanel(),header,nav,content);
 }
@@ -303,10 +304,37 @@ function renderRequest(){
     await mutate('/api/editions/'+encodeURIComponent(state.editionId)+'/recover',{}, {label:'Recovering the existing forecast edition…',native:true});await refresh();
   },{mutate:true}));
   if(complete)toolbar.append(button('Open returned work plan',()=>{state.tab='plan';render();},{primary:true}));
-  section.append(toolbar,details('Saved source metadata',edition));
+  section.append(...[toolbar,renderResourceRetry(edition),details('Saved source metadata',edition)].filter(Boolean));
   if(edition.error||edition.errors)section.append(details('Provider outcome',edition.error||edition.errors));
   return section;
 }
+function renderResourceRetry(edition){
+  const resource=edition.resources?.tile;
+  const retained=state.retryReview?.editionId===edition.id?state.retryReview.review:null;
+  if(resource?.state!=='FAILED')return null;
+  const section=element('section',{class:'form-section'},element('h3',{},'Retry a failed map request'));
+  const failure=resource?.providerError?.message||resource?.error||'The map request did not return an available image.';
+  section.append(element('p',{class:'small'},failure+(resource?.status?' · HTTP '+resource.status:'')),
+    element('p',{class:'help'},'Review one map request for this existing edition. The saved Timeline and staff decisions stay attached to their original source.'));
+  const format=select('tileTimeFormat',[['original','Original timestamp spelling'],['whole-seconds','Equivalent whole-second timestamp']],state.retryReview?.format||state.retryTimeFormat||'whole-seconds',{onChange:event=>{state.retryTimeFormat=event.target.value;state.retryReview=null;render();}});
+  section.append(field('Map timestamp format',format,'The equivalent option removes only an all-zero fractional second. The requested instant, map point and layer remain the same.'));
+  section.append(element('div',{class:'toolbar spaced'},button('Review failed map request',async()=>{
+    const editionId=edition.id,body=format.value==='whole-seconds'?{tileTimeFormat:'whole-seconds'}:{};
+    const review=await mutate('/api/editions/'+encodeURIComponent(editionId)+'/resources/tile/review',body,{label:'Reviewing the single saved map request…'});
+    state.retryReview={editionId,format:format.value,review};state.detail=await api('/api/editions/'+encodeURIComponent(editionId));state.workspace=await api('/api/workspace');render();
+  },{mutate:true})));
+  if(retained){
+    section.append(element('div',{class:'toolbar spaced'},badge(String(retained.providerCalls)+' planned provider call')),
+      details('Previous map outcome',retained.previousFailure||resource),
+      details('Reviewed map request',retained.request),element('p',{class:'small mono'},'Review '+retained.reviewSha256),
+      button('Retry reviewed map request',async()=>{
+        await mutate('/api/editions/'+encodeURIComponent(edition.id)+'/resources/tile/retry',{reviewSha256:retained.reviewSha256},{label:'Acquiring the reviewed map request…',native:true});
+        state.retryReview=null;state.tab='plan';await refresh();
+      },{primary:true,mutate:true}));
+  }
+  return section;
+}
+
 function summary(label,value){return element('div',{class:'summary-cell'},element('dt',{},label),element('dd',{},value===null||value===undefined?'Unknown':String(value)));}
 function ruleText(rule,unit){
   if(typeof rule==='string')return rule;
@@ -358,7 +386,13 @@ function appendMap(section,detail,edition,work){
   if(detail.tile?.available)section.append(element('div',{class:'map-layout'},
     element('img',{class:'map-tile',src:'/api/editions/'+encodeURIComponent(edition.id)+'/tile',alt:'Native '+(work.tile?.field||'weather')+' map tile for '+(work.location?.label||'the selected point')}),
     element('div',{},element('h3',{},'Native map tile'),element('p',{class:'small'},(work.tile?.field||'Selected layer')+' · '+(work.tile?.time||'Saved tile time')),element('p',{class:'help'},'The map is a source image. Decisions above use the native timeline values.'),sourceLine(edition))));
-  else if(work.tile)section.append(element('p',{class:'small muted'},'Map tile availability: '+(edition.rawAvailability||'Not available for this edition')+'.'));
+  else if(work.tile){
+    const resource=edition.resources?.tile;
+    const outcome=resource?.state==='FAILED'?'Request failed'+(resource.status?' · HTTP '+resource.status:''):
+      resource?.sha256?'Source image is no longer retained':resource?'Source image is unavailable':'Awaiting acquisition';
+    section.append(element('p',{class:'small muted'},'Map tile: '+outcome+'.'));
+    if(resource?.error)section.append(details('Map request outcome',resource));
+  }
 }
 function renderDecision(row){
   if(!row)return element('aside',{class:'decision-panel'},element('h2',{},'Interval review'),element('p',{class:'small'},'Select an interval from the returned work plan.'));
@@ -396,6 +430,72 @@ function renderComparison(){
     element('td',{},row.change===null||row.change===undefined?'—':reading(row.change),element('div',{class:'cell-note'},row.status||''))))));
   return section;
 }
+function operationsKey(){return(state.workspace?.workspaceId||'')+':'+(state.operationsScope==='workspace'?'workspace':state.workId);}
+function operationsPath(){return '/api/operations'+(state.operationsScope==='workspace'?'':'?workId='+encodeURIComponent(state.workId));}
+async function loadOperations(){
+  notice('Reading the saved operations workspace…');
+  state.operations=await api(operationsPath());state.operationsKey=operationsKey();render();notice('Operations review refreshed.');
+}
+async function downloadOperations(format){
+  setBusy(true,'Preparing the operating report…');
+  try{
+    const response=await fetch('/api/operations/report',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':state.csrf||''},
+      body:JSON.stringify({format,...(state.operationsScope==='workspace'?{}:{workId:state.workId})})});
+    if(!response.ok){const result=await response.json();throw new Error(result.error?.message||'The operating report could not be prepared.');}
+    const blob=await response.blob(),filename=response.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1]||'weather-operations.'+format;
+    const url=URL.createObjectURL(blob),link=element('a',{href:url,download:filename});document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+    notice('Operating report downloaded.');
+  }finally{setBusy(false);}
+}
+async function openOperationsInterval(row){
+  state.workId=row.workId;state.editionId=row.editionId;state.intervalId=row.id||row.intervalId;state.review=null;state.comparison=null;
+  state.detail=await api('/api/editions/'+encodeURIComponent(row.editionId));state.tab='plan';state.filter='ALL';
+  const index=arr(state.detail.rows).findIndex(interval=>interval.id===state.intervalId);state.page=Math.max(0,Math.floor(index/50));
+  renderSidebar();render();
+}
+function renderOperations(){
+  const section=element('section',{class:'panel'},element('div',{class:'section-heading'},element('div',{},element('h2',{},'Operations review'),element('p',{class:'small muted'},'Staff assignments and review conditions from the saved forecast editions.')),button('Refresh operations',loadOperations,{small:true})));
+  const scope=select('operationsScope',[['workspace','All work plans in this workspace'],['current','Current work plan']],state.operationsScope,{onChange:event=>guard(async()=>{state.operationsScope=event.target.value;state.operationsFilter='ALL';state.operationsAssignee='ALL';await loadOperations();})});
+  section.append(element('div',{class:'toolbar spaced'},field('Review scope',scope),button('Download HTML report',()=>downloadOperations('html'),{mutate:true}),button('Download CSV report',()=>downloadOperations('csv'),{mutate:true}),button('Download JSON report',()=>downloadOperations('json'),{mutate:true})));
+  if(state.operationsKey!==operationsKey()||!state.operations){section.append(element('p',{class:'empty'},'Open the saved operations review.'),button('Load operations review',loadOperations,{primary:true}));return section;}
+  const review=state.operations,counts=review.summary||{},workNames=new Map(arr(review.workPlans).map(work=>[work.id,work.title]));
+  section.append(sourceLine(selectedEdition()),element('dl',{class:'summary-grid'},
+    summary('Needs review',counts.needsReview??0),summary('Forecast changes',counts.changedIntervals??0),
+    summary('Unassigned intervals',counts.unassigned??0),summary('Active intervals',counts.activeIntervals??0),
+    summary('Threshold matches',counts.thresholdMatches??0),summary('Missing values',counts.unavailableValues??0)));
+  section.append(element('p',{class:'help'},review.definitions?.selection||'The latest acquired edition for each selected work plan is active.'));
+  if(!arr(review.editions).length){section.append(element('p',{class:'empty'},'Acquire a Timeline edition from Request review to build the operating queue.'));return section;}
+  const queue=arr(review.queue),assignees=[...new Set(queue.map(row=>row.assignee||''))].sort();
+  const filter=select('operationsFilter',[['ALL','All review conditions'],['NEEDS_REVIEW','Needs a staff review'],['CHANGED','Forecast changed'],['MISSING','Missing source values'],['MATCHED','Threshold matched']],state.operationsFilter,{onChange:event=>{state.operationsFilter=event.target.value;render();}});
+  const assignee=select('operationsAssignee',[['ALL','All assignments'],...assignees.map(name=>[name||'UNASSIGNED',name||'Unassigned'])],state.operationsAssignee,{onChange:event=>{state.operationsAssignee=event.target.value;render();}});
+  const filtered=queue.filter(row=>{
+    if(state.operationsAssignee!=='ALL'&&(row.assignee||'UNASSIGNED')!==state.operationsAssignee)return false;
+    if(state.operationsFilter==='NEEDS_REVIEW')return row.needsReview;
+    if(state.operationsFilter==='CHANGED')return arr(row.changes).length>0;
+    if(state.operationsFilter==='MISSING')return row.hasMissingValue||arr(row.reasonCodes).includes('MISSING_NATIVE_VALUE');
+    if(state.operationsFilter==='MATCHED')return row.hasTriggeredRule;
+    return true;
+  });
+  section.append(element('h3',{class:'spaced'},'Staff review queue'),element('div',{class:'toolbar spaced'},field('Review condition',filter),field('Assigned staff',assignee),element('span',{class:'small muted'},filtered.length+' matching intervals')));
+  if(filtered.length)section.append(table(['Work / interval','Review conditions','Assigned staff / decision','Source and work instruction'],filtered.map(row=>element('tr',{},
+    element('td',{},element('span',{class:'cell-label'},workNames.get(row.workId)||row.workId),element('span',{class:'cell-note mono'},row.startTime+' · '+row.timestep),button('Open interval',()=>openOperationsInterval(row),{small:true})),
+    element('td',{},arr(row.reasonCodes).map(reason=>element('div',{class:'cell-note'},reason)),row.observationAvailability==='RETAINED_DECISION_ONLY'?element('div',{class:'help'},'Saved staff instruction; source values have expired.'):null),
+    element('td',{},row.assignee||'Unassigned',row.latestDecision?element('div',{class:'cell-note'},badge(row.latestDecision.decision), ' · revision '+row.latestDecision.revision):null),
+    element('td',{},element('span',{class:'cell-note mono'},row.editionId),row.latestDecision?.note?element('p',{class:'small'},row.latestDecision.note):element('span',{class:'small muted'},'Staff review needed.'))))));
+  else section.append(element('p',{class:'empty'},'No intervals match the selected review conditions.'));
+  section.append(element('h3',{class:'spaced'},'Staff assignments'),table(['Staff member','Active intervals','Needs review','Threshold matches','Forecast changes','Saved decisions'],arr(review.assignments).map(row=>element('tr',{},
+    element('td',{},row.assignee||'Unassigned'),element('td',{},row.intervals),element('td',{},row.needsReview),element('td',{},row.triggered),element('td',{},row.changed),
+    element('td',{},Object.entries(row.decisionCounts||{}).map(([name,count])=>name+': '+count).join('; ')||'None')))));
+  section.append(element('h3',{class:'spaced'},'Selected work plans'),table(['Work plan','Active source received','Intervals / reviewed','Source availability'],arr(review.workPlans).map(work=>element('tr',{},
+    element('td',{},work.title,element('span',{class:'cell-note'},work.location?.label||'')),
+    element('td',{},work.acquiredAt||'Awaiting source',element('span',{class:'cell-note mono'},work.activeEditionId)),
+    element('td',{},work.intervals+' / '+work.reviewed),
+    element('td',{},work.sourceAvailable?'Available':(work.retainedDecisionIntervals?'Saved staff decisions available':'No available source intervals'))))));
+  if(arr(review.issues).length)section.append(details('Source and decision observations',review.issues));
+  section.append(details('Review definitions',review.definitions),element('p',{class:'help'},'Report downloads include the source and staff records permitted by the current workspace retention settings.'));
+  return section;
+}
+
 function renderHistory(){
   const section=element('section',{class:'panel'},element('h2',{},'Forecast and decision history'));
   const editions=workEditions();

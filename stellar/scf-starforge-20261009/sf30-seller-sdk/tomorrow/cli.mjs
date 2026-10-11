@@ -20,6 +20,8 @@ const flags = {
   review: ['workspace', 'edition', 'out'],
   acquire: ['workspace', 'edition', 'review'],
   recover: ['workspace', 'edition'],
+  'review-retry': ['workspace', 'edition', 'kind', 'tile-time-format', 'out'],
+  retry: ['workspace', 'edition', 'kind', 'review'],
   decision: ['workspace', 'input'],
   compare: ['workspace', 'before', 'after', 'out'],
   handover: ['workspace', 'editions', 'include-raw', 'out'],
@@ -42,6 +44,8 @@ export const USAGE = 'Tomorrow.io operations\n' +
   '  node cli.mjs prepare --workspace DIR --work WORK_ID [--label TEXT]\n' +
   '  node cli.mjs review --workspace DIR --edition ID --out NEW_JSON\n' +
   '  node cli.mjs acquire --workspace DIR --edition ID --review JSON\n' +
+  '  node cli.mjs review-retry --workspace DIR --edition ID --kind tile [--tile-time-format whole-seconds] --out NEW_JSON\n' +
+  '  node cli.mjs retry --workspace DIR --edition ID --kind tile --review JSON\n' +
   '  node cli.mjs decision --workspace DIR --input JSON\n' +
   '  node cli.mjs compare --workspace DIR --before ID --after ID [--out NEW_JSON]\n' +
   '  node cli.mjs handover --workspace DIR --out NEW_JSON [--include-raw true]\n' +
@@ -116,35 +120,38 @@ export async function main(args = process.argv.slice(2)) {
   }
   try {
     switch (command) {
-      case 'view': return options.edition ? workspace.editionView(options.edition) : workspace.view();
-      case 'work': return workspace.saveWork(await json('input'));
-      case 'prepare': return workspace.prepareEdition(required('work'), { label: options.label });
-      case 'review': return publish(await workspace.reviewEdition(required('edition')));
+      case 'view': return await (options.edition ? workspace.editionView(options.edition) : workspace.view());
+      case 'work': return await workspace.saveWork(await json('input'));
+      case 'prepare': return await workspace.prepareEdition(required('work'), { label: options.label });
+      case 'review': return await publish(await workspace.reviewEdition(required('edition')));
       case 'acquire': return editionSummary(await workspace.acquireEdition(required('edition'), await json('review')));
       case 'recover': return editionSummary(await workspace.recoverEdition(required('edition')));
-      case 'decision': return workspace.decide(await json('input'));
-      case 'compare': return publish(await workspace.compare(required('before'), required('after')));
-      case 'handover': return publish(await workspace.handover({ editionIds: options.editions?.split(','), includeRaw: boolean('include-raw') }));
-      case 'import': return workspace.importHandover(await json('input'));
-      case 'package': return packageWeatherEdition({ workspace, editionId: required('edition'), directory: required('out'), ...await json('seller') });
-      case 'austin-forecast': return exportAustinForecast({ workspace, editionIds: required('editions').split(','),
+      case 'review-retry': return await publish(await workspace.reviewResourceRetry(required('edition'), required('kind'), { tileTimeFormat: options['tile-time-format'] ?? 'original' }));
+      case 'retry': return editionSummary(await workspace.retryResource(required('edition'), required('kind'), { reviewSha256: (await json('review')).reviewSha256 }));
+      case 'decision': return await workspace.decide(await json('input'));
+      case 'compare': return await publish(await workspace.compare(required('before'), required('after')));
+      case 'handover': return await publish(await workspace.handover({ editionIds: options.editions?.split(','), includeRaw: boolean('include-raw') }));
+      case 'import': return await workspace.importHandover(await json('input'));
+      case 'package': { const terms = await json('seller'); return await packageWeatherEdition({ workspace, editionId: required('edition'), directory: required('out'), publicOrigin: terms.publicOrigin, paymentOptions: terms.paymentOptions }); }
+      case 'austin-forecast': return await exportAustinForecast({ workspace, editionIds: required('editions').split(','),
         stationId: required('station-id'), timestep: options.timestep ?? '1h', directory: required('out'),
         providerIssuedByEdition: options['provider-issue-pointers'] ? await json('provider-issue-pointers') : {} });
       default: {
         const buyer = await originalBuyer(required('buyer-config')), directory = required('purchase');
         if (command === 'prepare-buy') {
+          const selection = await json('selection');
           const purchase = await WeatherPurchase.prepare({ buyer, workspace, directory, product: await json('product'),
-            catalogBytes: await readBytes(resolve(required('catalog')), 1048576), ...await json('selection') });
+            catalogBytes: await readBytes(resolve(required('catalog')), 1048576), purchaseId: selection.purchaseId, acceptIndices: selection.acceptIndices });
           return { purchase: purchase.directory, operations: Object.keys(await purchase.original()) };
         }
         const purchase = await WeatherPurchase.open({ buyer, workspace, directory });
-        if (command === 'review-buy') return publish(await purchase.review());
+        if (command === 'review-buy') return await publish(await purchase.review());
         if (command === 'buy') { const result = await purchase.execute({ review: await json('review') });
           return { purchaseId: result.purchaseId, deliveries: result.deliveries, edition: editionSummary(result.edition) }; }
         if (command === 'recover-buy') { const result = await purchase.recover();
           return { purchaseId: result.purchaseId, deliveries: result.deliveries, pending: result.pending, edition: editionSummary(result.edition) }; }
-        if (command === 'continue-buy-preparation') return purchase.continuePreparation();
-        if (command === 'export-buy') return publish(await purchase.export({ includeRaw: boolean('include-raw', true) }));
+        if (command === 'continue-buy-preparation') return await purchase.continuePreparation();
+        if (command === 'export-buy') return await publish(await purchase.export({ includeRaw: boolean('include-raw', true) }));
         throw new Error('WEATHER_COMMAND_INVALID');
       }
     }
