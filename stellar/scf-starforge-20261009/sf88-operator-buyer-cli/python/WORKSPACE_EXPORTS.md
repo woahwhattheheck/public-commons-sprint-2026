@@ -92,6 +92,11 @@ file with status 200 so the client can replace its old partial copy. The ETag
 and `X-Content-SHA256` always identify the entire immutable output. Validate the
 whole received file against its manifest before publishing it for consumption.
 
+The package includes a complete receiving client that performs this transfer,
+resumes verified files and partial byte ranges, and reopens the original result
+offline. Follow [Receive a complete customer query export](QUERY_EXPORT_DELIVERY.md)
+for its CLI, Python API, progress, cancellation and portable recipient handover.
+
 Browsers supporting streaming file save write directly to the chosen file.
 The ordinary download fallback supports files up to 64 MiB. Larger files stay
 complete at the displayed private directory and can use the existing native
