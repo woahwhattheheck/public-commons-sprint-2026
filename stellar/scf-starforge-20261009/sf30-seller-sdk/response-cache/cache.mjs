@@ -268,7 +268,7 @@ export function createResponseCache({ handler, admit, shareAcrossBuyers,
         maxSourceInFlight, maxWaiters, sourceTimeoutMs, varyHeaders: [...vary] } };
   }
   function invalidate() {
-    const removed = entries.size; generation++; entries.clear(); bytes = 0;
+    const removed = entries.size; generation++; entries.clear(); flights.clear(); bytes = 0;
     totals.invalidations++; return { removed, generation };
   }
   async function close({ graceMs = 5000 } = {}) {
