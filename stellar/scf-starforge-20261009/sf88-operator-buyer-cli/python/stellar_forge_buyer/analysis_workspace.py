@@ -204,6 +204,8 @@ class AnalysisWorkspace:
                 old = parse(existing["record"].encode())
                 if all(old.get(key) == source[key] for key in ("session", "room", "session_sha256")):
                     db.commit()
+                    if expected_native is not None:
+                        return {**old, "native_delivery": source["native_delivery"]}
                     return old
             revision = existing["revision"] if existing else 0
             if revision != expected_revision:
