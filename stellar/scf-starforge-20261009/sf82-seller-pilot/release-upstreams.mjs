@@ -75,6 +75,7 @@ function inspectBytes(bytes, service, allowLoopback) {
   }
   return { bindings, environment: [...references].sort(), credentialValuesChecked: false };
 }
+export { inspectBytes as inspectUpstreamConfiguration };
 export async function inspectReleaseUpstreams(directory, snapshot, service, { allowLoopback = false } = {}) {
   const retained = upstreamReleaseSnapshot(snapshot), bytes = await bytesAt(join(directory, retained.file));
   if (digest(bytes) !== retained.sha256) throw new Error('Staged upstream configuration changed. Restore the original release or stage a new one.');
