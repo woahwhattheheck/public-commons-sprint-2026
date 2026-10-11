@@ -15,6 +15,11 @@
 <p class="hint">The recommendation can only select from our fixed catalogue and cannot change prices.</p></section>
 <section class="panel"><div class="number">02 / Consent</div><h2>Review before checkout</h2>
 <div id="proposal" class="placeholder">Complete step 01 to see the AI's bounded proposal.</div>
+<div class="catalogue-panel" aria-label="Server-priced catalogue comparison">
+<h3>Compare before approving</h3>
+<p class="hint">These prices come from the fixed server catalogue, not the AI. Comparison is read-only; only the exact recommended item can enter checkout.</p>
+<div id="catalogue" class="catalogue-options" role="list"></div>
+</div>
 <form id="orderform" hidden><label class="check"><input id="consent" type="checkbox" required>
 I approve this exact item and USD amount. I understand this is a PayPal sandbox demo.</label>
 <button type="submit" id="orderbtn">Create sandbox checkout <span>↗</span></button></form></section>
