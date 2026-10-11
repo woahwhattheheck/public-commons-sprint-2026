@@ -50,8 +50,10 @@ test('HTTP workflow enforces approval id, revision, stale replay, undo and reset
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
   const url = `http://127.0.0.1:${server.address().port}`;
+  let cookie = '';
   async function call(path, body) {
-    const r = await fetch(url + path, { method: body === undefined ? 'GET' : 'POST', headers: body === undefined ? undefined : { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const r = await fetch(url + path, { method: body === undefined ? 'GET' : 'POST', headers: { ...(cookie ? { cookie } : {}), ...(body === undefined ? {} : { 'content-type': 'application/json' }) }, body: body === undefined ? undefined : JSON.stringify(body) });
+    if (r.headers.has('set-cookie')) cookie = r.headers.get('set-cookie').split(';')[0];
     return { status: r.status, data: await r.json() };
   }
   const initial = await call('/api/state');
@@ -77,7 +79,7 @@ test('HTTP workflow enforces approval id, revision, stale replay, undo and reset
   assert.equal(undo.status, 200);
   assert.equal(undo.data.state.revision, 2);
   assert.equal(undo.data.state.shifts.find(s => s.id === 'welcome').assigned.length, 1);
-  const reset = await call('/api/reset', {});
+  const reset = await call('/api/reset', { expectedRevision: 2 });
   assert.equal(reset.status, 200);
-  assert.equal(reset.data.state.revision, 0);
+  assert.equal(reset.data.state.revision, 3);
 });
