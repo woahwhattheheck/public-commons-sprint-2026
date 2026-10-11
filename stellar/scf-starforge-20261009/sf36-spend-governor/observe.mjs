@@ -5,6 +5,7 @@ import {reconcileRpc} from '../sf86-rpc-transfer-reconcile/verify.mjs';
 import {DEFAULT_RPC,TESTNET_RPC_ENDPOINTS} from '../sf86-rpc-transfer-reconcile/terms.mjs';
 import {originalRecordFromEvidence} from '../sf86-rpc-transfer-reconcile/cli.mjs';
 import {openOutbox} from '../sf98-merchant-delivery/outbox.mjs';
+import {createPublicHttpsFetch} from '../sf31-buyer-client/public-transport.mjs';
 
 const sha=x=>createHash('sha256').update(x).digest('hex');
 let size=0;const chunks=[];
@@ -23,8 +24,15 @@ try {
     // Saved verdicts and loopback replay cannot reach the privileged worker.
     const rpcEndpoint=input.rpcEndpoint??DEFAULT_RPC;
     if(!TESTNET_RPC_ENDPOINTS.includes(rpcEndpoint))throw new Error('RPC_ENDPOINT_NOT_ALLOWED');
+    // This optional value comes from the privileged worker's explicit operator
+    // configuration, never a receipt, event, merchant header or saved verdict.
+    const transport=input.rpcProxyUrl===undefined?null:createPublicHttpsFetch({trustedProxy:{
+      mode:'explicit-connect',origin:new URL(rpcEndpoint).origin,proxyUrl:input.rpcProxyUrl,
+    }});
     const decodeContractEvent=await createOfficialEventDecoder();
-    console.log(JSON.stringify(await reconcileRpc({record,payer:input.payer,decodeContractEvent,rpcEndpoint})));
+    console.log(JSON.stringify(await reconcileRpc({record,payer:input.payer,decodeContractEvent,rpcEndpoint,
+      ...(transport===null?{}:{fetchImpl:(url,init)=>transport(url,{...init,redirect:'manual'})}),
+    })));
   } else if(input.action==='merchant') {
     const rows=await (await openOutbox(input.outbox)).rows();
     const request=record.operatorReservation.approved_request;
