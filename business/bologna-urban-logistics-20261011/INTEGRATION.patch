@@ -1,0 +1,85 @@
+--- a/workspace/model.py
++++ b/workspace/model.py
+@@ -223,6 +223,9 @@
+     action = payload.get("action")
+ 
+     def operation(state):
++        if isinstance(action, str) and action.startswith("interviews."):
++            from interviews import apply_interview_action
++            return apply_interview_action(state, payload)
+         delivery_result = apply_delivery_action(state, payload)
+         if delivery_result is not None:
+             return delivery_result
+@@ -307,6 +310,7 @@
+             name = checked_text(payload.get("name"), "Publication name", 200)
+             frozen = report_payload(state)
+             frozen["workspaceRevision"] = state["revision"] + 1
++            frozen["interviews"]["workspaceRevision"] = frozen["workspaceRevision"]
+             frozen["snapshotAt"] = utc_now()
+             publication = {"id": str(uuid.uuid4()), "name": name, "createdAt": frozen["snapshotAt"],
+                            "workspaceRevision": state["revision"] + 1, "reportSha256": sha256(canonical(frozen)), "report": frozen}
+@@ -335,6 +339,7 @@
+             "baseline": copy.deepcopy(state["baseline"]), "datedObservations": copy.deepcopy(state["datedObservations"]),
+             "decisions": copy.deepcopy(state["decisions"]), "assumptions": copy.deepcopy(state["assumptions"]),
+             "scenarios": copy.deepcopy(state["scenarios"]), "survey": survey_summary(state),
++            "interviews": __import__("interviews").analyze(state),
+             "streetPlans": copy.deepcopy(state["streetPlans"]), "roadmap": copy.deepcopy(state["roadmap"]),
+             "workspaceRevision": state["revision"], "snapshotAt": state["updatedAt"], "delivery": delivery,
+             "boundary": "Source-linked analytical material with separate analyst review and municipal decision records."}
+@@ -393,6 +398,10 @@
+              "report.json": canonical(report), **delivery_files(report)}
+     if "streetPlans" in report and "roadmap" in report:
+         files["roadmap.csv"] = roadmap_csv(report)
++    if "interviews" in report:
++        analysis = report["interviews"]
++        frozen_state = {"revision": analysis["workspaceRevision"], "baseline": report["baseline"], "scenarios": report["scenarios"]}
++        files.update(__import__("interviews").export_files(frozen_state, analysis))
+     manifest = file_manifest(report, files, publication_id)
+     files["manifest.json"] = canonical(manifest)
+     return manifest, files
+--- a/workspace/server.py
++++ b/workspace/server.py
+@@ -49,8 +49,12 @@
+             if path == "/api/health":
+                 state = load_state(self.server.state_root)
+                 return self.send_json(200, {"ok": True, "revision": state["revision"]})
+-            name = "index.html" if path == "/" else path.removeprefix("/")
+-            if name not in {"index.html", "app.js", "style.css", "delivery.js"}:
++            if path.startswith("/api/interviews"):
++                from interviews import get_resource
++                content_type, data = get_resource(load_state(self.server.state_root), path)
++                return self.send_bytes(200, data, content_type)
++            name = "index.html" if path == "/" else ("interviews.html" if path == "/interviews" else path.removeprefix("/"))
++            if name not in {"index.html", "app.js", "style.css", "delivery.js", "interviews.html", "interviews.js", "interviews.css"}:
+                 return self.send_json(404, {"error": "NOT_FOUND"})
+             data = (PUBLIC / name).read_bytes()
+             return self.send_bytes(200, data, mimetypes.guess_type(name)[0] or "application/octet-stream")
+@@ -60,13 +64,17 @@
+             return self.send_json(500, {"error": type(error).__name__, "message": str(error)})
+ 
+     def do_POST(self):
+-        if urlparse(self.path).path != "/api/action":
++        path = urlparse(self.path).path
++        if path not in {"/api/action", "/api/interviews/preview"}:
+             return self.send_json(404, {"error": "NOT_FOUND"})
+         try:
+             length = int(self.headers.get("Content-Length", "0"))
+             if length < 2 or length > 1_000_000:
+                 raise ValueError("JSON body must be 2–1000000 bytes")
+             payload = json.loads(self.rfile.read(length))
++            if path == "/api/interviews/preview":
++                from interviews import prepare_source
++                return self.send_json(200, prepare_source(load_state(self.server.state_root), payload))
+             state, result = apply_action(self.server.state_root, payload)
+             state["delivery"] = public_delivery(state)
+             return self.send_json(200, {"state": state, "result": result})
+--- a/workspace/public/index.html
++++ b/workspace/public/index.html
+@@ -26,6 +26,7 @@
+         <button type="button" data-tab="learning"><span>08</span>Learning and reports</button>
+         <button type="button" data-tab="publication"><span>09</span>Export and publication</button>
+       </nav>
++      <p class="sidebar-note"><a href="/interviews" style="color:inherit">Interviews and validation</a></p>
+       <p class="sidebar-note">One saved assessment.<br>Changes retain their revision and source references.</p>
+     </aside>
+     <div class="workspace-main">
