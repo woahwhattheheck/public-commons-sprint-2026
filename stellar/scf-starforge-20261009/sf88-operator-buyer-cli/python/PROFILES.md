@@ -59,6 +59,16 @@ checks prevent one operator silently replacing another operator's saved review.
 A repeated save with the same request ID and identical content returns that
 original save.
 
+The browser retains each outgoing profile request and review save in its
+existing session before sending it. When a connection loses the reply, the
+recovery panel retries that exact request ID and body. Reopening the same browser
+session restores a pending review's edited notes; retrying confirms its original
+revision instead of creating a duplicate. A changed selection or draft cannot
+silently replace an unresolved request. **Forget retained browser requests**
+explicitly discards only that local pending copy; any accepted operation remains
+in the workspace history. The original workspace must be reopened at its same
+origin for that browser session storage to remain available.
+
 Under the column's complete-dictionary section, save a frequency query with a
 new name. Open that recipe in the existing analysis workspace to inspect its
 actual typed rows, refine SQL, save a report, or use the existing complete-query

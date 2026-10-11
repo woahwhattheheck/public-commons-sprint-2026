@@ -954,6 +954,34 @@ The original checkout guide supplies the native facilitator, authenticated SF98
 delivery and existing receiver configuration for actual payment and file release.
 The desk's order view does not infer settlement or payment from enrollment.
 
+
+
+### Recover original merchant orders and purchased access
+
+The existing merchant desk includes **Recovery** for consistent snapshots of the
+original SF101 database and every enrolled paid file. Restore rebinds those files
+to the new state directory and preserves native events, access policy, purchased
+allowances, unfinished reservations and retained application responses.
+
+The same operation is available from the installed command:
+
+```sh
+starforge merchant-order-recovery snapshot \
+  --state /private/merchant \
+  --out /private/snapshots/merchant-001
+starforge merchant-order-recovery inspect \
+  --snapshot /private/snapshots/merchant-001
+starforge merchant-order-recovery restore \
+  --snapshot /private/snapshots/merchant-001 \
+  --out /private/restored-merchant
+```
+
+Point the original receiver and API application at the returned state path.
+The [merchant order recovery guide](../sf101-merchant-receiver/recovery/README.md)
+covers original checkout/outbox configuration, the separate approved product
+directory, private runtime settings, and encryption through the existing
+`starforge merchant-recovery` command.
+
 ### Resume and recover the entitled file
 
 Keep the customer's original handoff, selected output path and current private
@@ -2201,6 +2229,23 @@ returned SHA-256. SQL, probe values, private source and credential references ar
 excluded from the fixed customer archive. Restart the same workspace command to
 reopen saved revisions, reviews and prepared merchants; restarting does not
 automatically launch a seller.
+
+The same screen's **Publish and roll back retained releases** stages the selected
+prepared folder into the existing merchant release system. Open its original
+release console to compare query/price changes, select a generation, start or
+drain/restart the seller, and roll back to the previous retained version. The
+workspace keeps the reviewed native column types with that release and downloads
+the original customer files from the retained copy after the former input folder
+moves. Database data remains live. **Close controls and drain seller** preserves
+release selection/history while closing the owned original processes.
+
+The installed `starforge releases stage --clickhouse-package PREPARED_DIRECTORY`
+and `starforge merchant-mcp init --clickhouse-package PREPARED_DIRECTORY` select
+the same original adapter. Full console, CLI, existing MCP, customer-export and
+recovery instructions are included at
+`source/stellar/scf-starforge-20261009/sf82-seller-pilot/CLICKHOUSE_RELEASES.md`.
+This uses the existing `releases`, `merchant-mcp` and `clickhouse-workspace`
+commands; it adds no archive family or payment protocol.
 
 The existing native facilitator is selected with `--facilitator HTTPS_URL` and the
 same payment dependencies described below. The default serves the original
@@ -4184,3 +4229,149 @@ Programmatic exports are `./seller/sftp` for `createSftpSource`,
 `./seller/sftp/publisher` for `openSftpPublisher`,
 `./seller/sftp/workspace` for `startSftpWorkbench`, and
 `./seller/sftp/workspace/model` for `openSftpWorkbench`.
+
+
+## Research dossiers: questions, evidence and portable reports
+
+The installed research workspace turns saved source deliveries into a project
+with questions, retained editions, selected evidence, analyst notes and cited
+findings. It uses the original SF88 buyer's private storage and result primitives.
+The maintained SF88 component supplies the whole application, including its
+browser assets and the original result reader.
+
+### Open the installed operator
+
+Use the maintained Node 22+ runtime and an absolute private data directory whose
+parent already exists:
+
+```sh
+starforge research-workspace --dir /private/research-workspace
+```
+
+Open the complete local URL printed by the command. The generated token fragment
+opens that private session. The server binds to 127.0.0.1; an optional `--port`
+selects its port. Keep the same data directory when restarting to reopen the
+original dossiers and their revision history.
+
+The industrial browser provides the complete working flow:
+
+1. Create a dossier and write its research questions. Each question retains its
+   own notes and status: open, answered or parked.
+2. Add one or several original result files to a question, or attach an existing
+   provider edition by its original handle.
+3. Inspect sources grouped by DOI or URL. Select an edition excerpt, inspect its
+   original citation and result record, and review the provider's current source
+   availability. Objects and arrays remain typed in retained records.
+4. Select evidence, classify it as supporting, contradicting, background or
+   unreviewed, and save analyst notes.
+5. Write findings for a question and attach that question's evidence. Editing a
+   finding keeps its original source references until the operator explicitly
+   replaces them. Notes on unavailable editions remain editable.
+6. Compare revisions to inspect source additions and changes, question and
+   edition changes, and findings with their previous and revised text and
+   reference handles.
+7. Download HTML, Markdown or portable JSON. Reopen the portable project from
+   the project list to retain its original identity, source bytes and history.
+
+Concurrent edits use the current revision. When another operator saves first,
+refresh the dossier and apply the intended edit against its latest state.
+
+### Receive original research results
+
+The result-file selector has two retained input modes. `openalex` accepts the
+original works response containing `meta` and `results`. `research` accepts an
+envelope with schema `sf88-research-results-v1`, an actual `sourceTerms` string
+and the original `results` array. Complete source rows remain alongside the
+normalized display fields; content may be a string, object or array of objects.
+The source upload control accepts UTF-8 JSON files up to 16 MiB and preserves
+their original text. The CLI and Node API accept original retained responses up
+to the engine's 64 MiB limit.
+
+The [complete research-dossier guide](../sf88-operator-buyer-cli/research-dossiers/README.md)
+contains the exact input envelope, original buyer-result integration, source
+contracts and current retention behavior. Its `receiveBuyerResult` API reads an
+already-saved SF88 result's bytes and binds the result's original length and
+SHA-256 to the dossier edition.
+
+Use the installed CLI for file-based operation:
+
+```sh
+starforge research-dossiers help
+starforge research-dossiers create \
+  --store /private/research-workspace \
+  --title "Research review"
+starforge research-dossiers get \
+  --store /private/research-workspace --id DOSSIER_ID
+starforge research-dossiers receive \
+  --store /private/research-workspace --id DOSSIER_ID \
+  --question QUESTION_ID --revision CURRENT_REVISION \
+  --provider openalex --file /private/original-openalex.json \
+  --label "Original result edition"
+starforge research-dossiers export \
+  --store /private/research-workspace --id DOSSIER_ID \
+  --format html --out /private/research-report.html
+starforge research-dossiers export \
+  --store /private/research-workspace --id DOSSIER_ID \
+  --format json --out /private/research-portable.json
+starforge research-dossiers reopen \
+  --store /private/received-research --file /private/research-portable.json
+```
+
+Replace `DOSSIER_ID`, `QUESTION_ID` and `CURRENT_REVISION` with the original
+values returned by the project. Create the question through the operator or the
+CLI's documented `question` command. Select `--format md` for Markdown.
+Portable JSON includes the complete revision history and permitted retained
+source bytes, up to 256 MiB total. An identical portable project reopens
+idempotently; a matching continuation appends to the same history.
+
+### Use the original Valyu edition
+
+The Valyu merchant and customer workspace owns provider requests, editions and
+source access. The research application accepts its existing edition handle:
+
+```json
+{"editionId":"the-original-valyu-edition-id"}
+```
+
+In the operator, choose provider-edition mode, select `valyu`, enter this
+original handle and associate it with the intended question. A configured
+adapter reads the original workspace's current edition view. The dossier
+retains its handle and the analyst's own questions, notes and findings; the
+source owner's current availability governs the displayed provider content.
+
+Applications can use the installed public module with the already-open original
+Valyu store:
+
+```js
+import {
+  openDossierStore,
+  startDossierWorkspace,
+  createValyuEditionProvider,
+} from '@tokenjunkielabs/starforge-merchant/buyer/research-dossiers';
+
+const providers = {
+  valyu: createValyuEditionProvider(originalValyuStore),
+};
+const workspace = await startDossierWorkspace({
+  directory: '/private/research-workspace',
+  providers,
+});
+console.log(workspace.url);
+```
+
+Here `originalValyuStore` is the original provider workspace's existing
+`ValyuStore` instance. Its owner retains its lifecycle; the dossier adapter
+calls `editionView(id)`. A separately launched operator accepts a trusted
+absolute module exporting the same `providers` object:
+
+```sh
+starforge research-workspace \
+  --dir /private/research-workspace \
+  --edition-adapter /private/original-edition-adapters.mjs
+```
+
+The separate `@tokenjunkielabs/starforge-merchant/buyer/research-dossiers/server`
+entry exports `startDossierWorkspace` for applications that need only the
+operator server. Use `openDossierStore(directory, {providers})` for the same
+research engine in an existing application. Source and installed usage share
+the original dossier, revision and edition identities.
