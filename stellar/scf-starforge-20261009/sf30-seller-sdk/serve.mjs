@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { compileSellerRoutes, createSellerResourceHandler } from './resource-server.mjs';
 import { validateAdmissionTimeout } from './admission.mjs';
+import { validateHandlerTimeout } from './handler-execution.mjs';
 import { createConfiguredAdmission, validateInputOption } from './configured-admission.mjs';
 import { compileServicePath } from './route-path.mjs';
 import { readJsonResponseFile, validateResponseFile } from './response-file.mjs';
@@ -31,6 +32,7 @@ function validateConfig(config) {
     throw new TypeError('Expected seller-service.v1 config with 1–64 routes');
   }
   validateAdmissionTimeout(config.admissionTimeoutMs ?? 2000);
+  validateHandlerTimeout(config.handlerTimeoutMs ?? 30000);
   const seen = new Set();
   for (const route of config.routes) {
     if (!object(route) || !/^[A-Za-z0-9_-]{1,64}$/.test(route.id ?? '') ||
@@ -153,7 +155,8 @@ export async function startSellerService({ config, port = 8423, handlers = {},
     const nativeServer = nativeFactory ? await nativeFactory(compiled) : null;
     if (nativeFactory && !nativeServer) throw new TypeError('Native factory did not return a resource server');
     const resources = createSellerResourceHandler({ compiled, nativeServer,
-      admissionTimeoutMs: config.admissionTimeoutMs ?? 2000 });
+      admissionTimeoutMs: config.admissionTimeoutMs ?? 2000,
+      handlerTimeoutMs: config.handlerTimeoutMs ?? 30000 });
     const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
     const developerPortal = createSellerDeveloperPortal({ compiled, mode });
     const info = { schema: SCHEMA, mode, routes: compiled.routes.map(route => ({
