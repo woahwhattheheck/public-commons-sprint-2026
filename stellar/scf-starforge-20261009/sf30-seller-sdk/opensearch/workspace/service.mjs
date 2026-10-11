@@ -3,7 +3,7 @@ import { readFile, mkdir, readdir, lstat, realpath, chmod, open, link, unlink } 
 import { randomUUID } from 'node:crypto';
 import { join, resolve, relative, basename, sep } from 'node:path';
 import { readOpenSearchSourceFile, createOpenSearchQuerySource } from '../source.mjs';
-import { validateOpenSearchSource } from '../declaration.mjs';
+import { validateOpenSearchSource, compileOpenSearchQueries, bindOpenSearchParameters } from '../declaration.mjs';
 import { compileOpenSearchMerchantPlan, prepareOpenSearchSeller } from '../prepare.mjs';
 import { openWorkspaceStore, WorkspaceError, clone, digest, identifier, compareEditions, editionCsv } from './store.mjs';
 
@@ -22,7 +22,8 @@ function nativeError(error, config, env) {
     if (typeof value === 'string' && value.length) message = message.split(value).join('[credential]');
   }
   message = message.replace(/https?:\/\/[^\s/@]+:[^\s/@]+@/g, 'https://[credential]@');
-  const code = /^[A-Z][A-Z0-9_]{2,95}$/.test(error?.code ?? '') ? error.code : 'OPENSEARCH_WORKSPACE_OPERATION_FAILED';
+  const declared = error?.code ?? (/^[A-Z][A-Z0-9_]{2,95}$/.test(String(error?.message ?? '')) ? error.message : null);
+  const code = /^[A-Z][A-Z0-9_]{2,95}$/.test(declared ?? '') ? declared : 'OPENSEARCH_WORKSPACE_OPERATION_FAILED';
   return { code, message: message.slice(0, 1600),
     ...(Number.isInteger(error?.status) ? { status: error.status } : {}) };
 }
@@ -98,10 +99,16 @@ class OpenSearchWorkspace {
   }
   validate(id, revision) {
     const draft = this.store.draft(id, revision);
-    const config = this.configFor(draft);
-    const compiled = compileOpenSearchMerchantPlan(config.queries, draft.plan);
-    return { draftId: id, revision: draft.revision, source: config,
-      merchant: compiled, sourceSha256: digest(config), planSha256: digest(draft.plan) };
+    try {
+      const config = this.configFor(draft);
+      bindOpenSearchParameters(compileOpenSearchQueries(config.queries)[draft.queryName], clone(draft.input));
+      const compiled = compileOpenSearchMerchantPlan(config.queries, draft.plan);
+      return { draftId: id, revision: draft.revision, source: config,
+        merchant: compiled, sourceSha256: digest(config), planSha256: digest(draft.plan) };
+    } catch (error) {
+      const failure = nativeError(error, this.config, this.env);
+      throw new WorkspaceError(failure.code, failure.message, failure.status ?? 422);
+    }
   }
   async filesFor(draft) {
     const config = this.configFor(draft), stem = draft.id + '-r' + draft.revision;

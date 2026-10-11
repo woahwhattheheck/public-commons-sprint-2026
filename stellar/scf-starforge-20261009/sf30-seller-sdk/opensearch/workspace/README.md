@@ -24,7 +24,7 @@ Restart the same command with the same workspace directory to reopen drafts, rev
 
 1. Select a named source query and choose **New draft**. Edit the title, query declaration, search input and merchant plan. The full original query contract remains visible: selected indices and fields, typed parameters, native sort, page size, result limits and probe input.
 2. **Save draft** creates a durable numbered revision. Later edits require the exact revision currently open, so another operator's saved changes cannot be overwritten silently. **Revision history** opens every retained revision.
-3. **Validate saved plan** calls the original source and merchant compilers. **Inspect native source** opens the original adapter, performs its actual source preflight and retains the returned description, inspection and status.
+3. **Validate saved plan** calls the original source and merchant compilers and binds the saved search input through the original parameter contract. **Inspect native source** opens the original adapter, performs its actual source preflight and retains the returned description, inspection and status.
 4. **Capture search edition** runs the saved query with its saved typed input through the original adapter. Native point-in-time pagination and cleanup stay with that adapter. The complete returned result is saved before the request is reported complete.
 5. Open **Result editions** to inspect original documents, page through all captured hits, download the original result or complete edition JSON, and export CSV. Preparing or downloading an edition does not substitute a new search for its original capture.
 6. **Prepare merchant** writes a new private package through the original preparation function. Open **Merchant packages** for the exact files, their byte hashes, original launcher information and generated customer handoff. Each request has a separate output directory.
@@ -33,9 +33,9 @@ The interface is dependency-free, neutral industrial software. Wide result table
 
 ## Preserve native search meaning
 
-Document identity is the original pair **[_index, _id]**. Comparison joins that exact pair and returns added, removed, changed and unchanged captured documents. Changes include the complete original hit, including source fields, score, native sort values and exact-integer metadata.
+Document identity is the original pair **[_index, _id]**. Comparison joins that exact pair. Added and removed hits describe entry into or exit from the two retained result sets. Content changes compare the projected source and its exact-integer type metadata. Score and declared business-sort movement appear separately as ranking changes. The native `_index` and `_shard_doc` snapshot tie breakers are excluded from those change counts, so a new PIT or segment layout does not manufacture a content change. Each full original hit remains in its retained result export.
 
-A comparison describes its two retained result editions. Their query, revision, capture time, total relation, truncation status and source/result hashes remain attached. The UI distinguishes an exact provider total from a lower bound and shows when the configured capture limit was reached.
+A comparison describes its two retained result editions. Their complete query, input, projection, revision, capture time, total relation, truncation status and source/result hashes remain attached. The comparison reports whether the query/input/fields match and whether either capture reached its limit; a different query or capture boundary can change set membership while the underlying documents remain unchanged. The UI distinguishes an exact provider total from a lower bound and shows when the configured capture limit was reached.
 
 The adapter's original unsafe-integer representation is preserved unchanged: decimal strings, its numberEncoding value, and every hit's exactIntegerPaths. Original numeric tokens therefore remain distinguishable from original string identifiers. JSON downloads come from the retained server result text. The browser's display and table previews are separate views.
 
@@ -47,7 +47,7 @@ For the underlying provider contracts, see [OpenSearch Search](https://docs.open
 
 Every save, native inspection, capture and preparation uses a caller-generated request ID. The browser retains that ID and exact payload before sending; SQLite records the operation and original draft before native work begins.
 
-If the reply is lost, open **Requests** and choose **Read original result**. **Retry the same request** resends the same ID and bytes. The server returns the existing outcome or pending record rather than dispatching a second native operation. Reusing an ID with different input is rejected.
+If the reply is lost, open **Requests** and choose **Read original result**. **Retry the same request** resends the same ID and bytes. The server returns the existing outcome or pending record rather than dispatching a second native operation. Reusing an ID with different input is rejected. When a rejected save or revision check leaves no recorded operation, the API confirms that absence and the editor unlocks with its contents intact so the operator can correct it. Requests with an uncertain outcome remain recoverable under their original ID.
 
 The workspace preserves pending operations across restart. When the recorded original process has ended, recovery marks its unfinished request **INTERRUPTED** while keeping the exact draft, request and any prepared files. It does not manufacture a result or replay that search. After reading the terminal interruption, choose a new explicit capture or preparation to create a new operation. An original process still present remains represented by its pending request.
 
@@ -67,7 +67,7 @@ Keep the complete workspace directory when moving or backing up work, after its 
 
 Result JSON has its own SHA-256 and byte count. Each prepared file has its actual byte SHA-256; downloads re-read and compare those exact bytes. Previously prepared packages and captured editions are never overwritten by a later draft or result.
 
-The source profile hash binds the workspace to its selected environment-reference policy. The actual remote dataset remains live. A new capture uses that current dataset through the native source; an old edition keeps its original captured result.
+The source profile hash binds the workspace to its selected environment-reference policy. Each native capture also preserves the adapter's source cluster fingerprint and server version; comparisons report when captures came from different clusters, even if the environment-reference names stayed the same. The actual remote dataset remains live. A new capture uses that current dataset through the native source; an old edition keeps its original captured result.
 
 ## Embedding and API
 

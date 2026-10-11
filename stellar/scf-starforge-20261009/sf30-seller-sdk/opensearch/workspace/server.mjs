@@ -45,6 +45,7 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
   let origin, closing;
   const requests = new Set();
   const server = createServer((req, res) => {
+    let operationId;
     const task = Promise.resolve().then(async () => {
       if (closing) return send(res, 503, { error: 'WORKSPACE_CLOSING' });
       if (req.headers.host !== new URL(origin).host || (req.headers.origin && req.headers.origin !== origin))
@@ -89,6 +90,7 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
           !timingSafeEqual(Buffer.from(supplied), Buffer.from(token)))
           return send(res, 403, { error: 'WORKSPACE_TOKEN_REQUIRED' });
         const input = await body(req);
+        if (path !== '/api/validate') operationId = input.requestId;
         if (path === '/api/drafts') return send(res, 200, workspace.save(input));
         if (path === '/api/validate') return send(res, 200, workspace.validate(input.draftId, input.expectedRevision));
         const result = await workspace.run(path.slice('/api/'.length), input);
@@ -98,8 +100,16 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
     }).catch(error => {
       if (res.writableEnded || res.destroyed) return;
       const known = error instanceof WorkspaceError || /^OPENSEARCH_|^MERCHANT_|^QUERY_|^SELLER_/.test(error?.code ?? '');
+      let requestRecorded;
+      if (operationId !== undefined) {
+        try { workspace.operation(operationId); requestRecorded = true; }
+        catch (lookup) {
+          if (['WORKSPACE_OPERATION_NOT_FOUND', 'WORKSPACE_INVALID_IDENTIFIER'].includes(lookup.code)) requestRecorded = false;
+        }
+      }
       if (!res.headersSent) send(res, error.status >= 400 && error.status <= 599 ? error.status : known ? 422 : 500,
-        { error: known ? error.code : 'WORKSPACE_UNAVAILABLE', message: known ? error.message : 'The workspace could not complete this request.' });
+        { error: known ? error.code : 'WORKSPACE_UNAVAILABLE', message: known ? error.message : 'The workspace could not complete this request.',
+          ...(requestRecorded === undefined ? {} : { requestRecorded }) });
       else res.end();
     }).finally(() => requests.delete(task));
     requests.add(task);
