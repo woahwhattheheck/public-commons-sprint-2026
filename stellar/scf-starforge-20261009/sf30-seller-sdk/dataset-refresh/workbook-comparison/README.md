@@ -155,3 +155,19 @@ After adoption, use the returned source.id, plan.id and plan.revision in the ori
 The original workbook bridge constructs this module with the same source store, original reader, native status reader and mapping-save operation. The comparison engine uses held source descriptors and the retained original parser. It uses private temporary projection files and SQLite join material during computation, then removes them.
 
 The browser extension owns its separate workbook-editions UI and monochrome stylesheet. The main workspace adds only its assets, lifecycle hooks and authenticated routes. The existing workbook CLI adds the edition operations to its original session client.
+
+
+## Repeat the actual annual Census update
+
+[census-example.mjs](census-example.mjs) continues an existing merchant workspace that already retains the original Census 2023 Jam Values workbook and its reviewed Jam Values!A20:G36 mapping. It accepts the original session file and publishes the actual 2024 replacement through that same merchant.
+
+Use the [official 2024 workbook](https://www2.census.gov/programs-surveys/acs/tech_docs/jam_values/2024_Jam_Values.xlsx) as --target-file. The example verifies both annual originals by their captured SHA-256 and uses the earlier declared public mapping. It compares the full sixteen original records, reads a filtered page through the installed CLI, exports all rows, adopts the replacement mapping, prepares and publishes the original native candidate, and reopens the same saved adoption after publication.
+
+~~~sh
+node workbook-comparison/census-example.mjs \
+  --session-file /private/publisher-session.json \
+  --operation-dir /private/census-annual-update \
+  --target-file /data/2024_Jam_Values.xlsx
+~~~
+
+When multiple eligible baseline mappings exist, pass --baseline-source, --baseline-plan and --baseline-revision from the original saved mapping. The exported function also accepts explicit public keys and a publisherDirectory for an existing source installation. Reuse the same operation directory to recover the same comparison request. It retains the operation inputs, complete comparison, original candidate review and completed result in that private directory.
