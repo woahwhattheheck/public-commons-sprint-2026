@@ -1,11 +1,13 @@
 // MIT. Named native OpenSearch PIT searches behind the original SF30 seller.
 import { open } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 import { record } from '../sqlite/parameters.mjs';
 import { validateOpenSearchSource, compileOpenSearchQueries, describeOpenSearchQueries,
   bindOpenSearchParameters, QueryInputError } from './declaration.mjs';
 import { NativeInteger, OpenSearchSourceError, fail, assertLosslessJSONSupport,
   nativeJSON, portableJSON, resolveConnection, createWire } from './wire.mjs';
+import { validateOpenSearchProjection } from './projection.mjs';
 export { OpenSearchSourceError, validateOpenSearchSource };
 
 export async function readJSONFile(filename, cap = 262144) {
@@ -80,8 +82,8 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
   assertLosslessJSONSupport();
   const config = validateOpenSearchSource(raw), queries = compileOpenSearchQueries(config.queries);
   const wire = createWire(resolveConnection(config, env));
-  const pinned = Object.create(null), jobs = new Set(), pendingCleanup = new Set();
-  let closed = false, closing, completed = 0, failures = 0, cleanupFailures = 0, serverVersion;
+  const pinned = Object.create(null), projections = Object.create(null), jobs = new Set(), pendingCleanup = new Map();
+  let closed = false, closing, completed = 0, failures = 0, cleanupFailures = 0, serverVersion, sourceIdentity;
 
   function definition(name) {
     if (typeof name !== 'string' || !Object.hasOwn(queries, name)) fail('QUERY_NOT_FOUND');
@@ -95,6 +97,10 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
   async function readFields(name, query, options = {}) {
     return fieldContract(await wire('GET', metadataPath(query), { maxBytes: 1048576, ...options }), query, name);
   }
+  async function readProjection(name, query, options = {}) {
+    const path = query.indices.map(encodeURIComponent).join(',') + '/_mapping?allow_no_indices=false&ignore_unavailable=false';
+    return validateOpenSearchProjection(await wire('GET', path, { maxBytes: 2097152, ...options }), query.fields, { queryName: name });
+  }
   async function cleanup(id) {
     // Delete only the snapshot owned by this query; never delete-all or list-all.
     try {
@@ -105,7 +111,10 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
         fail('OPENSEARCH_PIT_RELEASE_FAILED');
       pendingCleanup.delete(id); return true;
     } catch {
-      cleanupFailures++; pendingCleanup.add(id); return false;
+      cleanupFailures++;
+      const now = Date.now();
+      for (const [pending, expires] of pendingCleanup) if (expires <= now) pendingCleanup.delete(pending);
+      pendingCleanup.set(id, now + 60000); return false;
     }
   }
   async function execute(name, input, { signal } = {}) {
@@ -122,7 +131,10 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
     jobs.add(job);
     const options = () => ({ signal: controller.signal, timeoutMs: Math.max(1, deadline - Date.now()) });
     try {
-      if (!same(await readFields(name, query, options()), pinned[name])) fail('QUERY_SCHEMA_CHANGED', name);
+      const [currentFields, currentProjection] = await Promise.all([
+        readFields(name, query, options()), readProjection(name, query, options()),
+      ]);
+      if (!same(currentFields, pinned[name]) || !same(currentProjection, projections[name])) fail('QUERY_SCHEMA_CHANGED', name);
       const keepAlive = String(Math.ceil(query.timeoutMs / 1000) + 15) + 's';
       const created = await wire('POST', query.indices.map(encodeURIComponent).join(',') +
         '/_search/point_in_time?keep_alive=' + keepAlive +
@@ -166,7 +178,7 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
           const port = portableJSON({ _index: hit._index, _id: hit._id, _source: hit._source,
             _score: hit._score ?? null, sort: hit.sort });
           const saved = { ...port.value, exactIntegerPaths: port.exactIntegerPaths };
-          portableBytes += Buffer.byteLength(JSON.stringify(saved));
+          if (hits.length < query.maxHits) portableBytes += Buffer.byteLength(JSON.stringify(saved));
           if (portableBytes > query.maxBytes) fail('QUERY_RESULT_TOO_LARGE', name);
           hits.push(saved);
         }
@@ -178,8 +190,10 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
       const truncated = hits.length > query.maxHits;
       if (!truncated && (total.relation !== 'eq' || hits.length !== total.value))
         fail('OPENSEARCH_INCOMPLETE_SEARCH', name);
+      if (controller.signal.aborted) fail(controller.signal.reason?.code === 'QUERY_TIMEOUT' ? 'QUERY_TIMEOUT' : 'QUERY_ABORTED', name);
+      if (Date.now() >= deadline) fail('QUERY_TIMEOUT', name);
       result = { schema: 'stellar-forge.opensearch-result.v1', query: name, fields: [...query.fields],
-        fieldTypes: structuredClone(pinned[name]), hits: hits.slice(0, query.maxHits),
+        fieldTypes: structuredClone(pinned[name]), source: { ...sourceIdentity }, hits: hits.slice(0, query.maxHits),
         hitCount: Math.min(hits.length, query.maxHits), total, truncated, pages,
         snapshot: 'point-in-time', capturedAt: new Date().toISOString(),
         numberEncoding: 'unsafe-integer-decimal-text', snapshotReleased: false };
@@ -206,7 +220,9 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
     for (const job of current) job.controller.abort(new OpenSearchSourceError('QUERY_ABORTED'));
     closing = Promise.allSettled(current.map(job => job.done)).then(async () => {
       // One resource-release retry on shutdown, never a search/payment replay.
-      for (const id of [...pendingCleanup]) await cleanup(id);
+      for (const [id, expires] of [...pendingCleanup]) {
+        if (expires > Date.now()) await cleanup(id); else pendingCleanup.delete(id);
+      }
     });
     return closing;
   }
@@ -217,8 +233,14 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
     if (version?.version?.distribution !== 'opensearch' || !numbers ||
         Number(numbers[1]) < 3 || Number(numbers[1]) === 3 && Number(numbers[2]) < 3)
       fail('OPENSEARCH_3_3_OR_NEWER_REQUIRED');
+    if (typeof version.cluster_uuid !== 'string' || !version.cluster_uuid || version.cluster_uuid === '_na_' || version.cluster_uuid.length > 256)
+      fail('OPENSEARCH_CLUSTER_IDENTITY_UNAVAILABLE');
+    sourceIdentity = { clusterFingerprint: createHash('sha256').update(version.cluster_uuid).digest('hex'), serverVersion };
     for (const [name, query] of Object.entries(queries)) {
-      pinned[name] = await readFields(name, query, { timeoutMs: query.timeoutMs });
+      [pinned[name], projections[name]] = await Promise.all([
+        readFields(name, query, { timeoutMs: query.timeoutMs }),
+        readProjection(name, query, { timeoutMs: query.timeoutMs }),
+      ]);
       const validation = await wire('POST', query.indices.map(encodeURIComponent).join(',') +
         '/_validate/query?all_shards=true&explain=false', {
           body: { query: bindQuery(query, query.probe) }, timeoutMs: query.timeoutMs, maxBytes: 65536,
@@ -260,8 +282,8 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
   return Object.freeze({
     query: execute, route, close,
     describe: () => describeOpenSearchQueries(queries),
-    inspect: () => ({ schema: 'stellar-forge.opensearch-inspection.v1', serverVersion,
-      queries: describeOpenSearchQueries(queries), fieldTypes: structuredClone(pinned),
+    inspect: () => ({ schema: 'stellar-forge.opensearch-inspection.v1', serverVersion, source: { ...sourceIdentity },
+      queries: describeOpenSearchQueries(queries), fieldTypes: structuredClone(pinned), projections: structuredClone(projections),
       snapshot: 'point-in-time', transport: 'native-http', maxInFlight: config.maxInFlight,
       numberEncoding: 'unsafe-integer-decimal-text' }),
     status: () => ({ schema: 'stellar-forge.opensearch-status.v1', state: closed ? 'CLOSED' : 'READY',
