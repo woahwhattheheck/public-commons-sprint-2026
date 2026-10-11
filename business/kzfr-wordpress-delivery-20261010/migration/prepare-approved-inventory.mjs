@@ -210,6 +210,7 @@ function prepare(args) {
   const source = fileBytes(args['--input'], MAX_SOURCE);
   const mapSource = fileBytes(args['--map'], 256 * 1024);
   const { header, rows } = readCsv(utf8(source));
+  if (!rows.length) throw new Error('Approved inventory contains no content records.');
   let mapping;
   try { mapping = JSON.parse(utf8(mapSource)); }
   catch { throw new Error('Mapping is not a valid JSON object.'); }
