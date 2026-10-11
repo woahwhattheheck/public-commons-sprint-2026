@@ -1,6 +1,6 @@
 // MIT. Explicit Google Sheets range and public-column declarations.
 import { dirname, resolve } from 'node:path';
-import { object, readPrivate, digest, fault } from '../postgres/publisher/files.mjs';
+import { object, readPrivate, digest, fault, absolute } from '../postgres/publisher/files.mjs';
 
 export const MAX_CAPTURE_BYTES = 67108864;
 export const HASH = /^[a-f0-9]{64}$/;
@@ -92,8 +92,11 @@ export async function readSheetsSourceFile(filename) {
     if (typeof connection.file !== 'string' || !connection.file || connection.file.includes('\0') || !HASH.test(connection.sha256 ?? ''))
       throw fault('SHEETS_CAPTURE_CONNECTION_INVALID');
   } else if (connection?.kind === 'google') {
-    only(connection, ['kind', 'accessTokenEnv', 'maxResponseBytes', 'timeoutMs'], 'SHEETS_GOOGLE_CONNECTION_INVALID');
-    if (typeof connection.accessTokenEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,127}$/.test(connection.accessTokenEnv))
+    only(connection, ['kind', 'accessTokenEnv', 'oauthDirectory', 'maxResponseBytes', 'timeoutMs'], 'SHEETS_GOOGLE_CONNECTION_INVALID');
+    if (Object.hasOwn(connection, 'accessTokenEnv') === Object.hasOwn(connection, 'oauthDirectory'))
+      throw fault('SHEETS_CREDENTIAL_REFERENCE_REQUIRED', 'Choose exactly one accessTokenEnv or absolute oauthDirectory reference.');
+    if (connection.oauthDirectory !== undefined) absolute(connection.oauthDirectory, 'OAuth connection directory');
+    else if (typeof connection.accessTokenEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,127}$/.test(connection.accessTokenEnv))
       throw fault('SHEETS_TOKEN_ENV_REQUIRED');
     integer(connection.maxResponseBytes ?? MAX_CAPTURE_BYTES, 1024, MAX_CAPTURE_BYTES, 'SHEETS_RESPONSE_LIMIT_INVALID');
     integer(connection.timeoutMs ?? 30000, 100, 180000, 'SHEETS_TIMEOUT_INVALID');
