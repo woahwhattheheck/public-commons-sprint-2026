@@ -1,0 +1,91 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "routes": [
+    {
+      "id": "hourly-count",
+      "path": "/reports/hourly-count",
+      "definition": {
+        "method": "GET",
+        "serviceName": "Operator-Approved Analytics",
+        "description": "One named authorized Cube report per original native x402 settlement; not general API access",
+        "tags": [
+          "analytics",
+          "example"
+        ],
+        "payment": {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        },
+        "queryParameters": [
+          {
+            "name": "start",
+            "type": "string",
+            "description": "Date start, for date-window report only",
+            "required": false
+          },
+          {
+            "name": "end",
+            "type": "string",
+            "description": "Date end, for date-window report only",
+            "required": false
+          }
+        ],
+        "outputExample": {
+          "data": [
+            {
+              "logs.count": 12
+            }
+          ]
+        }
+      },
+      "handler": "cubeReport"
+    },
+    {
+      "id": "date-window",
+      "path": "/reports/date-window",
+      "definition": {
+        "method": "GET",
+        "serviceName": "Operator-Approved Analytics",
+        "description": "One named authorized Cube report per original native x402 settlement; not general API access",
+        "tags": [
+          "analytics",
+          "example"
+        ],
+        "payment": {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        },
+        "queryParameters": [
+          {
+            "name": "start",
+            "type": "string",
+            "description": "Date start, for date-window report only",
+            "required": false
+          },
+          {
+            "name": "end",
+            "type": "string",
+            "description": "Date end, for date-window report only",
+            "required": false
+          }
+        ],
+        "outputExample": {
+          "data": [
+            {
+              "logs.count": 12
+            }
+          ]
+        }
+      },
+      "handler": "cubeReport"
+    }
+  ]
+}
