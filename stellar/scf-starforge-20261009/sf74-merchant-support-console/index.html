@@ -29,6 +29,14 @@
   <section id="output" hidden>
     <div class="card"><div class="eyebrow">Original-source outcome</div><h2 id="outcome"></h2><p id="observed"></p><p id="source-note"></p><div id="scope" class="scope"></div><h3>2 · Actionable original findings</h3><ol id="actions" class="findings"></ol><p id="safeguards" class="notice"></p></div>
     <div class="card"><div class="split"><div><h3>3 · Retain the original diagnosis</h3><p>Download and keep this complete JSON before repairing the merchant route. Keep the downloaded file unchanged if you use it for an SF72 preflight or repair comparison.</p></div><div class="actions"><button id="download-intake" type="button" disabled class="secondary">Download intake JSON</button><button id="copy" type="button" disabled class="secondary">Copy original JSON</button></div></div><pre id="raw-report" tabindex="0"></pre></div>
+    <div id="post-preflight" class="card" hidden>
+      <h3>POST-only browser preflight · original SF72</h3>
+      <p>The original preflight checks whether this capture proves a POST-only route. When eligible, it sends one OPTIONS request to the displayed seller. It sends no GET, POST, cookies or payment.</p>
+      <p id="post-target" class="scope"></p>
+      <form id="post-form"><label class="approval"><input id="post-permission" type="checkbox" required><span>I authorize this one OPTIONS-only check of the seller displayed above.</span></label><button id="post-run" type="submit">Run original OPTIONS-only preflight</button></form>
+      <p id="post-status" class="status" role="status" aria-live="polite">Review the target and authorize this separate check.</p>
+      <div id="post-output" hidden><h3 id="post-outcome"></h3><ul id="post-findings" class="findings"></ul><p id="post-limits" class="notice"></p><button id="download-post" type="button" class="secondary" disabled>Download SF72 preflight JSON</button><details><summary>Full original preflight and source link</summary><pre id="raw-post" tabindex="0"></pre></details></div>
+    </div>
   </section>
   <section class="card" aria-labelledby="compare-heading">
     <h2 id="compare-heading">4 · Review a merchant repair</h2>
