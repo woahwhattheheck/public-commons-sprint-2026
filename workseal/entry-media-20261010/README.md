@@ -17,6 +17,10 @@ The media and generator are available through the existing Commons Library packa
 
 ## What the media shows
 
+**Published presentation (2:23)**: [Watch on YouTube](https://youtu.be/8Ys4bl2JrPk). A narrated illustrated overview of the buyer/worker settlement problem, WorkSeal's signed-acceptance flow, product direction, and next priorities. The visuals are illustrations, not live browser or chain footage.
+
+**Published product walkthrough (1:58)**: [Watch on YouTube](https://youtu.be/NWx7sexcHO0). A narrated, source-guided illustrated walkthrough of the task, result, acceptance, and settlement-intent protocol. It is not a recording of live browser execution or an on-chain transaction.
+
 **Presentation**: buyer/worker settlement problem; exact content-addressed task and result; signed acceptance, replay/alteration hold, Solana and Meteora architecture, initial commercial wedge, and next development priorities.
 
 **Product walkthrough**: narrated, source-guided illustrated stages of WorkSeal's actual task/result/acceptance/intent protocol. **It is not a screen capture of live browser execution, a Solana bank-test recording, a deployed escrow, a devnet transfer or a paid settlement.** The [current source](../web/judge-proof.html), [verified browser core](../web/core.mjs), and [Solana program](../solana-program/) remain the judge's independently executable proof path. The entrant should upgrade the product video with genuine browser/chain captures when the runtime owner provides them; don't infer onchain execution from visual footage.
