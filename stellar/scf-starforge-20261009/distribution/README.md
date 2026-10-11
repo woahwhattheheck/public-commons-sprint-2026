@@ -2696,6 +2696,62 @@ regenerate them if that installation moves. The `./seller/s3` and
 configuration APIs. Importing them does not itself load the AWS client or access
 storage; opening the configured source uses its original provider.
 
+### Author and operate an object-store product
+
+Create or reopen the private S3 workspace through the installed command:
+
+```sh
+npx --no-install starforge s3 workspace \
+  --state /private/object-authoring --release-store /private/merchant-releases
+```
+
+The command prints its private loopback browser URL. Import the merchant's
+selected source and complete payment declaration, then edit object routes,
+descriptions, byte ranges and ordered payment options. Save a revision and
+choose **Review objects** to capture actual metadata through the original AWS
+provider. Preparing that review retains the selected object identities and
+original merchant files. Stage the package into the selected release store,
+then use its existing release console or fleet to compare, activate and run it.
+Keep the workspace and store outside `node_modules` so source updates preserve
+the merchant's saved work.
+
+The workspace retains drafts across reloads, detects concurrent saved revisions
+and resumes the same review or preparation after an interrupted response. Its
+customer handoff downloads the original `objects.json` and `offers.json` for
+the Object Buyer described above. The bundled
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/s3/workspace/README.md`
+contains the complete source, payment, native release and browser workflow.
+
+An application can open the same browser directly:
+
+```js
+import { startS3MerchantWorkspace } from
+  '@tokenjunkielabs/starforge-merchant/seller/s3/workspace/server';
+
+const objects = await startS3MerchantWorkspace({
+  directory: '/private/object-authoring',
+  releaseStore: '/private/merchant-releases',
+  port: 8413,
+});
+console.log(objects.url);
+// Close this workspace in the application's shutdown handler.
+await objects.close();
+```
+
+`./seller/s3/workspace` exposes `openS3MerchantWorkspace` and
+`validateS3MerchantDraft` for applications with their own interface. The main
+package import exports those functions and `startS3MerchantWorkspace` as well.
+
+An existing merchant MCP host can attach the same saved model using
+`s3WorkspaceConnection`; `starforge merchant-mcp init-s3-workspaces` initializes
+a new host from that connection. Its 13 S3 tools cover saved edits, actual
+object review, preparation, native release staging and customer-file delivery.
+`starforge merchant-mcp inspect-s3` reviews the selected release, and
+`starforge merchant-mcp download-s3` resumes its original buyer inputs using
+the existing authenticated MCP client. Use the bundled
+`source/stellar-forge/mcp-merchant-operator/S3_WORKSPACE.md` for the complete
+host connection, tool arguments, activation and download commands.
+
 ## Review merchant pricing and operations
 
 Use the original merchant pricing workspace, pricing importer and accounting

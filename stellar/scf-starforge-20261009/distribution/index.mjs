@@ -30,3 +30,5 @@ export { fleetControl } from '../merchant-fleet-gateway/control.mjs';
 export { startFleetWorkspace } from '../merchant-fleet-gateway/workspace/server.mjs';
 export { startDuckdbWorkspace } from '../sf30-seller-sdk/duckdb/workspace/server.mjs';
 export { createDuckdbWorkspace } from '../sf30-seller-sdk/duckdb/workspace/model.mjs';
+export { openS3MerchantWorkspace, validateS3MerchantDraft } from '../sf30-seller-sdk/s3/workspace/controller.mjs';
+export { startS3MerchantWorkspace } from '../sf30-seller-sdk/s3/workspace/server.mjs';

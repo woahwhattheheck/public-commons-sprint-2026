@@ -370,6 +370,8 @@
     "./merchant/repricing-source": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/repricing-source.mjs",
     "./seller/s3": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/s3/source.mjs",
     "./seller/s3/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/s3/config.mjs",
+    "./seller/s3/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/s3/workspace/controller.mjs",
+    "./seller/s3/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/s3/workspace/server.mjs",
     "./seller/python": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs",
     "./seller/python/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/config.mjs",
     "./seller/python/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/model.mjs",
