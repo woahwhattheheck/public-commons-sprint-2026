@@ -67,7 +67,7 @@ export async function privateSupportDirectory(path) {
 export async function readSupportConfiguration(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'casesDirectory', 'incidentsDirectory', 'handoffs', 'workspaces'], ['schema', 'casesDirectory']);
+  exact(raw, ['schema', 'casesDirectory', 'incidentsDirectory', 'handoffs', 'workspaces', 'profiles'], ['schema', 'casesDirectory']);
   if (raw.schema !== SUPPORT_CONFIG_SCHEMA) throw failure('CONFIGURATION_ERROR', 'Expected an original merchant support connection.');
   const base = dirname(path), aliases = kind => {
     const source = raw[kind] ?? {};
@@ -80,7 +80,7 @@ export async function readSupportConfiguration(path) {
   return { casesDirectory: await privateSupportDirectory(hostPath(raw.casesDirectory, base)),
     incidentsDirectory: raw.incidentsDirectory === undefined ? null
       : await privateSupportDirectory(hostPath(raw.incidentsDirectory, base)),
-    handoffs: aliases('handoffs'), workspaces: aliases('workspaces') };
+    handoffs: aliases('handoffs'), workspaces: aliases('workspaces'), profiles: aliases('profiles') };
 }
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const parse = bytes => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
