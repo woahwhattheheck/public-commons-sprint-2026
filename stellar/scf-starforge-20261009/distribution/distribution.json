@@ -37,6 +37,7 @@
     "stellar/scf-starforge-20261009/sf74-merchant-support-console",
     "stellar/scf-starforge-20261009/sf95-signed-seller-withdrawal",
     "stellar/scf-starforge-20261009/sf101-merchant-receiver",
+    "stellar/scf-starforge-20261009/sf101-merchant-recovery",
     "scf46-stellar-bazaar/src",
     "stellar-forge/catalog-trust",
     "stellar-forge/catalog-lifecycle",
@@ -55,6 +56,12 @@
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
+    "stellar-forge/payment-auto-catalog/schema-pattern.mjs",
+    "stellar-forge/payment-auto-catalog/package.json",
+    "stellar/scf-starforge-20261009/partners/getblock-stellar/product.mjs",
+    "stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs",
+    "stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs",
+    "stellar/scf-starforge-20261009/sf74-merchant-support-console/case-store.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE.md",
@@ -327,6 +334,7 @@
     }
   },
   "runtimePackageManifests": {
+    "schema": "stellar-forge/payment-auto-catalog/package.json",
     "postgres": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json",
     "s3": "stellar/scf-starforge-20261009/sf30-seller-sdk/s3/package.json",
     "graphql": "stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/package.json"
