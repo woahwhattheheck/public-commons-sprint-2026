@@ -5,7 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { stageRelease, inspectRelease, compareReleases, activateRelease, rollbackRelease,
   readReleaseState, releaseStatus, runActiveRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
 import { exportSellerClient } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs';
-import { exact, failure, identifier, line, writePrivate, readMerchantConfig, inspectMerchantSource } from './config.mjs';
+import { exact, failure, identifier, line, writePrivate, readMerchantConfig, inspectMerchantSource, pythonSourceView } from './config.mjs';
 import { MerchantDiscovery, discoveryTools } from './discovery.mjs';
 import { cacheControlTools, merchantCacheStatus, merchantCacheInvalidate } from './controls.mjs';
 
@@ -22,8 +22,8 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
 }
 export const MERCHANT_TOOLS = [
   tool('merchant_status', 'Inspect original release selection, retained history, seller readiness and this MCP process ownership. Makes only original loopback health/offer reads.', {}, [], { readOnly: true, idempotent: true }),
-  tool('merchant_sources', 'List configured aliases or inspect an original saved API package or source files: exact input hashes, public routes, payment choices, backend mapping and credential environment names. Reads configured local files without credential values or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
-  tool('merchant_stage', 'Compile a configured source alias into a new immutable original SF82 release, including its original saved workspace and upstream snapshot. Does not activate, import application code, start a listener or make a payment.',
+  tool('merchant_sources', 'List configured aliases or inspect an original API package, OpenAPI files or Python merchant: exact input hashes, public routes, payment choices, backend or worker configuration and credential environment names. Reads configured local files without credential values, application imports or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
+  tool('merchant_stage', 'Compile a configured source alias into a new immutable original SF82 release, retaining its saved workspace, upstream snapshot or Python declaration and selected application source. Does not activate, import application code, start a listener or make a payment.',
     { source: idSchema, id: idSchema, label: textSchema }, ['source', 'id']),
   tool('merchant_inspect', 'Inspect and verify one retained original release including complete terms, application hashes and native/challenge mode.', { id: idSchema }, ['id'], { readOnly: true, idempotent: true }),
   tool('merchant_compare', 'Compare a staged release against the active release or a named retained version. Returns exact payment, route and application changes with the selection generation.',
@@ -54,7 +54,8 @@ function releaseView(release) {
   if (!release) return null;
   const { handlerEntry, runtime, ...rest } = release;
   const { handlers, ...options } = runtime;
-  return { ...rest, runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams) },
+  return { ...rest, ...(rest.python ? { python: pythonSourceView(rest.python) } : {}),
+    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python) },
     handlerEntry: handlerEntry ? { sha256: handlerEntry.sha256, bytes: handlerEntry.bytes, scope: handlerEntry.scope } : null };
 }
 function runtimeView(runtime) {
@@ -163,7 +164,8 @@ export class MerchantReleaseOperator {
         const comparison = await compareReleases(root, from === null ? null : identifier(from), identifier(args.to));
         return { ...comparison, generation: state.generation, before: releaseView(comparison.before), after: releaseView(comparison.after),
           runtimeChanges: comparison.runtimeChanges.map(change => change.field === 'handlers'
-            ? { field: 'applicationConfigured', before: Boolean(change.before), after: Boolean(change.after) } : change) };
+            ? { field: 'applicationConfigured', before: Boolean(change.before), after: Boolean(change.after) }
+            : change.field === 'python' ? { ...change, before: pythonSourceView(change.before), after: pythonSourceView(change.after) } : change) };
       }
       case 'merchant_activate': case 'merchant_rollback': {
         const target = identifier(name === 'merchant_activate' ? args.id : args.to);

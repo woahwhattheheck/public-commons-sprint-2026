@@ -63,8 +63,13 @@ The session lowers the final page's cap to the remaining overall allocation
 when necessary; a higher offered price is rejected by the original buyer
 before signing.
 
-Optional max-rows defaults to 1,000,000. The max-page-bytes flag defaults to 1 MiB
-and is applied by the original streaming response writer. If the actual dataset
+Optional max-rows defaults to 1,000,000. New sessions allow at most 4,096 pages
+and 2 MiB per page, matching the original SF100 import limits. The max-page-bytes
+flag defaults to 1 MiB and is applied by the original streaming response writer.
+An incompatible configured ceiling is rejected before creating a session or
+attempt. Existing session definitions remain readable and recoverable. The
+original exporter's aggregate archive/export ceilings still apply to the acquired
+selection. If the actual dataset
 snapshot is already known, the snapshot flag validates its exact 64-character SHA-256.
 Otherwise the first completed native page pins the snapshot for the rest of
 the session.

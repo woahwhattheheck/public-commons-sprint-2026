@@ -5,13 +5,14 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import {diagnose, requireEndpoint} from '../sf52-merchant-visibility/diagnose.mjs';
 import {probe} from '../sf68-browser-payment-readiness/audit.mjs';
+import {supportsSellerMethod} from '../sf30-seller-sdk/http-methods.mjs';
 
 const VALUE_FLAGS = new Set(['--resource','--catalog','--origin','--network','--pay-to','--method','--out']);
 const SWITCH_FLAGS = new Set(['--credentialed','--allow-loopback','--help']);
 const HELP = [
   'SF70 merchant one-pass intake (read-only, Node 22+)',
   'node run.mjs --resource https://seller.example/paid --catalog https://facilitator.example/discovery/resources',
-  '  --origin https://buyer.example --network stellar:testnet --pay-to G... [--method GET|POST]',
+  '  --origin https://buyer.example --network stellar:testnet --pay-to G... [--method GET|HEAD|POST|PUT|PATCH|DELETE]',
   '  [--credentialed] [--out private.json]',
   'For local original HTTP fixtures only: --allow-loopback with literal http://127.0.0.1 URLs.',
   'Performs original catalog GET pages; GET/OPTIONS browser checks only where GET is a relevant advertised operation. Never signs or pays.'
@@ -50,7 +51,7 @@ export function parseArgs(argv) {
   if (!payTo.trim() || payTo!==payTo.trim() || payTo.length>256)
     throw new TypeError('Invalid seller payment recipient');
   const method=values.get('--method')||'GET';
-  if (!['GET','POST','PUT','PATCH','DELETE'].includes(method))
+  if (!supportsSellerMethod(method))
     throw new TypeError('Unsupported intended buyer retry method');
   const out=values.get('--out');
   if (out && out.length>2048) throw new TypeError('Report path too long');
