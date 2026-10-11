@@ -1,0 +1,110 @@
+{
+  "schema": "tjlabs.l2d.exact-hessian-run-plan/v1",
+  "operation": "L2D-EXACT-HESSIAN107-6966-20261011",
+  "frozen_sources": [
+    {
+      "id": "099",
+      "sha256": "144216f254636979e1878df1f80afeae04240f8bf2e86d6f06d640d570e27b96"
+    },
+    {
+      "id": "101",
+      "sha256": "9893bc6f4fb3960959f3d01d26509b7727a283f0b4882a460cadff86d439fa7e"
+    },
+    {
+      "id": "107-original",
+      "sha256": "474e9191fbaa2a058257d0f616608bd207a757ec58481a1a838c2315f155ba17"
+    },
+    {
+      "id": "107-measured6966",
+      "sha256": "9b478a32e37594b54892884ac24d3a8e04d7c33974affdc5480095416b8ca192"
+    }
+  ],
+  "common_objective": {
+    "problem": "UIFOProblem",
+    "size": 3,
+    "n_frequencies": 50,
+    "hessian_batch_size": 1,
+    "penalty": "original supplied native default",
+    "logging": "one original Objective; native logged loss/is_feasible/time histories; no reset or unlogged result-producing calls"
+  },
+  "phases": [
+    {
+      "id": "matched-development",
+      "candidates": [
+        "099",
+        "101",
+        "107-original",
+        "107-measured6966"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 180,
+      "purpose": "Same public cohort/budget as retained V5 development; original099/101 sources remain distinct from its096/V1 records."
+    },
+    {
+      "id": "broad-public",
+      "candidates": "Retain the strongest measured frozen control and promising exact-Hessian source after matched-development; pin those chosen source hashes before launch.",
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 600,
+      "purpose": "Paired ten-topology public mean, tails, feasibility, failures and measured call-cost behavior on the same available GPU runtime."
+    },
+    {
+      "id": "full-objective-budget",
+      "candidates": "Two selected frozen sources from broad-public.",
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 14400,
+      "container_cap_seconds": 16200,
+      "purpose": "Original four-hour budget continuation on existing available compute; retained public inputs remain separate from hidden official tasks."
+    }
+  ],
+  "retention": "Keep every original raw cell and error. Reuse only exact source/runner/runtime/problem/seeds/budget matches. CPU and GPU results are separate conditions. Retain completed matching cells and the complete original output histories and diagnostics.",
+  "runtime_capture": {
+    "gpu_entrypoint": "python runner/run_recorded.py -- <original runner arguments>",
+    "cpu_entrypoint": "bash runner/run_recorded_cpu.sh <original runner arguments>",
+    "retained_files": "The original output.json and adjacent output.json.runtime.json; both create-only.",
+    "comparison": "Same-process effective configuration joins exact original report bytes; aggregate only within the same hardware/runtime/physics/budget cohort."
+  },
+  "phase_operator": {
+    "path": "run_phase.py",
+    "development_cells": 12,
+    "broader_cells": 20,
+    "full_budget_cells": 20,
+    "dispatch": "One process per native cell inside one existing allocation; no second scheduler.",
+    "compilation_cache": "New empty isolated cache per cell, at most128MiB; release only its own cache after child exit and retained completion.",
+    "handoff": "Original raw report/context/console/attempt/completion and matched comparison in a complete output archive."
+  }
+}
