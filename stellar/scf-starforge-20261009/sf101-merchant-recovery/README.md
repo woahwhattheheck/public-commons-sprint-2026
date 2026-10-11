@@ -34,7 +34,7 @@ node stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs verify \
   --bundle /private/backups/merchant-20261011-001 --pass-env SF101_RECOVERY_PASSPHRASE
 ```
 
-Each file is AES-256-GCM authenticated and the key derives from a random per-bundle salt using scrypt; each file has its own random IV. Explicit 0700 directories/0600 files, exclusive-create output, original content SHA-256 plus ciphertext integrity digest, complete authenticated re-read and fast fail on corruption. The manifest contains only named logical roots/relative paths and metadata, no original absolute directories or secret values. **Do not expose, check into Git, or upload private backup bundles;** secret loss makes encrypted recovery impossible. Encrypt volume storage and control access to the passphrase separately.
+Each file is AES-256-GCM authenticated and the key derives from a random per-bundle salt using scrypt; each file has its own random IV. Explicit 0700 directories/0600 files, exclusive-create output, original content SHA-256 plus ciphertext integrity digest, complete authenticated re-read and fast fail on corruption. The manifest contains only named logical roots/relative paths and metadata, no original absolute directories or secret values. Keep backup bundles private and outside public Git. For off-host retention, use the configured private object store described in [Remote recovery](REMOTE.md). Passphrase loss makes encrypted recovery impossible. Encrypt volume storage and control access to the passphrase separately.
 
 ## Dry recovery drill / controlled restore
 
@@ -46,6 +46,22 @@ node stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs restore 
 ```
 
 The entire backup is authenticated **before** any restore directory is created. Restore goes only into a **new** private directory, never over an existing merchant, running SQLite DB or production journal. Failed restores remove the tool-created destination. Review original merchant root names and file layout, bring up original SF60/SQLite source on the isolated restored state with original operators, reconcile SF98 event IDs against the real authoritative facilitator/merchant backend, and only then use normal merchant change-management to switch over. This tool does not claim restored state proves settlement or prevent webhook duplicate delivery; the original SF98 receiver must deduplicate event IDs and original SF60 catalog retains its own head semantics. Restored files are conservatively private (0600), directories 0700; adjust service-user ownership/execute permissions with normal deployment tooling.
+
+## Remote recovery
+
+The [remote recovery operator guide](REMOTE.md) carries the original encrypted
+bundle to an existing private S3-compatible store and back. It provides resumable
+upload, paginated completed-snapshot inventory, authenticated retrieval and cold
+restore through this same recovery engine. Object bytes and the original
+manifest stay unchanged. The completion record appears after every encrypted
+file and the manifest have been uploaded and read back successfully.
+
+The maintained toolkit exposes the original local engine as
+`starforge merchant-recovery` and the remote operator as
+`starforge merchant-recovery-remote`. Install the toolkit's existing `s3`
+runtime dependency for remote transfers. Keep object-store credentials and the
+recovery passphrase in the private operator environment. Use a stable operation
+ID and the same retained operation directory to resume an interrupted transfer.
 
 ## Integration & commercial handoff
 
