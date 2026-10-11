@@ -214,3 +214,48 @@ The primary API methods are:
 | `WorkbookAnalysis` | `register`, `receive`, `resume`, `history`, `waitJob`, `call`, `close` |
 
 Source revisions use new immutable workbook sources/plans, original publisher revision review, and a new customer packet for a changed prepared selection. The original completed packet and its receiving deliveries remain independently reopenable. The original Analysis source/view histories can compare and select those complete acquired editions.
+
+## Run the complete receiving workflow
+
+[examples/run-workbook-receiver.mjs](examples/run-workbook-receiver.mjs) accepts a retained private job description and runs the complete receiving continuation. It composes the same customer APIs, the original Python Analysis service, and the original resumable query-export receiver. The service child uses the provided checkout and Python package; an existing running service can be selected with `analysis.start: false`.
+
+Save the actual absolute paths in a private `ready.json`:
+
+```json
+{
+  "schema": "stellar-forge.workbook-customer-ready.v1",
+  "customerDirectory": "/absolute/source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook-customer",
+  "runtimeDirectory": "/absolute/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli",
+  "sourceRoot": "/absolute/source",
+  "pythonPath": "/absolute/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python",
+  "buyerStateDirectory": "/absolute/customer/app",
+  "packetDirectory": "/absolute/customer/census-2023",
+  "reviewFile": "/absolute/merchant/exported-review.json",
+  "configFile": "/absolute/merchant/prepared-buyer.json",
+  "datasetId": "census-jam-2023",
+  "sessionDirectory": "/absolute/customer/original-complete-session",
+  "deliveryDirectory": "/absolute/customer/census-native-room",
+  "portableDirectory": "/absolute/exports/census-receiver",
+  "resultFile": "/absolute/customer/census-result.json",
+  "analysis": {
+    "database": "/absolute/customer/census-analysis",
+    "alias": "census_analysis",
+    "source": "census_2023",
+    "view": "census_2023",
+    "exportDirectory": "/absolute/customer/query-transfer",
+    "portableExportDirectory": "/absolute/exports/census-query"
+  }
+}
+```
+
+Invoke the same source or installed entrypoint:
+
+```bash
+node examples/run-workbook-receiver.mjs --ready /absolute/customer/ready.json
+```
+
+With an existing completed `sessionDirectory`, the workflow attaches that original session, creates or reopens its SF100 room, copies and reopens the customer packet, and imports that exact acquired edition into Analysis. Its retained SQL request reviews one row of `SELECT *` from the selected view; the subsequent full export contains the complete query result in JSONL, CSV, and SQLite. The original receiver downloads those complete files and verifies a portable copy. Reopening the finished receiving directory uses local native readers.
+
+For a new acquisition, omit `sessionDirectory` and provide `operatorProfileFile` and `acquisition` with the original reviewed `maxPages`, string `maxTotalAtomic`, `maxRows`, and `maxPageBytes`. An original operator workspace can instead be supplied as `acquisition.workspaceDirectory`. The same original Buyer remains responsible for approval, page execution, recovery, and accounting.
+
+The callable export is `runWorkbookReceiver(ready, {buyer, signal, progress})`; an already initialized original Buyer can be supplied by the host application. A completed result retains the original acquisition/delivery records, packet and source identities, original import/query/export jobs, and actual transfer observations. Retrying an interrupted invocation reuses its immutable packet and native job IDs; a completed result reopens its verified portable packet. The workflow closes an Analysis child that it created after receiving finishes. A service supplied with `analysis.start: false` keeps its existing owner and lifecycle.
