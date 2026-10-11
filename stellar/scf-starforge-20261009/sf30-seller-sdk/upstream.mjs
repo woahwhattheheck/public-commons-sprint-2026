@@ -9,6 +9,7 @@ import { compileAvailabilityPolicy, protectUpstream } from './upstream-readiness
 import { compileResponseContract } from './response-contract.mjs';
 import { compileUpstreamIdempotency, configuredUpstreamIdempotency } from './upstream-idempotency-config.mjs';
 import { supportsSellerMethod } from './http-methods.mjs';
+import { createUpstreamOperationControl } from './upstream-operation-control.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
 const OWN = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
@@ -207,7 +208,8 @@ export function createUpstreamApplication(config,bindings,options={}) {
     handlers[name] = handler.admit;
     route.admit = name;
   }
-  return {config:service,handlers:Object.freeze(handlers),snapshot:() => ({
+  return {config:service,handlers:Object.freeze(handlers),
+    operationControl:createUpstreamOperationControl(compiled,originals),snapshot:() => ({
     schema:'stellar-forge.seller-upstream-availability.v1',capturedAt:new Date().toISOString(),
     bindings:Object.entries(compiled).map(([name,binding]) => ({name,method:binding.method,
       protected:binding.availability !== null,...originals[name].snapshot()})),
