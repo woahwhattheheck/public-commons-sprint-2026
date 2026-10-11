@@ -208,7 +208,12 @@ export class PythonWorkspace {
   transaction(action) {
     this.db.exec('BEGIN IMMEDIATE');
     try { const result = action(); this.db.exec('COMMIT'); return result; }
-    catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    catch (error) {
+      // SQLite may already have rolled back after a storage failure.
+      // Preserve the original failure so the operator can recover its cause.
+      try { this.db.exec('ROLLBACK'); } catch {}
+      throw error;
+    }
   }
   writable() { if (this.closing || this.closed) throw problem('WORKSPACE_CLOSING', 'The workspace is shutting down.', 409); }
   async putBlob(bytes) {
