@@ -13,6 +13,7 @@ function stageCommand(release) {
   const command = 'node release-cli.mjs stage --store ' + quoted(snapshot.root) + ' --id release-name';
   if (release?.sqlite) return command + ' --sqlite-package sqlite-workbench-export';
   if (release?.jsonrpc) return command + ' --jsonrpc-package prepared-rpc-package';
+  if (release?.redis) return command + ' --redis-package prepared-redis-package';
   if (release?.mysql) return command + ' --mysql-package prepared-mysql-package';
   if (release?.s3) return command + ' --s3-package configured-s3-package';
   if (release?.duckdb) return command + ' --duckdb-package prepared-duckdb-package --duckdb-python ' + quoted(release.duckdb.interpreter);
@@ -184,7 +185,7 @@ function renderStatus(value) {
   for (const release of value.releases) {
     const button = node('button', undefined, 'release-card'); button.dataset.id = release.id;
     button.setAttribute('aria-pressed', String(release.id === selected));
-    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
+    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.redis ? 'Redis / Valkey · ' : release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
       node('span', date(release.createdAt)), node('span', release.id === value.state.active ? 'Selected for next start' : 'Prepared'));
     button.addEventListener('click', () => choose(release.id)); list.append(button);
   }
