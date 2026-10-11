@@ -1,4 +1,5 @@
 // MIT. Editable original documents; the maintained onboarding compiler owns review.
+import { createAuthoringWorkspace } from './authoring-ui.mjs';
 const $ = id => document.getElementById(id);
 const tokenKey = 'sf105-workspace:' + location.origin;
 const fragment = location.hash.slice(1);
@@ -7,6 +8,7 @@ const token = fragment || sessionStorage.getItem(tokenKey) || '';
 const state = { saved: null, revision: 0, dirty: false, review: null, operation: 0, exportId: null,
   queries: null, plan: null, busy: false, baselineId: null, evolution: null,
   deploymentId: null, deploymentExportId: null, deploymentInspection: null };
+let authoring = null;
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function node(tag, text, className) {
@@ -59,18 +61,19 @@ async function action(message, work) {
   finally { state.busy = false; buttons(); }
 }
 function buttons() {
+  const dirty = state.dirty || authoring?.pending();
   for (const element of document.querySelectorAll('button,input,select,textarea')) {
     const selected = element.name === 'merchant-export' ? state.saved?.exports.find(item => item.id === element.value) : null;
     const staleExport = selected && (selected.unavailable || selected.inputDigest !== state.saved?.inputDigest);
     element.disabled = state.busy || element.id === 'project-id' && state.saved !== null || staleExport || element.dataset.unavailable === 'true';
   }
-  $('export').disabled = state.busy || !state.saved || state.dirty || !state.review;
-  $('start').disabled = state.busy || state.dirty || !state.saved || !state.exportId;
+  $('export').disabled = state.busy || !state.saved || dirty || !state.review;
+  $('start').disabled = state.busy || dirty || !state.saved || !state.exportId;
   $('baseline-export').disabled = state.busy || !state.baselineId;
   $('compare-evolution').disabled = state.busy || !state.saved || !state.baselineId;
-  $('prepare-evolution').disabled = state.busy || state.dirty || !state.saved || !state.evolution?.review.ready ||
+  $('prepare-evolution').disabled = state.busy || dirty || !state.saved || !state.evolution?.review.ready ||
     state.evolution.inputDigest !== state.saved.inputDigest || state.evolution.baseline.id !== state.baselineId;
-  const deployment = selectedDeployment(), saved = !state.busy && state.saved && !state.dirty;
+  const deployment = selectedDeployment(), saved = !state.busy && state.saved && !dirty;
   $('prepare-deployment').disabled = !saved || !state.deploymentExportId;
   $('deployment-export').disabled = state.busy || !state.deploymentExportId;
   $('deployment-select').disabled = state.busy || !deployment;
@@ -80,6 +83,7 @@ function buttons() {
   $('recover-deployment').disabled = !saved || !state.deploymentInspection?.pending;
   $('deployment-console').disabled = state.busy || !deployment;
   $('host-facilitator').disabled = state.busy || $('host-mode').value !== 'native';
+  authoring?.buttons();
 }
 function changed() {
   state.dirty = true; state.review = null;
@@ -87,6 +91,7 @@ function changed() {
   $('review-status').textContent = 'The draft changed. Review its current source and terms before export.';
   $('review-summary').replaceChildren();
   $('revision').textContent = state.saved ? 'Revision ' + state.revision + ' · unsaved changes' : 'Unsaved project';
+  authoring?.draftChanged();
   buttons();
 }
 function input() {
@@ -135,7 +140,7 @@ function detail(title, value) {
 }
 function renderOperation() {
   const editor = $('operation-editor'), op = state.queries?.operations?.[state.operation]; editor.replaceChildren();
-  if (!op) { empty(editor, 'Load an approved-queries document or add a query from the actual schema.'); renderRoute(); return; }
+  if (!op) { empty(editor, 'Load an approved-queries document or add a query from the actual schema.'); renderRoute(); authoring?.operationChanged(); return; }
   const grid = node('div', undefined, 'grid two');
   for (const key of ['name', 'root', 'handler', 'admission']) grid.append(control(
     { name: 'Operation name', root: 'GraphQL result root', handler: 'Native handler name', admission: 'Native admission name' }[key], op[key], value => {
@@ -171,13 +176,13 @@ function renderOperation() {
       if (value.trim()) spec.default = JSON.parse(value); else delete spec.default; syncQueries();
     })); editor.append(row);
   }
-  renderRoute();
+  renderRoute(); authoring?.operationChanged();
 }
 function renderQueries() {
   const q = state.queries;
   if (!q) {
     $('operation-select').replaceChildren();
-    empty($('operation-editor'), 'Apply valid queries JSON to use the guided editors.'); renderRoute(); return;
+    empty($('operation-editor'), 'Apply valid queries JSON to use the guided editors.'); renderRoute(); authoring?.operationChanged(); return;
   }
   for (const [id, key, fallback] of [['backend-origin', 'origin', ''], ['backend-path', 'path', '/graphql'],
     ['backend-auth', 'authorizationEnv', ''], ['backend-timeout', 'timeoutMs', 8000],
@@ -248,7 +253,7 @@ function loadDraft(saved) {
   $('review-summary').replaceChildren(); $('review-status').textContent = 'Review this saved project against its retained schema and current compiler.';
   state.baselineId = null; resetEvolution();
   if (saved.revision !== saved.currentRevision) { state.dirty = true; state.exportId = null; }
-  loadEditors(); renderExports(); renderDeployments(); buttons();
+  loadEditors(); authoring?.reset(); renderExports(); renderDeployments(); buttons();
 }
 function fresh() {
   state.saved = null; state.revision = 0; state.dirty = false; state.review = null; state.operation = 0; state.exportId = null;
@@ -261,9 +266,9 @@ function fresh() {
   $('review-status').textContent = 'Review the complete draft using its original schema and merchant compiler.';
   state.baselineId = null; resetEvolution();
   state.deploymentId = null; state.deploymentExportId = null; state.deploymentInspection = null;
-  $('history').replaceChildren(); loadEditors(); renderExports(); renderDeployments(); buttons();
+  $('history').replaceChildren(); loadEditors(); authoring?.reset(); renderExports(); renderDeployments(); buttons();
 }
-function discard() { return !state.dirty || confirm('Open another project and discard these unsaved edits?'); }
+function discard() { return !(state.dirty || authoring?.pending()) || confirm('Open another project and discard these unsaved edits?'); }
 async function projects() {
   const result = await api('/api/projects'); $('directory').textContent = result.directory; renderRuntime(result.runtime);
   const target = $('projects'); target.replaceChildren();
@@ -616,15 +621,22 @@ for (const [id, target, limit] of [['schema-file', 'schema-text', 1024 * 1024], 
   }));
 $('new-project').addEventListener('click', () => { if (discard()) { fresh(); notice('New project opened.'); } });
 $('refresh').addEventListener('click', () => action('Refreshing projects…', async () => { await projects(); notice('Projects refreshed.'); }));
-$('save').addEventListener('click', () => action('Saving private project revision…', async () => {
-  const saved = await api('/api/save', { id: $('project-id').value, input: input(), expectedRevision: state.revision });
+async function acceptProject(saved, selectedName = state.queries?.operations?.[state.operation]?.name) {
   const reviewed = state.review, compared = state.evolution; loadDraft(saved);
+  const index = state.queries?.operations?.findIndex(item => item.name === selectedName) ?? -1;
+  if (index >= 0) { state.operation = index; renderQueries(); }
   if (reviewed?.inputDigest === saved.inputDigest) { state.review = reviewed; renderReview(reviewed); }
   if (compared?.inputDigest === saved.inputDigest) {
     state.evolution = compared; state.baselineId = compared.baseline.id; renderBaselines(); renderEvolution(compared);
   }
-  await projects(); await historyList(); notice('Saved revision ' + saved.revision + '.');
-}));
+  await projects(); await historyList();
+}
+async function saveCurrentDraft() {
+  await authoring?.applyPending();
+  const saved = await api('/api/save', { id: $('project-id').value, input: input(), expectedRevision: state.revision });
+  await acceptProject(saved); notice('Saved revision ' + saved.revision + '.'); return saved;
+}
+$('save').addEventListener('click', () => action('Saving private project revision…', saveCurrentDraft));
 $('inspect-schema').addEventListener('click', () => action('Inspecting the original query service schema…', async () => {
   const result = await api('/api/schema', { schemaText: $('schema-text').value });
   $('schema-status').textContent = result.format + ' · original schema accepted';
@@ -632,6 +644,7 @@ $('inspect-schema').addEventListener('click', () => action('Inspecting the origi
   notice('Schema inspection completed.');
 }));
 $('review').addEventListener('click', () => action('Reviewing the current merchant draft…', async () => {
+  await authoring?.applyPending();
   const reviewed = await api('/api/review', { input: input() }); state.review = reviewed; renderReview(reviewed);
   notice(state.dirty || !state.saved ? 'Merchant review completed. Save this draft to export these exact contents.' : 'Merchant review completed. The saved project is ready to export.');
   $('review-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -646,6 +659,7 @@ $('baseline-export').addEventListener('change', () => {
   resetEvolution('Baseline changed. Compare the current draft with this retained merchant.'); buttons();
 });
 $('compare-evolution').addEventListener('click', () => action('Comparing the draft with the retained original merchant…', async () => {
+  await authoring?.applyPending();
   resetEvolution('Comparing current source and merchant terms…');
   const compared = await api('/api/evolution/compare', { id: state.saved.id, expectedRevision: state.revision,
     baselineExportId: state.baselineId, input: input() });
@@ -715,7 +729,41 @@ $('start').addEventListener('click', () => action('Starting the original merchan
 $('stop').addEventListener('click', () => action('Draining the managed merchant…', async () => { renderRuntime(await api('/api/stop', {})); notice('Managed merchant stopped.'); }));
 $('runtime-refresh').addEventListener('click', () => action('Refreshing runtime…', async () => { renderRuntime(await api('/api/runtime')); notice('Runtime refreshed.'); }));
 $('history-refresh').addEventListener('click', () => action('Refreshing project history…', async () => { await historyList(); notice('Project history refreshed.'); }));
-window.addEventListener('beforeunload', event => { if (state.dirty) { event.preventDefault(); event.returnValue = ''; } });
+window.addEventListener('beforeunload', event => { if (state.dirty || authoring?.pending()) { event.preventDefault(); event.returnValue = ''; } });
+authoring = createAuthoringWorkspace({ $, node, button, control, selectControl, checkControl, detail, table, api, action, notice, json,
+  buttons, input, saved: () => state.saved, revision: () => state.revision, busy: () => state.busy,
+  isDirty: () => state.dirty || authoring?.pending(), getOperation: () => state.queries?.operations?.[state.operation],
+  samples: name => state.plan?.routes?.find(route => route.operation === name)?.variables ?? {},
+  save: saveCurrentDraft, acceptProject,
+  acceptSchema(captured) {
+    $('schema-text').value = captured.schemaText; changed(); renderSchema(captured.catalog);
+    $('schema-status').textContent = 'Captured running query schema · ' + new Date(captured.capturedAt).toLocaleString();
+  },
+  applyOperation(compiled, oldName) {
+    state.queries = editorObject(compiled.queriesText, 'queries');
+    try { state.plan = editorObject($('plan-text').value, 'plan'); }
+    catch { state.plan = null; }
+    if (state.plan) {
+      state.plan.routes ??= [];
+      const routes = state.plan.routes.filter(route => route.operation === oldName);
+      if (!routes.length) {
+        const route = { id: compiled.operation.name, path: '/queries/' + compiled.operation.name,
+          operation: compiled.operation.name, serviceName: $('project-title').value, description: '',
+          variables: {}, variableDescriptions: {} };
+        state.plan.routes.push(route); routes.push(route);
+      }
+      for (const route of routes) {
+        route.operation = compiled.operation.name; route.variables = compiled.samples;
+        if (plain(route.variableDescriptions)) route.variableDescriptions = Object.fromEntries(
+          Object.entries(route.variableDescriptions).filter(([key]) => Object.hasOwn(compiled.operation.variables, key)));
+      }
+      syncPlan();
+    }
+    state.operation = state.queries.operations.findIndex(item => item.name === compiled.operation.name);
+    syncQueries(); renderQueries(); renderPlan();
+    return { examplesRetained: Boolean(state.plan) };
+  }
+});
 fresh();
 action('Opening private workspace…', async () => {
   if (!token) throw new Error('Open the complete private URL printed by the workspace launcher.');

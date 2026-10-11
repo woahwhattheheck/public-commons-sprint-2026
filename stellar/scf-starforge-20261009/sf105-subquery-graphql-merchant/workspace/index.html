@@ -27,7 +27,10 @@
 
       <section class="panel" id="schema-panel">
         <div class="panel-heading"><div><span class="step">01</span><h2>Query service schema</h2></div><label class="file-button">Load schema<input type="file" id="schema-file" accept=".graphql,.gql,.json,.txt"></label></div>
-        <p>Load the actual query service SDL, an introspection response, or its captured source envelope.</p>
+        <p>Connect to the running query service, or load its SDL, introspection response or captured source envelope.</p>
+        <div class="grid three"><label>GraphQL backend origin<input id="backend-origin" placeholder="https://indexer.example"></label><label>Backend path<input id="backend-path" placeholder="/graphql"></label><label>Authorization environment name<input id="backend-auth" placeholder="Optional environment reference"></label></div>
+        <label class="checkbox"><input id="authoring-loopback" type="checkbox">Allow a backend on 127.0.0.1 for schema capture and query previews</label>
+        <div class="toolbar"><button id="capture-schema" type="button">Capture served schema</button><span class="subtle">Sends one introspection request using the configured backend and server environment.</span></div>
         <label class="sr-only" for="schema-text">Original schema source</label><textarea id="schema-text" class="code" rows="8" spellcheck="false" placeholder="Paste the actual GraphQL query service schema"></textarea>
         <div class="toolbar"><button id="inspect-schema" type="button">Inspect schema</button><span id="schema-status"></span></div>
         <div id="schema-summary"></div>
@@ -35,11 +38,23 @@
 
       <section class="panel">
         <div class="panel-heading"><div><span class="step">02</span><h2>Approved queries</h2></div><label class="file-button">Load queries<input type="file" id="queries-file" accept=".json"></label></div>
-        <div class="grid three"><label>GraphQL backend origin<input id="backend-origin" placeholder="https://indexer.example"></label><label>Backend path<input id="backend-path" placeholder="/graphql"></label><label>Authorization environment name<input id="backend-auth" placeholder="Optional environment reference"></label></div>
         <div class="grid three compact"><label>Timeout (ms)<input id="backend-timeout" type="number" min="1" max="120000"></label><label>Maximum response bytes<input id="backend-bytes" type="number" min="1" max="1048576"></label><label>Maximum concurrent requests<input id="backend-concurrency" type="number" min="1" max="256"></label></div>
         <div class="operation-toolbar"><label>Approved operation<select id="operation-select"></select></label><button id="add-operation" type="button">Add operation</button><button id="remove-operation" type="button" class="secondary">Remove operation</button></div>
         <div id="operation-editor"></div>
+        <div class="subheading"><h3>Schema field editor</h3><button id="open-query-builder" type="button">Edit fields from schema</button></div>
+        <p id="query-builder-status" class="subtle">Choose an operation, then select its actual source fields and arguments.</p>
+        <div id="query-builder"></div>
+        <div class="toolbar"><button id="apply-query-builder" type="button" disabled>Apply query selection</button><button id="close-query-builder" type="button" class="secondary" disabled>Close field editor</button></div>
         <details><summary>Original approved-queries JSON</summary><textarea id="queries-text" class="code" rows="14" spellcheck="false"></textarea><button id="apply-queries" type="button">Apply JSON to editors</button></details>
+      </section>
+
+      <section class="panel" id="preview-panel">
+        <div class="panel-heading"><h2>Query result preview</h2><button id="refresh-previews" type="button" class="secondary">Refresh retained previews</button></div>
+        <p>Save the selected operation and request one result through its original handler. Previews use the backend's actual access and usage terms.</p>
+        <label>Preview variables (JSON object)<textarea id="preview-variables" class="code" rows="5" spellcheck="false">{}</textarea></label>
+        <div class="toolbar"><button id="preview-operation" type="button">Save and preview selected query</button><span id="preview-status" class="subtle"></span></div>
+        <div id="preview-result"></div>
+        <details><summary>Retained source requests and results</summary><div id="preview-history"></div></details>
       </section>
 
       <section class="panel">

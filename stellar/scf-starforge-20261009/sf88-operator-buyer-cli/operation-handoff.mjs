@@ -158,6 +158,18 @@ export async function readOperationHandoffBody({file}) {
   return unpackHandoff(decode(raw)).body;
 }
 
+/** Private host integration of the same validated packet. Reads once and returns
+ * original bytes and preparation; callers must not serialize this into public
+ * discovery or status. It creates no files and loads no operator credentials. */
+export async function readOperationHandoffRequest({file,directory,acceptIndex,requireCurrent=true}) {
+  path(directory);
+  need(typeof requireCurrent==='boolean','OPERATION_HANDOFF_REVIEW_MODE_INVALID');
+  const raw=await privateBytes(file,OPERATION_HANDOFF_MAX_BYTES), value=decode(raw);
+  const prepared=prepareHandoff(value,directory,acceptIndex,{requireCurrent});
+  return {...prepared,source:{file,sha256:sha256(raw),bytes:raw.length},
+    review:{...view(prepared,file,raw),acceptIndex},handoffBytes:raw};
+}
+
 /** Create-only receiver. The original review config is written last, after all
  * private inputs are durable; an interrupted import never exposes a ready config. */
 export async function importOperationHandoff({file,directory,acceptIndex}) {
