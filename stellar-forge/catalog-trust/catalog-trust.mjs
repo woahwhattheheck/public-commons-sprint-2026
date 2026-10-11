@@ -92,7 +92,10 @@ function inspectAccepts(accepts, authority) {
     if (!authority.allowedRecipients.has(term.payTo)) return reject('PAYMENT_RECIPIENT_UNAUTHORIZED', term.payTo);
     if (!authority.allowedNetworks.has(term.network)) return reject('PAYMENT_NETWORK_UNAUTHORIZED', term.network);
     if (!authority.allowedSchemes.has(term.scheme)) return reject('PAYMENT_SCHEME_UNAUTHORIZED', term.scheme);
-    const key = `${term.network}|${term.scheme}|${term.payTo}`;
+    // Match the original seller's selectable payment identity. Distinct assets
+    // on the same network/payee are alternatives; contradictory terms for one
+    // exact scheme/network/asset/payee still conflict below.
+    const key = JSON.stringify([term.scheme, term.network, term.asset, term.payTo]);
     const hash = digest(term);
     if (seen.has(key) && seen.get(key) !== hash) return reject('PAYMENT_TERM_CONFLICT', key);
     seen.set(key, hash);
