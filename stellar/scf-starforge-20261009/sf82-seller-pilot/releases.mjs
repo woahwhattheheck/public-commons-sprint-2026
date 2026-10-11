@@ -1,4 +1,4 @@
-// MIT. Version and operate original SF61 exports through the original SF82 launcher.
+// MIT. Version original SF61 exports and SF30 Python projects through SF82.
 import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { join, resolve, dirname } from 'node:path';
@@ -7,11 +7,13 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { upstreamReleaseSnapshot, stageReleaseUpstreams, inspectReleaseUpstreams, readReleaseWorkspace } from './release-upstreams.mjs';
 import { releaseCacheControlPath } from './release-cache.mjs';
+import { PYTHON_SOURCE_SCHEMA, stagePythonRelease, inspectPythonRelease } from './release-python.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
 const RUN = 'stellar-forge.seller-release-process.v1';
 const PILOT = fileURLToPath(new URL('./pilot.mjs', import.meta.url));
+const PYTHON_PILOT = fileURLToPath(new URL('./release-python.mjs', import.meta.url));
 const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
 const LIMIT = 4 * 1024 * 1024;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -180,8 +182,14 @@ function runtimeOptions(value = {}) {
   return result;
 }
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
-  const manifestBytes = await regular(join(path, 'manifest.json'), 65536);
+  const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
   const manifest = JSON.parse(manifestBytes);
+  if (manifest.schema === PYTHON_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('A Python release owns its original application bindings.');
+    const snapshot = await inspectPythonRelease(path);
+    return { ...snapshot, routes: sourceRoutes(snapshot.service, new Map(), null, snapshot.python), hasApplication: true };
+  }
+  if (manifestBytes.length > 65536) throw new RangeError('Original SF61 manifest exceeds its 65536-byte limit.');
   const offersBytes = await regular(join(path, 'offers.json'));
   const serviceBytes = await regular(join(path, 'seller-service.json'), 1024 * 1024);
   if (manifest.schema !== 'stellar.open-api-seller-manifest.v1' ||
@@ -205,7 +213,12 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
     if (hash(bytes) !== asset.sha256) throw new Error('Response snapshot changed: ' + asset.file);
     snapshots.set(asset.file, asset.sha256); files.push({ file: asset.file, sha256: asset.sha256, bytes: bytes.length });
   }
-  const routes = service.routes.map(route => {
+  const routes = sourceRoutes(service, snapshots, upstream);
+  const hasApplication = service.routes.some(route => route.handler || route.admit);
+  return { manifest, offers, service, files: files.sort((a, b) => a.file.localeCompare(b.file)), routes, hasApplication };
+}
+function sourceRoutes(service, snapshots, upstream = null, python = null) {
+  return service.routes.map(route => {
     if (route.responseFile && !snapshots.has(route.responseFile)) throw new Error('Unpinned response file: ' + route.id);
     if (!route.offer || typeof route.offer.extensions?.bazaar?.info?.input?.method !== 'string')
       throw new TypeError('Release route must use an original imported SF61 offer.');
@@ -221,18 +234,18 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
       requestContractSha256: hash(stable(route.offer.extensions.bazaar)),
       application: { handler: route.handler ?? null, admit: route.admit ?? null, validateInput: route.validateInput ?? false,
         configurationSha256: hash(stable(configuration)),
+        ...(python ? { pythonExecutionSha256: python.executionSha256 } : {}),
         responseSha256: route.responseFile ? snapshots.get(route.responseFile) :
           Object.hasOwn(route, 'response') ? hash(stable(route.response)) : null } };
   });
-  const hasApplication = service.routes.some(route => route.handler || route.admit);
-  return { manifest, offers, service, files: files.sort((a, b) => a.file.localeCompare(b.file)), routes, hasApplication };
 }
 function publicRelease(record) {
   return { id: record.id, label: record.label, createdAt: record.createdAt,
     digest: record.digest, publicOrigin: record.publicOrigin, routes: record.routes,
     runtime: record.runtime, handlerEntry: record.handlerEntry,
     mode: record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
-    source: record.source, ...(record.inputPackage ? { inputPackage: record.inputPackage } : {}) };
+    source: record.source, ...(record.inputPackage ? { inputPackage: record.inputPackage } : {}),
+    ...(record.python ? { python: record.python } : {}) };
 }
 async function releaseRecord(root, releaseId, verify = false) {
   const path = join(resolve(root), 'releases', id(releaseId)); await directory(path);
@@ -242,7 +255,8 @@ async function releaseRecord(root, releaseId, verify = false) {
     throw new Error('Release metadata changed or belongs to a different release.');
   if (verify) {
     const snapshot = await sourceSnapshot(path, record.runtime.upstreams, record.runtime.allowLoopbackUpstream === true);
-    if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes))
+    if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes) ||
+        stable(snapshot.python ?? null) !== stable(record.python ?? null))
       throw new Error('Release files changed after staging. Restore the selected immutable release.');
     if (record.handlerEntry && hash(await regular(record.handlerEntry.path)) !== record.handlerEntry.sha256)
       throw new Error('Trusted handler entry changed after staging. Restore it or stage a new release.');
@@ -254,6 +268,11 @@ async function releaseRecord(root, releaseId, verify = false) {
 export async function stageRelease(root, options) {
   root = resolve(root); await readReleaseState(root);
   const releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
+  const pythonSource = options.python !== undefined;
+  if (pythonSource && (['workspace', 'spec', 'config', 'bindings', 'upstreams'].some(key => options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose a Python merchant declaration or an OpenAPI source; Python owns its original application bindings.');
+  if (options.pythonRoot !== undefined && !pythonSource) throw new TypeError('pythonRoot requires a Python merchant declaration.');
   if (options.workspace && (['spec', 'config', 'bindings', 'upstreams'].some(key => options[key] !== undefined) || options.runtime?.handlers))
     throw new TypeError('Choose --workspace or explicit source inputs for this release.');
   const workspace = options.workspace ? await readReleaseWorkspace(options.workspace) : null;
@@ -266,9 +285,12 @@ export async function stageRelease(root, options) {
   const temp = join(root, 'releases', '.stage-' + randomUUID());
   let committed = false;
   try {
-    const compile = (await import('../sf61-openapi-seller-import/cli.mjs')).run;
-    await compile(['--spec', resolve(inputs.spec), '--config', resolve(inputs.config),
-      '--service-bindings', resolve(inputs.bindings), '--out', temp]);
+    if (pythonSource) await stagePythonRelease(temp, options.python, { sourceRoot: options.pythonRoot });
+    else {
+      const compile = (await import('../sf61-openapi-seller-import/cli.mjs')).run;
+      await compile(['--spec', resolve(inputs.spec), '--config', resolve(inputs.config),
+        '--service-bindings', resolve(inputs.bindings), '--out', temp]);
+    }
     let source = await sourceSnapshot(temp);
     if (inputs.upstreams) {
       runtime.upstreams = await stageReleaseUpstreams(temp, resolve(inputs.upstreams), source.service,
@@ -280,7 +302,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -291,9 +313,12 @@ export async function stageRelease(root, options) {
     const content = { schema: RELEASE, id: releaseId, label, createdAt: new Date().toISOString(),
       publicOrigin: source.service.publicOrigin, runtime, handlerEntry, files: source.files, routes: source.routes,
       ...(workspace ? { inputPackage: workspace.provenance } : {}),
+      ...(source.python ? { python: source.python } : {}),
       source: { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256,
-        specSha256: source.manifest.specSha256, selectionsSha256: source.manifest.selectionsSha256,
-        serviceBindingsSha256: source.manifest.serviceBindingsSha256 } };
+        ...(source.python ? { kind: 'PYTHON_APPLICATION', declarationSha256: source.python.configSha256,
+          applicationSha256: source.python.applicationSha256, sourceSha256: source.python.sourceSha256 }
+          : { specSha256: source.manifest.specSha256, selectionsSha256: source.manifest.selectionsSha256,
+            serviceBindingsSha256: source.manifest.serviceBindingsSha256 }) } };
     const record = { ...content, digest: hash(stable(content)) };
     await writeNew(join(temp, 'release.json'), record);
     await mutate(root, async () => {
@@ -346,6 +371,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
   }
   if (before?.handlerEntry?.sha256 !== after.handlerEntry?.sha256)
     runtimeChanges.push({ field: 'handlerEntrySha256', before: before?.handlerEntry?.sha256 ?? null, after: after.handlerEntry?.sha256 ?? null });
+  if (stable(before?.python ?? null) !== stable(after.python ?? null))
+    runtimeChanges.push({ field: 'python', before: before?.python ?? null, after: after.python ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
     summary: { added: changes.filter(c => c.state === 'ADDED').length,
       removed: changes.filter(c => c.state === 'REMOVED').length,
@@ -440,18 +467,29 @@ export async function releaseStatus(root) {
 // its private cache controls attach before the release reports readiness.
 
 /** Spawn the ORIGINAL foreground launcher so each run gets fresh application imports. */
-export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs = 70000, expectedGeneration, handleSignals = true } = {}) {
+export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs, expectedGeneration, handleSignals = true } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 120000 ||
-      !Number.isInteger(shutdownGraceMs) || shutdownGraceMs < 1000 || shutdownGraceMs > 120000)
+      shutdownGraceMs !== undefined && (!Number.isInteger(shutdownGraceMs) || shutdownGraceMs < 1000 || shutdownGraceMs > 120000))
     throw new TypeError('Startup and shutdown timeouts must be 1000–120000 ms.');
   if (expectedGeneration !== undefined && (!Number.isSafeInteger(expectedGeneration) || expectedGeneration < 0))
     throw new TypeError('expectedGeneration must be the nonnegative integer shown by release status.');
   if (typeof handleSignals !== 'boolean') throw new TypeError('handleSignals must be a boolean.');
   const releaseLock = await lock(root, 'run.lock');
   let child, observation, closing, finishing, stopping, completion, startupTimer, failure;
+  let ownsPythonGroup = false, effectiveShutdownGraceMs = shutdownGraceMs ?? 70000;
   let exited = Promise.resolve(), exitSettled = true, shutdownRequested = null, rejectReady = () => {};
   let exitCode = null, exitSignal = null;
+  const forceOwnedChild = () => {
+    if (!child?.pid) return;
+    // Python workers inherit this specifically owned detached process group.
+    // Keep graceful SIGTERM on its leader so the seller can drain first; a hard
+    // deadline or failed leader must not leave those workers serving in limbo.
+    if (ownsPythonGroup && process.platform !== 'win32') {
+      try { process.kill(-child.pid, 'SIGKILL'); }
+      catch (error) { if (error.code !== 'ESRCH') failure ??= 'Could not stop the owned Python process group.'; }
+    } else if (!exitSettled) child.kill('SIGKILL');
+  };
   const stopChild = (signal = 'SIGTERM') => {
     if (stopping) return stopping;
     stopping = (async () => {
@@ -459,8 +497,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       if (child?.pid && !exitSettled) {
         child.kill(signal);
         forceTimer = setTimeout(() => {
-          if (!exitSettled) { forced = true; child.kill('SIGKILL'); }
-        }, shutdownGraceMs);
+          if (!exitSettled) { forced = true; forceOwnedChild(); }
+        }, effectiveShutdownGraceMs);
       }
       try { await exited; } finally { clearTimeout(forceTimer); }
       return { forced, exitCode, exitSignal };
@@ -500,6 +538,9 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
         (previous.host === undefined || previous.host === hostname()) && alive(previous.pid))
       throw Object.assign(new Error('The previously recorded seller process is still present. This manager cannot start a duplicate or stop a process it does not own.'), { code: 'RELEASE_BUSY' });
     const { record, path } = await releaseRecord(root, state.active, true);
+    ownsPythonGroup = Boolean(record.python);
+    if (ownsPythonGroup && shutdownGraceMs === undefined)
+      effectiveShutdownGraceMs = Math.max(70000, 60000 + record.python.shutdownTimeoutMs + 5000);
     // Replace only original mutable runtime settings, never compiled source. This
     // prevents a previous manual resume override from leaking into the release.
     const originalOptions = { ...record.runtime, port: String(record.runtime.port) };
@@ -510,7 +551,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
+    child = spawn(process.execPath, [CHILD, record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     let readyResolve, readyReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
@@ -521,6 +562,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       const settle = () => { if (!exitSettled) { exitSettled = true; done(); } };
       child.on('error', error => { failure ??= error.message; readyReject(error); if (!child.pid) settle(); });
       child.once('exit', (code, signal) => { exitCode = code; exitSignal = signal;
+        if (ownsPythonGroup && (signal || code !== 0)) forceOwnedChild();
         readyReject(new Error('Original seller exited before startup (code ' + code + ', signal ' + signal + '). ' + stderr.slice(-2000))); settle(); });
     });
     if (handleSignals) { process.on('SIGINT', onInterrupt); process.on('SIGTERM', onTerminate); }
