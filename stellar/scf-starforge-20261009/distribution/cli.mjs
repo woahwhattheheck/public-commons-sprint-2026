@@ -67,6 +67,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   fleet-release                              Stage, compare and operate original releases across a fleet
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
+  merchant-accounting-recovery                Recover an original completed purchase and saved response
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   merchant-readiness                         Review every configured Stellar receiving account
