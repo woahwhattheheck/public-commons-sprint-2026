@@ -225,7 +225,8 @@ export async function restoreAccountingWorkspace({bundle,expectedSha256,director
     await directories(stateRoot,directory,{create:true});await privateRoot(directory);lease=await acquireStateLease(directory);
     const markerPath=join(directory,RESTORE_MARKER),markerInfo=await info(markerPath),identity=receipt.manifestSha256;
     if(markerInfo){const marker=await readJSON(markerPath,16_000);need(marker.schema===RESTORE&&marker.manifestSha256===identity&&marker.directory===directory&&marker.stateRoot===stateRoot,'ACCOUNTING_RECOVERY_OTHER_RESTORE','Resume the backup recorded by this workspace before selecting another restore.');
-      for(const item of entries.filter(e=>e.kind==='file')){const path=partialPath(item,identity),st=await info(path);if(st){need(regular(st)&&(st.mode&0o077n)===0n,'ACCOUNTING_RECOVERY_PARTIAL','An unfinished restore file is unsafe.');await unlink(path);}}
+      for(const item of entries.filter(e=>e.kind==='file')){if(!(await directories(stateRoot,dirname(item.destination))))continue;
+        const path=partialPath(item,identity),st=await info(path);if(st){need(regular(st)&&(st.mode&0o077n)===0n,'ACCOUNTING_RECOVERY_PARTIAL','An unfinished restore file is unsafe.');await unlink(path);}}
     }
     const expected=new Map(entries.map(item=>[item.destination,item])),exclude=new Set([markerPath]),versions=new Map();
     const existing=await inventory(roots,extras,stateRoot,{missing:true,signal,exclude});

@@ -204,8 +204,9 @@ state root:
 | Connected original recovered-settlement collection | Existing transfer proofs, receipt identities and exact delivered response bytes |
 | Files explicitly referenced by saved original recovery requests | The outcome, approved request, terms and optional response required to reuse a retained recovery review |
 
-Unrelated deployment files, signer keys and host credentials are outside that
-selection. Keep their established private operational backup separately. A
+Other files elsewhere under the state root are not scanned. Keep signer keys
+and host credentials outside these accounting source paths and preserve their
+established private operational backup separately. A
 source configured outside the selected state root is reported before capture;
 select the correct common private ancestor instead of rewriting its saved path.
 
