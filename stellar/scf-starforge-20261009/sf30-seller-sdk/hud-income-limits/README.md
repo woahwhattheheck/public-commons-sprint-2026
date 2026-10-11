@@ -75,9 +75,47 @@ Use Linux with Node 22.16+ and util-linux `flock`. Workbook intake also needs Py
 
 The implementation reads the maintained `dataset-refresh/workbook/reader.py` through a fixed source URL. The HUD worker receives the original workbook on file descriptor 3, an exclusive JSONL output on descriptor 4, and the trusted original reader source on descriptor 5. The request contains the retained workbook hash/size and fiscal year. The worker uses the original `Workbook` class and exact source cells; it never supplies a new XML/Excel parser.
 
-The authored dependency join used reader Git blob `226dd5862de8630735a57abb7c2493cf8df7bbe9`, SHA-256 `e4a18cbd7169566b61b2658baa62d33d8706dd0921941a62f10cc79c5a952cc5`, and the original SF82 `release-dataset.mjs` interface at source `3bd8231c7837ec578a2a404a0ce24085094092bc`. Distribution owners include those maintained files through their original source registrations.
+The authored dependency join uses the original reader Git blob `226dd5862de8630735a57abb7c2493cf8df7bbe9`, SHA-256 `e4a18cbd7169566b61b2658baa62d33d8706dd0921941a62f10cc79c5a952cc5`, and the maintained SF82 `release-dataset.mjs` adapter from PR1363. That adapter keeps the original version controller and explicitly selects its loopback control transport. Distribution owners include these maintained files through their original source registrations.
 
 The merchant path uses the existing selected SF30 runtime dependencies, including its original Stellar/x402 packages and validators. Reuse a complete installed source/runtime profile. Preserve the profile lockfile and source manifest when moving this workspace to another host.
+
+## Installed command and module imports
+
+The maintained merchant package exposes this same application:
+
+```bash
+starforge hud-income-limits --help
+starforge hud-income-limits init --workspace /srv/starforge/hud-operator
+starforge hud-income-limits serve --workspace /srv/starforge/hud-operator --port 8458
+```
+
+Every argument is forwarded unchanged to this component's original `cli.mjs`. The remaining direct-source examples use `node cli.mjs`; replace that prefix with `starforge hud-income-limits` when using the installed package.
+
+The package exports the original modules without an additional wrapper or workspace:
+
+| Package import suffix after `@tokenjunkielabs/starforge-merchant` | Original module |
+|---|---|
+| `/seller/hud-income-limits` | `application.mjs`: open and recover the complete operator workspace |
+| `/seller/hud-income-limits/source` | `release.mjs`: retain, inspect, compare and transfer published releases |
+| `/seller/hud-income-limits/contract` | `contract.mjs`: reviewed source, selection and field contracts |
+| `/seller/hud-income-limits/publisher` | `driver.mjs`: open the original source dataset publisher with this adapter |
+| `/seller/hud-income-limits/workspace` | `server.mjs`: serve the same application's local authenticated desk |
+| `/seller/hud-income-limits/customer` | `delivery.mjs`: original publication handover and buyer preparation |
+| `/seller/hud-income-limits/releases` | `sf82.mjs`: prepare and operate the original managed dataset releases |
+
+```js
+import { openHudApplication } from '@tokenjunkielabs/starforge-merchant/seller/hud-income-limits';
+
+const application = await openHudApplication({
+  directory: '/srv/starforge/hud-operator',
+  python: '/usr/bin/python3'
+});
+try {
+  console.log(await application.status());
+} finally {
+  await application.close();
+}
+```
 
 ## Start a workspace
 

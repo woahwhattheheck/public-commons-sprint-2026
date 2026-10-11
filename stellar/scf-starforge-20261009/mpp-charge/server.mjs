@@ -10,6 +10,8 @@ import { merchantConfig, buyerConfig, MAX_BODY, absolute } from './config.mjs';
 import { createMerchant, storedResponse } from './merchant.mjs';
 import { preparePurchase, executePurchase, finalizePurchase, purchaseView } from './buyer.mjs';
 import { versions } from './runtime.mjs';
+import { merchantContract, contractOpenAPI } from './customer/contract.mjs';
+import { createCustomerBundle } from './customer/export.mjs';
 
 const uiRoot=new URL('./public/',import.meta.url);
 function portNumber(value) {
@@ -52,6 +54,12 @@ export async function serveMerchant({workspace,profile,port=8788,environment=pro
       requireValue(url.origin===merchant.config.publicOrigin,'MPP_MERCHANT_ORIGIN_INVALID');
       if(request.method==='GET' && url.pathname==='/_mpp/health') {
         await send(response,Response.json({status:'ready',title:merchant.config.title,profileId:merchant.profileId}));return;
+      }
+      if(request.method==='GET' && ['/_mpp/contract','/_mpp/openapi.json'].includes(url.pathname)) {
+        const contract=merchantContract(merchant.config);
+        const document=url.pathname==='/_mpp/contract'?contract:contractOpenAPI(contract);
+        await send(response,Response.json(document,{headers:{'etag':'"'+contract.sha256+'"',
+          'cache-control':'public, max-age=0, must-revalidate','x-content-type-options':'nosniff'}}));return;
       }
       if(request.method==='GET' && url.pathname==='/_mpp/offers') {
         await send(response,Response.json({schema:'stellar-forge.mpp-offers.v1',title:merchant.config.title,
@@ -133,6 +141,26 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
       }
       authorized(request);
       if(request.method==='GET' && url.pathname==='/api/state') {await send(response,Response.json(await snapshot()));return;}
+      if(request.method==='GET' && ['/api/customer','/api/customer/contract','/api/customer/openapi','/api/customer/package'].includes(url.pathname)) {
+        requireValue([...url.searchParams.keys()].every(key=>key==='profileId') &&
+          url.searchParams.getAll('profileId').length<=1,'MPP_CUSTOMER_SELECTION_INVALID');
+        const profile=merchantServer?.merchant.config??await workspace.profile('merchant');
+        requireValue(profile,'MPP_MERCHANT_PROFILE_REQUIRED',409);
+        const contract=merchantContract(profile),selected=url.searchParams.get('profileId');
+        requireValue(!selected || selected===contract.profileId,'MPP_CUSTOMER_PROFILE_CHANGED',409);
+        const profileSource=merchantServer?'active':'saved';
+        if(url.pathname==='/api/customer') {
+          await send(response,Response.json({profileSource,contract,publicContract:contract.origin+'/_mpp/contract',
+            publicOpenAPI:contract.origin+'/_mpp/openapi.json'},{headers:{'cache-control':'no-store'}}));return;
+        }
+        const kind=url.pathname.split('/').at(-1);
+        const document=kind==='contract'?contract:kind==='openapi'?contractOpenAPI(contract):
+          await createCustomerBundle({contract});
+        const name='mpp-'+kind+'-'+contract.sha256.slice(0,12)+'.json';
+        await send(response,new Response(json(document),{headers:{'content-type':'application/json; charset=utf-8',
+          'content-disposition':'attachment; filename="'+name+'"','cache-control':'private, no-store',
+          'x-content-type-options':'nosniff'}}));return;
+      }
       const download=/^\/api\/(purchases|deliveries)\/([^/]+)\/response$/.exec(url.pathname);
       if(request.method==='GET' && download) {
         const record=await workspace.read(download[1],decodeURIComponent(download[2]));

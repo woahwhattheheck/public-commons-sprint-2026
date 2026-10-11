@@ -69,6 +69,7 @@ function inspectBytes(bytes, service, allowLoopback) {
       idempotency: raw.idempotency ?? null,
       cache: raw.cache ?? null,
       ...(raw.oauth2 === undefined ? {} : { oauth2: raw.oauth2 }),
+      ...(raw.oauthConnection === undefined ? {} : { oauthConnection: raw.oauthConnection }),
     };
   }
   return { bindings, environment: references, credentialValuesChecked: false };
