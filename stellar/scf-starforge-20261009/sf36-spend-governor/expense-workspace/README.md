@@ -16,6 +16,8 @@ python3 stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/ser
 
 Open the complete private URL printed by the server. It listens on 127.0.0.1 with a fresh capability for that process. Keep the process open while working; use Ctrl-C to finish accepted requests and release its writer lease.
 
+With the maintained Starforge package, the original command is `starforge buyer-expenses --state /absolute/private/buyer-expenses --port 0`. Its fixed Node forwarder runs this same Python server and preserves arguments, signals and exit status.
+
 Use a new private directory with mode 0700, separate from the buyer. An existing expense project opens in the same way. Opening a saved project reads its operator state without touching its source ledgers.
 
 ## Complete operating flow
@@ -101,6 +103,7 @@ The whole source lives inside SF36, so the maintained distribution's existing SF
 | `exports.py` | Frozen accountant HTML, CSV, JSON and source packet |
 | `portable.py` | Included-source, consistent private receiving package |
 | `server.py` | Loopback capability interface and graceful lifetime |
+| `cli.mjs` | Installed command forwarding to the same Python entrypoint |
 | `public/` | Operator source review, expense coding and period UI |
 
 The original source contract is documented in [STATEMENTS.md](../STATEMENTS.md). The native buyer ledger remains authoritative for payment and finality.

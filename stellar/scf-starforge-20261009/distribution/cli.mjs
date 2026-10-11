@@ -22,6 +22,9 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  sftp                                      Inspect, capture and resume pinned private report files
+  sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
+  sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
   provider-operator                          Original external-provider capture, case and terminal workflow
   provider-workspace                         Retained provider desk, host profiles and complete case recovery
   runtime-profile                            Select exact dependencies for an original release
@@ -52,10 +55,12 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-host                             Install, observe and recover the original Linux merchant group
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
+  buyer-expenses                            Allocate native buyer expenses and issue accountant periods
   routescan-merchant  Configure, preview and operate the original Routescan gas-data merchant
   routescan-workspace Operate its saved project through the original local workspace
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations
@@ -81,7 +86,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
-  openapi-workspace                          Prepare and operate a merchant from its API contract
+  openapi-workspace                          Import an API contract or Postman collection and operate its merchant
+  openapi postman                            Review collections, retain source and create merchant packages
+  openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
   duckdb-prepare                             Prepare, verify and reopen native data packages
   duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant
@@ -113,6 +120,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-pricing                Import a saved original pricing report as accounting terms
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
+  merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases

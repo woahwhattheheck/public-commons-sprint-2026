@@ -8,7 +8,7 @@ import tempfile
 import zipfile
 
 APP_FILES = ("native.py", "domain.py", "store.py", "exports.py", "portable.py", "server.py",
-             "public/index.html", "public/app.mjs", "public/style.css", "README.md")
+             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs")
 PREPARE = '''from pathlib import Path,PurePosixPath
 import hashlib,json,os
 root=Path(__file__).resolve().parent
