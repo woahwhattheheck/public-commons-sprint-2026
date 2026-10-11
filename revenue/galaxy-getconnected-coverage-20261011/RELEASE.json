@@ -1,0 +1,18 @@
+{
+  "schema": "shiftloom.coverage-release.v1",
+  "source_commit": "77a337de930b39ed0ba4e81272e7845a3d2aabd3",
+  "filename": "Get_Connected_Coverage_Workspace_20261011.zip",
+  "bytes": 149800,
+  "sha256": "c43fd4b34c404d51de15f1b4c0ea7624c36a18eeee2aa5a70edfeced68abcb83",
+  "files": 33,
+  "expanded_bytes": 512151,
+  "installed_operation": {
+    "status": "PASS",
+    "completed_at": "2026-10-11T20:30:07.080472+00:00",
+    "all_manifest_bytes_verified": true,
+    "fresh_example_revision": 11,
+    "retained_datasets": 5,
+    "http_start_and_state": "PASS",
+    "original_availability_bom_preserved": true
+  }
+}
