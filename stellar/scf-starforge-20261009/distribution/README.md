@@ -2787,6 +2787,11 @@ node stellar/scf-starforge-20261009/distribution/build.mjs \
   --out /absolute/new-release-directory --ref HEAD
 ```
 
+For partial-clone acquisition, cached batch reads, offline rebuilding and native
+phase progress, use the [release-building guide](BUILDING.md). The final receipt
+includes source acquisition counts and timing alongside the original archive
+identity.
+
 This packaging command needs Node, npm and Git. It reads only the chosen commit
 through Git, independently of modified or untracked worktree files. It copies
 explicit product components and their required shared schema/Python modules,
