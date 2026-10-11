@@ -1,0 +1,6 @@
+{
+  "pagination": {
+    "cursor": "REPLACE_WITH_CURSOR_FROM_ACTUAL_PREVIOUS_PAGE",
+    "limit": 100
+  }
+}
