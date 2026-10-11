@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.api-merchant-plan.v1",
+  "sellerServer": "https://merchant.example/api",
+  "serviceName": "Finite stream example",
+  "payment": {
+    "network": "stellar:testnet",
+    "asset": "DEMO_NONPAYABLE_ASSET",
+    "payTo": "DEMO_NONPAYABLE_RECIPIENT",
+    "maxTimeoutSeconds": 180,
+    "paymentFlow": "authorization"
+  },
+  "allowLoopbackUpstream": true,
+  "operations": [
+    {
+      "id": "answer_stream", "method": "POST", "path": "/answer", "amountAtomic": "10000",
+      "responseMode": "sse", "responseValidation": "none", "timeoutMs": 3000,
+      "stream": {"maxBytes": 1048576, "maxDurationMs": 30000, "idleTimeoutMs": 5000}
+    },
+    {
+      "id": "record_stream", "method": "GET", "path": "/records", "amountAtomic": "10000",
+      "responseMode": "ndjson", "responseValidation": "none", "timeoutMs": 3000,
+      "stream": {"maxBytes": 1048576, "maxDurationMs": 30000, "idleTimeoutMs": 5000}
+    }
+  ]
+}

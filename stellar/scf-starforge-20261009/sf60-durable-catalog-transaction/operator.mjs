@@ -236,6 +236,9 @@ export async function openCatalogOperator({ directory, policyFile, port = 0, cre
           input.catalogKey.length > 4096) fail('CATALOG_KEY_INVALID');
       return { journalHead: catalog.head, current: catalog.lookupCatalogKey(input.catalogKey) };
     }
+    if (command.operation === 'inspect-revisions') {
+      return { ...catalog.inspectRevisions(input), policySha256: policy.sourceSha256 };
+    }
     if (command.operation === 'history') {
       fields(input, ['lifecycleId']);
       if (typeof input.lifecycleId !== 'string' || !input.lifecycleId.length ||
@@ -468,7 +471,10 @@ export async function openCatalogOperator({ directory, policyFile, port = 0, cre
  * its outcome unknown; inspect status/lookup/history instead of blind retries.
  */
 export async function requestCatalogOperator({ directory, operation, input = {},
-  requestId = randomUUID(), timeoutMs = 30000 } = {}) {
+  requestId = randomUUID(), timeoutMs = 30000, signal } = {}) {
+  if (signal !== undefined && !(signal instanceof AbortSignal)) fail('ABORT_SIGNAL_REQUIRED');
+  const abortError = () => Object.assign(new Error('LOCAL_OPERATOR_ABORTED'), { commandSent: false, requestId });
+  if (signal?.aborted) throw abortError();
   const target = resolve(directory), socketPath = join(target, SOCKET_NAME);
   const meta = await lstat(target);
   if (!meta.isDirectory() || meta.isSymbolicLink() || await realpath(target) !== target ||
@@ -492,6 +498,7 @@ export async function requestCatalogOperator({ directory, operation, input = {},
         (process.getuid && socketMeta.uid !== process.getuid())) fail('OWNED_PRIVATE_OPERATOR_SOCKET_REQUIRED');
     destination = { socketPath };
   }
+  if (signal?.aborted) throw abortError();
   if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 120000) fail('TIMEOUT_INVALID');
   const body = JSON.stringify({ schema: CONTROL_SCHEMA, requestId, operation, input });
   if (Buffer.byteLength(body) > MAX_COMMAND) fail('COMMAND_TOO_LARGE');
@@ -500,6 +507,7 @@ export async function requestCatalogOperator({ directory, operation, input = {},
     const finish = (error, value) => {
       if (settled) return;
       settled = true; clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
       if (error) {
         error.commandSent = sent;
         error.requestId = requestId;
@@ -529,10 +537,13 @@ export async function requestCatalogOperator({ directory, operation, input = {},
         } catch (error) { finish(error); }
       });
     });
+    const onAbort = () => req.destroy(abortError());
     const timer = setTimeout(() => req.destroy(new Error('LOCAL_OPERATOR_TIMEOUT')), timeoutMs);
     req.on('finish', () => { sent = true; });
     req.on('error', error => finish(error));
-    req.end(body);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (signal?.aborted) onAbort();
+    else req.end(body);
   });
 }
 

@@ -61,6 +61,11 @@ class Buyer:
         from .recovery import WorkspaceRecovery
         return WorkspaceRecovery.from_buyer(self)
 
+    def acquisitions(self, **options):
+        """Open the original acquisition workspace using this native runtime."""
+        from .acquisitions import AcquisitionWorkspace
+        return AcquisitionWorkspace.from_buyer(self, **options)
+
     def operation(self, intent_id: str):
         return Operation(self, intent(intent_id))
 

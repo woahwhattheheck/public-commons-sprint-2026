@@ -4,8 +4,27 @@
   "description": "Durable Node applications using the original Stellar Forge SF88 buyer runtime",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=22" },
-  "exports": { ".": { "types": "./index.d.mts", "import": "./index.mjs" } },
-  "files": ["*.mjs", "index.d.mts", "README.md", "OBJECTS.md", "STREAMS.md", "ACCOUNTING.md", "RECOVERY.md", "INBOX.md", "examples"],
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.mts",
+      "import": "./index.mjs"
+    }
+  },
+  "files": [
+    "*.mjs",
+    "index.d.mts",
+    "README.md",
+    "OBJECTS.md",
+    "STREAMS.md",
+    "ACCOUNTING.md",
+    "RECOVERY.md",
+    "INBOX.md",
+    "WORKSPACE.md",
+    "ACQUISITIONS.md",
+    "examples"
+  ],
   "sideEffects": false
 }
