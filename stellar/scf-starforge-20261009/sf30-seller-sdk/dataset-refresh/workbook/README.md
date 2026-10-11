@@ -56,7 +56,7 @@ XLSX parsing never follows external relationships, loads macros or evaluates exp
 
 ## Source update and restart
 
-Upload a changed workbook as a **new immutable source**. Select a saved mapping from the original source as a starting point, inspect the new workbook's actual sheet/range/cells, and save a new source-bound plan. Earlier originals, plan editions, candidates, publication outcomes and buyer files remain available.
+Upload a changed workbook as a **new immutable source**. Use **Review workbook updates** to carry forward a saved mapping, inspect actual sheet/header/column changes, compare both complete selections by declared row keys, and adopt the reviewed replacement mapping. The [workbook edition guide](../workbook-comparison/README.md) covers the screen, complete row/cell review, saved comparisons, restart recovery and same-session CLI. Earlier originals, plan editions, candidates, publication outcomes and buyer files remain available.
 
 Publishing or rollback may advance the current native revision. A mapping saved against an older publication can reopen an already prepared candidate. Preparing a new candidate requires an explicit new mapping review against the displayed current native schema. A status refresh does not silently rebase the candidate or plan.
 

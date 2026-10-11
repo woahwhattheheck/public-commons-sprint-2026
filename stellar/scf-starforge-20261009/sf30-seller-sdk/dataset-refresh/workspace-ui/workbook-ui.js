@@ -310,5 +310,5 @@ function createWorkbookControls(host) {
     const origin=state().draft?.workbookSource;if(!origin)return;
     host.action('Opening the selected candidate’s retained original source…',()=>openSource(origin.sourceId,origin.planId,origin.planRevision));
   });
-  return {accept,controls,error};
+  return {accept,controls,error,openSource};
 }
