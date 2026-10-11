@@ -6,6 +6,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { splitAuthenticateChallenges } from './split-auth-challenges.mjs';
 
 const MAX_CAPTURE_BYTES = 262144;
 const MAX_HEADER_BYTES = 16384;
@@ -165,7 +166,7 @@ export function inspectCapture(input,{rawBytes}={}) {
   const headers = headersOf(input);
   const xValues = headers.get('payment-required') ?? [];
   const authValues = headers.get('www-authenticate') ?? [];
-  const mppCandidates = authValues.filter(h => /^\s*Payment(?:\s+|$)/i.test(h));
+  const mppCandidates = authValues.flatMap(splitAuthenticateChallenges).filter(h => /^\s*Payment(?:\s+|$)/i.test(h));
   const report = {
     schema:'scf.sf84.market-intake.v1',
     capturedSha256:hash(rawBytes ?? JSON.stringify(input)),
