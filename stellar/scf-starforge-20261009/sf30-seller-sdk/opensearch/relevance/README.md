@@ -142,3 +142,16 @@ await workspace.close();
 ```
 
 The HTTP workspace exposes these same methods under its existing loopback-origin and request-token checks. The relevance store uses the original workspace database and request journal; it adds no independent service or external persistence dependency.
+
+## Run the complete native operator handoff
+
+The existing public-playground receiver can run this full workflow in one process tree:
+
+```sh
+python3 stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/run-playground.py \
+  --journey relevance --directory /absolute/private/relevance-receiving
+```
+
+It uses the retained seven-document native flight cohort and verifies the SHA-256 of its original result bytes before deriving judgments. The engineering example grades flights at or below the cohort's median `AvgTicketPrice` as relevant, then evaluates native ascending and descending price variants over exactly those document IDs. The saved criterion, original records, native response, case coverage and same-snapshot comparison accompany the customer exports. `STARFORGE_OPENSEARCH_COHORT_FILE` may select another retained cohort envelope with the same schema; its original result bytes and source identity remain required.
+
+The receiver exercises the original HTTP workspace from set import and validation through one native evaluation, retained-request recovery, JSON/HTML/CSV exports, judgment-set import, evaluated-query promotion, merchant preparation, generated-client request construction and SQLite reopening. It preserves all output in the selected private directory. See `native-relevance-journey.json` in the chosen receiving directory for the completed workflow, and `relevance-exports/` for the customer handoff. The lower-level reusable entry point is `runRelevanceOperatorJourney()` in `relevance/operator-journey.mjs`.
