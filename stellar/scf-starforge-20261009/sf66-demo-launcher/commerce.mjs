@@ -12,6 +12,9 @@ import { startSellerOperations } from '../sf30-seller-sdk/operations/server.mjs'
 import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 import { selectServiceRoute } from '../sf30-seller-sdk/route-path.mjs';
 import { initializeQueue, openQueue } from '../sf88-operator-buyer-cli/queue.mjs';
+import { acquireInitialization, initializationJson, retainInitializationFile,
+  retainInitializationRecord, optionalInitializationBytes, verifyInitializationFile } from '../sf88-operator-buyer-cli/initialization.mjs';
+import { readRequestBody } from '../sf88-operator-buyer-cli/request-body.mjs';
 import { config as readBuyer, execution } from '../sf88-operator-buyer-cli/config.mjs';
 import { absolute, readPrivateFile, parseJson, inspectOperatorConfig } from '../sf103-native-buyer-signer/operator.mjs';
 import { readCheckout, compileCheckout } from '../sf101-merchant-receiver/checkout-config.mjs';
@@ -120,10 +123,10 @@ function plan(value) {
 }
 
 /** Create an original buyer inbox and one persistent merchant configuration. */
-export async function initializeCommerce({ planFile, directory }) {
+export async function initializeCommerce({ planFile, directory }, { resume = false } = {}) {
   absolute(planFile); absolute(directory);
   await privateDirectory(dirname(directory));
-  const input = plan(parseJson(await readPrivateFile(planFile)));
+  const planBytes = await readPrivateFile(planFile), input = plan(parseJson(planBytes));
   const checkoutRaw = input.seller.checkoutConfig ? await readPrivateFile(input.seller.checkoutConfig) : null;
   const checkout = checkoutRaw ? compileCheckout(parseJson(checkoutRaw)) : null;
   const python = input.seller.python ? await preparePythonCommerce(input.seller.python) : null;
@@ -142,14 +145,17 @@ export async function initializeCommerce({ planFile, directory }) {
     const { readConfig } = await import('../native-facilitator/config.mjs');
     facilitatorConfig = await readConfig(input.seller.facilitatorConfig);
   }
-  const prepared = [], outputs = new Set();
+  const prepared = [], sources = [], outputs = new Set();
+  let operatorPython;
   const reserveOutput = path => {
     const key = resolve(path);
     need(!outputs.has(key), 'COMMERCE_OUTPUT_PATH_COLLISION');
     outputs.add(key);
   };
   for (const entry of input.buyers) {
-    const buyer = await readBuyer(entry.config), { op } = execution(buyer);
+    const buyer = await readBuyer(entry.config), { op, owner } = execution(buyer);
+    operatorPython ??= owner.python;
+    const body = await readRequestBody(op);
     need(new URL(op.url).origin === new URL(seller.publicOrigin).origin, 'COMMERCE_BUYER_MERCHANT_ORIGIN_MISMATCH');
     need(!prepared.some(item => item.intentId === op.intentId), 'COMMERCE_DUPLICATE_INTENT');
     need(buyer.signerModule !== nativeSigner || entry.signerConfig, 'COMMERCE_SF103_CONFIG_REQUIRED');
@@ -158,6 +164,12 @@ export async function initializeCommerce({ planFile, directory }) {
       signer.expected.operation.intentId === op.intentId, 'COMMERCE_SF103_BUYER_MISMATCH');
     if (entry.workspace) await privateDirectory(entry.workspace);
     const purchase = entry.paidFile ? await readPurchaseInput(entry.paidFile, op, buyer.responseFile?.destination) : null;
+    sources.push({ intentId: op.intentId, config: entry.config,
+      configSha256: sha(await readPrivateFile(entry.config, 65536)),
+      bodySha256: body === undefined ? null : sha(body), bodyBytes: body?.length ?? 0,
+      signerSha256: sha(await sourceFile(buyer.signerModule).then(value => value.bytes)),
+      policySha256: sha(await readPrivateFile(owner.policy)),
+      purchaseSha256: purchase?.sha256 ?? null });
     reserveOutput(join(buyer.evidenceDir, sha(op.intentId) + '.json'));
     if (buyer.responseFile) reserveOutput(buyer.responseFile.destination);
     if (purchase) { reserveOutput(purchase.destination); reserveOutput(purchase.destination + '.sf101.json'); }
@@ -167,29 +179,33 @@ export async function initializeCommerce({ planFile, directory }) {
       ...(purchase ? { purchase } : {}),
       ...(entry.signerConfig ? { signerConfigSha256: sha(await readPrivateFile(entry.signerConfig)) } : {}) });
   }
-  // mkdir is exclusive; failure must never remove an existing operator directory.
-  await mkdir(directory, { mode: 0o700 });
+  const lease = await acquireInitialization(directory, { python: operatorPython, resume });
   try {
-    await writeNew(join(directory, 'seller.json'), seller);
-    const pythonSnapshot = python ? await savePythonCommerce(python, directory) : {};
-    const upstreamSnapshot = upstream ? await retainUpstreamCommerce(join(directory, 'upstreams.json'), upstream) : null;
-    const jsonrpcSnapshot = jsonrpc ? await retainJsonrpcCommerce(join(directory, 'jsonrpc.json'), jsonrpc) : null;
-    const sellerBytes = await readPrivateFile(join(directory, 'seller.json'), 1048576);
+    const checkpoint = { schema: 'stellar-forge.commerce-session-initialization.v1', planFile,
+      planSha256: sha(planBytes), directory, buyers: sources,
+      sellerSha256: sha(initializationJson(seller)),
+      python: python ? { declaration: python.declaration, applicationSha256: python.applicationSha256 } : null,
+      upstreamSha256: upstream?.sha256 ?? null, jsonrpcSha256: jsonrpc?.sha256 ?? null,
+      facilitatorSha256: facilitatorConfig ? sha(initializationJson(facilitatorConfig)) : null,
+      handlersSha256: handlers?.sha256 ?? null };
+    const priorCheckpoint = await optionalInitializationBytes(join(directory, 'initializing.json'));
+    if (lease.created || priorCheckpoint)
+      await retainInitializationRecord(join(directory, 'initializing.json'), checkpoint, { resume });
+    const sellerBytes = initializationJson(seller);
+    const pythonSnapshot = python ? { python: join(directory, 'python.json'),
+      pythonSha256: sha(initializationJson(python.declaration)), pythonApplicationSha256: python.applicationSha256 } : {};
+    const upstreamSnapshot = upstream ? { file: join(directory, 'upstreams.json'), sha256: upstream.sha256 } : null;
+    const jsonrpcSnapshot = jsonrpc ? { file: join(directory, 'jsonrpc.json'), sha256: jsonrpc.sha256 } : null;
     const queueRoot = join(directory, 'inbox');
     const facilitatorPath = facilitatorConfig ? join(directory, 'facilitator.json') : null;
-    if (facilitatorPath) await writeNew(facilitatorPath, facilitatorConfig);
-    await initializeQueue(queueRoot);
-    const queue = await openQueue(queueRoot);
-    for (const entry of prepared) await queue.enqueue(entry.config);
     const buyers = [];
     for (const entry of prepared) {
       const { purchase, paidFile: sourcePaidFile, ...original } = entry;
-      if (purchase) original.paidFile = await freezePurchase(purchase,
-        join(directory, 'handoff-' + sha(entry.intentId) + '.json'));
+      if (purchase) original.paidFile = { handoff: join(directory, 'handoff-' + sha(entry.intentId) + '.json'),
+        handoffSha256: purchase.sha256, destination: purchase.destination, claimEnv: purchase.claimEnv };
       buyers.push(original);
     }
     const checkoutPath = checkoutRaw ? join(directory, 'checkout.json') : null;
-    if (checkoutPath) await writeNew(checkoutPath, parseJson(checkoutRaw));
     const session = { schema: SESSION, createdAt: new Date().toISOString(),
       directory, queueRoot, seller: { ...input.seller, config: join(directory, 'seller.json'),
         configSha256: sha(sellerBytes),
@@ -199,20 +215,65 @@ export async function initializeCommerce({ planFile, directory }) {
         jsonrpc: jsonrpcSnapshot?.file ?? null,
         ...(jsonrpcSnapshot ? { jsonrpcSha256: jsonrpcSnapshot.sha256 } : {}),
         checkoutConfig: checkoutPath,
-        ...(checkoutPath ? { checkoutConfigSha256: sha(await readPrivateFile(checkoutPath)) } : {}),
+        ...(checkoutPath ? { checkoutConfigSha256: sha(initializationJson(parseJson(checkoutRaw))) } : {}),
         facilitatorConfig: facilitatorPath,
-        ...(facilitatorPath ? { facilitatorConfigSha256: sha(await readPrivateFile(facilitatorPath)) } : {}),
+        ...(facilitatorPath ? { facilitatorConfigSha256: sha(initializationJson(facilitatorConfig)) } : {}),
         ...(handlers ? { handlersSha256: handlers.sha256 } : {}) },
       operationsPort: input.operationsPort, operationControls: input.operationControls, buyers };
-    await writeNew(join(directory, 'session.json'), session);
+    const checkBuyer = queued => {
+      const source = sources.find(item => item.intentId === queued.operation.intentId);
+      need(source && queued.sourceConfigSha256 === source.configSha256 && queued.bodySha256 === source.bodySha256 &&
+        queued.bodyBytes === source.bodyBytes && queued.dependencies?.signer?.sha256 === source.signerSha256 &&
+        queued.dependencies?.policy?.sha256 === source.policySha256, 'COMMERCE_INITIALIZATION_BUYER_CHANGED');
+    };
+    // A published session is reopened read-only. Lost queue history is restored, never re-enqueued.
+    if (await optionalInitializationBytes(join(directory, 'session.json'))) {
+      await retainInitializationRecord(join(directory, 'session.json'), session, { resume: true, ignore: ['createdAt'] });
+      const existing = await readSession(directory);
+      for (const queued of existing.jobs) checkBuyer(queued);
+      return await inspectCommerce(directory);
+    }
+    const staged = [[join(directory, 'seller.json'), sellerBytes],
+      ...(python ? [[pythonSnapshot.python, initializationJson(python.declaration)]] : []),
+      ...(upstream ? [[upstreamSnapshot.file, upstream.sourceBytes]] : []),
+      ...(jsonrpc ? [[jsonrpcSnapshot.file, jsonrpc.sourceBytes]] : []),
+      ...(facilitatorPath ? [[facilitatorPath, initializationJson(facilitatorConfig)]] : [])];
+    const inboxPresent = await lstat(queueRoot).then(() => true).catch(error => {
+      if (error.code === 'ENOENT') return false; throw error;
+    });
+    if (resume) {
+      for (const [path, bytes] of staged) {
+        const present = await verifyInitializationFile(path, bytes);
+        need(!inboxPresent || present, 'COMMERCE_RESTORE_ORIGINAL_SESSION_INPUTS');
+      }
+      if (checkoutPath) await verifyInitializationFile(checkoutPath, initializationJson(parseJson(checkoutRaw)));
+      for (const entry of prepared) if (entry.purchase)
+        await verifyInitializationFile(join(directory, 'handoff-' + sha(entry.intentId) + '.json'), entry.purchase.bytes);
+    }
+    const retain = (path, value) => retainInitializationFile(path, initializationJson(value), { resume });
+    await retain(join(directory, 'seller.json'), seller);
+    if (python) await savePythonCommerce(python, directory, { resume });
+    if (upstream) await retainUpstreamCommerce(upstreamSnapshot.file, upstream, { resume });
+    if (jsonrpc) await retainJsonrpcCommerce(jsonrpcSnapshot.file, jsonrpc, { resume });
+    if (facilitatorPath) await retain(facilitatorPath, facilitatorConfig);
+    await initializeQueue(queueRoot, { resume });
+    const queue = await openQueue(queueRoot);
+    for (const queued of await queue.list()) checkBuyer(queued);
+    for (const entry of prepared) checkBuyer(await queue.enqueue(entry.config));
+    for (const entry of prepared) if (entry.purchase)
+      await freezePurchase(entry.purchase, join(directory, 'handoff-' + sha(entry.intentId) + '.json'), { resume });
+    if (checkoutPath) await retain(checkoutPath, parseJson(checkoutRaw));
+    if (!lease.created && !priorCheckpoint)
+      await retainInitializationRecord(join(directory, 'initializing.json'), checkpoint, { resume });
+    await retainInitializationRecord(join(directory, 'session.json'), session, { resume, ignore: ['createdAt'] });
     const handle = await open(directory, 'r');
     try { await handle.sync(); } finally { await handle.close(); }
-    return inspectCommerce(directory);
+    return await inspectCommerce(directory);
   } catch (error) {
     // Only this invocation's exclusively created, unpublished session is removed.
-    await rm(directory, { recursive: true, force: true });
+    if (lease.created && !resume) await rm(directory, { recursive: true, force: true });
     throw error;
-  }
+  } finally { await lease.close(); }
 }
 
 async function readSession(directory) {
@@ -648,3 +709,4 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
 }
 
 export { codeOf as commerceErrorCode };
+

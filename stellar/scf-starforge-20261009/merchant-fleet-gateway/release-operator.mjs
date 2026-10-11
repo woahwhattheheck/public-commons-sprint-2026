@@ -7,6 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { activateRelease, compareReleases, inspectRelease, listReleases,
   readReleaseState, runActiveRelease, stageRelease } from '../sf82-seller-pilot/releases.mjs';
 import { selectDuckdbInterpreter } from '../sf82-seller-pilot/release-duckdb.mjs';
+import { sqliteSnapshotOptions } from '../sf82-seller-pilot/release-sqlite.mjs';
 import { startMerchantFleet, loadMerchantFleet } from './gateway.mjs';
 import { fleetControl } from './control.mjs';
 import { acquireStateLease } from './state-lease.mjs';
@@ -19,6 +20,9 @@ const MAX = 1024 * 1024;
 const NAME = /^[a-z][a-z0-9-]{0,39}$/;
 const ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const HEX = /^[a-f0-9]{64}$/;
+const PACKAGE_KINDS = Object.freeze({ workspace: 'OPENAPI_WORKSPACE', python: 'PYTHON_APPLICATION',
+  duckdbPackage: 'DUCKDB_PACKAGE', s3Package: 'S3_OBJECT_PACKAGE', jsonrpcPackage: 'JSONRPC_MERCHANT_PACKAGE',
+  sqlitePackage: 'SQLITE_MERCHANT_PACKAGE', mysqlPackage: 'MYSQL_MERCHANT_PACKAGE' });
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = (code, status = 409) => Object.assign(new Error(code), { status });
 const stable = value => JSON.stringify(normalize(value));
@@ -41,10 +45,12 @@ function pathValue(value, base) {
 }
 /** Share original source selectors and path rules with retained fleet setup. */
 export function normalizeFleetPackageSource(source, base) {
-  keys(source, ['workspace', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage', 'runtime']);
-  const selected = ['workspace', 'python', 'duckdbPackage', 's3Package', 'jsonrpcPackage'].filter(key => source[key] !== undefined);
+  keys(source, [...Object.keys(PACKAGE_KINDS), 'pythonRoot', 'duckdbPython',
+    'sqliteSnapshotMaxBytes', 'sqliteSnapshotTimeoutMs', 'runtime']);
+  const selected = Object.keys(PACKAGE_KINDS).filter(key => source[key] !== undefined);
   if (selected.length !== 1 || source.pythonRoot !== undefined && selected[0] !== 'python' ||
-      source.duckdbPython !== undefined && selected[0] !== 'duckdbPackage')
+      source.duckdbPython !== undefined && selected[0] !== 'duckdbPackage' ||
+      selected[0] !== 'sqlitePackage' && (source.sqliteSnapshotMaxBytes !== undefined || source.sqliteSnapshotTimeoutMs !== undefined))
     throw fail('FLEET_RELEASE_PACKAGE_SOURCE_REQUIRED', 400);
   const runtime = source.runtime ?? {};
   keys(runtime, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
@@ -53,13 +59,16 @@ export function normalizeFleetPackageSource(source, base) {
   const value = { [selected[0]]: pathValue(source[selected[0]], base) };
   if (source.pythonRoot !== undefined) value.pythonRoot = pathValue(source.pythonRoot, base);
   if (source.duckdbPython !== undefined) value.duckdbPython = selectDuckdbInterpreter(source.duckdbPython, base);
+  if (selected[0] === 'sqlitePackage') {
+    const limits = sqliteSnapshotOptions({ maxBytes: source.sqliteSnapshotMaxBytes, timeoutMs: source.sqliteSnapshotTimeoutMs });
+    value.sqliteSnapshotMaxBytes = limits.maxBytes; value.sqliteSnapshotTimeoutMs = limits.timeoutMs;
+  }
   return { ...value, runtime: structuredClone(runtime) };
 }
 /** Public aliases retain source type while all configured paths stay with the host. */
 export function describeFleetPackages(packages) {
   return Object.entries(packages).map(([name, source]) => ({ name,
-    kind: source.jsonrpcPackage !== undefined ? 'JSONRPC_MERCHANT_PACKAGE' : source.s3Package !== undefined ? 'S3_OBJECT_PACKAGE' : source.duckdbPackage !== undefined ? 'DUCKDB_PACKAGE' :
-      source.python !== undefined ? 'PYTHON_APPLICATION' : 'OPENAPI_WORKSPACE' }));
+    kind: Object.entries(PACKAGE_KINDS).find(([key]) => source[key] !== undefined)?.[1] ?? 'OPENAPI_WORKSPACE' }));
 }
 function privateDirectory(path) {
   if (!existsSync(path)) mkdirSync(path, { recursive: true, mode: 0o700 });
@@ -195,7 +204,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
   if (directory === stateDirectory) throw fail('FLEET_RELEASE_SEPARATE_STATE_REQUIRED', 400);
   const lease = await acquireStateLease(directory), journalPath = join(directory, 'links.json');
   const manifestPath = join(directory, 'prepared-fleet.json');
-  let journal, gateway, operation = null, closing = false, closed = false, closingPromise;
+  let journal, gateway, operation = null, stagingController, closing = false, closed = false, closingPromise;
   const owned = new Map(), reviews = new Map(), tenants = new Map(plan.tenants.map(row => [row.id, row]));
   function locate(tenantId, slotName) {
     const tenant = tenants.get(tenantId), slot = tenant?.slots[slotName];
@@ -402,9 +411,14 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       keys(input, ['tenant', 'slot', 'package', 'releaseId']);
       const { tenant, slot } = locate(input.tenant, input.slot), source = tenant.packages[input.package];
       if (!source || !ID.test(input.releaseId ?? '')) throw fail('FLEET_RELEASE_PACKAGE_OR_ID_INVALID', 400);
-      const release = await stageRelease(slot.store, { ...source, id: input.releaseId,
-        runtime: { ...source.runtime, port: slot.port } });
-      return { tenant: input.tenant, slot: input.slot, package: input.package, release: shortRelease(release) };
+      const controller = source.sqlitePackage !== undefined ? new AbortController() : null;
+      stagingController = controller;
+      try {
+        const release = await stageRelease(slot.store, { ...source, id: input.releaseId,
+          ...(controller ? { signal: controller.signal } : {}),
+          runtime: { ...source.runtime, port: slot.port } });
+        return { tenant: input.tenant, slot: input.slot, package: input.package, release: shortRelease(release) };
+      } finally { if (stagingController === controller) stagingController = null; }
     }); },
     review(input) { return exclusive('review', async () => {
       keys(input, ['tenant', 'slot', 'releaseId']);
@@ -511,9 +525,16 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       held.ended = true;
       return { tenant, slot, instanceId, stopped: true, native: result };
     }); },
+    // Provider shutdown can cancel a native snapshot before awaiting its
+    // serialized call. The original stage API removes its uncommitted output.
+    cancelStaging() {
+      if (!stagingController || stagingController.signal.aborted) return false;
+      stagingController.abort(fail('FLEET_RELEASE_STAGE_CANCELLED')); return true;
+    },
     close() {
       if (closingPromise) return closingPromise;
       closing = true;
+      api.cancelStaging();
       closingPromise = (async () => {
         await operation?.promise.catch(() => {});
         const errors = [];

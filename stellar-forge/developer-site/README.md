@@ -172,7 +172,11 @@ Open `/fleet.html` to prepare the first retained multi-merchant fleet. The
 workbench edits two to thirty-two merchants, two to four fixed slots per
 merchant, public hosts, current/later source aliases, initial releases and the
 original gateway limits. Registered sources use the original API workspace,
-Python application, DuckDB/Parquet, S3 or Stellar RPC package selectors.
+Python application, DuckDB/Parquet, S3, Stellar RPC, SQLite and MySQL package selectors.
+SQLite source cards expose the original snapshot byte ceiling and timeout; the
+export keeps those integer fields beside `sqlitePackage`. SQLite stages committed
+database snapshots, while MySQL and MariaDB retain the prepared named queries and
+read the live database through the merchant host's connection environment.
 
 Review shows the exact sequential slot ports and retained store layout before
 export. Drafts can be downloaded while incomplete and reopened as portable JSON;
@@ -188,6 +192,9 @@ releases, select the initial slots and retain interruption recovery. The MCP
 handoff uses `init-fleet --fleet-directory` and the original client-registration
 command. Later stage/review/activation, drain and rollback remain available in
 the original operator.
+An interrupted SQLite capture is cancelled by the original setup or fleet owner,
+including merchant MCP shutdown. Reopening the same directory preserves completed
+releases and permits the uncommitted stage to be retried.
 
 `dist/fleet-onboarding.mjs` owns the portable declaration and command generation.
 `dist/fleet-setup.mjs` owns editing, import, review and downloads; `fleet.html` and
@@ -206,3 +213,18 @@ across three HTTP 206 ranges with its expected hash. Eight native x402 requests
 used the original SDK and a local facilitator fixture. Setup resume and the
 exported MCP initialization/host registration reopened the same retained fleet
 after the original S3 package moved. All owned child processes closed.
+
+The joined SQLite/MySQL acceptance exported a seven-source browser packet and
+used its unchanged native commands to initialize four retained stores. SQLite
+capture limits survived native import, editing, source switching, draft reopen,
+and ZIP export as numeric package fields. The managed fleet served exact large
+integers, decimal strings, Unicode and selected columns through eight original
+x402 SDK requests with the local facilitator fixture. An actual locked SQLite
+capture was cancelled through both workspace shutdown and MCP shutdown; each
+original worker exited and removed its uncommitted stage. The same stores reopened
+and retried successfully. Original review and activation changed SQLite prices
+12500→15000 and MySQL prices 10000→12500, then retirement and rollback restored
+the retained releases. SQLite kept its staged data while MySQL read live updates.
+After all prepared package directories moved, setup resume and MCP reopened the
+same fleet at revision four. Both browser views stayed within 390px with zero
+page errors, and all owned processes closed.

@@ -84,6 +84,21 @@ payment approval. The normal native buyer executes the original frozen request
 once. Its response, recorded outcome and existing recovery controls remain in
 the same commerce workspace. The input viewer itself neither signs nor pays.
 
+## Resume an interrupted preparation
+
+If preparation is interrupted before the prepared snapshot is published, run the
+original `resume` command with the same setup file and directory:
+
+```sh
+node stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-setup.mjs resume --config /private/setup.json --directory /private/new-commerce
+```
+
+Resume verifies the retained packet, body, ticket and source configuration before
+continuing the original initialization. It preserves the existing operator keys,
+ledger and queue intents. Keep the original inputs available until preparation
+is complete. The [resumable setup guide](RESUMABLE_SETUP.md) explains recovery at
+each initialization stage and how to restore an original missing input.
+
 ## Stop and reopen the same operation
 
 Stop the original session so admitted work and owned processes drain. Reopen

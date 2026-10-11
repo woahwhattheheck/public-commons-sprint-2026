@@ -1,0 +1,11 @@
+{
+  "schema": "stellar-forge.goldrush-pilot.v1",
+  "publicOrigin": "https://goldrush-stellar.example",
+  "credentialEnv": "GOLDRUSH_AUTHORIZATION",
+  "chains": ["eth-mainnet", "base-mainnet", "arbitrum-mainnet"],
+  "maxPageSize": 100,
+  "operations": {
+    "balances": {"accepts": [{"scheme": "exact", "network": "stellar:testnet", "asset": "REPLACE_WITH_PROVIDER_SEP41_CONTRACT", "payTo": "REPLACE_WITH_PROVIDER_STELLAR_RECIPIENT", "amount": "100000", "maxTimeoutSeconds": 120}]},
+    "transfers": {"accepts": [{"scheme": "exact", "network": "stellar:testnet", "asset": "REPLACE_WITH_PROVIDER_SEP41_CONTRACT", "payTo": "REPLACE_WITH_PROVIDER_STELLAR_RECIPIENT", "amount": "100000", "maxTimeoutSeconds": 120}]}
+  }
+}

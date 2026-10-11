@@ -5,7 +5,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createRpcWorkspace, WorkspaceError, publicIssue } from './model.mjs';
 
 const ASSETS = new Map([['/', ['index.html','text/html']],
-  ['/app.mjs',['app.mjs','text/javascript']], ['/style.css',['style.css','text/css']]]);
+  ['/app.mjs',['app.mjs','text/javascript']], ['/commerce.mjs',['commerce.mjs','text/javascript']], ['/style.css',['style.css','text/css']]]);
 const HEADERS = { 'cache-control':'no-store', 'x-content-type-options':'nosniff',
   'referrer-policy':'no-referrer', 'cross-origin-resource-policy':'same-origin',
   'content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'" };
@@ -52,7 +52,9 @@ export async function startRpcWorkspace({ port = 8447, ...options } = {}) {
   let origin, model, closing = false, closePromise;
   const actions = new Map([['/api/save','save'],['/api/import','importPlan'],['/api/review','review'],
     ['/api/compare','compare'],['/api/prepare','prepare'],['/api/diagnose','diagnose'],
-    ['/api/buyer','buyer'],['/api/start','start'],['/api/stop','stop']]);
+    ['/api/buyer','buyer'],['/api/start','start'],['/api/stop','stop'],
+    ['/api/commerce/review','commerceReview'],['/api/commerce/prepare','commercePrepare'],
+    ['/api/commerce/inspect','commerceInspect'],['/api/commerce/open','commerceOpen']]);
   const server = createServer((req,res) => {
     Promise.resolve().then(async () => {
       if (closing || !model) throw new WorkspaceError('WORKSPACE_CLOSING',503);
@@ -75,6 +77,16 @@ export async function startRpcWorkspace({ port = 8447, ...options } = {}) {
       }
       if (req.method === 'GET' && url.pathname === '/api/actions') {
         const values = params(url,['before']); return send(res,200,model.actions(values));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/action') {
+        const { id } = params(url,['id'],['id']); return send(res,200,model.action(id));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/commerce/buyers') {
+        const values = params(url,['revision','packageId','before'],['revision','packageId']);
+        return send(res,200,model.commerceBuyers({...values,revision:number(values.revision)}));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/commerce/preparations') {
+        const values = params(url,['before']); return send(res,200,model.commercePreparations(values));
       }
       if (req.method === 'GET' && url.pathname === '/api/artifact') {
         const values = params(url,['kind','id','name'],['kind','id']), artifact = await model.artifact(values);
@@ -107,3 +119,4 @@ export async function startRpcWorkspace({ port = 8447, ...options } = {}) {
     },
   };
 }
+

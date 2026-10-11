@@ -6,6 +6,7 @@ import { absolute, readPrivateFile, parseJson } from '../sf103-native-buyer-sign
 import { prepareProduct, credentialReferences } from '../sf30-seller-sdk/jsonrpc/config.mjs';
 import { createStellarRpcApplication } from '../sf30-seller-sdk/jsonrpc/application.mjs';
 import { admitRequest } from '../sf30-seller-sdk/jsonrpc/stellar.mjs';
+import { retainInitializationFile } from '../sf88-operator-buyer-cli/initialization.mjs';
 
 const LIMIT = 131072;
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -28,13 +29,11 @@ export async function readJsonrpcCommerce(file, { expectedConfig, expectedSha256
   return { file, sourceBytes, sha256, plan: prepared.plan, service: prepared.service, allowLoopback };
 }
 
-export async function retainJsonrpcCommerce(file, reviewed) {
+export async function retainJsonrpcCommerce(file, reviewed, { resume = false } = {}) {
   absolute(file);
   need(Buffer.isBuffer(reviewed?.sourceBytes) && sha(reviewed.sourceBytes) === reviewed.sha256,
     'COMMERCE_JSONRPC_PLAN_CHANGED');
-  const handle = await open(file, 'wx', 0o600);
-  try { await handle.writeFile(reviewed.sourceBytes); await handle.sync(); }
-  finally { await handle.close(); }
+  await retainInitializationFile(file, reviewed.sourceBytes, { resume });
   return { file, sha256: reviewed.sha256 };
 }
 
@@ -64,3 +63,4 @@ export async function openJsonrpcCommerce(file, { expectedConfig, expectedSha256
   catch (error) { await application.close().catch(() => {}); throw error; }
   return application;
 }
+

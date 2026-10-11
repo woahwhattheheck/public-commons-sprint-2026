@@ -1,0 +1,74 @@
+{
+  "success": true,
+  "data": {
+    "endpoints": [
+      {
+        "slug": "get-token-balances-for-address",
+        "urlTemplate": "/v1/{chain}/address/{address}/balances_v2/",
+        "supportedChains": "ALL",
+        "pricing": {
+          "model": "fixed",
+          "creditRate": 1,
+          "unit": "request",
+          "basePrice": "$0.000100"
+        }
+      },
+      {
+        "slug": "get-erc20-token-transfers-for-address",
+        "urlTemplate": "/v1/{chain}/address/{address}/transfers_v2/",
+        "supportedChains": "ALL",
+        "pricing": {
+          "model": "linear",
+          "creditRate": 0.05,
+          "unit": "item",
+          "basePrice": "$0.000100",
+          "tiers": [
+            {
+              "name": "small",
+              "description": "Up to 50 items",
+              "maxItems": 50,
+              "price": "$0.005000"
+            },
+            {
+              "name": "medium",
+              "description": "51-200 items",
+              "maxItems": 200,
+              "price": "$0.0200"
+            },
+            {
+              "name": "large",
+              "description": "201-500 items",
+              "maxItems": 500,
+              "price": "$0.0500"
+            },
+            {
+              "name": "xl",
+              "description": "501+ items (max 1000)",
+              "maxItems": "unlimited",
+              "price": "$0.1000"
+            }
+          ]
+        }
+      }
+    ],
+    "x402": {
+      "network": "eip155:84532",
+      "facilitatorUrl": "https://x402.org/facilitator",
+      "payoutAddress": "0xA3669FfBBa16Eb5394fcE56C831cF8C4495c9de6",
+      "instructions": {
+        "message": "To access paid endpoints, include x402 payment signature in request headers",
+        "documentation": "https://docs.x402.org"
+      }
+    },
+    "pricing": {
+      "creditToUsdRate": 1e-06,
+      "minPrice": "$0.000100",
+      "marginMultiplier": 1.5,
+      "rateLimit": {
+        "maxRequests": 100,
+        "windowMs": 60000,
+        "window": "60s"
+      }
+    }
+  }
+}

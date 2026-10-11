@@ -4,6 +4,7 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, open, realpath, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { isDeepStrictEqual as same } from 'node:util';
 import { readSellerConfig } from '../sf30-seller-sdk/serve.mjs';
 import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
@@ -12,6 +13,8 @@ import { compileAssetRouteOffer } from '../sf30-seller-sdk/response-asset.mjs';
 import { compileSellerOpenApi } from '../sf30-seller-sdk/developer-portal.mjs';
 import { readConfig as readFacilitator, reviewConfig } from '../native-facilitator/config.mjs';
 import { initializeWorkspace, openWorkspace } from '../sf88-operator-buyer-cli/workspace.mjs';
+import { acquireInitialization, initializationDirectory, optionalInitializationBytes,
+  retainInitializationFile, retainInitializationRecord, verifyInitializationFile } from '../sf88-operator-buyer-cli/initialization.mjs';
 import { config as readBuyer, execution, responseFile, requestTimeoutMs, buyerTransport } from '../sf88-operator-buyer-cli/config.mjs';
 import { validateNativeSignerConfiguration } from '../sf88-operator-buyer-cli/native-signer.mjs';
 import { absolute, parseJson, readPrivateFile } from '../sf103-native-buyer-signer/operator.mjs';
@@ -250,7 +253,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
 }
 
 /** Create the original SF88 workspace once, then reuse its ledger for every intent. */
-export async function prepareCommerceSetup({configFile, directory}, {environment = process.env} = {}) {
+export async function prepareCommerceSetup({configFile, directory}, {environment = process.env, resume = false} = {}) {
   const reviewed = await reviewCommerceSetup({configFile, directory});
   await privateDirectory(dirname(directory));
   const {initializeCommerce, bindMerchantPurchase} = await import('./commerce.mjs');
@@ -259,36 +262,57 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
   // Reuse the session's own offer selection rules before creating any workspace.
   for (const item of selections) need(bindMerchantPurchase(compiled, item.draft).acceptIndex === item.acceptIndex,
     'COMMERCE_SETUP_PAYMENT_OPTION_NOT_UNIQUE');
-  let created;
+  const lease = await acquireInitialization(directory, { python: operator.python, resume });
   try {
-    await mkdir(directory, {mode:0o700});
-    created = await privateDirectory(directory);
-    for (const name of ['bodies','responses','buyers','tickets','requests']) await mkdir(join(directory, name), {mode:0o700});
+    const checkpoint = { schema: 'stellar-forge.commerce-setup-initialization.v1',
+      source: reviewed.source, summary, directory, handlers };
+    const completed = await optionalInitializationBytes(join(directory, 'prepared.json'), 1048576);
+    if (completed) {
+      const record = parseJson(completed);
+      const { operatorKeySource, ...originalSummary } = record.summary ?? {};
+      need(record.summary?.state === 'PREPARED' && same(record.source, reviewed.source) &&
+        same({...originalSummary, state: summary.state}, JSON.parse(json(summary))),
+      'COMMERCE_SETUP_RESUME_SOURCE_CHANGED');
+      return await inspectCommerceSetup(directory);
+    }
+    const priorCheckpoint = await optionalInitializationBytes(join(directory, 'initializing.json'));
+    if (lease.created || priorCheckpoint)
+      await retainInitializationRecord(join(directory, 'initializing.json'), checkpoint, { resume });
+    for (const name of ['bodies','responses','buyers','tickets','requests']) await initializationDirectory(join(directory, name), { create: true });
     const captured = [];
     const retain = async (path, value) => {
       const bytes = Buffer.isBuffer(value) ? value : json(value);
-      await writeNew(path, bytes);
+      await retainInitializationFile(path, bytes, { resume });
       captured.push({path, bytes:bytes.length, sha256:sha(bytes)});
     };
+    const staged = [];
     for (const item of selections) {
-      if (item.packet) await retain(item.packet.path,item.packet.bytes);
-      if (item.body !== null) await retain(item.draft.operation.bodyFile, item.body);
-      if (item.ticket) await retain(item.draft.operation.ticketFile, item.ticket.sourceBytes);
-      await retain(join(directory, 'buyers', item.key + '-review.json'), item.draft);
+      if (item.packet) staged.push([item.packet.path, item.packet.bytes]);
+      if (item.body !== null) staged.push([item.draft.operation.bodyFile, item.body]);
+      if (item.ticket) staged.push([item.draft.operation.ticketFile, item.ticket.sourceBytes]);
+      staged.push([join(directory, 'buyers', item.key + '-review.json'), item.draft]);
     }
-    await retain(join(directory, 'seller.json'), merchant);
-    if (python) await retain(join(directory, 'python.json'), python.declaration);
-    if (upstream) await retain(join(directory, 'upstreams.json'), upstream.sourceBytes);
-    if (jsonrpc) await retain(join(directory, 'jsonrpc.json'), jsonrpc.sourceBytes);
-    await retain(join(directory, 'facilitator.json'), facilitator);
+    staged.push([join(directory, 'seller.json'), merchant]);
+    if (python) staged.push([join(directory, 'python.json'), python.declaration]);
+    if (upstream) staged.push([join(directory, 'upstreams.json'), upstream.sourceBytes]);
+    if (jsonrpc) staged.push([join(directory, 'jsonrpc.json'), jsonrpc.sourceBytes]);
+    staged.push([join(directory, 'facilitator.json'), facilitator]);
     const workspace = join(directory, 'operator');
+    const operatorPresent = await lstat(workspace).then(() => true).catch(error => {
+      if (error.code === 'ENOENT') return false; throw error;
+    });
+    if (resume) for (const [path, value] of staged) {
+      const present = await verifyInitializationFile(path, Buffer.isBuffer(value) ? value : json(value));
+      need(!operatorPresent || present, 'COMMERCE_SETUP_RESTORE_ORIGINAL_INPUTS');
+    }
+    for (const [path, value] of staged) await retain(path, value);
     const args = ['--config', join(directory, 'buyers', maximum.key + '-review.json'), '--dir', workspace,
       '--actor', operator.actor, '--service', operator.service, '--python', operator.python,
       '--payer', operator.payer, '--total-atomic', operator.totalAtomic, '--daily-atomic', operator.dailyAtomic,
       '--rpc', facilitator.rpcUrl, ...(operator.httpsProxyEnv === undefined ? [] :
         ['--https-proxy-env', operator.httpsProxyEnv]), ...(operator.secretEnv !== undefined ?
         ['--secret-env', operator.secretEnv] : ['--signer-provider', operator.signerProvider])];
-    const initialized = await initializeWorkspace(args, {environment});
+    const initialized = await initializeWorkspace(args, {environment, resume});
     const base = await readBuyer(initialized.config);
     const buyers = [];
     for (const item of selections) {
@@ -311,13 +335,15 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
         port:reviewed.sellerPort, ...(handlers ? {handlers:handlers.path} : {})},
       operationsPort:reviewed.operationsPort, operationControls:reviewed.operationControls, buyers});
     const session = join(directory, 'session');
-    const initializedSession = await initializeCommerce({planFile, directory:session});
+    const initializedSession = await initializeCommerce({planFile, directory:session}, {resume});
     need(!python || initializedSession.python?.applicationSha256 === python.applicationSha256,
       'COMMERCE_SETUP_PYTHON_SOURCE_CHANGED');
     need(!upstream || initializedSession.upstreams?.sha256 === upstream.sha256,
       'COMMERCE_UPSTREAM_CONFIG_CHANGED');
     need(!jsonrpc || initializedSession.jsonrpc?.sha256 === jsonrpc.sha256,
       'COMMERCE_JSONRPC_PLAN_CHANGED');
+    if (!lease.created && !priorCheckpoint)
+      await retainInitializationRecord(join(directory, 'initializing.json'), checkpoint, { resume });
     await retain(join(directory, 'prepared.json'), {
       schema:SNAPSHOT, createdAt:new Date().toISOString(), directory, session, workspace,
       planFile, source:reviewed.source, files:captured, handlers,
@@ -327,13 +353,13 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
     try { await handle.sync(); } finally { await handle.close(); }
     return await inspectCommerceSetup(directory);
   } catch (error) {
-    if (created) {
+    if (lease.created && !resume) {
       const current = await lstat(directory).catch(() => null);
-      if (current?.dev === created.dev && current?.ino === created.ino)
+      if (current?.dev === lease.identity.dev && current?.ino === lease.identity.ino)
         await rm(directory, {recursive:true, force:true}).catch(() => {});
     }
     throw error;
-  }
+  } finally { await lease.close(); }
 }
 
 /** Reopen original retained setup and inbox without opening wallet or operator keys. */
@@ -384,9 +410,10 @@ function options(args) {
 }
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') {
-    process.stdout.write('Usage: commerce-setup.mjs review|prepare --config /private/setup.json --directory /private/new-commerce\n' +
+    process.stdout.write('Usage: commerce-setup.mjs review|prepare|resume --config /private/setup.json --directory /private/commerce\n' +
       '       commerce-setup.mjs inspect --directory /private/prepared-commerce\n' +
       'Preparation creates one original testnet operator workspace and commerce session. Use commerce-cli.mjs for the actual native purchase.\n' +
+      'Resume completes the same interrupted preparation, preserving its original keys, ledger, source bytes and queue intents. See RESUMABLE_SETUP.md.\n' +
       'For a retained Stellar JSON-RPC product, set seller.jsonrpc and follow JSONRPC_COMMERCE.md.\n');
     return;
   }
@@ -395,6 +422,7 @@ export async function main(args = process.argv.slice(2)) {
   let result;
   if (command === 'review') result = (await reviewCommerceSetup(input)).summary;
   else if (command === 'prepare') result = await prepareCommerceSetup(input);
+  else if (command === 'resume') result = await prepareCommerceSetup(input, {resume:true});
   else if (command === 'inspect' && opt['--config'] === undefined) result = await inspectCommerceSetup(input.directory);
   else need(false, 'COMMERCE_SETUP_COMMAND_REQUIRED');
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
@@ -406,3 +434,4 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     process.stderr.write(JSON.stringify({error:code}) + '\n');
     process.exitCode = 1;
   });
+

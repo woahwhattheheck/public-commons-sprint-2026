@@ -1,6 +1,6 @@
 // GridKind: view an alternative tariff through the original robustness engine.
-// This module has no approval, execution, proposal mutation or device pathway.
-export function createRobustnessPanel({getContext}) {
+// Selected tariffs re-enter the original household input and fresh-plan flow.
+export function createRobustnessPanel({getContext,onWorkspace=()=>{},onBusyChange=()=>{},onAdopt=null}) {
   const $=id=>document.getElementById(id);
   const bands=['offpeak','standard','peak'];
   const bandForHour=h=>h>=17&&h<21?'peak':h>=21||h<7?'offpeak':'standard';
@@ -16,11 +16,13 @@ export function createRobustnessPanel({getContext}) {
       context.draftRevision===basis.draftRevision&&inputRevision===basis.inputRevision;
   }
   function clearResult(text) {
+    const wasPending=Boolean(pending);
     pending?.controller.abort();pending=null;saved=null;
     $('robustness-results').className='only-hidden';
     $('robustness-export').disabled=true;
     $('robustness-error').textContent='';
     message=text;
+    if(wasPending)onBusyChange(false);
   }
   function seedFromProposal(context) {
     const prices=context.state?.proposal?.prices;
@@ -48,10 +50,11 @@ export function createRobustnessPanel({getContext}) {
       clearResult('The current simulation is updating. Compare again when it finishes.');
     if (saved&&!sameBasis(context,saved)) clearResult('The comparison is no longer current. Compare again.');
     const blocked=!available(context)||context.busy;
-    $('robustness-fields').disabled=blocked;
+    $('robustness-fields').disabled=blocked||Boolean(pending);
     $('robustness-compare').disabled=blocked||Boolean(pending);
     $('robustness-reset').disabled=blocked;
     $('robustness-export').disabled=blocked||Boolean(pending)||!saved;
+    if($('robustness-adopt'))$('robustness-adopt').disabled=blocked||Boolean(pending)||!saved?.recordId||!onAdopt;
     $('robustness-form').setAttribute('aria-busy',String(Boolean(pending)));
     $('robustness-status').textContent=context.busy?'Current simulation is updating; tariff comparison is paused.':
       !available(context)?'Settings changed or no proposal is available. Plan the current scenario first.':message;
@@ -121,28 +124,30 @@ export function createRobustnessPanel({getContext}) {
     clearResult('Comparing this proposal under the hypothetical alternative tariff…');
     const request={proposalId:context.state.proposal.id,draftRevision:context.draftRevision,
       inputRevision,controller:new AbortController()};
-    pending=request;refresh();
+    pending=request;onBusyChange(true);refresh();
     try {
       const prices=readPrices();
       const response=await fetch('/api/robustness',{method:'POST',headers:{'content-type':'application/json'},
         signal:request.controller.signal,body:JSON.stringify({proposalId:request.proposalId,
+          context:context.state.workspace?{revision:context.state.workspace.revision,generation:context.state.workspace.generation,householdId:context.state.workspace.selectedId}:undefined,
           alternatives:[{name:alternativeName,prices}]})});
       const data=await response.json();
+      onWorkspace(data.workspace??data.state?.workspace);
       if (pending!==request||!sameBasis(getContext(),request)||getContext().busy) return;
       if (!response.ok) throw Error(response.status===409
         ? 'This proposal is no longer current. Plan this scenario again before comparing.'
         : data.error||'Tariff comparison failed (HTTP '+response.status+').');
       if (data.proposalId!==request.proposalId) throw Error('The proposal changed. Compare the current proposal again.');
       const row=validateReport(data.report,prices);
-      saved={...request,report:data.report};
+      saved={...request,report:data.report,recordId:data.recordId};
       render(data.report,row);
-      message='Comparison complete for this proposal and these alternative rates. No schedule was applied, approved or executed.';
+      message=data.recordId?'Comparison saved in household history. Keep the current plan or use this tariff for a fresh plan.':'Comparison complete for this proposal and these alternative rates.';
     } catch (error) {
       if (pending!==request||!sameBasis(getContext(),request)) return;
       $('robustness-error').textContent=error.message||'Unable to compare tariffs.';
       message='Alternative inputs retained. Correct the issue or compare again.';
     } finally {
-      if (pending===request) pending=null;
+      if (pending===request){pending=null;onBusyChange(false);}
       refresh();
     }
   }
@@ -165,6 +170,10 @@ export function createRobustnessPanel({getContext}) {
     link.download='gridkind-tariff-'+saved.proposalId.replace(/[^A-Za-z0-9_-]/g,'').slice(0,80)+'.json';
     document.body.append(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+  $('robustness-adopt')?.addEventListener('click',()=>{
+    const context=getContext();
+    if(saved?.recordId&&onAdopt&&!context.busy&&!pending&&sameBasis(context,saved))onAdopt(saved.recordId);
   });
   return Object.freeze({refresh});
 }

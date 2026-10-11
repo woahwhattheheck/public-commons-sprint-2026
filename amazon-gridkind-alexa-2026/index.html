@@ -2,36 +2,62 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GridKind — simulated Alexa+ energy planning</title><link rel="stylesheet" href="/style.css"></head>
 <body><main>
-<div class="tag">Original agentic planning simulation • Amazon Alexa+ alternate path</div>
-<h1>GridKind<span class="brand-period">.</span></h1>
-<p class="dim">What if your flexible home loads ran when power was cheaper? Set your assumptions, compare full schedules, then approve an exact plan for <strong>simulation</strong>.</p>
-<div class="chips"><span>24-hour hypothetical tariff</span><span id="load-count">3 flexible loads</span><span>Quiet hours honored</span><span id="circuit-summary">3.0 kW circuit cap</span><span>No real device or provider access</span></div>
+<header class="app-header">
+<div class="tag">HOUSEHOLD ENERGY PLANNING / ALEXA+ SIMULATION</div>
+<h1>GridKind</h1>
+<p class="dim">Plan flexible loads, compare tariffs, and keep the reasoning behind each decision. Every household has its own saved inputs and decision history.</p>
+<div class="chips"><span>24-hour hypothetical tariff</span><span id="load-count">3 flexible loads</span><span>Quiet hours honored</span><span id="circuit-summary">3.0 kW circuit cap</span><span>Saved household workspace</span></div>
+</header>
+<section class="panel workspace-toolbar" aria-labelledby="workspace-title">
+<div class="section-heading"><div><div class="tag">Workspace</div><h2 id="workspace-title">Your households</h2></div><span id="workspace-state" class="status-chip" role="status">Opening saved work…</span></div>
+<div class="household-controls">
+<label for="household-select">Saved household<select id="household-select" disabled></select></label>
+<button id="household-open" class="secondary" type="button" disabled>Open household</button>
+<label for="household-name">Household name<input id="household-name" maxlength="100" placeholder="e.g. Home · weekday"></label>
+<button id="household-rename" class="secondary" type="button" disabled>Rename</button>
+<button id="household-create" type="button" disabled>New from current inputs</button>
+</div>
+<p id="workspace-status" class="dim" role="status" aria-live="polite">Loading the households saved for this browser.</p>
+</section>
+<div class="workspace-layout"><div class="working-column">
 <section class="panel" aria-labelledby="scenario-title">
-<div class="section-heading"><div><div class="tag">1 · Set your assumptions</div><h2 id="scenario-title">Your what-if scenario</h2></div><button id="restore-example" class="secondary" type="button">Restore example</button></div>
+<div class="section-heading"><div><div class="tag">1 · Set your assumptions</div><h2 id="scenario-title">Household inputs</h2></div><div class="controls"><button id="reload-saved" class="secondary" type="button">Reopen saved inputs</button><button id="restore-example" class="secondary" type="button">Restore example</button></div></div>
 <p class="dim" id="scenario-help">All values are hypothetical. Hours run from 0 (midnight) to 24 (end of this day). Changing a value requires a new plan and approval.</p>
 <form id="scenario-form"><fieldset id="scenario-fields" aria-describedby="scenario-help">
 <legend class="sr-only">Scenario settings</legend>
+<label class="check advanced-toggle" for="advanced-mode"><input id="advanced-mode" type="checkbox"> Edit hourly rates and custom loads</label>
+<div id="simple-scenario">
 <div class="scenario-grid rates">
-<label for="max-kw">Shared circuit cap (kW)<input id="max-kw" type="number" min="0.5" max="50" step="0.1" value="3" required></label>
-<label for="rate-offpeak">Off-peak ($/kWh)<span class="field-hint">00:00–07:00 and 21:00–24:00</span><input id="rate-offpeak" type="number" min="0" max="10" step="0.01" value="0.12" required></label>
-<label for="rate-standard">Daytime ($/kWh)<span class="field-hint">07:00–17:00</span><input id="rate-standard" type="number" min="0" max="10" step="0.01" value="0.25" required></label>
-<label for="rate-peak">Evening ($/kWh)<span class="field-hint">17:00–21:00</span><input id="rate-peak" type="number" min="0" max="10" step="0.01" value="0.43" required></label>
+<label for="max-kw">Shared circuit cap (kW)<input id="max-kw" type="number" min="0.5" max="50" step="any" value="3" required></label>
+<label for="rate-offpeak">Off-peak ($/kWh)<span class="field-hint">00:00–07:00 and 21:00–24:00</span><input id="rate-offpeak" type="number" min="0" max="10" step="any" value="0.12" required></label>
+<label for="rate-standard">Daytime ($/kWh)<span class="field-hint">07:00–17:00</span><input id="rate-standard" type="number" min="0" max="10" step="any" value="0.25" required></label>
+<label for="rate-peak">Evening ($/kWh)<span class="field-hint">17:00–21:00</span><input id="rate-peak" type="number" min="0" max="10" step="any" value="0.43" required></label>
 </div>
-<article class="load-card" data-task="laundry"><div class="load-heading"><label class="check" for="laundry-enabled"><input id="laundry-enabled" type="checkbox" checked> Laundry</label><span class="dim">Hypothetical load</span></div><div class="scenario-grid"><label for="laundry-kw">Power (kW)<input class="task-value" id="laundry-kw" type="number" min="0.1" max="50" step="0.1" value="1.2" required></label><label for="laundry-hours">Run time (hours)<input class="task-value" id="laundry-hours" type="number" min="1" max="6" step="1" value="2" required></label><label for="laundry-earliest">Earliest start (hour)<input class="task-value" id="laundry-earliest" type="number" min="0" max="23" step="1" value="8" required></label><label for="laundry-deadline">Finish by (hour)<input class="task-value" id="laundry-deadline" type="number" min="1" max="24" step="1" value="21" required></label></div><label class="check quiet-choice" for="laundry-quiet"><input class="task-value" id="laundry-quiet" type="checkbox" checked> Keep this load outside quiet hours (22:00–07:00)</label></article>
-<article class="load-card" data-task="dishwasher"><div class="load-heading"><label class="check" for="dishwasher-enabled"><input id="dishwasher-enabled" type="checkbox" checked> Dishwasher</label><span class="dim">Hypothetical load</span></div><div class="scenario-grid"><label for="dishwasher-kw">Power (kW)<input class="task-value" id="dishwasher-kw" type="number" min="0.1" max="50" step="0.1" value="1" required></label><label for="dishwasher-hours">Run time (hours)<input class="task-value" id="dishwasher-hours" type="number" min="1" max="6" step="1" value="2" required></label><label for="dishwasher-earliest">Earliest start (hour)<input class="task-value" id="dishwasher-earliest" type="number" min="0" max="23" step="1" value="12" required></label><label for="dishwasher-deadline">Finish by (hour)<input class="task-value" id="dishwasher-deadline" type="number" min="1" max="24" step="1" value="24" required></label></div><label class="check quiet-choice" for="dishwasher-quiet"><input class="task-value" id="dishwasher-quiet" type="checkbox" checked> Keep this load outside quiet hours (22:00–07:00)</label></article>
-<article class="load-card" data-task="ev-topup"><div class="load-heading"><label class="check" for="ev-topup-enabled"><input id="ev-topup-enabled" type="checkbox" checked> EV top-up</label><span class="dim">Hypothetical load</span></div><div class="scenario-grid"><label for="ev-topup-kw">Power (kW)<input class="task-value" id="ev-topup-kw" type="number" min="0.1" max="50" step="0.1" value="2.6" required></label><label for="ev-topup-hours">Run time (hours)<input class="task-value" id="ev-topup-hours" type="number" min="1" max="6" step="1" value="3" required></label><label for="ev-topup-earliest">Earliest start (hour)<input class="task-value" id="ev-topup-earliest" type="number" min="0" max="23" step="1" value="17" required></label><label for="ev-topup-deadline">Finish by (hour)<input class="task-value" id="ev-topup-deadline" type="number" min="1" max="24" step="1" value="24" required></label></div><label class="check quiet-choice" for="ev-topup-quiet"><input class="task-value" id="ev-topup-quiet" type="checkbox"> Keep this load outside quiet hours (22:00–07:00)</label></article>
+<article class="load-card" data-task="laundry"><div class="load-heading"><label class="check" for="laundry-enabled"><input id="laundry-enabled" type="checkbox" checked> Laundry</label><span class="dim">Hypothetical load</span></div><div class="scenario-grid"><label for="laundry-kw">Power (kW)<input class="task-value" id="laundry-kw" type="number" min="0" max="50" step="any" value="1.2" required></label><label for="laundry-hours">Run time (hours)<input class="task-value" id="laundry-hours" type="number" min="1" max="6" step="1" value="2" required></label><label for="laundry-earliest">Earliest start (hour)<input class="task-value" id="laundry-earliest" type="number" min="0" max="23" step="1" value="8" required></label><label for="laundry-deadline">Finish by (hour)<input class="task-value" id="laundry-deadline" type="number" min="1" max="24" step="1" value="21" required></label></div><label class="check quiet-choice" for="laundry-quiet"><input class="task-value" id="laundry-quiet" type="checkbox" checked> Keep this load outside quiet hours (22:00–07:00)</label></article>
+<article class="load-card" data-task="dishwasher"><div class="load-heading"><label class="check" for="dishwasher-enabled"><input id="dishwasher-enabled" type="checkbox" checked> Dishwasher</label><span class="dim">Hypothetical load</span></div><div class="scenario-grid"><label for="dishwasher-kw">Power (kW)<input class="task-value" id="dishwasher-kw" type="number" min="0" max="50" step="any" value="1" required></label><label for="dishwasher-hours">Run time (hours)<input class="task-value" id="dishwasher-hours" type="number" min="1" max="6" step="1" value="2" required></label><label for="dishwasher-earliest">Earliest start (hour)<input class="task-value" id="dishwasher-earliest" type="number" min="0" max="23" step="1" value="12" required></label><label for="dishwasher-deadline">Finish by (hour)<input class="task-value" id="dishwasher-deadline" type="number" min="1" max="24" step="1" value="24" required></label></div><label class="check quiet-choice" for="dishwasher-quiet"><input class="task-value" id="dishwasher-quiet" type="checkbox" checked> Keep this load outside quiet hours (22:00–07:00)</label></article>
+<article class="load-card" data-task="ev-topup"><div class="load-heading"><label class="check" for="ev-topup-enabled"><input id="ev-topup-enabled" type="checkbox" checked> EV top-up</label><span class="dim">Hypothetical load</span></div><div class="scenario-grid"><label for="ev-topup-kw">Power (kW)<input class="task-value" id="ev-topup-kw" type="number" min="0" max="50" step="any" value="2.6" required></label><label for="ev-topup-hours">Run time (hours)<input class="task-value" id="ev-topup-hours" type="number" min="1" max="6" step="1" value="3" required></label><label for="ev-topup-earliest">Earliest start (hour)<input class="task-value" id="ev-topup-earliest" type="number" min="0" max="23" step="1" value="17" required></label><label for="ev-topup-deadline">Finish by (hour)<input class="task-value" id="ev-topup-deadline" type="number" min="1" max="24" step="1" value="24" required></label></div><label class="check quiet-choice" for="ev-topup-quiet"><input class="task-value" id="ev-topup-quiet" type="checkbox"> Keep this load outside quiet hours (22:00–07:00)</label></article>
+</div>
+<div id="advanced-scenario" class="only-hidden">
+<fieldset id="custom-fields"><legend class="sr-only">Hourly tariff and custom flexible loads</legend>
+<label class="custom-cap" for="custom-max-kw">Shared circuit cap (kW)<input id="custom-max-kw" type="number" min="0.5" max="50" step="any" required></label>
+<h3>Hourly prices</h3><p class="field-hint">Enter the hypothetical $/kWh rate for each hour of the same day.</p>
+<div id="hourly-rates" class="hourly-rates"></div>
+<div class="section-heading custom-load-title"><h3>Flexible loads</h3><span id="custom-load-count" class="tag">0 of 5 loads</span></div>
+<div id="custom-loads"></div><button id="add-custom-load" type="button" class="secondary">Add a flexible load</button>
+</fieldset>
+</div>
 </fieldset></form>
+<div class="scenario-save"><label for="scenario-name">Revision name<input id="scenario-name" maxlength="100" placeholder="e.g. Weekday · evening rates"></label><button id="save-scenario" class="secondary" type="button">Save inputs</button></div>
 <p id="scenario-status" class="dim" role="status" aria-live="polite">Choose at least one load, then plan your scenario.</p>
 <div class="controls"><button id="plan" type="button">Plan this scenario</button><button id="cancel" class="secondary" type="button">Clear current plan</button></div>
-<section class="handoff" aria-labelledby="handoff-title">
-<h3 id="handoff-title">Keep or share a hypothetical scenario</h3>
-<p class="dim" id="handoff-help">Download the inputs and an illustrative summary as a portable JSON file. Import another person's inputs on this device to inspect them first, then plan anew. No approval, simulation receipt, or device authorization travels with a file. Applying an import explicitly clears this session's current plan, approval, and simulated receipt before editing the inputs.</p>
+<details class="handoff"><summary id="handoff-title">Share a simple scenario</summary>
+<p class="dim" id="handoff-help">Export the original three-load, three-band format for sharing inputs. Use the household backup to retain custom hourly rates, every load, and the full decision history. Preview an imported scenario before applying its inputs and planning again.</p>
 <div class="controls"><button id="handoff-export" class="secondary" type="button">Download my scenario</button></div>
 <label class="handoff-picker" for="handoff-file">Open a GridKind scenario file (JSON)<input id="handoff-file" type="file" accept=".json,application/json" aria-describedby="handoff-help handoff-status"></label>
 <p id="handoff-status" class="dim" role="status" aria-live="polite">Choose a local JSON file to preview its scenario.</p>
 <p id="handoff-preview" class="dim"></p>
 <button id="handoff-apply" class="secondary" type="button" disabled>Apply imported assumptions</button>
-</section>
+</details>
 <details class="voice"><summary>Ask with a natural-language command</summary><label for="cmd">Agent request</label><input id="cmd" maxlength="240" value="Find a cheaper schedule for tonight"><button id="ask" class="secondary" type="button">Ask GridKind</button><p class="dim">Planning commands use the settings above. “Explain the plan” is read-only; approval and execution use the separate controls below.</p></details>
 </section>
 <div id="error" role="alert" class="warn"></div>
@@ -41,7 +67,7 @@
 <div class="panel"><div class="tag">Schedule proposal</div><div id="tasks"></div><p class="dim">Hourly quote profile ($/kWh), hours 00–23. Approval authorizes only this session's simulated commands.</p><div id="bars" class="bars" role="img" aria-label="24 hourly hypothetical price bars"></div><div class="controls approval-controls"><button id="approve" disabled>Approve this exact schedule</button><button id="execute" class="secondary" disabled>Execute simulation</button></div><p id="status" class="dim" role="status"></p></div>
 <section id="robustness-panel" class="panel" aria-labelledby="robustness-title">
 <div class="tag">Optional · Compare another tariff</div><h2 id="robustness-title">What if the tariff changed?</h2>
-<p class="dim" id="robustness-help">Enter a hypothetical alternate tariff to compare keeping this schedule with replanning the same loads within the same limits. This comparison does not change, reapprove, or execute your current schedule.</p>
+<p class="dim" id="robustness-help">Enter a hypothetical alternate tariff to compare keeping this schedule with replanning the same loads within the same limits. The completed comparison is retained in this household. Use its tariff to start a fresh plan when you choose.</p>
 <p id="robustness-proposal" class="dim">Comparison uses the schedule proposal above.</p>
 <form id="robustness-form"><fieldset id="robustness-fields" aria-describedby="robustness-help">
 <legend class="sr-only">Hypothetical alternate electricity rates</legend>
@@ -67,13 +93,32 @@
 </div>
 <p id="robustness-table-help" class="field-hint">Start times use the same 24-hour day. Scroll the table sideways if needed.</p>
 <p id="robustness-empty" class="dim only-hidden">No loads move under this alternate tariff.</p>
-<div class="controls"><button id="robustness-export" class="secondary" type="button" disabled>Download comparison JSON</button></div>
-<p class="dim robustness-note">All costs are hypothetical. Your schedule and its approval state stay unchanged.</p>
+<div class="controls"><button id="robustness-adopt" type="button" disabled>Use this tariff for a new plan</button><button id="robustness-export" class="secondary" type="button" disabled>Download comparison JSON</button></div>
+<p class="dim robustness-note">A saved comparison retains the original schedule, alternative prices, changed start times, and modeled costs.</p>
 </div>
 </section>
 <div class="panel"><div class="tag">3 · Simulated receipt</div><pre id="receipt">No commands issued.</pre></div>
 </section>
-<footer class="dim"><small>Simulation only. GridKind does not connect to Amazon accounts, Alexa devices, utilities, appliances, or real-time prices. Values describe this scenario, not a prediction of your energy bill.</small></footer>
+</div>
+<aside class="history-column" aria-label="Household saved work">
+<section class="panel" aria-labelledby="history-title">
+<div class="section-heading"><div><div class="tag">Retained decisions</div><h2 id="history-title">Household history</h2></div><span id="history-count" class="status-chip">0</span></div>
+<p class="dim">Inputs, plans, tariff comparisons, and decisions are saved together.</p>
+<div id="household-history" class="history-list" aria-live="polite"></div>
+<div class="controls history-pagination"><button id="history-newer" type="button" class="secondary" disabled>Newer</button><button id="history-older" type="button" class="secondary" disabled>Older</button></div>
+<div id="history-detail" class="history-detail" tabindex="-1"><p class="dim">Open a saved record to inspect its inputs and result.</p></div>
+</section>
+<section class="panel" aria-labelledby="backup-title">
+<div class="tag">Portable household</div><h2 id="backup-title">Backup and recovery</h2>
+<p class="dim">Keep the complete household on another computer, including its input revisions and decision history.</p>
+<button id="household-export" class="secondary" type="button" disabled>Download household backup</button>
+<label class="file-label" for="household-file">Open household backup<input id="household-file" type="file" accept=".json,application/json"></label>
+<p id="household-import-preview" class="dim" role="status">Choose a backup to preview its household and saved records.</p>
+<button id="household-import" type="button" disabled>Restore as a new household</button>
+<p class="field-hint">Reopened inputs start a fresh plan and approval. Prior decisions remain readable in history.</p>
+</section>
+</aside></div>
+<footer class="dim"><small>GridKind runs the original constraint-aware optimizer on your hypothetical prices and loads. Execution produces a labeled simulated receipt. Saved households belong to this browser on this local server; download a backup before clearing browser data or moving machines.</small></footer>
 </main><script type="module" src="/app.js"></script></body></html>
 
 

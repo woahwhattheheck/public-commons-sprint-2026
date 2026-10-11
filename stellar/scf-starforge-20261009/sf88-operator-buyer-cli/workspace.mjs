@@ -1,6 +1,6 @@
 // MIT. Private operator setup for the original SF88 -> SF81 -> SF36 buyer.
 import { spawn } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { access, lstat, mkdir, open, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -10,6 +10,9 @@ import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
 import { checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 import { NETWORKS } from '../sf86-rpc-transfer-reconcile/terms.mjs';
+import { readRequestBody } from './request-body.mjs';
+import { acquireInitialization, initializationDirectory, optionalInitializationBytes,
+  retainInitializationFile, retainInitializationRecord, verifyInitializationFile } from './initialization.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.operator-workspace.v1';
 const KEY_NAMES = ['SF36_CONSENT_KEY_B64', 'SF36_AUDIT_KEY_B64', 'SF36_OPERATOR_KEY_B64'];
@@ -85,13 +88,16 @@ names=('SF36_CONSENT_KEY_B64','SF36_AUDIT_KEY_B64','SF36_OPERATOR_KEY_B64')
 ledger=Governor(sys.argv[3],policy,*(base64.b64decode(keys[n],validate=True) for n in names))
 try:
     count=ledger.db.execute('SELECT count(*) FROM reservations').fetchone()[0]
-    if count != 0: raise RuntimeError('NEW_LEDGER_NOT_EMPTY')
-    print(json.dumps({'schema':'stellar-forge.sf88.ledger-init.v1','reservations':count,'journalMode':ledger.db.execute('PRAGMA journal_mode').fetchone()[0]}))
+    if sys.argv[4] != 'resume' and count != 0: raise RuntimeError('NEW_LEDGER_NOT_EMPTY')
+    ledger.db.execute('BEGIN')
+    try: audit=ledger.audit()
+    finally: ledger.db.execute('ROLLBACK')
+    print(json.dumps({'schema':'stellar-forge.sf88.ledger-init.v1','reservations':count,'audit':audit,'journalMode':ledger.db.execute('PRAGMA journal_mode').fetchone()[0]}))
 finally: ledger.close()
 `;
-async function initializeLedger(python, policy, ledger, keyValues) {
+async function initializeLedger(python, policy, ledger, keyValues, { resume = false } = {}) {
   return new Promise((accept, reject) => {
-    const child = spawn(python, ['-I', '-B', '-c', INITIALIZE_LEDGER, governorPath, policy, ledger], {
+    const child = spawn(python, ['-I', '-B', '-c', INITIALIZE_LEDGER, governorPath, policy, ledger, resume ? 'resume' : 'create'], {
       shell:false, env:{LANG:'C.UTF-8', LC_ALL:'C.UTF-8'}, stdio:['pipe', 'pipe', 'ignore'],
     });
     let output = '', settled = false;
@@ -115,7 +121,8 @@ async function initializeLedger(python, policy, ledger, keyValues) {
       try {
         const result = JSON.parse(output);
         need(result.schema === 'stellar-forge.sf88.ledger-init.v1' &&
-          result.reservations === 0 && result.journalMode === 'wal', 'WORKSPACE_LEDGER_INIT_FAILED');
+          Number.isSafeInteger(result.reservations) && result.reservations >= 0 && (resume || result.reservations === 0) &&
+          result.journalMode === 'wal' && result.audit?.outcome === 'JOURNAL_CONSISTENT', 'WORKSPACE_LEDGER_INIT_FAILED');
         finish(null, result);
       } catch { finish(new InputError('WORKSPACE_LEDGER_INIT_FAILED')); }
     });
@@ -124,7 +131,7 @@ async function initializeLedger(python, policy, ledger, keyValues) {
 }
 
 /** Provision a NEW operator workspace from an existing offline-reviewed operation. */
-export async function initializeWorkspace(args, { environment = process.env } = {}) {
+export async function initializeWorkspace(args, { environment = process.env, resume = false } = {}) {
   need(process.platform !== 'win32', 'WORKSPACE_POSIX_OPERATOR_REQUIRED');
   const opt = options(args, ['--config', '--dir', '--actor', '--service', '--payer', '--python',
     '--secret-env', '--signer-provider', '--rpc', '--https-proxy', '--https-proxy-env',
@@ -167,7 +174,6 @@ export async function initializeWorkspace(args, { environment = process.env } = 
   await access(owner.python, constants.X_OK);
   // Resolve the parent once and refuse aliasing through a symlinked directory.
   need(await realpath(dirname(directory)) === dirname(directory), 'WORKSPACE_PARENT_PATH_AMBIGUOUS');
-  const keySet = keys(environment, {create:true});
   const policy = {schema:'stellar-spend-governor/v1', assets:[{
     network:op.expect.network, asset:op.expect.asset,
     max_single:maximum, max_total:total, max_per_utc_day:daily,
@@ -195,30 +201,65 @@ export async function initializeWorkspace(args, { environment = process.env } = 
     `  validateNativeSignerInput(payload, pins);\n` +
     `  adapter ??= ${factory}({...pins, environment:process.env});\n` +
     `  return (await adapter).sign(payload);\n}\n`;
-  const manifest = {schema:SCHEMA, createdAt:new Date().toISOString(), directory,
+  const body = await readRequestBody(op);
+  const digest = value => createHash('sha256').update(value).digest('hex');
+  const lease = await acquireInitialization(directory, { python: owner.python, resume }).catch(error => {
+    if (error.code === 'EEXIST') throw new InputError('WORKSPACE_ALREADY_EXISTS');
+    throw error;
+  });
+  try {
+  const priorManifestBytes = await optionalInitializationBytes(join(directory, 'workspace.json'), 65536);
+  const priorManifest = priorManifestBytes === null ? null : await privateJson(join(directory, 'workspace.json'));
+  const checkpointBytes = await optionalInitializationBytes(join(directory, 'initializing.json'), 65536);
+  const checkpoint = checkpointBytes === null ? null : await privateJson(join(directory, 'initializing.json'));
+  const keyBytes = await optionalInitializationBytes(join(directory, 'operator-keys.json'), 16384);
+  const ledgerInfo = await lstat(owner.ledger).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
+  if (ledgerInfo) need(ledgerInfo.isFile() && !ledgerInfo.isSymbolicLink() && privateMode(ledgerInfo), 'WORKSPACE_LEDGER_NOT_PRIVATE');
+  need(!priorManifest || ledgerInfo, 'WORKSPACE_RESTORE_ORIGINAL_LEDGER');
+  let keySet;
+  if (keyBytes !== null) {
+    const stored = await privateJson(join(directory, 'operator-keys.json'), 16384);
+    need(stored.schema === SCHEMA && schemaObject(stored.keys) && Object.keys(stored.keys).length === KEY_NAMES.length,
+      'WORKSPACE_KEY_FILE_INVALID');
+    keySet = { values: keys(stored.keys).values,
+      source: priorManifest?.operatorKeySource ?? checkpoint?.operatorKeySource ?? 'RETAINED_PRIVATE_WORKSPACE' };
+    if (KEY_NAMES.some(name => environment[name] !== undefined)) {
+      const supplied = keys(environment).values;
+      need(KEY_NAMES.every(name => supplied[name] === keySet.values[name]), 'WORKSPACE_OPERATOR_KEYS_CHANGED');
+    }
+  } else {
+    need(!ledgerInfo && !priorManifest, 'WORKSPACE_RESTORE_ORIGINAL_OPERATOR_KEYS');
+    keySet = keys(environment, { create: true });
+  }
+  const manifest = {schema:SCHEMA, createdAt:priorManifest?.createdAt ?? checkpoint?.createdAt ?? new Date().toISOString(), directory,
     config:'operator.json', keys:'operator-keys.json', sourceCli:cliPath,
     sourceConfig:inputPath, signer:signerPins,
     ...(transport === null ? {} : {buyerTransport:transport}),
     operatorKeySource:keySet.source, walletKeyEnvironment:secretEnv, signerProvider,
     network:op.expect.network, payer};
-  let created;
-  try {
-    try { await mkdir(directory, {mode:0o700}); }
-    catch (error) {
-      if (error.code === 'EEXIST') throw new InputError('WORKSPACE_ALREADY_EXISTS');
-      throw error;
-    }
-    created = await privateDirectory(directory);
-    await mkdir(cfg.evidenceDir, {mode:0o700});
-    for (const [name, contents] of [
+    const initialization = { schema: 'stellar-forge.sf88.workspace-initialization.v1',
+      createdAt: manifest.createdAt, directory, sourceConfig: inputPath,
+      configSha256: digest(configuredBytes), policySha256: digest(json(policy)), signerSha256: digest(signerSource),
+      bodySha256: body === undefined ? null : digest(body), bodyBytes: body?.length ?? 0,
+      ticketSha256: ticket ? digest(ticket.sourceBytes) : null, operatorKeySource: keySet.source };
+    const retainedFiles = [
       ['operator.json', configuredBytes], ['policy.json', json(policy)],
       ['operator-keys.json', json({schema:SCHEMA, keys:keySet.values})], ['signer.mjs', signerSource],
       ...(ticket ? [['operation-ticket.json', ticket.sourceBytes]] : []),
-    ]) await writeFile(join(directory, name), contents, {flag:'wx', mode:0o600});
-    const ledger = await initializeLedger(owner.python, owner.policy, owner.ledger, keySet.values);
+    ];
+    if (resume) for (const [name, contents] of retainedFiles) {
+      const present = await verifyInitializationFile(join(directory, name), contents);
+      need(!ledgerInfo || present, 'WORKSPACE_RESTORE_ORIGINAL_INITIALIZATION_INPUTS');
+    }
+    if (!priorManifest) await retainInitializationRecord(join(directory, 'initializing.json'), initialization, { resume, ignore: ['createdAt'] });
+    else if (checkpoint) await retainInitializationRecord(join(directory, 'initializing.json'), initialization, { resume: true, ignore: ['createdAt'] });
+    await initializationDirectory(cfg.evidenceDir, { create: !ledgerInfo });
+    for (const [name, contents] of retainedFiles)
+      await retainInitializationFile(join(directory, name), contents, { resume });
+    const ledger = await initializeLedger(owner.python, owner.policy, owner.ledger, keySet.values, { resume });
     // The manifest is written last; partial initialization is never executable.
-    await writeFile(join(directory, 'workspace.json'), json(manifest), {flag:'wx', mode:0o600});
-    return {mode:'PRIVATE_OPERATOR_WORKSPACE_CREATED', directory,
+    await retainInitializationRecord(join(directory, 'workspace.json'), manifest, { resume, ignore: ['createdAt'] });
+    return {mode:priorManifest ? 'PRIVATE_OPERATOR_WORKSPACE_REOPENED' : lease.created ? 'PRIVATE_OPERATOR_WORKSPACE_CREATED' : 'PRIVATE_OPERATOR_WORKSPACE_RESUMED', directory,
       config:join(directory, 'operator.json'), network:manifest.network, payer,
       operatorKeySource:keySet.source, walletKeyEnvironment:secretEnv,
       operationTicket:operationTicketView(ticket),
@@ -228,13 +269,13 @@ export async function initializeWorkspace(args, { environment = process.env } = 
         execute:[process.execPath, cliPath, '--execute-workspace', '--dir', directory]}};
   } catch (error) {
     // Only remove the new directory this invocation owns, never an existing workspace.
-    if (created) {
+    if (lease.created && !resume) {
       const current = await lstat(directory).catch(() => null);
-      if (current?.dev === created.dev && current?.ino === created.ino)
+      if (current?.dev === lease.identity.dev && current?.ino === lease.identity.ino)
         await rm(directory, {recursive:true, force:true}).catch(() => {});
     }
     throw error;
-  }
+  } finally { await lease.close(); }
 }
 
 /** Review never opens the operator-key file or loads the signer/SDK. */
@@ -348,3 +389,4 @@ export async function diagnoseWorkspace(args, {environment = process.env} = {}) 
     next:ready ? 'Review the operation, then use --execute-workspace for original terminal approval.' :
       'Resolve the listed runtime requirements and diagnose this same workspace again.'};
 }
+
