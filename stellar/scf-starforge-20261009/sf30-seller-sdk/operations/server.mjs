@@ -18,6 +18,8 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL(file, import.meta.url)) }])));
   const observer = observeSellerTraffic(session, { recentLimit });
+  const snapshot = () => ({ ...observer.snapshot(),
+    ...(typeof session.upstreamSnapshot === 'function' ? { upstreams: session.upstreamSnapshot() } : {}) });
   // The SAME outbox used by the merchant's original native settlement decorator.
   const readDelivery = deliveryOutbox ? createDeliveryReader(deliveryOutbox) : null;
   let allowedHosts = new Set(), allowedOrigins = new Set();
@@ -39,8 +41,12 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       }
       if (!['GET', 'HEAD'].includes(req.method)) return reply(405, 'text/plain', 'Read only', { allow: 'GET, HEAD' });
       if (req.url === '/api/snapshot' || req.url === '/export.json') {
-        return reply(200, 'application/json; charset=utf-8', JSON.stringify(observer.snapshot()),
+        return reply(200, 'application/json; charset=utf-8', JSON.stringify(snapshot()),
           req.url === '/export.json' ? { 'content-disposition': 'attachment; filename="seller-traffic.json"' } : {});
+      }
+      if (req.url === '/api/upstreams') {
+        if (typeof session.upstreamSnapshot !== 'function') return reply(404, 'text/plain', 'No upstream adapter attached');
+        return reply(200, 'application/json; charset=utf-8', JSON.stringify(session.upstreamSnapshot()));
       }
       if (req.url === '/export.csv') return reply(200, 'text/csv; charset=utf-8', trafficCsv(observer.snapshot()),
         { 'content-disposition': 'attachment; filename="seller-traffic.csv"' });

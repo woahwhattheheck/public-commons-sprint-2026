@@ -221,6 +221,14 @@ backend payment headers are not passed through.
 
 ## Failure and side-effect contract
 
+For repeated backend failures, opt in to the maintained
+[availability and recovery integration](UPSTREAM_AVAILABILITY.md). It uses the
+original admission hook to reject open/saturated bindings before native
+verification, permits one recovery backend call after cooldown, and reports
+the same session's state through the existing private operations dashboard.
+Omitting the option preserves current binding behavior. No probes or automatic
+request retries are introduced.
+
 There is one backend invocation and **no automatic redirect or retry** per
 handler call. Timeouts include connection and body handling. Shared per-binding
 capacity limits return a failure rather than unbounded parallel backend work.

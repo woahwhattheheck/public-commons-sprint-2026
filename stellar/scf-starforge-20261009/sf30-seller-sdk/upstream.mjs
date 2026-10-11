@@ -5,6 +5,7 @@ import { isIP } from 'node:net';
 import { readFile, stat } from 'node:fs/promises';
 import { isPublicAddress } from '../sf31-buyer-client/public-transport.mjs';
 import { createUpstreamHandler } from './upstream-handler.mjs';
+import { compileAvailabilityPolicy, protectUpstream } from './upstream-readiness.mjs';
 import { compileResponseContract } from './response-contract.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
@@ -13,7 +14,7 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
 const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','responseContract']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability','responseContract']);
 const bad = text => { throw new TypeError(text); };
 
 function integer(value,fallback,max,name) {
@@ -113,7 +114,8 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       ...(responseContract === undefined ? {} : {responseContract}),
       timeoutMs:integer(raw.timeoutMs,10000,120000,'timeoutMs'),
       maxResponseBytes:integer(raw.maxResponseBytes,1_048_576,1_048_576,'maxResponseBytes'),
-      maxInFlight:integer(raw.maxInFlight,16,256,'maxInFlight')});
+      maxInFlight:integer(raw.maxInFlight,16,256,'maxInFlight'),
+      availability:compileAvailabilityPolicy(raw.availability)});
   }
   return Object.freeze(compiled);
 }
@@ -159,13 +161,42 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
   const compiled = compileUpstreamBindings(config,{allowLoopback,env});
   const handlers = Object.create(null);
   for (const [name,binding] of Object.entries(compiled)) {
-    handlers[name] = createUpstreamHandler({baseUrl:binding.origin,path:binding.path,method:binding.method,
+    const handler = createUpstreamHandler({baseUrl:binding.origin,path:binding.path,method:binding.method,
       query:binding.query,headers:binding.credentials,requestHeaders:binding.requestHeaders,
       responseHeaders:[...new Set(['content-type',...binding.responseHeaders])],responseType:binding.responseMode,
       ...(binding.responseContract === undefined ? {} : {responseContract:binding.responseContract}),
       timeoutMs:binding.timeoutMs,maxResponseBytes:binding.maxResponseBytes,maxInFlight:binding.maxInFlight,
       allowLocal:binding.local,...(binding.local ? {} : {lookup:publicLookup(binding,lookup)})});
+    handlers[name] = binding.availability ? protectUpstream(handler,binding.availability,
+      {maxInFlight:binding.maxInFlight}) : handler;
   }
   return Object.freeze(handlers);
 }
 
+/** Compose opt-in backend admission with the original seller's schema admission.
+ * The original config stays unchanged; the returned config goes to startSellerService.
+ * No credentials, origins, request values or response contents enter the snapshot. */
+export function createUpstreamApplication(config,bindings,options={}) {
+  const compiled = compileUpstreamBindings(bindings,options);
+  validateUpstreamService(config,compiled);
+  const originals = createUpstreamHandlers(bindings,options), handlers = {...originals};
+  const service = structuredClone(config);
+  let sequence = 0;
+  for (const route of service.routes) {
+    const handler = originals[route.handler];
+    if (typeof handler?.admit !== 'function') continue;
+    let name;
+    do { name = `__sf30UpstreamAvailability${sequence++}`; } while (OWN(handlers,name));
+    handlers[name] = handler.admit;
+    route.admit = name;
+  }
+  return {config:service,handlers:Object.freeze(handlers),snapshot:() => ({
+    schema:'stellar-forge.seller-upstream-availability.v1',capturedAt:new Date().toISOString(),
+    bindings:Object.entries(compiled).map(([name,binding]) => ({name,method:binding.method,
+      protected:binding.availability !== null,...originals[name].snapshot()})),
+    semantics:{availability:'Original backend response health, not payment or settlement status',
+      recovery:'One backend trial; admitted requests are not capacity reservations',
+      retention:'Process memory; restart resets availability and counters',
+      requests:'No automatic probes or retries; each backend call uses the original handler'},
+  })};
+}
