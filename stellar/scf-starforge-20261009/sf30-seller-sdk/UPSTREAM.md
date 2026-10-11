@@ -38,7 +38,7 @@ node "$S/upstream-serve.mjs" \
 ```
 
 The startup JSON contains the actual listener, health and offers URLs. The
-seller binds to `127.0.0.1:8423`; the example backend uses port 8424.
+seller binds to `127.0.0.1:8423`; the example backend uses port 8425.
 `--port 0` selects an available seller port. Both JSON paths resolve from the
 current working directory, not from one another.
 
@@ -53,7 +53,7 @@ handler. The example's asset and recipient are deliberately unverified local
 markers, not payable Stellar accounts or assets.
 
 `--check` reads both configurations, resolves required environment variables,
-and verifies handler names, methods and named path bindings without listening,
+and uses the original offer compiler plus handler/method/path checks without listening,
 resolving DNS, invoking an upstream or initializing a facilitator. It does not
 prove backend availability, account ownership or payable asset validity.
 
@@ -204,9 +204,10 @@ const service = await startSellerService({config, handlers, port: 8423});
 
 Custom prepayment admission stays with the original embedding application;
 the JSON launcher never reuses an upstream handler as an admission hook.
-Static routes and the maintained original config reader are preserved. No
-changes to `serve.mjs`, `resource-server.mjs`, SF61 or the shared handler are
-required by this binding layer.
+Static routes and the maintained original config reader are preserved. The original resource adapter imports the existing pure SF25 schema validator
+directly instead of loading the catalog-storage reexport. Its validation and
+payment logic are unchanged. `serve.mjs`, SF61 and the shared handler are
+otherwise reused without copies.
 
 ```sh
 node --test "$S/test/upstream.test.mjs"

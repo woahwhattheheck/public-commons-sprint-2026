@@ -2,7 +2,7 @@
   "schema": "stellar-forge.seller-upstreams.v1",
   "bindings": {
     "existingDataset": {
-      "origin": "http://127.0.0.1:8424",
+      "origin": "http://127.0.0.1:8425",
       "path": "/v1/dataset",
       "query": ["region"],
       "requestHeaders": ["accept-language"],
