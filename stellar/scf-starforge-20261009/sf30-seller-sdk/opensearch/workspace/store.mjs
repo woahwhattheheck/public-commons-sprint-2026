@@ -311,13 +311,20 @@ export function compareEditions(before, after) {
 }
 
 function field(source, path) {
-  if (source && Object.hasOwn(source, path)) return source[path];
-  let value = source;
-  for (const part of path.split('.')) {
-    if (!value || typeof value !== 'object' || !Object.hasOwn(value, part)) return undefined;
-    value = value[part];
+  function visit(value, parts) {
+    if (!parts.length) return value;
+    if (Array.isArray(value)) {
+      if (!value.length) return [];
+      const selected = value.map(item => visit(item, parts));
+      return selected.every(item => item === undefined) ? undefined :
+        selected.map(item => item === undefined ? null : item);
+    }
+    if (!value || typeof value !== 'object') return undefined;
+    const literal = parts.join('.');
+    if (Object.hasOwn(value, literal)) return value[literal];
+    return Object.hasOwn(value, parts[0]) ? visit(value[parts[0]], parts.slice(1)) : undefined;
   }
-  return value;
+  return visit(source, path.split('.'));
 }
 function csvCell(value) {
   let text = value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value);
