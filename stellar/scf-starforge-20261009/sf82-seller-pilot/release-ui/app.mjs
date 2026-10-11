@@ -9,6 +9,12 @@ const node = (tag, text, className) => { const result = document.createElement(t
 const date = value => value ? new Date(value).toLocaleString() : '—';
 const literal = value => value === null || value === undefined ? '—' : typeof value === 'string' ? value : JSON.stringify(value, null, 2);
 const quoted = value => "'" + value.replaceAll("'", "'\\''") + "'";
+function stageCommand(release) {
+  const command = 'node release-cli.mjs stage --store ' + quoted(snapshot.root) + ' --id release-name';
+  if (release?.duckdb) return command + ' --duckdb-package prepared-duckdb-package --duckdb-python ' + quoted(release.duckdb.interpreter);
+  if (release?.python) return command + ' --python python-merchant.json';
+  return command + ' --spec openapi.json --config selections.json --bindings bindings.json';
+}
 function notice(message = '', error = false) { $('#notice').textContent = message; $('#notice').classList.toggle('error', error); }
 async function request(path, payload) {
   const options = { headers: { 'x-release-token': token }, cache: 'no-store' };
@@ -162,12 +168,12 @@ function renderStatus(value) {
   $('#listener').textContent = value.runtime.state === 'STOPPED' ? '—' : value.runtime.observed?.listener ?? '—';
   $('#mode').textContent = value.runtime.state === 'STOPPED' ? 'Ready to start a selected release' : value.runtime.observed?.mode ?? '—';
   $('#store').textContent = value.root;
-  $('#stage-command').textContent = 'node release-cli.mjs stage --store ' + quoted(value.root) + ' --id release-name --spec openapi.json --config selections.json --bindings bindings.json';
+  $('#stage-command').textContent = stageCommand(value.releases.find(release => release.id === (selected ?? value.state.active)));
   const list = $('#release-list'); list.replaceChildren();
   for (const release of value.releases) {
     const button = node('button', undefined, 'release-card'); button.dataset.id = release.id;
     button.setAttribute('aria-pressed', String(release.id === selected));
-    button.append(node('strong', release.label), node('span', release.id + ' · ' + release.routes.length + ' routes'),
+    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
       node('span', date(release.createdAt)), node('span', release.id === value.state.active ? 'Selected for next start' : 'Prepared'));
     button.addEventListener('click', () => choose(release.id)); list.append(button);
   }
@@ -196,6 +202,7 @@ function fieldPair(field, before, after) {
 }
 function renderDiff(value) {
   comparison = value;
+  $('#stage-command').textContent = stageCommand(value.after);
   $('#comparison-caption').textContent = (value.before?.id ?? 'No selected release') + ' → ' + value.after.id;
   $('#review-title').textContent = value.after.label;
   $('#review-mode').textContent = value.after.mode;

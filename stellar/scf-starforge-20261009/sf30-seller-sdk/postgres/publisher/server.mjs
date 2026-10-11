@@ -2,6 +2,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fault } from './files.mjs';
+import { openPostgresSchedule } from './schedule.mjs';
 
 async function body(req) {
   if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''))
@@ -20,8 +21,10 @@ export async function startPostgresPublisherServer({ publisher, port = 8442 } = 
     throw new TypeError('Open publisher and valid port required');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'], ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
+    ['/schedules.mjs', 'schedules.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([url, file, type]) => [url, { bytes: await readFile(new URL('./public/' + file, import.meta.url)), type }])));
+  const schedule = await openPostgresSchedule({ publisher });
   let origin, closing;
   const server = createServer((req, res) => {
     const send = (status, value, type = 'application/json; charset=utf-8') => {
@@ -40,6 +43,10 @@ export async function startPostgresPublisherServer({ publisher, port = 8442 } = 
         const file = assets.get(path); return send(200, file.bytes, file.type);
       }
       if (req.method === 'GET') {
+        if (path === '/api/schedule') return send(200, schedule.status({
+          limit: url.searchParams.has('limit') ? Number(url.searchParams.get('limit')) : undefined,
+          offset: url.searchParams.has('offset') ? Number(url.searchParams.get('offset')) : undefined,
+        }));
         if (path === '/api/status') {
           const options = {};
           for (const key of ['limit', 'plansOffset', 'runsOffset', 'historyOffset'])
@@ -55,6 +62,11 @@ export async function startPostgresPublisherServer({ publisher, port = 8442 } = 
       }
       if (req.method !== 'POST') throw fault('NOT_FOUND', 'Action not found.', 404);
       const input = await body(req);
+      if (path === '/api/schedule/save') return send(200, await schedule.configure(input));
+      if (path === '/api/schedule/enable') return send(200, await schedule.enable(input));
+      if (path === '/api/schedule/pause') return send(200, await schedule.pause(input));
+      if (path === '/api/schedule/run') return send(202, { id: schedule.runNow(input).id });
+      if (path === '/api/schedule/continue') return send(202, { id: schedule.continueRun(input).id });
       if (path === '/api/plans') return send(201, await publisher.savePlan(input));
       if (path === '/api/extract') {
         const started = publisher.startExtraction(input.plan);
@@ -75,16 +87,22 @@ export async function startPostgresPublisherServer({ publisher, port = 8442 } = 
     });
   });
   server.requestTimeout = 330000; server.headersTimeout = 15000; server.keepAliveTimeout = 1000;
-  await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', done); });
+  try { await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', done); }); }
+  catch (issue) { await schedule.close(); throw issue; }
   origin = `http://127.0.0.1:${server.address().port}`;
-  return { url: origin, server, publisher, close() {
+  schedule.start();
+  return { url: origin, server, publisher, schedule, close() {
     closing ??= (async () => {
       const stop = new Promise((done, reject) => {
         server.close(issue => issue ? reject(issue) : done()); server.closeIdleConnections?.();
       });
-      const running = publisher.status().active;
+      const scheduling = schedule.close(), running = publisher.status().active;
       if (running?.kind === 'extraction') publisher.cancel(running.id);
-      try { await stop; } finally { await publisher.close(); }
+      try {
+        const results = await Promise.allSettled([stop, scheduling]);
+        const failed = results.find(result => result.status === 'rejected');
+        if (failed) throw failed.reason;
+      } finally { await publisher.close(); }
     })();
     return closing;
   } };

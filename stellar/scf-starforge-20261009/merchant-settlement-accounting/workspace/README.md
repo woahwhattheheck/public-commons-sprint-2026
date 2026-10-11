@@ -44,6 +44,20 @@ Enter the operator or reviewer name in the sidebar. It is recorded with imports,
 
 Refresh preserves unsaved form text. If another operator saved the same review or changed the workspace revision, the interface retains the draft and offers an explicit reload and reapply action. Completed background work can also advance the workspace revision. A stale write is never silently substituted for the newer saved state.
 
+## Collect verification in the same workspace
+
+The **RPC collections** area retains original reserved payment records and their read-only verification work alongside the accounting inputs. Use the merchant runtime's existing `@stellar/stellar-sdk` event decoder for network collection.
+
+1. **Review original payment files.** Select SF81 record JSON or SF82 checkout evidence and enter the independently known payer account. Each upload retains its exact source bytes and validates the original reservation, receipt and payment terms. The default RPC endpoint comes from the shared network catalog. An optional endpoint must match that network's catalog or the original loopback replay format.
+2. **Prepare the selected collection.** Choose the reviewed sources and name the collection. Preparation snapshots their exact bytes through the original SF86 batch API. Sources and prepared collections remain available after reopening.
+3. **Collect and resume.** Start read-only verification and follow the per-record result and attempt count. Stop an active operation when necessary; completed original results stay retained. Resume collects only unattempted records. Select unsuccessful records to retry explicitly; earlier attempts remain unchanged. Two collection operations may progress at once, with further operations queued in the same workspace.
+4. **Use current results in accounting.** Publish the selected collection's current original results. The workspace retains an immutable original export and imports its files through the existing accounting import API. Repeating publication reuses identical imported files and preserves an operator's inclusion choices. Interrupted publication can be resumed by publishing the current results again.
+5. **Capture and export the reconciliation.** Capture current selected sources using the existing accounting workflow. The run includes selected collection results, native journal events and any connected recovered-payment collection. Review the original classifications, then download the original report or source-inclusive review archive. Each collection record also offers its current original verification JSON.
+
+Uploaded sources support 4 MB per file and 2,000 retained sources. Collection input paths and progress live under the existing private workspace; the original batch engine owns its source snapshots and immutable attempts. On process restart, unfinished operations are marked interrupted and their completed attempt files are read through the original inspector. Current progress uses the retained batch results, with an in-memory view while an operation is active. Workspace revisions advance for meaningful operator and operation transitions rather than every network response.
+
+For a host with an explicitly configured HTTPS CONNECT proxy, start or reopen with `--rpc-proxy-env HTTPS_PROXY`. The existing public HTTPS transport reads that environment variable on the host. Enter the variable name at startup; the browser handles the retained records and public account identities.
+
 ## Use a saved pricing decision
 
 Open **Pricing decisions** to upload an original saved SF97 pricing report.

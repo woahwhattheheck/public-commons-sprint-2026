@@ -277,6 +277,30 @@ Private response content and handler paths are omitted from normal release
 results. Exact public payment terms, application hashes and original native or
 challenge-only mode remain visible.
 
+## Prepared DuckDB and Parquet merchants
+
+The original prepared DuckDB package is a source alias for this same operator:
+
+```sh
+starforge merchant-mcp init --dir /private/data-merchant \
+  --duckdb-package /private/duckdb-workspace/packages/PACKAGE_ID \
+  --duckdb-python /private/duckdb-venv/bin/python --seller-port 8423
+```
+
+`merchant_sources` inspects exact package, query-declaration, plan and dataset
+hashes with the public routes and terms. `merchant_stage` retains the complete
+original package and copies its declared data into the existing release store.
+Source aliases use `duckdbPackage` and optional `duckdbPython` fields; those
+host-selected paths are hidden from MCP source and release views. The normal
+inspect, compare, activate, start, restart, stop, rollback, customer-client and
+discovery tools operate the same native merchant. Dataset-only changes are
+visible in the release comparison.
+
+The [DuckDB release guide](../../stellar/scf-starforge-20261009/sf82-seller-pilot/DUCKDB_RELEASES.md)
+documents two-version operation, retained packages, the original reader and
+facilitator, graceful worker shutdown, console use and reopen after the original
+authoring workspace has moved.
+
 ## Source and focused integration exercise
 
 `exercise.mjs` runs one complete loopback session using the original SF61

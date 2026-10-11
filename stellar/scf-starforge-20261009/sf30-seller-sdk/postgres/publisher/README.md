@@ -8,8 +8,9 @@ writer. Buyers retain the original snapshot and cursor while the database and
 current published version change.
 
 This local workflow composes the maintained PostgreSQL source, CSV loader,
-dataset version store and SF88 buyer preparation. It introduces no SQL service,
-payment engine, version engine or automatic publication schedule.
+dataset version store and SF88 buyer preparation. Its optional
+[continuous publication controls](SCHEDULES.md) keep a reviewed data product
+current through the same original extraction and publication engines.
 
 ## Start and reopen
 
