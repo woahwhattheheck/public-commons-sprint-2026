@@ -64,6 +64,16 @@ export async function openJobMerchant({ configPath, directory, env = process.env
     return { schema: 'stellar-forge.job-accepted.v1', jobId: row.id, functionId: row.functionId,
       inputSha256: row.inputSha256, state: 'AWAITING_SETTLEMENT', ...urls(row.id) };
   }
+  function handoff(row, token, created = false) {
+    const definition = source.compiled.functions[row.functionId];
+    const purchaseUrl = new URL(definition.offer.resource.url);
+    purchaseUrl.searchParams.set('sf98_order', row.id);
+    const purchase = { url: purchaseUrl.href, method: 'POST', orderReference: row.id,
+      headers: { 'x-sf98-order-id': row.id, 'x-sfjobs-token': token }, body: { jobId: row.id },
+      payment: structuredClone(row.payment) };
+    return { schema: 'stellar-forge.job-handoff.v1', created, job: summary(row),
+      claimToken: token, purchase, acceptance: accepted(row), ...urls(row.id) };
+  }
   function customerView(row) {
     return { schema: 'stellar-forge.job-status.v1', jobId: row.id, functionId: row.functionId,
       label: row.label, state: row.state, revision: row.revision, createdAt: row.createdAt,
@@ -264,13 +274,15 @@ export async function openJobMerchant({ configPath, directory, env = process.env
           payment: structuredClone(definition.payment), settlement: null, result: null, error: null,
           attempts: [], history: [{ at, action: 'prepared', state: 'PREPARED' }] });
       }
-      const purchaseUrl = new URL(definition.offer.resource.url);
-      purchaseUrl.searchParams.set('sf98_order', id);
-      const purchase = { url: purchaseUrl.href, method: 'POST', orderReference: id,
-        headers: { 'x-sf98-order-id': id, 'x-sfjobs-token': token }, body: { jobId: id },
-        payment: structuredClone(definition.payment) };
-      return { schema: 'stellar-forge.job-handoff.v1', created: !existing, job: summary(row),
-        claimToken: token, purchase, acceptance: accepted(row), ...urls(id) };
+      return handoff(row, token, !existing);
+    },
+    async renewClaim({ id, expectedRevision, reason: why, claimToken } = {}) {
+      assertOpen(); revision(expectedRevision); reason(why);
+      if (typeof id !== 'string' || !JOB_ID.test(id)) fail('JOB_NOT_FOUND', 404);
+      const token = claimToken ?? randomBytes(32).toString('base64url');
+      if (!tokenValid(token)) fail('JOB_CLAIM_TOKEN_INVALID');
+      const row = await store.renewClaim(id, expectedRevision, digest(token), why);
+      return handoff(row, token);
     },
     async admitJob(functionId, context) {
       try {
@@ -292,12 +304,15 @@ export async function openJobMerchant({ configPath, directory, env = process.env
       try {
         const id = context.body.jobId;
         const row = await store.update(id, undefined, current => {
+          // Admission precedes native verification. A claim can be renewed while
+          // that verification is in flight, so recheck it in the serialized stage.
+          if (!tokenMatches(current, context.headers?.['x-sfjobs-token'])) fail('JOB_NOT_FOUND', 404);
           if (current.state !== 'PREPARED') fail('JOB_ALREADY_SUBMITTED', 409);
           current.state = 'AWAITING_SETTLEMENT'; current.submittedAt = now();
           return history(current, 'submitted');
         });
         return { status: 202, headers: { 'content-type': 'application/json', 'cache-control': 'private, no-store' }, body: accepted(row) };
-      } catch (error) { return { status: error.status === 409 ? 409 : 503,
+      } catch (error) { return { status: [404, 409].includes(error.status) ? error.status : 503,
         body: { error: /^JOB_[A-Z_]+$/.test(error.code ?? '') ? error.code : 'JOB_STAGING_UNAVAILABLE' } }; }
     },
     bindNativeFactory(factory) {

@@ -2,8 +2,8 @@
 // Facilitator and HTTP connection are explicit loopback protocol fixtures.
 import assert from 'node:assert/strict';
 import { createServer, request as httpRequest } from 'node:http';
-import { mkdtemp, readFile, writeFile, link, lstat, rm } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { mkdtemp, readFile, writeFile, open, link, lstat, rm } from 'node:fs/promises';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { randomUUID, createHash } from 'node:crypto';
@@ -21,10 +21,12 @@ import { startCustomerServer } from './customer.mjs';
 import { startJobsWorkspace } from './workspace/server.mjs';
 import { createJobBuyer, openJobBuyer } from './buyer.mjs';
 
-const work = await mkdtemp(join(process.env.SF_JOBS_JOURNEY_TMPDIR ?? tmpdir(), 'sf30-paid-jobs-'));
+const resumeDirectory = process.env.SF_JOBS_JOURNEY_RESUME;
+const work = resumeDirectory ? resolve(resumeDirectory) :
+  await mkdtemp(join(process.env.SF_JOBS_JOURNEY_TMPDIR ?? tmpdir(), 'sf30-paid-jobs-'));
 const stateDirectory = join(work, 'merchant-state'), configPath = join(work, 'merchant.json');
 const gate = join(work, 'release-application'), output = process.env.SF_JOBS_JOURNEY_OUTPUT;
-const keepWork = process.env.SF_JOBS_JOURNEY_KEEP === '1';
+const keepWork = process.env.SF_JOBS_JOURNEY_KEEP === '1' || !!resumeDirectory;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const write = (path, value) => writeFile(path, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
 const listen = server => new Promise((resolve, reject) => {
@@ -123,7 +125,25 @@ const applicationBuyer = new Buyer({
   stateDirectory: join(work, 'original-buyer'),
 });
 const reviews = [];
+async function retainHandoff(handoff) {
+  const filename = handoff.job.id.replace(/:/g, '_') + '.handoff-r' + handoff.job.revision + '.json';
+  const path = join(work, filename), bytes = JSON.stringify(handoff, null, 2) + '\n';
+  let handle;
+  try {
+    handle = await open(path, 'wx', 0o600);
+    await handle.writeFile(bytes); await handle.sync();
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    assert.equal(await readFile(path, 'utf8'), bytes, 'Retained handoff revision changed.');
+  } finally { await handle?.close(); }
+  const directory = await open(work, 'r');
+  try { await directory.sync(); } finally { await directory.close(); }
+  return path;
+}
 async function buy(handoff) {
+  // Native buyer preparation can fail before returning its operation. Retain the
+  // exact private capability first so the original prepared job stays recoverable.
+  await retainHandoff(handoff);
   const payment = handoff.purchase.payment;
   const expect = { scheme: payment.scheme, network: payment.network, asset: payment.asset,
     payTo: payment.payTo, maxAtomic: payment.amount, maxTimeoutSeconds: payment.maxTimeoutSeconds };
@@ -154,32 +174,58 @@ async function buy(handoff) {
 
 try {
   assert.equal(await version(), NATIVE_SDK_VERSION);
-  const config = JSON.parse(await readFile(new URL('./example-merchant.json', import.meta.url)));
-  const application = await readFile(new URL('./example-application.mjs', import.meta.url), 'utf8');
-  const input = JSON.parse(await readFile(new URL('./example-input.json', import.meta.url)));
-  const gated = [
-    '',
-    'export async function gated(input, { signal }) {',
-    "  const { access } = await import('node:fs/promises');",
-    "  const { setTimeout } = await import('node:timers/promises');",
-    '  for (;;) {',
-    '    signal.throwIfAborted();',
-    '    try { await access(process.env.SF_JOBS_JOURNEY_GATE); break; }',
-    "    catch (error) { if (error.code !== 'ENOENT') throw error; }",
-    '    await setTimeout(50, undefined, { signal });',
-    '  }',
-    '  return analyze(input, { signal });',
-    '}', '',
-  ].join('\n');
-  await writeFile(join(work, 'application.mjs'), application + gated, { mode: 0o600 });
-  config.application = './application.mjs'; config.workerCount = 1; config.memoryLimitMb = 64;
-  config.environment = ['SF_JOBS_JOURNEY_GATE'];
-  config.functions.gated = { ...structuredClone(config.functions.analyze), path: '/gated-analysis',
-    description: 'Loopback journey application held until the operator releases its work.', timeoutMs: 30000 };
-  await write(configPath, config);
+  let input;
+  if (!resumeDirectory) {
+    const config = JSON.parse(await readFile(new URL('./example-merchant.json', import.meta.url)));
+    const application = await readFile(new URL('./example-application.mjs', import.meta.url), 'utf8');
+    input = JSON.parse(await readFile(new URL('./example-input.json', import.meta.url)));
+    const gated = [
+      '',
+      'export async function gated(input, { signal }) {',
+      "  const { access } = await import('node:fs/promises');",
+      "  const { setTimeout } = await import('node:timers/promises');",
+      '  for (;;) {',
+      '    signal.throwIfAborted();',
+      '    try { await access(process.env.SF_JOBS_JOURNEY_GATE); break; }',
+      "    catch (error) { if (error.code !== 'ENOENT') throw error; }",
+      '    await setTimeout(50, undefined, { signal });',
+      '  }',
+      '  return analyze(input, { signal });',
+      '}', '',
+    ].join('\n');
+    await writeFile(join(work, 'application.mjs'), application + gated, { mode: 0o600 });
+    config.application = './application.mjs'; config.workerCount = 1; config.memoryLimitMb = 64;
+    config.environment = ['SF_JOBS_JOURNEY_GATE'];
+    config.functions.gated = { ...structuredClone(config.functions.analyze), path: '/gated-analysis',
+      description: 'Loopback journey application held until the operator releases its work.', timeoutMs: 30000 };
+    await write(configPath, config);
+  }
   await listen(facilitator); await startMerchant();
   assert.equal((await fetch(workspace.origin)).status, 200);
-  const report = await operator('/api/jobs', { functionId: 'analyze', input, label: 'October series report', reference: 'report:2026.10' });
+  let report;
+  if (resumeDirectory) {
+    const prepared = await model.get('report:2026.10'), snapshot = await model.snapshot();
+    assert.equal(snapshot.jobs.length, 1, 'Resume the original pre-purchase report without recreating other jobs.');
+    assert.equal(prepared.functionId, 'analyze');
+    assert.equal(prepared.state, 'PREPARED');
+    assert.equal(prepared.submittedAt, null); assert.equal(prepared.settlement, null);
+    assert.equal((await model.deliveryOutbox.rows()).length, 0);
+    input = structuredClone(prepared.input);
+    report = await operator('/api/jobs/' + encodeURIComponent(prepared.id) + '/renew-claim', {
+      expectedRevision: prepared.revision,
+      reason: 'Recover the original prepared job after buyer runtime setup interrupted ticket delivery.',
+    });
+    assert.equal(report.created, false); assert.equal(report.job.id, prepared.id);
+    assert.equal(report.job.revision, prepared.revision + 1);
+    assert.equal(report.job.inputSha256, prepared.inputSha256);
+    assert.deepEqual(report.purchase.payment, prepared.payment);
+    const renewed = await model.get(prepared.id);
+    assert.equal(renewed.history.at(-1).action, 'claim-renewed');
+    assert.equal(renewed.history.at(-1).previousRevision, prepared.revision);
+    assert.equal(renewed.history.at(-1).revision, renewed.revision);
+  } else {
+    report = await operator('/api/jobs', { functionId: 'analyze', input, label: 'October series report', reference: 'report:2026.10' });
+  }
   assert.equal(new URL(report.purchase.url).searchParams.get('sf98_order'), report.job.id);
   const firstBuyer = await buy(report);
   const queued = await firstBuyer.inspect();
@@ -243,6 +289,7 @@ try {
     facilitator: 'LOCAL_PROTOCOL_FIXTURE',
     transport: 'ORIGINAL_SF31_PUBLIC_TRANSPORT_WITH_LOOPBACK_REQUEST_SEAM',
     originalOfflineBuyerReviews: reviews, nativeVerifies: verified, nativeSettlements: settled,
+    resumedPreparedJob: !!resumeDirectory, privateHandoffsRetainedBeforeBuyerPreparation: true,
     jobs: [{ jobId: report.job.id, state: completed.state, sha256: download.sha256, bytes: download.bytes },
       { jobId: recovery.job.id, state: secondCompleted.state, sha256: secondDownload.sha256, attempts: 3 }],
     recoveredTemporaryResultLink: true,
