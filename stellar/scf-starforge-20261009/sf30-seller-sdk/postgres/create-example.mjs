@@ -1,24 +1,22 @@
-// MIT. Create one private operator workspace; no database connection or payment.
-import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-
-export async function createExample(directory) {
-  const path = resolve(directory);
-  await mkdir(path, { mode: 0o700 });
-  try {
-    for (const [source, target] of [['example-source.json', 'source.json'], ['example-service.json', 'service.json'],
-      ['example-bindings.json', 'bindings.json'], ['example-schema.sql', 'example-schema.sql']]) {
-      await writeFile(resolve(path, target), await readFile(new URL(source, import.meta.url)), { mode: 0o600, flag: 'wx' });
-    }
-    return { directory: path, source: resolve(path, 'source.json'), service: resolve(path, 'service.json'),
-      bindings: resolve(path, 'bindings.json'), launcher: fileURLToPath(new URL('serve.mjs', import.meta.url)) };
-  } catch (error) { await rm(path, { recursive: true, force: true }); throw error; }
+#!/usr/bin/env node
+// MIT. A create-only merchant starter; never connects to or mutates a database.
+import { mkdir, copyFile, chmod, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+export async function main(args = process.argv.slice(2)) {
+  if (args.length !== 2 || args[0] !== '--directory') throw new TypeError('Usage: node postgres/create-example.mjs --directory NEW_DIRECTORY');
+  const directory = resolve(args[1]); await mkdir(directory, { mode: 0o700 });
+  for (const [input, output] of [['example-source.json','source.json'],['example-service.json','service.json'],['example-seed.sql','seed.sql']]) {
+    await copyFile(new URL(input, import.meta.url), join(directory,output), constants.COPYFILE_EXCL);
+    await chmod(join(directory,output),0o600);
+  }
+  await writeFile(join(directory,'README.txt'), 'Merchant workspace: source.json selects an existing PostgreSQL URL environment variable. No credentials belong in these files. Review source SQL/projection and seller payment terms. seed.sql is fictional and may be run explicitly only in your new disposable database. The starter has not connected or executed SQL. See the original postgres/README.md for launch and database-role setup.\n', { flag:'wx',mode:0o600 });
+  console.log(JSON.stringify({schema:'stellar-forge.postgres-starter.v1',directory,
+    source:join(directory,'source.json'),service:join(directory,'service.json'),
+    launcher:fileURLToPath(new URL('./start.mjs',import.meta.url)),
+    databaseModified:false,mode:'FICTIONAL_CHALLENGE_ONLY_CONFIG'},null,2));
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  if (process.argv.length !== 4 || process.argv[2] !== '--directory') {
-    process.stderr.write('Usage: node create-example.mjs --directory NEW_DIRECTORY\n'); process.exitCode = 1;
-  } else createExample(process.argv[3]).then(result => process.stdout.write(JSON.stringify(result, null, 2) + '\n'), () => {
-    process.stderr.write('{"error":"EXAMPLE_CREATE_FAILED"}\n'); process.exitCode = 1;
-  });
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(issue=>{process.stderr.write((issue.code??issue.message)+'\n');process.exitCode=1;});
 }

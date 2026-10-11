@@ -1,6 +1,7 @@
 // MIT. Bounded HTTP observations around the original SF30 server, not payment accounting.
 import { randomUUID } from 'node:crypto';
 import { selectServiceRoute } from '../route-path.mjs';
+import { supportsSellerMethod } from '../http-methods.mjs';
 
 const LIMITS = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 15000, Infinity];
 const OUTCOMES = ['success', 'challenge', 'clientError', 'serverError', 'other', 'disconnected'];
@@ -52,7 +53,7 @@ export function observeSellerTraffic(session, { now = Date.now, monotonic = () =
   for (const route of routes) {
     if (typeof route.id !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(route.id) ||
         stats.has(route.id) || typeof route.path !== 'string' || route.path.length > 2048 ||
-        !['GET', 'HEAD', 'POST'].includes(route.method) || !route.binding) {
+        !supportsSellerMethod(route.method) || !route.binding) {
       throw new TypeError('Original compiled seller routes required');
     }
     stats.set(route.id, { id: route.id, method: route.method, path: route.path, ...empty() });

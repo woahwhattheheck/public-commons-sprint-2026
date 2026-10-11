@@ -3,6 +3,7 @@ import { buildUnpaidRequest, readLimitedResponse, decodePaymentRequired } from '
 const $ = id => document.getElementById(id);
 const text = (id, value) => { $(id).textContent = value; };
 const json = value => JSON.stringify(value, null, 2);
+const bodyMethods = new Set(['POST', 'PUT', 'PATCH']);
 let documentSpec, operations = [], current, request, controller, revision = 0;
 const setError = value => { text('input-error', value); $('input-error').hidden = !value; };
 function invalidate() {
@@ -18,9 +19,22 @@ function preview() {
   try {
     request = buildUnpaidRequest(current, values(), location.origin);
     text('curl', request.curl); text('target', request.url); setError('');
+    const inputs = values();
+    const clientInputs = { ...(Object.keys(inputs.path).length ? { path: inputs.path } : {}),
+      ...(Object.keys(inputs.query).length ? { query: inputs.query } : {}),
+      ...(bodyMethods.has(current['x-seller-route'].method) ? { body: JSON.parse(inputs.body) } : {}) };
+    const choice = $('client-payment-option').value;
+    if (choice === '') text('client-code', 'Choose an original payment option to generate client usage.');
+    else text('client-code', "import { buildRequest } from './seller-client.mjs';\n\n" +
+      'const request = buildRequest(' + JSON.stringify(current.operationId) + ', ' + json(clientInputs) + ', {\n' +
+      "  intentId: 'your-stable-business-operation-id',\n" +
+      '  acceptIndex: ' + Number(choice) + ',\n' +
+      '  maxAtomic: ' + JSON.stringify(current['x-x402-payment-required'].accepts[Number(choice)].amount) + ',\n});\n' +
+      '// Pass request to your configured buyer with your approval and signer.');
     $('copy').disabled = false; $('send').disabled = false;
   } catch (error) {
     request = null; text('curl', 'Complete valid request inputs to generate a command.'); text('target', '—');
+    text('client-code', 'Complete valid request inputs to generate client usage.');
     setError(error.message); $('copy').disabled = true; $('send').disabled = true;
   }
 }
@@ -89,7 +103,18 @@ function choose(operation) {
     field.addEventListener('input', preview); label.append(field); $('path-fields').append(label);
   }
   $('query').value = json(input.queryParams ?? {});
-  $('body').value = json(input.body ?? {}); $('body-field').hidden = route.method !== 'POST';
+  $('body').value = json(input.body ?? {}); $('body-field').hidden = !bodyMethods.has(route.method);
+  const choices = $('client-payment-option'); choices.replaceChildren();
+  if (offer.accepts.length > 1) {
+    const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = 'Choose a payment option';
+    choices.append(placeholder);
+  }
+  offer.accepts.forEach((payment, index) => {
+    const option = document.createElement('option'); option.value = String(index);
+    option.textContent = `${index + 1}: ${payment.network} · ${payment.amount} atomic · ${payment.asset}`;
+    choices.append(option);
+  });
+  choices.value = offer.accepts.length > 1 ? '' : '0';
   const required = (operation.parameters ?? []).filter(p => p.in === 'query' && p.required).map(p => p.name);
   text('required', required.length ? 'Required: ' + required.join(', ') : 'Omit unused optional parameters. Repeated values use JSON arrays of strings.');
   $('detail').hidden = false;
@@ -108,6 +133,7 @@ function renderRoutes() {
   if (!$('routes').children.length) { const empty = document.createElement('p'); empty.className = 'hint'; empty.textContent = 'No matching endpoints.'; $('routes').append(empty); }
 }
 $('query').addEventListener('input', preview); $('body').addEventListener('input', preview);
+$('client-payment-option').addEventListener('change', preview);
 $('filter').addEventListener('input', renderRoutes);
 const tabs = [...document.querySelectorAll('[data-tab]')];
 function selectTab(button) {

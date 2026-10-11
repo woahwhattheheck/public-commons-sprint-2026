@@ -1,169 +1,226 @@
-// MIT. Application data source for the existing SF30 seller lifecycle.
+// MIT. A pooled PostgreSQL data source for the ORIGINAL SF30 seller lifecycle.
 import { performance } from 'node:perf_hooks';
-import { compilePostgresQueries, bindPostgresParameters, PostgresInputError, limit } from './parameters.mjs';
+import { bindPostgresParameters, compilePostgresQueries, describePostgresQueries,
+  projectedStatement, QueryInputError } from './declaration.mjs';
 
 export class PostgresSourceError extends Error {
-  constructor(code) { super(code); this.name = 'PostgresSourceError'; this.code = code; }
+  constructor(code, query = undefined, sqlState = undefined) {
+    super(code); this.name = 'PostgresSourceError'; this.code = code;
+    if (query) this.query = query;
+    if (typeof sqlState === 'string' && /^[0-9A-Z]{5}$/.test(sqlState)) this.sqlState = sqlState;
+  }
 }
-const fault = code => new PostgresSourceError(code);
-const invalid = error => ({ status: 422, body: { error: 'QUERY_INPUT_INVALID', code: error.code, field: error.field } });
-const nativeCode = error => error instanceof PostgresSourceError ? error.code : error?.code === '57014' ? 'QUERY_TIMEOUT' :
-  error?.code === '25006' ? 'SOURCE_READ_ONLY_VIOLATION' : 'QUERY_UNAVAILABLE';
+const error = (code, query, state) => new PostgresSourceError(code, query, state);
+const TEXT_TYPES = Object.freeze({ getTypeParser: () => value => value });
+const limit = (value, low, high, code) => {
+  if (!Number.isInteger(value) || value < low || value > high) throw new RangeError(code);
+  return value;
+};
+const inputResponse = issue => ({ status: 422,
+  body: { error: 'QUERY_INPUT_INVALID', code: issue.code, field: issue.field } });
+function safeFailure(issue, name) {
+  if (issue instanceof PostgresSourceError || issue instanceof QueryInputError) return issue;
+  if (issue?.code === '57014') return error('QUERY_TIMEOUT', name, issue.code);
+  if (issue?.code === '55P03') return error('QUERY_LOCK_TIMEOUT', name, issue.code);
+  return error('QUERY_UNAVAILABLE', name, issue?.code);
+}
 
-export async function createPostgresQuerySource({ connection, queries, maxConnections = 4, maxPending = 32,
-  connectTimeoutMs = 5000, idleTimeoutMs = 10000 } = {}) {
-  if (!connection || typeof connection !== 'object' || Array.isArray(connection) ||
-      ['host', 'user', 'database'].some(key => typeof connection[key] !== 'string' || !connection[key]) ||
-      Object.hasOwn(connection, 'connectionString')) throw new TypeError('Explicit operator host, user and database configuration required');
-  limit(maxConnections, 1, 16, 'maxConnections'); limit(maxPending, maxConnections, 256, 'maxPending');
-  limit(connectTimeoutMs, 100, 30000, 'connectTimeoutMs'); limit(idleTimeoutMs, 1000, 300000, 'idleTimeoutMs');
+export async function createPostgresQuerySource({ connection, queries, maxConnections = 4,
+  maxPending = 32, connectTimeoutMs = 5000, idleTimeoutMs = 30000,
+  lockTimeoutMs = 500, startupTimeoutMs = 10000 } = {}) {
+  if (!connection || typeof connection !== 'object') throw new TypeError('POSTGRES_CONNECTION_REQUIRED');
+  maxConnections = limit(maxConnections, 1, 32, 'POSTGRES_CONNECTION_LIMIT');
+  maxPending = limit(maxPending, maxConnections, 256, 'POSTGRES_PENDING_LIMIT');
+  connectTimeoutMs = limit(connectTimeoutMs, 100, 30000, 'POSTGRES_CONNECT_TIMEOUT');
+  idleTimeoutMs = limit(idleTimeoutMs, 1000, 300000, 'POSTGRES_IDLE_TIMEOUT');
+  lockTimeoutMs = limit(lockTimeoutMs, 1, 30000, 'POSTGRES_LOCK_TIMEOUT');
+  startupTimeoutMs = limit(startupTimeoutMs, 100, 60000, 'POSTGRES_STARTUP_TIMEOUT');
   const compiled = compilePostgresQueries(queries);
-  const [{ default: pg }, { default: Cursor }] = await Promise.all([import('pg'), import('pg-cursor')]);
-  const pool = new pg.Pool({ host: connection.host, port: connection.port ?? 5432, user: connection.user,
-    database: connection.database, password: connection.password, ssl: connection.ssl,
-    max: maxConnections, connectionTimeoutMillis: connectTimeoutMs,
-    idleTimeoutMillis: idleTimeoutMs, allowExitOnIdle: true, application_name: 'stellar-forge-sf30-postgres',
-    options: '-c default_transaction_read_only=on -c standard_conforming_strings=on',
-    statement_timeout: 30000, query_timeout: 30000 });
-  // Idle failures are handled by pg-pool. Never print provider errors/credentials.
-  pool.on('error', () => {});
-  const waiting = [], active = new Set();
-  let closed = false, closing;
+  let Pool;
+  try { ({ Pool } = await import('pg')); }
+  catch { throw error('POSTGRES_DRIVER_UNAVAILABLE'); }
+  const pool = new Pool({ ...connection, max: maxConnections,
+    connectionTimeoutMillis: connectTimeoutMs, idleTimeoutMillis: idleTimeoutMs,
+    allowExitOnIdle: true, application_name: 'sf30-postgres-source',
+    statement_timeout: startupTimeoutMs, query_timeout: startupTimeoutMs + 1000,
+    idle_in_transaction_session_timeout: startupTimeoutMs + 1000 });
+  // A terminated idle backend must not crash the process or log its credentials.
+  pool.on('error', () => { failures++; });
+  const queue = [], jobs = new Set(), running = new Set();
+  let active = 0, closed = false, closing = null, completed = 0, failures = 0;
+  let serverVersion, columnTypes = Object.create(null);
+
   function definition(name) {
-    if (typeof name !== 'string' || !Object.hasOwn(compiled, name)) throw fault('QUERY_NOT_FOUND');
+    if (typeof name !== 'string' || !Object.hasOwn(compiled, name)) throw error('QUERY_NOT_FOUND');
     return compiled[name];
   }
   const validate = (name, input) => bindPostgresParameters(definition(name), input);
-  const busy = () => waiting.length + active.size;
-  function destroy(job) {
-    if (job.client && !job.released) { job.released = true; job.client.release(true); }
+  function release(job, destroy) {
+    const client = job.client;
+    if (!client) return;
+    job.client = null;
+    try { client.release(destroy === true); } catch { /* already retired */ }
   }
-  function finish(job, error, result) {
+  function finish(job, issue, result) {
     if (job.done) return;
-    job.done = true; clearTimeout(job.timer); job.signal?.removeEventListener('abort', job.onAbort);
-    error ? job.reject(error) : job.resolve(result);
+    job.done = true; clearTimeout(job.timer);
+    job.signal?.removeEventListener('abort', job.abort);
+    jobs.delete(job);
+    if (issue) { failures++; job.reject(issue); }
+    else { completed++; job.resolve(result); }
   }
-  function interrupt(job, code) {
+  function cancel(job, code) {
     if (job.done) return;
-    const index = waiting.indexOf(job);
-    if (index >= 0) waiting.splice(index, 1);
-    destroy(job); finish(job, fault(code)); queueMicrotask(pump);
+    finish(job, error(code, job.name));
+    // Retire this connection. Never put an uncertain/aborted transaction back
+    // into the pool, and never replay the query on a replacement connection.
+    release(job, true);
+    pump();
   }
-  const remaining = job => Math.max(1, Math.ceil(job.deadline - performance.now()));
-  async function run(job) {
-    active.add(job);
-    let cursor;
+  const remaining = job => Math.max(1, Math.floor(job.deadline - performance.now()));
+  async function execute(job) {
     try {
-      const client = await pool.connect(); job.client = client;
-      if (job.done) { destroy(job); return; }
-      await client.query({ text: 'BEGIN READ ONLY', query_timeout: remaining(job) });
+      const client = await pool.connect();
+      if (job.done || closed) { client.release(true); return; }
+      job.client = client;
+      await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
       if (job.done) return;
-      // Server deadline and local deadline both cover the complete read lifecycle.
-      await client.query({ text: "SELECT set_config('statement_timeout', $1, true), set_config('lock_timeout', $1, true), set_config('idle_in_transaction_session_timeout', $1, true), set_config('timezone', 'UTC', true), set_config('DateStyle', 'ISO, YMD', true), set_config('bytea_output', 'hex', true)",
-        values: [String(remaining(job))], query_timeout: remaining(job) });
+      const budget = remaining(job);
+      await client.query({ text: "SELECT set_config('statement_timeout',$1,true), " +
+        "set_config('lock_timeout',$2,true), set_config('idle_in_transaction_session_timeout',$3,true), " +
+        "set_config('search_path','pg_catalog',true)",
+        values: [String(budget), String(Math.min(lockTimeoutMs, budget)), String(budget + 1000)],
+        queryMode: 'extended' });
       if (job.done) return;
-      const spec = definition(job.name);
-      cursor = client.query(new Cursor(spec.sql, job.values, { rowMode: 'array', types: { getTypeParser: () => value => value } }));
-      const rows = []; let fields = [], bytes = 0, truncated = false;
-      while (!job.done) {
-        const batch = await new Promise((resolve, reject) => cursor.read(Math.min(32, spec.maxRows + 1 - rows.length),
-          (error, values, result) => error ? reject(error) : resolve({ values, fields: result?.fields })));
-        if (job.done) return;
-        if (batch.fields) fields = batch.fields.map(field => ({ name: field.name, dataTypeID: field.dataTypeID }));
-        if (fields.length !== spec.columns.length || fields.some((field, index) => field.name !== spec.columns[index]))
-          throw fault('QUERY_RESULT_CONTRACT');
-        for (const row of batch.values) {
-          if (rows.length === spec.maxRows) { truncated = true; break; }
-          if (row.length !== spec.columns.length || row.some(value => value !== null && typeof value !== 'string')) throw fault('QUERY_RESULT_CONTRACT');
-          const item = Object.fromEntries(spec.columns.map((column, index) => [column, row[index]]));
-          bytes += Buffer.byteLength(JSON.stringify(item)) + 1;
-          if (bytes > spec.maxBytes) throw fault('QUERY_RESULT_TOO_LARGE');
-          rows.push(item);
-        }
-        if (truncated || !batch.values.length) break;
-      }
+      const query = compiled[job.name];
+      const result = await client.query({ text: projectedStatement(query), values: job.values,
+        rowMode: 'array', types: TEXT_TYPES, queryMode: 'extended' });
       if (job.done) return;
-      await cursor.close(); cursor = null;
+      if (result.fields.length !== query.columns.length ||
+          result.fields.some((field, index) => field.name !== query.columns[index]))
+        throw error('QUERY_PROJECTION_CHANGED', job.name);
+      const rows = result.rows.slice(0, query.maxRows).map(row =>
+        Object.fromEntries(query.columns.map((name, index) => [name, row[index]])));
+      const output = { schema: 'stellar-forge.postgres-result.v1', query: job.name,
+        columns: [...query.columns], columnTypes: result.fields.map(field => ({ name: field.name, oid: field.dataTypeID })),
+        rows, rowCount: rows.length, truncated: result.rows.length > query.maxRows,
+        valueEncoding: 'postgres-text', snapshot: 'single-request-repeatable-read' };
+      if (Buffer.byteLength(JSON.stringify(output)) > query.maxBytes) throw error('QUERY_RESULT_TOO_LARGE', job.name);
+      await client.query('COMMIT');
       if (job.done) return;
-      const result = { schema: 'stellar-forge.postgres-result.v1', query: job.name,
-        columns: [...spec.columns], fields, encoding: 'postgres-text', rows, rowCount: rows.length, truncated };
-      if (Buffer.byteLength(JSON.stringify(result)) > spec.maxBytes) throw fault('QUERY_RESULT_TOO_LARGE');
-      await client.query({ text: 'COMMIT', query_timeout: remaining(job) });
-      if (!job.done) finish(job, null, result);
-    } catch (error) {
-      // A failed/timed-out read destroys this connection, rolling back its
-      // transaction and ensuring no uncertain pooled state reaches the next buyer.
-      destroy(job); finish(job, fault(nativeCode(error)));
+      release(job, false); finish(job, null, output);
+    } catch (issue) {
+      release(job, true);
+      if (!job.done) finish(job, safeFailure(issue, job.name));
     } finally {
-      if (job.client && !job.released) {
-        if (cursor || job.done && performance.now() >= job.deadline) destroy(job);
-        else { job.released = true; job.client.release(); }
-      }
-      active.delete(job); queueMicrotask(pump);
+      release(job, true); active--;
+      pump();
     }
   }
   function pump() {
     if (closed) return;
-    while (waiting.length && active.size < maxConnections) {
-      const job = waiting.shift(); if (!job.done) void run(job);
+    while (active < maxConnections && queue.length) {
+      const job = queue.shift();
+      if (job.done) continue;
+      active++;
+      const task = execute(job);
+      running.add(task);
+      task.finally(() => running.delete(task));
     }
   }
   function query(name, input, { signal } = {}) {
     try {
+      if (closed) throw error('SOURCE_CLOSED');
+      if (signal !== undefined && (typeof signal.addEventListener !== 'function' ||
+          typeof signal.removeEventListener !== 'function')) throw new TypeError('ABORT_SIGNAL_REQUIRED');
+      if (signal?.aborted) throw error('QUERY_ABORTED', name);
       const values = validate(name, input);
-      if (closed) throw fault('SOURCE_CLOSED');
-      if (signal !== undefined && !(signal instanceof AbortSignal)) throw new TypeError('signal must be an AbortSignal');
-      if (signal?.aborted) throw fault('QUERY_ABORTED');
-      if (busy() >= maxPending) throw fault('SOURCE_BUSY');
+      if (jobs.size >= maxPending) throw error('SOURCE_BUSY');
       return new Promise((resolve, reject) => {
-        const spec = definition(name), job = { name, values, signal, resolve, reject,
-          deadline: performance.now() + spec.timeoutMs, done: false, released: false };
-        job.onAbort = () => interrupt(job, 'QUERY_ABORTED');
-        job.timer = setTimeout(() => interrupt(job, 'QUERY_TIMEOUT'), spec.timeoutMs);
-        signal?.addEventListener('abort', job.onAbort, { once: true });
-        waiting.push(job); pump();
+        const duration = compiled[name].timeoutMs;
+        const job = { name, values, signal, resolve, reject, done: false, client: null,
+          deadline: performance.now() + duration };
+        job.abort = () => cancel(job, 'QUERY_ABORTED');
+        job.timer = setTimeout(() => cancel(job, 'QUERY_TIMEOUT'), duration);
+        signal?.addEventListener('abort', job.abort, { once: true });
+        jobs.add(job); queue.push(job); pump();
       });
-    } catch (error) { return Promise.reject(error); }
+    } catch (issue) { return Promise.reject(issue); }
   }
   function route(name, { input = 'query' } = {}) {
     definition(name);
-    if (!['query', 'body'].includes(input)) throw new TypeError('Route input must be query or body');
-    function values(context) {
-      if (input === 'body' && !['POST', 'PUT', 'PATCH'].includes(context?.method)) throw new PostgresInputError(null, 'JSON_BODY_METHOD_REQUIRED');
+    if (!['query', 'body'].includes(input)) throw new TypeError('POSTGRES_ROUTE_INPUT_INVALID');
+    const values = context => {
+      if (input === 'body' && !['POST', 'PUT', 'PATCH'].includes(context?.method))
+        throw new QueryInputError(null, 'JSON_BODY_METHOD_REQUIRED');
       return context?.[input];
-    }
+    };
     return Object.freeze({
       admit(context) {
         try {
           validate(name, values(context));
-          if (closed) throw fault('SOURCE_CLOSED');
-          if (busy() >= maxPending) return { status: 429, headers: { 'retry-after': '1' }, body: { error: 'SOURCE_BUSY' } };
+          if (closed) return { status: 503, body: { error: 'SOURCE_CLOSED' } };
+          if (jobs.size >= maxPending) return { status: 429,
+            headers: { 'retry-after': '1' }, body: { error: 'SOURCE_BUSY' } };
           return true;
-        } catch (error) { if (error instanceof PostgresInputError) return invalid(error); throw error; }
+        } catch (issue) { if (issue instanceof QueryInputError) return inputResponse(issue); throw issue; }
       },
       async handler(context) {
         try { return { status: 200, headers: { 'content-type': 'application/json; charset=utf-8' },
           body: await query(name, values(context), { signal: context?.signal }) }; }
-        catch (error) {
-          if (error instanceof PostgresInputError) return invalid(error);
-          return { status: 503, body: { error: nativeCode(error) } };
+        catch (issue) {
+          if (issue instanceof QueryInputError) return inputResponse(issue);
+          return { status: issue.code === 'QUERY_TIMEOUT' ? 504 : issue.code === 'SOURCE_BUSY' ? 429 : 503,
+            body: { error: issue instanceof PostgresSourceError ? issue.code : 'QUERY_UNAVAILABLE' } };
         }
       },
     });
   }
-  function describe() {
-    return Object.fromEntries(Object.entries(compiled).map(([name, spec]) => [name, {
-      parameters: structuredClone(spec.parameters), columns: [...spec.columns], maxRows: spec.maxRows,
-      maxBytes: spec.maxBytes, timeoutMs: spec.timeoutMs, encoding: 'postgres-text',
-    }]));
-  }
+  function status() { return { schema: 'stellar-forge.postgres-status.v1', state: closed ? 'CLOSED' : 'READY',
+    active, pending: jobs.size, maxConnections, maxPending, completed, failures }; }
+  const describe = () => describePostgresQueries(compiled);
+  const inspect = () => ({ schema: 'stellar-forge.postgres-inspection.v1', serverVersion,
+    transactionMode: 'REPEATABLE READ READ ONLY', queries: describe(), columnTypes: structuredClone(columnTypes) });
   function close() {
     if (closing) return closing;
     closed = true;
-    for (const job of [...waiting, ...active]) interrupt(job, 'SOURCE_CLOSED');
-    closing = pool.end(); return closing;
+    for (const job of [...jobs]) cancel(job, 'SOURCE_CLOSED');
+    queue.length = 0;
+    closing = (async () => { await Promise.allSettled([...running]); await pool.end(); })();
+    return closing;
   }
-  return Object.freeze({ query, validate, route, describe, close,
-    status: () => ({ state: closed ? 'CLOSED' : 'OPEN', active: active.size, queued: waiting.length,
-      maxConnections, maxPending, connected: pool.totalCount, idle: pool.idleCount }) });
+
+  // Parse declarations against the operator's actual schema before exposing a
+  // seller. LIMIT 0 returns metadata only. No caller input or paid operation.
+  let startupClient, startupExpired = false;
+  const startupTimer = setTimeout(() => {
+    startupExpired = true;
+    if (startupClient) { try { startupClient.release(true); } catch {} startupClient = null; }
+  }, startupTimeoutMs);
+  try {
+    const client = await pool.connect();
+    if (startupExpired) { client.release(true); throw error('SOURCE_START_TIMEOUT'); }
+    startupClient = client;
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    await client.query("SET LOCAL search_path = pg_catalog");
+    const version = await client.query("SELECT current_setting('server_version') AS version, current_setting('transaction_read_only') AS readonly");
+    if (version.rows[0]?.readonly !== 'on') throw error('SOURCE_READ_ONLY_NOT_ACTIVE');
+    serverVersion = version.rows[0].version;
+    for (const [name, declaration] of Object.entries(compiled)) {
+      try {
+        const result = await client.query({ text: projectedStatement(declaration, 0),
+          values: declaration.parameterOrder.map(() => null), rowMode: 'array',
+          types: TEXT_TYPES, queryMode: 'extended' });
+        columnTypes[name] = result.fields.map(field => ({ name: field.name, oid: field.dataTypeID }));
+      } catch (issue) { throw error('SOURCE_QUERY_DECLARATION_INVALID', name, issue?.code); }
+    }
+    await client.query('COMMIT');
+    if (startupClient) { startupClient.release(); startupClient = null; }
+  } catch (issue) {
+    if (startupClient) { startupClient.release(true); startupClient = null; }
+    await close();
+    throw startupExpired ? error('SOURCE_START_TIMEOUT') :
+      issue instanceof PostgresSourceError ? issue : error('SOURCE_START_FAILED', undefined, issue?.code);
+  } finally { clearTimeout(startupTimer); }
+  return Object.freeze({ query, validate, route, describe, inspect, status, close });
 }

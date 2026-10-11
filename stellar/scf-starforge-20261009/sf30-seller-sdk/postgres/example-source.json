@@ -1,21 +1,24 @@
 {
   "schema": "stellar-forge.postgres-source.v1",
-  "connectionStringEnv": "SF30_DATABASE_URL",
-  "tls": "disable",
-  "allowLocalDatabase": true,
+  "connectionEnv": "SF30_POSTGRES_URL",
+  "tls": "verify-full",
   "maxConnections": 4,
   "maxPending": 32,
+  "connectTimeoutMs": 5000,
+  "lockTimeoutMs": 500,
   "queries": {
     "catalog": {
-      "sql": "SELECT id, region, label, price FROM sf30_example.catalog WHERE region = $1::text AND id > $2::bigint ORDER BY id",
-      "parameters": [
-        { "name": "region", "type": "string", "minLength": 1, "maxLength": 32, "enum": ["north", "south"] },
-        { "name": "after_id", "type": "integer", "minimum": "0", "default": "0" }
-      ],
-      "columns": ["id", "region", "label", "price"],
+      "sql": "SELECT id, title, region, price_cents, updated_at FROM sf30_demo.products WHERE region = $1::text AND id > $2::bigint ORDER BY id",
+      "parameterOrder": ["region", "after_id"],
+      "parameters": {
+        "region": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "after_id": { "type": "integer", "minimum": "0", "default": "0" }
+      },
+      "columns": ["id", "title", "region", "price_cents", "updated_at"],
       "maxRows": 100,
       "maxBytes": 524288,
-      "timeoutMs": 3000
+      "timeoutMs": 1500
     }
-  }
+  },
+  "bindings": { "catalog": { "query": "catalog", "input": "query" } }
 }

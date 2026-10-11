@@ -1,0 +1,30 @@
+{
+  "schema": "stellar-forge.s3-source.v1",
+  "region": "us-east-1",
+  "bucket": "replace-with-your-private-bucket",
+  "credentialProvider": "environment",
+  "timeoutMs": 10000,
+  "maxInFlight": 4,
+  "objects": [
+    {
+      "id": "report",
+      "path": "/downloads/report",
+      "key": "exports/approved-report.pdf",
+      "mode": "whole",
+      "maxBytes": 921600,
+      "contentType": "application/pdf",
+      "filename": "report.pdf",
+      "description": "Download the merchant-approved report as a PDF"
+    },
+    {
+      "id": "archive",
+      "path": "/downloads/archive",
+      "key": "exports/approved-dataset.zip",
+      "mode": "chunks",
+      "maxBytes": 921600,
+      "contentType": "application/octet-stream",
+      "filename": "dataset.zip.part",
+      "description": "Download a byte chunk of the approved dataset archive; each request has the advertised price"
+    }
+  ]
+}
