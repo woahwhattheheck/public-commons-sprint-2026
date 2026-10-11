@@ -12,6 +12,13 @@ export const NETWORKS = Object.freeze(Object.fromEntries(Object.entries(
 export const DEFAULT_RPC = NETWORKS['stellar:testnet'].defaultRpc;
 export const TESTNET_RPC_ENDPOINTS = NETWORKS['stellar:testnet'].rpcEndpoints;
 export const TESTNET_PASSPHRASE = NETWORKS['stellar:testnet'].passphrase;
+export const PUBNET_PASSPHRASE = NETWORKS['stellar:pubnet'].passphrase;
+export const PUBNET_RPC_ENDPOINTS = NETWORKS['stellar:pubnet'].rpcEndpoints;
+// Read-only collection/accounting view of the same buyer/Python catalog.
+export const RPC_NETWORKS = Object.freeze(Object.fromEntries(Object.entries(NETWORKS)
+  .map(([network,profile])=>[network,Object.freeze({passphrase:profile.passphrase,
+    endpoints:profile.rpcEndpoints,defaultEndpoint:profile.defaultRpc,
+    verdict:profile.transferVerdict,source:profile.rpcSource})])));
 const I128MAX = (1n << 127n) - 1n;
 const TX = /^[0-9a-f]{64}$/;
 const INTENT = /^[A-Za-z0-9._:-]{1,160}$/;
@@ -31,12 +38,22 @@ export function networkProfile(network) {
 export function resolveRpcEndpoint(network, endpoint, {allowLocal = false} = {}) {
   const profile = networkProfile(network);
   const selected = endpoint ?? profile.defaultRpc;
-  if (allowLocal && typeof selected === 'string' && LOCAL_RPC.test(selected)) return selected;
+  if (allowLocal && typeof selected === 'string' && LOCAL_RPC.test(selected)) {
+    const port=Number(selected.slice(17,-1));
+    requireTruth(port>0&&port<=65535,'RPC_ENDPOINT_NOT_ALLOWED');
+    return selected;
+  }
   let url;
   try { url = new URL(selected); } catch { throw new ReconciliationError('RPC_ENDPOINT_NOT_ALLOWED'); }
   const known = profile.rpcEndpoints.find(candidate => new URL(candidate).href === url.href);
   requireTruth(known !== undefined, 'RPC_ENDPOINT_NOT_ALLOWED');
   return known;
+}
+
+/** Resolve a collection endpoint from the canonical network catalog. */
+export function rpcNetwork(network,endpoint) {
+  endpoint=resolveRpcEndpoint(network,endpoint,{allowLocal:true});
+  return {...RPC_NETWORKS[network],endpoint,live:!LOCAL_RPC.test(endpoint)};
 }
 
 // Exactly the Stellar StrKey version/checksum convention; not only a regex.
