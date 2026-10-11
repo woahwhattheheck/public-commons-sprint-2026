@@ -24,7 +24,39 @@
     <div class="content">
       <section id="setup" class="panel" hidden>
         <div class="section-heading"><div><p class="eyebrow">NEW DOWNLOAD</p><h2>Select a merchant object</h2></div><button id="close-setup" class="quiet small">Close</button></div>
-        <p class="intro">Choose a configured product, review its complete byte plan and set the maximum allocation for this download.</p>
+        <p class="intro">Receive the merchant's file description and offers, or choose an existing product. Review the complete byte plan and your spending limits before creating a download.</p>
+        <details id="receiving-panel" class="receiving-panel">
+          <summary>Receive a merchant object</summary>
+          <p class="note">Choose the merchant's public objects.json and saved offers. Your local operator preset supplies the payer and signer reference.</p>
+          <p id="receiving-operator" class="product-summary"></p>
+          <form id="receive-files-form">
+            <div class="form-grid">
+              <label>Object description<input id="receive-description" type="file" accept=".json,application/json" required><small>Original objects.json, up to 8 MiB.</small></label>
+              <label>Merchant offers<input id="receive-catalog" type="file" accept=".json,application/json" required><small>Original seller offers or saved catalog, up to 1 MiB.</small></label>
+            </div>
+            <button id="receive-files" type="submit">Receive files</button>
+          </form>
+          <form id="receive-plan-form">
+            <label class="full">Received merchant files<select id="receive-source" required></select></label>
+            <label class="full">Object<select id="receive-object" required></select></label>
+            <label class="full">Resource and payment option<select id="receive-offer" required></select></label>
+            <div id="receive-object-summary" class="product-summary"></div>
+            <div class="form-grid">
+              <label>Session name<input id="receive-session" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_\-]{0,63}" autocomplete="off" required></label>
+              <label>Bytes per request<input id="receive-chunk" type="number" min="1" step="1" required></label>
+              <label>Whole-download cap<input id="receive-total" type="text" inputmode="numeric" pattern="[0-9]+" required><small>Atomic units of the selected asset.</small></label>
+              <label>Daily cap<input id="receive-daily" type="text" inputmode="numeric" pattern="[0-9]+" required><small>Original operator limit per UTC day.</small></label>
+            </div>
+            <button id="receive-review" type="submit">Review received download</button>
+          </form>
+          <section id="received-review" class="review" hidden>
+            <h3>Reviewed object and buyer</h3>
+            <dl id="received-review-terms" class="detail-grid"></dl>
+            <p class="note">Create your original private operator workspace and this download plan. Start download is a separate action with the original per-request terminal approval.</p>
+            <button id="receive-create" class="primary">Create buyer and download</button>
+          </section>
+        </details>
+        <h3>Existing products</h3>
         <form id="setup-form">
           <label class="full">Merchant product<select id="product" required></select></label>
           <div id="product-summary" class="product-summary"></div>

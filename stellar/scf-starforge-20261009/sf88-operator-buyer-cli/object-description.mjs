@@ -9,22 +9,13 @@ const HASH = /^[a-f0-9]{64}$/;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const count = value => Number.isSafeInteger(value) && value > 0;
 
-/** Offline selection of one row from the merchant's ORIGINAL objects.json.
- * The descriptor is product metadata, not a signature or payment authorization.
- * The original buyer still binds and reviews each actual query-bearing quote. */
-export async function selectObjectDescription({descriptionPath, objectId, configPath, chunkBytes} = {}) {
-  need(typeof descriptionPath === 'string' && isAbsolute(descriptionPath) &&
-    !descriptionPath.includes('\0'), 'OBJECT_DESCRIPTION_ABSOLUTE_PATH_REQUIRED');
+/** Shared original row selection for saved files and receiving applications.
+ * The descriptor supplies product facts; the original buyer reviews payment. */
+export function selectObjectDescriptionBytes(raw, {objectId, chunkBytes} = {}) {
+  need(raw instanceof Uint8Array && raw.byteLength <= 8 * 1024 * 1024,
+    'OBJECT_DESCRIPTION_BYTE_LIMIT');
   need(typeof objectId === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(objectId),
     'OBJECT_EXPLICIT_SELECTION_REQUIRED');
-  const handle = await open(descriptionPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-  let raw;
-  try {
-    const info = await handle.stat();
-    need(info.isFile() && info.size <= 8 * 1024 * 1024, 'OBJECT_DESCRIPTION_FILE_INVALID');
-    raw = await handle.readFile();
-    need(raw.length <= 8 * 1024 * 1024, 'OBJECT_DESCRIPTION_BYTE_LIMIT');
-  } finally { await handle.close(); }
   let description;
   try { description = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
   catch { throw new InputError('OBJECT_DESCRIPTION_JSON_INVALID'); }
@@ -45,9 +36,6 @@ export async function selectObjectDescription({descriptionPath, objectId, config
   need(item.expectedSha256 === undefined ||
     typeof item.expectedSha256 === 'string' && HASH.test(item.expectedSha256),
     'OBJECT_DESCRIPTION_DIGEST_INVALID');
-  const source = await config(configPath), op = operation(source.operation), url = new URL(op.url);
-  need(op.method === 'GET' && !url.search && url.pathname === item.path,
-    'OBJECT_DESCRIPTION_BUYER_ROUTE_MISMATCH');
   const requested = chunkBytes ?? item.maxBytes;
   need(count(requested) && requested <= item.maxBytes, 'OBJECT_DESCRIPTION_CHUNK_LIMIT');
   return {
@@ -57,4 +45,23 @@ export async function selectObjectDescription({descriptionPath, objectId, config
       descriptionSha256:createHash('sha256').update(raw).digest('hex'),
       objectId:item.id, filename:item.filename, path:item.path},
   };
+}
+
+/** Offline selection of one row from the merchant's ORIGINAL objects.json.
+ * The original buyer still binds and reviews each actual query-bearing quote. */
+export async function selectObjectDescription({descriptionPath, objectId, configPath, chunkBytes} = {}) {
+  need(typeof descriptionPath === 'string' && isAbsolute(descriptionPath) &&
+    !descriptionPath.includes('\0'), 'OBJECT_DESCRIPTION_ABSOLUTE_PATH_REQUIRED');
+  const handle = await open(descriptionPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  let raw;
+  try {
+    const info = await handle.stat();
+    need(info.isFile() && info.size <= 8 * 1024 * 1024, 'OBJECT_DESCRIPTION_FILE_INVALID');
+    raw = await handle.readFile();
+  } finally { await handle.close(); }
+  const selected = selectObjectDescriptionBytes(raw, {objectId, chunkBytes});
+  const source = await config(configPath), op = operation(source.operation), url = new URL(op.url);
+  need(op.method === 'GET' && !url.search && url.pathname === selected.selection.path,
+    'OBJECT_DESCRIPTION_BUYER_ROUTE_MISMATCH');
+  return selected;
 }
