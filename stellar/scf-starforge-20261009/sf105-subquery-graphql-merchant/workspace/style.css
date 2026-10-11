@@ -5,3 +5,4 @@
 
 .table-wrap{width:100%;overflow:auto;margin:10px 0}.table-wrap table{min-width:480px}
 .revision-route{border:1px solid #ccc;padding:15px;margin:16px 0}.revision-side{min-width:0}.revision-side>h3{margin-top:12px}.revision-side td{white-space:pre-line;overflow-wrap:anywhere}.lineage{border-left:3px solid #aaa;margin:12px 0;padding-left:12px}#evolution-summary>h3{margin-top:24px}#evolution-summary>h3:first-child{margin-top:0}#evolution-summary td{white-space:pre-line}.revision-route .table-wrap table{min-width:360px}
+.deployment-host{border:1px solid #ccc;padding:15px;margin-top:16px}#deployment-panel>.checkbox{margin-top:12px}#deployment-summary td{overflow-wrap:anywhere}#deployment-console-link{margin-top:14px}#host-runbook{margin-top:20px}#host-runbook pre{max-height:680px}#recover-deployment:disabled{display:none}
