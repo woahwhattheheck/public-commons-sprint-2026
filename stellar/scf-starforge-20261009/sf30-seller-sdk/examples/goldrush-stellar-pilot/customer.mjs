@@ -44,8 +44,16 @@ export async function buildCustomerRequest({ release:directory, selectedRelease,
     ...(paymentFlow === undefined ? {} : {paymentFlow}) });
   const selectedOperation = client.operations.find(operation => operation.id === id);
   const { createLiveRequestAdmission } = await nativeImport(root, 'sf89-live-request-admission/index.mjs');
-  const decision = createLiveRequestAdmission(selectedOperation.offer)({ method: 'GET',
-    pathParams: inputs.path, query: inputs.query ?? {} });
+  let decision;
+  try {
+    decision = createLiveRequestAdmission(selectedOperation.offer)({ method: 'GET',
+      pathParams: inputs.path, query: inputs.query ?? {} });
+  } catch (error) {
+    if (error.message === 'Original imported Bazaar schema is invalid: SCHEMA_PATTERN_ENGINE_UNAVAILABLE')
+      throw Object.assign(new Error('The original schema runtime requires its installed re2js dependency'),
+        {code:'GOLDRUSH_SCHEMA_RUNTIME_REQUIRED',status:503,cause:error});
+    throw error;
+  }
   if (decision !== true) throw new TypeError('Original merchant input admission rejected this request: ' + (decision.body?.error ?? 'INVALID_INPUT'));
   return built;
 }

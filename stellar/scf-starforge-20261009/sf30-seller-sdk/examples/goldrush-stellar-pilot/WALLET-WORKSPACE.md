@@ -23,7 +23,7 @@ An existing operator profile may be supplied with --profile /absolute/operator-p
 
 Open the private local URL printed by the process. The wallet app at /goldrush and the ordinary Resource library share the same foreground listener and existing private session.
 
-When the original runtime resides in another installed source tree, add --source-root /absolute/installed/source. The browser application imports the server extension from this example's source tree and uses the selected installed native Buyer, Inbox and Library. This local application needs no new dependency installation or hosted service.
+When the original runtime resides in another installed source tree, add --source-root /absolute/installed/source. The browser application imports the server extension from this example's source tree and uses the selected installed native Buyer, Inbox and Library. The selected native runtime's schema feature requires `re2js@2.8.6` to be installed and resolvable in the application, as described by the merchant distribution's schema installation guide. Check that installation with `starforge doctor --feature schema`. If the dependency is already installed in a separate application directory, run this process with `NODE_PATH=/absolute/existing-application/node_modules`; keep that setting when reopening. The application uses the original schema validator and runs locally.
 
 Stop with Ctrl-C. Reopen the same work with:
 
