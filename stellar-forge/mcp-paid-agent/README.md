@@ -19,6 +19,7 @@ files through the [native workspace](NATIVE_WORKSPACE.md).
 | Expose an existing merchant function as a paid MCP tool | [Native paid tool server](PAID_TOOLS.md) |
 | Use the existing SF88 native HTTP purchase and returned-file workflow | [Native workspace](NATIVE_WORKSPACE.md) |
 | Preserve and inspect quote history across restart | [Durable workspace](DURABILITY.md) |
+| Read, export and recover complete remote MCP results | [Result inbox and native Node API](RESULTS.md) |
 
 The local buyer's HTTP endpoint implements the MCP 2025-11-25 JSON response
 transport. The stdio launcher connects the same tools to a host subprocess.
@@ -37,6 +38,9 @@ described in [REMOTE_MCP.md](REMOTE_MCP.md) before using native remote tools.
 | `bazaar_status` | Read the original quote's current state and retained result. |
 | `bazaar_history` | Page through this workspace's original and recovered quotes. |
 | `bazaar_cancel` | Cancel an unexecuted quote, or retain an uncertain signed outcome for reconciliation. |
+| `bazaar_results` | Page through complete saved native MCP results and their original receipts. |
+| `bazaar_read_result` | Read verified bytes from one saved result, with explicit range continuation. |
+| `bazaar_recover_result` | Restore an original local completion from its result file and manifest. |
 | `sf43_discover_review_and_pay` | Use the separately configured original SF43/SF88 native buyer workspace. |
 
 Search performs a discovery GET. Describe and preview use the cached result;
@@ -56,6 +60,12 @@ the quoted network and a transaction hash. Independent chain reconciliation is a
 separate operation. An uncertain signed request becomes `INDETERMINATE` and is not
 automatically resubmitted. Repeating execute on an already attempted quote returns
 its retained state.
+
+With `MCP_STATE_DIR`, complete remote MCP results are saved beside the quote
+database. The inbox, terminal and Node API can consume their structured content,
+text, embedded resources and original receipt after the buyer restarts. The
+64 KiB status preview remains compact; the result file retains the full native
+`CallToolResult` up to the transport's 2 MiB limit. See [RESULTS.md](RESULTS.md).
 
 ## Start the local HTTP workspace
 

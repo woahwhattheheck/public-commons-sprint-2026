@@ -7,7 +7,8 @@ import { isDeepStrictEqual as same } from 'node:util';
 
 export const MCP_SDK_VERSION = '1.32.1';
 export const MCP_ARGUMENT_BYTES = 64 * 1024;
-const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+export const MCP_RESPONSE_BYTES = 2 * 1024 * 1024;
+const MAX_RESPONSE_BYTES = MCP_RESPONSE_BYTES;
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = (code, message = code) => { throw Object.assign(new Error(message), { code }); };
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -128,6 +129,13 @@ export function mcpResultContent(result) {
   const maximum = 64 * 1024;
   return { contentType: 'application/json', body: bytes.subarray(0, maximum).toString('utf8'),
     truncated: bytes.length > maximum };
+}
+
+/** Validate a retained native result without changing its original fields. */
+export async function validateMcpResult(result) {
+  const {CallToolResultSchema} = await loadSdk();
+  if (!CallToolResultSchema.safeParse(result).success) fail('MCP_RESULT_INVALID');
+  return result;
 }
 
 let sdkPromise;

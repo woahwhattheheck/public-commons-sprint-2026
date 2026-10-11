@@ -1,0 +1,21 @@
+{
+  "schema": "stellar-forge.clickhouse-merchant-plan.v1",
+  "publicOrigin": "https://clickhouse-merchant.example",
+  "payment": {
+    "scheme": "exact", "network": "stellar:testnet", "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT", "amount": "10000", "maxTimeoutSeconds": 60
+  },
+  "routes": [{
+    "id": "transfers", "path": "/transfers", "method": "POST", "query": "transfers",
+    "serviceName": "ClickHouse transfer API",
+    "description": "Selected transfer fields from an operator-owned analytical database, with exact identifiers and amounts.",
+    "tags": ["clickhouse", "analytics"],
+    "example": { "account": "merchant-demo", "after_ledger": "0", "after_record_id": "0", "minimum_amount": "0" },
+    "parameterDescriptions": {
+      "account": "Exact account in the approved source view.",
+      "after_ledger": "Ledger from the last delivered row; paired with after_record_id. Separate calls observe current data.",
+      "after_record_id": "Exact record ID from that same last row. The two-part cursor includes later rows in the same ledger.",
+      "minimum_amount": "Inclusive amount threshold, as exact decimal text."
+    }
+  }]
+}

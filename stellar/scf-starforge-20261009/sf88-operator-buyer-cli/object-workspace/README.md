@@ -2,7 +2,8 @@
 
 Select a merchant's large file, review its request plan, operate the original
 buyer, retain completed parts through interruption, and download the assembled
-file from one private browser workspace.
+file from one private browser workspace. Complete the original purchase records,
+retain their native receipts and reopen them independently of the delivered file.
 
 This workspace uses the original `object-session.mjs`, `object-description.mjs`
 and `object-report.mjs` APIs. Each range remains an original SF88 inbox job with
@@ -83,7 +84,7 @@ and port in the printed link. Keep the launching terminal open for the original
 approval prompt. A fresh server creates a new browser capability; reopen its
 new printed URL after restart.
 
-The browser workflow has five stages:
+The browser workflow has six stages:
 
 1. **Select and review.** Choose a configured product, a new session name, bytes
    per request and a whole-download cap. Review the exact number of requests,
@@ -107,12 +108,82 @@ The browser workflow has five stages:
    through the existing streaming writer. Download opens the recorded file,
    checks its length and SHA-256 again, and streams it to the browser's normal
    download destination. Large files are not buffered into a browser Blob.
+6. **Complete purchase records.** Open **Purchase records** for the selected
+   download. Review each original part's financial status, then explicitly
+   **Finalize original purchases** to process every earlier attempt using the
+   saved native workspace. Watch progress, stop the owned operation when needed,
+   and retain the same original receipts. The original native finalizer can
+   observe network finality; this action creates no buyer request or payment.
 
 The whole-download cap and attempt allocations describe maximum permitted
 amounts. The request table shows each original financial outcome separately.
 For interrupted or uncertain attempts, use **Recover saved results** and the
 original [inbox recovery workflow](../QUEUE.md) with the same intent. The
 existing original engine decides which saved files are complete.
+
+## Purchase records and finalization
+
+**File delivery** and **Purchase records** are two views of the same session.
+The first checks the delivered parts and assembled file. The second calls the
+original `accountObjectSession` reader over the original inbox; it does not read
+or hash product bytes and needs no operator keys or RPC connection for saved
+history. The browser remembers the chosen view within its current session.
+
+Purchase history is paged in groups of 50 original parts. Its amount and status
+counters describe the displayed page, not the whole download. The amount is the
+sum of current finalized actual amounts; unattempted parts, original unsigned
+responses and unresolved attempts remain distinct. Expand **Record details** for
+the original intent, observation time, approved-request digest and saved source
+path. If a later check fails, an earlier retained finalized receipt stays visible
+with its original amount and time.
+The most recent browser operation also labels any source-read or view-save issue
+beside the affected visible part, including when an earlier ledger receipt still
+exists. These operation messages remain in memory for the latest eight sessions;
+the durable receipts and ledger stay in their original native locations.
+
+**Finalize original purchases** reviews the bound session identity, selected
+native workspace, terms and complete part count. It traverses every original
+part through the existing native finalizer in groups of ten. The progress line
+counts the entire operation, while the table continues to show its selected
+page. Unresolved entries do not prevent later original parts from being examined.
+This uses the original SF36 ledger and SF86 financial authority, original saved
+attempts and existing transport. A lower current spending cap does not erase an
+earlier approved reservation. No new quote, signer, acquisition or payment is
+created by this action.
+
+**Stop operation** cancels this exact owned finalization or export. Completed
+native results stay in the original inbox; running finalization again resolves
+the same attempts. Repeating the most recent action ID returns its retained result. Closing
+the host process drains this owned operation before releasing the listener.
+After an abrupt process exit, use the original session recovery workflow for a
+stale process lease before another finalization. Reading receipts remains
+available while that recovery is pending.
+
+The original session must retain its native `workspace` reference for the browser
+to finalize it. For a historical session created with process-environment setup,
+saved views still open in the browser. Finalize it through the original CLI with
+its matching existing workspace:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs finalize \
+  --session /absolute/private/download-workspace/sessions/archive-2026-10-11 \
+  --workspace /absolute/private/archive-buyer --offset 0 --limit 100
+```
+
+Continue from the returned `range.nextOffset` until it is `null`; the command
+processes its selected range. The browser's finalize action traverses all ranges
+itself for sessions already bound to their workspace.
+
+**Download all purchase records** streams the complete original accounting
+history as `SESSION.accounting.jsonl`, using the existing one-use download
+capability. Each line is one unchanged native accounting result with up to 50
+entries, its own `observedAt`, range, terms and record authority. The last complete
+line has `range.nextOffset: null`. The export reads original saved views, so it
+works after restart without a product profile, keys or delivered bytes. It keeps
+one range in memory and streams directly to the browser download destination.
+An interrupted download retains only its completed ranges; request a new export
+to obtain the full current record. These are timestamped views of the original
+ledger, not a separate balance or new source of financial authority.
 
 ## Retained files and restart
 
@@ -134,8 +205,9 @@ you also want to create new downloads. Reopening a session uses its original
 saved configuration even if the profile is absent or the original input file
 has moved.
 
-Startup enumerates retained manifests. Selecting a session performs one original
-inspection, including saved-byte verification. While a run is active, browser
+Startup enumerates retained manifests. Selecting a session in **File delivery**
+performs one original inspection, including saved-byte verification. Selecting
+**Purchase records** reads only its current original accounting range. While a run is active, browser
 updates consume the original progress callback. **Refresh and verify** performs
 another deliberate original inspection; idle browser refreshes do not repeatedly
 hash every saved chunk. The server retains at most eight full reports in memory,
