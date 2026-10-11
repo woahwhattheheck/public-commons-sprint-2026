@@ -213,6 +213,32 @@ traffic routes. Independent chain and fulfillment accounting remain in the
 existing [merchant accounting](../merchant-settlement-accounting/README.md) and
 native merchant services.
 
+## Use a saved pricing decision in accounting
+
+Download **Report JSON** from the saved version. The original accounting
+[pricing import](../merchant-settlement-accounting/PRICING.md) converts that
+report into validated merchant accounting terms and retains the exact report
+bytes alongside them:
+
+```sh
+node stellar/scf-starforge-20261009/merchant-settlement-accounting/pricing-cli.mjs \
+  --report /private/merchant/pricing/versions/VERSION/report/report.json \
+  --out /private/merchant/new-pricing-import
+```
+
+Use the resulting `accounting-terms.json` in the existing accounting workspace's
+**Sources & imports → Merchant accounting terms → Import & select terms** flow,
+or pass it as `--terms` to the original accounting CLI. The import maps every
+configured payment option, exact route quote and per-fulfilled cost; unknown
+costs remain unknown. Choose the saved report instead of the pricing
+`terms.json` because the two tools have distinct terms formats.
+
+For a long or descriptive quote basis, supply `--reference` with an explicit
+short accounting label. The original full quote basis, selected pricing range,
+source hashes, monthly targets, fixed costs and challenge costs are retained.
+The accounting run uses its selected native journals and verification sources;
+the pricing assumptions provide its unit valuations.
+
 ## Saved-state and restart behavior
 
 The private directory contains `versions/`, `successors/`, and `pending/`.
