@@ -19,13 +19,15 @@ Primary sources reviewed 2026-10-11:
 | `series` | `/aggregations/avg-gas-price` | `dateFrom`, `dateTo`, `unit` | Array of arrays of strings |
 | `total` | `/aggregations/avg-gas-price/tot` | `dateFrom`, `dateTo` | Object containing a string `value` |
 
+Both operations also accept optional ecosystem, includedChainIds and excludedChainIds filters. The included/excluded lists use the first-party comma-separated wire representation, for example `43114,73772`; pass these as strings through the original HTTP query/compiler/client path. The operator controls the path's network and chain selection, including an explicit `all` chain choice. Absent filters remain absent in the request and generated example.
+
 The series `unit` is a time aggregation interval: second, minute, hour or day, restricted further by the merchant's configuration. The total endpoint applies its date filters at day granularity. Both original response structures and their string values are preserved. The published schema does not establish a gas denomination; consumers should retain the original value labels and strings.
 
 The provider origin and operation paths are fixed. A source result records the selected network, chain, exact timezone-bearing date strings, aggregation interval, original source URL, response bytes, byte count and SHA-256. Successful source response headers expose its URL, SHA-256 and Routescan attribution. An optional key is read from an operator-selected environment variable and sent in the provider's `apikey` header.
 
 ## Configure and save
 
-Use the original SF30 dependencies, Node 24 and Linux `flock`. Run these commands from `sf30-seller-sdk`.
+Use the original SF30 dependencies, Node 24 and Linux `flock`. The source's explicit Node HTTPS Agent honors the host's proxy environment through the original SF30 exchange; this supports the managed cloud runtime's egress route. Its agent closes after source operations drain. Run these commands from `sf30-seller-sdk`.
 
 ~~~bash
 node routescan/cli.mjs inspect --config routescan/merchant.example.json
@@ -38,7 +40,7 @@ Copy the example to the operator-owned configuration file and select the followi
 | Configuration | Operator choice |
 | --- | --- |
 | `publicOrigin` | Customer-facing HTTPS origin |
-| `provider.network`, `provider.chainId` | mainnet or testnet and one numeric string chain ID |
+| `provider.network`, `provider.chainId` | mainnet or testnet and one numeric string chain ID; the operator can explicitly select all |
 | `provider.account` | Stable provider-account label shared by quota users |
 | `provider.apiKeyEnv` | Optional environment variable containing the provider key |
 | `quota.requestsPerSecond`, `quota.callsPerDay` | Quota matching the selected provider plan |

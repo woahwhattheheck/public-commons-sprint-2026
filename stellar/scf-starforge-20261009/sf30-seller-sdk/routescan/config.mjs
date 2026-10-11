@@ -9,6 +9,7 @@ import { compileSellerOpenApi } from '../developer-portal.mjs';
 export const SCHEMA = 'stellar-forge.routescan-merchant.v1';
 export const PROVIDER_ORIGIN = 'https://api.routescan.io';
 export const SOURCE_URL = 'https://api.routescan.io/v2/documentation/json';
+export const FILTERS = Object.freeze(['ecosystem', 'includedChainIds', 'excludedChainIds']);
 export const UNITS = Object.freeze(['second', 'minute', 'hour', 'day']);
 export const OPERATIONS = Object.freeze({
   series: { suffix: '/aggregations/avg-gas-price', description: 'Average gas price series',
@@ -45,14 +46,19 @@ export function instant(value, label) {
 export function requestFor(compiled, id, supplied) {
   const product = compiled.products.find(item => item.id === id);
   if (!product) fail('Choose a configured gas product.');
-  const allowed = product.operation === 'series' ? ['dateFrom', 'dateTo', 'unit'] : ['dateFrom', 'dateTo'];
+  const allowed = [...(product.operation === 'series' ? ['dateFrom', 'dateTo', 'unit'] : ['dateFrom', 'dateTo']), ...FILTERS];
   fields(supplied, allowed, 'gas request');
   for (const name of ['dateFrom', 'dateTo']) instant(supplied[name], name);
   const duration = Date.parse(supplied.dateTo) - Date.parse(supplied.dateFrom);
   if (duration <= 0 || duration > compiled.config.maxRangeDays * 86400000)
     fail('Select a positive date range of at most ' + compiled.config.maxRangeDays + ' days.');
   if (product.operation === 'series' && !compiled.config.units.includes(supplied.unit)) fail('Choose an enabled aggregation interval.');
-  const request = Object.fromEntries(allowed.map(key => [key, supplied[key]]));
+  if (own(supplied, 'ecosystem')) text(supplied.ecosystem, 'ecosystem filter', 80);
+  for (const name of ['includedChainIds', 'excludedChainIds']) if (own(supplied, name)) {
+    if (typeof supplied[name] !== 'string' || !/^[1-9]\d{0,19}(?:,[1-9]\d{0,19}){0,31}$/.test(supplied[name]))
+      fail(name + ' must use comma-separated numeric chain IDs, as in the provider examples.');
+  }
+  const request = Object.fromEntries(allowed.filter(key => own(supplied, key)).map(key => [key, supplied[key]]));
   const path = '/v2/network/' + compiled.config.provider.network + '/evm/' + compiled.config.provider.chainId + OPERATIONS[product.operation].suffix;
   const url = new URL(path, PROVIDER_ORIGIN);
   for (const [key, value] of Object.entries(request)) url.searchParams.set(key, value);
@@ -69,8 +75,8 @@ export function compileRoutescanMerchant(input) {
   if (origin.protocol !== 'https:' || origin.origin !== config.publicOrigin || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash)
     fail('Use the merchant public HTTPS origin without a path.');
   fields(config.provider, ['network', 'chainId', 'account', 'apiKeyEnv'], 'provider selection');
-  if (!['mainnet', 'testnet'].includes(config.provider.network) || typeof config.provider.chainId !== 'string' || !/^[1-9]\d{0,19}$/.test(config.provider.chainId))
-    fail('Choose mainnet or testnet and one explicit numeric Routescan chain ID.');
+  if (!['mainnet', 'testnet'].includes(config.provider.network) || typeof config.provider.chainId !== 'string' || !/^(?:all|[1-9]\d{0,19})$/.test(config.provider.chainId))
+    fail('Choose mainnet or testnet and one explicit numeric Routescan chain ID or the operator choice all.');
   if (!/^[A-Za-z0-9_-]{1,80}$/.test(config.provider.account ?? '')) fail('Set a stable provider account label shared by its quota users.');
   if (own(config.provider, 'apiKeyEnv') && !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(config.provider.apiKeyEnv)) fail('Use an environment name for the provider key.');
   fields(config.quota, ['requestsPerSecond', 'callsPerDay'], 'operator quota');
@@ -93,11 +99,18 @@ export function compileRoutescanMerchant(input) {
       { name: 'dateFrom', type: 'string', required: true, description: 'Exact source range start, ISO timestamp with timezone', example: product.example?.dateFrom },
       { name: 'dateTo', type: 'string', required: true, description: 'Exact source range end, ISO timestamp with timezone', example: product.example?.dateTo },
       ...(product.operation === 'series' ? [{ name: 'unit', type: 'string', required: true, description: 'Time aggregation interval; original source value strings remain unchanged', example: product.example?.unit }] : []),
+      ...FILTERS.map(name => ({ name, type: 'string', required: false,
+        description: name === 'ecosystem' ? 'Optional original ecosystem filter' : 'Optional provider chain-ID array in first-party comma-separated wire format',
+        example: product.example?.[name] ?? '' })),
     ];
     const offer = compileHttpSellerOffer({ url: config.publicOrigin + product.path, method: 'GET',
       description: product.description + ' · Powered by Routescan.io APIs', serviceName: 'Routescan gas data', tags: ['gas', 'routescan'],
       paymentOptions: product.paymentOptions, queryParameters, mimeType: 'application/json' });
     const query = offer.extensions.bazaar.schema.properties.input.properties.queryParams;
+    for (const name of FILTERS) {
+      query.properties[name].maxLength = name === 'ecosystem' ? 80 : 671;
+      if (!own(product.example ?? {}, name)) delete offer.extensions.bazaar.info.input.queryParams[name];
+    }
     for (const name of ['dateFrom', 'dateTo']) query.properties[name].maxLength = 35;
     if (product.operation === 'series') query.properties.unit.enum = [...config.units];
     products.push({ ...product, offer, upstreamPath: '/v2/network/' + config.provider.network + '/evm/' + config.provider.chainId + OPERATIONS[product.operation].suffix });

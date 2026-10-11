@@ -1,6 +1,7 @@
 // MIT. Routescan application source; original SF30 owns the HTTP exchange and payment lifecycle.
+import { Agent as HttpsAgent } from 'node:https';
 import { createUpstreamHandler } from '../upstream-handler.mjs';
-import { PROVIDER_ORIGIN, OPERATIONS, requestFor, fail, plain, sha256 } from './config.mjs';
+import { PROVIDER_ORIGIN, FILTERS, requestFor, fail, plain, sha256 } from './config.mjs';
 import { openRoutescanQuota } from './quota.mjs';
 
 function validResponse(operation, body) {
@@ -17,6 +18,7 @@ function applicationFailure(error) {
 export async function createRoutescanSource(compiled, { quotaDirectory, env = process.env } = {}) {
   const quota = await openRoutescanQuota({ directory: quotaDirectory, provider: compiled.config.provider, policy: compiled.config.quota });
   let closed = false, pending = new Set();
+  const agent = new HttpsAgent({ keepAlive: false, proxyEnv: env });
   const headers = () => {
     const name = compiled.config.provider.apiKeyEnv;
     if (!name) return {};
@@ -26,7 +28,8 @@ export async function createRoutescanSource(compiled, { quotaDirectory, env = pr
   };
   const upstreams = new Map(compiled.products.map(product => [product.id, createUpstreamHandler({
     baseUrl: PROVIDER_ORIGIN, path: product.upstreamPath, method: 'GET',
-    query: product.operation === 'series' ? ['dateFrom', 'dateTo', 'unit'] : ['dateFrom', 'dateTo'],
+    query: [...(product.operation === 'series' ? ['dateFrom', 'dateTo', 'unit'] : ['dateFrom', 'dateTo']), ...FILTERS],
+    agent,
     headers, responseHeaders: ['content-type'], responseType: 'json', timeoutMs: compiled.config.timeoutMs,
     maxResponseBytes: compiled.config.maxResponseBytes, maxInFlight: Math.min(256, compiled.config.quota.requestsPerSecond),
   })]));
@@ -74,5 +77,5 @@ export async function createRoutescanSource(compiled, { quotaDirectory, env = pr
   }
   return { handlers, request, quota, async snapshot() { return { quota: await quota.snapshot(),
     upstreams: Object.fromEntries([...upstreams].map(([id, handler]) => [id, handler.snapshot()])) }; },
-    async close() { closed = true; await Promise.allSettled([...pending]); await quota.close(); } };
+    async close() { closed = true; await Promise.allSettled([...pending]); agent.destroy(); await quota.close(); } };
 }
