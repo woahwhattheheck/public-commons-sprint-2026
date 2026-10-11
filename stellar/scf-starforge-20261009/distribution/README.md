@@ -954,6 +954,34 @@ The original checkout guide supplies the native facilitator, authenticated SF98
 delivery and existing receiver configuration for actual payment and file release.
 The desk's order view does not infer settlement or payment from enrollment.
 
+
+
+### Recover original merchant orders and purchased access
+
+The existing merchant desk includes **Recovery** for consistent snapshots of the
+original SF101 database and every enrolled paid file. Restore rebinds those files
+to the new state directory and preserves native events, access policy, purchased
+allowances, unfinished reservations and retained application responses.
+
+The same operation is available from the installed command:
+
+```sh
+starforge merchant-order-recovery snapshot \
+  --state /private/merchant \
+  --out /private/snapshots/merchant-001
+starforge merchant-order-recovery inspect \
+  --snapshot /private/snapshots/merchant-001
+starforge merchant-order-recovery restore \
+  --snapshot /private/snapshots/merchant-001 \
+  --out /private/restored-merchant
+```
+
+Point the original receiver and API application at the returned state path.
+The [merchant order recovery guide](../sf101-merchant-receiver/recovery/README.md)
+covers original checkout/outbox configuration, the separate approved product
+directory, private runtime settings, and encryption through the existing
+`starforge merchant-recovery` command.
+
 ### Resume and recover the entitled file
 
 Keep the customer's original handoff, selected output path and current private

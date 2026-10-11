@@ -78,6 +78,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   delivery-workspace                         Configure receivers and operate retained delivery recovery
   delivery-destinations                      Route original events to independently operated receivers
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
+  merchant-order-recovery                    Snapshot and restore original orders, usage and paid files
   paid-file-purchase Prepare and retrieve an approved customer order
   api-pass                                  Sell and operate purchased API allowances on original orders
   api-pass-client                           Use an allowance, inspect usage and recover an original response
