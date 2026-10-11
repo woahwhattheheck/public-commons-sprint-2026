@@ -15,13 +15,14 @@ Use Node 22.16 or later. From a new application directory, install the supplied
 `tokenjunkielabs-starforge-merchant-*.tgz` archive:
 
 ```sh
-npm install --ignore-scripts --offline /absolute/path/to/the-package.tgz
+npm install --ignore-scripts --offline --omit=optional /absolute/path/to/the-package.tgz
 npx --no-install starforge doctor
 ```
 
 This is a local npm-compatible source distribution. It is marked `private` to
 prevent an accidental registry publish; local installation and `npm pack` work
-normally. The archive does not fetch or install the optional payment packages.
+normally. This source-only installation omits optional packages. PostgreSQL
+drivers and native payment packages have their own setup below.
 Git and a Commons checkout are unnecessary on the merchant's machine.
 
 ## Start a merchant workspace
@@ -69,6 +70,45 @@ The bundled upstream example points to an operator-owned loopback backend at
 port 8425. No backend is invented or started for it. Use the original upstream
 configuration and flags for your own HTTPS service.
 
+## An existing PostgreSQL database
+
+The distribution includes the original database source and its merchant workspace.
+Production driver versions are derived from the same source commit's
+`sf30-seller-sdk/postgres/package.json`, and are declared as optional runtime
+dependencies of the archive. Development-only database fixtures are not runtime
+dependencies. For this source revision, install the drivers in your application:
+
+```sh
+npm install --ignore-scripts pg@8.23.1 pg-cursor@2.22.1
+npx --no-install starforge doctor --postgres
+npx --no-install starforge postgres-init --directory ./database-merchant
+```
+
+Configure the existing connection environment and TLS policy in
+`database-merchant/source.json`, then open the maintained workspace:
+
+```sh
+npx --no-install starforge postgres-workspace \
+  --source ./database-merchant/source.json --output ./merchant-packages
+```
+
+Select the actual table/view, public columns, typed filters, ordering and merchant
+terms. Each reviewed export creates a new private directory. Start those exact
+files through the original seller:
+
+```sh
+npx --no-install starforge postgres \
+  --source /absolute/export/source.json --config /absolute/export/service.json
+```
+
+`postgres-inspect --source FILE --describe` reviews the declared query contract;
+`--preflight` checks it against the existing database. The original PostgreSQL
+guide and `postgres/workspace/README.md` describe role, certificate, capped-query
+and facilitator setup. `doctor --postgres` checks the source manifest's actual
+production imports, including a source checkout with drivers installed in the
+original postgres directory. It does not connect to the database. This check is
+independent of `--native`, so database setup does not require payment packages.
+
 ## Native payment dependencies
 
 For an actual payment-capable seller, install the native packages in the same
@@ -110,6 +150,10 @@ or automatically retry a request.
 | `starforge upstream` | SF30 existing-API seller |
 | `starforge operations` | SF30 seller plus live operations dashboard |
 | `starforge dataset` | SF30 dataset API compilation |
+| `starforge postgres` | Original PostgreSQL query seller and operations console |
+| `starforge postgres-init` | Create-only original PostgreSQL source/service starter |
+| `starforge postgres-inspect` | Original declaration, schema preflight or query inspection |
+| `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
 | `starforge pilot` | SF96 original SF82 seller pilot, dashboard and SF93 support composition |
 | `starforge buyer` | SF88 discovery, saved-source preparation, offline review and approved execution |

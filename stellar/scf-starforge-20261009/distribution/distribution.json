@@ -32,6 +32,10 @@
     "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
     "operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs",
     "dataset": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs",
+    "postgres": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/start.mjs",
+    "postgres-init": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/create-example.mjs",
+    "postgres-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/inspect.mjs",
+    "postgres-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
     "openapi": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/cli.mjs",
     "pilot": "stellar/scf-starforge-20261009/sf96-seller-pilot-ops/pilot-ops.mjs",
     "buyer": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs",
@@ -46,6 +50,9 @@
     "./seller/http": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/resource-server.mjs",
     "./seller/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/native-factory.mjs",
     "./seller/operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/operations/server.mjs",
+    "./seller/postgres": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/config.mjs",
+    "./seller/postgres/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/source.mjs",
+    "./seller/postgres/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
     "./buyer": {
       "types": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/buyer.d.ts",
       "import": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/buyer.mjs"
@@ -59,6 +66,9 @@
     "./support": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs",
     "./package.json": "./package.json",
     "./manifest.json": "./manifest.json"
+  },
+  "runtimePackageManifests": {
+    "postgres": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json"
   },
   "nativePeers": {
     "@x402/core": {"version": "2.28.0", "probe": "@x402/core/server"},

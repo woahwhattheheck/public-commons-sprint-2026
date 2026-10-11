@@ -42,7 +42,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
   const names = new Set(selected.map(item => item.path));
   const required = [...Object.values(spec.commands), ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9))];
-  for (const path of [...required, ...spec.supportFiles])
+  for (const path of [...required, ...spec.supportFiles, ...Object.values(spec.runtimePackageManifests ?? {})])
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
   const sources = new Map();
   let totalBytes = 0;
@@ -65,6 +65,22 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
       if (!names.has(target)) throw new TypeError('Unpackaged relative module: ' + path + ' -> ' + target);
     }
   }
+  // Drivers come from the same immutable original source as their entrypoints.
+  // Only production dependencies participate; database fixtures stay development-only.
+  const runtimeDependencies = Object.create(null), runtimePackageSources = {};
+  for (const [group, path] of Object.entries(spec.runtimePackageManifests ?? {})) {
+    const original = JSON.parse(sources.get(path));
+    if (!original.dependencies || typeof original.dependencies !== 'object' || Array.isArray(original.dependencies) ||
+        !Object.keys(original.dependencies).length) throw new TypeError('Runtime dependencies missing: ' + path);
+    for (const [name, version] of Object.entries(original.dependencies)) {
+      if (!/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(name) ||
+          !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) ||
+          Object.hasOwn(runtimeDependencies, name) && runtimeDependencies[name] !== version)
+        throw new TypeError('Conflicting or unpinned runtime dependency in ' + path);
+      runtimeDependencies[name] = version;
+    }
+    runtimePackageSources[group] = path;
+  }
   const version = spec.version + '-source.g' + commit.slice(0, 12);
   const metadata = {
     name: spec.name, version, private: true, type: 'module', license: 'MIT',
@@ -74,6 +90,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     exports: spec.exports, files: ['source/', 'manifest.json', 'README.md', 'LICENSE'],
     peerDependencies: Object.fromEntries(Object.entries(spec.nativePeers).map(([name, value]) => [name, value.version])),
     peerDependenciesMeta: Object.fromEntries(Object.keys(spec.nativePeers).map(name => [name, { optional: true }])),
+    optionalDependencies: runtimeDependencies,
     repository: { type: 'git', url: 'https://github.com/woahwhattheheck/public-commons-sprint-2026.git', directory: ownPath },
   };
   const metadataBytes = Buffer.from(json(metadata));
@@ -89,6 +106,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
       gitBlob: item.blob, sha256: digest(sources.get(item.path)), bytes: sources.get(item.path).length, mode: item.mode })),
     packageFiles: { 'package.json': digest(metadataBytes), 'README.md': digest(readme), 'LICENSE': digest(license) },
     optionalNativePeers: metadata.peerDependencies,
+    optionalRuntimeDependencies: runtimeDependencies, runtimePackageSources,
   };
   // The caller chooses a new output directory. No prior archive or workspace is replaced.
   await mkdir(out, { mode: 0o700 });

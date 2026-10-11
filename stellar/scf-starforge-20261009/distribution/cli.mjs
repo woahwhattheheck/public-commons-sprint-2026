@@ -5,6 +5,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { constants } from 'node:os';
+import { createRequire } from 'node:module';
 import { createWorkspace, workspaceCommand } from './workspace.mjs';
 
 const specification = JSON.parse(await readFile(new URL('./distribution.json', import.meta.url), 'utf8'));
@@ -13,7 +14,7 @@ const help = `Starforge merchant toolkit
 
   starforge init --dir DIRECTORY [--template dataset|application|upstream]
   starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]
-  starforge doctor [--native]
+  starforge doctor [--native] [--postgres]
   starforge source
 
 Native commands (arguments pass unchanged to the maintained implementation):
@@ -22,6 +23,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   handoff     Captured challenge -> review    support     Private seller support case
+  postgres    Original PostgreSQL seller      postgres-init       Source starter
+  postgres-workspace  Database merchant UI    postgres-inspect    Source/query inspection
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
@@ -45,7 +48,7 @@ function pairs(args, allowed) {
   }
   return result;
 }
-export async function doctor({ requireNative = false } = {}) {
+export async function doctor({ requireNative = false, requirePostgres = false } = {}) {
   const original = await release();
   const peers = [];
   for (const [name, value] of Object.entries(specification.nativePeers)) {
@@ -55,15 +58,29 @@ export async function doctor({ requireNative = false } = {}) {
   }
   const python = spawnSync('python3', ['--version'], { encoding: 'utf8', timeout: 2000, windowsHide: true });
   const nativeDependenciesPresent = peers.every(peer => peer.available);
+  const runtimeDependencies = {};
+  for (const [group, path] of Object.entries(specification.runtimePackageManifests ?? {})) {
+    const filename = resolve(sourceRoot, path), manifest = JSON.parse(await readFile(filename, 'utf8'));
+    const resolveDependency = createRequire(filename).resolve;
+    runtimeDependencies[group] = Object.entries(manifest.dependencies ?? {}).map(([name, version]) => {
+      let available = false;
+      try { resolveDependency(name); available = true; } catch {}
+      return { name, requestedVersion: version, available };
+    });
+  }
+  const postgresDependenciesPresent = Boolean(runtimeDependencies.postgres?.length) &&
+    runtimeDependencies.postgres.every(dependency => dependency.available);
   const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
   const result = { package: specification.name, packageVersion: original?.packageVersion ?? 'source-checkout',
     sourceCommit: original?.sourceCommit ?? null, node: process.version,
     localSellerReady: nodeMajor > 22 || nodeMajor === 22 && nodeMinor >= 16,
     nativeDependenciesPresent, nativeDependencies: peers,
+    postgresDependenciesPresent, runtimeDependencies,
     operatorPython: python.status === 0 ? python.stdout.trim() || python.stderr.trim() : null,
     operatorPlatform: process.platform === 'win32' ? 'POSIX_HOST_REQUIRED_FOR_ORIGINAL_OPERATOR' : 'POSIX',
     nativeRuntimeConfigured: false };
-  if (!result.localSellerReady || requireNative && !nativeDependenciesPresent) process.exitCode = 1;
+  if (!result.localSellerReady || requireNative && !nativeDependenciesPresent ||
+      requirePostgres && !postgresDependenciesPresent) process.exitCode = 1;
   return result;
 }
 function forward(command, args) {
@@ -96,8 +113,9 @@ export async function main(args = process.argv.slice(2)) {
     return print(await release() ?? { package: specification.name, mode: 'SOURCE_CHECKOUT', components: specification.components });
   }
   if (command === 'doctor') {
-    if (rest.length && !(rest.length === 1 && rest[0] === '--native')) throw new TypeError('doctor [--native]');
-    return print(await doctor({ requireNative: rest[0] === '--native' }));
+    if (rest.some(value => !['--native', '--postgres'].includes(value)) || new Set(rest).size !== rest.length)
+      throw new TypeError('doctor [--native] [--postgres]');
+    return print(await doctor({ requireNative: rest.includes('--native'), requirePostgres: rest.includes('--postgres') }));
   }
   if (command === 'init') {
     const options = pairs(rest, ['--dir', '--template']);
