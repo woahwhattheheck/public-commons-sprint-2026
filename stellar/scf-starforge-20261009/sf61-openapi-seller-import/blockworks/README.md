@@ -16,6 +16,36 @@ Open the complete URL printed by the launcher and choose **Migrations**. Enter t
 
 The merchant workspace, contract revision desk, Postman intake and migration view share the original application. **Use in merchant setup** opens the selected retained provider description in the existing merchant configuration interface.
 
+## Use the installed Node package
+
+The same application and engines are available from the maintained `@tokenjunkielabs/starforge-merchant` source package. The [distribution guide](../../distribution/README.md) describes installation and the original `starforge openapi-workspace` command.
+
+| Package subpath | Original API |
+| --- | --- |
+| `/seller/openapi/workspace` | `startWorkspace` opens the complete merchant browser application, including Migrations. |
+| `/seller/openapi/blockworks` | `openMigrationApplication` opens the project, acquisition, mapping, release and handover services. |
+| `/seller/openapi/blockworks/acquisition` | `openAcquisitions` retains and resumes the original provider request. |
+| `/seller/openapi/blockworks/mapping` | `reviewMapping` and `compareMappedResults` use the selected original source populations. |
+| `/seller/openapi/blockworks/customer` | `openCustomerReceiver` and `legacyCaptureSource` compose original receiving and retained response selection. |
+| `/seller/openapi/blockworks/handover` | `openMigrationHandovers` and `restoreMigrationHandover` use the complete original closure. |
+
+A Node owner can open an existing project and await all of its owned operations when closing:
+
+~~~js
+import {openMigrationApplication} from
+  '@tokenjunkielabs/starforge-merchant/seller/openapi/blockworks';
+
+const migration = await openMigrationApplication({parent: privateProjectParent});
+try {
+  const current = await migration.snapshot(existingProjectId);
+  // Present the retained sources, acquisitions, packages and release state.
+} finally {
+  await migration.close();
+}
+~~~
+
+The application methods use the same project revision, operator and request identity as the browser. Pass those current values for a mutation. Use the original workspace starter when a browser session is needed; the underlying application does not introduce another HTTP or payment interface.
+
 ## Retain the source and application inventory
 
 Import the original Blockworks OpenAPI as **Blockworks OpenAPI**, the existing provider contract as **Legacy OpenAPI**, and the application's requests as an inventory. Keep the original source URL, retrieval time and reference when available. For a saved customer response, retain its recorded HTTP status, request, headers and paging metadata. File exports can retain an unknown HTTP status.
