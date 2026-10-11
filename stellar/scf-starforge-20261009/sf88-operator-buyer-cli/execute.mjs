@@ -1,10 +1,11 @@
 // MIT — SF88 privileged operator execution delegates to original source modules.
 import { stat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { OperatorApprovedBuyer } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import { OperatorApprovedBuyer, checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
+import { selectTestnetEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { execution, bytes, need } from './config.mjs';
 import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
   requireCurrentOperationTicket } from './operation-ticket.mjs';
@@ -26,10 +27,16 @@ const reservationOf = value => {
 };
 
 export async function execute(cfg, { signal, emitSummary = true, environment = process.env,
-  operationTicketSha256 } = {}) {
+  operationTicketSha256, evidenceRpcEndpoint } = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof emitSummary === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
   const { op, owner, download:responseFile, transport } = execution(cfg);
+  const rpcEndpoint = selectTestnetEvidenceEndpoint(evidenceRpcEndpoint);
+  // Keep RPC and merchant origin pins separate while using the same explicitly
+  // selected egress proxy. No wallet or merchant headers enter read-only RPC.
+  const rpcTransport = transport === null ? null : createPublicHttpsFetch({trustedProxy:{
+    ...transport, origin:new URL(rpcEndpoint).origin,
+  }});
   const ticket = await loadOperationTicket(op, {requireCurrent:true});
   requireOperationTicketFingerprint(ticket, operationTicketSha256);
   const headers = operationTicketHeaders(op, ticket);
@@ -40,6 +47,8 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   need(signerFile.isFile(), 'SIGNER_MODULE_MUST_EXIST');
   const body = op.bodyFile === undefined ? undefined :
     Uint8Array.from(await bytes(op.bodyFile, 1048576, 'REQUEST_BODY_INVALID'));
+  need(!signal?.aborted, 'OPERATOR_ABORTED');
+  await checkOperatorTerminal(op.intentId);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
 
   let output, download, delivery, evidence, evidenceError, nativeResult, nativeError;
@@ -94,6 +103,12 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
         },
         outputDir:cfg.evidenceDir,
         trustedPayer:cfg.trustedPayer,
+        rpcEndpoint,
+        // SF43 rejects non-2xx responses; this original transport never follows
+        // redirects and retains the same bounded body and abort behavior.
+        ...(rpcTransport === null ? {} : {
+          rpcFetch:(url, init) => rpcTransport(url, {...init, redirect:'manual'}),
+        }),
         // The file writer consumes the original body once; no cloned-body race.
         captureBody:output ? false : cfg.captureBody ?? false,
         bodyCaptureTimeoutMs:cfg.bodyCaptureTimeoutMs ?? 15000,
@@ -137,6 +152,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     httpStatus:result?.response?.status ?? null,
     sellerReportedSettlement:result?.settlement ?? null,
     evidencePath:evidence?.evidencePath ?? null,
+    evidenceRpcEndpoint:rpcEndpoint,
     originalOutcomeReport:evidence?.report ?? null,
     operatorReservation:reservationOf(result?.operatorReservation ?? error?.operatorReservation),
     ...(output ? {responseFile:delivery} : {}),

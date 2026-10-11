@@ -1,12 +1,12 @@
 // MIT — Offline saved-catalog selection for the existing SF88 review command.
 import { createHash } from 'node:crypto';
 import { open, unlink } from 'node:fs/promises';
-import { abs, bytes, InputError, need, operation, preparedFrom } from './config.mjs';
+import { abs, bytes, InputError, need, operation, preparedFrom, responseFile } from './config.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const required = ['--discovery','--row','--accept','--intent-id','--url','--method','--out'];
-const optional = ['--body-file','--content-type','--ticket-file','--ticket-header'];
+const optional = ['--body-file','--content-type','--ticket-file','--ticket-header','--response-out'];
 function index(value) {
   need(typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value) &&
     Number.isSafeInteger(Number(value)), 'EXPLICIT_SELECTION_INDEX_REQUIRED');
@@ -24,7 +24,7 @@ function https(value) {
 export function prepareReview(raw, selection) {
   need(raw instanceof Uint8Array && raw.byteLength <= 1048576, 'INVALID_DISCOVERY_FILE');
   need(object(selection) && Object.keys(selection).every(key =>
-    ['rowIndex','acceptIndex','intentId','url','method','bodyFile','headers','ticketFile','ticketHeader'].includes(key)),
+    ['rowIndex','acceptIndex','intentId','url','method','bodyFile','headers','ticketFile','ticketHeader','responseOut'].includes(key)),
     'PREPARE_EXPLICIT_SELECTION_REQUIRED');
   const {rowIndex, acceptIndex, intentId, url, method, bodyFile, headers, ticketFile, ticketHeader} = selection;
   need(typeof method === 'string' && ['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(method),
@@ -83,6 +83,25 @@ export function prepareReview(raw, selection) {
     discoveryFileSha256:createHash('sha256').update(raw).digest('hex'), source, sourceEnvelope,
     rowIndex, acceptIndex, originalListing:structuredClone(row)});
   const draft = {operation:op, captureBody:false, preparedFrom:origin};
+  const asset = row.extensions?.['stellar-forge-asset'];
+  if (asset !== undefined) {
+    need(object(asset) && asset.schema === 'stellar-forge.asset-product.v1' &&
+      Object.keys(asset).every(key => ['schema','sha256','bytes','contentType','downloadName'].includes(key)) &&
+      method === 'GET' && bodyFile === undefined && requested.href === advertised.href &&
+      typeof asset.downloadName === 'string' && asset.downloadName.length > 0 &&
+      typeof asset.contentType === 'string' && asset.contentType === row.resource?.mimeType,
+      'INVALID_ASSET_PRODUCT');
+    need(selection.responseOut !== undefined, 'ASSET_RESPONSE_DESTINATION_REQUIRED');
+    need(typeof asset.sha256 === 'string' && typeof asset.bytes === 'number', 'INVALID_ASSET_PRODUCT');
+    // The output filename remains the buyer's explicit choice, never a path
+    // obtained from Content-Disposition or a merchant-controlled downloadName.
+    draft.responseFile = {destination:selection.responseOut, maxBytes:Math.max(1,asset.bytes),
+      expectedSha256:asset.sha256, expectedBytes:asset.bytes, expectedContentType:asset.contentType};
+    responseFile(draft);
+  } else if (selection.responseOut !== undefined) {
+    draft.responseFile = {destination:selection.responseOut};
+    responseFile(draft);
+  }
   const data = Buffer.from(JSON.stringify(draft, null, 2) + '\n');
   need(data.length <= 65536, 'PREPARED_CONFIG_EXCEEDS_CONFIG_LIMIT');
   return {draft, data, configSha256:createHash('sha256').update(data).digest('hex')};
@@ -106,7 +125,8 @@ export async function prepare(args) {
     ...(flags.has('--body-file') ? {bodyFile:flags.get('--body-file')} : {}),
     ...(flags.has('--content-type') ? {headers:{'Content-Type':flags.get('--content-type')}} : {}),
     ...(flags.has('--ticket-file') ? {ticketFile:flags.get('--ticket-file')} : {}),
-    ...(flags.has('--ticket-header') ? {ticketHeader:flags.get('--ticket-header')} : {})});
+    ...(flags.has('--ticket-header') ? {ticketHeader:flags.get('--ticket-header')} : {}),
+    ...(flags.has('--response-out') ? {responseOut:flags.get('--response-out')} : {})});
   const op = draft.operation, origin = draft.preparedFrom;
   const ticket = await loadOperationTicket(op, {requireCurrent:true});
   let file;
@@ -124,6 +144,7 @@ export async function prepare(args) {
     sourceFileSha256:origin.discoveryFileSha256, rowIndex, acceptIndex,
     intentId:op.intentId, sellerUrl:op.url, method:op.method, acceptedTerms:op.expect,
     operationTicket:operationTicketView(ticket),
+    ...(draft.responseFile ? {responseFile:draft.responseFile} : {}),
     sourceStatus:'SAVED_UNVERIFIED_DISCOVERY',
     next:'Review this config with --review; add trusted operator settings separately before execution'};
 }

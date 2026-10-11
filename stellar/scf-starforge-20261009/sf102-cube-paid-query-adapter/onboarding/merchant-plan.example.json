@@ -1,0 +1,49 @@
+{
+  "schema": "stellar-forge.cube-merchant-plan.v1",
+  "serviceName": "Cube Report Example",
+  "publicOrigin": "https://reports.example",
+  "tags": ["analytics"],
+  "upstream": {
+    "origin": "https://cube.example",
+    "path": "/cubejs-api/v1/load",
+    "authEnv": "CUBE_API_AUTHORIZATION",
+    "timeoutMs": 10000,
+    "maxResponseBytes": 262144,
+    "maxInFlight": 8,
+    "maxRows": 1000
+  },
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "amount": "10000",
+    "maxTimeoutSeconds": 60
+  },
+  "reports": {
+    "daily-count": {
+      "description": "Daily count for one selected status and date window",
+      "query": {
+        "measures": ["orders.count"],
+        "dimensions": ["orders.status"],
+        "filters": [
+          {"member": "orders.status", "operator": "equals", "values": [{"$param": "status"}]}
+        ],
+        "timeDimensions": [
+          {"dimension": "orders.createdAt", "granularity": "day", "dateRange": [{"$param": "start"}, {"$param": "end"}]}
+        ],
+        "order": [["orders.createdAt", "asc"], ["orders.count", "desc"]],
+        "limit": 100,
+        "offset": {"$param": "offset"},
+        "timezone": "UTC"
+      },
+      "inputs": {
+        "status": {"type": "enum", "values": ["completed", "pending"], "description": "Order status", "example": "completed"},
+        "start": {"type": "date", "description": "First included date", "example": "2026-10-01"},
+        "end": {"type": "date", "description": "Last included date", "example": "2026-10-07"},
+        "offset": {"type": "integer", "min": 0, "max": 10000, "description": "Result rows to skip", "example": 0}
+      },
+      "range": {"start": "start", "end": "end", "maxDays": 31}
+    }
+  }
+}

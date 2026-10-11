@@ -5,7 +5,8 @@ let token = location.hash.slice(1);
 if (/^[A-Za-z0-9_-]{43}$/.test(token)) { sessionStorage.setItem(key,token); history.replaceState(null,'',location.pathname); }
 else token = sessionStorage.getItem(key) || '';
 let state = { status:null, draft:null, selected:null, result:null, dataset:null,
-  query:'', history:[''], page:0, busy:false, dirty:false, activation:null };
+  query:'', history:[''], page:0, busy:false, dirty:false, activation:null,
+  buyerSource:null, buyerReview:null, buyerPrepared:null };
 const fmt = n => typeof n === 'number' ? n.toLocaleString() : '—';
 const bytes = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n/1024).toFixed(1)} KiB` : `${(n/1048576).toFixed(1)} MiB`;
 const short = x => x ? x.slice(0,12) : '—';
@@ -34,12 +35,18 @@ function controls() {
   for(const button of $('versions').querySelectorAll('button'))button.disabled=busy;
   $('confirm-activation').disabled=busy||!state.activation;
   $('cancel-activation').disabled=busy;
+  const published=state.status?.versions.find(v=>v.snapshot===state.selected&&v.status!=='EXPIRED');
+  $('load-offer').disabled=busy||!state.buyerSource||!published||!state.result||state.dirty;
+  for(const id of ['buyer-accept','buyer-intent'])$(id).disabled=busy||!state.buyerReview;
+  $('prepare-buyer').disabled=busy||!state.buyerReview||state.dirty;
+  $('download-buyer').disabled=busy||!state.buyerPrepared||state.dirty;
 }
 async function action(message,fn) {
   if(state.busy)return;
   state.busy=true; controls(); notice(message);
   try { await fn(); }
   catch(error) {
+    if(/^(SELLER_|SNAPSHOT_SELECTION_|VERSION_NOT_AVAILABLE)/.test(error.code||''))clearBuyer();
     // Show a concurrent operator's new revision without silently re-reviewing
     // this draft or changing the saved activation expectation.
     if(error.status===409)try{accept(await api('status',undefined,'GET'));}catch{}
@@ -48,10 +55,13 @@ async function action(message,fn) {
   finally { state.busy=false; controls(); }
 }
 function accept(data) {
+  if(data.status&&state.status&&data.status.revision!==state.status.revision)clearBuyer();
   if(data.status)state.status=data.status;
   if(Object.hasOwn(data,'draft'))state.draft=data.draft;
   if(data.maxUploadBytes)$('upload-limit').textContent='Upload limit '+bytes(data.maxUploadBytes);
   if(data.resource){$('resource-link').href=data.resource;$('resource-link').hidden=false;}
+  if(Object.hasOwn(data,'buyerSource'))state.buyerSource=data.buyerSource;
+  $('buyer-setup').textContent=state.buyerSource?'Inspect a published version and run the query, then load its current seller offer.':'Connect the existing seller with the workspace’s --seller and --resource options.';
   renderStatus();
 }
 function renderStatus() {
@@ -107,7 +117,7 @@ function schema(description) {
   $('filters').replaceChildren();$('no-filters').hidden=false;
   $('add-filter').disabled=!description.columns.some(c=>c.filterable||c.rangeFilterable);
 }
-function dirty() {state.dirty=true;$('query-note').textContent='Query changed. Run preview to see these results.';controls();}
+function dirty() {state.dirty=true;clearBuyer();$('query-note').textContent='Query changed. Run preview to see these results.';controls();}
 function addFilter() {
   const columns=state.dataset.columns.filter(c=>c.filterable||c.rangeFilterable);if(!columns.length)return;
   const row=el('div',undefined,'filter-row'),column=el('select'),operator=el('select'),value=el('input'),remove=el('button','×');
@@ -135,6 +145,7 @@ async function select(target) {
   notice(selectionLabel()+' loaded.');
 }
 function renderResult(data) {
+  clearBuyer();
   state.result=data.result;state.dataset=data.dataset;state.dirty=false;state.executedQuery=data.query;
   $('preview-source').textContent=`${selectionLabel()} / ${data.dataset.snapshot}`;
   $('query-note').textContent='Preview reads the selected local snapshot.';
@@ -153,6 +164,42 @@ async function runPage(cursor='',reset=false,page=state.page,history=state.histo
   state.query=proposedQuery;state.history=reset?['']:history;state.page=reset?0:page;
   renderResult(data);notice('Preview updated.');
 }
+function clearBuyer() {
+  state.buyerReview=null;state.buyerPrepared=null;
+  $('buyer-review').hidden=true;$('buyer-prepared').hidden=true;
+}
+function buyerTerms() {
+  const accepted=state.buyerReview?.accepts[Number($('buyer-accept').value)];if(!accepted)return;
+  state.buyerPrepared=null;$('buyer-prepared').hidden=true;
+  $('buyer-price').textContent=`${accepted.amount} atomic units / ${accepted.network}`;
+  $('buyer-asset').textContent=accepted.asset;$('buyer-recipient').textContent=accepted.payTo;
+  $('buyer-payment').textContent=`${accepted.scheme} / maximum timeout ${accepted.maxTimeoutSeconds} seconds${accepted.extra?.paymentFlow?' / '+accepted.extra.paymentFlow:''}`;
+  controls();
+}
+function download(text,filename) {
+  const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));const a=el('a');
+  a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$('load-offer').addEventListener('click',()=>action('Loading the original seller’s current offer…',async()=>{
+  clearBuyer();const data=await api('buyer-offer',{target:state.selected,query:state.query});state.buyerReview=data;
+  $('buyer-mode').textContent=data.mode==='NATIVE_X402'?'Native x402 seller':'Challenge-only seller';
+  $('buyer-url').textContent=data.url;
+  $('buyer-selection').textContent=`${fmt(data.selection.matchingRows)} matching rows / ${fmt(data.selection.rowsPerPage)} per page / ${data.selection.fields.join(', ')}`;
+  $('buyer-expiry').textContent=data.selection.expiresAt===null?'Current version; retention begins when it is replaced':new Date(data.selection.expiresAt).toLocaleString();
+  $('buyer-accept').replaceChildren();data.accepts.forEach((accepted,index)=>{const option=el('option',`${index+1} / ${accepted.network} / ${accepted.amount} atomic units`);option.value=String(index);$('buyer-accept').append(option);});
+  $('buyer-intent').value='dataset:'+crypto.randomUUID();$('buyer-review').hidden=false;buyerTerms();
+  notice('Current offer loaded. Review the exact payment terms and prepare the buyer config.');
+}));
+$('buyer-accept').addEventListener('change',buyerTerms);
+$('buyer-intent').addEventListener('input',()=>{state.buyerPrepared=null;$('buyer-prepared').hidden=true;controls();});
+$('buyer-form').addEventListener('submit',event=>{event.preventDefault();action('Preparing the original buyer configuration…',async()=>{
+  const data=await api('buyer-prepare',{target:state.selected,query:state.query,intentId:$('buyer-intent').value,
+    acceptIndex:Number($('buyer-accept').value),offerSha256:state.buyerReview.offerSha256});
+  state.buyerPrepared=data;$('buyer-prepared').hidden=false;
+  $('buyer-prepared-summary').textContent=`Snapshot ${short(data.snapshot)} / ${fmt(data.selection.matchingRows)} rows / ${data.config.operation.expect.maxAtomic} atomic units maximum per page.`;
+  notice('Buyer config prepared from the current original offer. Ready to download.');
+});});
+$('download-buyer').addEventListener('click',()=>{if(!state.buyerPrepared)return;download(state.buyerPrepared.configText,'dataset-'+short(state.buyerPrepared.snapshot)+'-buyer.json');notice('Original buyer config downloaded. Continue in the private buyer workspace.');});
 $('upload-form').addEventListener('submit',event=>{event.preventDefault();const file=$('csv-file').files[0];if(!file)return;
   action('Uploading and validating the CSV…',async()=>{accept(await api('draft',file,'PUT',{'x-upload-name':encodeURIComponent(file.name)}));await select(draftTarget());notice('CSV validated. Inspect the draft, then publish when ready.');$('csv-file').value='';});
 });
@@ -174,6 +221,6 @@ $('next').addEventListener('click',()=>action('Loading the next page…',async()
 $('previous').addEventListener('click',()=>action('Loading the previous page…',()=>runPage(state.history[state.page-1],false,state.page-1)));
 $('copy-query').addEventListener('click',()=>action('Copying the selected query…',async()=>{await navigator.clipboard.writeText(state.executedQuery||'limit='+state.dataset.defaultLimit);notice('Current page query copied. It applies to the selected dataset contract.');}));
 $('export-page').addEventListener('click',()=>{
-  if(!state.result)return;const url=URL.createObjectURL(new Blob([JSON.stringify(state.result,null,2)+'\n'],{type:'application/json'}));const a=el('a');a.href=url;a.download='dataset-'+short(state.dataset.snapshot)+'-page-'+(state.page+1)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('Current preview page exported.');
+  if(!state.result)return;download(JSON.stringify(state.result,null,2)+'\n','dataset-'+short(state.dataset.snapshot)+'-page-'+(state.page+1)+'.json');notice('Current preview page exported.');
 });
 action('Connecting to the running seller…',async()=>{accept(await api('status',undefined,'GET'));await select(state.status.current);notice('Connected. Upload a CSV or inspect a retained version.');});

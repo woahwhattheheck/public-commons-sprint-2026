@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
 import { buyerTransport, config, operation, responseFile, bytes, need } from './config.mjs';
+import { selectTestnetEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
@@ -39,7 +40,7 @@ async function discover(c) {
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
     process.stdout.write('Usage: node cli.mjs --review|--discover|--execute --config /absolute/operator.json [--response-out /absolute/output]\n' +
-      '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json [--body-file /absolute/request.json] [--content-type application/json] [--ticket-file /absolute/merchant-ticket.json] [--ticket-header x-merchant-operation]\n');
+      '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json [--response-out /absolute/product] [--body-file /absolute/request.json] [--content-type application/json] [--ticket-file /absolute/merchant-ticket.json] [--ticket-header x-merchant-operation]\n');
     process.stdout.write('       node cli.mjs --init-workspace --config /absolute/review.json --dir /absolute/new-workspace --actor operator-id --service seller-id --payer G... --python /usr/bin/python3 [--secret-env STELLAR_SECRET | --signer-provider /absolute/wallet.mjs] [--rpc https://rpc.example] [--https-proxy http://proxy.example:8080 | --https-proxy-env HTTPS_PROXY] [--total-atomic 1000] [--daily-atomic 1000]\n' +
       '       node cli.mjs --review-workspace|--diagnose-workspace|--execute-workspace --dir /absolute/workspace\n');
     return;
@@ -58,12 +59,13 @@ async function main(args) {
     if (result.status === 'SETUP_REQUIRED') process.exitCode = 1;
     return print(result);
   }
-  let c, operatorEnvironment;
+  let c, operatorEnvironment, evidenceRpcEndpoint;
   if (['--review-workspace', '--execute-workspace'].includes(args[0])) {
     const {openWorkspace} = await import('./workspace.mjs');
     const workspace = await openWorkspace(args.slice(1), {execute:args[0] === '--execute-workspace'});
     c = workspace.config;
     operatorEnvironment = workspace.operatorEnvironment;
+    evidenceRpcEndpoint = selectTestnetEvidenceEndpoint(workspace.manifest.signer.rpcUrl);
     if (args[0] === '--review-workspace') return review(c);
   } else {
   need((args.length === 3 || args.length === 5 && args[3] === '--response-out') &&
@@ -90,7 +92,8 @@ async function main(args) {
   process.on('SIGTERM', onTerminate);
   try {
     const { execute } = await import('./execute.mjs');
-    return await execute(c, { signal:controller.signal, environment:operatorEnvironment });
+    return await execute(c, { signal:controller.signal, environment:operatorEnvironment,
+      evidenceRpcEndpoint });
   } finally {
     process.off('SIGINT', onInterrupt);
     process.off('SIGTERM', onTerminate);

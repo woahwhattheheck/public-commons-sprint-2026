@@ -87,13 +87,31 @@ callback. An optional `--rpc https://operator-rpc.example` selects a testnet RPC
 the default is the official testnet endpoint. RPC credentials, query parameters
 and fragments are not accepted in the URL.
 
-`--diagnose-workspace` checks the existing workspace, pinned SDK versions and
-provider file or environment-variable presence. It never reads the SF36 key
+`--diagnose-workspace` checks the existing workspace, pinned SDK versions,
+provider file or environment-variable presence, and access to the controlling
+operator terminal at `/dev/tty`. It never reads the SF36 key
 file, opens a wallet, signs, reserves funds or calls RPC. `READY_TO_EXECUTE`
 means the setup requirements are present; actual wallet access, payer identity
 and network availability are checked during approved execution. An empty or
 invalid wallet variable is still rejected at that point. Existing environment
 workspaces keep the same generated signer and operator ledger.
+
+An allocated terminal stream can report `isTTY` while `/dev/tty` is unavailable.
+The original approval helper uses `/dev/tty`, so both direct execution and the
+inbox check that device before preparing output or recording a permanent
+attempt. `OPERATOR_CONTROLLING_TERMINAL_REQUIRED` leaves an unattempted inbox
+item queued. On a Linux host with util-linux `script`, run the same command in a
+controlling terminal:
+
+```sh
+script -q -e -c 'node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs --execute-workspace --dir /private/weather-operator' /dev/null
+```
+
+Keep the existing command, workspace, and intent. The wrapper provides the
+terminal for the original interactive review; it grants no approval. For an
+inbox operation, wrap that operation's existing `queue-cli.mjs execute`
+command. An intent with a recorded attempt remains recorded and is never
+reset by this setup check.
 
 Execution checks the configured provider file or wallet-variable presence, and
 loads the pinned local SDK before creating an inbox attempt or reserving budget.

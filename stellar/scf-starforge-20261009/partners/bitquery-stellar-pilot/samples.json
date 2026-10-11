@@ -1,0 +1,67 @@
+{
+  "provider": "Bitquery",
+  "datasetPage": "https://bitquery.io/datastore/datasets/stellar",
+  "retrievedAt": "2026-10-11",
+  "files": [
+    {
+      "table": "blocks",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/blocks/55080300_55080349.parquet",
+      "sha256": "ab1850e1bb789f0a8f8fed71574fb4c14a204dddd33cbdb36ac4938aef81ca59"
+    },
+    {
+      "table": "transactions",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/transactions/55080300_55080349.parquet",
+      "sha256": "9cd00830dbf8b4dcd1d3833bd40e6d613e690f2e9f8bb9c761216395370fef4d"
+    },
+    {
+      "table": "operations_tx",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/operations_tx/55080300_55080349.parquet",
+      "sha256": "b08ecb162005fbac236880197fecc930aac027b45b94ddb28b52b7a90fd26f66"
+    },
+    {
+      "table": "payments_tx",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/payments_tx/55080300_55080349.parquet",
+      "sha256": "31e2f26e0d9ba88724c0dfb3eacc7691441a5a4b3f9295795d8901cd1c94273b"
+    },
+    {
+      "table": "transfers_tx",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/transfers_tx/55080300_55080349.parquet",
+      "sha256": "4eb848e4eb51c50513c74811c25eebb0972f8a68c0cf5eb9cc8dc78cc2a1189b"
+    },
+    {
+      "table": "effects_tx",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/effects_tx/55080300_55080349.parquet",
+      "sha256": "ea78c7f1f5046e778372e3e67400dcdcc5399c364bb6a8d07eb43adb73ae13ae"
+    },
+    {
+      "table": "effect_arguments_tx",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/effect_arguments_tx/55080300_55080349.parquet",
+      "sha256": "99057116264ab1dc008d2ed8c15e908ca4690bca3d1d21f70c6901fe408eba9f"
+    },
+    {
+      "table": "balance_effects_tx",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/balance_effects_tx/55080300_55080349.parquet",
+      "sha256": "e432bdf83786ad8277ccc781f78436c7af2528a55fd06758d3945158f44edb33"
+    },
+    {
+      "table": "trade_effects_tx",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/trade_effects_tx/55080300_55080349.parquet",
+      "sha256": "cdb92fcc3264ca31a22f973837062cc8a0d094a0b79b45449b984ee13a1f9cad"
+    },
+    {
+      "table": "claimable_balance_effects",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/claimable_balance_effects/55080300_55080349.parquet",
+      "sha256": "a0ff6899fd41ec6f872d5c70bf9f1ab7661f3aac0ef947b77b5e91d4627263e6"
+    },
+    {
+      "table": "liquidity_pool_effects",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/liquidity_pool_effects/55080300_55080349.parquet",
+      "sha256": "c05d37cb69773118a6e21d3c1d387261311f13af5eeb4aee4be036a85991a2e5"
+    },
+    {
+      "table": "liquidity_pool_trade_effects",
+      "url": "https://bitquery-blockchain-dataset.s3.us-east-1.amazonaws.com/stellar/liquidity_pool_trade_effects/55080300_55080349.parquet",
+      "sha256": "96530c1a097a82c113f20f4810c4946cf07824863d8b2f43f90fb523ba37326b"
+    }
+  ]
+}

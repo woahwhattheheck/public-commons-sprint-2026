@@ -119,3 +119,34 @@ const buyer = new OperatorApprovedBuyer({operator, fetchImpl});
 ```
 
 Merchant data must never populate this trusted configuration automatically.
+
+## Original transaction evidence
+
+Workspace execution also uses its existing `--rpc` preference for original
+SF43/SF82 evidence when that preference is one of the supported public testnet
+providers: SDF's `https://soroban-testnet.stellar.org` or
+`https://soroban-rpc.testnet.stellar.gateway.fm`. Both appear in the
+[Stellar RPC provider documentation](https://developers.stellar.org/docs/data/apis/rpc/providers).
+A private or other signer RPC keeps the original SDF evidence endpoint; it does
+not gain verification authority by appearing in a signer configuration. A raw
+config execution without a workspace likewise keeps that original default.
+
+The original CLI and durable inbox forward the selected workspace preference
+to SF82's existing `rpcEndpoint` and `rpcFetch` seams. With a configured proxy,
+SF31 creates a separate connection pinned only to the supported RPC origin,
+using the same explicitly selected proxy source. It sends only SF43's read-only
+JSON-RPC methods. Merchant headers, capability tickets, wallet secrets, and
+payment payloads are not part of those requests. This does not change the
+native signer's own SDK transport or widen the merchant-origin pin.
+
+For Gateway, SF43 first confirms the actual `getNetwork` testnet passphrase,
+then retains its original matching transaction hash, successful inclusion,
+ledger, payer, token contract, recipient, atomic amount, and decoded SEP-41
+transfer checks. The default SDF path remains unchanged. The SF88 terminal
+summary records `evidenceRpcEndpoint` alongside the existing original outcome;
+a configured endpoint does not itself claim a matched transfer.
+
+An embedding that already uses trusted `execute()` may pass the optional
+`evidenceRpcEndpoint` preference directly. Unsupported preferences retain the
+same original SDF evidence source. No additional execution config, observer,
+wallet, ledger, or automatic retry is created.

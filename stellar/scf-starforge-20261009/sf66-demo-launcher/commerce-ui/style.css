@@ -48,13 +48,14 @@ pre { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, mon
 .links { display: flex; flex-direction: column; gap: 9px; }
 a { color: #373737; text-underline-offset: 3px; }
 .links a { font-size: 13px; }
+.links input { min-width: 0; width: 100%; border: 1px solid #ccc; padding: 8px; color: #444; background: #f8f8f8; font: 12px ui-monospace, monospace; }
 .route-list { list-style: none; padding: 0; margin: 0; }
 .route-list li { border-top: 1px solid #e2e2e2; padding: 10px 0; overflow-wrap: anywhere; font-size: 12px; }
 .route-list li:last-child { padding-bottom: 0; }
 .route-list .method { margin-right: 7px; font-size: 10px; padding: 1px 5px; }
 .route-list .muted { display: block; margin-top: 4px; }
 .preview-heading { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0 8px; font-size: 12px; }
-#preview-text { border: 1px solid #ddd; background: #f7f7f7; padding: 12px; max-height: 380px; overflow: auto; }
+#preview-text, #product-preview-text { border: 1px solid #ddd; background: #f7f7f7; padding: 12px; max-height: 380px; overflow: auto; }
 #outcome-json { max-height: 420px; overflow: auto; }
 footer { max-width: 1368px; padding: 8px 24px 28px; margin: auto; display: flex; justify-content: space-between; gap: 12px; color: #777; font-size: 11px; overflow-wrap: anywhere; }
 [hidden] { display: none !important; }

@@ -31,6 +31,10 @@
       <div><h2>Seller process</h2><p id="process-description">Start the selected seller release.</p></div>
       <div class="actions"><button id="start">Start selected</button><button id="restart">Restart selected</button><button id="stop">Stop seller</button></div>
     </section>
+    <section class="cache-operations" aria-labelledby="cache-title">
+      <div class="section-heading"><div><h2 id="cache-title">Running source cache</h2><p id="cache-state">Start a release with a shared read policy to inspect its source cache.</p></div><div class="actions"><button id="cache-refresh">Refresh cache</button><button id="cache-invalidate-all">Invalidate all cached routes</button></div></div>
+      <div class="table-scroll"><table><thead><tr><th>Route / binding</th><th>Sharing policy</th><th>Source activity</th><th>Action</th></tr></thead><tbody id="cache-routes"></tbody></table></div>
+    </section>
     <section class="history"><h2>Selection history</h2><div class="table-scroll"><table><thead><tr><th>Time</th><th>Generation</th><th>Change</th><th>Reason</th></tr></thead><tbody id="history"></tbody></table></div></section>
     <footer><span id="store"></span><span>Local operator interface · Exact atomic payment amounts</span></footer>
   </main>

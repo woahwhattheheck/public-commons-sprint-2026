@@ -2,6 +2,7 @@ import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {dirname, join} from 'node:path';
+import {homedir} from 'node:os';
 import {makeSnapshot, TEAMS, validateFixture} from './engine.mjs';
 import {foundryConfigured, suggestedNarrative} from './foundry.mjs';
 import {createFoundryAdmission} from './foundry_quota.mjs';
@@ -9,13 +10,14 @@ import {createOpusCommentary} from './opus_commentary.mjs';
 import {createEvidenceExport, evidenceCsv} from './evidence_export.mjs';
 import {scenarioList, DEFAULT_SCENARIO} from './scenarios.mjs';
 import {createSessionStore, parseView, parseSpeed, parseCount, resumeCursor, delayMs} from './live_sessions.mjs';
+import {createMatchArchiveStore, MAX_PACKAGE_BYTES, MAX_REVIEW_BYTES} from './match_archive.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const FIXTURE = JSON.parse(await readFile(join(ROOT, 'data', 'events.json'), 'utf8'));
 validateFixture(FIXTURE);
-const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8'};
-const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css'};
+const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/archive.js':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8'};
+const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/archive.js': 'archive.js', '/style.css': 'style.css'};
 const DEFAULT_PORT = 3167;
 // Existing local replay remains free; admitted paid attempts count even on failure.
 const foundryAdmission = createFoundryAdmission();
@@ -24,19 +26,31 @@ const opus = createOpusCommentary();
 export const sessions = createSessionStore();
 const sweeper = setInterval(() => sessions.sweep(), 60 * 1000);
 sweeper.unref();
+// A collection belongs to a random browser key; shared replay links carry only
+// the unguessable read ID. The native match stays usable if storage is offline.
+let archiveStore;
+function archives() {
+  if (!archiveStore) archiveStore = createMatchArchiveStore({
+    directory: process.env.COUNTERPRESS_ARCHIVE_DIR || join(homedir(), '.local', 'share', 'counterpress-compass', 'matches'),
+  }).catch(() => {
+    archiveStore = null;
+    throw Object.assign(new Error('Saved-match storage is unavailable; the match player is still usable'), {status: 503});
+  });
+  return archiveStore;
+}
 
 function send(res, status, data) {
   const body = JSON.stringify(data);
   res.writeHead(status, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
   res.end(body);
 }
-async function getJSON(req) {
+async function getJSON(req, maxBytes = 8192) {
   if (!String(req.headers['content-type'] || '').startsWith('application/json')) throw Object.assign(new Error('Expected application/json'), {status:415});
   let length = 0;
   const chunks = [];
   for await (const c of req) {
     length += c.length;
-    if (length > 8192) throw Object.assign(new Error('Body exceeds 8KB'), {status:413});
+    if (length > maxBytes) throw Object.assign(new Error('Body exceeds ' + Math.floor(maxBytes / 1024) + 'KB'), {status:413});
     chunks.push(c);
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
@@ -148,6 +162,43 @@ export const server = createServer(async (req, res) => {
       return send(res, 201, sessions.create(body.scenario ?? DEFAULT_SCENARIO, body.seed));
     }
     const parts = path.split('/');
+    if (path === '/api/archives' || path.startsWith('/api/archives/')) {
+      const store = await archives();
+      const libraryKey = req.headers['x-counterpress-library'];
+      if (path === '/api/archives' && req.method === 'GET')
+        return send(res, 200, {archives: await store.list(libraryKey), limits: store.limits});
+      if (path === '/api/archives' && req.method === 'POST') {
+        const body = objectBody(await getJSON(req, MAX_REVIEW_BYTES));
+        return send(res, 201, await store.saveSession(sessions.get(body.sessionId), body.review, libraryKey));
+      }
+      if (path === '/api/archives/import' && req.method === 'POST')
+        return send(res, 201, await store.importPackage(objectBody(await getJSON(req, MAX_PACKAGE_BYTES)), libraryKey));
+      if (parts.length >= 4 && parts.length <= 5 && parts[1] === 'api' && parts[2] === 'archives') {
+        const id = parts[3], action = parts[4];
+        if (action === undefined && req.method === 'GET') return send(res, 200, await store.get(id, libraryKey));
+        if (action === undefined && req.method === 'PUT') {
+          const body = objectBody(await getJSON(req, MAX_REVIEW_BYTES));
+          return send(res, 200, await store.update(id, body.revision, body.review, libraryKey));
+        }
+        if (action === undefined && req.method === 'DELETE') {
+          const body = objectBody(await getJSON(req));
+          await store.remove(id, body.revision, libraryKey);
+          res.writeHead(204, {'Cache-Control': 'no-store'}); return res.end();
+        }
+        if (action === 'open' && req.method === 'POST') {
+          objectBody(await getJSON(req));
+          const {archive, match} = await store.open(id, libraryKey);
+          return send(res, 201, {archive, session: sessions.restore(match)});
+        }
+        if (action === 'export' && req.method === 'GET') {
+          const body = JSON.stringify(await store.exportPackage(id), null, 2) + '\n';
+          res.writeHead(200, {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store',
+            'Content-Disposition': 'attachment; filename="counterpress-match-' + id + '.json"'});
+          return res.end(body);
+        }
+      }
+      return send(res, 404, {error: 'Not found'});
+    }
     if (parts.length >= 4 && parts.length <= 5 && parts[1] === 'api' && parts[2] === 'sessions') {
       const id = parts[3];
       const action = parts[4];

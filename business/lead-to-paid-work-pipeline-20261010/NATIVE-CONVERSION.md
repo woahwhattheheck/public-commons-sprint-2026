@@ -1,4 +1,4 @@
-# Native Gmail capture and standing sales authority
+# Native contact capture and standing sales authority
 
 ## Capture once, reuse the original provider response
 
@@ -119,7 +119,7 @@ Put policy data alongside `opportunities[]` in the existing pipeline input:
 }
 ```
 
-The operator records actual instructions; the source does not create them. `ORDINARY_OUTBOUND_SALES` covers the four contact actions exposed by this workflow. Individual actions can be specified instead. Optional `recipients`, `recipientDomains`, `opportunityIds`, `channels` and `expiresAt` narrow a grant. Domain scope matches that domain and its subdomains. Exact grants must name recipients or opportunity IDs. An exclusion matching any intended recipient excludes that message; a scoped grant must cover all intended recipients.
+The operator records actual instructions; the source does not create them. `ORDINARY_OUTBOUND_SALES` covers the four contact actions exposed by this workflow. Individual actions can be specified instead. Optional `recipients`, `recipientDomains`, `formUrls`, `opportunityIds`, `channels` and `expiresAt` narrow a grant. Domain scope matches that domain and its subdomains, including the hostname of the official form. Exact grants must name recipients, form URLs or opportunity IDs. An exclusion matching any intended destination excludes that contact; a scoped grant must cover all intended destinations. Form URL matching removes a query string, fragment and trailing slash while preserving the official HTTPS host and path.
 
 Opportunity configuration:
 
@@ -141,3 +141,15 @@ Explicit owner exclusions override grants. Entries explicitly issued by `AGENT` 
 
 No new contact authority changes provider declines, duplicate-send history, contract terms or receipt-backed collection balances. Actual connected sending and final provider readback remain part of the operator's existing workflow.
 
+
+## Shared email and web-form contact history
+
+The canonical registry remains `woahwhattheheck/commons/tools/sales_first_contact/claims/v1/`. Bind original paths in `communication.contactClaimPaths[]` and pass `--contact-records=/private/contact-records.json` to the same pipeline. The input contains `captures[]`; each entry has `id`, offset `capturedAt`, `operation`, the actual read `request.url`, and its unmodified `result`. Supported reads are the raw file on `main`, GitHub Contents with `ref=main`, or the original `first_contact.py export` result. A CLI export uses `operation: "first_contact.export"` and the exact `claimPath` instead of a URL. Prepared create/complete plans are not completed provider reads.
+
+The importer retains original confirmed Gmail SENT records and accepted provider form receipts. A form contact retains its provider, submission ID when supplied, saved confirmation, receipt digest and observation time. Observation time is distinct from an optional provider acceptance timestamp. It produces `FORM_SUBMITTED`, not a fabricated Gmail send or partner interest.
+
+A completed contact disables only the original first-introduction action and keeps the existing workshare, human reply, referral, delivery and collection lanes. A later absent or reserved record cannot erase an earlier completed contact. Reservations remain visible for the original seat to complete or recover with the canonical contact tool; this importer neither reserves nor changes that record. A failed or omitted read reports the exact record still to fetch. Commercial stages and cash still require their original events and receipts.
+
+For a form contact, set `communication.channel: "web-form"` and `communication.formUrl` to the observed official HTTPS form. Include `web-form` in the applicable actual owner grant's `channels`, or omit the channel restriction if the original directive covers all channels. An exact `formUrls` scope and domain-scoped owner exclusions use the same destination matcher as email. These fields describe existing authority; importing a receipt does not grant authority for another message.
+
+The rendered board shows contact status, provider and observation time. Full provider IDs, claim paths and receipt URLs stay in the private `contact-history.json`. The source creates no new network calls, contacts, hosted jobs, registry or payment events.
