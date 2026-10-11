@@ -45,9 +45,22 @@ function originalCapture(bytes) {
   try { capture = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes)); }
   catch { throw new HandoffError('ORIGINAL_CAPTURE_JSON_INVALID'); }
   check(plain(capture) && capture.schema === 'scf.sf85.capture.v1', 'SF85_ORIGINAL_CAPTURE_REQUIRED');
-  check(Object.keys(capture).sort().join(',') ===
-    ['schema','collectedAtUtc','url','method','status','headers'].sort().join(','), 'SF85_CAPTURE_SHAPE_INVALID');
-  check(typeof capture.collectedAtUtc === 'string' && Number.isFinite(Date.parse(capture.collectedAtUtc)),
+  const imported = capture.captureSource === 'operator-exported-http-response-headers';
+  const names = ['schema','collectedAtUtc','url','method','status','headers'];
+  if (imported) names.push('captureSource','importedAtUtc','sourceHeaderSha256','sourceHeaderBytes',
+    'discardedPreludeBlocks','requestMethodSource');
+  check(Object.keys(capture).sort().join(',') === names.sort().join(','), 'SF85_CAPTURE_SHAPE_INVALID');
+  if (imported) {
+    // The original SF85 importer cannot establish response time or request method.
+    // Preserve its explicit provenance instead of manufacturing a live capture.
+    check(capture.collectedAtUtc === null && typeof capture.importedAtUtc === 'string' &&
+      Number.isFinite(Date.parse(capture.importedAtUtc)) &&
+      typeof capture.sourceHeaderSha256 === 'string' && /^[a-f0-9]{64}$/.test(capture.sourceHeaderSha256) &&
+      Number.isInteger(capture.sourceHeaderBytes) && capture.sourceHeaderBytes >= 1 &&
+      capture.sourceHeaderBytes <= 65536 && Number.isInteger(capture.discardedPreludeBlocks) &&
+      capture.discardedPreludeBlocks >= 0 && capture.discardedPreludeBlocks <= 3 &&
+      capture.requestMethodSource === 'operator-declared', 'SF85_IMPORTED_HEADER_PROVENANCE_INVALID');
+  } else check(typeof capture.collectedAtUtc === 'string' && Number.isFinite(Date.parse(capture.collectedAtUtc)),
     'SF85_CAPTURE_TIME_INVALID');
   check(['GET', 'HEAD'].includes(capture.method) && capture.status === 402,
     'UNPAID_402_GET_OR_HEAD_REQUIRED');
@@ -126,6 +139,11 @@ export function derive(bytes, { index, intentId, maxAtomic }) {
     capturedRailClassification:report.classification,
     offerIndex:index, intentId, quotedAtomic:selected.amount, maxAtomic,
     network:selected.network, asset:selected.asset, recipient:selected.payTo,
+    ...(capture.captureSource === undefined ? {} : {originalCaptureProvenance:{
+      source:capture.captureSource, importedAtUtc:capture.importedAtUtc,
+      sourceHeaderSha256:capture.sourceHeaderSha256, sourceHeaderBytes:capture.sourceHeaderBytes,
+      discardedPreludeBlocks:capture.discardedPreludeBlocks, requestMethodSource:capture.requestMethodSource,
+    }}),
   };
   return {config, selection};
 }
@@ -143,6 +161,13 @@ function instructions(config, selection) {
     `Exact Stellar rail: ${selection.network}`,
     `Original quoted atomic units: ${selection.quotedAtomic}`,
     `Operator-selected maximum atomic units: ${selection.maxAtomic}`,
+    ...(selection.originalCaptureProvenance ? [
+      'Source: original SF85 operator-exported HTTP response headers',
+      'Original response capture time: unknown (preserved as null)',
+      `Imported at: ${selection.originalCaptureProvenance.importedAtUtc}`,
+      `Original header export (SHA-256): ${selection.originalCaptureProvenance.sourceHeaderSha256}`,
+      'Request method: operator-declared in original import',
+    ] : []),
     '',
     'This bundle includes the original SF85 capture and a source-bound',
     'SF88-compatible OFFLINE review configuration. It contains no signer,',

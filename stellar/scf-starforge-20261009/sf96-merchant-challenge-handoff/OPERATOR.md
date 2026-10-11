@@ -54,6 +54,13 @@ redirect. The output adds the original SF84 parsed offer list so the operator ca
 choose an index without retyping the merchant's terms. An existing unchanged SF85
 capture can be used directly; do not recapture merely to repeat this step.
 
+If the operator already has the genuine response headers from another approved
+runtime, use the original [SF85 header importer](../sf85-live-402-capture/HEADER_IMPORT.md)
+and supply its output to preparation. The workflow accepts that source's exact
+shape and preserves its header digest, import time and operator-declared method.
+Its unknown response capture time stays null throughout the handoff and report.
+It does not turn the import into a TLS-observed response.
+
 ## 2. Prepare the complete private operation
 
 Select the zero-based original offer index, choose a stable intent ID, and state
@@ -122,9 +129,11 @@ node stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli
   execute --dir /absolute/private-pilots/provider-resource-001
 ```
 
-This opens the original workspace's private operator environment and starts the
-original queue CLI in a fresh child process. No process-global environment is
-changed. SF81 presents fresh native terms through `/dev/tty`; its existing typed
+This starts the original queue CLI with its native `--workspace` option in a
+fresh child process. The queue checks and binds the workspace and signer
+prerequisites before recording an attempt, then loads the original private
+operator environment. This wrapper never reads the workspace keys or changes a
+process-global environment. SF81 presents fresh native terms through `/dev/tty`; its existing typed
 approval and original SF36 reservation precede signing. The original buyer makes
 its unsigned request and at most one signed retry. This wrapper does not approve
 on the user's behalf, select another quote, retry an attempt or reset a budget.
@@ -134,6 +143,10 @@ status, seller/HTTP outcome, independently produced outcome report and separate
 returned-file result. SIGINT/SIGTERM are forwarded to the original command for
 its existing cancellation and cleanup behavior. If the process ends before it
 prints a summary, reopen the same directory.
+
+An unavailable workspace or signer prerequisite is reported by the original
+queue command and leaves an unattempted request queued. Correct that prerequisite
+and inspect the same case; the wrapper does not replace the intent or ledger.
 
 ## 4. Reopen, recover and hand over the result
 

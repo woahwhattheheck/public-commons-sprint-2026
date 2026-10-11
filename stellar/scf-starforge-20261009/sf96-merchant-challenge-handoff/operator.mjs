@@ -206,6 +206,10 @@ function view({directory, manifest, selected, job}) {
   return {schema:SCHEMA, directory, intentId:manifest.intentId,
     source:{captureSha256:manifest.originalCaptureSha256, selectedOfferSha256:manifest.selectedOfferSha256,
       capturedAt:selected.originalCaptureAtUtc, offerIndex:selected.offerIndex,
+      captureSource:selected.originalCaptureProvenance?.source ?? 'original-sf85-https-capture',
+      importedAt:selected.originalCaptureProvenance?.importedAtUtc ?? null,
+      sourceHeaderSha256:selected.originalCaptureProvenance?.sourceHeaderSha256 ?? null,
+      requestMethodSource:selected.originalCaptureProvenance?.requestMethodSource ?? 'original-request',
       quotedAtomic:selected.quotedAtomic, maxAtomic:selected.maxAtomic,
       originalMethod:selected.originalMethod, originalResourceUrl:selected.originalResourceUrl},
     // The original result includes distinct HTTP, settlement, reconciliation and file outcomes.
@@ -243,16 +247,16 @@ export async function review(directory, options = {}) {
   return runChild([buyerCli, '--review-workspace', '--dir', join(pilot.directory, 'operator')], options);
 }
 
-/** Execute through the existing queue in a fresh process with its workspace's private environment. */
+/** Execute through the existing queue in a fresh process with its native workspace prerequisite. */
 export async function execute(directory, {environment = process.env, signal} = {}) {
   const pilot = await openPilot(directory);
   need(pilot.job.state === 'QUEUED', 'PILOT_ORIGINAL_ATTEMPT_ALREADY_RECORDED');
-  const {openWorkspace} = await workspaceModule();
-  const owner = await openWorkspace(['--dir', join(pilot.directory, 'operator')], {execute:true, environment});
-  // This environment is passed only to the original child. Never mutate process.env or serialize it.
-  // SF81 prompts through /dev/tty; child stdout is an already-persisted queue summary.
+  // Original --workspace binds custody and checks prerequisites before attempt.json.
+  // SF81 prompts through /dev/tty; the original queue persists its own stdout summary.
+  // The parent never reads the workspace keys or mutates process.env.
   const command = await runChild([queueCli, 'execute', '--root', pilot.queue.root,
-    '--intent', pilot.manifest.intentId], {environment:owner.operatorEnvironment, signal, quiet:true});
+    '--intent', pilot.manifest.intentId, '--workspace', join(pilot.directory, 'operator')],
+    {environment, signal, quiet:true});
   return {...await show(directory), originalCommand:command};
 }
 
@@ -274,7 +278,7 @@ export async function report(directory, destination) {
     commandFor:verb => `${shellQuote(process.execPath)} ${shellQuote(thisCli)} ${verb} --dir ${shellQuote(pilot.directory)}`});
   const source = view(pilot).source;
   const rows = Object.entries(source).map(([name, value]) =>
-    `<div><dt>${escape(name)}</dt><dd><code>${escape(value)}</code></dd></div>`).join('');
+    `<div><dt>${escape(name)}</dt><dd><code>${escape(value ?? 'Not recorded')}</code></dd></div>`).join('');
   const introduction = `<section class="section"><h2>Direct merchant source</h2><dl>${rows}</dl>` +
     '<p class="note">The saved original challenge was re-derived and matched to the current workspace and queue. ' +
     'A local hash detects changes; it is not a merchant signature. Execution still requires fresh native terms and operator approval.</p></section>';
