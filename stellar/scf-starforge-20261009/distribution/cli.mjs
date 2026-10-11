@@ -37,6 +37,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   openapi-workspace                          Prepare and operate a merchant from its API contract
+  duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
+  duckdb-prepare                             Prepare, verify and reopen native data packages
+  duckdb-workbench                           Author and operate a data merchant in the browser
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions

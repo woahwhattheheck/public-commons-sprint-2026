@@ -134,6 +134,8 @@ or automatically retry a request.
 | `starforge dataset` | SF30 dataset API compilation |
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
+| `starforge duckdb-workbench` | Actual DuckDB/Parquet schemas to selected queries, private previews and retained merchant packages |
+| `starforge duckdb` / `duckdb-inspect` / `duckdb-prepare` | Launch or inspect the original local source; prepare, verify and reopen its merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
 | `starforge openapi-workspace` | Select an API contract, prepare the merchant and use its native operator workflow |
 | `starforge pilot` | SF96 original SF82 seller pilot, dashboard and SF93 support composition |
@@ -673,6 +675,50 @@ SQLite uses Node's built-in database module and requires no PostgreSQL driver.
 `starforge sqlite-init --directory NEW_DIRECTORY` creates the original example;
 `starforge sqlite-inspect --help` exposes declaration/query inspection. The
 bundled source guides cover application bindings and current Node requirements.
+
+### Build a DuckDB or Parquet merchant
+
+The DuckDB workbench begins with actual local files and generates the original
+source declaration. Use Linux with `flock`, and select an existing Python 3.10+
+environment containing the pinned DuckDB dependency. To create that environment
+from the installed application's directory:
+
+```sh
+python3 -m venv /private/duckdb-env
+/private/duckdb-env/bin/python -m pip install -r \
+  node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/requirements.txt
+npx --no-install starforge duckdb-workbench \
+  --workspace /private/merchant-workbench \
+  --data-dir /private/merchant-data \
+  --database warehouse.duckdb \
+  --parquet exports/events.parquet \
+  --python /private/duckdb-env/bin/python
+```
+
+For Parquet alone, omit `--database` and repeat `--parquet` for each approved
+file. Existing native declarations use `--source /private/data/source.json`.
+The source directory must allow private metadata writes; selected datasets must
+be stable regular files under that directory. The workbench creates a private
+workspace and retains its original Linux lease while open.
+
+Open the printed local URL. Inspect real schemas, select public columns, add
+typed filters and ordering, then preview actual query results. Enter complete
+merchant payment terms, save and review the draft, and prepare a named version.
+The original preparation service copies the selected data, performs native
+preflight and exports the original API/client. Inspect, start and stop that
+package from the same browser. Reopen with `--workspace` and `--python`; the
+saved data selection, draft and packages remain available. Add the original
+`--facilitator HTTPS_URL` option for payment-enabled sessions.
+
+The [complete workbench guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workbench/README.md)
+is also included under the same `source/` path. It documents the query contract,
+limits, version lifecycle and application API. The package includes the fixed
+native worker, schema helper, browser assets and shared lease implementation.
+Applications can import `startDuckdbWorkbench` from
+`@tokenjunkielabs/starforge-merchant/seller/duckdb/workbench` and the non-HTTP
+model from `seller/duckdb/workbench/model`. Source, configuration, merchant,
+preparation, catalog and query-authoring modules have matching DuckDB subpaths
+in the package export map.
 
 `doctor` reports optional feature availability and fails only for the requested
 feature or native dependency group. It resolves modules without importing them
