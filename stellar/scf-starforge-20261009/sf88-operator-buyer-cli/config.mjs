@@ -1,6 +1,7 @@
 // MIT — SF88 trusted local operator input, consumed only by original SF31/SF81/SF82.
 import { stat, readFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
+import { normalizeBuyerTransport } from '../sf31-buyer-client/public-transport.mjs';
 import { validateResponseFileIntegrity } from '../sf31-buyer-client/response-file.mjs';
 
 export class InputError extends Error {
@@ -30,9 +31,20 @@ export async function config(path) {
   try { value = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
   catch { throw new InputError('CONFIG_JSON_INVALID'); }
   shape(value, ['catalog','operation','operator','signerModule','evidenceDir',
-    'trustedPayer','captureBody','bodyCaptureTimeoutMs','responseFile','preparedFrom'], 'INVALID_CONFIG_FIELDS');
+    'trustedPayer','captureBody','bodyCaptureTimeoutMs','responseFile','preparedFrom',
+    'buyerTransport'], 'INVALID_CONFIG_FIELDS');
   if (value.preparedFrom !== undefined) preparedFrom(value.preparedFrom);
+  buyerTransport(value);
   return value;
+}
+export function buyerTransport(c) {
+  if (c.buyerTransport === undefined) return null;
+  const profile = normalizeBuyerTransport(c.buyerTransport);
+  let origin;
+  try { origin = new URL(c.operation?.url).origin; }
+  catch { throw new InputError('BUYER_TRANSPORT_OPERATION_REQUIRED'); }
+  need(profile.origin === origin, 'BUYER_TRANSPORT_ORIGIN_MISMATCH');
+  return profile;
 }
 // Saved source data is review context only; it grants no payment authority.
 export function preparedFrom(x) {
@@ -80,7 +92,7 @@ export function catalog(x) {
   return x;
 }
 export function operation(x) {
-  shape(x, ['intentId','url','method','expect','bodyFile','headers'], 'INVALID_OPERATION');
+  shape(x, ['intentId','url','method','expect','bodyFile','headers','orderReference'], 'INVALID_OPERATION');
   need(typeof x.intentId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(x.intentId),
     'STABLE_INTENT_ID_REQUIRED');
   let u;
@@ -106,10 +118,22 @@ export function operation(x) {
     abs(x.bodyFile, 'BODY_PATH_MUST_BE_ABSOLUTE');
     need(!['GET','HEAD'].includes(method), 'BODY_DISALLOWED_FOR_METHOD');
   }
-  const headers = x.headers ?? {};
-  shape(headers, ['Content-Type','Accept'], 'INVALID_HEADERS');
+  const headers = {...(x.headers ?? {})};
+  shape(x.headers ?? {}, ['Content-Type','Accept','X-SF98-Order-ID'], 'INVALID_HEADERS');
   need(Object.values(headers).every(v => typeof v === 'string' && v.length <= 256 &&
     !/[\r\n]/.test(v)), 'INVALID_HEADERS');
+  if (x.orderReference !== undefined) {
+    need(typeof x.orderReference === 'string' && /^[A-Za-z0-9._:-]{1,80}$/.test(x.orderReference),
+      'INVALID_ORDER_REFERENCE');
+    // The native SF31/SF54/SF36 approval already binds the complete resource URL.
+    // Derive this one fulfillment header from the SAME visible, approved value.
+    const references = u.searchParams.getAll('sf98_order');
+    need(references.length === 1 && references[0] === x.orderReference,
+      'ORDER_REFERENCE_MUST_MATCH_APPROVED_RESOURCE');
+    need(headers['X-SF98-Order-ID'] === undefined || headers['X-SF98-Order-ID'] === x.orderReference,
+      'ORDER_HEADER_MISMATCH');
+    headers['X-SF98-Order-ID'] = x.orderReference;
+  } else need(headers['X-SF98-Order-ID'] === undefined, 'ORDER_REFERENCE_REQUIRED');
   return { ...x, method, headers };
 }
 export function operator(x) {
@@ -132,5 +156,5 @@ export function execution(x) {
   if (x.bodyCaptureTimeoutMs !== undefined)
     need(Number.isInteger(x.bodyCaptureTimeoutMs) && x.bodyCaptureTimeoutMs >= 1 &&
       x.bodyCaptureTimeoutMs <= 60000, 'BODY_TIMEOUT_INVALID');
-  return { op, owner, download:responseFile(x) };
+  return { op, owner, download:responseFile(x), transport:buyerTransport(x) };
 }

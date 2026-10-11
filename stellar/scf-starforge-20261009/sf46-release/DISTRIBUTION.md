@@ -80,8 +80,12 @@ Run `node forge.mjs status` to see the paths present in the selected release.
 | `handoff` | SF96 captured challenge to buyer configuration |
 | `support` | SF93 support-bundle exporter |
 | `seller-check` | SF96 original seller route audit |
+| `postgres` | Original PostgreSQL seller and operations launcher |
+| `postgres-init` | Original create-only PostgreSQL source/service starter |
+| `postgres-inspect` | Original PostgreSQL declaration/query inspection |
+| `postgres-workspace` | Original database metadata-to-merchant-package workspace |
 
-Optional `buyer-inbox`, `buyer-runbook` and `deploy` commands are included only when their
+Optional `buyer-inbox`, `buyer-runbook`, `deploy` and PostgreSQL commands are included only when their
 original named CLI files exist in the selected commit. The exact manifest is
 authoritative. Other shipped modules remain importable by their original paths;
 the distribution does not advertise nonexistent entry points.
@@ -105,6 +109,48 @@ node /tmp/stellar-forge-home/forge.mjs run pilot-ops -- --help
 SF88 retains its original buyer settings, controlling-terminal approval, signer,
 budget accounting and response-file behavior. A release install or activation
 does not add approvals, repeat purchases or grant new authority.
+
+## PostgreSQL merchant installation
+
+Current releases include the PostgreSQL source and workspace directly. Their root
+`package.json` includes the original source manifest's pinned production drivers
+as optional dependencies, alongside the existing optional native payment SDK.
+Versions come from that release's exact `postgres/package.json`; PGlite and other
+development dependencies are not promoted into the root runtime dependency set.
+
+Use `node forge.mjs status` to find `releaseDirectory`. In that exact selected
+release directory, run the existing explicit dependency installation:
+
+```sh
+npm install --ignore-scripts --omit=dev
+node forge.mjs doctor
+```
+
+Doctor reports PostgreSQL driver names, requested and installed versions separately
+from native payment packages, with `postgresDriversInstalled` indicating whether
+the source-pinned set matches. It does not connect to a database or start a payment
+operation. Standard library commands remain usable when optional drivers are absent.
+
+Then run the maintained setup against an existing private source configuration:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run postgres-init -- \
+  --directory /tmp/stellar-forge-home/config/database-merchant
+
+# Configure the existing connection environment and TLS in its source.json.
+node /tmp/stellar-forge-home/forge.mjs run postgres-workspace -- \
+  --source /tmp/stellar-forge-home/config/database-merchant/source.json \
+  --output /tmp/stellar-forge-home/config/merchant-packages
+
+node /tmp/stellar-forge-home/forge.mjs run postgres -- \
+  --source /absolute/export/source.json --config /absolute/export/service.json
+```
+
+The workspace reads real metadata, takes explicit fields/filters/payment terms,
+and exports the original query/seller configuration. The original PostgreSQL
+launcher owns seller and operations shutdown. Use its existing `--facilitator`
+option when configuring native payment operation. The workspace guide is included
+at `stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/README.md`.
 
 ## Upgrade and rollback
 

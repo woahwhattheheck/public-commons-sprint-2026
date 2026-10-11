@@ -1,0 +1,34 @@
+{
+  "schema": "stellar-forge.duckdb-source.v1",
+  "database": "merchant.duckdb",
+  "parquetFiles": ["events.parquet"],
+  "maxWorkers": 2,
+  "maxPending": 32,
+  "memoryLimitMb": 256,
+  "threads": 2,
+  "queries": {
+    "catalog": {
+      "sql": "SELECT id, title, region, price FROM products WHERE region = $region AND id > $after_id ORDER BY id",
+      "parameters": {
+        "region": {"type": "string", "minLength": 1, "maxLength": 32},
+        "after_id": {"type": "integer", "minimum": "0", "default": "0"}
+      },
+      "columns": ["id", "title", "region", "price"],
+      "maxRows": 100,
+      "maxBytes": 524288,
+      "timeoutMs": 5000
+    },
+    "regionalSales": {
+      "sql": "SELECT region, COUNT(*) AS events, SUM(amount) AS total FROM read_parquet('events.parquet') WHERE region = $region GROUP BY region",
+      "parameters": {"region": {"type": "string", "minLength": 1, "maxLength": 32}},
+      "columns": ["region", "events", "total"],
+      "maxRows": 10,
+      "maxBytes": 524288,
+      "timeoutMs": 5000
+    }
+  },
+  "bindings": {
+    "catalog": {"query": "catalog", "input": "query"},
+    "sales": {"query": "regionalSales", "input": "query"}
+  }
+}
