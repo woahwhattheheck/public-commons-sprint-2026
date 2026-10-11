@@ -1,0 +1,9 @@
+{
+  "name": "@tokenjunkielabs/starforge-subquery-merchant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "dependencies": { "graphql": "16.14.2" }
+}
