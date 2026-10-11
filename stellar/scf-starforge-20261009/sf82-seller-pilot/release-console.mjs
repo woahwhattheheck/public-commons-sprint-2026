@@ -9,6 +9,7 @@ import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs'
 import { releaseCatalogStatus, reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
 import { createReleaseDiscoveryConsole } from './release-discovery-console.mjs';
 import { createReleaseFacilitatorControl } from './release-facilitator.mjs';
+import { createReleaseClientConsole } from './release-client.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 function failure(message, status = 400) { return Object.assign(new Error(message), { status }); }
@@ -24,7 +25,7 @@ async function body(req) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw failure('JSON object required.');
   return value;
 }
-export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup, facilitators } = {}) {
+export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup, facilitators, clientExportsDirectory } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Console port must be 0–65535.');
   if (catalogConfig && discoverySetup !== undefined) throw new TypeError('Use either an existing catalog connection or a managed discovery setup.');
@@ -37,18 +38,20 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
     ['/facilitator.mjs', 'facilitator.mjs', 'text/javascript; charset=utf-8'],
+    ['/client.mjs', 'client.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { bytes: await readFile(new URL('./release-ui/' + file, import.meta.url)), type }])));
   let hosts = new Set(), origins = new Set(), url, managed = null, busy = false, stopping = false;
   let lastError = null, resolveClosed, rejectClosed, actionDone = Promise.resolve();
   let catalogReview = null;
+  const clients = await createReleaseClientConsole(root, { directory: clientExportsDirectory, getManaged: () => managed });
   const closed = new Promise((done, fail) => { resolveClosed = done; rejectClosed = fail; });
   // Library callers may observe closed later; errors remain available there.
   closed.catch(() => {});
   const status = async () => ({ ...await releaseStatus(root),
     console: { managesRunningSeller: Boolean(managed), instanceId: managed?.observation.instanceId ?? null,
       operations: managed?.operations ?? null,
-      catalogConfigured: Boolean(catalogConnection()), busy, lastError } });
+      catalogConfigured: Boolean(catalogConnection()), clientExports: clients.summary, busy, lastError } });
   const server = createServer(async (req, res) => {
     const reply = (code, type, data) => {
       if (res.destroyed) return;
@@ -75,6 +78,20 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       const supplied = Buffer.from(req.headers['x-release-token'] ?? '');
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes)) throw failure('Reopen the operator URL printed by the console command.', 401);
       if (req.method === 'GET' && target.pathname === '/api/status' && !target.search) { send(200, await status()); return; }
+      if (req.method === 'GET' && target.pathname === '/api/clients') {
+        if ([...target.searchParams.keys()].some(key => !['after', 'limit'].includes(key))) throw failure('Unknown customer listing parameter.');
+        send(200, await clients.list({ ...(target.searchParams.has('after') ? { after: target.searchParams.get('after') } : {}),
+          ...(target.searchParams.has('limit') ? { limit: Number(target.searchParams.get('limit')) } : {}) })); return;
+      }
+      if (req.method === 'GET' && target.pathname === '/api/clients/inspect') {
+        if ([...target.searchParams.keys()].some(key => key !== 'exportId')) throw failure('Unknown customer inspection parameter.');
+        send(200, await clients.inspect({ exportId: target.searchParams.get('exportId') })); return;
+      }
+      if (req.method === 'GET' && target.pathname === '/api/clients/download') {
+        if ([...target.searchParams.keys()].some(key => !['exportId', 'expectedManifestSha256', 'file', 'expectedSha256'].includes(key)))
+          throw failure('Unknown customer download parameter.');
+        await clients.sendDownload(req, res, Object.fromEntries(target.searchParams)); return;
+      }
       if (req.method === 'GET' && target.pathname === '/api/cache' && !target.search) { send(200, await releaseCacheStatus(root)); return; }
       if (req.method === 'GET' && target.pathname === '/api/facilitators' && !target.search) { send(200, facilitator.status()); return; }
       if (req.method === 'GET' && target.pathname === '/api/discovery' && !target.search) {
@@ -98,7 +115,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       }
       if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate', '/api/catalog/review', '/api/catalog/apply',
         '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop',
-        '/api/facilitator/review', '/api/facilitator/stage'].includes(target.pathname) || target.search)
+        '/api/facilitator/review', '/api/facilitator/stage', '/api/clients/generate', '/api/clients/adopt'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
       if (!req.headers.origin || !origins.has(req.headers.origin)) throw failure('Same-origin operator action required.', 403);
       if (busy || stopping) throw failure('An operator action is already running. Refresh when it completes.', 409);
@@ -112,6 +129,9 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
         if (target.pathname.startsWith('/api/facilitator/')) {
           const action = target.pathname.slice('/api/facilitator/'.length);
           send(200, await facilitator[action](input)); return;
+        } else if (target.pathname.startsWith('/api/clients/')) {
+          const action = target.pathname.slice('/api/clients/'.length);
+          send(200, await clients[action](input)); return;
         } else if (target.pathname.startsWith('/api/discovery/')) {
           if (!discovery) throw failure('This console uses an existing external catalog connection.', 409);
           const action = target.pathname.slice('/api/discovery/'.length);
@@ -163,6 +183,13 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       } catch (error) { busy = false; lastError = error.message; throw error; }
       finally { busy = false; finishAction(); }
     } catch (error) {
+      if (res.headersSent) { res.destroy(); return; }
+      if (req.url?.startsWith('/api/clients') && ['EACCES', 'EPERM', 'ENOENT', 'EIO', 'ENOSPC', 'CLIENT_EXPORT_INCOMPLETE'].includes(error.code)) {
+        send(error.code === 'ENOENT' ? 404 : error.code === 'CLIENT_EXPORT_INCOMPLETE' ? 409 : 500,
+          { error: error.code, message: error.code === 'CLIENT_EXPORT_INCOMPLETE'
+            ? 'The customer export stopped before completion. Inspect this export ID to recover its retained files.'
+            : 'The original customer files could not be read or written (' + error.code + '). Check the configured export directory on this host.' }); return;
+      }
       const code = error.status ?? (['RELEASE_CONFLICT', 'RELEASE_BUSY'].includes(error.code) ? 409 : 400);
       send(code, { error: error.code ?? 'OPERATOR_ERROR', message: error.message,
         ...(error.reviewId ? { reviewId: error.reviewId } : {}),
@@ -183,7 +210,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
         await facilitator.close();
         try { if (managed) await managed.close(); }
         finally {
-          try { await discovery?.close(); }
+          try { try { await clients.close(); } finally { await discovery?.close(); } }
           finally {
             await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); });
           }

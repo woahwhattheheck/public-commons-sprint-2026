@@ -46,6 +46,31 @@ supports interrupted-install continuation, fresh-directory upgrades, recovery,
 and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
 for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
 
+### Versioned installation, upgrade and rollback
+
+Use `starforge installation` to put a selected maintained package into the
+original SF46 installation with durable `config/` and `state/` directories:
+
+```sh
+npx --no-install starforge installation inspect ./node_modules/@tokenjunkielabs/starforge-merchant
+npx --no-install starforge installation install ./node_modules/@tokenjunkielabs/starforge-merchant \
+  --home /absolute/private/starforge
+npx --no-install starforge installation status --home /absolute/private/starforge
+```
+
+The first release becomes active. Later package installs are staged for explicit
+activation, with the previous version available for rollback. The original
+package manifest, source paths, commands and package metadata travel together.
+The [managed package guide](../sf46-release/MANAGED_PACKAGE.md) covers manifest
+selection, direct Node usage, merchant launch, optional dependencies, retained
+portable preparation and interrupted-install recovery.
+
+For an existing completed original runtime, use `starforge installation
+adopt-runtime RUNTIME_DIRECTORY --home /absolute/private/starforge`. Its recorded
+profile and lockfile become part of the managed release identity, with dependencies
+retained at the original runtime location. The [runtime adoption guide](../sf46-release/MANAGED_PACKAGE.md#adopt-a-completed-runtime)
+covers profile-based staging, source-level runtime inspection and rollback.
+
 ### Schema pattern support
 
 Merchant request schemas that use regular-expression constraints load the
@@ -634,6 +659,7 @@ or automatically retry a request.
 | `starforge merchant-host` | Generate original Caddy/systemd merchant services, inspect installed operation and run encrypted maintenance/cutover |
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
 | `starforge buyer-node` | Review, execute and recover a generated-client purchase through the original Node buyer |
+| `starforge buyer-agent` | Run, pause and resume the original buyer with SQLite LangGraph checkpoints or four LangChain tools; [installed agent guide](NODE_AGENTS.md) |
 | `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
 | `starforge merchant` / `delivery` | Original native seller with its retained fulfillment journal and event delivery |
 | `starforge delivery-workspace` | Configure receiver revisions, operate the original worker and recover selected exhausted events |
@@ -2669,6 +2695,62 @@ regenerate them if that installation moves. The `./seller/s3` and
 `./seller/s3/config` package imports expose the same original source and
 configuration APIs. Importing them does not itself load the AWS client or access
 storage; opening the configured source uses its original provider.
+
+### Author and operate an object-store product
+
+Create or reopen the private S3 workspace through the installed command:
+
+```sh
+npx --no-install starforge s3 workspace \
+  --state /private/object-authoring --release-store /private/merchant-releases
+```
+
+The command prints its private loopback browser URL. Import the merchant's
+selected source and complete payment declaration, then edit object routes,
+descriptions, byte ranges and ordered payment options. Save a revision and
+choose **Review objects** to capture actual metadata through the original AWS
+provider. Preparing that review retains the selected object identities and
+original merchant files. Stage the package into the selected release store,
+then use its existing release console or fleet to compare, activate and run it.
+Keep the workspace and store outside `node_modules` so source updates preserve
+the merchant's saved work.
+
+The workspace retains drafts across reloads, detects concurrent saved revisions
+and resumes the same review or preparation after an interrupted response. Its
+customer handoff downloads the original `objects.json` and `offers.json` for
+the Object Buyer described above. The bundled
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/s3/workspace/README.md`
+contains the complete source, payment, native release and browser workflow.
+
+An application can open the same browser directly:
+
+```js
+import { startS3MerchantWorkspace } from
+  '@tokenjunkielabs/starforge-merchant/seller/s3/workspace/server';
+
+const objects = await startS3MerchantWorkspace({
+  directory: '/private/object-authoring',
+  releaseStore: '/private/merchant-releases',
+  port: 8413,
+});
+console.log(objects.url);
+// Close this workspace in the application's shutdown handler.
+await objects.close();
+```
+
+`./seller/s3/workspace` exposes `openS3MerchantWorkspace` and
+`validateS3MerchantDraft` for applications with their own interface. The main
+package import exports those functions and `startS3MerchantWorkspace` as well.
+
+An existing merchant MCP host can attach the same saved model using
+`s3WorkspaceConnection`; `starforge merchant-mcp init-s3-workspaces` initializes
+a new host from that connection. Its 13 S3 tools cover saved edits, actual
+object review, preparation, native release staging and customer-file delivery.
+`starforge merchant-mcp inspect-s3` reviews the selected release, and
+`starforge merchant-mcp download-s3` resumes its original buyer inputs using
+the existing authenticated MCP client. Use the bundled
+`source/stellar-forge/mcp-merchant-operator/S3_WORKSPACE.md` for the complete
+host connection, tool arguments, activation and download commands.
 
 ## Review merchant pricing and operations
 

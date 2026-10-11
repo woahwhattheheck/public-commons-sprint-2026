@@ -34,7 +34,8 @@ async function file(path, limit, privateMode = true) {
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const info = await handle.stat();
-    need(info.isFile() && info.nlink === 1 && info.size <= limit &&
+    // Package managers may hardlink public CLI source; private data stays singly linked.
+    need(info.isFile() && (privateMode ? info.nlink === 1 : info.nlink >= 1) && info.size <= limit &&
       (!privateMode || (info.mode & 0o077) === 0), 'DATASET_DELIVERY_FILE_INVALID');
     return handle;
   } catch (error) { await handle.close(); throw error; }

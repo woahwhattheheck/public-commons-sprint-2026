@@ -398,3 +398,14 @@ is running, rejects a stale selection write and duplicate process, upgrades,
 then rolls back through the real local operator HTTP interface. It also checks
 operator-token/origin behavior and preserves the source snapshot after its
 input file changes. It starts no hosted Actions and submits no payment.
+
+## Customer SDK handover
+
+The same release console now generates, reviews and retains the original customer
+SDK, including every original payment option and its completion receipt. Use
+`console --store DIR --client-exports PRIVATE_CUSTOMER_DIRECTORY` to share an
+existing MCP merchant's `exportsDirectory`; the default is `DIR.clients`.
+The retained list, exact-file inspection, reviewed legacy adoption, complete
+client archive and individual byte-range downloads remain available after seller
+shutdown and console reopening. See [CLIENT_HANDOVER.md](CLIENT_HANDOVER.md) for
+the complete operator, customer, recovery and original MCP workflow.
