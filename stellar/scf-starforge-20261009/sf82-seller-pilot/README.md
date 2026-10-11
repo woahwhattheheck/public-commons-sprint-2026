@@ -6,6 +6,8 @@ To change its configured native facilitator while retaining the prepared merchan
 use [Retained facilitator review and release](FACILITATORS.md). The CLI, console
 and MCP share the same saved review and original startup/rollback lifecycle.
 
+The [PostgreSQL merchant release guide](POSTGRES_RELEASES.md) connects original schema discovery and saved query packages to retained release review, operation, SDK delivery and rollback.
+
 Compile selected operations from an existing API, run their seller service, stop it, and restart the same compiled seller. Supply declarative bindings for an existing HTTP backend, a trusted JavaScript application, or static responses. This command uses the original [SF61 importer](../sf61-openapi-seller-import/README.md) and [SF30 server](../sf30-seller-sdk/README.md), including their schema checks, application handlers, admission callbacks and native x402 payment integration.
 
 ## Start

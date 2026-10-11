@@ -70,16 +70,24 @@ class AcquisitionError(NativeError):
 class AcquisitionWorkspace:
     """Construction does not create a Buyer, workspace, ledger or restore target."""
     def __init__(self, *, checkout, directory=None, configs_directory=None,
-                 operator_settings=None, temporary_directory=None, result_limit=33_554_432,
+                 operator_settings=None, paid_file_claim_envs=None, temporary_directory=None, result_limit=33_554_432,
                  node="node", environment=None, timeout=360, output_limit=2_097_152):
         self.runtime = Runtime(checkout, node=node, environment=environment,
                                timeout=timeout, output_limit=output_limit)
-        self._selection(directory, configs_directory, operator_settings, temporary_directory, result_limit)
+        self._selection(directory, configs_directory, operator_settings, temporary_directory, result_limit,
+                        paid_file_claim_envs)
 
-    def _selection(self, directory, configs_directory, operator_settings, temporary_directory, result_limit):
+    def _selection(self, directory, configs_directory, operator_settings, temporary_directory, result_limit,
+                   paid_file_claim_envs=None):
         self.directory = None if directory is None else _canonical(directory)
         self.configs_directory = None if configs_directory is None else _canonical(configs_directory)
         self.operator_settings = None if operator_settings is None else _canonical(operator_settings)
+        if paid_file_claim_envs is not None and (
+                not isinstance(paid_file_claim_envs, (list, tuple)) or not 1 <= len(paid_file_claim_envs) <= 32
+                or any(not isinstance(name, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,64}", name)
+                       for name in paid_file_claim_envs) or len(set(paid_file_claim_envs)) != len(paid_file_claim_envs)):
+            raise StateError("PAID_FILE_CLAIM_ENVS_INVALID")
+        self.paid_file_claim_envs = None if paid_file_claim_envs is None else tuple(paid_file_claim_envs)
         self.temporary_directory = None if temporary_directory is None else _canonical(temporary_directory)
         if type(result_limit) is not int or not 1_048_576 <= result_limit <= 268_435_456:
             raise StateError("ACQUISITION_RESULT_LIMIT_INVALID")
@@ -87,12 +95,13 @@ class AcquisitionWorkspace:
 
     @classmethod
     def from_buyer(cls, buyer, *, directory=None, configs_directory=None,
-                   operator_settings=None, temporary_directory=None, result_limit=33_554_432):
+                   operator_settings=None, paid_file_claim_envs=None, temporary_directory=None, result_limit=33_554_432):
         if not isinstance(getattr(buyer, "runtime", None), Runtime):
             raise StateError("ORIGINAL_BUYER_RUNTIME_REQUIRED")
         value = cls.__new__(cls)
         value.runtime = buyer.runtime
-        value._selection(directory, configs_directory, operator_settings, temporary_directory, result_limit)
+        value._selection(directory, configs_directory, operator_settings, temporary_directory, result_limit,
+                         paid_file_claim_envs)
         return value
 
     def _command(self, command, parameters=None, *, cancel_event=None):
@@ -103,6 +112,7 @@ class AcquisitionWorkspace:
         workspace = {key: value for key, value in {
             "directory": self.directory, "configsDirectory": self.configs_directory,
             "operatorSettings": self.operator_settings,
+            "paidFileClaimEnvs": self.paid_file_claim_envs,
         }.items() if value is not None}
         payload = {"schema": SCHEMA, "command": command, "commandId": command_id,
                    "parameters": parameters, "resultLimit": self.result_limit}
@@ -195,6 +205,41 @@ class AcquisitionWorkspace:
 
     def prepare_request(self, request_id, *, review_sha256, cancel_event=None):
         return self._command("prepare-request", {"id": request_id, "reviewSha256": review_sha256}, cancel_event=cancel_event)
+
+    def paid_file(self, order_id, *, cancel_event=None):
+        return self._command("paid-file", {"id": order_id}, cancel_event=cancel_event)
+
+    def receive_paid_file(self, file, *, filename=None, cancel_event=None):
+        return self._command("receive-paid-file", {"file": _canonical(file), "filename": filename},
+                             cancel_event=cancel_event)
+
+    def review_paid_file(self, order_id, *, expected_revision, total_atomic, daily_atomic,
+                         filename, claim_env, cancel_event=None):
+        return self._command("review-paid-file", {"id": order_id, "expectedRevision": expected_revision,
+                             "totalAtomic": total_atomic, "dailyAtomic": daily_atomic, "filename": filename,
+                             "claimEnv": claim_env}, cancel_event=cancel_event)
+
+    def prepare_paid_file(self, order_id, *, review_sha256, cancel_event=None):
+        return self._command("prepare-paid-file", {"id": order_id, "reviewSha256": review_sha256},
+                             cancel_event=cancel_event)
+
+    def retrieve_paid_file(self, acquisition_id, *, only, config_sha256, handoff_sha256, cancel_event=None):
+        return self._command("retrieve-paid-file", {"id": acquisition_id, "only": only,
+                             "configSha256": config_sha256, "handoffSha256": handoff_sha256},
+                             cancel_event=cancel_event)
+
+    def reset_paid_file(self, acquisition_id, *, only, config_sha256, handoff_sha256, cancel_event=None):
+        return self._command("reset-paid-file", {"id": acquisition_id, "only": only,
+                             "configSha256": config_sha256, "handoffSha256": handoff_sha256},
+                             cancel_event=cancel_event)
+
+    def download_paid_file(self, acquisition_id, operation_id, destination, *, cancel_event=None):
+        return self._command("download-paid-file", {"id": acquisition_id, "operationId": operation_id,
+                             "destination": _canonical(destination)}, cancel_event=cancel_event)
+
+    def export_paid_file(self, order_id, *, destination, cancel_event=None):
+        return self._command("export-paid-file", {"id": order_id, "destination": _canonical(destination)},
+                             cancel_event=cancel_event)
 
     def draft(self, acquisition_id, *, revision=None, cancel_event=None):
         return self._command("draft", {"id": acquisition_id, "revision": revision}, cancel_event=cancel_event)

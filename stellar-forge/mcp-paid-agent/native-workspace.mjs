@@ -8,6 +8,8 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { requiredQueryKeys } from './query-requirements.mjs';
 import {createNativeObjects, nativeObjectActions} from './native-objects.mjs';
+import {createNativeDatasets, nativeDatasetActions} from './native-datasets.mjs';
+import {createNativeAnalysis, nativeAnalysisActions} from './native-analysis.mjs';
 import {createSavedFileReader} from './native-file.mjs';
 import { initializeQueue, openQueue } from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs';
 import { openWorkspace } from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/workspace.mjs';
@@ -260,6 +262,14 @@ export async function openNativeWorkspace(directory) {
       const entry=active.get(key);if(!entry)return false;
       entry.controller.abort();await entry.promise;return true;
     }});
+  const datasets=createNativeDatasets({manifest,currentWorkspace,runOwned,
+    isClosed:()=>closed,isActive:key=>active.has(key),
+    cancelOwned:async key=>{
+      const entry=active.get(key);if(!entry)return false;
+      entry.controller.abort();await entry.promise;return true;
+    }});
+  const analysis=createNativeAnalysis({manifest,completedDataset:datasets.completedDataset,
+    isClosed:()=>closed});
   async function retained(intentId) {
     const path = join(root, 'requests', intentKey(intentId));
     await privateDirectory(path);
@@ -410,12 +420,17 @@ export async function openNativeWorkspace(directory) {
   return {
     manifest:structuredClone(manifest),
     registerObjects:objects.register,
+    registerDatasets:datasets.register,
+    completedDataset:datasets.completedDataset,
+    registerAnalysis:analysis.register,
     async call(args = {}, context = {}) {
       need(!closed, 'MCP_NATIVE_WORKSPACE_CLOSING');
       need(object(args) && object(context) &&
         (context.signal === undefined || context.signal instanceof AbortSignal), 'MCP_NATIVE_ARGUMENTS_INVALID');
       const action = args.action ?? 'execute';
       if(nativeObjectActions.includes(action))return objects.call(args,context);
+      if(nativeDatasetActions.includes(action))return datasets.call(args,context);
+      if(nativeAnalysisActions.includes(action))return analysis.call(args,context);
       need(Object.hasOwn(allowedFields, action) &&
         Object.keys(args).every(key => key === 'action' || allowedFields[action].includes(key)), 'MCP_NATIVE_ARGUMENTS_INVALID');
       if (action !== 'history') intentKey(args.intentId);
@@ -452,7 +467,7 @@ export async function openNativeWorkspace(directory) {
     async close() {
       if (closed) return;
       closed = true; shutdown.abort();
-      await Promise.allSettled([objects.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
+      await Promise.allSettled([objects.close(), datasets.close(), analysis.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
     },
   };
 }

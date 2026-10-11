@@ -32,7 +32,7 @@ that uses a private `~/.n8n/nodes` directory:
 
 ~~~sh
 cd /absolute/existing/n8n-user/.n8n/nodes
-npm install --ignore-scripts --omit=dev /absolute/path/n8n-nodes-starforge-buyer-0.1.0.tgz
+npm install --ignore-scripts --omit=dev /absolute/path/n8n-nodes-starforge-buyer-0.1.1.tgz
 ~~~
 
 Keep the `n8n-workflow` peer compatible with the installed engine and restart
@@ -57,8 +57,8 @@ and command settings, not signer secrets:
 | Original SF88 Runtime Directory | Absolute installed directory containing `cli.mjs` and `node/index.mjs` |
 | Existing Node Application State | The original private Node buyer state directory |
 | Existing Native Inbox | The original private inbox containing `inbox.json` and `jobs/` |
-| Original Operator Profile File | Existing private profile used when importing a merchant packet |
-| Original Operator Workspace | Existing workspace used by the terminal command and financial finalizer |
+| Original Operator Profile File | Existing private profile for packet intake when no workspace is selected |
+| Original Operator Workspace | Existing workspace used by packet intake, the terminal command and financial finalizer |
 | Original Merchant Outbox | Optional existing outbox for the selected merchant finalization route |
 | Private Report Directory | Optional existing private report folder; otherwise the Node state holds reports |
 | Native Command Timeout | Original command timeout, default 360,000 ms |
@@ -70,9 +70,22 @@ missing. When setting up a new customer, use the maintained Node customer CLI's
 Keep writers stopped during a whole-workspace snapshot or restore through the
 existing recovery workflow in the selected runtime's `node/RECOVERY.md`.
 
-An operator profile selects the existing operator and signer. An imported
-merchant packet cannot replace it. **Enqueue Original Configuration** retains
-the configuration file's own settings and applies no profile override.
+When an operator workspace is selected, packet intake uses the native importer
+and `Buyer.fromWorkspace` to preserve that workspace's operator, signer, policy,
+ledger and evidence directory. The selected workspace takes precedence over a
+profile file. Use a complete runtime with the maintained `fromWorkspace` API;
+an older runtime returns `ORIGINAL_WORKSPACE_BUYER_RUNTIME_REQUIRED` before intake.
+
+Without a workspace, the original operator profile supplies the operator and
+signer through `Buyer.fromOperationHandoff`. An imported merchant packet cannot
+replace either configuration. **Enqueue Original Configuration** retains the
+configuration file's own settings and applies no profile or workspace override.
+
+Version 0.1.1 corrects workspace binding for newly imported handoffs. Existing
+prepared requests keep their original configuration and intent; this update
+does not rewrite them. Inspect their native operator and evidence binding before
+choosing an original continuation. Changing the credential does not migrate a
+retained job to another workspace.
 
 ## Import the complete customer workflow
 

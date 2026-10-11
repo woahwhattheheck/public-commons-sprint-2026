@@ -19,10 +19,19 @@ const help = `Starforge merchant toolkit
   starforge installation                     Inspect, install, stage and select a maintained package
   starforge runtime-profile --help
   starforge runtime-install --help
+  starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  valyu-merchant                            Configure and operate the native research search merchant
+  valyu-research                            Save queries, operate purchases, compare research and export editions
+  sftp                                      Inspect, capture and resume pinned private report files
+  sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
+  sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
+  provider-operator                          Original external-provider capture, case and terminal workflow
+  provider-workspace                         Retained provider desk, host profiles and complete case recovery
   runtime-profile                            Select exact dependencies for an original release
   runtime-install                            Install, resume, run, upgrade and recover a customer runtime
+  runtime-workspace                          Review, install and recover runtimes in a private browser workspace
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
@@ -48,7 +57,14 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-host                             Install, observe and recover the original Linux merchant group
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
+  routescan-merchant  Configure, preview and operate the original Routescan gas-data merchant
+  routescan-workspace Operate its saved project through the original local workspace
+  buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
+  tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
+  tenderly-customer                          Receive, recover and export the original simulation purchase
+  tenderly-analysis                          Receive, compare and review completed Tenderly simulations
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
@@ -71,7 +87,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
-  openapi-workspace                          Prepare and operate a merchant from its API contract
+  openapi-workspace                          Import an API contract or Postman collection and operate its merchant
+  openapi postman                            Review collections, retain source and create merchant packages
+  openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
   duckdb-prepare                             Prepare, verify and reopen native data packages
   duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant
@@ -103,6 +121,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-pricing                Import a saved original pricing report as accounting terms
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
+  merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases
@@ -113,6 +132,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
+  grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
   woo-operator                              Review original Stellar transfers and complete selected Woo orders
 
 Optional feature groups: ${[...new Set([

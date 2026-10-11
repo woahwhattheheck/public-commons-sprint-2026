@@ -197,17 +197,32 @@ def restore(source, destination):
         if sum(row["bytes"] for row in expected.values()) != manifest.get("totalBytes"):
             fail("Archive total differs from its manifest.")
         destination.mkdir(mode=0o700)
+        directories = {destination}
         for name, row in expected.items():
             data = archive.read(by_name[name])
             if entry(name, data) != row:
                 fail("Archive member differs from its recorded bytes: " + name)
             target = destination / name
-            target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            parent = destination
+            for component in Path(name).parts[:-1]:
+                parent = parent / component
+                try:
+                    parent.mkdir(mode=0o700)
+                except FileExistsError:
+                    pass
+                private_root(str(parent))
+                directories.add(parent)
             fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
             with os.fdopen(fd, "wb") as saved:
                 saved.write(data)
                 saved.flush()
                 os.fsync(saved.fileno())
+        for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
+            fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
         return {"directory": str(destination), "files": len(expected), "bytes": manifest["totalBytes"], "state": "RESTORED"}
 
 
