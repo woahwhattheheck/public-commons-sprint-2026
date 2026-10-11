@@ -8,6 +8,7 @@ import { readReleaseState, compareReleases, activateRelease, rollbackRelease,
 import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 import { releaseCatalogStatus, reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
 import { createReleaseDiscoveryConsole } from './release-discovery-console.mjs';
+import { createReleaseFacilitatorControl } from './release-facilitator.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 function failure(message, status = 400) { return Object.assign(new Error(message), { status }); }
@@ -23,17 +24,19 @@ async function body(req) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw failure('JSON object required.');
   return value;
 }
-export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup } = {}) {
+export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup, facilitators } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Console port must be 0–65535.');
   if (catalogConfig && discoverySetup !== undefined) throw new TypeError('Use either an existing catalog connection or a managed discovery setup.');
   const discovery = catalogConfig ? null : createReleaseDiscoveryConsole(root, { directory: discoverySetup ?? root + '.discovery' });
   const catalogConnection = () => catalogConfig ?? discovery?.catalogConfig;
+  const facilitator = createReleaseFacilitatorControl(root, facilitators);
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
+    ['/facilitator.mjs', 'facilitator.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { bytes: await readFile(new URL('./release-ui/' + file, import.meta.url)), type }])));
   let hosts = new Set(), origins = new Set(), url, managed = null, busy = false, stopping = false;
@@ -73,6 +76,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes)) throw failure('Reopen the operator URL printed by the console command.', 401);
       if (req.method === 'GET' && target.pathname === '/api/status' && !target.search) { send(200, await status()); return; }
       if (req.method === 'GET' && target.pathname === '/api/cache' && !target.search) { send(200, await releaseCacheStatus(root)); return; }
+      if (req.method === 'GET' && target.pathname === '/api/facilitators' && !target.search) { send(200, facilitator.status()); return; }
       if (req.method === 'GET' && target.pathname === '/api/discovery' && !target.search) {
         send(200, discovery ? await discovery.status() : { enabled: false, state: 'EXTERNAL' }); return;
       }
@@ -93,7 +97,8 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
         send(200, { generation: state.generation, ...await compareReleases(root, target.searchParams.get('from') ?? state.active, target.searchParams.get('to')) }); return;
       }
       if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate', '/api/catalog/review', '/api/catalog/apply',
-        '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop'].includes(target.pathname) || target.search)
+        '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop',
+        '/api/facilitator/review', '/api/facilitator/stage'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
       if (!req.headers.origin || !origins.has(req.headers.origin)) throw failure('Same-origin operator action required.', 403);
       if (busy || stopping) throw failure('An operator action is already running. Refresh when it completes.', 409);
@@ -104,7 +109,10 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       actionDone = new Promise(done => { finishAction = done; });
       try {
         lastError = null;
-        if (target.pathname.startsWith('/api/discovery/')) {
+        if (target.pathname.startsWith('/api/facilitator/')) {
+          const action = target.pathname.slice('/api/facilitator/'.length);
+          send(200, await facilitator[action](input)); return;
+        } else if (target.pathname.startsWith('/api/discovery/')) {
           if (!discovery) throw failure('This console uses an existing external catalog connection.', 409);
           const action = target.pathname.slice('/api/discovery/'.length);
           const allowed = { review: ['id', 'sellerId', 'sourceURL'], create: ['reviewId'], start: [], stop: ['instanceId'] }[action];
@@ -172,6 +180,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
     closing = (async () => {
       try {
         await actionDone;
+        await facilitator.close();
         try { if (managed) await managed.close(); }
         finally {
           try { await discovery?.close(); }

@@ -22,6 +22,13 @@ wallet keys, handler paths, arbitrary file paths, target URLs or payment overrid
 as tool arguments. Owner-entered support terms may reference their existing
 consent and proposal records; those URLs are retained as text and never fetched.
 
+For a provider change on an already retained merchant, attach host-configured
+facilitator aliases, review the actual native payment requirements, and stage
+the same compiled source through the original release controls. The complete
+review survives reopen and is checked at native startup. See
+[Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
+for the three MCP tools, console and CLI commands.
+
 ## Review pricing and retain seller changes
 
 Attach an original SF97 workspace with `init-pricing --dir NEW_HOST --pricing
