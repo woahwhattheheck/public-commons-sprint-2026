@@ -108,8 +108,13 @@ try {
   release(); const original = await second; original.body.fill(0);
   assert.deepEqual(JSON.parse((await cache.handler(context)).body), { stable: true });
   await delay(25); assert.equal(cache.stats().entries, 0);
-  const inFlight = cache.handler(context); await Promise.resolve(); cache.invalidate(); release(); await inFlight;
-  assert.equal(cache.stats().entries, 0); assert.equal((await cache.close()).drained, true);
+  const inFlight = cache.handler(context); await Promise.resolve();
+  const releaseOld = release; cache.invalidate();
+  const afterInvalidation = cache.handler(context); await Promise.resolve();
+  const releaseNew = release; assert.notEqual(releaseOld, releaseNew);
+  releaseOld(); await inFlight; assert.equal(cache.stats().entries, 0);
+  releaseNew(); await afterInvalidation; assert.equal(cache.stats().entries, 1);
+  assert.equal((await cache.close()).drained, true);
   const bounded = createResponseCache({ shareAcrossBuyers: true, maxEntries: 1, maxBytes: 1024,
     maxEntryBytes: 128, handler: input => ({ body: { path: input.url.pathname } }) });
   await bounded.handler(context); await bounded.handler({ ...context, url: new URL('https://merchant.example/other') });
