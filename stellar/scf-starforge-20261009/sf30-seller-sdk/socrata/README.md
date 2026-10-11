@@ -336,3 +336,94 @@ paths do not become implicit source imports.
 - [Ordered SODA paging](https://dev.socrata.com/docs/paging.html)
 - [Socrata floating timestamps](https://dev.socrata.com/docs/datatypes/floating_timestamp)
 - [Original SF30 dataset types, query semantics and seller handover](../DATASET_API.md)
+
+
+## Publish the retained edition and deliver it to a customer
+
+The **Publisher & buyer** section continues the same operator through the original dataset publisher, seller release and buyer acquisition. Its durable publisher directory is `WORKSPACE/publisher`. It retains its own original version store, draft records, seller releases and customer sessions alongside the source workspace.
+
+Start the complete maintained source with the normal workspace command. Choose **Open publisher**, or prepare an existing exported edition directly. The export selector includes only packages carrying the original `seller.json`; return to Merchant and Export & recovery when an edition still needs its payment terms.
+
+### Prepare, inspect and select a version
+
+**Prepare publisher dataset** imports the exact retained CSV, dataset configuration, source provenance and merchant offer. On the first preparation it initializes the original private dataset with that baseline. Later preparations become retained drafts in that same version store while preserving the existing query contract.
+
+The draft list provides the original CSV and review download. Choose **Use this draft**, load the operator's saved query, and run **Preview selected dataset**. A draft preview runs through the original typed dataset; a published snapshot preview uses the running seller's original private control channel. The preview retains the original result, row count and continuation cursor. **Next preview page** continues the same target and query.
+
+Select a draft and choose **Review against current version** while the seller is running. The screen shows the current snapshot and integer revision. **Publish reviewed draft** sends those exact values to the original publisher. A concurrent version change requires another review of that same retained draft. A response loss remains in the original publication history; **Reconcile publisher** reads and reconciles that history before its next continuation.
+
+Published versions remain individually selectable. **Activate this version** uses the displayed current snapshot and revision. **Collect expired versions** delegates the original retention and cursor policy. The source operator's selected edition and the publisher's current serving version are both visible in their respective views.
+
+### Stage and run the seller
+
+Choose the retained draft, give its release an ID and label, and stage its original seller package. Port `0` asks the operating system for an available local port. A facilitator URL is optional when the original runtime already supplies its configured facilitator. A local HTTP facilitator requires the explicit local-facilitator runtime option.
+
+**Activate release** selects the retained release with the displayed generation. **Start selected seller** owns its original process in this running operator. The interface shows the actual listener, selected release and observed running release. Changing the selection preserves the current process until it is stopped and started again. **Roll back release selection** delegates the original retained release history and generation check.
+
+Closing an operator that owns the seller drains that seller. A browser attached to an existing operator closes only its listener; ownership of the existing operator and seller remains with its host.
+
+### Review and run the original buyer acquisition
+
+Choose a published snapshot and load the saved first-page query. **Read actual customer offer** fetches the running seller's actual offer and native query preview. The interface shows its URL, accepted payment options and offer hash.
+
+Enter a retained request intent ID, select one of those accepted options, and choose **Prepare customer request**. The original publisher rereads the offer before preparing the request. A changed query or snapshot requires a new offer review; a changed seller offer is rejected by the original preparation.
+
+Choose the prepared request and the absolute path of an existing original buyer workspace. Its account, signer and execution configuration remain in that workspace. Enter explicit limits for pages, total atomic payment units, rows and bytes per page. **Open retained buyer session** binds those values to the same request and snapshot.
+
+The acquisition card exposes the original continuations:
+
+| Control | Original operation |
+| --- | --- |
+| Run acquisition | Runs the retained session with its configured buyer workspace and exact limits |
+| Recover same acquisition | Reconciles that session's retained page work |
+| Finalize account records | Reconciles and finalizes the original workspace account records |
+| Export customer delivery | Creates or resumes the retained original delivery files |
+
+After export, download the acquired CSV, acquired JSONL, delivery review and acquisition manifest. These are the original acquisition outputs. The prepared request, publisher draft CSV and publisher review have their own download controls.
+
+The browser does not repeat an uncertain mutation automatically. Refresh retained state, reopen the same publisher or acquisition, and use its original reconciliation or recovery action.
+
+### CLI and embedded operator composition
+
+The CLI accepts the same `publisher.*` action names through its existing `action` command. JSON payloads and the complete publisher contract are documented in [PUBLISHING.md](./PUBLISHING.md). For example:
+
+```sh
+node cli.mjs action publisher.status --directory /absolute/operator
+node cli.mjs action publisher.prepare --directory /absolute/operator --input prepare-publisher.json
+```
+
+`prepare-publisher.json` names an existing original export directory:
+
+```json
+{"exportDirectory":"/absolute/operator/exports/export-id"}
+```
+
+For the continuous publication and buyer workflow, use the running browser operator or its host's shared model. The `publisher.release.start` CLI action also keeps its model alive, prints a private local browser session URL for that same operator, and drains its original seller on Ctrl+C.
+
+A host such as the merchant tool server can create one dispatcher and lend it to the browser:
+
+```js
+import {openSocrataOperator,startSocrataWorkspace} from './server.mjs';
+
+const directory = '/absolute/operator';
+const operator = await openSocrataOperator({directory});
+const browser = await startSocrataWorkspace({directory,operator,port:0});
+
+await operator.act('publisher.status',{});
+// The host and browser now use this same lazily opened publisher.
+// On host shutdown, drain the browser before its original models.
+await browser.close();
+await operator.close();
+```
+
+`openSocrataOperator` exposes `state()`, `act(action,payload)`, `readExport(exportId,filename)`, `readPublisherExport(kind,id)` and `close()`. State includes the original source state and `publisher`, which is null until the first publisher action unless a publisher model was supplied. Action responses contain `{result,state}` with the combined state. Original publisher downloads return a Buffer, filename and content type.
+
+Hosts that already own the original models can instead call `openSocrataOperator({directory,workspace,publisher})`, or pass those two optional models directly to `startSocrataWorkspace`. Supplied models are borrowed. Models opened by the wrapper are owned and closed by that wrapper. Supplied `operator` and supplied raw models are alternative construction choices. Startup failures preserve borrowed models, and owned-model shutdown waits for its accepted actions.
+
+Publisher downloads use the same private browser session authentication as source exports:
+
+```text
+GET /api/publisher/exports/:kind/:id
+```
+
+Supported kinds are `draft-csv`, `draft-review`, `buyer-config`, `session-manifest`, `session-csv`, `session-jsonl` and `session-review`. The original publisher validates the retained ID and reads its own export; the route does not accept arbitrary filesystem paths.

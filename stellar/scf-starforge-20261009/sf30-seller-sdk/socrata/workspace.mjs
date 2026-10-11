@@ -1,5 +1,5 @@
 // MIT. Retained Socrata captures and dataset editions using the original SF30 engine.
-import { mkdir, readFile, writeFile, rename, open, lstat, realpath, readdir, copyFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rename, link, unlink, open, lstat, realpath, readdir, copyFile } from 'node:fs/promises';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { resolve, dirname, basename, relative, isAbsolute, sep } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -42,18 +42,26 @@ async function jsonAt(root, path, maxBytes) {
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await bytesAt(root, path, maxBytes))); }
   catch (error) { if (error.code?.startsWith('SOCRATA_')) throw error; throw fail('SOCRATA_JSON', 'A retained JSON file could not be read.'); }
 }
-async function atomic(path, value) {
+async function stagedWrite(path, value, commit) {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = path + '.' + randomUUID() + '.tmp';
-  const handle = await open(temporary, 'wx', 0o600);
-  try { await handle.writeFile(typeof value === 'string' || Buffer.isBuffer(value) ? value : json(value)); await handle.sync(); }
-  finally { await handle.close(); }
-  await rename(temporary, path);
+  let handle;
+  try {
+    handle = await open(temporary, 'wx', 0o600);
+    await handle.writeFile(typeof value === 'string' || Buffer.isBuffer(value) ? value : json(value));
+    await handle.sync(); await handle.close(); handle = null;
+    await commit(temporary);
+  } finally {
+    if (handle) await handle.close().catch(() => {});
+    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  }
+}
+async function atomic(path, value) {
+  await stagedWrite(path, value, temporary => rename(temporary, path));
 }
 async function immutable(root, path, bytes) {
   const full = inside(root, path);
-  await mkdir(dirname(full), { recursive: true, mode: 0o700 });
-  try { await writeFile(full, bytes, { flag: 'wx', mode: 0o600 }); }
+  try { await stagedWrite(full, bytes, temporary => link(temporary, full)); }
   catch (error) {
     if (error.code !== 'EEXIST') throw error;
     if (sha256(await bytesAt(root, path)) !== sha256(bytes)) throw fail('SOCRATA_RETAINED_CONFLICT', 'A retained artifact has different bytes.', 409);
@@ -398,6 +406,7 @@ export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}
         if (!c || c.status !== 'running') throw fail('SOCRATA_CAPTURE_STATE', 'Start or resume a capture before advancing it.', 409);
         const pages = integer(input.pages ?? 1, 'pages', 1, 100);
         for (let iteration = 0; iteration < pages && c.status === 'running'; iteration++) {
+          if (c.rowCount === c.expectedRows) { await finalizeCapture(c); break; }
           await checkRevision(c);
           const page = await client.page(c.source, c.nextOffset);
           if (c.rowCount + page.rows.length > c.expectedRows || c.byteCount + page.bytes.length > c.source.maxBytes)

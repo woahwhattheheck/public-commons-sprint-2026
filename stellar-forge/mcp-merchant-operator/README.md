@@ -475,3 +475,16 @@ tools, host configuration, replay, comparison, export and browser handoff.
 
 The same provider now operates original PostgreSQL, SQLite and MySQL publisher workspaces: approved saved query and typed candidate, native review/publication, recurring maintenance, retained buyer configuration and restart recovery. Use `init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json` or add the host `publisherConnection` to an existing merchant. [PUBLISHERS.md](PUBLISHERS.md) gives complete setup, agent operations, seller/customer handoff and shutdown.
 
+
+## Socrata source and customer workspaces
+
+[SOCRATA_WORKSPACES.md](./SOCRATA_WORKSPACES.md) connects this same merchant MCP to
+the original Socrata source application. Host-declared aliases cover real
+provider capture, typed editions, native queries, complete portable exports,
+dataset publication, release operation and customer acquisition.
+
+Use `init-socrata-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `socrataWorkspaceConnection` to the existing merchant configuration.
+The `merchant_socrata_*` tools use the original source and publisher objects.
+Their industrial browser borrows that same operator, and complete customer files
+use the existing verified retained-file reader.

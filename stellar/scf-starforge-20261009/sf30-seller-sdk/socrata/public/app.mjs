@@ -1,4 +1,6 @@
 // MIT. Browser operator for the original Socrata workspace.
+import {createPublisherPanel} from "./publisher.mjs";
+let publisherPanel;
 const $ = id => document.getElementById(id);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const json = value => JSON.stringify(value, null, 2);
@@ -124,7 +126,28 @@ function bindForm(id, operation) {
 }
 function selectSection(name) {
   document.querySelectorAll('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== name; });
-  document.querySelectorAll('[data-section]').forEach(button => {
+  async function downloadPublisher(kind, id) {
+  let response;
+  try {
+    response = await fetch('/api/publisher/exports/' + encodeURIComponent(kind) + '/' + encodeURIComponent(id),
+      {headers:{Authorization:'Bearer ' + token},cache:'no-store'});
+  } catch { throw new Error('The retained publisher download could not be read. Retry this file download.'); }
+  if (!response.ok) {
+    const failure = await response.json().catch(() => ({}));
+    throw new Error(failure.message || failure.error || 'Export the retained customer delivery before downloading this file.');
+  }
+  const disposition = response.headers.get('content-disposition') || '';
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+  const filename = encoded ? decodeURIComponent(encoded) : kind + '.json';
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a'); link.href = url; link.download = filename;
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url),30000);
+  notice('Downloaded retained publisher file: ' + filename);
+}
+publisherPanel = createPublisherPanel({getState:() => state,perform,download:downloadPublisher,handle,notice,selectSection});
+
+document.querySelectorAll('[data-section]').forEach(button => {
     if (button.dataset.section === name) button.setAttribute('aria-current', 'page');
     else button.removeAttribute('aria-current');
   });
@@ -356,7 +379,7 @@ function renderConditions() {
     const remove = node('button', 'Remove'); remove.type = 'button'; remove.dataset.removeCondition = index;
     row.append(fieldLabel, operatorLabel, valueLabel, remove); area.append(row);
   }
-  if (!conditions.length) area.append(node('p', queryFields().length ? 'No conditions. The query includes every row.' :
+  if (!conditions.length) area.append(node('p', queryFields().length ? 'Add a condition here or enter native parameters below.' :
     'Enable filter or range columns in the saved mapping to add conditions.', 'empty'));
 }
 function queryPayload() {
@@ -489,6 +512,7 @@ function renderControls() {
   $('add-all-mapping-columns').disabled = !state?.metadata?.columns?.length;
   $('refresh-state').disabled = busy;
   $('mapping-dirty').textContent = mappingDirty ? 'Unsaved mapping changes' : state?.mapping ? 'Saved mapping' : 'Choose and save a mapping';
+  publisherPanel?.controls(locked);
 }
 function render() {
   if (!state) { renderControls(); return; }
@@ -505,7 +529,7 @@ function render() {
   if (currentActive !== activeSignature) {
     activeSignature = currentActive; lastQuery = null; nextCursor = null; queryResult = null; queryDirty = false;
   }
-  renderQueryCapabilities(); renderQueryResult(); renderMerchant(); renderExports(); renderControls();
+  renderQueryCapabilities(); renderQueryResult(); renderMerchant(); renderExports(); publisherPanel?.render(state); renderControls();
   if (!busy) $('connection-status').textContent = 'Local workspace';
 }
 async function runCapture({resume = false} = {}) {
@@ -667,6 +691,7 @@ $('load-saved-query').addEventListener('click', () => {
   $('query-fields').value = query.fields || '';
   delete query.limit; delete query.sort; delete query.fields;
   $('query-extra').value = new URLSearchParams(query).toString();
+  if ($('query-extra').value) $('query-extra').closest('details').open = true;
   conditions = []; lastQuery = null; nextCursor = null; queryResult = null; queryDirty = true;
   renderConditions(); renderQueryResult(); renderControls();
   notice('Saved query selection loaded. Review its parameters and run the native preview.');

@@ -24,7 +24,8 @@
         <button type="button" data-section="editions"><span>03</span> Mapping &amp; editions</button>
         <button type="button" data-section="query"><span>04</span> Query preview</button>
         <button type="button" data-section="merchant"><span>05</span> Merchant</button>
-        <button type="button" data-section="exports"><span>06</span> Export &amp; recovery</button>
+        <button type="button" data-section="publisher"><span>06</span> Publisher &amp; buyer</button>
+        <button type="button" data-section="exports"><span>07</span> Export &amp; recovery</button>
       </nav>
       <div class="sidebar-summary"><div class="eyebrow">CURRENT WORKSPACE</div><strong id="workspace-name">No source configured</strong><p id="workspace-summary">Choose a source or restore a package.</p><span id="edition-summary" class="mono"></span></div>
     </aside>
@@ -162,8 +163,114 @@
         <div class="panel"><h3>Prepared seller configuration</h3><div id="merchant-summary" class="muted">Select an edition and prepare its offer.</div><pre id="merchant-details" hidden></pre></div>
       </section>
 
+
+      <section id="section-publisher" class="publisher-section" data-panel="publisher" aria-labelledby="publisher-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">06 / PUBLISHER &amp; BUYER</div><h2 id="publisher-title">Publish and deliver the dataset</h2><p>Use the retained export with the original dataset publisher, seller release and customer acquisition.</p></div><button id="pub-open" type="button" data-write>Open publisher</button></div>
+        <div id="pub-state-summary" class="panel muted">Open the publisher to inspect its retained versions, releases and customer sessions.</div>
+        <nav class="publisher-nav" aria-label="Publication workflow">
+          <button type="button" data-publisher-view="prepare" aria-current="page">1. Prepare dataset</button>
+          <button type="button" data-publisher-view="versions">2. Review versions</button>
+          <button type="button" data-publisher-view="release">3. Run seller</button>
+          <button type="button" data-publisher-view="buyer">4. Deliver to customer</button>
+        </nav>
+        <div data-publisher-panel="prepare">
+          <form id="pub-prepare-form" class="panel">
+            <h3>Prepare an exported edition</h3>
+            <p>The publisher retains the exact CSV, dataset configuration, source provenance and original merchant offer. Its first preparation initializes the original dataset version store.</p>
+            <label>Retained operator export<select id="pub-export"><option value="">Export an edition with merchant terms first</option></select></label>
+            <div id="pub-export-summary" class="help"></div>
+            <div class="actions"><button type="submit" id="pub-prepare" class="primary" data-write>Prepare publisher dataset</button><button type="button" id="pub-go-exports">Open export &amp; recovery</button></div>
+          </form>
+          <div class="panel"><div class="panel-heading"><h3>Retained drafts</h3><span id="pub-draft-count" class="badge">0 drafts</span></div><div id="pub-drafts"></div></div>
+        </div>
+        <div data-publisher-panel="versions" hidden>
+          <form id="pub-preview-form" class="panel">
+            <h3>Preview an exact draft or version</h3>
+            <div class="form-grid">
+              <label class="span-2">Preview target<select id="pub-preview-target" required><option value="">Prepare a dataset first</option></select></label>
+              <label class="span-2">Native query string<textarea id="pub-preview-query" rows="3" spellcheck="false" maxlength="8192" placeholder="limit=100"></textarea></label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-preview" class="primary" data-write>Preview selected dataset</button><button type="button" id="pub-preview-next" data-write>Next preview page</button><button type="button" id="pub-load-query">Load operator query</button></div>
+            <p class="help">Draft previews use the original typed dataset. Published versions use the running seller’s original private control channel.</p>
+            <div id="pub-preview-summary" class="help"></div><div id="pub-preview-table" class="table-scroll query-table"></div>
+            <details><summary>Exact native preview</summary><pre id="pub-preview-result">No publisher preview yet.</pre></details>
+          </form>
+          <div class="panel">
+            <h3>Review and publish a retained draft</h3>
+            <label>Draft<select id="pub-review-draft"><option value="">Prepare a dataset first</option></select></label>
+            <div id="pub-review-summary" class="help"></div><div id="pub-publication-pins" class="facts mono"></div>
+            <div class="actions"><button type="button" id="pub-review" data-write>Review against current version</button><button type="button" id="pub-publish" class="primary" data-write>Publish reviewed draft</button></div>
+            <p class="help">Start the seller before reviewing or publishing. A changed target revision requires a fresh review of this same draft.</p>
+            <details><summary>Retained draft and publication history</summary><pre id="pub-review-result">Select a draft.</pre></details>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><h3>Published versions</h3><button type="button" id="pub-collect" data-write>Collect expired versions</button></div>
+            <p class="help">Select an existing version using the displayed current snapshot and revision. Retention and active cursor handling remain with the original dataset engine.</p>
+            <div id="pub-versions"></div>
+          </div>
+        </div>
+        <div data-publisher-panel="release" hidden>
+          <form id="pub-release-form" class="panel">
+            <h3>Stage the original seller release</h3>
+            <div class="form-grid">
+              <label class="span-2">Source draft<select id="pub-release-draft" required><option value="">Prepare a dataset first</option></select></label>
+              <label>Release ID<input id="pub-release-id" required maxlength="64" pattern="[a-z0-9][a-z0-9._-]*" autocomplete="off" spellcheck="false" placeholder="hpd-queens-01"></label>
+              <label>Release label<input id="pub-release-label" required autocomplete="off" placeholder="Queens housing dataset"></label>
+              <label>Local listening port<input id="pub-release-port" type="number" min="0" max="65535" value="0" required><span class="help">0 lets the operating system select an available port.</span></label>
+              <label>Facilitator URL<input id="pub-facilitator" type="url" autocomplete="off" spellcheck="false" placeholder="Optional configured facilitator"></label>
+              <label class="checkbox-label span-2"><input id="pub-local-facilitator" type="checkbox">Allow a local facilitator for this configured runtime</label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-stage" class="primary" data-write>Stage seller release</button></div>
+          </form>
+          <div class="panel">
+            <div class="panel-heading"><h3>Release selection and runtime</h3><span id="pub-generation" class="badge">Generation —</span></div>
+            <div id="pub-runtime-summary"></div>
+            <div class="actions"><button type="button" id="pub-release-start" class="primary" data-write>Start selected seller</button><button type="button" id="pub-release-stop" data-write>Stop this operator’s seller</button><button type="button" id="pub-release-rollback" data-write>Roll back release selection</button></div>
+            <p class="help">Activation selects a retained release. Stop and start the owned seller to run a changed selection; its current process remains visible until then.</p>
+            <div id="pub-releases"></div>
+            <details><summary>Original release status</summary><pre id="pub-release-details">Open the publisher.</pre></details>
+          </div>
+        </div>
+        <div data-publisher-panel="buyer" hidden>
+          <form id="pub-buyer-review-form" class="panel">
+            <h3>Review the customer’s actual offer</h3>
+            <div class="form-grid">
+              <label class="span-2">Published snapshot<select id="pub-buyer-snapshot" required><option value="">Prepare and run the seller first</option></select></label>
+              <label class="span-2">First-page native query<textarea id="pub-buyer-query" rows="3" maxlength="8192" spellcheck="false" placeholder="limit=100"></textarea><span class="help">Choose the snapshot above; continuation cursors are generated by the original acquisition.</span></label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-buyer-review" class="primary" data-write>Read actual customer offer</button><button type="button" id="pub-load-buyer-query">Load operator query</button></div>
+            <div id="pub-buyer-review-summary" class="help"></div><div id="pub-buyer-preview" class="table-scroll query-table"></div>
+            <details><summary>Original offer, accepted payment terms and query</summary><pre id="pub-buyer-offer">Read the running seller’s offer.</pre></details>
+          </form>
+          <form id="pub-buyer-prepare-form" class="panel">
+            <h3>Prepare the reviewed customer request</h3>
+            <div class="form-grid">
+              <label>Request intent ID<input id="pub-intent-id" required autocomplete="off" spellcheck="false" placeholder="A retained customer request ID"></label>
+              <label>Accepted payment option<select id="pub-accept" required><option value="">Review the actual offer first</option></select></label>
+            </div>
+            <p id="pub-accept-summary" class="help"></p>
+            <div class="actions"><button type="submit" id="pub-buyer-prepare" class="primary" data-write>Prepare customer request</button></div>
+          </form>
+          <form id="pub-session-form" class="panel">
+            <h3>Continue through the original buyer workspace</h3>
+            <div class="form-grid">
+              <label class="span-2">Prepared customer request<select id="pub-buyer-id" required><option value="">Prepare a customer request first</option></select></label>
+              <label class="span-2">Existing buyer workspace path<input id="pub-buyer-workspace" required autocomplete="off" spellcheck="false" placeholder="/absolute/path/to/original-buyer-workspace"><span class="help">Use the original workspace with its configured account and signer. Credentials stay in that workspace.</span></label>
+              <label>Maximum pages<input id="pub-max-pages" type="number" min="1" required placeholder="Number of reviewed pages"></label>
+              <label>Total payment limit, atomic units<input id="pub-max-total" required inputmode="numeric" pattern="[0-9]+" placeholder="Exact integer limit"></label>
+              <label>Maximum rows<input id="pub-max-rows" type="number" min="1" value="1000000" required></label>
+              <label>Maximum bytes per page<input id="pub-max-page-bytes" type="number" min="1" value="1048576" required></label>
+            </div>
+            <p id="pub-session-summary" class="help">The session retains its original request, selected snapshot, workspace and limits for run and recovery.</p>
+            <div class="actions"><button type="submit" id="pub-session" class="primary" data-write>Open retained buyer session</button><button type="button" id="pub-download-buyer">Download customer request</button></div>
+          </form>
+          <div class="panel"><h3>Customer acquisitions and delivery files</h3><div id="pub-sessions"></div></div>
+        </div>
+        <details class="panel"><summary>Retained publisher state</summary><pre id="pub-state-details">Open the publisher.</pre></details>
+      </section>
+
       <section id="section-exports" data-panel="exports" aria-labelledby="exports-title" hidden>
-        <div class="section-heading"><div><div class="eyebrow">06 / EXPORT &amp; RECOVERY</div><h2 id="exports-title">Deliver and reopen the workspace</h2><p>Keep source provenance, dataset editions and merchant configuration together in a retained package.</p></div></div>
+        <div class="section-heading"><div><div class="eyebrow">07 / EXPORT &amp; RECOVERY</div><h2 id="exports-title">Deliver and reopen the workspace</h2><p>Keep source provenance, dataset editions and merchant configuration together in a retained package.</p></div></div>
         <div class="panel">
           <div class="panel-heading"><h3>Create a portable package</h3><button type="button" id="export-package" class="primary" data-write>Export current package</button></div>
           <p>The compressed package carries the complete workspace. Companion CSV and configuration files are available for the original seller.</p>
