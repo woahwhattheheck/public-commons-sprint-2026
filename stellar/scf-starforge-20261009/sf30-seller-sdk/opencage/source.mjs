@@ -50,7 +50,7 @@ export function createOpenCageSource(raw,{env=process.env,lookup,clock=Date.now}
   const plan=compileGeocodePlan(raw),bindings={};
   for (const product of plan.products) bindings[handlerName(product.id)] = {
     origin:API_ORIGIN,path:API_PATH,method:'GET',query:[...PARAMETERS[product.mode],'key'],
-    responseHeaders:['content-type','retry-after','x-ratelimit-limit','x-ratelimit-remaining','x-ratelimit-reset'],
+    responseHeaders:['content-type'],
     responseMode:'json',timeoutMs:plan.timeoutMs,maxResponseBytes:plan.maxResponseBytes,maxInFlight:1,
   };
   const native=createUpstreamHandlers({schema:'stellar-forge.seller-upstreams.v1',bindings},
