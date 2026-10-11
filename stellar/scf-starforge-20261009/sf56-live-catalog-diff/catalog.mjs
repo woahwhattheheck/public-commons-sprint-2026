@@ -78,9 +78,32 @@ export function inspectListing(row, rowIndex, network = NETWORK) {
 }
 
 function vendorPayload(item) {
-  if (obj(item) && obj(item.payload)) return item.payload;
+  // The original HTTP bytes are authoritative when both a raw body and an
+  // independently derived payload are present. Never inspect a substituted
+  // flattened payload while hashing different source bytes.
   if (obj(item) && typeof item.body === 'string') return JSON.parse(item.body);
+  if (obj(item) && obj(item.payload)) return item.payload;
   return item;
+}
+
+// Vellar's first-party x402 v2 discovery has pagination.total, while early
+// local fixtures used a flat total. Preserve both without rewriting the
+// original response or manufacturing a declared count.
+function declaredPageTotal(page, offset) {
+  if (page.pagination !== undefined) {
+    if (!obj(page.pagination)) throw Error('Invalid provider pagination metadata');
+    if (page.pagination.offset !== undefined && page.pagination.offset !== offset)
+      throw Error('Provider pagination offset mismatch');
+    if (page.pagination.limit !== undefined && page.pagination.limit !== LIMIT)
+      throw Error('Provider pagination limit mismatch');
+  }
+  const flat = page.total, native = page.pagination?.total;
+  if (flat !== undefined && native !== undefined && flat !== native)
+    throw Error('Conflicting provider totals');
+  const total = flat ?? native;
+  if (!Number.isSafeInteger(total) || total < 0)
+    throw Error('Missing safe provider pagination total');
+  return total;
 }
 
 export function analyzePages(pages, { source = PROVIDER, network = NETWORK, capturedAt = new Date().toISOString() } = {}) {
@@ -94,11 +117,11 @@ export function analyzePages(pages, { source = PROVIDER, network = NETWORK, capt
     const page = vendorPayload(item);
     if (!obj(page) || !Array.isArray(page.items)) throw Error(`Vellar page ${i} must have items[]`);
     if (page.items.length > LIMIT) throw Error(`Vellar page ${i} exceeds page limit`);
-    if (!Number.isSafeInteger(page.total) || page.total < 0) throw Error(`Vellar page ${i} missing safe total`);
-    if (expectedTotal !== null && expectedTotal !== page.total) throw Error('Total changed during pagination');
-    expectedTotal = page.total;
     const offset = item?.offset ?? i * LIMIT;
     if (!Number.isSafeInteger(offset) || offset !== i * LIMIT) throw Error('Missing or out-of-order page offset');
+    const total = declaredPageTotal(page, offset);
+    if (expectedTotal !== null && expectedTotal !== total) throw Error('Total changed during pagination');
+    expectedTotal = total;
     const bytes = typeof item?.body === 'string' ? Buffer.byteLength(item.body, 'utf8') : Buffer.byteLength(JSON.stringify(page), 'utf8');
     if (bytes > MAX_PAGE_BYTES) throw Error('Oversized provider page');
     pageHashes.push({ offset, sha256: hexSha(typeof item?.body === 'string' ? item.body : JSON.stringify(page)), bytes });
@@ -198,9 +221,12 @@ export async function fetchVellar({ fetchImpl = globalThis.fetch, timeoutMs = 25
     const response=await fetchImpl(url.href,{method:'GET',redirect:'error',headers:{accept:'application/json'},signal:AbortSignal.timeout(timeoutMs)});
     const body=await boundedResponse(response);
     let payload;try{payload=JSON.parse(body);}catch{throw Error('Malformed discovery JSON');}
-    if (!obj(payload)||!Array.isArray(payload.items)||!Number.isSafeInteger(payload.total)) throw Error('Malformed Vellar pagination envelope');
-    if(declaredTotal!==null && declaredTotal!==payload.total) throw Error('Provider total changed across pages');
-    declaredTotal=payload.total;
+    if (!obj(payload) || !Array.isArray(payload.items)) throw Error('Malformed Vellar pagination envelope');
+    let total;
+    try { total = declaredPageTotal(payload, offset); }
+    catch (error) { throw Error(`Malformed Vellar pagination envelope: ${error.message}`); }
+    if (declaredTotal !== null && declaredTotal !== total) throw Error('Provider total changed across pages');
+    declaredTotal = total;
     pages.push({offset,body,payload,requestUrl:url.href});
     if(offset+payload.items.length>=declaredTotal) break;
     if(payload.items.length!==LIMIT) throw Error('Premature short page');
