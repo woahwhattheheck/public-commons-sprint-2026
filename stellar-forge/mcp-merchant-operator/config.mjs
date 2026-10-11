@@ -324,22 +324,24 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
 }
 
 /** Configure the same provider for an existing fleet without an individual source. */
-export async function initializeFleetMerchant({ directory, planFile, name = 'Starforge merchant fleet', accounting }) {
+export async function initializeFleetMerchant({ directory, planFile, fleetDirectory, name = 'Starforge merchant fleet', accounting }) {
   const root = resolve(directory);
   name = line(name, 'Merchant fleet name');
   planFile = hostPath(planFile, process.cwd());
   const plan = await readFleetReleasePlan(planFile);
+  const fleet = { planFile, directory: fleetDirectory === undefined ? './fleet' : hostPath(fleetDirectory, process.cwd()) };
   const accountingConfig = accounting === undefined ? null : await readAccountingConfig(accounting);
   await mkdir(root, { mode: 0o700 });
   await initReleaseStore(join(root, 'releases'));
   await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
   const configuration = join(root, 'merchant-mcp.json');
   await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
-    exportsDirectory: './customer-exports', sources: {}, fleet: { planFile, directory: './fleet' },
+    exportsDirectory: './customer-exports', sources: {}, fleet,
     ...(accountingConfig ? { accounting: accountingConfig } : {}) });
   await readMerchantConfig(configuration);
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', fleetConfigured: true,
-    planDigest: plan.digest, tenants: plan.tenants.length, fleet: 'STARTED_ONLY_BY_EXPLICIT_TOOL', accountingConfigured: Boolean(accountingConfig) };
+    planDigest: plan.digest, tenants: plan.tenants.length, fleetDirectory: hostPath(fleet.directory, root),
+    fleet: 'STARTED_ONLY_BY_EXPLICIT_TOOL', accountingConfigured: Boolean(accountingConfig) };
 }
 
 /** Use the same merchant provider for existing accounting sources, without staging a seller. */
