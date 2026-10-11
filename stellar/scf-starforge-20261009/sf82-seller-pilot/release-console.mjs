@@ -7,6 +7,7 @@ import { readReleaseState, compareReleases, activateRelease, rollbackRelease,
   releaseStatus, runActiveRelease } from './releases.mjs';
 import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 import { releaseCatalogStatus, reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
+import { createReleaseDiscoveryConsole } from './release-discovery-console.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 function failure(message, status = 400) { return Object.assign(new Error(message), { status }); }
@@ -22,13 +23,17 @@ async function body(req) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw failure('JSON object required.');
   return value;
 }
-export async function startReleaseConsole(root, { port = 8425, catalogConfig } = {}) {
+export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Console port must be 0–65535.');
+  if (catalogConfig && discoverySetup !== undefined) throw new TypeError('Use either an existing catalog connection or a managed discovery setup.');
+  const discovery = catalogConfig ? null : createReleaseDiscoveryConsole(root, { directory: discoverySetup ?? root + '.discovery' });
+  const catalogConnection = () => catalogConfig ?? discovery?.catalogConfig;
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
+    ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { bytes: await readFile(new URL('./release-ui/' + file, import.meta.url)), type }])));
   let hosts = new Set(), origins = new Set(), url, managed = null, busy = false, stopping = false;
@@ -39,7 +44,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig } =
   closed.catch(() => {});
   const status = async () => ({ ...await releaseStatus(root),
     console: { managesRunningSeller: Boolean(managed), instanceId: managed?.observation.instanceId ?? null,
-      catalogConfigured: Boolean(catalogConfig), busy, lastError } });
+      catalogConfigured: Boolean(catalogConnection()), busy, lastError } });
   const server = createServer(async (req, res) => {
     const reply = (code, type, data) => {
       if (res.destroyed) return;
@@ -67,10 +72,18 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig } =
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes)) throw failure('Reopen the operator URL printed by the console command.', 401);
       if (req.method === 'GET' && target.pathname === '/api/status' && !target.search) { send(200, await status()); return; }
       if (req.method === 'GET' && target.pathname === '/api/cache' && !target.search) { send(200, await releaseCacheStatus(root)); return; }
+      if (req.method === 'GET' && target.pathname === '/api/discovery' && !target.search) {
+        send(200, discovery ? await discovery.status() : { enabled: false, state: 'EXTERNAL' }); return;
+      }
+      if (req.method === 'GET' && target.pathname === '/api/discovery/enrollment' && !target.search) {
+        if (!discovery) throw failure('This console uses an existing external catalog connection.', 409);
+        send(200, await discovery.enrollment()); return;
+      }
       if (req.method === 'GET' && target.pathname === '/api/catalog') {
         if ([...target.searchParams.keys()].some(key => key !== 'id')) throw failure('Unknown catalog parameter.');
-        if (!catalogConfig) { send(200, { configured: false }); return; }
-        send(200, { configured: true, ...await releaseCatalogStatus(root, { config: catalogConfig,
+        const config = catalogConnection();
+        if (!config) { send(200, { configured: false }); return; }
+        send(200, { configured: true, ...await releaseCatalogStatus(root, { config,
           releaseId: target.searchParams.get('id') }) }); return;
       }
       if (req.method === 'GET' && target.pathname === '/api/diff') {
@@ -78,7 +91,8 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig } =
         const state = await readReleaseState(root);
         send(200, { generation: state.generation, ...await compareReleases(root, target.searchParams.get('from') ?? state.active, target.searchParams.get('to')) }); return;
       }
-      if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate', '/api/catalog/review', '/api/catalog/apply'].includes(target.pathname) || target.search)
+      if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate', '/api/catalog/review', '/api/catalog/apply',
+        '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
       if (!req.headers.origin || !origins.has(req.headers.origin)) throw failure('Same-origin operator action required.', 403);
       if (busy || stopping) throw failure('An operator action is already running. Refresh when it completes.', 409);
@@ -89,17 +103,27 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig } =
       actionDone = new Promise(done => { finishAction = done; });
       try {
         lastError = null;
-        if (target.pathname === '/api/catalog/review') {
-          if (!catalogConfig) throw failure('Configure the existing catalog connection when starting this console.', 409);
+        if (target.pathname.startsWith('/api/discovery/')) {
+          if (!discovery) throw failure('This console uses an existing external catalog connection.', 409);
+          const action = target.pathname.slice('/api/discovery/'.length);
+          const allowed = { review: ['id', 'sellerId', 'sourceURL'], create: ['reviewId'], start: [], stop: ['instanceId'] }[action];
+          if (Object.keys(input).some(key => !allowed.includes(key))) throw failure('Unknown discovery action field.');
+          catalogReview = null;
+          send(200, await discovery[action](action === 'review'
+            ? { releaseId: input.id, sellerId: input.sellerId, sourceURL: input.sourceURL } : input)); return;
+        } else if (target.pathname === '/api/catalog/review') {
+          const config = catalogConnection();
+          if (!config) throw failure('Start discovery in this console before reviewing publication.', 409);
           if (Object.keys(input).some(key => !['id', 'action', 'routeId', 'reason'].includes(key))) throw failure('Unknown catalog review field.');
-          catalogReview = await reviewReleaseCatalog(root, { config: catalogConfig, releaseId: input.id,
+          catalogReview = await reviewReleaseCatalog(root, { config, releaseId: input.id,
             action: input.action, routeId: input.routeId, reason: input.reason });
           send(200, catalogReview); return;
         } else if (target.pathname === '/api/catalog/apply') {
-          if (!catalogConfig || !catalogReview || Object.keys(input).some(key => key !== 'reviewId') || input.reviewId !== catalogReview.id)
+          const config = catalogConnection();
+          if (!config || !catalogReview || Object.keys(input).some(key => key !== 'reviewId') || input.reviewId !== catalogReview.id)
             throw failure('Review the current catalog changes in this console first.', 409);
           const reviewed = catalogReview; catalogReview = null;
-          send(200, await applyReleaseCatalog(root, { config: catalogConfig, review: reviewed })); return;
+          send(200, await applyReleaseCatalog(root, { config, review: reviewed })); return;
         } else if (target.pathname === '/api/cache/invalidate') {
           if (!managed || input.instanceId !== managed.observation.instanceId)
             throw failure('This console does not own that running seller cache. Refresh.', 409);
@@ -147,8 +171,13 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig } =
     closing = (async () => {
       try {
         await actionDone;
-        if (managed) await managed.close();
-        await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); });
+        try { if (managed) await managed.close(); }
+        finally {
+          try { await discovery?.close(); }
+          finally {
+            await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); });
+          }
+        }
         resolveClosed();
       } catch (error) { rejectClosed(error); throw error; }
     })();

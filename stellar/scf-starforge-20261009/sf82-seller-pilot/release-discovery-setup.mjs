@@ -98,14 +98,21 @@ async function sourceOf(root, releaseId, sourceURL) {
   return { source: sourceIdentity, permissions };
 }
 
+/** Review the same source-derived enrollment before creating its private identity. */
+export async function reviewReleaseDiscoverySetup(root, { releaseId, sellerId, sourceURL } = {}) {
+  if (typeof sellerId !== 'string' || !/^[A-Za-z0-9_.:-]{1,128}$/.test(sellerId)) fail('DISCOVERY_SELLER_ID_REQUIRED');
+  const original = await sourceOf(resolve(root), releaseId, sourceURL);
+  if (jsonBytes(original).length > MAX_SETUP_BYTES - 8192) fail('DISCOVERY_SETUP_SOURCE_LIMIT');
+  return { sellerId, ...original };
+}
+
 /** Create once from the actual retained merchant. No key or policy is overwritten. */
 export async function createReleaseDiscoverySetup(root, { directory, releaseId, sellerId, sourceURL } = {}) {
   if (process.platform === 'win32') fail('POSIX_PRIVATE_PERMISSIONS_REQUIRED');
   if (typeof directory !== 'string' || !directory.trim()) fail('DISCOVERY_SETUP_DIRECTORY_REQUIRED');
-  if (typeof sellerId !== 'string' || !/^[A-Za-z0-9_.:-]{1,128}$/.test(sellerId)) fail('DISCOVERY_SELLER_ID_REQUIRED');
   root = resolve(root); directory = resolve(directory); separate(root, directory);
-  const original = await sourceOf(root, releaseId, sourceURL);
-  if (jsonBytes(original).length > MAX_SETUP_BYTES - 8192) fail('DISCOVERY_SETUP_SOURCE_LIMIT');
+  const reviewed = await reviewReleaseDiscoverySetup(root, { releaseId, sellerId, sourceURL });
+  const original = { source: reviewed.source, permissions: reviewed.permissions };
   const parent = dirname(directory);
   if (await realpath(parent) !== parent) fail('DISCOVERY_REAL_PARENT_REQUIRED');
   // mkdir is exclusive. A failed setup retains its private files for the owner;
@@ -145,8 +152,9 @@ export async function createReleaseDiscoverySetup(root, { directory, releaseId, 
 }
 
 /** Reopen exact public setup and original source without reading signing bytes. */
-export async function inspectReleaseDiscoverySetup(root, { directory } = {}) {
+export async function inspectReleaseDiscoverySetup(root, { directory, includeEnrollment = false } = {}) {
   if (typeof directory !== 'string' || !directory.trim()) fail('DISCOVERY_SETUP_DIRECTORY_REQUIRED');
+  if (typeof includeEnrollment !== 'boolean') fail('DISCOVERY_INSPECTION_OPTIONS_INVALID');
   root = resolve(root); directory = resolve(directory); separate(root, directory);
   await privateDirectory(directory);
   let record;
@@ -192,7 +200,8 @@ export async function inspectReleaseDiscoverySetup(root, { directory } = {}) {
     publicKeySha256: record.publicKeySha256, source: record.source, permissions: record.permissions,
     connectionFile: join(directory, FILES.connection), policyFile: join(directory, FILES.policy),
     enrollmentFile: join(directory, FILES.enrollment), catalogDirectory: connection.directory,
-    workspaceDirectory: join(directory, 'workspace'), policySha256: record.fingerprints.policy };
+    workspaceDirectory: join(directory, 'workspace'), policySha256: record.fingerprints.policy,
+    ...(includeEnrollment ? { enrollment: documents.enrollment } : {}) };
 }
 
 /** Own only the original services started by this call. Close UI before its writer. */

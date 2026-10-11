@@ -1,5 +1,11 @@
 # SQLite → paid SF30 query service
 
+For a reviewed data product with stable pages across database changes, use the
+[SQLite dataset publisher](publisher/README.md). It exports an approved named
+query in one native read transaction and composes the existing dataset version
+store, review browser and buyer handoff. The current-query service below remains
+the original live SQLite interface.
+
 Expose selected results from an operator-owned SQLite database through the **existing SF30 seller**, rather than dumping the database into CSV or adding another payment server. Each named query has fixed operator-written SQL, explicit output columns and typed bound parameters. HTTP callers supply values, never SQL, database paths, table names or projection names.
 
 This is an application data adapter. `../serve.mjs`, the original native x402 verifier/settlement/cancellation paths, developer explorer and operations dashboard remain authoritative. A source handler runs only when that seller reaches its existing application-handler stage.

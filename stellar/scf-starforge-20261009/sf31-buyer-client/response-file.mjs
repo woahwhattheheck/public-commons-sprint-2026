@@ -126,7 +126,7 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
     throw error;
   }
 
-  async function saveOnce(result, signal) {
+  async function saveOnce(result, signal, byteSource = false) {
     let reader = null, timer = null, onExternalAbort = null, complete = false;
     const stop = () => { throw controller.signal.reason; };
     const check = () => { if (controller.signal.aborted) stop(); };
@@ -140,17 +140,37 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       }
       timer = setTimeout(() => controller.abort(new BuyerResponseFileError('RESPONSE_FILE_TIMEOUT')), timeoutMs);
       check();
-      const response = result?.response;
-      if (!(response instanceof Response) || !response.ok)
-        throw new BuyerResponseFileError('RESPONSE_FILE_HTTP_STATUS', 'a returned 2xx Response is required');
-      if (response.bodyUsed || response.body?.locked)
-        throw new BuyerResponseFileError('RESPONSE_FILE_BODY_UNAVAILABLE', 'save the unread original response');
+      let body, contentType, objectMetadata = {};
+      if (byteSource) {
+        if (!(result.bytes instanceof Uint8Array) || result.bytes.byteLength > maxBytes)
+          throw new BuyerResponseFileError('RESPONSE_FILE_BYTE_SOURCE_INVALID');
+        if (typeof result.contentType !== 'string' || result.contentType.length > 256 ||
+            /[\x00-\x1f\x7f]/.test(result.contentType))
+          throw new BuyerResponseFileError('RESPONSE_FILE_BYTE_TYPE_INVALID');
+        // Blob snapshots the caller's bytes. This is local serialization, with
+        // no fabricated HTTP status, network response or payment outcome.
+        body = new Blob([result.bytes]).stream();
+        contentType = result.contentType;
+      } else {
+        const response = result?.response;
+        if (!(response instanceof Response) || !response.ok)
+          throw new BuyerResponseFileError('RESPONSE_FILE_HTTP_STATUS', 'a returned 2xx Response is required');
+        if (response.bodyUsed || response.body?.locked)
+          throw new BuyerResponseFileError('RESPONSE_FILE_BODY_UNAVAILABLE', 'save the unread original response');
+        body = response.body; contentType = response.headers.get('content-type');
+        objectMetadata = {
+          contentRange: response.headers.get('content-range'),
+          contentSha256: response.headers.get('x-content-sha256'),
+          snapshot: response.headers.get('x-sf30-object-snapshot'),
+          totalBytes: response.headers.get('x-sf30-object-bytes'),
+        };
+      }
       // Count the bytes Fetch exposes, not Content-Length: compression can make
       // that header describe a different representation than this stream.
       const hash = createHash('sha256');
-      if (response.body) reader = response.body.getReader();
+      if (body) reader = body.getReader();
       if (pins.expectedContentType !== undefined &&
-          response.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== pins.expectedContentType)
+          contentType?.split(';', 1)[0].trim().toLowerCase() !== pins.expectedContentType)
         throw new BuyerResponseFileError('RESPONSE_FILE_TYPE_MISMATCH');
       while (reader) {
         check();
@@ -182,7 +202,7 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       await file.close();
       file = null;
       check();
-      const saved = { path: finalPath, bytes, sha256: hash.digest('hex'), contentType: response.headers.get('content-type') };
+      const saved = { path: finalPath, bytes, sha256: hash.digest('hex'), contentType };
       // A completed transfer is not yet an accepted product. Leave a mismatched
       // private partial for reconciliation; never publish it under the buyer's name.
       if (pins.expectedBytes !== undefined && bytes !== pins.expectedBytes)
@@ -190,12 +210,6 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       if (pins.expectedSha256 !== undefined && saved.sha256 !== pins.expectedSha256)
         throw new BuyerResponseFileError('RESPONSE_FILE_DIGEST_MISMATCH');
       if (Object.keys(pins).length) saved.verifiedAgainst = { ...pins };
-      const objectMetadata = {
-        contentRange: response.headers.get('content-range'),
-        contentSha256: response.headers.get('x-content-sha256'),
-        snapshot: response.headers.get('x-sf30-object-snapshot'),
-        totalBytes: response.headers.get('x-sf30-object-bytes'),
-      };
       if (Object.values(objectMetadata).some(value => value !== null))
         saved.objectMetadata = objectMetadata;
       // link is atomic and fails when the destination exists; rename would
@@ -236,6 +250,14 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
         return Promise.reject(new BuyerResponseFileError('RESPONSE_FILE_NOT_PREPARED', state));
       state = 'SAVING';
       activeSave = saveOnce(result, signal);
+      return activeSave;
+    },
+    /** Save already-returned non-HTTP bytes through the same reserved writer. */
+    saveBytes(bytes, { contentType = 'application/octet-stream', signal } = {}) {
+      if (state !== 'PREPARED')
+        return Promise.reject(new BuyerResponseFileError('RESPONSE_FILE_NOT_PREPARED', state));
+      state = 'SAVING';
+      activeSave = saveOnce({ bytes, contentType }, signal, true);
       return activeSave;
     },
     async abort() {
