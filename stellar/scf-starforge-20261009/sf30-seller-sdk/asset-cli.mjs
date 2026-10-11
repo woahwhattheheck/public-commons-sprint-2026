@@ -18,10 +18,12 @@ const USAGE = `SF30 file products (no payments or network requests)
   node asset-cli.mjs inspect --file FILE --type MIME [--name DOWNLOAD_NAME]
   node asset-cli.mjs bundle --config SELLER_JSON --out NEW_DIRECTORY
   node asset-cli.mjs verify --directory BUNDLE_DIRECTORY
+  node asset-cli.mjs catalog --directory BUNDLE_DIRECTORY --out NEW_JSON_FILE
 
 inspect prints a pinned responseAsset descriptor and the required byte limit.
 bundle copies declarative asset-only routes to a private, portable directory.
 verify reads every packaged byte and checks config, route and content digests.
+catalog exports content-free native offers and pinned product metadata for SF88.
 Serve seller.json with the EXISTING serve.mjs; facilitator configuration stays explicit.`;
 
 async function jsonFile(path) {
@@ -109,7 +111,7 @@ export async function createAssetBundle(input, { configDir = process.cwd(), out 
   return { directory, manifest, uniqueFiles: unique.size };
 }
 
-export async function verifyAssetBundle(directory) {
+async function verifiedAssetBundle(directory) {
   const dir = resolve(directory);
   const { value: manifest } = await jsonFile(join(dir, 'manifest.json'));
   if (!object(manifest) || manifest.schema !== schema || manifest.config !== 'seller.json' ||
@@ -133,14 +135,52 @@ export async function verifyAssetBundle(directory) {
       throw new Error('Bundle manifest does not match the packaged route');
     seen.add(entry.routeId);
   }
-  return { verified: true, directory: dir, routes: seen.size,
-    totalRouteBytes: prepared.retainedBytes, configSha256: manifest.configSha256 };
+  return { config, prepared, verification:{ verified: true, directory: dir, routes: seen.size,
+    totalRouteBytes: prepared.retainedBytes, configSha256: manifest.configSha256 } };
+}
+
+export async function verifyAssetBundle(directory) {
+  return (await verifiedAssetBundle(directory)).verification;
+}
+
+/** Public catalog data only: never copy asset bytes, operator configuration,
+ * source paths or manifest config hashes into a buyer-facing listing. */
+export async function exportAssetCatalog(directory, out) {
+  if (typeof out !== 'string' || !out.trim()) throw new TypeError('New catalog output path required');
+  // Use the same validated config and immutable snapshots as verification;
+  // no second read, re-hash or retained copy of the merchant's file collection.
+  const {config, prepared} = await verifiedAssetBundle(directory);
+  if (!config.publicOrigin) throw new TypeError('Catalog export requires the real public HTTPS origin');
+  const origin = new URL(config.publicOrigin).origin;
+  const resources = config.routes.filter(route => route.definition.method.toUpperCase() === 'GET').map(route => {
+    const offer = compileAssetRouteOffer(route, origin, compileHttpSellerOffer);
+    const metadata = prepared.assets.get(route.id).metadata;
+    return {...offer, type:'http', extensions:{...offer.extensions,
+      'stellar-forge-asset':{schema:'stellar-forge.asset-product.v1', ...metadata}}};
+  });
+  if (!resources.length) throw new TypeError('A downloadable product catalog requires at least one GET route');
+  const catalog = {resources};
+  const output = encoded(catalog);
+  if (output.length > 1024 * 1024) throw new RangeError('Catalog exceeds the original buyer discovery limit');
+  const destination = resolve(out);
+  // durableFile uses wx. Never delete or replace a pre-existing operator file.
+  let created = false, file;
+  try {
+    file = await open(destination, 'wx', 0o600); created = true;
+    await file.writeFile(output); await file.sync();
+  } catch (error) {
+    if (file) { await file.close().catch(() => {}); file = null; }
+    if (created) await rm(destination, {force:true}).catch(() => {});
+    throw error;
+  } finally { if (file) await file.close(); }
+  return {catalogPath:destination, resources:resources.length,
+    catalogSha256:hash(output), contentIncluded:false};
 }
 
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { console.log(USAGE); return; }
   const [command, ...rest] = args;
-  const allowed = { inspect: ['--file', '--type', '--name'], bundle: ['--config', '--out'], verify: ['--directory'] }[command];
+  const allowed = { inspect: ['--file', '--type', '--name'], bundle: ['--config', '--out'], verify: ['--directory'], catalog: ['--directory','--out'] }[command];
   if (!allowed) throw new TypeError(USAGE);
   const options = new Map();
   for (let i = 0; i < rest.length; i += 2) {
@@ -160,6 +200,9 @@ export async function main(args = process.argv.slice(2)) {
     const path = resolve(options.get('--config'));
     result = await createAssetBundle((await jsonFile(path)).value,
       { configDir: dirname(path), out: options.get('--out') });
+  } else if (command === 'catalog') {
+    if (!options.has('--directory') || !options.has('--out')) throw new TypeError(USAGE);
+    result = await exportAssetCatalog(options.get('--directory'), options.get('--out'));
   } else {
     if (!options.has('--directory')) throw new TypeError(USAGE);
     result = await verifyAssetBundle(options.get('--directory'));
