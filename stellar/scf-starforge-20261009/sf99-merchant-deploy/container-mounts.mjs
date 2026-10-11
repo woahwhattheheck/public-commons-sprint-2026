@@ -1,6 +1,7 @@
 // MIT. Exact-path bindings for the original SF99 merchant container.
 import { lstat, realpath } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
+import { validateOAuthHostDirectories } from '../sf30-seller-sdk/oauth-connections/deployment.mjs';
 
 const inside = (root, file) => file === root || file.startsWith(root + '/');
 const overlaps = (left, right) => inside(left, right) || inside(right, left);
@@ -100,8 +101,14 @@ export async function prepareMounts(host, container, bundle) {
       label + ' must retain private 0700 owner read/write/traverse access: ' + path);
   }));
 
+  const oauth = await Promise.all(validateOAuthHostDirectories(host, { bundle }).map(entry =>
+    existing(entry.directory, 'Private OAuth store ' + entry.directoryEnv, 'directory')));
+  for (const store of oauth) need(store.info.uid === container.uid && (store.info.mode & 0o777) === 0o700,
+    'Each private OAuth store must retain 0700 access and belong to the selected container UID');
   const roots = await Promise.all(extras.map(value => existing(value, 'readOnlyRoots entry')));
   for (const root of roots) {
+    need(!oauth.some(store => overlaps(root.path, store.path)),
+      'A readOnlyRoots entry cannot cover or subdivide a private writable OAuth store');
     need(!overlaps(root.path, state.path),
       'A readOnlyRoots entry cannot cover or subdivide the writable merchant state: ' + root.path);
     need(!(root.path !== source.path && inside(root.path, source.path)),
@@ -120,6 +127,7 @@ export async function prepareMounts(host, container, bundle) {
   const selected = [
     ...(sourceMode === 'bind' ? [{ ...source, readOnly: true, role: 'source' }] : []),
     { ...state, readOnly: false, role: 'state' },
+    ...oauth.map(store => ({ ...store, readOnly: false, role: 'oauth' })),
     { ...output, readOnly: true, role: 'bundle' },
     ...roots.map(root => ({ ...root, readOnly: true, role: 'extra' })),
     ...files.map(file => ({ ...file, readOnly: true, role: 'input' })),

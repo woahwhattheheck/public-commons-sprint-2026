@@ -240,6 +240,7 @@
     "python-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/cli.mjs",
     "revenue-report": "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
     "openapi-workspace": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+    "oauth-connection": "stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/cli.mjs",
     "buyer-runbook": "stellar/scf-starforge-20261009/buyer-runbook/cli.mjs",
     "merchant-readiness": "stellar/scf-starforge-20261009/sf101-merchant-account-readiness/merchant-cli.mjs",
     "dataset-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workspace.mjs",
@@ -364,6 +365,18 @@
     "./package.json": "./package.json",
     "./manifest.json": "./manifest.json",
     "./seller/developer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer-portal.mjs",
+    "./seller/oauth-connections": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/connection.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/connection.mjs"
+    },
+    "./seller/oauth-connections/profile": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/profile.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/profile.mjs"
+    },
+    "./seller/oauth-connections/host": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/host.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/host.mjs"
+    },
     "./seller/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-generator.mjs",
     "./seller/client-export": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs",
     "./seller/releases": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs",
