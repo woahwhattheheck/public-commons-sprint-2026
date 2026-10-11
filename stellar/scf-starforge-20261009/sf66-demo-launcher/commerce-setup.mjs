@@ -16,12 +16,13 @@ import { selectServiceRoute } from '../sf30-seller-sdk/route-path.mjs';
 import { createLiveRequestAdmission } from '../sf89-live-request-admission/index.mjs';
 import { readConfig as readFacilitator, reviewConfig } from '../native-facilitator/config.mjs';
 import { initializeWorkspace, openWorkspace } from '../sf88-operator-buyer-cli/workspace.mjs';
-import { config as readBuyer, operation, execution, responseFile, buyerTransport } from '../sf88-operator-buyer-cli/config.mjs';
+import { config as readBuyer, operation, execution, responseFile, requestTimeoutMs, buyerTransport } from '../sf88-operator-buyer-cli/config.mjs';
 import { validateNativeSignerConfiguration } from '../sf88-operator-buyer-cli/native-signer.mjs';
 import { absolute, parseJson, readPrivateFile } from '../sf103-native-buyer-signer/operator.mjs';
 import { readUpstreamCommerce, describeUpstreamCommerce, readUpstreamPurchaseTicket,
   upstreamPurchaseTicketView } from './commerce-upstream.mjs';
 import { preparePythonCommerce, describePythonCommerce } from './commerce-python.mjs';
+import { readJsonrpcCommerce, describeJsonrpcCommerce, validateJsonrpcCommerceRequest } from './commerce-jsonrpc.mjs';
 
 const SCHEMA = 'stellar-forge.commerce-setup.v1';
 const SNAPSHOT = 'stellar-forge.prepared-commerce.v1';
@@ -33,6 +34,7 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const commerceCli = fileURLToPath(new URL('./commerce-cli.mjs', import.meta.url));
 const commerceConsole = fileURLToPath(new URL('./commerce-console.mjs', import.meta.url));
 const pythonMerchantCli = fileURLToPath(new URL('../sf30-seller-sdk/python/merchant.mjs', import.meta.url));
+const jsonrpcMerchantCli = fileURLToPath(new URL('../sf30-seller-sdk/jsonrpc/cli.mjs', import.meta.url));
 const buyerCli = fileURLToPath(new URL('../sf88-operator-buyer-cli/cli.mjs', import.meta.url));
 const thisCli = fileURLToPath(import.meta.url);
 function need(ok, code) { if (!ok) throw Object.assign(new Error(code), { code }); }
@@ -104,27 +106,30 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   const input = fields(parseJson(source),
     ['schema','seller','operator','purchases','operationsPort','operationControls'], 'COMMERCE_SETUP_FIELDS_INVALID');
   need(input.schema === SCHEMA, 'COMMERCE_SETUP_SCHEMA_INVALID');
-  const seller = fields(input.seller, ['config','python','handlers','upstreams','allowLoopbackUpstream',
+  const seller = fields(input.seller, ['config','python','jsonrpc','handlers','upstreams','allowLoopbackUpstream',
     'availabilityDirectory','facilitatorConfig','port'],
     'COMMERCE_SETUP_SELLER_INVALID');
-  need([seller.config, seller.python].filter(Boolean).length === 1,
+  need([seller.config, seller.python, seller.jsonrpc].filter(Boolean).length === 1,
     'COMMERCE_SETUP_ONE_MERCHANT_CONFIGURATION_REQUIRED');
   need(!seller.python || seller.handlers === undefined, 'COMMERCE_SETUP_PYTHON_USES_ORIGINAL_HANDLERS');
+  need(!seller.jsonrpc || seller.handlers === undefined, 'COMMERCE_SETUP_JSONRPC_USES_ORIGINAL_HANDLERS');
   need(seller.upstreams === undefined || seller.config && seller.handlers === undefined,
     'COMMERCE_UPSTREAM_USES_CONFIGURED_APPLICATION');
-  need(seller.allowLoopbackUpstream === undefined || seller.upstreams !== undefined &&
+  need(seller.allowLoopbackUpstream === undefined || (seller.upstreams !== undefined || seller.jsonrpc !== undefined) &&
     typeof seller.allowLoopbackUpstream === 'boolean', 'COMMERCE_UPSTREAM_LOOPBACK_INVALID');
   need(input.operationControls === undefined || typeof input.operationControls === 'boolean',
     'COMMERCE_OPERATION_CONTROLS_INVALID');
   const availabilityDirectory = seller.availabilityDirectory === undefined ? null :
     validateAvailabilityDirectory(seller.availabilityDirectory);
-  const sellerPath = seller.python ?? seller.config;
+  const sellerPath = seller.python ?? seller.jsonrpc ?? seller.config;
   absolute(sellerPath); absolute(seller.facilitatorConfig);
   // Validate the original private bytes before its readers resolve response paths.
   const sellerBytes = await readPrivateFile(sellerPath, 1048576);
   const facilitatorBytes = await readPrivateFile(seller.facilitatorConfig);
   const python = seller.python ? await preparePythonCommerce(seller.python) : null;
-  const merchant = python?.compiled.service ?? await readSellerConfig(seller.config);
+  const jsonrpc = seller.jsonrpc ? await readJsonrpcCommerce(seller.jsonrpc,
+    { allowLoopback: seller.allowLoopbackUpstream === true, expectedSha256: sha(sellerBytes) }) : null;
+  const merchant = python?.compiled.service ?? jsonrpc?.service ?? await readSellerConfig(seller.config);
   const upstream = seller.upstreams === undefined ? null : await readUpstreamCommerce(seller.upstreams, merchant,
     {allowLoopback:seller.allowLoopbackUpstream === true});
   need(!input.operationControls || upstream &&
@@ -145,7 +150,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     'COMMERCE_SETUP_ADVERTISED_TERMS_OUTSIDE_FACILITATOR');
   }
   const handlers = seller.handlers === undefined ? null : await regularSource(seller.handlers);
-  need(python || upstream || handlers || !merchant.routes.some(route => route.handler || route.admit),
+  need(python || upstream || jsonrpc || handlers || !merchant.routes.some(route => route.handler || route.admit),
     'COMMERCE_SETUP_HANDLER_MODULE_REQUIRED');
   const operator = fields(input.operator,
     ['actor','service','python','payer','secretEnv','signerProvider','httpsProxyEnv','totalAtomic','dailyAtomic'],
@@ -170,7 +175,8 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   const selections = [], intents = new Set();
   for (const [index, value] of input.purchases.entries()) {
     const selected = fields(value, ['routeId','acceptIndex','intentId','method','path','query',
-      'bodyFile','ticketFile','ticketHeader','saveResponse','responseMaxBytes','responseTimeoutMs'], 'COMMERCE_SETUP_SELECTION_INVALID');
+      'bodyFile','ticketFile','ticketHeader','saveResponse','responseMaxBytes','responseTimeoutMs',
+      'requestTimeoutMs'], 'COMMERCE_SETUP_SELECTION_INVALID');
     const route = compiled.routes.find(route => route.id === selected.routeId);
     need(route && selected.method === route.method, 'COMMERCE_SETUP_EXPLICIT_ROUTE_METHOD_REQUIRED');
     need(Number.isInteger(selected.acceptIndex) && selected.acceptIndex >= 0 &&
@@ -196,6 +202,8 @@ export async function reviewCommerceSetup({ configFile, directory }) {
         ...(body === null ? {} : {body:JSON.parse(bodyText)})});
       need(valid === true, valid?.body?.error ?? 'COMMERCE_SETUP_REQUEST_SCHEMA_REJECTED');
     }
+    if (jsonrpc) validateJsonrpcCommerceRequest(jsonrpc, route.id, { method: route.method,
+      url: target, query: queryObject(target), body: JSON.parse(bodyText) });
     const saveResponse = selected.saveResponse ?? route.method !== 'HEAD';
     need(typeof saveResponse === 'boolean' && !(route.method === 'HEAD' && saveResponse),
       'COMMERCE_SETUP_HEAD_HAS_NO_RESPONSE_BODY');
@@ -213,12 +221,15 @@ export async function reviewCommerceSetup({ configFile, directory }) {
       ...(body === null ? {} : {bodyFile:join(directory, 'bodies', key + '.json')})});
     const ticket = await readUpstreamPurchaseTicket(selected, op, upstream, originalRoute);
     intents.add(op.intentId);
-    const draft = {operation:op, captureBody:false, ...(saveResponse ? {
+    const draft = {operation:op, captureBody:false,
+      ...(selected.requestTimeoutMs === undefined ? {} : {requestTimeoutMs:selected.requestTimeoutMs}),
+      ...(saveResponse ? {
       responseFile:{destination:join(directory, 'responses', key + '.bin'),
         ...(selected.responseMaxBytes === undefined ? {} : {maxBytes:selected.responseMaxBytes}),
         ...(selected.responseTimeoutMs === undefined ? {} : {timeoutMs:selected.responseTimeoutMs})},
     } : {})};
     responseFile(draft);
+    requestTimeoutMs(draft);
     selections.push({key, routeId:route.id, acceptIndex:selected.acceptIndex,
       originalOffer:structuredClone(route.offer), draft, body, ticket,
       bodySha256:body === null ? null : sha(body), bodyBytes:body?.length ?? 0});
@@ -241,6 +252,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     publicOrigin:merchant.publicOrigin, network:facilitator.network,
     ...(python ? {python:describePythonCommerce(python)} : {}),
     ...(upstream ? {upstreams:describeUpstreamCommerce(upstream)} : {}),
+    ...(jsonrpc ? {jsonrpc:describeJsonrpcCommerce(jsonrpc)} : {}),
     operationControls:input.operationControls === true,
     availabilityDirectory,
     payer:operator.payer, asset:first.asset, recipient:first.payTo, buyerTransport:transport,
@@ -251,9 +263,9 @@ export async function reviewCommerceSetup({ configFile, directory }) {
       method:item.draft.operation.method, url:item.draft.operation.url, acceptIndex:item.acceptIndex,
       originalTerms:item.originalOffer.accepts[item.acceptIndex], bodyBytes:item.bodyBytes,
       bodySha256:item.bodySha256, operationTicket:upstreamPurchaseTicketView(item.ticket),
-      responseFile:item.draft.responseFile ?? null})),
+      responseFile:item.draft.responseFile ?? null, requestTimeoutMs:requestTimeoutMs(item.draft)})),
     signingMaterialLoaded:false, paymentAttempts:0};
-  return {summary, merchant, facilitator, operator, selections, maximum, handlers, python, upstream,
+  return {summary, merchant, facilitator, operator, selections, maximum, handlers, python, upstream, jsonrpc,
     operationControls:input.operationControls === true,
     availabilityDirectory,
     sellerPort:port(seller.port, 8423), operationsPort:port(input.operationsPort, 0),
@@ -262,6 +274,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
       ...(python ? {pythonApplication:python.compiled.options.application,
         pythonApplicationSha256:python.applicationSha256} : {}),
       ...(upstream ? {upstreamsFile:upstream.file, upstreamsSha256:upstream.sha256} : {}),
+      ...(jsonrpc ? {jsonrpcFile:jsonrpc.file, jsonrpcSha256:jsonrpc.sha256} : {}),
       facilitatorSha256:sha(facilitatorBytes)}};
 }
 
@@ -270,7 +283,7 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
   const reviewed = await reviewCommerceSetup({configFile, directory});
   await privateDirectory(dirname(directory));
   const {initializeCommerce, bindMerchantPurchase} = await import('./commerce.mjs');
-  const {summary, merchant, facilitator, operator, selections, maximum, handlers, python, upstream} = reviewed;
+  const {summary, merchant, facilitator, operator, selections, maximum, handlers, python, upstream, jsonrpc} = reviewed;
   const compiled = compileMerchant(merchant);
   // Reuse the session's own offer selection rules before creating any workspace.
   for (const item of selections) need(bindMerchantPurchase(compiled, item.draft).acceptIndex === item.acceptIndex,
@@ -294,6 +307,7 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
     await retain(join(directory, 'seller.json'), merchant);
     if (python) await retain(join(directory, 'python.json'), python.declaration);
     if (upstream) await retain(join(directory, 'upstreams.json'), upstream.sourceBytes);
+    if (jsonrpc) await retain(join(directory, 'jsonrpc.json'), jsonrpc.sourceBytes);
     await retain(join(directory, 'facilitator.json'), facilitator);
     const workspace = join(directory, 'operator');
     const args = ['--config', join(directory, 'buyers', maximum.key + '-review.json'), '--dir', workspace,
@@ -308,6 +322,7 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
     for (const item of selections) {
       const configured = {...base, ...item.draft};
       if (!item.draft.responseFile) delete configured.responseFile;
+      if (item.draft.requestTimeoutMs === undefined) delete configured.requestTimeoutMs;
       execution(configured);
       const path = join(directory, 'buyers', item.key + '.json');
       await retain(path, configured);
@@ -315,9 +330,11 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
     }
     const planFile = join(directory, 'commerce-plan.json');
     await retain(planFile, {schema:'stellar-forge.commerce-plan.v1',
-      seller:{...(python ? {python:join(directory, 'python.json')} : {config:join(directory, 'seller.json')}),
+      seller:{...(python ? {python:join(directory, 'python.json')} : jsonrpc ? {jsonrpc:join(directory, 'jsonrpc.json')} :
+        {config:join(directory, 'seller.json')}),
         ...(reviewed.availabilityDirectory ? {availabilityDirectory:reviewed.availabilityDirectory} : {}),
         ...(upstream ? {upstreams:join(directory, 'upstreams.json'), allowLoopbackUpstream:upstream.allowLoopback} : {}),
+        ...(jsonrpc ? {allowLoopbackUpstream:jsonrpc.allowLoopback} : {}),
         facilitatorConfig:join(directory, 'facilitator.json'),
         port:reviewed.sellerPort, ...(handlers ? {handlers:handlers.path} : {})},
       operationsPort:reviewed.operationsPort, operationControls:reviewed.operationControls, buyers});
@@ -327,6 +344,8 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
       'COMMERCE_SETUP_PYTHON_SOURCE_CHANGED');
     need(!upstream || initializedSession.upstreams?.sha256 === upstream.sha256,
       'COMMERCE_UPSTREAM_CONFIG_CHANGED');
+    need(!jsonrpc || initializedSession.jsonrpc?.sha256 === jsonrpc.sha256,
+      'COMMERCE_JSONRPC_PLAN_CHANGED');
     await retain(join(directory, 'prepared.json'), {
       schema:SNAPSHOT, createdAt:new Date().toISOString(), directory, session, workspace,
       planFile, source:reviewed.source, files:captured, handlers,
@@ -371,6 +390,9 @@ export async function inspectCommerceSetup(directory) {
       console:[process.execPath, commerceConsole, 'start', '--directory', record.session],
       ...(record.summary.python ? {diagnosePython:[process.execPath, pythonMerchantCli,
         'diagnose', '--config', join(record.session, 'python.json')]} : {}),
+      ...(record.summary.jsonrpc ? {diagnoseJsonrpc:[process.execPath, jsonrpcMerchantCli,
+        'diagnose', '--plan', join(record.session, 'jsonrpc.json'),
+        ...(record.summary.jsonrpc.allowLoopback ? ['--allow-loopback-upstream'] : [])]} : {}),
     }};
 }
 
@@ -388,7 +410,8 @@ export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') {
     process.stdout.write('Usage: commerce-setup.mjs review|prepare --config /private/setup.json --directory /private/new-commerce\n' +
       '       commerce-setup.mjs inspect --directory /private/prepared-commerce\n' +
-      'Preparation creates one original testnet operator workspace and commerce session. Use commerce-cli.mjs for the actual native purchase.\n');
+      'Preparation creates one original testnet operator workspace and commerce session. Use commerce-cli.mjs for the actual native purchase.\n' +
+      'For a retained Stellar JSON-RPC product, set seller.jsonrpc and follow JSONRPC_COMMERCE.md.\n');
     return;
   }
   const [command, ...rest] = args, opt = options(rest);
