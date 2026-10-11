@@ -25,6 +25,11 @@ for (const [address, prefix] of [
 ]) denied.addSubnet(address, prefix, 'ipv4');
 
 const publicV4 = (address) => isIP(address) === 4 && !denied.check(address, 'ipv4');
+// Some sandbox VMs resolve public HTTPS names to a fixed 198.18/15 egress
+// gateway rather than a public A record. This opt-in is an EXACT resolved-IP
+// assertion, not a general permission to connect to private network targets.
+const sandboxGatewayRange = new BlockList();
+sandboxGatewayRange.addSubnet('198.18.0.0', 15, 'ipv4');
 const CHALLENGE = new Set(['payment-required', 'www-authenticate']);
 // Query parameters can carry access credentials under names beyond "token".
 // Normalize separated/camel-case keys before attempting an original HTTPS capture.
@@ -40,7 +45,7 @@ function hasCredentialQuery(target) {
 }
 
 export function parseArgs(argv) {
-  const allowed = new Set(['--url', '--allow-origin', '--out', '--method', '--timeout-ms']);
+  const allowed = new Set(['--url', '--allow-origin', '--out', '--method', '--timeout-ms', '--allow-sandbox-gateway-ip']);
   if (argv.length % 2 !== 0) throw new CaptureError('USAGE_REQUIRES_VALUE_PAIRS');
   const args = new Map();
   for (let i = 0; i < argv.length; i += 2) {
@@ -61,19 +66,38 @@ export function parseArgs(argv) {
   if (!Number.isSafeInteger(timeout) || timeout < 1000 || timeout > 30000) throw new CaptureError('TIMEOUT_OUT_OF_RANGE');
   const out = args.get('--out');
   if (!isAbsolute(out) || out.includes('\0')) throw new CaptureError('OUTPUT_MUST_BE_ABSOLUTE_PATH');
-  return { target, out, method, timeout };
+  const sandboxGateway = args.get('--allow-sandbox-gateway-ip') ?? null;
+  if (sandboxGateway !== null &&
+      (isIP(sandboxGateway) !== 4 || !sandboxGatewayRange.check(sandboxGateway, 'ipv4'))) {
+    throw new CaptureError('SANDBOX_GATEWAY_IP_MUST_BE_19818_IPV4');
+  }
+  return { target, out, method, timeout, sandboxGateway };
 }
 
-export async function capture({ target, method, timeout }, { resolve = lookup, httpsRequest = request } = {}) {
+export async function capture({ target, method, timeout, sandboxGateway = null }, { resolve = lookup, httpsRequest = request } = {}) {
   // Resolve the ORIGINAL hostname once. Reject mixed internal/public answers and pin
   // a public IPv4 into the TLS connection, preventing later DNS rebinding.
   let answers;
   try { answers = await resolve(target.hostname, { family: 4, all: true }); }
   catch { throw new CaptureError('PUBLIC_IPV4_RESOLUTION_FAILED'); }
-  if (!Array.isArray(answers) || answers.length === 0 || answers.some(a => a.family !== 4 || !publicV4(a.address))) {
+  if (!Array.isArray(answers) || answers.length === 0) {
     throw new CaptureError('DNS_HAS_NONPUBLIC_OR_NO_IPV4');
   }
-  const pinnedIP = answers[0].address;
+  let pinnedIP;
+  if (sandboxGateway !== null) {
+    // Exact operator-supplied gateway must match the VM's ONE DNS answer.
+    // Reject mixed public/internal answers; never allow arbitrary private IPs.
+    if (isIP(sandboxGateway) !== 4 || !sandboxGatewayRange.check(sandboxGateway, 'ipv4') ||
+        answers.length !== 1 || answers[0].family !== 4 || answers[0].address !== sandboxGateway) {
+      throw new CaptureError('SANDBOX_GATEWAY_DNS_MISMATCH');
+    }
+    pinnedIP = sandboxGateway;
+  } else {
+    if (answers.some(a => a.family !== 4 || !publicV4(a.address))) {
+      throw new CaptureError('DNS_HAS_NONPUBLIC_OR_NO_IPV4');
+    }
+    pinnedIP = answers[0].address;
+  }
   const raw = await new Promise((resolveResult, reject) => {
     const req = httpsRequest(target, {
       method,
@@ -83,6 +107,7 @@ export async function capture({ target, method, timeout }, { resolve = lookup, h
       lookup: (_host, _options, cb) => cb(null, pinnedIP, 4),
       signal: AbortSignal.timeout(timeout),
       rejectUnauthorized: true,
+      servername: target.hostname, // TLS certificate MUST authenticate the original approved host.
     }, (response) => {
       // Capturing only the two payment challenge headers preserves repeated
       // WWW-Authenticate lines without persisting incidental server headers.
@@ -104,6 +129,7 @@ export async function capture({ target, method, timeout }, { resolve = lookup, h
     collectedAtUtc: new Date().toISOString(),
     url: target.href,
     method,
+    transport: sandboxGateway ? 'operator-approved-19818-gateway-tls' : 'public-ipv4-tls',
     status: raw.status,
     headers: raw.headers,
   };
@@ -122,6 +148,7 @@ export async function run(argv) {
     capturedSha256: report.capturedSha256,
     collectedAtUtc: source.collectedAtUtc,
     httpStatus: report.httpStatus,
+    transport: source.transport,
     classification: report.classification,
     x402: { status: report.x402.status, optionCount: report.x402.offer?.optionCount ?? 0, error: report.x402.error },
     mpp: { status: report.mpp.status, challengeCount: report.mpp.challenges.length, error: report.mpp.error },
