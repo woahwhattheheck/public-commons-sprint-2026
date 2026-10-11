@@ -1,0 +1,58 @@
+/* MIT. Collection controls inherit the existing neutral merchant workspace. */
+.collection-workspace {min-width:0}
+.collection-source-form {display:grid;gap:16px}
+.collection-fields {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.collection-fields>div {min-width:0}
+.collection-options {font-size:12px}
+.collection-options>summary {cursor:pointer;font-weight:600}
+.collection-options .collection-fields {grid-template-columns:minmax(0,2fr) minmax(0,1fr);margin-top:14px}
+.collection-upload-queue {border-top:1px solid var(--border);padding-top:16px}
+.collection-upload-items {display:grid;gap:7px;margin:10px 0 15px;padding:0;list-style:none;max-height:230px;overflow:auto}
+.collection-upload-items li {display:flex;justify-content:space-between;gap:15px;align-items:flex-start;font-size:12px}
+.collection-upload-items strong {font-weight:550;overflow-wrap:anywhere;min-width:0}
+.collection-upload-items span {font-size:11px;color:var(--muted);flex:0 0 auto}
+.collection-upload-items button {font-size:10px;min-height:25px;padding:3px 6px;margin-left:8px}
+.collection-workspace #collection-metrics {grid-template-columns:repeat(5,minmax(0,1fr))}
+.collection-prepare-form {border-top:1px solid var(--border)}
+.collection-prepare-form .hint {margin:0}
+.collection-selected-heading {border-top:1px solid var(--border);padding-bottom:0}
+.collection-selected-heading .history-detail {max-width:45%;min-width:0;text-align:right}
+.collection-selected-heading .record-values {text-align:left}
+.collection-progress {margin:16px 20px 0}
+.collection-controls {padding-top:4px}
+.collection-controls .hint {flex-basis:100%;margin:3px 0 0}
+.collection-workspace .record-values {font-size:11px}
+.collection-workspace td {overflow-wrap:anywhere}
+.collection-workspace td:first-child:has(input[type=checkbox]) {width:38px}
+.collection-workspace td input[type=checkbox],.collection-workspace th input[type=checkbox] {margin:3px 0;vertical-align:top}
+.collection-workspace .record-detail .actions {margin-bottom:12px}
+.collection-workspace .record-detail details {margin-top:14px}
+.collection-publish {border-top:1px solid var(--border);display:grid;gap:13px}
+.collection-publish .hint {margin-top:5px}
+.collection-publish .table-wrap {border:1px solid var(--border);border-radius:3px}
+.collection-publish .table-wrap:empty {display:none}
+.collection-run-form {border-top:1px solid var(--border);padding-top:15px}
+.collection-workspace .job-result {font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:460px}
+.collection-workspace .native-reason {font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:6px}
+.collection-workspace .collection-filter-count {font-size:11px;color:var(--muted)}
+@media(max-width:1150px) {
+  .collection-workspace #collection-metrics {grid-template-columns:repeat(3,minmax(0,1fr))}
+  .collection-fields {grid-template-columns:1fr 1fr}
+  .collection-fields>div:last-child {grid-column:1/-1}
+  .collection-options .collection-fields>div:last-child {grid-column:auto}
+}
+@media(max-width:760px) {
+  .collection-workspace .table-wrap table {min-width:580px}
+  .collection-workspace #collection-metrics {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .collection-fields,.collection-options .collection-fields {grid-template-columns:1fr}
+  .collection-fields>div:last-child,.collection-options .collection-fields>div:last-child {grid-column:auto}
+  .collection-selected-heading {flex-direction:column;gap:12px}
+  .collection-selected-heading .history-detail {max-width:100%;width:100%;text-align:left}
+  .collection-progress {margin:15px 15px 0}
+  .collection-upload-items li {display:block}
+  .collection-upload-items span {display:block;margin-top:3px}
+  .collection-controls>button {flex:1 1 190px}
+  .collection-workspace .panel-heading {flex-wrap:wrap}
+  #collection-source-detail .record-values,#collection-result-detail .record-values {grid-template-columns:1fr;gap:4px}
+  #collection-source-detail .record-values dd,#collection-result-detail .record-values dd {margin-bottom:8px}
+}
