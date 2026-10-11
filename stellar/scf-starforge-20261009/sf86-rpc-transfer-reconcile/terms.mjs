@@ -85,18 +85,29 @@ export function validStrKey(value, type) {
 }
 export function checkOriginalTerms(record, payer) {
   requireTruth(object(record), 'INVALID_SF81_RECORD');
-  const { intentId, requirement:q, receipt:r, operatorReservation:p } = record;
+  const {intentId, requirement:q, receipt:r, operatorReservation:p}=record;
   requireTruth(typeof intentId === 'string' && INTENT.test(intentId), 'INVALID_INTENT_ID');
   requireTruth(object(q) && object(r), 'MISSING_NATIVE_TERMS_OR_RECEIPT');
   requireTruth(object(p) && p.schema === 'stellar-forge.sf62.result.v1' &&
     p.outcome === 'FRESH_RESERVATION_APPROVED' && p.request_id === intentId,
   'NO_MATCHING_SF81_RESERVATION');
-  requireTruth(q.scheme === 'exact', 'NOT_AN_EXACT_PAYMENT');
-  networkProfile(q.network);
   requireTruth(p.network === q.network && p.asset === q.asset &&
     p.reserved_atomic_units === q.amount, 'RESERVED_TERMS_MISMATCH');
+  return checkNativeTerms(record,payer,{allowPending:true});
+}
+/** Inspect a completed original native receipt through the same transfer checks. */
+export function checkReportedTerms(record,payer) {
+  return checkNativeTerms(record,payer,{allowPending:false});
+}
+function checkNativeTerms(record,payer,{allowPending}) {
+  requireTruth(object(record), 'INVALID_NATIVE_RECEIPT_RECORD');
+  const {intentId, requirement:q, receipt:r}=record;
+  requireTruth(typeof intentId === 'string' && INTENT.test(intentId), 'INVALID_INTENT_ID');
+  requireTruth(object(q) && object(r), 'MISSING_NATIVE_TERMS_OR_RECEIPT');
+  requireTruth(q.scheme === 'exact', 'NOT_AN_EXACT_PAYMENT');
+  networkProfile(q.network);
   requireTruth(r.network === q.network && (r.success === true ||
-    (r.success === false && r.errorReason === 'settlement_pending')),
+    (allowPending && r.success === false && r.errorReason === 'settlement_pending')),
   'NO_ELIGIBLE_SELLER_TRANSACTION_CLAIM');
   requireTruth(validStrKey(payer,'G'), 'INVALID_TRUSTED_PAYER');
   requireTruth(r.payer === payer, 'RECEIPT_PAYER_MISMATCH');
