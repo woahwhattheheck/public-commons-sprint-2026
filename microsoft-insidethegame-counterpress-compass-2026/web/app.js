@@ -8,7 +8,7 @@ const L = {
     opusTitle: 'AI match insight (optional)', opusAsk: 'Explain this moment', opusOff: 'Not configured', opusWait: 'Writing insight…', opusSlow: 'Still writing — the match stays fully usable.', opusFail: 'Insight unavailable right now; match captions keep working.', opusBusy: 'Insight is busy; try again in a little while.', opusAt: n => `Event ${n}`,
     share: 'Copy match link', shareCopied: 'Link copied. It opens this moment paused.', shareManual: 'Select and copy the link below.', shareHelp: 'Reopens this synthetic match at the selected event. The recipient needs access to this app.', shareLocal: 'Local address: the link opens only where this app is running.', badLink: 'This match link is invalid or no longer supported. A fresh match is ready.', clampedLink: 'The saved event is beyond this version of the match; showing its final event.',
     play: '▶ Play', pause: '❚❚ Pause', step: 'Next event', restart: 'Restart', ready: 'READY', live: 'LIVE', paused: 'PAUSED', ft: 'FULL TIME',
-    reconnecting: 'Reconnecting…', expiredSession: 'This match expired. Press Kick off for a new one.', loading: 'Setting up match…', badSeed: 'Seed must be 1–999999.',
+    reconnecting: 'Reconnecting…', expiredSession: 'The session expired. Resume from the last confirmed moment.', recover: 'Resume match', recovering: 'Restoring the last confirmed event…', recoverFailed: 'Recovery failed. Check your connection and try Resume match again.', outOfSync: 'Event order changed. Resume from the last confirmed event.', loading: 'Setting up match…', badSeed: 'Seed must be 1–999999.',
     shots: n => n + (n === 1 ? ' shot' : ' shots'), counterpress: 'Counterpress', waiting: 'Waiting for the next counterpress moment…', start: 'Press Play to stream the match event by event.',
     type: {pass: 'passes', loss: 'loses the ball', pressure: 'presses', regain: 'wins it back', shot: 'shoots', clock: 'clock'},
     kickoffEv: 'Kick-off', fulltimeEv: 'Full time',
@@ -30,7 +30,7 @@ const L = {
     opusTitle: 'Análisis IA del momento (opcional)', opusAsk: 'Explicar este momento', opusOff: 'No configurado', opusWait: 'Escribiendo análisis…', opusSlow: 'Sigue escribiendo; el partido sigue disponible.', opusFail: 'Análisis no disponible ahora; los textos del partido siguen activos.', opusBusy: 'Análisis ocupado; inténtalo de nuevo en un rato.', opusAt: n => `Jugada ${n}`,
     share: 'Copiar enlace del partido', shareCopied: 'Enlace copiado. Abre esta jugada en pausa.', shareManual: 'Selecciona y copia el enlace de abajo.', shareHelp: 'Abre este partido sintético en la jugada elegida. El destinatario necesita acceso a esta aplicación.', shareLocal: 'Dirección local: el enlace solo abre donde se ejecuta esta aplicación.', badLink: 'Este enlace no es válido o ya no es compatible. Hay un partido nuevo listo.', clampedLink: 'La jugada guardada supera esta versión del partido; se muestra la última.',
     play: '▶ Reproducir', pause: '❚❚ Pausa', step: 'Siguiente jugada', restart: 'Reiniciar', ready: 'LISTO', live: 'EN DIRECTO', paused: 'PAUSA', ft: 'FINAL',
-    reconnecting: 'Reconectando…', expiredSession: 'Este partido caducó. Pulsa Saque inicial para otro.', loading: 'Preparando partido…', badSeed: 'La semilla debe ser 1–999999.',
+    reconnecting: 'Reconectando…', expiredSession: 'La sesión caducó. Recupera la última jugada confirmada.', recover: 'Reanudar partido', recovering: 'Recuperando la última jugada confirmada…', recoverFailed: 'No se pudo reanudar. Comprueba la conexión y vuelve a intentarlo.', outOfSync: 'El orden de jugadas cambió. Recupera la última jugada confirmada.', loading: 'Preparando partido…', badSeed: 'La semilla debe ser 1–999999.',
     shots: n => n + (n === 1 ? ' tiro' : ' tiros'), counterpress: 'Contrapresión', waiting: 'Esperando el próximo momento de contrapresión…', start: 'Pulsa Reproducir para seguir el partido jugada a jugada.',
     type: {pass: 'pasa', loss: 'pierde el balón', pressure: 'presiona', regain: 'recupera', shot: 'dispara', clock: 'reloj'},
     kickoffEv: 'Saque inicial', fulltimeEv: 'Final del partido',
@@ -45,7 +45,7 @@ const L = {
       rateLine: (s, r, p) => `Tasa de recuperación ${p}% (${s}/${r} ventanas resueltas).`, unclearLine: n => `${n} ventana(s) cortada(s) por otra pérdida: resultado desconocido, no cuenta como fallo.`,
       zoneLine: z => `Contrapresiones exitosas sobre todo en: ${z}.`, pressLine: x => `${x} acciones de presión por contrapresión.`, rivalLine: (t, p) => `${t}: tasa de recuperación ${p}.`}}
 };
-const S = {session: null, events: [], cursor: 0, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, linkTimer: null};
+const S = {session: null, events: [], cursor: 0, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
 const t = () => L[el('locale').value] || L.en;
 const view = () => ({team: el('team').value, audience: el('audience').value, locale: el('locale').value});
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
@@ -235,8 +235,11 @@ function ui() {
   el('share').disabled = !currentMatchLink();
   el('play').disabled = !s; el('restart').disabled = !s; el('scrub').disabled = !s;
   el('step').disabled = !s || S.cursor >= s.total;
-  const st = S.playing ? 'live' : s && S.cursor >= s.total ? 'ft' : S.cursor > 0 ? 'paused' : 'ready';
+  const st = S.playing && S.transport === 'reconnecting' ? 'reconnecting' : S.playing ? 'live' : s && S.cursor >= s.total ? 'ft' : S.cursor > 0 ? 'paused' : 'ready';
   el('state').textContent = T[st]; el('state').className = 'state ' + st;
+  el('recover').textContent = T.recover;
+  el('recover').hidden = !S.recoverable;
+  el('recover').disabled = S.recoveryBusy || !s;
 }
 function opusKey() { return S.session ? [S.session.id, S.cursor, el('team').value, el('audience').value, el('locale').value].join('|') : ''; }
 function apply(f) {
@@ -265,6 +268,7 @@ function stopStream() {
   ++S.conn;
   if (S.es) { S.es.close(); S.es = null; }
   S.playing = false;
+  S.transport = 'ready'; S.recoverable = false;
   syncMatchLink(true);
   ui();
 }
@@ -278,19 +282,68 @@ function play() {
   const q = new URLSearchParams({from: String(S.cursor), speed: el('speed').value, ...view()});
   const es = new EventSource(`/api/sessions/${encodeURIComponent(s.id)}/stream?${q}`);
   S.es = es; S.playing = true; ui();
+  // A transport reconnection is not a new match or a new clock. Keep the last
+  // validated event until the original server resumes the ordered stream.
+  es.onopen = () => {
+    if (my !== S.conn || S.session !== s) return;
+    S.transport = 'ready'; S.recoverable = false; notice(''); ui();
+  };
   es.addEventListener('frame', m => {
     if (my !== S.conn || S.session !== s) return;
-    let f; try { f = JSON.parse(m.data); } catch { return; }
-    if (f.sessionId !== s.id || f.count !== S.cursor + 1 || !f.event) return;
-    S.events.push(f.event); S.cursor = f.count; notice('');
-    apply(f);
+    let f; try { f = JSON.parse(m.data); } catch { f = null; }
+    if (!f || f.sessionId !== s.id || f.count !== S.cursor + 1 || !f.event) {
+      stopStream();
+      S.recoverable = true; notice(t().outOfSync); ui();
+      return;
+    }
+    S.events.push(f.event); S.cursor = f.count; S.transport = 'ready';
+    S.recoverable = false; notice(''); apply(f);
   });
   es.addEventListener('end', () => { if (my === S.conn) stopStream(); });
   es.onerror = () => {
-    if (my !== S.conn) return;
-    if (es.readyState === EventSource.CLOSED) { stopStream(); notice(t().expiredSession); }
-    else notice(t().reconnecting);
+    if (my !== S.conn || S.session !== s) return;
+    if (es.readyState === EventSource.CLOSED) {
+      stopStream(); S.recoverable = true; notice(t().expiredSession); ui();
+    } else {
+      S.transport = 'reconnecting'; S.recoverable = true;
+      notice(t().reconnecting); ui();
+    }
   };
+}
+// Operator-driven repair: refresh the exact event prefix from the original
+// session. Only on an actual 404 do we re-create the same deterministic match.
+async function recoverStream() {
+  const s = S.session, match = S.match, count = S.cursor;
+  if (!s || !match || S.recoveryBusy) return;
+  stopStream();
+  const token = ++S.req;
+  S.recoveryBusy = true; notice(t().recovering); ui();
+  try {
+    const frame = await api(`/api/sessions/${encodeURIComponent(s.id)}/frame`, 'POST', {count, ...view()});
+    if (token !== S.req || S.session !== s) return;
+    if (frame.sessionId !== s.id || frame.count !== count || !Array.isArray(frame.events) || frame.events.length !== count) throw new Error('Invalid event prefix');
+    S.events = frame.events; S.cursor = count; apply(frame);
+    S.recoveryBusy = false; notice(''); play();
+  } catch (e) {
+    if (token !== S.req || S.session !== s) return;
+    if (e.status === 404 || e.status === 410) {
+      // The server discarded its ephemeral session, not the match definition.
+      // Never continue a stale stream or silently replace the selected fixture.
+      el('scenario').value = match.scenario; el('seed').value = String(match.seed);
+      const nextStart = S.starting + 1;
+      await newMatch({count});
+      if (S.starting === nextStart && S.session !== s && S.frame?.sessionId === S.session?.id &&
+          S.match?.scenario === match.scenario && S.match?.seed === match.seed) {
+        S.recoveryBusy = false; notice(''); play();
+        return;
+      }
+    }
+    if (S.session === s || (!S.playing && S.match?.scenario === match.scenario && S.match?.seed === match.seed)) {
+      S.recoverable = true; notice(t().recoverFailed);
+    }
+  } finally {
+    S.recoveryBusy = false; ui();
+  }
 }
 async function seek(count) {
   const s = S.session;
@@ -354,6 +407,7 @@ async function boot() {
   el('seed').addEventListener('keydown', e => { if (e.key === 'Enter') newMatch(); });
   el('dice').addEventListener('click', () => { el('seed').value = String(1 + crypto.getRandomValues(new Uint32Array(1))[0] % 999999); newMatch(); });
   el('play').addEventListener('click', () => (S.playing ? stopStream() : play()));
+  el('recover').addEventListener('click', recoverStream);
   el('step').addEventListener('click', () => { if (S.session) seek(Math.min(S.cursor + 1, S.session.total)); });
   el('restart').addEventListener('click', () => seek(0));
   el('speed').addEventListener('change', () => { if (S.playing) play(); });
