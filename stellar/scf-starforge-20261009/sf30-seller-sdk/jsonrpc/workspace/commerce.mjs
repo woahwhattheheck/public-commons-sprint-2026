@@ -99,6 +99,16 @@ export async function bindCommerceBuyers({ root, saved, review, record, folder, 
   need(Array.isArray(actions) && actions.length >= 1 && actions.length <= 64,
     'RPC_COMMERCE_BUYERS_REQUIRED', 'Select one to 64 completed buyer reviews from this package.', 422);
   const product = prepareProduct(saved.plan), seen = new Set(), bindings = [];
+  const [{ compileSellerRoutes }, { compileSellerOpenApi }] = await Promise.all([
+    import('../../resource-server.mjs'), import('../../developer-portal.mjs'),
+  ]);
+  const compilationOnly = () => { throw new Error('RPC_COMMERCE_COMPILATION_ONLY'); };
+  const compiled = compileSellerRoutes(product.service.routes.map(route => ({
+    id: route.id, offer: route.offer, handler: compilationOnly,
+    ...(route.admit || route.validateInput ? { admit: compilationOnly } : {}),
+  })));
+  const specification = compileSellerOpenApi(compiled);
+  const operations = Object.values(specification.paths).flatMap(path => Object.values(path));
   for (const action of actions) {
     need(action?.kind === 'buyer' && action.state === 'COMPLETE' && action.revision === saved.revision &&
       action.request.reviewId === review.reviewId && action.request.packageId === record.id,
@@ -124,8 +134,12 @@ export async function bindCommerceBuyers({ root, saved, review, record, folder, 
     'RPC_COMMERCE_BUYER_TERMS_CHANGED');
     need(admitRequest(method, { method: 'POST', body: parseJson(bytes), url: new URL(op.url), query: {} },
       product.plan.limits) === true, 'RPC_COMMERCE_BUYER_PARAMETERS_CHANGED');
-    const request = buildUnpaidRequest(product.spec.paths[product.imported.offers[index].path].post,
-      { body: new TextDecoder('utf-8', { fatal: true }).decode(bytes) }, product.plan.publicOrigin);
+    const apiOperation = operations.find(operation => operation.operationId === method);
+    need(apiOperation, 'RPC_COMMERCE_BUYER_ROUTE_CHANGED');
+    const request = buildUnpaidRequest(apiOperation,
+      { body: new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes) }, product.plan.publicOrigin);
+    need(request.publicUrl === op.url && request.init.method === op.method &&
+      Buffer.from(request.init.body).equals(bytes), 'RPC_COMMERCE_BUYER_REQUEST_CHANGED');
     const commerceHeaders = headers(request.init.headers), buyerHeaders = headers(op.headers);
     need(buyerHeaders['content-type'] === commerceHeaders['content-type'] &&
       Object.entries(buyerHeaders).every(([key, value]) => commerceHeaders[key] === value),
