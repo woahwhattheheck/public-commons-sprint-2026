@@ -81,9 +81,22 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
   }
   // New modules can participate once they actually exist at the selected commit.
   const optional = [
+    ['dataset', 'sf30-seller-sdk/dataset-cli.mjs', 'Inspect an original CSV dataset or compile its seller configuration'],
+    ['dataset-refresh', 'sf30-seller-sdk/dataset-refresh/cli.mjs', 'Initialize, serve, refresh and activate retained native dataset versions'],
+    ['dataset-workspace', 'sf30-seller-sdk/dataset-workspace.mjs', 'Inspect, preview and activate retained native dataset versions'],
+    ['dataset-publisher', 'sf30-seller-sdk/dataset-refresh/workspace.mjs', 'Publish CSV revisions and prepare original buyer acquisition from a selected offer'],
+    ['catalog', 'sf60-durable-catalog-transaction/operator-cli.mjs', 'Inspect or update the original live catalog through private control'],
+    ['catalog-operator', 'sf60-durable-catalog-transaction/operator-cli.mjs', 'Alias of catalog for the original live operator commands'],
+    ['catalog-serve', 'sf60-durable-catalog-transaction/operator.mjs', 'Serve live discovery and the original private catalog writer'],
+    ['catalog-withdrawal', 'sf95-signed-seller-withdrawal/cli.mjs', 'Prepare or sign an original seller withdrawal request'],
+    ['buyer-dataset', 'sf88-operator-buyer-cli/dataset-cli.mjs', 'Acquire, resume and deliver native dataset pages with the original buyer'],
+    ['dataset-delivery', 'sf88-operator-buyer-cli/queue-dataset-cli.mjs', 'Assemble saved original inbox pages through native dataset delivery'],
     ['buyer-inbox', 'sf88-operator-buyer-cli/queue-cli.mjs', 'Inspect the original inbox and execute one selected intent'],
     ['buyer-runbook', 'buyer-runbook/cli.mjs', 'Plan and resume an original multi-resource buying run'],
     ['buyer-node', 'sf88-operator-buyer-cli/node/examples/customer.mjs', 'Review, execute and recover a durable generated-client application request'],
+    ['merchant-fleet', 'merchant-fleet-gateway/cli.mjs', 'Run the original merchant gateway with retained rollout state'],
+    ['merchant-fleet-control', 'merchant-fleet-gateway/control.mjs', 'Prepare, activate, inspect or roll back native merchant configuration'],
+    ['merchant-fleet-workspace', 'merchant-fleet-gateway/workspace/server.mjs', 'Inspect and manage the original retained merchant fleet'],
     ['deploy', 'sf99-merchant-deploy/cli.mjs', 'Generate the original HTTPS host deployment'],
     ['postgres', 'sf30-seller-sdk/postgres/start.mjs', 'Run the original PostgreSQL merchant seller'],
     ['postgres-init', 'sf30-seller-sdk/postgres/create-example.mjs', 'Create a PostgreSQL source and seller starter'],
