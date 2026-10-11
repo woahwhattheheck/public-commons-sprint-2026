@@ -1,6 +1,6 @@
 /** MIT. Operator-owned loopback MCP workspace; credentials never arrive over MCP. */
 import { createServer } from 'node:http';
-import { isAbsolute, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { McpPaidToolBroker, createMcpHttpHandler } from './agent-server.mjs';
 
@@ -20,11 +20,13 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
   const timeoutMs = Number(environment.MCP_PROVIDER_TIMEOUT_MS ?? 8000);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300000)
     throw new RangeError('MCP_PROVIDER_TIMEOUT_MS must be 1..300000');
-  let quoteStore, broker, server, operator;
+  let quoteStore, resultStore, broker, server, operator;
   try {
     if (directory) {
       const { SqliteQuoteStore } = await import('./quote-store.mjs');
       quoteStore = new SqliteQuoteStore({ directory });
+      const {McpResultStore} = await import('./result-store.mjs');
+      resultStore = new McpResultStore({directory:join(quoteStore.directory,'results')});
     }
     if (modulePath) {
       // Executable trusted host configuration, never a path from MCP or discovery.
@@ -33,7 +35,7 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
           (operator.close !== undefined && typeof operator.close !== 'function'))
         throw new TypeError('The trusted operator module must export approve and signPayment functions.');
     }
-    broker = new McpPaidToolBroker({ discoveryUrl, allowedResourceOrigins, quoteStore, timeoutMs,
+    broker = new McpPaidToolBroker({ discoveryUrl, allowedResourceOrigins, quoteStore, resultStore, timeoutMs,
       ...(operator ? { approve: operator.approve, signPayment: operator.signPayment,
         agentCommerce: operator.agentCommerce ?? null,
         ...(operator.fetchImpl === undefined ? {} : {fetchImpl:operator.fetchImpl}),
@@ -45,7 +47,10 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
     });
   } catch (failure) {
     server?.close();
-    try { if (broker) await broker.close({ graceMs: 0 }); else quoteStore?.close(); }
+    try {
+      if (broker) await broker.close({ graceMs: 0 });
+      else { try { await resultStore?.close(); } finally { quoteStore?.close(); } }
+    }
     catch { /* report the original startup failure after closing operator resources */ }
     finally { try { await operator?.close?.(); } catch { /* preserve original failure */ } }
     throw failure;
