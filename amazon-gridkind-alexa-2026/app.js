@@ -1,4 +1,5 @@
 import {createRobustnessPanel} from './robustness-ui.js';
+import {mountScenarioHandoff} from './scenario-handoff.js';
 const $=id=>document.getElementById(id);
 const loads=[
   {id:'laundry',label:'Laundry'},
@@ -6,6 +7,7 @@ const loads=[
   {id:'ev-topup',label:'EV top-up'},
 ];
 let state=null,busy=false,stateRevision=0,draftRevision=0,needsPlan=false;
+let handoff=null;
 const robustness=createRobustnessPanel({getContext:()=>({state,busy,needsPlan,draftRevision})});
 const money=n=>'$'+Number(n||0).toFixed(2);
 const rateForHour=h=>h>=17&&h<21?'peak':h>=21||h<7?'offpeak':'standard';
@@ -60,9 +62,10 @@ function updateControls(){
     needsPlan?'Settings changed. Plan again before approving or executing.':
     state?.proposal?'This proposal uses your current scenario settings.':'Choose at least one load, then plan your scenario.';
   robustness.refresh();
+  handoff?.refresh();
 }
 function changed(){
-  draftRevision++;needsPlan=true;$('error').textContent='';updateControls();
+  draftRevision++;needsPlan=true;$('error').textContent='';handoff?.invalidate();updateControls();
 }
 async function call(action,params={}){
   if(busy)return;
@@ -134,6 +137,16 @@ $('plan').onclick=()=>planRequest();
 $('approve').onclick=()=>call('approve',{id:state?.proposal?.id});
 $('execute').onclick=()=>call('execute',{id:state?.proposal?.id});
 $('cancel').onclick=()=>call('cancel');
+handoff=mountScenarioHandoff({
+  getDraft:readScenario,
+  getProposal:()=>needsPlan?null:state?.proposal,
+  isBusy:()=>busy,
+  applyDraft:scenario=>{
+    if(!fillScenario(scenario))throw Error('This scenario is not supported by the editor.');
+    changed(); // Require a fresh original proposal, approval, and simulated execution.
+  },
+  onProblem:error=>{$('error').textContent=error?.message||'Scenario transfer failed';},
+});
 updateControls();
 const initialRevision=stateRevision,initialDraft=draftRevision;
 fetch('/api/state').then(r=>{if(!r.ok)throw Error('Could not restore current session');return r.json();}).then(data=>{
