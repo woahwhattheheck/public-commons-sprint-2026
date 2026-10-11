@@ -1,11 +1,11 @@
 // One source-native ClickHouse workspace → fleet continuation. Scratch acceptance only.
 import assert from 'node:assert/strict';
 import { createServer, request as httpRequest } from 'node:http';
-import { mkdir, readFile, writeFile, cp, stat, rename } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, cp, stat, rename, open, lstat, unlink } from 'node:fs/promises';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
-import { join, resolve, relative, extname } from 'node:path';
+import { join, resolve, relative, extname, dirname } from 'node:path';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 const repo = process.env.CLICKHOUSE_FLEET_SOURCE ?? '/workspace/scratch/e49d179edb44/scf_engineering/fleet-database-adoption/source';
@@ -19,7 +19,21 @@ const dist = join(repo, 'stellar-forge/developer-site/dist');
 const original = process.env.CLICKHOUSE_FIXTURE_ROOT ?? '/workspace/scratch/6f7c5af20f40/clickhouse-workspace-check/retained-workspace';
 const state = join(work, 'merchant-workspace'), directory = join(work, 'operator'), planFile = join(directory, 'fleet-plan.json');
 const read = async file => JSON.parse(await readFile(file, 'utf8'));
-const save = (file, value) => writeFile(file, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
+async function save(file, value) {
+  const temporary = file + '.' + randomUUID() + '.tmp';
+  let handle;
+  try {
+    handle = await open(temporary, 'wx', 0o600);
+    await handle.writeFile(JSON.stringify(value, null, 2) + '\n'); await handle.sync();
+    await handle.close(); handle = null; await rename(temporary, file);
+    if (process.platform !== 'win32') {
+      const parent = await open(dirname(file), 'r'); try { await parent.sync(); } finally { await parent.close(); }
+    }
+  } finally { await handle?.close(); await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+}
+async function exists(path) {
+  try { await lstat(path); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; }
+}
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const wait = ms => new Promise(done => setTimeout(done, ms));
 const run = promisify(execFile), require = createRequire(join(repo, 'package.json'));
@@ -329,8 +343,38 @@ async function nativePhase() {
     await mark('Original same-directory MCP staged the complete reviewed source, compared prices, drained before retirement and rolled back', { prices: ['25000', '27500', '25000'], retirementWaitedForRequest: true, nativeSourceKind: staged.release.sourceKind, comparison: reviewed.comparison.summary });
   }
   if (!receipt.sourcesMoved) {
-    const paths = new Set(Object.values(receipt.inputs.packages).flatMap(packages => Object.values(packages).map(source => source.clickhousePackage)));
-    for (const path of paths) await rename(path, path + '-moved'); receipt.sourcesMoved = true; await save(join(work, 'receipt.json'), receipt);
+    receipt.sourceRelocations ??= {};
+    const sources = new Map(Object.values(receipt.inputs.packages).flatMap(packages =>
+      Object.values(packages).map(source => [source.clickhousePackage, source])));
+    // Save every original prepared identity before the first directory moves.
+    // A resumed move must match that retained compiler-verified package exactly.
+    for (const [path, source] of sources) {
+      const target = path + '-moved', present = await exists(path), moved = await exists(target);
+      assert(present !== moved, 'Exactly one original or moved ClickHouse package must exist: ' + path);
+      if (!receipt.sourceRelocations[path]) {
+        assert(present, 'Recover the recorded original prepared identity before accepting a moved package: ' + path);
+        const prepared = await prepareClickHouseRelease(path, { columnTypes: source.clickhouseColumnTypes });
+        receipt.sourceRelocations[path] = { target, identity: {
+          packageSha256: prepared.clickhouse.packageSha256, executionSha256: prepared.clickhouse.executionSha256,
+        }, complete: false };
+        await save(join(work, 'receipt.json'), receipt);
+      }
+    }
+    for (const [path, source] of sources) {
+      const retained = receipt.sourceRelocations[path], target = path + '-moved';
+      assert.equal(retained.target, target);
+      const present = await exists(path), moved = await exists(target);
+      assert(present !== moved, 'Exactly one original or moved ClickHouse package must exist: ' + path);
+      const inspect = async candidate => {
+        const prepared = await prepareClickHouseRelease(candidate, { columnTypes: source.clickhouseColumnTypes });
+        assert.equal(prepared.clickhouse.packageSha256, retained.identity.packageSha256);
+        assert.equal(prepared.clickhouse.executionSha256, retained.identity.executionSha256);
+      };
+      await inspect(present ? path : target);
+      if (present) { await rename(path, target); await inspect(target); }
+      retained.complete = true; await save(join(work, 'receipt.json'), receipt);
+    }
+    receipt.sourcesMoved = true; await save(join(work, 'receipt.json'), receipt);
   }
   const resumed = await command('setup'); assert.equal(resumed.planDigest, receipt.planDigest);
   const reopened = await startMcp(); assert.equal(reopened.fleet.native.revision, 3);
