@@ -10,6 +10,15 @@ The source supports Redis 7 or later and Valkey 7.2 or later with `EVAL_RO`.
 It uses the maintained `@redis/client` 6.2.1 connection implementation and the
 existing SF30 developer portal, operations interface and request lifecycle.
 
+## Connect an Upstash source
+
+The same merchant supports Upstash's native HTTPS/RESP2 transport. Start with
+`starforge redis init --directory NEW_DIRECTORY --transport upstash-rest`.
+The [Upstash customer guide](UPSTASH.md) covers credentials, original-source
+preflight, customer preparation, retained releases and the complete native
+provider operation. The existing read-only query engine and exact value handling
+are shared by both connection types.
+
 ## Install the native feature
 
 Select a distribution archive that includes the Redis command and its runtime
