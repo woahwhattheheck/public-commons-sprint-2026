@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Starforge · Seller API</title><link rel="stylesheet" href="/_seller/developer/style.css"><script type="module" src="/_seller/developer/browser.mjs"></script></head>
+<body>
+<header class="top"><a class="brand" href="/_seller/docs">S<span>STARFORGE</span></a><span class="eyebrow">SELLER / DEVELOPER WORKSPACE</span><a class="download" href="/_seller/openapi.json" download="seller-openapi.json">Download OpenAPI ↗</a></header>
+<main>
+<section class="hero"><div><p class="eyebrow">LIVE CONFIGURATION · NO WALLET REQUIRED</p><h1 id="title">Your API, ready to explore.</h1><p class="intro">Understand the inputs. Inspect the advertised price. Make one unpaid request.</p></div><div class="runtime"><span class="dot"></span><span id="mode">Loading configuration…</span></div></section>
+<div id="fatal" class="error" role="alert" hidden></div>
+<section class="overview"><div><span class="label">PUBLIC RESOURCE ORIGIN</span><code id="origin">—</code></div><div><span class="label">AVAILABLE OPERATIONS</span><strong id="count">—</strong></div><div><span class="label">PAYMENT RAIL</span><strong>x402 · Stellar</strong></div></section>
+<div class="workspace">
+<aside><label for="filter" class="label">FIND AN ENDPOINT</label><input id="filter" type="search" placeholder="Path, method or description" autocomplete="off"><nav id="routes" aria-label="API endpoints"></nav><p class="aside-note">Generated from the running service. No imported specification can overwrite the payment configuration.</p></aside>
+<article id="detail" hidden>
+<div class="endpoint-heading"><span id="method" class="method"></span><h2 id="path"></h2></div><p id="description" class="description"></p>
+<div class="terms"><div><span class="label">PRICE / REQUEST</span><strong id="amount"></strong><small>atomic units · advertised terms</small></div><div><span class="label">NETWORK / SCHEME</span><strong id="network"></strong><small id="timeout"></small></div></div>
+<details class="terms-detail"><summary>Asset and receiving address</summary><dl><dt>Asset</dt><dd id="asset"></dd><dt>Recipient</dt><dd id="recipient"></dd></dl><p>These are seller-advertised values, not a verification of wallet ownership or a settlement receipt.</p></details>
+<div class="tabs" role="tablist" aria-label="Endpoint details"><button id="tab-request" role="tab" aria-selected="true" aria-controls="request-panel" data-tab="request">Build request</button><button id="tab-schema" role="tab" aria-selected="false" aria-controls="schema-panel" data-tab="schema">Input schema</button><button id="tab-offer" role="tab" aria-selected="false" aria-controls="offer-panel" data-tab="offer">Original offer</button></div>
+<section id="request-panel" role="tabpanel" aria-labelledby="tab-request">
+<div id="path-fields" class="fields"></div>
+<label for="query" class="field-label">Query parameters <span>JSON object; strings or arrays of strings</span></label><textarea id="query" rows="4" spellcheck="false" autocomplete="off">{}</textarea><p id="required" class="hint"></p>
+<div id="body-field" hidden><label for="body" class="field-label">Request body <span>application/json</span></label><textarea id="body" rows="8" spellcheck="false" autocomplete="off"></textarea></div>
+<div class="preview"><div class="preview-heading"><span class="label">PUBLIC API · COPYABLE UNPAID REQUEST</span><button id="copy" class="quiet">Copy curl</button></div><pre id="curl"></pre></div>
+<div class="execution"><div><span class="label">BROWSER REQUEST TARGET</span><code id="target"></code><p>One request to this service. No cookies, authorization headers, wallet, payment signature or redirect following.</p></div><button id="send" class="primary">Inspect unpaid response →</button><button id="cancel" class="quiet" hidden>Cancel</button></div>
+<div id="input-error" class="error" role="alert" hidden></div>
+<section id="result" class="result" aria-live="polite" hidden><div class="result-heading"><h3 id="status"></h3><span id="elapsed"></span></div><p id="result-note"></p><h4>Decoded payment requirements</h4><pre id="challenge"></pre><details><summary>Response headers</summary><pre id="headers"></pre></details><details><summary>Response body</summary><pre id="response-body"></pre></details></section>
+</section>
+<section id="schema-panel" role="tabpanel" aria-labelledby="tab-schema" hidden><p class="hint">Original Bazaar schema for this offer. It describes metadata examples and constraints; the application and admission hook determine request acceptance.</p><pre id="schema"></pre><p id="projection-note" class="hint"></p></section>
+<section id="offer-panel" role="tabpanel" aria-labelledby="tab-offer" hidden><p class="hint">Complete, unchanged offer from this compiled route. Dynamic requests return their concrete URL and path values in the actual challenge.</p><pre id="offer"></pre></section>
+</article>
+</div>
+<footer>Documentation is free to inspect. A 402 response is a quote, not a charge. <a href="/_seller/health">Runtime health</a><a href="/_seller/offers">Raw offers</a></footer>
+</main>
+</body></html>
