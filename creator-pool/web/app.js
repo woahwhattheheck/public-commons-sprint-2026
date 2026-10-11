@@ -1263,28 +1263,93 @@ function statusPill(text) {
   return h("span", { class: `pill ${cls}`, text: String(text).replace(/_/g, " ") });
 }
 
+function poolBalance(c) {
+  const fields = ["fundedAtomic", "reservedAtomic", "paidAtomic", "refundedAtomic", "availableAtomic"];
+  if (fields.some(key => c[key] === null || c[key] === undefined)) return { state: "incomplete" };
+  const funded = BigInt(c.fundedAtomic), reserved = BigInt(c.reservedAtomic);
+  const paid = BigInt(c.paidAtomic), refunded = BigInt(c.refundedAtomic), available = BigInt(c.availableAtomic);
+  const committed = c.committedAtomic === null || c.committedAtomic === undefined ? null : BigInt(c.committedAtomic);
+  const budget = c.budgetAtomic === null || c.budgetAtomic === undefined ? null : BigInt(c.budgetAtomic);
+  if (funded !== reserved + paid + refunded + available ||
+      (committed !== null && committed !== reserved + paid) ||
+      (budget !== null && funded > budget)) return { state: "mismatch" };
+  return { state: "balanced", funded, reserved, paid, refunded, available, budget };
+}
+
 function budgetMeter(c) {
-  const meter = h("div", { class: "meter", role: "img", "aria-label": "Budget split" });
-  const total = c.budgetAtomic || c.fundedAtomic;
-  if (!total || Amount.isZero(total)) return meter;
-  const t = BigInt(total);
-  const pct = (v) => {
-    if (!v) return 0;
-    const n = Number((BigInt(v) * 10000n) / t) / 100;
-    return Math.min(Math.max(n, 0), 100);
-  };
-  const segs = [
-    ["m-paid", c.paidAtomic, "paid"],
-    ["m-reserved", c.reservedAtomic, "reserved"],
-    ["m-refunded", c.refundedAtomic, "refunded"],
-    ["m-available", c.availableAtomic, "available"],
-  ];
-  for (const [cls, val, label] of segs) {
-    const p = pct(val);
-    if (p <= 0) continue;
-    meter.append(h("span", { class: cls, title: `${label}: ${fmtWithUnit(val)}`, style: `width:${p}%` }));
-  }
-  return meter;
+  const model = poolBalance(c);
+  const meter = h("div", { class: "meter", role: "img", "aria-label": "Pool allocation unavailable until complete on-chain readback" });
+  if (model.state !== "balanced") return meter;
+  const total = model.budget !== null ? model.budget : model.funded;
+  if (total <= 0n) return meter;
+  const pct = (atomic) => Number((atomic * 10000n) / total) / 100;
+  const unfunded = total - model.funded;
+  const parts = [
+    ["m-paid", model.paid, "Claimed"],
+    ["m-reserved", model.reserved, "Reserved"],
+    ["m-refunded", model.refunded, "Refunded"],
+    ["m-available", model.available, "Available"],
+    ["m-unfunded", unfunded, "Not yet funded"],
+  ];
+  meter.setAttribute("aria-label", parts.map(([_, amount, name]) =>
+    `${name}: ${fmtWithUnit(amount.toString(10))}`).join("; "));
+  for (const [cls, amount, name] of parts) {
+    const percent = Math.max(0, Math.min(100, pct(amount)));
+    if (amount === 0n) continue;
+    meter.append(h("span", { class: cls, title: `${name}: ${fmtWithUnit(amount.toString(10))}`, style: `width:${percent}%` }));
+  }
+  return meter;
+}
+
+function sponsorBudgetPanel(c) {
+  if (ui.role !== "sponsor") return null;
+  const m = poolBalance(c);
+  const amounts = [
+    ["Free to allocate", c.availableAtomic, c.closed ? "Campaign closed; this balance cannot approve new work." : "Funds not yet committed to creators; refundable on close."],
+    ["Reserved for creators", c.reservedAtomic, "Approved work awaits creator-initiated claims, including after close."],
+    ["Already claimed", c.paidAtomic, "Rewards paid out to creators, not remaining in the pool."],
+    ["Returned to sponsor", c.refundedAtomic, "Unused funds returned by an on-chain campaign close."],
+  ];
+  const status = m.state === "balanced" ? "Allocation reconciles" :
+    m.state === "incomplete" ? "Awaiting full readback" : "Check pool balances";
+  const accounting = m.state === "balanced"
+    ? `${fmtWithUnit(c.fundedAtomic)} funded = ${fmtWithUnit(c.reservedAtomic)} reserved + ${fmtWithUnit(c.paidAtomic)} claimed + ${fmtWithUnit(c.refundedAtomic)} refunded + ${fmtWithUnit(c.availableAtomic)} free.`
+    : m.state === "incomplete"
+    ? "Some pool balances are unavailable. Refresh to see the complete allocation; no missing value is treated as zero."
+    : "The received balances do not reconcile with the recorded funded amount. Refresh before making a budget decision.";
+  let decision = "The amount available for another approval is not yet known.";
+  if (m.state === "balanced") {
+    if (c.closed) {
+      decision = `This campaign is closed. ${fmtWithUnit(c.reservedAtomic)} remains reserved for approved creators to claim.`;
+    } else if (c.rewardAtomic !== null && c.rewardAtomic !== undefined && BigInt(c.rewardAtomic) > 0n) {
+      const reward = BigInt(c.rewardAtomic);
+      const affordable = m.available / reward;
+      decision = `At ${fmtWithUnit(c.rewardAtomic)} per selection, the available balance covers up to ${affordable.toString(10)} more approval${affordable === 1n ? "" : "s"} by budget alone. Each approval moves that reward from free to reserved; it does not pay the creator yet. Closing instead refunds only the uncommitted ${fmtWithUnit(c.availableAtomic)}.`;
+    } else {
+      decision = `Closing now refunds the uncommitted ${fmtWithUnit(c.availableAtomic)}; ${fmtWithUnit(c.reservedAtomic)} remains claimable by approved creators.`;
+    }
+  }
+  return h("section", { class: "sponsor-ledger", "aria-label": "Sponsor pool allocation and decisions" },
+    h("div", { class: "sponsor-ledger-head" },
+      h("h3", { text: "Where the campaign budget goes" }),
+      h("span", { class: `sponsor-ledger-status ${m.state}`, text: status })),
+    h("div", { class: "sponsor-ledger-legend" },
+      amounts.map(([label, value, explanation]) => h("div", { class: "sponsor-ledger-item" },
+        h("span", { class: "sponsor-ledger-label", text: label }),
+        h("strong", { class: "sponsor-ledger-amount", text: fmtWithUnit(value) }),
+        h("p", { text: explanation })))),
+    h("p", { class: "sponsor-ledger-equation", text: accounting }),
+    h("p", { class: "sponsor-ledger-decision", text: decision }),
+    h("p", { class: "sponsor-ledger-footnote", text: "These are contract-reported balances in the selected network, not a wallet balance or a promise of a pending transaction. The campaign contract still enforces every approval, claim and close." }));
+}
+
+function approvalReserveAction(c, sub) {
+  const remaining = (BigInt(c.availableAtomic) - BigInt(c.rewardAtomic)).toString(10);
+  return h("div", { class: "reserve-preview" },
+    h("p", { class: "reserve-preview-copy", text:
+      `This approval reserves ${fmtWithUnit(c.rewardAtomic)} for the creator and leaves ${fmtWithUnit(remaining)} free. The creator claims later, even after close.` }),
+    busyButton(`approve:${sub.id}`, `Approve · ${fmtWithUnit(c.rewardAtomic)}`, "primary small",
+      () => doApprove(c, sub), { busyLabel: "Approving…" }));
 }
 
 function figure(label, value, opts = {}) {
@@ -1563,7 +1628,8 @@ function renderDetail() {
       figure("Paid to creators", fmt(c.paidAtomic), { cls: c.paidAtomic && !Amount.isZero(c.paidAtomic) ? "good" : "" }),
       Amount.isZero(c.refundedAtomic) ? null : figure("Refunded", fmt(c.refundedAtomic))),
     c.remainingApprovals !== null ? h("p", { class: "muted small", text: `Room for ${c.remainingApprovals} more approval${c.remainingApprovals === "1" ? "" : "s"} at the current reward.` }) : null,
-    h("div", { class: "detail-actions" }, detailActions),
+    sponsorBudgetPanel(c),
+    h("div", { class: "detail-actions" }, detailActions),
     campaignLinkNode(c),
   ].filter(Boolean));
 
@@ -1639,8 +1705,7 @@ function renderSubmission(c, sub) {
       ? h("span", { class: "action-note", text: "Available budget is below the reward — cannot approve." })
       : !sg.ok
       ? gateNote(sg)
-      : busyButton(`approve:${sub.id}`, `Approve · ${fmtWithUnit(c.rewardAtomic)}`, "primary small",
-          () => doApprove(c, sub), { busyLabel: "Approving…" });
+      : approvalReserveAction(c, sub);
   } else if (!sponsorView && approvedish && !paidish) {
     const cg = creatorGate(sub);
     const claimableByApi = sub.claimable !== undefined ? Boolean(sub.claimable) : true;
