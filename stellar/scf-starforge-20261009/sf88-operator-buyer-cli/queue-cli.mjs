@@ -5,12 +5,16 @@ import { need } from './config.mjs';
 
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 const commands = {init:[], enqueue:['--config'], list:[], show:['--intent'],
-  execute:['--intent'], recover:['--intent'], finalize:['--intent','--workspace'], cancel:['--intent'], report:['--out']};
+  execute:['--intent'], recover:['--intent'], finalize:['--intent','--workspace'], cancel:['--intent'], report:['--out'],
+  'inspect-missing-receipt':['--intent','--workspace'],
+  'read-missing-receipt':['--intent','--workspace'],
+  'recover-missing-receipt':['--intent','--workspace','--transaction','--request-sha']};
 let signalExit;
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
     process.stdout.write('Usage: node queue-cli.mjs COMMAND --root /absolute/inbox [OPTION VALUE]\n' +
       'Commands: init | enqueue --config ABS | list | show --intent ID | execute --intent ID [--workspace ABS] | recover --intent ID | finalize --intent ID --workspace ABS [--outbox ABS --merchant-route ID] | cancel --intent ID | report --out ABS [--workspace ABS]\n' +
+      'Missing receipt: inspect-missing-receipt | read-missing-receipt | recover-missing-receipt --transaction HASH --request-sha HASH; each requires --intent ID --workspace ABS. Read/recover accept --attempt ID --config-sha HASH --node ABS.\n' +
       'Execute invokes the original SF88 operator approval for one exact intent. An attempted intent is never replayed.\n');
     return;
   }
@@ -18,7 +22,9 @@ async function main(args) {
   need(Object.hasOwn(commands, command), 'INBOX_COMMAND_REQUIRED');
   const required = ['--root', ...commands[command]];
   const allowed = [...required, ...(['execute','report'].includes(command) ? ['--workspace'] : []),
-    ...(command === 'finalize' ? ['--outbox','--merchant-route'] : [])], flags = new Map();
+    ...(command === 'finalize' ? ['--outbox','--merchant-route'] : []),
+    ...(['read-missing-receipt','recover-missing-receipt'].includes(command)?['--attempt','--config-sha','--node']:[]),
+    ...(command==='read-missing-receipt'?['--request-sha']:[])], flags = new Map();
   need(rest.length % 2 === 0 && rest.length >= required.length * 2 &&
     rest.length <= allowed.length * 2, 'INBOX_EXPLICIT_ARGUMENTS_REQUIRED');
   for (let i=0; i<rest.length; i+=2) {
@@ -33,6 +39,11 @@ async function main(args) {
   if (command === 'show') return print(await queue.show(flags.get('--intent')));
   if (command === 'recover') return print(await queue.recover(flags.get('--intent')));
   if (command === 'cancel') return print(await queue.cancel(flags.get('--intent')));
+  if (command === 'inspect-missing-receipt') {
+    const {inspectMissingReceiptAttempt}=await import('./missing-receipt.mjs');
+    return print(await inspectMissingReceiptAttempt({root:queue.root,intentId:flags.get('--intent'),
+      workspace:flags.get('--workspace')}));
+  }
   if (command === 'report') {
     const {renderQueueReport} = await import('./queue-report.mjs');
     return print(await saveQueueReport(flags.get('--out'), renderQueueReport({
@@ -45,7 +56,14 @@ async function main(args) {
   process.on('SIGINT', interrupt); process.on('SIGTERM', terminate);
   try {
     let result;
-    if(command === 'finalize') {
+    if(['read-missing-receipt','recover-missing-receipt'].includes(command)) {
+      const api=await import('./missing-receipt.mjs');
+      const operation=command==='read-missing-receipt'?api.readMissingReceiptRecovery:api.recoverMissingReceipt;
+      result=await operation({root:queue.root,intentId:flags.get('--intent'),workspace:flags.get('--workspace'),
+        transaction:flags.get('--transaction'),expectedRequestSha256:flags.get('--request-sha'),
+        expectedAttemptId:flags.get('--attempt'),expectedConfigSha256:flags.get('--config-sha'),
+        node:flags.get('--node'),signal:controller.signal});
+    } else if(command === 'finalize') {
       const {finalizeQueueIntent}=await import('./finalization.mjs');
       result=await finalizeQueueIntent({root:queue.root,intentId:flags.get('--intent'),
         workspace:flags.get('--workspace'),outbox:flags.get('--outbox'),
@@ -55,7 +73,7 @@ async function main(args) {
     } else result = await queue.run(flags.get('--intent'), {signal:controller.signal,
       ...(flags.has('--workspace') ? {workspace:flags.get('--workspace')} : {})});
     print(result);
-    if (result.lastError) process.exitCode = 2;
+    if (!command.endsWith('-missing-receipt')&&result?.lastError) process.exitCode = 2;
   } finally {
     process.off('SIGINT', interrupt); process.off('SIGTERM', terminate);
     if (signalExit !== undefined) process.exitCode = signalExit;
