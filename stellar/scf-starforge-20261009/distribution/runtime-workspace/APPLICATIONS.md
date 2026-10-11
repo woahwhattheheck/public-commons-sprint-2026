@@ -11,7 +11,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
-| Object buyer workspace | object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
+| Object buyer workspace | buyer-object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
 | Commerce session | commerce-console start | An initialized SF66 session, original buyer/delivery/recovery and terminal approval |
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
 

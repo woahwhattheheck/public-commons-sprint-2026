@@ -52,7 +52,7 @@ export const APPLICATION_CATALOG = Object.freeze([
     description: 'Inspect the original database source, review its paid query contract and prepare the original merchant release.',
     fields: [field('sourceFile', 'Original PostgreSQL source', 'path', true), field('outputDirectory', 'Private merchant output directory', 'path', true),
       field('releaseStore', 'Existing release store'), ...common] },
-  { id: 'object-buyer', command: 'object-workspace', requiredSource: 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs',
+  { id: 'object-buyer', command: 'buyer-object-workspace', requiredSource: 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs',
     title: 'Object buyer workspace', terminal: true,
     description: 'Reopen original object sessions, received products, verified downloads and analysis. Every new acquisition retains its original explicit terminal approval.',
     fields: [field('stateDirectory', 'Original private object buyer state', 'path', true), field('profileFile', 'Original product profile'),
